@@ -3,9 +3,7 @@ import { installMarketplaceExtensionResponseSchema } from "pstdio-api-contracts"
 import { ExtensionNameConflictError, ProjectNotFoundError } from "../../../services/extension-service";
 import { ExtensionUpgradeUnavailableError } from "../../../services/extension-upgrade-service";
 import type { AppRouteHandler } from "../../../types";
-import { scheduleProjectWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
-import type { ExtensionsRouteDeps } from "../deps";
-import { toProjectExtensionInstance } from "../project-extension-instance";
+import type { ProjectExtensionLifecycleRouteDeps } from "../project-extension-lifecycle";
 
 const errorSchema = z.object({ error: z.string() });
 
@@ -39,29 +37,12 @@ export const installMarketplaceExtensionRoute = createRoute({
 });
 
 export const installMarketplaceExtensionHandler = (
-  deps: ExtensionsRouteDeps,
+  deps: ProjectExtensionLifecycleRouteDeps,
 ): AppRouteHandler<typeof installMarketplaceExtensionRoute> => {
   return async (c) => {
     const { installName, projectId } = c.req.valid("param");
-    const marketplace = deps.extensionUpgradeService;
-    if (!marketplace) return c.json({ error: "This Prompt Studio host does not support marketplace installs." }, 409);
-
     try {
-      const result = await marketplace.installMarketplaceExtension(projectId, installName);
-      scheduleProjectWorkspaceProvisioning(deps, projectId);
-      return c.json(
-        {
-          extension: toProjectExtensionInstance(
-            result.instance,
-            result.installedSource,
-            result.installedSource.source_hash,
-            {
-              canUpgrade: await marketplace.canUpgrade(result.installedSource),
-            },
-          ),
-        },
-        200,
-      );
+      return c.json(await deps.projectExtensionLifecycle.installMarketplace(projectId, installName), 200);
     } catch (error) {
       if (error instanceof ProjectNotFoundError) return c.json({ error: error.message }, 404);
       if (error instanceof ExtensionUpgradeUnavailableError || error instanceof ExtensionNameConflictError) {

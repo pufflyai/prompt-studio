@@ -38,21 +38,25 @@ const makeExtension = (
   writeFileSync(
     join(dir, "extension.ts"),
     `export default {
-  commands: {
-    hello: {
+  commands: [
+    {
+      id: "hello",
+      ref: { kind: "command", id: "hello" },
       title: "Hello",
       run() {
         throw new Error("command handlers must not run during install");
       },
     },
-  },
-  templates: {
-    ticket: {
+  ],
+  templates: [
+    {
+      id: "ticket",
+      ref: { kind: "template", id: "ticket" },
       title: "Ticket",
       type: "ticket",
       source: { kind: "package-asset", path: "./ticket.md", baseUrl: import.meta.url },
     },
-  },
+  ],
 };`,
   );
   writeFileSync(join(dir, "ticket.md"), "# ticket\n");

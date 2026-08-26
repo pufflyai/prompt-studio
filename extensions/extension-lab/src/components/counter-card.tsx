@@ -19,7 +19,7 @@ export const CounterCard = () => {
     let cancelled = false;
     void (async () => {
       try {
-        const next = await executeCounterCommand({ host, commandId: "extension-lab.counter.read" });
+        const next = await executeCounterCommand({ host, commandId: "pstdio.extension-lab.command.counter.read" });
         if (!cancelled) setCounter(next);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
@@ -63,7 +63,7 @@ export const CounterCard = () => {
             <Button
               type="button"
               variant="outline"
-              onClick={() => runCounterCommand("extension-lab.counter.bump", { amount: -1 })}
+              onClick={() => runCounterCommand("pstdio.extension-lab.command.counter.bump", { amount: -1 })}
               aria-label="Decrement"
               disabled={isPending}
             >
@@ -72,7 +72,7 @@ export const CounterCard = () => {
             <Button
               type="button"
               variant="primary"
-              onClick={() => runCounterCommand("extension-lab.counter.bump")}
+              onClick={() => runCounterCommand("pstdio.extension-lab.command.counter.bump")}
               aria-label="Increment"
               disabled={isPending}
             >
@@ -81,7 +81,7 @@ export const CounterCard = () => {
             <Button
               type="button"
               variant="ghost"
-              onClick={() => runCounterCommand("extension-lab.counter.reset")}
+              onClick={() => runCounterCommand("pstdio.extension-lab.command.counter.reset")}
               disabled={isPending}
             >
               Reset

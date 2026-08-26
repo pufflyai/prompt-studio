@@ -1,5 +1,4 @@
-import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
-import { createDashboardExtensionPanelResource } from "../extensions/extension-panel-resource";
+import type { ResourceRef, WorkbenchHierarchyNode, WorkbenchModuleContext } from "@pstdio/workbench";
 
 export interface ExtensionResourceReference {
   type: string;
@@ -8,6 +7,13 @@ export interface ExtensionResourceReference {
   icon?: string;
   metadata?: Record<string, unknown>;
 }
+
+export interface ExtensionViewParentReference {
+  type: "view";
+  viewId: string;
+}
+
+export type ExtensionHierarchyReference = ExtensionResourceReference | ExtensionViewParentReference;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -34,6 +40,15 @@ export const normalizeExtensionResourceReference = (value: unknown): ExtensionRe
   };
 };
 
+export const normalizeExtensionHierarchyReference = (value: unknown): ExtensionHierarchyReference | undefined => {
+  if (!isRecord(value)) return undefined;
+  if (value.type === "view") {
+    const viewId = textValue(value.viewId);
+    return viewId ? { type: "view", viewId } : undefined;
+  }
+  return normalizeExtensionResourceReference(value);
+};
+
 export interface DashboardResourceReferenceInput {
   projectId: string;
   /** Icon used when the reference declares none (e.g. the registered kind's icon). */
@@ -44,19 +59,6 @@ export const dashboardResourceFromExtensionReference = (
   reference: ExtensionResourceReference,
   input: DashboardResourceReferenceInput,
 ): ResourceRef => {
-  // Extension panels are browse roots with a canonical URI; a generic
-  // dashboard-workbench://extension-view/... URI would give the same view a
-  // second identity and break sidenav selection and breadcrumb sync.
-  if (reference.type === "extension-view") {
-    return createDashboardExtensionPanelResource({
-      extensionId: textValue(reference.metadata?.extensionId) ?? "",
-      icon: reference.icon ?? input.fallbackIcon,
-      label: reference.label ?? reference.id,
-      panelId: reference.id,
-      projectId: input.projectId,
-    });
-  }
-
   return {
     kind: reference.type,
     uri: `dashboard-workbench://${reference.type}/${encodeURIComponent(reference.id)}`,
@@ -70,9 +72,14 @@ export const dashboardResourceFromExtensionReference = (
   };
 };
 
-export const dashboardResourceParent = (ctx: WorkbenchModuleContext, resource: ResourceRef, projectId: string) => {
-  const reference = normalizeExtensionResourceReference(resource.metadata?.resourceParent);
+export const dashboardResourceParent = (
+  ctx: WorkbenchModuleContext,
+  resource: ResourceRef,
+  projectId: string,
+): WorkbenchHierarchyNode | undefined => {
+  const reference = normalizeExtensionHierarchyReference(resource.metadata?.resourceParent);
   if (!reference) return undefined;
+  if ("viewId" in reference) return reference;
   return dashboardResourceFromExtensionReference(reference, {
     projectId,
     fallbackIcon: ctx.resources.getKind(reference.type)?.icon,

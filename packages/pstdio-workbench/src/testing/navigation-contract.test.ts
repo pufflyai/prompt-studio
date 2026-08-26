@@ -15,7 +15,7 @@ const setup = (): RouteContractHarness => {
   workbench.modes.registerMode({ id: MODE, label: "Contract", activate: () => undefined });
   workbench.resources.registerKind({ kind: ROOT_KIND, label: "Root" });
   workbench.resources.registerKind({ kind: DETAIL_KIND, label: "Detail" });
-  workbench.layout.registerWidget({
+  workbench.layout.registerLocation({
     id: "contract-root-view",
     title: "Root",
     region: "main",
@@ -23,7 +23,7 @@ const setup = (): RouteContractHarness => {
     rendererId: "noop",
     resourceKinds: [ROOT_KIND],
   });
-  workbench.layout.registerWidget({
+  workbench.layout.registerLocation({
     id: "contract-detail-view",
     title: "Detail",
     region: "main",
@@ -73,7 +73,7 @@ describeResourceRouteContract({
 test("the active-URI invariant catches a wrapper-identity presenter", async () => {
   const workbench = createWorkbenchCore();
   workbench.resources.registerKind({ kind: "wrap-detail", label: "Detail" });
-  workbench.layout.registerWidget({
+  workbench.layout.registerLocation({
     id: "wrap-view",
     title: "Detail",
     region: "main",

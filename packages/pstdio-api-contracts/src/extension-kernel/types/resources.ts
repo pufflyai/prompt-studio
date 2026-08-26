@@ -11,6 +11,11 @@ export interface ResourceRef {
   metadata?: JsonObject;
 }
 
+export interface ViewHierarchyParent {
+  type: "view";
+  viewId: string;
+}
+
 export interface RendererInvocationContext {
   placement: "visible" | "background";
 }

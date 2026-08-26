@@ -5,7 +5,6 @@ import type { Skill } from "../../skills";
 import type { TemplateWithContent } from "../../templates";
 import type {
   CommandHelpersApi,
-  CommandInvocation,
   CommandMiddlewareResult,
   CommandNotice,
   CommandSource,
@@ -15,6 +14,7 @@ import type { EventDeliveryResult, EventRef } from "./events";
 import type { JsonObject, MaybePromise, Struct } from "./json";
 import type { RendererContext, RepoContext, ResourceAnchor, ResourceRef } from "./resources";
 import type { SlotInvocationContext } from "./slots";
+import type { ExtensionWorkspacesApi } from "./workspaces";
 
 export interface ExtensionStorageCollectionApi<TItem = unknown> {
   get(id: string): Promise<TItem | undefined>;
@@ -192,28 +192,6 @@ export interface ExtensionHarnessInput {
   model?: string;
 }
 
-export interface ExtensionWorkspace {
-  id: string;
-  name?: string;
-  project_id?: string;
-  workspace_shorthand?: string;
-  branch?: string | null;
-  worktree_path?: string | null;
-  anchors_json?: ResourceAnchor[];
-  initializing?: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface ExtensionWorkspacesApi {
-  list(): Promise<ExtensionWorkspace[]>;
-  get(id: string): Promise<ExtensionWorkspace | null>;
-  getByShorthand(shorthand: string): Promise<ExtensionWorkspace | null>;
-  create(input: JsonObject): Promise<ExtensionWorkspace>;
-  archive(id: string): Promise<void>;
-  delete(id: string): Promise<void>;
-}
-
 export interface ExtensionReposApi {
   list(): Promise<RepoContext[]>;
   get(repoId: string): Promise<RepoContext>;
@@ -329,30 +307,33 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   settings: ExtensionSettingsApi<TSettings>;
 }
 
-export interface CommandContext<
-  TParams extends Struct = Struct,
-  TSettings extends Record<string, unknown> = Record<string, unknown>,
-> extends ExtensionContextBase<TSettings> {
+export interface CommandContext<TSettings extends Record<string, unknown> = Record<string, unknown>>
+  extends ExtensionContextBase<TSettings> {
   commandId: string;
   invocationId: string;
-  invocation: CommandInvocation<TParams>;
+  invocation: {
+    readonly source?: CommandSource;
+    readonly attachment?: WorkbenchAttachmentInvocationContext;
+    readonly slot?: SlotInvocationContext;
+    readonly metadata?: JsonObject;
+  };
   resource?: ResourceRef;
   attachment?: WorkbenchAttachmentInvocationContext;
   slot?: SlotInvocationContext;
-  params: TParams;
 }
 
-export type CommandMiddlewareContext<TParams extends Struct = Struct> = CommandContext<TParams>;
+export type CommandMiddlewareContext = CommandContext;
 
 export type CommandMiddlewareHandler<TParams extends Struct = Struct> = (
-  ctx: CommandMiddlewareContext<TParams>,
+  ctx: CommandMiddlewareContext,
+  params: TParams,
 ) => MaybePromise<CommandMiddlewareResult<TParams>>;
 
 export type CommandRunHandler<
   TParams extends Struct = Struct,
   TResult = unknown,
   TSettings extends Record<string, unknown> = Record<string, unknown>,
-> = (ctx: CommandContext<TParams, TSettings>) => MaybePromise<TResult>;
+> = (ctx: CommandContext<TSettings>, params: TParams) => MaybePromise<TResult>;
 
 export type RendererCallback<
   TInput extends Struct = Struct,

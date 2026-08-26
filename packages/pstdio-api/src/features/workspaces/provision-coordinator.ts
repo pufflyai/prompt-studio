@@ -175,6 +175,13 @@ const runProjectWorkspaceProvisioning = async (
   if (repos.length === 0) return;
 
   for (const workspace of workspaces) {
+    if (workspace.provider_state && workspace.provider_state !== "ready") continue;
+    if (workspace.execution_kind && workspace.execution_kind !== "local") continue;
+    const targetsRootRepos = workspace.provider_id
+      ? workspace.provider_id === "pstdio.root" || workspace.is_default
+      : !workspace.worktree_path;
+    if (!workspace.worktree_path && !targetsRootRepos) continue;
+
     // A root workspace can span every linked repo; a worktree workspace resolves to its own
     // worktree dir regardless of the repo passed, so provisioning it once is enough.
     const repoPaths = workspace.worktree_path ? [repos[0].path] : repos.map((repo) => repo.path);

@@ -13,13 +13,17 @@ const resolveProjectDefaultPath = (projectId: string) => `/projects/${projectId}
 const bypassOnboarding = async (page: import("@playwright/test").Page) => {
   await page.addInitScript(() => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.harness-open-code.opencode");
+    localStorage.setItem("selected-agent", "pstdio.harness-open-code.harness.opencode");
   });
 };
 
 const availableAgentsResponse = [
-  { id: "pstdio.harness-open-code.opencode", name: "OpenCode", availability: { type: "INSTALLED" as const } },
-  { id: "pstdio.harness-claude-code.claude-code", name: "Claude Code", availability: { type: "INSTALLED" as const } },
+  { id: "pstdio.harness-open-code.harness.opencode", name: "OpenCode", availability: { type: "INSTALLED" as const } },
+  {
+    id: "pstdio.harness-claude-code.harness.claude-code",
+    name: "Claude Code",
+    availability: { type: "INSTALLED" as const },
+  },
 ];
 
 const mockAvailableAgents = async (page: Page) => {

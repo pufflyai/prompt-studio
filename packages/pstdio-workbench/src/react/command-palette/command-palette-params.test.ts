@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   buildCommandParamInitialValues,
+  createCommandFilesParamValue,
   hasCommandParameters,
   listCommandParamEntries,
   normalizeCommandParamValues,
@@ -24,6 +25,23 @@ describe("command palette params", () => {
         { amount: 2 },
       ),
     ).toEqual({ title: "Untitled", amount: "2", tags: "[]" });
+  });
+
+  test("keeps existing file refs separate from pending browser files", () => {
+    expect(
+      buildCommandParamInitialValues(
+        {
+          files: { type: "files", defaultValue: ["default-ref"] },
+        },
+        { files: ["preset-ref"] },
+      ),
+    ).toEqual({ files: { refs: ["preset-ref"], uploads: [] } });
+  });
+
+  test("keeps one existing ref for a single-file parameter", () => {
+    expect(
+      buildCommandParamInitialValues({ files: { type: "files", multiple: false } }, { files: ["first", "second"] }),
+    ).toEqual({ files: { refs: ["first"], uploads: [] } });
   });
 
   test("deduplicates selection options by value", () => {
@@ -88,5 +106,24 @@ describe("command palette params", () => {
         },
       ),
     ).toEqual({ title: "New ticket", count: 3, enabled: true, tags: ["bug"] });
+  });
+
+  test("preserves pending file values for host preparation", () => {
+    const file = new File(["first"], "first.csv", { type: "text/csv" });
+    const files = createCommandFilesParamValue({
+      refs: ["existing-ref"],
+      uploads: [{ id: "first", file, status: "queued" }],
+    });
+
+    expect(normalizeCommandParamValues({ files: { type: "files", required: true } }, { files })).toEqual({ files });
+  });
+
+  test("requires either an existing ref or a pending file", () => {
+    expect(() =>
+      normalizeCommandParamValues(
+        { files: { type: "files", label: "Data files", required: true } },
+        { files: createCommandFilesParamValue() },
+      ),
+    ).toThrow("Missing required parameter: Data files");
   });
 });

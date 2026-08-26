@@ -42,6 +42,28 @@ describe("createResourceRegistry surface routing", () => {
 });
 
 describe("createResourceRegistry hierarchy", () => {
+  test("uses an explicit view as the terminal root without fabricating a resource", () => {
+    const resources = createResourceRegistry({
+      resolveView: (viewId) =>
+        viewId === "pstdio-planner.tickets" ? { label: "Tickets", icon: "square-kanban" } : undefined,
+    });
+    const parent = { kind: "ticket", uri: "pstdio://ticket/parent", label: "PS-1 Parent" };
+    const child = { kind: "ticket", uri: "pstdio://ticket/child", label: "PS-2 Child" };
+
+    resources.registerHierarchyProvider({
+      id: "tickets",
+      canResolve: (resource) => resource.kind === "ticket",
+      getParent: (resource) =>
+        resource.uri === parent.uri ? { type: "view", viewId: "pstdio-planner.tickets" } : parent,
+    });
+
+    expect(resources.walkHierarchy(child)).toEqual([
+      { type: "view", viewId: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" },
+      parent,
+      child,
+    ]);
+  });
+
   test("walks canonical parent edges into a root-to-leaf resource path", () => {
     const resources = createResourceRegistry();
     const tickets = { kind: "dashboard-view", uri: "pstdio://tickets", label: "Tickets" };

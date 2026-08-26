@@ -4,6 +4,7 @@ import type {
   WorkbenchPanelRegion,
   WorkbenchWidgetPlacement,
 } from "../../registries/layout/layout-model";
+import { getActiveLocationPlacement } from "../../registries/layout/layout-operations";
 import { isWorkbenchPanelPlacementVisible } from "../../registries/layout/panel-widget-eligibility";
 import {
   isWorkbenchModePanelAvailable,
@@ -66,6 +67,7 @@ const addModePanels = (input: {
 const addRegisteredPanels = (input: {
   addable: Map<string, WorkbenchCompositionAddablePanel>;
   modeId: string | undefined;
+  location: WorkbenchWidgetPlacement | undefined;
   placements: readonly WorkbenchWidgetPlacement[];
   region: WorkbenchPanelRegion;
   resource: ResourceRef | undefined;
@@ -75,7 +77,12 @@ const addRegisteredPanels = (input: {
     if (!contribution.eligibleLocations) continue;
     if (contribution.region !== input.region && contribution.fallbackRegion !== input.region) continue;
     if (input.addable.has(contribution.id) || isOpenSingleton(contribution, input.placements, input.resource)) continue;
-    if (!isWorkbenchPanelPlacementVisible(contribution, input.resource, input.modeId)) continue;
+    if (
+      !isWorkbenchPanelPlacementVisible(contribution, input.resource, input.modeId, undefined, {
+        location: input.location,
+      })
+    )
+      continue;
     input.addable.set(contribution.id, { panelId: contribution.id, region: input.region, contribution });
   }
 };
@@ -87,6 +94,7 @@ export const createWorkbenchCompositionController = (
     const layout = input.getLayout();
     const open = layout.regions[region]?.widgets ?? [];
     const resource = input.getResource();
+    const location = getActiveLocationPlacement(layout);
     const mode = input.getActiveMode();
     if (!isWorkbenchModePanelAvailable(mode, region)) return { open, addable: [], closable: [] };
 
@@ -95,7 +103,7 @@ export const createWorkbenchCompositionController = (
     const addable = new Map<string, WorkbenchCompositionAddablePanel>();
 
     addModePanels({ addable, layout, mode, placements, region, resource, widgets });
-    addRegisteredPanels({ addable, modeId: mode?.id, placements, region, resource, widgets });
+    addRegisteredPanels({ addable, location, modeId: mode?.id, placements, region, resource, widgets });
 
     return {
       open,

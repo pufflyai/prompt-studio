@@ -6,6 +6,7 @@ import {
   buildCommandParamInitialValues,
   type CommandParamEntry,
   type CommandParamValue,
+  isCommandFilesParamValue,
   listCommandParamEntries,
   mergeCommandParamArgs,
   normalizeCommandParamValues,
@@ -27,6 +28,12 @@ export type { CommandParamFieldProps, CommandParamFieldRenderer } from "./comman
 interface CommandParamsDialogProps {
   request: CommandParamsRequest | null;
   renderParamField?: CommandParamFieldRenderer;
+  prepareArgs?: (input: {
+    commandId: string;
+    args: unknown;
+    context?: WorkbenchCommandExecutionContext;
+    onArgsChange: (args: unknown) => void;
+  }) => Promise<unknown>;
   onClose: () => void;
   onRun: (input: {
     commandId: string;
@@ -38,12 +45,13 @@ interface CommandParamsDialogProps {
 
 const isFilled = (entry: CommandParamEntry, value: CommandParamValue) => {
   if (entry.type === "boolean") return value !== undefined;
+  if (isCommandFilesParamValue(value)) return value.refs.length + value.uploads.length > 0;
   if (Array.isArray(value)) return value.length > 0;
   return typeof value === "string" && value.length > 0;
 };
 
 export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
-  const { request, renderParamField, onClose, onRun } = props;
+  const { request, renderParamField, prepareArgs, onClose, onRun } = props;
   const [values, setValues] = useState<Record<string, CommandParamValue>>({});
   const [error, setError] = useState<string | undefined>();
   const [submitting, setSubmitting] = useState(false);
@@ -70,9 +78,19 @@ export const CommandParamsDialog = (props: CommandParamsDialogProps) => {
     setError(undefined);
     try {
       const params = normalizeCommandParamValues(request.record.command.params, values);
+      const args = mergeCommandParamArgs(request.args, params);
+      const preparedArgs = prepareArgs
+        ? await prepareArgs({
+            commandId: request.record.command.id,
+            args,
+            context: request.context,
+            onArgsChange: (nextArgs) =>
+              setValues(buildCommandParamInitialValues(request.record.command.params, nextArgs, request.context)),
+          })
+        : args;
       await onRun({
         commandId: request.record.command.id,
-        args: mergeCommandParamArgs(request.args, params),
+        args: preparedArgs,
         context: request.context,
         label: request.label,
       });

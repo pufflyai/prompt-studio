@@ -332,7 +332,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
 
   const removeProjectExtensionInstance = async (instanceId: string) => {
     const removed = await deps.extensionInstancesService.remove(instanceId);
-    if (removed) deps.eventBus?.emit("extension_instances", "delete", { id: instanceId });
+    if (removed) deps.eventBus?.emit("extension_instances", "delete", removed);
     return removed;
   };
 

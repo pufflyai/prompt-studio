@@ -8,7 +8,7 @@ import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardResources } from "@/shared/app/resources";
+import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
@@ -31,13 +31,10 @@ const STORY_TICKET_WIDGET_ID = "story.ticket-location";
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
-const ticketsResource = {
-  kind: "dashboard-view",
-  uri: `dashboard-workbench://project/${PROJECT_ID}/kanban-renderer/tickets`,
-  id: "tickets",
+const ticketsView = {
+  id: "pstdio-planner.tickets",
   label: "Tickets",
   icon: "square-kanban",
-  metadata: { collectionId: "tickets", projectId: PROJECT_ID },
 };
 const parentTicketResource = {
   kind: "ticket",
@@ -101,7 +98,8 @@ const createTicketsNavigationModule = () => ({
     ctx.resources.registerHierarchyProvider({
       id: "story.ticket-hierarchy",
       canResolve: (resource) => resource.kind === "ticket",
-      getParent: (resource) => dashboardResourceParent(ctx, resource, PROJECT_ID) ?? ticketsResource,
+      getParent: (resource) =>
+        dashboardResourceParent(ctx, resource, PROJECT_ID) ?? { type: "view", viewId: ticketsView.id },
     });
     ctx.resources.registerPresenter({
       id: "story.ticket-presenter",
@@ -118,6 +116,16 @@ const createTicketsNavigationModule = () => ({
       },
     });
     ctx.modes.registerMode({ id: "pstdio-planner.ticket", label: "Ticket", activate: () => undefined });
+    ctx.views.registerView({
+      id: ticketsView.id,
+      panelId: STORY_TICKET_WIDGET_ID,
+      title: ticketsView.label,
+      icon: ticketsView.icon,
+      resolveInput: (input) => {
+        ctx.navigator.commitContext({ modeId: "pstdio-planner.ticket", resource: null });
+        return input;
+      },
+    });
     registerSidenavContribution(ctx, {
       id: "story.tickets-navigation",
       modes: ["*"],
@@ -125,10 +133,10 @@ const createTicketsNavigationModule = () => ({
       order: 40,
       getHeaderNodes: () => [
         {
-          id: ticketsResource.uri,
-          label: ticketsResource.label,
-          icon: ticketsResource.icon,
-          resource: ticketsResource,
+          id: ticketsView.id,
+          label: ticketsView.label,
+          icon: ticketsView.icon,
+          target: { kind: "view", viewId: ticketsView.id },
         },
       ],
     });
@@ -249,7 +257,6 @@ const bootstrapWorkbench = () => {
   linkSessionsToWorkspace();
 
   const workbench = createWorkbenchCore();
-  workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
 
   for (const module of [
     createSidenavModule(),
@@ -281,6 +288,10 @@ const openInMode = (workbench: WorkbenchCore, resource: Parameters<WorkbenchCore
   void workbench.resources.openResource(resource, { replaceActive: true });
 };
 
+const openView = (workbench: WorkbenchCore, viewId: string) => {
+  void workbench.views.openView(viewId, { strategy: { kind: "replace-active" } });
+};
+
 const meta = {
   title: "Dashboard/Sidenav",
   parameters: { layout: "fullscreen" },
@@ -310,20 +321,18 @@ const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
 
 // F15: the project selector and global collections stay fixed while the resource region is empty.
 export const ProjectMode: Story = {
-  render: () => <SidenavStory open={(workbench) => openInMode(workbench, dashboardResources.start)} />,
+  render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.start.id)} />,
 };
 
 // Aggregate collection: the same header stays mounted and Workspaces is not duplicated in the resource region.
 export const WorkspacesView: Story = {
-  render: () => <SidenavStory open={(workbench) => openInMode(workbench, dashboardResources.workspaces)} />,
+  render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.workspaces.id)} />,
 };
 
 export const WorkspacesViewHover: Story = {
-  render: () => <SidenavStory open={(workbench) => openInMode(workbench, dashboardResources.workspaces)} />,
+  render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.workspaces.id)} />,
   play: async ({ canvasElement }) => {
-    canvasElement
-      .querySelector('[data-tree-list-focus-id="dashboard-workbench://dashboard-view/workspaces"]')
-      ?.setAttribute("data-hover", "");
+    canvasElement.querySelector('[data-tree-list-focus-id="workspaces"]')?.setAttribute("data-hover", "");
   },
 };
 
@@ -351,7 +360,7 @@ export const TicketWorkspaceBackJourney: Story = {
 
 // Session mode: global collections stay fixed above an expanded Sessions group with inline creation.
 export const SessionMode: Story = {
-  render: () => <SidenavStory open={(workbench) => openInMode(workbench, dashboardResources.sessions)} />,
+  render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.sessions.id)} />,
 };
 
 // Workspace mode: global collections stay fixed above the expanded, workspace-scoped Sessions group.

@@ -339,6 +339,9 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
       <CommandParamsDialog
         request={paramsRequest}
         renderParamField={renderParamField}
+        prepareArgs={(input) =>
+          workbench.commands.prepareCommandArgs(input.commandId, input.args, input.context, input.onArgsChange)
+        }
         onClose={() => workbench.commandPalette.clearParams()}
         onRun={(input) => executePaletteCommand({ workbench, ...input })}
       />

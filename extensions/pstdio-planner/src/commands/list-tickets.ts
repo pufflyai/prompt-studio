@@ -7,6 +7,7 @@ import { sortedBySortOrder } from "../utils/sort";
 // (Decision 3); the result is curated display rows so the router renders a tidy
 // table. `--parent` doubles as the "sub-tickets of X" query.
 export const listTicketsCommand = defineCommand({
+  id: "list-tickets",
   title: "List tickets",
   cli: {
     globalAliases: [["tickets", "list"]],
@@ -19,7 +20,7 @@ export const listTicketsCommand = defineCommand({
     draft: params.boolean(),
     parent: params.text(),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const [tickets, statuses, tags] = await Promise.all([
       ticketsCollection(ctx.storage).list(),
       statusesCollection(ctx.storage).list(),
@@ -29,14 +30,14 @@ export const listTicketsCommand = defineCommand({
     const statusNameById = new Map(statuses.map((status) => [status.id, status.name]));
     const optionNameById = new Map(tags.flatMap((tag) => tag.options).map((option) => [option.id, option.name]));
 
-    const statusId = ctx.params.status ? await resolveStatusId(ctx.storage, ctx.params.status) : undefined;
-    const tagIds = ctx.params.tags?.length ? await resolveTagOptionIds(ctx.storage, ctx.params.tags) : undefined;
-    const parentId = ctx.params.parent ? await resolveTicketId(ctx.storage, ctx.params.parent) : undefined;
+    const statusId = commandParams.status ? await resolveStatusId(ctx.storage, commandParams.status) : undefined;
+    const tagIds = commandParams.tags?.length ? await resolveTagOptionIds(ctx.storage, commandParams.tags) : undefined;
+    const parentId = commandParams.parent ? await resolveTicketId(ctx.storage, commandParams.parent) : undefined;
 
     // Drafts and archived tickets are hidden by default, matching the legacy
     // `tickets list`; --draft / --archived select that subset instead.
-    const archivedFilter = ctx.params.archived ?? false;
-    const draftFilter = ctx.params.draft ?? false;
+    const archivedFilter = commandParams.archived ?? false;
+    const draftFilter = commandParams.draft ?? false;
 
     return sortedBySortOrder(
       tickets.filter((ticket) => {

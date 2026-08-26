@@ -250,6 +250,7 @@ export type {
   NavigationTargetItem,
   NavigationTargetPanel,
   NavigationTargetResource,
+  NavigationTargetView,
   RegisteredNavigationParser,
   RegisteredResourceNavigator,
   ResourceNavigator,
@@ -400,12 +401,15 @@ export type {
   ResourceRef,
   ResourceRegistry,
   ResourceSurface,
+  WorkbenchHierarchyNode,
+  WorkbenchViewHierarchyNode,
 } from "./registries/resources/resource-registry";
 export {
   createResourceRegistry,
   createWorkbenchResourceContextValues,
   createWorkbenchSelectionResourceMetadata,
   getWorkbenchSelectionResourceUris,
+  isWorkbenchViewHierarchyNode,
   resourceHierarchyCycleCode,
   workbenchResourceIdContextKey,
   workbenchResourceKindContextKey,
@@ -430,6 +434,24 @@ export type {
 } from "./registries/settings/settings-registry";
 export { createSettingsRegistry } from "./registries/settings/settings-registry";
 export type {
+  CreateWorkbenchStatusBarRegistryInput,
+  WorkbenchStatusBarItem,
+  WorkbenchStatusBarRegistry,
+  WorkbenchStatusBarRegistryState,
+  WorkbenchStatusBarSlot,
+} from "./registries/status-bar/status-bar-registry";
+export { createStatusBarRegistry } from "./registries/status-bar/status-bar-registry";
+export type {
+  RegisteredWorkbenchStatusSet,
+  WorkbenchStatusRegistry,
+  WorkbenchStatusRegistryState,
+  WorkbenchStatusSetContribution,
+  WorkflowStatus,
+  WorkflowStatusAction,
+  WorkflowStatusBoardRules,
+} from "./registries/statuses/status-registry";
+export { createStatusRegistry } from "./registries/statuses/status-registry";
+export type {
   FileIconThemeFont,
   FileIconThemePreferenceOption,
 } from "./registries/themes/file-icon-theme-contracts";
@@ -446,6 +468,16 @@ export type {
 } from "./registries/themes/theme-contracts";
 export type { ThemeRegistry, WorkbenchThemeStoreState } from "./registries/themes/theme-registry";
 export { createThemeRegistry } from "./registries/themes/theme-registry";
+export type {
+  CreateWorkbenchViewRegistryInput,
+  OpenWorkbenchViewInput,
+  RegisteredWorkbenchView,
+  WorkbenchViewContribution,
+  WorkbenchViewOpenEvent,
+  WorkbenchViewRegistry,
+  WorkbenchViewRegistryStoreState,
+} from "./registries/views/view-registry";
+export { createViewRegistry, workbenchViewIdContextKey } from "./registries/views/view-registry";
 export type { ContextKeyScope, ContextKeyService, ContextKeyValue } from "./shared/context/context-key-service";
 export { createContextKeyService, matchesContextExpression } from "./shared/context/context-key-service";
 export type {

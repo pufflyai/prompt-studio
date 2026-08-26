@@ -59,6 +59,23 @@ describe("workbench composition query", () => {
     expect(workbench.composition.panelsFor("side").addable.map((panel) => panel.panelId)).toEqual(["session"]);
   });
 
+  test("offers registered panels that match the active view location", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.layout.registerPanel({ id: "start", title: "Start", region: "main", rendererId: "start" });
+    workbench.views.registerView({ id: "start", panelId: "start", title: "Start" });
+    workbench.layout.registerPanel({
+      id: "session",
+      title: "Session",
+      region: "side",
+      rendererId: "session",
+      eligibleLocations: { canOpenLocation: ({ viewId }) => viewId === "start" },
+    });
+
+    await workbench.views.openView("start");
+
+    expect(workbench.composition.panelsFor("side").addable.map((panel) => panel.panelId)).toEqual(["session"]);
+  });
+
   test("does not offer panels in a region excluded by the active mode", () => {
     const workbench = createWorkbenchCore();
     workbench.layout.registerPanel({

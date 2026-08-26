@@ -169,7 +169,7 @@ const resolveEntry = (diagnostics: ExtensionDiagnostic[], packagePath: string, p
 };
 
 // An extension declares the exact API version it was built against. Ranges are refused:
-// `^1.0.0-alpha.1` also matches `1.0.0-alpha.2` under semver, so a range would wave through
+// `^1.0.0-alpha.1` also matches `1.0.0-alpha.3` under semver, so a range would wave through
 // every alpha bump while looking like a gate.
 const isVersionRange = (declared: string) => /^[\^~><=*]/.test(declared);
 

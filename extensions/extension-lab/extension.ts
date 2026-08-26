@@ -1,22 +1,29 @@
-import { commandRef, defineExtension, l10n, packageAsset } from "@pstdio/sdk/extensions";
+import {
+  defineCommandPaletteResource,
+  defineExtension,
+  defineKeybinding,
+  defineSkill,
+  defineTemplate,
+  l10n,
+  packageAsset,
+} from "@pstdio/sdk/extensions";
 import { labCommands, labSchedules } from "./src/commands";
+import { queryLabResources } from "./src/commands/lab-resources-command";
+import { sayHelloCommand } from "./src/commands/say-hello-command";
 import { labSettings } from "./src/data/lab-settings";
 import { labHarnesses } from "./src/harnesses";
 import { labHooks } from "./src/hooks";
 import { labMiddlewares } from "./src/middlewares";
+import { labWorkflowStatuses } from "./src/renderers/lab-workflow-statuses";
 import {
-  createLabPanels,
-  createLabRoutes,
-  createLabSettingsPanels,
-  createLabStatusItems,
+  createLabUi,
   labActivityItems,
-  labControlsRenderers,
-  labDataTableRenderers,
   labModes,
   labResourceKinds,
-  labTreeItems,
-  labTreeRenderers,
+  labSettingsSection,
 } from "./src/renderers/ui-contributions";
+
+const labUi = createLabUi(import.meta.url);
 
 const extension = defineExtension({
   defaultLocale: "en",
@@ -34,44 +41,48 @@ const extension = defineExtension({
 
   modes: labModes,
   resourceKinds: labResourceKinds,
-  panels: createLabPanels(import.meta.url),
-  statusItems: createLabStatusItems(import.meta.url),
-  routes: createLabRoutes(import.meta.url),
-  treeItems: labTreeItems,
+  views: labUi.views,
+  resourceViews: labUi.resourceViews,
+  viewMenus: labUi.viewMenus,
+  placements: labUi.placements,
+  navigationItems: labUi.navigationItems,
+  statusBarItems: labUi.statusBarItems,
+  statuses: [labWorkflowStatuses],
   activityItems: labActivityItems,
-  controlsRenderers: labControlsRenderers,
-  dataTableRenderers: labDataTableRenderers,
-  treeRenderers: labTreeRenderers,
-  commandPaletteResources: {
-    slides: {
+  commandPaletteResources: [
+    defineCommandPaletteResource({
+      id: "slides",
       title: l10n("commandPaletteResources.slides.title", "Lab slides"),
-      resourceKind: "lab.slide",
-      queryCommand: commandRef("extension-lab.command-palette-resources.query"),
-    },
-  },
-  settingsPanels: createLabSettingsPanels(import.meta.url),
+      query: queryLabResources,
+    }),
+  ],
+  settingsPanels: labUi.settingsPanels,
+  settingsSections: [labSettingsSection],
 
-  keybindings: {
-    "say-hello": {
+  keybindings: [
+    defineKeybinding({
+      id: "say-hello",
       key: "mod+shift+h",
-      command: commandRef("extension-lab.say-hello"),
-    },
-  },
+      command: sayHelloCommand.ref,
+    }),
+  ],
 
-  templates: {
-    labResource: {
+  templates: [
+    defineTemplate({
+      id: "labResource",
       title: l10n("templates.labResource.title", "Glass Lab artifact"),
       type: "glass-lab-artifact",
       source: packageAsset("./templates/lab-ticket.md", import.meta.url),
-    },
-  },
+    }),
+  ],
 
-  skills: {
-    labResource: {
+  skills: [
+    defineSkill({
+      id: "labResource",
       title: l10n("skills.labResource.title", "Glass Lab Curator"),
       source: packageAsset("./skills/lab-resource", import.meta.url),
-    },
-  },
+    }),
+  ],
 });
 
 export default extension;

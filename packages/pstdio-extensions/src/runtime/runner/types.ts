@@ -6,6 +6,7 @@ import type {
   EventDeliveryResult,
   ExtensionActivityApi,
   ExtensionArtifactApi,
+  ExtensionContextBase,
   ExtensionFilesApi,
   ExtensionLoggerApi,
   ExtensionNetApi,
@@ -99,6 +100,7 @@ export interface HostCommandExecuteInput<TResult = unknown> extends CommandExecu
 }
 
 export interface CommandRunner {
+  buildExtensionContext(input: BuildEnvironmentInput): Promise<ExtensionContextBase>;
   execute(input: CommandExecuteInput): Promise<CommandOutcome>;
   executeHostCommand<TResult = unknown>(input: HostCommandExecuteInput<TResult>): Promise<CommandOutcome<TResult>>;
   dispatchEvent(input: ExtensionEventDispatchInput): Promise<EventDeliveryResult>;

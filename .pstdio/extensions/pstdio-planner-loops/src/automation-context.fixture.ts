@@ -171,33 +171,33 @@ export const makeAutomationContext = (state: PlannerFixtureState) => {
 
   const run = (commandId: string, params: Record<string, unknown>): unknown => {
     switch (commandId) {
-      case "pstdio-planner.automation-policy":
+      case "pstdio.pstdio-planner.command.automation-policy":
         return { maxInProgress: state.maxInProgress ?? 2 };
-      case "pstdio-planner.read-tickets":
+      case "pstdio.pstdio-planner.command.read-tickets":
         return state.tickets;
-      case "pstdio-planner.ticketStatus.read":
+      case "pstdio.pstdio-planner.command.ticketStatus.read":
         return { statuses };
-      case "pstdio-planner.ticketTag.read":
+      case "pstdio.pstdio-planner.command.ticketTag.read":
         return { tags };
-      case "pstdio-planner.get-ticket":
+      case "pstdio.pstdio-planner.command.get-ticket":
         return findTicket(params.id as string);
-      case "pstdio-planner.set-ticket-attribute":
+      case "pstdio.pstdio-planner.command.set-ticket-attribute":
         return setAttribute(params as { rowId: string; attributeId: string; value: string });
-      case "pstdio-planner.refine-ticket":
+      case "pstdio.pstdio-planner.command.refine-ticket":
         return { id: `refine-session-${++createdSessions}` };
-      case "pstdio-planner.run-attempt":
+      case "pstdio.pstdio-planner.command.run-attempt":
         return runAttempt(params);
-      case "pstdio-planner.runReview":
+      case "pstdio.pstdio-planner.command.runReview":
         return runReview(params);
-      case "pstdio-planner.list-attempts":
+      case "pstdio.pstdio-planner.command.list-attempts":
         return attempts;
-      case "pstdio-planner.reconcile-attempt":
+      case "pstdio.pstdio-planner.command.reconcile-attempt":
         return reconcileAttempt(params);
-      case "pstdio-planner.ticket-workspaces": {
+      case "pstdio.pstdio-planner.command.ticket-workspaces": {
         const ticket = findTicket(params.id as string);
         return state.workspacesByTicket?.[ticket?.shorthand ?? ""] ?? [];
       }
-      case "pstdio-planner.workspace-activity":
+      case "pstdio.pstdio-planner.command.workspace-activity":
         return state.activityByWorkspace?.[params.workspaceId as string] ?? { active: false, sessions: [] };
       default:
         throw new Error(`Unexpected planner command: ${commandId}`);
@@ -214,8 +214,12 @@ export const makeAutomationContext = (state: PlannerFixtureState) => {
     },
     sessions: { get: async (id: string) => state.sessionsById?.[id] ?? null },
     commands: {
-      execute: async (ref: { id: string } | string, invocation: { params?: Record<string, unknown> }) => {
-        const commandId = typeof ref === "string" ? ref : ref.id;
+      execute: async (
+        ref: { extensionId?: string; id: string } | string,
+        invocation: { params?: Record<string, unknown> },
+      ) => {
+        const commandId =
+          typeof ref === "string" ? ref : ref.extensionId ? `${ref.extensionId}.command.${ref.id}` : ref.id;
         const params = invocation.params ?? {};
         calls.push({ commandId, params });
         return { ok: true, status: "success", value: run(commandId, params) };

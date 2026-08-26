@@ -56,7 +56,7 @@ describe("packaged extension webviews", () => {
           expect(createRes.status).toBe(201);
           const project = (await createRes.json()) as { id: string };
 
-          let labRoute: WorkbenchExtensionMetadata["routes"][number] | undefined;
+          let labWebview: Extract<WorkbenchExtensionMetadata["views"][number]["body"], { kind: "webview" }> | undefined;
           const deadline = Date.now() + 30_000;
           while (Date.now() < deadline) {
             const metadataRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
@@ -64,16 +64,17 @@ describe("packaged extension webviews", () => {
             });
             expect(metadataRes.status).toBe(200);
             const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
-            labRoute = metadata.routes.find((route) => route.path === "lab");
-            if (labRoute?.webview.moduleUrl) {
-              const moduleRes = await fetch(`${started.baseUrl}${labRoute.webview.moduleUrl}`, {
+            const labView = metadata.views.find((view) => view.path === "lab");
+            labWebview = labView?.body.kind === "webview" ? labView.body : undefined;
+            if (labWebview?.webview.moduleUrl) {
+              const moduleRes = await fetch(`${started.baseUrl}${labWebview.webview.moduleUrl}`, {
                 headers: runtimeAuthorization(started.descriptor),
               });
               if (moduleRes.ok) break;
             }
             await Bun.sleep(250);
           }
-          expect(labRoute?.webview.moduleUrl).toBeTruthy();
+          expect(labWebview?.webview.moduleUrl).toBeTruthy();
 
           browser = await browserCase.type.launch({ headless: true, ...browserCase.launchOptions });
           const page = await browser.newPage();
@@ -84,24 +85,14 @@ describe("packaged extension webviews", () => {
             }
           });
           await page.addInitScript(
-            ({ projectId, route }) => {
+            ({ projectId }) => {
               localStorage.setItem("onboarding-complete", "true");
               localStorage.setItem("dashboard-wb:selected-project:global", projectId);
-              localStorage.setItem(
-                `dashboard-wb:last-resource:${projectId}`,
-                JSON.stringify({
-                  id: route.path,
-                  kind: "extension-route",
-                  label: "Lab",
-                  metadata: { projectId, route, routePath: route.path },
-                  uri: `dashboard-workbench://project/${projectId}/extensions/${route.path}`,
-                }),
-              );
             },
-            { projectId: project.id, route: labRoute! },
+            { projectId: project.id },
           );
 
-          await page.goto(`${started.baseUrl}/projects/${project.id}`, { waitUntil: "domcontentloaded" });
+          await page.goto(`${started.baseUrl}/projects/${project.id}/lab`, { waitUntil: "domcontentloaded" });
           const iframe = page.locator('iframe[title="Lab"]');
           await iframe.waitFor({ state: "visible", timeout: 30_000 });
           expect(await iframe.getAttribute("sandbox")).not.toContain("allow-same-origin");

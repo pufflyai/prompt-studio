@@ -21,7 +21,7 @@ describe("workbench modules", () => {
 
         return [
           ctx.resources.registerKind({ kind: "project", label: "Project", icon: "folder" }),
-          ctx.layout.registerWidget({
+          ctx.layout.registerLocation({
             id: "project.settings",
             title: "Project settings",
             region: "main",

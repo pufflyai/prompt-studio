@@ -1,5 +1,6 @@
 import { sessionLogger } from "../../lib/logger";
 import type { SessionsRouteDeps } from "./deps";
+import { getSessionHarness } from "./get-session-harness";
 import { reattachAgentSession } from "./spawn-agent";
 
 type Deps = Pick<
@@ -35,7 +36,7 @@ export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) 
 
     if (deps.sessionService.store.get(session.id)) continue;
 
-    const harness = session.agent ? await deps.harnessRegistry.get(session.agent) : null;
+    const harness = await getSessionHarness(deps.harnessRegistry, session);
     const canReattach =
       harness?.supportsReattach &&
       (await harness.capabilities()).includes("SessionReattach") &&

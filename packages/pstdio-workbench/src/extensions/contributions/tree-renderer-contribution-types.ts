@@ -1,11 +1,5 @@
-import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type {
-  CommandRef,
-  ExtensionNavigationTarget,
-  Localizable,
-  ParamObjectSchema,
-  Struct,
-} from "@pstdio/sdk/extensions";
+import type { CommandRef, Localizable, NavigationTarget, ParamObjectSchema, Struct } from "@pstdio/sdk/extensions";
+import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 
 export type ExtensionTreeRendererRecord = NonNullable<WorkbenchExtensionMetadata["treeRenderers"]>[number];
 export type ExtensionTreePanelRecord = WorkbenchExtensionMetadata["panels"][number];
@@ -20,13 +14,13 @@ export interface ExtensionTreeResource {
   metadata?: Record<string, unknown>;
 }
 
-export type ExtensionTreeTarget = ExtensionNavigationTarget;
+export type ExtensionTreeTarget = NavigationTarget;
 
 export interface ExtensionTreeAction {
   id: string;
   label?: Localizable<string>;
   icon?: string;
-  command?: CommandRef<Struct, unknown> | string;
+  command?: CommandRef<Struct, unknown>;
   params?: Struct;
   input?: ParamObjectSchema;
   submitLabel?: string;

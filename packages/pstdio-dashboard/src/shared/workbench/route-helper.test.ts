@@ -6,7 +6,7 @@ import { selectDashboardProject } from "@/shared/app/project-context";
 import { registerResourceRoute } from "./route-helper";
 
 const ROOT = {
-  kind: "dashboard-view",
+  kind: "route-test-root",
   uri: "dashboard-workbench://route-test",
   id: "workspaces",
   label: "Route test",
@@ -19,7 +19,7 @@ const MODE = "route-test-mode";
 const setup = (): RouteContractHarness => {
   const workbench = createWorkbenchCore();
   selectDashboardProject(workbench, { id: "project-1", name: "Route test" });
-  workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
+  workbench.resources.registerKind({ kind: ROOT.kind, label: "Root" });
   workbench.resources.registerKind({ kind: DETAIL_KIND, label: "Detail" });
 
   workbench.registerModule({
@@ -32,7 +32,7 @@ const setup = (): RouteContractHarness => {
         region: "main",
         singleton: true,
         rendererId: "noop",
-        resourceKinds: ["dashboard-view"],
+        resourceKinds: [ROOT.kind],
       });
       ctx.layout.registerPanel({
         id: "route-test-detail",
@@ -72,14 +72,14 @@ describeResourceRouteContract({
 });
 
 describe("registerResourceRoute navigation state", () => {
-  test("keeps aggregate collections separate from selected resources", async () => {
+  test("replaces the selected domain resource", async () => {
     const { workbench } = setup();
     const detail = { kind: DETAIL_KIND, uri: "route-test://detail/1", id: "1", label: "Detail 1" };
 
     await workbench.resources.openResource(ROOT);
 
-    expect(getDashboardActiveCollection(workbench)).toBe("workspaces");
-    expect(getDashboardSelectedResource(workbench)).toBeUndefined();
+    expect(getDashboardActiveCollection(workbench)).toBeUndefined();
+    expect(getDashboardSelectedResource(workbench)).toEqual(ROOT);
 
     await workbench.resources.openResource(detail, { replaceActive: true });
 

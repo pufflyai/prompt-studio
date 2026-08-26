@@ -26,9 +26,10 @@ export const writeProvisionHarnessExtension = (
   writeFileSync(
     join(sourcePath, "extension.ts"),
     `export default {
-  harnesses: {
-    ${JSON.stringify(options.localId)}: {
+  harnesses: [
+    {
       id: ${JSON.stringify(options.localId)},
+      ref: { kind: "harness", id: ${JSON.stringify(options.localId)} },
       label: ${JSON.stringify(options.localId)},
       skills: { dir: ${JSON.stringify(options.skillsDir)} },
       capabilities: () => [],
@@ -36,11 +37,13 @@ export const writeProvisionHarnessExtension = (
       start: () => ({ done: Promise.resolve({ status: "completed" }), stop: () => {} }),
       resume: () => ({ done: Promise.resolve({ status: "completed" }), stop: () => {} }),
     },
-  },
-  hooks: {
-    provision: {
-      eventId: "workspace.provision",
-      async handler(ctx) {
+  ],
+  hooks: [
+    {
+      id: "provision",
+      ref: { kind: "hook", id: "provision" },
+      event: { extensionId: "pstdio", kind: "event", id: "workspace.provision" },
+      async run(ctx) {
         const skills = (await ctx.skills?.list?.()) ?? [];
         const files = skills.flatMap((skill) =>
           skill.files.map((file) => ({ path: skill.name + "/" + file.path, content: file.content })),
@@ -48,7 +51,7 @@ export const writeProvisionHarnessExtension = (
         if (ctx.workspaceFiles) await ctx.workspaceFiles.syncDir(${JSON.stringify(options.skillsDir)}, files);
       },
     },
-  },
+  ],
 };
 `,
     "utf8",

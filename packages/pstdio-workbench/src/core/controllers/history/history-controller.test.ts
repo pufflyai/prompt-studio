@@ -7,7 +7,7 @@ const setupWorkbench = () => {
   const workbench = createWorkbenchCore();
 
   workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
-  workbench.layout.registerWidget({
+  workbench.layout.registerLocation({
     id: "ticket-viewer",
     title: "Ticket",
     region: "main",
@@ -16,7 +16,7 @@ const setupWorkbench = () => {
     rendererId: "noop",
     resourceKinds: [TICKET_KIND],
   });
-  workbench.layout.registerWidget({
+  workbench.layout.registerLocation({
     id: "scratch",
     title: "Scratch",
     region: "main",
@@ -25,7 +25,7 @@ const setupWorkbench = () => {
     reuse: "none",
     rendererId: "noop",
   });
-  workbench.layout.registerWidget({
+  workbench.layout.registerLocation({
     id: "sidenav",
     title: "Sidenav",
     region: "sidenav",
@@ -46,6 +46,72 @@ const openTicket = (workbench: ReturnType<typeof setupWorkbench>, id: string) =>
   workbench.resources.openResource({ kind: TICKET_KIND, uri: `${TICKET_KIND}:${id}`, id, label: `Ticket ${id}` });
 
 describe("createHistoryController", () => {
+  test("records and reopens stable view identities through the view registry", async () => {
+    const workbench = createWorkbenchCore();
+    for (const id of ["tickets", "font-editor"]) {
+      workbench.layout.registerLocation({
+        id: `${id}.panel`,
+        title: id,
+        region: "main",
+        rendererId: "noop",
+        closable: true,
+      });
+      workbench.views.registerView({ id, panelId: `${id}.panel`, title: id });
+    }
+
+    await workbench.views.openView("tickets");
+    await workbench.views.openView("font-editor");
+
+    expect(workbench.history.store.getState().entries.map((entry) => entry.viewId)).toEqual(["tickets", "font-editor"]);
+    expect(workbench.history.store.getState().entries.map((entry) => entry.kind)).toEqual(["view", "view"]);
+
+    workbench.history.goBack();
+    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe("tickets.panel");
+  });
+
+  test("reopens a closed view with its resource binding", async () => {
+    const workbench = createWorkbenchCore();
+    const ticket = { kind: TICKET_KIND, uri: `${TICKET_KIND}:PS-298`, id: "PS-298" };
+    workbench.layout.registerLocation({
+      id: "tickets.panel",
+      title: "Tickets",
+      region: "main",
+      rendererId: "noop",
+      closable: true,
+    });
+    workbench.views.registerView({ id: "tickets", panelId: "tickets.panel", title: "Tickets" });
+
+    const opened = await workbench.views.openView("tickets", { resource: ticket });
+    workbench.layout.closePanel(opened.instanceId);
+    expect(workbench.history.recentlyClosed().at(-1)).toMatchObject({
+      kind: "view",
+      viewId: "tickets",
+      resource: ticket,
+    });
+
+    workbench.history.reopenLastClosed();
+    expect(workbench.layout.getLayout().regions.main.widgets.at(-1)).toMatchObject({
+      viewId: "tickets",
+      resource: ticket,
+    });
+  });
+
+  test("replays a view when its singleton panel was rebound to a resource", async () => {
+    const workbench = setupWorkbench();
+    workbench.views.registerView({ id: "tickets", panelId: "ticket-viewer", title: "Tickets" });
+
+    await workbench.views.openView("tickets");
+    await openTicket(workbench, "PS-298");
+    workbench.history.goBack();
+    await Promise.resolve();
+
+    expect(workbench.layout.getLayout().regions.main.widgets[0]).toMatchObject({
+      viewId: "tickets",
+      resource: undefined,
+    });
+    expect(workbench.layout.getLayout().activeResourceUri).toBeUndefined();
+  });
+
   test("records every successful open with a stable cursor", async () => {
     const workbench = setupWorkbench();
     await openTicket(workbench, "PS-1");
@@ -185,7 +251,7 @@ describe("createHistoryController navigation", () => {
     const opened: string[] = [];
 
     workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "ticket-viewer",
       title: "Ticket",
       region: "main",
@@ -248,14 +314,14 @@ describe("createHistoryController navigation", () => {
 
     workbench.resources.registerKind({ kind: "history.test.board", label: "Board" });
     workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "board-view",
       title: "Board",
       region: "main",
       singleton: true,
       rendererId: "noop",
     });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "ticket-editor",
       title: "Ticket",
       region: "main",
@@ -310,7 +376,7 @@ describe("createHistoryController navigation", () => {
     const workbench = createWorkbenchCore();
     const opened: string[] = [];
     workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "ticket-editor",
       title: "Ticket",
       region: "main",
@@ -381,7 +447,7 @@ describe("createHistoryController mode-aware navigation", () => {
 
     workbench.resources.registerKind({ kind: "history.test.project-item", label: "Project item" });
     workbench.resources.registerKind({ kind: "history.test.workspace-file", label: "Workspace file" });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "project-viewer",
       title: "Project",
       region: "main",
@@ -389,7 +455,7 @@ describe("createHistoryController mode-aware navigation", () => {
       rendererId: "noop",
       resourceKinds: ["history.test.project-item"],
     });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "workspace-viewer",
       title: "Workspace",
       region: "main",
@@ -481,7 +547,7 @@ describe("createHistoryController mode-aware navigation", () => {
     const board = { kind: "board", uri: "board:tickets", id: "tickets", label: "Tickets" };
 
     workbench.resources.registerKind({ kind: "board", label: "Board" });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "board-viewer",
       title: "Board",
       region: "main",
@@ -526,7 +592,7 @@ describe("createHistoryController mode-aware navigation", () => {
       region: "main",
       rendererId: "noop",
     });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "ticket-sidenav",
       title: "Ticket sidenav",
       region: "sidenav",

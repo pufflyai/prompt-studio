@@ -10,13 +10,13 @@ The core workspace commands manage standalone Git worktrees. Planner ticket atte
 ## Commands
 
 ```sh
-pst workspaces create [--base <ref>] [--target worktree]
+pst workspaces create [--base <ref>] [--provider <id>] [--params <json>]
 pst workspaces list [--json]
 pst workspaces merge --id <workspace-id> [--delete-workspace]
 pst workspaces delete --id <workspace-id>
 ```
 
-`create` makes a worktree-backed workspace from `HEAD` or the ref passed to `--base`. The only supported target is `worktree`.
+`create` makes a worktree-backed workspace from `HEAD` or the ref passed to `--base`. Use `--provider` and `--params` for an extension provider.
 
 `list` prints active workspaces. Use `--json` when another tool needs the complete records.
 

@@ -63,14 +63,8 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
       }
       if (url.pathname.endsWith("/file") && browserRequest.method() === "PUT") fileWrites.push(url.search);
     });
-
     await prepareDashboard(page, project.id, repo.id);
     await page.goto(`/projects/${project.id}/workspaces`);
-    await page
-      .locator('[data-workbench-region="sidenav"]')
-      .getByRole("option", { name: /^Workspaces(?:\s|$)/ })
-      .first()
-      .click();
     await openWorkspace(page, attempt.workspace.workspace_shorthand);
 
     const filesTab = page.getByRole("tab", { name: "Files" });
@@ -193,11 +187,6 @@ test("PS-118 browses and edits files in the default workspace", async ({ page, r
 
     await prepareDashboard(page, project.id, repo.id);
     await page.goto(`/projects/${project.id}/workspaces`);
-    await page
-      .locator('[data-workbench-region="sidenav"]')
-      .getByRole("option", { name: /^Workspaces(?:\s|$)/ })
-      .first()
-      .click();
     await openWorkspace(page, workspace.workspace_shorthand);
 
     await page.getByRole("tab", { name: "Files" }).click();
@@ -222,15 +211,16 @@ test("PS-118 browses and edits files in the default workspace", async ({ page, r
     const changesTab = page.getByRole("tab", { name: "Changes" });
     await changesTab.click();
     await page.getByRole("textbox", { name: "Search files" }).fill("README");
+    await page.getByTestId("diff-viewer").getByRole("option", { name: "README.md M" }).click();
     await readmeBodyResponse;
-    await expect(page.getByTestId("diff-viewer").getByRole("option", { name: /README\.md/ })).toBeVisible();
+    await expect(page.getByTestId("diff-viewer").getByRole("option", { name: "README.md M" })).toBeVisible();
     await expect(
       page.getByTestId("diff-viewer").getByRole("row", { name: /Edited in the default workspace/ }),
     ).toBeVisible();
 
     await page.getByRole("tab", { name: "Files" }).click();
     await page.getByRole("textbox", { name: "Search files" }).fill("README");
-    await expect(page.getByRole("option", { name: /README\.md/ }).getByText("M", { exact: true })).toBeVisible();
+    await expect(page.getByRole("option", { name: "README.md M" }).getByText("M", { exact: true })).toBeVisible();
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

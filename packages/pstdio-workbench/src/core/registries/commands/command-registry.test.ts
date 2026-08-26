@@ -50,6 +50,27 @@ describe("createCommandRegistry", () => {
     expect(contexts).toEqual([{ resource }]);
   });
 
+  test("prepares command args and reports intermediate values before execution", async () => {
+    const commands = createCommandRegistry();
+    const reported: unknown[] = [];
+
+    commands.registerCommand(
+      { id: "files.read", label: "Read files" },
+      {
+        prepareArgs: async (args: { files: string | string[] }, _context, onArgsChange) => {
+          onArgsChange?.({ files: "uploading" });
+          return { ...args, files: ["ref-1"] };
+        },
+        execute: (args) => args,
+      },
+    );
+
+    await expect(
+      commands.prepareCommandArgs("files.read", { files: "queued" }, undefined, (args) => reported.push(args)),
+    ).resolves.toEqual({ files: ["ref-1"] });
+    expect(reported).toEqual([{ files: "uploading" }]);
+  });
+
   test("rejects duplicate command ids until a registration is disposed", async () => {
     const commands = createCommandRegistry();
     const first = commands.registerCommand({ id: "resource.open", label: "Open Resource" }, { execute: () => "first" });

@@ -9,7 +9,7 @@ const originalFetch = globalThis.fetch;
 
 const AGENTS_INFO = [
   {
-    id: "pstdio.harness-claude-code.claude-code",
+    id: "pstdio.harness-claude-code.harness.claude-code",
     availability: { type: "INSTALLED" },
     skills: { dir: ".claude/skills", global_dir: ".claude/skills" },
   },

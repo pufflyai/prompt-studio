@@ -25,22 +25,39 @@ describe("workspaces create", () => {
     const createStandaloneWorkspace = mock(async () => mockWorkspace) as never;
 
     const handler = createHandler({ ...baseDeps, createStandaloneWorkspace });
-    await handler({ target: "worktree", base: "main", _: [], $0: "" } as never);
+    await handler({ base: "main", _: [], $0: "" } as never);
 
     expect(createStandaloneWorkspace).toHaveBeenCalledWith({ projectId: "proj-1", base: "main" });
   });
 
-  test("throws on invalid target", async () => {
+  test("passes provider and params through to the API", async () => {
+    const createStandaloneWorkspace = mock(async () => mockWorkspace) as never;
+
+    const handler = createHandler({ ...baseDeps, createStandaloneWorkspace });
+    await handler({
+      provider: "example.remote",
+      params: '{"repository":"acme/repo"}',
+      _: [],
+      $0: "",
+    } as never);
+
+    expect(createStandaloneWorkspace).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      base: undefined,
+      providerId: "example.remote",
+      params: { repository: "acme/repo" },
+    });
+  });
+
+  test("throws on invalid params JSON", async () => {
     const handler = createHandler(baseDeps);
-    await expect(handler({ target: "docker", _: [], $0: "" } as never)).rejects.toThrow(
-      "Invalid target: docker. Must be 'worktree'.",
+    await expect(handler({ provider: "example.remote", params: "{", _: [], $0: "" } as never)).rejects.toThrow(
+      "Invalid --params JSON",
     );
   });
 
   test("throws when not in git repo", async () => {
     const handler = createHandler({ ...baseDeps, findGitRoot: () => null });
-    await expect(handler({ target: "worktree", _: [], $0: "" } as never)).rejects.toThrow(
-      "Not inside a git repository.",
-    );
+    await expect(handler({ _: [], $0: "" } as never)).rejects.toThrow("Not inside a git repository.");
   });
 });

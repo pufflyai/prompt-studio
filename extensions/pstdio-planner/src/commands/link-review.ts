@@ -5,6 +5,7 @@ import { inferReviewLinkTarget } from "../data/review-links";
 import type { StoredTicketReviewLink } from "../data/types";
 
 export const linkReviewCommand = defineCommand({
+  id: "link-review",
   title: "Link review",
   cli: {
     globalAliases: [["tickets", "link-review"]],
@@ -15,16 +16,16 @@ export const linkReviewCommand = defineCommand({
     url: params.text({ required: true }),
     title: params.text(),
   },
-  async run(ctx) {
-    const ticket = await findTicket(ctx.storage, ctx.params.id);
-    if (!ticket) throw new Error(`Unknown ticket "${ctx.params.id}"`);
+  async run(ctx, commandParams) {
+    const ticket = await findTicket(ctx.storage, commandParams.id);
+    if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
 
     const now = new Date().toISOString();
     const reviewLink: StoredTicketReviewLink = {
       id: crypto.randomUUID(),
-      url: ctx.params.url,
-      ...inferReviewLinkTarget(ctx.params.url),
-      title: ctx.params.title ?? null,
+      url: commandParams.url,
+      ...inferReviewLinkTarget(commandParams.url),
+      title: commandParams.title ?? null,
       createdAt: now,
       updatedAt: now,
     };

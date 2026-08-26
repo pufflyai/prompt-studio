@@ -58,6 +58,7 @@ export const commandSourceSchema = z.enum([
 export const extensionWhenExpressionSchema = z.object({
   mode: z.union([z.string(), z.array(z.string())]).optional(),
   source: z.array(commandSourceSchema).optional(),
+  viewId: z.union([z.string(), z.array(z.string())]).optional(),
   resourceType: z.array(z.string()).optional(),
   metadata: jsonObjectSchema.optional(),
 });

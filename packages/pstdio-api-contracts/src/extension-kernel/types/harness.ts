@@ -10,6 +10,7 @@ import type {
 import type { SessionMessage } from "../../session-messages";
 import type { Localizable } from "../l10n";
 import type { ExtensionLoggerApi, ExtensionNetApi, ExtensionProcessApi } from "./context";
+import type { ContributionDefinition } from "./contribution-identity";
 import type { MaybePromise } from "./json";
 import type { BooleanParam, SelectParam } from "./params";
 
@@ -88,9 +89,7 @@ export type HarnessParamsSchema = Record<string, HarnessParamDescriptor>;
  * (and approval channel) and owns the session lifecycle: timeouts, persistence,
  * and status transitions are keyed off the returned HarnessSession.
  */
-export interface HarnessProvider {
-  /** Bare local id (e.g. "claude-code"); the runtime composes `${extensionId}.${id}`. */
-  id: string;
+export interface HarnessProvider extends ContributionDefinition<"harness"> {
   label: Localizable<string>;
   /** Declares skill directories so the host installs project skills for this agent. Absent = no skill setup. */
   skills?: HarnessSkillsLayout;

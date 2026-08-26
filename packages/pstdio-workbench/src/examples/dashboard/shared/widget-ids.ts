@@ -6,7 +6,7 @@ export const dashboardWidgetIds = {
   workspace: "dashboard-workbench.workspace",
   ticketSidenav: "dashboard-workbench.ticket-sidenav",
   sessions: "dashboard-workbench.sessions",
-  extensionRoute: "dashboard-workbench.extension-route",
+  extensionPage: "dashboard-workbench.extension-page",
   status: "dashboard-workbench.status",
   session: "dashboard-workbench.session",
 } as const;

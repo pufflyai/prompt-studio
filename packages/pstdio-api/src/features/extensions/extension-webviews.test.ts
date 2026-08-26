@@ -24,7 +24,7 @@ describe("classifyWebviewEntry", () => {
 });
 
 describe("collectExtensionWebviews", () => {
-  test("collects route, Panel, nested Panel Menu, and settings webviews by package name id", () => {
+  test("collects every webview body from views and ignores placements that reuse them", () => {
     const webviews = collectExtensionWebviews({
       metadata: {
         id: "pstdio.test",
@@ -34,26 +34,25 @@ describe("collectExtensionWebviews", () => {
         enginesPstdio: "^1.0.0",
       },
       definition: {
-        routes: { page: { webview: { entry: asset("./route.tsx") } } },
-        panels: {
-          panel: {
-            webview: { entry: asset("./view.tsx") },
-            panelMenus: {
-              inspector: { side: "right", webview: { entry: asset("./inspector.tsx") } },
-            },
-          },
-        },
-        settingsPanels: { prefs: { webview: { entry: asset("./settings.tsx") } } },
-        statusItems: { status: { webview: { entry: asset("./status.tsx") } } },
-      },
+        views: [
+          { id: "page", title: "Page", body: { kind: "webview", entry: asset("./page.tsx") } },
+          { id: "panel", title: "Panel", body: { kind: "webview", entry: asset("./panel.tsx") } },
+          { id: "inspector", title: "Inspector", body: { kind: "webview", entry: asset("./inspector.tsx") } },
+          { id: "prefs", title: "Preferences", body: { kind: "webview", entry: asset("./settings.tsx") } },
+          { id: "status", title: "Status", body: { kind: "webview", entry: asset("./status.tsx") } },
+          { id: "tree", title: "Tree", body: { kind: "tree", body: () => [] } },
+        ],
+        settingsPanels: [{ id: "prefs", view: { kind: "view", id: "prefs" }, slot: { id: "project.settings" } }],
+        statusBarItems: [{ id: "status", view: { kind: "view", id: "status" }, slot: { id: "status-bar.leading" } }],
+      } as never,
     });
 
     expect(webviews.map((webview) => webview.id).sort()).toEqual([
-      "test.page",
-      "test.panel",
-      "test.panel.inspector",
-      "test.prefs",
-      "test.status",
+      "pstdio.test.view.inspector",
+      "pstdio.test.view.page",
+      "pstdio.test.view.panel",
+      "pstdio.test.view.prefs",
+      "pstdio.test.view.status",
     ]);
   });
 });

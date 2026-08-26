@@ -1,5 +1,5 @@
 import type { WorkbenchExtensionCommandPaletteResourceRecord } from "@pstdio/sdk/api";
-import type { ExtensionNavigationTarget } from "@pstdio/sdk/extensions";
+import type { NavigationTarget } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { CommandPaletteResourceResult, Disposable } from "../../core";
 import { FILE_SECTION_NAVIGATION_METADATA_KEY } from "../../core/registries/renderers/file-section-navigation";
@@ -17,7 +17,7 @@ interface ResourceItem {
   description?: string;
   icon?: string;
   keywords?: string[];
-  target: ExtensionNavigationTarget;
+  target: NavigationTarget;
 }
 
 interface ProviderQueryResult {
@@ -27,8 +27,10 @@ interface ProviderQueryResult {
 const isProviderQueryResult = (value: unknown): value is ProviderQueryResult =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const commandIdOf = (command: Extract<ExtensionNavigationTarget, { kind: "command" }>["command"]) =>
-  typeof command === "string" ? command : command.id;
+const commandIdOf = (
+  command: Extract<NavigationTarget, { kind: "command" }>["target"]["command"],
+  extensionId: string,
+) => `${command.extensionId ?? extensionId}.command.${command.id}`;
 
 const activateTarget = async (
   context: WorkbenchExtensionCommandContext,
@@ -37,7 +39,9 @@ const activateTarget = async (
 ) => {
   const { target } = item;
   if (target.kind === "command") {
-    await executeWorkbenchExtensionCommand(context, commandIdOf(target.command), { params: target.params });
+    await executeWorkbenchExtensionCommand(context, commandIdOf(target.target.command, record.extensionId), {
+      params: target.target.params,
+    });
     // A selected command may mutate extension data; refresh providers so a reopened
     // palette reflects the change without an app reload.
     context.workbench.commandPaletteResources.refresh();
@@ -46,6 +50,7 @@ const activateTarget = async (
 
   await context.workbench.navigation.openTarget(
     toWorkbenchNavigationTarget(target, {
+      extensionId: record.extensionId,
       resourceOf: (resource, resourceTarget) => {
         const resolved = toWorkbenchResource(resource);
         if (!resourceTarget.section) return resolved;
@@ -95,7 +100,7 @@ export const registerWorkbenchExtensionCommandPaletteResources = (
         refreshEventIds: record.refreshEventIds,
         query: async ({ query, limit }) => {
           const activeResource = context.workbench.getActiveResource();
-          const value = await executeWorkbenchExtensionCommand(context, record.queryCommandId, {
+          const value = await executeWorkbenchExtensionCommand(context, record.queryHandlerId, {
             params: {
               projectId: context.projectId,
               modeId: context.workbench.modes.getActiveModeId(),

@@ -4,6 +4,7 @@ import { findTicket } from "../data/resolve";
 import { ticketResourceHierarchyMetadata } from "../data/ticket-resource-hierarchy";
 import type { StoredTicket } from "../data/types";
 import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
+import { ticketSlots } from "../slots";
 
 export const ticketActionParams = {
   ticket: params.text({ label: "Ticket" }),
@@ -32,9 +33,10 @@ const nonEmptyText = (value: string | undefined) => {
 };
 
 export const resolveTicket = (
-  ctx: Pick<CommandContext<{ ticket?: string; rowId?: string }>, "attachment" | "params" | "resource">,
+  ctx: Pick<CommandContext, "attachment" | "resource">,
+  commandParams: { ticket?: string; rowId?: string },
 ) => {
-  const ticket = nonEmptyText(ctx.params.ticket) ?? nonEmptyText(ctx.params.rowId);
+  const ticket = nonEmptyText(commandParams.ticket) ?? nonEmptyText(commandParams.rowId);
   if (ticket) return ticket;
 
   if (ctx.resource?.type === "ticket") return ctx.resource.id;
@@ -103,19 +105,25 @@ export const createAnchoredWorkspace = async (
       repo?: { repoId: string; branch?: string };
       mode?: string;
     }>,
-    "extensionId" | "params" | "projectId" | "resource" | "attachment" | "storage" | "workspaces"
+    "extensionId" | "projectId" | "resource" | "attachment" | "storage" | "workspaces"
   >,
+  commandParams: {
+    ticket?: string;
+    rowId?: string;
+    repo?: { repoId: string; branch?: string };
+    mode?: string;
+  },
   base?: string,
 ) => {
-  const { mode, repo } = ctx.params;
-  const ticketRef = resolveTicket(ctx);
+  const { mode, repo } = commandParams;
+  const ticketRef = resolveTicket(ctx, commandParams);
   const { anchor, shorthand, ticket } = await resolveTicketAnchor(ctx, ticketRef);
   const attemptMode = mode === "current_branch" ? mode : "worktree";
   const workspace = await ctx.workspaces.create({
     project_id: ctx.projectId,
     shorthand_base: shorthand,
     anchors: [anchor],
-    mode: attemptMode,
+    provider_id: attemptMode === "current_branch" ? "pstdio.root" : "pstdio.worktree",
     ...(repo ? { repo_id: repo.repoId } : {}),
     ...((base ?? repo?.branch) ? { base: base ?? repo?.branch } : {}),
   });
@@ -124,10 +132,11 @@ export const createAnchoredWorkspace = async (
 };
 
 export const createWorkspaceCommand = defineCommand({
+  id: "create-workspace",
   title: "Create workspace",
   menus: [
     {
-      slot: "ticket.headerOverflow",
+      slot: ticketSlots.headerOverflow,
       label: l10n("kanbanRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
       icon: "git-branch",
       placement: "first",
@@ -139,8 +148,8 @@ export const createWorkspaceCommand = defineCommand({
     repo: params.repo({ label: "Workspace" }),
     mode: workspaceModeParam,
   },
-  async run(ctx) {
-    const { mode, ticket, workspace } = await createAnchoredWorkspace(ctx);
+  async run(ctx, commandParams) {
+    const { mode, ticket, workspace } = await createAnchoredWorkspace(ctx, commandParams);
 
     return {
       mode,
@@ -152,10 +161,11 @@ export const createWorkspaceCommand = defineCommand({
 });
 
 export const refineTicketCommand = defineCommand({
+  id: "refine-ticket",
   title: "Refine ticket",
   menus: [
     {
-      slot: "ticket.headerOverflow",
+      slot: ticketSlots.headerOverflow,
       label: l10n("kanbanRenderers.tickets.rowActions.refineTicket", "Refine ticket"),
       icon: "sparkles",
     },
@@ -165,9 +175,9 @@ export const refineTicketCommand = defineCommand({
     template: params.template({ label: "Template", type: "ticket", required: false }),
     context: params.longText({ label: "Additional context", required: false }),
   },
-  async run(ctx) {
-    const { agent, context, template } = ctx.params;
-    const ticketRef = resolveTicket(ctx);
+  async run(ctx, commandParams) {
+    const { agent, context, template } = commandParams;
+    const ticketRef = resolveTicket(ctx, commandParams);
     const { anchor, shorthand } = await resolveTicketAnchor(ctx, ticketRef);
     const session = await ctx.sessions.create({
       title: `Refine ticket: ${shorthand}`,
@@ -185,6 +195,7 @@ export const refineTicketCommand = defineCommand({
 });
 
 export const proposalRefinedCommand = defineCommand({
+  id: "proposal-refined",
   title: "Mark proposal refined",
   cli: {
     globalAliases: [["tickets", "proposal-refined"]],
@@ -193,21 +204,22 @@ export const proposalRefinedCommand = defineCommand({
   params: {
     id: params.text({ label: "Ticket", required: true }),
   },
-  async run(ctx) {
-    const ticket = await findTicket(ctx.storage, ctx.params.id);
-    if (!ticket) throw new Error(`Unknown ticket "${ctx.params.id}"`);
+  async run(ctx, commandParams) {
+    const ticket = await findTicket(ctx.storage, commandParams.id);
+    if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
     await notifyProposalRefined(ctx, ticket);
     return { ticket, notified: true };
   },
 });
 
 export const approveProposalCommand = defineCommand({
+  id: "approve-proposal",
   title: "Approve proposal",
   params: {
     ticket: selectedTicketParams.ticket,
   },
-  async run(ctx) {
-    const ticketRef = resolveTicket(ctx);
+  async run(ctx, commandParams) {
+    const ticketRef = resolveTicket(ctx, commandParams);
     const ticket = await findTicket(ctx.storage, ticketRef);
     if (!ticket) throw new Error(`Unknown ticket "${ticketRef}"`);
     await resolveProposalRefinedNotification(ctx, ticket);
@@ -216,10 +228,11 @@ export const approveProposalCommand = defineCommand({
 });
 
 export const breakIntoSubTicketsCommand = defineCommand({
+  id: "break-into-sub-tickets",
   title: "Break into sub-tickets",
   menus: [
     {
-      slot: "ticket.headerOverflow",
+      slot: ticketSlots.headerOverflow,
       label: l10n("kanbanRenderers.tickets.rowActions.breakIntoSubTickets", "Break into sub-tickets"),
       icon: "list-tree",
     },
@@ -228,9 +241,9 @@ export const breakIntoSubTicketsCommand = defineCommand({
     ...ticketActionParams,
     template: params.template({ label: "Template", type: "ticket", required: false }),
   },
-  async run(ctx) {
-    const { agent, template } = ctx.params;
-    const ticketRef = resolveTicket(ctx);
+  async run(ctx, commandParams) {
+    const { agent, template } = commandParams;
+    const ticketRef = resolveTicket(ctx, commandParams);
     const { anchor, shorthand } = await resolveTicketAnchor(ctx, ticketRef);
 
     return ctx.sessions.create({

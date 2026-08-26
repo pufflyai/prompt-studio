@@ -1,15 +1,18 @@
-import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { WorkbenchModuleContext } from "../../core";
+import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 import {
   panelRendererId,
   registerWorkbenchExtensionPanel,
+  resolveWorkbenchExtensionViewInput,
   toWorkbenchCompositionPanelContribution,
+  type WorkbenchExtensionViewInputResolver,
 } from "./panel-contributions";
 import type { ExtensionTreePanelRecord } from "./tree-renderer-contribution-types";
 
 interface RegisterTreeViewWidgetInput {
-  workbench: WorkbenchModuleContext;
   resourcePanels?: WorkbenchExtensionMetadata["resourcePanels"];
+  resolveViewInput?: WorkbenchExtensionViewInputResolver;
+  workbench: WorkbenchModuleContext;
 }
 
 export const registerTreeViewWidget = (
@@ -22,6 +25,9 @@ export const registerTreeViewWidget = (
   if (!rendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: input.workbench,
+    path: panel.path,
+    aliases: panel.aliases,
+    resolveInput: resolveWorkbenchExtensionViewInput(input.resolveViewInput, panel),
     contribution: toWorkbenchCompositionPanelContribution({
       panel,
       rendererId,

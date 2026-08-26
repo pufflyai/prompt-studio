@@ -1,5 +1,22 @@
 # @pstdio/sdk
 
+## 0.20.0
+
+_2026-08-25_
+
+### Minor Changes
+
+- 8db7aa1: Add a typed webview client (`createWebviewClient`) with react-query hooks to the SDK and expose the owning extension id to webview guests.
+
+## 0.19.0
+
+_2026-08-24_
+
+### Minor Changes
+
+- 88e89b2: Add workspace file browsing, stable Monaco editing, file and folder actions, drag-to-move entries, file icons, live change badges, current and fork-point Changes views, and macOS Finder reveal.
+- c257623: Fetch default extensions from Git, add concurrent Available installs with contribution details and upgrades, preserve data across clean reinstalls, and seed isolation with a repo-local notification example.
+
 ## 0.18.0
 
 _2026-08-21_

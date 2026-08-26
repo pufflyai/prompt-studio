@@ -4,6 +4,7 @@ import type {
   KanbanRendererBoardColumnConfig,
   KanbanRendererEnumOption,
   Localizable,
+  StatusRef,
 } from "@pstdio/sdk/extensions";
 import { l10n } from "@pstdio/sdk/extensions";
 import { bySortOrder } from "../utils/sort";
@@ -213,13 +214,15 @@ const tagToAttribute = (tag: StoredTag): KanbanRendererAttributeDescriptor => ({
 });
 
 export const buildTicketAttributes = (
-  statuses: StoredStatus[],
+  statuses: StoredStatus[] | StatusRef,
   tags: StoredTag[] = [],
 ): KanbanRendererAttributeDescriptor[] => [
   {
     id: "status",
     label: l10n("displayMenu.propertyOptions.status", "Status"),
-    type: { kind: "enum", options: [...statuses].sort(bySortOrder).map(statusToOption) },
+    type: Array.isArray(statuses)
+      ? { kind: "enum", options: [...statuses].sort(bySortOrder).map(statusToOption) }
+      : { kind: "status", statuses },
     groupable: true,
     filterable: true,
     displayable: true,

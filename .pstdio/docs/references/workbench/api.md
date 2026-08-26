@@ -293,7 +293,7 @@ Use `resourcePanels` only to bind a panel to a resource kind owned by another
 extension. The extension host normalizes all of these declarations and lets the
 composition resolver own placement and closability.
 
-See the [extension mode guide](../../../../extensions/docs/modes-and-layout.md)
+See the [extension mode guide](../../extensions/modes-and-layout.md)
 for full recipes and cross-extension slots.
 
 ## Shell, persistence, and React

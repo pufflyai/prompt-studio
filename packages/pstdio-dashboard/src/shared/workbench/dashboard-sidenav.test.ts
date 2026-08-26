@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench";
-import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
-import { dashboardResources } from "@/shared/app/resources";
+import { selectDashboardNavigationResource, selectDashboardNavigationView } from "@/shared/app/navigation-state";
+import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { registerSidenavContribution } from "./contributions/sidenav-tree-contributions";
 import { registerDashboardSidenav } from "./dashboard-sidenav";
@@ -35,8 +35,8 @@ describe("registerDashboardSidenav", () => {
     registerDashboardSidenav(workbench);
 
     expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav)).toMatchObject({
-      expandedNodeIds: ["sessions"],
-      expandedSectionIds: ["sessions"],
+      expandedNodeIds: ["workspace-sessions"],
+      expandedSectionIds: ["sessions-wrap"],
     });
   });
 
@@ -84,7 +84,7 @@ describe("registerDashboardSidenav", () => {
     ]);
     expect(resourceReads).toEqual([undefined, workspace.uri]);
 
-    selectDashboardNavigationResource(workbench, dashboardResources.workspaces);
+    selectDashboardNavigationView(workbench, dashboardViews.workspaces.id);
 
     expect(await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav)).toEqual([
       { id: "resource", nodes: [{ id: "aggregate", label: "Aggregate" }] },

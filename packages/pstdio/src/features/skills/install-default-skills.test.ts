@@ -51,13 +51,13 @@ const toApiSkill = (s: (typeof SKILL_FIXTURES)[number]) => ({
 });
 
 const CLAUDE_AGENT = {
-  id: "pstdio.harness-claude-code.claude-code",
+  id: "pstdio.harness-claude-code.harness.claude-code",
   availability: { type: "INSTALLED" as const },
   skills: { dir: ".claude/skills", global_dir: ".claude/skills" },
 };
 
 const OPENCODE_AGENT = {
-  id: "pstdio.harness-open-code.opencode",
+  id: "pstdio.harness-open-code.harness.opencode",
   availability: { type: "INSTALLED" as const },
   skills: { dir: ".agents/skills", global_dir: ".agents/skills" },
 };
@@ -294,7 +294,7 @@ describe("installSkillsForAgent", () => {
   });
 
   test("installs nothing for a harness without a skills layout", async () => {
-    mockApi([{ id: "pstdio.extension-lab.fake", availability: { type: "INSTALLED" as const } }]);
+    mockApi([{ id: "pstdio.extension-lab.harness.fake", availability: { type: "INSTALLED" as const } }]);
     const root = setup("no-skills-agent");
 
     const installed = await installSkillsForAgent({

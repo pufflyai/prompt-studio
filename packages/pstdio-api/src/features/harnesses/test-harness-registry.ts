@@ -6,7 +6,7 @@ import type { HarnessRegistryService } from "./harness-registry-service";
 
 // Test support: an in-memory harness registry mirroring the namespaced ids the
 // real extension-backed registry produces.
-export const testHarnessId = (localId: string) => `pstdio.pstdio-${localId}.${localId}`;
+export const testHarnessId = (localId: string) => `pstdio.pstdio-${localId}.harness.${localId}`;
 
 // Mirrors the skills layouts the bundled harness extensions declare.
 const defaultSkillsLayout = (localId: string) =>
@@ -26,6 +26,7 @@ export const createTestHarnessRecord = (
     start: () => ({ done: Promise.resolve({ status: "completed" as const }), stop: () => {} }),
     resume: () => ({ done: Promise.resolve({ status: "completed" as const }), stop: () => {} }),
     ...options?.provider,
+    ref: options?.provider?.ref ?? { kind: "harness", id: localId },
   };
 
   return {

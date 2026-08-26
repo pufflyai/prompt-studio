@@ -39,13 +39,15 @@ const makeExtension = (root: string, input: { name?: string; version?: string; t
   writeFileSync(
     join(root, "extension.ts"),
     `export default {
-  templates: {
-    ${input.templateKey ?? "ticket"}: {
+  templates: [
+    {
+      id: "${input.templateKey ?? "ticket"}",
+      ref: { kind: "template", id: "${input.templateKey ?? "ticket"}" },
       title: "Ticket",
       type: "ticket",
       source: { kind: "package-asset", path: "./ticket.md", baseUrl: import.meta.url },
     },
-  },
+  ],
 };`,
   );
   writeFileSync(join(root, "ticket.md"), "# ticket\n");
@@ -262,6 +264,45 @@ describe("extensionService", () => {
     expect(second.installedSource.source_kind).toBe("git");
     expect(second.installedSource.source_ref).toBe("https://example/repo#main:planner");
   });
+
+  test("emits the removed project instance row with its scope", async () => {
+    const eventBus = new EventBus();
+    const events: Array<{ table: string; op: string; data: unknown }> = [];
+    eventBus.subscribe((event) => events.push(event));
+    const scopedService = createExtensionService({
+      extensionInstancesService,
+      installedExtensionSourcesService,
+      extensionUserDataService,
+      projectService,
+      eventBus,
+    });
+    const project = await projectService.create({ name: "Scoped delete project" });
+    const enabled = await scopedService.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "scoped-delete",
+      extensionId: "pstdio.scoped-delete",
+      name: "scoped-delete",
+      displayName: "Scoped delete",
+      sourcePath: "/extensions/scoped-delete",
+      manifest: {},
+    });
+    events.length = 0;
+
+    await scopedService.removeProjectExtensionInstance(enabled.instance.id);
+
+    expect(events).toEqual([
+      expect.objectContaining({
+        table: "extension_instances",
+        op: "delete",
+        data: expect.objectContaining({
+          id: enabled.instance.id,
+          scope_type: "project",
+          scope_id: project.id,
+          installed_extension_id: enabled.installedSource.id,
+        }),
+      }),
+    ]);
+  });
 });
 
 describe("extensionService reload", () => {
@@ -301,7 +342,9 @@ describe("extensionService reload", () => {
       expect(result.installedSource.status).toBe("loaded");
       expect(result.installedSource.display_name).toBe("Reloaded Extension");
       expect(result.installedSource.version).toBe("1.1.0");
-      expect(result.installedSource.manifest_json).toMatchObject({ templates: ["second"] });
+      expect(result.installedSource.manifest_json).toMatchObject({
+        templates: [expect.objectContaining({ id: "second", ref: { kind: "template", id: "second" } })],
+      });
       expect(result.installedSource.source_hash).not.toBe("old-hash");
       expect(result.installedSource.loaded_revision).toBeString();
       expect(result.installedSource.last_error_json).toBeNull();

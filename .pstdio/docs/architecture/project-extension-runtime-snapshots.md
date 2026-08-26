@@ -124,6 +124,6 @@ Tests may inspect generation and loader counts through a narrow test hook. Impor
 
 ## Related Product Requirements
 
-- [Project Extension Runtime Snapshots](../../../extensions/docs/runtime-snapshots.md)
-- [Extension Conformance and Regression Coverage](../../../extensions/docs/conformance.md)
+- [Project Extension Runtime Snapshots](../extensions/runtime-snapshots.md)
+- [Extension Conformance and Regression Coverage](../extensions/conformance.md)
 - [Extension Runtime](./extensions-runtime.md)

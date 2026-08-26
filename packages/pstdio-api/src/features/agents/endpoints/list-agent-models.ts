@@ -5,7 +5,10 @@ import { agentModelsListResponseSchema } from "../dto";
 
 const agentIdParamSchema = z
   .object({
-    agentId: z.string().min(1).openapi({ description: "Harness id (e.g. pstdio.harness-claude-code.claude-code)" }),
+    agentId: z
+      .string()
+      .min(1)
+      .openapi({ description: "Harness id (e.g. pstdio.harness-claude-code.harness.claude-code)" }),
   })
   .strict();
 

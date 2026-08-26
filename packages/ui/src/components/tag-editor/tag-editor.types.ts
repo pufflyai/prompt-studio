@@ -31,6 +31,7 @@ export interface TagEditorProps {
   /** Marks the heading with the unsaved-changes asterisk. */
   hasChanges?: boolean;
   isSaving?: boolean;
+  readOnly?: boolean;
   addLabel?: string;
   /** Name given to a freshly added option before it is renamed inline. */
   addName?: string;

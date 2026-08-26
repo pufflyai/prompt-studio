@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { namedSourceRef } from "../features/extensions/install-extension-source";
 import {
   createExtensionUpgradeService,
@@ -21,7 +22,7 @@ const installedSource = {
   source_hash: "old-hash",
   source_kind: "git",
   source_path: "/home/user/.pstdio/extensions/pstdio-planner",
-  source_ref: "https://github.com/pufflyai/prompt-studio@old-commit#extensions/pstdio-planner",
+  source_ref: namedSourceRef("0".repeat(40), "pstdio-planner"),
 };
 
 const installed = {
@@ -33,16 +34,30 @@ const installed = {
     name: "pstdio-planner",
     displayName: "Prompt Studio Planner",
     version: "0.8.0",
-    enginesPstdio: "1.0.0-alpha.2",
+    enginesPstdio: "1.0.0-alpha.3",
   },
   source: {
     kind: "named" as const,
     name: "pstdio-planner",
-    ref: "https://github.com/pufflyai/prompt-studio@commit#extensions/pstdio-planner",
+    ref: namedSourceRef("b".repeat(40), "pstdio-planner"),
   },
   sourceHash: "new-hash",
   targetPath: "/home/user/.pstdio/extensions/pstdio-planner",
 };
+
+const idleExtensionService = {
+  enableInstalledSourceForProject: async () => {
+    throw new Error("should not enable");
+  },
+  getInstalledSource: async () => null as never,
+  getProjectExtensionInstance: async () => null as never,
+  listProjectExtensionInstances: async () => [],
+  registerInstalledSource: async () => {
+    throw new Error("should not register");
+  },
+};
+
+const emptyRepoService = { listByProject: async () => [] };
 
 describe("extension upgrade service", () => {
   test("resolves an annotated release tag to its commit", async () => {
@@ -59,18 +74,9 @@ describe("extension upgrade service", () => {
   test("does not offer an upgrade when the installed source matches the host release", async () => {
     const releaseCommit = "a".repeat(40);
     const service = createExtensionUpgradeService({
-      extensionService: {
-        enableInstalledSourceForProject: async () => {
-          throw new Error("should not enable");
-        },
-        getInstalledSource: async () => null as never,
-        getProjectExtensionInstance: async () => null as never,
-        registerInstalledSource: async () => {
-          throw new Error("should not register");
-        },
-      },
+      extensionService: idleExtensionService,
       release: { source: "git", ref: releaseCommit },
-      repoService: { listByProject: async () => [] },
+      repoService: emptyRepoService,
     });
 
     const result = await service.canUpgrade({
@@ -85,19 +91,10 @@ describe("extension upgrade service", () => {
     const releaseCommit = "b".repeat(40);
     const resolveReleaseCommit = mock(async () => releaseCommit);
     const service = createExtensionUpgradeService({
-      extensionService: {
-        enableInstalledSourceForProject: async () => {
-          throw new Error("should not enable");
-        },
-        getInstalledSource: async () => null as never,
-        getProjectExtensionInstance: async () => null as never,
-        registerInstalledSource: async () => {
-          throw new Error("should not register");
-        },
-      },
+      extensionService: idleExtensionService,
       release: { source: "git", ref: "pstdio@0.27.0" },
       resolveReleaseCommit,
-      repoService: { listByProject: async () => [] },
+      repoService: emptyRepoService,
     });
     const currentSource = {
       ...installedSource,
@@ -111,18 +108,9 @@ describe("extension upgrade service", () => {
 
   test("offers an upgrade when the installed commit is older than the host release", async () => {
     const service = createExtensionUpgradeService({
-      extensionService: {
-        enableInstalledSourceForProject: async () => {
-          throw new Error("should not enable");
-        },
-        getInstalledSource: async () => null as never,
-        getProjectExtensionInstance: async () => null as never,
-        registerInstalledSource: async () => {
-          throw new Error("should not register");
-        },
-      },
+      extensionService: idleExtensionService,
       release: { source: "git", ref: "c".repeat(40) },
-      repoService: { listByProject: async () => [] },
+      repoService: emptyRepoService,
     });
 
     expect(
@@ -133,21 +121,77 @@ describe("extension upgrade service", () => {
     ).toBe(true);
   });
 
+  test("offers an upgrade for an incompatible marketplace source adopted without provenance", async () => {
+    const service = createExtensionUpgradeService({
+      extensionService: idleExtensionService,
+      release: { source: "git", ref: "c".repeat(40) },
+      repoService: emptyRepoService,
+    });
+
+    // Discovery creates rows for extensions it finds on disk. Those rows carry no install
+    // provenance, and the upgrade path is the only recovery for them after an API change.
+    expect(
+      await service.canUpgrade({
+        ...installedSource,
+        manifest_json: { name: "pstdio-planner", enginesPstdio: "^1.0.0" },
+        source_ref: null,
+      }),
+    ).toBe(true);
+  });
+
+  test("leaves a healthy source without provenance under local control", async () => {
+    const service = createExtensionUpgradeService({
+      extensionService: idleExtensionService,
+      release: { source: "git", ref: "c".repeat(40) },
+      repoService: emptyRepoService,
+    });
+
+    expect(
+      await service.canUpgrade({
+        ...installedSource,
+        manifest_json: { name: "pstdio-planner", enginesPstdio: EXTENSION_API_VERSION },
+        source_ref: null,
+      }),
+    ).toBe(false);
+  });
+
+  test("does not offer an upgrade for an extension outside the marketplace", async () => {
+    const service = createExtensionUpgradeService({
+      extensionService: idleExtensionService,
+      release: { source: "git", ref: "c".repeat(40) },
+      repoService: emptyRepoService,
+    });
+
+    expect(
+      await service.canUpgrade({
+        ...installedSource,
+        install_name: "extension-lab",
+        manifest_json: { name: "extension-lab", enginesPstdio: "^1.0.0" },
+        source_ref: null,
+      }),
+    ).toBe(false);
+  });
+
   test("replaces a named extension with the source from the host release", async () => {
     const installExtensionSource = mock(async () => installed as never);
     const registerInstalledSource = mock(async () => ({ ...installedSource, source_hash: "new-hash" }) as never);
     const service = createExtensionUpgradeService({
       extensionService: {
-        enableInstalledSourceForProject: async () => {
-          throw new Error("should not enable");
-        },
-        getInstalledSource: async () => null as never,
-        getProjectExtensionInstance: async () => ({ instance, installedSource }) as never,
+        ...idleExtensionService,
+        getProjectExtensionInstance: async () =>
+          ({
+            instance,
+            installedSource: {
+              ...installedSource,
+              source_ref: namedSourceRef("d".repeat(40), installedSource.install_name),
+            },
+          }) as never,
         registerInstalledSource,
       },
       installExtensionSource,
       release: { source: "git", ref: "pstdio@0.27.0" },
-      repoService: { listByProject: async () => [] },
+      resolveReleaseCommit: async () => "e".repeat(40),
+      repoService: emptyRepoService,
     });
 
     const result = await service.upgrade("project-1", "instance-1");
@@ -180,19 +224,10 @@ describe("extension upgrade service", () => {
         }),
     );
     const service = createExtensionUpgradeService({
-      extensionService: {
-        enableInstalledSourceForProject: async () => {
-          throw new Error("should not enable");
-        },
-        getInstalledSource: async () => null as never,
-        getProjectExtensionInstance: async () => null as never,
-        registerInstalledSource: async () => {
-          throw new Error("should not register");
-        },
-      },
+      extensionService: idleExtensionService,
       installExtensionSource: installExtensionSource as never,
       release: { source: "git", ref: "pstdio@0.27.0" },
-      repoService: { listByProject: async () => [] },
+      repoService: emptyRepoService,
     });
 
     const first = service.prepareMarketplaceExtensionSource("pstdio-planner");
@@ -216,81 +251,57 @@ describe("extension upgrade service", () => {
     expect(await second).toBe(installed);
   });
 
-  test("loads marketplace sources from the configured workspace release", async () => {
+  test("replaces a marketplace source that was adopted without provenance", async () => {
     const installExtensionSource = mock(async () => installed as never);
+    const registerInstalledSource = mock(async () => ({ ...installedSource, source_hash: "new-hash" }) as never);
     const service = createExtensionUpgradeService({
       extensionService: {
-        enableInstalledSourceForProject: async () => {
-          throw new Error("should not enable");
-        },
-        getInstalledSource: async () => null as never,
-        getProjectExtensionInstance: async () => null as never,
-        registerInstalledSource: async () => {
-          throw new Error("should not register");
-        },
-      },
-      installExtensionSource,
-      release: { source: "workspace", ref: "workspace-release", root: "/workspace/prompt-studio" },
-      repoService: { listByProject: async () => [] },
-    });
-
-    await service.prepareMarketplaceExtensionSource("pstdio-planner");
-
-    expect(installExtensionSource).toHaveBeenCalledWith({
-      force: true,
-      installName: "pstdio-planner",
-      skipInstall: true,
-      source: "/workspace/prompt-studio/extensions/pstdio-planner",
-    });
-  });
-
-  test("refuses to replace a local source", async () => {
-    const service = createExtensionUpgradeService({
-      extensionService: {
-        enableInstalledSourceForProject: async () => {
-          throw new Error("should not enable");
-        },
-        getInstalledSource: async () => null as never,
+        ...idleExtensionService,
         getProjectExtensionInstance: async () =>
           ({
             instance,
-            installedSource: { ...installedSource, source_kind: "local_path" },
+            installedSource: {
+              ...installedSource,
+              manifest_json: { name: "pstdio-planner", enginesPstdio: "^1.0.0" },
+              source_kind: "local_path",
+              source_ref: null,
+            },
           }) as never,
-        registerInstalledSource: async () => {
-          throw new Error("should not register");
-        },
+        registerInstalledSource,
       },
-      installExtensionSource: async () => {
-        throw new Error("should not install");
-      },
+      installExtensionSource,
       release: { source: "git", ref: "pstdio@0.27.0" },
-      repoService: { listByProject: async () => [] },
+      repoService: emptyRepoService,
     });
 
-    expect(service.upgrade("project-1", "instance-1")).rejects.toBeInstanceOf(ExtensionUpgradeUnavailableError);
+    const result = await service.upgrade("project-1", "instance-1");
+
+    expect(installExtensionSource).toHaveBeenCalledWith(
+      expect.objectContaining({
+        force: true,
+        installName: "pstdio-planner",
+        ref: "pstdio@0.27.0",
+        source: "pstdio-planner",
+      }),
+    );
+    expect(result?.changed).toBe(true);
   });
 
   test("refuses a Git extension that is not in the marketplace", async () => {
     const service = createExtensionUpgradeService({
       extensionService: {
-        enableInstalledSourceForProject: async () => {
-          throw new Error("should not enable");
-        },
-        getInstalledSource: async () => null as never,
+        ...idleExtensionService,
         getProjectExtensionInstance: async () =>
           ({
             instance,
             installedSource: { ...installedSource, install_name: "extension-lab" },
           }) as never,
-        registerInstalledSource: async () => {
-          throw new Error("should not register");
-        },
       },
       installExtensionSource: async () => {
         throw new Error("should not install");
       },
       release: { source: "git", ref: "pstdio@0.27.0" },
-      repoService: { listByProject: async () => [] },
+      repoService: emptyRepoService,
     });
 
     expect(service.upgrade("project-1", "instance-1")).rejects.toBeInstanceOf(ExtensionUpgradeUnavailableError);

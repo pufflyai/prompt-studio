@@ -1,11 +1,8 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { ResourceRef } from "@pstdio/workbench";
-import { text } from "pstdio-extensions/workbench";
 import { resourceKindsFromMetadata } from "./resource-bindings";
 
-const resourceKindFromMetadata = (metadata: WorkbenchExtensionMetadata) =>
-  resourceKindsFromMetadata(metadata)[0] ??
-  metadata.kanbanRenderers?.find((renderer) => renderer.resourceKind)?.resourceKind;
+const resourceKindFromMetadata = (metadata: WorkbenchExtensionMetadata) => resourceKindsFromMetadata(metadata)[0];
 
 const ticketPreviewResource = () =>
   ({
@@ -26,17 +23,6 @@ export const createPreviewResource = (metadata: WorkbenchExtensionMetadata): Res
       uri: `bench://${resourceKind}/preview`,
       id: "preview",
       label: `${resourceKind} preview`,
-      icon: "FileText",
-    };
-  }
-
-  const route = metadata.routes[0];
-  if (route) {
-    return {
-      kind: "extension-route",
-      uri: `workbench://extension-route/${route.id}`,
-      id: route.id,
-      label: text(route.label, route.path),
       icon: "FileText",
     };
   }

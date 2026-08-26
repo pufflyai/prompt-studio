@@ -6,8 +6,10 @@ describe("createCommandRunner: lifecycle", () => {
     const events: string[] = [];
 
     const runner = makeRunner({
-      commands: {
-        "counter.bump": {
+      commands: [
+        {
+          id: "counter.bump",
+          ref: { kind: "command", id: "counter.bump" },
           title: "Bump counter",
           async run(ctx) {
             const current = ((await ctx.storage.get<number>("counter")) ?? 0) as number;
@@ -16,31 +18,37 @@ describe("createCommandRunner: lifecycle", () => {
             return { counter: next };
           },
         },
-      },
-      hooks: {
-        observeAll: {
-          eventId: "command.completed:lab.counter.bump",
-          handler: async () => {
+      ],
+      hooks: [
+        {
+          id: "observeAll",
+          ref: { kind: "hook", id: "observeAll" },
+          event: { kind: "event", id: "command.completed:counter.bump" },
+          run: async () => {
             events.push("completed");
           },
         },
-        observeStarted: {
-          eventId: "command.started:lab.counter.bump",
-          handler: async () => {
+        {
+          id: "observeStarted",
+          ref: { kind: "hook", id: "observeStarted" },
+          event: { kind: "event", id: "command.started:counter.bump" },
+          run: async () => {
             events.push("started");
           },
         },
-        observeRequested: {
-          eventId: "command.requested:lab.counter.bump",
-          handler: async () => {
+        {
+          id: "observeRequested",
+          ref: { kind: "hook", id: "observeRequested" },
+          event: { kind: "event", id: "command.requested:counter.bump" },
+          run: async () => {
             events.push("requested");
           },
         },
-      },
+      ],
     });
 
     const outcome = await runner.execute({
-      commandId: "lab.counter.bump",
+      commandId: "pstdio.lab.command.counter.bump",
       projectId: "p1",
       source: "cli",
     });
@@ -55,25 +63,27 @@ describe("createCommandRunner: lifecycle", () => {
     const events: string[] = [];
     const runner = makeRunner(
       {
-        commands: {
-          update: {
+        commands: [
+          {
+            id: "update",
+            ref: { kind: "command", id: "update" },
             title: "Update",
             async run(ctx) {
-              await ctx.events.emit("tickets.changed", { ticketId: "PS-1" });
+              await ctx.events.emit({ kind: "event", id: "tickets.changed" }, { ticketId: "PS-1" });
             },
           },
-        },
+        ],
       },
       { onDidDispatchEvent: (eventId) => events.push(eventId) },
     );
 
-    await runner.execute({ commandId: "lab.update", projectId: "p1" });
+    await runner.execute({ commandId: "pstdio.lab.command.update", projectId: "p1" });
 
     expect(events).toEqual([
-      "command.requested:lab.update",
-      "command.started:lab.update",
-      "tickets.changed",
-      "command.completed:lab.update",
+      "command.requested:pstdio.lab.command.update",
+      "command.started:pstdio.lab.command.update",
+      "pstdio.lab.event.tickets.changed",
+      "command.completed:pstdio.lab.command.update",
     ]);
   });
 
@@ -81,25 +91,29 @@ describe("createCommandRunner: lifecycle", () => {
     const events: string[] = [];
 
     const runner = makeRunner({
-      commands: {
-        boom: {
+      commands: [
+        {
+          id: "boom",
+          ref: { kind: "command", id: "boom" },
           title: "Boom",
           async run() {
             throw new Error("kaboom");
           },
         },
-      },
-      hooks: {
-        onFailed: {
-          eventId: "command.failed:lab.boom",
-          handler: async () => {
+      ],
+      hooks: [
+        {
+          id: "onFailed",
+          ref: { kind: "hook", id: "onFailed" },
+          event: { kind: "event", id: "command.failed:boom" },
+          run: async () => {
             events.push("failed");
           },
         },
-      },
+      ],
     });
 
-    const outcome = await runner.execute({ commandId: "lab.boom", projectId: "p1" });
+    const outcome = await runner.execute({ commandId: "pstdio.lab.command.boom", projectId: "p1" });
     expect(outcome.ok).toBe(false);
     if (!outcome.ok && outcome.status === "error") {
       expect(outcome.reason).toBe("kaboom");
@@ -110,7 +124,7 @@ describe("createCommandRunner: lifecycle", () => {
 
   test("returns command_not_found when the id is unknown", async () => {
     const runner = makeRunner({});
-    const outcome = await runner.execute({ commandId: "lab.missing", projectId: "p1" });
+    const outcome = await runner.execute({ commandId: "pstdio.lab.command.missing", projectId: "p1" });
     expect(outcome.ok).toBe(false);
     if (!outcome.ok && outcome.status === "error") {
       expect(outcome.code).toBe("command_not_found");
@@ -119,18 +133,23 @@ describe("createCommandRunner: lifecycle", () => {
 
   test("executes a private renderer handler without registering a public command", async () => {
     const runner = makeRunner({
-      kanbanRenderers: {
-        rows: {
+      views: [
+        {
+          id: "rows",
+          ref: { kind: "view", id: "rows" },
           title: "Rows",
-          query: async (_ctx, params) => ({
-            rows: [{ id: String(params.renderer.rendererId), title: "Rows", attributes: {} }],
-          }),
+          body: {
+            kind: "kanban",
+            query: async (_ctx, params) => ({
+              rows: [{ id: String(params.renderer.rendererId), title: "Rows", attributes: {} }],
+            }),
+          },
         },
-      },
+      ],
     });
 
     const outcome = await runner.execute({
-      commandId: "lab.rows.kanban.query",
+      commandId: "pstdio.lab.view.rows.kanban.query",
       projectId: "p1",
       params: { renderer: { rendererId: "lab.rows" } },
     });
@@ -143,18 +162,20 @@ describe("createCommandRunner: lifecycle", () => {
 
   test("collects command toast notices in the outcome", async () => {
     const runner = makeRunner({
-      commands: {
-        hello: {
+      commands: [
+        {
+          id: "hello",
+          ref: { kind: "command", id: "hello" },
           title: "Hello",
           async run(ctx) {
             await ctx.notify.toast({ type: "info", title: "Lab", message: "Hello from the lab" });
             return { ok: true };
           },
         },
-      },
+      ],
     });
 
-    const outcome = await runner.execute({ commandId: "lab.hello", projectId: "p1" });
+    const outcome = await runner.execute({ commandId: "pstdio.lab.command.hello", projectId: "p1" });
 
     expect(outcome.ok).toBe(true);
     expect(outcome.notices).toEqual([{ type: "info", title: "Lab", message: "Hello from the lab" }]);
@@ -162,17 +183,19 @@ describe("createCommandRunner: lifecycle", () => {
 
   test("exposes project context to command handlers", async () => {
     const runner = makeRunner({
-      commands: {
-        inspect: {
+      commands: [
+        {
+          id: "inspect",
+          ref: { kind: "command", id: "inspect" },
           title: "Inspect",
           async run(ctx) {
             return { projectId: ctx.projectId, project: ctx.project };
           },
         },
-      },
+      ],
     });
 
-    const outcome = await runner.execute({ commandId: "lab.inspect", projectId: "p1" });
+    const outcome = await runner.execute({ commandId: "pstdio.lab.command.inspect", projectId: "p1" });
 
     expect(outcome.ok).toBe(true);
     if (outcome.ok) {

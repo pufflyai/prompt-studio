@@ -51,14 +51,16 @@ describe("installExtensionSource dependency health", () => {
       `import { defineExtension } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
-  commands: {
-    hello: {
+  commands: [
+    {
+      id: "hello",
+      ref: { kind: "command", id: "hello" },
       title: "Hello",
       run() {
         return { ok: true };
       },
     },
-  },
+  ],
 });
 `,
     );

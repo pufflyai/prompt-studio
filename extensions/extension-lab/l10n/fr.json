@@ -28,6 +28,7 @@
   "routes.lab.label": "Laboratoire",
   "settingsPanels.global.title": "Labo (global)",
   "settingsPanels.project.title": "Labo (projet)",
+  "settingsSections.lab.title": "Labo",
   "skills.labResource.title": "Curateur Glass Lab",
   "templates.labResource.title": "Artefact Glass Lab",
   "treeRenderers.labCams.title": "Caméras",

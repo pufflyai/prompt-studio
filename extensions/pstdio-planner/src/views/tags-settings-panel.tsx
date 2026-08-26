@@ -19,9 +19,9 @@ import { renderTicketRoot } from "./view-root";
 const TAGS_KEY = ["tags"];
 
 const commandIds = {
-  read: "pstdio-planner.ticketTag.read",
-  createTag: "pstdio-planner.ticketTag.create",
-  deleteTag: "pstdio-planner.ticketTag.delete",
+  read: "pstdio.pstdio-planner.command.ticketTag.read",
+  createTag: "pstdio.pstdio-planner.command.ticketTag.create",
+  deleteTag: "pstdio.pstdio-planner.command.ticketTag.delete",
 };
 
 const run = <TResult,>(host: GuestHost, commandId: string, params?: Record<string, unknown>) =>

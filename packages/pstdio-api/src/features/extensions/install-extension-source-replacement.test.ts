@@ -26,7 +26,7 @@ const writeExtension = (packageManager?: string) => {
       ...(packageManager ? { packageManager } : {}),
     }),
   );
-  writeFileSync(join(source, "extension.ts"), "export default { commands: {} };");
+  writeFileSync(join(source, "extension.ts"), "export default { commands: [] };");
 };
 
 const writeExistingInstall = () => {

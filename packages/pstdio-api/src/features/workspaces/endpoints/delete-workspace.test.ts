@@ -37,7 +37,7 @@ const createWorkspaceAttempt = async (repoRoot: string) => {
   const workspaceRes = await app.request("/v1/workspaces", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, repo_id: repo.id, type: "worktree" }),
+    body: JSON.stringify({ project_id: projectId, repo_id: repo.id }),
   });
   expect(workspaceRes.status).toBe(201);
   const workspace = (await workspaceRes.json()) as { id: string; branch: string | null; worktree_path: string | null };

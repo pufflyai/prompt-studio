@@ -39,8 +39,8 @@ const session = (input: { id: string; workspaceId?: string | null; updatedAt?: s
 };
 
 const sessionGroupChildren = (sections: ReturnType<typeof buildSessionsSidenavSections>) =>
-  sections.find((section) => section.id === "sessions-wrap")?.nodes.find((node) => node.id === "sessions")?.children ??
-  [];
+  sections.find((section) => section.id === "sessions-wrap")?.nodes.find((node) => node.id === "workspace-sessions")
+    ?.children ?? [];
 
 describe("buildSessionsSidenavSections", () => {
   test("models the list as a single collapsible Sessions group", () => {
@@ -54,7 +54,7 @@ describe("buildSessionsSidenavSections", () => {
     expect(sections[0]?.label).toBeUndefined();
 
     const group = sections[0]?.nodes[0];
-    expect(group).toMatchObject({ id: "sessions", label: "Sessions", collapsible: true });
+    expect(group).toMatchObject({ id: "workspace-sessions", label: "Sessions", collapsible: true });
   });
 
   test("adds a create action to the Sessions group", () => {
@@ -98,7 +98,7 @@ describe("buildSessionsSidenavSections", () => {
       sessions: [session({ id: "session-1" })],
     });
 
-    expect(sections[0]?.nodes[0]).toMatchObject({ id: "sessions" });
+    expect(sections[0]?.nodes[0]).toMatchObject({ id: "workspace-sessions" });
     expect(sections[0]?.nodes[0]?.canHide).toBeUndefined();
   });
 
@@ -108,7 +108,7 @@ describe("buildSessionsSidenavSections", () => {
       sessions: [session({ id: "session-1" })],
     });
 
-    expect(sections[0]?.nodes[0]).toMatchObject({ id: "sessions", canHide: true });
+    expect(sections[0]?.nodes[0]).toMatchObject({ id: "workspace-sessions", canHide: true });
   });
 
   test("uses command targets for embedded session rows", () => {

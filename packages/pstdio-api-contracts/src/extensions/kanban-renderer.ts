@@ -13,6 +13,14 @@ const kanbanRendererEnumOptionSchema = z.object({
 const kanbanRendererAttributeTypeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("enum"), options: z.array(kanbanRendererEnumOptionSchema) }),
   z.object({ kind: z.literal("enum-multi"), options: z.array(kanbanRendererEnumOptionSchema) }),
+  z.object({
+    kind: z.literal("status"),
+    statuses: z.object({
+      extensionId: z.string().optional(),
+      kind: z.literal("status"),
+      id: z.string(),
+    }),
+  }),
   z.object({ kind: z.literal("string") }),
   z.object({ kind: z.literal("date") }),
   z.object({ kind: z.literal("number") }),
@@ -108,7 +116,7 @@ export const extensionCommandPaletteResourceRecordSchema = z.object({
   extensionId: z.string(),
   title: localizableStringSchema,
   resourceKind: z.string().optional(),
-  queryCommandId: z.string(),
+  queryHandlerId: z.string(),
   refreshEventIds: z.array(z.string().min(1)).optional(),
 });
 

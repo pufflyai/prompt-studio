@@ -1,5 +1,5 @@
 import type { WorkbenchModeActivationContext } from "../../../../core";
-import { dashboardResources } from "../../shared/mock-data/resources";
+import { dashboardResources, dashboardViews } from "../../shared/mock-data/resources";
 import { dashboardHelpMenuPath } from "./commands";
 
 export const dashboardNavigationTreeViewId = "dashboard-workbench.navigation";
@@ -22,16 +22,16 @@ export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) =
             target: { kind: "command", commandId: "dashboard.openCommandPalette" },
           },
           {
-            id: dashboardResources.tickets.uri,
+            id: dashboardViews.tickets.id,
             label: "Tickets",
-            icon: dashboardResources.tickets.icon,
-            resource: dashboardResources.tickets,
+            icon: dashboardViews.tickets.icon,
+            target: { kind: "view", viewId: dashboardViews.tickets.id },
           },
           {
-            id: dashboardResources.workspaces.uri,
+            id: dashboardViews.workspaces.id,
             label: "Workspaces",
-            icon: dashboardResources.workspaces.icon,
-            resource: dashboardResources.workspaces,
+            icon: dashboardViews.workspaces.icon,
+            target: { kind: "view", viewId: dashboardViews.workspaces.id },
           },
         ],
       },
@@ -40,28 +40,33 @@ export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) =
         label: "Extensions",
         collapsible: false,
         nodes: [
-          { id: dashboardResources.lab.uri, label: "Lab", icon: "FlaskConical", resource: dashboardResources.lab },
           {
-            id: dashboardResources.repoHealth.uri,
-            label: "Repo health",
-            icon: "GitBranch",
-            resource: dashboardResources.repoHealth,
+            id: dashboardViews.lab.id,
+            label: "Lab",
+            icon: "FlaskConical",
+            target: { kind: "view", viewId: dashboardViews.lab.id },
           },
           {
-            id: dashboardResources.changelog.uri,
+            id: dashboardViews.repoHealth.id,
+            label: "Repo health",
+            icon: "GitBranch",
+            target: { kind: "view", viewId: dashboardViews.repoHealth.id },
+          },
+          {
+            id: dashboardViews.changelog.id,
             label: "Changelog",
             icon: "Workflow",
-            resource: dashboardResources.changelog,
+            target: { kind: "view", viewId: dashboardViews.changelog.id },
           },
         ],
       },
     ],
     getFooter: () => [
       {
-        id: dashboardResources.sessions.uri,
+        id: dashboardViews.sessions.id,
         label: "Sessions",
         icon: "MessageCircle",
-        resource: dashboardResources.sessions,
+        target: { kind: "view", viewId: dashboardViews.sessions.id },
       },
       {
         id: "help",

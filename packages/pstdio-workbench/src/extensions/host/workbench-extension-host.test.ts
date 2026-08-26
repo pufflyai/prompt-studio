@@ -1,434 +1,368 @@
 import { describe, expect, test } from "bun:test";
-import type { CommandExecuteRequest, CommandExecuteResponse, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore, type MenuPath, workbenchCommandPaletteMenuPath } from "../../core";
-import { BRIDGE_WEBVIEW_RENDERER_ID } from "../bridge/bridge-webview-renderer";
+import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { createWorkbenchCore, type WorkbenchModuleContribution } from "../../core";
+import { buildSettingsTreeBody } from "../../react/settings/settings-tree";
 import { registerWorkbenchExtensionContributions } from "./workbench-extension-host";
 
-const success = (commandId: string, value: unknown): CommandExecuteResponse => ({
-  commandId,
-  extensionId: "pstdio.lab",
-  outcome: { ok: true, status: "success", value },
-});
-
-const webview = {
-  entry: { kind: "package-asset" as const, path: "./ticket.tsx", baseUrl: "file:///extension/extension.ts" },
-  runtimeUrl: "/runtime.html",
-  moduleUrl: "/ticket.js",
-  styles: ["/ticket.css"],
-};
+const extensionId = "pstdio.lab";
+const modeId = `${extensionId}.mode.review`;
+const treeViewId = `${extensionId}.view.outline`;
+const controlsViewId = `${extensionId}.view.filters`;
+const detailViewId = `${extensionId}.view.detail`;
+const statusViewId = `${extensionId}.view.sync-status`;
+const statusesId = `${extensionId}.status.workflow`;
 
 const metadata = {
-  extensions: [{ id: "pstdio.lab", name: "lab", displayName: "Lab", sourcePath: "/extension/extension.ts" }],
-  commands: [
-    { id: "lab.open", extensionId: "pstdio.lab", title: "Open lab" },
+  extensions: [{ id: extensionId, name: "lab", displayName: "Lab", sourcePath: "/extensions/lab" }],
+  commands: [],
+  menuContributions: [],
+  commandPaletteContributions: [],
+  modes: [{ id: modeId, localId: "review", extensionId, label: "Review" }],
+  views: [
     {
-      id: "lab.create",
-      extensionId: "pstdio.lab",
-      title: "Create lab item",
-      params: {
-        title: { type: "text", label: "Title" },
-        amount: { type: "number", defaultValue: 1 },
+      id: treeViewId,
+      localId: "outline",
+      extensionId,
+      title: "Outline",
+      body: {
+        kind: "tree",
+        bodyHandlerId: `${treeViewId}.tree.body`,
+        refreshEventIds: [`${extensionId}.event.outline.changed`],
       },
     },
-    { id: "lab.queryRows", extensionId: "pstdio.lab", title: "Query rows" },
-    { id: "lab.updateRow", extensionId: "pstdio.lab", title: "Update row" },
-  ],
-  diagnostics: [],
-  menuContributions: [
     {
-      id: "lab.open.menu",
-      extensionId: "pstdio.lab",
-      commandId: "lab.open",
-      slotId: "project.headerPrimary",
-      label: "Open lab",
-      params: { source: "menu" },
+      id: controlsViewId,
+      localId: "filters",
+      extensionId,
+      title: "Filters",
+      body: {
+        kind: "controls",
+        queryHandlerId: `${controlsViewId}.controls.query`,
+      },
     },
-  ],
-  commandPaletteContributions: [
     {
-      id: "lab.open.palette",
-      extensionId: "pstdio.lab",
-      commandId: "lab.open",
-      label: "Open lab",
-      group: "Lab",
-      params: { source: "palette" },
-    },
-  ],
-  modes: [
-    {
-      id: "lab.review",
-      extensionId: "pstdio.lab",
-      modeId: "lab.review",
-      label: "Review",
-      panelRegions: ["main", "side"],
-      resources: {
-        ticket: {
-          slots: {
-            primary: { region: "main", required: true },
-            auxiliary: { region: "side" },
-          },
+      id: detailViewId,
+      localId: "detail",
+      extensionId,
+      title: "Detail",
+      body: {
+        kind: "webview",
+        webview: {
+          entry: { kind: "package-asset", path: "./detail.tsx", baseUrl: "file:///extensions/lab/" },
+          runtimeUrl: "/runtime.html",
+          moduleUrl: "/detail.js",
         },
       },
+    },
+    {
+      id: statusViewId,
+      localId: "sync-status",
+      extensionId,
+      title: "Sync status",
+      body: {
+        kind: "webview",
+        webview: {
+          entry: { kind: "package-asset", path: "./sync-status.tsx", baseUrl: "file:///extensions/lab/" },
+          runtimeUrl: "/runtime.html",
+          moduleUrl: "/sync-status.js",
+        },
+      },
+    },
+  ],
+  viewMenus: [],
+  placements: [
+    {
+      id: `${extensionId}.placement.outline`,
+      localId: "outline",
+      extensionId,
+      mode: { extensionId, kind: "mode", id: "review" },
+      item: { kind: "view", view: { extensionId, kind: "view", id: "outline" } },
+      region: "main",
+      defaultOpen: true,
+      required: true,
+    },
+    {
+      id: `${extensionId}.placement.detail`,
+      localId: "detail",
+      extensionId,
+      mode: { extensionId, kind: "mode", id: "review" },
+      item: {
+        kind: "resource-slot",
+        slot: {
+          resourceKind: { extensionId, kind: "resource-kind", id: "artifact" },
+          id: "inspector",
+        },
+      },
+      region: "side",
     },
   ],
   resourceKinds: [
     {
-      id: "ticket",
-      extensionId: "pstdio.lab",
-      surface: "primary",
-      slots: {
-        primary: { cardinality: "one", external: false },
-        auxiliary: { cardinality: "many", external: true },
+      id: "artifact",
+      localId: "artifact",
+      extensionId,
+      surface: "attached",
+      label: "Artifact",
+      slots: [{ id: "inspector", cardinality: "many", access: "public" }],
+    },
+  ],
+  resourceViews: [
+    {
+      id: `${extensionId}.resource-view.detail`,
+      extensionId,
+      resourceKind: { extensionId, kind: "resource-kind", id: "artifact" },
+      slot: {
+        resourceKind: { extensionId, kind: "resource-kind", id: "artifact" },
+        id: "inspector",
       },
+      view: { extensionId, kind: "view", id: "detail" },
     },
   ],
-  resourcePanels: [
+  navigationItems: [],
+  statusBarItems: [
     {
-      id: "lab.ticketPanel",
-      extensionId: "pstdio.lab",
-      resourceKind: "ticket",
-      panel: "lab.ticketPanel",
-      slot: "primary",
-    },
-    { id: "lab.rows", extensionId: "pstdio.lab", resourceKind: "ticket", panel: "lab.rows", slot: "auxiliary" },
-    {
-      id: "lab.ticketModal",
-      extensionId: "pstdio.lab",
-      resourceKind: "ticket",
-      panel: "lab.ticketModal",
-      slot: "auxiliary",
+      id: `${extensionId}.status-bar-item.sync-status`,
+      extensionId,
+      view: { extensionId, kind: "view", id: "sync-status" },
+      slot: { id: "workbench.statusBar.trailing" },
+      order: 20,
+      when: { mode: { extensionId, kind: "mode", id: "review" } },
     },
   ],
-  routes: [
+  statuses: [
     {
-      id: "lab.details",
-      extensionId: "pstdio.lab",
-      path: "details",
-      label: "Details",
-      webview: { ...webview, moduleUrl: "/details.js" },
+      id: statusesId,
+      localId: "workflow",
+      extensionId,
+      title: "Workflow",
+      queryHandlerId: `${statusesId}.query`,
     },
   ],
-  settingsDefinitions: [
-    {
-      key: "lab.enabled",
-      extensionId: "pstdio.lab",
-      type: "boolean",
-      scope: "project",
-      default: true,
-      description: "Enable lab",
-    },
-  ],
-  settingsPanels: [
-    {
-      id: "lab.settings",
-      extensionId: "pstdio.lab",
-      slotId: "project.settingsPanels",
-      scope: "project",
-      title: "Lab settings",
-      webview: { ...webview, moduleUrl: "/settings.js" },
-    },
-  ],
-  treeItems: [],
-  treeRenderers: [],
-  kanbanRenderers: [
-    {
-      id: "lab.rows",
-      extensionId: "pstdio.lab",
-      title: "Rows",
-      resourceKind: "ticket",
-      attributes: [{ id: "status", label: "Status", type: { kind: "string" }, editable: true }],
-      queryHandlerId: "lab.rows.query",
-      attributeChangeHandlerId: "lab.rows.onAttributeChange",
-    },
-  ],
-  panels: [
-    {
-      id: "lab.rows",
-      extensionId: "pstdio.lab",
-      show: { region: "main", allowedRegions: ["main", "side"] },
-      title: "Rows",
-      renderer: { kind: "kanban", id: "lab.rows" },
-    },
-    {
-      id: "lab.ticketPanel",
-      extensionId: "pstdio.lab",
-      show: { region: "main" },
-      title: "Ticket",
-      webview,
-    },
-    {
-      id: "lab.ticketModal",
-      extensionId: "pstdio.lab",
-      show: { region: "side" },
-      title: "Ticket modal",
-      webview: { ...webview, moduleUrl: "/ticket-modal.js" },
-    },
-  ],
+  settingsPanels: [],
+  diagnostics: [],
 } satisfies WorkbenchExtensionMetadata;
 
-const registerOwnedShowForPresenter = async () => {
-  const workbench = createWorkbenchCore();
-  const showOnlyMetadata = {
-    ...metadata,
-    resourcePanels: [],
-    modes: [
-      {
-        ...metadata.modes[0],
-        resources: { ticket: { panels: { "lab.ticketPanel": { region: "main", required: true } } } },
-      },
-    ],
-    panels: metadata.panels.map((panel) =>
-      panel.id === "lab.ticketPanel" ? { ...panel, show: { for: "ticket", region: "main" as const } } : panel,
-    ),
-  } satisfies WorkbenchExtensionMetadata;
-
-  registerWorkbenchExtensionContributions({
-    executeCommand: async (commandId) => success(commandId, undefined),
-    metadata: showOnlyMetadata,
-    projectId: "project-1",
-    workbench,
-  });
-
-  await workbench.resources.openResource({
-    kind: "ticket",
-    uri: "workbench://ticket/T-1",
-    id: "T-1",
-    label: "T-1",
-  });
-
-  expect(workbench.layout.listPanelInstances("main")).toEqual([
-    expect.objectContaining({ panelId: "lab.ticketPanel", resourceUri: "workbench://ticket/T-1" }),
-  ]);
-};
-
 describe("registerWorkbenchExtensionContributions", () => {
-  test("registers workbench-facing contributions and command-backed callbacks", async () => {
+  test("groups extension settings by owner and keeps statuses in the Project section", async () => {
     const workbench = createWorkbenchCore();
-    const calls: { commandId: string; request: CommandExecuteRequest }[] = [];
-    const headerPath: MenuPath = ["project", "header", "primary"];
-
-    registerWorkbenchExtensionContributions({
-      executeCommand: async (commandId, request) => {
-        calls.push({ commandId, request });
-        if (commandId === "lab.rows.query") {
-          return success(commandId, {
-            rows: [{ id: "row-1", title: "Row 1", attributes: { status: "open" } }],
-          });
-        }
-        return success(commandId, { ok: true });
-      },
-      menuSlotsById: new Map([["project.headerPrimary", { menuPath: headerPath }]]),
-      metadata,
-      projectId: "project-1",
-      workbench,
-    });
-
-    expect(workbench.renderers.getRenderer(BRIDGE_WEBVIEW_RENDERER_ID)).toBeDefined();
-    expect(workbench.layout.getPanel("lab.ticketPanel")).toMatchObject({
-      region: "main",
-      rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
-      config: expect.objectContaining({ moduleUrl: "/ticket.js" }),
-    });
-    expect(workbench.layout.getPanel("lab.ticketPanel")?.resourceKinds).toBeUndefined();
-    expect(workbench.layout.getPanel("lab.ticketModal")).toMatchObject({
-      region: "side",
-      rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
-      config: expect.objectContaining({
-        moduleUrl: "/ticket-modal.js",
-      }),
-    });
-    expect(workbench.layout.getPanel("lab.ticketModal")?.resourceKinds).toBeUndefined();
-    expect(workbench.commands.getCommand("lab.create")?.command.params).toEqual({
-      title: { type: "text", label: "Title" },
-      amount: { type: "number", defaultValue: 1 },
-    });
-    expect(workbench.settings.getPanel("lab.settings")).toMatchObject({
+    workbench.settings.registerSection({ id: "workbench", title: "Workbench", order: 10 });
+    workbench.settings.registerSection({ id: "project", title: "Project", order: 20 });
+    workbench.settings.registerPanel({
+      id: "host.extensions",
+      title: "Extensions",
       kind: "custom",
-      section: "extensions",
-      scope: "project",
+      order: 10,
+      section: "project",
+      render: () => null,
     });
-    expect(workbench.preferences.getSchema("lab.enabled")).toMatchObject({ scope: "project", default: true });
-
-    const renderer = workbench.renderers.getKanbanRenderer("lab.rows");
-    expect(renderer).toMatchObject({ id: "lab.rows", title: "Rows" });
-    expect(workbench.layout.getPanel("lab.rows")).toMatchObject({
-      region: "main",
-      rendererId: "lab.rows",
+    workbench.settings.registerPanel({
+      id: "host.repositories",
+      title: "Repositories",
+      kind: "custom",
+      order: 20,
+      section: "project",
+      render: () => null,
     });
-    expect(workbench.layout.getPanel("lab.rows")?.resourceKinds).toBeUndefined();
-    await expect(
-      renderer?.executeQuery({
-        settings: {
-          viewMode: "list",
-          columnGrouping: "none",
-          rowGrouping: "none",
-          ordering: { attributeId: "status", direction: "asc" },
-          displayProperties: ["status"],
+    workbench.settings.registerPanel({
+      id: "host.danger",
+      title: "Danger zone",
+      kind: "custom",
+      order: 90,
+      section: "project",
+      render: () => null,
+    });
+    const settingsMetadata = {
+      ...metadata,
+      views: [
+        ...metadata.views,
+        {
+          id: `${extensionId}.view.zebra-settings`,
+          localId: "zebra-settings",
+          extensionId,
+          title: "Zebra settings",
+          icon: "zebra",
+          body: {
+            kind: "webview",
+            webview: {
+              entry: { kind: "package-asset", path: "./zebra.tsx", baseUrl: "file:///extensions/lab/" },
+              runtimeUrl: "/runtime.html",
+              moduleUrl: "/zebra.js",
+            },
+          },
         },
-        filters: {},
-      }),
-    ).resolves.toEqual([{ id: "row-1", title: "Row 1", attributes: { status: "open" } }]);
-    renderer?.onAttributeChange?.("row-1", "status", "done");
-    expect(calls.at(-1)).toMatchObject({
-      commandId: "lab.rows.onAttributeChange",
-      request: { params: { rowId: "row-1", attributeId: "status", value: "done" } },
-    });
-
-    const menuItem = workbench.layout.listMenuItems(headerPath)[0];
-    expect(menuItem).toMatchObject({ commandId: "workbench.extension.menu.lab.open.menu" });
-    await workbench.commands.executeCommand(menuItem!.commandId);
-    expect(calls.at(-1)).toMatchObject({
-      commandId: "lab.open",
-      request: { params: { source: "menu" }, source: "dashboard" },
-    });
-
-    const paletteItem = workbench.layout
-      .listMenuItems(workbenchCommandPaletteMenuPath)
-      .find((item) => item.commandId === "workbench.extension.palette.lab.open.palette");
-    expect(paletteItem).toMatchObject({ commandId: "workbench.extension.palette.lab.open.palette" });
-    await workbench.commands.executeCommand(paletteItem!.commandId);
-    expect(calls.at(-1)).toMatchObject({
-      commandId: "lab.open",
-      request: { params: { source: "palette" }, slot: { id: "workbench.commandPalette" } },
-    });
-
-    await workbench.resources.openResource({
-      kind: "extension-route",
-      uri: "workbench://extension-route/lab.details",
-      id: "lab.details",
-    });
-    expect(workbench.layout.listPanelInstances("main").at(-1)).toMatchObject({ panelId: "lab.details" });
-
-    await workbench.navigator.open({
-      modeId: "lab.review",
-      resource: { kind: "ticket", uri: "workbench://ticket/T-1", id: "T-1", label: "T-1" },
-    });
-    expect(workbench.layout.listPanelInstances("main").at(-1)).toMatchObject({ panelId: "lab.ticketPanel" });
-    expect(workbench.layout.listPanelInstances("side").map((instance) => instance.panelId)).toEqual([
-      "lab.rows",
-      "lab.ticketModal",
-    ]);
-    expect(workbench.shell.getSidePanelPresentation()).toBe("attached");
-  });
-
-  test("registers a resource presenter for an owned show.for panel without a resourcePanels edge", async () => {
-    await registerOwnedShowForPresenter();
-  });
-
-  test("keeps webview command executions in the extension command response envelope", async () => {
-    const workbench = createWorkbenchCore();
-    const calls: { commandId: string; request: CommandExecuteRequest }[] = [];
-    const fileCalls: unknown[] = [];
+        {
+          id: `${extensionId}.view.alpha-settings`,
+          localId: "alpha-settings",
+          extensionId,
+          title: "Alpha settings",
+          icon: "alpha",
+          body: {
+            kind: "webview",
+            webview: {
+              entry: { kind: "package-asset", path: "./alpha.tsx", baseUrl: "file:///extensions/lab/" },
+              runtimeUrl: "/runtime.html",
+              moduleUrl: "/alpha.js",
+            },
+          },
+        },
+      ],
+      settingsSections: [
+        {
+          id: `${extensionId}.settings-section.lab`,
+          extensionId,
+          title: "Lab",
+          order: 30,
+        },
+      ],
+      settingsPanels: [
+        {
+          id: `${extensionId}.settings-panel.zebra`,
+          extensionId,
+          view: { extensionId, kind: "view", id: "zebra-settings" },
+          slot: { id: "project.settingsPanels" },
+          section: { extensionId, kind: "settings-section", id: "lab" },
+        },
+        {
+          id: `${extensionId}.settings-panel.alpha`,
+          extensionId,
+          view: { extensionId, kind: "view", id: "alpha-settings" },
+          slot: { id: "project.settingsPanels" },
+          section: { extensionId, kind: "settings-section", id: "lab" },
+        },
+      ],
+    } satisfies WorkbenchExtensionMetadata;
 
     registerWorkbenchExtensionContributions({
-      executeCommand: async (commandId, request) => {
-        calls.push({ commandId, request });
-        return success(commandId, { ok: true });
-      },
-      metadata,
+      executeCommand: () => undefined,
+      metadata: settingsMetadata,
       projectId: "project-1",
-      webviewFiles: {
-        upload: async (params) => {
-          fileCalls.push(["upload", params]);
-          return { id: "blob-1", name: "a.txt" };
-        },
-        list: async (params) => {
-          fileCalls.push(["list", params]);
-          return { files: [{ id: "blob-1", name: "a.txt" }] };
-        },
-        delete: async (params) => {
-          fileCalls.push(["delete", params]);
-        },
-      },
+      settingsSectionId: "project",
+      settingsSectionTitle: "Project",
       workbench,
     });
 
-    const renderer = workbench.renderers.getRenderer(BRIDGE_WEBVIEW_RENDERER_ID);
-    const widget = workbench.layout.getPanel("lab.ticketPanel")!;
-    const element = renderer?.keepAlive
-      ? null
-      : (renderer?.render({
-          refresh: () => {},
-          panel: widget,
-          workbench,
-          instance: {
-            instanceId: "lab.ticketPanel",
-            resource: { kind: "ticket", uri: "pstdio://ticket/PS-16", id: "PS-16", label: "Ticket PS-16" },
-            panelId: "lab.ticketPanel",
-            closable: false,
-          },
-        }) as { props?: { capabilities?: Record<string, (params: unknown) => unknown> } } | null);
-
-    await expect(
-      element?.props?.capabilities?.["commands.execute"]?.({
-        commandId: "lab.open",
-        params: { source: "webview" },
-      }),
-    ).resolves.toEqual(success("lab.open", { ok: true }));
-    expect(calls.at(-1)).toMatchObject({
-      commandId: "lab.open",
-      request: {
-        params: { source: "webview" },
-        projectId: "project-1",
-        resource: { type: "ticket", id: "PS-16", label: "Ticket PS-16" },
-        slot: { id: "lab.ticketPanel", kind: "panel" },
-        source: "dashboard",
-      },
-    });
-    await expect(element?.props?.capabilities?.["files.upload"]?.({ name: "a.txt" })).resolves.toEqual({
-      id: "blob-1",
-      name: "a.txt",
-    });
-    await expect(
-      element?.props?.capabilities?.["files.list"]?.({ scope: { type: "resource", id: "PS-16" } }),
-    ).resolves.toEqual({
-      files: [{ id: "blob-1", name: "a.txt" }],
-    });
-    await expect(element?.props?.capabilities?.["files.delete"]?.({ id: "blob-1" })).resolves.toBeUndefined();
-    expect(fileCalls).toEqual([
-      ["upload", { name: "a.txt" }],
-      ["list", { scope: { type: "resource", id: "PS-16" } }],
-      ["delete", { id: "blob-1" }],
+    const tree = await buildSettingsTreeBody({ settings: workbench.settings, hasProjectScope: true });
+    expect(tree.map((section) => ({ label: section.label, nodes: section.nodes.map((node) => node.label) }))).toEqual([
+      { label: "Project", nodes: ["Extensions", "Repositories", "Statuses", "Danger zone"] },
+      { label: "Lab", nodes: ["Alpha settings", "Zebra settings"] },
     ]);
+    expect(workbench.settings.getPanel("workbench.statuses")).toMatchObject({
+      icon: "list-checks",
+      order: 25,
+      section: "project",
+    });
   });
 
-  test("merges webview host capability overrides over extension command capabilities", async () => {
+  test("prepares extension command arguments through the host adapter", async () => {
     const workbench = createWorkbenchCore();
-    const calls: { commandId: string; request: CommandExecuteRequest }[] = [];
+    const commandId = `${extensionId}.command.inspect`;
+    const argumentChanges: unknown[] = [];
+    const preparedCalls: Array<{ commandId: string; args: unknown }> = [];
+    const commandMetadata = {
+      ...metadata,
+      commands: [
+        {
+          id: commandId,
+          extensionId,
+          title: "Inspect",
+          params: { files: { type: "files", required: true } },
+        },
+      ],
+    } satisfies WorkbenchExtensionMetadata;
 
     registerWorkbenchExtensionContributions({
-      createWebviewHostCapabilityOverrides: () => ({
-        "preferences.get": () => "pstdio-dark",
-      }),
-      executeCommand: async (commandId, request) => {
-        calls.push({ commandId, request });
-        return success(commandId, { ok: true });
+      executeCommand: () => [],
+      metadata: commandMetadata,
+      prepareCommandArgs: (targetCommandId, args, _context, onArgsChange) => {
+        preparedCalls.push({ commandId: targetCommandId, args });
+        const nextArgs = { files: ["uploaded-file"] };
+        onArgsChange?.(nextArgs);
+        return nextArgs;
       },
-      metadata,
       projectId: "project-1",
       workbench,
     });
 
-    const renderer = workbench.renderers.getRenderer(BRIDGE_WEBVIEW_RENDERER_ID);
-    const widget = workbench.layout.getPanel("lab.ticketPanel")!;
-    const element = renderer?.keepAlive
-      ? null
-      : (renderer?.render({
-          refresh: () => {},
-          panel: widget,
-          workbench,
-          instance: {
-            instanceId: "lab.ticketPanel",
-            resource: { kind: "ticket", uri: "pstdio://ticket/PS-16", id: "PS-16", label: "Ticket PS-16" },
-            panelId: "lab.ticketPanel",
-            closable: false,
-          },
-        }) as { props?: { capabilities?: Record<string, (params: unknown) => unknown> } } | null);
-
-    expect(element?.props?.capabilities?.["preferences.get"]?.({ name: "dashboard.themePreference" })).toBe(
-      "pstdio-dark",
+    const prepared = await workbench.commands.prepareCommandArgs(
+      commandId,
+      { files: ["browser-file"] },
+      undefined,
+      (args) => argumentChanges.push(args),
     );
-    await element?.props?.capabilities?.["commands.execute"]?.({ commandId: "lab.open" });
-    expect(calls.at(-1)).toMatchObject({ commandId: "lab.open" });
+
+    expect(preparedCalls).toEqual([{ commandId, args: { files: ["browser-file"] } }]);
+    expect(argumentChanges).toEqual([{ files: ["uploaded-file"] }]);
+    expect(prepared).toEqual({ files: ["uploaded-file"] });
+  });
+
+  test("registers alpha.4 views, placements, status chrome, and workflow statuses", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    const calls: string[] = [];
+    const openedViews: string[] = [];
+    const preparedResources: string[] = [];
+    const module: WorkbenchModuleContribution = {
+      id: "test.extension-host",
+      activate: (ctx) =>
+        registerWorkbenchExtensionContributions({
+          executeCommand: (commandId) => {
+            calls.push(commandId);
+            if (commandId.endsWith(".query")) {
+              return { statuses: [{ id: "todo", label: "Todo", color: "blue", sortOrder: 0 }] };
+            }
+            return [];
+          },
+          metadata,
+          prepareResource: (resource) => preparedResources.push(resource.uri),
+          projectId: "project-1",
+          resolveViewInput: (view) => (openInput) => {
+            openedViews.push(view.id);
+            return openInput;
+          },
+          workbench: ctx,
+        }),
+    };
+
+    workbench.registerModule(module);
+    workbench.modes.setActiveMode(modeId);
+
+    expect(workbench.views.getView(treeViewId)?.panelId).toBe(treeViewId);
+    expect(workbench.renderers.getTreeRenderer(treeViewId)).toBeDefined();
+    expect(workbench.renderers.getControlsRenderer(controlsViewId)).toBeDefined();
+    expect(workbench.layout.listPanelInstances("main")).toContainEqual(
+      expect.objectContaining({ panelId: treeViewId, closable: false }),
+    );
+    expect(workbench.statusBar.listItems()).toEqual([
+      expect.objectContaining({
+        id: `${extensionId}.status-bar-item.sync-status`,
+        viewId: statusViewId,
+        slot: "trailing",
+      }),
+    ]);
+    expect(workbench.statusBar.listVisibleItems()).toHaveLength(1);
+    workbench.modes.setActiveMode("project");
+    expect(workbench.statusBar.listVisibleItems()).toHaveLength(0);
+    workbench.modes.setActiveMode(modeId);
+    expect(workbench.views.getView(statusViewId)).toBeDefined();
+    expect(workbench.layout.getWidget(statusViewId)).toBeDefined();
+    expect(workbench.layout.listPanelInstances().some((panel) => panel.panelId === statusViewId)).toBe(false);
+
+    await workbench.views.openView(detailViewId);
+    expect(openedViews).toEqual([detailViewId]);
+
+    workbench.sidePanel.setMode("closed");
+    await workbench.resources.openResource({
+      kind: "artifact",
+      uri: "pstdio://artifact/artifact-1",
+      id: "artifact-1",
+      label: "Artifact 1",
+    });
+    expect(preparedResources).toEqual(["pstdio://artifact/artifact-1"]);
+    expect(workbench.sidePanel.getMode()).toBe("attached");
+
+    await expect(workbench.statuses.query(statusesId)).resolves.toEqual([
+      { id: "todo", label: "Todo", color: "blue", sortOrder: 0 },
+    ]);
+    expect(calls).toContain(`${statusesId}.query`);
   });
 });

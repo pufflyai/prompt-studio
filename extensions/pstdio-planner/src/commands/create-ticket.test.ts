@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { deleteTicketCommand } from "./delete-ticket";
 
@@ -13,9 +13,9 @@ describe("createTicketCommand", () => {
     const defaultStatus = statuses.find((status) => status.isDefault)!;
 
     const first = await createTicketCommand.run(
-      makeCommandContext({ storage, params: { content: "# Heading\n\nhello" } }),
+      ...makeCommandArgs({ storage, params: { content: "# Heading\n\nhello" } }),
     );
-    const second = await createTicketCommand.run(makeCommandContext({ storage, params: { content: "Second" } }));
+    const second = await createTicketCommand.run(...makeCommandArgs({ storage, params: { content: "Second" } }));
 
     expect(first.shorthand).toBe("T-1");
     expect(first.title).toBe("Heading");
@@ -35,14 +35,14 @@ describe("createTicketCommand", () => {
     const storage = createMemoryStorage();
 
     const first = await createTicketCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { title: "First" },
         overrides: { project: { id: "proj-1", name: "Prompt Studio", shorthand: "PS" } },
       }),
     );
     const second = await createTicketCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { title: "Second" },
         overrides: { project: { id: "proj-1", name: "Prompt Studio", shorthand: "PS" } },
@@ -58,7 +58,7 @@ describe("createTicketCommand", () => {
     await seedDefaultStatuses(storage);
 
     const ticket = await createTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "Pinned", statusId: "custom" } }),
+      ...makeCommandArgs({ storage, params: { title: "Pinned", statusId: "custom" } }),
     );
 
     expect(ticket.statusId).toBe("custom");
@@ -78,7 +78,7 @@ describe("createTicketCommand", () => {
     };
 
     const created = await createTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "With attachment", attachments: [attachment] } }),
+      ...makeCommandArgs({ storage, params: { title: "With attachment", attachments: [attachment] } }),
     );
 
     expect(created.attachments).toEqual([attachment]);
@@ -88,10 +88,10 @@ describe("createTicketCommand", () => {
     const storage = createMemoryStorage();
     await seedDefaultStatuses(storage);
     await seedDefaultTags(storage);
-    const parent = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Parent" } }));
+    const parent = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Parent" } }));
 
     const created = await createTicketCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { title: "Child", status: "TODO", tags: ["High", "Bug"], parent: parent.shorthand },
       }),
@@ -114,12 +114,7 @@ describe("createTicketCommand", () => {
           label: `${parent.shorthand} Parent`,
           metadata: {
             shorthand: parent.shorthand,
-            resourceParent: {
-              type: "extension-view",
-              id: "pstdio-planner.tickets",
-              label: "Tickets",
-              icon: "square-kanban",
-            },
+            resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },
       },
@@ -128,12 +123,12 @@ describe("createTicketCommand", () => {
 
   test("continues shorthand and sort order after hard delete", async () => {
     const storage = createMemoryStorage();
-    await createTicketCommand.run(makeCommandContext({ storage, params: { title: "First" } }));
-    const second = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Second" } }));
-    await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Third" } }));
+    await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "First" } }));
+    const second = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Second" } }));
+    await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Third" } }));
 
-    await deleteTicketCommand.run(makeCommandContext({ storage, params: { rowId: second.id } }));
-    const created = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Fourth" } }));
+    await deleteTicketCommand.run(...makeCommandArgs({ storage, params: { rowId: second.id } }));
+    const created = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Fourth" } }));
 
     expect(created.shorthand).toBe("T-4");
     expect(created.sortOrder).toBe(3);
@@ -142,18 +137,18 @@ describe("createTicketCommand", () => {
   test("continues project shorthand after hard delete", async () => {
     const storage = createMemoryStorage();
     const ctx = (title: string) =>
-      makeCommandContext({
+      makeCommandArgs({
         storage,
         params: { title },
         overrides: { project: { id: "proj-1", name: "Prompt Studio", shorthand: "PS" } },
       });
 
-    await createTicketCommand.run(ctx("First"));
-    const second = await createTicketCommand.run(ctx("Second"));
-    await createTicketCommand.run(ctx("Third"));
+    await createTicketCommand.run(...ctx("First"));
+    const second = await createTicketCommand.run(...ctx("Second"));
+    await createTicketCommand.run(...ctx("Third"));
 
-    await deleteTicketCommand.run(makeCommandContext({ storage, params: { rowId: second.id } }));
-    const created = await createTicketCommand.run(ctx("Fourth"));
+    await deleteTicketCommand.run(...makeCommandArgs({ storage, params: { rowId: second.id } }));
+    const created = await createTicketCommand.run(...ctx("Fourth"));
 
     expect(created.shorthand).toBe("PS-4");
   });
@@ -173,7 +168,7 @@ describe("createTicketCommand", () => {
     });
 
     const created = await createTicketCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: { title: "Next" },
         overrides: { project: { id: "proj-1", name: "Prompt Studio", shorthand: "PS" } },

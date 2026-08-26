@@ -283,20 +283,9 @@ test.describe("Workspace rename", () => {
 
     await page.addInitScript((selectedProjectId) => {
       window.localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
-      window.localStorage.setItem(
-        `dashboard-wb:last-resource:${selectedProjectId}`,
-        JSON.stringify({
-          kind: "dashboard-view",
-          uri: "dashboard-workbench://dashboard-view/workspaces",
-          id: "workspaces",
-          label: "Workspaces",
-          icon: "computer",
-          metadata: { favoriteScope: { scope: "project", projectId: "dashboard-project" } },
-        }),
-      );
     }, projectId);
 
-    await page.goto("/");
+    await page.goto(`/projects/${projectId}/workspaces`);
     await expect(page.getByRole("option", { name: workspace.workspace_shorthand })).toBeVisible();
 
     await page.getByRole("option", { name: workspace.workspace_shorthand }).click({ button: "right" });

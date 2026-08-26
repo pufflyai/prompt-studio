@@ -110,6 +110,33 @@ describe("dashboard workspaces", () => {
     expect(workspace.resource.metadata).toMatchObject({ workspacePath: "/repo/prompt-studio" });
   });
 
+  test("shows provider failures without assigning the project repository path", () => {
+    const [workspace] = buildDashboardWorkspacesFromRows(
+      {
+        ...rows,
+        workspaces: [
+          {
+            ...rows.workspaces[0],
+            worktree_path: null,
+            execution_kind: "remote",
+            provider_state: "failed",
+            provider_error_json: { message: "remote create failed" },
+          },
+        ],
+      },
+      { projectId: "project-1" },
+    );
+
+    expect(workspace.setupError).toBe("remote create failed");
+    expect(workspace.resource.metadata).toMatchObject({
+      workspaceExecutionKind: "remote",
+      workspaceProviderState: "failed",
+      workspaceError: "remote create failed",
+    });
+    expect(workspace.resource.metadata).not.toHaveProperty("workspacePath");
+    expect(toWorkspaceRow(workspace).attributes).toMatchObject({ error: "remote create failed" });
+  });
+
   test("carries ticket anchors in resource metadata so breadcrumbs stay ticket-scoped", () => {
     const [workspace] = buildDashboardWorkspacesFromRows(
       {

@@ -1,7 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { ExtensionsRouteDeps } from "../deps";
-import { refreshProjectSkillsInRepos } from "../extension-skill-cleanup";
+import type { ProjectExtensionLifecycleRouteDeps } from "../project-extension-lifecycle";
 
 const errorSchema = z.object({ error: z.string() });
 
@@ -37,22 +36,14 @@ export const uninstallProjectExtensionRoute = createRoute({
 });
 
 export const uninstallProjectExtensionHandler = (
-  deps: ExtensionsRouteDeps,
+  deps: ProjectExtensionLifecycleRouteDeps,
 ): AppRouteHandler<typeof uninstallProjectExtensionRoute> => {
   return async (c) => {
     const { projectId, instanceId } = c.req.valid("param");
     const deleteUserData = c.req.valid("query").deleteUserData === "true";
 
-    const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
-    if (!existing) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
-
-    const removed = await deps.extensionService.uninstallProjectExtension({ projectId, instanceId, deleteUserData });
+    const removed = await deps.projectExtensionLifecycle.uninstall({ projectId, instanceId, deleteUserData });
     if (!removed) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
-
-    // Re-provision so harness extensions sync their dirs to the catalog after the uninstall,
-    // pruning the removed extension's skills (and any harness dirs it owned).
-    await refreshProjectSkillsInRepos(deps, projectId);
-
     return c.body(null, 204);
   };
 };

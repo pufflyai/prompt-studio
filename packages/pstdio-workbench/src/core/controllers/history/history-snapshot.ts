@@ -50,7 +50,7 @@ export const selectedSubPanelsFromLayout = (layout: LayoutModel, modeId: string 
       active &&
       widget &&
       workbenchPlacementRole(layout, active) === "sub-panel" &&
-      isWorkbenchPanelPlacementVisible(widget, location?.resource, modeId, active)
+      isWorkbenchPanelPlacementVisible(widget, location?.resource, modeId, active, { location })
     ) {
       selected[regionId] = subPanelRefFromPlacement(active);
     }
@@ -66,10 +66,13 @@ const locationFromPlacement = (
   placement: WorkbenchWidgetPlacement,
   modeId: string | undefined,
 ): WorkbenchLocationRef => ({
-  key: placement.resourceUri
-    ? `${modeId ?? "global"}:resource:${placement.resourceUri}`
-    : `${modeId ?? "global"}:widget:${placement.contributionId}:${placement.widgetId}`,
+  key: placement.viewId
+    ? `${modeId ?? "global"}:view:${placement.viewId}${placement.resourceUri ? `:resource:${placement.resourceUri}` : ""}`
+    : placement.resourceUri
+      ? `${modeId ?? "global"}:resource:${placement.resourceUri}`
+      : `${modeId ?? "global"}:widget:${placement.contributionId}:${placement.widgetId}`,
   modeId,
+  viewId: placement.viewId,
   resource: placement.resource,
   contributionId: placement.contributionId,
   instanceKey: placement.widgetId,
@@ -94,9 +97,10 @@ export const entryFromCurrentSnapshot = (input: {
     return {
       ...base,
       location: locationFromPlacement(placement, modeId),
-      kind: placement.resource ? "resource" : "widget",
+      kind: placement.viewId ? "view" : placement.resource ? "resource" : "widget",
       modeId,
       resource: placement.resource,
+      viewId: placement.viewId,
       widgetId: placement.widgetId,
       contributionId: placement.contributionId,
       title: placement.title,
@@ -167,19 +171,23 @@ export const closedNavigationEntry = (input: {
     entryId: `history-${recordedAt}-${counter}`,
     recordedAt,
     location: {
-      key: placement.resourceUri
-        ? `${modeId ?? "global"}:resource:${placement.resourceUri}`
-        : `${modeId ?? "global"}:widget:${placement.contributionId}:${placement.widgetId}`,
+      key: placement.viewId
+        ? `${modeId ?? "global"}:view:${placement.viewId}${placement.resourceUri ? `:resource:${placement.resourceUri}` : ""}`
+        : placement.resourceUri
+          ? `${modeId ?? "global"}:resource:${placement.resourceUri}`
+          : `${modeId ?? "global"}:widget:${placement.contributionId}:${placement.widgetId}`,
       modeId,
+      viewId: placement.viewId,
       resource: placement.resource,
       contributionId: placement.contributionId,
       instanceKey: placement.widgetId,
       title: placement.title,
     },
     selectedSubPanels: {},
-    kind: placement.resource ? "resource" : "widget",
+    kind: placement.viewId ? "view" : placement.resource ? "resource" : "widget",
     modeId,
     resource: placement.resource,
+    viewId: placement.viewId,
     widgetId: placement.widgetId,
     contributionId: placement.contributionId,
     title: placement.title,

@@ -75,35 +75,52 @@ const metadata = {
     { id: extensionId, name: "outline", displayName: "Outline", sourcePath: "" },
   ],
   commands: [
-    { id: "outline.list", extensionId, title: "List outline" },
+    { id: extensionId + ".view.outline.tree.body", extensionId, title: "List outline" },
   ],
   menuContributions: [],
   commandPaletteContributions: [],
-  modes: [],
-  panels: [
+  modes: [
     {
-      id: "outline",
+      id: extensionId + ".mode.outline",
+      localId: "outline",
+      extensionId,
+      label: "Outline",
+    },
+  ],
+  views: [
+    {
+      id: extensionId + ".view.outline",
+      localId: "outline",
       extensionId,
       title: "Outline",
-      show: {
-        region: "main",
-        allowedRegions: ["main", "sidenav"],
-        required: true,
+      body: {
+        kind: "tree",
+        bodyHandlerId: extensionId + ".view.outline.tree.body",
       },
-      renderer: { kind: "tree", id: "outline-tree" },
     },
   ],
-  routes: [],
-  settingsPanels: [],
-  treeItems: [],
-  treeRenderers: [
+  viewMenus: [],
+  placements: [
     {
-      id: "outline-tree",
+      id: extensionId + ".placement.outline",
+      localId: "outline",
       extensionId,
-      title: "Outline",
-      bodyHandlerId: "outline.list",
+      mode: { extensionId, kind: "mode", id: "outline" },
+      item: {
+        kind: "view",
+        view: { extensionId, kind: "view", id: "outline" },
+      },
+      region: "main",
+      movableTo: ["main", "sidenav"],
+      required: true,
     },
   ],
+  resourceKinds: [],
+  resourceViews: [],
+  navigationItems: [],
+  statusBarItems: [],
+  statuses: [],
+  settingsPanels: [],
   diagnostics: [],
 } satisfies WorkbenchExtensionMetadata;
 

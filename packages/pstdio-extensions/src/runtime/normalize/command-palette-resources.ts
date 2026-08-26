@@ -1,9 +1,12 @@
+import type { CommandPaletteResourceContribution } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension, RuntimeCommandPaletteResourceRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
-import { type Accumulator, isRecord, type RegistryIndex, refId } from "./accumulator";
+import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
+import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { isLocalizableString } from "./localizable";
-import { contributionId } from "./references";
+import { registerPrivateHandler } from "./private-handlers";
+import { normalizeContributionRef } from "./references";
 
 export const registerCommandPaletteResources = (
   ext: NormalizedExtension,
@@ -11,14 +14,27 @@ export const registerCommandPaletteResources = (
   runtime: Accumulator,
   index: RegistryIndex,
 ) => {
-  for (const [localId, contribution] of Object.entries(source.definition.commandPaletteResources ?? {})) {
-    const id = contributionId(ext, localId);
+  const contributions = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "command-palette-resource",
+    contributions: contributionArray<CommandPaletteResourceContribution>(source.definition.commandPaletteResources),
+  });
+  for (const contribution of contributions) {
+    const localId = contribution.id;
+    const base = contributionRecordBase(ext, source, "command-palette-resource", localId);
+    const id = base.id;
 
-    if (!isRecord(contribution) || !isLocalizableString(contribution.title) || !refId(contribution.queryCommand)) {
+    if (
+      !isRecord(contribution) ||
+      !isLocalizableString(contribution.title) ||
+      typeof contribution.query !== "function"
+    ) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_command_palette_resource",
-          message: `Command palette resource "${id}" must define title and queryCommand`,
+          message: `Command palette resource "${id}" must define title and query`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { contributionId: id },
@@ -27,13 +43,29 @@ export const registerCommandPaletteResources = (
       continue;
     }
 
+    const queryHandlerId = registerPrivateHandler({
+      ext,
+      source,
+      runtime,
+      index,
+      rendererId: id,
+      rendererKind: "commandPaletteResource",
+      rendererLocalId: localId,
+      operation: "query",
+      handler: contribution.query,
+    });
+    if (!queryHandlerId) continue;
+
     const record: RuntimeCommandPaletteResourceRecord = {
-      id,
-      localId,
-      extensionId: ext.id,
-      name: ext.name,
-      sourcePath: source.sourcePath,
-      contribution: contribution as RuntimeCommandPaletteResourceRecord["contribution"],
+      ...base,
+      contribution: {
+        ...contribution,
+        ref: normalizeContributionRef(ext, contribution.ref),
+        queryHandlerId,
+        ...(contribution.resourceKind
+          ? { resourceKind: normalizeContributionRef(ext, contribution.resourceKind) }
+          : {}),
+      } as RuntimeCommandPaletteResourceRecord["contribution"],
     };
 
     const existing = index.commandPaletteResourceIds.get(id);

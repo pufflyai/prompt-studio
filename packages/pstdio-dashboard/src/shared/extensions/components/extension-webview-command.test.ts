@@ -63,4 +63,30 @@ describe("executeWebviewCommand", () => {
       },
     ]);
   });
+
+  test("keeps the command outcome envelope for extension commands registered in the workbench", async () => {
+    const workbench = createWorkbenchCore();
+    const extensionCalls: unknown[] = [];
+    const response = {
+      commandId: "pstdio.extension-lab.command.counter.read",
+      extensionId: "pstdio.extension-lab",
+      outcome: { ok: true, status: "success", value: { counter: 1 } },
+    };
+    workbench.commands.registerCommand(
+      { id: response.commandId, label: "Read counter" },
+      { execute: () => response.outcome.value },
+    );
+
+    const result = await executeWebviewCommand({
+      commandId: response.commandId,
+      workbench,
+      executeExtensionCommand: async (input) => {
+        extensionCalls.push(input);
+        return response;
+      },
+    });
+
+    expect(result).toEqual(response);
+    expect(extensionCalls).toEqual([{ commandId: response.commandId }]);
+  });
 });

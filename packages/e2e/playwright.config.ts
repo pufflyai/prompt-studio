@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "./src/default-extensions";
 
+const repoRoot = join(import.meta.dirname, "../..");
+
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const dashboardPort = Number(process.env.E2E_DASHBOARD_PORT ?? "5174");
 const runId = process.env.E2E_RUN_ID ?? `${Date.now()}-${process.pid}`;
@@ -70,6 +72,8 @@ export default defineConfig({
         PSTDIO_EVENT_BUS_BUFFER_SIZE: "5",
         PSTDIO_HOME: resolvedHomePath,
         PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
+        PSTDIO_EXTENSION_RELEASE_REF: "e2e",
+        PSTDIO_EXTENSION_SOURCE_ROOT: repoRoot,
         PSTDIO_TERMINAL_ORIGINS: `http://localhost:${dashboardPort}`,
         HOME: resolvedHomePath,
         BUN_INSTALL_CACHE_DIR: bunCacheDir,

@@ -1,5 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
+import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 import { STORY_RENDER_TIMEOUT_MS, startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const workspaceModeStoryId = "dashboard-sidenav--workspace-mode";
@@ -25,16 +26,14 @@ test.describe("PS-172 workspace sessions", () => {
 
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     await expect(sidenav).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
-    const workspaceSessions = sidenav.locator('[data-tree-list-focus-id="sessions"]');
+    const workspaceSessions = sidenav.locator('[data-tree-list-focus-id="workspace-sessions"]');
     await expect(workspaceSessions).toBeVisible();
     await expect(workspaceSessions).toHaveAttribute("aria-expanded", "true");
     await expect(sidenav.getByRole("option", { name: "Refactor sidenav", exact: true })).toBeVisible();
     await expect(sidenav.getByRole("option", { name: "Wire up board", exact: true })).toBeVisible();
 
-    await sidenav
-      .getByRole("option", { name: /^Workspaces/ })
-      .first()
-      .click();
+    const workspacesNavigation = await showHiddenSidenavEntry(page, "Workspaces");
+    await workspacesNavigation.click();
     await page.getByRole("option", { name: /^Mode-driven sidenav/ }).click();
     await expect(sidenav.getByRole("option", { name: "Refactor sidenav", exact: true })).toBeVisible();
 
@@ -53,7 +52,7 @@ test.describe("PS-172 workspace sessions", () => {
 
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     await expect(sidenav).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
-    const workspaceSessions = sidenav.locator('[data-tree-list-focus-id="sessions"]');
+    const workspaceSessions = sidenav.locator('[data-tree-list-focus-id="workspace-sessions"]');
     await expect(workspaceSessions).toHaveAttribute("aria-expanded", "true");
 
     await workspaceSessions.hover();

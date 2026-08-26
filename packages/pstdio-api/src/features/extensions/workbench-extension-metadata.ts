@@ -1,5 +1,5 @@
 import { existsSync, readdirSync } from "node:fs";
-import type { WorkbenchExtensionMetadata, WorkbenchExtensionRouteRecord } from "pstdio-api-contracts";
+import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import type { PackageAssetDescriptor } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionRuntime } from "pstdio-extensions";
 import { createWorkbenchExtensionMetadata, type ResolveWorkbenchExtensionWebview } from "pstdio-extensions/workbench";
@@ -9,7 +9,10 @@ import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-we
 type ExtensionIdMap = Map<string, string>;
 type InstallNameMap = Map<string, string>;
 type AssetRevisionMap = Map<string, string | null | undefined>;
-type ExtensionWebviewRecord = WorkbenchExtensionRouteRecord["webview"];
+type ExtensionWebviewRecord = Extract<
+  WorkbenchExtensionMetadata["views"][number]["body"],
+  { kind: "webview" }
+>["webview"];
 
 const listDistCssFiles = (installName: string, webviewId: string, webviewCacheRoot: string) => {
   const { distDir } = resolveManagedWebviewPaths({ installName, webviewCacheRoot, webviewId });
@@ -57,16 +60,6 @@ export interface BuildWorkbenchExtensionMetadataInput {
   webviewCacheRoot: string;
 }
 
-const enrichInstallMetadata = <TRecord extends { extensionId: string }>(
-  record: TRecord,
-  input: BuildWorkbenchExtensionMetadataInput,
-) => ({
-  ...record,
-  extensionInstanceId: input.extensionInstanceIdsByExtensionId?.get(record.extensionId),
-  installedExtensionId: input.installedExtensionIdsByExtensionId?.get(record.extensionId),
-  installName: input.installNamesByExtensionId.get(record.extensionId),
-});
-
 export const buildWorkbenchExtensionMetadata = (
   input: BuildWorkbenchExtensionMetadataInput,
 ): WorkbenchExtensionMetadata => {
@@ -80,12 +73,5 @@ export const buildWorkbenchExtensionMetadata = (
     }),
   });
 
-  return {
-    ...metadata,
-    keybindings: metadata.keybindings,
-    kanbanRenderers: (metadata.kanbanRenderers ?? []).map((renderer) => enrichInstallMetadata(renderer, input)),
-    panels: metadata.panels.map((panel) => enrichInstallMetadata(panel, input)),
-    routes: metadata.routes.map((route) => enrichInstallMetadata(route, input)),
-    settingsPanels: metadata.settingsPanels.map((panel) => enrichInstallMetadata(panel, input)),
-  };
+  return metadata;
 };

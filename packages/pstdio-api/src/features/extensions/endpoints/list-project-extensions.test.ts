@@ -1,14 +1,13 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
-import { writeProvisionHarnessExtension } from "../../../test-utils/write-provision-harness-extension";
 import type { AppBindings } from "../../../types";
 import { createTestHarnessRecord, createTestHarnessRegistry } from "../../harnesses/test-harness-registry";
-import { hashExtensionSource, loadExtensionSource } from "../extension-runtime";
-import { createTestExtensionSource, createTestSkillExtensionSource } from "../test-utils/create-test-extension-source";
+import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
 
 type AppHandle = Awaited<ReturnType<typeof createTestApp>>;
 
@@ -111,66 +110,6 @@ const seedInstance = async (
   }
 
   return { instanceId: result.instance.id, installedExtensionId: result.installedSource.id };
-};
-
-const seedSkillInstance = async (projectId: string, installName: string) => {
-  const sourcePath = createTestSkillExtensionSource({
-    displayName: "Deleted Skill Extension",
-    installName,
-    name: "deleted-skill-extension",
-    root: pstdioHome,
-    skillKey: "lab",
-    version: "1.0.0",
-  });
-  const loaded = await loadExtensionSource(sourcePath);
-  await handle.deps.extensionService.enableInstalledSourceForProject({
-    displayName: loaded.metadata.displayName,
-    extensionId: loaded.metadata.id,
-    installName,
-    manifest: loaded.manifest,
-    name: loaded.metadata.name,
-    projectId,
-    sourceHash: hashExtensionSource(sourcePath),
-    sourcePath,
-    version: loaded.metadata.version ?? null,
-  });
-
-  return sourcePath;
-};
-
-// Enable a harness extension whose workspace.provision hook syncs skills into .claude/skills,
-// so provisioning materializes (and prunes) the agent dir like the real harness extensions.
-const enableProvisionHarness = async (projectId: string) => {
-  const sourcePath = writeProvisionHarnessExtension(pstdioHome, {
-    installName: `provision-harness-${projectId}`,
-    localId: "claude-code",
-    skillsDir: ".claude/skills",
-  });
-  const loaded = await loadExtensionSource(sourcePath);
-  await handle.deps.extensionService.enableInstalledSourceForProject({
-    displayName: loaded.metadata.displayName,
-    extensionId: loaded.metadata.id,
-    installName: `provision-harness-${projectId}`,
-    manifest: loaded.manifest,
-    name: loaded.metadata.name,
-    projectId,
-    sourceHash: hashExtensionSource(sourcePath),
-    sourcePath,
-    version: loaded.metadata.version ?? null,
-  });
-};
-
-const registerClaudeRepo = async (projectId: string, name: string) => {
-  const repoPath = join(tempRoot, name);
-  mkdirSync(repoPath, { recursive: true });
-  const res = await app.request(`/v1/projects/${projectId}/repos`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name, path: repoPath }),
-  });
-  expect(res.status).toBe(201);
-
-  return repoPath;
 };
 
 describe("GET /v1/projects/:projectId/extensions", () => {
@@ -284,14 +223,14 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     });
   });
 
-  test("keeps a local-first core extension under local source control", async () => {
-    const project = await createProject("Incompatible Core Extension Project");
+  test("keeps a healthy local-first core extension under local source control", async () => {
+    const project = await createProject("Local Core Extension Project");
     const seeded = await seedInstance(project.id, {
       name: "pstdio-planner",
       extensionId: "pstdio.pstdio-planner",
       displayName: "Prompt Studio Planner",
       installName: "pstdio-planner",
-      enginesPstdio: "1.0.0-alpha.1",
+      enginesPstdio: EXTENSION_API_VERSION,
       sourceKind: "local_path",
       version: "0.10.0",
     });
@@ -305,8 +244,35 @@ describe("GET /v1/projects/:projectId/extensions", () => {
     expect(row).toMatchObject({
       canUpgrade: false,
       installName: "pstdio-planner",
-      status: "error",
+      status: "loaded",
       version: "0.10.0",
+    });
+  });
+
+  test("offers release recovery for an incompatible core extension without install provenance", async () => {
+    const project = await createProject("Incompatible Core Extension Project");
+    const seeded = await seedInstance(project.id, {
+      name: "pstdio-skills",
+      extensionId: "pstdio.pstdio-skills",
+      displayName: "Prompt Studio Skills",
+      installName: "pstdio-skills",
+      enginesPstdio: "1.0.0-alpha.1",
+      sourceKind: "local_path",
+      version: "0.3.0",
+    });
+
+    const res = await app.request(`/v1/projects/${project.id}/extensions`);
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    const row = body.extensions.find((entry: { id: string }) => entry.id === seeded.instanceId);
+
+    expect(row).toMatchObject({
+      canUpgrade: true,
+      installName: "pstdio-skills",
+      status: "error",
+      lastError: { code: "extension_manifest_unsupported_api_version" },
+      version: "0.3.0",
     });
   });
 
@@ -324,11 +290,20 @@ describe("GET /v1/projects/:projectId/extensions", () => {
           installName: "pstdio-planner",
           installed: false,
         }),
+        expect.objectContaining({
+          displayName: "Prompt Studio Planner Automation",
+          installName: "pstdio-planner-loops",
+          installed: false,
+        }),
       ]),
     );
+    expect(body.marketplace.every((entry: Record<string, unknown>) => !("repositoryPath" in entry))).toBe(true);
+    expect(body.marketplace.every((entry: Record<string, unknown>) => !("scope" in entry))).toBe(true);
   });
+});
 
-  test("syncs globally installed extensions when a project extension list is requested", async () => {
+describe("GET /v1/projects/:projectId/extensions read boundary", () => {
+  test("does not discover globally installed extensions during a list request", async () => {
     const project = await createProject("Late Discovery Extension Project");
     createTestExtensionSource({
       root: pstdioHome,
@@ -345,56 +320,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
       (entry: { installName: string }) => entry.installName === "late-discovered-extension-source",
     );
 
-    expect(row).toMatchObject({
-      displayName: "Late Discovered Extension",
-      enabled: false,
-      installName: "late-discovered-extension-source",
-      name: "late-discovered-extension",
-      projectId: project.id,
-    });
-  });
-
-  test("removes extensions whose installed folder was deleted", async () => {
-    const project = await createProject("Deleted Extension Project");
-    const sourcePath = createTestExtensionSource({
-      root: pstdioHome,
-      name: "deleted-extension",
-      displayName: "Deleted Extension",
-      installName: "deleted-extension-source",
-    });
-
-    const firstRes = await app.request(`/v1/projects/${project.id}/extensions`);
-    expect(firstRes.status).toBe(200);
-
-    const firstBody = await firstRes.json();
-    expect(
-      firstBody.extensions.find((entry: { installName: string }) => entry.installName === "deleted-extension-source"),
-    ).toBeDefined();
-
-    rmSync(sourcePath, { recursive: true, force: true });
-
-    const secondRes = await app.request(`/v1/projects/${project.id}/extensions`);
-    expect(secondRes.status).toBe(200);
-
-    const secondBody = await secondRes.json();
-    expect(
-      secondBody.extensions.find((entry: { installName: string }) => entry.installName === "deleted-extension-source"),
-    ).toBeUndefined();
-  });
-
-  test("removes installed skills when an extension folder was deleted", async () => {
-    const project = await createProject("Deleted Extension Skill Project");
-    await enableProvisionHarness(project.id);
-    const sourcePath = await seedSkillInstance(project.id, "deleted-skill-extension-source");
-    const repoPath = await registerClaudeRepo(project.id, "deleted-extension-skill-repo");
-    const skillPath = join(repoPath, ".claude", "skills", "lab", "SKILL.md");
-    expect(existsSync(skillPath)).toBe(true);
-
-    rmSync(sourcePath, { recursive: true, force: true });
-
-    const res = await app.request(`/v1/projects/${project.id}/extensions`);
-    expect(res.status).toBe(200);
-    expect(existsSync(skillPath)).toBe(false);
+    expect(row).toBeUndefined();
   });
 
   test("returns 404 when project does not exist", async () => {

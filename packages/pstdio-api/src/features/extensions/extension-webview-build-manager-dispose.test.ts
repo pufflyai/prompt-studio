@@ -30,13 +30,11 @@ const writeExtension = (root: string, options: { loadStartedPath?: string } = {}
   writeFileSync(
     join(root, "extension.ts"),
     `${options.loadStartedPath ? `await Bun.write(${JSON.stringify(options.loadStartedPath)}, "started");\nawait Bun.sleep(40);\n` : ""}export default {
-      routes: {
-        labPage: {
-          path: "labPage",
-          label: "labPage",
-          webview: { entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: import.meta.url } },
-        },
-      },
+      views: [{
+        id: "labPage",
+        title: "labPage",
+        body: { kind: "webview", entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: import.meta.url } },
+      }],
     };`,
   );
 };

@@ -27,31 +27,19 @@ export const classifyWebviewEntry = (asset: PackageAssetDescriptor): WebviewEntr
   return { extension, kind: "unsupported" };
 };
 
-// Every contribution kind that can carry a webview body. A kind missing here builds no
-// bundle, so its view fails to load at runtime with no build-time signal.
-const contributionMaps = ["panels", "routes", "settingsPanels", "statusItems"] as const;
-
-const collectWebview = (webviews: WebviewContributionRecord[], id: string, contribution: Record<string, unknown>) => {
-  if (!isRecord(contribution.webview) || !isPackageAssetDescriptor(contribution.webview.entry)) return;
-  webviews.push({ id, entry: contribution.webview.entry });
+const collectWebview = (webviews: WebviewContributionRecord[], id: string, body: Record<string, unknown>) => {
+  if (body.kind !== "webview" || !isPackageAssetDescriptor(body.entry)) return;
+  webviews.push({ id, entry: body.entry });
 };
 
 export const collectExtensionWebviews = (loaded: Pick<LoadedExtension, "definition" | "metadata">) => {
   const webviews: WebviewContributionRecord[] = [];
 
-  for (const mapKey of contributionMaps) {
-    const contributions = loaded.definition[mapKey];
-    if (!isRecord(contributions)) continue;
-
-    for (const [key, contribution] of Object.entries(contributions)) {
-      if (!isRecord(contribution)) continue;
-      const contributionId = `${loaded.metadata.name}.${key}`;
-      collectWebview(webviews, contributionId, contribution);
-      if (mapKey !== "panels" || !isRecord(contribution.panelMenus)) continue;
-      for (const [menuId, menu] of Object.entries(contribution.panelMenus)) {
-        if (isRecord(menu)) collectWebview(webviews, `${contributionId}.${menuId}`, menu);
-      }
-    }
+  const views = loaded.definition.views;
+  if (!Array.isArray(views)) return webviews;
+  for (const view of views) {
+    if (!isRecord(view) || typeof view.id !== "string" || !isRecord(view.body)) continue;
+    collectWebview(webviews, `${loaded.metadata.id}.view.${view.id}`, view.body);
   }
 
   return webviews;

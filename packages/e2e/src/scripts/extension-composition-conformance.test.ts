@@ -22,16 +22,19 @@ describe("shipped extension composition", () => {
     const runtime = await loadRuntime([plannerPath, labPath]);
 
     expect(runtime.diagnostics).toEqual([]);
-    // A resource kind keeps the plain name its extension declared; the owner is the
-    // `extensionId` on the record, not a prefix on the id.
-    expect(runtime.resourceKinds.map((kind) => [kind.id, kind.extensionId])).toEqual([
+    expect(runtime.resourceKinds.map((kind) => [kind.localId, kind.extensionId])).toEqual([
       ["ticket", "pstdio.pstdio-planner"],
       ["glass-lab-artifact", "pstdio.extension-lab"],
       ["blend-project", "pstdio.extension-lab"],
     ]);
-    expect(runtime.resourcePanels).toEqual([]);
-    expect(runtime.panels.find((panel) => panel.id === "pstdio-planner.ticketEditor")?.contribution.show).toEqual({
-      for: "ticket",
+    expect(runtime.resourceViews.find((view) => view.localId === "ticket-editor")?.contribution).toMatchObject({
+      view: { kind: "view", id: "ticket-editor" },
+      slot: { id: "primary" },
+    });
+    expect(
+      runtime.placements.find((placement) => placement.localId === "ticket-primary.project")?.contribution,
+    ).toMatchObject({
+      item: { kind: "resource-slot", slot: { id: "primary" } },
       region: "main",
       required: true,
     });
@@ -41,50 +44,40 @@ describe("shipped extension composition", () => {
     const runtime = await loadRuntime([labPath]);
 
     expect(runtime.diagnostics).toEqual([]);
-    expect(runtime.resourcePanels).toEqual([]);
+    expect(runtime.resourceViews.map((view) => view.localId)).toContain("artifact-detail");
   });
 
   test("arranges one shared resource differently in the Animation and Sculpt modes", async () => {
     const runtime = await loadRuntime([labPath]);
-    const recipeFor = (modeId: string) =>
-      runtime.modes.find((mode) => mode.contribution.id === modeId)?.contribution.resources?.["blend-project"];
-    const placementFor = (panelId: string) => {
-      const show = runtime.panels.find((panel) => panel.id === panelId)?.contribution.show;
-      const placements = Array.isArray(show) ? show : [show];
-      return placements.find((placement) => placement?.for === "blend-project");
-    };
+    const placementFor = (id: string) => runtime.placements.find((placement) => placement.localId === id)?.contribution;
 
-    const animation = recipeFor("pstdio.extension-lab.animation");
-    const sculpt = recipeFor("pstdio.extension-lab.sculpt");
-
-    expect(placementFor("extension-lab.labOverview")).toEqual({
-      for: "blend-project",
+    expect(placementFor("blend-primary.animation")).toMatchObject({
+      item: { kind: "resource-slot", slot: { id: "primary" } },
       region: "main",
       required: true,
     });
-    expect(placementFor("extension-lab.labCams")).toEqual({
-      for: "blend-project",
+    expect(placementFor("blend-navigation.animation")).toMatchObject({
+      item: { kind: "resource-slot", slot: { id: "navigation" } },
       region: "sidenav",
-      allowedRegions: ["sidenav", "side"],
       required: true,
     });
-    expect(placementFor("extension-lab.labArtifacts")).toEqual({
-      for: "blend-project",
+    expect(placementFor("blend-inspector.animation")).toMatchObject({
+      item: { kind: "resource-slot", slot: { id: "inspector" } },
       region: "side",
-      allowedRegions: ["side", "secondary"],
+      movableTo: ["side", "secondary"],
     });
-    // Animation uses the panel-owned defaults. Sculpt stores only its overrides.
-    expect(animation).toEqual({});
-    expect(sculpt?.panels).toEqual({
-      labCams: { region: "side" },
-      labArtifacts: { region: "secondary" },
-    });
+    expect(placementFor("blend-navigation.sculpt")?.region).toBe("side");
+    expect(placementFor("blend-inspector.sculpt")?.region).toBe("secondary");
   });
 
   test("keeps the Lab status bar out of docked layout", async () => {
     const runtime = await loadRuntime([labPath]);
 
-    expect(runtime.statusItems.map((item) => item.id)).toEqual(["extension-lab.labStatusBar"]);
-    expect(runtime.panels.map((panel) => panel.id)).not.toContain("extension-lab.labStatusBar");
+    expect(runtime.statusBarItems.map((item) => item.localId)).toEqual(["lab"]);
+    expect(
+      runtime.placements.some(
+        (placement) => placement.contribution.item.kind === "view" && placement.contribution.item.view.id === "status",
+      ),
+    ).toBe(false);
   });
 });

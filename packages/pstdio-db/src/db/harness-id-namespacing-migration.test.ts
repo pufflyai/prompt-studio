@@ -43,7 +43,7 @@ describe("0020_harness_id_namespacing", () => {
     await db.execute(sql`
       INSERT INTO sessions (id, title, status, agent, created_at, updated_at)
       VALUES ('s-1', 'S', 'in_progress', 'fake', ${now}, ${now}),
-             ('s-2', 'S2', 'completed', 'pstdio.harness-open-code.opencode', ${now}, ${now}),
+             ('s-2', 'S2', 'completed', 'pstdio.harness-open-code.harness.opencode', ${now}, ${now}),
              ('s-3', 'S3', 'completed', 'acme.acme-agent.my-agent', ${now}, ${now})
     `);
 
@@ -52,12 +52,12 @@ describe("0020_harness_id_namespacing", () => {
     await runDataRewrites(db);
 
     const projects = await db.execute(sql`SELECT default_agent_id FROM projects`);
-    expect(projects.rows).toEqual([{ default_agent_id: "pstdio.harness-claude-code.claude-code" }]);
+    expect(projects.rows).toEqual([{ default_agent_id: "pstdio.harness-claude-code.harness.claude-code" }]);
 
     const sessions = await db.execute(sql`SELECT id, agent FROM sessions ORDER BY id`);
     expect(sessions.rows).toEqual([
       { id: "s-1", agent: "pstdio.harness-lab.fake" },
-      { id: "s-2", agent: "pstdio.harness-open-code.opencode" },
+      { id: "s-2", agent: "pstdio.harness-open-code.harness.opencode" },
       { id: "s-3", agent: "acme.acme-agent.my-agent" },
     ]);
 

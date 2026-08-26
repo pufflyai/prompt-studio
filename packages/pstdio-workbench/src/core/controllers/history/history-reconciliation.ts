@@ -1,10 +1,11 @@
 import type { LayoutModel } from "../../registries/layout/layout-model";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import type { ResourceRegistry } from "../../registries/resources/resource-registry";
+import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
 import { compactNavigationEntries } from "./history-snapshot";
 import type { HistoryStoreState, PersistedWorkbenchHistory, WorkbenchNavigationEntry } from "./history-types";
 
-export const WORKBENCH_HISTORY_VERSION = 1 as const;
+export const WORKBENCH_HISTORY_VERSION = 2 as const;
 const RECENTLY_CLOSED_LIMIT = 20;
 
 export const emptyHistoryState = (): HistoryStoreState => ({
@@ -15,7 +16,7 @@ export const emptyHistoryState = (): HistoryStoreState => ({
 });
 
 export const hydrateHistoryState = (persisted: PersistedWorkbenchHistory | undefined): HistoryStoreState => {
-  if (persisted?.version !== WORKBENCH_HISTORY_VERSION) return emptyHistoryState();
+  if (persisted?.version !== 1 && persisted?.version !== WORKBENCH_HISTORY_VERSION) return emptyHistoryState();
   const entries = compactNavigationEntries(persisted.entries);
   return {
     entries,
@@ -30,8 +31,9 @@ const reconcileEntry = (input: {
   layout: LayoutModel;
   modes?: Pick<WorkbenchModeRegistry, "getMode">;
   resources: ResourceRegistry;
+  views?: WorkbenchViewRegistry;
 }) => {
-  const { entry, layout, modes, resources } = input;
+  const { entry, layout, modes, resources, views } = input;
   if (entry.modeId && modes && !modes.getMode(entry.modeId)) return undefined;
   if (entry.closedSubPanel && !layout.getWidget(entry.closedSubPanel.reference.contributionId)) {
     return undefined;
@@ -40,10 +42,12 @@ const reconcileEntry = (input: {
   const hasLocation =
     entry.kind === "mode"
       ? Boolean(entry.modeId && modes?.getMode(entry.modeId))
-      : Boolean(
-          (contribution && !contribution.panelMenuOwner && !contribution.eligibleLocations) ||
-            (entry.resource && resources.listPresenters().some((presenter) => presenter.canOpen(entry.resource!))),
-        );
+      : entry.kind === "view"
+        ? Boolean(entry.viewId && views?.canResolveView(entry.viewId))
+        : Boolean(
+            (contribution && !contribution.panelMenuOwner && !contribution.eligibleLocations) ||
+              (entry.resource && resources.listPresenters().some((presenter) => presenter.canOpen(entry.resource!))),
+          );
   if (!hasLocation) return undefined;
 
   const selectedSubPanels = Object.fromEntries(
@@ -60,6 +64,7 @@ export const reconcileHistoryState = (input: {
   layout: LayoutModel;
   modes?: Pick<WorkbenchModeRegistry, "getMode">;
   resources: ResourceRegistry;
+  views?: WorkbenchViewRegistry;
 }) => {
   const { state } = input;
   const currentEntryId = state.entries[state.cursor]?.entryId;

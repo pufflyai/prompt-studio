@@ -286,15 +286,14 @@
           "harnesses": "Harnesses",
           "commands": "Comandos",
           "modes": "Modos",
-          "panels": "Vistas",
-          "routes": "Rutas",
+          "views": "Vistas",
+          "placements": "Ubicaciones",
           "menuContributions": "Elementos de menú",
           "settingsPanels": "Paneles de configuración",
-          "renderers": "Renderizadores",
           "skills": "Habilidades",
           "templates": "Plantillas",
           "themes": "Temas",
-          "treeItems": "Elementos de árbol",
+          "navigationItems": "Elementos de navegación",
           "commandPaletteResources": "Recursos de la paleta de comandos"
         }
       },

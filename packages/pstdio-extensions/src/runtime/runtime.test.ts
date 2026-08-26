@@ -44,13 +44,15 @@ describe("loadExtensionRuntime", () => {
     writeFileSync(
       join(root, "lab", "extension.ts"),
       `export default {
-        commands: {
-          "say-hello": {
+        commands: [
+          {
+            id: "say-hello",
+            ref: { kind: "command", id: "say-hello" },
             title: "Say hello",
             cli: true,
             run: async () => ({ message: "hi" }),
           },
-        },
+        ],
       };`,
     );
 
@@ -62,7 +64,7 @@ describe("loadExtensionRuntime", () => {
     expect(runtime.diagnostics).toEqual([]);
     expect(runtime.extensions).toHaveLength(1);
     expect(runtime.commands).toHaveLength(1);
-    expect(runtime.commands[0]?.id).toBe("lab.say-hello");
+    expect(runtime.commands[0]?.id).toBe("pstdio.lab.command.say-hello");
     expect(runtime.cli[0]?.pathKey).toBe("lab say-hello");
   });
 
@@ -94,25 +96,21 @@ describe("loadExtensionRuntime", () => {
     expect(runtime.diagnostics.map((d) => d.code)).toContain("invalid_default_export");
   });
 
-  test("accepts panels that declare their docked regions", async () => {
+  test("accepts views with separate docked placements", async () => {
     const root = createTempDir();
     mkdirSync(join(root, "lab"));
     writePackage(join(root, "lab"), "lab");
     writeFileSync(
       join(root, "lab", "extension.ts"),
-      `export default {
-        panels: {
-          content: {
-            title: "Content",
-            show: { region: "main" },
-            webview: { entry: "./content.tsx" },
-          },
-          tickets: {
-            title: "Tickets",
-            show: { region: "main", allowedRegions: ["main", "side"] },
-            webview: { entry: "./tickets.tsx" },
-          },
-        },
+      `const projectMode = { extensionId: "pstdio", kind: "mode", id: "project" };
+      const content = { id: "content", ref: { kind: "view", id: "content" }, title: "Content", body: { kind: "dataTable", query: async () => ({ rows: [] }) } };
+      const tickets = { id: "tickets", ref: { kind: "view", id: "tickets" }, title: "Tickets", body: { kind: "dataTable", query: async () => ({ rows: [] }) } };
+      export default {
+        views: [content, tickets],
+        placements: [
+          { id: "content", ref: { kind: "placement", id: "content" }, mode: projectMode, item: { kind: "view", view: content.ref }, region: "main" },
+          { id: "tickets", ref: { kind: "placement", id: "tickets" }, mode: projectMode, item: { kind: "view", view: tickets.ref }, region: "main", movableTo: ["main", "side"] },
+        ],
       };`,
     );
 
@@ -122,6 +120,7 @@ describe("loadExtensionRuntime", () => {
     });
 
     expect(runtime.diagnostics).toEqual([]);
-    expect(runtime.panels.map((panel) => panel.localId)).toEqual(["content", "tickets"]);
+    expect(runtime.views.map((view) => view.localId)).toEqual(["content", "tickets"]);
+    expect(runtime.placements.map((placement) => placement.contribution.region)).toEqual(["main", "main"]);
   });
 });

@@ -20,13 +20,13 @@ const createProjectViaApi = async (request: APIRequestContext, name: string) => 
 const bypassOnboarding = async (page: Page, projectId: string) => {
   await page.addInitScript((currentProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
     localStorage.setItem(
       `pstdio-project-settings/projects/${currentProjectId}/values`,
       JSON.stringify({
         state: {
-          lastSelectedAgent: "pstdio.extension-lab.fake",
+          lastSelectedAgent: "pstdio.extension-lab.harness.fake",
           lastSelectedModels: [],
           lastSelectedRepo: "",
           lastSelectedBranches: [],
@@ -67,7 +67,7 @@ test("PS-8 reuses a dashboard session tab selected again from a planner ticket",
     apiBase,
     project.id,
     "refine-ticket",
-    { agent: { harnessId: "pstdio.extension-lab.fake" } },
+    { agent: { harnessId: "pstdio.extension-lab.harness.fake" } },
     {
       resource: {
         type: "ticket",
@@ -114,7 +114,7 @@ test("PS-8 restores an attached session Side Panel and its session across refres
     apiBase,
     project.id,
     "refine-ticket",
-    { agent: { harnessId: "pstdio.extension-lab.fake" } },
+    { agent: { harnessId: "pstdio.extension-lab.harness.fake" } },
     {
       resource: {
         type: "ticket",

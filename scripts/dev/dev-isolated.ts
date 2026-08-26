@@ -22,6 +22,7 @@ const SEEDED_RELEASE_EXTENSIONS = [
   "harness-open-code",
   "pstdio-base-themes",
   "pstdio-planner",
+  "pstdio-planner-loops",
   "pstdio-skills",
   "extension-lab",
 ];

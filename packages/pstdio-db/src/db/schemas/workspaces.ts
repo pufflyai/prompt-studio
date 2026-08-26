@@ -5,6 +5,48 @@ import { projects } from "./projects";
 import { sessions } from "./sessions";
 import type { ResourceRef } from "./types";
 
+type JsonObject = Record<string, unknown>;
+
+export type WorkspaceProviderRef = {
+  version: number;
+  data: JsonObject;
+};
+
+export type WorkspaceProviderState =
+  | "provisioning"
+  | "ready"
+  | "failed"
+  | "cancelled"
+  | "archiving"
+  | "archived"
+  | "deleting"
+  | "provider_missing";
+
+export type WorkspaceCapabilities = {
+  files: "none" | "read" | "write";
+  diff: boolean;
+  merge: boolean;
+  rebase: boolean;
+  archive: boolean;
+  delete: boolean;
+};
+
+export const defaultLocalWorkspaceCapabilities: WorkspaceCapabilities = {
+  files: "write",
+  diff: true,
+  merge: true,
+  rebase: true,
+  archive: true,
+  delete: true,
+};
+
+export type WorkspaceProviderError = {
+  code: string;
+  message: string;
+  retryable: boolean;
+  occurred_at: string;
+};
+
 export const workspaces = pgTable(
   "workspaces",
   {
@@ -15,6 +57,21 @@ export const workspaces = pgTable(
     name: text("name").notNull(),
     branch: text("branch"),
     worktree_path: text("worktree_path"),
+    // An unspecified workspace is a root checkout. Isolated worktrees are created only through
+    // the provider flow, which always writes pstdio.worktree explicitly.
+    provider_id: text("provider_id").notNull().default("pstdio.root"),
+    provider_params_json: jsonb("provider_params_json").$type<JsonObject>().notNull().default({}),
+    provider_ref_json: jsonb("provider_ref_json").$type<WorkspaceProviderRef>(),
+    provider_state: text("provider_state").$type<WorkspaceProviderState>().notNull().default("ready"),
+    execution_kind: text("execution_kind").$type<"local" | "remote">().notNull().default("local"),
+    provider_operation_id: text("provider_operation_id"),
+    provider_operation_kind: text("provider_operation_kind").$type<"create" | "cancel" | "archive" | "delete">(),
+    provider_error_json: jsonb("provider_error_json").$type<WorkspaceProviderError>(),
+    provider_capabilities_json: jsonb("provider_capabilities_json")
+      .$type<WorkspaceCapabilities>()
+      .notNull()
+      .default(defaultLocalWorkspaceCapabilities),
+    display_path: text("display_path"),
     // Marks the auto-created workspace that targets the project's root repo on
     // its current branch (no isolated worktree). At most one per project.
     is_default: boolean("is_default").notNull().default(false),

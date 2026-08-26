@@ -7,21 +7,15 @@ import { createSessionsModule } from "./module";
 
 test("sessions mode preserves the previous Location's Session Sub Panels", async () => {
   const workbench = createWorkbenchCore();
-  const location = createDashboardResource("dashboard-view", "tickets", "Tickets", "List", "project-1");
   const session = createDashboardResource("session", "session-1", "Session one", "MessageCircle", "project-1");
-  workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
   workbench.layout.registerPanel({
     id: "dashboard.tickets",
     title: "Tickets",
     region: "main",
     rendererId: "dashboard.tickets",
   });
-  workbench.resources.registerPresenter({
-    id: "dashboard.tickets",
-    canOpen: (resource) => resource.uri === location.uri,
-    open: (resource) => workbench.layout.openPanel("dashboard.tickets", { resource }),
-  });
-  await workbench.resources.openResource(location);
+  workbench.views.registerView({ id: "tickets", panelId: "dashboard.tickets", title: "Tickets" });
+  await workbench.views.openView("tickets");
   workbench.registerModule(createSessionBubbleModule());
   const sessionsModule = workbench.registerModule(createSessionsModule());
 

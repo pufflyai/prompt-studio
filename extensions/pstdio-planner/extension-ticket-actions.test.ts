@@ -8,11 +8,12 @@ const orderOf = (menu: { placement?: keyof typeof placementOrder }, index: numbe
 
 describe("pstdio planner ticket actions", () => {
   test("keeps ticket header overflow actions aligned with board row actions", () => {
-    const rowActions = extension.kanbanRenderers?.tickets?.rowActions ?? [];
-    const menuActions = Object.values(extension.commands ?? {})
+    const tickets = extension.views?.find((view) => view.id === "tickets");
+    const rowActions = tickets?.body.kind === "kanban" ? (tickets.body.rowActions ?? []) : [];
+    const menuActions = (extension.commands ?? [])
       .flatMap((command) => command.menus ?? [])
       .map((menu, index) => ({ menu, index }))
-      .filter(({ menu }) => menu.slot === "ticket.headerOverflow")
+      .filter(({ menu }) => menu.slot.id === "ticket.headerOverflow")
       .sort((left, right) => orderOf(left.menu, left.index) - orderOf(right.menu, right.index))
       .map(({ menu }) => ({ label: menu.label, icon: menu.icon }));
 

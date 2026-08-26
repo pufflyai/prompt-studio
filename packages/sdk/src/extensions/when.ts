@@ -8,10 +8,12 @@ import type { WhenExpression } from "pstdio-api-contracts/extension-kernel";
  * palette does not have).
  */
 export const matchesResourceWhen = (
-  when: Pick<WhenExpression, "resourceType"> | undefined,
+  when: Pick<WhenExpression, "resourceType"> | { resourceType?: readonly string[] } | undefined,
   resourceType: string | undefined,
 ) => {
   const resourceTypes = when?.resourceType;
   if (!resourceTypes?.length) return true;
-  return resourceType ? resourceTypes.includes(resourceType) : false;
+  return resourceType
+    ? resourceTypes.some((candidate) => (typeof candidate === "string" ? candidate : candidate.id) === resourceType)
+    : false;
 };

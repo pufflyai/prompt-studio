@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { callsTo, makeAttempt, makeAutomationContext, makeTicket } from "../automation-context.fixture";
 import { implementTicketsCommand } from "./implement-tickets";
 
-const run = (ctx: Parameters<typeof implementTicketsCommand.run>[0]) => implementTicketsCommand.run(ctx);
+const run = (ctx: Parameters<typeof implementTicketsCommand.run>[0]) => implementTicketsCommand.run(ctx, {});
 
 describe("implement-tickets automation", () => {
   test("asks Planner to start Todo tickets by priority until live attempt capacity is full", async () => {
@@ -21,7 +21,11 @@ describe("implement-tickets automation", () => {
       implemented: ["T2", "T3"],
       waits: [{ ticket: "T1", reason: "capacity-full" }],
     });
-    expect(callsTo(calls, "pstdio-planner.run-attempt").map((call) => call.params.ticket)).toEqual(["T2", "T3", "T1"]);
+    expect(callsTo(calls, "pstdio.pstdio-planner.command.run-attempt").map((call) => call.params.ticket)).toEqual([
+      "T2",
+      "T3",
+      "T1",
+    ]);
   });
 
   test("skips tickets carrying the stable Human Requested flag", async () => {

@@ -340,6 +340,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       <TreeParamsDialog
         request={paramsRequest}
         renderParamField={renderParamField}
+        workbench={workbench}
         onClose={() => setParamsRequest(null)}
       />
     </Flex>

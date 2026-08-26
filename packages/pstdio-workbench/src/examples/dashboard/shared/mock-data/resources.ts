@@ -14,12 +14,15 @@ export const createResource = (kind: string, id: string, label: string, icon: st
 // routes through the shared settings surface.
 export const dashboardDefaultSettingsPanel = { id: "runtime", title: "Runtime", icon: standardResourceIcons.settings };
 
+export const dashboardViews = {
+  tickets: { id: "tickets", label: "Tickets", icon: "square-kanban" },
+  workspaces: { id: "workspaces", label: "Workspaces", icon: standardResourceIcons.workspace },
+  sessions: { id: "sessions", label: "Sessions", icon: "MessageCircle" },
+  lab: { id: "lab", label: "Lab", icon: "FlaskConical" },
+  repoHealth: { id: "repo-health", label: "Repo health", icon: "GitBranch" },
+  changelog: { id: "changelog", label: "Changelog", icon: "Workflow" },
+} as const;
+
 export const dashboardResources = {
-  tickets: createResource("dashboard-view", "tickets", "Tickets", "square-kanban"),
-  workspaces: createResource("dashboard-view", "workspaces", "Workspaces", standardResourceIcons.workspace),
-  sessions: createResource("dashboard-view", "sessions", "Sessions", "MessageCircle"),
-  lab: createResource("extension-route", "lab", "Lab", "FlaskConical"),
-  repoHealth: createResource("extension-route", "repo-health", "Repo health", "GitBranch"),
-  changelog: createResource("extension-route", "changelog", "Changelog", "Workflow"),
   settings: settingsPanelResource(dashboardDefaultSettingsPanel),
 } as const;

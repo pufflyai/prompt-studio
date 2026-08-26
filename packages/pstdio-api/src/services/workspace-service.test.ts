@@ -21,6 +21,7 @@ const buildDeps = () => {
     get: mock(async () => null),
     getByShorthand: mock(async () => null),
     list: mock(async () => []),
+    listForProviderReconciliation: mock(async () => []),
     setInitializing: mock(async (id: string, initializing: boolean) => ({
       id,
       project_id: "project_1",
@@ -36,11 +37,6 @@ const buildDeps = () => {
       id,
       project_id: "project_1",
       startup_log_file_id: fileId,
-    })),
-    updateGitMetadata: mock(async (id: string, patch: Record<string, unknown>) => ({
-      id,
-      project_id: "project_1",
-      ...patch,
     })),
   };
 
@@ -130,40 +126,6 @@ describe("WorkspaceService", () => {
       const service = createWorkspaceService(deps);
 
       const result = await service.rename("missing", "Spike - API only");
-
-      expect(result).toBeNull();
-      expect(emitted).toHaveLength(0);
-    });
-  });
-
-  describe("updateGitMetadata", () => {
-    test("emits a sync event after the DB write succeeds", async () => {
-      const { deps, workspacesDb, emitted } = buildDeps();
-      const service = createWorkspaceService(deps);
-
-      const result = await service.updateGitMetadata("ws_1", {
-        branch: "feature/x",
-        worktree_path: "/tmp/wt",
-      });
-
-      expect(result).toMatchObject({ id: "ws_1", branch: "feature/x", worktree_path: "/tmp/wt" });
-      expect(workspacesDb.updateGitMetadata).toHaveBeenCalledWith("ws_1", {
-        branch: "feature/x",
-        worktree_path: "/tmp/wt",
-      });
-      expect(emitted).toContainEqual([
-        "workspaces",
-        "set",
-        expect.objectContaining({ id: "ws_1", branch: "feature/x" }),
-      ]);
-    });
-
-    test("does not emit when no row is updated", async () => {
-      const { deps, workspacesDb, emitted } = buildDeps();
-      (workspacesDb.updateGitMetadata as ReturnType<typeof mock>).mockImplementation(async () => null);
-      const service = createWorkspaceService(deps);
-
-      const result = await service.updateGitMetadata("missing", { branch: "x", worktree_path: "/tmp/y" });
 
       expect(result).toBeNull();
       expect(emitted).toHaveLength(0);

@@ -8,18 +8,18 @@ const e2eExtension = (name: string) => ({
   skipInstall: !name.startsWith(".pstdio/extensions/"),
 });
 
-export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({
-  defaultExtensions: [
-    e2eExtension("pstdio-base-themes"),
-    e2eExtension("pstdio-planner"),
-    e2eExtension("pstdio-reports"),
-    e2eExtension("pstdio-skills"),
-    e2eExtension("harness-claude-code"),
-    e2eExtension("harness-codex"),
-    e2eExtension("harness-open-code"),
-    e2eExtension("extension-lab"),
-  ],
-});
+const e2eDefaultExtensions = [
+  e2eExtension("pstdio-base-themes"),
+  e2eExtension("pstdio-planner"),
+  e2eExtension("pstdio-reports"),
+  e2eExtension("pstdio-skills"),
+  e2eExtension("harness-claude-code"),
+  e2eExtension("harness-codex"),
+  e2eExtension("harness-open-code"),
+  e2eExtension("extension-lab"),
+];
+
+export const PSTDIO_E2E_DEFAULT_EXTENSIONS = JSON.stringify({ defaultExtensions: e2eDefaultExtensions });
 
 export const PSTDIO_E2E_PLANNER_EXTENSION = JSON.stringify({
   defaultExtensions: [e2eExtension("pstdio-planner")],

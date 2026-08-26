@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { WorkbenchExtensionKanbanRendererRecord } from "@pstdio/sdk/api";
+import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import { createWorkbenchCore, type KanbanRendererQueryState } from "../../core";
 import { registerWorkbenchExtensionKanbanRenderers } from "./kanban-renderer-contributions";
 
@@ -94,7 +94,123 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
     expect(action?.icon).toBeDefined();
     expect(typeof action?.icon).not.toBe("string");
   });
+});
 
+describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
+  test("resolves independent live workflow status sets", async () => {
+    const workbench = createWorkbenchCore();
+    const firstId = "pstdio.planner.status.first";
+    const secondId = "pstdio.planner.status.second";
+    workbench.statuses.registerStatusSet({
+      id: firstId,
+      title: "First",
+      query: () => [{ id: "todo", label: "Todo", color: "blue", sortOrder: 0 }],
+      save: (statuses) => statuses,
+    });
+    workbench.statuses.registerStatusSet({
+      id: secondId,
+      title: "Second",
+      query: () => [{ id: "todo", label: "Queued", color: "purple", sortOrder: 0 }],
+    });
+    await Promise.all([workbench.statuses.query(firstId), workbench.statuses.query(secondId)]);
+    const record = (id: string, statusId: string) =>
+      ({
+        id,
+        extensionId: "pstdio.planner",
+        title: id,
+        queryHandlerId: `${id}.query`,
+        attributes: [
+          {
+            id: "status",
+            label: "Status",
+            type: { kind: "status", statuses: { kind: "status", id: statusId } },
+          },
+        ],
+      }) satisfies WorkbenchExtensionKanbanRendererRecord;
+
+    registerWorkbenchExtensionKanbanRenderers(
+      { projectId: "project-1", workbench, executeCommand: async () => ({ rows: [] }) },
+      [record("first-board", "first"), record("second-board", "second")],
+    );
+
+    expect(workbench.renderers.getKanbanRenderer("first-board")?.getBoardColumnConfig?.("todo").color).toBe("blue");
+    expect(workbench.renderers.getKanbanRenderer("second-board")?.getBoardColumnConfig?.("todo").color).toBe("purple");
+
+    await workbench.statuses.save(firstId, [{ id: "todo", label: "Todo", color: "green", sortOrder: 0 }]);
+
+    expect(workbench.renderers.getKanbanRenderer("first-board")?.getBoardColumnConfig?.("todo").color).toBe("green");
+    expect(workbench.renderers.getKanbanRenderer("second-board")?.getBoardColumnConfig?.("todo").color).toBe("purple");
+  });
+
+  test("keeps declared attributes when a query returns only rows", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.statuses.registerStatusSet({
+      id: "pstdio.lab.status.workflow",
+      title: "Workflow",
+      query: () => [{ id: "idea", label: "Idea", color: "gray", sortOrder: 0 }],
+    });
+    await workbench.statuses.query("pstdio.lab.status.workflow");
+    const record = {
+      id: "workflow",
+      extensionId: "pstdio.lab",
+      title: "Workflow",
+      queryHandlerId: "workflow.query",
+      attributes: [
+        {
+          id: "status",
+          label: "Status",
+          type: { kind: "status", statuses: { kind: "status", id: "workflow" } },
+        },
+      ],
+    } satisfies WorkbenchExtensionKanbanRendererRecord;
+    registerWorkbenchExtensionKanbanRenderers(
+      { projectId: "project-1", workbench, executeCommand: async () => ({ rows: [] }) },
+      [record],
+    );
+
+    const renderer = workbench.renderers.getKanbanRenderer("workflow")!;
+    if (!("getSnapshot" in renderer.attributes)) throw new Error("Expected live status attributes");
+    expect(renderer.attributes.getSnapshot()).toHaveLength(1);
+    await renderer.executeQuery(queryState);
+    expect(renderer.attributes.getSnapshot()).toHaveLength(1);
+  });
+
+  test("rejects board column configs for a declared status attribute", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.statuses.registerStatusSet({
+      id: "pstdio.planner.status.tickets",
+      title: "Tickets",
+      query: () => [{ id: "todo", label: "Todo", color: "blue", sortOrder: 0 }],
+    });
+    const record = {
+      id: "tickets",
+      extensionId: "pstdio.planner",
+      title: "Tickets",
+      queryHandlerId: "tickets.query",
+      attributes: [
+        {
+          id: "status",
+          label: "Status",
+          type: { kind: "status", statuses: { kind: "status", id: "tickets" } },
+        },
+      ],
+    } satisfies WorkbenchExtensionKanbanRendererRecord;
+    registerWorkbenchExtensionKanbanRenderers(
+      {
+        projectId: "project-1",
+        workbench,
+        executeCommand: async () => ({ rows: [], boardColumnConfigs: { todo: { color: "red" } } }),
+      },
+      [record],
+    );
+
+    await expect(workbench.renderers.getKanbanRenderer("tickets")?.executeQuery(queryState)).rejects.toThrow(
+      "cannot return boardColumnConfigs",
+    );
+  });
+});
+
+describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
   test("maps extension row action icons into context menu actions", () => {
     const workbench = createWorkbenchCore();
     const record = {

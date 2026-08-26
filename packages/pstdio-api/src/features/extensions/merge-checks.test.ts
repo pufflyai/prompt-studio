@@ -18,15 +18,19 @@ const check = (overrides: Partial<ExtensionsCheckResponse> = {}): ExtensionsChec
   menuContributions: [],
   commandPaletteContributions: [],
   modes: [],
-  panels: [],
-  routes: [],
-  treeItems: [],
-  treeRenderers: [],
-  fileRenderers: [],
-  controlsRenderers: [],
+  views: [],
+  viewMenus: [],
+  placements: [],
+  resourceKinds: [],
+  resourceViews: [],
+  resourceHierarchyProviders: [],
+  navigationItems: [],
+  statusBarItems: [],
+  statuses: [],
+  activityItems: [],
+  settingsSections: [],
   keybindings: [],
   settingsPanels: [],
-  kanbanRenderers: [],
   commandPaletteResources: [],
   settingsDefinitions: [],
   templates: [],
@@ -41,22 +45,26 @@ const check = (overrides: Partial<ExtensionsCheckResponse> = {}): ExtensionsChec
 });
 
 describe("mergeCheck", () => {
-  test("merges controls renderer records", () => {
+  test("merges view records", () => {
     const target = check();
     const source = check({
-      controlsRenderers: [
+      views: [
         {
-          id: "planner.ticketInspector",
+          id: "pstdio.planner.view.ticket-inspector",
+          localId: "ticket-inspector",
           extensionId: "pstdio.planner",
           title: "Ticket inspector",
-          queryHandlerId: "planner.ticketInspector.query",
+          body: {
+            kind: "controls",
+            queryHandlerId: "pstdio.planner.view.ticket-inspector.controls.query",
+          },
         },
       ],
     });
 
     mergeCheck(target, source);
 
-    expect(target.controlsRenderers).toEqual(source.controlsRenderers);
+    expect(target.views).toEqual(source.views);
   });
 
   test("preserves an unverified host compatibility result", () => {

@@ -20,7 +20,7 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((currentProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
   }, projectId);
 };
@@ -32,7 +32,7 @@ const getSecondaryHeader = (page: import("@playwright/test").Page) =>
   page.locator('[data-workbench-panel-header="secondary"]');
 
 const addTerminal = async (page: import("@playwright/test").Page) => {
-  await expect(page.getByRole("link", { name: "Start", exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Main", exact: true })).toBeVisible();
   const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
   if (await showSecondary.isVisible()) await showSecondary.click();
   await getSecondaryHeader(page).getByRole("button", { name: "Add panel" }).click();

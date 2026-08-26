@@ -11,14 +11,15 @@ import { registerWorkbenchExtensionContributions } from "@pstdio/workbench/exten
 const metadata = {
   extensions: [{ id: "pstdio.lab", name: "lab", displayName: "Lab", sourcePath: "" }],
   commands: [
-    { id: "lab.focus", extensionId: "pstdio.lab", title: "Focus lab" },
-    { id: "lab.search", extensionId: "pstdio.lab", title: "Search lab resources" },
+    { id: "pstdio.lab.command.focus", extensionId: "pstdio.lab", title: "Focus lab" },
+    { id: "pstdio.lab.command.search", extensionId: "pstdio.lab", title: "Search lab resources" },
+    { id: "pstdio.lab.view.tree.tree.body", extensionId: "pstdio.lab", title: "List lab tree" },
   ],
   menuContributions: [
     {
       id: "lab.focus.header",
       extensionId: "pstdio.lab",
-      commandId: "lab.focus",
+      commandId: "pstdio.lab.command.focus",
       slotId: "main.header",
       label: "Lab action",
     },
@@ -29,31 +30,52 @@ const metadata = {
       extensionId: "pstdio.lab",
       title: "Lab resources",
       resourceKind: "lab.resource",
-      queryCommandId: "lab.search",
+      queryHandlerId: "pstdio.lab.command.search",
     },
   ],
-  treeRenderers: [
+  modes: [
     {
-      id: "lab.tree",
+      id: "pstdio.lab.mode.review",
+      localId: "review",
+      extensionId: "pstdio.lab",
+      label: "Review",
+    },
+  ],
+  views: [
+    {
+      id: "pstdio.lab.view.tree",
+      localId: "tree",
       extensionId: "pstdio.lab",
       title: "Lab tree",
-      bodyHandlerId: "lab.treeBody",
-      defaultExpandedSectionIds: ["workflows"],
+      body: {
+        kind: "tree",
+        bodyHandlerId: "pstdio.lab.view.tree.tree.body",
+        defaultExpandedSectionIds: ["workflows"],
+      },
     },
   ],
-  panels: [
+  viewMenus: [],
+  placements: [
     {
-      id: "lab.treePanel",
+      id: "pstdio.lab.placement.tree",
+      localId: "tree",
       extensionId: "pstdio.lab",
-      title: "Lab tree",
-      show: { region: "sidenav", required: true },
-      renderer: { kind: "tree", id: "lab.tree" },
+      mode: { kind: "mode", id: "review", extensionId: "pstdio.lab" },
+      item: {
+        kind: "view",
+        view: { kind: "view", id: "tree", extensionId: "pstdio.lab" },
+      },
+      region: "sidenav",
+      required: true,
     },
   ],
+  resourceKinds: [],
+  resourceViews: [],
+  navigationItems: [],
+  statusBarItems: [],
+  statuses: [],
   commandPaletteContributions: [],
   diagnostics: [],
-  modes: [],
-  routes: [],
   settingsPanels: [],
 } satisfies WorkbenchExtensionMetadata;
 
@@ -62,10 +84,10 @@ export const createExtensionModule = (): WorkbenchModuleContribution => ({
   activate(ctx) {
     return registerWorkbenchExtensionContributions({
       executeCommand: (commandId: string, body: CommandExecuteRequest) => {
-        if (commandId === "lab.treeBody") {
+        if (commandId === "pstdio.lab.view.tree.tree.body") {
           return [{ id: "workflows", label: "Workflows", nodes: [] }];
         }
-        if (commandId === "lab.search") {
+        if (commandId === "pstdio.lab.command.search") {
           return { items: [] };
         }
         return undefined;

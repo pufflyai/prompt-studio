@@ -1,6 +1,7 @@
 import { rmSync } from "node:fs";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
+import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
@@ -18,13 +19,13 @@ const prepareDashboard = async (page: Page, projectId: string, repoId: string) =
   await page.addInitScript(
     ({ selectedProjectId, selectedRepoId }) => {
       localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+      localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
       localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
       localStorage.setItem(
         `pstdio-project-settings/projects/${selectedProjectId}/values`,
         JSON.stringify({
           state: {
-            lastSelectedAgent: "pstdio.extension-lab.fake",
+            lastSelectedAgent: "pstdio.extension-lab.harness.fake",
             lastSelectedModels: [],
             lastSelectedRepo: selectedRepoId,
             lastSelectedBranches: [],
@@ -72,8 +73,7 @@ test("PS-171 restores resource Panel state across A to B to A and reload", async
     await prepareDashboard(page, project.id, repo.id);
     await page.goto(`/projects/${project.id}/`);
 
-    const sidenav = page.locator('[data-workbench-region="sidenav"]');
-    const workspacesNavigation = sidenav.getByRole("option", { name: /^Workspaces(?:\s|$)/ }).first();
+    const workspacesNavigation = await showHiddenSidenavEntry(page, "Workspaces");
     await workspacesNavigation.click();
 
     await openWorkspace(page, attemptA.workspace.workspace_shorthand);

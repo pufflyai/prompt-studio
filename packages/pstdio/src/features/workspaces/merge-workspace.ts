@@ -115,8 +115,14 @@ export const mergeWorkspace = async (input: MergeWorkspaceInput, deps: Deps = de
 
   const workspace = await deps.getWorkspace(projectId, workspaceShorthand);
   if (!workspace) throw new Error(`Workspace not found: ${workspaceShorthand}`);
+  const canMerge =
+    workspace.provider_state === "ready" &&
+    workspace.execution_kind === "local" &&
+    workspace.provider_capabilities_json.merge &&
+    Boolean(workspace.worktree_path && workspace.branch);
+  if (!canMerge) throw new Error(`Workspace cannot be merged: ${workspaceShorthand}`);
 
-  const branch = workspace.branch ?? `workspace/${workspace.workspace_shorthand}`;
+  const branch = workspace.branch!;
   const message = `workspace(${workspace.workspace_shorthand}): squash merge`;
 
   try {

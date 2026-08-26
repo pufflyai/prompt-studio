@@ -61,7 +61,9 @@ export const updateInstalledExtensionTemplateHandler = (
     }
 
     const loaded = await loadExtensionSource(installedSource.source_path);
-    const contribution = isRecord(loaded.definition.templates) ? loaded.definition.templates[templateKey] : null;
+    const contribution = Array.isArray(loaded.definition.templates)
+      ? loaded.definition.templates.find((template) => isRecord(template) && template.id === templateKey)
+      : null;
 
     if (!isRecord(contribution) || !isPackageAssetDescriptor(contribution.source)) {
       return c.json({ error: `Installed extension template not found: ${templateKey}` }, 404);

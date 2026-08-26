@@ -166,7 +166,7 @@ describe("mode panel layouts", () => {
       id: "sessions",
       panels: ["main", "secondary", "side"],
       activate: (ctx) => {
-        return ctx.layout.registerWidget({
+        return ctx.layout.registerLocation({
           id: "sessions.secondary",
           title: "Session details",
           region: "secondary",

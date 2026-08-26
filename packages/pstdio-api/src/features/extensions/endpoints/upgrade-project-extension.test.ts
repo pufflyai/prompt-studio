@@ -68,7 +68,7 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
       databasePath: ":memory:",
       storageRoot: join(tempRoot, "storage"),
       harnessRegistry: createTestHarnessRegistry([]),
-      release: { source: "git", ref: "pstdio@0.27.0" },
+      release: { source: "git", ref: "f".repeat(40) },
       installExtensionSource,
     });
     const project = await createProject();
@@ -81,6 +81,7 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
       projectId: project.id,
       sourceHash: hashExtensionSource(sourcePath),
       sourceKind: "git",
+      sourceRef: `https://github.com/pufflyai/prompt-studio@${"a".repeat(40)}#extensions/pstdio-planner`,
       sourcePath,
       version: "1.0.0",
     });
@@ -100,7 +101,7 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
       },
     });
     expect(installExtensionSource).toHaveBeenCalledWith(
-      expect.objectContaining({ ref: "pstdio@0.27.0", source: "pstdio-planner" }),
+      expect.objectContaining({ ref: "f".repeat(40), source: "pstdio-planner" }),
     );
   });
 });

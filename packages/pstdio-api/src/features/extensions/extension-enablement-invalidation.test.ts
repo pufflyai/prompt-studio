@@ -24,7 +24,7 @@ describe("subscribeExtensionEnablementInvalidation", () => {
     expect(invalidations).toEqual([{ projectId: "project-1", reason: "enablement_changed" }]);
   });
 
-  test("invalidates everything when the event carries no project identity", () => {
+  test("invalidates only the project named by a delete event", () => {
     const eventBus = new EventBus();
     const invalidations: InvalidateCall[] = [];
 
@@ -33,9 +33,14 @@ describe("subscribeExtensionEnablementInvalidation", () => {
       invalidate: (input) => invalidations.push(input),
     });
 
-    eventBus.emit("extension_instances", "delete", { id: "instance-1" });
+    eventBus.emit("extension_instances", "delete", {
+      id: "instance-1",
+      installed_extension_id: "source-1",
+      scope_type: "project",
+      scope_id: "project-1",
+    });
 
-    expect(invalidations).toEqual([{ projectId: undefined, reason: "enablement_changed" }]);
+    expect(invalidations).toEqual([{ projectId: "project-1", reason: "enablement_changed" }]);
   });
 
   test("ignores events for unrelated tables", () => {

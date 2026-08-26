@@ -28,12 +28,12 @@ const writeExtension = (
     else writeFileSync(join(root, entry), "console.log('webview');");
   }
 
-  const routes = Object.entries(entries)
+  const views = Object.entries(entries)
     .map(
-      ([key, path]) => `${key}: {
-        path: "${key}",
-        label: "${key}",
-        webview: { entry: { kind: "package-asset", path: "./${path}", baseUrl: import.meta.url } },
+      ([key, path]) => `{
+        id: "${key}",
+        title: "${key}",
+        body: { kind: "webview", entry: { kind: "package-asset", path: "./${path}", baseUrl: import.meta.url } },
       }`,
     )
     .join(",");
@@ -41,7 +41,7 @@ const writeExtension = (
   writeFileSync(
     join(root, "extension.ts"),
     `export default {
-      routes: { ${routes} },
+      views: [${views}],
     };`,
   );
 };
@@ -89,7 +89,7 @@ describe("createExtensionWebviewBuildManager", () => {
       await manager.refresh();
       await manager.refresh();
 
-      const distPath = join(cacheRoot, "extension-lab", "lab.labPage", "dist");
+      const distPath = join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist");
       expect(builds).toHaveLength(1);
       // Bun's path resolution sometimes canonicalizes macOS `/var/...` to `/private/var/...`.
       // Match the entry path tail rather than the full prefix.
@@ -97,7 +97,7 @@ describe("createExtensionWebviewBuildManager", () => {
       expect(builds[0]?.outdir).toMatch(/\/dist\.staging-[^/]+$/);
       expect(existsSync(distPath)).toBe(true);
 
-      expect(successes).toEqual([{ installName: "extension-lab", webviewId: "lab.labPage" }]);
+      expect(successes).toEqual([{ installName: "extension-lab", webviewId: "pstdio.lab.view.labPage" }]);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -216,7 +216,7 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
 
       expect(failures).toHaveLength(1);
       expect(failures[0]?.installName).toBe("extension-lab");
-      expect(failures[0]?.webviewId).toBe("lab.labPage");
+      expect(failures[0]?.webviewId).toBe("pstdio.lab.view.labPage");
       expect(String(failures[0]?.error)).toContain("build failed");
     } finally {
       manager.dispose();
@@ -255,14 +255,14 @@ describe("createExtensionWebviewBuildManager lifecycle", () => {
       await manager.refresh();
       await manager.refresh();
       expect(runCount).toBe(1);
-      expect(failures).toEqual(["lab.labPage"]);
+      expect(failures).toEqual(["pstdio.lab.view.labPage"]);
 
       writeFileSync(join(sourcePath, "src/main.tsx"), "console.log('fixed webview');");
       sourceHash = "hash-2";
       await manager.refresh();
 
       expect(runCount).toBe(2);
-      expect(failures).toEqual(["lab.labPage", "lab.labPage"]);
+      expect(failures).toEqual(["pstdio.lab.view.labPage", "pstdio.lab.view.labPage"]);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -492,7 +492,7 @@ describe("createExtensionWebviewBuildManager resilience", () => {
       expect(managerErrors).toEqual([]);
       expect(failures).toHaveLength(1);
       expect(failures[0]?.installName).toBe("extension-lab");
-      expect(failures[0]?.webviewId).toBe("lab.labPage");
+      expect(failures[0]?.webviewId).toBe("pstdio.lab.view.labPage");
       expect(String(failures[0]?.error)).toContain("ENFILE");
     } finally {
       manager.dispose();

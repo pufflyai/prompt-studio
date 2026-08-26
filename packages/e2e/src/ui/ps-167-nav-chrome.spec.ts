@@ -27,7 +27,7 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
 const prepareDashboard = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
   }, projectId);
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -107,7 +107,9 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   await expect(back).toBeEnabled();
   await expect(forward).toBeDisabled();
   await back.click();
-  await expect(page.getByRole("link", { name: "Tickets", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Tickets", { exact: true }),
+  ).toBeVisible();
   await expect(forward).toBeEnabled();
   await expect(closedSidenav).toBeVisible();
 
@@ -166,7 +168,7 @@ test("PS-167 keeps the Secondary Panel closed from Workspaces until requested", 
   const showSecondary = nav.getByRole("button", { name: "Show Secondary Panel" });
   await expect(showSecondary).toHaveAttribute("aria-pressed", "false");
 
-  await page.getByRole("option", { name: /^Workspaces/ }).click();
+  await page.goto(`/projects/${project.id}/workspaces`);
   await expect(showSecondary).toHaveAttribute("aria-pressed", "false");
   await showSecondary.click();
 

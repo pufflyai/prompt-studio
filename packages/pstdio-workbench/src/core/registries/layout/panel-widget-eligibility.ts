@@ -35,6 +35,7 @@ const matchesLocationEligibility = (
   resource: ResourceRef | undefined,
   modeId: string | undefined,
   placement?: WorkbenchWidgetPlacement,
+  location?: WorkbenchWidgetPlacement,
 ) => {
   const eligibleLocations = widget.eligibleLocations;
   if (!matchesWorkbenchModeEligibility(widget, modeId)) return false;
@@ -51,6 +52,12 @@ const matchesLocationEligibility = (
     return false;
   }
   if (eligibleLocations?.canOpen && (!resource || !eligibleLocations.canOpen(resource))) return false;
+  if (
+    eligibleLocations?.canOpenLocation &&
+    !eligibleLocations.canOpenLocation({ resource, viewId: location?.viewId })
+  ) {
+    return false;
+  }
   if (placement?.ownerResourceUri && placement.ownerResourceUri !== resource?.uri) return false;
   return true;
 };
@@ -65,11 +72,11 @@ export const isWorkbenchPanelPlacementVisible = (
   resource: ResourceRef | undefined,
   modeId: string | undefined,
   placement?: WorkbenchWidgetPlacement,
-  options: { ignoreResourceLocation?: boolean } = {},
+  options: { ignoreResourceLocation?: boolean; location?: WorkbenchWidgetPlacement } = {},
 ) => {
   if (!supportsResource(widget, placement?.resource ?? resource)) return false;
   if (options.ignoreResourceLocation) return matchesWorkbenchModeEligibility(widget, modeId);
-  return matchesLocationEligibility(widget, resource, modeId, placement);
+  return matchesLocationEligibility(widget, resource, modeId, placement, options.location);
 };
 
 export const allowsWorkbenchFloatingPanels = (

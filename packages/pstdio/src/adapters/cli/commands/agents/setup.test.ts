@@ -2,8 +2,8 @@ import { describe, expect, mock, test } from "bun:test";
 import { createHandler } from "./setup";
 
 const harnessIds = {
-  "claude-code": "pstdio.harness-claude-code.claude-code",
-  opencode: "pstdio.harness-open-code.opencode",
+  "claude-code": "pstdio.harness-claude-code.harness.claude-code",
+  opencode: "pstdio.harness-open-code.harness.opencode",
 };
 const resolveHarnessId = async (id: string) => {
   const match = harnessIds[id as keyof typeof harnessIds];
@@ -33,7 +33,7 @@ describe("agents setup", () => {
       projectId: "proj-1",
       global: false,
     });
-    expect(log).toHaveBeenCalledWith('Using harness "pstdio.harness-open-code.opencode".');
+    expect(log).toHaveBeenCalledWith('Using harness "pstdio.harness-open-code.harness.opencode".');
     expect(log).toHaveBeenCalledWith("Installed 1 skill(s): create-ticket");
   });
 

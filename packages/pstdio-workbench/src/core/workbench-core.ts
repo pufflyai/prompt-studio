@@ -53,6 +53,7 @@ import {
   createLayoutModel,
   type LayoutModel,
   type LayoutPersistenceAdapter,
+  type OpenWorkbenchPanelInput,
   type WorkbenchLayout,
   type WorkbenchRegion,
 } from "./registries/layout/layout-model";
@@ -98,8 +99,15 @@ import {
   type ResourceRegistry,
 } from "./registries/resources/resource-registry";
 import { createSettingsRegistry, type SettingsRegistry } from "./registries/settings/settings-registry";
+import { createStatusBarRegistry, type WorkbenchStatusBarRegistry } from "./registries/status-bar/status-bar-registry";
+import { createStatusRegistry, type WorkbenchStatusRegistry } from "./registries/statuses/status-registry";
 import { createFileIconThemeRegistry, type FileIconThemeRegistry } from "./registries/themes/file-icon-theme-registry";
 import { createThemeRegistry, type ThemeRegistry } from "./registries/themes/theme-registry";
+import {
+  createViewRegistry,
+  type WorkbenchViewRegistry,
+  workbenchViewIdContextKey,
+} from "./registries/views/view-registry";
 import { type ContextKeyService, createContextKeyService } from "./shared/context/context-key-service";
 import type { ContributionMetadata, ContributionSource } from "./shared/contributions/metadata";
 import type { Disposable } from "./shared/disposable";
@@ -111,9 +119,13 @@ import { registerWorkbenchBuiltIns } from "./workbench-built-ins";
 // because a menu item is just another "bind X to a place" contribution.
 export type WorkbenchLayoutModel = LayoutModel & MenuRegistry;
 
+// Extension modules place declared views. Widget registration is an internal
+// implementation detail used by the workbench's renderer and panel registries.
+export type WorkbenchModuleLayoutModel = Omit<WorkbenchLayoutModel, "registerWidget">;
+
 // The renderer namespace owns content-producing registrations. Tree renderers
-// and kanban renderers live here too: each auto-registers a widget renderer so
-// they are placed via layout.registerWidget like any other content.
+// and kanban renderers live here too: each connects its content to an internal
+// view-backed widget renderer.
 export type WorkbenchRenderers = WorkbenchRendererRegistry &
   TreeRendererRegistry &
   KanbanRendererRegistry &
@@ -132,7 +144,7 @@ export interface WorkbenchCoreContributionContext {
   history: HistoryController;
   keybindings: KeybindingRegistry;
   lastResource: WorkbenchLastResourceController;
-  layout: WorkbenchLayoutModel;
+  layout: WorkbenchModuleLayoutModel;
   modes: WorkbenchModeRegistry;
   navigation: NavigationRegistry;
   navigator: WorkbenchNavigator;
@@ -141,7 +153,10 @@ export interface WorkbenchCoreContributionContext {
   preferences: PreferenceRegistry;
   renderers: WorkbenchRenderers;
   resources: ResourceRegistry;
+  views: WorkbenchViewRegistry;
   settings: SettingsRegistry;
+  statusBar: WorkbenchStatusBarRegistry;
+  statuses: WorkbenchStatusRegistry;
   shell: WorkbenchShellController;
   sidePanel: WorkbenchSidePanelController;
   terminal: WorkbenchTerminalController;
@@ -178,6 +193,7 @@ export interface WorkbenchHost {
 
 export interface WorkbenchCore extends WorkbenchCoreContributionContext {
   host: WorkbenchHost;
+  layout: WorkbenchLayoutModel;
   registerModule(module: WorkbenchModuleContribution): Disposable;
   unregisterModule(moduleId: string): void;
 }
@@ -247,6 +263,8 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
     return disposable;
   };
 
+  const { registerWidget: _registerWidget, ...moduleLayout } = core.layout;
+
   const context = {
     ...core,
     onDidChangePrimaryResource: (listener: (resource: ResourceRef | undefined) => void) =>
@@ -286,7 +304,7 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
     lastResource: { ...core.lastResource },
     navigator: core.navigator,
     layout: {
-      ...core.layout,
+      ...moduleLayout,
       openPanel: (id, openInput) => {
         const instance = core.layout.openPanel(id, openInput);
         track(createDisposable(() => core.layout.removeWidgetPlacement(instance.instanceId)));
@@ -304,8 +322,6 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
       registerPlaceholder: (placeholder, metadata) =>
         track(core.layout.registerPlaceholder(placeholder, withModuleMetadata(input, metadata))),
       registerPanel: (panel, metadata) => track(core.layout.registerPanel(panel, withModuleMetadata(input, metadata))),
-      registerWidget: (widget, metadata) =>
-        track(core.layout.registerWidget(widget, withModuleMetadata(input, metadata))),
       registerLocation: (location, metadata) =>
         track(core.layout.registerLocation(location, withModuleMetadata(input, metadata))),
       registerSubPanel: (subPanel, metadata) =>
@@ -382,12 +398,26 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
       registerProvider: (provider) => track(core.resources.registerProvider(provider)),
       onDidOpenResource: (listener) => track(core.resources.onDidOpenResource(listener)),
     },
+    views: {
+      ...core.views,
+      registerView: (view, metadata) => track(core.views.registerView(view, withModuleMetadata(input, metadata))),
+      onDidOpenView: (listener) => track(core.views.onDidOpenView(listener)),
+    },
     settings: {
       ...core.settings,
       registerSection: (section, metadata) =>
         track(core.settings.registerSection(section, withModuleMetadata(input, metadata))),
       registerPanel: (panel, metadata) =>
         track(core.settings.registerPanel(panel, withModuleMetadata(input, metadata))),
+    },
+    statusBar: {
+      ...core.statusBar,
+      registerItem: (item) => track(core.statusBar.registerItem(item)),
+    },
+    statuses: {
+      ...core.statuses,
+      registerStatusSet: (statusSet, metadata) =>
+        track(core.statuses.registerStatusSet(statusSet, withModuleMetadata(input, metadata))),
     },
     shell: {
       ...core.shell,
@@ -419,6 +449,88 @@ const createCoreCompositionController = (core: WorkbenchCore) =>
     getLayout: core.layout.getLayout,
     getResource: core.getPrimaryResource,
     listWidgets: core.layout.listWidgets,
+  });
+
+const connectWorkbenchCoreState = (core: WorkbenchCore, input: CreateWorkbenchCoreInput) => {
+  core.layout.store.subscribe((state) => {
+    const activeRegion = core.focus.getActiveRegion();
+    if (activeRegion && !state.layout.regions[activeRegion].visible) core.focus.clearFocus();
+  });
+  core.layout.store.subscribeSelector(
+    (state) => {
+      const activeId = state.layout.activeWidgetId;
+      if (!activeId) return undefined;
+      return Object.values(state.layout.regions)
+        .flatMap((region) => region.widgets)
+        .find((placement) => placement.widgetId === activeId)?.viewId;
+    },
+    (viewId) => {
+      if (viewId) core.context.set(workbenchViewIdContextKey, viewId);
+      else core.context.delete(workbenchViewIdContextKey);
+    },
+    { fireImmediately: true },
+  );
+
+  // The panels controller is workbench-global, but layout region visibility is
+  // per-scope. Mirror scope changes into the panel chrome.
+  core.layout.onDidChangePersistenceScope(() => {
+    const layout = core.layout.getLayout();
+    for (const region of Object.values(layout.regions)) {
+      core.panels.setOpen(region.id, region.visible);
+    }
+  });
+
+  // Supporting selections such as Side Panel sessions do not replace the main subject.
+  core.onDidChangePrimaryResource((resource) => {
+    if (resource) core.lastResource.set(resource);
+  });
+
+  createPrimaryCoordinator({
+    layout: core.layout,
+    isInScope: input.isInScope ?? createScopedIsInScope(core.resources),
+  });
+  registerWorkbenchBuiltIns(core);
+};
+
+const createCoreNavigationRegistry = (
+  resolveCore: () => WorkbenchCore,
+  openPanel: WorkbenchCore["layout"]["openPanel"],
+) =>
+  createNavigationRegistry({
+    resolveDispatcher: () => {
+      const core = resolveCore();
+      return {
+        createCheckpoint: () => {
+          // The checkpoint covers the navigation state the workbench owns:
+          // layout, history, and breadcrumbs. Side effects of commands that
+          // already executed belong to their extensions and cannot be undone.
+          const layout = core.layout.getLayout();
+          const restoreHistory = core.history.createCheckpoint();
+          const breadcrumbs = core.breadcrumbs.getItems();
+          return () => {
+            core.layout.restoreLayout(layout);
+            restoreHistory();
+            if (breadcrumbs) core.breadcrumbs.setItems(breadcrumbs);
+            else core.breadcrumbs.clearItems();
+          };
+        },
+        canOpenResource: (resource) => {
+          const state = core.resources.store.getState();
+          return Boolean(
+            state.kinds[resource.kind] &&
+              Object.values(state.presenters).some((presenter) => presenter.canOpen(resource)),
+          );
+        },
+        canOpenPanel: (panelId) => Boolean(core.layout.getPanel(panelId)),
+        canOpenView: (viewId) => core.views.canResolveView(viewId),
+        canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
+        openResource: (resource, openInput) => core.resources.openResource(resource, openInput),
+        openPanel,
+        openView: (viewId, openInput) => core.views.openView(viewId, openInput),
+        executeCommand: (commandId, args) => core.commands.executeCommand(commandId, args),
+        openHref: (href) => globalThis.open(href, "_blank", "noopener,noreferrer"),
+      };
+    },
   });
 
 export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
@@ -459,6 +571,19 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     persistence: input.sidePanelPersistence,
   });
   const shell = createWorkbenchShellController({ layout, sidePanel });
+  const openPanel = (panelId: string, openInput: OpenWorkbenchPanelInput = {}) => {
+    const opened = layout.openPanel(panelId, openInput);
+    const instance = openInput.viewId ? establishLocation(opened.instanceId) : opened;
+    const panel = layout.getPanel(panelId);
+    const region = openInput.region ?? panel?.region;
+    if (region) {
+      if (region === "side") shell.setSidePanelPresentation("attached");
+      else if (isWorkbenchShellOpenRegion(region)) shell.setRegionOpen(region, true);
+    }
+    return instance;
+  };
+  const views = createViewRegistry({ getPanel: layout.getPanel, openPanel });
+  const statusBar = createStatusBarRegistry({ hasView: (viewId) => Boolean(views.getView(viewId)) });
 
   const core: WorkbenchCore = {
     breadcrumbs: createWorkbenchBreadcrumbController(),
@@ -484,50 +609,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     modes: undefined as unknown as WorkbenchModeRegistry,
     navigator: undefined as unknown as WorkbenchNavigator,
     notifications: createNotificationRegistry(),
-    navigation: createNavigationRegistry({
-      resolveDispatcher: () => ({
-        createCheckpoint: () => {
-          // The checkpoint covers the navigation state the workbench owns:
-          // layout, history, and breadcrumbs. Side effects of commands that
-          // already executed belong to their extensions and cannot be undone.
-          const layout = core.layout.getLayout();
-          const restoreHistory = core.history.createCheckpoint();
-          const breadcrumbs = core.breadcrumbs.getItems();
-          return () => {
-            core.layout.restoreLayout(layout);
-            restoreHistory();
-            if (breadcrumbs) core.breadcrumbs.setItems(breadcrumbs);
-            else core.breadcrumbs.clearItems();
-          };
-        },
-        canOpenResource: (resource) => {
-          const state = core.resources.store.getState();
-          return Boolean(
-            state.kinds[resource.kind] &&
-              Object.values(state.presenters).some((presenter) => presenter.canOpen(resource)),
-          );
-        },
-        canOpenPanel: (panelId) => Boolean(core.layout.getPanel(panelId)),
-        canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
-        openResource: (resource, openInput) => core.resources.openResource(resource, openInput),
-        openPanel: (panelId, openInput) => {
-          const instance = core.layout.openPanel(panelId, openInput);
-          // Navigation is ingress — revealing the view is part of the intent.
-          // The region might be hidden (panel collapsed, persisted state); make
-          // sure the user can actually see the widget they navigated to.
-          const panel = core.layout.getPanel(panelId);
-          const region = openInput?.region ?? panel?.region;
-          if (region) {
-            if (region === "side") core.shell.setSidePanelPresentation("attached");
-            else if (isWorkbenchShellOpenRegion(region)) {
-              core.shell.setRegionOpen(region, true);
-            }
-          }
-          return instance;
-        },
-        executeCommand: (commandId, args) => core.commands.executeCommand(commandId, args),
-      }),
-    }),
+    navigation: createCoreNavigationRegistry(() => core, openPanel),
     panels: createWorkbenchPanelsController({
       defaultOpenByRegionId: input.defaultPanelOpenByRegionId,
       persistence: input.panelsPersistence,
@@ -545,8 +627,12 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     resources: createResourceRegistry({
       getPrimary: () => getActiveLocationPlacement(core.layout.getLayout())?.resource,
       establishLocation: (instance) => establishLocation(instance.instanceId),
+      resolveView: (viewId) => core.views.getView(viewId),
     }),
+    views,
     settings: createSettingsRegistry(),
+    statusBar,
+    statuses: createStatusRegistry(),
     shell,
     sidePanel,
     terminal: createWorkbenchTerminalController(),
@@ -638,43 +724,18 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     layout: core.layout,
     modes: core.modes,
     resources: core.resources,
+    views: core.views,
     persistence: input.historyPersistence,
     commitNavigation: (commit) => core.navigator.commitContext(commit),
   });
-
-  core.layout.store.subscribe((state) => {
-    const activeRegion = core.focus.getActiveRegion();
-    if (activeRegion && !state.layout.regions[activeRegion].visible) core.focus.clearFocus();
+  core.navigation.registerParser({
+    id: "workbench.views.paths",
+    priority: 1_000,
+    canParse: (location) => Boolean(core.views.resolvePath(location)),
+    parse: (location) => core.views.resolvePath(location)!,
   });
 
-  // The panels controller is workbench-global, but layout region visibility is
-  // per-scope. After a scope switch, mirror each region's `visible` flag into
-  // panels so the panel chrome (collapse/expand) reflects the loaded scope —
-  // otherwise the previous scope's collapse state sticks around visually.
-  core.layout.onDidChangePersistenceScope(() => {
-    const layout = core.layout.getLayout();
-    for (const region of Object.values(layout.regions)) {
-      core.panels.setOpen(region.id, region.visible);
-    }
-  });
-
-  // Persist the last PRIMARY (main) resource so apps can call `lastResource.restore()`
-  // on next boot. We track the primary, not the global active resource: "where you were"
-  // is the main subject (workspace/ticket), not a transient supporting selection like a
-  // Side Panel session — those are detached and scoped, so they are intentionally not restored.
-  core.onDidChangePrimaryResource((resource) => {
-    if (resource) core.lastResource.set(resource);
-  });
-
-  // Keep the secondary resource anchors (derived/detached) consistent with the primary
-  // (main) resource. The default scope predicate keeps detached anchors; apps inject
-  // `isInScope` once scoped resource providers exist.
-  createPrimaryCoordinator({
-    layout: core.layout,
-    isInScope: input.isInScope ?? createScopedIsInScope(core.resources),
-  });
-
-  registerWorkbenchBuiltIns(core);
+  connectWorkbenchCoreState(core, input);
 
   return core;
 };

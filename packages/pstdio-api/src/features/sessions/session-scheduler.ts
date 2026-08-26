@@ -1,6 +1,7 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
+import { getSessionHarness } from "./get-session-harness";
 import {
   createSubmittedDispatchEntry,
   type DispatchContext,
@@ -68,7 +69,7 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
   const canReattachActiveSession = async (session: ExistingSession) => {
     if (!session.agent || !session.agent_session_id) return false;
 
-    const harness = await deps.harnessRegistry.get(session.agent);
+    const harness = await getSessionHarness(deps.harnessRegistry, session);
     return Boolean(harness?.supportsReattach && (await harness.capabilities()).includes("SessionReattach"));
   };
 

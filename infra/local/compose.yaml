@@ -12,8 +12,9 @@ services:
       IS_SANDBOX: "1"
       PSTDIO_DISABLE_API_AUTO_START: "1"
       PSTDIO_DISABLE_EMBED_MANIFEST: "1"
-      PSTDIO_DEFAULT_EXTENSIONS: '${PSTDIO_DEFAULT_EXTENSIONS:-["harness-claude-code","harness-codex","harness-open-code","pstdio-base-themes","pstdio-planner","pstdio-skills","extension-lab"]}'
+      PSTDIO_DEFAULT_EXTENSIONS: '${PSTDIO_DEFAULT_EXTENSIONS:-["harness-claude-code","harness-codex","harness-open-code","pstdio-base-themes","pstdio-planner","pstdio-planner-loops","pstdio-skills","extension-lab"]}'
       PSTDIO_EXTENSION_RELEASE_REF: ${PSTDIO_EXTENSION_RELEASE_REF:?PSTDIO_EXTENSION_RELEASE_REF is required}
+      PSTDIO_EXTENSION_SOURCE_ROOT: ${HOST_WORKTREE:?HOST_WORKTREE is required}
       PSTDIO_HOME: ${HOST_PSTDIO_HOME:?HOST_PSTDIO_HOME is required}
       PSTDIO_DESKTOP_FLOW: ${PSTDIO_DESKTOP_FLOW:-0}
       PSTDIO_TERMINAL_ORIGINS: ${PSTDIO_TERMINAL_ORIGINS:?PSTDIO_TERMINAL_ORIGINS is required}
@@ -84,7 +85,7 @@ services:
 
         curl -fsS "$${auth_header[@]}" -X PATCH "$$api_url/v1/projects/$$project_id" \
           -H 'content-type: application/json' \
-          --data '{"default_agent_id":"pstdio.harness-codex.codex","default_agent_model":"gpt-5.5"}' >/dev/null
+          --data '{"default_agent_id":"pstdio.harness-codex.harness.codex","default_agent_model":"gpt-5.5"}' >/dev/null
 
         if [ -n "$$dashboard_child" ]; then
           wait -n "$$api_child" "$$dashboard_child"

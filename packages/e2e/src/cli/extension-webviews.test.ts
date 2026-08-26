@@ -88,19 +88,21 @@ describe("extension webview setup", () => {
       await enableExtensionLab(projectId);
 
       const metadata = await fetchMetadata(projectId);
-      const labRoute = metadata.routes.find((route) => route.path === "lab");
+      const labView = metadata.views.find((view) => view.path === "lab");
+      expect(labView?.body.kind).toBe("webview");
+      if (labView?.body.kind !== "webview") throw new Error("Extension Lab view is not a webview.");
 
-      expect(labRoute?.webview.runtimeUrl).toMatch(
-        /^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/extension-lab\/extension-lab\.labPage\/runtime$/,
+      expect(labView.body.webview.runtimeUrl).toMatch(
+        /^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/extension-lab\/pstdio\.extension-lab\.view\.lab-page\/runtime$/,
       );
-      expect(labRoute?.webview.moduleUrl).toMatch(
-        /^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/extension-lab\/extension-lab\.labPage\/assets\/module\.js\?h=.+$/,
+      expect(labView.body.webview.moduleUrl).toMatch(
+        /^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/extension-lab\/pstdio\.extension-lab\.view\.lab-page\/assets\/module\.js\?h=.+$/,
       );
 
-      const module = await waitForOk(`${api.url}${labRoute!.webview.moduleUrl}`);
+      const module = await waitForOk(`${api.url}${labView.body.webview.moduleUrl}`);
       expect(module.headers.get("content-type")).toContain("application/javascript");
 
-      const runtimeHtml = await waitForOk(`${api.url}${labRoute!.webview.runtimeUrl}`);
+      const runtimeHtml = await waitForOk(`${api.url}${labView.body.webview.runtimeUrl}`);
       const runtimeContent = await runtimeHtml.text();
       expectNoExternalExecutableSource(runtimeContent);
       expect(runtimeContent).toContain("notification.action");

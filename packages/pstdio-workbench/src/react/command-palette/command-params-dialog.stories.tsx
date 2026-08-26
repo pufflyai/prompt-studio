@@ -73,6 +73,21 @@ const everyControlCommand = registerCommand({
   },
 });
 
+const filesCommand = registerCommand({
+  id: "storybook.files-param",
+  label: "Import data files",
+  params: {
+    files: {
+      type: "files",
+      label: "Data files",
+      description: "Choose one or more CSV files to import.",
+      required: true,
+      multiple: true,
+      accept: ".csv",
+    },
+  },
+});
+
 const meta = {
   title: "pstdio-workbench/CommandParamsDialog",
   component: CommandParamsDialog,
@@ -119,6 +134,15 @@ export const EveryControl: Story = {
     request: {
       label: "Run with every param type",
       record: everyControlCommand,
+    },
+  },
+};
+
+export const FilesParameter: Story = {
+  args: {
+    request: {
+      label: "Import data files",
+      record: filesCommand,
     },
   },
 };

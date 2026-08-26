@@ -181,6 +181,7 @@ const attemptStates: AttemptState[] = [
 ];
 
 export const requestHumanCommand = defineCommand({
+  id: "request-human",
   title: "Request human input",
   cli: true,
   params: {
@@ -199,12 +200,13 @@ export const requestHumanCommand = defineCommand({
       options: attemptStates.map((state) => ({ label: state, value: state })),
     }),
   },
-  async run(ctx) {
-    return requestHuman(ctx, ctx.params as RequestHumanInput);
+  async run(ctx, commandParams) {
+    return requestHuman(ctx, commandParams as RequestHumanInput);
   },
 });
 
 export const resolveHumanRequestCommand = defineCommand({
+  id: "resolve-human-request",
   title: "Resolve human request",
   cli: true,
   params: {
@@ -212,19 +214,20 @@ export const resolveHumanRequestCommand = defineCommand({
     resolution: params.longText({ required: true }),
     completedAction: params.longText({ required: true }),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     if (ctx.source === "schedule" || ctx.source === "automation" || ctx.source === "event") {
       throw new Error("Automation cannot resolve a human request.");
     }
     const requests = humanRequestsCollection(ctx.storage);
-    const request = await requests.get(ctx.params.requestId);
-    if (!request || request.state !== "open") throw new Error(`Unknown open human request "${ctx.params.requestId}"`);
+    const request = await requests.get(commandParams.requestId);
+    if (!request || request.state !== "open")
+      throw new Error(`Unknown open human request "${commandParams.requestId}"`);
     const resolved: HumanRequestRecord = {
       ...request,
       state: "resolved",
       resolvedAt: new Date().toISOString(),
       resolvedBy: actorFromSource(ctx.source, ctx.invocationId),
-      resolution: `${ctx.params.resolution}\n\nCompleted action: ${ctx.params.completedAction}`,
+      resolution: `${commandParams.resolution}\n\nCompleted action: ${commandParams.completedAction}`,
     };
     await requests.put(resolved.id, resolved);
 

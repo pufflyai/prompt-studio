@@ -17,5 +17,7 @@ export const commandEvent = <TPhase extends CommandLifecyclePhase, TParams exten
   command: CommandRef<TParams, TResult>,
   phase: TPhase,
 ): EventRef<CommandLifecycleEventPayload<TPhase, TParams, TResult>> => ({
+  ...(command.extensionId ? { extensionId: command.extensionId } : {}),
+  kind: "event",
   id: `command.${phase}:${command.id}`,
 });

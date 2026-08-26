@@ -10,7 +10,7 @@ const apiBase = `http://localhost:${apiPort}`;
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId?: string) => {
   await page.addInitScript((selectedProjectId: string | undefined) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
     if (!selectedProjectId) return;
     localStorage.setItem(
       `pstdio-project-settings/projects/${selectedProjectId}/values`,
@@ -125,7 +125,7 @@ const writeHotReloadExtension = (input: { command?: boolean; description: string
           ? `{
               "hot-reload": {
                 title: "Hot Reload Command",
-                palette: { label: "Hot Reload Command", group: "E2E" },
+                palette: [{ label: "Hot Reload Command", group: "E2E" }],
                 run: async () => ({ ok: true })
               }
             }`

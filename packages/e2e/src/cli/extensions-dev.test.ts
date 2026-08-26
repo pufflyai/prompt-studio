@@ -41,8 +41,10 @@ const writeExtension = (extensionRoot: string, input: { dependency?: boolean; co
     )}\n`,
   );
   const dependencyImport = input.dependency ? 'import "missing-dev-dependency";\n' : "";
-  const commands = input.command ? ' commands: { ping: { title: "Ping", run: async () => ({ ok: true }) } }' : "";
-  writeFileSync(join(extensionRoot, "extension.ts"), `${dependencyImport}export default {${commands} };\n`);
+  const command = input.command
+    ? '{ id: "ping", ref: { id: "ping", kind: "command" }, title: "Ping", run: async () => ({ ok: true }) }'
+    : "";
+  writeFileSync(join(extensionRoot, "extension.ts"), `${dependencyImport}export default { commands: [${command}] };\n`);
 };
 
 const startDev = (repo: string, extensionRoot: string) => {
@@ -124,7 +126,7 @@ describe("extensions dev", () => {
         expect(await extensionState(project.id)).toMatchObject({ status: "loaded" });
 
         writeExtension(extensionRoot, { command: true });
-        await waitFor(() => dev.stdout().includes("registered dev-smoke.ping"), dev.child, dev.stdout);
+        await waitFor(() => dev.stdout().includes("registered pstdio.dev-smoke.command.ping"), dev.child, dev.stdout);
 
         writeExtension(extensionRoot, { command: true, dependency: true });
         await waitFor(() => dev.stderr().includes("Dependency install failed"), dev.child, dev.stderr);

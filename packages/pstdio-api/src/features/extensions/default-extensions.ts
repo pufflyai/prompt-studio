@@ -2,7 +2,7 @@ import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import { readPackageManifestMetadata } from "pstdio-extensions";
-import { extensionMarketplace } from "./extension-marketplace";
+import { extensionMarketplace, marketplaceExtensionRepositoryPath } from "./extension-marketplace";
 import {
   createSharedNamedSourceCheckout,
   type InstallExtensionSourceInput,
@@ -78,7 +78,7 @@ const sourceFor = (entry: DefaultExtensionEntry) => (typeof entry === "string" ?
 const sourceModeDefaultEntry = async (entry: DefaultExtensionEntry, force: boolean): Promise<DefaultExtensionEntry> => {
   if (typeof entry !== "string") return entry;
 
-  const localSource = join(import.meta.dirname, "../../../../../extensions", entry);
+  const localSource = join(import.meta.dirname, "../../../../../", marketplaceExtensionRepositoryPath(entry));
   if (existsSync(localSource)) return { source: localSource, installName: entry, force, skipInstall: true };
   return entry;
 };

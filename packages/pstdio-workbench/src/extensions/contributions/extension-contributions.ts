@@ -4,7 +4,7 @@ import type {
   WorkbenchExtensionMetadata,
 } from "@pstdio/sdk/api";
 import { isLocalizedString, type Localizable } from "@pstdio/sdk/extensions";
-import type { Command, MenuItem, MenuPath, ResourceBrowseEntry, ResourceRef } from "../../core";
+import type { Command, MenuItem, MenuPath } from "../../core";
 
 export type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 
@@ -13,12 +13,6 @@ const placementOrder = { first: 0, default: 1, last: 2 } satisfies Record<
   number
 >;
 type ExtensionContributionPlacement = keyof typeof placementOrder;
-
-export type WorkbenchExtensionRoute = WorkbenchExtensionMetadata["routes"][number];
-
-export interface WorkbenchExtensionRouteResourceInput {
-  route: WorkbenchExtensionRoute;
-}
 
 export interface WorkbenchExtensionMenuSlotConfig {
   menuPath: MenuPath;
@@ -51,16 +45,22 @@ export const emptyWorkbenchExtensionMetadata = {
   extensions: [],
   menuContributions: [],
   modes: [],
-  routes: [],
-  kanbanRenderers: [],
-  dataTableRenderers: [],
-  treeRenderers: [],
-  fileRenderers: [],
+  views: [],
+  viewMenus: [],
+  placements: [],
+  resourceKinds: [],
+  resourceViews: [],
+  navigationItems: [],
+  statusBarItems: [],
+  statuses: [],
   settingsPanels: [],
   settingsDefinitions: [],
-  treeItems: [],
-  panels: [],
 } satisfies WorkbenchExtensionMetadata;
+
+type CommandContributionMetadata = Pick<
+  WorkbenchExtensionMetadata,
+  "commands" | "commandPaletteContributions" | "menuContributions"
+>;
 
 const defaultWorkbenchExtensionCommandId = (contribution: ExtensionMenuContribution) =>
   `workbench.extension.menu.${contribution.id}`;
@@ -93,6 +93,7 @@ const createMenuItem = (input: {
     label: resolveString(contribution.label, contribution.extensionId),
     icon: contribution.icon,
     group: slot.group ?? contribution.group,
+    args: contribution.params,
     overflowLabel: slot.overflowLabel,
     order: contributionOrder(contribution, index),
     when,
@@ -112,12 +113,13 @@ const createPaletteItem = (input: {
     label: resolveString(contribution.label, contribution.extensionId),
     icon: contribution.icon,
     group: contribution.group,
+    args: contribution.params,
     order: contributionOrder(contribution, index),
   } satisfies MenuItem;
 };
 
 export const buildWorkbenchExtensionMenuRegistrations = (input: {
-  metadata: WorkbenchExtensionMetadata;
+  metadata: CommandContributionMetadata;
   menuSlotsById: ReadonlyMap<string, WorkbenchExtensionMenuSlotConfig>;
   menuTargetsById?: ReadonlyMap<string, WorkbenchExtensionMenuSlotConfig>;
   createCommandId?: (contribution: ExtensionMenuContribution) => string;
@@ -170,7 +172,7 @@ export const buildWorkbenchExtensionMenuRegistrations = (input: {
 };
 
 export const buildWorkbenchExtensionCommandPaletteRegistrations = (input: {
-  metadata: WorkbenchExtensionMetadata;
+  metadata: CommandContributionMetadata;
   createCommandId?: (contribution: ExtensionCommandPaletteContribution) => string;
   resolveString?: WorkbenchExtensionStringResolver;
 }) => {
@@ -197,16 +199,4 @@ export const buildWorkbenchExtensionCommandPaletteRegistrations = (input: {
   });
 
   return registrations;
-};
-
-export const buildWorkbenchExtensionRouteEntries = (input: {
-  metadata: WorkbenchExtensionMetadata | undefined;
-  createResource: (resourceInput: WorkbenchExtensionRouteResourceInput) => ResourceRef;
-}) => {
-  const { createResource, metadata } = input;
-  if (!metadata) return [] as ResourceBrowseEntry[];
-
-  return metadata.routes.map((route) => ({
-    resource: createResource({ route }),
-  }));
 };

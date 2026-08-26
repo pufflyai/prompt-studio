@@ -79,7 +79,6 @@ describe("core extension catalog", () => {
       resolve(import.meta.dirname, "../../../../../extensions/pstdio-skills"),
       "pstdio-skills",
     );
-
     const templatesRes = await handle.app.request(`/v1/projects/${project.id}/templates`);
     const templates = await templatesRes.json();
     expect(

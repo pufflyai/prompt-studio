@@ -69,33 +69,33 @@ export interface TicketWorkspaceRow {
   active: boolean;
 }
 
-// The planner's public command surface is the only boundary automation may
-// cross; importing planner internals is forbidden.
+// This repo-local extension is also installed outside the monorepo, where the
+// private Planner package cannot be a dependency. Keep this fallback scoped so
+// the Planner identity is declared once and command references stay structured.
+const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "pstdio-planner" });
+
 export const planner = {
-  automationPolicy: commandRef<Record<string, never>, { maxInProgress: number }>("pstdio-planner.automation-policy"),
-  readTickets: commandRef<Record<string, never>, PlannerTicket[]>("pstdio-planner.read-tickets"),
-  readStatuses: commandRef<Record<string, never>, { statuses: PlannerStatus[] }>("pstdio-planner.ticketStatus.read"),
-  readTags: commandRef<Record<string, never>, { tags: PlannerTag[] }>("pstdio-planner.ticketTag.read"),
-  getTicket: commandRef<{ id: string }, PlannerTicket | null>("pstdio-planner.get-ticket"),
-  setTicketAttribute: commandRef<{ rowId: string; attributeId: string; value: string }, PlannerTicket | null>(
-    "pstdio-planner.set-ticket-attribute",
+  automationPolicy: plannerCommand<Record<string, never>, { maxInProgress: number }>("automation-policy"),
+  readTickets: plannerCommand<Record<string, never>, PlannerTicket[]>("read-tickets"),
+  readStatuses: plannerCommand<Record<string, never>, { statuses: PlannerStatus[] }>("ticketStatus.read"),
+  readTags: plannerCommand<Record<string, never>, { tags: PlannerTag[] }>("ticketTag.read"),
+  getTicket: plannerCommand<{ id: string }, PlannerTicket | null>("get-ticket"),
+  setTicketAttribute: plannerCommand<{ rowId: string; attributeId: string; value: string }, PlannerTicket | null>(
+    "set-ticket-attribute",
   ),
-  refineTicket: commandRef<{ ticket: string }, { id: string }>("pstdio-planner.refine-ticket"),
-  runAttempt: commandRef<
+  refineTicket: plannerCommand<{ ticket: string }, { id: string }>("refine-ticket"),
+  runAttempt: plannerCommand<
     { ticket: string },
     | { decision: "started"; attempt: PlannerAttempt; session: { id: string } }
     | { decision: "wait"; reason: string; dependencyIds: string[] }
-  >("pstdio-planner.run-attempt"),
-  runReview: commandRef<
-    { workspaceId: string; expectedRevision?: number },
-    { review: { id: string }; session: { id: string } }
-  >("pstdio-planner.runReview"),
-  listAttempts: commandRef<Record<string, never>, PlannerAttempt[]>("pstdio-planner.list-attempts"),
-  reconcileAttempt: commandRef<{ workspaceId: string }, { decision: string; attempt: PlannerAttempt }>(
-    "pstdio-planner.reconcile-attempt",
+  >("run-attempt"),
+  runReview: plannerCommand<{ workspaceId: string }, { review: { id: string }; session: { id: string } }>("runReview"),
+  listAttempts: plannerCommand<Record<string, never>, PlannerAttempt[]>("list-attempts"),
+  reconcileAttempt: plannerCommand<{ workspaceId: string }, { decision: string; attempt: PlannerAttempt }>(
+    "reconcile-attempt",
   ),
-  ticketWorkspaces: commandRef<{ id: string }, TicketWorkspaceRow[]>("pstdio-planner.ticket-workspaces"),
-  workspaceActivity: commandRef<{ workspaceId: string }, WorkspaceActivity>("pstdio-planner.workspace-activity"),
+  ticketWorkspaces: plannerCommand<{ id: string }, TicketWorkspaceRow[]>("ticket-workspaces"),
+  workspaceActivity: plannerCommand<{ workspaceId: string }, WorkspaceActivity>("workspace-activity"),
 };
 
 export interface PlannerContext {

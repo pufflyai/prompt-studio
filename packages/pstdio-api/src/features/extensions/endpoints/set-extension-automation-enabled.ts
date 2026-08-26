@@ -4,7 +4,7 @@ import {
   workbenchExtensionAutomationRecordSchema,
 } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
-import type { ExtensionsRouteDeps } from "../deps";
+import type { ProjectExtensionLifecycleRouteDeps } from "../project-extension-lifecycle";
 
 const errorSchema = z.object({ error: z.string() });
 
@@ -38,41 +38,19 @@ export const setExtensionAutomationEnabledRoute = createRoute({
 });
 
 export const setExtensionAutomationEnabledHandler = (
-  deps: ExtensionsRouteDeps,
+  deps: ProjectExtensionLifecycleRouteDeps,
 ): AppRouteHandler<typeof setExtensionAutomationEnabledRoute> => {
   return async (c) => {
     const { projectId, instanceId, automationId } = c.req.valid("param");
     const { enabled } = c.req.valid("json");
 
-    const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
-    if (!existing) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
-
-    const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
-    const schedule = snapshot.runtime.schedules.find(
-      (candidate) => candidate.id === automationId && candidate.extensionId === existing.installedSource.extension_id,
-    );
-    if (!schedule) return c.json({ error: `Automation not found: ${automationId}` }, 404);
-
-    const row = await deps.extensionAutomationPreferencesService.set({
-      project_id: projectId,
-      extension_instance_id: instanceId,
-      automation_id: automationId,
+    const automation = await deps.projectExtensionLifecycle.setAutomationEnabled(
+      projectId,
+      instanceId,
+      automationId,
       enabled,
-    });
-    deps.eventBus?.emit("extension_automation_preferences", "set", row);
-
-    return c.json(
-      {
-        id: schedule.id,
-        localId: schedule.localId,
-        extensionId: schedule.extensionId,
-        extensionInstanceId: instanceId,
-        title: schedule.title,
-        cron: schedule.cron,
-        commandId: schedule.commandId,
-        enabled,
-      },
-      200,
     );
+    if (!automation) return c.json({ error: `Automation not found: ${automationId}` }, 404);
+    return c.json(automation, 200);
   };
 };

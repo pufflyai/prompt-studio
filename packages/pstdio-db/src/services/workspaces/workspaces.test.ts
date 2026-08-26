@@ -256,21 +256,46 @@ describe("createWorkspacesDBService lookups and mutations", () => {
     expect(ws.workspace_shorthand).toBe("PS-1_A2");
   });
 
-  test("updateGitMetadata stores branch and worktree_path", async () => {
+  test("provider projections preserve omitted references and operations", async () => {
     const ws = await workspacesService.create({
       project_id: projectId,
       shorthand_base: "PS-1",
-      anchors: [ticketAnchor],
+      provider_id: "example.remote",
+      provider_state: "provisioning",
+      provider_operation_id: "op-create-1",
+      provider_operation_kind: "create",
+    });
+    await workspacesService.updateProviderProjection(ws.id, {
+      provider_state: "provisioning",
+      execution_kind: "remote",
+      provider_ref_json: { version: 1, data: { remoteId: "remote-1" } },
+      provider_capabilities_json: ws.provider_capabilities_json,
     });
 
-    await workspacesService.updateGitMetadata(ws.id, {
-      branch: `workspace/${ws.workspace_shorthand}`,
-      worktree_path: `/tmp/workspaces/${ws.workspace_shorthand}`,
+    await workspacesService.updateProviderProjection(ws.id, {
+      provider_state: "provisioning",
+      execution_kind: "remote",
+      provider_capabilities_json: ws.provider_capabilities_json,
     });
 
     const found = await workspacesService.get(ws.id);
-    expect(found).not.toBeNull();
-    expect(found!.branch).toBe(`workspace/${ws.workspace_shorthand}`);
-    expect(found!.worktree_path).toBe(`/tmp/workspaces/${ws.workspace_shorthand}`);
+    expect(found?.provider_ref_json).toEqual({ version: 1, data: { remoteId: "remote-1" } });
+    expect(found?.provider_operation_id).toBe("op-create-1");
+    expect(found?.provider_operation_kind).toBe("create");
+  });
+
+  test("provider reconciliation reads archived rows with pending operations", async () => {
+    const ws = await workspacesService.create({
+      project_id: projectId,
+      shorthand_base: "PS-1",
+      provider_id: "example.remote",
+      provider_state: "archiving",
+      provider_operation_id: "op-archive-1",
+      provider_operation_kind: "archive",
+    });
+    await workspacesService.archive(ws.id);
+
+    expect(await workspacesService.list(projectId)).toEqual([]);
+    expect((await workspacesService.listForProviderReconciliation(projectId)).map((row) => row.id)).toContain(ws.id);
   });
 });

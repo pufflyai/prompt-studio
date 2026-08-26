@@ -21,38 +21,31 @@ import {
 } from "./api";
 import { collectExtensionCommandNotifications } from "./command-outcome";
 import { publishExtensionCommandEvent } from "./extension-webview-broadcast";
+import {
+  createProjectExtensionCache,
+  invalidateExtensionQueries,
+  projectExtensionMetadataQueryKey,
+  projectExtensionsQueryKey,
+} from "./project-extension-cache";
 
-const projectExtensionsQueryKey = (projectId: string | undefined) => ["project-extensions", projectId] as const;
-const projectExtensionMetadataQueryKey = (projectId: string | undefined) =>
-  ["project-extension-metadata", projectId] as const;
 const extensionSyncTables = new Set<CollectionChange["table"]>(["installed_extension_sources", "extension_instances"]);
-
-const invalidateExtensionQueries = (queryClient: ReturnType<typeof useQueryClient>, projectId: string | undefined) => {
-  queryClient.invalidateQueries({ queryKey: projectExtensionsQueryKey(projectId) });
-  queryClient.invalidateQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) });
-  queryClient.invalidateQueries({ queryKey: ["extension-contributions", projectId] });
-  // Harness availability follows extension enablement.
-  queryClient.invalidateQueries({ queryKey: ["agents-info"] });
-  queryClient.invalidateQueries({ queryKey: ["agent-models"] });
-};
 
 // Extension installs/enables sync over the live collections, so refresh the
 // project extension queries whenever those tables change.
-const useInvalidateExtensionQueriesOnSync = (projectId: string | undefined) => {
+export const useProjectExtensionSync = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
 
   useEffect(
     () =>
       subscribeCollections((change) => {
         if (!change || !extensionSyncTables.has(change.table)) return;
-        invalidateExtensionQueries(queryClient, projectId);
+        void invalidateExtensionQueries(queryClient, projectId);
       }),
     [projectId, queryClient],
   );
 };
 
 export const useProjectExtensionMetadata = (projectId: string | undefined) => {
-  useInvalidateExtensionQueriesOnSync(projectId);
   return useQuery({
     queryKey: projectExtensionMetadataQueryKey(projectId),
     queryFn: () => getProjectExtensionMetadata(projectId!),
@@ -61,7 +54,6 @@ export const useProjectExtensionMetadata = (projectId: string | undefined) => {
 };
 
 export const useProjectExtensions = (projectId: string | undefined) => {
-  useInvalidateExtensionQueriesOnSync(projectId);
   return useQuery({
     queryKey: projectExtensionsQueryKey(projectId),
     queryFn: () => listProjectExtensions(projectId!),
@@ -71,28 +63,31 @@ export const useProjectExtensions = (projectId: string | undefined) => {
 
 export const useInstallMarketplaceExtension = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
+  const cache = createProjectExtensionCache(queryClient, projectId);
   return useMutation({
     mutationFn: ({ installName }: { installName: string }) => {
       if (!projectId) throw new Error("Project id is required to install extensions.");
       return installMarketplaceExtension(projectId, installName);
     },
-    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+    onSuccess: (result) => cache.storeExtension(result.extension),
   });
 };
 
 export const useSetProjectExtensionEnabled = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
+  const cache = createProjectExtensionCache(queryClient, projectId);
   return useMutation({
     mutationFn: ({ instanceId, enabled }: { instanceId: string; enabled: boolean }) => {
       if (!projectId) throw new Error("Project id is required to update extensions.");
       return setProjectExtensionEnabled(projectId, instanceId, enabled);
     },
-    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+    onSuccess: (extension) => cache.storeExtension(extension),
   });
 };
 
 export const useSetExtensionAutomationEnabled = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
+  const cache = createProjectExtensionCache(queryClient, projectId);
   return useMutation({
     mutationFn: ({
       instanceId,
@@ -106,7 +101,7 @@ export const useSetExtensionAutomationEnabled = (projectId: string | undefined) 
       if (!projectId) throw new Error("Project id is required to update automations.");
       return setExtensionAutomationEnabled(projectId, instanceId, automationId, enabled);
     },
-    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+    onSuccess: (automation, variables) => cache.storeAutomation(variables.instanceId, automation),
   });
 };
 
@@ -117,7 +112,9 @@ export const useReloadProjectExtension = (projectId: string | undefined) => {
       if (!projectId) throw new Error("Project id is required to reload extensions.");
       return reloadProjectExtension(projectId, instanceId);
     },
-    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+    onSuccess: () => {
+      void invalidateExtensionQueries(queryClient, projectId);
+    },
   });
 };
 
@@ -128,7 +125,9 @@ export const useUpgradeProjectExtension = (projectId: string | undefined) => {
       if (!projectId) throw new Error("Project id is required to upgrade extensions.");
       return upgradeProjectExtension(projectId, instanceId);
     },
-    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+    onSuccess: () => {
+      void invalidateExtensionQueries(queryClient, projectId);
+    },
   });
 };
 
@@ -186,12 +185,13 @@ export const useUpdateProjectExtensionSetting = (projectId: string | undefined) 
 
 export const useUninstallProjectExtension = (projectId: string | undefined) => {
   const queryClient = useQueryClient();
+  const cache = createProjectExtensionCache(queryClient, projectId);
   return useMutation({
     mutationFn: ({ instanceId, deleteUserData }: { instanceId: string; deleteUserData?: boolean }) => {
       if (!projectId) throw new Error("Project id is required to uninstall extensions.");
       return uninstallProjectExtension(projectId, instanceId, deleteUserData);
     },
-    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+    onSuccess: (_result, variables) => cache.removeExtension(variables.instanceId),
   });
 };
 

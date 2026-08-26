@@ -22,6 +22,9 @@ type EditorLabels = Pick<
   | "deleteNotificationText"
   | "description"
   | "iconOptions"
+  | "readOnly"
+  | "showDefault"
+  | "onSetDefault"
   | "showIcons"
   | "title"
 >;
@@ -84,6 +87,7 @@ export const TagSettingsPanel = <TValue extends SortableValue>(props: TagSetting
     values: loadedValues,
     loadError,
     onSave,
+    readOnly,
     toEditorValue,
     valueNeedsUpdate,
     ...editorProps
@@ -144,20 +148,28 @@ export const TagSettingsPanel = <TValue extends SortableValue>(props: TagSetting
       ) : (
         <TagEditor
           {...editorProps}
+          readOnly={readOnly}
           values={drafts}
           onValuesChange={setDrafts}
           onDeleteValue={handleDeleteValue}
+          onSetDefault={
+            editorProps.showDefault
+              ? (value) => setDrafts(drafts.map((draft) => ({ ...draft, isDefault: draft.id === value.id })))
+              : editorProps.onSetDefault
+          }
           hasChanges={hasChanges}
           isSaving={isSaving}
           headerActions={
-            <TagEditorSaveBar
-              hasChanges={hasChanges}
-              isSaving={isSaving}
-              resetLabel={resetLabel}
-              saveLabel={saveLabel}
-              onSave={() => void handleSave()}
-              onReset={handleReset}
-            />
+            readOnly ? undefined : (
+              <TagEditorSaveBar
+                hasChanges={hasChanges}
+                isSaving={isSaving}
+                resetLabel={resetLabel}
+                saveLabel={saveLabel}
+                onSave={() => void handleSave()}
+                onReset={handleReset}
+              />
+            )
           }
         />
       )}

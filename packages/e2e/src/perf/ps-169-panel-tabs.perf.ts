@@ -39,7 +39,7 @@ test("PS-169 opens one Panel tab within the interaction budget", async ({ page, 
   const project = await createProject(request);
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", projectId);
     document.addEventListener(
       "click",

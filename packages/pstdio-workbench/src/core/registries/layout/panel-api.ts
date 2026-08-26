@@ -15,20 +15,22 @@ export const toOpenWidgetInput = (
   defaultTabRetention?: WorkbenchTabRetention,
 ): OpenWidgetInput => {
   const { strategy, ...shared } = input;
-  if (!strategy) return { ...shared, tabRetention: defaultTabRetention };
+  const normalized = shared.resource && shared.viewId === undefined ? { ...shared, viewId: null } : shared;
+  if (!strategy) return { ...normalized, tabRetention: defaultTabRetention };
   if (strategy.kind === "persistent") {
-    return { ...shared, tabPosition: strategy.position, tabRetention: "persistent" };
+    return { ...normalized, tabPosition: strategy.position, tabRetention: "persistent" };
   }
-  if (strategy.kind === "replace-active") return { ...shared, replaceActive: true };
+  if (strategy.kind === "replace-active") return { ...normalized, replaceActive: true };
   if (strategy.kind === "replace-panel") {
-    return { ...shared, replaceWidgetId: strategy.instanceId, tabRetention: strategy.retention };
+    return { ...normalized, replaceWidgetId: strategy.instanceId, tabRetention: strategy.retention };
   }
-  return { ...shared, tabRetention: "preview", tabPosition: strategy.position };
+  return { ...normalized, tabRetention: "preview", tabPosition: strategy.position };
 };
 
 export const toPanelInstance = (placement: WorkbenchWidgetPlacement): WorkbenchPanelInstance => ({
   instanceId: placement.widgetId,
   panelId: placement.contributionId,
+  viewId: placement.viewId,
   ownerId: placement.ownerId,
   source: placement.source,
   resource: placement.resource,

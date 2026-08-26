@@ -3,9 +3,7 @@ import type { Context } from "hono";
 import { workbenchExtensionMetadataSchema } from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppBindings, AppRouteHandler } from "../../../types";
-import { syncInstalledExtensionsForProject } from "../default-extensions";
 import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps } from "../deps";
-import { refreshProjectSkillsInRepos } from "../extension-skill-cleanup";
 import { assembleWorkbenchMetadata } from "../workbench-metadata-assembly";
 
 const errorSchema = z.object({ error: z.string() });
@@ -36,13 +34,6 @@ export const getProjectExtensionUiHandler = (
   const handler = async (c: Context<AppBindings>) => {
     const { projectId } = c.req.param();
     try {
-      await syncInstalledExtensionsForProject({
-        extensionService: deps.extensionService,
-        onProjectExtensionInstancesPruned: async () => {
-          await refreshProjectSkillsInRepos(deps, projectId);
-        },
-        projectId,
-      });
       const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
       return c.json(await assembleWorkbenchMetadata(deps, projectId, snapshot.runtime, snapshot.enabledSources), 200);
     } catch (error) {

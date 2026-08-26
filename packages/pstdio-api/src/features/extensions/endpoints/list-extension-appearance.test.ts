@@ -60,12 +60,14 @@ describe("list extension appearance", () => {
     writeFileSync(
       join(root, "extension.ts"),
       `export default {
-        commands: {
-          sayHello: {
+        commands: [
+          {
+            id: "sayHello",
+            ref: { kind: "command", id: "sayHello" },
             title: { $l10n: "commands.sayHello.title", default: "Say hello" },
             run: async () => undefined,
           },
-        },
+        ],
         translations: {
           fr: { kind: "package-asset", path: "./fr.json", baseUrl: import.meta.url },
         },
@@ -125,14 +127,16 @@ describe("list extension appearance", () => {
     writeFileSync(
       join(root, "extension.ts"),
       `export default {
-        themes: {
-          monokai: {
+        themes: [
+          {
+            id: "monokai",
+            ref: { kind: "theme", id: "monokai" },
             title: "Monokai",
             format: "vscode-color-theme",
             mode: "dark",
             source: { kind: "package-asset", path: "./theme.json", baseUrl: import.meta.url },
           },
-        },
+        ],
       };`,
     );
 
@@ -142,7 +146,7 @@ describe("list extension appearance", () => {
 
       expect(response.status).toBe(200);
       expect(body.themes[0]).toMatchObject({
-        id: "lab.monokai",
+        id: "pstdio.lab.theme.monokai",
         title: "Monokai",
         tokens: {
           "colors.bg": "#272822",

@@ -61,5 +61,5 @@ export type HarnessParamsInfo = z.infer<typeof harnessParamsSchema>;
 
 export { findAgentModel, resolveAgentModelParams } from "./agent-model-params";
 
-/** Bare provider id of a (possibly namespaced) harness id, e.g. "pstdio.harness-claude-code.claude-code" -> "claude-code". */
+/** Bare provider id of a (possibly namespaced) harness id, e.g. "pstdio.harness-claude-code.harness.claude-code" -> "claude-code". */
 export const harnessLocalId = (id: string) => id.slice(id.lastIndexOf(".") + 1);

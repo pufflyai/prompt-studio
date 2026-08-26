@@ -6,16 +6,13 @@ import type {
   RuntimeCliContribution,
   RuntimeCommandPaletteResourceRecord,
   RuntimeCommandRecord,
-  RuntimeControlsRendererRecord,
-  RuntimeDataTableRendererRecord,
   RuntimeFileIconThemeRecord,
-  RuntimeFileRendererRecord,
-  RuntimeKanbanRendererRecord,
   RuntimeKeybindingRecord,
   RuntimePrivateHandlerRecord,
+  RuntimeStatusRecord,
   RuntimeThemeRecord,
   RuntimeTranslationRecord,
-  RuntimeTreeRendererRecord,
+  RuntimeViewRecord,
 } from "../../types/runtime";
 
 export type Accumulator = ExtensionRuntime;
@@ -25,16 +22,13 @@ export type RegistryIndex = {
   privateHandlerIds: Map<string, RuntimePrivateHandlerRecord>;
   cliKeys: Map<string, RuntimeCliContribution>;
   mountKeys: Map<string, RuntimeArtifactMount>;
-  kanbanRendererIds: Map<string, RuntimeKanbanRendererRecord>;
-  dataTableRendererIds: Map<string, RuntimeDataTableRendererRecord>;
   commandPaletteResourceIds: Map<string, RuntimeCommandPaletteResourceRecord>;
-  treeRendererIds: Map<string, RuntimeTreeRendererRecord>;
-  fileRendererIds: Map<string, RuntimeFileRendererRecord>;
-  controlsRendererIds: Map<string, RuntimeControlsRendererRecord>;
   themeIds: Map<string, RuntimeThemeRecord>;
   fileIconThemeIds: Map<string, RuntimeFileIconThemeRecord>;
   translationIds: Map<string, RuntimeTranslationRecord>;
   keybindingDedupe: Map<string, RuntimeKeybindingRecord>;
+  viewIds: Map<string, RuntimeViewRecord>;
+  statusIds: Map<string, RuntimeStatusRecord>;
 };
 
 export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Accumulator => ({
@@ -47,22 +41,19 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   schedules: [],
   artifactMounts: [],
   modes: [],
-  panels: [],
+  views: [],
+  viewMenus: [],
+  placements: [],
+  navigationItems: [],
+  statusBarItems: [],
+  statuses: [],
   resourceKinds: [],
-  resourcePanels: [],
+  resourceViews: [],
   resourceHierarchyProviders: [],
-  statusItems: [],
-  routes: [],
-  treeItems: [],
   activityItems: [],
   settingsSections: [],
   settingsPanels: [],
-  kanbanRenderers: [],
-  dataTableRenderers: [],
   commandPaletteResources: [],
-  treeRenderers: [],
-  fileRenderers: [],
-  controlsRenderers: [],
   keybindings: [],
   settings: [],
   templateTypes: [],
@@ -81,16 +72,13 @@ export const createRegistryIndex = (): RegistryIndex => ({
   privateHandlerIds: new Map(),
   cliKeys: new Map(),
   mountKeys: new Map(),
-  kanbanRendererIds: new Map(),
-  dataTableRendererIds: new Map(),
   commandPaletteResourceIds: new Map(),
-  treeRendererIds: new Map(),
-  fileRendererIds: new Map(),
-  controlsRendererIds: new Map(),
   themeIds: new Map(),
   fileIconThemeIds: new Map(),
   translationIds: new Map(),
   keybindingDedupe: new Map(),
+  viewIds: new Map(),
+  statusIds: new Map(),
 });
 
 export const isRecord = (value: unknown): value is Record<string, unknown> =>

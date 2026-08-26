@@ -1,20 +1,21 @@
-import { defineCommand, l10n } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, projectSlots } from "@pstdio/sdk/extensions";
 import { LAB_ROUTE_HEADER_WHEN } from "../utils/lab-constants";
 
 export const sayHelloCommand = defineCommand({
+  id: "say-hello",
   title: l10n("commands.sayHello.title", "Say hello"),
   cli: true,
-  palette: { group: "Lab", label: l10n("commands.sayHello.paletteLabel", "Say hello") },
+  palette: [{ group: "Lab", label: l10n("commands.sayHello.paletteLabel", "Say hello") }],
   menus: [
     {
-      target: "workbench.nav.actions",
+      slot: projectSlots.headerPrimary,
       label: l10n("commands.sayHello.headerLabel", "Lab: Say hello"),
       icon: "flask-conical",
       presentation: "button",
       when: LAB_ROUTE_HEADER_WHEN,
     },
   ],
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     const model = await ctx.settings.get("model.default");
     const tone = await ctx.settings.get("greeting.tone");
     const attachment = ctx.attachment;

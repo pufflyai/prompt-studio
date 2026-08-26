@@ -28,9 +28,11 @@ afterEach(() => {
 
 const writeExtension = (
   hookSource = `
-    rememberWorktree: {
-      eventId: "workspace.provision",
-      async handler(ctx, event) {
+    {
+      id: "remember-worktree",
+      ref: { kind: "hook", id: "remember-worktree" },
+      event: { extensionId: "pstdio", kind: "event", id: "workspace.provision" },
+      async run(ctx, event) {
         await ctx.storage.set("last-worktree", event.workspaceDir);
       },
     },
@@ -54,9 +56,9 @@ const writeExtension = (
     join(root, "extension.ts"),
     `
       export default {
-        hooks: {
+        hooks: [
           ${hookSource}
-        },
+        ],
       };
     `,
   );
@@ -127,9 +129,11 @@ describe("fireExtensionEvent", () => {
 
   test("logs extension hook failures", async () => {
     const sourcePath = writeExtension(`
-      explodingHook: {
-        eventId: "workspace.provision",
-        handler() {
+      {
+        id: "exploding-hook",
+        ref: { kind: "hook", id: "exploding-hook" },
+        event: { extensionId: "pstdio", kind: "event", id: "workspace.provision" },
+        run() {
           throw new Error("boom");
         },
       },
@@ -184,7 +188,7 @@ describe("fireExtensionEvent", () => {
         event: "extension.event.log",
         metadata: { eventId: "workspace.provision" },
       });
-      expect(warnSpy.mock.calls[0]?.[1]).toContain('Hook "extension-lab.explodingHook" failed: boom');
+      expect(warnSpy.mock.calls[0]?.[1]).toContain('Hook "pstdio.extension-lab.hook.exploding-hook" failed: boom');
     } finally {
       warnSpy.mockRestore();
     }

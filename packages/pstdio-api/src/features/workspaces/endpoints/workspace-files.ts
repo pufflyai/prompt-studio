@@ -1,7 +1,7 @@
 import { createWorkspaceFilesMount, WorkspaceFileAccessError, type WorkspaceMountEntry } from "pstdio-extensions";
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
-import { resolveWorkspaceRoot } from "../resolve-workspace-root";
+import { resolveWorkspaceExecutionTarget } from "../workspace-provider-service";
 import type {
   createWorkspaceDirectoryRoute,
   createWorkspaceFileRoute,
@@ -80,8 +80,8 @@ const toApiEntry = (entry: WorkspaceMountEntry) => ({
   ...(entry.modifiedAt ? { modified_at: entry.modifiedAt } : {}),
 });
 
-const resolveWorkspaceMount = async (deps: WorkspacesRouteDeps, id: string) => {
-  const context = await resolveWorkspaceRoot(deps, id);
+const resolveWorkspaceMount = async (deps: WorkspacesRouteDeps, id: string, access: "files:read" | "files:write") => {
+  const context = await resolveWorkspaceExecutionTarget(deps, id, access);
   if (!context) return undefined;
   return { mount: createWorkspaceFilesMount(context.root), workspace: context.workspace };
 };
@@ -167,7 +167,7 @@ export const listWorkspaceFilesHandler = (
   return async (c) => {
     const { id } = c.req.valid("param");
     const { limit = DEFAULT_LIST_LIMIT, path = "", query } = c.req.valid("query");
-    const context = await resolveWorkspaceMount(deps, id);
+    const context = await resolveWorkspaceMount(deps, id, "files:read");
     if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {
@@ -205,7 +205,7 @@ export const getWorkspaceFileHandler = (deps: WorkspacesRouteDeps): AppRouteHand
   return async (c) => {
     const { id } = c.req.valid("param");
     const { path } = c.req.valid("query");
-    const context = await resolveWorkspaceMount(deps, id);
+    const context = await resolveWorkspaceMount(deps, id, "files:read");
     if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {
@@ -224,7 +224,7 @@ export const writeWorkspaceFileHandler = (
     const { id } = c.req.valid("param");
     const { path } = c.req.valid("query");
     const { content } = c.req.valid("json");
-    const context = await resolveWorkspaceMount(deps, id);
+    const context = await resolveWorkspaceMount(deps, id, "files:write");
     if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {
@@ -246,7 +246,7 @@ export const createWorkspaceFileHandler = (
     const { id } = c.req.valid("param");
     const { path } = c.req.valid("query");
     const { content } = c.req.valid("json");
-    const context = await resolveWorkspaceMount(deps, id);
+    const context = await resolveWorkspaceMount(deps, id, "files:write");
     if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {
@@ -265,7 +265,7 @@ export const createWorkspaceDirectoryHandler = (
   return async (c) => {
     const { id } = c.req.valid("param");
     const { path } = c.req.valid("query");
-    const context = await resolveWorkspaceMount(deps, id);
+    const context = await resolveWorkspaceMount(deps, id, "files:write");
     if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {
@@ -285,7 +285,7 @@ export const moveWorkspaceEntryHandler = (
     const { id } = c.req.valid("param");
     const { path } = c.req.valid("query");
     const { destination_path: destinationPath } = c.req.valid("json");
-    const context = await resolveWorkspaceMount(deps, id);
+    const context = await resolveWorkspaceMount(deps, id, "files:write");
     if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {
@@ -304,7 +304,7 @@ export const deleteWorkspaceEntryHandler = (
   return async (c) => {
     const { id } = c.req.valid("param");
     const { path } = c.req.valid("query");
-    const context = await resolveWorkspaceMount(deps, id);
+    const context = await resolveWorkspaceMount(deps, id, "files:write");
     if (!context) return c.json({ error: `Workspace not found or has no file root: ${id}` }, 404);
 
     try {

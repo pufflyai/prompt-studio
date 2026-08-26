@@ -56,14 +56,16 @@ const writeRepoScopedDefaultExtension = (sourcePath: string, markerPath: string)
     `import { writeFileSync } from "node:fs";
 
 export default {
-  hooks: {
-    marker: {
-      eventId: "workspace.provision",
-      async handler(_ctx, payload) {
+  hooks: [
+    {
+      id: "marker",
+      ref: { kind: "hook", id: "marker" },
+      event: { extensionId: "pstdio", kind: "event", id: "workspace.provision" },
+      async run(_ctx, payload) {
         writeFileSync(${JSON.stringify(markerPath)}, payload.workspaceDir);
       },
     },
-  },
+  ],
 };
 `,
   );
@@ -131,7 +133,7 @@ describe("repo-local default extensions", () => {
         expect.arrayContaining([
           expect.objectContaining({
             eventId: "workspace.provision",
-            id: `${defaultInstallName}.marker`,
+            id: `pstdio.${defaultInstallName}.hook.marker`,
             sourcePath: extensionEntry,
           }),
         ]),
@@ -140,7 +142,7 @@ describe("repo-local default extensions", () => {
       const workspaceResponse = await handle.app.request("/v1/workspaces", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: project.id, repo_id: repo.id, type: "worktree" }),
+        body: JSON.stringify({ project_id: project.id, repo_id: repo.id }),
       });
       expect(workspaceResponse.status).toBe(201);
       const workspace = (await workspaceResponse.json()) as { worktree_path: string };

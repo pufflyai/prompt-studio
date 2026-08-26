@@ -52,12 +52,13 @@ See the [CLI command index](/product/cli/index) for the current core commands.
 | `adrs/`            | Architecture Decision Records for accepted project decisions.                              |
 | `architecture/`    | System boundaries, runtime flows, and package relationships.                               |
 | `contributing/`    | Development workflow, testing, standards, and maintenance guidance.                        |
+| `extensions/`      | Extension authoring guides, API contracts, and product requirements.                       |
 | `lessons-learned/` | Root cause notes for issues that took time to diagnose.                                    |
 | `product/`         | User-facing guides and cookbooks for the core CLI, dashboard, SDK, and platform.            |
 | `references/`      | Lookup-oriented API, SDK, workbench, endpoint, and command references.                     |
 
-Extension documentation follows the code that owns it:
+Extension documentation is split by audience:
 
-- [Extension authoring guides](../../extensions/docs/index.md) live under `extensions/docs/`.
+- [Extension authoring guides](./extensions/index.md) live under `.pstdio/docs/extensions/`.
 - [Workbench references](./references/workbench/index.md) cover the public package API, navigation, and contribution ownership.
 - Each first-party extension keeps its product guides in its own folder. See the [Planner extension](../../extensions/pstdio-planner/README.md).

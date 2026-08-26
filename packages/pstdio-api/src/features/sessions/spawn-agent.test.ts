@@ -169,6 +169,32 @@ describe("workspace readiness gate", () => {
 
     expect(reattach).not.toHaveBeenCalled();
   });
+
+  test("spawnAgentSession refuses to launch when provider creation failed", async () => {
+    const start = mock((_ctx: unknown, _input: unknown) => completedSession());
+    const registry = createTestHarnessRegistry([createTestHarnessRecord("claude-code", { provider: { start } })]);
+    const sessionService = createSessionServiceMock();
+
+    await expect(
+      spawnAgentSession({ sessionId: "s_1", agentId: CLAUDE_CODE_ID, prompt: "start", cwd: undefined }, {
+        harnessRegistry: registry,
+        sessionService,
+        eventBus: { emit: () => {} },
+        workspaceSessionService: {
+          getWorkspaceBySessionId: async () => ({
+            id: "w1",
+            initializing: false,
+            setup_error: null,
+            provider_state: "failed",
+            execution_kind: "local",
+            provider_error_json: { message: "worktree add failed" },
+          }),
+        },
+      } as unknown as Parameters<typeof spawnAgentSession>[1]),
+    ).rejects.toThrow(/worktree add failed/);
+
+    expect(start).not.toHaveBeenCalled();
+  });
 });
 
 describe("spawnAgentSession lifecycle", () => {

@@ -15,3 +15,4 @@ export * from "./panels";
 export * from "./renderers";
 export * from "./settings";
 export * from "./targets";
+export * from "./workbench-metadata";

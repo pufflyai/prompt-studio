@@ -308,12 +308,13 @@ const reconcileReview = async (ctx: CommandContext, attempt: AttemptRecord) => {
 };
 
 export const reconcileAttemptCommand = defineCommand({
+  id: "reconcile-attempt",
   title: "Reconcile managed attempt",
   cli: true,
   params: { workspaceId: params.text({ required: true }) },
-  async run(ctx) {
-    const attempt = await readAttempt(ctx.storage, ctx.params.workspaceId);
-    if (!attempt) throw new Error(`Unknown managed attempt "${ctx.params.workspaceId}"`);
+  async run(ctx, commandParams) {
+    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+    if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
     if (attempt.state === "implementing" || attempt.state === "changes_requested") {
       return reconcileImplementation(ctx, attempt);
     }
@@ -323,10 +324,11 @@ export const reconcileAttemptCommand = defineCommand({
 });
 
 export const listAttemptsCommand = defineCommand({
+  id: "list-attempts",
   title: "List managed attempts",
   cli: true,
   params: {},
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     return listAttempts(ctx.storage);
   },
 });

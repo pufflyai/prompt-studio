@@ -20,13 +20,13 @@ const createProjectViaApi = async (request: APIRequestContext, name: string) => 
 const bypassOnboarding = async (page: Page, projectId: string) => {
   await page.addInitScript((currentProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.harness-open-code.opencode");
+    localStorage.setItem("selected-agent", "pstdio.harness-open-code.harness.opencode");
     localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
     localStorage.setItem(
       `pstdio-project-settings/projects/${currentProjectId}/values`,
       JSON.stringify({
         state: {
-          lastSelectedAgent: "pstdio.harness-open-code.opencode",
+          lastSelectedAgent: "pstdio.harness-open-code.harness.opencode",
           lastSelectedModels: [],
           lastSelectedRepo: "",
           lastSelectedBranches: [],
@@ -81,7 +81,7 @@ test.describe("Ticket sidenav sessions", () => {
       apiBase,
       projectId,
       "refine-ticket",
-      { agent: { harnessId: "pstdio.extension-lab.fake" } },
+      { agent: { harnessId: "pstdio.extension-lab.harness.fake" } },
       {
         resource: {
           type: "ticket",

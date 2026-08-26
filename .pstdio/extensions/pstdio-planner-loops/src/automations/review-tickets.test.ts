@@ -30,13 +30,13 @@ describe("review-tickets automation", () => {
       ],
     });
 
-    const result = await reviewTicketsCommand.run(ctx as never);
+    const result = await reviewTicketsCommand.run(ctx as never, {});
 
     expect(result).toMatchObject({ reviewed: "T1", workspaceId: "workspace-old" });
-    expect(callsTo(calls, "pstdio-planner.runReview")).toEqual([
+    expect(callsTo(calls, "pstdio.pstdio-planner.command.runReview")).toEqual([
       {
-        commandId: "pstdio-planner.runReview",
-        params: { workspaceId: "workspace-old", expectedRevision: 2 },
+        commandId: "pstdio.pstdio-planner.command.runReview",
+        params: { workspaceId: "workspace-old" },
       },
     ]);
   });
@@ -68,10 +68,10 @@ describe("review-tickets automation", () => {
       ],
     });
 
-    const result = await reviewTicketsCommand.run(ctx as never);
+    const result = await reviewTicketsCommand.run(ctx as never, {});
 
     expect(result).toMatchObject({ reviewed: null });
-    expect(callsTo(calls, "pstdio-planner.runReview")).toEqual([]);
+    expect(callsTo(calls, "pstdio.pstdio-planner.command.runReview")).toEqual([]);
   });
 
   test("reconciles a running review without starting another round", async () => {
@@ -88,12 +88,12 @@ describe("review-tickets automation", () => {
       reconcileDecisions: { "workspace-1": "active" },
     });
 
-    const result = await reviewTicketsCommand.run(ctx as never);
+    const result = await reviewTicketsCommand.run(ctx as never, {});
 
     expect(result).toMatchObject({
       reviewed: null,
       reconciled: [{ workspaceId: "workspace-1", decision: "active" }],
     });
-    expect(callsTo(calls, "pstdio-planner.runReview")).toEqual([]);
+    expect(callsTo(calls, "pstdio.pstdio-planner.command.runReview")).toEqual([]);
   });
 });

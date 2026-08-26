@@ -281,15 +281,14 @@
           "harnesses": "Harness",
           "commands": "命令",
           "modes": "模式",
-          "panels": "视图",
-          "routes": "路由",
+          "views": "视图",
+          "placements": "布局位置",
           "menuContributions": "菜单项",
           "settingsPanels": "设置面板",
-          "renderers": "渲染器",
           "skills": "技能",
           "templates": "模板",
           "themes": "主题",
-          "treeItems": "树节点",
+          "navigationItems": "导航项",
           "commandPaletteResources": "命令面板资源"
         }
       },

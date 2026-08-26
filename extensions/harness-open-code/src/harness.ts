@@ -95,7 +95,7 @@ const toHarnessSession = (input: {
 export const createOpencodeHarness = (
   overrides: Partial<OpencodeHarnessDeps> = {},
   serviceOverrides: Parameters<typeof createOpencodeService>[0] = {},
-): HarnessProvider => {
+): Omit<HarnessProvider, "ref"> => {
   const deps = { ...defaultDeps, ...overrides };
   const opencode = createOpencodeService(serviceOverrides);
   let modelCache: { expiresAt: number; value: Promise<ReturnType<typeof parseOpencodeModels>> } | undefined;

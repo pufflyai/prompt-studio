@@ -168,14 +168,32 @@ const countAdditionsDeletions = async (cwd: string, base: string, filePath: stri
   }
 };
 
+const getDiffStatsByPath = async (cwd: string, base: string) => {
+  const raw = await git(cwd, ["diff", "--numstat", base, "--"]).catch(() => "");
+  const stats = new Map<string, { additions: number; deletions: number }>();
+
+  for (const line of raw.split("\n").filter(Boolean)) {
+    const [additions, deletions, filePath] = line.split("\t");
+    if (!filePath) continue;
+    stats.set(filePath, {
+      additions: additions === "-" ? 0 : Number.parseInt(additions, 10) || 0,
+      deletions: deletions === "-" ? 0 : Number.parseInt(deletions, 10) || 0,
+    });
+  }
+
+  return stats;
+};
+
 const buildFileDiffSummary = async (
   worktreePath: string,
   base: string,
   entry: ParsedEntry,
+  statsByPath?: ReadonlyMap<string, { additions: number; deletions: number }>,
 ): Promise<FileDiffSummary> => {
   const oldPath = entry.oldPath ?? entry.filePath;
   const newPath = entry.newPath ?? entry.filePath;
-  const stats = await countAdditionsDeletions(worktreePath, base, newPath, entry.oldPath);
+  const cachedStats = entry.oldPath ? undefined : statsByPath?.get(entry.filePath);
+  const stats = cachedStats ?? (await countAdditionsDeletions(worktreePath, base, newPath, entry.oldPath));
   const additions =
     entry.change === "added" && stats.additions === 0
       ? countContentLines(await getWorkingContent(worktreePath, newPath))
@@ -238,11 +256,10 @@ export const getWorktreeDiffSummaryFiles = async (opts: {
 }): Promise<WorktreeDiffSummaryFiles> => {
   const { worktreePath, base } = opts;
   const { fileMap } = await discoverChangedFiles(worktreePath, base);
-  const files: FileDiffSummary[] = [];
-
-  for (const entry of fileMap.values()) {
-    files.push(await buildFileDiffSummary(worktreePath, base, entry));
-  }
+  const statsByPath = await getDiffStatsByPath(worktreePath, base);
+  const files = await Promise.all(
+    [...fileMap.values()].map((entry) => buildFileDiffSummary(worktreePath, base, entry, statsByPath)),
+  );
 
   return { files, totals: buildTotals(files) };
 };

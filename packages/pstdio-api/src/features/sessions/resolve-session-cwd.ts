@@ -1,7 +1,5 @@
 import type { SessionsRouteDeps } from "./deps";
 
-// Resolves the working directory for a session.
-// Priority: workspace.worktree_path → first project repo path → undefined
 export const resolveSessionCwd = async (
   deps: Pick<SessionsRouteDeps, "workspaceService" | "repoService">,
   projectId: string,
@@ -9,7 +7,10 @@ export const resolveSessionCwd = async (
 ) => {
   if (workspaceId) {
     const workspace = await deps.workspaceService.get(workspaceId);
-    if (workspace?.worktree_path) return workspace.worktree_path;
+    if (!workspace || workspace.provider_state !== "ready" || workspace.execution_kind !== "local") return undefined;
+    if (workspace.setup_error) return undefined;
+    if (workspace.worktree_path) return workspace.worktree_path;
+    if (workspace.provider_id !== "pstdio.root" && !workspace.is_default) return undefined;
   }
 
   const repos = await deps.repoService.listByProject(projectId);

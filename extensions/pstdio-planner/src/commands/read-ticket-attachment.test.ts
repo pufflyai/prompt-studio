@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import type { StoredTicketAttachment } from "../data/types";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { readTicketAttachmentCommand } from "./read-ticket-attachment";
 
@@ -23,12 +23,12 @@ const attachUpload = async (
 describe("read ticket attachment command", () => {
   test("returns a data url built from the stored bytes", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
     const bytes = new Uint8Array([1, 2, 3, 4]);
     const ref = await attachUpload(storage, ticket.id, { name: "diagram.png", data: bytes, mimeType: "image/png" });
 
     const result = await readTicketAttachmentCommand.run(
-      makeCommandContext({ storage, params: { ticketId: ticket.id, attachmentId: ref.id } }),
+      ...makeCommandArgs({ storage, params: { ticketId: ticket.id, attachmentId: ref.id } }),
     );
 
     const expected = `data:image/png;base64,${btoa(String.fromCharCode(1, 2, 3, 4))}`;
@@ -37,10 +37,10 @@ describe("read ticket attachment command", () => {
 
   test("returns null when the attachment is unknown", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
 
     const result = await readTicketAttachmentCommand.run(
-      makeCommandContext({ storage, params: { ticketId: ticket.id, attachmentId: "missing" } }),
+      ...makeCommandArgs({ storage, params: { ticketId: ticket.id, attachmentId: "missing" } }),
     );
 
     expect(result).toBeNull();

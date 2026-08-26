@@ -33,6 +33,7 @@ type GuestRemote = {
     props: unknown;
     theme: ThemePreference;
     themeVariables: Record<string, string>;
+    extensionId: string;
   }) => Promise<void>;
   themeUpdate: (message: { theme: ThemePreference; variables: Record<string, string> }) => void;
   propsUpdate: (message: { props: unknown }) => void;
@@ -188,6 +189,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
             props: propsRef.current,
             theme: resolveActiveTheme(themeRef.current),
             themeVariables: collectChakraThemeVariables(),
+            extensionId: view.extensionId,
           });
           initializedRef.current = true;
           setRuntimeError(null);
@@ -206,7 +208,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     // at iframe load and binds to that connection ID. Closing during React StrictMode's
     // dev-only cleanup would leave the live iframe with no host listener.
     return removeLoadListener;
-  }, [frameEpoch, view.webview.runtimeUrl, view.webview.moduleUrl, view.webview.styles]);
+  }, [frameEpoch, view.extensionId, view.webview.runtimeUrl, view.webview.moduleUrl, view.webview.styles]);
 
   // Re-renders may hand the frame a fresh publisher (renderers rebuild their
   // capability context per render); route it to the live connection.

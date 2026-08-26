@@ -101,7 +101,7 @@ describe("pstdio sessions create with mocked Codex", () => {
       writeFileSync(join(repo, "notes.txt"), "codex attachment context\n");
 
       const result = runSafe(
-        'sessions create --agent pstdio.harness-codex.codex --model gpt-5.5 --prompt "Inspect the attachment" --attach notes.txt',
+        'sessions create --agent pstdio.harness-codex.harness.codex --model gpt-5.5 --prompt "Inspect the attachment" --attach notes.txt',
         repo,
         FLOW_TIMEOUT,
       );

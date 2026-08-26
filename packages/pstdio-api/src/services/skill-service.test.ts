@@ -31,32 +31,35 @@ const emptyRuntime = {
   cli: [],
   commandPaletteResources: [],
   commands: [],
-  controlsRenderers: [],
-  dataTableRenderers: [],
   diagnostics: [],
   extensions: [],
   fileIconThemes: [],
-  fileRenderers: [],
   harnesses: [],
   hooks: [],
-  kanbanRenderers: [],
   keybindings: [],
   middlewares: [],
   modes: [],
-  panels: [],
-  routes: [],
+  navigationItems: [],
+  placements: [],
+  privateHandlers: [],
+  resourceHierarchyProviders: [],
+  resourceKinds: [],
+  resourceViews: [],
   schedules: [],
   settings: [],
   settingsPanels: [],
   settingsSections: [],
   skills: [],
+  statusBarItems: [],
+  statuses: [],
   templateTypes: [],
   templates: [],
   themes: [],
   translations: [],
-  treeItems: [],
-  treeRenderers: [],
+  views: [],
+  viewMenus: [],
   workspaceTypes: [],
+  activityItems: [],
 };
 
 const writeExtensionWithSkill = (root: string, importCountPath: string) => {
@@ -79,13 +82,15 @@ const currentCount = Number(await Bun.file(countPath).text().catch(() => "0"));
 await Bun.write(countPath, String(currentCount + 1));
 
 export default {
-  skills: {
-    review_code: {
+  skills: [
+    {
+      id: "review_code",
+      ref: { kind: "skill", id: "review_code" },
       title: "Review code",
       description: "Review code changes",
       source: { kind: "package-asset", path: "./skill", baseUrl: import.meta.url },
     },
-  },
+  ],
 };`,
   );
   writeFileSync(join(root, "skill", "SKILL.md"), "Review code changes\n");

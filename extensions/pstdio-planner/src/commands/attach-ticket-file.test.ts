@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import { attachTicketFileCommand, detachTicketFileCommand } from "./attach-ticket-file";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 
 const attachment = {
@@ -19,10 +19,10 @@ const attachment = {
 describe("ticket file attachment commands", () => {
   test("attaches a blob ref to a ticket", async () => {
     const storage = createMemoryStorage();
-    const ticket = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Ticket" } }));
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
 
     const updated = await attachTicketFileCommand.run(
-      makeCommandContext({ storage, params: { ticketId: ticket.id, ref: attachment } }),
+      ...makeCommandArgs({ storage, params: { ticketId: ticket.id, ref: attachment } }),
     );
 
     expect(updated?.attachments).toEqual([attachment]);
@@ -33,11 +33,11 @@ describe("ticket file attachment commands", () => {
   test("detaches a blob ref from a ticket", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "Ticket", attachments: [attachment] } }),
+      ...makeCommandArgs({ storage, params: { title: "Ticket", attachments: [attachment] } }),
     );
 
     const updated = await detachTicketFileCommand.run(
-      makeCommandContext({ storage, params: { ticketId: ticket.id, fileId: attachment.id } }),
+      ...makeCommandArgs({ storage, params: { ticketId: ticket.id, fileId: attachment.id } }),
     );
 
     expect(updated?.attachments).toEqual([]);

@@ -131,14 +131,9 @@ const formatExtensionSection = (ext: NormalizedExtension, runtime: ExtensionRunt
       renderItem: (m) => [`    ${m.localId} -> ${m.fullPath}`],
     }),
     ...renderSubsection({
-      title: "Panels",
-      items: runtime.panels.filter((v) => v.extensionId === ext.id),
+      title: "Views",
+      items: runtime.views.filter((v) => v.extensionId === ext.id),
       renderItem: (v) => [`    ${v.id}`],
-    }),
-    ...renderSubsection({
-      title: "Routes",
-      items: runtime.routes.filter((r) => r.extensionId === ext.id),
-      renderItem: (r) => [`    ${r.id} -> ${r.contribution.path}`],
     }),
     ...renderSubsection({
       title: "Keybindings",

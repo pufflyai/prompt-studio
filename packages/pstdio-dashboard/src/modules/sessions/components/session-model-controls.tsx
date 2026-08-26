@@ -13,7 +13,7 @@ import { resolveRuntimeAgentSelection, resolveRuntimeModelSelection } from "../r
 import { HarnessParamInlineControls } from "./harness-param-inline-controls";
 import { filterHarnessParamValues, type HarnessParamValues, harnessParamValuesEqual } from "./harness-param-values";
 
-const fallbackAgentId = "pstdio.harness-open-code.opencode";
+const fallbackAgentId = "pstdio.harness-open-code.harness.opencode";
 
 interface SessionModelControlsProps {
   view: DashboardSessionView;

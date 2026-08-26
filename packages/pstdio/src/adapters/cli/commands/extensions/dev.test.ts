@@ -37,24 +37,35 @@ const makeCheck = (errorCount = 0): ExtensionsCheckResponse => ({
   menuContributions: [],
   commandPaletteContributions: [],
   modes: [],
-  panels: [],
-  routes: [
+  views: [
     {
-      id: "dev-test.overview",
+      id: "pstdio.dev-test.view.overview",
+      localId: "overview",
       extensionId: "pstdio.dev-test",
-      label: "Overview",
+      title: "Overview",
       path: "overview",
-      webview: { entry: { kind: "package-asset", path: "./src/overview.tsx", baseUrl: "file:///repo/" } },
+      body: {
+        kind: "webview",
+        webview: {
+          entry: { kind: "package-asset", path: "./src/overview.tsx", baseUrl: "file:///repo/" },
+          runtimeUrl: "/runtime",
+          moduleUrl: "/module.js",
+        },
+      },
     },
   ],
-  treeItems: [],
+  viewMenus: [],
+  placements: [],
+  resourceKinds: [],
+  resourceViews: [],
+  resourceHierarchyProviders: [],
+  navigationItems: [],
+  statusBarItems: [],
+  statuses: [],
+  activityItems: [],
+  settingsSections: [],
   settingsPanels: [],
-  kanbanRenderers: [],
-  dataTableRenderers: [],
   commandPaletteResources: [],
-  treeRenderers: [],
-  fileRenderers: [],
-  controlsRenderers: [],
   keybindings: [],
   settingsDefinitions: [],
   templates: [],
@@ -69,7 +80,7 @@ const makeCheck = (errorCount = 0): ExtensionsCheckResponse => ({
             severity: "error",
             extensionId: "pstdio.dev-test",
             sourcePath: "/repo/dev-test/extension.ts",
-            metadata: { contributionId: "dev-test.overview", missingCapability: "workbench.routes" },
+            metadata: { contributionId: "pstdio.dev-test.view.overview", missingCapability: "workbench.views" },
           },
         ],
   hostCompatibility: {
@@ -197,7 +208,7 @@ describe("extensions dev", () => {
 
     expect(target.logs).toContain("validated pstdio.dev-test");
     expect(target.logs).toContain("registered dev-test.run");
-    expect(target.logs).toContain("webview dev-test.overview rebuilt");
+    expect(target.logs).toContain("webview pstdio.dev-test.view.overview rebuilt");
     expect(target.logs).toContain("watching /repo/dev-test");
 
     target.signals.emit("SIGINT");

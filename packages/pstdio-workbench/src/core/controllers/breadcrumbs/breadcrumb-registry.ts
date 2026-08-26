@@ -1,4 +1,9 @@
-import type { ResourceRef, ResourceRegistry } from "../../registries/resources/resource-registry";
+import {
+  isWorkbenchViewHierarchyNode,
+  type ResourceRef,
+  type ResourceRegistry,
+} from "../../registries/resources/resource-registry";
+import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
@@ -28,15 +33,30 @@ export interface WorkbenchBreadcrumbController {
 export const createResourceBreadcrumbItems = (
   resources: ResourceRegistry,
   resource: ResourceRef | undefined,
+  views?: WorkbenchViewRegistry,
 ): WorkbenchBreadcrumbItem[] => {
   const path = resources.walkHierarchy(resource);
 
-  return path.map((entry, index) => ({
-    title: entry.label ?? entry.id ?? resources.getKind(entry.kind)?.label ?? entry.kind,
-    icon: entry.icon ?? resources.getKind(entry.kind)?.icon,
-    resource: entry,
-    ...(index < path.length - 1 ? { onClick: () => void resources.openResource(entry, { replaceActive: true }) } : {}),
-  }));
+  return path.map((entry, index) => {
+    if (isWorkbenchViewHierarchyNode(entry)) {
+      const view = views?.getView(entry.viewId);
+      return {
+        title: entry.label ?? view?.title ?? entry.viewId,
+        icon: entry.icon ?? view?.icon,
+        ...(index < path.length - 1 && views
+          ? { onClick: () => void views.openView(entry.viewId, { strategy: { kind: "replace-active" } }) }
+          : {}),
+      };
+    }
+    return {
+      title: entry.label ?? entry.id ?? resources.getKind(entry.kind)?.label ?? entry.kind,
+      icon: entry.icon ?? resources.getKind(entry.kind)?.icon,
+      resource: entry,
+      ...(index < path.length - 1
+        ? { onClick: () => void resources.openResource(entry, { replaceActive: true }) }
+        : {}),
+    };
+  });
 };
 
 export const createWorkbenchBreadcrumbController = (): WorkbenchBreadcrumbController => {

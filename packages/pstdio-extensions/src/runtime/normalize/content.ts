@@ -1,3 +1,4 @@
+import type { SkillContribution, TemplateContribution, TemplateTypeContribution } from "@pstdio/sdk/extensions";
 import { isPackageAssetDescriptor } from "../../artifacts/asset-validation";
 import { PackageAssetError, resolvePackageAsset } from "../../artifacts/package-assets";
 import type {
@@ -9,17 +10,22 @@ import type {
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
+import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { isLocalizableString } from "./localizable";
 
 const registerTemplateTypes = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
-  for (const [localId, type] of Object.entries(source.definition.templateTypes ?? {})) {
+  const contributions = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "template-type",
+    contributions: contributionArray<TemplateTypeContribution>(source.definition.templateTypes),
+  });
+  for (const type of contributions) {
+    const localId = type.id;
     if (!isRecord(type) || !isLocalizableString(type.label)) continue;
     runtime.templateTypes.push({
-      id: `${ext.name}.${localId}`,
-      localId,
-      extensionId: ext.id,
-      name: ext.name,
-      sourcePath: source.sourcePath,
+      ...contributionRecordBase(ext, source, "template-type", localId),
       contribution: type as RuntimeTemplateTypeRecord["contribution"],
     });
   }
@@ -49,9 +55,15 @@ const checkTemplateAssetExists = (
 };
 
 const registerTemplates = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
-  const seen = new Set<string>();
-
-  for (const [localId, template] of Object.entries(source.definition.templates ?? {})) {
+  const contributions = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "template",
+    contributions: contributionArray<TemplateContribution>(source.definition.templates),
+  });
+  for (const template of contributions) {
+    const localId = template.id;
     if (!isRecord(template) || !isLocalizableString(template.title) || typeof template.type !== "string") continue;
     if (!isPackageAssetDescriptor(template.source)) {
       runtime.diagnostics.push(
@@ -64,27 +76,10 @@ const registerTemplates = (ext: NormalizedExtension, source: LoadedExtensionSour
       );
       continue;
     }
-    if (seen.has(localId)) {
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "duplicate_template_key",
-          message: `Extension "${ext.id}" declares template key "${localId}" more than once`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-        }),
-      );
-      continue;
-    }
-    seen.add(localId);
-
     checkTemplateAssetExists(ext, source, runtime, localId, template);
 
     runtime.templates.push({
-      id: `${ext.name}.${localId}`,
-      localId,
-      extensionId: ext.id,
-      name: ext.name,
-      sourcePath: source.sourcePath,
+      ...contributionRecordBase(ext, source, "template", localId),
       contribution: template as RuntimeTemplateRecord["contribution"],
     });
   }
@@ -114,9 +109,15 @@ const checkSkillAssetExists = (
 };
 
 const registerSkills = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
-  const seen = new Set<string>();
-
-  for (const [localId, skill] of Object.entries(source.definition.skills ?? {})) {
+  const contributions = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "skill",
+    contributions: contributionArray<SkillContribution>(source.definition.skills),
+  });
+  for (const skill of contributions) {
+    const localId = skill.id;
     if (!isRecord(skill) || !isLocalizableString(skill.title)) continue;
     if (!isPackageAssetDescriptor(skill.source)) {
       runtime.diagnostics.push(
@@ -129,27 +130,10 @@ const registerSkills = (ext: NormalizedExtension, source: LoadedExtensionSource,
       );
       continue;
     }
-    if (seen.has(localId)) {
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "duplicate_skill_key",
-          message: `Extension "${ext.id}" declares skill key "${localId}" more than once`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-        }),
-      );
-      continue;
-    }
-    seen.add(localId);
-
     checkSkillAssetExists(ext, source, runtime, localId, skill);
 
     runtime.skills.push({
-      id: `${ext.name}.${localId}`,
-      localId,
-      extensionId: ext.id,
-      name: ext.name,
-      sourcePath: source.sourcePath,
+      ...contributionRecordBase(ext, source, "skill", localId),
       contribution: skill as RuntimeSkillRecord["contribution"],
     });
   }

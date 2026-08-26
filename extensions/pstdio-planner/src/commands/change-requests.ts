@@ -1,4 +1,4 @@
-import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
+import { type CommandContext, commandRef, defineCommand, params } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { rollUpAttemptTicket } from "../data/attempt-rollup";
 import { appendRevision } from "../data/attempt-state";
@@ -6,10 +6,15 @@ import { appendAttemptEvent, putAttempt, readAttempt, reviewThreadsCollection } 
 import type { AttemptRecord } from "../data/attempt-types";
 import { inlineThreadIsOutdated } from "../data/thread-mapping";
 
+const reportsCommand = commandRef.forExtension({ publisher: "pstdio", name: "pstdio-reports" });
+const readReportCommand = reportsCommand<{ id: string }, { id?: string; workspaceId?: string | null; draft?: boolean }>(
+  "reports.read",
+);
+
 export const readReport = async (ctx: Pick<CommandContext, "commands">, reportId: string) => {
-  const outcome = await ctx.commands.execute("pstdio-reports.reports.read", { params: { id: reportId } });
+  const outcome = await ctx.commands.execute(readReportCommand, { params: { id: reportId } });
   if (!outcome.ok) throw new Error(`Unknown report "${reportId}": ${outcome.reason}`);
-  return outcome.value as { id?: string; workspaceId?: string | null; draft?: boolean };
+  return outcome.value;
 };
 
 export const workspaceGitPath = async (ctx: CommandContext, workspaceId: string) => {
@@ -68,6 +73,7 @@ const mapOpenThreads = async (ctx: CommandContext, attempt: AttemptRecord, nextH
 };
 
 export const submitChangeRequestCommand = defineCommand({
+  id: "submit-change-request",
   title: "Submit change request",
   cli: true,
   params: {
@@ -84,18 +90,23 @@ export const submitChangeRequestCommand = defineCommand({
       ],
     }),
   },
-  async run(ctx) {
-    const attempt = await readAttempt(ctx.storage, ctx.params.workspaceId);
-    if (!attempt) throw new Error(`Unknown managed attempt "${ctx.params.workspaceId}"`);
-    const implementationSessionId = ctx.params.implementationSessionId ?? ctx.params.sessionId;
+  async run(ctx, commandParams) {
+    const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
+    if (!attempt) throw new Error(`Unknown managed attempt "${commandParams.workspaceId}"`);
+    const implementationSessionId = commandParams.implementationSessionId ?? commandParams.sessionId;
     if (!implementationSessionId || attempt.implementationSessionId !== implementationSessionId) {
       throw new Error("The implementation session does not own this attempt.");
     }
-    if (attempt.state !== ctx.params.expectedAttemptState) throw new Error("Attempt state changed before submission.");
+    if (attempt.state !== commandParams.expectedAttemptState)
+      throw new Error("Attempt state changed before submission.");
     const currentHead = await workspaceHead(ctx, attempt.workspaceId);
-    if (currentHead !== ctx.params.headSha) throw new Error("Workspace HEAD changed before submission.");
-    const report = await readReport(ctx, ctx.params.changeRequestReportId);
-    if (report.id !== ctx.params.changeRequestReportId || report.workspaceId !== attempt.workspaceId || report.draft) {
+    if (currentHead !== commandParams.headSha) throw new Error("Workspace HEAD changed before submission.");
+    const report = await readReport(ctx, commandParams.changeRequestReportId);
+    if (
+      report.id !== commandParams.changeRequestReportId ||
+      report.workspaceId !== attempt.workspaceId ||
+      report.draft
+    ) {
       throw new Error("The saved change request report does not belong to this workspace.");
     }
 
@@ -103,7 +114,7 @@ export const submitChangeRequestCommand = defineCommand({
     const revisions = appendRevision(attempt.revisions, {
       baseSha: attempt.base.headSha,
       headSha: currentHead,
-      changeRequestReportId: ctx.params.changeRequestReportId,
+      changeRequestReportId: commandParams.changeRequestReportId,
       submittedAt: timestamp,
       submittedBy: actorFromSource(ctx.source, ctx.invocationId),
     });

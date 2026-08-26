@@ -1,5 +1,5 @@
 import { Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
-import type { HistoryEntry, WorkbenchCore, WorkbenchModuleContribution } from "../../core";
+import type { HistoryEntry, WorkbenchCore, WorkbenchModuleContext, WorkbenchModuleContribution } from "../../core";
 import { useWorkbenchStore } from "../../react";
 
 export const HISTORY_CLOSE_ACTIVE_WIDGET_COMMAND_ID = "history.example.closeActiveWidget";
@@ -20,7 +20,7 @@ const renderEntry = (entry: HistoryEntry) => {
   return `panel:${entry.widgetId}`;
 };
 
-const getClosableActiveWidgetId = (workbench: Pick<WorkbenchCore, "layout">) => {
+const getClosableActiveWidgetId = (workbench: Pick<WorkbenchModuleContext, "layout">) => {
   const activePanel = workbench.layout.getActivePanel();
   return activePanel?.closable ? activePanel.instanceId : undefined;
 };

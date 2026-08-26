@@ -77,11 +77,17 @@ const createWorkspaceResourceMetadata = (input: {
   summary?: DashboardWorkspaceDiffSummary;
 }) => {
   const branch = input.workspace.branch as string | null;
+  const executionKind = input.workspace.execution_kind as string | undefined;
+  const providerState = input.workspace.provider_state as string | undefined;
+  const providerError = input.workspace.provider_error_json as { message?: string } | null | undefined;
   const metadata: Record<string, unknown> = {
     workspaceId: input.workspace.id,
     ...(input.workspacePath ? { workspacePath: input.workspacePath } : {}),
     workspaceShorthand: input.workspace.workspace_shorthand as string,
     workspaceType: input.workspace.worktree_path ? "worktree" : "current_branch",
+    ...(executionKind ? { workspaceExecutionKind: executionKind } : {}),
+    ...(providerState ? { workspaceProviderState: providerState } : {}),
+    ...(providerError?.message ? { workspaceError: providerError.message } : {}),
     // Resource-scoped action menus (header overflow, tree context menu) gate the
     // rename/archive/delete actions on this flag so the default workspace stays permanent.
     workspaceIsDefault: Boolean(input.workspace.is_default),
@@ -111,7 +117,12 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
       const summary = options.diffSummariesByWorkspaceId?.get(workspace.id);
       const diffOverview = summary ? formatDashboardWorkspaceDiffOverview(summary) : undefined;
       const workspacePath =
-        (workspace.worktree_path as string | null) ?? repoPathByProjectId.get(workspace.project_id as string) ?? null;
+        workspace.execution_kind === "remote"
+          ? null
+          : ((workspace.worktree_path as string | null) ??
+            repoPathByProjectId.get(workspace.project_id as string) ??
+            null);
+      const providerError = workspace.provider_error_json as { message?: string } | null | undefined;
 
       return {
         id: workspace.id,
@@ -127,7 +138,7 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
         branch: (workspace.branch as string | null) ?? null,
         worktreePath: (workspace.worktree_path as string | null) ?? null,
         isDefault: Boolean(workspace.is_default),
-        setupError: (workspace.setup_error as string | null) ?? null,
+        setupError: (workspace.setup_error as string | null) ?? providerError?.message ?? null,
         resource: createDashboardResource(
           "workspace",
           workspace.id,
@@ -159,6 +170,7 @@ export const toWorkspaceRow = (workspace: DashboardWorkspace): DashboardWorkspac
     isDefault: workspace.isDefault,
     created: workspace.createdAt,
     updated: workspace.updatedAt,
+    ...(workspace.setupError ? { error: workspace.setupError } : {}),
     ...(workspace.diffOverview !== undefined
       ? {
           diffOverview: workspace.diffOverview,

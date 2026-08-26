@@ -1,23 +1,83 @@
 import { describe, expect, test } from "bun:test";
 import extension from "./extension";
+import { labArtifactsChanged } from "./src/events";
 
 const commandMenus = () => Object.values(extension.commands ?? {}).flatMap((command) => command.menus ?? []);
 const commandPalettes = () => Object.values(extension.commands ?? {}).flatMap((command) => command.palette ?? []);
+const view = (id: string) => extension.views?.find((candidate) => candidate.id === id);
 
 describe("extension-lab workbench attachments", () => {
   test("refreshes artifact renderers from the shared artifact event", () => {
-    const event = { id: "extension-lab.artifacts.changed" };
+    expect(view("artifacts")?.body.refreshEvents).toEqual([labArtifactsChanged]);
+    expect(view("artifact-create")?.body.refreshEvents).toEqual([labArtifactsChanged]);
+    expect(view("workflow")?.body.refreshEvents).toEqual([labArtifactsChanged]);
+  });
 
-    expect(extension.dataTableRenderers?.glassLabArtifacts?.refreshEvents).toEqual([event]);
-    expect(extension.controlsRenderers?.labArtifactCreate?.refreshEvents).toEqual([event]);
+  test("uses stored artifact resources as movable workflow rows", async () => {
+    const artifacts = new Map<string, Record<string, unknown>>();
+    const values = new Map<string, unknown>();
+    const emitted: string[] = [];
+    const storage = {
+      get: async (key: string) => values.get(key),
+      set: async (key: string, value: unknown) => {
+        values.set(key, value);
+      },
+      collection: () => ({
+        get: async (id: string) => artifacts.get(id),
+        list: async () => [...artifacts.values()],
+        put: async (id: string, value: Record<string, unknown>) => {
+          artifacts.set(id, value);
+        },
+        delete: async (id: string) => {
+          artifacts.delete(id);
+        },
+      }),
+    };
+    const events = {
+      emit: async (event: string | { id: string }) => {
+        emitted.push(typeof event === "string" ? event : event.id);
+        return { delivered: 0 };
+      },
+    };
+    const workflow = view("workflow")?.body;
+    if (workflow?.kind !== "kanban") throw new Error("Workflow Kanban view is missing.");
+
+    const initial = await workflow.query({ events, storage } as never, {} as never);
+    expect(initial.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "concept",
+          attributes: { status: "idea" },
+          resource: expect.objectContaining({ type: "glass-lab-artifact", id: "concept" }),
+        }),
+      ]),
+    );
+    expect(workflow.onAttributeChange).toBeFunction();
+
+    await workflow.onAttributeChange?.({ events, storage } as never, {
+      rowId: "concept",
+      attributeId: "status",
+      value: "testing",
+    });
+
+    const moved = await workflow.query({ events, storage } as never, {} as never);
+    expect(moved.rows.find((row) => row.id === "concept")).toMatchObject({
+      attributes: { status: "testing" },
+      resource: { metadata: { status: "testing" } },
+    });
+    expect(artifacts.get("concept")).toMatchObject({ status: "testing" });
+    expect(emitted).toContain("artifacts.changed");
   });
 
   test("exercises PS-313 attachment targets", () => {
     expect(commandMenus()).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ target: "workbench.nav.actions" }),
-        expect.objectContaining({ target: "workbench.nav.overflow" }),
-        expect.objectContaining({ target: "workbench.nav.actions", when: { mode: "workspace" } }),
+        expect.objectContaining({ slot: expect.objectContaining({ id: "project.headerPrimary" }) }),
+        expect.objectContaining({ slot: expect.objectContaining({ id: "project.headerOverflow" }) }),
+        expect.objectContaining({
+          slot: expect.objectContaining({ id: "workspace.headerPrimary" }),
+          when: { mode: { extensionId: "pstdio", id: "workspace", kind: "mode" } },
+        }),
       ]),
     );
     expect(commandPalettes()).toEqual(expect.arrayContaining([expect.objectContaining({ group: "Lab" })]));
@@ -26,26 +86,33 @@ describe("extension-lab workbench attachments", () => {
         expect.objectContaining({ label: expect.objectContaining({ $l10n: "commands.counter.read.title" }) }),
       ]),
     );
-    expect(extension.dataTableRenderers?.glassLabArtifacts).toMatchObject({
-      title: "Artifacts",
-      resourceKind: "glass-lab-artifact",
-      query: expect.any(Function),
-      rowActions: [
-        {
-          id: "delete",
-          label: "Delete artifact",
-          icon: "trash",
-          destructive: true,
-          command: { id: "extension-lab.glass-lab-artifacts.delete" },
-        },
-      ],
+    expect(view("artifacts")).toMatchObject({
+      title: { $l10n: "panels.labArtifacts.title", default: "Artifacts" },
+      body: {
+        kind: "dataTable",
+        query: expect.any(Function),
+        rowActions: [
+          {
+            id: "delete",
+            label: "Delete artifact",
+            icon: "trash",
+            destructive: true,
+            command: { id: "glass-lab-artifacts.delete", kind: "command" },
+          },
+        ],
+      },
     });
-    expect(extension.treeItems?.labPage).toMatchObject({
-      target: "workbench.left.tree",
+    expect(extension.navigationItems?.find((item) => item.id === "lab")).toMatchObject({
       action: {
         kind: "command",
-        command: "workbench.action.switchMode",
-        params: { modeId: "pstdio.extension-lab.lab" },
+        target: {
+          command: {
+            extensionId: "pstdio",
+            kind: "command",
+            id: "workbench.action.switchMode",
+          },
+          params: { modeId: "pstdio.extension-lab.mode.lab" },
+        },
       },
     });
   });
@@ -53,105 +120,81 @@ describe("extension-lab workbench attachments", () => {
   test("stages a single Lab mode with native activity items and status chrome", () => {
     // Lab is the mode-wide workspace; Animation and Sculpt are the conformance
     // fixture that arranges one shared blend-project resource two ways.
-    expect(Object.keys(extension.modes ?? {})).toEqual(["lab", "animation", "sculpt"]);
-    expect(extension.modes?.lab).toMatchObject({
-      id: "pstdio.extension-lab.lab",
-      // No "secondary": keeps the Terminal entry out of the Lab mode.
-      panelRegions: ["main", "side"],
-      resources: {
-        "glass-lab-artifact": {},
-      },
+    expect(extension.modes?.map((mode) => mode.id)).toEqual(["lab", "animation", "sculpt"]);
+    expect(extension.modes?.[0]).toMatchObject({
+      id: "lab",
+      ref: { kind: "mode", id: "lab" },
     });
-    // The Lab owns navigation through native activity items; no sidenav or
-    // activity webview panel exists.
-    expect(extension.panels).not.toHaveProperty("labSidenav");
-    expect(extension.panels).not.toHaveProperty("labActionTray");
-    expect(extension.panels).not.toHaveProperty("labActivityBar");
-    expect(extension.activityItems?.createArtifact).toMatchObject({
+    expect(extension.activityItems?.find((item) => item.id === "create-artifact")).toMatchObject({
       icon: "package-plus",
-      modes: ["pstdio.extension-lab.lab"],
-      command: { id: "extension-lab.glass-lab-artifacts.create" },
+      modes: [{ kind: "mode", id: "lab" }],
+      command: { id: "glass-lab-artifacts.create", kind: "command" },
     });
-    expect(extension.activityItems?.projectHome).toMatchObject({
+    expect(extension.activityItems?.find((item) => item.id === "project-home")).toMatchObject({
       icon: "house",
-      modes: ["pstdio.extension-lab.lab"],
+      modes: [{ kind: "mode", id: "lab" }],
       placement: "last",
-      command: "workbench.action.switchMode",
+      command: { extensionId: "pstdio", id: "workbench.action.switchMode", kind: "command" },
       params: { modeId: "project" },
     });
-    // Status chrome is a typed status item, not a docked panel.
-    expect(extension.panels).not.toHaveProperty("labStatusBar");
-    expect(extension.statusItems?.labStatusBar).toMatchObject({
-      when: { mode: "pstdio.extension-lab.lab" },
-      webview: { entry: { path: "./src/views/lab-status-bar.tsx" } },
+    expect(extension.statusBarItems?.[0]).toMatchObject({
+      when: { mode: { kind: "mode", id: "lab" } },
+      view: { kind: "view", id: "status" },
     });
+    expect(view("status")?.body).toMatchObject({ kind: "webview", entry: { path: "./src/views/lab-status-bar.tsx" } });
   });
 
-  test("gives each main panel an icon and an action menu where it belongs", () => {
-    expect(extension.panels?.labOverview).toMatchObject({
+  test("gives each main view an icon and a separate action menu", () => {
+    expect(view("overview")).toMatchObject({
       icon: "layout-dashboard",
-      show: [
-        { region: "main", required: true },
-        { for: "blend-project", region: "main", required: true },
-      ],
-      webview: { entry: { path: "./src/views/lab-overview.tsx" } },
+      body: { kind: "webview", entry: { path: "./src/views/lab-overview.tsx" } },
     });
-    expect(extension.panels?.labOverview?.panelMenus).toBeUndefined();
-    expect(extension.panels?.labArtifacts).toMatchObject({
+    expect(view("artifacts")).toMatchObject({
       icon: "package-search",
-      show: [{ region: "main" }, { for: "blend-project", region: "side", allowedRegions: ["side", "secondary"] }],
-      renderer: { kind: "dataTable", id: "glassLabArtifacts" },
-      panelMenus: {
-        create: expect.objectContaining({ side: "right", renderer: { kind: "controls", id: "labArtifactCreate" } }),
-      },
+      body: { kind: "dataTable" },
     });
-    expect(extension.panels?.labCams).toMatchObject({
+    expect(view("cams")).toMatchObject({
       icon: "cctv",
-      show: [
-        { region: "main" },
-        {
-          for: "blend-project",
-          region: "sidenav",
-          allowedRegions: ["sidenav", "side"],
-          required: true,
-        },
-      ],
-      webview: { entry: { path: "./src/views/lab-cams.tsx" } },
-      panelMenus: {
-        cameras: expect.objectContaining({ side: "left", renderer: { kind: "tree", id: "labCams" } }),
-      },
+      body: { kind: "webview", entry: { path: "./src/views/lab-cams.tsx" } },
     });
-    expect(extension.treeRenderers?.labCams).toMatchObject({
-      icon: "cctv",
-      body: expect.any(Function),
-    });
-    expect(extension.controlsRenderers?.labArtifactCreate).toMatchObject({
+    expect(
+      extension.viewMenus?.map((menu) => ({ id: menu.id, owner: menu.owner.id, view: menu.view.id, side: menu.side })),
+    ).toEqual([
+      { id: "artifacts.create", owner: "artifacts", view: "artifact-create", side: "right" },
+      { id: "cams.cameras", owner: "cams", view: "camera-tree", side: "left" },
+    ]);
+    expect(view("camera-tree")?.body).toMatchObject({ kind: "tree", body: expect.any(Function) });
+    expect(view("artifact-create")?.body).toMatchObject({
+      kind: "controls",
       query: expect.any(Function),
       onValueChange: expect.any(Function),
     });
-    expect(extension.controlsRenderers).not.toHaveProperty("labActionTray");
-    expect(extension.controlsRenderers).not.toHaveProperty("labParameters");
-    expect(extension.controlsRenderers).not.toHaveProperty("labReviewChecklist");
   });
 
   test("opens artifacts as a side inspector bound to the resource kind", () => {
-    expect(extension.panels?.labArtifactDetail).toMatchObject({
-      show: { for: "glass-lab-artifact", region: "side" },
-      webview: { entry: { path: "./src/views/lab-artifact.tsx" } },
+    expect(view("artifact-detail")?.body).toMatchObject({
+      kind: "webview",
+      entry: { path: "./src/views/lab-artifact.tsx" },
     });
     // An attached resource adds an inspector; it never replaces the primary
     // location, so the kind declares no primary slot.
-    expect(extension.resourceKinds?.["glass-lab-artifact"]).toMatchObject({
+    expect(extension.resourceKinds?.find((kind) => kind.id === "glass-lab-artifact")).toMatchObject({
       surface: "attached",
-      slots: { inspector: { cardinality: "many", external: true } },
+      slots: [{ id: "inspector", cardinality: "many", access: "public" }],
     });
-    expect(extension.resourceKinds?.["glass-lab-artifact"]?.slots).not.toHaveProperty("primary");
-    expect(extension.resourcePanels).not.toHaveProperty("labArtifactDetail");
-    expect(extension.resourcePanels).toBeUndefined();
+    expect(extension.resourceViews?.find((binding) => binding.id === "artifact-detail")).toMatchObject({
+      slot: { id: "inspector" },
+      view: { id: "artifact-detail" },
+    });
+    expect(extension.placements?.find((placement) => placement.id === "artifact-inspector.lab")).toMatchObject({
+      item: { kind: "resource-slot", slot: { id: "inspector" } },
+      region: "side",
+    });
   });
 
   test("keeps the remaining lab surfaces", () => {
-    expect(extension.routes?.labPage?.webview.capabilities).toContain("notification.action");
+    const labPage = view("lab-page");
+    expect(labPage?.body.kind === "webview" ? labPage.body.capabilities : undefined).toContain("notification.action");
     expect(extension.settings?.properties["counter.step"]).toMatchObject({
       type: "number",
       scope: "project",
@@ -162,25 +205,30 @@ describe("extension-lab workbench attachments", () => {
       scope: "global",
       enum: ["friendly", "formal"],
     });
-    expect(extension.settingsPanels?.projectPanel).toMatchObject({
-      target: "workbench.settings",
-      scope: "project",
-      webview: { entry: { path: "./src/views/settings-project.tsx" } },
+    expect(extension.settingsPanels?.find((panel) => panel.id === "project")).toMatchObject({
+      view: { kind: "view", id: "project-settings" },
     });
-    expect(extension.settingsPanels?.globalPanel).toMatchObject({
-      target: "workbench.settings",
-      scope: "global",
-      webview: { entry: { path: "./src/views/settings-global.tsx" } },
+    expect(extension.settingsPanels?.find((panel) => panel.id === "global")).toMatchObject({
+      view: { kind: "view", id: "global-settings" },
     });
-    expect(extension.hooks).toEqual({});
-    expect(extension.templates?.labResource).toMatchObject({
+    expect(extension.settingsSections).toEqual([
+      expect.objectContaining({ id: "lab", order: 30, title: expect.objectContaining({ default: "Lab" }) }),
+    ]);
+    expect(extension.settingsPanels).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "project", section: { kind: "settings-section", id: "lab" } }),
+        expect.objectContaining({ id: "global", section: { kind: "settings-section", id: "lab" } }),
+      ]),
+    );
+    expect(extension.hooks).toEqual([]);
+    expect(extension.templates?.find((template) => template.id === "labResource")).toMatchObject({
       title: expect.objectContaining({ default: "Glass Lab artifact" }),
       type: "glass-lab-artifact",
     });
-    expect(extension.skills?.labResource).toMatchObject({
+    expect(extension.skills?.find((skill) => skill.id === "labResource")).toMatchObject({
       title: expect.objectContaining({ default: "Glass Lab Curator" }),
     });
-    expect(extension.harnesses?.fake).toMatchObject({
+    expect(extension.harnesses?.find((harness) => harness.id === "fake")).toMatchObject({
       id: "fake",
       label: expect.objectContaining({ default: "Fake Agent" }),
     });

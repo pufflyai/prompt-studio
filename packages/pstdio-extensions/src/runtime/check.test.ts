@@ -2,10 +2,18 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  defineExtension,
+  defineResourceKind,
+  defineResourceView,
+  defineSettingsSection,
+  defineView,
+  resourceSlotRef,
+} from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import type { ExtensionRuntime } from "../types/runtime";
 import { checkExtensions, formatCheckReport } from "./check";
 import { checkExtensionHostCompatibility, dashboardExtensionHostCapabilities } from "./host-capabilities";
+import { normalizeExtensionSources } from "./normalize";
 
 const tempDirs: string[] = [];
 
@@ -44,32 +52,38 @@ afterEach(() => {
 });
 
 const validExtensionSource = `export default {
-  commands: {
-    "say-hello": { title: "Say hello", cli: true, run: async () => undefined },
-    "counter-bump": { title: "Bump counter", cli: true, run: async () => undefined },
-  },
-  middlewares: {
-    rejectDoomDeletes: {
-      command: { id: "planner.tickets.delete" },
-      handler: async () => undefined,
+  commands: [
+    { id: "say-hello", ref: { kind: "command", id: "say-hello" }, title: "Say hello", cli: true, run: async () => undefined },
+    { id: "counter-bump", ref: { kind: "command", id: "counter-bump" }, title: "Bump counter", cli: true, run: async () => undefined },
+  ],
+  middlewares: [
+    {
+      id: "reject-doom-deletes",
+      ref: { kind: "middleware", id: "reject-doom-deletes" },
+      command: { extensionId: "pstdio.planner", kind: "command", id: "tickets.delete" },
+      run: async () => undefined,
     },
-  },
-  hooks: {
-    notifyDoomRejected: {
-      event: { id: "command:planner.tickets.delete:rejected" },
-      handler: async () => undefined,
+  ],
+  hooks: [
+    {
+      id: "notify-doom-rejected",
+      ref: { kind: "hook", id: "notify-doom-rejected" },
+      event: { extensionId: "pstdio.planner", kind: "event", id: "command.rejected:tickets.delete" },
+      run: async () => undefined,
     },
-  },
-  schedules: {
-    heartbeat: {
+  ],
+  schedules: [
+    {
+      id: "heartbeat",
+      ref: { kind: "schedule", id: "heartbeat" },
       title: "Heartbeat",
-      cron: "0 * * * *",
-      command: { id: "extension-lab.say-hello" },
+      schedule: "0 * * * *",
+      command: { kind: "command", id: "say-hello" },
     },
-  },
-  artifactMounts: {
-    tickets: { path: "tickets", label: "Tickets" },
-  },
+  ],
+  artifactMounts: [
+    { id: "tickets", ref: { kind: "artifact-mount", id: "tickets" }, path: "tickets", label: "Tickets" },
+  ],
 };`;
 
 describe("checkExtensions", () => {
@@ -111,33 +125,6 @@ describe("checkExtensions", () => {
     expect(report).toContain("tickets -> .pstdio/extension-lab/tickets");
   });
 
-  test("reports a panel with an empty placement declaration as an error", async () => {
-    const home = createTempHome();
-    writeExtension(
-      home,
-      "extension-lab",
-      `export default {
-        panels: {
-          everywhere: {
-            title: "Everywhere",
-            show: [],
-            webview: { entry: "./panel.tsx" },
-          },
-        },
-      };`,
-    );
-
-    const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
-
-    expect(result.errorCount).toBe(1);
-    expect(result.runtime.diagnostics).toEqual([
-      expect.objectContaining({
-        code: "extension_panel_contract_invalid",
-        severity: "error",
-      }),
-    ]);
-  });
-
   test("flags invalid default exports", async () => {
     const home = createTempHome();
     writeExtension(home, "broken", `export default "nope";`);
@@ -150,9 +137,9 @@ describe("checkExtensions", () => {
   test("flags duplicate extension ids, command ids, and CLI paths", async () => {
     const home = createTempHome();
     const make = () => `export default {
-      commands: {
-        "counter-bump": { title: "B", cli: { path: ["counter", "bump"] }, run: async () => undefined },
-      },
+      commands: [
+        { id: "counter-bump", ref: { kind: "command", id: "counter-bump" }, title: "B", cli: { path: ["counter", "bump"] }, run: async () => undefined },
+      ],
     };`;
     writeExtension(home, "dup-a", make());
     writeExtension(home, "dup-b", make());
@@ -189,9 +176,9 @@ describe("checkExtensions", () => {
       home,
       "bad-mount",
       `export default {
-        artifactMounts: {
-          escape: { path: "../escape", label: "Escape" },
-        },
+        artifactMounts: [
+          { id: "escape", ref: { kind: "artifact-mount", id: "escape" }, path: "../escape", label: "Escape" },
+        ],
       };`,
     );
 
@@ -205,9 +192,9 @@ describe("checkExtensions", () => {
       home,
       "bad-mw",
       `export default {
-        middlewares: {
-          orphan: { handler: async () => undefined },
-        },
+        middlewares: [
+          { id: "orphan", ref: { kind: "middleware", id: "orphan" }, run: async () => undefined },
+        ],
       };`,
     );
 
@@ -221,9 +208,9 @@ describe("checkExtensions", () => {
       home,
       "bad-sched",
       `export default {
-        schedules: {
-          orphan: { title: "Orphan", cron: "0 * * * *" },
-        },
+        schedules: [
+          { id: "orphan", ref: { kind: "schedule", id: "orphan" }, title: "Orphan", schedule: "0 * * * *" },
+        ],
       };`,
     );
 
@@ -245,97 +232,50 @@ describe("checkExtensions", () => {
 
 describe("checkExtensionHostCompatibility", () => {
   test("flags registered dashboard surfaces when the host does not advertise their bridges", () => {
-    const runtime = {
-      extensions: [],
-      commands: [],
-      privateHandlers: [],
-      middlewares: [],
-      hooks: [],
-      cli: [],
-      schedules: [],
-      artifactMounts: [],
-      modes: [],
-      statusItems: [],
-      resourceKinds: [],
-      resourcePanels: [
-        {
-          id: "lab.rowsForTicket",
-          localId: "rowsForTicket",
-          extensionId: "pstdio.lab",
+    const ticket = defineResourceKind({
+      id: "ticket",
+      surface: "primary",
+      slots: [{ id: "inspector", cardinality: "many", access: "public" }],
+    });
+    const rows = defineView({
+      id: "rows",
+      title: "Rows",
+      body: { kind: "dataTable", columns: [], query: async () => ({ rows: [] }) },
+    });
+    const runtime = normalizeExtensionSources([
+      {
+        packagePath: "/extension",
+        sourcePath: "/extension/extension.ts",
+        sourceKind: "local_path",
+        manifest: {
+          id: "pstdio.lab",
           name: "lab",
-          sourcePath: "/extension/extension.ts",
-          resourceKindId: "lab.ticket",
-          panelId: "lab.panel",
-          slotId: "inspector",
-          contribution: { resourceKind: "ticket", panel: "panel", slot: "inspector" },
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./extension.ts",
+          enginesPstdio: EXTENSION_API_VERSION,
         },
-      ],
-      resourceHierarchyProviders: [],
-      panels: [
-        {
-          id: "lab.panel",
-          localId: "panel",
-          extensionId: "pstdio.lab",
-          name: "lab",
-          sourcePath: "/extension/extension.ts",
-          contribution: {
-            title: "Rows",
-            show: { region: "main" },
-            renderer: { kind: "dataTable", id: "rows" },
-          },
-        },
-      ],
-      routes: [],
-      treeItems: [],
-      activityItems: [],
-      settingsSections: [
-        {
-          id: "lab.section",
-          localId: "section",
-          extensionId: "pstdio.lab",
-          name: "lab",
-          sourcePath: "/extension/extension.ts",
-          contribution: { title: "Lab" },
-        },
-      ],
-      settingsPanels: [],
-      kanbanRenderers: [],
-      dataTableRenderers: [
-        {
-          id: "lab.rows",
-          localId: "rows",
-          extensionId: "pstdio.lab",
-          name: "lab",
-          sourcePath: "/extension/extension.ts",
-          contribution: { title: "Rows", query: async () => ({ rows: [] }), queryHandlerId: "lab.rows.query" } as never,
-        },
-      ],
-      commandPaletteResources: [],
-      treeRenderers: [],
-      fileRenderers: [],
-      controlsRenderers: [],
-      keybindings: [],
-      settings: [],
-      templateTypes: [],
-      templates: [],
-      skills: [],
-      themes: [],
-      fileIconThemes: [],
-      translations: [],
-      harnesses: [],
-      workspaceTypes: [],
-      diagnostics: [],
-    } satisfies ExtensionRuntime;
+        definition: defineExtension({
+          views: [rows],
+          resourceKinds: [ticket],
+          resourceViews: [
+            defineResourceView({
+              id: "rows-for-ticket",
+              resourceKind: ticket.ref,
+              slot: resourceSlotRef(ticket.ref, "inspector"),
+              view: rows.ref,
+            }),
+          ],
+          settingsSections: [defineSettingsSection({ id: "lab", title: "Lab" })],
+        }),
+      },
+    ]);
     const host = {
       ...dashboardExtensionHostCapabilities,
       hostVersion: "0.25.1",
       capabilities: Object.fromEntries(
         Object.entries(dashboardExtensionHostCapabilities.capabilities).filter(
-          ([name]) =>
-            name !== "renderer.data-table.v1" &&
-            name !== "panel.data-table-renderer.v1" &&
-            name !== "settings.section.v1" &&
-            name !== "resource-view.v1",
+          ([name]) => name !== "view.data-table.v1" && name !== "settings.section.v1" && name !== "resource-view.v1",
         ),
       ),
     };
@@ -344,8 +284,8 @@ describe("checkExtensionHostCompatibility", () => {
 
     expect(result.status).toBe("verified");
     expect(result.diagnostics.map((diagnostic) => diagnostic.metadata?.missingCapability)).toEqual([
+      "view.data-table.v1",
       "settings.section.v1",
-      "renderer.data-table.v1",
       "resource-view.v1",
     ]);
   });

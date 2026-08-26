@@ -43,7 +43,7 @@ const createSession = async (
       project_id: projectId,
       title,
       prompt: title,
-      agent: "pstdio.extension-lab.fake",
+      agent: "pstdio.extension-lab.harness.fake",
     },
   });
   expect(response.ok()).toBe(true);
@@ -75,13 +75,17 @@ test("PS-170 preserves Forward history when refreshing after Back", async ({ pag
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await page.getByRole("option", { name: "Sessions", exact: true }).click();
   await page.getByRole("button", { name: "Navigate back" }).click();
-  await expect(page.getByRole("link", { name: "Tickets", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Tickets", { exact: true }),
+  ).toBeVisible();
 
   await page.reload();
   const forward = page.getByRole("button", { name: "Navigate forward" });
   await expect(forward).toBeEnabled();
   await forward.click();
-  await expect(page.getByRole("link", { name: "Sessions", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
+  ).toBeVisible();
 });
 
 test("PS-170 keeps the project selector and Session Panel available on project home", async ({ page, request }) => {
@@ -107,7 +111,7 @@ test("PS-170 preserves other Session tabs when selecting from New session", asyn
   await createSession(request, project.id, "Second context session");
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", projectId);
   }, project.id);
   await page.goto(`/projects/${project.id}/`);
@@ -176,9 +180,16 @@ test("PS-170 updates a New session Sub Panel in place after the first message", 
   const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 Draft Session" } });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
+  const updateResponse = await request.patch(`${apiBase}/v1/projects/${project.id}`, {
+    data: { default_agent_id: "pstdio.extension-lab.harness.fake" },
+  });
+  expect(updateResponse.ok()).toBe(true);
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+    localStorage.setItem(
+      `pstdio-dashboard:command-params:recent-harness:${projectId}`,
+      JSON.stringify({ harnessId: "pstdio.extension-lab.harness.fake" }),
+    );
     localStorage.setItem("dashboard-wb:selected-project:global", projectId);
   }, project.id);
   await page.goto(`/projects/${project.id}/`);

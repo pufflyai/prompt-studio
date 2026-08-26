@@ -8,6 +8,12 @@ import { ticketMarkdownPath } from "./src/data/draft-storage";
 import { createMemoryStorage } from "./src/data/memory-storage";
 import type { StoredTicket } from "./src/data/types";
 
+const command = (id: string) => extension.commands?.find((contribution) => contribution.id === id);
+const hook = (id: string) => extension.hooks?.find((contribution) => contribution.id === id);
+const skill = (id: string) => extension.skills?.find((contribution) => contribution.id === id);
+const template = (id: string) => extension.templates?.find((contribution) => contribution.id === id);
+const templateType = (id: string) => extension.templateTypes?.find((contribution) => contribution.id === id);
+
 const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>) =>
   putTicket(storage, {
     id: "ticket-1",
@@ -34,54 +40,90 @@ describe("pstdio planner extension contributions", () => {
     // A ticket is a resource. A ticket mode would reshape the workbench on open and
     // drop the project chrome the user had.
     expect(extension.modes).toBeUndefined();
-    expect(extension.resourceKinds?.ticket).toMatchObject({ surface: "primary" });
+    expect(extension.resourceKinds?.[0]).toMatchObject({ id: "ticket", surface: "primary" });
     expect(extension.resourcePanels).toBeUndefined();
-    expect(extension.panels?.ticketEditor?.show).toEqual({ for: "ticket", region: "main", required: true });
-    expect(extension.panels?.ticketFiles?.show).toEqual({
-      for: "ticket",
+    expect(extension.resourceViews?.map((binding) => binding.id)).toEqual(["ticket-editor", "ticket-files"]);
+    expect(extension.viewMenus?.[0]).toMatchObject({
+      id: "ticket.properties",
+      owner: { id: "ticket-editor" },
+      view: { id: "ticket-properties" },
+      side: "right",
+    });
+    expect(extension.placements?.find((placement) => placement.id === "ticket-primary.project")).toMatchObject({
+      region: "main",
+      required: true,
+      item: { kind: "resource-slot", slot: { id: "primary" } },
+    });
+    expect(extension.placements?.find((placement) => placement.id === "ticket-navigation.project")).toMatchObject({
       region: "sidenav",
       required: true,
+      item: { kind: "resource-slot", slot: { id: "navigation" } },
     });
   });
 
-  test("uses a native tree renderer for ticket files", () => {
-    expect(extension.treeRenderers?.ticketFiles).toMatchObject({
-      title: { $l10n: "treeRenderers.ticketFiles.title", default: "Files" },
-      icon: "Files",
-      body: expect.any(Function),
-      defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
-    });
-    expect(extension.panels?.ticketFiles).toMatchObject({
+  test("uses a native tree body for ticket files", () => {
+    expect(extension.views?.find((view) => view.id === "ticket-files")).toMatchObject({
       title: { $l10n: "panels.ticketFiles.title", default: "Files" },
-      show: { for: "ticket", region: "sidenav", required: true },
-      renderer: { kind: "tree", id: "ticketFiles" },
+      icon: "Files",
+      body: {
+        kind: "tree",
+        body: expect.any(Function),
+        defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
+      },
     });
-    expect(extension.panels?.ticketFiles).not.toHaveProperty("target");
-    expect(extension.panels?.ticketFiles).not.toHaveProperty("webview");
   });
 
-  test("refreshes native ticket renderers from the shared ticket event", () => {
-    const event = { id: "pstdio-planner.tickets.changed" };
+  test("refreshes native ticket view bodies from the shared ticket event", () => {
+    const event = { extensionId: "pstdio.pstdio-planner", id: "tickets.changed", kind: "event" };
 
-    expect(extension.treeRenderers?.ticketFiles?.refreshEvents).toEqual([event]);
-    expect(extension.fileRenderers?.ticketContent?.refreshEvents).toEqual([event]);
-    expect(extension.controlsRenderers?.ticketProperties?.refreshEvents).toEqual([event]);
-    expect(extension.kanbanRenderers?.tickets?.refreshEvents).toEqual([event]);
+    for (const id of ["ticket-files", "ticket-editor", "ticket-properties", "tickets"]) {
+      expect(extension.views?.find((view) => view.id === id)?.body.refreshEvents).toEqual([event]);
+    }
   });
 
   test("contributes shared document templates and planner skills", () => {
-    expect(extension.templateTypes?.document).toMatchObject({ label: "Document" });
-    expect(extension.templates?.prd).toMatchObject({ title: "PRD", type: "document" });
-    expect(extension.templates?.commit_message).toMatchObject({ title: "Commit message", type: "prompt" });
-    expect(extension.skills?.create_ticket).toMatchObject({ title: "Create a ticket" });
-    expect(extension.skills).not.toHaveProperty("create_pstdio_extension");
-    expect(extension.skills).not.toHaveProperty("pstdio");
+    expect(templateType("document")).toMatchObject({ label: "Document" });
+    expect(template("prd")).toMatchObject({ title: "PRD", type: "document" });
+    expect(template("commit_message")).toMatchObject({ title: "Commit message", type: "prompt" });
+    expect(skill("create_ticket")).toMatchObject({ title: "Create a ticket" });
+    expect(skill("create_pstdio_extension")).toBeUndefined();
+    expect(skill("pstdio")).toBeUndefined();
   });
 
   test("registers the link review ticket command", () => {
-    expect(extension.commands?.["link-review"]).toMatchObject({
+    expect(command("link-review")).toMatchObject({
       title: "Link review",
       cli: { globalAliases: [["tickets", "link-review"]] },
+    });
+  });
+
+  test("exposes manual planner settings commands through the CLI", () => {
+    expect(command("ticketStatus.update")?.cli).toEqual({
+      globalAliases: [["statuses", "update"]],
+      examples: ["pstdio statuses update --status-id backlog --label Backlog"],
+    });
+    expect(command("ticketStatus.reorder")?.cli).toEqual({
+      globalAliases: [["statuses", "reorder"]],
+      examples: ['pstdio statuses reorder --status-ids \'["backlog","ready"]\''],
+    });
+    expect(command("ticketTag.update")).toMatchObject({
+      cli: {
+        globalAliases: [["tags", "update"]],
+        examples: ["pstdio tags update --tag-id default-priority --sort-order 0"],
+      },
+      params: { sortOrder: { type: "number" } },
+    });
+    expect(command("ticketTag.createOption")?.cli).toMatchObject({
+      globalAliases: [["tags", "options", "create"]],
+    });
+    expect(command("ticketTag.updateOption")?.cli).toMatchObject({
+      globalAliases: [["tags", "options", "update"]],
+    });
+    expect(command("ticketTag.deleteOption")?.cli).toMatchObject({
+      globalAliases: [["tags", "options", "delete"]],
+    });
+    expect(command("ticketTag.applyDraft")?.cli).toMatchObject({
+      globalAliases: [["tags", "apply-draft"]],
     });
   });
 
@@ -95,11 +137,12 @@ describe("pstdio planner extension contributions", () => {
       "zh-Hans": expect.objectContaining({ kind: "package-asset" }),
       "zh-Hant": expect.objectContaining({ kind: "package-asset" }),
     });
-    expect(extension.kanbanRenderers?.tickets?.title).toEqual({
+    const tickets = extension.views?.find((view) => view.id === "tickets");
+    expect(tickets?.title).toEqual({
       $l10n: "kanbanRenderers.tickets.title",
       default: "Tickets",
     });
-    expect(extension.kanbanRenderers?.tickets?.createRow).toMatchObject({
+    expect(tickets?.body.kind === "kanban" ? tickets.body.createRow : undefined).toMatchObject({
       columnParam: "statusId",
       attributesParam: "attributes",
       params: {
@@ -118,10 +161,7 @@ describe("pstdio planner extension contributions", () => {
         cancel: { $l10n: "kanbanRenderers.tickets.createRow.cancel", default: "Cancel" },
       },
     });
-    expect(extension.settingsPanels?.ticketStatuses?.title).toEqual({
-      $l10n: "settingsPanels.ticketStatuses.title",
-      default: "Ticket status",
-    });
+    expect(extension.statuses?.[0]?.title).toBe("Ticket status");
   });
 
   test("copies the linked ticket file when a ticket worktree is created", async () => {
@@ -130,7 +170,7 @@ describe("pstdio planner extension contributions", () => {
     const worktreePath = mkdtempSync(join(tmpdir(), "planner-worktree-"));
 
     try {
-      await extension.hooks?.worktreeCreated.handler({ storage } as never, {
+      await hook("worktree-created")?.run({ storage } as never, {
         projectId: "project-1",
         workspaceId: "workspace-1",
         repoPath: "/repo",
@@ -164,7 +204,7 @@ describe("pstdio planner extension contributions", () => {
     writeFileSync(repoTicketPath, localContent);
 
     try {
-      await extension.hooks?.worktreeCreated.handler({ storage } as never, {
+      await hook("worktree-created")?.run({ storage } as never, {
         projectId: "project-1",
         workspaceId: "workspace-1",
         repoPath,
@@ -190,51 +230,64 @@ describe("pstdio planner extension contributions", () => {
   // pstdio-planner-loops extension; the planner keeps only worktreeCreated and the
   // blocked-notification hook.
   test("contributes no session-start or git hooks", () => {
-    expect(Object.keys(extension.hooks ?? {}).sort()).toEqual(["sessionAwaitingInput", "worktreeCreated"]);
+    expect(extension.hooks?.map((contribution) => contribution.id).sort()).toEqual([
+      "session-awaiting-input",
+      "worktree-created",
+    ]);
   });
 
   test("mounts run review in the workspace overflow menu", () => {
-    expect(extension.commands?.runReview?.menus).toEqual([
+    expect(command("runReview")?.menus).toMatchObject([
       {
-        target: "workbench.nav.overflow",
+        slot: { id: "workspace.headerOverflow", kind: "menu" },
         label: { $l10n: "commands.runReview.menuLabel", default: "Run review" },
         icon: "clipboard-check",
-        when: { resourceType: ["workspace"] },
+        when: { resourceType: [{ extensionId: "pstdio", id: "workspace", kind: "resource-kind" }] },
       },
     ]);
   });
 
-  test("runReview gets workspace identity from dashboard resource context", () => {
-    expect(extension.commands?.runReview?.params?.workspaceId).toMatchObject({ required: false });
+  test("runReview only exposes workspace and harness options", () => {
+    const runReview = command("runReview");
+
+    expect(Object.keys(runReview?.params ?? {}).sort()).toEqual(["harness", "workspaceId"]);
+    expect(runReview?.params?.workspaceId).toMatchObject({ required: false });
   });
 
-  test("places the tickets kanban in a panel with core properties displayed", () => {
-    expect(extension.kanbanRenderers?.tickets?.defaultFilters).toEqual({ archived: ["active"] });
-    expect(extension.kanbanRenderers?.tickets?.defaultSettings).toMatchObject({
+  test("places the tickets Kanban view with core properties displayed", () => {
+    const tickets = extension.views?.find((view) => view.id === "tickets");
+    if (tickets?.body.kind !== "kanban") throw new Error("Tickets view must use a Kanban body");
+    expect(tickets.body.defaultFilters).toEqual({ archived: ["active"] });
+    expect(tickets.body.defaultSettings).toMatchObject({
       viewMode: "board",
       columnGrouping: "status",
       ordering: { attributeId: "created", direction: "desc" },
       displayProperties: ["id", "workspace", "type", "priority"],
     });
-    expect(extension.kanbanRenderers?.tickets?.onColumnAction).toBeFunction();
-    expect(extension.kanbanRenderers?.tickets?.onRowActivate).toBeFunction();
-    expect(extension.panels?.tickets).toMatchObject({
-      show: { region: "main" },
-      renderer: { kind: "kanban", id: "tickets" },
+    expect(tickets.body.onColumnAction).toBeFunction();
+    expect(tickets.body.onRowActivate).toBeFunction();
+    expect(extension.placements?.find((placement) => placement.id === "tickets.project")).toMatchObject({
+      region: "main",
+      item: { kind: "view", view: tickets.ref },
     });
   });
 
   test("exposes ticket workspace creation as an extension-owned row action", () => {
-    expect(extension.kanbanRenderers?.tickets?.rowActions).toContainEqual({
+    const tickets = extension.views?.find((view) => view.id === "tickets");
+    expect(tickets?.body.kind === "kanban" ? tickets.body.rowActions : undefined).toContainEqual({
       id: "create-workspace",
       label: { $l10n: "kanbanRenderers.tickets.rowActions.createWorkspace", default: "Create workspace" },
       icon: "git-branch",
-      command: { id: "pstdio-planner.create-workspace" },
+      command: { id: "create-workspace", kind: "command" },
     });
   });
 
-  test("contributes only ticket settings panels", () => {
-    expect(Object.keys(extension.settingsPanels ?? {}).sort()).toEqual(["ticketStatuses", "ticketTags"]);
+  test("keeps tags separate and contributes statuses through the shared editor", () => {
+    expect(extension.settingsPanels?.map((panel) => panel.id)).toEqual(["ticket-tags"]);
+    expect(extension.settingsSections).toEqual([
+      expect.objectContaining({ id: "planner", order: 40, title: expect.objectContaining({ default: "Planner" }) }),
+    ]);
+    expect(extension.statuses?.map((provider) => provider.id)).toEqual(["ticket-statuses"]);
   });
 });
 
@@ -244,7 +297,7 @@ describe("pstdio planner notification hooks", () => {
     const ticket = await seedBacklogTicket(storage);
     const notifications: unknown[] = [];
 
-    await extension.hooks?.sessionAwaitingInput.handler(
+    await hook("session-awaiting-input")?.run(
       {
         storage,
         notify: {

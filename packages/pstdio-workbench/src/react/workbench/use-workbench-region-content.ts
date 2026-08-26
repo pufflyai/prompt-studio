@@ -1,4 +1,5 @@
 import {
+  getActiveWorkbenchLocationPanel,
   getWorkbenchModePanelForRegion,
   isWorkbenchModePanelAvailable,
   isWorkbenchPanelPlacementVisible,
@@ -34,7 +35,9 @@ export const useWorkbenchRegionContent = (
       if (!widget) return false;
       return region === "side"
         ? matchesWorkbenchModeEligibility(widget, modeId)
-        : isWorkbenchPanelPlacementVisible(widget, resource, modeId, placement);
+        : isWorkbenchPanelPlacementVisible(widget, resource, modeId, placement, {
+            location: getActiveWorkbenchLocationPanel(state.layout),
+          });
     });
   });
 };

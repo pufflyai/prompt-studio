@@ -36,6 +36,10 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
   runRef.run = executeInternal;
 
   return {
+    buildExtensionContext: async (input: BuildEnvironmentInput) => {
+      const env = await deps.buildEnvironment(input);
+      return factory.buildExtensionContext(env, input, 0);
+    },
     execute: (input: CommandExecuteInput) => executeInternal({ ...input, depth: 0 }),
     executeHostCommand: (input) => executeHostCommand(state, input),
     dispatchEvent: (input: ExtensionEventDispatchInput): Promise<EventDeliveryResult> =>

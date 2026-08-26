@@ -78,7 +78,7 @@ const executePlannerCommand = async (projectId: string, commandId: string, body:
 };
 
 const getPlannerTicket = async (projectId: string, id: string) => {
-  const result = await executePlannerCommand(projectId, "pstdio-planner.get-ticket", {
+  const result = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.get-ticket", {
     source: "api",
     params: { id },
   });
@@ -145,10 +145,10 @@ describe("planner automations", () => {
         shorthand: string;
       };
 
-      const result = await executePlannerCommand(projectId, "pstdio-planner.run-attempt", {
+      const result = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.run-attempt", {
         source: "api",
         params: {
-          agent: { harnessId: "pstdio.extension-lab.fake" },
+          agent: { harnessId: "pstdio.extension-lab.harness.fake" },
           mode: "current_branch",
         },
         resource: {
@@ -175,7 +175,7 @@ describe("planner automations", () => {
       expect(movedToInProgress).toBe(true);
 
       const readActivity = async () => {
-        const activity = await executePlannerCommand(projectId, "pstdio-planner.workspace-activity", {
+        const activity = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.workspace-activity", {
           source: "api",
           params: { workspaceId: value.workspace.id },
         });
@@ -194,7 +194,7 @@ describe("planner automations", () => {
       });
       expect(settled).toBe(true);
 
-      const workspaces = await executePlannerCommand(projectId, "pstdio-planner.ticket-workspaces", {
+      const workspaces = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.ticket-workspaces", {
         source: "api",
         params: { id: ticket.shorthand },
       });
@@ -219,7 +219,7 @@ describe("planner automations", () => {
         shorthand: string;
       };
 
-      const workspaceResult = await executePlannerCommand(projectId, "pstdio-planner.create-workspace", {
+      const workspaceResult = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.create-workspace", {
         source: "api",
         params: {
           rowId: ticket.id,
@@ -247,17 +247,17 @@ describe("planner automations", () => {
         data: imageBytes,
       });
 
-      const attached = await executePlannerCommand(projectId, "pstdio-planner.attach-file", {
+      const attached = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.attach-file", {
         source: "api",
         params: { ticketId: ticket.id, ref: uploaded },
       });
       expect(attached.outcome.ok).toBe(true);
 
-      const tree = await executePlannerCommand(projectId, "pstdio-planner.ticket-files.tree.body", {
+      const tree = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.ticket-files.tree.body", {
         source: "api",
         params: {
           renderer: {
-            rendererId: "pstdio-planner.ticketFiles",
+            rendererId: "pstdio.pstdio-planner.view.ticket-files",
             resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
           },
         },
@@ -268,7 +268,7 @@ describe("planner automations", () => {
         expect.objectContaining({ id: uploaded.id, label: "diagram.png" }),
       );
 
-      const preview = await executePlannerCommand(projectId, "pstdio-planner.read-ticket-attachment", {
+      const preview = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.read-ticket-attachment", {
         source: "api",
         params: { ticketId: ticket.id, attachmentId: uploaded.id },
       });

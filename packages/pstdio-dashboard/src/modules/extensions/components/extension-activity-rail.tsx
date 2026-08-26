@@ -9,6 +9,8 @@ import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webv
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
 const placementRank = { first: 0, default: 1, last: 2 } as const;
+const contributionRefId = (ref: { extensionId: string; kind: string; id: string }) =>
+  ref.extensionId === "pstdio" ? ref.id : `${ref.extensionId}.${ref.kind}.${ref.id}`;
 
 // Renders extension activity items natively: an icon column that executes the
 // declared command on click. No webview is involved, so the rail paints with the
@@ -27,16 +29,17 @@ export const ExtensionActivityRailWidget = (props: { input: WorkbenchPanelRender
 
   const projectId = getDashboardSelectedProjectId(workbench);
   const items = (getCachedDashboardExtensionMetadata(projectId)?.activityItems ?? [])
-    .filter((item) => Boolean(activeModeId && item.modes.includes(activeModeId)))
+    .filter((item) => Boolean(activeModeId && item.modes.some((mode) => contributionRefId(mode) === activeModeId)))
     .sort((a, b) => placementRank[a.placement ?? "default"] - placementRank[b.placement ?? "default"]);
 
   const run = async (item: (typeof items)[number]) => {
-    if (item.commandId.startsWith("workbench.")) {
-      await workbench.commands.executeCommand(item.commandId, item.params);
+    const commandId = contributionRefId(item.command);
+    if (commandId.startsWith("workbench.")) {
+      await workbench.commands.executeCommand(commandId, item.params);
       return;
     }
     if (!projectId) return;
-    const response = await executeExtensionCommand(projectId, item.commandId, {
+    const response = await executeExtensionCommand(projectId, commandId, {
       params: item.params,
       source: "dashboard",
     });

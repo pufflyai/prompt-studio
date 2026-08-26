@@ -9,6 +9,11 @@ interface CreateDashboardLastResourcePersistenceInput {
   projectSelection: Pick<DashboardProjectSelectionPersistence, "getSelectedProjectId">;
 }
 
+export interface DashboardLastResourcePersistence extends LastResourcePersistenceAdapter {
+  getLegacyViewResource(): ResourceRef | undefined;
+  clearLegacyViewResource(): void;
+}
+
 const isResourceRef = (value: unknown): value is ResourceRef =>
   Boolean(value) && typeof (value as ResourceRef).kind === "string" && typeof (value as ResourceRef).uri === "string";
 
@@ -27,12 +32,15 @@ const readResource = (storage: WorkbenchStorageLike, key: string) => {
   }
 };
 
+const isLegacyViewResource = (resource: ResourceRef | undefined) =>
+  resource?.kind === "extension-route" || resource?.kind === "extension-view" || resource?.kind === "dashboard-view";
+
 // Persists the last-opened resource per project. Without per-project scoping, switching
 // projects (or closing and reopening one) would surface another project's view through
 // the workbench's `lastResource` controller.
 export const createDashboardLastResourcePersistence = (
   input: CreateDashboardLastResourcePersistenceInput,
-): LastResourcePersistenceAdapter => {
+): DashboardLastResourcePersistence => {
   const storage = resolveDashboardStorage(input.storage);
 
   const resolveKey = () => {
@@ -46,7 +54,7 @@ export const createDashboardLastResourcePersistence = (
       if (!key) return undefined;
 
       const saved = readResource(storage, key);
-      if (saved) return saved;
+      if (saved) return isLegacyViewResource(saved) ? undefined : saved;
 
       const legacyKey = workbenchStoragePersistenceKey(input.namespace, "last-resource", "global");
       const legacyResource = readResource(storage, legacyKey);
@@ -54,7 +62,7 @@ export const createDashboardLastResourcePersistence = (
 
       storage.setItem(key, JSON.stringify(legacyResource));
       storage.removeItem?.(legacyKey);
-      return legacyResource;
+      return isLegacyViewResource(legacyResource) ? undefined : legacyResource;
     },
     setLastResource: (resource) => {
       const key = resolveKey();
@@ -66,6 +74,17 @@ export const createDashboardLastResourcePersistence = (
       }
 
       storage.setItem(key, JSON.stringify(resource));
+    },
+    getLegacyViewResource: () => {
+      const key = resolveKey();
+      if (!key) return undefined;
+      const resource = readResource(storage, key);
+      return isLegacyViewResource(resource) ? resource : undefined;
+    },
+    clearLegacyViewResource: () => {
+      const key = resolveKey();
+      if (!key || !isLegacyViewResource(readResource(storage, key))) return;
+      storage.removeItem?.(key);
     },
   };
 };

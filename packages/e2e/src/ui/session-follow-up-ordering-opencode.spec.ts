@@ -19,7 +19,7 @@ import {
 } from "./helpers/session-follow-up";
 
 const requiresOpencode = process.env.E2E_AGENTS === "opencode";
-const opencodeAgentId = "pstdio.harness-open-code.opencode";
+const opencodeAgentId = "pstdio.harness-open-code.harness.opencode";
 const selectedModel = "opencode/big-pickle";
 const opencodeStatusTimeout = 120_000;
 

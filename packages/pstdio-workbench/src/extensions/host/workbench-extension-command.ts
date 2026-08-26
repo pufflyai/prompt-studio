@@ -1,9 +1,20 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import type { ResourceRef, WorkbenchModuleContext } from "../../core";
+import {
+  isWorkbenchViewHierarchyNode,
+  type ResourceRef,
+  type WorkbenchCommandExecutionContext,
+  type WorkbenchModuleContext,
+} from "../../core";
 import { unwrapCommandValue } from "./command-response";
 
 export interface WorkbenchExtensionCommandContext {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
+  prepareCommandArgs?(
+    commandId: string,
+    args: unknown,
+    context?: WorkbenchCommandExecutionContext,
+    onArgsChange?: (args: unknown) => void,
+  ): Promise<unknown> | unknown;
   projectId: string;
   workbench: WorkbenchModuleContext;
 }
@@ -49,6 +60,34 @@ export const createExtensionSlot = (input: {
   context: { projectId: input.projectId, ...(input.context ?? {}) },
 });
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const deletedResourceId = (value: unknown) => {
+  if (!isRecord(value) || value.deleted !== true) return undefined;
+  return typeof value.id === "string" ? value.id : undefined;
+};
+
+const handleDeletedResource = async (
+  context: WorkbenchExtensionCommandContext,
+  resource: ResourceRef | undefined,
+  value: unknown,
+) => {
+  if (!resource || deletedResourceId(value) !== (resource.id ?? resource.uri)) return;
+
+  context.workbench.navigator.forgetResource(resource.uri);
+  if (context.workbench.getPrimaryResource()?.uri !== resource.uri) return;
+
+  const parent = context.workbench.resources.walkHierarchy(resource).at(-2);
+  if (!parent) return;
+
+  if (isWorkbenchViewHierarchyNode(parent)) {
+    await context.workbench.views.openView(parent.viewId, { strategy: { kind: "replace-active" } });
+    return;
+  }
+  await context.workbench.resources.openResource(parent, { replaceActive: true });
+};
+
 export const executeWorkbenchExtensionCommand = async (
   context: WorkbenchExtensionCommandContext,
   commandId: string,
@@ -63,5 +102,7 @@ export const executeWorkbenchExtensionCommand = async (
     source: "dashboard",
     ...(input.metadata ? { metadata: input.metadata } : {}),
   });
-  return unwrapCommandValue(response);
+  const value = unwrapCommandValue(response);
+  await handleDeletedResource(context, input.resource, value);
+  return value;
 };

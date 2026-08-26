@@ -4,6 +4,7 @@ import type {
   KanbanRendererFilterState,
   KanbanRendererQueryResult,
 } from "@pstdio/sdk/extensions";
+import { ticketStatuses } from "../ticket-status-provider";
 import { sortedBySortOrder } from "../utils/sort";
 import { ticketsCollection } from "./collections";
 import {
@@ -11,12 +12,11 @@ import {
   createTicketParentLookup,
   createTicketRowMapper,
   createTicketWorkspaceLookup,
-  statusToColumnConfig,
   TICKET_ARCHIVE_STATE_ACTIVE,
   TICKET_ARCHIVE_STATE_ARCHIVED,
   TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
 } from "./mappers";
-import { seedDefaultStatuses, seedDefaultTags } from "./seed";
+import { seedDefaultTags } from "./seed";
 import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
 
 interface TicketsQueryInput {
@@ -27,10 +27,9 @@ interface TicketsQueryInput {
   workspaceSessions?: TicketWorkspaceSessionLookup;
 }
 
-// The renderer re-applies filter / sort / group locally, so we return the
-// requested archive set plus the live status + tag schema and board config.
-// Statuses and tags are seeded lazily here so a freshly enabled project always has
-// board columns and tag attributes regardless of the install-time lifecycle scope.
+// The renderer re-applies filter, sort, and grouping locally. The query returns the
+// requested archive set and tag schema. Workflow status data comes from the referenced
+// status provider, which keeps its storage and board rules in one place.
 export const runTicketsQuery = async ({
   storage,
   projectId,
@@ -38,13 +37,8 @@ export const runTicketsQuery = async ({
   workspaces = [],
   workspaceSessions = new Map(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
-  const [tickets, statuses, tags] = await Promise.all([
-    ticketsCollection(storage).list(),
-    seedDefaultStatuses(storage),
-    seedDefaultTags(storage),
-  ]);
+  const [tickets, tags] = await Promise.all([ticketsCollection(storage).list(), seedDefaultTags(storage)]);
 
-  const sortedStatuses = sortedBySortOrder(statuses);
   const toTicketRow = createTicketRowMapper(
     projectId,
     tags,
@@ -63,7 +57,6 @@ export const runTicketsQuery = async ({
 
   return {
     rows,
-    attributes: buildTicketAttributes(sortedStatuses, tags),
-    boardColumnConfigs: Object.fromEntries(sortedStatuses.map((status) => [status.id, statusToColumnConfig(status)])),
+    attributes: buildTicketAttributes(ticketStatuses.ref, tags),
   };
 };

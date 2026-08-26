@@ -115,24 +115,24 @@ describe("createDashboardWorkbench restoration", () => {
     expect(sidePanelSessionUris(second)).toEqual([]);
   });
 
-  test("keeps the persisted primary resource when a Side Panel session is restored", async () => {
+  test("restores a persisted primary view before its Side Panel session", async () => {
     const storage = createStorage();
     seedSyncedRows();
 
     const first = createDashboardWorkbench({ storage });
     await first.resources.openResource(projectResource);
     await flushMicrotasks();
-    await first.resources.openResource(
-      { kind: "dashboard-view", uri: "dashboard-workbench://dashboard-view/workspaces", id: "workspaces" },
-      { replaceActive: true },
-    );
+    await first.views.openView("workspaces", { strategy: { kind: "replace-active" } });
+    await flushMicrotasks();
     await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
+    first.history.flush();
+    expect(first.lastResource.get()).toBeUndefined();
 
     const second = createDashboardWorkbench({ storage });
     await flushMicrotasks();
 
-    expect(second.getPrimaryResource()?.uri).toBe("dashboard-workbench://dashboard-view/workspaces");
-    expect(second.lastResource.get()?.uri).toBe("dashboard-workbench://dashboard-view/workspaces");
+    expect(second.layout.getLayout().regions.main.widgets[0]?.viewId).toBe("workspaces");
+    expect(second.lastResource.get()).toBeUndefined();
     expect(sidePanelSessionUris(second)).toEqual([sessionResource.uri]);
   });
 

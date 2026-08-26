@@ -1,7 +1,9 @@
+import type { HarnessProvider, WorkspaceTypeProvider } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension, RuntimeHarnessRecord, RuntimeWorkspaceTypeRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
+import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { isLocalizableString } from "./localizable";
 
 const isValidSelectDescriptor = (descriptor: Record<string, unknown>) => {
@@ -46,7 +48,14 @@ const normalizeHarnessParams = (schema: unknown) => {
 };
 
 export const registerProviders = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
-  for (const [, provider] of Object.entries(source.definition.harnesses ?? {})) {
+  const harnesses = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "harness",
+    contributions: contributionArray<HarnessProvider>(source.definition.harnesses),
+  });
+  for (const provider of harnesses) {
     if (!isRecord(provider) || typeof provider.id !== "string" || !isLocalizableString(provider.label)) continue;
     if (
       typeof provider.start !== "function" ||
@@ -69,24 +78,24 @@ export const registerProviders = (ext: NormalizedExtension, source: LoadedExtens
     }
     const normalizedProvider = { ...provider, params: normalizedParams.params };
     const record: RuntimeHarnessRecord = {
-      id: `${ext.id}.${provider.id}`,
-      localId: provider.id,
-      extensionId: ext.id,
-      name: ext.name,
-      sourcePath: source.sourcePath,
+      ...contributionRecordBase(ext, source, "harness", provider.id),
       provider: normalizedProvider as RuntimeHarnessRecord["provider"],
     };
     runtime.harnesses.push(record);
   }
 
-  for (const [, provider] of Object.entries(source.definition.workspaceTypes ?? {})) {
+  const workspaceTypes = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "workspace-type",
+    contributions: contributionArray<WorkspaceTypeProvider>(source.definition.workspaceTypes),
+  });
+  for (const provider of workspaceTypes) {
     if (!isRecord(provider) || typeof provider.id !== "string" || !isLocalizableString(provider.label)) continue;
     if (typeof provider.create !== "function" || typeof provider.resolve !== "function") continue;
     const record: RuntimeWorkspaceTypeRecord = {
-      id: provider.id,
-      extensionId: ext.id,
-      name: ext.name,
-      sourcePath: source.sourcePath,
+      ...contributionRecordBase(ext, source, "workspace-type", provider.id),
       provider: provider as RuntimeWorkspaceTypeRecord["provider"],
     };
     runtime.workspaceTypes.push(record);

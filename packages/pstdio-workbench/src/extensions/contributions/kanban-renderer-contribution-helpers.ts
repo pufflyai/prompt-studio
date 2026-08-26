@@ -1,7 +1,8 @@
-import type { WorkbenchExtensionKanbanRendererRecord } from "@pstdio/sdk/api";
 import type { KanbanRendererBoardColumnConfig as WireBoardColumnConfig } from "@pstdio/sdk/extensions";
+import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import type {
   AttributeDescriptor,
+  EnumOptions,
   KanbanRendererContribution,
   KanbanRendererCreateField,
   KanbanRendererCreateFieldType,
@@ -29,6 +30,13 @@ export interface MutableAttributeSource {
   set(attributes: WorkbenchExtensionKanbanRendererRecord["attributes"] | undefined): void;
 }
 
+export type ResolveStatusOptions = (
+  statuses: Extract<
+    NonNullable<WorkbenchExtensionKanbanRendererRecord["attributes"]>[number]["type"],
+    { kind: "status" }
+  >["statuses"],
+) => EnumOptions;
+
 export const isQueryResult = (value: unknown): value is QueryResult =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -37,20 +45,23 @@ const localizeAttributes = (
   attributes: WorkbenchExtensionKanbanRendererRecord["attributes"] | undefined,
   localize: Localizer,
   decorate: (record: WorkbenchExtensionKanbanRendererRecord, attribute: AttributeDescriptor) => AttributeDescriptor,
+  resolveStatusOptions: ResolveStatusOptions,
 ): AttributeDescriptor[] =>
   (attributes ?? []).map((attribute) => {
     const base: AttributeDescriptor = {
       ...attribute,
       label: localize(attribute.label, attribute.id),
       type:
-        attribute.type.kind === "enum" || attribute.type.kind === "enum-multi"
-          ? {
-              ...attribute.type,
-              options: Array.isArray(attribute.type.options)
-                ? attribute.type.options.map((option) => ({ ...option, label: localize(option.label, option.value) }))
-                : attribute.type.options,
-            }
-          : attribute.type,
+        attribute.type.kind === "status"
+          ? { kind: "enum", options: resolveStatusOptions(attribute.type.statuses) }
+          : attribute.type.kind === "enum" || attribute.type.kind === "enum-multi"
+            ? {
+                ...attribute.type,
+                options: Array.isArray(attribute.type.options)
+                  ? attribute.type.options.map((option) => ({ ...option, label: localize(option.label, option.value) }))
+                  : attribute.type.options,
+              }
+            : attribute.type,
     };
     return decorate(record, base);
   });
@@ -60,8 +71,9 @@ export const createMutableAttributeSource = (
   initial: WorkbenchExtensionKanbanRendererRecord["attributes"] | undefined,
   localize: Localizer,
   decorate: (record: WorkbenchExtensionKanbanRendererRecord, attribute: AttributeDescriptor) => AttributeDescriptor,
+  resolveStatusOptions: ResolveStatusOptions = () => [],
 ): MutableAttributeSource => {
-  let snapshot = localizeAttributes(record, initial, localize, decorate);
+  let snapshot = localizeAttributes(record, initial, localize, decorate, resolveStatusOptions);
   const listeners = new Set<() => void>();
   return {
     source: {
@@ -72,7 +84,7 @@ export const createMutableAttributeSource = (
       },
     },
     set(attributes) {
-      snapshot = localizeAttributes(record, attributes, localize, decorate);
+      snapshot = localizeAttributes(record, attributes, localize, decorate, resolveStatusOptions);
       for (const listener of listeners) listener();
     },
   };

@@ -48,11 +48,10 @@ const rendererRefreshTargets = (metadata: WorkbenchExtensionMetadata) => {
     }
   };
 
-  for (const renderer of metadata.treeRenderers ?? []) add("tree", renderer);
-  for (const renderer of metadata.fileRenderers ?? []) add("file", renderer);
-  for (const renderer of metadata.controlsRenderers ?? []) add("controls", renderer);
-  for (const renderer of metadata.dataTableRenderers ?? []) add("dataTable", renderer);
-  for (const renderer of metadata.kanbanRenderers ?? []) add("kanban", renderer);
+  for (const view of metadata.views) {
+    if (view.body.kind === "webview") continue;
+    add(view.body.kind, { id: view.id, refreshEventIds: view.body.refreshEventIds });
+  }
   return targets;
 };
 
@@ -85,24 +84,13 @@ export const refreshOpenWorkbenchExtensionWebviews = (
 ) => {
   const activeWidgetId = workbench.layout.getLayout().activeWidgetId;
 
-  for (const panel of metadata.panels) {
-    if (!panel.webview) continue;
-    const placement = findOpenPlacement(workbench, panel.id);
+  for (const view of metadata.views) {
+    if (view.body.kind !== "webview") continue;
+    const placement = findOpenPlacement(workbench, view.id);
     if (!placement) continue;
-    workbench.layout.openPanel(panel.id, {
+    workbench.layout.openPanel(view.id, {
       resource: placement.resource,
-      title: text(panel.title, placement.title),
-      strategy: { kind: "replace-panel", instanceId: placement.instanceId },
-    });
-  }
-
-  for (const route of metadata.routes) {
-    if (!route.webview) continue;
-    const placement = findOpenPlacement(workbench, route.id);
-    if (!placement) continue;
-    workbench.layout.openPanel(route.id, {
-      resource: placement.resource,
-      title: text(route.label, placement.title),
+      title: text(view.title, placement.title),
       strategy: { kind: "replace-panel", instanceId: placement.instanceId },
     });
   }

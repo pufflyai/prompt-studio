@@ -1,5 +1,4 @@
+import { defineHarness } from "@pstdio/sdk/extensions";
 import { createFakeHarness } from "./fake-harness";
 
-export const labHarnesses = {
-  fake: createFakeHarness(),
-};
+export const labHarnesses = [defineHarness(createFakeHarness())];

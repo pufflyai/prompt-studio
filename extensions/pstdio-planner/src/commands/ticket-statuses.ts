@@ -10,9 +10,10 @@ import {
 } from "../data/status-operations";
 
 export const readTicketStatusesCommand = defineCommand({
+  id: "ticketStatus.read",
   title: "Read ticket statuses",
   cli: { globalAliases: [["statuses", "list"]], examples: ["pstdio statuses list"] },
-  async run(ctx) {
+  async run(ctx, _commandParams) {
     return readTicketStatuses(ctx.storage);
   },
 });
@@ -25,6 +26,7 @@ const statusActionParams = {
 };
 
 export const createTicketStatusCommand = defineCommand({
+  id: "ticketStatus.create",
   title: "Create ticket status",
   cli: { globalAliases: [["statuses", "create"]], examples: ["pstdio statuses create --label Backlog --color gray"] },
   params: {
@@ -33,22 +35,27 @@ export const createTicketStatusCommand = defineCommand({
     icon: params.text({ label: "Icon", required: false }),
     ...statusActionParams,
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     return createTicketStatus({
       storage: ctx.storage,
-      name: ctx.params.label,
-      color: ctx.params.color,
-      icon: ctx.params.icon,
-      canCreate: ctx.params.canCreate,
-      canDragIn: ctx.params.canDragIn,
-      canDragOut: ctx.params.canDragOut,
-      columnActions: ctx.params.columnActions,
+      name: commandParams.label,
+      color: commandParams.color,
+      icon: commandParams.icon,
+      canCreate: commandParams.canCreate,
+      canDragIn: commandParams.canDragIn,
+      canDragOut: commandParams.canDragOut,
+      columnActions: commandParams.columnActions,
     });
   },
 });
 
 export const updateTicketStatusCommand = defineCommand({
+  id: "ticketStatus.update",
   title: "Update ticket status",
+  cli: {
+    globalAliases: [["statuses", "update"]],
+    examples: ["pstdio statuses update --status-id backlog --label Backlog"],
+  },
   params: {
     statusId: params.text({ label: "Status", required: true }),
     label: params.text({ label: "Label", required: false }),
@@ -57,53 +64,60 @@ export const updateTicketStatusCommand = defineCommand({
     sortOrder: params.number({ label: "Sort order", required: false }),
     ...statusActionParams,
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     return updateTicketStatus({
       storage: ctx.storage,
-      statusId: ctx.params.statusId,
-      name: ctx.params.label,
-      color: ctx.params.color,
-      icon: ctx.params.icon,
-      sortOrder: ctx.params.sortOrder,
-      canCreate: ctx.params.canCreate,
-      canDragIn: ctx.params.canDragIn,
-      canDragOut: ctx.params.canDragOut,
-      columnActions: ctx.params.columnActions,
+      statusId: commandParams.statusId,
+      name: commandParams.label,
+      color: commandParams.color,
+      icon: commandParams.icon,
+      sortOrder: commandParams.sortOrder,
+      canCreate: commandParams.canCreate,
+      canDragIn: commandParams.canDragIn,
+      canDragOut: commandParams.canDragOut,
+      columnActions: commandParams.columnActions,
     });
   },
 });
 
 export const deleteTicketStatusCommand = defineCommand({
+  id: "ticketStatus.delete",
   title: "Delete ticket status",
   cli: { globalAliases: [["statuses", "delete"]], examples: ["pstdio statuses delete --status TODO"] },
   params: {
     statusId: params.text({ label: "Status", required: false }),
     status: params.text({ label: "Status name", required: false }),
   },
-  async run(ctx) {
-    const statusId = ctx.params.statusId ?? (await resolveStatusId(ctx.storage, ctx.params.status ?? ""));
+  async run(ctx, commandParams) {
+    const statusId = commandParams.statusId ?? (await resolveStatusId(ctx.storage, commandParams.status ?? ""));
     return deleteTicketStatus({ storage: ctx.storage, statusId });
   },
 });
 
 export const setDefaultTicketStatusCommand = defineCommand({
+  id: "ticketStatus.setDefault",
   title: "Set default ticket status",
   cli: { globalAliases: [["statuses", "set-default"]], examples: ["pstdio statuses set-default --status TODO"] },
   params: {
     status: params.text({ label: "Status", required: true }),
   },
-  async run(ctx) {
-    const statusId = await resolveStatusId(ctx.storage, ctx.params.status);
+  async run(ctx, commandParams) {
+    const statusId = await resolveStatusId(ctx.storage, commandParams.status);
     return setDefaultStatus({ storage: ctx.storage, statusId });
   },
 });
 
 export const reorderTicketStatusesCommand = defineCommand({
+  id: "ticketStatus.reorder",
   title: "Reorder ticket statuses",
+  cli: {
+    globalAliases: [["statuses", "reorder"]],
+    examples: ['pstdio statuses reorder --status-ids \'["backlog","ready"]\''],
+  },
   params: {
     statusIds: params.json<string[]>(),
   },
-  async run(ctx) {
-    return reorderTicketStatuses({ storage: ctx.storage, statusIds: ctx.params.statusIds ?? [] });
+  async run(ctx, commandParams) {
+    return reorderTicketStatuses({ storage: ctx.storage, statusIds: commandParams.statusIds ?? [] });
   },
 });

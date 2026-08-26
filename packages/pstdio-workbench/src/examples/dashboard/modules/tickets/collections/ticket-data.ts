@@ -122,7 +122,6 @@ export const registerTicketKanbanRenderer = (ctx: WorkbenchModuleContext) => {
       title: "Tickets",
       region: "main",
       rendererId: dashboardWidgetIds.tickets,
-      resourceKinds: ["dashboard-view"],
       singleton: true,
     },
     { priority: 90 },

@@ -61,6 +61,7 @@ export const workspaceDiffFileQueryOptions = (workspaceId: string, mode: Workspa
   });
 
 export const invalidateWorkspaceFileData = async (queryClient: QueryClient, workspaceId: string) => {
+  await queryClient.cancelQueries({ queryKey: ["workspace-diffs", workspaceId] });
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: ["workspace-files", workspaceId, "list"] }),
     queryClient.invalidateQueries({ queryKey: ["workspace-diffs", workspaceId] }),

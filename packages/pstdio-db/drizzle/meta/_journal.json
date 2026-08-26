@@ -183,6 +183,13 @@
       "when": 1785829135160,
       "tag": "0025_eager_freak",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1787768132979,
+      "tag": "0026_rainy_whirlwind",
+      "breakpoints": true
     }
   ]
 }

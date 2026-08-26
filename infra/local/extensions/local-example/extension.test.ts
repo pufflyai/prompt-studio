@@ -5,14 +5,18 @@ describe("local example extension", () => {
   test("shows a notification when the hello command runs", async () => {
     const notices: unknown[] = [];
 
-    const result = await extension.commands?.hello?.run({
-      notify: {
-        toast: async (notice) => {
-          notices.push(notice);
-        },
-      },
-      params: {},
-    } as never);
+    const result = await extension.commands
+      ?.find((command) => command.id === "hello")
+      ?.run(
+        {
+          notify: {
+            toast: async (notice) => {
+              notices.push(notice);
+            },
+          },
+        } as never,
+        {},
+      );
 
     expect(result).toEqual({ message: "The repo-local extension is running." });
     expect(notices).toEqual([

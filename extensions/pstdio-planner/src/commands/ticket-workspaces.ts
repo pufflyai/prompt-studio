@@ -16,11 +16,12 @@ const workspacesForTicket = async (
 // `pst tickets workspaces`: list the workspaces linked to a ticket with their live
 // activity, derived from anchored sessions.
 export const ticketWorkspacesCommand = defineCommand({
+  id: "ticket-workspaces",
   title: "List ticket workspaces",
   cli: { globalAliases: [["tickets", "workspaces"]], examples: ["pstdio tickets workspaces --id PS-1"] },
   params: { id: params.text({ required: true }) },
-  async run(ctx) {
-    const { workspaces } = await workspacesForTicket(ctx, ctx.params.id);
+  async run(ctx, commandParams) {
+    const { workspaces } = await workspacesForTicket(ctx, commandParams.id);
     const rows = [];
     for (const ws of workspaces) {
       const sessions = await ctx.sessions.listByWorkspace(ws.id);
@@ -39,11 +40,12 @@ export const ticketWorkspacesCommand = defineCommand({
 // `pst tickets worktrees list`: list the worktrees (workspaces with a worktree path)
 // linked to a ticket.
 export const ticketWorktreesListCommand = defineCommand({
+  id: "ticket-worktrees-list",
   title: "List ticket worktrees",
   cli: { globalAliases: [["tickets", "worktrees", "list"]], examples: ["pstdio tickets worktrees list --id PS-1"] },
   params: { id: params.text({ required: true }) },
-  async run(ctx) {
-    const { workspaces } = await workspacesForTicket(ctx, ctx.params.id);
+  async run(ctx, commandParams) {
+    const { workspaces } = await workspacesForTicket(ctx, commandParams.id);
     return workspaces
       .filter((ws) => ws.worktree_path)
       .map((ws) => ({
@@ -57,17 +59,18 @@ export const ticketWorktreesListCommand = defineCommand({
 // `pst tickets worktrees remove-all`: remove every worktree (and its branch) linked
 // to a ticket. Git work runs in the API via the host process capability.
 export const ticketWorktreesRemoveAllCommand = defineCommand({
+  id: "ticket-worktrees-remove-all",
   title: "Remove ticket worktrees",
   cli: {
     globalAliases: [["tickets", "worktrees", "remove-all"]],
     examples: ["pstdio tickets worktrees remove-all --id PS-1"],
   },
   params: { id: params.text({ required: true }) },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const repoPath = ctx.repo?.path;
     if (!repoPath) throw new Error("This command must be run inside a project repository.");
 
-    const { workspaces } = await workspacesForTicket(ctx, ctx.params.id);
+    const { workspaces } = await workspacesForTicket(ctx, commandParams.id);
     const worktrees = workspaces.filter((ws) => ws.worktree_path);
 
     let removed = 0;

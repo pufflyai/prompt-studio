@@ -54,7 +54,7 @@ export const notifyProposalRefined = (ctx: NotifyActionContext, ticket: StoredTi
         id: "approve-proposal",
         label: "Approve",
         kind: "command",
-        command: "pstdio-planner.approve-proposal",
+        command: "pstdio.pstdio-planner.command.approve-proposal",
         params: { ticket: ticket.shorthand },
       },
     ],

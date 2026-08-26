@@ -1,12 +1,12 @@
 {
   "name": "pstdio-skills",
-  "version": "0.3.2",
+  "version": "0.3.4",
   "displayName": "Prompt Studio Skills",
   "description": "Built-in Prompt Studio skills for using Prompt Studio and authoring extensions.",
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.2"
+    "pstdio": "1.0.0-alpha.5"
   },
   "pstdio": {
     "scope": "user"
@@ -18,7 +18,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.18.0"
+    "@pstdio/sdk": "^0.20.0"
   },
   "devDependencies": {
     "@types/bun": "1.3.13",

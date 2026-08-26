@@ -2,11 +2,10 @@ import { Box, SimpleGrid, Text } from "@chakra-ui/react";
 import type { ResourceBrowseEntry, ResourceRef, WorkbenchCore } from "@pstdio/workbench";
 import { text } from "pstdio-extensions/workbench";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
-import { isPanelForResourceKind, resourceKindsFromMetadata } from "../lib/resource-bindings";
+import { isViewForResourceKind, resourceKindsFromMetadata } from "../lib/resource-bindings";
 
 const primaryRendererId = "extension-testbench.primary.renderer";
 const primaryWidgetId = "extension-testbench.primary";
-const syntheticTreeWidgetId = "extension-testbench.tree";
 
 const PrimaryPanel = (props: { bench: ExtensionBenchLoadResponse; resource?: ResourceRef }) => {
   const { bench, resource } = props;
@@ -44,15 +43,15 @@ const PrimaryPanel = (props: { bench: ExtensionBenchLoadResponse; resource?: Res
             Views
           </Text>
           <Text as="dd" fontSize="sm" m="0">
-            {bench.summary.panels}
+            {bench.summary.views}
           </Text>
         </Box>
         <Box bg="bg" borderColor="border.subtle" borderRadius="sm" borderWidth="1px" minW="0" p="3">
           <Text as="dt" color="fg.muted" fontSize="xs" fontWeight="700" mb="1">
-            Tree renderers
+            Tree views
           </Text>
           <Text as="dd" fontSize="sm" m="0">
-            {bench.summary.treeRenderers}
+            {bench.summary.treeViews}
           </Text>
         </Box>
         <Box bg="bg" borderColor="border.subtle" borderRadius="sm" borderWidth="1px" minW="0" p="3">
@@ -77,9 +76,9 @@ const PrimaryPanel = (props: { bench: ExtensionBenchLoadResponse; resource?: Res
 };
 
 const findTreeView = (bench: ExtensionBenchLoadResponse, resource: ResourceRef) =>
-  bench.metadata.panels.find(
-    (view) => view.renderer?.kind === "tree" && isPanelForResourceKind(bench.metadata, view.id, resource.kind),
-  ) ?? bench.metadata.panels.find((view) => view.renderer?.kind === "tree");
+  bench.metadata.views.find(
+    (view) => view.body.kind === "tree" && isViewForResourceKind(bench.metadata, view.localId, resource.kind),
+  ) ?? bench.metadata.views.find((view) => view.body.kind === "tree");
 
 export const registerResourceKinds = (
   workbench: WorkbenchCore,
@@ -129,30 +128,11 @@ export const openPrimaryResource = (
 
 export const openTreePreview = (workbench: WorkbenchCore, bench: ExtensionBenchLoadResponse, resource: ResourceRef) => {
   const view = findTreeView(bench, resource);
-
-  if (view) {
-    workbench.layout.openPanel(view.id, {
-      pinned: true,
-      resource,
-      title: text(view.title, view.id),
-    });
-    return;
-  }
-
-  const renderer = bench.metadata.treeRenderers?.[0];
-  if (!renderer) return;
-
-  workbench.layout.registerPanel({
-    id: syntheticTreeWidgetId,
-    title: text(renderer.title, renderer.id),
-    region: "main-left-menu",
-    rendererId: renderer.id,
-    resourceKinds: [resource.kind],
-  });
-  workbench.layout.openPanel(syntheticTreeWidgetId, {
+  if (!view) return;
+  void workbench.views.openView(view.id, {
     pinned: true,
     resource,
-    title: text(renderer.title, renderer.id),
+    title: text(view.title, view.id),
   });
 };
 

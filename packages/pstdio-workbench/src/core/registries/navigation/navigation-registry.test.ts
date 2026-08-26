@@ -5,6 +5,10 @@ import { createNavigationRegistry, type NavigationDispatcherContext } from "./na
 const createDispatcherCollector = () => {
   const calls: Array<{ kind: string; payload: unknown }> = [];
   const dispatcher: NavigationDispatcherContext = {
+    openView: async (viewId, input) => {
+      calls.push({ kind: "openView", payload: { viewId, input } });
+      return viewId;
+    },
     openResource: async (resource, input) => {
       calls.push({ kind: "openResource", payload: { resource, input } });
       return resource;
@@ -87,20 +91,24 @@ describe("createNavigationRegistry", () => {
         kind: "compound",
         targets: [
           { kind: "resource", resource: { kind: "ticket", uri: "ticket://PS-200", id: "PS-200" } },
-          { kind: "panel", panelId: "workspace-tree" },
+          { kind: "view", viewId: "workspace-tree" },
         ],
       }),
     });
 
     await navigation.navigate("pstdio://open?resource=ticket:PS-200&view=workspace-tree");
 
-    expect(calls.map((entry) => entry.kind)).toEqual(["openResource", "openPanel"]);
+    expect(calls.map((entry) => entry.kind)).toEqual(["openResource", "openView"]);
   });
 
   test("compound dispatch validates every item before committing any item", async () => {
     const calls: string[] = [];
     const dispatcher: NavigationDispatcherContext = {
       canOpenPanel: () => false,
+      canOpenView: () => false,
+      openView: async () => {
+        calls.push("view");
+      },
       openResource: async (resource) => {
         calls.push(`resource:${resource.uri}`);
       },
@@ -118,11 +126,11 @@ describe("createNavigationRegistry", () => {
         kind: "compound",
         targets: [
           { kind: "resource", resource: { kind: "ticket", uri: "ticket://a" } },
-          { kind: "panel", panelId: "broken" },
+          { kind: "view", viewId: "broken" },
           { kind: "command", commandId: "noop" },
         ],
       }),
-    ).rejects.toThrow("Cannot open navigation Panel target: broken");
+    ).rejects.toThrow("Cannot open navigation view target: broken");
     expect(calls).toEqual([]);
   });
 
@@ -139,6 +147,10 @@ describe("createNavigationRegistry", () => {
         openResource: async (resource) => {
           calls.push(`resource:${resource.uri}`);
         },
+        openView: async () => {
+          calls.push("view");
+          throw new Error("view dispatch failed");
+        },
         openPanel: () => {
           calls.push("widget");
           throw new Error("widget dispatch failed");
@@ -154,10 +166,10 @@ describe("createNavigationRegistry", () => {
         kind: "compound",
         targets: [
           { kind: "resource", resource: { kind: "ticket", uri: "ticket://a" } },
-          { kind: "panel", panelId: "broken" },
+          { kind: "view", viewId: "broken" },
         ],
       }),
-    ).rejects.toThrow("widget dispatch failed");
+    ).rejects.toThrow("view dispatch failed");
     expect(calls).toEqual([]);
   });
 
@@ -183,6 +195,28 @@ describe("createNavigationRegistry", () => {
     await workbench.navigation.openTarget({ kind: "command", commandId: "test.command", args: ["a", "b"] });
 
     expect(payloads).toEqual([["a", "b"]]);
+  });
+
+  test("resolves registered view paths without creating a resource", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.layout.registerLocation({
+      id: "tickets.panel",
+      title: "Tickets",
+      region: "main",
+      rendererId: "noop",
+    });
+    workbench.views.registerView({
+      id: "pstdio-planner.tickets",
+      panelId: "tickets.panel",
+      path: "/tickets",
+    });
+
+    expect(workbench.navigation.resolveLocation("/tickets")).toEqual({
+      kind: "view",
+      viewId: "pstdio-planner.tickets",
+    });
+    await workbench.navigation.navigate("/tickets");
+    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe("tickets.panel");
   });
 
   test("throws when no parser handles the location and when no dispatcher is configured", async () => {

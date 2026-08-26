@@ -16,7 +16,7 @@ test("PS-119 answers a hydrated question tool call from the session composer", a
       project_id: project.id,
       title: questionPrompt,
       prompt: questionPrompt,
-      agent: "pstdio.extension-lab.fake",
+      agent: "pstdio.extension-lab.harness.fake",
     },
   });
   expect(sessionResponse.ok()).toBe(true);
@@ -37,7 +37,7 @@ test("PS-119 answers a hydrated question tool call from the session composer", a
 
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", projectId);
   }, project.id);
 

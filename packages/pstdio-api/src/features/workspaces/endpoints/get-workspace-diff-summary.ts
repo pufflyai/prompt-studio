@@ -4,7 +4,7 @@ import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
 import { resolveBase } from "../resolve-base";
-import { resolveWorkspaceRoot } from "../resolve-workspace-root";
+import { resolveWorkspaceExecutionTarget } from "../workspace-provider-service";
 
 const diffSummaryResponseSchema = z.object({
   workspace_id: z.string(),
@@ -42,7 +42,7 @@ export const getWorkspaceDiffSummaryHandler = (
   return async (c) => {
     const { id } = c.req.valid("param");
     const { mode } = c.req.valid("query");
-    const context = await resolveWorkspaceRoot(deps, id);
+    const context = await resolveWorkspaceExecutionTarget(deps, id, "diff");
     if (!context) return c.json({ error: `Workspace has no linked file root: ${id}` }, 404);
 
     const resolved = mode === "current" ? { sha: "HEAD" } : await resolveBase(context.root);

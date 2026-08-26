@@ -14,6 +14,15 @@ const SMOKE_TEST_TIMEOUT = 30_000;
 // The macOS Intel release runner can spend over a minute extracting and loading all bundled core extensions.
 const CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT = 120_000;
 const REPO_ROOT = join(import.meta.dirname, "../../../..");
+const CORE_DEFAULT_EXTENSION_NAMES = [
+  "harness-claude-code",
+  "harness-codex",
+  "harness-open-code",
+  "pstdio-base-themes",
+  "pstdio-planner",
+  "pstdio-reports",
+  "pstdio-skills",
+];
 
 beforeAll(() => {
   if (!process.env.PSTDIO_PACKAGED_BINARY_PATH) {
@@ -188,27 +197,22 @@ describe("packaged pstdio — core default extensions", () => {
 
       try {
         const npmConfigPath = join(tempRoot, ".npmrc");
+        const started = await startPackagedServe(tempRoot, {
+          NPM_CONFIG_USERCONFIG: npmConfigPath,
+          PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
+            defaultExtensions: CORE_DEFAULT_EXTENSION_NAMES.map((installName) => ({
+              installName,
+              source: join(REPO_ROOT, "extensions", installName),
+            })),
+          }),
+        });
+        child = started.child;
         const registry = await startLocalWorkspaceRegistry({
           configPath: npmConfigPath,
           outputRoot: tempRoot,
           packagePaths: [join(REPO_ROOT, "packages/sdk"), join(REPO_ROOT, "packages/ui")],
         });
         closeRegistry = registry.close;
-        const started = await startPackagedServe(tempRoot, {
-          NPM_CONFIG_USERCONFIG: npmConfigPath,
-          PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-            defaultExtensions: [
-              "harness-claude-code",
-              "harness-codex",
-              "harness-open-code",
-              "pstdio-base-themes",
-              "pstdio-planner",
-              "pstdio-reports",
-              "pstdio-skills",
-            ],
-          }),
-        });
-        child = started.child;
 
         const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
           method: "POST",
@@ -268,12 +272,36 @@ describe("packaged pstdio — core default extensions", () => {
           ]),
         );
 
+        const skillsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/skills`, {
+          headers: runtimeAuthorization(started.descriptor),
+        });
+        expect(skillsRes.status).toBe(200);
+        const skills = (await skillsRes.json()) as Array<{
+          files: Array<{ path: string }>;
+          name: string;
+        }>;
+        expect(skills).toContainEqual(
+          expect.objectContaining({
+            name: "create-pstdio-extension",
+            files: expect.arrayContaining([
+              expect.objectContaining({ path: "SKILL.md" }),
+              expect.objectContaining({ path: "references/extension-api.md" }),
+              expect.objectContaining({ path: "references/examples.md" }),
+            ]),
+          }),
+        );
+
         const metadataRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
           headers: runtimeAuthorization(started.descriptor),
         });
         expect(metadataRes.status).toBe(200);
         const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
-        const webview = metadata.settingsPanels.find((panel) => panel.webview)?.webview;
+        const settingsPanel = metadata.settingsPanels.find((panel) => panel.view);
+        const settingsViewId = settingsPanel
+          ? `${settingsPanel.view.extensionId}.view.${settingsPanel.view.id}`
+          : undefined;
+        const settingsView = metadata.views.find((view) => view.id === settingsViewId);
+        const webview = settingsView?.body.kind === "webview" ? settingsView.body.webview : undefined;
         expect(webview?.runtimeUrl).toBeTruthy();
 
         const runtimeRes = await fetch(`${started.baseUrl}${webview!.runtimeUrl}`, {

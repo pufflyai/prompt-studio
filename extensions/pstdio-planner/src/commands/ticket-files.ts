@@ -1,5 +1,6 @@
 import {
   defineCommand,
+  type ExtensionContextBase,
   type ExtensionWorkspace,
   params,
   type RendererContext,
@@ -7,6 +8,7 @@ import {
   type TreeNode,
   type TreeViewSection,
 } from "@pstdio/sdk/extensions";
+
 import { statusesCollection, ticketsCollection } from "../data/collections";
 import { selectedDocumentFromResource } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
@@ -22,6 +24,8 @@ import { isImageAttachment } from "../utils/is-image-attachment";
 import { createWorkspaceCommand } from "./ticket-actions";
 import { buildSessionsSection } from "./ticket-sessions-tree";
 import { buildSubTicketsSection } from "./ticket-sub-tickets-tree";
+
+const ticketResourceKind = { extensionId: "pstdio.pstdio-planner", kind: "resource-kind", id: "ticket" } as const;
 
 const TICKET_BODY_ID = "__ticket__";
 
@@ -105,7 +109,7 @@ const workspaceSectionActions = (ticketId: string): TreeAction[] => [
     id: "create-workspace",
     label: "Create workspace",
     icon: "Plus",
-    command: "pstdio-planner.create-workspace",
+    command: createWorkspaceCommand.ref,
     params: { ticket: ticketId },
     input: createWorkspaceTreeActionParams,
   },
@@ -139,8 +143,8 @@ const workspacesSection = (
   nodes: workspaceNodes(workspaces, ticket).concat(workspaces.length === 0 ? [emptyWorkspacesNode()] : []),
 });
 
-const selectedTicketId = (ctx: { params: { ticketId?: string }; resource?: { type?: string; id?: string } }) =>
-  ctx.params.ticketId ?? (ctx.resource?.type === "ticket" ? ctx.resource.id : undefined);
+const selectedTicketId = (ctx: { resource?: { type?: string; id?: string } }, commandParams: { ticketId?: string }) =>
+  commandParams.ticketId ?? (ctx.resource?.type === "ticket" ? ctx.resource.id : undefined);
 
 const fileContextMenuActions = (input: { ticketId: string; fileId: string; fileName: string }) => {
   const actions: TreeAction[] = [
@@ -148,7 +152,7 @@ const fileContextMenuActions = (input: { ticketId: string; fileId: string; fileN
       id: "rename",
       label: "Rename",
       icon: "Pencil",
-      command: "pstdio-planner.rename-ticket-file",
+      command: renameTicketFileCommand.ref,
       params: { ticketId: input.ticketId, fileId: input.fileId, name: input.fileName },
       submitLabel: "Save",
       input: {
@@ -159,7 +163,7 @@ const fileContextMenuActions = (input: { ticketId: string; fileId: string; fileN
       id: "delete",
       label: "Delete",
       icon: "Trash",
-      command: "pstdio-planner.delete-ticket-file",
+      command: deleteTicketFileCommand.ref,
       params: { ticketId: input.ticketId, fileId: input.fileId },
     },
   ];
@@ -167,16 +171,17 @@ const fileContextMenuActions = (input: { ticketId: string; fileId: string; fileN
 };
 
 export const createTicketFileCommand = defineCommand({
+  id: "create-ticket-file",
   title: "Create ticket file",
-  palette: { group: "Tickets", when: { resourceType: ["ticket"] } },
+  palette: [{ group: "Tickets", when: { resourceType: [ticketResourceKind] } }],
   params: {
     ticketId: params.text(),
     name: params.text({ label: "File name" }),
   },
-  async run(ctx) {
-    const ticketId = selectedTicketId(ctx);
+  async run(ctx, commandParams) {
+    const ticketId = selectedTicketId(ctx, commandParams);
     if (!ticketId) throw new Error("Ticket resource is required.");
-    const file = await createTicketFile({ storage: ctx.storage, ticketId, name: ctx.params.name });
+    const file = await createTicketFile({ storage: ctx.storage, ticketId, name: commandParams.name });
     await ctx.events.emit(plannerTicketsChanged, { ticketId });
     // ticketId travels with the result so the editor can filter the broadcast.
     return { ...file, ticketId };
@@ -184,6 +189,7 @@ export const createTicketFileCommand = defineCommand({
 });
 
 export const updateTicketFileCommand = defineCommand({
+  id: "update-ticket-file",
   title: "Update ticket file",
   params: {
     ticketId: params.text({ required: true }),
@@ -191,26 +197,27 @@ export const updateTicketFileCommand = defineCommand({
     content: params.longText(),
     name: params.text(),
   },
-  async run(ctx) {
+  async run(ctx, commandParams) {
     const ticket = await updateTicketFile({
       storage: ctx.storage,
-      ticketId: ctx.params.ticketId,
-      fileId: ctx.params.fileId,
-      content: ctx.params.content,
-      name: ctx.params.name,
+      ticketId: commandParams.ticketId,
+      fileId: commandParams.fileId,
+      content: commandParams.content,
+      name: commandParams.name,
     });
-    await ctx.events.emit(plannerTicketsChanged, { ticketId: ctx.params.ticketId });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: commandParams.ticketId });
     return ticket;
   },
 });
 
 export const renameTicketFileCommand = defineCommand({
+  id: "rename-ticket-file",
   title: "Rename ticket file",
   params: {
     name: params.text({ label: "File name", required: true }),
   },
-  async run(ctx) {
-    const input = ctx.params as typeof ctx.params & { ticketId: string; fileId: string };
+  async run(ctx, commandParams) {
+    const input = commandParams as typeof commandParams & { ticketId: string; fileId: string };
     const ticket = await ticketsCollection(ctx.storage).get(input.ticketId);
     const file = ticket?.files?.find((entry) => entry.id === input.fileId);
     const updated = await updateTicketFile({
@@ -225,129 +232,136 @@ export const renameTicketFileCommand = defineCommand({
 });
 
 export const deleteTicketFileCommand = defineCommand({
+  id: "delete-ticket-file",
   title: "Delete ticket file",
   params: {
     ticketId: params.text({ required: true }),
     fileId: params.text({ required: true }),
   },
-  async run(ctx) {
-    await deleteTicketFile({ storage: ctx.storage, ticketId: ctx.params.ticketId, fileId: ctx.params.fileId });
-    await ctx.events.emit(plannerTicketsChanged, { ticketId: ctx.params.ticketId });
+  async run(ctx, commandParams) {
+    await deleteTicketFile({ storage: ctx.storage, ticketId: commandParams.ticketId, fileId: commandParams.fileId });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: commandParams.ticketId });
     // ticketId travels with the result so the editor can filter the broadcast.
-    return { ticketId: ctx.params.ticketId, fileId: ctx.params.fileId };
+    return { ticketId: commandParams.ticketId, fileId: commandParams.fileId };
   },
 });
 
+export const listTicketFilesTree = async (
+  ctx: Pick<ExtensionContextBase, "sessions" | "storage" | "workspaces">,
+  input: { renderer?: RendererContext },
+) => {
+  const renderer = input.renderer ?? { rendererId: "pstdio.pstdio-planner.view.ticket-files" };
+  const resource = renderer.resource as TicketTreeResource | undefined;
+  const ticketId = resource?.type === "ticket" ? resource.id : undefined;
+  if (!ticketId) return [emptyFilesSection()];
+
+  const ticket = await ticketsCollection(ctx.storage).get(ticketId);
+  if (!ticket) return [emptyFilesSection()];
+
+  const selectedDocument = selectedDocumentFromResource(resource);
+  const tickets = await ticketsCollection(ctx.storage).list();
+
+  const parentLookup = createTicketParentLookup(tickets);
+  const ticketMeta = linkedResourceParentMetadata(ticket, parentLookup);
+
+  // The selected document travels with the ticket resource. This keeps the UI state
+  // in the workbench and lets every renderer callback receive the same selection.
+  const ticketResource = ticketResourceReference(ticket, parentLookup);
+  const selectTarget = (documentId: string) =>
+    ({
+      kind: "resource" as const,
+      resource: {
+        ...ticketResource,
+        metadata: { ...ticketResource.metadata, documentId },
+      },
+      input: { strategy: "replace-active" as const },
+    }) satisfies TreeNode["target"];
+
+  const ticketSection: TreeViewSection = {
+    id: "ticket",
+    collapsible: false,
+    nodes: [
+      {
+        id: TICKET_BODY_ID,
+        label: ticketDisplayTitle(ticket),
+        icon: TICKET_RESOURCE_ICON,
+        target: selectTarget(TICKET_BODY_ID),
+        selected: selectedDocument === TICKET_BODY_ID,
+      },
+    ],
+  };
+
+  const fileNodes: TreeNode[] = [
+    ...(ticket.files ?? []).map((file) => ({
+      id: file.id,
+      label: file.name,
+      icon: "FileText",
+      target: selectTarget(file.id),
+      selected: selectedDocument === file.id,
+      contextMenuActions: fileContextMenuActions({ ticketId, fileId: file.id, fileName: file.name }),
+    })),
+    // Image attachments open read-only in the editor's image preview.
+    ...(ticket.attachments ?? []).filter(isImageAttachment).map((attachment) => ({
+      id: attachment.id,
+      label: attachment.name,
+      icon: "Image",
+      target: selectTarget(attachment.id),
+      selected: selectedDocument === attachment.id,
+    })),
+  ];
+
+  const filesSection: TreeViewSection = {
+    ...emptyFilesSection(),
+    actions: [
+      {
+        id: "create",
+        label: "New file",
+        icon: "Plus",
+        command: createTicketFileCommand.ref,
+        params: { ticketId },
+      },
+    ],
+    nodes: fileNodes.length === 0 ? [emptyFilesNode()] : fileNodes,
+  };
+
+  // Linked workspaces open as native workspace tabs from the same sidenav.
+  const linkedWorkspaces = (await ctx.workspaces.list()).filter((workspace) =>
+    isWorkspaceLinkedToTicket(workspace, ticket.shorthand),
+  );
+
+  const statusesById = new Map((await statusesCollection(ctx.storage).list()).map((status) => [status.id, status]));
+  const maybeSubTicketsSection = buildSubTicketsSection({
+    tickets,
+    parentTicketId: ticket.id,
+    statusesById,
+  });
+  const linkedWorkspacesSection = workspacesSection(linkedWorkspaces, ticket.id, ticketMeta);
+
+  // Refine / Break into sub-tickets sessions anchor themselves to the ticket; attempts belong
+  // to its workspaces. The ticket shows the whole conversation history either way.
+  const workspaceSessions = (
+    await Promise.all(linkedWorkspaces.map((workspace) => ctx.sessions.listByWorkspace(workspace.id)))
+  ).flat();
+  const sessionsSection = buildSessionsSection({
+    sessions: await ctx.sessions.list(),
+    ticketId: ticket.id,
+    workspaceSessions,
+  });
+
+  return [
+    ticketSection,
+    filesSection,
+    ...(maybeSubTicketsSection ? [maybeSubTicketsSection] : []),
+    linkedWorkspacesSection,
+    sessionsSection,
+  ];
+};
+
 export const listTicketFilesTreeCommand = defineCommand({
+  id: "ticket-files.tree.body",
   title: "List ticket files tree",
   params: {
     renderer: params.json<RendererContext>(),
   },
-  async run(ctx) {
-    const renderer = ctx.params.renderer ?? { rendererId: "pstdio-planner.ticketFiles" };
-    const resource = renderer.resource as TicketTreeResource | undefined;
-    const ticketId = resource?.type === "ticket" ? resource.id : undefined;
-    if (!ticketId) return [emptyFilesSection()];
-
-    const ticket = await ticketsCollection(ctx.storage).get(ticketId);
-    if (!ticket) return [emptyFilesSection()];
-
-    const selectedDocument = selectedDocumentFromResource(resource);
-    const tickets = await ticketsCollection(ctx.storage).list();
-
-    const parentLookup = createTicketParentLookup(tickets);
-    const ticketMeta = linkedResourceParentMetadata(ticket, parentLookup);
-
-    // The selected document travels with the ticket resource. This keeps the UI state
-    // in the workbench and lets every renderer callback receive the same selection.
-    const ticketResource = ticketResourceReference(ticket, parentLookup);
-    const selectTarget = (documentId: string) =>
-      ({
-        kind: "resource" as const,
-        resource: {
-          ...ticketResource,
-          metadata: { ...ticketResource.metadata, documentId },
-        },
-        input: { strategy: "replace-active" as const },
-      }) satisfies TreeNode["target"];
-
-    const ticketSection: TreeViewSection = {
-      id: "ticket",
-      collapsible: false,
-      nodes: [
-        {
-          id: TICKET_BODY_ID,
-          label: ticketDisplayTitle(ticket),
-          icon: TICKET_RESOURCE_ICON,
-          target: selectTarget(TICKET_BODY_ID),
-          selected: selectedDocument === TICKET_BODY_ID,
-        },
-      ],
-    };
-
-    const fileNodes: TreeNode[] = [
-      ...(ticket.files ?? []).map((file) => ({
-        id: file.id,
-        label: file.name,
-        icon: "FileText",
-        target: selectTarget(file.id),
-        selected: selectedDocument === file.id,
-        contextMenuActions: fileContextMenuActions({ ticketId, fileId: file.id, fileName: file.name }),
-      })),
-      // Image attachments open read-only in the editor's image preview.
-      ...(ticket.attachments ?? []).filter(isImageAttachment).map((attachment) => ({
-        id: attachment.id,
-        label: attachment.name,
-        icon: "Image",
-        target: selectTarget(attachment.id),
-        selected: selectedDocument === attachment.id,
-      })),
-    ];
-
-    const filesSection: TreeViewSection = {
-      ...emptyFilesSection(),
-      actions: [
-        {
-          id: "create",
-          label: "New file",
-          icon: "Plus",
-          command: "pstdio-planner.create-ticket-file",
-          params: { ticketId },
-        },
-      ],
-      nodes: fileNodes.length === 0 ? [emptyFilesNode()] : fileNodes,
-    };
-
-    // Linked workspaces open as native workspace tabs from the same sidenav.
-    const linkedWorkspaces = (await ctx.workspaces.list()).filter((workspace) =>
-      isWorkspaceLinkedToTicket(workspace, ticket.shorthand),
-    );
-
-    const statusesById = new Map((await statusesCollection(ctx.storage).list()).map((status) => [status.id, status]));
-    const maybeSubTicketsSection = buildSubTicketsSection({
-      tickets,
-      parentTicketId: ticket.id,
-      statusesById,
-    });
-    const linkedWorkspacesSection = workspacesSection(linkedWorkspaces, ticket.id, ticketMeta);
-
-    // Refine / Break into sub-tickets sessions anchor themselves to the ticket; attempts belong
-    // to its workspaces. The ticket shows the whole conversation history either way.
-    const workspaceSessions = (
-      await Promise.all(linkedWorkspaces.map((workspace) => ctx.sessions.listByWorkspace(workspace.id)))
-    ).flat();
-    const sessionsSection = buildSessionsSection({
-      sessions: await ctx.sessions.list(),
-      ticketId: ticket.id,
-      workspaceSessions,
-    });
-
-    return [
-      ticketSection,
-      filesSection,
-      ...(maybeSubTicketsSection ? [maybeSubTicketsSection] : []),
-      linkedWorkspacesSection,
-      sessionsSection,
-    ];
-  },
+  run: listTicketFilesTree,
 });

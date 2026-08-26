@@ -8,7 +8,7 @@ describe("resolveSynchronizedModel", () => {
     // as "this agent has zero models" and wipe the stored selection on mount.
     expect(
       resolveSynchronizedModel({
-        currentAgent: "pstdio.harness-open-code.opencode",
+        currentAgent: "pstdio.harness-open-code.harness.opencode",
         currentModel: "openai/gpt-5.5",
         modelsQuery: { isPending: true, data: undefined },
         modelHistory: [],
@@ -19,7 +19,7 @@ describe("resolveSynchronizedModel", () => {
   test("clears the stored model once the agent is known to have no models", () => {
     expect(
       resolveSynchronizedModel({
-        currentAgent: "pstdio.harness-open-code.opencode",
+        currentAgent: "pstdio.harness-open-code.harness.opencode",
         currentModel: "openai/gpt-5.5",
         modelsQuery: { isPending: false, data: [] },
         modelHistory: [],
@@ -41,7 +41,7 @@ describe("resolveSynchronizedModel", () => {
   test("keeps the current model when the agent offers it", () => {
     expect(
       resolveSynchronizedModel({
-        currentAgent: "pstdio.harness-open-code.opencode",
+        currentAgent: "pstdio.harness-open-code.harness.opencode",
         currentModel: "openai/gpt-5.5",
         modelsQuery: { isPending: false, data: [{ id: "openai/gpt-5.5" }] },
         modelHistory: [],
@@ -52,7 +52,7 @@ describe("resolveSynchronizedModel", () => {
   test("falls back to a remembered model, then a concrete catalog default", () => {
     expect(
       resolveSynchronizedModel({
-        currentAgent: "pstdio.harness-open-code.opencode",
+        currentAgent: "pstdio.harness-open-code.harness.opencode",
         currentModel: "openai/gpt-5.5",
         modelsQuery: {
           isPending: false,
@@ -64,7 +64,7 @@ describe("resolveSynchronizedModel", () => {
 
     expect(
       resolveSynchronizedModel({
-        currentAgent: "pstdio.harness-open-code.opencode",
+        currentAgent: "pstdio.harness-open-code.harness.opencode",
         currentModel: "openai/gpt-5.5",
         modelsQuery: {
           isPending: false,
@@ -78,7 +78,7 @@ describe("resolveSynchronizedModel", () => {
   test("uses the first model when the catalog does not mark a default", () => {
     expect(
       resolveSynchronizedModel({
-        currentAgent: "pstdio.harness-open-code.opencode",
+        currentAgent: "pstdio.harness-open-code.harness.opencode",
         currentModel: "gone",
         modelsQuery: { isPending: false, data: [{ id: "first" }, { id: "second" }] },
         modelHistory: [],

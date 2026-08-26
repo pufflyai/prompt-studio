@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "../data/memory-storage";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { workspaceActivityCommand } from "./workspace-activity";
 
 const session = (id: string, status: string, overrides: Record<string, unknown> = {}) => ({
@@ -13,7 +13,7 @@ const session = (id: string, status: string, overrides: Record<string, unknown> 
 });
 
 const activityContext = (sessions: unknown[]) =>
-  makeCommandContext({
+  makeCommandArgs({
     storage: createMemoryStorage(),
     params: { workspaceId: "w1" },
     overrides: {
@@ -26,7 +26,7 @@ const activityContext = (sessions: unknown[]) =>
 describe("workspaceActivityCommand", () => {
   test.each(["queued", "in_progress", "awaiting_input"])("reports active while a session is %s", async (status) => {
     const result = await workspaceActivityCommand.run(
-      activityContext([session("s1", "completed"), session("s2", status)]),
+      ...activityContext([session("s1", "completed"), session("s2", status)]),
     );
 
     expect(result.active).toBe(true);
@@ -38,14 +38,14 @@ describe("workspaceActivityCommand", () => {
     "cancelled",
     "disconnected",
   ])("reports inactive when every session is terminal (%s)", async (status) => {
-    const result = await workspaceActivityCommand.run(activityContext([session("s1", status)]));
+    const result = await workspaceActivityCommand.run(...activityContext([session("s1", status)]));
 
     expect(result.active).toBe(false);
     expect(result.sessions.map((entry) => entry.status)).toEqual([status]);
   });
 
   test("returns the session list with timestamps", async () => {
-    const result = await workspaceActivityCommand.run(activityContext([session("s1", "completed")]));
+    const result = await workspaceActivityCommand.run(...activityContext([session("s1", "completed")]));
 
     expect(result).toEqual({
       active: false,
@@ -70,14 +70,14 @@ describe("workspaceActivityCommand", () => {
     ];
 
     const result = await workspaceActivityCommand.run(
-      activityContext([session("s1", "in_progress", { anchors_json: anchors })]),
+      ...activityContext([session("s1", "in_progress", { anchors_json: anchors })]),
     );
 
     expect(result.sessions[0]).toMatchObject({ anchors, phase: "implementation" });
   });
 
   test("reports inactive for a workspace without sessions", async () => {
-    const result = await workspaceActivityCommand.run(activityContext([]));
+    const result = await workspaceActivityCommand.run(...activityContext([]));
 
     expect(result).toEqual({ active: false, sessions: [] });
   });

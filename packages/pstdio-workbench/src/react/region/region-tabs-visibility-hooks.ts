@@ -57,6 +57,7 @@ export const isPlacementEligibleForRegion = (
   return widget
     ? isWorkbenchPanelPlacementVisible(widget, resource, modeId, placement, {
         ignoreResourceLocation: region === "side",
+        location: getActiveWorkbenchLocationPanel(workbench.layout.getLayout()),
       })
     : false;
 };

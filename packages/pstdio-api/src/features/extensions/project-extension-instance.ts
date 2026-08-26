@@ -1,5 +1,7 @@
+import { dirname, join } from "node:path";
 import type { ProjectExtensionInstance } from "pstdio-api-contracts";
 import { getExtensionApiVersionError } from "pstdio-extensions";
+import { resolvePstdioHome } from "pstdio-paths";
 
 type InstanceLike = {
   id: string;
@@ -26,7 +28,7 @@ type InstalledSourceLike = {
 
 const optionalString = (value: unknown) => (typeof value === "string" && value.length > 0 ? value : undefined);
 
-const compatibilityError = (installedSource: InstalledSourceLike) => {
+export const compatibilityError = (installedSource: { install_name: string; manifest_json?: unknown }) => {
   const manifest = (installedSource.manifest_json ?? {}) as Record<string, unknown>;
   const name = optionalString(manifest.name) ?? installedSource.install_name;
   const declared = optionalString(manifest.enginesPstdio);
@@ -41,9 +43,13 @@ const compatibilityError = (installedSource: InstalledSourceLike) => {
     : null;
 };
 
-// Mirrors repoExtensionsRoot: repo-local sources always live under `<repo>/.pstdio/extensions/`.
-const sourceScope = (sourcePath: string) =>
-  sourcePath.includes("/.pstdio/extensions/") ? ("repo" as const) : ("global" as const);
+// User-global sources live directly in `<pstdio home>/extensions`. The home folder is usually
+// named `.pstdio` itself, so the repo pattern `<repo>/.pstdio/extensions/` alone would misread
+// global installs as repo-local.
+const sourceScope = (sourcePath: string) => {
+  if (dirname(sourcePath) === join(resolvePstdioHome({ env: process.env }), "extensions")) return "global" as const;
+  return sourcePath.includes("/.pstdio/extensions/") ? ("repo" as const) : ("global" as const);
+};
 
 // The package name follows the source's current manifest, so it can never drift from a stored copy.
 export const nameFromSource = (installedSource: InstalledSourceLike) => {

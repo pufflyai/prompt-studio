@@ -1,4 +1,5 @@
 import type { RouteDeps } from "../deps";
+import type { WorkspaceProviderRuntime } from "./workspace-provider-runtime";
 
 export type WorkspacesRouteDeps = Pick<
   RouteDeps,
@@ -24,4 +25,4 @@ export type WorkspacesRouteDeps = Pick<
   | "templateService"
   | "workspaceService"
   | "workspaceSessionService"
->;
+> & { workspaceProviderRuntime?: WorkspaceProviderRuntime };

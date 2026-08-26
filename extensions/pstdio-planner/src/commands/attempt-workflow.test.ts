@@ -12,9 +12,9 @@ import {
   resolveReviewThreadCommand,
 } from "./attempt-history";
 import { submitChangeRequestCommand } from "./change-requests";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { runReviewCommand } from "./run-review";
-import { submitReviewCommand } from "./submit-review";
+import { type ReviewFinding, submitReviewCommand } from "./submit-review";
 
 const actor = { type: "agent" as const, id: "agent-1", displayName: "Agent" };
 
@@ -62,8 +62,8 @@ const setup = async () => {
   const followups: unknown[] = [];
   const addedAnchors: unknown[] = [];
   let createdSessions = 0;
-  const context = (params: Record<string, unknown>, headSha = "head-sha") =>
-    makeCommandContext({
+  const context = <const TParams extends Record<string, unknown>>(params: TParams, headSha = "head-sha") =>
+    makeCommandArgs({
       storage,
       params,
       overrides: {
@@ -113,15 +113,15 @@ const setup = async () => {
 
 const submitRevisionAndStartReview = async (fixture: Awaited<ReturnType<typeof setup>>) => {
   await submitChangeRequestCommand.run(
-    fixture.context({
+    ...fixture.context({
       workspaceId: "workspace-1",
       implementationSessionId: "implementation-1",
       headSha: "head-sha",
       changeRequestReportId: "change-report-1",
       expectedAttemptState: "implementing",
-    }) as never,
+    }),
   );
-  const started = await runReviewCommand.run(fixture.context({ workspaceId: "workspace-1", expectedRevision: 1 }));
+  const started = await runReviewCommand.run(...fixture.context({ workspaceId: "workspace-1" }));
   return started;
 };
 
@@ -132,7 +132,7 @@ describe("attempt workflow commands", () => {
 
     await expect(
       submitReviewCommand.run(
-        fixture.context({
+        ...fixture.context({
           workspaceId: "workspace-1",
           reviewId: started.review.id,
           reviewSessionId: started.session.id,
@@ -140,8 +140,8 @@ describe("attempt workflow commands", () => {
           reviewReportId: "review-report-1",
           verdict: "passed",
           expectedRevision: 1,
-          threads: [{ severity: "critical", body: "Must be fixed" }],
-        }) as never,
+          threads: [{ severity: "critical", body: "Must be fixed" }] as ReviewFinding[],
+        }),
       ),
     ).rejects.toThrow("passed review cannot contain");
     expect((await readAttempt(fixture.storage, "workspace-1"))?.state).toBe("reviewing");
@@ -152,7 +152,7 @@ describe("attempt workflow commands", () => {
     const started = await submitRevisionAndStartReview(fixture);
 
     const result = await submitReviewCommand.run(
-      fixture.context({
+      ...fixture.context({
         workspaceId: "workspace-1",
         reviewId: started.review.id,
         reviewSessionId: started.session.id,
@@ -169,8 +169,8 @@ describe("attempt workflow commands", () => {
             severity: "critical",
             body: "Preserve the workflow invariant.",
           },
-        ],
-      }) as never,
+        ] as ReviewFinding[],
+      }),
     );
 
     expect(result.attempt.state).toBe("changes_requested");
@@ -193,26 +193,26 @@ describe("attempt workflow commands", () => {
     const thread = (await reviewThreadsCollection(fixture.storage).list())[0]!;
     const initialComment = (await reviewCommentsCollection(fixture.storage).list())[0]!;
     const reply = await addReviewCommentCommand.run(
-      fixture.context({
+      ...fixture.context({
         workspaceId: "workspace-1",
         reviewId: started.review.id,
         threadId: thread.id,
         body: "I will preserve it.",
         replyToCommentId: initialComment.id,
-      }) as never,
+      }),
     );
     await addReviewCommentCommand.run(
-      fixture.context({
+      ...fixture.context({
         workspaceId: "workspace-1",
         reviewId: started.review.id,
         threadId: thread.id,
         body: "The fix is ready.",
         replyToCommentId: reply.id,
-      }) as never,
+      }),
     );
-    const firstPage = await readReviewThreadCommand.run(fixture.context({ threadId: thread.id, limit: 2 }) as never);
+    const firstPage = await readReviewThreadCommand.run(...fixture.context({ threadId: thread.id, limit: 2 }));
     const secondPage = await readReviewThreadCommand.run(
-      fixture.context({ threadId: thread.id, limit: 2, cursor: firstPage.nextCursor }) as never,
+      ...fixture.context({ threadId: thread.id, limit: 2, cursor: firstPage.nextCursor ?? undefined }),
     );
     expect([...firstPage.comments, ...secondPage.comments].map((comment) => comment.id).sort()).toEqual(
       (await reviewCommentsCollection(fixture.storage).list()).map((comment) => comment.id).sort(),
@@ -221,18 +221,16 @@ describe("attempt workflow commands", () => {
     expect(reply).toMatchObject({ author: actor, replyToCommentId: initialComment.id });
 
     await resolveReviewThreadCommand.run(
-      fixture.context({ workspaceId: "workspace-1", reviewId: started.review.id, threadId: thread.id }) as never,
+      ...fixture.context({ workspaceId: "workspace-1", reviewId: started.review.id, threadId: thread.id }),
     );
     const dismissed = await dismissReviewCommand.run(
-      fixture.context({ workspaceId: "workspace-1", reviewId: started.review.id, reason: "Superseded" }) as never,
+      ...fixture.context({ workspaceId: "workspace-1", reviewId: started.review.id, reason: "Superseded" }),
     );
     expect(dismissed.state).toBe("review_ready");
     expect(dismissed.revisions[0]?.reviews[0]?.state).toBe("dismissed");
     expect((await reviewThreadsCollection(fixture.storage).get(thread.id))?.state).toBe("resolved");
 
-    const history = await readAttemptHistoryCommand.run(
-      fixture.context({ workspaceId: "workspace-1", limit: 2 }) as never,
-    );
+    const history = await readAttemptHistoryCommand.run(...fixture.context({ workspaceId: "workspace-1", limit: 2 }));
     expect(history.nextCursor).not.toBeNull();
     expect(history.events.every((event) => event.workspaceId === "workspace-1")).toBe(true);
     expect(JSON.stringify(history.events)).not.toContain("Preserve the workflow invariant");
@@ -243,7 +241,7 @@ describe("attempt workflow commands", () => {
     const started = await submitRevisionAndStartReview(fixture);
 
     await submitReviewCommand.run(
-      fixture.context({
+      ...fixture.context({
         workspaceId: "workspace-1",
         reviewId: started.review.id,
         reviewSessionId: started.session.id,
@@ -251,8 +249,8 @@ describe("attempt workflow commands", () => {
         reviewReportId: "review-report-1",
         verdict: "passed",
         expectedRevision: 1,
-        threads: [],
-      }) as never,
+        threads: [] as ReviewFinding[],
+      }),
     );
 
     expect((await readAttempt(fixture.storage, "workspace-1"))?.state).toBe("approved");
@@ -265,7 +263,7 @@ describe("attempt workflow commands", () => {
         anchors: [expect.objectContaining({ type: "planner-human-request" })],
       }),
     ]);
-    await expect(runReviewCommand.run(fixture.context({ workspaceId: "workspace-1" }))).rejects.toThrow(
+    await expect(runReviewCommand.run(...fixture.context({ workspaceId: "workspace-1" }))).rejects.toThrow(
       "not ready for review",
     );
   });

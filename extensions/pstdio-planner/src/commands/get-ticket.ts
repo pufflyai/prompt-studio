@@ -2,10 +2,11 @@ import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { findTicket } from "../data/resolve";
 
 export const getTicketCommand = defineCommand({
+  id: "get-ticket",
   title: "Get ticket",
   cli: { globalAliases: [["tickets", "panel"]], examples: ["pstdio tickets panel --id PS-1"] },
   params: { id: params.text({ required: true }) },
-  async run(ctx) {
-    return (await findTicket(ctx.storage, ctx.params.id)) ?? null;
+  async run(ctx, commandParams) {
+    return (await findTicket(ctx.storage, commandParams.id)) ?? null;
   },
 });

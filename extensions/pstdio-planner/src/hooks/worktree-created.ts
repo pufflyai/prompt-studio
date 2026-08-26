@@ -1,7 +1,12 @@
 import { existsSync } from "node:fs";
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { defineHook, type ExtensionStorageApi, type WorkspaceProvisionPayload } from "@pstdio/sdk/extensions";
+import {
+  defineHook,
+  type ExtensionStorageApi,
+  type WorkspaceProvisionPayload,
+  workspaceEvents,
+} from "@pstdio/sdk/extensions";
 import { ticketMarkdownPath, ticketToMarkdown } from "../data/draft-storage";
 import { findTicket } from "../data/resolve";
 import type { StoredTicket } from "../data/types";
@@ -27,8 +32,9 @@ const copyOrWriteTicketFile = async (input: {
 };
 
 export const worktreeCreatedHook = defineHook<WorkspaceProvisionPayload>({
-  eventId: "workspace.provision",
-  async handler(ctx, payload) {
+  id: "worktree-created",
+  event: workspaceEvents.provision,
+  async run(ctx, payload) {
     const ticketRef = ticketRefFromAnchors(payload.workspace.anchors_json);
     if (!ticketRef) return;
 

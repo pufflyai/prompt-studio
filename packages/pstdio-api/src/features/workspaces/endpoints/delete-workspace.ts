@@ -3,7 +3,7 @@ import { type ExtensionWorkspace, worktreeEvents } from "pstdio-api-contracts/ex
 import type { AppRouteHandler } from "../../../types";
 import { fireExtensionEventAsync } from "../../extensions/extension-event-runtime";
 import type { WorkspacesRouteDeps } from "../deps";
-import { cleanupWorkspaceWorktree } from "../worktree-cleanup";
+import { deleteProviderBackedWorkspace } from "../workspace-provider-lifecycle";
 
 type WorkspaceRecord = NonNullable<Awaited<ReturnType<WorkspacesRouteDeps["workspaceService"]["get"]>>>;
 
@@ -48,11 +48,25 @@ export const deleteWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
     if (workspace?.is_default) {
       return c.json({ error: "Default workspace cannot be deleted." }, 409);
     }
+    if (workspace && !workspace.provider_capabilities_json.delete) {
+      return c.json({ error: "Workspace provider does not allow deletion." }, 409);
+    }
+
+    // The provider must release its backing resource before the row disappears;
+    // a failed provider delete keeps the row so the operation can be retried.
+    let removed = false;
+    if (workspace) {
+      try {
+        removed = await deleteProviderBackedWorkspace(deps, workspace);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return c.json({ error: message }, 409);
+      }
+    }
 
     await deps.workspaceService.softDelete(id);
 
     if (workspace) {
-      const removed = await cleanupWorkspaceWorktree(deps, workspace);
       if (removed && workspace.worktree_path) {
         fireExtensionEventAsync(deps, workspace.project_id, worktreeEvents.removed, {
           projectId: workspace.project_id,

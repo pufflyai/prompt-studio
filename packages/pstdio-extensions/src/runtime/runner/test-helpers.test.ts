@@ -1,5 +1,5 @@
-import type { ExtensionDefinition } from "@pstdio/sdk/extensions";
 import type { ExtensionRuntime } from "../../types/runtime";
+import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "../normalize";
 import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
 
@@ -55,7 +55,9 @@ export const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): C
     get: async () => null,
     getByShorthand: async () => null,
     create: async () => ({ id: "" }),
-    archive: async () => {},
+    resolve: async () => ({}) as never,
+    cancel: async () => ({ id: "" }),
+    archive: async () => ({ id: "" }),
     delete: async () => {},
   },
   repos: {
@@ -85,7 +87,7 @@ export const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): C
   },
 });
 
-export const buildRuntime = (definition: ExtensionDefinition): ExtensionRuntime =>
+export const buildRuntime = (definition: LoadedExtensionSource["definition"]): ExtensionRuntime =>
   normalizeExtensionSources([
     {
       packagePath: "/tmp/lab",
@@ -104,7 +106,7 @@ export const buildRuntime = (definition: ExtensionDefinition): ExtensionRuntime 
   ]);
 
 export const makeRunner = (
-  definition: ExtensionDefinition,
+  definition: LoadedExtensionSource["definition"],
   opts: { maxDepth?: number; onDidDispatchEvent?: (eventId: string) => void } = {},
 ) => {
   const runtime = buildRuntime(definition);

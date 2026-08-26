@@ -315,15 +315,14 @@
           "harnesses": "Harnesses",
           "commands": "Commands",
           "modes": "Modes",
-          "panels": "Views",
-          "routes": "Routes",
+          "views": "Views",
+          "placements": "Placements",
           "menuContributions": "Menu items",
           "settingsPanels": "Settings panels",
-          "renderers": "Renderers",
           "skills": "Skills",
           "templates": "Templates",
           "themes": "Themes",
-          "treeItems": "Tree items",
+          "navigationItems": "Navigation items",
           "commandPaletteResources": "Command palette resources"
         }
       },

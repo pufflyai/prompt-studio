@@ -1,20 +1,44 @@
-import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
 import type {
   Disposable,
   WorkbenchModuleContext,
   WorkbenchPanelContribution,
   WorkbenchPanelMenuDefinition,
+  WorkbenchViewContribution,
 } from "../../core";
 import { BRIDGE_WEBVIEW_RENDERER_ID } from "../bridge/bridge-webview-renderer";
 import { toBridgeWebviewConfig } from "../bridge/webview-contribution-config";
+import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 
 type ExtensionPanelRecord = WorkbenchExtensionMetadata["panels"][number];
 type ExtensionPanelMenu = NonNullable<ExtensionPanelRecord["panelMenus"]>[number];
 type ExtensionResourcePanels = WorkbenchExtensionMetadata["resourcePanels"];
 
+export interface WorkbenchExtensionViewDescriptor {
+  id: string;
+  title: string;
+  icon?: string;
+}
+
+export type WorkbenchExtensionViewInputResolver = (
+  view: WorkbenchExtensionViewDescriptor,
+) => WorkbenchViewContribution["resolveInput"];
+
+export const resolveWorkbenchExtensionViewInput = (
+  resolver: WorkbenchExtensionViewInputResolver | undefined,
+  panel: ExtensionPanelRecord,
+) =>
+  resolver?.({
+    id: panel.id,
+    title: text(panel.title, panel.id),
+    icon: panel.icon,
+  });
+
 export interface RegisterWorkbenchExtensionPanelInput {
   contribution: WorkbenchPanelContribution;
+  path?: string;
+  aliases?: readonly string[];
+  resolveInput?: WorkbenchViewContribution["resolveInput"];
   workbench: WorkbenchModuleContext;
 }
 
@@ -100,8 +124,30 @@ export const toWorkbenchPanelMenus = (
     priority: menuPlacementBasePriority[menu.placement ?? "default"] - (declarationOffset + index),
   }));
 
-export const registerWorkbenchExtensionPanel = (input: RegisterWorkbenchExtensionPanelInput): Disposable =>
-  input.workbench.layout.registerPanel(input.contribution);
+export const registerWorkbenchExtensionPanel = (input: RegisterWorkbenchExtensionPanelInput): Disposable => {
+  const panel = input.workbench.layout.registerPanel(input.contribution);
+  let view: Disposable;
+  try {
+    view = input.workbench.views.registerView({
+      id: input.contribution.id,
+      panelId: input.contribution.id,
+      title: input.contribution.title,
+      icon: input.contribution.icon,
+      path: input.path,
+      aliases: input.aliases,
+      resolveInput: input.resolveInput,
+    });
+  } catch (error) {
+    panel.dispose();
+    throw error;
+  }
+  return {
+    dispose() {
+      view.dispose();
+      panel.dispose();
+    },
+  };
+};
 
 export const panelRendererId = (
   panel: ExtensionPanelRecord,

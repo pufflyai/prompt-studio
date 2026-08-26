@@ -17,11 +17,11 @@ const camLabelFromValue = (value: unknown) => {
 // Only mutations refresh the strip. Refreshing on every command event would loop
 // forever: the strip's own queries publish command events too.
 const refreshTriggers = new Set([
-  "extension-lab.glass-lab-artifacts.create",
-  "extension-lab.glass-lab-artifacts.delete",
-  "extension-lab.artifact-menu.update",
-  "extension-lab.parameters.apply",
-  "extension-lab.cams.select",
+  "pstdio.extension-lab.command.glass-lab-artifacts.create",
+  "pstdio.extension-lab.command.glass-lab-artifacts.delete",
+  "pstdio.extension-lab.command.artifact-menu.update",
+  "pstdio.extension-lab.command.parameters.apply",
+  "pstdio.extension-lab.command.cams.select",
 ]);
 
 // A one-widget status strip: the `status` region renders a single active widget,
@@ -43,11 +43,11 @@ const LabStatusBar = () => {
     void (async () => {
       const [artifacts, cam] = await Promise.all([
         host.call<{ outcome: { value?: unknown } }>("commands.execute", {
-          commandId: "extension-lab.glass-lab-artifacts.query",
+          commandId: "pstdio.extension-lab.command.glass-lab-artifacts.query",
           params: {},
         }),
         host.call<{ outcome: { value?: unknown } }>("commands.execute", {
-          commandId: "extension-lab.cams.current",
+          commandId: "pstdio.extension-lab.command.cams.current",
           params: {},
         }),
       ]);

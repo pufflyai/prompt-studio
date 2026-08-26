@@ -218,7 +218,7 @@ describe("pstdio sessions create with mocked OpenCode protocol", () => {
       const projectId = readProjectId(repo);
 
       const result = runSafe(
-        'sessions create --agent pstdio.harness-open-code.opencode --model openai/gpt-5.5 --prompt "external repo session smoke"',
+        'sessions create --agent pstdio.harness-open-code.harness.opencode --model openai/gpt-5.5 --prompt "external repo session smoke"',
         repo,
         FLOW_TIMEOUT,
       );
@@ -232,7 +232,7 @@ describe("pstdio sessions create with mocked OpenCode protocol", () => {
       if (!createdSessionId) throw new Error(`Session id missing from CLI output: ${result.stdout}`);
 
       const session = await waitForCompletedSession(createdSessionId);
-      expect(session.agent).toBe("pstdio.harness-open-code.opencode");
+      expect(session.agent).toBe("pstdio.harness-open-code.harness.opencode");
       expect(session.last_selected_model).toBe("openai/gpt-5.5");
       expect(session.agent_session_id).toBe(sessionId);
 

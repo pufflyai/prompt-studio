@@ -106,12 +106,19 @@ const contributionIds = (check: InstalledExtensionSource["check"]) => {
     ...check.themes,
     ...check.fileIconThemes,
     ...check.modes,
-    ...check.kanbanRenderers,
-    ...(check.dataTableRenderers ?? []),
-    ...check.commandPaletteResources,
-    ...check.treeRenderers,
-    ...check.fileRenderers,
-    ...check.controlsRenderers,
+    ...check.views,
+    ...check.viewMenus,
+    ...check.placements,
+    ...check.resourceKinds,
+    ...check.resourceViews,
+    ...(check.resourceHierarchyProviders ?? []),
+    ...check.navigationItems,
+    ...check.statusBarItems,
+    ...check.statuses,
+    ...(check.activityItems ?? []),
+    ...(check.settingsSections ?? []),
+    ...check.settingsPanels,
+    ...(check.commandPaletteResources ?? []),
     ...check.templates,
     ...check.skills,
   ].map((entry) => entry.id);
@@ -119,12 +126,7 @@ const contributionIds = (check: InstalledExtensionSource["check"]) => {
 };
 
 const webviewIds = (check: InstalledExtensionSource["check"]) => {
-  const ids = [
-    ...check.routes.filter((entry) => entry.webview),
-    ...check.panels.filter((entry) => entry.webview),
-    ...check.panels.flatMap((entry) => (entry.panelMenus ?? []).filter((menu) => menu.webview)),
-    ...check.settingsPanels.filter((entry) => entry.webview),
-  ].map((entry) => entry.id);
+  const ids = check.views.filter((entry) => entry.body.kind === "webview").map((entry) => entry.id);
   return [...new Set(ids)].sort();
 };
 

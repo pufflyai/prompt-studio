@@ -3,7 +3,9 @@ import { normalizeHotkey, parseHotkey, validateHotkey } from "@tanstack/hotkeys"
 import type { NormalizedExtension, ParsedKeybindingChord, RuntimeKeybindingRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
-import { type Accumulator, isRecord, type RegistryIndex, refId } from "./accumulator";
+import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
+import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
+import { resolveCommandRef } from "./references";
 import { findReservedKeybindingConflicts } from "./reserved-keybindings";
 
 const PLATFORM_KEYS = ["mac", "linux", "win"] as const;
@@ -115,21 +117,7 @@ const resolveCommandId = (
   runtime: Accumulator,
   index: RegistryIndex,
 ) => {
-  const ref = refId(contribution.command);
-  if (!ref) {
-    runtime.diagnostics.push(
-      createDiagnostic({
-        code: "invalid_keybinding",
-        message: `Keybinding "${contributionId}" must reference a command`,
-        extensionId: ext.id,
-        sourcePath: source.sourcePath,
-        metadata: { contributionId },
-      }),
-    );
-    return undefined;
-  }
-
-  const commandId = ref.includes(".") ? ref : `${ext.name}.${ref}`;
+  const commandId = resolveCommandRef(ext, contribution.command);
   if (!index.commandIds.has(commandId)) {
     runtime.diagnostics.push(
       createDiagnostic({
@@ -174,10 +162,19 @@ export const registerKeybindings = (
   runtime: Accumulator,
   index: RegistryIndex,
 ) => {
-  for (const [localId, raw] of Object.entries(source.definition.keybindings ?? {})) {
-    const contributionId = `${ext.name}.${localId}`;
+  const contributions = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "keybinding",
+    contributions: contributionArray<KeybindingContribution>(source.definition.keybindings),
+  });
+  for (const contribution of contributions) {
+    const localId = contribution.id;
+    const base = contributionRecordBase(ext, source, "keybinding", localId);
+    const contributionId = base.id;
 
-    if (!isRecord(raw) || typeof raw.key !== "string" || raw.key.length === 0) {
+    if (!isRecord(contribution) || typeof contribution.key !== "string" || contribution.key.length === 0) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_keybinding",
@@ -190,7 +187,6 @@ export const registerKeybindings = (
       continue;
     }
 
-    const contribution = raw as KeybindingContribution;
     if (!validateChord(contribution.key, "key", contributionId, ext, source, runtime)) continue;
 
     const overrides = collectPlatformOverrides(contribution);
@@ -257,11 +253,7 @@ export const registerKeybindings = (
     }
 
     const record: RuntimeKeybindingRecord = {
-      id: contributionId,
-      localId,
-      extensionId: ext.id,
-      name: ext.name,
-      sourcePath: source.sourcePath,
+      ...base,
       commandId,
       contribution,
       canonicalChord,

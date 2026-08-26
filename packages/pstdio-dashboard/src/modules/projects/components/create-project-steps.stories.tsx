@@ -14,11 +14,15 @@ type Story = StoryObj<typeof meta>;
 export const DetectedFirst: Story = {
   args: {
     harnesses: [
-      { id: "pstdio.harness-codex.codex", name: "Codex", availability: { type: "INSTALLED" } },
-      { id: "pstdio.harness-claude-code.claude-code", name: "Claude Code", availability: { type: "INSTALLED" } },
-      { id: "pstdio.harness-open-code.opencode", name: "OpenCode", availability: { type: "NOT_FOUND" } },
+      { id: "pstdio.harness-codex.harness.codex", name: "Codex", availability: { type: "INSTALLED" } },
+      {
+        id: "pstdio.harness-claude-code.harness.claude-code",
+        name: "Claude Code",
+        availability: { type: "INSTALLED" },
+      },
+      { id: "pstdio.harness-open-code.harness.opencode", name: "OpenCode", availability: { type: "NOT_FOUND" } },
     ],
-    selectedAgentIds: ["pstdio.harness-codex.codex", "pstdio.harness-claude-code.claude-code"],
+    selectedAgentIds: ["pstdio.harness-codex.harness.codex", "pstdio.harness-claude-code.harness.claude-code"],
     hasAgentError: false,
     isWorking: false,
     isAgentsLoading: false,

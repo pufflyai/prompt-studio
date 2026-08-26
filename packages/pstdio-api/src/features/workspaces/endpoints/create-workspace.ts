@@ -1,9 +1,10 @@
 import { createRoute, z } from "@hono/zod-openapi";
+import type { JsonObject } from "pstdio-api-contracts/extension-kernel";
 import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { createWorkspaceBodySchema, workspaceResponseSchema } from "../dto";
 import { runWorkspaceProvisioning } from "../provision-coordinator";
-import { setupWorkspaceWorktree } from "../worktree-setup";
+import { createProviderBackedWorkspace, WorkspaceRepoNotFoundError } from "../workspace-provider-service";
 
 export const createWorkspaceRoute = createRoute({
   method: "post",
@@ -21,6 +22,10 @@ export const createWorkspaceRoute = createRoute({
       description: "Workspace created.",
       content: { "application/json": { schema: workspaceResponseSchema } },
     },
+    202: {
+      description: "Workspace provisioning accepted.",
+      content: { "application/json": { schema: workspaceResponseSchema } },
+    },
     404: {
       description: "No repository found for the project.",
       content: { "application/json": { schema: z.object({ error: z.string() }) } },
@@ -28,46 +33,27 @@ export const createWorkspaceRoute = createRoute({
   },
 });
 
-const resolveProjectRepo = async (deps: WorkspacesRouteDeps, projectId: string, repoId?: string) => {
-  const repos = await deps.repoService.listByProject(projectId);
-  if (repos.length === 0) return null;
-  if (repoId) return repos.find((repo) => repo.id === repoId) ?? null;
-  return repos[0] ?? null;
-};
-
 export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof createWorkspaceRoute> => {
   return async (c) => {
     const input = c.req.valid("json");
-
-    const repo = await resolveProjectRepo(deps, input.project_id, input.repo_id);
-    if (!repo) {
-      return c.json({ error: `No repository found for project ${input.project_id}` }, 404);
-    }
-
-    const workspace = await deps.workspaceService.createStandalone({ project_id: input.project_id });
-
+    let workspace: Awaited<ReturnType<typeof createProviderBackedWorkspace>>;
     try {
-      const { branch, worktreePath } = await setupWorkspaceWorktree({
-        repoPath: repo.path,
-        workspaceShorthand: workspace.workspace_shorthand,
-        base: input.base ?? "HEAD",
-      });
-
-      const updated =
-        (await deps.workspaceService.updateGitMetadata(workspace.id, { branch, worktree_path: worktreePath })) ??
-        workspace;
-
-      const provisioned = await runWorkspaceProvisioning(deps, {
+      workspace = await createProviderBackedWorkspace(deps, {
         projectId: input.project_id,
-        workspace: updated,
-        repoPath: repo.path,
+        providerId: input.provider_id,
+        params: input.params as JsonObject | undefined,
+        repoId: input.repo_id,
+        base: input.base,
+        standalone: true,
+        provision: (workspace, repoPath) =>
+          runWorkspaceProvisioning(deps, { projectId: input.project_id, workspace, repoPath }),
       });
-
-      return c.json(provisioned, 201);
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const failed = (await deps.workspaceService.setSetupError(workspace.id, message)) ?? workspace;
-      return c.json(failed, 201);
+      if (error instanceof WorkspaceRepoNotFoundError) return c.json({ error: error.message }, 404);
+      throw error;
     }
+
+    const status = workspace.provider_state === "ready" && workspace.execution_kind === "local" ? 201 : 202;
+    return c.json(workspace, status);
   };
 };

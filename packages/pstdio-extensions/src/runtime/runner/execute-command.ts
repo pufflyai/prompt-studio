@@ -168,7 +168,7 @@ export const executeExtensionCommand = async (
 
   const start = Date.now();
   try {
-    const value = await record.run(buildCommandCtx(finalInvocation));
+    const value = await record.run(buildCommandCtx(finalInvocation), finalInvocation.params);
     const elapsedMs = Date.now() - start;
     await state.dispatcher.dispatch(lifecycleEventId("completed", record.id), {
       ...startedPayload,

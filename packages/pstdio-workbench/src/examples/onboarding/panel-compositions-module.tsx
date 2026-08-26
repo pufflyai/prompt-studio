@@ -192,7 +192,7 @@ const compositionFlags = (kind: CompositionKind) => ({
 });
 
 const collapseMenu = (
-  workbench: Pick<WorkbenchCore, "layout" | "panels">,
+  workbench: Pick<WorkbenchModuleContext, "layout" | "panels">,
   menuRegion: "main" | "secondary",
   panelId: string,
 ) => {
@@ -201,7 +201,7 @@ const collapseMenu = (
 };
 
 const applyLocationSwitch = async (
-  workbench: Pick<WorkbenchCore, "layout" | "panels" | "resources">,
+  workbench: Pick<WorkbenchModuleContext, "layout" | "panels" | "resources">,
   alphaLocation: { instanceId: string },
 ) => {
   collapseMenu(workbench, "main", locationMenuId);
@@ -222,7 +222,7 @@ const applyLocationSwitch = async (
 };
 
 const openPanelCompositionScenario = (
-  workbench: Pick<WorkbenchCore, "layout" | "panels" | "resources">,
+  workbench: Pick<WorkbenchModuleContext, "layout" | "panels" | "resources">,
   kind: CompositionKind,
 ) => {
   const flags = compositionFlags(kind);

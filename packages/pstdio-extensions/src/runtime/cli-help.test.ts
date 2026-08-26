@@ -21,24 +21,25 @@ const wrap = (definition: ReturnType<typeof defineExtension>): LoadedExtensionSo
 
 const labFixture = () =>
   defineExtension({
-    commands: {
-      "say-hello": {
+    commands: [
+      {
+        id: "say-hello",
+        ref: { kind: "command", id: "say-hello" },
         title: "Say hello",
         cli: true,
         menus: [{ slot: projectSlots.headerPrimary, label: "Lab: Say hello" }],
         run: async () => undefined,
       },
-      "counter.bump": {
+      {
+        id: "counter.bump",
+        ref: { kind: "command", id: "counter.bump" },
         title: "Bump counter",
         cli: true,
         menus: [{ slot: projectSlots.headerOverflow, label: "Bump" }],
         run: async () => undefined,
       },
-      hidden: {
-        title: "Hidden",
-        run: async () => undefined,
-      },
-    },
+      { id: "hidden", ref: { kind: "command", id: "hidden" }, title: "Hidden", run: async () => undefined },
+    ],
   });
 
 describe("buildCliHelpTree", () => {
@@ -48,7 +49,7 @@ describe("buildCliHelpTree", () => {
     expect(labRoot?.segment).toBe("lab");
     expect(labRoot?.children.map((c) => c.segment)).toEqual(["counter", "say-hello"]);
     expect(labRoot?.children.find((c) => c.segment === "counter")?.children[0]?.command?.commandId).toBe(
-      "lab.counter.bump",
+      "pstdio.lab.command.counter.bump",
     );
   });
 });

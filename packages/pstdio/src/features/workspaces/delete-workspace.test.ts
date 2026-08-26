@@ -1,26 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
 import { homedir } from "node:os";
-import type { Workspace } from "@pstdio/sdk/resources";
 import { deleteWorkspaceWithWorktree } from "./delete-workspace";
-
-const makeWorkspace = (shorthand: string): Workspace => ({
-  id: "ws-1",
-  project_id: "proj-1",
-  name: shorthand,
-  branch: `workspace/${shorthand}`,
-  worktree_path: `${homedir()}/.pstdio/workspaces/${shorthand}`,
-  is_default: false,
-  archived: false,
-  workspace_shorthand: shorthand,
-  startup_log_file_id: null,
-  anchors_json: [],
-  created_at: "2026-03-05T00:00:00.000Z",
-  updated_at: "2026-03-05T00:00:00.000Z",
-  deleted_at: null,
-});
+import { makeWorkspace } from "./workspace.test-fixture";
 
 const baseDeps = {
-  getWorkspace: async () => makeWorkspace("PS-1_A1"),
+  getWorkspace: async () => makeWorkspace({ workspace_shorthand: "PS-1_A1" }),
   deleteWorkspace: async () => {},
   removeWorktreeAndBranch: async () => {},
   log: () => {},

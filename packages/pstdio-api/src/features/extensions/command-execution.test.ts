@@ -34,17 +34,19 @@ const writeCommandExtension = (root: string) => {
   writeFileSync(
     join(extensionRoot, "extension.ts"),
     `export default {
-      commands: {
-        "counter.bump": {
+      commands: [
+        {
+          id: "counter.bump",
+          ref: { kind: "command", id: "counter.bump" },
           title: "Bump lab counter",
           cli: { globalAliases: [["counter", "bump"]] },
           params: { amount: { type: "number", defaultValue: 1 } },
-          async run(ctx) {
+          async run(ctx, commandParams) {
             const current = await ctx.storage.get("counter") ?? 0;
-            const amount = ctx.params.amount ?? 1;
+            const amount = commandParams.amount ?? 1;
             const next = current + amount;
             await ctx.storage.set("counter", next);
-            await ctx.events.emit("lab.counter.changed", { counter: next });
+            await ctx.events.emit({ kind: "event", id: "counter.changed" }, { counter: next });
             return {
               counter: next,
               projectId: ctx.projectId,
@@ -54,42 +56,52 @@ const writeCommandExtension = (root: string) => {
             };
           },
         },
-        "counter.read": {
+        {
+          id: "counter.read",
+          ref: { kind: "command", id: "counter.read" },
           title: "Read lab counter",
           cli: true,
-          async run(ctx) {
+          async run(ctx, commandParams) {
             return { counter: await ctx.storage.get("counter") ?? 0 };
           },
         },
-        awaken: {
+        {
+          id: "awaken",
+          ref: { kind: "command", id: "awaken" },
           title: "Awaken",
           async run() {
             return { awakened: true };
           },
         },
-        boom: {
+        {
+          id: "boom",
+          ref: { kind: "command", id: "boom" },
           title: "Boom",
           async run() {
             throw new Error("kaboom");
           },
         },
-        loop: {
+        {
+          id: "loop",
+          ref: { kind: "command", id: "loop" },
           title: "Loop",
-          async run(ctx) {
-            return ctx.commands.execute("lab.loop", { params: {} });
+          async run(ctx, commandParams) {
+            return ctx.commands.execute({ kind: "command", id: "loop" }, { params: {} });
           },
         },
-      },
-      middlewares: {
-        rejectSentience: {
-          commandId: "lab.awaken",
-          async handler(ctx) {
-            if (String(ctx.params.title ?? "").toLowerCase().includes("consciousness")) {
+      ],
+      middlewares: [
+        {
+          id: "reject-sentience",
+          ref: { kind: "middleware", id: "reject-sentience" },
+          command: { kind: "command", id: "awaken" },
+          async run(ctx, commandParams) {
+            if (String(commandParams.title ?? "").toLowerCase().includes("consciousness")) {
               return ctx.commands.reject({ code: "sentience_rejected", reason: "refusing sentience" });
             }
           },
         },
-      },
+      ],
     };`,
   );
   return extensionRoot;
@@ -163,7 +175,7 @@ describe("extension command execution routes", () => {
     const body = await response.json();
     expect(body.commands).toContainEqual(
       expect.objectContaining({
-        id: "lab.counter.bump",
+        id: "pstdio.lab.command.counter.bump",
         cliPath: "lab counter bump",
         extensionId: "pstdio.lab",
         cliAliases: ["counter bump"],
@@ -176,27 +188,30 @@ describe("extension command execution routes", () => {
     const syncEvents: Array<{ table: string; data: unknown }> = [];
     const unsubscribe = appEventBus.subscribe((event) => syncEvents.push({ table: event.table, data: event.data }));
     const repo = await createJson(`/v1/projects/${projectId}/repos`, { name: "repo", path: tempRoot });
-    const bumpResponse = await app.request(`/v1/projects/${projectId}/extensions/commands/lab.counter.bump/execute`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        params: { amount: 2 },
-        repo: { projectId, repoId: repo.id, path: tempRoot },
-        resource: { type: "ticket", id: "PS-1", projectId },
-        source: "cli",
-      }),
-    });
+    const bumpResponse = await app.request(
+      `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.counter.bump/execute`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          params: { amount: 2 },
+          repo: { projectId, repoId: repo.id, path: tempRoot },
+          resource: { type: "ticket", id: "PS-1", projectId },
+          source: "cli",
+        }),
+      },
+    );
 
     expect(bumpResponse.status).toBe(200);
     const bump = await bumpResponse.json();
     expect(bump).toMatchObject({
-      commandId: "lab.counter.bump",
+      commandId: "pstdio.lab.command.counter.bump",
       extensionId: "pstdio.lab",
       eventIds: [
-        "command.requested:lab.counter.bump",
-        "command.started:lab.counter.bump",
-        "lab.counter.changed",
-        "command.completed:lab.counter.bump",
+        "command.requested:pstdio.lab.command.counter.bump",
+        "command.started:pstdio.lab.command.counter.bump",
+        "pstdio.lab.event.counter.changed",
+        "command.completed:pstdio.lab.command.counter.bump",
       ],
       outcome: {
         ok: true,
@@ -207,24 +222,30 @@ describe("extension command execution routes", () => {
     unsubscribe();
     expect(syncEvents).toContainEqual({
       table: "extension_events",
-      data: expect.objectContaining({ projectId, eventId: "lab.counter.changed" }),
+      data: expect.objectContaining({ projectId, eventId: "pstdio.lab.event.counter.changed" }),
     });
 
-    const readResponse = await app.request(`/v1/projects/${projectId}/extensions/commands/lab.counter.read/execute`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: "{}",
-    });
+    const readResponse = await app.request(
+      `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.counter.read/execute`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      },
+    );
     const read = await readResponse.json();
     expect(read.outcome.value).toEqual({ counter: 2 });
   });
 
   test("returns rejected middleware outcomes without running the handler", async () => {
-    const response = await app.request(`/v1/projects/${projectId}/extensions/commands/lab.awaken/execute`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ params: { title: "Gain consciousness" } }),
-    });
+    const response = await app.request(
+      `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.awaken/execute`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ params: { title: "Gain consciousness" } }),
+      },
+    );
 
     expect(response.status).toBe(200);
     const body = await response.json();
@@ -237,14 +258,17 @@ describe("extension command execution routes", () => {
   });
 
   test("reports missing commands and handler failures", async () => {
-    const missing = await app.request(`/v1/projects/${projectId}/extensions/commands/lab.missing/execute`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: "{}",
-    });
+    const missing = await app.request(
+      `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.missing/execute`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      },
+    );
     expect(missing.status).toBe(404);
 
-    const failed = await app.request(`/v1/projects/${projectId}/extensions/commands/lab.boom/execute`, {
+    const failed = await app.request(`/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.boom/execute`, {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: "{}",
@@ -252,7 +276,7 @@ describe("extension command execution routes", () => {
     expect(failed.status).toBe(200);
     const body = await failed.json();
     expect(body).toMatchObject({
-      commandId: "lab.boom",
+      commandId: "pstdio.lab.command.boom",
       extensionId: "pstdio.lab",
       outcome: { ok: false, status: "error", code: "handler_threw", reason: "kaboom" },
     });
@@ -261,22 +285,28 @@ describe("extension command execution routes", () => {
   test("rejects an execute request carrying an unknown or foreign workspace id", async () => {
     // The workspace id must resolve to a workspace in this route's project; a missing or
     // cross-project id is refused so a caller cannot mount another project's worktree.
-    const response = await app.request(`/v1/projects/${projectId}/extensions/commands/lab.counter.read/execute`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ workspaceId: "ws_from_another_project" }),
-    });
+    const response = await app.request(
+      `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.counter.read/execute`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ workspaceId: "ws_from_another_project" }),
+      },
+    );
 
     expect(response.status).toBe(404);
     expect((await response.json()).code).toBe("workspace_not_found");
   });
 
   test("protects nested command execution from recursion", async () => {
-    const response = await app.request(`/v1/projects/${projectId}/extensions/commands/lab.loop/execute`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: "{}",
-    });
+    const response = await app.request(
+      `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.loop/execute`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: "{}",
+      },
+    );
 
     expect(response.status).toBe(200);
     expect(JSON.stringify(await response.json())).toContain("nested_depth_exceeded");

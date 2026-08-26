@@ -6,8 +6,8 @@ type SubscribeExtensionEnablementInvalidationInput = {
   invalidate: ProjectExtensionRuntimeCatalog["invalidate"];
 };
 
-// "set" events carry the instance row with its scope; "delete" events carry only
-// the instance id, so a removal cannot name its project and invalidates everything.
+// Instance events carry their scope, including deletion events whose row has already
+// been removed from storage. This keeps runtime invalidation project-local.
 const projectIdOf = (data: unknown) => {
   if (typeof data !== "object" || data === null) return undefined;
   const row = data as { scope_type?: unknown; scope_id?: unknown };

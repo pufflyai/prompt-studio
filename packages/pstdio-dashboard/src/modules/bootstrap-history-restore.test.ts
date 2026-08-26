@@ -1,15 +1,14 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createWorkbenchCore, type PersistedWorkbenchHistory } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardResources } from "@/shared/app/resources";
+import { dashboardViews } from "@/shared/app/resources";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { createBootstrapModule } from "./bootstrap";
 import { createExtensionsModule } from "./extensions/module";
 import { emptyAppearance, flushMicrotasks, type metadataWithLabMode } from "./extensions/module-test-fixtures";
 
 describe("createBootstrapModule history restore", () => {
-  test("restores built-in history without waiting for extension contributions", async () => {
-    const resource = dashboardResources.workspaces;
+  test("restores a built-in view without waiting for extension contributions", async () => {
     const widgetId = "test.workspaces";
     const persisted: PersistedWorkbenchHistory = {
       version: 1,
@@ -18,21 +17,21 @@ describe("createBootstrapModule history restore", () => {
         {
           entryId: "workspaces-history",
           recordedAt: 1,
-          kind: "resource",
+          kind: "view",
           location: {
-            key: `project:resource:${resource.uri}`,
+            key: `project:view:${dashboardViews.workspaces.id}`,
             modeId: "project",
-            resource,
+            viewId: dashboardViews.workspaces.id,
             contributionId: widgetId,
             instanceKey: widgetId,
-            title: resource.label,
+            title: dashboardViews.workspaces.label,
           },
           selectedSubPanels: {},
           modeId: "project",
-          resource,
+          viewId: dashboardViews.workspaces.id,
           widgetId,
           contributionId: widgetId,
-          title: resource.label,
+          title: dashboardViews.workspaces.label,
         },
       ],
       recentlyClosed: [],
@@ -46,18 +45,11 @@ describe("createBootstrapModule history restore", () => {
     });
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.resources.registerKind({ kind: "dashboard-view", label: "Dashboard view" });
-    workbench.layout.registerPanel({
-      id: widgetId,
-      title: "Workspaces",
-      region: "main",
-      rendererId: widgetId,
-      singleton: true,
-    });
-    workbench.resources.registerPresenter({
-      id: widgetId,
-      canOpen: (candidate) => candidate.uri === resource.uri,
-      open: (candidate) => workbench.layout.openPanel(widgetId, { resource: candidate }),
+    workbench.layout.registerPanel({ id: widgetId, title: "Workspaces", region: "main", rendererId: widgetId });
+    workbench.views.registerView({
+      id: dashboardViews.workspaces.id,
+      panelId: widgetId,
+      title: dashboardViews.workspaces.label,
     });
     workbench.history.setPersistenceScope("project:project-1");
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -71,8 +63,8 @@ describe("createBootstrapModule history restore", () => {
 
     try {
       await flushMicrotasks();
-
-      expect(workbench.getPrimaryResource()?.uri).toBe(resource.uri);
+      const placement = workbench.layout.getLayout().regions.main.widgets[0];
+      expect(placement?.viewId).toBe(dashboardViews.workspaces.id);
       expect(workbench.history.store.getState().hydrating).toBe(false);
     } finally {
       bootstrap.dispose();

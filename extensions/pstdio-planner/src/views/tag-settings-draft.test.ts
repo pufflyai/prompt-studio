@@ -150,7 +150,7 @@ describe("tag settings draft", () => {
 
     expect(calls).toEqual([
       {
-        commandId: "pstdio-planner.ticketTag.applyDraft",
+        commandId: "pstdio.pstdio-planner.command.ticketTag.applyDraft",
         params: {
           tagId: "tag-1",
           type: "multi_select",

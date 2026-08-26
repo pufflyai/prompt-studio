@@ -192,7 +192,7 @@ export const createFakeHarness = () => {
     },
 
     getMessages: (_ctx, input) => sessions.get(input.agentSessionId) ?? [],
-  } satisfies HarnessProvider;
+  } satisfies Omit<HarnessProvider, "ref">;
 
   return provider;
 };

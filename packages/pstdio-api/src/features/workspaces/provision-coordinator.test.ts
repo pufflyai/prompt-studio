@@ -8,7 +8,15 @@ import {
   type WorkspaceProvisioningHooks,
 } from "./provision-coordinator";
 
-type Row = { id: string; initializing: boolean; setup_error: string | null; worktree_path: string | null };
+type Row = {
+  id: string;
+  initializing: boolean;
+  setup_error: string | null;
+  worktree_path: string | null;
+  provider_id?: string;
+  provider_state?: string;
+  execution_kind?: string;
+};
 
 const makeDeps = (row: Row) => {
   const calls: string[] = [];
@@ -128,6 +136,31 @@ describe("runWorkspaceProvisioning", () => {
 });
 
 describe("provisionProjectWorkspaces", () => {
+  test("does not provision remote workspaces into the project repository", async () => {
+    const row: Row = {
+      id: "ws-remote",
+      initializing: false,
+      setup_error: null,
+      worktree_path: null,
+      provider_id: "pocketcoder.remote",
+      provider_state: "ready",
+      execution_kind: "remote",
+    };
+    const { deps, calls } = makeDeps(row);
+    const ensured: string[] = [];
+    const hooks = {
+      ...makeHooks(undefined, []),
+      ensureConfig: async (workspaceDir: string) => {
+        ensured.push(workspaceDir);
+      },
+    };
+
+    await provisionProjectWorkspaces(deps, "p1", hooks);
+
+    expect(ensured).toEqual([]);
+    expect(calls).toEqual([]);
+  });
+
   test("schedules derived workspace sync without holding the caller open", async () => {
     const row: Row = { id: "ws-1", initializing: false, setup_error: null, worktree_path: "/wt" };
     const { deps } = makeDeps(row);

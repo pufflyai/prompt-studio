@@ -9,7 +9,7 @@ const record: WorkbenchExtensionCommandPaletteResourceRecord = {
   extensionId: "pstdio.lab",
   title: "Slides",
   resourceKind: "lab.slide",
-  queryCommandId: "lab.querySlides",
+  queryHandlerId: "lab.querySlides",
 };
 
 describe("registerWorkbenchExtensionCommandPaletteResources", () => {
@@ -26,7 +26,13 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
               label: "Intro",
               description: "First slide",
               icon: "Presentation",
-              target: { kind: "command", command: "lab.openSlide", params: { slideId: "intro" } },
+              target: {
+                kind: "command",
+                target: {
+                  command: { kind: "command", id: "openSlide" },
+                  params: { slideId: "intro" },
+                },
+              },
             },
           ],
         };
@@ -62,7 +68,7 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
     });
 
     await results[0]?.results[0]?.activate();
-    const activateCall = calls.find((call) => call.commandId === "lab.openSlide");
+    const activateCall = calls.find((call) => call.commandId === "pstdio.lab.command.openSlide");
     expect(activateCall?.body).toMatchObject({ params: { slideId: "intro" } });
   });
 
@@ -154,8 +160,8 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
           target: {
             kind: "compound",
             targets: [
-              { kind: "panel", panel: "ticket" },
-              { kind: "panel", panel: "missing" },
+              { kind: "view", view: { kind: "view", id: "ticket" } },
+              { kind: "view", view: { kind: "view", id: "missing" } },
             ],
           },
         },
@@ -163,30 +169,19 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
     });
 
     workbench.layout.registerPanel({
-      id: "ticket",
+      id: "pstdio.lab.view.ticket",
       title: "Ticket",
       region: "main",
       rendererId: "test",
     });
-    workbench.layout.registerPanel({
-      id: "notes",
-      title: "Notes",
-      region: "main",
-      rendererId: "test",
-    });
-    workbench.commands.registerCommand(
-      { id: "workbench.extensionNavigation.openPanel", label: "Open panel" },
-      {
-        execute: (panelId) => {
-          opened.push(String(panelId));
-          workbench.layout.openPanel(String(panelId));
-        },
-      },
-    );
+    workbench.views.registerView({ id: "pstdio.lab.view.ticket", panelId: "pstdio.lab.view.ticket", title: "Ticket" });
+    workbench.views.onDidOpenView(({ viewId }) => opened.push(viewId));
     registerWorkbenchExtensionCommandPaletteResources({ executeCommand, projectId: "p1", workbench }, [record]);
 
     const results = await workbench.commandPaletteResources.queryProviders({ query: "compound", limit: 10 });
-    await expect(results[0]?.results[0]?.activate()).rejects.toThrow("Cannot open navigation Panel target: missing");
+    await expect(results[0]?.results[0]?.activate()).rejects.toThrow(
+      "Cannot open navigation view target: pstdio.lab.view.missing",
+    );
 
     expect(opened).toEqual([]);
   });

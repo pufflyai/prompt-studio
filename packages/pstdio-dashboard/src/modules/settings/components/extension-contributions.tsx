@@ -8,12 +8,10 @@ import {
   Copy,
   FileCode,
   LayoutDashboard,
-  LayoutGrid,
   ListTree,
   MenuIcon,
   Palette,
   PanelsTopLeft,
-  Route,
   SlidersHorizontal,
   Sparkles,
   Terminal,
@@ -81,29 +79,25 @@ export const buildContributionGroups = (metadata: DashboardExtensionMetadata | u
       key: "modes",
       icon: LayoutDashboard,
       rows: forExtension(metadata?.modes, extensionId).map((record) =>
-        row(String(record.modeId ?? record.id), text(record.label, extensionId)),
+        row(String(record.id), text(record.label, extensionId)),
       ),
     },
     {
-      key: "panels",
+      key: "views",
       icon: PanelsTopLeft,
-      rows: forExtension(metadata?.panels, extensionId).map((record) =>
+      rows: forExtension(metadata?.views, extensionId).map((record) =>
         row(
           String(record.id),
-          text(record.title ?? record.label, extensionId),
-          typeof record.slotId === "string" ? record.slotId : undefined,
-        ),
-      ),
-    },
-    {
-      key: "routes",
-      icon: Route,
-      rows: forExtension(metadata?.routes, extensionId).map((record) =>
-        row(
-          String(record.id),
-          text(record.label, extensionId),
+          text(record.title, extensionId),
           typeof record.path === "string" ? record.path : undefined,
         ),
+      ),
+    },
+    {
+      key: "placements",
+      icon: LayoutDashboard,
+      rows: forExtension(metadata?.placements, extensionId).map((record) =>
+        row(String(record.id), String(record.region)),
       ),
     },
     {
@@ -121,19 +115,8 @@ export const buildContributionGroups = (metadata: DashboardExtensionMetadata | u
       key: "settingsPanels",
       icon: SlidersHorizontal,
       rows: forExtension(metadata?.settingsPanels, extensionId).map((record) =>
-        row(String(record.id), text(record.title, extensionId)),
+        row(String(record.id), String((record.view as { id?: unknown }).id ?? record.id)),
       ),
-    },
-    {
-      key: "renderers",
-      icon: LayoutGrid,
-      rows: [
-        ...forExtension(metadata?.kanbanRenderers, extensionId),
-        ...forExtension(metadata?.dataTableRenderers, extensionId),
-        ...forExtension(metadata?.treeRenderers, extensionId),
-        ...forExtension(metadata?.fileRenderers, extensionId),
-        ...forExtension(metadata?.controlsRenderers, extensionId),
-      ].map((record) => row(String(record.id), text(record.title ?? record.label, extensionId))),
     },
     {
       key: "skills",
@@ -157,10 +140,10 @@ export const buildContributionGroups = (metadata: DashboardExtensionMetadata | u
       ),
     },
     {
-      key: "treeItems",
+      key: "navigationItems",
       icon: ListTree,
-      rows: forExtension(metadata?.treeItems, extensionId).map((record) =>
-        row(String(record.id), text(record.label ?? record.title, extensionId)),
+      rows: forExtension(metadata?.navigationItems, extensionId).map((record) =>
+        row(String(record.id), text(record.label, extensionId)),
       ),
     },
     {

@@ -7,6 +7,7 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { OpenWorkbenchPanelInput } from "../layout/layout-types";
 import type { OpenResourceInput, ResourceRef } from "../resources/resource-registry";
+import type { OpenWorkbenchViewInput } from "../views/view-registry";
 
 export interface NavigationTargetResource {
   kind: "resource";
@@ -20,13 +21,29 @@ export interface NavigationTargetPanel {
   input?: OpenWorkbenchPanelInput;
 }
 
+export interface NavigationTargetView {
+  kind: "view";
+  viewId: string;
+  input?: OpenWorkbenchViewInput;
+}
+
 export interface NavigationTargetCommand {
   kind: "command";
   commandId: string;
   args?: unknown;
 }
 
-export type NavigationTargetItem = NavigationTargetResource | NavigationTargetPanel | NavigationTargetCommand;
+export interface NavigationTargetHref {
+  kind: "href";
+  href: string;
+}
+
+export type NavigationTargetItem =
+  | NavigationTargetResource
+  | NavigationTargetView
+  | NavigationTargetPanel
+  | NavigationTargetCommand
+  | NavigationTargetHref;
 
 export interface NavigationTargetCompound {
   kind: "compound";
@@ -59,11 +76,14 @@ export type RegisteredResourceNavigator = Omit<ResourceNavigator, "priority"> & 
 export interface NavigationDispatcherContext {
   canOpenResource?(resource: ResourceRef): boolean;
   canOpenPanel?(panelId: string): boolean;
+  canOpenView?(viewId: string): boolean;
   canExecuteCommand?(commandId: string): boolean;
   createCheckpoint?(): undefined | (() => void);
   openResource(resource: ResourceRef, input?: OpenResourceInput): Promise<unknown>;
   openPanel(panelId: string, input?: OpenWorkbenchPanelInput): unknown;
+  openView(viewId: string, input?: OpenWorkbenchViewInput): Promise<unknown> | unknown;
   executeCommand(commandId: string, args?: unknown): Promise<unknown> | unknown;
+  openHref?(href: string): Promise<unknown> | unknown;
 }
 
 const byPriorityAndId = (left: { id: string; priority: number }, right: { id: string; priority: number }) =>
@@ -99,7 +119,12 @@ const noDispatcher = (): NavigationDispatcherContext => {
 
 const dispatchItem = async (target: NavigationTargetItem, dispatcher: NavigationDispatcherContext) => {
   if (target.kind === "resource") return dispatcher.openResource(target.resource, target.input);
+  if (target.kind === "view") return dispatcher.openView(target.viewId, target.input);
   if (target.kind === "panel") return dispatcher.openPanel(target.panelId, target.input);
+  if (target.kind === "href") {
+    if (!dispatcher.openHref) throw new Error(`Cannot open navigation href target: ${target.href}`);
+    return dispatcher.openHref(target.href);
+  }
   return dispatcher.executeCommand(target.commandId, target.args);
 };
 
@@ -109,6 +134,9 @@ const validateItem = (target: NavigationTargetItem, dispatcher: NavigationDispat
   }
   if (target.kind === "panel" && dispatcher.canOpenPanel?.(target.panelId) === false) {
     throw new Error(`Cannot open navigation Panel target: ${target.panelId}`);
+  }
+  if (target.kind === "view" && dispatcher.canOpenView?.(target.viewId) === false) {
+    throw new Error(`Cannot open navigation view target: ${target.viewId}`);
   }
   if (target.kind === "command" && dispatcher.canExecuteCommand?.(target.commandId) === false) {
     throw new Error(`Cannot open navigation command target: ${target.commandId}`);

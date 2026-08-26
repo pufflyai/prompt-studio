@@ -1,24 +1,24 @@
 import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "../data/memory-storage";
-import { makeCommandContext } from "./command-context.fixture";
+import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { listTicketFilesTreeCommand } from "./ticket-files";
 
 describe("ticket files tree sub-ticket section", () => {
   test("lists child tickets as sub-tickets in the ticket resource tree", async () => {
     const storage = createMemoryStorage();
-    const parent = await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Parent" } }));
+    const parent = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Parent" } }));
     const child = await createTicketCommand.run(
-      makeCommandContext({ storage, params: { title: "Child", parentId: parent.id } }),
+      ...makeCommandArgs({ storage, params: { title: "Child", parentId: parent.id } }),
     );
-    await createTicketCommand.run(makeCommandContext({ storage, params: { title: "Unrelated" } }));
+    await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Unrelated" } }));
 
     const sections = await listTicketFilesTreeCommand.run(
-      makeCommandContext({
+      ...makeCommandArgs({
         storage,
         params: {
           renderer: {
-            rendererId: "pstdio-planner.ticketFiles",
+            rendererId: "pstdio.pstdio-planner.view.ticket-files",
             resource: { type: "ticket", id: parent.id, label: parent.shorthand },
           },
         },
@@ -51,12 +51,7 @@ describe("ticket files tree sub-ticket section", () => {
                   label: `${parent.shorthand} ${parent.title}`,
                   metadata: {
                     shorthand: parent.shorthand,
-                    resourceParent: {
-                      type: "extension-view",
-                      id: "pstdio-planner.tickets",
-                      label: "Tickets",
-                      icon: "square-kanban",
-                    },
+                    resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
                   },
                 },
               },

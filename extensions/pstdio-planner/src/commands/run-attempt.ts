@@ -4,6 +4,7 @@ import { appendAttemptEvent, launchClaimsCollection, putAttempt } from "../data/
 import type { AttemptLaunchClaim, AttemptRecord, HumanRequestReason } from "../data/attempt-types";
 import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
+import { ticketSlots } from "../slots";
 import { loadAttemptReadiness } from "./attempt-readiness";
 import { requestHuman } from "./human-requests";
 import {
@@ -23,11 +24,12 @@ const humanReadinessReasons = new Set<HumanRequestReason>([
 ]);
 
 export const runAttemptCommand = defineCommand({
+  id: "run-attempt",
   title: "Run attempt",
   cli: { examples: ["pst pstdio-planner run-attempt --ticket PS-1"] },
   menus: [
     {
-      slot: "ticket.headerOverflow",
+      slot: ticketSlots.headerOverflow,
       label: l10n("kanbanRenderers.tickets.rowActions.runAttempt", "Run attempt"),
       icon: "play",
     },
@@ -36,12 +38,10 @@ export const runAttemptCommand = defineCommand({
     ...ticketActionParams,
     repo: params.repo({ label: "Workspace" }),
     mode: workspaceModeParam,
-    expectedBaseWorkspaceId: params.text({ label: "Expected base workspace", required: false }),
-    expectedBaseHeadSha: params.text({ label: "Expected base commit", required: false }),
   },
-  async run(ctx) {
-    const { agent } = ctx.params;
-    const ticketRef = resolveTicket(ctx);
+  async run(ctx, commandParams) {
+    const { agent } = commandParams;
+    const ticketRef = resolveTicket(ctx, commandParams);
     const ticketIdentity = await resolveTicketIdentity(ctx, ticketRef);
     const claims = launchClaimsCollection(ctx.storage);
     const now = new Date();
@@ -61,7 +61,7 @@ export const runAttemptCommand = defineCommand({
     }
 
     try {
-      const { readiness } = await loadAttemptReadiness(ctx, ticketRef);
+      const { readiness } = await loadAttemptReadiness(ctx, ticketRef, commandParams);
       if (readiness.decision === "wait") {
         const storedTicket = await findTicket(ctx.storage, ticketRef);
         if (storedTicket?.statusId && humanReadinessReasons.has(readiness.reason as HumanRequestReason)) {
@@ -76,15 +76,11 @@ export const runAttemptCommand = defineCommand({
         }
         return readiness;
       }
-      if (
-        (ctx.params.expectedBaseWorkspaceId !== undefined &&
-          ctx.params.expectedBaseWorkspaceId !== (readiness.baseWorkspaceId ?? "")) ||
-        (ctx.params.expectedBaseHeadSha !== undefined && ctx.params.expectedBaseHeadSha !== readiness.baseHeadSha)
-      ) {
-        return { decision: "wait" as const, reason: "stale-base" as const, dependencyIds: [] };
-      }
-
-      const { anchor, mode, ticket, workspace } = await createAnchoredWorkspace(ctx, readiness.baseHeadSha);
+      const { anchor, mode, ticket, workspace } = await createAnchoredWorkspace(
+        ctx,
+        commandParams,
+        readiness.baseHeadSha,
+      );
       const attemptAnchor: ResourceAnchor = {
         type: "planner-attempt",
         id: workspace.id,

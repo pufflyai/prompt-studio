@@ -281,15 +281,14 @@
           "harnesses": "하니스",
           "commands": "명령",
           "modes": "모드",
-          "panels": "뷰",
-          "routes": "라우트",
+          "views": "뷰",
+          "placements": "배치",
           "menuContributions": "메뉴 항목",
           "settingsPanels": "설정 패널",
-          "renderers": "렌더러",
           "skills": "스킬",
           "templates": "템플릿",
           "themes": "테마",
-          "treeItems": "트리 항목",
+          "navigationItems": "탐색 항목",
           "commandPaletteResources": "명령 팔레트 리소스"
         }
       },
