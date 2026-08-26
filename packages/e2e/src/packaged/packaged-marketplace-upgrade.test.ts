@@ -251,7 +251,9 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     await page.getByTestId("extension-delete").click();
     const dialog = page.getByRole("dialog").last();
     await dialog.getByRole("button", { name: "Delete", exact: true }).click();
-    const marketplaceRow = page.getByTestId("marketplace-extension-entry").filter({ hasText: "Prompt Studio Planner" });
+    const marketplaceRow = page
+      .getByTestId("marketplace-extension-entry")
+      .filter({ has: page.getByText("Prompt Studio Planner", { exact: true }) });
     await marketplaceRow.waitFor();
 
     const reinstallResponse = page.waitForResponse(

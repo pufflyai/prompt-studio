@@ -354,8 +354,15 @@ describe("GET /v1/projects/:projectId/extensions", () => {
           installName: "pstdio-planner",
           installed: false,
         }),
+        expect.objectContaining({
+          displayName: "Prompt Studio Planner Automation",
+          installName: "pstdio-planner-loops",
+          installed: false,
+        }),
       ]),
     );
+    expect(body.marketplace.every((entry: Record<string, unknown>) => !("repositoryPath" in entry))).toBe(true);
+    expect(body.marketplace.every((entry: Record<string, unknown>) => !("scope" in entry))).toBe(true);
   });
 });
 

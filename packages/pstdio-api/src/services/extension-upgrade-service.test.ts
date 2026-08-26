@@ -51,6 +51,7 @@ const idleExtensionService = {
   },
   getInstalledSource: async () => null as never,
   getProjectExtensionInstance: async () => null as never,
+  listProjectExtensionInstances: async () => [],
   registerInstalledSource: async () => {
     throw new Error("should not register");
   },

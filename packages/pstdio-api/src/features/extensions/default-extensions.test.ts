@@ -111,6 +111,7 @@ describe("resolveDefaultExtensionsConfig", () => {
       "harness-open-code",
       "pstdio-base-themes",
       "pstdio-planner",
+      "pstdio-planner-loops",
       "pstdio-reports",
       "pstdio-skills",
     ]);

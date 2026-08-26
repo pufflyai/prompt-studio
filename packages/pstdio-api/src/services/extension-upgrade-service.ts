@@ -1,6 +1,10 @@
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { isMarketplaceExtension } from "../features/extensions/extension-marketplace";
+import {
+  getMarketplaceExtension,
+  isMarketplaceExtension,
+  marketplaceExtensionRepositoryPath,
+} from "../features/extensions/extension-marketplace";
 import { runCommand } from "../features/extensions/install-extension-dependencies";
 import {
   type InstallExtensionSourceInput,
@@ -15,7 +19,11 @@ import type { createRepoService } from "./repo-service";
 
 type ExtensionService = Pick<
   ReturnType<typeof createExtensionService>,
-  "enableInstalledSourceForProject" | "getInstalledSource" | "getProjectExtensionInstance" | "registerInstalledSource"
+  | "enableInstalledSourceForProject"
+  | "getInstalledSource"
+  | "getProjectExtensionInstance"
+  | "listProjectExtensionInstances"
+  | "registerInstalledSource"
 >;
 
 type RepoService = Pick<ReturnType<typeof createRepoService>, "listByProject">;
@@ -26,6 +34,7 @@ type ExtensionUpgradeServiceDeps = {
   releaseRef?: string;
   resolveReleaseCommit?: (releaseRef: string) => Promise<string>;
   repoService: RepoService;
+  sourceRoot?: string;
 };
 
 type UpgradeSource = {
@@ -51,7 +60,7 @@ const gitCommitPattern = /^[0-9a-f]{40}$/i;
 const commitFromSourceRef = (source: UpgradeSource) => {
   if (!source.source_ref) return null;
   const prefix = `${PSTDIO_REPOSITORY_URL}@`;
-  const suffix = `#extensions/${source.install_name}`;
+  const suffix = `#${marketplaceExtensionRepositoryPath(source.install_name)}`;
   if (!source.source_ref.startsWith(prefix) || !source.source_ref.endsWith(suffix)) return null;
   const commit = source.source_ref.slice(prefix.length, -suffix.length);
   return gitCommitPattern.test(commit) ? commit.toLowerCase() : null;
@@ -140,13 +149,17 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
     });
   };
 
-  const installForRelease = async (installName: string) => {
+  const installForRelease = async (installName: string, repoPath?: string) => {
     assertMarketplaceInstall(installName);
+    const source = deps.sourceRoot
+      ? join(deps.sourceRoot, marketplaceExtensionRepositoryPath(installName))
+      : installName;
     const installed = await install({
-      source: installName,
+      source,
       installName,
       force: true,
-      ref: deps.releaseRef,
+      ...(deps.sourceRoot ? { skipInstall: true } : { ref: deps.releaseRef }),
+      ...(repoPath ? { repoPath } : {}),
       reuseInstalledDependencies: true,
     });
     const installedCommit =
@@ -171,12 +184,17 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       "extension-catalog",
       encodeURIComponent(deps.releaseRef!),
     );
+    const extension = getMarketplaceExtension(installName);
+    const source = deps.sourceRoot
+      ? join(deps.sourceRoot, marketplaceExtensionRepositoryPath(installName))
+      : installName;
     const preview = install({
       env: { ...process.env, PSTDIO_HOME: previewHome },
-      source: installName,
+      source,
       installName,
       force: true,
-      ref: deps.releaseRef,
+      ...(deps.sourceRoot ? { skipInstall: true } : { ref: deps.releaseRef }),
+      ...(extension?.scope === "repo" ? { repoPath: join(previewHome, "repo") } : {}),
       reuseInstalledDependencies: true,
     }).catch((error) => {
       if (previewSources.get(installName) === preview) previewSources.delete(installName);
@@ -188,6 +206,39 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
 
   const installMarketplaceExtension = async (projectId: string, installName: string) => {
     assertMarketplaceInstall(installName);
+    const extension = getMarketplaceExtension(installName)!;
+    if (extension.scope === "repo") {
+      const repos = [...(await deps.repoService.listByProject(projectId))].sort((left, right) =>
+        left.path.localeCompare(right.path),
+      );
+      if (repos.length === 0) {
+        throw new ExtensionUpgradeUnavailableError("Link a repository before installing this repo-scoped extension.");
+      }
+
+      const records = await deps.extensionService.listProjectExtensionInstances(projectId);
+      const installedResults = [];
+      for (const repo of repos) {
+        const targetPath = resolve(repo.path, ".pstdio/extensions", installName);
+        const existing = records.find(
+          (record) => resolve(record.installedSource.source_path) === targetPath && existsSync(targetPath),
+        );
+        if (existing) {
+          installedResults.push(await enableExisting(projectId, existing.installedSource));
+          continue;
+        }
+
+        const installed = await installForRelease(installName, repo.path);
+        installedResults.push(
+          await deps.extensionService.enableInstalledSourceForProject({
+            installName: installed.installName,
+            projectId,
+            ...toExtensionEnableInput(installed),
+          }),
+        );
+      }
+      return installedResults[0]!;
+    }
+
     const existing = await deps.extensionService.getInstalledSource(installName);
     if (existing && existsSync(join(existing.source_path, "package.json"))) {
       return enableExisting(projectId, existing);

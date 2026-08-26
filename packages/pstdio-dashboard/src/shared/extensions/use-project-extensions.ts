@@ -1,4 +1,4 @@
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
+import type { CommandExecuteResponse, ListProjectExtensionsResponse, ProjectExtensionInstance } from "@pstdio/sdk/api";
 import { toaster } from "@pstdio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -36,6 +36,23 @@ const invalidateExtensionQueries = (queryClient: ReturnType<typeof useQueryClien
     queryClient.invalidateQueries({ queryKey: ["agents-info"] }),
     queryClient.invalidateQueries({ queryKey: ["agent-models"] }),
   ]);
+
+const storeProjectExtension = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  projectId: string | undefined,
+  extension: ProjectExtensionInstance,
+) => {
+  queryClient.setQueryData<ListProjectExtensionsResponse>(projectExtensionsQueryKey(projectId), (current) => {
+    if (!current) return current;
+    return {
+      ...current,
+      extensions: [...current.extensions.filter((entry) => entry.id !== extension.id), extension],
+      marketplace: current.marketplace.map((entry) =>
+        entry.installName === extension.installName ? { ...entry, installed: true } : entry,
+      ),
+    };
+  });
+};
 
 // Extension installs/enables sync over the live collections, so refresh the
 // project extension queries whenever those tables change.
@@ -77,7 +94,10 @@ export const useInstallMarketplaceExtension = (projectId: string | undefined) =>
       if (!projectId) throw new Error("Project id is required to install extensions.");
       return installMarketplaceExtension(projectId, installName);
     },
-    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+    onSuccess: (result) => {
+      storeProjectExtension(queryClient, projectId, result.extension);
+      void invalidateExtensionQueries(queryClient, projectId);
+    },
   });
 };
 
@@ -88,7 +108,10 @@ export const useSetProjectExtensionEnabled = (projectId: string | undefined) => 
       if (!projectId) throw new Error("Project id is required to update extensions.");
       return setProjectExtensionEnabled(projectId, instanceId, enabled);
     },
-    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+    onSuccess: (extension) => {
+      storeProjectExtension(queryClient, projectId, extension);
+      void invalidateExtensionQueries(queryClient, projectId);
+    },
   });
 };
 

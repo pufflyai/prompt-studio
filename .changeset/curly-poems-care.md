@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Fix repo-local extension enable and disable lifecycle
+Fix default repo-local extension installation, removal, enable, and disable lifecycle.

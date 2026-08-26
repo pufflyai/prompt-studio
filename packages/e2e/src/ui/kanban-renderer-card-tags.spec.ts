@@ -52,7 +52,7 @@ const selectProjectAndDisplayTicketProperties = async (
     { projectId: input.projectId },
   );
 
-  await page.goto("/");
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await page.getByRole("button", { name: "Display settings" }).click();
   const displayDialog = page.getByRole("dialog").filter({ hasText: "PROPERTIES" });

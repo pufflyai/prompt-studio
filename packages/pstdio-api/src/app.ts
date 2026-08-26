@@ -84,6 +84,7 @@ interface AppOptions {
   harnessRegistry?: HarnessRegistryService;
   runtimeHost?: RuntimeHost;
   extensionReleaseRef?: string;
+  extensionSourceRoot?: string;
   installExtensionSource?: typeof installExtensionSource;
   terminalOrigins?: string[];
   onDatabaseLockAcquired?: () => void;
@@ -108,6 +109,9 @@ const resolveExtensionWebviewBuilds = (value: boolean | undefined) => {
 
 const resolveExtensionReleaseRef = (configured: string | undefined) =>
   configured ?? process.env.PSTDIO_EXTENSION_RELEASE_REF;
+
+const resolveExtensionSourceRoot = (configured: string | undefined) =>
+  configured ?? process.env.PSTDIO_EXTENSION_SOURCE_ROOT;
 
 const sessionStatusEventFor = (status: string) => {
   if (status === "awaiting_input") return sessionEvents.awaitingInput;
@@ -289,6 +293,7 @@ const wireExtensionRuntimeServices = async (input: {
     installExtensionSource: options.installExtensionSource,
     releaseRef: resolveExtensionReleaseRef(options.extensionReleaseRef),
     repoService,
+    sourceRoot: resolveExtensionSourceRoot(options.extensionSourceRoot),
   });
   const extensionRuntimeCatalog = createProjectExtensionRuntimeCatalog({
     extensionService,

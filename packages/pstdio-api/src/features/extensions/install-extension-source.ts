@@ -15,6 +15,7 @@ import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
 import { readPackageManifest, readPackageManifestMetadata } from "pstdio-extensions";
 import { expandHomePath, resolvePstdioHome as resolveRuntimePstdioHome } from "pstdio-paths";
 import { createExtensionIgnoreMatcher } from "./extension-ignore";
+import { marketplaceExtensionRepositoryPath } from "./extension-marketplace";
 import {
   checkExtensionSource,
   checkExtensionsRoot,
@@ -265,13 +266,15 @@ const cloneRepoSparse = async (
   return head.stdout.trim();
 };
 
-export const namedSourceRef = (commit: string, name: string) => `${PSTDIO_REPOSITORY_URL}@${commit}#extensions/${name}`;
+export const namedSourceRef = (commit: string, name: string) =>
+  `${PSTDIO_REPOSITORY_URL}@${commit}#${marketplaceExtensionRepositoryPath(name)}`;
 
 const prepareNamedSource = async (name: string, tempDir: string, ref?: string) => {
   const checkoutPath = join(tempDir, "prompt-studio");
-  const commit = await cloneRepoSparse(checkoutPath, [`extensions/${name}`], runCommand, ref);
+  const repositoryPath = marketplaceExtensionRepositoryPath(name);
+  const commit = await cloneRepoSparse(checkoutPath, [repositoryPath], runCommand, ref);
   return {
-    path: join(checkoutPath, "extensions", name),
+    path: join(checkoutPath, repositoryPath),
     ref: namedSourceRef(commit, name),
   };
 };
@@ -295,7 +298,7 @@ export const createSharedNamedSourceCheckout = async (
   try {
     commit = await cloneRepoSparse(
       checkoutPath,
-      names.map((name) => `extensions/${name}`),
+      names.map(marketplaceExtensionRepositoryPath),
       options.runCommand ?? runCommand,
       options.ref,
     );
@@ -305,7 +308,7 @@ export const createSharedNamedSourceCheckout = async (
   }
 
   const shared = async (name: string) => ({
-    path: join(checkoutPath, "extensions", name),
+    path: join(checkoutPath, marketplaceExtensionRepositoryPath(name)),
     ref: namedSourceRef(commit, name),
   });
 

@@ -57,7 +57,9 @@ export const listProjectExtensionsHandler = (
       );
       const installedNames = new Set(installedRecords.map(({ installedSource }) => installedSource.install_name));
       const marketplace = extensionMarketplace.map((extension) => ({
-        ...extension,
+        installName: extension.installName,
+        displayName: extension.displayName,
+        description: extension.description,
         installed: installedNames.has(extension.installName),
       }));
       return c.json({ extensions, marketplace }, 200);

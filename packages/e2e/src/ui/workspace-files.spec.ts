@@ -221,15 +221,16 @@ test("PS-118 browses and edits files in the default workspace", async ({ page, r
     const changesTab = page.getByRole("tab", { name: "Changes" });
     await changesTab.click();
     await page.getByRole("textbox", { name: "Search files" }).fill("README");
+    await page.getByTestId("diff-viewer").getByRole("option", { name: "README.md M" }).click();
     await readmeBodyResponse;
-    await expect(page.getByTestId("diff-viewer").getByRole("option", { name: /README\.md/ })).toBeVisible();
+    await expect(page.getByTestId("diff-viewer").getByRole("option", { name: "README.md M" })).toBeVisible();
     await expect(
       page.getByTestId("diff-viewer").getByRole("row", { name: /Edited in the default workspace/ }),
     ).toBeVisible();
 
     await page.getByRole("tab", { name: "Files" }).click();
     await page.getByRole("textbox", { name: "Search files" }).fill("README");
-    await expect(page.getByRole("option", { name: /README\.md/ }).getByText("M", { exact: true })).toBeVisible();
+    await expect(page.getByRole("option", { name: "README.md M" }).getByText("M", { exact: true })).toBeVisible();
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }
