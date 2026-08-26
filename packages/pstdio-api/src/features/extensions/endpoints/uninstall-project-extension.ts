@@ -1,7 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { ExtensionsRouteDeps } from "../deps";
-import { extensionChangesWorkspaceProvisioning, refreshProjectSkillsInRepos } from "../extension-skill-cleanup";
+import type { ProjectExtensionLifecycleRouteDeps } from "../project-extension-lifecycle";
 
 const errorSchema = z.object({ error: z.string() });
 
@@ -37,22 +36,14 @@ export const uninstallProjectExtensionRoute = createRoute({
 });
 
 export const uninstallProjectExtensionHandler = (
-  deps: ExtensionsRouteDeps,
+  deps: ProjectExtensionLifecycleRouteDeps,
 ): AppRouteHandler<typeof uninstallProjectExtensionRoute> => {
   return async (c) => {
     const { projectId, instanceId } = c.req.valid("param");
     const deleteUserData = c.req.valid("query").deleteUserData === "true";
 
-    const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
-    if (!existing) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
-    const refreshSkills = await extensionChangesWorkspaceProvisioning(deps, existing.installedSource);
-
-    const removed = await deps.extensionService.uninstallProjectExtension({ projectId, instanceId, deleteUserData });
+    const removed = await deps.projectExtensionLifecycle.uninstall({ projectId, instanceId, deleteUserData });
     if (!removed) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
-
-    // Only skill and provision-hook changes can alter files materialized in workspaces.
-    if (refreshSkills) await refreshProjectSkillsInRepos(deps, projectId);
-
     return c.body(null, 204);
   };
 };

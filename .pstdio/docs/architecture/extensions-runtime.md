@@ -72,6 +72,18 @@ The runtime manager owns the lifecycle of loaded extension state.
 
 Consumers should not each reload extensions independently. They should read the current snapshot owned by the runtime manager. This keeps extension edits predictable: save a file, the source watcher reloads the affected package, diagnostics and metadata update, and consumers observe the new snapshot.
 
+## Lifecycle Ownership
+
+Extension lifecycle commands have one API coordinator. Install, enable, disable, automation changes, and uninstall commit their database changes before they return. The response is the authoritative result of that transition.
+
+Lifecycle handlers must not rely on a later list request to finish a transition. List endpoints are read-only. Discovery and reconciliation run during startup, project loading, repo linking, or an explicit reload command.
+
+After a commit, the coordinator performs only work required for the response to be usable. For example, it waits for workspace provisioning when an enabled extension contributes skills or workspace hooks. Watcher refreshes and unrelated metadata reconciliation may continue after the response.
+
+Extension instance events contain the full project scope for both set and delete operations. Runtime invalidation can therefore target only the affected project.
+
+The dashboard applies a successful lifecycle response to its cache before starting background refetches. It cancels older list and metadata reads first, so a request that started before the mutation cannot restore stale state. Sync events subscribe once at the project extension boundary and invalidate that same cache.
+
 ```mermaid
 graph TD
   Sources["Extension roots"] --> Discover["Discover package directories"]

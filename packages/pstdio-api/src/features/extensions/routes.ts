@@ -76,6 +76,10 @@ import {
   updateInstalledExtensionTemplateRoute,
 } from "./endpoints/update-installed-extension-template";
 import { upgradeProjectExtensionHandler, upgradeProjectExtensionRoute } from "./endpoints/upgrade-project-extension";
+import {
+  createProjectExtensionLifecycle,
+  type ProjectExtensionLifecycleRouteDeps,
+} from "./project-extension-lifecycle";
 
 type ExtensionRoutes = OpenAPIHono<AppBindings>;
 
@@ -106,7 +110,7 @@ const registerExtensionFileRoutes = (routes: ExtensionRoutes, deps: ExtensionsRo
 
 const registerProjectExtensionRoutes = (
   routes: ExtensionRoutes,
-  deps: ExtensionsRouteDeps & ExtensionWebviewMetadataDeps,
+  deps: ProjectExtensionLifecycleRouteDeps & ExtensionWebviewMetadataDeps,
 ) => {
   routes.openapi(listProjectExtensionsRoute, listProjectExtensionsHandler(deps));
   routes.openapi(installMarketplaceExtensionRoute, installMarketplaceExtensionHandler(deps));
@@ -137,7 +141,10 @@ export const createExtensionRoutes = (deps: ExtensionsRouteDeps & ExtensionWebvi
   registerInstalledExtensionRoutes(routes, deps);
   registerExtensionWorkbenchRoutes(routes, deps);
   registerExtensionFileRoutes(routes, deps);
-  registerProjectExtensionRoutes(routes, deps);
+  registerProjectExtensionRoutes(routes, {
+    ...deps,
+    projectExtensionLifecycle: createProjectExtensionLifecycle(deps),
+  });
   registerExtensionSettingsRoutes(routes, deps);
 
   return routes;

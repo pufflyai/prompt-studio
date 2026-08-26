@@ -48,7 +48,7 @@ const removeProjectInstance = async (
   const removed = await deps.extensionInstancesService.remove(instance.id);
   if (!removed) return null;
 
-  deps.eventBus?.emit("extension_instances", "delete", { id: instance.id });
+  deps.eventBus?.emit("extension_instances", "delete", removed);
   return { instance, installedSource };
 };
 

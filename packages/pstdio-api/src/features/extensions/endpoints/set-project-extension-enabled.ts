@@ -1,9 +1,7 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import { projectExtensionInstanceSchema, setProjectExtensionEnabledRequestSchema } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
-import type { ExtensionsRouteDeps } from "../deps";
-import { extensionChangesWorkspaceProvisioning, refreshProjectSkillsInRepos } from "../extension-skill-cleanup";
-import { toProjectExtensionInstance } from "../project-extension-instance";
+import type { ProjectExtensionLifecycleRouteDeps } from "../project-extension-lifecycle";
 
 const errorSchema = z.object({ error: z.string() });
 
@@ -36,27 +34,14 @@ export const setProjectExtensionEnabledRoute = createRoute({
 });
 
 export const setProjectExtensionEnabledHandler = (
-  deps: ExtensionsRouteDeps,
+  deps: ProjectExtensionLifecycleRouteDeps,
 ): AppRouteHandler<typeof setProjectExtensionEnabledRoute> => {
   return async (c) => {
     const { projectId, instanceId } = c.req.valid("param");
     const { enabled } = c.req.valid("json");
 
-    const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
-    if (!existing) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
-    const refreshSkills = await extensionChangesWorkspaceProvisioning(deps, existing.installedSource);
-
-    const updated = await deps.extensionService.setProjectExtensionEnabled(instanceId, enabled);
+    const updated = await deps.projectExtensionLifecycle.setEnabled(projectId, instanceId, enabled);
     if (!updated) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
-
-    // Only skill and provision-hook changes can alter files materialized in workspaces.
-    if (refreshSkills) await refreshProjectSkillsInRepos(deps, projectId);
-
-    return c.json(
-      toProjectExtensionInstance(updated, existing.installedSource, undefined, {
-        canUpgrade: await deps.extensionUpgradeService?.canUpgrade(existing.installedSource),
-      }),
-      200,
-    );
+    return c.json(updated, 200);
   };
 };

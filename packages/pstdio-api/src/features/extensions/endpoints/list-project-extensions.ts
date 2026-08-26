@@ -3,10 +3,9 @@ import { createRoute, z } from "@hono/zod-openapi";
 import { listProjectExtensionsResponseSchema } from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
-import { syncInstalledExtensionsForProject } from "../default-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { extensionMarketplace } from "../extension-marketplace";
-import { refreshProjectSkillsInRepos } from "../extension-skill-cleanup";
+import { hashExtensionSource } from "../extension-runtime";
 import { toProjectExtensionInstance } from "../project-extension-instance";
 
 const errorSchema = z.object({ error: z.string() });
@@ -37,20 +36,11 @@ export const listProjectExtensionsHandler = (
   return async (c) => {
     const { projectId } = c.req.valid("param");
     try {
-      const synced = await syncInstalledExtensionsForProject({
-        extensionService: deps.extensionService,
-        onProjectExtensionInstancesPruned: async () => {
-          await refreshProjectSkillsInRepos(deps, projectId);
-        },
-        projectId,
-      });
-      // The sync pass already hashed every folder on disk; compare against what the project adopted.
-      const diskHashes = new Map(synced.map((entry) => [entry.installName, entry.sourceHash]));
       const records = await deps.extensionService.listProjectExtensionInstances(projectId);
       const installedRecords = records.filter(({ installedSource }) => existsSync(installedSource.source_path));
       const extensions = await Promise.all(
         installedRecords.map(async ({ instance, installedSource }) =>
-          toProjectExtensionInstance(instance, installedSource, diskHashes.get(installedSource.install_name), {
+          toProjectExtensionInstance(instance, installedSource, hashExtensionSource(installedSource.source_path), {
             canUpgrade: await deps.extensionUpgradeService?.canUpgrade(installedSource),
           }),
         ),

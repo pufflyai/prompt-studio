@@ -70,8 +70,9 @@ export const uninstallProjectExtension = async (
       continue;
     }
 
-    if (await deps.extensionInstancesService.remove(extensionInstance.id)) {
-      deps.eventBus?.emit("extension_instances", "delete", { id: extensionInstance.id });
+    const removed = await deps.extensionInstancesService.remove(extensionInstance.id);
+    if (removed) {
+      deps.eventBus?.emit("extension_instances", "delete", removed);
     }
   }
 

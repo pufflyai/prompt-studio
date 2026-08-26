@@ -36,6 +36,36 @@ const openExtensions = async (page: import("@playwright/test").Page, projectId: 
   await expect(page.getByTestId("extensions-panel")).toBeVisible();
 };
 
+const holdProjectExtensionReads = async (page: import("@playwright/test").Page, projectId: string) => {
+  const pattern = `**/v1/projects/${projectId}/extensions**`;
+  const held: import("@playwright/test").Route[] = [];
+  await page.route(pattern, async (route) => {
+    const request = route.request();
+    const pathname = new URL(request.url()).pathname;
+    const shouldHold =
+      request.method() === "GET" &&
+      (pathname === `/v1/projects/${projectId}/extensions` ||
+        pathname.endsWith("/extensions/ui") ||
+        pathname.endsWith("/contributions"));
+    if (shouldHold) {
+      held.push(route);
+      return;
+    }
+    await route.continue();
+  });
+
+  return {
+    wait: () =>
+      expect
+        .poll(() => held.length, { message: "background extension reconciliation was not requested" })
+        .toBeGreaterThan(0),
+    release: async () => {
+      await page.unroute(pattern);
+      await Promise.all(held.splice(0).map((route) => route.continue().catch(() => undefined)));
+    },
+  };
+};
+
 test("deletes, installs, disables, and enables a Marketplace extension without stale lists", async ({
   page,
   request,
@@ -75,23 +105,13 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
   await expect(installedRow).toBeVisible();
   await expect(availableRow).toHaveCount(0);
 
-  let holdExtensionRefetch = false;
-  let heldExtensionRefetch: import("@playwright/test").Route | null = null;
-  await page.route(`**/v1/projects/${project.id}/extensions`, async (route) => {
-    if (holdExtensionRefetch && !heldExtensionRefetch) {
-      heldExtensionRefetch = route;
-      return;
-    }
-    await route.continue();
-  });
-
   await installedRow.click();
   await expect(page.getByTestId("extension-detail")).toBeVisible();
   await page.getByRole("tab", { name: "Settings" }).click();
   await page.getByTestId("extension-delete").click();
   const dialog = page.getByRole("dialog").last();
   await dialog.getByText("Also delete this extension's data", { exact: false }).click();
-  holdExtensionRefetch = true;
+  const deleteReads = await holdProjectExtensionReads(page, project.id);
   const deleteResponse = page.waitForResponse(
     (response) =>
       response.url().includes(`/v1/projects/${project.id}/extensions/`) && response.request().method() === "DELETE",
@@ -104,12 +124,10 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
   await expect(availableRow).toBeVisible();
   expect(existsSync(join(repoPath, ".pstdio/extensions/pstdio-planner-loops/package.json"))).toBe(false);
 
-  await expect
-    .poll(() => heldExtensionRefetch !== null, { message: "background extension refresh was not requested" })
-    .toBe(true);
-  await heldExtensionRefetch?.continue();
-  await page.unroute(`**/v1/projects/${project.id}/extensions`);
+  await deleteReads.wait();
+  await deleteReads.release();
 
+  const installReads = await holdProjectExtensionReads(page, project.id);
   const installResponse = page.waitForResponse(
     (response) =>
       response.url().includes("/extensions/marketplace/pstdio-planner-loops/install") &&
@@ -117,36 +135,35 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
   );
   await availableRow.getByTestId("marketplace-extension-install").click();
   expect((await installResponse).status()).toBe(200);
-  await expect
-    .poll(async () => {
-      const response = await request.get(`${apiBase}/v1/projects/${project.id}/extensions`);
-      expect(response.ok()).toBe(true);
-      const result = (await response.json()) as {
-        extensions: Array<{ enabled: boolean; installName: string }>;
-      };
-      return result.extensions.find((extension) => extension.installName === "pstdio-planner-loops");
-    })
-    .toMatchObject({ enabled: true });
   await expect(installedRow).toBeVisible();
+  await expect(availableRow).toHaveCount(0);
   expect(existsSync(join(repoPath, ".pstdio/extensions/pstdio-planner-loops/package.json"))).toBe(true);
+  await installReads.wait();
+  await installReads.release();
 
   const checkbox = installedRow.locator("input[type='checkbox']");
   const visibleSwitch = installedRow.locator("[data-scope='switch'][data-part='control']");
   await expect(checkbox).toBeChecked();
 
+  const disableReads = await holdProjectExtensionReads(page, project.id);
   const disableResponse = page.waitForResponse(
     (response) => response.request().method() === "PATCH" && response.url().includes(`/extensions/`),
   );
   await visibleSwitch.click();
   expect((await disableResponse).status()).toBe(200);
   await expect(checkbox).not.toBeChecked();
+  await disableReads.wait();
+  await disableReads.release();
 
+  const enableReads = await holdProjectExtensionReads(page, project.id);
   const enableResponse = page.waitForResponse(
     (response) => response.request().method() === "PATCH" && response.url().includes(`/extensions/`),
   );
   await visibleSwitch.click();
   expect((await enableResponse).status()).toBe(200);
   await expect(checkbox).toBeChecked();
+  await enableReads.wait();
+  await enableReads.release();
 
   await installedRow.click();
   const automationRow = page.getByTestId("extension-automation-row").filter({ hasText: "Refine backlog tickets" });
@@ -155,36 +172,40 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
   const automationSwitch = automationRow.locator("[data-scope='switch'][data-part='control']");
   await expect(automationCheckbox).toBeChecked();
 
-  const heldAutomationRefreshes: import("@playwright/test").Route[] = [];
-  await page.route(`**/v1/projects/${project.id}/extensions/**`, async (route) => {
-    const requestUrl = route.request().url();
-    if (
-      route.request().method() === "GET" &&
-      (requestUrl.endsWith("/extensions/ui") || requestUrl.endsWith("/contributions"))
-    ) {
-      heldAutomationRefreshes.push(route);
-      return;
-    }
-    await route.continue();
-  });
-
+  const disableAutomationReads = await holdProjectExtensionReads(page, project.id);
   const disableAutomationResponse = page.waitForResponse(
     (response) => response.request().method() === "PATCH" && response.url().includes("/automations/"),
   );
   await automationSwitch.click();
   expect((await disableAutomationResponse).status()).toBe(200);
   await expect(automationCheckbox).not.toBeChecked();
-  await expect
-    .poll(() => heldAutomationRefreshes.length, { message: "background automation refresh was not requested" })
-    .toBeGreaterThan(0);
+  await page.getByTestId("extension-detail-back").click();
+  await expect(installedRow.getByTestId("extension-automation-status")).toContainText("3/4");
+  await disableAutomationReads.wait();
+  await disableAutomationReads.release();
 
-  for (const route of heldAutomationRefreshes) await route.continue();
-  await page.unroute(`**/v1/projects/${project.id}/extensions/**`);
+  await installedRow.click();
+  const enabledAutomationRow = page
+    .getByTestId("extension-automation-row")
+    .filter({ hasText: "Refine backlog tickets" });
+  const enabledAutomationCheckbox = enabledAutomationRow.locator("input[type='checkbox']");
+  const enabledAutomationSwitch = enabledAutomationRow.locator("[data-scope='switch'][data-part='control']");
+  await expect(enabledAutomationCheckbox).not.toBeChecked();
 
+  const enableAutomationReads = await holdProjectExtensionReads(page, project.id);
   const enableAutomationResponse = page.waitForResponse(
     (response) => response.request().method() === "PATCH" && response.url().includes("/automations/"),
   );
-  await automationSwitch.click();
+  await enabledAutomationSwitch.click();
   expect((await enableAutomationResponse).status()).toBe(200);
-  await expect(automationCheckbox).toBeChecked();
+  await expect(enabledAutomationCheckbox).toBeChecked();
+  await page.getByTestId("extension-detail-back").click();
+  await expect(installedRow.getByTestId("extension-automation-status")).toContainText("4/4");
+  await enableAutomationReads.wait();
+  await enableAutomationReads.release();
+
+  await openExtensions(page, project.id);
+  const persistedRow = page.getByTestId("extension-entry").filter({ hasText: "Prompt Studio Planner Automation" });
+  await expect(persistedRow.locator("input[type='checkbox']")).toBeChecked();
+  await expect(persistedRow.getByTestId("extension-automation-status")).toContainText("4/4");
 });

@@ -264,6 +264,45 @@ describe("extensionService", () => {
     expect(second.installedSource.source_kind).toBe("git");
     expect(second.installedSource.source_ref).toBe("https://example/repo#main:planner");
   });
+
+  test("emits the removed project instance row with its scope", async () => {
+    const eventBus = new EventBus();
+    const events: Array<{ table: string; op: string; data: unknown }> = [];
+    eventBus.subscribe((event) => events.push(event));
+    const scopedService = createExtensionService({
+      extensionInstancesService,
+      installedExtensionSourcesService,
+      extensionUserDataService,
+      projectService,
+      eventBus,
+    });
+    const project = await projectService.create({ name: "Scoped delete project" });
+    const enabled = await scopedService.enableInstalledSourceForProject({
+      projectId: project.id,
+      installName: "scoped-delete",
+      extensionId: "pstdio.scoped-delete",
+      name: "scoped-delete",
+      displayName: "Scoped delete",
+      sourcePath: "/extensions/scoped-delete",
+      manifest: {},
+    });
+    events.length = 0;
+
+    await scopedService.removeProjectExtensionInstance(enabled.instance.id);
+
+    expect(events).toEqual([
+      expect.objectContaining({
+        table: "extension_instances",
+        op: "delete",
+        data: expect.objectContaining({
+          id: enabled.instance.id,
+          scope_type: "project",
+          scope_id: project.id,
+          installed_extension_id: enabled.installedSource.id,
+        }),
+      }),
+    ]);
+  });
 });
 
 describe("extensionService reload", () => {

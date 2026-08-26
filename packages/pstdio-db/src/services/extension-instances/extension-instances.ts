@@ -84,11 +84,8 @@ export const createExtensionInstancesDBService = (db: DbClient) => {
   };
 
   const remove = async (id: string) => {
-    const deleted = await db
-      .delete(extension_instances)
-      .where(eq(extension_instances.id, id))
-      .returning({ id: extension_instances.id });
-    return deleted.length > 0;
+    const [deleted] = await db.delete(extension_instances).where(eq(extension_instances.id, id)).returning();
+    return deleted ?? null;
   };
 
   return { list, get, findByScopeInstalledSource, create, update, remove };

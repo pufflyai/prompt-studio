@@ -50,6 +50,7 @@ beforeEach(async () => {
   handle = await createApp({
     harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("claude-code", { availability: "INSTALLED" })]),
     dbPath: ":memory:",
+    extensionWebviewBuilds: false,
     storagePath: join(tempRoot, "storage"),
     filesRoot: "",
   });
@@ -80,7 +81,6 @@ describe("core extension catalog", () => {
       resolve(import.meta.dirname, "../../../../../extensions/pstdio-skills"),
       "pstdio-skills",
     );
-
     const templatesRes = await handle.app.request(`/v1/projects/${project.id}/templates`);
     const templates = await templatesRes.json();
     expect(

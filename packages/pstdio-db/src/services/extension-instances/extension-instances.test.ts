@@ -113,4 +113,21 @@ describe("extensionInstancesService", () => {
     expect(updated?.enabled).toBe(false);
     expect(updated?.config_json).toEqual({ key: "value" });
   });
+
+  test("remove returns the deleted row with its project scope", async () => {
+    const created = await svc.create({
+      installed_extension_id: installedId,
+      scope_type: "project",
+      scope_id: projectId,
+    });
+
+    const removed = await svc.remove(created.id);
+
+    expect(removed).toMatchObject({
+      id: created.id,
+      installed_extension_id: installedId,
+      scope_type: "project",
+      scope_id: projectId,
+    });
+  });
 });
