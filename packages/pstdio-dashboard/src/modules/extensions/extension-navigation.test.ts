@@ -36,6 +36,7 @@ describe("registerExtensionNavigation", () => {
           expect.objectContaining({
             id: "pstdio.extension-lab.navigation-item.labPage",
             label: "Lab",
+            canHide: true,
             target: {
               kind: "command",
               commandId: "workbench.action.switchMode",

@@ -22,6 +22,7 @@ const toNode = (item: NavigationItem): TreeNode => ({
   id: item.id,
   label: item.label,
   icon: item.icon,
+  canHide: true,
   target: toWorkbenchNavigationTarget(item.action as ExtensionNavigationTarget, { extensionId: item.extensionId }),
 });
 

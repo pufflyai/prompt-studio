@@ -176,6 +176,16 @@ test("PS-174 customizes the Sidenav from any point and persists header ordering"
   await page.keyboard.press("Escape");
   await expect(searchToggle).toBeHidden();
 
+  await row(sidenav, "Tickets").click({ button: "right" });
+  const ticketsToggle = page.getByRole("menuitem", { name: "Tickets", exact: true });
+  await expect(ticketsToggle).toBeVisible();
+  await ticketsToggle.click();
+  await expect(row(sidenav, "Tickets")).toHaveCount(0);
+  await expect(ticketsToggle).toBeVisible();
+  await ticketsToggle.click();
+  await expect(row(sidenav, "Tickets")).toBeVisible();
+  await page.keyboard.press("Escape");
+
   await dragBefore(page, row(sidenav, "Notifications"), row(sidenav, "Search"));
   const reorderedTopEdges = await Promise.all(
     [row(sidenav, "Notifications"), row(sidenav, "Search")].map(async (item) => (await item.boundingBox())!.y),
