@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { FilePart, SessionMessage, SessionMessagePart, TextPart } from "pstdio-api-contracts";
 import type { SessionsRouteDeps } from "./deps";
+import { getSessionHarness } from "./get-session-harness";
 import { buildMessagesFromPatches } from "./session-messages";
 
 const textParts = (message: SessionMessage) => message.parts.filter((part): part is TextPart => part.type === "text");
@@ -77,9 +78,7 @@ export const getSessionMessages = async (sessionId: string, deps: SessionsRouteD
   }
 
   if (session.agent && session.agent_session_id) {
-    const agentMessages = await getAgentMessages(session.agent, session.agent_session_id, session.cwd, deps).catch(
-      () => null,
-    );
+    const agentMessages = await getAgentMessages(session, deps).catch(() => null);
     return agentMessages && agentMessages.length > 0
       ? mergePersistedUserAttachmentParts(agentMessages, persistedMessages)
       : persistedMessages;
@@ -96,13 +95,21 @@ const getPersistedMessages = async (sessionFileId: string, deps: SessionsRouteDe
 };
 
 const getAgentMessages = async (
-  agentId: string,
-  agentSessionId: string,
-  cwd: string | null,
+  session: {
+    agent: string | null;
+    agent_session_id: string | null;
+    cwd: string | null;
+    project_id: string | null;
+  },
   deps: SessionsRouteDeps,
 ) => {
-  const harness = await deps.harnessRegistry.get(agentId);
+  if (!session.agent_session_id) return null;
+
+  const harness = await getSessionHarness(deps.harnessRegistry, session);
   if (!harness) return null;
 
-  return harness.getMessages({ agentSessionId, cwd: cwd ?? undefined });
+  return harness.getMessages({
+    agentSessionId: session.agent_session_id,
+    cwd: session.cwd ?? undefined,
+  });
 };
