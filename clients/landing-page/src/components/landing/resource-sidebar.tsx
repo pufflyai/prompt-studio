@@ -1,14 +1,9 @@
 import { Box, Stack } from "@chakra-ui/react";
 import { TreeList, type TreeListNode, type TreeListSection } from "@pstdio/ui";
-import { ArrowUpRight, Github, MessagesSquare } from "lucide-react";
-import { useRef, useState } from "react";
-import {
-  type LandingView,
-  NAVIGATION_GROUP_META,
-  type NavigationGroupId,
-  SITE_LINKS,
-  VIEW_META,
-} from "./landing-content";
+import { ArrowUpRight, BookOpen, FileText, Folder, Github, MessagesSquare } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { type LandingView, NAVIGATION_GROUP_META, SITE_LINKS, VIEW_META } from "./landing-content";
+import { REPOSITORY_DOC_TREE, type RepositoryDocTreeNode } from "./repository-docs";
 
 const EXTERNAL_NODES: Record<string, { label: string; icon: typeof Github; url: string }> = {
   github: { label: "GitHub", icon: Github, url: SITE_LINKS.github },
@@ -25,17 +20,14 @@ const viewNode = (view: LandingView, label?: string): TreeListNode => {
   };
 };
 
-// container rows toggle on click (workbench tree semantics)
-const groupNode = (group: NavigationGroupId, children: LandingView[]): TreeListNode => {
-  const meta = NAVIGATION_GROUP_META[group];
+const repositoryNode = (node: RepositoryDocTreeNode): TreeListNode => {
+  const isFolder = Boolean(node.children?.length);
   return {
-    id: `${group}-group`,
-    label: meta.label,
-    icon: <meta.icon size={14} />,
-    children: [
-      ...(meta.overview ? [viewNode(meta.overview, "Overview")] : []),
-      ...children.map((child) => viewNode(child)),
-    ],
+    id: node.id,
+    label: node.label,
+    icon: isFolder ? <Folder size={14} /> : <FileText size={14} />,
+    children: node.children?.map(repositoryNode),
+    isNavigable: Boolean(node.path),
   };
 };
 
@@ -50,9 +42,6 @@ const externalNode = (id: keyof typeof EXTERNAL_NODES): TreeListNode => {
   };
 };
 
-// Keep the routes available while the documentation group is hidden from navigation.
-const SHOW_DOCUMENTATION = false;
-
 const SIDEBAR_SECTIONS: TreeListSection[] = [
   {
     id: "explore",
@@ -64,36 +53,19 @@ const SIDEBAR_SECTIONS: TreeListSection[] = [
       viewNode("gallery"),
     ],
   },
-  ...(SHOW_DOCUMENTATION
-    ? [
-        {
-          id: "documentation",
-          label: "Documentation",
-          nodes: [
-            viewNode("concepts"),
-            groupNode("guides", [
-              "guide-getting-started",
-              "guide-create-ticket",
-              "guide-implement-ticket",
-              "guide-create-proposal",
-              "guide-create-sub-tickets",
-              "guide-refine-ticket",
-              "guide-create-extension",
-            ]),
-            groupNode("cli-reference", [
-              "cli-projects",
-              "cli-workspaces",
-              "cli-agents",
-              "cli-sessions",
-              "cli-extensions",
-              "cli-planner",
-              "cli-configuration",
-            ]),
-            groupNode("sdk-reference", ["sdk-commands", "sdk-views", "sdk-hooks", "sdk-client", "sdk-assets"]),
-          ],
-        },
-      ]
-    : []),
+  {
+    id: "documentation",
+    label: "Documentation",
+    nodes: [
+      {
+        id: "doc:index.md",
+        label: "Overview",
+        icon: <BookOpen size={14} />,
+        isNavigable: true,
+      },
+      ...REPOSITORY_DOC_TREE.map(repositoryNode),
+    ],
+  },
   { id: "links", label: "Links", nodes: [externalNode("github"), externalNode("discord")] },
 ];
 
@@ -103,20 +75,32 @@ const CLOSE_THRESHOLD = 120;
 
 const toggleId = (list: string[], id: string) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]);
 
+const folderIdsForPath = (path?: string) => {
+  const segments = path?.split("/").slice(0, -1) ?? [];
+  return segments.map((_, index) => `doc-folder:${segments.slice(0, index + 1).join("/")}`);
+};
+
 interface ResourceSidebarProps {
   width: number;
+  activeDocPath?: string;
   activeView: LandingView;
   onResize: (width: number) => void;
   onClose: () => void;
   onNavigate: (view: LandingView) => void;
+  onNavigateDoc: (path: string) => void;
 }
 
 export const ResourceSidebar = (props: ResourceSidebarProps) => {
-  const { width, activeView, onResize, onClose, onNavigate } = props;
+  const { width, activeDocPath, activeView, onResize, onClose, onNavigate, onNavigateDoc } = props;
 
   const dragRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const [expandedSectionIds, setExpandedSectionIds] = useState(SIDEBAR_SECTIONS.map((section) => section.id));
-  const [expandedNodeIds, setExpandedNodeIds] = useState<string[]>([]);
+  const [expandedNodeIds, setExpandedNodeIds] = useState<string[]>(() => folderIdsForPath(activeDocPath));
+
+  useEffect(() => {
+    const activeFolders = folderIdsForPath(activeDocPath);
+    setExpandedNodeIds((ids) => [...new Set([...ids, ...activeFolders])]);
+  }, [activeDocPath]);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     // stop the drag from selecting page text
@@ -148,8 +132,14 @@ export const ResourceSidebar = (props: ResourceSidebarProps) => {
       window.open(external.url, "_blank", "noopener");
       return;
     }
+    if (event.nodeId.startsWith("doc:")) {
+      onNavigateDoc(event.nodeId.slice("doc:".length));
+      return;
+    }
     onNavigate(event.nodeId as LandingView);
   };
+
+  const activeNodeId = activeView === "documentation" ? `doc:${activeDocPath ?? "index.md"}` : activeView;
 
   return (
     <Stack
@@ -180,7 +170,7 @@ export const ResourceSidebar = (props: ResourceSidebarProps) => {
         <TreeList
           sections={SIDEBAR_SECTIONS}
           rowVariant="compact"
-          activeNodeId={activeView}
+          activeNodeId={activeNodeId}
           expandedSectionIds={expandedSectionIds}
           expandedNodeIds={expandedNodeIds}
           onNavigate={handleNavigate}

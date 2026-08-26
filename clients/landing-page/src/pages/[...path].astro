@@ -1,10 +1,13 @@
 ---
 import { IndexPage } from "../components/index-page";
 import { ALL_LANDING_PATHS } from "../components/landing/landing-route";
+import { ALL_REPOSITORY_DOC_PATHS } from "../components/landing/repository-docs";
 import BaseLayout from "../layouts/base-layout.astro";
 
 export const getStaticPaths = () =>
-  ALL_LANDING_PATHS.filter((path) => path !== "/").map((path) => ({ params: { path: path.slice(1) } }));
+  [...new Set([...ALL_LANDING_PATHS, ...ALL_REPOSITORY_DOC_PATHS])]
+    .filter((path) => path !== "/")
+    .map((path) => ({ params: { path: path.slice(1) } }));
 ---
 
 <BaseLayout>

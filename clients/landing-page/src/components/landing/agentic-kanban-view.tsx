@@ -1,5 +1,5 @@
 import { Badge, Box, Flex, HStack, Stack, Text } from "@chakra-ui/react";
-import { Bot, CircleDashed, CircleDot, Columns3, Plus, SlidersHorizontal } from "lucide-react";
+import { CircleDashed, CircleDot, Columns3, Plus, SlidersHorizontal } from "lucide-react";
 
 interface Ticket {
   id: string;
@@ -101,26 +101,6 @@ const MobileKanban = () => (
         <MobileTicketCard key={ticket.id} ticket={ticket} />
       ))}
     </Stack>
-    <HStack
-      mt="auto"
-      minHeight="46px"
-      px="13px"
-      gap="12px"
-      bg="bg.subtle"
-      borderWidth="1px"
-      borderColor="border"
-      rounded="8px"
-    >
-      <Bot size={15} color="var(--chakra-colors-blue-300)" />
-      <Stack gap="0">
-        <Text fontFamily="heading" fontSize="12px" fontWeight="medium">
-          Project agent
-        </Text>
-        <Text fontFamily="body" fontSize="9px" color="fg.muted">
-          2 tasks in progress
-        </Text>
-      </Stack>
-    </HStack>
   </Stack>
 );
 
@@ -177,7 +157,6 @@ const DesktopKanban = () => (
       </HStack>
       <SimpleBoard />
     </Stack>
-    <ProjectAgentPanel />
   </Flex>
 );
 
@@ -212,36 +191,6 @@ const SimpleBoard = () => (
       </Stack>
     ))}
   </Flex>
-);
-
-const ProjectAgentPanel = () => (
-  <Stack width="292px" flexShrink="0" gap="0" borderLeftWidth="1px" borderColor="border" bg="bg.subtle">
-    <HStack height="40px" px="14px" gap="8px" borderBottomWidth="1px" borderColor="border">
-      <Bot size={14} color="var(--chakra-colors-blue-300)" />
-      <Text fontFamily="heading" fontSize="12px" fontWeight="medium">
-        Project agent
-      </Text>
-      <Plus size={13} />
-    </HStack>
-    <Stack gap="16px" p="14px">
-      <Box p="10px" bg="bg" borderWidth="1px" borderColor="border">
-        <Text fontFamily="body" fontSize="12px">
-          What’s left before we can cut the release?
-        </Text>
-        <Text fontFamily="body" fontSize="9px" color="fg.subtle" mt="8px">
-          09:20
-        </Text>
-      </Box>
-      <Text fontFamily="body" fontSize="12px" lineHeight="1.5">
-        I’m watching the release plan and can move work, create tickets, or delegate the next task.
-      </Text>
-    </Stack>
-    <Box mt="auto" mx="14px" mb="16px" p="10px" borderWidth="1px" borderColor="border" rounded="5px">
-      <Text fontFamily="body" fontSize="12px" color="fg.subtle">
-        Ask the project agent…
-      </Text>
-    </Box>
-  </Stack>
 );
 
 export const AgenticKanbanView = () => (

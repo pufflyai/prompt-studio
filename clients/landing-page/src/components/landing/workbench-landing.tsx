@@ -1,5 +1,4 @@
-import { Box, Flex, IconButton } from "@chakra-ui/react";
-import { MessageCircle } from "lucide-react";
+import { Box, Flex } from "@chakra-ui/react";
 import { useEffect, useState } from "react";
 import { AgenticKanbanView } from "./agentic-kanban-view";
 import { BlogView } from "./blog-view";
@@ -39,12 +38,19 @@ import {
 import { whyPromptStudioPage } from "./content/why-prompt-studio";
 import { docPageToMarkdown } from "./doc-page-markdown";
 import { type DocPage, DocView } from "./doc-view";
+import { DocumentationReader } from "./documentation-reader";
 import { ExtensionGallery } from "./extension-gallery";
 import type { LandingView, ProjectTabId } from "./landing-content";
 import { LANDING_DOCUMENT_PAGE, LandingDocument } from "./landing-document";
 import { type LandingLocation, landingLocationFromPath, landingPathForLocation } from "./landing-route";
 import { ProjectTabsBar } from "./project-tabs-bar";
 import { QuickstartView } from "./quickstart-view";
+import {
+  type RepositoryDocument,
+  repositoryDocPathFromUrl,
+  repositoryDocument,
+  resolveRepositoryDocUrl,
+} from "./repository-docs";
 import { ResourceSidebar } from "./resource-sidebar";
 import { WhyPromptStudioView } from "./why-prompt-studio-view";
 import { WorkbenchNav } from "./workbench-nav";
@@ -83,13 +89,25 @@ interface WorkbenchLandingProps {
   initialPath: string;
 }
 
-const resolveResourceTitle = (activeView: LandingView, docPage: DocPage | undefined, blogPostId?: string) => {
+const resolveResourceTitle = (
+  activeView: LandingView,
+  docPage: DocPage | undefined,
+  repositoryDoc: RepositoryDocument | undefined,
+  blogPostId?: string,
+) => {
   if (activeView === "blog") return (BLOG_POSTS.find((post) => post.id === blogPostId) ?? VISIBLE_BLOG_POSTS[0]).title;
+  if (activeView === "documentation") return repositoryDoc?.title;
   return docPage?.title;
 };
 
-const resolveResourceMarkdown = (activeView: LandingView, docPage: DocPage | undefined, blogPostId?: string) => {
+const resolveResourceMarkdown = (
+  activeView: LandingView,
+  docPage: DocPage | undefined,
+  repositoryDoc: RepositoryDocument | undefined,
+  blogPostId?: string,
+) => {
   if (activeView === "start") return docPageToMarkdown(LANDING_DOCUMENT_PAGE);
+  if (activeView === "documentation") return repositoryDoc?.markdown;
   if (activeView === "blog") {
     const post = BLOG_POSTS.find((candidate) => candidate.id === blogPostId) ?? VISIBLE_BLOG_POSTS[0];
     return docPageToMarkdown(post.page);
@@ -112,7 +130,9 @@ interface LandingContentProps {
   blogPostId?: string;
   blogPostListOpen: boolean;
   docPage?: DocPage;
+  repositoryDoc?: RepositoryDocument;
   onNavigate: (view: LandingView) => void;
+  onNavigateDoc: (path: string) => void;
   onPostListOpenChange: (open: boolean) => void;
   onSelectBlogPost: (postId: string) => void;
 }
@@ -124,13 +144,25 @@ const LandingContent = (props: LandingContentProps) => {
     blogPostId,
     blogPostListOpen,
     docPage,
+    repositoryDoc,
     onNavigate,
+    onNavigateDoc,
     onPostListOpenChange,
     onSelectBlogPost,
   } = props;
 
   if (activeTab === "agentic-kanban") return <AgenticKanbanView />;
-  if (activeView === "guide-getting-started") return <QuickstartView />;
+  if (activeView === "guide-getting-started") return <QuickstartView onNavigateDoc={onNavigateDoc} />;
+  if (activeView === "documentation" && repositoryDoc) {
+    return (
+      <DocumentationReader
+        markdown={repositoryDoc.markdown}
+        onNavigateDoc={onNavigateDoc}
+        resolveMarkdownUrl={(source, kind) => resolveRepositoryDocUrl(source, repositoryDoc.path, kind)}
+        resolvePathFromUrl={repositoryDocPathFromUrl}
+      />
+    );
+  }
   if (activeView === "gallery") return <ExtensionGallery />;
   if (activeView === "blog") {
     return (
@@ -145,31 +177,34 @@ const LandingContent = (props: LandingContentProps) => {
   if (activeView === "why-prompt-studio") return <WhyPromptStudioView onNavigate={onNavigate} />;
   if (docPage) {
     return (
-      <Flex justify="center">
+      <Flex height="100%" justify="center">
         <DocView page={docPage} />
       </Flex>
     );
   }
   return (
-    <Flex justify="center">
-      <LandingDocument onNavigate={onNavigate} />
-    </Flex>
+    <Box height="100%" overflowY="auto">
+      <Flex justify="center">
+        <LandingDocument onNavigate={onNavigate} />
+      </Flex>
+    </Box>
   );
 };
 
 export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
   const { initialPath } = props;
-  const [location, setLocation] = useState(() => landingLocationFromPath(initialPath));
+  const [location, setLocation] = useState(() => landingLocationFromPath(initialPath, repositoryDocPathFromUrl));
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [sidebarWidth, setSidebarWidth] = useState(220);
   const [blogPostListOpen, setBlogPostListOpen] = useState(true);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [changelogOpen, setChangelogOpen] = useState(false);
 
-  const { activeTab, activeView, blogPostId } = location;
+  const { activeTab, activeView, blogPostId, docPath } = location;
   const docPage = DOC_PAGES[activeView];
-  const resourceTitle = resolveResourceTitle(activeView, docPage, blogPostId);
-  const resourceMarkdown = resolveResourceMarkdown(activeView, docPage, blogPostId);
+  const activeRepositoryDoc = activeView === "documentation" ? repositoryDocument(docPath) : undefined;
+  const resourceTitle = resolveResourceTitle(activeView, docPage, activeRepositoryDoc, blogPostId);
+  const resourceMarkdown = resolveResourceMarkdown(activeView, docPage, activeRepositoryDoc, blogPostId);
   const hasWorkbenchBody = activeTab === "docs" || activeTab === "agentic-kanban";
   const branchLabel = branchLabelForLocation(activeTab, activeView);
 
@@ -185,7 +220,8 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
   }, []);
 
   useEffect(() => {
-    const handlePopState = () => setLocation(landingLocationFromPath(window.location.pathname));
+    const handlePopState = () =>
+      setLocation(landingLocationFromPath(window.location.pathname, repositoryDocPathFromUrl));
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
@@ -198,6 +234,10 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
 
   const navigate = (view: LandingView) => {
     updateLocation({ activeTab: "docs", activeView: view });
+  };
+
+  const navigateDoc = (path: string) => {
+    updateLocation({ activeTab: "docs", activeView: "documentation", docPath: path });
   };
 
   const selectTab = (tab: ProjectTabId) => {
@@ -214,42 +254,53 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
 
   return (
     <Flex direction="column" height="100dvh" position="relative" bg="bg" color="fg" overflow="hidden">
-      <ProjectTabsBar activeTab={activeTab} branchLabel={branchLabel} onSelectTab={selectTab} />
+      <ProjectTabsBar
+        activeTab={activeTab}
+        branchLabel={branchLabel}
+        onNavigateHome={() => navigate("start")}
+        onSelectTab={selectTab}
+      />
       {hasWorkbenchBody && (
         <>
           <Flex flex="1" minHeight="0">
             {sidebarOpen && (
               <ResourceSidebar
                 width={sidebarWidth}
+                activeDocPath={docPath}
                 activeView={activeTab === "agentic-kanban" ? "guide-getting-started" : activeView}
                 onResize={setSidebarWidth}
                 onClose={() => setSidebarOpen(false)}
                 onNavigate={navigate}
+                onNavigateDoc={navigateDoc}
               />
             )}
             <Flex direction="column" flex="1" minWidth="0">
               <WorkbenchNav
                 activeTab={activeTab}
                 activeView={activeView}
+                docPath={docPath}
                 resourceMarkdown={resourceMarkdown}
                 resourceTitle={resourceTitle}
                 sidebarOpen={sidebarOpen}
                 showPostListOpener={activeView === "blog" && !blogPostListOpen}
                 onSelectTab={selectTab}
                 onNavigate={navigate}
+                onNavigateDoc={navigateDoc}
                 onOpenNavigation={() => setPaletteOpen(true)}
                 onOpenPostList={() => setBlogPostListOpen(true)}
                 onToggleSidebar={() => setSidebarOpen((open) => !open)}
               />
               <Box as="main" flex="1" minHeight="0" position="relative">
-                <Box position="absolute" inset="0" overflowY={activeView === "blog" ? "hidden" : "auto"}>
+                <Box position="absolute" inset="0" overflow="hidden">
                   <LandingContent
                     activeTab={activeTab}
                     activeView={activeView}
                     blogPostId={blogPostId}
                     blogPostListOpen={blogPostListOpen}
                     docPage={docPage}
+                    repositoryDoc={activeRepositoryDoc}
                     onNavigate={navigate}
+                    onNavigateDoc={navigateDoc}
                     onPostListOpenChange={setBlogPostListOpen}
                     onSelectBlogPost={selectBlogPost}
                   />
@@ -259,25 +310,11 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
           </Flex>
           <WorkbenchStatusBar
             label={activeTab === "docs" && activeView === "start" ? "changelog" : branchLabel}
+            onNavigate={navigate}
             onOpenChangelog={() => setChangelogOpen(true)}
           />
         </>
       )}
-      <IconButton
-        aria-label="Open Prompt Studio assistant"
-        variant="outline"
-        size="sm"
-        position="absolute"
-        right={{ base: "16px", md: "24px" }}
-        bottom={{ base: "18px", md: hasWorkbenchBody ? "50px" : "22px" }}
-        zIndex="2"
-        bg="bg"
-        rounded="full"
-        display={activeTab === "agentic-kanban" ? { base: "inline-flex", md: "none" } : "inline-flex"}
-        onClick={() => setPaletteOpen(true)}
-      >
-        <MessageCircle size={19} />
-      </IconButton>
       <CommandPaletteModal
         open={paletteOpen}
         onClose={() => setPaletteOpen(false)}

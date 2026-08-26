@@ -3,6 +3,8 @@
 .pstdio
 !.pstdio/
 .pstdio/*
+!.pstdio/docs/
+!.pstdio/docs/**
 !.pstdio/extensions/
 .pstdio/extensions/*
 !.pstdio/extensions/font-editor/
