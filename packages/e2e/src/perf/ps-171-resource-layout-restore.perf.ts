@@ -1,6 +1,7 @@
 import { rmSync } from "node:fs";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
+import { showHiddenSidenavEntry } from "../ui/helpers/sidenav-navigation";
 import { createGitRepo, registerRepoViaApi } from "../ui/helpers/workspace-session-attempt";
 import { calculateStats, installLongTaskObserver, throttleChromiumCpu } from "./perf-helpers";
 
@@ -95,8 +96,7 @@ test("PS-171 restores a resource layout within the interaction budget", async ({
     await throttleChromiumCpu(page);
     await page.goto(`/projects/${project.id}/`);
 
-    const sidenav = page.locator('[data-workbench-region="sidenav"]');
-    const workspacesNavigation = sidenav.getByRole("option", { name: /^Workspaces(?:\s|$)/ }).first();
+    const workspacesNavigation = await showHiddenSidenavEntry(page, "Workspaces");
     await workspacesNavigation.click();
     await openWorkspace(page, shorthandA);
     await page.getByRole("button", { name: "Show Secondary Panel" }).click();

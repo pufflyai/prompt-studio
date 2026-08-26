@@ -65,11 +65,6 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
     });
     await prepareDashboard(page, project.id, repo.id);
     await page.goto(`/projects/${project.id}/workspaces`);
-    await page
-      .locator('[data-workbench-region="sidenav"]')
-      .getByRole("option", { name: /^Workspaces(?:\s|$)/ })
-      .first()
-      .click();
     await openWorkspace(page, attempt.workspace.workspace_shorthand);
 
     const filesTab = page.getByRole("tab", { name: "Files" });
@@ -192,11 +187,6 @@ test("PS-118 browses and edits files in the default workspace", async ({ page, r
 
     await prepareDashboard(page, project.id, repo.id);
     await page.goto(`/projects/${project.id}/workspaces`);
-    await page
-      .locator('[data-workbench-region="sidenav"]')
-      .getByRole("option", { name: /^Workspaces(?:\s|$)/ })
-      .first()
-      .click();
     await openWorkspace(page, workspace.workspace_shorthand);
 
     await page.getByRole("tab", { name: "Files" }).click();

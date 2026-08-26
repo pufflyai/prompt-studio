@@ -33,7 +33,8 @@ const toWorkbenchResource = (resource: ExtensionCommandResource | undefined) => 
 
 export const executeWebviewCommand = (input: ExecuteWebviewCommandInput) => {
   const { commandId, executeExtensionCommand, metadata, params, repo, resource, workbench } = input;
-  if (workbench?.commands.getCommand(commandId)) {
+  const isExtensionCommand = commandId.includes(".command.");
+  if (!isExtensionCommand && workbench?.commands.getCommand(commandId)) {
     return workbench.commands.executeCommand(commandId, params, { resource: toWorkbenchResource(resource) });
   }
   return executeExtensionCommand({ commandId, metadata, params, repo, resource });

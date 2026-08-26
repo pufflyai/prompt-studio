@@ -138,12 +138,12 @@ describe("extension-lab commands", () => {
       expect.objectContaining({
         id: "create",
         type: "actions",
-        options: [expect.objectContaining({ id: "random" }), expect.objectContaining({ id: "locked" })],
+        options: [expect.objectContaining({ id: "random" }), expect.objectContaining({ id: "testing" })],
       }),
     ]);
 
-    const created = await update?.run({ events, storage } as never, { controlId: "create", value: "locked" });
-    expect(created).toMatchObject({ status: "locked" });
+    const created = await update?.run({ events, storage } as never, { controlId: "create", value: "testing" });
+    expect(created).toMatchObject({ status: "testing" });
     expect(collections.get("glass-lab-artifacts")?.size).toBe(1);
 
     // ParamEditor value-sync calls carry other values and must not create artifacts.

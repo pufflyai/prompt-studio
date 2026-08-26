@@ -1,6 +1,7 @@
 import { rmSync } from "node:fs";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
+import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
@@ -72,8 +73,7 @@ test("PS-171 restores resource Panel state across A to B to A and reload", async
     await prepareDashboard(page, project.id, repo.id);
     await page.goto(`/projects/${project.id}/`);
 
-    const sidenav = page.locator('[data-workbench-region="sidenav"]');
-    const workspacesNavigation = sidenav.getByRole("option", { name: /^Workspaces(?:\s|$)/ }).first();
+    const workspacesNavigation = await showHiddenSidenavEntry(page, "Workspaces");
     await workspacesNavigation.click();
 
     await openWorkspace(page, attemptA.workspace.workspace_shorthand);

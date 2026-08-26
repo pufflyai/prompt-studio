@@ -1,6 +1,7 @@
 import { rmSync } from "node:fs";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { createPlannerAttempt, createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
@@ -78,10 +79,8 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
         exact: true,
       }),
     ).toBeVisible();
-    await sidenav
-      .getByRole("option", { name: /^Workspaces(?:\s|$)/ })
-      .first()
-      .click();
+    const workspacesNavigation = await showHiddenSidenavEntry(page, "Workspaces");
+    await workspacesNavigation.click();
     await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
     await expect(ticketCard).toBeVisible();
 
@@ -96,10 +95,7 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
         exact: true,
       }),
     ).toBeVisible();
-    await sidenav
-      .getByRole("option", { name: /^Workspaces(?:\s|$)/ })
-      .first()
-      .click();
+    await workspacesNavigation.click();
     await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
     await expect(ticketCard).toBeVisible();
 
@@ -134,10 +130,7 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
     await breadcrumbAction.click();
     await expect(page.getByRole("menuitem", { name: "Run attempt", exact: true })).toBeHidden();
 
-    await sidenav
-      .getByRole("option", { name: /^Workspaces(?:\s|$)/ })
-      .first()
-      .click();
+    await workspacesNavigation.click();
     const workspaceRow = page.getByRole("option").filter({ hasText: attempt.workspace.workspace_shorthand }).first();
     await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
     await workspaceRow.click({ button: "right" });

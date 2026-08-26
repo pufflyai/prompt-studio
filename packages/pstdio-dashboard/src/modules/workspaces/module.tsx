@@ -43,6 +43,7 @@ const workspaceNavigationNode = (): TreeNode => ({
   label: "Workspaces",
   icon: dashboardViews.workspaces.icon,
   canHide: true,
+  hiddenByDefault: true,
   commandId: dashboardCommandIds.openWorkspaces,
   target: { kind: "view", viewId: dashboardViews.workspaces.id },
   actions: [

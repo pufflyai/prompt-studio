@@ -7,5 +7,5 @@ Use this template to sketch a controlled, glass-walled lab artifact for the Exte
 - Name:
 - Role:
 - Trust signal:
-- Locked or active:
+- Workflow status, idea or testing:
 - What tension does it add to the lab:

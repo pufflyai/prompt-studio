@@ -10,6 +10,63 @@ describe("extension-lab workbench attachments", () => {
   test("refreshes artifact renderers from the shared artifact event", () => {
     expect(view("artifacts")?.body.refreshEvents).toEqual([labArtifactsChanged]);
     expect(view("artifact-create")?.body.refreshEvents).toEqual([labArtifactsChanged]);
+    expect(view("workflow")?.body.refreshEvents).toEqual([labArtifactsChanged]);
+  });
+
+  test("uses stored artifact resources as movable workflow rows", async () => {
+    const artifacts = new Map<string, Record<string, unknown>>();
+    const values = new Map<string, unknown>();
+    const emitted: string[] = [];
+    const storage = {
+      get: async (key: string) => values.get(key),
+      set: async (key: string, value: unknown) => {
+        values.set(key, value);
+      },
+      collection: () => ({
+        get: async (id: string) => artifacts.get(id),
+        list: async () => [...artifacts.values()],
+        put: async (id: string, value: Record<string, unknown>) => {
+          artifacts.set(id, value);
+        },
+        delete: async (id: string) => {
+          artifacts.delete(id);
+        },
+      }),
+    };
+    const events = {
+      emit: async (event: string | { id: string }) => {
+        emitted.push(typeof event === "string" ? event : event.id);
+        return { delivered: 0 };
+      },
+    };
+    const workflow = view("workflow")?.body;
+    if (workflow?.kind !== "kanban") throw new Error("Workflow Kanban view is missing.");
+
+    const initial = await workflow.query({ events, storage } as never, {} as never);
+    expect(initial.rows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "concept",
+          attributes: { status: "idea" },
+          resource: expect.objectContaining({ type: "glass-lab-artifact", id: "concept" }),
+        }),
+      ]),
+    );
+    expect(workflow.onAttributeChange).toBeFunction();
+
+    await workflow.onAttributeChange?.({ events, storage } as never, {
+      rowId: "concept",
+      attributeId: "status",
+      value: "testing",
+    });
+
+    const moved = await workflow.query({ events, storage } as never, {} as never);
+    expect(moved.rows.find((row) => row.id === "concept")).toMatchObject({
+      attributes: { status: "testing" },
+      resource: { metadata: { status: "testing" } },
+    });
+    expect(artifacts.get("concept")).toMatchObject({ status: "testing" });
+    expect(emitted).toContain("artifacts.changed");
   });
 
   test("exercises PS-313 attachment targets", () => {

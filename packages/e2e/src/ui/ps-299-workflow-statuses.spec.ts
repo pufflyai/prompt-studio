@@ -97,6 +97,23 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
   await page.getByRole("tab", { name: "Workflow status demo", exact: true }).click();
   await expect(page.getByTestId("board-column-idea")).toContainText("Concept", { timeout: 30_000 });
 
+  const concept = page.getByTestId("renderer-card").filter({ hasText: "Shape the concept" });
+  const testing = page.getByTestId("board-column-testing");
+  await expect(concept).toBeVisible();
+  const moveResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname.endsWith(
+        "/extensions/commands/pstdio.extension-lab.view.workflow.kanban.onAttributeChange/execute",
+      ),
+  );
+  await concept.dragTo(testing);
+  expect((await moveResponse).ok()).toBe(true);
+  await expect(testing).toContainText("Shape the concept");
+  await concept.getByText("Shape the concept", { exact: true }).click();
+  const artifact = page.frameLocator('iframe[title="Artifact"]');
+  await expect(artifact.getByRole("heading", { name: "Shape the concept" })).toBeVisible({ timeout: 15_000 });
+
   await page.goto(`/projects/${project.id}/tickets`);
   await expect(page.getByTestId("board-column-backlog")).toContainText("Keep the Planner board visible", {
     timeout: 30_000,

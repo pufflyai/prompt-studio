@@ -110,6 +110,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
     disposables.push(kanban.disposable);
     disposables.push(
       registerWorkbenchExtensionContributions({
+        createKeybindingWhenExpression: buildDashboardWorkbenchWhenExpression,
         createMenuWhenExpression: (contribution) => buildDashboardWorkbenchWhenExpression(contribution.when),
         executeCommand: async (commandId, body) => {
           const rawResponse = await input.executeCommand(input.projectId, commandId, body);

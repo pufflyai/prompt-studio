@@ -24,6 +24,7 @@ import type {
   InternalRegisterWorkbenchExtensionContributionsInput,
   RegisterWorkbenchExtensionContributionsInput,
 } from "./workbench-extension-host-types";
+import { registerWorkbenchExtensionKeybindings } from "./workbench-extension-keybindings";
 
 export type { RegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
 
@@ -176,6 +177,13 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
 
   disposables.push(...registerBridgeRenderer(input));
   disposables.push(...registerCommands(context, input.metadata));
+  disposables.push(
+    ...registerWorkbenchExtensionKeybindings({
+      bindings: input.metadata.keybindings,
+      createWhenExpression: input.createKeybindingWhenExpression,
+      workbench: input.workbench,
+    }),
+  );
   disposables.push(...registerMenus(input, context));
   disposables.push(...registerCommandPaletteContributions(input, context));
   disposables.push(

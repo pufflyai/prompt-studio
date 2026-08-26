@@ -56,6 +56,9 @@ test("the Lab mode swaps the sidenav for activity and status chrome without a te
   await page.getByRole("tab", { name: "Overview", exact: true }).click();
   const overviewFrame = labFrame(page, "Overview");
   await expect(overviewFrame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible({ timeout: 30_000 });
+  await expect(overviewFrame.getByText("0", { exact: true })).toBeVisible();
+  await overviewFrame.getByRole("button", { name: "Increment" }).click();
+  await expect(overviewFrame.getByText("1", { exact: true })).toBeVisible();
 
   // The native activity rail replaces the sidenav and the status strip reports lab state.
   const activityRail = page.locator('[data-workbench-region="activity"]');
@@ -113,6 +116,10 @@ test("artifacts are created from the panel menu and inspected in the Side Panel"
   // The Create artifacts menu lives on the Artifacts panel itself.
   const createMenu = page.locator('[data-workbench-panel-menu="main-right"]');
   await expect(createMenu.getByText("Catalog intake")).toBeVisible({ timeout: 30_000 });
+  const dataTable = page.locator("table.data-table");
+  const rows = dataTable.locator("tbody tr");
+  await expect(rows).toHaveCount(2, { timeout: 15_000 });
+  const initialArtifactCount = await rows.count();
   const createResponse = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname.endsWith(
@@ -120,21 +127,24 @@ test("artifacts are created from the panel menu and inspected in the Side Panel"
       ) && response.request().method() === "POST",
   );
   await createMenu.getByRole("button", { name: "Random artifact" }).click();
-  expect((await createResponse).ok()).toBe(true);
+  const response = await createResponse;
+  expect(response.ok()).toBe(true);
+  const created = (await response.json()) as { outcome: { value: { title: string } } };
 
-  const dataTable = page.locator("table.data-table");
-  await expect(dataTable.locator("tbody tr")).toHaveCount(1, { timeout: 15_000 });
-  const artifactTitle = await dataTable.locator("td[data-column-id='artifact']").first().textContent();
+  await expect(rows).toHaveCount(initialArtifactCount + 1, { timeout: 15_000 });
+  const createdArtifact = rows.filter({ hasText: created.outcome.value.title });
 
   // Selecting a row opens the Side Panel inspector without leaving the Lab.
-  await dataTable.locator("td[data-column-id='artifact']").first().click();
+  await createdArtifact.locator("td[data-column-id='artifact']").click();
   const detailFrame = labFrame(page, "Artifact");
-  await expect(detailFrame.getByRole("heading", { name: artifactTitle! })).toBeVisible({ timeout: 15_000 });
+  await expect(detailFrame.getByRole("heading", { name: created.outcome.value.title })).toBeVisible({
+    timeout: 15_000,
+  });
   await expect(page.getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
   await expect(page.locator('[data-workbench-region="activity"]')).toBeVisible();
 
   // Row actions still delete artifacts.
-  await dataTable.locator("tbody tr").first().locator('button[aria-label="Row actions"]').click();
+  await createdArtifact.locator('button[aria-label="Row actions"]').click();
   const deleteResponse = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname.endsWith(
@@ -143,5 +153,5 @@ test("artifacts are created from the panel menu and inspected in the Side Panel"
   );
   await page.getByRole("menuitem", { name: "Delete artifact" }).click();
   expect((await deleteResponse).ok()).toBe(true);
-  await expect(page.getByRole("heading", { name: "No artifacts found" })).toBeVisible({ timeout: 15_000 });
+  await expect(rows).toHaveCount(initialArtifactCount, { timeout: 15_000 });
 });

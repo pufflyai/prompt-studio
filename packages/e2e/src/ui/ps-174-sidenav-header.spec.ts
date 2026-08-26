@@ -1,6 +1,7 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 import {
   STORY_RENDER_TIMEOUT_MS,
   startStorybook,
@@ -17,6 +18,7 @@ const ticketModeStoryId = "dashboard-sidenav--ticket-mode";
 const ticketWorkspaceBackStoryId = "dashboard-sidenav--ticket-workspace-back-journey";
 const sessionModeStoryId = "dashboard-sidenav--session-mode";
 const globalRowNames = ["Search", "Notifications", "Sessions", "Workspaces", "Tickets"] as const;
+const defaultGlobalRowNames = globalRowNames.filter((name) => name !== "Workspaces");
 
 const createProject = async (request: import("@playwright/test").APIRequestContext) => {
   const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-174 Sidenav" } });
@@ -76,9 +78,11 @@ const row = (sidenav: Locator, name: (typeof globalRowNames)[number]) =>
         .first()
     : sidenav.getByRole("option", { name, exact: true }).first();
 
-const expectGlobalHeader = async (sidenav: Locator) => {
-  const rows = globalRowNames.map((name) => row(sidenav, name));
+const expectGlobalHeader = async (sidenav: Locator, workspacesVisible = false) => {
+  const visibleNames = workspacesVisible ? globalRowNames : defaultGlobalRowNames;
+  const rows = visibleNames.map((name) => row(sidenav, name));
   for (const globalRow of rows) await expect(globalRow).toBeVisible({ timeout: 30_000 });
+  if (!workspacesVisible) await expect(row(sidenav, "Workspaces")).toHaveCount(0);
 
   const topEdges: number[] = [];
   for (const globalRow of rows) {
@@ -125,6 +129,9 @@ test("PS-174 keeps project-owned collections ordered and stable across aggregate
   expect(projectBox!.x).toBeLessThan(breadcrumbBox!.x);
   await expectGlobalHeader(sidenav);
 
+  await showHiddenSidenavEntry(page, "Workspaces");
+  await expectGlobalHeader(sidenav, true);
+
   const stableElements = [await projectButton.elementHandle()];
   for (const name of globalRowNames) stableElements.push(await row(sidenav, name).elementHandle());
   expect(stableElements.every(Boolean)).toBe(true);
@@ -133,13 +140,13 @@ test("PS-174 keeps project-owned collections ordered and stable across aggregate
   await expect(
     page.getByRole("navigation", { name: "breadcrumb" }).getByText("Workspaces", { exact: true }),
   ).toBeVisible();
-  await expectGlobalHeader(sidenav);
+  await expectGlobalHeader(sidenav, true);
 
   await row(sidenav, "Sessions").click();
   await expect(
     page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
   ).toBeVisible();
-  await expectGlobalHeader(sidenav);
+  await expectGlobalHeader(sidenav, true);
   await sidenav.getByRole("option", { name: "Sessions", exact: true }).last().click();
   await expect(sidenav.getByRole("option", { name: "Existing sidenav session", exact: true })).toBeVisible();
   await expect(sidenav.getByRole("button", { name: "Help", exact: true })).toBeVisible();
@@ -148,7 +155,7 @@ test("PS-174 keeps project-owned collections ordered and stable across aggregate
   await row(sidenav, "Tickets").click();
   await expect(row(sidenav, "Tickets")).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("button", { name: "Create row", exact: true })).toBeVisible();
-  await expectGlobalHeader(sidenav);
+  await expectGlobalHeader(sidenav, true);
 
   for (const element of stableElements) expect(await element!.evaluate((node) => node.isConnected)).toBe(true);
 });
@@ -167,7 +174,11 @@ test("PS-174 customizes the Sidenav from any point and persists header ordering"
 
   await row(sidenav, "Search").click({ button: "right" });
   const searchToggle = page.getByRole("menuitem", { name: /Search/ });
+  const workspacesToggle = page.getByRole("menuitem", { name: /Workspaces/ });
   await expect(searchToggle).toBeVisible();
+  await expect(workspacesToggle).toBeVisible();
+  await workspacesToggle.click();
+  await expect(row(sidenav, "Workspaces")).toBeVisible();
   await searchToggle.click();
   await expect(row(sidenav, "Search")).toHaveCount(0);
   await expect(searchToggle).toBeVisible();
@@ -193,6 +204,7 @@ test("PS-174 customizes the Sidenav from any point and persists header ordering"
   expect(reorderedTopEdges[0]).toBeLessThan(reorderedTopEdges[1]);
 
   await page.reload();
+  await expect(row(sidenav, "Workspaces")).toBeVisible();
   const persistedTopEdges = await Promise.all(
     [row(sidenav, "Notifications"), row(sidenav, "Search")].map(async (item) => (await item.boundingBox())!.y),
   );
@@ -203,6 +215,7 @@ test("PS-174 customizes the Sidenav from any point and persists header ordering"
   await expect(row(sidenav, "Search")).toHaveCount(0);
   await page.getByRole("menuitem", { name: "Reset to default", exact: true }).click();
   await expect(row(sidenav, "Search")).toBeVisible();
+  await expect(row(sidenav, "Workspaces")).toHaveCount(0);
 
   const resetTopEdges = await Promise.all(
     [row(sidenav, "Search"), row(sidenav, "Notifications")].map(async (item) => (await item.boundingBox())!.y),

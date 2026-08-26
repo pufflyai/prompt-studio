@@ -6,6 +6,7 @@ import {
   queryGlassLabArtifacts,
   updateArtifactMenu,
 } from "../commands/glass-lab-artifacts-command";
+import { queryLabWorkflowArtifacts, updateLabWorkflowArtifact } from "../data/lab-workflow-artifacts";
 import { labArtifactsChanged } from "../events";
 import { labWorkflowStatuses } from "./lab-workflow-statuses";
 
@@ -162,12 +163,11 @@ export const createLabViews = (baseUrl: string) => {
           displayable: true,
         },
       ],
-      query: async () => ({
-        rows: [
-          { id: "concept", title: "Shape the concept", attributes: { status: "idea" } },
-          { id: "prototype", title: "Test the prototype", attributes: { status: "testing" } },
-        ],
-      }),
+      query: queryLabWorkflowArtifacts,
+      refreshEvents: [labArtifactsChanged],
+      onAttributeChange: updateLabWorkflowArtifact,
+      onRowActivate: (_ctx, { row }) =>
+        row.resource ? { kind: "resource", resource: row.resource, input: { strategy: "replace-active" } } : undefined,
       defaultSettings: {
         viewMode: "board",
         columnGrouping: "status",

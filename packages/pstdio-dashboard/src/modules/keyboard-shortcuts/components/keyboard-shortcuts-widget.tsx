@@ -1,6 +1,6 @@
 import { Dialog, Flex, Menu, Stack, Text } from "@chakra-ui/react";
 import { PaletteShortcut, ScrollArea } from "@pstdio/ui";
-import type { KeybindingSequence } from "@pstdio/workbench";
+import type { KeybindingSequence, WorkbenchCore } from "@pstdio/workbench";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 
 interface ShortcutEntry {
@@ -10,15 +10,15 @@ interface ShortcutEntry {
   keybinding: KeybindingSequence;
 }
 
-const buildShortcutEntries = (input: WorkbenchPanelRenderInput): ShortcutEntry[] => {
-  return input.workbench.keybindings
-    .listActiveKeybindings()
-    .map((keybinding) => {
-      const record = input.workbench.commands.getCommand(keybinding.commandId);
+export const buildShortcutEntries = (workbench: WorkbenchCore): ShortcutEntry[] => {
+  return workbench.keybindings
+    .listKeybindings()
+    .map((keybinding, index) => {
+      const record = workbench.commands.getCommand(keybinding.commandId);
       if (!record) return null;
 
       return {
-        id: keybinding.commandId,
+        id: `${keybinding.commandId}:${index}`,
         label: record.command.label,
         category: record.command.category ?? "Workbench",
         keybinding: keybinding.keybinding,
@@ -34,7 +34,7 @@ const buildShortcutEntries = (input: WorkbenchPanelRenderInput): ShortcutEntry[]
 
 export const KeyboardShortcutsWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
-  const shortcuts = buildShortcutEntries(input);
+  const shortcuts = buildShortcutEntries(input.workbench);
 
   return (
     <Stack gap="0" minW="0">

@@ -14,7 +14,7 @@ const artifactsCollectionName = "glass-lab-artifacts";
 const artifactSubjects = ["Interview room", "Session deck", "Facility keycard", "Observation mirror"];
 const artifactQualifiers = ["Glass", "Turing", "Remote", "Sealed", "Inert"];
 const artifactRoles = ["observation", "evaluation", "access"] as const;
-const artifactStatuses = ["active", "locked"] as const;
+const artifactStatuses = ["idea", "testing"] as const;
 const artifactCustodies = ["Quarantine shelf", "Review bench", "Operator locker", "Transit case"];
 const artifactNextSteps = ["Compare against control notes", "Route through review checks", "Request operator sign-off"];
 
@@ -46,7 +46,7 @@ export const createRandomArtifact = (overrides: Partial<GlassLabArtifact> = {}):
 export const artifactsCollection = (storage: ExtensionStorageApi) =>
   storage.collection<GlassLabArtifact>(artifactsCollectionName);
 
-const artifactResource = (artifact: GlassLabArtifact) => ({
+export const artifactResource = (artifact: GlassLabArtifact) => ({
   type: resourceKind,
   id: artifact.id,
   label: artifact.title,
@@ -114,7 +114,7 @@ export const queryArtifactMenu = async (_ctx: ExtensionContextBase, _input: obje
           type: "actions",
           options: [
             { id: "random", name: "Random artifact" },
-            { id: "locked", name: "Locked artifact" },
+            { id: "testing", name: "Testing artifact" },
           ],
         },
       ],
@@ -141,10 +141,10 @@ export const updateArtifactMenu = async (
   // The ParamEditor issues extra update calls (value syncs) beyond the action
   // click, so only the two known action values may create an artifact.
   if (input.controlId !== "create") return { value: input.value };
-  if (input.value !== "random" && input.value !== "locked") return { value: input.value };
+  if (input.value !== "random" && input.value !== "testing") return { value: input.value };
   const artifact =
-    input.value === "locked"
-      ? createRandomArtifact({ status: "locked", summary: "Locked on intake by the Create artifacts menu." })
+    input.value === "testing"
+      ? createRandomArtifact({ status: "testing", summary: "Sent to testing by the Create artifacts menu." })
       : createRandomArtifact();
   await artifactsCollection(ctx.storage).put(artifact.id, artifact);
   await ctx.events.emit(labArtifactsChanged, { artifactId: artifact.id });

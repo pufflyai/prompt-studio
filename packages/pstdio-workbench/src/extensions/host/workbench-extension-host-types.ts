@@ -1,4 +1,5 @@
 import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import type { ExtensionKeybindingRecord } from "pstdio-api-contracts";
 import type {
   Disposable,
   MenuItem,
@@ -30,6 +31,7 @@ export interface WorkbenchExtensionHostMenuRegistration
 }
 
 export interface RegisterWorkbenchExtensionContributionsInput {
+  createKeybindingWhenExpression?: (when: ExtensionKeybindingRecord["when"]) => string | undefined;
   createMenuWhenExpression?: WorkbenchExtensionMenuWhenBuilder;
   createWebviewHostCapabilities?: CreateBridgeWebviewHostCapabilities;
   createWebviewHostCapabilityOverrides?: CreateBridgeWebviewHostCapabilities;

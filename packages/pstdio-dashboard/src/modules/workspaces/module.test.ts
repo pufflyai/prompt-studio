@@ -182,6 +182,7 @@ describe("createWorkspacesModule navigation", () => {
     expect(headerNodeIds).not.toContain("new-workspace");
     expect(workspacesNode).toMatchObject({
       commandId: dashboardCommandIds.openWorkspaces,
+      hiddenByDefault: true,
       actions: [
         expect.objectContaining({
           id: "new-workspace",
