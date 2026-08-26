@@ -1,4 +1,9 @@
-import type { CommandExecuteResponse, ListProjectExtensionsResponse, ProjectExtensionInstance } from "@pstdio/sdk/api";
+import type {
+  CommandExecuteResponse,
+  ListProjectExtensionsResponse,
+  ProjectExtensionInstance,
+  WorkbenchExtensionAutomationRecord,
+} from "@pstdio/sdk/api";
 import { toaster } from "@pstdio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
@@ -21,6 +26,7 @@ import {
 } from "./api";
 import { collectExtensionCommandNotifications } from "./command-outcome";
 import { publishExtensionCommandEvent } from "./extension-webview-broadcast";
+import type { DashboardExtensionMetadata } from "./types";
 
 const projectExtensionsQueryKey = (projectId: string | undefined) => ["project-extensions", projectId] as const;
 const projectExtensionMetadataQueryKey = (projectId: string | undefined) =>
@@ -52,6 +58,58 @@ const storeProjectExtension = (
       ),
     };
   });
+};
+
+const removeProjectExtension = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  projectId: string | undefined,
+  instanceId: string,
+) => {
+  queryClient.setQueryData<ListProjectExtensionsResponse>(projectExtensionsQueryKey(projectId), (current) => {
+    if (!current) return current;
+    const removed = current.extensions.find((extension) => extension.id === instanceId);
+    if (!removed) return current;
+
+    const extensions = current.extensions.filter((extension) => extension.id !== instanceId);
+    const stillInstalled = extensions.some((extension) => extension.installName === removed.installName);
+    return {
+      ...current,
+      extensions,
+      marketplace: current.marketplace.map((entry) =>
+        entry.installName === removed.installName ? { ...entry, installed: stillInstalled } : entry,
+      ),
+    };
+  });
+};
+
+const replaceAutomation = (
+  current: DashboardExtensionMetadata | undefined,
+  automation: WorkbenchExtensionAutomationRecord,
+  instanceId: string,
+) => {
+  if (!current) return current;
+  let found = false;
+  const automations = (current.automations ?? []).map((entry) => {
+    if (entry.id !== automation.id || entry.extensionInstanceId !== instanceId) return entry;
+    found = true;
+    return automation;
+  });
+
+  return { ...current, automations: found ? automations : [...automations, automation] };
+};
+
+const storeExtensionAutomation = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  projectId: string | undefined,
+  instanceId: string,
+  automation: WorkbenchExtensionAutomationRecord,
+) => {
+  queryClient.setQueryData<DashboardExtensionMetadata>(projectExtensionMetadataQueryKey(projectId), (current) =>
+    replaceAutomation(current, automation, instanceId),
+  );
+  queryClient.setQueryData<DashboardExtensionMetadata>(["extension-contributions", projectId, instanceId], (current) =>
+    replaceAutomation(current, automation, instanceId),
+  );
 };
 
 // Extension installs/enables sync over the live collections, so refresh the
@@ -130,7 +188,10 @@ export const useSetExtensionAutomationEnabled = (projectId: string | undefined) 
       if (!projectId) throw new Error("Project id is required to update automations.");
       return setExtensionAutomationEnabled(projectId, instanceId, automationId, enabled);
     },
-    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+    onSuccess: (automation, variables) => {
+      storeExtensionAutomation(queryClient, projectId, variables.instanceId, automation);
+      void invalidateExtensionQueries(queryClient, projectId);
+    },
   });
 };
 
@@ -215,7 +276,10 @@ export const useUninstallProjectExtension = (projectId: string | undefined) => {
       if (!projectId) throw new Error("Project id is required to uninstall extensions.");
       return uninstallProjectExtension(projectId, instanceId, deleteUserData);
     },
-    onSuccess: () => invalidateExtensionQueries(queryClient, projectId),
+    onSuccess: (_result, variables) => {
+      removeProjectExtension(queryClient, projectId, variables.instanceId);
+      void invalidateExtensionQueries(queryClient, projectId);
+    },
   });
 };
 

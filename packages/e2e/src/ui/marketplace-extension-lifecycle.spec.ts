@@ -36,7 +36,10 @@ const openExtensions = async (page: import("@playwright/test").Page, projectId: 
   await expect(page.getByTestId("extensions-panel")).toBeVisible();
 };
 
-test("installs and toggles the default repo-scoped Planner Automations extension", async ({ page, request }) => {
+test("deletes, installs, disables, and enables a Marketplace extension without stale lists", async ({
+  page,
+  request,
+}) => {
   const repoPath = createRepo();
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
     data: { name: `Marketplace extension ${Date.now()}` },
@@ -58,19 +61,50 @@ test("installs and toggles the default repo-scoped Planner Automations extension
   expect(installed).toMatchObject({ enabled: true });
   expect(existsSync(join(repoPath, ".pstdio/extensions/pstdio-planner-loops/package.json"))).toBe(true);
 
-  const deleted = await request.delete(`${apiBase}/v1/projects/${project.id}/extensions/${installed!.id}`, {
-    params: { deleteUserData: "true" },
-  });
-  expect(deleted.status()).toBe(204);
-
   await openExtensions(page, project.id);
   const installedRow = page.getByTestId("extension-entry").filter({ hasText: "Prompt Studio Planner Automation" });
-  await expect(installedRow).toHaveCount(0);
-
   const availableRow = page
     .getByTestId("marketplace-extension-entry")
     .filter({ hasText: "Prompt Studio Planner Automation" });
+
+  await expect(installedRow).toBeVisible();
+  await expect(availableRow).toHaveCount(0);
+
+  let holdExtensionRefetch = false;
+  let heldExtensionRefetch: import("@playwright/test").Route | null = null;
+  await page.route(`**/v1/projects/${project.id}/extensions`, async (route) => {
+    if (holdExtensionRefetch && !heldExtensionRefetch) {
+      heldExtensionRefetch = route;
+      return;
+    }
+    await route.continue();
+  });
+
+  await installedRow.click();
+  await expect(page.getByTestId("extension-detail")).toBeVisible();
+  await page.getByRole("tab", { name: "Settings" }).click();
+  await page.getByTestId("extension-delete").click();
+  const dialog = page.getByRole("dialog").last();
+  await dialog.getByText("Also delete this extension's data", { exact: false }).click();
+  holdExtensionRefetch = true;
+  const deleteResponse = page.waitForResponse(
+    (response) =>
+      response.url().includes(`/v1/projects/${project.id}/extensions/`) && response.request().method() === "DELETE",
+  );
+  await dialog.getByRole("button", { name: "Delete", exact: true }).click();
+  expect((await deleteResponse).status()).toBe(204);
+
+  await expect(page.getByTestId("extensions-panel")).toBeVisible();
+  await expect(installedRow).toHaveCount(0);
   await expect(availableRow).toBeVisible();
+  expect(existsSync(join(repoPath, ".pstdio/extensions/pstdio-planner-loops/package.json"))).toBe(false);
+
+  await expect
+    .poll(() => heldExtensionRefetch !== null, { message: "background extension refresh was not requested" })
+    .toBe(true);
+  await heldExtensionRefetch?.continue();
+  await page.unroute(`**/v1/projects/${project.id}/extensions`);
+
   const installResponse = page.waitForResponse(
     (response) =>
       response.url().includes("/extensions/marketplace/pstdio-planner-loops/install") &&
@@ -108,4 +142,44 @@ test("installs and toggles the default repo-scoped Planner Automations extension
   await visibleSwitch.click();
   expect((await enableResponse).status()).toBe(200);
   await expect(checkbox).toBeChecked();
+
+  await installedRow.click();
+  const automationRow = page.getByTestId("extension-automation-row").filter({ hasText: "Refine backlog tickets" });
+  await expect(automationRow).toBeVisible();
+  const automationCheckbox = automationRow.locator("input[type='checkbox']");
+  const automationSwitch = automationRow.locator("[data-scope='switch'][data-part='control']");
+  await expect(automationCheckbox).toBeChecked();
+
+  const heldAutomationRefreshes: import("@playwright/test").Route[] = [];
+  await page.route(`**/v1/projects/${project.id}/extensions/**`, async (route) => {
+    const requestUrl = route.request().url();
+    if (
+      route.request().method() === "GET" &&
+      (requestUrl.endsWith("/extensions/ui") || requestUrl.endsWith("/contributions"))
+    ) {
+      heldAutomationRefreshes.push(route);
+      return;
+    }
+    await route.continue();
+  });
+
+  const disableAutomationResponse = page.waitForResponse(
+    (response) => response.request().method() === "PATCH" && response.url().includes("/automations/"),
+  );
+  await automationSwitch.click();
+  expect((await disableAutomationResponse).status()).toBe(200);
+  await expect(automationCheckbox).not.toBeChecked();
+  await expect
+    .poll(() => heldAutomationRefreshes.length, { message: "background automation refresh was not requested" })
+    .toBeGreaterThan(0);
+
+  for (const route of heldAutomationRefreshes) await route.continue();
+  await page.unroute(`**/v1/projects/${project.id}/extensions/**`);
+
+  const enableAutomationResponse = page.waitForResponse(
+    (response) => response.request().method() === "PATCH" && response.url().includes("/automations/"),
+  );
+  await automationSwitch.click();
+  expect((await enableAutomationResponse).status()).toBe(200);
+  await expect(automationCheckbox).toBeChecked();
 });
