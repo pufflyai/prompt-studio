@@ -50,8 +50,8 @@ interface WorkbenchNavigationControlsProps {
 const WorkbenchNavigationControls = (props: WorkbenchNavigationControlsProps) => {
   const { workbench, regionControls } = props;
   const history = useWorkbenchStore(workbench.history.store, (state) => state);
-  const canNavigateBack = history.cursor > 0;
-  const canNavigateForward = history.cursor >= 0 && history.cursor < history.entries.length - 1;
+  const canNavigateBack = !history.hydrating && history.cursor > 0;
+  const canNavigateForward = !history.hydrating && history.cursor >= 0 && history.cursor < history.entries.length - 1;
 
   return (
     <HStack gap="2xs" flexShrink={0}>
