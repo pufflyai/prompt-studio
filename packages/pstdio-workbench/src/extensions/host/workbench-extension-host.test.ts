@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { createWorkbenchCore, type WorkbenchModuleContribution } from "../../core";
+import { buildSettingsTreeBody } from "../../react/settings/settings-tree";
 import { registerWorkbenchExtensionContributions } from "./workbench-extension-host";
 
 const extensionId = "pstdio.lab";
@@ -142,13 +143,32 @@ const metadata = {
 } satisfies WorkbenchExtensionMetadata;
 
 describe("registerWorkbenchExtensionContributions", () => {
-  test("keeps extension settings icons and places panels after host settings in stable order", () => {
+  test("groups extension settings by owner and keeps statuses in the Project section", async () => {
     const workbench = createWorkbenchCore();
+    workbench.settings.registerSection({ id: "workbench", title: "Workbench", order: 10 });
+    workbench.settings.registerSection({ id: "project", title: "Project", order: 20 });
+    workbench.settings.registerPanel({
+      id: "host.extensions",
+      title: "Extensions",
+      kind: "custom",
+      order: 10,
+      section: "project",
+      render: () => null,
+    });
+    workbench.settings.registerPanel({
+      id: "host.repositories",
+      title: "Repositories",
+      kind: "custom",
+      order: 20,
+      section: "project",
+      render: () => null,
+    });
     workbench.settings.registerPanel({
       id: "host.danger",
       title: "Danger zone",
       kind: "custom",
       order: 90,
+      section: "project",
       render: () => null,
     });
     const settingsMetadata = {
@@ -186,18 +206,28 @@ describe("registerWorkbenchExtensionContributions", () => {
           },
         },
       ],
+      settingsSections: [
+        {
+          id: `${extensionId}.settings-section.lab`,
+          extensionId,
+          title: "Lab",
+          order: 30,
+        },
+      ],
       settingsPanels: [
         {
           id: `${extensionId}.settings-panel.zebra`,
           extensionId,
           view: { extensionId, kind: "view", id: "zebra-settings" },
           slot: { id: "project.settingsPanels" },
+          section: { extensionId, kind: "settings-section", id: "lab" },
         },
         {
           id: `${extensionId}.settings-panel.alpha`,
           extensionId,
           view: { extensionId, kind: "view", id: "alpha-settings" },
           slot: { id: "project.settingsPanels" },
+          section: { extensionId, kind: "settings-section", id: "lab" },
         },
       ],
     } satisfies WorkbenchExtensionMetadata;
@@ -206,15 +236,21 @@ describe("registerWorkbenchExtensionContributions", () => {
       executeCommand: () => undefined,
       metadata: settingsMetadata,
       projectId: "project-1",
+      settingsSectionId: "project",
+      settingsSectionTitle: "Project",
       workbench,
     });
 
-    expect(workbench.settings.listPanels().map(({ id, icon }) => ({ id, icon }))).toEqual([
-      { id: "workbench.statuses", icon: "list-checks" },
-      { id: "host.danger", icon: undefined },
-      { id: `${extensionId}.settings-panel.alpha`, icon: "alpha" },
-      { id: `${extensionId}.settings-panel.zebra`, icon: "zebra" },
+    const tree = await buildSettingsTreeBody({ settings: workbench.settings, hasProjectScope: true });
+    expect(tree.map((section) => ({ label: section.label, nodes: section.nodes.map((node) => node.label) }))).toEqual([
+      { label: "Project", nodes: ["Extensions", "Repositories", "Statuses", "Danger zone"] },
+      { label: "Lab", nodes: ["Alpha settings", "Zebra settings"] },
     ]);
+    expect(workbench.settings.getPanel("workbench.statuses")).toMatchObject({
+      icon: "list-checks",
+      order: 25,
+      section: "project",
+    });
   });
 
   test("prepares extension command arguments through the host adapter", async () => {

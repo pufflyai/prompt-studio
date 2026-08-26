@@ -157,7 +157,7 @@ const createStatusOptionsResolver = (
         context.workbench.statuses.store.subscribeSelector((state) => state.values[id], listener),
     };
     sources.set(id, source);
-    if (!context.workbench.statuses.getStatuses(id)) void context.workbench.statuses.query(id).catch(() => undefined);
+    void context.workbench.statuses.load(id).catch(() => undefined);
     return source;
   };
 };

@@ -7,6 +7,26 @@ const validStatuses = [
 ];
 
 describe("createStatusRegistry", () => {
+  test("loads a status set once and reuses its cached values", async () => {
+    const registry = createStatusRegistry();
+    let queryCount = 0;
+    registry.registerStatusSet({
+      id: "planner.ticket",
+      title: "Ticket statuses",
+      query: async () => {
+        queryCount += 1;
+        return validStatuses;
+      },
+    });
+
+    await expect(Promise.all([registry.load("planner.ticket"), registry.load("planner.ticket")])).resolves.toEqual([
+      validStatuses,
+      validStatuses,
+    ]);
+    await expect(registry.load("planner.ticket")).resolves.toEqual(validStatuses);
+    expect(queryCount).toBe(1);
+  });
+
   test("registers independent editable and read-only status sets", async () => {
     const registry = createStatusRegistry();
     registry.registerStatusSet({ id: "planner.ticket", title: "Ticket statuses", query: async () => validStatuses });

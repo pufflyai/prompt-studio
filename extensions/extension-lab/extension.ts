@@ -15,7 +15,13 @@ import { labHarnesses } from "./src/harnesses";
 import { labHooks } from "./src/hooks";
 import { labMiddlewares } from "./src/middlewares";
 import { labWorkflowStatuses } from "./src/renderers/lab-workflow-statuses";
-import { createLabUi, labActivityItems, labModes, labResourceKinds } from "./src/renderers/ui-contributions";
+import {
+  createLabUi,
+  labActivityItems,
+  labModes,
+  labResourceKinds,
+  labSettingsSection,
+} from "./src/renderers/ui-contributions";
 
 const labUi = createLabUi(import.meta.url);
 
@@ -51,6 +57,7 @@ const extension = defineExtension({
     }),
   ],
   settingsPanels: labUi.settingsPanels,
+  settingsSections: [labSettingsSection],
 
   keybindings: [
     defineKeybinding({

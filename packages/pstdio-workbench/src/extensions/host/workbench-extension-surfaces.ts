@@ -24,6 +24,7 @@ import type { InternalRegisterWorkbenchExtensionContributionsInput } from "./wor
 
 const settingsSectionIdDefault = "extensions";
 const extensionSettingsOrderBase = 1_000;
+const statusesSettingsOrder = 25;
 
 const asPreferenceValue = (value: unknown): PreferenceValue | undefined =>
   value === undefined ? undefined : (value as PreferenceValue);
@@ -135,6 +136,7 @@ export const registerStatuses = (
       title: "Statuses",
       icon: "list-checks",
       kind: "custom",
+      order: statusesSettingsOrder,
       section: input.settingsSectionId ?? settingsSectionIdDefault,
       scope: "project",
       render: () => createElement(WorkflowStatusSettings, { workbench: input.workbench }),
@@ -146,9 +148,27 @@ export const registerStatuses = (
 export const registerSettings = (input: InternalRegisterWorkbenchExtensionContributionsInput) => {
   const disposables: Disposable[] = [];
   const sectionId = input.settingsSectionId ?? settingsSectionIdDefault;
+
   if (!input.workbench.settings.getSection(sectionId)) {
     disposables.push(
       input.workbench.settings.registerSection({ id: sectionId, title: input.settingsSectionTitle ?? "Extensions" }),
+    );
+  }
+
+  const sections = [...input.metadata.settingsSections].sort(
+    (left, right) =>
+      (left.order ?? 0) - (right.order ?? 0) ||
+      left.extensionId.localeCompare(right.extensionId) ||
+      left.id.localeCompare(right.id),
+  );
+  for (const section of sections) {
+    disposables.push(
+      input.workbench.settings.registerSection({
+        id: section.id,
+        title: text(section.title, section.id),
+        order: section.order,
+        scope: section.scope,
+      }),
     );
   }
 
@@ -177,7 +197,7 @@ export const registerSettings = (input: InternalRegisterWorkbenchExtensionContri
         icon: panel.icon,
         kind: "custom",
         order: extensionSettingsOrderBase + index,
-        section: sectionId,
+        section: panel.section ?? sectionId,
         scope: panel.scope,
         render: (renderInput) =>
           renderBridgeWebviewFrame({

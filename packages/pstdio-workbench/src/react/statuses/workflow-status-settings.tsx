@@ -64,14 +64,18 @@ interface WorkflowStatusSectionProps {
 
 const WorkflowStatusSection = (props: WorkflowStatusSectionProps) => {
   const { statusSet, workbench } = props;
-  const [statuses, setStatuses] = useState<WorkflowStatus[] | undefined>();
+  const [statuses, setStatuses] = useState<WorkflowStatus[] | undefined>(() => {
+    const cached = workbench.statuses.getStatuses(statusSet.id);
+    return cached ? [...cached] : undefined;
+  });
   const [loadError, setLoadError] = useState<unknown>();
 
   useEffect(() => {
     let current = true;
-    setStatuses(undefined);
+    const cached = workbench.statuses.getStatuses(statusSet.id);
+    setStatuses(cached ? [...cached] : undefined);
     setLoadError(undefined);
-    void workbench.statuses.query(statusSet.id).then(
+    void workbench.statuses.load(statusSet.id).then(
       (value) => {
         if (current) setStatuses([...value]);
       },

@@ -154,6 +154,15 @@ describe("extension-lab workbench attachments", () => {
     expect(extension.settingsPanels?.find((panel) => panel.id === "global")).toMatchObject({
       view: { kind: "view", id: "global-settings" },
     });
+    expect(extension.settingsSections).toEqual([
+      expect.objectContaining({ id: "lab", order: 30, title: expect.objectContaining({ default: "Lab" }) }),
+    ]);
+    expect(extension.settingsPanels).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "project", section: { kind: "settings-section", id: "lab" } }),
+        expect.objectContaining({ id: "global", section: { kind: "settings-section", id: "lab" } }),
+      ]),
+    );
     expect(extension.hooks).toEqual([]);
     expect(extension.templates?.find((template) => template.id === "labResource")).toMatchObject({
       title: expect.objectContaining({ default: "Glass Lab artifact" }),

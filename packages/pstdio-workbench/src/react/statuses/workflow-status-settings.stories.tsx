@@ -41,6 +41,14 @@ loadingWorkbench.statuses.registerStatusSet({
   query: () => new Promise<WorkflowStatus[]>(() => {}),
 });
 
+const cachedWorkbench = createWorkbenchCore();
+cachedWorkbench.statuses.registerStatusSet({
+  id: "cached",
+  title: "Already loaded provider",
+  query: async () => ticketStatuses,
+  save: async (statuses) => statuses,
+});
+
 const saveFailureWorkbench = createWorkbenchCore();
 saveFailureWorkbench.statuses.registerStatusSet({
   id: "failing",
@@ -90,6 +98,11 @@ export const SeveralProvidersAndReadOnly: Story = {
 
 export const Loading: Story = {
   render: () => <StatusesFrame workbench={loadingWorkbench} />,
+};
+
+export const AlreadyLoaded: Story = {
+  loaders: [async () => await cachedWorkbench.statuses.load("cached")],
+  render: () => <StatusesFrame workbench={cachedWorkbench} />,
 };
 
 export const SaveFailure: Story = {

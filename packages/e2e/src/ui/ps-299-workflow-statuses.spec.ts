@@ -46,6 +46,12 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
   });
   await prepareDashboard(page, project.id);
   await page.setViewportSize({ width: 1440, height: 900 });
+  let plannerStatusQueries = 0;
+  page.on("request", (request) => {
+    if (request.url().endsWith("/pstdio.pstdio-planner.status.ticket-statuses.status.query/execute")) {
+      plannerStatusQueries += 1;
+    }
+  });
 
   await page.goto(`/projects/${project.id}/tickets`);
   await expect(page.getByTestId("board-column-backlog")).toContainText("Keep the Planner board visible", {
@@ -55,7 +61,22 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
   await page.getByRole("option", { name: "Settings", exact: true }).click();
   const settings = page.getByRole("dialog");
   await expect(settings).toBeVisible({ timeout: 30_000 });
+  await expect
+    .poll(async () =>
+      (await settings.getByText(/^(Workbench|Project|Lab|Planner)$/).allTextContents()).map((text) => text.trim()),
+    )
+    .toEqual(["Workbench", "Project", "Lab", "Planner"]);
+  const settingsEntries = await settings.getByRole("option").allTextContents();
+  const entryIndex = (label: string) => settingsEntries.findIndex((entry) => entry.trim() === label);
+  expect(entryIndex("Extensions")).toBeLessThan(entryIndex("Repositories"));
+  expect(entryIndex("Repositories")).toBeLessThan(entryIndex("Statuses"));
+  expect(entryIndex("Statuses")).toBeLessThan(entryIndex("Danger zone"));
+  expect(entryIndex("Danger zone")).toBeLessThan(entryIndex("Lab (global)"));
+  expect(entryIndex("Lab (project)")).toBeLessThan(entryIndex("Ticket tags"));
+  expect(plannerStatusQueries).toBe(1);
   await settings.getByText("Statuses", { exact: true }).click();
+  await expect(settings.getByText("Ticket status", { exact: true })).toBeVisible({ timeout: 30_000 });
+  expect(plannerStatusQueries).toBe(1);
   const labStatuses = settings.getByTestId("workflow-status-set-pstdio.extension-lab.status.workflow");
   await expect(labStatuses.getByText("Lab workflow", { exact: true })).toBeVisible({ timeout: 30_000 });
 

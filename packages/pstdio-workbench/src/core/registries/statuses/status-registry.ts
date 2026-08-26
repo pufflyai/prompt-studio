@@ -51,6 +51,7 @@ export interface WorkbenchStatusRegistry {
   getStatusSet(id: string): RegisteredWorkbenchStatusSet | undefined;
   listStatusSets(): RegisteredWorkbenchStatusSet[];
   getStatuses(id: string): readonly WorkflowStatus[] | undefined;
+  load(id: string): Promise<readonly WorkflowStatus[]>;
   query(id: string): Promise<readonly WorkflowStatus[]>;
   save(id: string, statuses: readonly WorkflowStatus[]): Promise<readonly WorkflowStatus[]>;
 }
@@ -99,6 +100,18 @@ export const createStatusRegistry = (): WorkbenchStatusRegistry => {
     return set;
   };
 
+  const loadingById = new Map<string, Promise<readonly WorkflowStatus[]>>();
+
+  const query = async (id: string) => {
+    const set = requireSet(id);
+    const statuses = validateStatuses(set, await set.query());
+    const current = store.getState();
+    if (current.statusSets[id] === set) {
+      store.setState({ ...current, values: { ...current.values, [id]: statuses } }, false, "queryStatuses");
+    }
+    return statuses;
+  };
+
   return {
     store,
 
@@ -112,6 +125,7 @@ export const createStatusRegistry = (): WorkbenchStatusRegistry => {
         "registerStatusSet",
       );
       return createDisposable(() => {
+        loadingById.delete(contribution.id);
         const snapshot = store.getState();
         if (snapshot.statusSets[contribution.id] !== record) return;
         const { [contribution.id]: _removed, ...statusSets } = snapshot.statusSets;
@@ -134,13 +148,21 @@ export const createStatusRegistry = (): WorkbenchStatusRegistry => {
       return store.getState().values[id];
     },
 
-    async query(id) {
-      const set = requireSet(id);
-      const statuses = validateStatuses(set, await set.query());
-      const current = store.getState();
-      store.setState({ ...current, values: { ...current.values, [id]: statuses } }, false, "queryStatuses");
-      return statuses;
+    load(id) {
+      const cached = store.getState().values[id];
+      if (cached) return Promise.resolve(cached);
+
+      const existing = loadingById.get(id);
+      if (existing) return existing;
+
+      const loading = query(id).finally(() => {
+        if (loadingById.get(id) === loading) loadingById.delete(id);
+      });
+      loadingById.set(id, loading);
+      return loading;
     },
+
+    query,
 
     async save(id, statuses) {
       const set = requireSet(id);

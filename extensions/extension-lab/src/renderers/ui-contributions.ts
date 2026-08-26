@@ -6,6 +6,7 @@ import {
   defineResourceKind,
   defineResourceView,
   defineSettingsPanel,
+  defineSettingsSection,
   defineStatusBarItem,
   defineViewMenu,
   l10n,
@@ -57,6 +58,12 @@ export const blendProjectKind = defineResourceKind({
 });
 
 export const labResourceKinds = [glassLabArtifactKind, blendProjectKind];
+
+export const labSettingsSection = defineSettingsSection({
+  id: "lab",
+  title: l10n("settingsSections.lab.title", "Lab"),
+  order: 30,
+});
 
 const artifactInspector = resourceSlotRef(glassLabArtifactKind.ref, "inspector");
 const blendPrimary = resourceSlotRef(blendProjectKind.ref, "primary");
@@ -234,11 +241,17 @@ export const createLabUi = (baseUrl: string) => {
       }),
     ],
     settingsPanels: [
-      defineSettingsPanel({ id: "project", view: projectSettings.ref, slot: workbenchSlots.projectSettings }),
+      defineSettingsPanel({
+        id: "project",
+        view: projectSettings.ref,
+        slot: workbenchSlots.projectSettings,
+        section: labSettingsSection.ref,
+      }),
       defineSettingsPanel({
         id: "global",
         view: globalSettings.ref,
         slot: { id: "global.settings" },
+        section: labSettingsSection.ref,
       }),
     ],
   };

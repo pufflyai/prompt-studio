@@ -284,6 +284,9 @@ describe("pstdio planner extension contributions", () => {
 
   test("keeps tags separate and contributes statuses through the shared editor", () => {
     expect(extension.settingsPanels?.map((panel) => panel.id)).toEqual(["ticket-tags"]);
+    expect(extension.settingsSections).toEqual([
+      expect.objectContaining({ id: "planner", order: 40, title: expect.objectContaining({ default: "Planner" }) }),
+    ]);
     expect(extension.statuses?.map((provider) => provider.id)).toEqual(["ticket-statuses"]);
   });
 });

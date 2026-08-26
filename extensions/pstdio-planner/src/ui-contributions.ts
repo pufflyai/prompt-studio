@@ -45,7 +45,7 @@ export const ticketResourceKind = defineResourceKind({
 export const plannerSettingsSection = defineSettingsSection({
   id: "planner",
   title: l10n("settingsSections.planner.title", "Planner"),
-  order: 30,
+  order: 40,
 });
 
 const ticketPrimary = resourceSlotRef(ticketResourceKind.ref, "primary");
