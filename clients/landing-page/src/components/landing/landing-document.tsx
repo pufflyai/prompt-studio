@@ -1,5 +1,6 @@
 import { Box, Flex, HStack, Link, Stack, Text } from "@chakra-ui/react";
 import { AppleLogo, LinuxLogo, OpenAiLogo } from "@phosphor-icons/react";
+import { RichMessage } from "@pstdio/ui/rich-text";
 import { Blocks, Braces, SquareTerminal } from "lucide-react";
 import { AnthropicLogo } from "./anthropic-logo";
 import { DashedTag } from "./dashed-tag";
@@ -22,14 +23,14 @@ export const LANDING_DOCUMENT_PAGE: DocPage = {
   title: LANDING_DOCUMENT_TITLE,
   intro: LANDING_DOCUMENT_INTRO,
   blocks: [
-    { type: "heading", text: "Install Prompt Studio" },
-    { type: "code", code: INSTALL_COMMANDS.join("\n") },
+    { type: "heading", text: "Get Prompt Studio" },
+    { type: "code", code: INSTALL_COMMANDS.join("\n"), language: "bash" },
     { type: "heading", text: "Bring your own agent" },
     {
       type: "paragraph",
       text: "Connect Claude Code, Codex, or OpenCode through harness extensions and use the agent you already trust.",
     },
-    { type: "heading", text: "You build the tools. Prompt Studio handles everything around them." },
+    { type: "heading", text: "Build the tools you need" },
     {
       type: "paragraph",
       text: "Describe the project-local command, panel, editor, automation, template, or skill you need and let your agent assemble it inside the workbench.",
@@ -159,23 +160,24 @@ const TagGroup = (props: TagGroupProps) => {
   );
 };
 
+const EXTENSION_EXAMPLE = `\`\`\`typescript
+defineExtension({
+  commands: {
+    "preview.deploy": {
+      agent: true,
+      run: () => deploy("preview"),
+    },
+  },
+});
+\`\`\``;
+
 const DesktopPromptExample = () => (
   <Flex gap="34px">
-    <Stack width="288px" flexShrink="0" gap="8px">
-      <Text fontFamily="heading" fontSize="15px" fontWeight="semibold">
-        Describe the tool. Extend your workbench.
-      </Text>
-      <Text fontFamily="body" fontSize="13px" lineHeight="1.5" color="fg.muted">
-        A preview deployer, a release dashboard, a client-ready report — whatever your workflow is missing, your agent
-        builds it into the workbench in minutes. No vendor to wait on, no backlog to join.
-      </Text>
-    </Stack>
-    <Box flex="1" minWidth="0" p="13px" bg="bg.subtle" borderWidth="1px" borderColor="border" rounded="6px">
-      <Text fontFamily="mono" fontSize="11px" lineHeight="1.5" whiteSpace="pre">
-        {
-          'defineExtension({\n  commands: {\n    "preview.deploy": {\n      agent: true, // agents get this as a tool\n      run: () => deploy("preview")\n    }\n  }\n})'
-        }
-      </Text>
+    <Text width="288px" flexShrink="0" fontFamily="heading" fontSize="15px" fontWeight="semibold" lineHeight="1.45">
+      Describe the missing tool. Your agent builds it into the workbench.
+    </Text>
+    <Box flex="1" minWidth="0" height="168px" overflow="hidden">
+      <RichMessage defaultState={EXTENSION_EXAMPLE} fullWidth />
     </Box>
   </Flex>
 );
@@ -215,7 +217,7 @@ export const LandingDocument = (props: LandingDocumentProps) => {
         </Text>
 
         <Stack className="group" gap="12px" pt="14px">
-          <SectionRule label="01 / start in two commands" />
+          <SectionRule label="01 / get Prompt Studio" />
           <TerminalBlock commands={INSTALL_COMMANDS} />
         </Stack>
 
@@ -252,7 +254,7 @@ export const LandingDocument = (props: LandingDocumentProps) => {
           </Stack>
 
           <Stack className="group" gap="14px">
-            <SectionRule label="03 / the tool you need is one prompt away" />
+            <SectionRule label="03 / build the tools you need" />
             <DesktopPromptExample />
           </Stack>
         </Stack>

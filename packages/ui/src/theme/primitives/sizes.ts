@@ -62,6 +62,7 @@ export const sizes = {
   "tag-action-menu": { value: sp[2000] },
   "view-bar": { value: sp[500] },
   "view-subheader": { value: "2.25rem" },
+  "data-table-column-min": { value: sp[3000] },
 };
 
 export const borderWidths = {

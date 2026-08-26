@@ -14,6 +14,7 @@ const VIEW_SEARCH_TEXT: Record<LandingView, string> = {
   "why-prompt-studio": "why Prompt Studio value proposition workflow tools differentiation",
   gallery: "extensions gallery marketplace install",
   concepts: "concepts documentation how it works",
+  documentation: "project documentation architecture product extensions references decisions lessons",
   "guide-getting-started": "guide install setup project agent getting started",
   "guide-create-ticket": "guide create plan ticket workflow",
   "guide-implement-ticket": "guide ticket implement delegate merge workspace",

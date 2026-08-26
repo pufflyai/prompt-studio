@@ -8,6 +8,7 @@ COPY packages packages
 COPY clients clients
 COPY extensions extensions
 COPY infra/local/extensions infra/local/extensions
+COPY .pstdio/docs .pstdio/docs
 COPY .pstdio/extensions/font-editor/package.json .pstdio/extensions/font-editor/package.json
 COPY .pstdio/extensions/pstdio-dev/package.json .pstdio/extensions/pstdio-dev/package.json
 COPY .pstdio/extensions/pstdio-planner-loops/package.json .pstdio/extensions/pstdio-planner-loops/package.json

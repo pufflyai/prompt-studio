@@ -25,7 +25,7 @@ describe("docPageToMarkdown", () => {
         "## Section",
         "Paragraph with **formatting**.",
         "- First\n- Second",
-        "```\nbun run example\n```",
+        "```bash\nbun run example\n```",
         "> A useful note.",
         "![Example](/example.png)",
       ].join("\n\n"),

@@ -12,15 +12,18 @@ const MAC_CONTROLS = [
 interface ProjectTabsBarProps {
   activeTab: ProjectTabId;
   branchLabel: string;
+  onNavigateHome: () => void;
   onSelectTab: (tab: ProjectTabId) => void;
 }
 
 export const ProjectTabsBar = (props: ProjectTabsBarProps) => {
-  const { activeTab, branchLabel, onSelectTab } = props;
+  const { activeTab, branchLabel, onNavigateHome, onSelectTab } = props;
 
   return (
     <>
       <Stack
+        as="button"
+        aria-label="Go to Prompt Studio home"
         height="52px"
         flexShrink="0"
         gap="1px"
@@ -30,6 +33,8 @@ export const ProjectTabsBar = (props: ProjectTabsBarProps) => {
         borderBottomWidth="1px"
         borderColor="border"
         display={{ base: "flex", md: "none" }}
+        textAlign="left"
+        onClick={onNavigateHome}
       >
         <Text fontFamily="heading" fontWeight="medium" fontSize="13px" lineHeight="1.2">
           Prompt Studio

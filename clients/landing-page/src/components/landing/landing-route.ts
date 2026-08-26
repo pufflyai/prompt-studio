@@ -1,11 +1,13 @@
 import { BLOG_POSTS } from "./content/blog";
 import type { LandingView, ProjectTabId } from "./landing-content";
+import { repositoryDocUrl } from "./repository-doc-route";
 
 const LANDING_VIEW_PATHS: Record<LandingView, string> = {
   start: "/",
   "why-prompt-studio": "/explore/why-prompt-studio",
   gallery: "/extensions",
   concepts: "/docs/concepts",
+  documentation: "/documentation",
   "guide-getting-started": "/guides/getting-started",
   "guide-create-ticket": "/guides/create-a-ticket",
   "guide-implement-ticket": "/guides/implement-a-ticket",
@@ -37,6 +39,7 @@ export interface LandingLocation {
   activeTab: ProjectTabId;
   activeView: LandingView;
   blogPostId?: string;
+  docPath?: string;
 }
 
 const normalizePath = (path: string) => {
@@ -47,15 +50,22 @@ const normalizePath = (path: string) => {
 
 export const landingPathForLocation = (location: LandingLocation) => {
   if (location.activeView === "blog" && location.blogPostId) return `/blog/${location.blogPostId}`;
+  if (location.activeView === "documentation") return repositoryDocUrl(location.docPath ?? "index.md");
   return LANDING_VIEW_PATHS[location.activeView];
 };
 
-export const landingLocationFromPath = (path: string): LandingLocation => {
+export const landingLocationFromPath = (
+  path: string,
+  resolveRepositoryDocPath?: (path: string) => string | undefined,
+): LandingLocation => {
   const pathname = normalizePath(path);
   const blogPost = BLOG_POSTS.find((post) => `/blog/${post.id}` === pathname);
   if (blogPost) {
     return { activeTab: "docs", activeView: "blog", blogPostId: blogPost.id };
   }
+
+  const docPath = resolveRepositoryDocPath?.(pathname);
+  if (docPath) return { activeTab: "docs", activeView: "documentation", docPath };
 
   const view = Object.entries(LANDING_VIEW_PATHS).find(([, candidate]) => candidate === pathname)?.[0] as
     | LandingView

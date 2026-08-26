@@ -28,7 +28,7 @@ import {
   Workflow,
 } from "lucide-react";
 
-export const INSTALL_COMMANDS = ["bun add -g pstdio@latest", "pst"];
+export const INSTALL_COMMANDS = ["bun add --global pstdio@latest", "pst"];
 
 export const SITE_LINKS = {
   github: "https://github.com/pufflyai/prompt-studio",
@@ -45,6 +45,7 @@ export type LandingView =
   | "why-prompt-studio"
   | "gallery"
   | "concepts"
+  | "documentation"
   | "guide-getting-started"
   | "guide-create-ticket"
   | "guide-implement-ticket"
@@ -82,6 +83,7 @@ export const VIEW_META: Record<LandingView, ViewMeta> = {
   "why-prompt-studio": { label: "Why Prompt Studio", icon: BadgeCheck, parent: "explore" },
   gallery: { label: "Extension gallery", icon: Blocks, parent: "explore" },
   concepts: { label: "Concepts", icon: BookOpen },
+  documentation: { label: "Documentation", icon: BookOpen },
   "guide-getting-started": { label: "Quickstart", icon: SquareTerminal, parent: "guides" },
   "guide-create-ticket": { label: "Create a ticket", icon: Ticket, parent: "guides" },
   "guide-implement-ticket": { label: "Implement a ticket", icon: Ticket, parent: "guides" },
@@ -148,33 +150,32 @@ export interface ChangelogEntry {
 // curated digest of packages/pstdio/CHANGELOG.md
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
-    version: "0.24.0",
-    date: "2026-07-09",
+    version: "0.29.0",
+    date: "2026-08-25",
     highlights: [
-      "Workbench terminal tabs with workspace-scoped PTY sessions.",
-      "Extensions contribute command-backed control panels rendered through the ParamEditor.",
-      "React xterm.js terminal surface shipped as @pstdio/ui/terminal.",
+      "Typed webview clients and React Query hooks for extension authors.",
+      "Marketplace upgrades now replace installed extensions cleanly.",
     ],
   },
   {
-    version: "0.23.0",
-    date: "2026-06-28",
+    version: "0.28.0",
+    date: "2026-08-24",
     highlights: [
-      "Durable notification center and inbox workflows.",
-      "Mode-reactive sidebar composed from extension contributions.",
+      "Workspace file browsing, Monaco editing, and diff review in the workbench.",
+      "Install and upgrade extensions directly from Git repositories.",
     ],
   },
   {
-    version: "0.22.0",
-    date: "2026-06-23",
-    highlights: ["Create a project with no coding agents installed; add them later in Settings."],
+    version: "0.27.0",
+    date: "2026-08-21",
+    highlights: [
+      "Editable Markdown tables and a broader extension API alpha.",
+      "Extension-owned workbench composition, refresh controls, and attempt orchestration.",
+    ],
   },
   {
-    version: "0.21.0",
-    date: "2026-06-17",
-    highlights: [
-      "Extensions contribute file icon themes: Monokai, Solarized, Dracula, and Seti.",
-      "Project templates can override extension templates per project.",
-    ],
+    version: "0.26.2",
+    date: "2026-08-16",
+    highlights: ["Authenticated extension webviews and more reliable runtime shutdown."],
   },
 ];

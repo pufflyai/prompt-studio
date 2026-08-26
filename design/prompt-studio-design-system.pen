@@ -99201,40 +99201,8 @@
               "cornerRadius": 0,
               "stroke": []
             },
-            "NyEGQ": {
-              "enabled": true
-            },
-            "lDVgu": {
-              "flipX": false,
-              "flipY": false,
-              "width": "fill_container",
-              "height": 40,
-              "x": 0,
-              "y": 0
-            },
-            "GsvjZ": {
-              "enabled": false
-            },
-            "RJOQb": {
-              "enabled": false
-            },
-            "Q08av": {
-              "enabled": false
-            },
-            "fYfek": {
-              "enabled": false
-            },
-            "lNBji": {
-              "enabled": false
-            },
-            "fRGml": {
-              "enabled": false
-            },
             "b71tU": {
               "content": "release-plan"
-            },
-            "U6igi": {
-              "enabled": false
             }
           }
         }
@@ -114005,6 +113973,369 @@
                       ]
                     },
                     {
+                      "type": "text",
+                      "id": "A27FN",
+                      "name": "Documentation Label",
+                      "fill": "$ds-fg-subtle",
+                      "content": "DOCUMENTATION",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 9,
+                      "fontWeight": "600",
+                      "letterSpacing": 1
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Ujewh",
+                      "name": "Documentation · Overview",
+                      "width": "fill_container",
+                      "height": 28,
+                      "fill": "#00000000",
+                      "cornerRadius": 4,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "jjFph",
+                          "name": "Overview Icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "book-open",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Awxit",
+                          "name": "Overview Label",
+                          "fill": "$ds-fg-muted",
+                          "content": "Overview",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "fBBA7",
+                          "name": "Overview Spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "naPuu",
+                      "name": "Documentation · Product",
+                      "width": "fill_container",
+                      "height": 28,
+                      "fill": "#00000000",
+                      "cornerRadius": 4,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "hJLxj",
+                          "name": "Product Icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "box",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Kmn8R",
+                          "name": "Product Label",
+                          "fill": "$ds-fg-muted",
+                          "content": "Product",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "Df6IU",
+                          "name": "Product Spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "Rj2fg",
+                      "name": "Documentation · Architecture",
+                      "width": "fill_container",
+                      "height": 28,
+                      "fill": "#00000000",
+                      "cornerRadius": 4,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "y8czQb",
+                          "name": "Architecture Icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "panels-top-left",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "o7fkcG",
+                          "name": "Architecture Label",
+                          "fill": "$ds-fg-muted",
+                          "content": "Architecture",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "XhW1w",
+                          "name": "Architecture Spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "YpYWN",
+                      "name": "Documentation · Extensions",
+                      "width": "fill_container",
+                      "height": 28,
+                      "fill": "#00000000",
+                      "cornerRadius": 4,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "RasMU",
+                          "name": "Extensions Icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "blocks",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "P59C0c",
+                          "name": "Extensions Label",
+                          "fill": "$ds-fg-muted",
+                          "content": "Extensions",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "sDsPN",
+                          "name": "Extensions Spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "xrhgq",
+                      "name": "Documentation · References",
+                      "width": "fill_container",
+                      "height": 28,
+                      "fill": "#00000000",
+                      "cornerRadius": 4,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "b3tohN",
+                          "name": "References Icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "files",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "zs6Ds",
+                          "name": "References Label",
+                          "fill": "$ds-fg-muted",
+                          "content": "References",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "ssIwJ",
+                          "name": "References Spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "HZXO7",
+                      "name": "Documentation · ADRs",
+                      "width": "fill_container",
+                      "height": 28,
+                      "fill": "#00000000",
+                      "cornerRadius": 4,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "WMbqn",
+                          "name": "ADRs Icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "history",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "uuO1D",
+                          "name": "ADRs Label",
+                          "fill": "$ds-fg-muted",
+                          "content": "ADRs",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "F3Cmwy",
+                          "name": "ADRs Spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "ZJBLP",
+                      "name": "Documentation · Contributing",
+                      "width": "fill_container",
+                      "height": 28,
+                      "fill": "#00000000",
+                      "cornerRadius": 4,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "XJQK6",
+                          "name": "Contributing Icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "git-pull-request",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "Z4olCm",
+                          "name": "Contributing Label",
+                          "fill": "$ds-fg-muted",
+                          "content": "Contributing",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "C84eq",
+                          "name": "Contributing Spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "CZ0xb",
+                      "name": "Documentation · Lessons learned",
+                      "width": "fill_container",
+                      "height": 28,
+                      "fill": "#00000000",
+                      "cornerRadius": 4,
+                      "gap": 8,
+                      "padding": [
+                        0,
+                        8
+                      ],
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "icon",
+                          "id": "IQtC9",
+                          "name": "Lessons learned Icon",
+                          "width": 13,
+                          "height": 13,
+                          "icon": "lightbulb",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
+                        {
+                          "type": "text",
+                          "id": "LNKep",
+                          "name": "Lessons learned Label",
+                          "fill": "$ds-fg-muted",
+                          "content": "Lessons learned",
+                          "fontFamily": "$font-body",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "type": "frame",
+                          "id": "nqvAg",
+                          "name": "Lessons learned Spacer",
+                          "width": "fill_container",
+                          "height": 1
+                        }
+                      ]
+                    },
+                    {
                       "type": "frame",
                       "id": "ZYaI1",
                       "name": "GitHub",
@@ -114299,7 +114630,7 @@
                                       "id": "BfPnN",
                                       "name": "Command line Title",
                                       "fill": "$ds-fg",
-                                      "content": "Command line",
+                                      "content": "Get Prompt Studio",
                                       "fontFamily": "$font-heading",
                                       "fontSize": 13,
                                       "fontWeight": "600"
@@ -114311,7 +114642,7 @@
                                   "id": "x5dhE",
                                   "name": "Command line Description",
                                   "fill": "$ds-fg-muted",
-                                  "content": "Run Prompt Studio anywhere.",
+                                  "content": "Install the CLI once.",
                                   "fontFamily": "$font-body",
                                   "fontSize": 12,
                                   "fontWeight": "normal"
@@ -114338,7 +114669,7 @@
                                       "id": "BUaWk",
                                       "name": "Command line Command",
                                       "fill": "$ds-fg",
-                                      "content": "npm i -g pstdio",
+                                      "content": "bun add --global pstdio@latest",
                                       "fontFamily": "$font-mono",
                                       "fontSize": 10,
                                       "fontWeight": "normal"
@@ -114350,7 +114681,7 @@
                                   "id": "zCqH8",
                                   "name": "Command line Description",
                                   "fill": "$ds-fg-muted",
-                                  "content": "Run Prompt Studio anywhere.",
+                                  "content": "Start the workbench.",
                                   "fontFamily": "$font-body",
                                   "fontSize": 12,
                                   "fontWeight": "normal"
@@ -114443,22 +114774,12 @@
                                           "id": "ESqTB",
                                           "name": "Developer SDK Title",
                                           "fill": "$ds-fg",
-                                          "content": "Developer SDK",
+                                          "content": "Build the tools you need",
                                           "fontFamily": "$font-heading",
                                           "fontSize": 13,
                                           "fontWeight": "600"
                                         }
                                       ]
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "BgVE2",
-                                      "name": "Developer SDK Description",
-                                      "fill": "$ds-fg-muted",
-                                      "content": "Compose panels, tools, and workflows.",
-                                      "fontFamily": "$font-body",
-                                      "fontSize": 12,
-                                      "fontWeight": "normal"
                                     },
                                     {
                                       "type": "frame",
@@ -114482,7 +114803,7 @@
                                           "id": "y5fi3R",
                                           "name": "Developer SDK Command",
                                           "fill": "$ds-fg",
-                                          "content": "defineExtension({ ... })",
+                                          "content": "pst extensions dev ./my-extension",
                                           "fontFamily": "$font-mono",
                                           "fontSize": 10,
                                           "fontWeight": "normal"
@@ -114557,49 +114878,45 @@
                       "width": 1220,
                       "height": 788,
                       "fill": "$ds-bg",
+                      "layout": "vertical",
+                      "alignItems": "center",
                       "children": [
                         {
                           "type": "frame",
-                          "id": "GiNeZ",
-                          "name": "Quickstart Guide",
-                          "width": 460,
+                          "id": "v9KqG5",
+                          "name": "CLI Documentation",
+                          "width": 820,
                           "height": "fill_container",
-                          "fill": "$ds-bg",
-                          "stroke": "$ds-border",
-                          "strokeWidth": {
-                            "right": 1
-                          },
-                          "strokeLinejoin": "round",
                           "layout": "vertical",
-                          "gap": 22,
+                          "gap": 18,
                           "padding": [
                             38,
-                            42
+                            32,
+                            34,
+                            32
                           ],
                           "children": [
                             {
                               "type": "frame",
-                              "id": "NqMQz",
-                              "name": "Quickstart Eyebrow",
+                              "id": "gB2Vi",
+                              "name": "CLI Documentation Eyebrow",
                               "gap": 8,
                               "alignItems": "center",
                               "children": [
                                 {
-                                  "type": "icon",
-                                  "id": "oMiko",
-                                  "name": "Quickstart Icon",
-                                  "width": 14,
-                                  "height": 14,
-                                  "icon": "zap",
-                                  "library": "lucide",
+                                  "type": "frame",
+                                  "id": "KKNXV",
+                                  "name": "CLI Documentation Accent",
+                                  "width": 18,
+                                  "height": 2,
                                   "fill": "$ds-info"
                                 },
                                 {
                                   "type": "text",
-                                  "id": "rWhQJ",
-                                  "name": "Quickstart Kicker",
+                                  "id": "aMJSq",
+                                  "name": "CLI Documentation Path",
                                   "fill": "$ds-info",
-                                  "content": "CLI QUICKSTART",
+                                  "content": "DOCUMENTATION / CLI / QUICKSTART",
                                   "fontFamily": "$font-heading",
                                   "fontSize": 10,
                                   "fontWeight": "600",
@@ -114609,652 +114926,284 @@
                             },
                             {
                               "type": "text",
-                              "id": "Yuoie",
-                              "name": "Quickstart Heading",
+                              "id": "vVV4m",
+                              "name": "CLI Documentation Heading",
                               "fill": "$ds-fg",
                               "textGrowth": "fixed-width",
                               "width": "fill_container",
-                              "content": "From install to first agent in five minutes.",
+                              "content": "Use the CLI",
                               "lineHeight": 1.08,
                               "fontFamily": "$font-heading",
-                              "fontSize": 32,
+                              "fontSize": 34,
                               "fontWeight": "600",
-                              "letterSpacing": -0.7
+                              "letterSpacing": -0.8
                             },
                             {
                               "type": "text",
-                              "id": "ODWTF",
-                              "name": "Quickstart Intro",
+                              "id": "HvgBA",
+                              "name": "CLI Documentation Intro",
                               "fill": "$ds-fg-muted",
                               "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "Follow the live terminal as Prompt Studio creates a project, connects your repository, and opens the workbench.",
-                              "lineHeight": 1.5,
+                              "width": 680,
+                              "content": "The pst command starts Prompt Studio and gives people and agents the same project, agent, session, and extension tools.",
+                              "lineHeight": 1.45,
                               "fontFamily": "$font-body",
-                              "fontSize": 14,
+                              "fontSize": 15,
                               "fontWeight": "normal"
                             },
                             {
                               "type": "frame",
-                              "id": "qHA63",
-                              "name": "Quickstart Steps",
+                              "id": "mo790",
+                              "name": "CLI Section · 1. Install and start",
                               "width": "fill_container",
                               "layout": "vertical",
                               "gap": 8,
                               "children": [
                                 {
-                                  "type": "frame",
-                                  "id": "NZYWK",
-                                  "name": "Step 1 · Install the CLI",
-                                  "width": "fill_container",
-                                  "height": 62,
-                                  "fill": "#00000000",
-                                  "cornerRadius": 6,
-                                  "stroke": "#00000000",
-                                  "strokeWidth": 1,
-                                  "gap": 12,
-                                  "padding": [
-                                    0,
-                                    12
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "Y6BV7r",
-                                      "name": "Step 1 Number",
-                                      "width": 26,
-                                      "height": 26,
-                                      "fill": "$ds-success-subtle",
-                                      "cornerRadius": 999,
-                                      "stroke": "$ds-border",
-                                      "strokeWidth": 1,
-                                      "justifyContent": "center",
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "boIao",
-                                          "name": "Step 1 Value",
-                                          "fill": "$ds-success",
-                                          "content": "✓",
-                                          "fontFamily": "$font-heading",
-                                          "fontSize": 11,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "xNDPr",
-                                      "name": "Step 1 Copy",
-                                      "width": "fill_container",
-                                      "layout": "vertical",
-                                      "gap": 3,
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "k0HB7",
-                                          "name": "Step 1 Title",
-                                          "fill": "$ds-fg",
-                                          "content": "Install the CLI",
-                                          "fontFamily": "$font-heading",
-                                          "fontSize": 13,
-                                          "fontWeight": "600"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "xS9qx",
-                                          "name": "Step 1 Description",
-                                          "fill": "$ds-fg-muted",
-                                          "content": "Add the latest pstdio binary.",
-                                          "fontFamily": "$font-body",
-                                          "fontSize": 11,
-                                          "fontWeight": "normal"
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "guTRO",
-                                  "name": "Step 2 · Start Prompt Studio",
-                                  "width": "fill_container",
-                                  "height": 62,
-                                  "fill": "$ds-bg-active",
-                                  "cornerRadius": 6,
-                                  "stroke": "$ds-info",
-                                  "strokeWidth": 1,
-                                  "gap": 12,
-                                  "padding": [
-                                    0,
-                                    12
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "jZ2SO",
-                                      "name": "Step 2 Number",
-                                      "width": 26,
-                                      "height": 26,
-                                      "fill": "$ds-info-subtle",
-                                      "cornerRadius": 999,
-                                      "stroke": "$ds-border",
-                                      "strokeWidth": 1,
-                                      "justifyContent": "center",
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "ERsve",
-                                          "name": "Step 2 Value",
-                                          "fill": "$ds-info",
-                                          "content": "2",
-                                          "fontFamily": "$font-heading",
-                                          "fontSize": 11,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "d9CDm",
-                                      "name": "Step 2 Copy",
-                                      "width": "fill_container",
-                                      "layout": "vertical",
-                                      "gap": 3,
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "dOYvV",
-                                          "name": "Step 2 Title",
-                                          "fill": "$ds-fg",
-                                          "content": "Start Prompt Studio",
-                                          "fontFamily": "$font-heading",
-                                          "fontSize": 13,
-                                          "fontWeight": "600"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "N5YHE",
-                                          "name": "Step 2 Description",
-                                          "fill": "$ds-fg-muted",
-                                          "content": "Launch the API and desktop workbench.",
-                                          "fontFamily": "$font-body",
-                                          "fontSize": 11,
-                                          "fontWeight": "normal"
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "pBoQ2",
-                                  "name": "Step 3 · Create a project",
-                                  "width": "fill_container",
-                                  "height": 62,
-                                  "fill": "#00000000",
-                                  "cornerRadius": 6,
-                                  "stroke": "#00000000",
-                                  "strokeWidth": 1,
-                                  "gap": 12,
-                                  "padding": [
-                                    0,
-                                    12
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "eRavP",
-                                      "name": "Step 3 Number",
-                                      "width": 26,
-                                      "height": 26,
-                                      "fill": "$ds-surface",
-                                      "cornerRadius": 999,
-                                      "stroke": "$ds-border",
-                                      "strokeWidth": 1,
-                                      "justifyContent": "center",
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "WNqKx",
-                                          "name": "Step 3 Value",
-                                          "fill": "$ds-fg-muted",
-                                          "content": "3",
-                                          "fontFamily": "$font-heading",
-                                          "fontSize": 11,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "FMRD8",
-                                      "name": "Step 3 Copy",
-                                      "width": "fill_container",
-                                      "layout": "vertical",
-                                      "gap": 3,
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "ggdR0",
-                                          "name": "Step 3 Title",
-                                          "fill": "$ds-fg",
-                                          "content": "Create a project",
-                                          "fontFamily": "$font-heading",
-                                          "fontSize": 13,
-                                          "fontWeight": "600"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "uKE1n",
-                                          "name": "Step 3 Description",
-                                          "fill": "$ds-fg-muted",
-                                          "content": "Link the repository you want agents to use.",
-                                          "fontFamily": "$font-body",
-                                          "fontSize": 11,
-                                          "fontWeight": "normal"
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "k9scT",
-                                  "name": "Step 4 · Choose an agent",
-                                  "width": "fill_container",
-                                  "height": 62,
-                                  "fill": "#00000000",
-                                  "cornerRadius": 6,
-                                  "stroke": "#00000000",
-                                  "strokeWidth": 1,
-                                  "gap": 12,
-                                  "padding": [
-                                    0,
-                                    12
-                                  ],
-                                  "alignItems": "center",
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "qtn9p",
-                                      "name": "Step 4 Number",
-                                      "width": 26,
-                                      "height": 26,
-                                      "fill": "$ds-surface",
-                                      "cornerRadius": 999,
-                                      "stroke": "$ds-border",
-                                      "strokeWidth": 1,
-                                      "justifyContent": "center",
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "Sv6JD",
-                                          "name": "Step 4 Value",
-                                          "fill": "$ds-fg-muted",
-                                          "content": "4",
-                                          "fontFamily": "$font-heading",
-                                          "fontSize": 11,
-                                          "fontWeight": "600"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "frame",
-                                      "id": "rEMJ2",
-                                      "name": "Step 4 Copy",
-                                      "width": "fill_container",
-                                      "layout": "vertical",
-                                      "gap": 3,
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "JF2Ni",
-                                          "name": "Step 4 Title",
-                                          "fill": "$ds-fg",
-                                          "content": "Choose an agent",
-                                          "fontFamily": "$font-heading",
-                                          "fontSize": 13,
-                                          "fontWeight": "600"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "WXTUm",
-                                          "name": "Step 4 Description",
-                                          "fill": "$ds-fg-muted",
-                                          "content": "Connect Codex, Claude Code, or OpenCode.",
-                                          "fontFamily": "$font-body",
-                                          "fontSize": 11,
-                                          "fontWeight": "normal"
-                                        }
-                                      ]
-                                    }
-                                  ]
-                                }
-                              ]
-                            },
-                            {
-                              "type": "frame",
-                              "id": "L5u4q",
-                              "name": "Quickstart Spacer",
-                              "width": "fill_container",
-                              "height": "fill_container"
-                            },
-                            {
-                              "type": "frame",
-                              "id": "U9tbo8",
-                              "name": "Quickstart Help",
-                              "gap": 8,
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "id": "i68vN",
-                                  "name": "Help Icon",
-                                  "width": 13,
-                                  "height": 13,
-                                  "icon": "info",
-                                  "library": "lucide",
-                                  "fill": "$ds-fg-subtle"
-                                },
-                                {
                                   "type": "text",
-                                  "id": "VcVCm",
-                                  "name": "Help Link",
-                                  "fill": "$ds-fg-muted",
-                                  "content": "Need help? Open the full CLI guide  →",
-                                  "fontFamily": "$font-heading",
-                                  "fontSize": 11,
-                                  "fontWeight": "500"
-                                }
-                              ]
-                            }
-                          ]
-                        },
-                        {
-                          "type": "frame",
-                          "id": "ya1QV",
-                          "name": "Live Quickstart Terminal",
-                          "width": "fill_container",
-                          "height": "fill_container",
-                          "fill": "$ds-code",
-                          "layout": "vertical",
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "geaw2",
-                              "name": "Terminal Header",
-                              "width": "fill_container",
-                              "height": 40,
-                              "fill": "$ds-bg-subtle",
-                              "stroke": "$ds-border",
-                              "strokeWidth": {
-                                "bottom": 1
-                              },
-                              "strokeLinejoin": "round",
-                              "gap": 8,
-                              "padding": [
-                                0,
-                                14
-                              ],
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "icon",
-                                  "id": "enSot",
-                                  "name": "Terminal Icon",
-                                  "width": 14,
-                                  "height": 14,
-                                  "icon": "square-terminal",
-                                  "library": "lucide",
-                                  "fill": "$ds-fg-muted"
-                                },
-                                {
-                                  "type": "text",
-                                  "id": "X9QzQ",
-                                  "name": "Terminal Title",
+                                  "id": "ijuNS",
+                                  "name": "1. Install and start Heading",
                                   "fill": "$ds-fg",
-                                  "content": "Quickstart · zsh",
+                                  "content": "1. Install and start",
                                   "fontFamily": "$font-heading",
-                                  "fontSize": 11,
-                                  "fontWeight": "500"
+                                  "fontSize": 16,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "dHsuv",
+                                  "name": "1. Install and start Copy",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Install Prompt Studio globally, then run it from the repository you want to open.",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "AvCx5",
-                                  "name": "Terminal Header Spacer",
+                                  "id": "eWCHc",
+                                  "name": "1. Install and start Code",
                                   "width": "fill_container",
-                                  "height": 1
+                                  "fill": "$ds-code",
+                                  "cornerRadius": 5,
+                                  "stroke": "$ds-border",
+                                  "strokeWidth": 1,
+                                  "layout": "vertical",
+                                  "gap": 4,
+                                  "padding": [
+                                    10,
+                                    12
+                                  ],
+                                  "children": [
+                                    {
+                                      "type": "text",
+                                      "id": "xfYFr",
+                                      "name": "1. Install and start Command",
+                                      "fill": "$ds-fg",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "bun add --global pstdio@latest\npst",
+                                      "lineHeight": 1.55,
+                                      "fontFamily": "$font-mono",
+                                      "fontSize": 11,
+                                      "fontWeight": "normal"
+                                    }
+                                  ]
                                 }
                               ]
                             },
                             {
                               "type": "frame",
-                              "id": "p6jHc",
-                              "name": "Terminal Session",
+                              "id": "AUqig",
+                              "name": "CLI Section · 2. Create a project",
                               "width": "fill_container",
-                              "height": "fill_container",
                               "layout": "vertical",
-                              "gap": 18,
-                              "padding": [
-                                30,
-                                34
-                              ],
+                              "gap": 8,
                               "children": [
                                 {
-                                  "type": "frame",
-                                  "id": "HRBLc",
-                                  "name": "Command · bun add -g pstdio@latest",
+                                  "type": "text",
+                                  "id": "gN5IC",
+                                  "name": "2. Create a project Heading",
+                                  "fill": "$ds-fg",
+                                  "content": "2. Create a project",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 16,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "KzA3Z",
+                                  "name": "2. Create a project Copy",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
                                   "width": "fill_container",
+                                  "content": "Create a saved project when you want a stable name and repository context.",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
+                                },
+                                {
+                                  "type": "frame",
+                                  "id": "A2f7nU",
+                                  "name": "2. Create a project Code",
+                                  "width": "fill_container",
+                                  "fill": "$ds-code",
+                                  "cornerRadius": 5,
+                                  "stroke": "$ds-border",
+                                  "strokeWidth": 1,
                                   "layout": "vertical",
-                                  "gap": 7,
+                                  "gap": 4,
+                                  "padding": [
+                                    10,
+                                    12
+                                  ],
                                   "children": [
                                     {
-                                      "type": "frame",
-                                      "id": "O7m2JI",
-                                      "name": "bun add -g pstdio@latest Prompt",
-                                      "gap": 10,
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "d1uGE",
-                                          "name": "bun add -g pstdio@latest Dollar",
-                                          "fill": "$ds-success",
-                                          "content": "$",
-                                          "fontFamily": "$font-mono",
-                                          "fontSize": 13,
-                                          "fontWeight": "600"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "YabcO",
-                                          "name": "bun add -g pstdio@latest Command",
-                                          "fill": "$ds-fg",
-                                          "content": "bun add -g pstdio@latest",
-                                          "fontFamily": "$font-mono",
-                                          "fontSize": 13,
-                                          "fontWeight": "normal"
-                                        }
-                                      ]
-                                    },
-                                    {
                                       "type": "text",
-                                      "id": "XZNUK",
-                                      "name": "bun add -g pstdio@latest Output",
-                                      "fill": "$ds-fg-muted",
-                                      "content": "installed pstdio 0.24.0",
+                                      "id": "YHao3",
+                                      "name": "2. Create a project Command",
+                                      "fill": "$ds-fg",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "pst projects create",
                                       "lineHeight": 1.55,
                                       "fontFamily": "$font-mono",
                                       "fontSize": 11,
                                       "fontWeight": "normal"
                                     }
                                   ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "X3Ano",
+                              "name": "CLI Section · 3. Connect an agent",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "tepDG",
+                                  "name": "3. Connect an agent Heading",
+                                  "fill": "$ds-fg",
+                                  "content": "3. Connect an agent",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 16,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "SisQ1",
+                                  "name": "3. Connect an agent Copy",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Set up an agent once. The workbench can then start its sessions inside the active project.",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "drwXg",
-                                  "name": "Command · pstdio",
+                                  "id": "VCMYA",
+                                  "name": "3. Connect an agent Code",
                                   "width": "fill_container",
+                                  "fill": "$ds-code",
+                                  "cornerRadius": 5,
+                                  "stroke": "$ds-border",
+                                  "strokeWidth": 1,
                                   "layout": "vertical",
-                                  "gap": 7,
+                                  "gap": 4,
+                                  "padding": [
+                                    10,
+                                    12
+                                  ],
                                   "children": [
                                     {
-                                      "type": "frame",
-                                      "id": "XFIPW",
-                                      "name": "pstdio Prompt",
-                                      "gap": 10,
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "E5tCU",
-                                          "name": "pstdio Dollar",
-                                          "fill": "$ds-success",
-                                          "content": "$",
-                                          "fontFamily": "$font-mono",
-                                          "fontSize": 13,
-                                          "fontWeight": "600"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "m9ACaz",
-                                          "name": "pstdio Command",
-                                          "fill": "$ds-fg",
-                                          "content": "pstdio",
-                                          "fontFamily": "$font-mono",
-                                          "fontSize": 13,
-                                          "fontWeight": "normal"
-                                        }
-                                      ]
-                                    },
-                                    {
                                       "type": "text",
-                                      "id": "Zvo6W",
-                                      "name": "pstdio Output",
-                                      "fill": "$ds-fg-muted",
-                                      "content": "starting API on :19840\nopening workbench on :5555",
+                                      "id": "ZXrFT",
+                                      "name": "3. Connect an agent Command",
+                                      "fill": "$ds-fg",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "pst agents setup <agent-id>",
                                       "lineHeight": 1.55,
                                       "fontFamily": "$font-mono",
                                       "fontSize": 11,
                                       "fontWeight": "normal"
                                     }
                                   ]
+                                }
+                              ]
+                            },
+                            {
+                              "type": "frame",
+                              "id": "SZspn",
+                              "name": "CLI Section · 4. Let agents extend the workbench",
+                              "width": "fill_container",
+                              "layout": "vertical",
+                              "gap": 8,
+                              "children": [
+                                {
+                                  "type": "text",
+                                  "id": "L9KID",
+                                  "name": "4. Let agents extend the workbench Heading",
+                                  "fill": "$ds-fg",
+                                  "content": "4. Let agents extend the workbench",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 16,
+                                  "fontWeight": "600"
+                                },
+                                {
+                                  "type": "text",
+                                  "id": "eRS3k",
+                                  "name": "4. Let agents extend the workbench Copy",
+                                  "fill": "$ds-fg-muted",
+                                  "textGrowth": "fixed-width",
+                                  "width": "fill_container",
+                                  "content": "Prompt an agent to build a TypeScript extension when the current workbench is missing a command, page, editor, automation, or skill.",
+                                  "lineHeight": 1.5,
+                                  "fontFamily": "$font-body",
+                                  "fontSize": 12,
+                                  "fontWeight": "normal"
                                 },
                                 {
                                   "type": "frame",
-                                  "id": "XLwMo",
-                                  "name": "Command · pstdio projects create",
+                                  "id": "QL6iK",
+                                  "name": "4. Let agents extend the workbench Code",
                                   "width": "fill_container",
+                                  "fill": "$ds-code",
+                                  "cornerRadius": 5,
+                                  "stroke": "$ds-border",
+                                  "strokeWidth": 1,
                                   "layout": "vertical",
-                                  "gap": 7,
+                                  "gap": 4,
+                                  "padding": [
+                                    10,
+                                    12
+                                  ],
                                   "children": [
                                     {
-                                      "type": "frame",
-                                      "id": "Y2q0g",
-                                      "name": "pstdio projects create Prompt",
-                                      "gap": 10,
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "U0T0tj",
-                                          "name": "pstdio projects create Dollar",
-                                          "fill": "$ds-info",
-                                          "content": "$",
-                                          "fontFamily": "$font-mono",
-                                          "fontSize": 13,
-                                          "fontWeight": "600"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "kDAid",
-                                          "name": "pstdio projects create Command",
-                                          "fill": "$ds-fg",
-                                          "content": "pstdio projects create",
-                                          "fontFamily": "$font-mono",
-                                          "fontSize": 13,
-                                          "fontWeight": "normal"
-                                        }
-                                      ]
-                                    },
-                                    {
                                       "type": "text",
-                                      "id": "B3hKz",
-                                      "name": "pstdio projects create Output",
-                                      "fill": "$ds-fg-muted",
-                                      "content": "Project name: Agentic studio\nRepository: ~/Projects/agentic-studio",
+                                      "id": "u0VhQ",
+                                      "name": "4. Let agents extend the workbench Command",
+                                      "fill": "$ds-fg",
+                                      "textGrowth": "fixed-width",
+                                      "width": "fill_container",
+                                      "content": "pst extensions dev ./my-extension",
                                       "lineHeight": 1.55,
                                       "fontFamily": "$font-mono",
                                       "fontSize": 11,
                                       "fontWeight": "normal"
                                     }
                                   ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "v8eO4",
-                                  "name": "Command · pstdio agents setup codex",
-                                  "opacity": 0.42,
-                                  "width": "fill_container",
-                                  "layout": "vertical",
-                                  "gap": 7,
-                                  "children": [
-                                    {
-                                      "type": "frame",
-                                      "id": "wHAm3",
-                                      "name": "pstdio agents setup codex Prompt",
-                                      "gap": 10,
-                                      "alignItems": "center",
-                                      "children": [
-                                        {
-                                          "type": "text",
-                                          "id": "X52aIG",
-                                          "name": "pstdio agents setup codex Dollar",
-                                          "fill": "$ds-success",
-                                          "content": "$",
-                                          "fontFamily": "$font-mono",
-                                          "fontSize": 13,
-                                          "fontWeight": "600"
-                                        },
-                                        {
-                                          "type": "text",
-                                          "id": "u7nkno",
-                                          "name": "pstdio agents setup codex Command",
-                                          "fill": "$ds-fg",
-                                          "content": "pstdio agents setup codex",
-                                          "fontFamily": "$font-mono",
-                                          "fontSize": 13,
-                                          "fontWeight": "normal"
-                                        }
-                                      ]
-                                    },
-                                    {
-                                      "type": "text",
-                                      "id": "H9DBM",
-                                      "name": "pstdio agents setup codex Output",
-                                      "fill": "$ds-fg-muted",
-                                      "content": "waiting for project…",
-                                      "lineHeight": 1.55,
-                                      "fontFamily": "$font-mono",
-                                      "fontSize": 11,
-                                      "fontWeight": "normal"
-                                    }
-                                  ]
-                                },
-                                {
-                                  "type": "frame",
-                                  "id": "PAcW4",
-                                  "name": "Terminal Spacer",
-                                  "width": "fill_container",
-                                  "height": "fill_container"
                                 }
                               ]
                             }
@@ -116322,7 +116271,7 @@
                                 {
                                   "type": "frame",
                                   "id": "ZqBzP",
-                                  "x": 1040,
+                                  "x": 944,
                                   "y": 52,
                                   "name": "Properties Menu",
                                   "width": 276,
@@ -120129,434 +120078,6 @@
                   ]
                 }
               ]
-            },
-            {
-              "type": "frame",
-              "id": "NyEGQ",
-              "x": 928,
-              "y": 0,
-              "name": "Side Panel",
-              "enabled": false,
-              "width": 292,
-              "height": "fill_container(788)",
-              "fill": "$ds-bg",
-              "stroke": "$ds-border",
-              "strokeWidth": {
-                "left": 1
-              },
-              "strokeLinejoin": "round",
-              "layout": "vertical",
-              "children": [
-                {
-                  "type": "frame",
-                  "id": "lDVgu",
-                  "name": "Kanban Agent Header",
-                  "width": "fill_container",
-                  "height": 36,
-                  "fill": "$ds-bg-subtle",
-                  "stroke": "$ds-border",
-                  "strokeWidth": {
-                    "bottom": 1
-                  },
-                  "strokeLinejoin": "round",
-                  "gap": 5,
-                  "padding": [
-                    0,
-                    8
-                  ],
-                  "alignItems": "center",
-                  "children": [
-                    {
-                      "id": "o1ujC",
-                      "type": "ref",
-                      "ref": "TwCXd",
-                      "name": "Project agent · session",
-                      "theme": {
-                        "size": "xs",
-                        "tab": "active",
-                        "tab-status": "in_progress"
-                      },
-                      "descendants": {
-                        "w7NkD3": {
-                          "icon": "bot"
-                        },
-                        "k9XlqC": {
-                          "content": "Project agent"
-                        },
-                        "g1LJJh": {
-                          "enabled": false
-                        }
-                      }
-                    },
-                    {
-                      "id": "h6hXsQ",
-                      "type": "ref",
-                      "ref": "nvvgg",
-                      "name": "New session",
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "xs"
-                      },
-                      "width": 24,
-                      "height": 24,
-                      "descendants": {
-                        "k7mgm": {
-                          "icon": "plus",
-                          "width": 13,
-                          "height": 13
-                        }
-                      }
-                    },
-                    {
-                      "type": "frame",
-                      "id": "XSHd9",
-                      "name": "Header Spacer",
-                      "width": "fill_container",
-                      "height": 2
-                    },
-                    {
-                      "id": "GsvjZ",
-                      "type": "ref",
-                      "ref": "nvvgg",
-                      "name": "Reattach Side Panel",
-                      "theme": {
-                        "btn": "ghost",
-                        "size": "xs"
-                      },
-                      "width": 24,
-                      "height": 24,
-                      "descendants": {
-                        "k7mgm": {
-                          "icon": "panel-right",
-                          "width": 11,
-                          "height": 11
-                        }
-                      }
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "lA8W5",
-                  "name": "Kanban Agent Body",
-                  "width": "fill_container",
-                  "height": "fill_container",
-                  "layout": "vertical",
-                  "gap": 16,
-                  "padding": [
-                    18,
-                    16
-                  ],
-                  "children": [
-                    {
-                      "id": "jz3qE",
-                      "type": "ref",
-                      "ref": "CQVFo",
-                      "name": "User Request",
-                      "width": "fill_container",
-                      "descendants": {
-                        "ZdoE8": {
-                          "content": "What’s left before we can cut the release?"
-                        },
-                        "b60X5h": {
-                          "content": "09:20"
-                        }
-                      }
-                    },
-                    {
-                      "id": "jHdAI",
-                      "type": "ref",
-                      "ref": "X7Yj6",
-                      "name": "Agent Reply",
-                      "width": "fill_container",
-                      "descendants": {
-                        "EiVAs": {
-                          "content": "I’m watching the release plan and can move work, create tickets, or delegate the next task."
-                        },
-                        "p3bQE": {
-                          "content": "09:24"
-                        }
-                      }
-                    },
-                    {
-                      "type": "frame",
-                      "id": "RJOQb",
-                      "name": "Suggested Agent Action",
-                      "width": "fill_container",
-                      "fill": "$ds-bg-subtle",
-                      "cornerRadius": 6,
-                      "stroke": "$ds-border",
-                      "strokeWidth": 1,
-                      "layout": "vertical",
-                      "gap": 8,
-                      "padding": 12,
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "po8B1",
-                          "name": "Suggested Action Label",
-                          "fill": "$ds-info",
-                          "content": "SUGGESTED",
-                          "fontFamily": "$font-heading",
-                          "fontSize": 8,
-                          "fontWeight": "600",
-                          "letterSpacing": 0.8
-                        },
-                        {
-                          "type": "text",
-                          "id": "JbKe5",
-                          "name": "Suggested Action",
-                          "fill": "$ds-fg",
-                          "textGrowth": "fixed-width",
-                          "width": "fill_container",
-                          "content": "Break “Build workbench shell” into implementation tasks.",
-                          "lineHeight": 1.4,
-                          "fontFamily": "$font-body",
-                          "fontSize": 12,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "G9J6W",
-                          "name": "Suggested Action Controls",
-                          "gap": 8,
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "id": "J5MI0",
-                              "type": "ref",
-                              "ref": "c24zV7",
-                              "name": "Run Suggested Action",
-                              "height": 20,
-                              "theme": {
-                                "btn": "primary",
-                                "size": "2xs"
-                              },
-                              "descendants": {
-                                "DsEVd": {
-                                  "enabled": false
-                                },
-                                "Hf4GT": {
-                                  "content": "Run"
-                                },
-                                "khvEs": {
-                                  "enabled": false
-                                }
-                              }
-                            },
-                            {
-                              "id": "NLbDd",
-                              "type": "ref",
-                              "ref": "c24zV7",
-                              "name": "Dismiss Suggested Action",
-                              "height": 20,
-                              "theme": {
-                                "btn": "ghost",
-                                "size": "2xs"
-                              },
-                              "descendants": {
-                                "DsEVd": {
-                                  "enabled": false
-                                },
-                                "Hf4GT": {
-                                  "content": "Dismiss"
-                                },
-                                "khvEs": {
-                                  "enabled": false
-                                }
-                              }
-                            }
-                          ]
-                        }
-                      ]
-                    },
-                    {
-                      "type": "text",
-                      "id": "Q08av",
-                      "name": "Activity Label",
-                      "fill": "$ds-fg-subtle",
-                      "content": "RECENT ACTIVITY",
-                      "fontFamily": "$font-heading",
-                      "fontSize": 8,
-                      "fontWeight": "600",
-                      "letterSpacing": 0.8
-                    },
-                    {
-                      "type": "frame",
-                      "id": "fYfek",
-                      "name": "PS-240 completed",
-                      "width": "fill_container",
-                      "gap": 9,
-                      "padding": [
-                        7,
-                        0
-                      ],
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "icon",
-                          "id": "zc3FS",
-                          "name": "PS-240 completed Icon",
-                          "width": 13,
-                          "height": 13,
-                          "icon": "circle-check",
-                          "library": "lucide",
-                          "fill": "$ds-fg-muted"
-                        },
-                        {
-                          "type": "text",
-                          "id": "tUFMQ",
-                          "name": "PS-240 completed Label",
-                          "fill": "$ds-fg-muted",
-                          "content": "PS-240 completed",
-                          "fontFamily": "$font-body",
-                          "fontSize": 11,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "jktvL",
-                          "name": "PS-240 completed Spacer",
-                          "width": "fill_container",
-                          "height": 1
-                        },
-                        {
-                          "type": "text",
-                          "id": "L6K0d",
-                          "name": "PS-240 completed Time",
-                          "fill": "$ds-fg-subtle",
-                          "content": "2m",
-                          "fontFamily": "$font-mono",
-                          "fontSize": 9,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "lNBji",
-                      "name": "PR #184 opened",
-                      "width": "fill_container",
-                      "gap": 9,
-                      "padding": [
-                        7,
-                        0
-                      ],
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "icon",
-                          "id": "U2rgXp",
-                          "name": "PR #184 opened Icon",
-                          "width": 13,
-                          "height": 13,
-                          "icon": "git-pull-request",
-                          "library": "lucide",
-                          "fill": "$ds-fg-muted"
-                        },
-                        {
-                          "type": "text",
-                          "id": "Mnhls",
-                          "name": "PR #184 opened Label",
-                          "fill": "$ds-fg-muted",
-                          "content": "PR #184 opened",
-                          "fontFamily": "$font-body",
-                          "fontSize": 11,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "r8OeU",
-                          "name": "PR #184 opened Spacer",
-                          "width": "fill_container",
-                          "height": 1
-                        },
-                        {
-                          "type": "text",
-                          "id": "D9KrY",
-                          "name": "PR #184 opened Time",
-                          "fill": "$ds-fg-subtle",
-                          "content": "8m",
-                          "fontFamily": "$font-mono",
-                          "fontSize": 9,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "fRGml",
-                      "name": "Waiting on PS-228",
-                      "width": "fill_container",
-                      "gap": 9,
-                      "padding": [
-                        7,
-                        0
-                      ],
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "icon",
-                          "id": "V5kZ2",
-                          "name": "Waiting on PS-228 Icon",
-                          "width": 13,
-                          "height": 13,
-                          "icon": "message-square",
-                          "library": "lucide",
-                          "fill": "$ds-fg-muted"
-                        },
-                        {
-                          "type": "text",
-                          "id": "W98Da",
-                          "name": "Waiting on PS-228 Label",
-                          "fill": "$ds-fg-muted",
-                          "content": "Waiting on PS-228",
-                          "fontFamily": "$font-body",
-                          "fontSize": 11,
-                          "fontWeight": "normal"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "LJc1M",
-                          "name": "Waiting on PS-228 Spacer",
-                          "width": "fill_container",
-                          "height": 1
-                        },
-                        {
-                          "type": "text",
-                          "id": "llAJw",
-                          "name": "Waiting on PS-228 Time",
-                          "fill": "$ds-fg-subtle",
-                          "content": "12m",
-                          "fontFamily": "$font-mono",
-                          "fontSize": 9,
-                          "fontWeight": "normal"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "EVrc4",
-                      "name": "Agent Body Spacer",
-                      "width": "fill_container",
-                      "height": "fill_container"
-                    },
-                    {
-                      "id": "VKxKm",
-                      "type": "ref",
-                      "ref": "TDV8W",
-                      "name": "Agent Composer",
-                      "width": "fill_container",
-                      "descendants": {
-                        "dtF1C": {
-                          "content": "Ask the project agent…",
-                          "fill": "$ds-fg-subtle"
-                        }
-                      }
-                    }
-                  ]
-                }
-              ]
             }
           ]
         },
@@ -120607,26 +120128,46 @@
               "height": 1
             },
             {
+              "type": "icon",
+              "id": "Xe5i4",
+              "name": "Stockholm Icon",
+              "width": 11,
+              "height": 11,
+              "icon": "landmark",
+              "library": "lucide",
+              "fill": "$ds-fg-subtle"
+            },
+            {
               "type": "text",
               "id": "cx2YJ",
               "name": "Copyright Notice",
               "fill": "$ds-fg-subtle",
-              "content": "© 2026 Prompt Studio. All rights reserved.",
+              "content": "© Pufflig AB. Stockholm, 2026",
               "fontFamily": "$font-body",
               "fontSize": 9,
               "fontWeight": "normal"
+            },
+            {
+              "type": "text",
+              "id": "Q2QQV",
+              "name": "Privacy Link",
+              "fill": "$ds-fg-muted",
+              "content": "Privacy",
+              "fontFamily": "$font-body",
+              "fontSize": 9,
+              "fontWeight": "500"
+            },
+            {
+              "type": "text",
+              "id": "uDGh4",
+              "name": "Terms Link",
+              "fill": "$ds-fg-muted",
+              "content": "Terms",
+              "fontFamily": "$font-body",
+              "fontSize": 9,
+              "fontWeight": "500"
             }
           ]
-        },
-        {
-          "id": "U6igi",
-          "type": "ref",
-          "ref": "C572TP",
-          "name": "Session Bubble",
-          "context": "Side panel closed; no floating session panel.",
-          "layoutPosition": "absolute",
-          "x": 1372,
-          "y": 804
         }
       ]
     },
@@ -124153,21 +123694,6 @@
           "height": "fill_container",
           "fill": "$ds-bg",
           "layout": "vertical"
-        },
-        {
-          "id": "reV6V",
-          "type": "ref",
-          "ref": "C572TP",
-          "name": "Session Bubble",
-          "context": "Side panel closed; no floating session panel.",
-          "layoutPosition": "absolute",
-          "x": 330,
-          "y": 782,
-          "theme": {
-            "btn": "outline",
-            "mode": "dark",
-            "size": "lg"
-          }
         }
       ]
     },
@@ -124549,45 +124075,45 @@
           },
           "descendants": {
             "mltli": {
-              "content": "quickstart"
+              "content": "documentation"
             },
             "S5btRG": {
               "icon": "square-terminal"
             },
             "eh9nj": {
-              "content": "Quickstart"
+              "content": "CLI quickstart"
             },
             "VJBzG": {
               "type": "frame",
-              "id": "o90P1",
-              "name": "Quickstart Content",
+              "id": "AZjd9",
+              "name": "CLI Documentation",
               "clip": true,
-              "width": 390,
-              "height": 694,
+              "width": "fill_container",
+              "height": "fill_container",
               "fill": "$ds-bg",
               "layout": "vertical",
-              "gap": 18,
+              "gap": 16,
               "padding": [
                 20,
                 16,
-                22,
+                24,
                 16
               ],
               "children": [
                 {
                   "type": "frame",
-                  "id": "ZlJuD",
-                  "name": "Intro",
+                  "id": "K7rsL",
+                  "name": "CLI Documentation Intro",
                   "width": "fill_container",
                   "layout": "vertical",
                   "gap": 8,
                   "children": [
                     {
                       "type": "text",
-                      "id": "SOwQA",
-                      "name": "Eyebrow",
+                      "id": "Q1Q0F",
+                      "name": "CLI Documentation Eyebrow",
                       "fill": "$ds-info",
-                      "content": "QUICKSTART",
+                      "content": "DOCUMENTATION / CLI",
                       "fontFamily": "$font-heading",
                       "fontSize": 9,
                       "fontWeight": "600",
@@ -124595,12 +124121,12 @@
                     },
                     {
                       "type": "text",
-                      "id": "Pt6Ol",
-                      "name": "Title",
+                      "id": "UN0Qv",
+                      "name": "CLI Documentation Heading",
                       "fill": "$ds-fg",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "From install to first agent in five minutes.",
+                      "content": "Use the CLI",
                       "lineHeight": 1.12,
                       "fontFamily": "$font-heading",
                       "fontSize": 26,
@@ -124608,12 +124134,12 @@
                     },
                     {
                       "type": "text",
-                      "id": "Y65Cd0",
-                      "name": "Description",
+                      "id": "zUTJr",
+                      "name": "CLI Documentation Description",
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Follow one focused step at a time. Your progress stays visible while the active task takes the screen.",
+                      "content": "The pst command gives people and agents the same project and extension tools.",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-body",
                       "fontSize": 12,
@@ -124623,134 +124149,30 @@
                 },
                 {
                   "type": "frame",
-                  "id": "U5dcsp",
-                  "name": "Progress",
+                  "id": "pzvjr",
+                  "name": "CLI Section · 1. Install and start",
                   "width": "fill_container",
-                  "fill": "$ds-bg-subtle",
-                  "cornerRadius": 8,
-                  "stroke": "$ds-border",
-                  "strokeWidth": 1,
                   "layout": "vertical",
-                  "gap": 10,
-                  "padding": 14,
+                  "gap": 7,
                   "children": [
                     {
-                      "type": "frame",
-                      "id": "aTzbc",
-                      "name": "Progress Labels",
-                      "width": "fill_container",
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "uMm9c",
-                          "name": "Current Step",
-                          "fill": "$ds-info",
-                          "content": "STEP 2 OF 4",
-                          "fontFamily": "$font-heading",
-                          "fontSize": 9,
-                          "fontWeight": "600",
-                          "letterSpacing": 0.9
-                        },
-                        {
-                          "type": "text",
-                          "id": "rwafF",
-                          "name": "Step Title",
-                          "fill": "$ds-fg",
-                          "content": "Configure your project",
-                          "fontFamily": "$font-body",
-                          "fontSize": 12,
-                          "fontWeight": "500"
-                        }
-                      ]
-                    },
-                    {
-                      "type": "frame",
-                      "id": "feMOy",
-                      "name": "Progress Track",
-                      "width": "fill_container",
-                      "height": 4,
-                      "fill": "$ds-border",
-                      "cornerRadius": 999,
-                      "children": [
-                        {
-                          "type": "rectangle",
-                          "cornerRadius": 999,
-                          "id": "Yv6Qy",
-                          "name": "Progress Fill",
-                          "fill": "$ds-info",
-                          "width": 165,
-                          "height": 4
-                        }
-                      ]
-                    }
-                  ]
-                },
-                {
-                  "type": "frame",
-                  "id": "R0L5MH",
-                  "name": "Active Task",
-                  "width": "fill_container",
-                  "fill": "$ds-bg-subtle",
-                  "cornerRadius": 8,
-                  "stroke": "$ds-border",
-                  "strokeWidth": 1,
-                  "layout": "vertical",
-                  "gap": 12,
-                  "padding": 14,
-                  "children": [
-                    {
-                      "type": "frame",
-                      "id": "P2IdI",
-                      "name": "Task Header",
-                      "width": "fill_container",
-                      "justifyContent": "space_between",
-                      "alignItems": "center",
-                      "children": [
-                        {
-                          "type": "text",
-                          "id": "UsTPn",
-                          "name": "Task Title",
-                          "fill": "$ds-fg",
-                          "content": "Configure the CLI",
-                          "fontFamily": "$font-heading",
-                          "fontSize": 15,
-                          "fontWeight": "600"
-                        },
-                        {
-                          "type": "frame",
-                          "id": "seAsZ",
-                          "name": "Current Badge",
-                          "fill": "$ds-info-subtle",
-                          "cornerRadius": 999,
-                          "padding": [
-                            3,
-                            8
-                          ],
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "ZDzLL",
-                              "name": "Badge Label",
-                              "fill": "$ds-info",
-                              "content": "CURRENT",
-                              "fontFamily": "$font-body",
-                              "fontSize": 9,
-                              "fontWeight": "600"
-                            }
-                          ]
-                        }
-                      ]
+                      "type": "text",
+                      "id": "QAi1N",
+                      "name": "1. Install and start Heading",
+                      "fill": "$ds-fg",
+                      "content": "1. Install and start",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 15,
+                      "fontWeight": "600"
                     },
                     {
                       "type": "text",
-                      "id": "vFlWd",
-                      "name": "Task Description",
+                      "id": "LuWje",
+                      "name": "1. Install and start Copy",
                       "fill": "$ds-fg-muted",
                       "textGrowth": "fixed-width",
                       "width": "fill_container",
-                      "content": "Add your project name and preferred agent provider.",
+                      "content": "Install once, then run Prompt Studio from your repository.",
                       "lineHeight": 1.45,
                       "fontFamily": "$font-body",
                       "fontSize": 12,
@@ -124758,44 +124180,154 @@
                     },
                     {
                       "type": "frame",
-                      "id": "J06Uw",
-                      "name": "Code Block",
+                      "id": "Q0HgYS",
+                      "name": "1. Install and start Code",
                       "width": "fill_container",
-                      "fill": "#10131A",
-                      "cornerRadius": 6,
+                      "fill": "$ds-code",
+                      "cornerRadius": 5,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
                       "layout": "vertical",
-                      "gap": 8,
-                      "padding": 12,
+                      "padding": [
+                        10,
+                        12
+                      ],
                       "children": [
                         {
-                          "type": "frame",
-                          "id": "PTViz",
-                          "name": "Code Header",
-                          "width": "fill_container",
-                          "justifyContent": "space_between",
-                          "alignItems": "center",
-                          "children": [
-                            {
-                              "type": "text",
-                              "id": "BQozZ",
-                              "name": "Filename",
-                              "fill": "#9BA3EC",
-                              "content": "pstdio.json",
-                              "fontFamily": "$font-mono",
-                              "fontSize": 10,
-                              "fontWeight": "normal"
-                            }
-                          ]
-                        },
-                        {
                           "type": "text",
-                          "id": "bsvnJ",
-                          "name": "Configuration",
-                          "fill": "#E8EAF2",
+                          "id": "cHtS9",
+                          "name": "1. Install and start Command",
+                          "fill": "$ds-fg",
                           "textGrowth": "fixed-width",
                           "width": "fill_container",
-                          "content": "{\n  \"name\": \"prompt-studio\",\n  \"agent\": \"codex\"\n}",
-                          "lineHeight": 1.65,
+                          "content": "bun add --global pstdio@latest\npst",
+                          "lineHeight": 1.55,
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "t4i0PV",
+                  "name": "CLI Section · 2. Connect an agent",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 7,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "CoNfR",
+                      "name": "2. Connect an agent Heading",
+                      "fill": "$ds-fg",
+                      "content": "2. Connect an agent",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "upSvY",
+                      "name": "2. Connect an agent Copy",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Set up the agent that will work inside the active project.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "icX2Z",
+                      "name": "2. Connect an agent Code",
+                      "width": "fill_container",
+                      "fill": "$ds-code",
+                      "cornerRadius": 5,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "padding": [
+                        10,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Ma6Q2",
+                          "name": "2. Connect an agent Command",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "pst agents setup <agent-id>",
+                          "lineHeight": 1.55,
+                          "fontFamily": "$font-mono",
+                          "fontSize": 11,
+                          "fontWeight": "normal"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ypdNP",
+                  "name": "CLI Section · 3. Build missing tools",
+                  "width": "fill_container",
+                  "layout": "vertical",
+                  "gap": 7,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "iGgmI",
+                      "name": "3. Build missing tools Heading",
+                      "fill": "$ds-fg",
+                      "content": "3. Build missing tools",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    },
+                    {
+                      "type": "text",
+                      "id": "tmL59",
+                      "name": "3. Build missing tools Copy",
+                      "fill": "$ds-fg-muted",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Ask an agent for a command, page, editor, automation, or skill. Develop the extension in the workbench.",
+                      "lineHeight": 1.45,
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "uhPN3",
+                      "name": "3. Build missing tools Code",
+                      "width": "fill_container",
+                      "fill": "$ds-code",
+                      "cornerRadius": 5,
+                      "stroke": "$ds-border",
+                      "strokeWidth": 1,
+                      "layout": "vertical",
+                      "padding": [
+                        10,
+                        12
+                      ],
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "FzIMm",
+                          "name": "3. Build missing tools Command",
+                          "fill": "$ds-fg",
+                          "textGrowth": "fixed-width",
+                          "width": "fill_container",
+                          "content": "pst extensions dev ./my-extension",
+                          "lineHeight": 1.55,
                           "fontFamily": "$font-mono",
                           "fontSize": 11,
                           "fontWeight": "normal"
@@ -126825,7 +126357,7 @@
                       "id": "TTSuM",
                       "name": "No",
                       "fill": "$ds-fg-subtle",
-                      "content": "01 / start in two commands",
+                      "content": "01 / get Prompt Studio",
                       "fontFamily": "$font-mono",
                       "fontSize": 11,
                       "fontWeight": "normal",
@@ -126887,7 +126419,7 @@
                               "id": "Rk2xe",
                               "name": "Command",
                               "fill": "$ds-fg",
-                              "content": "bun add -g pstdio@latest",
+                              "content": "bun add --global pstdio@latest",
                               "fontFamily": "$font-mono",
                               "fontSize": 13,
                               "fontWeight": "normal"
@@ -127174,7 +126706,7 @@
                           "id": "iwxtF",
                           "name": "No",
                           "fill": "$ds-fg-subtle",
-                          "content": "03 / the tool you need is one prompt away",
+                          "content": "03 / build the tools you need",
                           "fontFamily": "$font-mono",
                           "fontSize": 11,
                           "fontWeight": "normal",
@@ -127210,23 +126742,13 @@
                               "id": "gD4t2",
                               "name": "Extend Lead",
                               "fill": "$ds-fg",
-                              "content": "Describe the tool. Extend your workbench.",
+                              "textGrowth": "fixed-width",
+                              "width": "fill_container",
+                              "content": "Describe the missing tool. Your agent builds it into the workbench.",
+                              "lineHeight": 1.45,
                               "fontFamily": "$font-heading",
                               "fontSize": 15,
                               "fontWeight": "600"
-                            },
-                            {
-                              "type": "text",
-                              "id": "kWuOg",
-                              "name": "Extend Desc",
-                              "fill": "$ds-fg-muted",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "A preview deployer, a release dashboard, a client-ready report — whatever your workflow is missing, your agent builds it into the workbench in minutes. No vendor to wait on, no backlog to join.",
-                              "lineHeight": 1.5,
-                              "fontFamily": "$font-body",
-                              "fontSize": 13,
-                              "fontWeight": "normal"
                             }
                           ]
                         },
