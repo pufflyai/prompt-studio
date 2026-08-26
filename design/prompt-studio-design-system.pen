@@ -17021,14 +17021,20 @@
                             {
                               "type": "frame",
                               "id": "BrslV",
+                              "x": 42,
+                              "y": 8,
                               "name": "Sp",
-                              "width": "fill_container",
+                              "enabled": false,
+                              "width": 1,
                               "height": 2
                             },
                             {
                               "type": "frame",
                               "id": "lw4Tf",
+                              "x": 202,
+                              "y": 0,
                               "name": "Avatar",
+                              "enabled": false,
                               "width": 18,
                               "height": 18,
                               "fill": "#5098FF",
@@ -17076,6 +17082,8 @@
                               "type": "ref",
                               "ref": "Tboo4",
                               "name": "Chip",
+                              "fill": "$ds-surface",
+                              "stroke": [],
                               "descendants": {
                                 "L109Bg": {
                                   "content": "design"
@@ -17097,14 +17105,20 @@
                             {
                               "type": "frame",
                               "id": "ak0He",
+                              "x": 55,
+                              "y": 9,
                               "name": "Sp",
-                              "width": "fill_container",
+                              "enabled": false,
+                              "width": 1,
                               "height": 2
                             },
                             {
                               "type": "text",
                               "id": "AMjNo",
+                              "x": 192,
+                              "y": 4,
                               "name": "Date",
+                              "enabled": false,
                               "fill": "$ds-fg-subtle",
                               "content": "Jul 12",
                               "fontFamily": "$font-body",
@@ -18102,7 +18116,7 @@
                                       "content": "design"
                                     },
                                     "F5oG1": {
-                                      "enabled": true
+                                      "enabled": false
                                     },
                                     "F5oG1/L109Bg": {
                                       "content": "ui"
@@ -18239,7 +18253,7 @@
                                       "content": "design"
                                     },
                                     "F5oG1": {
-                                      "enabled": true
+                                      "enabled": false
                                     },
                                     "F5oG1/L109Bg": {
                                       "content": "ui"
@@ -18475,7 +18489,7 @@
                                       "content": "design"
                                     },
                                     "F5oG1": {
-                                      "enabled": true
+                                      "enabled": false
                                     },
                                     "F5oG1/L109Bg": {
                                       "content": "ui"
@@ -78070,7 +78084,7 @@
                                         "btn": "ghost",
                                         "size": "xs"
                                       },
-                                      "x": 72,
+                                      "x": 70,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -99155,6 +99169,9 @@
             "zAH7D/g1LJJh": {
               "enabled": false
             },
+            "m8tZJX": {
+              "enabled": false
+            },
             "RJsiB": {
               "content": "PROJECT"
             },
@@ -99178,7 +99195,37 @@
               "fill": "$ds-fg",
               "fontWeight": "500"
             },
+            "hztKv/rKPgR": {
+              "enabled": true,
+              "theme": {
+                "crumb": "default",
+                "size": "sm"
+              }
+            },
+            "hztKv/rKPgR/QAdbs": {
+              "enabled": true,
+              "icon": "columns-3"
+            },
+            "hztKv/rKPgR/g7l5u": {
+              "content": "Project Roadmap"
+            },
+            "hztKv/U8yd35": {
+              "enabled": true,
+              "theme": {
+                "crumb": "current",
+                "size": "sm"
+              }
+            },
+            "hztKv/U8yd35/QAdbs": {
+              "enabled": false
+            },
+            "hztKv/U8yd35/g7l5u": {
+              "content": "Release plan"
+            },
             "hztKv/R8Q6C": {
+              "enabled": false
+            },
+            "hztKv/AZ9VV": {
               "enabled": false
             },
             "hztKv/AZ9VV/QAdbs": {
@@ -99187,12 +99234,24 @@
             "hztKv/AZ9VV/g7l5u": {
               "content": "Planner"
             },
+            "hztKv/saN8L": {
+              "enabled": false
+            },
+            "hztKv/kUCSG": {
+              "enabled": false
+            },
+            "hztKv/q7B3uG": {
+              "enabled": false
+            },
+            "hztKv/ups0z": {
+              "enabled": false
+            },
             "ofAlH": {
               "enabled": false
             },
             "bjUZP": {
               "enabled": true,
-              "width": 928
+              "width": 1440
             },
             "rHlgh": {
               "padding": 0
@@ -99202,7 +99261,7 @@
               "stroke": []
             },
             "b71tU": {
-              "content": "release-plan"
+              "content": "changelog"
             }
           }
         }
@@ -113632,14 +113691,14 @@
                   "id": "Enz7r",
                   "type": "ref",
                   "ref": "TwCXd",
-                  "name": "Docs",
+                  "name": "Prompt Studio Docs",
                   "theme": {
                     "size": "sm",
                     "tab": "active",
                     "tab-status": "none"
                   },
                   "height": 28,
-                  "context": "Project tab. Clicking activates Docs without navigating away from the workbench.",
+                  "context": "Project tab. Clicking activates Prompt Studio Docs without navigating away from the workbench.",
                   "x": 0,
                   "y": 8,
                   "descendants": {
@@ -113647,7 +113706,7 @@
                       "icon": "book-open"
                     },
                     "k9XlqC": {
-                      "content": "Docs"
+                      "content": "Prompt Studio Docs"
                     },
                     "g1LJJh": {
                       "enabled": true
@@ -113658,20 +113717,20 @@
                   "id": "nLBKv",
                   "type": "ref",
                   "ref": "TwCXd",
-                  "name": "Agentic kanban",
+                  "name": "Project Roadmap",
                   "theme": {
                     "size": "sm",
                     "tab": "default",
                     "tab-status": "none"
                   },
                   "height": 28,
-                  "context": "Project tab. Clicking activates Agentic kanban without navigating away from the workbench.",
+                  "context": "Project tab. Clicking activates the Project Roadmap without navigating away from the workbench.",
                   "descendants": {
                     "w7NkD3": {
                       "icon": "columns-3"
                     },
                     "k9XlqC": {
-                      "content": "Agentic kanban"
+                      "content": "Project Roadmap"
                     },
                     "g1LJJh": {
                       "enabled": true
@@ -113690,6 +113749,7 @@
                   },
                   "height": 28,
                   "context": "Project tab. Clicking activates Agentic design without navigating away from the workbench.",
+                  "enabled": false,
                   "descendants": {
                     "w7NkD3": {
                       "icon": "pen-tool"
@@ -113714,6 +113774,7 @@
                   },
                   "height": 28,
                   "context": "Project tab. Clicking activates Agentic data analysis without navigating away from the workbench.",
+                  "enabled": false,
                   "descendants": {
                     "w7NkD3": {
                       "icon": "chart-no-axes-combined"
@@ -113738,6 +113799,7 @@
                   },
                   "height": 28,
                   "context": "Project tab. Clicking activates Workflow builder without navigating away from the workbench.",
+                  "enabled": false,
                   "descendants": {
                     "w7NkD3": {
                       "icon": "workflow"
@@ -113783,7 +113845,12 @@
                   "height": "fill_container",
                   "layout": "vertical",
                   "gap": 4,
-                  "padding": 10,
+                  "padding": [
+                    0,
+                    10,
+                    10,
+                    10
+                  ],
                   "children": [
                     {
                       "type": "text",
@@ -124774,7 +124841,7 @@
               "icon": "columns-3"
             },
             "eh9nj": {
-              "content": "Agentic kanban"
+              "content": "Project Roadmap"
             },
             "VJBzG": {
               "type": "frame",
@@ -124818,7 +124885,7 @@
                               "id": "l6qRR",
                               "name": "Title",
                               "fill": "$ds-fg",
-                              "content": "Agentic kanban",
+                              "content": "Release plan",
                               "fontFamily": "$font-heading",
                               "fontSize": 20,
                               "fontWeight": "600"
@@ -124828,7 +124895,7 @@
                               "id": "SkCCa",
                               "name": "Project",
                               "fill": "$ds-fg-muted",
-                              "content": "release-plan",
+                              "content": "Project Roadmap",
                               "fontFamily": "$font-mono",
                               "fontSize": 9,
                               "fontWeight": "normal"
@@ -124861,7 +124928,7 @@
                               "type": "ellipse",
                               "id": "XRkJB",
                               "name": "Status",
-                              "fill": "$ds-info",
+                              "fill": "$ds-warning",
                               "width": 8,
                               "height": 8
                             },
@@ -124883,7 +124950,7 @@
                           "id": "jn67y",
                           "name": "Count",
                           "fill": "$ds-fg-muted",
-                          "content": "2 of 8 tickets",
+                          "content": "3 of 10 tickets",
                           "fontFamily": "$font-body",
                           "fontSize": 10,
                           "fontWeight": "normal"
@@ -124899,220 +124966,88 @@
                       "gap": 8,
                       "children": [
                         {
-                          "type": "frame",
-                          "id": "vHRtF",
-                          "name": "PS-164",
+                          "id": "VT5kq",
+                          "type": "ref",
+                          "ref": "jRZz3",
+                          "name": "PS-122",
                           "width": "fill_container",
-                          "height": 116,
-                          "fill": "$ds-bg-subtle",
-                          "cornerRadius": 8,
-                          "stroke": "$ds-border",
-                          "strokeWidth": 1,
-                          "layout": "vertical",
-                          "gap": 9,
-                          "padding": 12,
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "opD12",
-                              "name": "Ticket Header",
-                              "width": "fill_container",
-                              "justifyContent": "space_between",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "HDEp6",
-                                  "name": "Ticket ID",
-                                  "fill": "$ds-fg-muted",
-                                  "content": "PS-164",
-                                  "fontFamily": "$font-mono",
-                                  "fontSize": 9,
-                                  "fontWeight": "500"
-                                },
-                                {
-                                  "type": "ellipse",
-                                  "id": "bYKTw",
-                                  "name": "Status",
-                                  "fill": "$ds-info",
-                                  "width": 8,
-                                  "height": 8
-                                }
-                              ]
+                          "descendants": {
+                            "f0MFjy": {
+                              "content": "PS-122"
                             },
-                            {
-                              "type": "text",
-                              "id": "ZIXYz",
-                              "name": "Ticket Title",
-                              "fill": "$ds-fg",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "Implement mobile workbench layout",
-                              "lineHeight": 1.3,
-                              "fontFamily": "$font-heading",
-                              "fontSize": 14,
-                              "fontWeight": "500"
+                            "dHDLZ": {
+                              "content": "Show sidebar shortcuts at rest"
                             },
-                            {
-                              "type": "text",
-                              "id": "d3spMo",
-                              "name": "Ticket Meta",
-                              "fill": "$ds-fg-muted",
-                              "content": "Agent running · 2 files changed",
-                              "fontFamily": "$font-body",
-                              "fontSize": 10,
-                              "fontWeight": "normal"
+                            "M0eqp6/L109Bg": {
+                              "content": "design"
+                            },
+                            "F5oG1": {
+                              "enabled": false
                             }
-                          ]
+                          }
                         },
                         {
-                          "type": "frame",
-                          "id": "X0Rq0",
-                          "name": "PS-170",
+                          "id": "DMZHU",
+                          "type": "ref",
+                          "ref": "jRZz3",
+                          "name": "PS-130",
                           "width": "fill_container",
-                          "height": 116,
-                          "fill": "$ds-bg-subtle",
-                          "cornerRadius": 8,
-                          "stroke": "$ds-border",
-                          "strokeWidth": 1,
-                          "layout": "vertical",
-                          "gap": 9,
-                          "padding": 12,
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "ZOjVS",
-                              "name": "Ticket Header",
-                              "width": "fill_container",
-                              "justifyContent": "space_between",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "XyHr8",
-                                  "name": "Ticket ID",
-                                  "fill": "$ds-fg-muted",
-                                  "content": "PS-170",
-                                  "fontFamily": "$font-mono",
-                                  "fontSize": 9,
-                                  "fontWeight": "500"
-                                },
-                                {
-                                  "type": "ellipse",
-                                  "id": "M3iT6",
-                                  "name": "Status",
-                                  "fill": "$ds-review",
-                                  "width": 8,
-                                  "height": 8
-                                }
-                              ]
+                          "descendants": {
+                            "f0MFjy": {
+                              "content": "PS-130"
                             },
-                            {
-                              "type": "text",
-                              "id": "roLXx",
-                              "name": "Ticket Title",
-                              "fill": "$ds-fg",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "Review navigation states",
-                              "lineHeight": 1.3,
-                              "fontFamily": "$font-heading",
-                              "fontSize": 14,
-                              "fontWeight": "500"
+                            "dHDLZ": {
+                              "content": "Harness run parameters"
                             },
-                            {
-                              "type": "text",
-                              "id": "W6K45M",
-                              "name": "Ticket Meta",
-                              "fill": "$ds-fg-muted",
-                              "content": "Awaiting review · 3 comments",
-                              "fontFamily": "$font-body",
-                              "fontSize": 10,
-                              "fontWeight": "normal"
+                            "M0eqp6/L109Bg": {
+                              "content": "platform"
+                            },
+                            "F5oG1": {
+                              "enabled": false
                             }
-                          ]
+                          }
                         },
                         {
-                          "type": "frame",
-                          "id": "Xof7m",
-                          "name": "PS-172",
+                          "id": "mdirj",
+                          "type": "ref",
+                          "ref": "jRZz3",
+                          "name": "PS-94",
                           "width": "fill_container",
-                          "height": 116,
-                          "fill": "$ds-bg-subtle",
-                          "cornerRadius": 8,
-                          "stroke": "$ds-border",
-                          "strokeWidth": 1,
-                          "layout": "vertical",
-                          "gap": 9,
-                          "padding": 12,
-                          "children": [
-                            {
-                              "type": "frame",
-                              "id": "NUjAI",
-                              "name": "Ticket Header",
-                              "width": "fill_container",
-                              "justifyContent": "space_between",
-                              "alignItems": "center",
-                              "children": [
-                                {
-                                  "type": "text",
-                                  "id": "YQCmA",
-                                  "name": "Ticket ID",
-                                  "fill": "$ds-fg-muted",
-                                  "content": "PS-172",
-                                  "fontFamily": "$font-mono",
-                                  "fontSize": 9,
-                                  "fontWeight": "500"
-                                },
-                                {
-                                  "type": "ellipse",
-                                  "id": "xGW6E",
-                                  "name": "Status",
-                                  "fill": "$ds-info",
-                                  "width": 8,
-                                  "height": 8
-                                }
-                              ]
+                          "descendants": {
+                            "f0MFjy": {
+                              "content": "PS-94"
                             },
-                            {
-                              "type": "text",
-                              "id": "r6DvFB",
-                              "name": "Ticket Title",
-                              "fill": "$ds-fg",
-                              "textGrowth": "fixed-width",
-                              "width": "fill_container",
-                              "content": "Fix extension filters",
-                              "lineHeight": 1.3,
-                              "fontFamily": "$font-heading",
-                              "fontSize": 14,
-                              "fontWeight": "500"
+                            "dHDLZ": {
+                              "content": "Split planner loops into an extension"
                             },
-                            {
-                              "type": "text",
-                              "id": "y9t6W",
-                              "name": "Ticket Meta",
-                              "fill": "$ds-fg-muted",
-                              "content": "Agent running · 1 file changed",
-                              "fontFamily": "$font-body",
-                              "fontSize": 10,
-                              "fontWeight": "normal"
+                            "M0eqp6/L109Bg": {
+                              "content": "platform"
+                            },
+                            "F5oG1": {
+                              "enabled": false
                             }
-                          ]
+                          }
                         }
                       ]
                     },
                     {
                       "type": "frame",
                       "id": "r2wjb",
+                      "x": 0,
+                      "y": 476,
                       "name": "Board Spacer",
-                      "width": "fill_container",
+                      "enabled": false,
+                      "width": "fill_container(366)",
                       "height": 130
                     },
                     {
                       "type": "frame",
                       "id": "Q7blz",
+                      "x": 0,
+                      "y": 620,
                       "name": "Project Agent Drawer",
-                      "width": "fill_container",
+                      "enabled": false,
+                      "width": "fill_container(366)",
                       "height": 44,
                       "fill": "$ds-bg-subtle",
                       "cornerRadius": 8,
@@ -129463,7 +129398,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 696,
+              "y": 701,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -129480,7 +129415,7 @@
               "name": "DataTable display popover",
               "width": 300,
               "x": 72,
-              "y": 989,
+              "y": 994,
               "descendants": {
                 "s99FW": {
                   "content": "TABLE DISPLAY"
@@ -151904,7 +151839,7 @@
                                       "name": "Tab Refinement Related",
                                       "width": "fit_content",
                                       "x": 0,
-                                      "y": 40,
+                                      "y": 41,
                                       "descendants": {
                                         "L109Bg": {
                                           "content": "Refine PS-276"

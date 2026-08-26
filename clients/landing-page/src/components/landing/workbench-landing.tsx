@@ -263,7 +263,7 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
       {hasWorkbenchBody && (
         <>
           <Flex flex="1" minHeight="0">
-            {sidebarOpen && (
+            {activeTab === "docs" && sidebarOpen && (
               <ResourceSidebar
                 width={sidebarWidth}
                 activeDocPath={docPath}
@@ -281,6 +281,7 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
                 docPath={docPath}
                 resourceMarkdown={resourceMarkdown}
                 resourceTitle={resourceTitle}
+                sidebarAvailable={activeTab === "docs"}
                 sidebarOpen={sidebarOpen}
                 showPostListOpener={activeView === "blog" && !blogPostListOpen}
                 onSelectTab={selectTab}
@@ -308,15 +309,12 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
               </Box>
             </Flex>
           </Flex>
-          <WorkbenchStatusBar
-            label={activeTab === "docs" && activeView === "start" ? "changelog" : branchLabel}
-            onNavigate={navigate}
-            onOpenChangelog={() => setChangelogOpen(true)}
-          />
+          <WorkbenchStatusBar label="changelog" onNavigate={navigate} onOpenChangelog={() => setChangelogOpen(true)} />
         </>
       )}
       <CommandPaletteModal
         open={paletteOpen}
+        sidebarAvailable={activeTab === "docs"}
         onClose={() => setPaletteOpen(false)}
         onNavigate={navigate}
         onSelectTab={selectTab}

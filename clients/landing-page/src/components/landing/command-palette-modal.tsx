@@ -43,6 +43,7 @@ const VIEW_SEARCH_TEXT: Record<LandingView, string> = {
 
 interface CommandPaletteModalProps {
   open: boolean;
+  sidebarAvailable: boolean;
   onClose: () => void;
   onNavigate: (view: LandingView) => void;
   onSelectTab: (tab: ProjectTabId) => void;
@@ -51,7 +52,7 @@ interface CommandPaletteModalProps {
 }
 
 export const CommandPaletteModal = (props: CommandPaletteModalProps) => {
-  const { open, onClose, onNavigate, onSelectTab, onOpenChangelog, onToggleSidebar } = props;
+  const { open, sidebarAvailable, onClose, onNavigate, onSelectTab, onOpenChangelog, onToggleSidebar } = props;
 
   const { toggleThemePreference } = useThemePreference();
 
@@ -120,14 +121,18 @@ export const CommandPaletteModal = (props: CommandPaletteModalProps) => {
       icon: <GitBranch size={14} />,
       onActivate: run(onOpenChangelog),
     },
-    {
-      id: "command:toggle-sidebar",
-      label: "Toggle sidebar",
-      searchText: "toggle sidebar panel hide show",
-      group: "Commands",
-      icon: <PanelLeft size={14} />,
-      onActivate: run(onToggleSidebar),
-    },
+    ...(sidebarAvailable
+      ? [
+          {
+            id: "command:toggle-sidebar",
+            label: "Toggle sidebar",
+            searchText: "toggle sidebar panel hide show",
+            group: "Commands",
+            icon: <PanelLeft size={14} />,
+            onActivate: run(onToggleSidebar),
+          } satisfies PaletteEntry,
+        ]
+      : []),
     {
       id: "command:toggle-theme",
       label: "Toggle light/dark theme",

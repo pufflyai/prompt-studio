@@ -166,7 +166,7 @@ export const ResourceSidebar = (props: ResourceSidebarProps) => {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
       />
-      <Box flex="1" overflowY="auto" py="6px">
+      <Box flex="1" overflowY="auto" pb="6px">
         <TreeList
           sections={SIDEBAR_SECTIONS}
           rowVariant="compact"
