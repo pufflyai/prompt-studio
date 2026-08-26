@@ -86,10 +86,9 @@ export const planner = {
     | { decision: "started"; attempt: PlannerAttempt; session: { id: string } }
     | { decision: "wait"; reason: string; dependencyIds: string[] }
   >("pstdio-planner.run-attempt"),
-  runReview: commandRef<
-    { workspaceId: string; expectedRevision?: number },
-    { review: { id: string }; session: { id: string } }
-  >("pstdio-planner.runReview"),
+  runReview: commandRef<{ workspaceId: string }, { review: { id: string }; session: { id: string } }>(
+    "pstdio-planner.runReview",
+  ),
   listAttempts: commandRef<Record<string, never>, PlannerAttempt[]>("pstdio-planner.list-attempts"),
   reconcileAttempt: commandRef<{ workspaceId: string }, { decision: string; attempt: PlannerAttempt }>(
     "pstdio-planner.reconcile-attempt",

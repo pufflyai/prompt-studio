@@ -234,8 +234,11 @@ describe("pstdio planner extension contributions", () => {
     ]);
   });
 
-  test("runReview gets workspace identity from dashboard resource context", () => {
-    expect(extension.commands?.runReview?.params?.workspaceId).toMatchObject({ required: false });
+  test("runReview only exposes workspace and harness options", () => {
+    const runReview = extension.commands?.runReview;
+
+    expect(Object.keys(runReview?.params ?? {}).sort()).toEqual(["harness", "workspaceId"]);
+    expect(runReview?.params?.workspaceId).toMatchObject({ required: false });
   });
 
   test("places the tickets kanban in a panel with core properties displayed", () => {

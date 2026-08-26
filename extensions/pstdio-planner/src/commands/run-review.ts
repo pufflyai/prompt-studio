@@ -29,8 +29,6 @@ export const runReviewCommand = defineCommand({
   ],
   params: {
     workspaceId: params.text({ label: "Workspace", required: false }),
-    expectedRevision: params.number({ label: "Expected revision", required: false }),
-    manual: params.boolean({ label: "Manual review", required: false }),
     harness: params.harness({ label: "Harness", required: false }),
   },
   async run(ctx, commandParams) {
@@ -39,19 +37,13 @@ export const runReviewCommand = defineCommand({
     if (!attempt) throw new Error(`Unknown managed attempt "${workspaceId}"`);
     const revision = attempt.revisions.at(-1);
     if (!revision) throw new Error("The attempt has no submitted revision.");
-    if (commandParams.expectedRevision !== undefined && commandParams.expectedRevision !== revision.revision) {
-      throw new Error("Attempt revision changed before review started.");
-    }
-    if (attempt.state !== "review_ready" && !(commandParams.manual && attempt.state === "approved")) {
-      throw new Error("The attempt revision is not ready for review.");
-    }
+    if (attempt.state !== "review_ready") throw new Error("The attempt revision is not ready for review.");
 
     const reviewId = crypto.randomUUID();
     const timestamp = new Date().toISOString();
     const claimId = `${workspaceId}:${revision.revision}`;
     const claims = reviewLaunchClaimsCollection(ctx.storage);
     if (
-      !commandParams.manual &&
       !(await claims.createIfAbsent(claimId, {
         workspaceId,
         revision: revision.revision,
@@ -132,7 +124,7 @@ export const runReviewCommand = defineCommand({
         reviewId,
         threadId: null,
         commitSha: revision.headSha,
-        metadata: { manual: Boolean(commandParams.manual) },
+        metadata: {},
       });
       return { review, session };
     } catch (error) {
@@ -144,7 +136,7 @@ export const runReviewCommand = defineCommand({
           : candidate,
       );
       await putAttempt(ctx.storage, { ...attempt, revisions, updatedAt: review.completedAt });
-      if (!commandParams.manual) await claims.delete(claimId);
+      await claims.delete(claimId);
       throw error;
     }
   },

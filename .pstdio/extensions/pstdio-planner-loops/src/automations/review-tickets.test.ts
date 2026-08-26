@@ -36,7 +36,7 @@ describe("review-tickets automation", () => {
     expect(callsTo(calls, "pstdio-planner.runReview")).toEqual([
       {
         commandId: "pstdio-planner.runReview",
-        params: { workspaceId: "workspace-old", expectedRevision: 2 },
+        params: { workspaceId: "workspace-old" },
       },
     ]);
   });
