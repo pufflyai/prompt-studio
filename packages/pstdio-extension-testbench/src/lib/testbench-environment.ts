@@ -152,11 +152,13 @@ export const createBenchEnvironment = (seed?: BenchStorageSeed): CommandRunnerEn
   },
   workspaces: {
     list: async () => seed?.workspaces ?? [],
-    archive: async () => {},
+    archive: async (id) => ({ id }),
+    cancel: async (id) => ({ id }),
     create: async () => ({ id: crypto.randomUUID() }),
     delete: async () => {},
     get: async () => null,
     getByShorthand: async () => null,
+    resolve: async () => ({}) as never,
   },
   repos: {
     get: async () => ({}) as never,

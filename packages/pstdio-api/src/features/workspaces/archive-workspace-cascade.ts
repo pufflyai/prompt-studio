@@ -1,10 +1,8 @@
 import type { WorkspacesRouteDeps } from "./deps";
-import { cleanupWorkspaceWorktree } from "./worktree-cleanup";
+import { archiveProviderBackedWorkspace, type WorkspaceProviderLifecycleDeps } from "./workspace-provider-lifecycle";
 
-type ArchiveWorkspaceCascadeDeps = Pick<
-  WorkspacesRouteDeps,
-  "repoService" | "sessionService" | "workspaceService" | "workspaceSessionService"
->;
+type ArchiveWorkspaceCascadeDeps = WorkspaceProviderLifecycleDeps &
+  Pick<WorkspacesRouteDeps, "sessionService" | "workspaceSessionService">;
 
 type WorkspaceRecord = NonNullable<Awaited<ReturnType<WorkspacesRouteDeps["workspaceService"]["get"]>>>;
 
@@ -16,7 +14,6 @@ export const archiveWorkspaceCascade = async (deps: ArchiveWorkspaceCascadeDeps,
   const activeSessions = sessions.filter((session) => !session.archived);
 
   await Promise.all(activeSessions.map((session) => deps.sessionService.archive(session.id)));
-  await cleanupWorkspaceWorktree(deps, workspace);
 
-  return updated;
+  return archiveProviderBackedWorkspace(deps, workspace);
 };

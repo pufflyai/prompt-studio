@@ -3,6 +3,8 @@ import { createWorkspace as defaultCreateWorkspace } from "@/features/workspaces
 type CreateStandaloneWorkspaceInput = {
   projectId: string;
   base?: string;
+  providerId?: string;
+  params?: Record<string, unknown>;
 };
 
 type Deps = {
@@ -16,9 +18,15 @@ const defaultDeps: Deps = {
 };
 
 export const createStandaloneWorkspace = async (input: CreateStandaloneWorkspaceInput, deps: Deps = defaultDeps) => {
-  const workspace = await deps.createWorkspace({ project_id: input.projectId, base: input.base });
+  const workspace = await deps.createWorkspace({
+    project_id: input.projectId,
+    base: input.base,
+    provider_id: input.providerId,
+    params: input.params,
+  });
 
-  deps.log(`Created workspace ${workspace.workspace_shorthand} at ${workspace.worktree_path ?? "(unavailable)"}`);
+  const location = workspace.worktree_path ?? workspace.display_path ?? `(${workspace.provider_state})`;
+  deps.log(`Created workspace ${workspace.workspace_shorthand} at ${location}`);
 
   return workspace;
 };

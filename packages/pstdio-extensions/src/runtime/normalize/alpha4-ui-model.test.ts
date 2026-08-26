@@ -11,6 +11,7 @@ import {
   resourceSlotRef,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "./index";
 
@@ -24,7 +25,7 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
     version: "1.0.0",
     publisher: "pstdio",
     main: "./extension.ts",
-    enginesPstdio: "1.0.0-alpha.4",
+    enginesPstdio: EXTENSION_API_VERSION,
   },
   definition,
 });

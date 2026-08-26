@@ -1,9 +1,17 @@
 import { and, eq, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
-import { type ResourceRef, workspaces } from "../../db/schemas.pg";
+import {
+  type ResourceRef,
+  type WorkspaceCapabilities,
+  type WorkspaceProviderError,
+  type WorkspaceProviderRef,
+  type WorkspaceProviderState,
+  workspaces,
+} from "../../db/schemas.pg";
 import { renameWorkspace } from "./rename-workspace";
 
 type WorkspaceRecord = typeof workspaces.$inferSelect;
+type JsonObject = Record<string, unknown>;
 
 type CreateInput = {
   project_id: string;
@@ -12,6 +20,11 @@ type CreateInput = {
   name?: string;
   branch?: string;
   worktree_path?: string;
+  provider_id?: string;
+  provider_params_json?: JsonObject;
+  provider_state?: WorkspaceProviderState;
+  provider_operation_id?: string;
+  provider_operation_kind?: "create" | "cancel" | "archive" | "delete";
 };
 
 const nowTimestamp = () => new Date().toISOString();
@@ -62,6 +75,16 @@ const buildWorkspaceRecord = (input: {
   worktree_path?: string;
   is_default?: boolean;
   anchors?: ResourceRef[];
+  provider_id?: string;
+  provider_params_json?: JsonObject;
+  provider_ref_json?: WorkspaceProviderRef | null;
+  provider_state?: WorkspaceProviderState;
+  execution_kind?: "local" | "remote";
+  provider_operation_id?: string | null;
+  provider_operation_kind?: "create" | "cancel" | "archive" | "delete" | null;
+  provider_error_json?: WorkspaceProviderError | null;
+  provider_capabilities_json?: WorkspaceCapabilities;
+  display_path?: string | null;
 }): WorkspaceRecord => {
   const timestamp = nowTimestamp();
   return {
@@ -70,6 +93,23 @@ const buildWorkspaceRecord = (input: {
     name: input.name ?? input.shorthand,
     branch: input.branch ?? null,
     worktree_path: input.worktree_path ?? null,
+    provider_id: input.provider_id ?? (input.is_default ? "pstdio.root" : "pstdio.worktree"),
+    provider_params_json: input.provider_params_json ?? {},
+    provider_ref_json: input.provider_ref_json ?? null,
+    provider_state: input.provider_state ?? "ready",
+    execution_kind: input.execution_kind ?? "local",
+    provider_operation_id: input.provider_operation_id ?? null,
+    provider_operation_kind: input.provider_operation_kind ?? null,
+    provider_error_json: input.provider_error_json ?? null,
+    provider_capabilities_json: input.provider_capabilities_json ?? {
+      files: "write",
+      diff: true,
+      merge: true,
+      rebase: true,
+      archive: true,
+      delete: true,
+    },
+    display_path: input.display_path ?? input.worktree_path ?? null,
     is_default: input.is_default ?? false,
     archived: false,
     workspace_shorthand: input.shorthand,
@@ -112,6 +152,74 @@ const selectDefaultWorkspace = async (db: DbClient, projectId: string) => {
   return row ?? null;
 };
 
+const updateProviderProjection = async (
+  db: DbClient,
+  id: string,
+  input: {
+    branch?: string | null;
+    worktree_path?: string | null;
+    provider_ref_json?: WorkspaceProviderRef | null;
+    provider_state: WorkspaceProviderState;
+    execution_kind: "local" | "remote";
+    provider_operation_id?: string | null;
+    provider_operation_kind?: "create" | "cancel" | "archive" | "delete" | null;
+    provider_error_json?: WorkspaceProviderError | null;
+    provider_capabilities_json: WorkspaceCapabilities;
+    display_path?: string | null;
+  },
+) => {
+  const [updated] = await db
+    .update(workspaces)
+    .set({
+      branch: input.branch,
+      worktree_path: input.worktree_path,
+      provider_ref_json: input.provider_ref_json,
+      provider_state: input.provider_state,
+      execution_kind: input.execution_kind,
+      provider_operation_id: input.provider_operation_id ?? null,
+      provider_operation_kind: input.provider_operation_kind ?? null,
+      provider_error_json: input.provider_error_json ?? null,
+      provider_capabilities_json: input.provider_capabilities_json,
+      display_path: input.display_path ?? input.worktree_path ?? null,
+      updated_at: nowTimestamp(),
+    })
+    .where(eq(workspaces.id, id))
+    .returning();
+  return updated ?? null;
+};
+
+const normalizeProviderDefaults = async (db: DbClient, projectId: string) => {
+  const rows = await db
+    .update(workspaces)
+    .set({
+      provider_id: "pstdio.root",
+      provider_ref_json: null,
+      provider_state: "ready",
+      execution_kind: "local",
+      provider_operation_id: null,
+      provider_operation_kind: null,
+      provider_error_json: null,
+      provider_capabilities_json: {
+        files: "write",
+        diff: true,
+        merge: true,
+        rebase: true,
+        archive: true,
+        delete: true,
+      },
+      updated_at: nowTimestamp(),
+    })
+    .where(
+      and(
+        eq(workspaces.project_id, projectId),
+        eq(workspaces.is_default, true),
+        eq(workspaces.provider_id, "pstdio.worktree"),
+      ),
+    )
+    .returning();
+  return rows;
+};
+
 export const createWorkspacesDBService = (db: DbClient) => {
   const create = async (input: CreateInput) => {
     const shorthandBase = input.shorthand_base;
@@ -139,6 +247,11 @@ export const createWorkspacesDBService = (db: DbClient) => {
       branch: input.branch,
       worktree_path: input.worktree_path,
       anchors: input.anchors,
+      provider_id: input.provider_id,
+      provider_params_json: input.provider_params_json,
+      provider_state: input.provider_state,
+      provider_operation_id: input.provider_operation_id,
+      provider_operation_kind: input.provider_operation_kind,
     });
 
     await db.insert(workspaces).values(record);
@@ -151,6 +264,11 @@ export const createWorkspacesDBService = (db: DbClient) => {
     name?: string;
     branch?: string;
     worktree_path?: string;
+    provider_id?: string;
+    provider_params_json?: JsonObject;
+    provider_state?: WorkspaceProviderState;
+    provider_operation_id?: string;
+    provider_operation_kind?: "create" | "cancel" | "archive" | "delete";
   }) => {
     const existingWorkspaces = await db
       .select({ workspace_shorthand: workspaces.workspace_shorthand })
@@ -172,6 +290,11 @@ export const createWorkspacesDBService = (db: DbClient) => {
       name: input.name,
       branch: input.branch,
       worktree_path: input.worktree_path,
+      provider_id: input.provider_id,
+      provider_params_json: input.provider_params_json,
+      provider_state: input.provider_state,
+      provider_operation_id: input.provider_operation_id,
+      provider_operation_kind: input.provider_operation_kind,
     });
 
     await db.insert(workspaces).values(record);
@@ -285,6 +408,9 @@ export const createWorkspacesDBService = (db: DbClient) => {
     setSetupError,
     setStartupLogFileId,
     updateGitMetadata,
+    normalizeProviderDefaults: (projectId: string) => normalizeProviderDefaults(db, projectId),
+    updateProviderProjection: (id: string, input: Parameters<typeof updateProviderProjection>[2]) =>
+      updateProviderProjection(db, id, input),
     rename,
   };
 };

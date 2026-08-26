@@ -27,7 +27,7 @@ Every extension package must include a `package.json` next to its entry file.
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.4"
+    "pstdio": "1.0.0-alpha.5"
   },
   "pstdio": {
     "scope": "user"
@@ -38,8 +38,8 @@ Every extension package must include a `package.json` next to its entry file.
 Required fields:
 
 - `engines.pstdio`: the exact extension API version this extension was built against. While the API
-  is in alpha this is a plain version such as `1.0.0-alpha.4`, never a range: `^1.0.0-alpha.4` also
-  matches `1.0.0-alpha.4`, so a range would accept hosts the extension was never tested on. The host
+  is in alpha this is a plain version such as `1.0.0-alpha.5`, never a range: `^1.0.0-alpha.5` also
+  matches `1.0.0-alpha.5`, so a range would accept hosts the extension was never tested on. The host
   refuses an extension whose value does not match its own `EXTENSION_API_VERSION`, with a single
   diagnostic instead of per-contribution errors. Expect to update this on most releases while the
   API is unstable.

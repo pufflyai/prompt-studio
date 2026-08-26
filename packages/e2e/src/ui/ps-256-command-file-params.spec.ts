@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -35,7 +36,7 @@ const createFilesExtension = () => {
       displayName: "PS-256 Files",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "1.0.0-alpha.4" },
+      engines: { pstdio: EXTENSION_API_VERSION },
       type: "module",
     }),
   );

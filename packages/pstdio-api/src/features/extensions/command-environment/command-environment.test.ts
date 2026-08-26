@@ -398,10 +398,11 @@ describe("createCommandEnvironment workspaces", () => {
             created.push(input);
             return { id: "ws-1", workspace_shorthand: "T-1_A1", anchors_json: [], ...(input as object) };
           },
-          updateGitMetadata: async (id: string, input: unknown) => ({
+          updateProviderProjection: async (id: string, patch: unknown) => ({
             id,
             workspace_shorthand: "T-1_A1",
-            ...(input as object),
+            anchors_json: [],
+            ...(patch as object),
           }),
         },
         eventBus: { emit: () => {} },
@@ -427,11 +428,13 @@ describe("createCommandEnvironment workspaces", () => {
 
     expect(workspace).toMatchObject({ id: "ws-1" });
     expect(created).toEqual([
-      {
+      expect.objectContaining({
         project_id: "project-1",
         shorthand_base: "T-1",
+        provider_id: "pstdio.root",
+        provider_operation_kind: "create",
         anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
-      },
+      }),
     ]);
   });
 
@@ -477,12 +480,29 @@ describe("createCommandEnvironment workspaces", () => {
             workspace_shorthand: "T-1_A1",
             branch: null,
             worktree_path: null,
+            provider_id: "pstdio.worktree",
+            provider_ref_json: null,
+            execution_kind: "local",
+            provider_capabilities_json: {
+              files: "write",
+              diff: true,
+              merge: true,
+              rebase: true,
+              archive: true,
+              delete: true,
+            },
+            display_path: null,
             archived: false,
           }),
           archive: async (id: string) => {
             archivedWorkspaces.push(id);
             return { id, archived: true };
           },
+          updateProviderProjection: async (id: string, patch: unknown) => ({
+            id,
+            archived: true,
+            ...(patch as object),
+          }),
         },
         workspaceSessionService: {
           listByWorkspace: async () => [
@@ -841,10 +861,11 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
             anchors_json: [],
             ...(input as object),
           }),
-          updateGitMetadata: async (id: string, input: unknown) => ({
+          updateProviderProjection: async (id: string, patch: unknown) => ({
             id,
             workspace_shorthand: "T-1_A1",
-            ...(input as object),
+            anchors_json: [],
+            ...(patch as object),
           }),
         },
         eventBus: { emit: () => {} },

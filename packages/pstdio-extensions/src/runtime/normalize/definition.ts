@@ -1,4 +1,5 @@
 import type { ContributionKind } from "@pstdio/sdk/extensions";
+import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { NormalizedExtension } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
@@ -196,7 +197,7 @@ export const validateExtensionDefinition = (
 ) => {
   let valid = true;
   for (const key of Object.keys(source.definition).sort()) {
-    if (source.manifest.enginesPstdio === "1.0.0-alpha.4" && removedAlpha4ContributionKeys.has(key)) {
+    if (source.manifest.enginesPstdio === EXTENSION_API_VERSION && removedAlpha4ContributionKeys.has(key)) {
       valid = false;
       runtime.diagnostics.push(
         createDiagnostic({

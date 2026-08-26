@@ -9,6 +9,7 @@ import { syncRepoExtensionsForLinkedRepos } from "../features/extensions/repo-ex
 import { ensureProjectReposScaffolded } from "../features/projects/startup";
 import { resolveOrphanedSessions } from "../features/sessions/startup";
 import { provisionProjectWorkspaces } from "../features/workspaces/provision-coordinator";
+import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-lifecycle";
 import { apiLogger } from "../lib/logger";
 
 interface StartupTaskOptions {
@@ -65,6 +66,8 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
   }
   // Reconcile each project's workspaces so harness extensions sync skills to the current catalog.
   for (const project of await deps.projectService.list()) {
+    await deps.workspaceService.normalizeProviderDefaults(project.id);
+    await reconcileProviderWorkspaces(deps, project.id);
     await provisionProjectWorkspaces(deps, project.id);
   }
 };

@@ -22,7 +22,7 @@ This cookbook gives short recipes for the implemented extension API.
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.4"
+    "pstdio": "1.0.0-alpha.5"
   },
   "type": "module",
   "dependencies": {

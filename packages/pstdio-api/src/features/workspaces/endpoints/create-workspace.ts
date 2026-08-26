@@ -3,7 +3,7 @@ import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { createWorkspaceBodySchema, workspaceResponseSchema } from "../dto";
 import { runWorkspaceProvisioning } from "../provision-coordinator";
-import { setupWorkspaceWorktree } from "../worktree-setup";
+import { createProviderBackedWorkspace, rootProviderId, worktreeProviderId } from "../workspace-provider-service";
 
 export const createWorkspaceRoute = createRoute({
   method: "post",
@@ -21,6 +21,10 @@ export const createWorkspaceRoute = createRoute({
       description: "Workspace created.",
       content: { "application/json": { schema: workspaceResponseSchema } },
     },
+    202: {
+      description: "Workspace provisioning accepted.",
+      content: { "application/json": { schema: workspaceResponseSchema } },
+    },
     404: {
       description: "No repository found for the project.",
       content: { "application/json": { schema: z.object({ error: z.string() }) } },
@@ -35,39 +39,47 @@ const resolveProjectRepo = async (deps: WorkspacesRouteDeps, projectId: string, 
   return repos[0] ?? null;
 };
 
+const mergeProviderParams = (input: { params?: Record<string, unknown>; repo_id?: string; base?: string }) => ({
+  ...(input.params ?? {}),
+  ...(input.repo_id ? { repo_id: input.repo_id } : {}),
+  ...(input.base ? { base: input.base } : {}),
+});
+
 export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandler<typeof createWorkspaceRoute> => {
   return async (c) => {
     const input = c.req.valid("json");
+    const providerId = input.provider_id ?? (input.type === "current_branch" ? rootProviderId : worktreeProviderId);
+    const params = mergeProviderParams(input);
 
-    const repo = await resolveProjectRepo(deps, input.project_id, input.repo_id);
-    if (!repo) {
+    const repo =
+      providerId === rootProviderId || providerId === worktreeProviderId
+        ? await resolveProjectRepo(
+            deps,
+            input.project_id,
+            typeof params.repo_id === "string" ? params.repo_id : undefined,
+          )
+        : null;
+    if ((providerId === rootProviderId || providerId === worktreeProviderId) && !repo) {
       return c.json({ error: `No repository found for project ${input.project_id}` }, 404);
     }
 
-    const workspace = await deps.workspaceService.createStandalone({ project_id: input.project_id });
+    const workspace = await createProviderBackedWorkspace(deps, {
+      projectId: input.project_id,
+      providerId,
+      params,
+      standalone: true,
+    });
 
-    try {
-      const { branch, worktreePath } = await setupWorkspaceWorktree({
-        repoPath: repo.path,
-        workspaceShorthand: workspace.workspace_shorthand,
-        base: input.base ?? "HEAD",
-      });
-
-      const updated =
-        (await deps.workspaceService.updateGitMetadata(workspace.id, { branch, worktree_path: worktreePath })) ??
-        workspace;
-
-      const provisioned = await runWorkspaceProvisioning(deps, {
-        projectId: input.project_id,
-        workspace: updated,
-        repoPath: repo.path,
-      });
-
-      return c.json(provisioned, 201);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const failed = (await deps.workspaceService.setSetupError(workspace.id, message)) ?? workspace;
-      return c.json(failed, 201);
+    if (workspace.provider_state !== "ready" || workspace.execution_kind !== "local") {
+      return c.json(workspace, workspace.provider_state === "provisioning" ? 202 : 201);
     }
+
+    const provisioned = await runWorkspaceProvisioning(deps, {
+      projectId: input.project_id,
+      workspace,
+      repoPath: repo!.path,
+    });
+
+    return c.json(provisioned, 201);
   };
 };

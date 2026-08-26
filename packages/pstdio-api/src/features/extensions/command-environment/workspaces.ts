@@ -1,6 +1,20 @@
-import type { ExtensionWorkspace } from "pstdio-api-contracts/extension-kernel";
+import type {
+  CreateExtensionWorkspaceInput,
+  ExtensionWorkspace,
+  WorkspaceProviderRef,
+} from "pstdio-api-contracts/extension-kernel";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 import { archiveWorkspaceCascade } from "../../workspaces/archive-workspace-cascade";
+import type { WorkspacesRouteDeps } from "../../workspaces/deps";
+import {
+  cancelProviderBackedWorkspace,
+  deleteProviderBackedWorkspace,
+} from "../../workspaces/workspace-provider-lifecycle";
+import {
+  createProviderBackedWorkspace,
+  rootProviderId,
+  worktreeProviderId,
+} from "../../workspaces/workspace-provider-service";
 import type { ExtensionsRouteDeps } from "../deps";
 import type { CommandEnvironmentRuntimeDeps } from "./types";
 
@@ -19,59 +33,49 @@ export const createExtensionWorkspace = async (
   deps: ExtensionsRouteDeps,
   input: {
     projectId: string;
-    workspaceInput: Record<string, unknown>;
+    workspaceInput: CreateExtensionWorkspaceInput;
   },
   runtimeDeps: CommandEnvironmentRuntimeDeps,
 ) => {
-  const projectId =
-    typeof input.workspaceInput.project_id === "string" ? input.workspaceInput.project_id : input.projectId;
-  const anchors = Array.isArray(input.workspaceInput.anchors) ? (input.workspaceInput.anchors as never[]) : [];
-  const shorthandBase =
-    typeof input.workspaceInput.shorthand_base === "string" ? input.workspaceInput.shorthand_base : undefined;
+  const projectId = input.workspaceInput.project_id ?? input.projectId;
+  const anchors = input.workspaceInput.anchors ?? [];
+  const shorthandBase = input.workspaceInput.shorthand_base;
   if (!shorthandBase) throw new Error("Workspace creation requires shorthand_base");
 
   const mode = input.workspaceInput.mode === "current_branch" ? "current_branch" : "worktree";
-  const repo = await resolveRepoForWorkspace(deps, projectId, input.workspaceInput.repo_id);
-  const workspace = await deps.workspaceService.create({
-    project_id: projectId,
-    shorthand_base: shorthandBase,
+  const providerId =
+    typeof input.workspaceInput.provider_id === "string"
+      ? input.workspaceInput.provider_id
+      : mode === "current_branch"
+        ? rootProviderId
+        : worktreeProviderId;
+  const params = input.workspaceInput.params ?? {};
+  const providerParams = {
+    ...params,
+    ...(input.workspaceInput.repo_id ? { repo_id: input.workspaceInput.repo_id } : {}),
+    ...(input.workspaceInput.base ? { base: input.workspaceInput.base } : {}),
+  };
+  const repo =
+    providerId === rootProviderId || providerId === worktreeProviderId
+      ? await resolveRepoForWorkspace(deps, projectId, input.workspaceInput.repo_id)
+      : null;
+  const workspace = await createProviderBackedWorkspace(deps as WorkspacesRouteDeps, {
+    projectId,
+    shorthandBase,
     anchors,
+    providerId,
+    params: providerParams,
+    setupWorktree: runtimeDeps.setupWorkspaceWorktree,
   });
 
-  if (mode === "current_branch") {
-    // Root workspace runs in the repo itself; it still gets provisioned so harness
-    // hooks sync their agent dirs into the repo root before sessions spawn.
-    const updated =
-      (await deps.workspaceService.updateGitMetadata(workspace.id, {
-        branch: null,
-        worktree_path: repo.path,
-      })) ?? workspace;
-    return (await runtimeDeps.runWorkspaceProvisioning(deps, {
-      projectId,
-      workspace: updated,
-      repoPath: repo.path,
-    })) as ExtensionWorkspace;
-  }
+  if (workspace.provider_state !== "ready" || workspace.execution_kind !== "local")
+    return workspace as ExtensionWorkspace;
 
-  try {
-    const { branch, worktreePath } = await runtimeDeps.setupWorkspaceWorktree({
-      repoPath: repo.path,
-      workspaceShorthand: workspace.workspace_shorthand,
-      base: typeof input.workspaceInput.base === "string" ? input.workspaceInput.base : "HEAD",
-    });
-    const updated =
-      (await deps.workspaceService.updateGitMetadata(workspace.id, { branch, worktree_path: worktreePath })) ??
-      workspace;
-    return (await runtimeDeps.runWorkspaceProvisioning(deps, {
-      projectId,
-      workspace: updated,
-      repoPath: repo.path,
-    })) as ExtensionWorkspace;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    const failed = (await deps.workspaceService.setSetupError(workspace.id, message)) ?? workspace;
-    return failed;
-  }
+  return (await runtimeDeps.runWorkspaceProvisioning(deps, {
+    projectId,
+    workspace,
+    repoPath: repo!.path,
+  })) as ExtensionWorkspace;
 };
 
 export const createWorkspacesApi = (
@@ -89,12 +93,48 @@ export const createWorkspacesApi = (
       { projectId: input.projectId, workspaceInput },
       runtimeDeps,
     )) as ExtensionWorkspace,
+  resolve: async (id) => {
+    const workspace = await deps.workspaceService.get(id);
+    if (!workspace?.provider_ref_json) throw new Error(`Workspace provider reference not found: ${id}`);
+    const providerRef = workspace.provider_ref_json as WorkspaceProviderRef;
+    return {
+      providerRef,
+      state: workspace.provider_state,
+      executionKind: workspace.execution_kind,
+      executionTarget:
+        workspace.execution_kind === "local" && workspace.worktree_path
+          ? { kind: "local", rootPath: workspace.worktree_path, displayPath: workspace.display_path ?? undefined }
+          : {
+              kind: "remote",
+              providerId: workspace.provider_id,
+              providerRef,
+              displayPath: workspace.display_path ?? undefined,
+            },
+      displayPath: workspace.display_path ?? undefined,
+      capabilities: workspace.provider_capabilities_json,
+      error: workspace.provider_error_json
+        ? {
+            code: workspace.provider_error_json.code,
+            message: workspace.provider_error_json.message,
+            retryable: workspace.provider_error_json.retryable,
+          }
+        : undefined,
+    };
+  },
+  cancel: async (id) => {
+    const workspace = await deps.workspaceService.get(id);
+    if (!workspace) throw new Error(`Workspace not found: ${id}`);
+    return (await cancelProviderBackedWorkspace(deps, workspace)) as ExtensionWorkspace;
+  },
   archive: async (id) => {
     const workspace = await deps.workspaceService.get(id);
     // Cascade archive: also archive the workspace's sessions and remove its worktree.
-    if (workspace) await archiveWorkspaceCascade(deps, workspace);
+    if (workspace) return (await archiveWorkspaceCascade(deps, workspace)) as ExtensionWorkspace;
+    throw new Error(`Workspace not found: ${id}`);
   },
   delete: async (id) => {
+    const workspace = await deps.workspaceService.get(id);
+    if (workspace) await deleteProviderBackedWorkspace(deps, workspace);
     await deps.workspaceService.softDelete(id);
   },
 });

@@ -3,6 +3,26 @@ import { homedir } from "node:os";
 import type { Workspace } from "@pstdio/sdk/resources";
 import { deleteWorkspaceWithWorktree } from "./delete-workspace";
 
+const providerFields = {
+  provider_id: "pstdio.worktree",
+  provider_params_json: {},
+  provider_ref_json: null,
+  provider_state: "ready" as const,
+  execution_kind: "local" as const,
+  provider_operation_id: null,
+  provider_operation_kind: null,
+  provider_error_json: null,
+  provider_capabilities_json: {
+    files: "write" as const,
+    diff: true,
+    merge: true,
+    rebase: true,
+    archive: true,
+    delete: true,
+  },
+  display_path: null,
+};
+
 const makeWorkspace = (shorthand: string): Workspace => ({
   id: "ws-1",
   project_id: "proj-1",
@@ -17,6 +37,7 @@ const makeWorkspace = (shorthand: string): Workspace => ({
   created_at: "2026-03-05T00:00:00.000Z",
   updated_at: "2026-03-05T00:00:00.000Z",
   deleted_at: null,
+  ...providerFields,
 });
 
 const baseDeps = {

@@ -55,7 +55,9 @@ export const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): C
     get: async () => null,
     getByShorthand: async () => null,
     create: async () => ({ id: "" }),
-    archive: async () => {},
+    resolve: async () => ({}) as never,
+    cancel: async () => ({ id: "" }),
+    archive: async () => ({ id: "" }),
     delete: async () => {},
   },
   repos: {

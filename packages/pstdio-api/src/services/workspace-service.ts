@@ -88,6 +88,15 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   const updateGitMetadata = async (id: string, patch: Parameters<typeof raw.updateGitMetadata>[1]) =>
     emitOrLog("set", id, await raw.updateGitMetadata(id, patch));
 
+  const normalizeProviderDefaults = async (projectId: string) => {
+    const rows = await raw.normalizeProviderDefaults(projectId);
+    for (const row of rows) deps.eventBus.emit("workspaces", "set", row);
+    return rows;
+  };
+
+  const updateProviderProjection = async (id: string, patch: Parameters<typeof raw.updateProviderProjection>[1]) =>
+    emitOrLog("set", id, await raw.updateProviderProjection(id, patch));
+
   return {
     get,
     getByShorthand,
@@ -102,6 +111,8 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     setSetupError,
     setStartupLogFileId,
     updateGitMetadata,
+    normalizeProviderDefaults,
+    updateProviderProjection,
     rename,
   };
 };

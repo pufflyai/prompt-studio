@@ -37,11 +37,79 @@ import type {
 /** Current host extension API version. `engines.pstdio` in package.json is a semver range checked against this. */
 // While the API is unstable the version carries an `-alpha.N` suffix and extensions must
 // declare it exactly. Bump the alpha in the same change that breaks an extension contract.
-export const EXTENSION_API_VERSION = "1.0.0-alpha.4";
+export const EXTENSION_API_VERSION = "1.0.0-alpha.5";
 
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema
   ? ParamsOf<TSchema>
   : Struct;
+
+export interface WorkspaceProviderRef {
+  version: number;
+  data: JsonObject;
+}
+
+export interface WorkspaceProviderCreateInput {
+  operationId: string;
+  projectId: string;
+  workspaceId: string;
+  params: JsonObject;
+}
+
+export interface WorkspaceProviderResolveInput {
+  projectId: string;
+  workspaceId: string;
+  providerRef: WorkspaceProviderRef;
+}
+
+export interface WorkspaceProviderMutationInput extends WorkspaceProviderResolveInput {
+  operationId: string;
+}
+
+export type WorkspaceProviderState =
+  | "provisioning"
+  | "ready"
+  | "failed"
+  | "cancelled"
+  | "archiving"
+  | "archived"
+  | "deleting"
+  | "provider_missing";
+
+export type WorkspaceExecutionTarget =
+  | {
+      kind: "local";
+      rootPath: string;
+      displayPath?: string;
+    }
+  | {
+      kind: "remote";
+      providerId: string;
+      providerRef: WorkspaceProviderRef;
+      displayPath?: string;
+    };
+
+export interface WorkspaceCapabilities {
+  files: "none" | "read" | "write";
+  diff: boolean;
+  merge: boolean;
+  rebase: boolean;
+  archive: boolean;
+  delete: boolean;
+}
+
+export interface WorkspaceProviderResult {
+  providerRef?: WorkspaceProviderRef;
+  state: WorkspaceProviderState;
+  executionKind: "local" | "remote";
+  executionTarget?: WorkspaceExecutionTarget;
+  displayPath?: string;
+  capabilities: WorkspaceCapabilities;
+  error?: {
+    code: string;
+    message: string;
+    retryable: boolean;
+  };
+}
 
 /**
  * A command exposed by an extension. The `params` schema (typed via `params.*`) drives
@@ -95,10 +163,12 @@ export interface ScheduleContribution<TParams extends Struct = Struct> extends C
 
 export interface WorkspaceTypeProvider extends ContributionDefinition<"workspace-type"> {
   label: Localizable<string>;
-  create(ctx: ExtensionContextBase, input: JsonObject): MaybePromise<JsonObject>;
-  resolve(ctx: ExtensionContextBase, workspace: JsonObject): MaybePromise<{ rootPath: string; displayPath?: string }>;
-  archive?(ctx: ExtensionContextBase, workspace: JsonObject): MaybePromise<void>;
-  delete?(ctx: ExtensionContextBase, workspace: JsonObject): MaybePromise<void>;
+  params?: ParamObjectSchema;
+  create(ctx: ExtensionContextBase, input: WorkspaceProviderCreateInput): MaybePromise<WorkspaceProviderResult>;
+  resolve(ctx: ExtensionContextBase, input: WorkspaceProviderResolveInput): MaybePromise<WorkspaceProviderResult>;
+  cancel?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<WorkspaceProviderResult>;
+  archive?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<WorkspaceProviderResult>;
+  delete?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<void>;
 }
 
 export interface LocalExtensionSource {

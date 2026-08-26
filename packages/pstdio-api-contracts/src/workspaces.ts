@@ -2,12 +2,58 @@ import { z } from "zod";
 import { listActivityInputSchema, listActivityResponseSchema } from "./activity";
 import { extensionResourceRefSchema } from "./extensions";
 
+const jsonObjectSchema: z.ZodType<Record<string, unknown>> = z.record(z.string(), z.unknown());
+
+export const workspaceProviderRefSchema = z.object({
+  version: z.number().int().positive(),
+  data: jsonObjectSchema,
+});
+
+export const workspaceProviderStateSchema = z.enum([
+  "provisioning",
+  "ready",
+  "failed",
+  "cancelled",
+  "archiving",
+  "archived",
+  "deleting",
+  "provider_missing",
+]);
+
+export const workspaceExecutionKindSchema = z.enum(["local", "remote"]);
+
+export const workspaceCapabilitiesSchema = z.object({
+  files: z.enum(["none", "read", "write"]),
+  diff: z.boolean(),
+  merge: z.boolean(),
+  rebase: z.boolean(),
+  archive: z.boolean(),
+  delete: z.boolean(),
+});
+
+export const workspaceProviderErrorSchema = z.object({
+  code: z.string(),
+  message: z.string(),
+  retryable: z.boolean(),
+  occurred_at: z.string(),
+});
+
 export const workspaceSchema = z.object({
   id: z.string(),
   project_id: z.string(),
   name: z.string(),
   branch: z.string().nullable(),
   worktree_path: z.string().nullable(),
+  provider_id: z.string(),
+  provider_params_json: jsonObjectSchema,
+  provider_ref_json: workspaceProviderRefSchema.nullable(),
+  provider_state: workspaceProviderStateSchema,
+  execution_kind: workspaceExecutionKindSchema,
+  provider_operation_id: z.string().nullable(),
+  provider_operation_kind: z.enum(["create", "cancel", "archive", "delete"]).nullable(),
+  provider_error_json: workspaceProviderErrorSchema.nullable(),
+  provider_capabilities_json: workspaceCapabilitiesSchema,
+  display_path: z.string().nullable(),
   is_default: z.boolean(),
   archived: z.boolean(),
   workspace_shorthand: z.string(),
@@ -24,8 +70,12 @@ export const workspaceListItemSchema = workspaceSchema;
 
 export const createWorkspaceInputSchema = z.object({
   project_id: z.string().min(1),
-  /** Workspace target. Only worktree-backed workspaces are supported for now. */
-  type: z.literal("worktree").optional(),
+  /** Built-in compatibility target. Prefer provider_id and params for new callers. */
+  type: z.enum(["worktree", "current_branch"]).optional(),
+  /** Workspace provider. Defaults to pstdio.worktree. */
+  provider_id: z.string().optional(),
+  /** Provider parameters. Built-in worktree accepts repo_id and base. */
+  params: jsonObjectSchema.optional(),
   /** Repository to branch from. Defaults to the project's first repository. */
   repo_id: z.string().optional(),
   /** Base branch/ref for the new worktree. Defaults to HEAD. */
@@ -89,6 +139,11 @@ export const listWorkspaceActivityInputSchema = listActivityInputSchema;
 export const listWorkspaceActivityResponseSchema = listActivityResponseSchema;
 
 export type Workspace = z.infer<typeof workspaceSchema>;
+export type PublicWorkspaceCapabilities = z.infer<typeof workspaceCapabilitiesSchema>;
+export type WorkspaceExecutionKind = z.infer<typeof workspaceExecutionKindSchema>;
+export type WorkspaceProviderError = z.infer<typeof workspaceProviderErrorSchema>;
+export type PublicWorkspaceProviderRef = z.infer<typeof workspaceProviderRefSchema>;
+export type PublicWorkspaceProviderState = z.infer<typeof workspaceProviderStateSchema>;
 export type WorkspaceListItem = z.infer<typeof workspaceListItemSchema>;
 export type CreateWorkspaceInput = z.infer<typeof createWorkspaceInputSchema>;
 export type RenameWorkspaceInput = z.infer<typeof renameWorkspaceInputSchema>;

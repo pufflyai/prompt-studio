@@ -30,6 +30,33 @@ describe("workspaces create", () => {
     expect(createStandaloneWorkspace).toHaveBeenCalledWith({ projectId: "proj-1", base: "main" });
   });
 
+  test("passes provider and params through to the API", async () => {
+    const createStandaloneWorkspace = mock(async () => mockWorkspace) as never;
+
+    const handler = createHandler({ ...baseDeps, createStandaloneWorkspace });
+    await handler({
+      target: "worktree",
+      provider: "example.remote",
+      params: '{"repository":"acme/repo"}',
+      _: [],
+      $0: "",
+    } as never);
+
+    expect(createStandaloneWorkspace).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      base: undefined,
+      providerId: "example.remote",
+      params: { repository: "acme/repo" },
+    });
+  });
+
+  test("throws on invalid params JSON", async () => {
+    const handler = createHandler(baseDeps);
+    await expect(
+      handler({ target: "worktree", provider: "example.remote", params: "{", _: [], $0: "" } as never),
+    ).rejects.toThrow("Invalid --params JSON");
+  });
+
   test("throws on invalid target", async () => {
     const handler = createHandler(baseDeps);
     await expect(handler({ target: "docker", _: [], $0: "" } as never)).rejects.toThrow(

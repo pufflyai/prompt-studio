@@ -2,6 +2,26 @@ import { describe, expect, mock, test } from "bun:test";
 import type { Workspace } from "@pstdio/sdk/resources";
 import { mergeWorkspace } from "./merge-workspace";
 
+const providerFields = {
+  provider_id: "pstdio.worktree",
+  provider_params_json: {},
+  provider_ref_json: null,
+  provider_state: "ready" as const,
+  execution_kind: "local" as const,
+  provider_operation_id: null,
+  provider_operation_kind: null,
+  provider_error_json: null,
+  provider_capabilities_json: {
+    files: "write" as const,
+    diff: true,
+    merge: true,
+    rebase: true,
+    archive: true,
+    delete: true,
+  },
+  display_path: null,
+};
+
 const makeWorkspace = (shorthand: string): Workspace => ({
   id: "ws-1",
   project_id: "proj-1",
@@ -16,6 +36,7 @@ const makeWorkspace = (shorthand: string): Workspace => ({
   created_at: "",
   updated_at: "",
   deleted_at: null,
+  ...providerFields,
 });
 
 const baseDeps = {
