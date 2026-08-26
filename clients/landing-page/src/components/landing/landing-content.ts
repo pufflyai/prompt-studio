@@ -6,6 +6,8 @@ import {
   Bot,
   Boxes,
   Braces,
+  ChartNoAxesCombined,
+  Columns3,
   Command,
   Compass,
   FileText,
@@ -14,6 +16,7 @@ import {
   LayoutPanelLeft,
   MessagesSquare,
   Package,
+  PenTool,
   Plug,
   Scale,
   Server,
@@ -25,7 +28,7 @@ import {
   Workflow,
 } from "lucide-react";
 
-export const INSTALL_COMMANDS = ["bun add -g pstdio@latest && pst"];
+export const INSTALL_COMMANDS = ["bun add -g pstdio@latest", "pst"];
 
 export const SITE_LINKS = {
   github: "https://github.com/pufflyai/prompt-studio",
@@ -77,9 +80,9 @@ export interface ViewMeta {
 export const VIEW_META: Record<LandingView, ViewMeta> = {
   start: { label: "Start here", icon: Sparkles, parent: "explore" },
   "why-prompt-studio": { label: "Why Prompt Studio", icon: BadgeCheck, parent: "explore" },
-  gallery: { label: "Extensions", icon: Blocks, parent: "explore" },
+  gallery: { label: "Extension gallery", icon: Blocks, parent: "explore" },
   concepts: { label: "Concepts", icon: BookOpen },
-  "guide-getting-started": { label: "Set up Prompt Studio", icon: SquareTerminal, parent: "guides" },
+  "guide-getting-started": { label: "Quickstart", icon: SquareTerminal, parent: "guides" },
   "guide-create-ticket": { label: "Create a ticket", icon: Ticket, parent: "guides" },
   "guide-implement-ticket": { label: "Implement a ticket", icon: Ticket, parent: "guides" },
   "guide-create-proposal": { label: "Write a proposal", icon: FileText, parent: "guides" },
@@ -126,9 +129,15 @@ export interface ProjectTab {
   icon: LucideIcon;
 }
 
-export type ProjectTabId = "docs";
+export type ProjectTabId = "docs" | "agentic-kanban" | "agentic-design" | "agentic-data-analysis" | "workflow-builder";
 
-export const PROJECT_TABS: ProjectTab[] = [{ id: "docs", label: "Prompt Studio Docs", icon: BookOpen }];
+export const PROJECT_TABS: ProjectTab[] = [
+  { id: "docs", label: "Docs", icon: BookOpen },
+  { id: "agentic-kanban", label: "Agentic kanban", icon: Columns3 },
+  { id: "agentic-design", label: "Agentic design", icon: PenTool },
+  { id: "agentic-data-analysis", label: "Agentic data analysis", icon: ChartNoAxesCombined },
+  { id: "workflow-builder", label: "Workflow builder", icon: Workflow },
+];
 
 export interface ChangelogEntry {
   version: string;

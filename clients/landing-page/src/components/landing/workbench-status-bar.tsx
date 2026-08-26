@@ -1,7 +1,14 @@
-import { Box, HStack, Text } from "@chakra-ui/react";
-import { StockholmIcon } from "@pstdio/ui";
+import { HStack, Text } from "@chakra-ui/react";
+import { GitBranch } from "lucide-react";
 
-export const WorkbenchStatusBar = () => {
+interface WorkbenchStatusBarProps {
+  label: string;
+  onOpenChangelog: () => void;
+}
+
+export const WorkbenchStatusBar = (props: WorkbenchStatusBarProps) => {
+  const { label, onOpenChangelog } = props;
+
   return (
     <HStack
       as="footer"
@@ -14,14 +21,11 @@ export const WorkbenchStatusBar = () => {
       borderTopWidth="1px"
       borderColor="border"
       color="fg.muted"
+      display={{ base: "none", md: "flex" }}
     >
-      <HStack gap="4px" fontFamily="mono" fontSize="9px">
-        <Text>Made with</Text>
-        <Text aria-label="love">❤️</Text>
-        <Text>in</Text>
-        <Box width="13px" height="13px" color="fg.muted">
-          <StockholmIcon />
-        </Box>
+      <HStack as="button" gap="8px" fontFamily="mono" fontSize="9px" onClick={onOpenChangelog}>
+        <GitBranch size={10} />
+        <Text>{label}</Text>
       </HStack>
       <Text flex="1" textAlign="right" fontFamily="body" fontSize="9px" color="fg.subtle">
         © {new Date().getFullYear()} Prompt Studio. All rights reserved.
