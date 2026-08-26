@@ -60,7 +60,7 @@ const writeCommandExtension = (root: string) => {
           id: "counter.read",
           ref: { kind: "command", id: "counter.read" },
           title: "Read lab counter",
-          cli: {},
+          cli: true,
           async run(ctx, commandParams) {
             return { counter: await ctx.storage.get("counter") ?? 0 };
           },

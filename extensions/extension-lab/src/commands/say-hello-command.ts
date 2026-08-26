@@ -4,7 +4,7 @@ import { LAB_ROUTE_HEADER_WHEN } from "../utils/lab-constants";
 export const sayHelloCommand = defineCommand({
   id: "say-hello",
   title: l10n("commands.sayHello.title", "Say hello"),
-  cli: {},
+  cli: true,
   palette: [{ group: "Lab", label: l10n("commands.sayHello.paletteLabel", "Say hello") }],
   menus: [
     {

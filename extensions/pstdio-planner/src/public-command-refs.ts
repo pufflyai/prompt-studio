@@ -1,4 +1,4 @@
-import { type CommandHelpersApi, type CommandRef, commandRef } from "@pstdio/sdk/extensions";
+import { commandRef } from "@pstdio/sdk/extensions";
 
 export interface PlannerTicket {
   id: string;
@@ -69,11 +69,10 @@ export interface TicketWorkspaceRow {
   active: boolean;
 }
 
-// This repo-local extension is also installed outside the monorepo, where the
-// private Planner package cannot be a dependency. Keep this fallback scoped so
-// the Planner identity is declared once and command references stay structured.
 const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "pstdio-planner" });
 
+// This module owns the planner's public command contract. Consumers import these
+// references instead of repeating the planner identity or command ids.
 export const planner = {
   automationPolicy: plannerCommand<Record<string, never>, { maxInProgress: number }>("automation-policy"),
   readTickets: plannerCommand<Record<string, never>, PlannerTicket[]>("read-tickets"),
@@ -89,25 +88,14 @@ export const planner = {
     | { decision: "started"; attempt: PlannerAttempt; session: { id: string } }
     | { decision: "wait"; reason: string; dependencyIds: string[] }
   >("run-attempt"),
-  runReview: plannerCommand<{ workspaceId: string }, { review: { id: string }; session: { id: string } }>("runReview"),
+  runReview: plannerCommand<
+    { workspaceId: string; expectedRevision?: number },
+    { review: { id: string }; session: { id: string } }
+  >("runReview"),
   listAttempts: plannerCommand<Record<string, never>, PlannerAttempt[]>("list-attempts"),
   reconcileAttempt: plannerCommand<{ workspaceId: string }, { decision: string; attempt: PlannerAttempt }>(
     "reconcile-attempt",
   ),
   ticketWorkspaces: plannerCommand<{ id: string }, TicketWorkspaceRow[]>("ticket-workspaces"),
   workspaceActivity: plannerCommand<{ workspaceId: string }, WorkspaceActivity>("workspace-activity"),
-};
-
-export interface PlannerContext {
-  commands: CommandHelpersApi;
-}
-
-export const executePlanner = async <TParams extends Record<string, unknown>, TResult>(
-  ctx: PlannerContext,
-  ref: CommandRef<TParams, TResult>,
-  params: TParams,
-) => {
-  const outcome = await ctx.commands.execute(ref, { params });
-  if (!outcome.ok) throw new Error(`${ref.id} failed: ${outcome.reason}`);
-  return outcome.value;
 };

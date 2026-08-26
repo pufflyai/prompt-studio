@@ -26,7 +26,7 @@ const workspaceIdFrom = (
 export const runReviewCommand = defineCommand({
   id: "runReview",
   title: l10n("commands.runReview.title", "Run review"),
-  cli: {},
+  cli: true,
   menus: [
     {
       slot: workspaceSlots.headerOverflow,

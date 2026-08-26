@@ -53,8 +53,8 @@ afterEach(() => {
 
 const validExtensionSource = `export default {
   commands: [
-    { id: "say-hello", ref: { kind: "command", id: "say-hello" }, title: "Say hello", cli: {}, run: async () => undefined },
-    { id: "counter-bump", ref: { kind: "command", id: "counter-bump" }, title: "Bump counter", cli: {}, run: async () => undefined },
+    { id: "say-hello", ref: { kind: "command", id: "say-hello" }, title: "Say hello", cli: true, run: async () => undefined },
+    { id: "counter-bump", ref: { kind: "command", id: "counter-bump" }, title: "Bump counter", cli: true, run: async () => undefined },
   ],
   middlewares: [
     {

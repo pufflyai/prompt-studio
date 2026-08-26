@@ -57,7 +57,7 @@ export interface CommandDefinition<
   params?: TSchema;
   menus?: readonly MenuContribution[];
   palette?: readonly CommandPaletteContribution<SchemaParams<TSchema>>[];
-  cli?: CliContribution;
+  cli?: true | CliContribution;
   run: CommandRunHandler<SchemaParams<TSchema>, TResult, TSettings>;
 }
 

@@ -23,6 +23,7 @@ import { executeWorkbenchExtensionCommand, type WorkbenchExtensionCommandContext
 import type { InternalRegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
 
 const settingsSectionIdDefault = "extensions";
+const extensionSettingsOrderBase = 1_000;
 
 const asPreferenceValue = (value: unknown): PreferenceValue | undefined =>
   value === undefined ? undefined : (value as PreferenceValue);
@@ -132,6 +133,7 @@ export const registerStatuses = (
     input.workbench.settings.registerPanel({
       id: "workbench.statuses",
       title: "Statuses",
+      icon: "list-checks",
       kind: "custom",
       section: input.settingsSectionId ?? settingsSectionIdDefault,
       scope: "project",
@@ -164,12 +166,17 @@ export const registerSettings = (input: InternalRegisterWorkbenchExtensionContri
   );
   if (Object.keys(properties).length > 0) disposables.push(input.workbench.preferences.registerSchema({ properties }));
 
-  for (const panel of input.metadata.settingsPanels) {
+  const panels = [...input.metadata.settingsPanels].sort(
+    (left, right) => left.extensionId.localeCompare(right.extensionId) || left.id.localeCompare(right.id),
+  );
+  for (const [index, panel] of panels.entries()) {
     disposables.push(
       input.workbench.settings.registerPanel({
         id: panel.id,
         title: text(panel.title, panel.id),
+        icon: panel.icon,
         kind: "custom",
+        order: extensionSettingsOrderBase + index,
         section: sectionId,
         scope: panel.scope,
         render: (renderInput) =>

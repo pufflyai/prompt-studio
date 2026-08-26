@@ -35,7 +35,7 @@ metadata:
    - Export a single default `defineExtension({ ... })` value from `extension.ts`.
    - Use `packageAsset()` for every shipped file or directory asset.
    - Keep package asset paths relative and inside the extension package.
-   - Prefer typed refs returned by `define*` helpers, `commandRef`, `eventRef`, and kernel events over string ids.
+   - Use refs returned by `define*` helpers inside one extension. Import public refs from the provider for cross-extension calls. A provider may use `commandRef.forExtension()` once in its public contract module.
 4. Test the change following the repo's testing conventions.
    - For behavior changes, add or update the tests that cover the new behavior.
    - Put tests next to the behavior they cover.

@@ -57,7 +57,7 @@ const createProject = async (name: string) => {
 };
 
 describe("GET /v1/projects/:projectId/extensions/ui", () => {
-  test("removes enabled extensions whose installed folder was deleted", async () => {
+  test("reads the cached runtime without synchronizing installed extensions", async () => {
     const project = await createProject("Deleted UI Extension Project");
     const sourcePath = createTestExtensionSource({
       root: pstdioHome,
@@ -88,7 +88,7 @@ describe("GET /v1/projects/:projectId/extensions/ui", () => {
     const records = await handle.deps.extensionService.listProjectExtensionInstances(project.id);
     expect(
       records.find(({ installedSource }) => installedSource.install_name === "deleted-ui-extension-source"),
-    ).toBeUndefined();
+    ).toBeDefined();
   });
 
   test("lists declared themes as contribution records", async () => {

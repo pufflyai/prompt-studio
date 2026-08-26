@@ -1,18 +1,12 @@
-import { type CommandPaletteResourceContribution, commandRef } from "@pstdio/sdk/extensions";
+import type { CommandPaletteResourceContribution } from "@pstdio/sdk/extensions";
 import { TICKET_RESOURCE_ICON } from "../data/mappers";
 import { runTicketsQuery } from "../data/query";
+import { getTicketCommand } from "./get-ticket";
 
 const matchesQuery = (haystack: string, query: string) => {
   const needle = query.trim().toLowerCase();
   return !needle || haystack.toLowerCase().includes(needle);
 };
-
-// Backs the tickets command-palette resource provider: returns matching tickets as
-// palette items that open the ticket resource when selected.
-const getTicketCommand = commandRef<{ ticket: string }>({
-  extensionId: "pstdio.pstdio-planner",
-  id: "get-ticket",
-});
 
 export const queryTicketResources: CommandPaletteResourceContribution["query"] = async (ctx, input) => {
   const query = input.query ?? "";
@@ -27,7 +21,7 @@ export const queryTicketResources: CommandPaletteResourceContribution["query"] =
       icon: TICKET_RESOURCE_ICON,
       target: row.resource
         ? { kind: "resource" as const, resource: row.resource }
-        : { kind: "command" as const, target: { command: getTicketCommand, params: { ticket: row.id } } },
+        : { kind: "command" as const, target: { command: getTicketCommand.ref, params: { id: row.id } } },
     }));
 
   return { items };

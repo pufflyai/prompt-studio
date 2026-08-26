@@ -8,7 +8,7 @@ const reconcilableStates = new Set(["implementing", "changes_requested", "review
 export const stuckWorkSweepCommand = defineCommand({
   id: "stuck-work-sweep",
   title: "Reconcile managed attempts",
-  cli: {},
+  cli: true,
   async run(ctx, _commandParams) {
     const attempts = await executePlanner(ctx, planner.listAttempts, {});
     const decisions = [];

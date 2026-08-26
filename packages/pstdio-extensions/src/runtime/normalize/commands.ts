@@ -57,9 +57,10 @@ const normalizeCommandCli = (
   runtime: Accumulator,
   cliKeys: Map<string, RuntimeCliContribution>,
 ): RuntimeCliContribution | undefined => {
-  if (!isRecord(cli)) return undefined;
+  if (cli !== true && !isRecord(cli)) return undefined;
+  const options = cli === true ? {} : cli;
 
-  const customPath = Array.isArray(cli.path) ? (cli.path as string[]) : splitCommandKey(localId);
+  const customPath = Array.isArray(options.path) ? (options.path as string[]) : splitCommandKey(localId);
   const normalized = normalizeCliPath(customPath);
   if (!normalized) return undefined;
 
@@ -71,13 +72,13 @@ const normalizeCommandCli = (
     name: ext.name,
     path: normalized.segments,
     pathKey,
-    description: asLocalizableString(cli.description),
-    examples: Array.isArray(cli.examples)
-      ? cli.examples.filter((example): example is string => typeof example === "string")
+    description: asLocalizableString(options.description),
+    examples: Array.isArray(options.examples)
+      ? options.examples.filter((example): example is string => typeof example === "string")
       : undefined,
-    hidden: typeof cli.hidden === "boolean" ? cli.hidden : undefined,
-    globalAliases: Array.isArray(cli.globalAliases)
-      ? (cli.globalAliases as string[][]).filter((alias) => Array.isArray(alias))
+    hidden: typeof options.hidden === "boolean" ? options.hidden : undefined,
+    globalAliases: Array.isArray(options.globalAliases)
+      ? (options.globalAliases as string[][]).filter((alias) => Array.isArray(alias))
       : undefined,
   };
   validateCliExamples(ext, source, commandId, contribution, runtime);

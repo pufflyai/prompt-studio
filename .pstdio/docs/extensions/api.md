@@ -211,7 +211,8 @@ For the package above:
 package name     planner
 publisher        pstdio
 extension id     pstdio.planner
-command id       planner.tickets.create
+local command id tickets.create
+runtime id       pstdio.planner.command.tickets.create
 CLI path         pst planner tickets create
 artifact root    <repo>/.pstdio/planner/
 theme id         planner.<theme-key>
@@ -220,6 +221,22 @@ skill id         planner.<skill-key>
 ```
 
 The old `namespace` concept is removed. Use the package `name` anywhere extension-facing code needs a short project scope.
+Publisher-qualified runtime ids are host routing details. Extension code declares local ids and uses typed refs.
+For same-extension composition, use the `ref` returned by `defineCommand()`.
+
+When another extension needs a public command, the provider owns and exports that contract from one module:
+
+```ts
+import { commandRef } from "@pstdio/sdk/extensions";
+
+const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "planner" });
+
+export const plannerCommands = {
+  publish: plannerCommand<{ version: string }, { published: boolean }>("publish"),
+};
+```
+
+Consumers import `plannerCommands.publish`. They do not repeat the provider identity or rebuild runtime ids.
 
 ## Authoring Boundaries
 
@@ -346,7 +363,7 @@ export default defineExtension({
 Prefer exported event refs such as `sessionEvents.started` and
 `worktreeEvents.created`. Planner ticket automation should use planner commands
 or command lifecycle events, not removed core ticket/attempt-status events. Use
-`commandEvent(commandRef(...), "completed")` or another command lifecycle phase
+`commandEvent(providerCommands.someCommand, "completed")` or another command lifecycle phase
 when a hook should react to a command outcome.
 
 ## Dashboard UI Contributions

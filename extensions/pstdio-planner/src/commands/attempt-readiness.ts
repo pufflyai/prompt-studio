@@ -86,7 +86,7 @@ export const loadAttemptReadiness = async (
 export const attemptReadinessCommand = defineCommand({
   id: "attempt-readiness",
   title: "Read attempt readiness",
-  cli: {},
+  cli: true,
   params: {
     ticket: params.text({ label: "Ticket", required: true }),
     repoId: params.text({ label: "Repository", required: false }),

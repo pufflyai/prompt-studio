@@ -183,7 +183,7 @@ const attemptStates: AttemptState[] = [
 export const requestHumanCommand = defineCommand({
   id: "request-human",
   title: "Request human input",
-  cli: {},
+  cli: true,
   params: {
     ticket: params.text({ required: true }),
     workspaceId: params.text(),
@@ -208,7 +208,7 @@ export const requestHumanCommand = defineCommand({
 export const resolveHumanRequestCommand = defineCommand({
   id: "resolve-human-request",
   title: "Resolve human request",
-  cli: {},
+  cli: true,
   params: {
     requestId: params.text({ required: true }),
     resolution: params.longText({ required: true }),

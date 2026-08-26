@@ -6,10 +6,10 @@ import { appendAttemptEvent, putAttempt, readAttempt, reviewThreadsCollection } 
 import type { AttemptRecord } from "../data/attempt-types";
 import { inlineThreadIsOutdated } from "../data/thread-mapping";
 
-const readReportCommand = commandRef<{ id: string }, { id?: string; workspaceId?: string | null; draft?: boolean }>({
-  extensionId: "pstdio.pstdio-reports",
-  id: "reports.read",
-});
+const reportsCommand = commandRef.forExtension({ publisher: "pstdio", name: "pstdio-reports" });
+const readReportCommand = reportsCommand<{ id: string }, { id?: string; workspaceId?: string | null; draft?: boolean }>(
+  "reports.read",
+);
 
 export const readReport = async (ctx: Pick<CommandContext, "commands">, reportId: string) => {
   const outcome = await ctx.commands.execute(readReportCommand, { params: { id: reportId } });
@@ -75,7 +75,7 @@ const mapOpenThreads = async (ctx: CommandContext, attempt: AttemptRecord, nextH
 export const submitChangeRequestCommand = defineCommand({
   id: "submit-change-request",
   title: "Submit change request",
-  cli: {},
+  cli: true,
   params: {
     workspaceId: params.text({ required: true }),
     implementationSessionId: params.text(),

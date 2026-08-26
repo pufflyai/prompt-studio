@@ -37,9 +37,8 @@ export default defineExtension({
 ```ts
 import { commandRef, defineExtension, params } from "@pstdio/sdk/extensions";
 
-const publishCommand = commandRef<{ version: string }, { published: boolean }>(
-  "planner.release.publish",
-);
+const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "planner" });
+const publishCommand = plannerCommand<{ version: string }, { published: boolean }>("release.publish");
 
 export default defineExtension({
   commands: {
@@ -127,7 +126,8 @@ export default defineExtension({
 ```ts
 import { commandRef, defineExtension } from "@pstdio/sdk/extensions";
 
-const heartbeat = commandRef("planner.heartbeat");
+const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "planner" });
+const heartbeat = plannerCommand("heartbeat");
 
 export default defineExtension({
   commands: {

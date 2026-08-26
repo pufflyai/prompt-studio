@@ -56,6 +56,7 @@ export const registerWorkflowStatusesSettings = (ctx: WorkbenchModuleContext): D
     ctx.settings.registerPanel({
       id: "workbench.statuses",
       title: "Statuses",
+      icon: "list-checks",
       kind: "custom",
       section: "project",
       scope: "project",

@@ -33,7 +33,7 @@ describe("font editor extension", () => {
       "build",
       "verify",
     ];
-    for (const id of publicCommands) expect(command(id)?.cli).toEqual({});
+    for (const id of publicCommands) expect(command(id)?.cli).toBe(true);
   });
 
   test("routes dashboard invocations through the default repository", async () => {

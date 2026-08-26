@@ -49,7 +49,7 @@ describe("loadExtensionRuntime", () => {
             id: "say-hello",
             ref: { kind: "command", id: "say-hello" },
             title: "Say hello",
-            cli: {},
+            cli: true,
             run: async () => ({ message: "hi" }),
           },
         ],

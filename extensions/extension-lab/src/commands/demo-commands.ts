@@ -1,28 +1,12 @@
-import { defineCommand, params, projectSlots, workbenchModes, workspaceSlots } from "@pstdio/sdk/extensions";
+import { defineCommand, projectSlots, workbenchModes, workspaceSlots } from "@pstdio/sdk/extensions";
 import { LAB_ROUTE_HEADER_WHEN } from "../utils/lab-constants";
-import { labAwakenCommand } from "./command-refs";
-
-export const awakenCommand = defineCommand({
-  id: "awaken",
-  title: "Awaken",
-  description: "Internal target used to demo middleware rejection.",
-  params: { title: params.text() },
-  async run(ctx, commandParams) {
-    const { title = "anonymous" } = commandParams;
-    await ctx.notify.toast({
-      type: "info",
-      title: "Awakened",
-      message: `${title} is now awake.`,
-    });
-    return { awakened: true };
-  },
-});
+import { awakenCommand } from "./awaken-command";
 
 export const tryAwakenCommand = defineCommand({
   id: "demo.try-awaken",
   title: "Demo middleware rejection",
   description: "Invoke lab.awaken with title 'Gain consciousness' and watch the lab middleware refuse.",
-  cli: {},
+  cli: true,
   palette: [{ group: "Lab", label: "Demo middleware rejection" }],
   menus: [
     {
@@ -33,7 +17,7 @@ export const tryAwakenCommand = defineCommand({
     },
   ],
   async run(ctx, _commandParams) {
-    const outcome = await ctx.commands.execute(labAwakenCommand, {
+    const outcome = await ctx.commands.execute(awakenCommand.ref, {
       params: { title: "Gain consciousness" },
     });
 

@@ -1,6 +1,7 @@
+import { awakenCommand } from "./awaken-command";
 import { camsCurrentCommand, camsSelectCommand, camsTreeCommand } from "./cams-commands";
 import { bumpCounterCommand, readCounterCommand, resetCounterCommand } from "./counter-commands";
-import { awakenCommand, tryAwakenCommand, workspaceOnlyCommand } from "./demo-commands";
+import { tryAwakenCommand, workspaceOnlyCommand } from "./demo-commands";
 import {
   createGlassLabArtifactCommand,
   deleteGlassLabArtifactCommand,
@@ -12,7 +13,6 @@ import { heartbeatCommand } from "./heartbeat-command";
 import { openLabResourceCommand } from "./lab-resources-command";
 import { sayHelloCommand } from "./say-hello-command";
 
-export { labAwakenCommand, labHeartbeatCommand } from "./command-refs";
 export { labSchedules } from "./schedules";
 
 export const labCommands = [

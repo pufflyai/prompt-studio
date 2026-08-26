@@ -65,7 +65,7 @@ const discoverHighImpactIssuesCommand = defineCommand({
 const openInVscodeCommand = defineCommand({
   id: "workspace.openInVscode",
   title: "Open workspace in VS Code",
-  cli: {},
+  cli: true,
   menus: [
     {
       slot: workspaceSlots.headerOverflow,
@@ -94,7 +94,7 @@ const openInVscodeCommand = defineCommand({
 const openInIsolationCommand = defineCommand({
   id: "workspace.openInIsolation",
   title: "Open workspace in isolation",
-  cli: {},
+  cli: true,
   menus: [
     {
       slot: workspaceSlots.headerOverflow,
@@ -130,7 +130,7 @@ const openInIsolationCommand = defineCommand({
 const stopIsolationCommand = defineCommand({
   id: "workspace.stopIsolation",
   title: "Stop workspace isolation",
-  cli: {},
+  cli: true,
   menus: [
     {
       slot: workspaceSlots.headerOverflow,

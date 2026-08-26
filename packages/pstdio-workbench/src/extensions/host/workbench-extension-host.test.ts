@@ -142,6 +142,81 @@ const metadata = {
 } satisfies WorkbenchExtensionMetadata;
 
 describe("registerWorkbenchExtensionContributions", () => {
+  test("keeps extension settings icons and places panels after host settings in stable order", () => {
+    const workbench = createWorkbenchCore();
+    workbench.settings.registerPanel({
+      id: "host.danger",
+      title: "Danger zone",
+      kind: "custom",
+      order: 90,
+      render: () => null,
+    });
+    const settingsMetadata = {
+      ...metadata,
+      views: [
+        ...metadata.views,
+        {
+          id: `${extensionId}.view.zebra-settings`,
+          localId: "zebra-settings",
+          extensionId,
+          title: "Zebra settings",
+          icon: "zebra",
+          body: {
+            kind: "webview",
+            webview: {
+              entry: { kind: "package-asset", path: "./zebra.tsx", baseUrl: "file:///extensions/lab/" },
+              runtimeUrl: "/runtime.html",
+              moduleUrl: "/zebra.js",
+            },
+          },
+        },
+        {
+          id: `${extensionId}.view.alpha-settings`,
+          localId: "alpha-settings",
+          extensionId,
+          title: "Alpha settings",
+          icon: "alpha",
+          body: {
+            kind: "webview",
+            webview: {
+              entry: { kind: "package-asset", path: "./alpha.tsx", baseUrl: "file:///extensions/lab/" },
+              runtimeUrl: "/runtime.html",
+              moduleUrl: "/alpha.js",
+            },
+          },
+        },
+      ],
+      settingsPanels: [
+        {
+          id: `${extensionId}.settings-panel.zebra`,
+          extensionId,
+          view: { extensionId, kind: "view", id: "zebra-settings" },
+          slot: { id: "project.settingsPanels" },
+        },
+        {
+          id: `${extensionId}.settings-panel.alpha`,
+          extensionId,
+          view: { extensionId, kind: "view", id: "alpha-settings" },
+          slot: { id: "project.settingsPanels" },
+        },
+      ],
+    } satisfies WorkbenchExtensionMetadata;
+
+    registerWorkbenchExtensionContributions({
+      executeCommand: () => undefined,
+      metadata: settingsMetadata,
+      projectId: "project-1",
+      workbench,
+    });
+
+    expect(workbench.settings.listPanels().map(({ id, icon }) => ({ id, icon }))).toEqual([
+      { id: "workbench.statuses", icon: "list-checks" },
+      { id: "host.danger", icon: undefined },
+      { id: `${extensionId}.settings-panel.alpha`, icon: "alpha" },
+      { id: `${extensionId}.settings-panel.zebra`, icon: "zebra" },
+    ]);
+  });
+
   test("prepares extension command arguments through the host adapter", async () => {
     const workbench = createWorkbenchCore();
     const commandId = `${extensionId}.command.inspect`;

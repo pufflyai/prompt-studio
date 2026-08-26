@@ -55,6 +55,7 @@ export const createPlannerUi = (baseUrl: string) => {
   const tickets = defineView({
     id: "tickets",
     title: l10n("kanbanRenderers.tickets.title", "Tickets"),
+    icon: "square-kanban",
     path: "tickets",
     body: {
       kind: "kanban",

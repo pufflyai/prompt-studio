@@ -163,9 +163,8 @@ import {
   defineExtension,
 } from "@pstdio/sdk/extensions";
 
-const publishCommand = commandRef<{ version: string }, { published: boolean }>(
-  "planner.publish",
-);
+const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "planner" });
+const publishCommand = plannerCommand<{ version: string }, { published: boolean }>("publish");
 
 export default defineExtension({
   commands: {

@@ -4,7 +4,7 @@ import { COUNTER_STORAGE_KEY, LAB_ROUTE_HEADER_WHEN } from "../utils/lab-constan
 export const bumpCounterCommand = defineCommand({
   id: "counter.bump",
   title: l10n("commands.counter.bump.title", "Bump lab counter"),
-  cli: {},
+  cli: true,
   palette: [{ group: "Lab", label: l10n("commands.counter.bump.title", "Bump lab counter") }],
   menus: [
     {
@@ -30,7 +30,7 @@ export const bumpCounterCommand = defineCommand({
 export const readCounterCommand = defineCommand({
   id: "counter.read",
   title: l10n("commands.counter.read.title", "Read lab counter"),
-  cli: {},
+  cli: true,
   async run(ctx, _commandParams) {
     return { counter: (await ctx.storage.get<number>(COUNTER_STORAGE_KEY)) ?? 0 };
   },
@@ -39,7 +39,7 @@ export const readCounterCommand = defineCommand({
 export const resetCounterCommand = defineCommand({
   id: "counter.reset",
   title: l10n("commands.counter.reset.title", "Reset lab counter"),
-  cli: {},
+  cli: true,
   palette: [{ group: "Lab", label: l10n("commands.counter.reset.title", "Reset lab counter") }],
   menus: [
     {

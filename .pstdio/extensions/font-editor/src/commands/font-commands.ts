@@ -175,7 +175,7 @@ export const fontCommands = [
     id: "inspect",
     title: "Inspect font",
     description: "List font metadata and glyph mappings.",
-    cli: {},
+    cli: true,
     async run(ctx, _commandParams) {
       return inRepository(ctx, inspectInternal.ref, {}, inspectRepositoryFont);
     },
@@ -184,7 +184,7 @@ export const fontCommands = [
     id: "preview",
     title: "Load font preview",
     description: "Return the canonical TTF as a browser-safe data URL.",
-    cli: {},
+    cli: true,
     async run(ctx, _commandParams) {
       return inRepository(ctx, previewInternal.ref, {}, previewRepositoryFont);
     },
@@ -193,7 +193,7 @@ export const fontCommands = [
     id: "glyph.add",
     title: "Add SVG glyph",
     description: "Add one SVG path to the icon font and regenerate every output.",
-    cli: {},
+    cli: true,
     params: addParams,
     async run(ctx, commandParams) {
       if (ctx.repoFiles) {
@@ -212,7 +212,7 @@ export const fontCommands = [
     id: "glyph.rename",
     title: "Rename glyph",
     description: "Rename a glyph without changing its contours.",
-    cli: {},
+    cli: true,
     params: renameInternal.params,
     async run(ctx, commandParams) {
       const values = { glyph: commandParams.glyph, name: commandParams.name };
@@ -225,7 +225,7 @@ export const fontCommands = [
     id: "glyph.codepoint",
     title: "Set glyph codepoint",
     description: "Move a glyph to an unused Unicode codepoint.",
-    cli: {},
+    cli: true,
     params: codepointInternal.params,
     async run(ctx, commandParams) {
       const values = { glyph: commandParams.glyph, codepoint: commandParams.codepoint };
@@ -238,7 +238,7 @@ export const fontCommands = [
     id: "glyph.remove",
     title: "Remove glyph",
     description: "Remove a glyph and regenerate every output.",
-    cli: {},
+    cli: true,
     params: glyphParams,
     async run(ctx, commandParams) {
       const values = { glyph: commandParams.glyph };
@@ -248,7 +248,7 @@ export const fontCommands = [
   defineCommand({
     id: "config.get",
     title: "Get font editor configuration",
-    cli: {},
+    cli: true,
     async run(ctx, _commandParams) {
       return inRepository(ctx, configGetInternal.ref, {}, readRepositoryConfig);
     },
@@ -257,7 +257,7 @@ export const fontCommands = [
     id: "config.set",
     title: "Set font editor configuration",
     description: "Update settings and rebuild verified outputs.",
-    cli: {},
+    cli: true,
     params: configPatchParams,
     async run(ctx, commandParams) {
       const values = definedValues(commandParams);
@@ -268,7 +268,7 @@ export const fontCommands = [
     id: "build",
     title: "Build font",
     description: "Regenerate and verify every font and CSS output.",
-    cli: {},
+    cli: true,
     async run(ctx, _commandParams) {
       return inRepository(ctx, buildInternal.ref, {}, buildRepositoryFont);
     },
@@ -277,7 +277,7 @@ export const fontCommands = [
     id: "verify",
     title: "Verify font",
     description: "Verify generated formats and CSS against the canonical TTF.",
-    cli: {},
+    cli: true,
     async run(ctx, _commandParams) {
       return inRepository(ctx, verifyInternal.ref, {}, verifyRepositoryFont);
     },
