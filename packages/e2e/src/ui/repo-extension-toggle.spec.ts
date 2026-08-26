@@ -78,13 +78,40 @@ const openLocalExtensionToggle = async (page: import("@playwright/test").Page) =
 
   const localRow = page.getByTestId("extension-entry").filter({ hasText: "Local Example" });
   await expect(localRow).toBeVisible();
-  return localRow.locator("input[type='checkbox']");
+  return { settings, toggle: localRow.locator("input[type='checkbox']") };
+};
+
+const expectSettingsViewToLoad = async (
+  page: import("@playwright/test").Page,
+  settings: import("@playwright/test").Locator,
+  label: string,
+  content: string,
+) => {
+  await settings.getByText(label, { exact: true }).click();
+  const iframe = page.locator(`iframe[title="${label}"]`);
+  await expect(iframe).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.frameLocator(`iframe[title="${label}"]`).getByText(content, { exact: true })).toBeVisible();
+};
+
+const expectExtensionSettingsViewsToLoad = async (
+  page: import("@playwright/test").Page,
+  settings: import("@playwright/test").Locator,
+) => {
+  await expectSettingsViewToLoad(page, settings, "Lab (global)", "Greeting tone");
+  await expectSettingsViewToLoad(page, settings, "Lab (project)", "Counter step");
+  await expectSettingsViewToLoad(
+    page,
+    settings,
+    "Ticket tags",
+    "Configure the tag definitions and options available on tickets.",
+  );
 };
 
 test.describe
   .serial("repo-local extension toggle", () => {
     test("disables the extension", async ({ page }) => {
-      const toggle = await openLocalExtensionToggle(page);
+      const { settings, toggle } = await openLocalExtensionToggle(page);
       await expect(toggle).toBeChecked();
 
       const disableResponse = page.waitForResponse(
@@ -94,10 +121,11 @@ test.describe
       await toggle.click({ force: true });
       expect((await disableResponse).status()).toBe(200);
       await expect(toggle).not.toBeChecked();
+      await expectExtensionSettingsViewsToLoad(page, settings);
     });
 
     test("enables the extension again", async ({ page }) => {
-      const toggle = await openLocalExtensionToggle(page);
+      const { settings, toggle } = await openLocalExtensionToggle(page);
       await expect(toggle).not.toBeChecked();
 
       const enableResponse = page.waitForResponse(
@@ -107,5 +135,6 @@ test.describe
       await toggle.click({ force: true });
       expect((await enableResponse).status()).toBe(200);
       await expect(toggle).toBeChecked();
+      await expectExtensionSettingsViewsToLoad(page, settings);
     });
   });
