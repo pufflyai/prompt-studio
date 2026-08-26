@@ -38,7 +38,6 @@ export const reviewTicketsCommand = defineCommand({
     if (!revision) throw new Error(`Attempt ${candidate.workspaceShorthand} has no revision.`);
     const started = await executePlanner(ctx, planner.runReview, {
       workspaceId: candidate.workspaceId,
-      expectedRevision: revision.revision,
     });
     await recordAutomationActivity(ctx, AUTOMATION, `started review for ${candidate.workspaceShorthand}`, {
       ticketId: candidate.ticketId,

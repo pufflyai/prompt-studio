@@ -121,7 +121,7 @@ const submitRevisionAndStartReview = async (fixture: Awaited<ReturnType<typeof s
       expectedAttemptState: "implementing",
     }) as never,
   );
-  const started = await runReviewCommand.run(fixture.context({ workspaceId: "workspace-1", expectedRevision: 1 }));
+  const started = await runReviewCommand.run(fixture.context({ workspaceId: "workspace-1" }));
   return started;
 };
 
