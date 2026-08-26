@@ -1,6 +1,13 @@
 import { Palette, type PaletteEntry, useThemePreference } from "@pstdio/ui";
 import { ArrowUpRight, Copy, GitBranch, Github, MessagesSquare, PanelLeft, SunMoon } from "lucide-react";
-import { INSTALL_COMMANDS, type LandingView, SITE_LINKS, VIEW_META } from "./landing-content";
+import {
+  INSTALL_COMMANDS,
+  type LandingView,
+  PROJECT_TABS,
+  type ProjectTabId,
+  SITE_LINKS,
+  VIEW_META,
+} from "./landing-content";
 
 const VIEW_SEARCH_TEXT: Record<LandingView, string> = {
   start: "home landing start here",
@@ -37,12 +44,13 @@ interface CommandPaletteModalProps {
   open: boolean;
   onClose: () => void;
   onNavigate: (view: LandingView) => void;
+  onSelectTab: (tab: ProjectTabId) => void;
   onOpenChangelog: () => void;
   onToggleSidebar: () => void;
 }
 
 export const CommandPaletteModal = (props: CommandPaletteModalProps) => {
-  const { open, onClose, onNavigate, onOpenChangelog, onToggleSidebar } = props;
+  const { open, onClose, onNavigate, onSelectTab, onOpenChangelog, onToggleSidebar } = props;
 
   const { toggleThemePreference } = useThemePreference();
 
@@ -62,6 +70,15 @@ export const CommandPaletteModal = (props: CommandPaletteModalProps) => {
       onActivate: run(() => onNavigate(view)),
     };
   });
+
+  const projectEntries: PaletteEntry[] = PROJECT_TABS.map((tab) => ({
+    id: `project:${tab.id}`,
+    label: tab.label,
+    searchText: `project tab ${tab.label}`,
+    group: "Projects",
+    icon: <tab.icon size={14} />,
+    onActivate: run(() => onSelectTab(tab.id)),
+  }));
 
   const externalEntries: PaletteEntry[] = [
     {
@@ -123,7 +140,7 @@ export const CommandPaletteModal = (props: CommandPaletteModalProps) => {
   return (
     <Palette
       open={open}
-      entries={[...viewEntries, ...externalEntries, ...commandEntries]}
+      entries={[...projectEntries, ...viewEntries, ...externalEntries, ...commandEntries]}
       placeholder="Search or run a command…"
       onClose={onClose}
     />
