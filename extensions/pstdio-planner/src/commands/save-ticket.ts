@@ -39,6 +39,7 @@ const resolveDependencyIds = async (
 // `pst tickets save`: reconcile the edited local ticket.md (body + frontmatter +
 // files) back into extension storage and clear the draft flag.
 export const saveTicketCommand = defineCommand({
+  id: "save-ticket",
   title: "Save draft ticket",
   cli: {
     globalAliases: [["tickets", "save"]],

@@ -1,22 +1,15 @@
 import { Button, Code, HStack, Text } from "@chakra-ui/react";
 import type { CommandExecuteResponse, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import { useState } from "react";
-import {
-  createWorkbenchCore,
-  type WorkbenchLayout,
-  type WorkbenchModuleContribution,
-  type WorkbenchPanelRegion,
-} from "../../core";
+import { createWorkbenchCore, type WorkbenchLayout, type WorkbenchModuleContribution } from "../../core";
 import { registerWorkbenchExtensionContributions } from "../../extensions";
 import { useWorkbenchStore } from "../../react";
 import { ApiWorkbenchFrame } from "./api-story-frame";
 
 const extensionId = "pstdio.api-placement";
-export const placementPanelId = "api-placement.outline";
-const treeRendererId = "api-placement.outline-tree";
-const treeBodyCommandId = "api-placement.outline-body";
-const placementModeId = "api-placement.mode";
-const panelRegions: WorkbenchPanelRegion[] = ["main", "secondary", "side"];
+export const placementPanelId = `${extensionId}.view.outline`;
+const treeBodyCommandId = `${placementPanelId}.tree.body`;
+const placementModeId = `${extensionId}.mode.placement`;
 const placementRegions = ["sidenav", "main", "secondary", "side"] as const;
 
 const placementMetadata = {
@@ -26,34 +19,45 @@ const placementMetadata = {
   commandPaletteContributions: [],
   modes: [
     {
-      id: "api-placement.mode-record",
+      id: placementModeId,
+      localId: "placement",
       extensionId,
-      modeId: placementModeId,
       label: "Panel placement",
-      panelRegions,
     },
   ],
-  panels: [
+  views: [
     {
       id: placementPanelId,
+      localId: "outline",
       extensionId,
       title: "Outline",
-      show: { region: "main", allowedRegions: ["main", "sidenav"], required: true },
-      renderer: { kind: "tree", id: treeRendererId },
+      body: {
+        kind: "tree",
+        bodyHandlerId: treeBodyCommandId,
+        defaultExpandedSectionIds: ["placement"],
+      },
     },
   ],
-  routes: [],
-  settingsPanels: [],
-  treeItems: [],
-  treeRenderers: [
+  viewMenus: [],
+  placements: [
     {
-      id: treeRendererId,
+      id: `${extensionId}.placement.outline`,
+      localId: "outline",
       extensionId,
-      title: "Outline",
-      bodyHandlerId: treeBodyCommandId,
-      defaultExpandedSectionIds: ["placement"],
+      mode: { extensionId, kind: "mode", id: "placement" },
+      item: { kind: "view", view: { extensionId, kind: "view", id: "outline" } },
+      region: "main",
+      defaultOpen: true,
+      required: true,
+      movableTo: ["main", "sidenav"],
     },
   ],
+  resourceKinds: [],
+  resourceViews: [],
+  navigationItems: [],
+  statusBarItems: [],
+  statuses: [],
+  settingsPanels: [],
   diagnostics: [],
 } satisfies WorkbenchExtensionMetadata;
 
@@ -73,8 +77,8 @@ const placementModule: WorkbenchModuleContribution = {
             id: "placement",
             label: "Placement API",
             nodes: [
-              { id: "show", label: "show defines the default" },
-              { id: "saved", label: "saved placement stays inside allowedRegions" },
+              { id: "default", label: "The placement defines the default" },
+              { id: "saved", label: "Saved placement stays inside movableTo" },
             ],
           },
         ]),

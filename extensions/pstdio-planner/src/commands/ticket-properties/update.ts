@@ -28,6 +28,7 @@ export const updateTicketProperty = async (
 // Persists an edit from the ticket properties panel. The control id doubles as the
 // attribute id (status / tag), so this delegates to the shared attribute mutation.
 export const ticketPropertiesUpdateCommand = defineCommand({
+  id: "ticket-properties.update",
   title: "Update ticket property",
   params: {
     controlId: params.text({ required: true }),

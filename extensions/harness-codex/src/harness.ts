@@ -36,7 +36,7 @@ const defaultDeps: CodexDeps = {
 
 const MODEL_CACHE_TTL_MS = 5 * 60 * 1_000;
 
-export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): HarnessProvider => {
+export const createCodexHarness = (overrides: Partial<CodexDeps> = {}): Omit<HarnessProvider, "ref"> => {
   const deps = { ...defaultDeps, ...overrides };
   let modelCache: { expiresAt: number; value: Promise<AgentModel[]> } | undefined;
 

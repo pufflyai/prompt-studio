@@ -40,6 +40,7 @@ export const reorderTicket = async (
 };
 
 export const reorderTicketCommand = defineCommand({
+  id: "reorder-ticket",
   title: "Reorder ticket",
   params: {
     rowId: params.text({ required: true }),

@@ -50,6 +50,7 @@ const extensionPanelRecordBaseSchema = z.object({
   extensionId: z.string(),
   title: localizableStringSchema,
   path: z.string().optional(),
+  aliases: z.array(z.string()).optional(),
   icon: z.string().optional(),
   show: z.union([extensionPanelPlacementSchema, z.array(extensionPanelPlacementSchema).min(1)]).optional(),
   panelMenus: z.array(extensionPanelMenuRecordSchema).optional(),

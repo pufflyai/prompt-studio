@@ -87,7 +87,7 @@ describe("ticket resource hierarchy", () => {
             label: "PS-1 Root",
             metadata: {
               shorthand: "PS-1",
-              resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+              resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
         },
@@ -115,7 +115,7 @@ describe("ticket resource hierarchy", () => {
           label: "PS-1 Ticket",
           metadata: {
             shorthand: "PS-1",
-            resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+            resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },
       },
@@ -134,7 +134,7 @@ describe("ticket resource hierarchy", () => {
         label: "PS-2 Child",
         metadata: {
           shorthand: "PS-2",
-          resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+          resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
         },
       },
     });
@@ -153,7 +153,10 @@ describe("tickets browse root", () => {
     const reference = ticketResourceReference(child, tickets);
     const rootReference = reference.metadata.resourceParent as { metadata: Record<string, unknown> };
 
-    expect(rootReference.metadata.resourceParent).toEqual({ type: "view", viewId: "pstdio-planner.tickets" });
+    expect(rootReference.metadata.resourceParent).toEqual({
+      type: "view",
+      viewId: "pstdio.pstdio-planner.view.tickets",
+    });
   });
 
   test("a top-level ticket names the Tickets view as its parent", () => {
@@ -161,7 +164,7 @@ describe("tickets browse root", () => {
 
     expect(ticketResourceReference(ticket).metadata.resourceParent).toEqual({
       type: "view",
-      viewId: "pstdio-planner.tickets",
+      viewId: "pstdio.pstdio-planner.view.tickets",
     });
   });
 });

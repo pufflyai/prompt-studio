@@ -6,7 +6,12 @@ import { attachTicketFileCommand } from "./attach-ticket-file";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { createWorkspaceCommand } from "./ticket-actions";
-import { createTicketFileCommand, listTicketFilesTreeCommand } from "./ticket-files";
+import {
+  createTicketFileCommand,
+  deleteTicketFileCommand,
+  listTicketFilesTreeCommand,
+  renameTicketFileCommand,
+} from "./ticket-files";
 
 const createWorkspaceTreeActionParams = {
   repo: createWorkspaceCommand.params!.repo,
@@ -15,7 +20,7 @@ const createWorkspaceTreeActionParams = {
 
 const ticketRendererParams = (ticket: { id: string; shorthand: string }, documentId?: string) => ({
   renderer: {
-    rendererId: "pstdio-planner.ticketFiles",
+    rendererId: "pstdio.pstdio-planner.view.ticket-files",
     resource: {
       type: "ticket",
       id: ticket.id,
@@ -34,7 +39,7 @@ const ticketDocumentTarget = (ticket: { id: string; shorthand: string; title?: s
     metadata: {
       shorthand: ticket.shorthand,
       documentId,
-      resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+      resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
     },
   },
   input: { strategy: "replace-active" as const },
@@ -89,7 +94,7 @@ describe("ticket files tree commands", () => {
             id: "rename",
             label: "Rename",
             icon: "Pencil",
-            command: "pstdio-planner.rename-ticket-file",
+            command: renameTicketFileCommand.ref,
             params: { ticketId: ticket.id, fileId: file.id, name: "notes.md" },
             submitLabel: "Save",
             input: {
@@ -100,7 +105,7 @@ describe("ticket files tree commands", () => {
             id: "delete",
             label: "Delete",
             icon: "Trash",
-            command: "pstdio-planner.delete-ticket-file",
+            command: deleteTicketFileCommand.ref,
             params: { ticketId: ticket.id, fileId: file.id },
           },
         ],
@@ -209,7 +214,7 @@ describe("ticket files tree workspace commands", () => {
           label: "PS-999",
           metadata: {
             shorthand: "PS-999",
-            resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+            resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },
       ],
@@ -233,7 +238,7 @@ describe("ticket files tree workspace commands", () => {
           id: "create-workspace",
           label: "Create workspace",
           icon: "Plus",
-          command: "pstdio-planner.create-workspace",
+          command: createWorkspaceCommand.ref,
           params: { ticket: ticket.id },
           input: createWorkspaceTreeActionParams,
         },
@@ -257,7 +262,7 @@ describe("ticket files tree workspace commands", () => {
                   label: `${ticket.shorthand} ${ticket.title}`,
                   metadata: {
                     shorthand: ticket.shorthand,
-                    resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+                    resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
                   },
                 },
                 workspaceId: "ws-1",
@@ -327,7 +332,7 @@ describe("ticket files tree workspace commands", () => {
                     label: "PS-999",
                     metadata: {
                       shorthand: "PS-999",
-                      resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+                      resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
                     },
                   },
                 ],
@@ -348,7 +353,7 @@ describe("ticket files tree workspace commands", () => {
           id: "create-workspace",
           label: "Create workspace",
           icon: "Plus",
-          command: "pstdio-planner.create-workspace",
+          command: createWorkspaceCommand.ref,
           params: { ticket: ticket.id },
           input: createWorkspaceTreeActionParams,
         },

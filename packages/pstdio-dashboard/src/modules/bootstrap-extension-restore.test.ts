@@ -44,7 +44,7 @@ describe("createBootstrapModule extension restores", () => {
       resolveMetadata(metadataWithLabMode);
       await flushMicrotasks();
 
-      expect(activeViewId(workbench)).toBe("extension-lab.labPage");
+      expect(activeViewId(workbench)).toBe("pstdio.extension-lab.view.labPage");
     } finally {
       bootstrap.dispose();
       extensions.dispose();
@@ -109,7 +109,7 @@ describe("createBootstrapModule extension restores", () => {
       resolveMetadata(metadataWithLabMode);
       await flushMicrotasks();
 
-      expect(activeViewId(workbench)).toBe("extension-lab.labOverview");
+      expect(activeViewId(workbench)).toBe("pstdio.extension-lab.view.labOverview");
       expect(workbench.history.store.getState().cursor).toBe(0);
     } finally {
       bootstrap.dispose();
@@ -152,7 +152,7 @@ describe("createBootstrapModule extension restores", () => {
       resolveMetadata(metadataWithLabMode);
       await flushMicrotasks();
 
-      expect(activeViewId(workbench)).toBe("extension-lab.labOverview");
+      expect(activeViewId(workbench)).toBe("pstdio.extension-lab.view.labOverview");
       expect(saved).toBeUndefined();
       expect(clearCount).toBe(1);
     } finally {

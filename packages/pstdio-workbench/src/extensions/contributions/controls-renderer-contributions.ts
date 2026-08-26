@@ -1,6 +1,7 @@
-import type { WorkbenchExtensionControlsRendererRecord, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import type { WorkbenchExtensionControlsRendererRecord } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
 import type { ControlsQueryResult, Disposable, ResourceRef } from "../../core";
+import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import {
   createExtensionSlot,
@@ -11,7 +12,9 @@ import {
   panelMenuDeclarationOffsets,
   panelRendererId,
   registerWorkbenchExtensionPanel,
+  resolveWorkbenchExtensionViewInput,
   toWorkbenchCompositionPanelContribution,
+  type WorkbenchExtensionViewInputResolver,
 } from "./panel-contributions";
 
 type ControlsViewRecord = WorkbenchExtensionMetadata["panels"][number];
@@ -24,6 +27,7 @@ const isQueryResult = (value: unknown): value is ControlsQueryResult =>
 export interface WorkbenchExtensionControlsAdapter {
   /** Supply a fallback resource when the widget placement carries none. */
   resolveResource?: (record: WorkbenchExtensionControlsRendererRecord) => ResourceRef | undefined;
+  resolveViewInput?: WorkbenchExtensionViewInputResolver;
 }
 
 const registerControlsRenderer = (
@@ -87,12 +91,15 @@ const registerControlsViewWidget = (
   index: number,
   menuDeclarationOffset: number,
   resourcePanels: WorkbenchExtensionMetadata["resourcePanels"],
+  adapter: WorkbenchExtensionControlsAdapter,
 ) => {
   const rendererId = panelRendererId(panel, "controls");
   if (!rendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: context.workbench,
     path: panel.path,
+    aliases: panel.aliases,
+    resolveInput: resolveWorkbenchExtensionViewInput(adapter.resolveViewInput, panel),
     contribution: toWorkbenchCompositionPanelContribution({
       panel,
       rendererId,
@@ -118,7 +125,7 @@ export const registerWorkbenchExtensionControlsRenderers = (
   for (const record of records) disposables.push(registerControlsRenderer(context, record, adapter));
   const menuOffsets = panelMenuDeclarationOffsets(panels);
   panels.forEach((panel, index) => {
-    const disposable = registerControlsViewWidget(context, panel, index, menuOffsets[index]!, resourcePanels);
+    const disposable = registerControlsViewWidget(context, panel, index, menuOffsets[index]!, resourcePanels, adapter);
     if (disposable) disposables.push(disposable);
   });
 

@@ -4,6 +4,7 @@ import { findTicket } from "../data/resolve";
 import { ticketResourceHierarchyMetadata } from "../data/ticket-resource-hierarchy";
 import type { StoredTicket } from "../data/types";
 import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
+import { ticketSlots } from "../slots";
 
 export const ticketActionParams = {
   ticket: params.text({ label: "Ticket" }),
@@ -131,10 +132,11 @@ export const createAnchoredWorkspace = async (
 };
 
 export const createWorkspaceCommand = defineCommand({
+  id: "create-workspace",
   title: "Create workspace",
   menus: [
     {
-      slot: "ticket.headerOverflow",
+      slot: ticketSlots.headerOverflow,
       label: l10n("kanbanRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
       icon: "git-branch",
       placement: "first",
@@ -159,10 +161,11 @@ export const createWorkspaceCommand = defineCommand({
 });
 
 export const refineTicketCommand = defineCommand({
+  id: "refine-ticket",
   title: "Refine ticket",
   menus: [
     {
-      slot: "ticket.headerOverflow",
+      slot: ticketSlots.headerOverflow,
       label: l10n("kanbanRenderers.tickets.rowActions.refineTicket", "Refine ticket"),
       icon: "sparkles",
     },
@@ -192,6 +195,7 @@ export const refineTicketCommand = defineCommand({
 });
 
 export const proposalRefinedCommand = defineCommand({
+  id: "proposal-refined",
   title: "Mark proposal refined",
   cli: {
     globalAliases: [["tickets", "proposal-refined"]],
@@ -209,6 +213,7 @@ export const proposalRefinedCommand = defineCommand({
 });
 
 export const approveProposalCommand = defineCommand({
+  id: "approve-proposal",
   title: "Approve proposal",
   params: {
     ticket: selectedTicketParams.ticket,
@@ -223,10 +228,11 @@ export const approveProposalCommand = defineCommand({
 });
 
 export const breakIntoSubTicketsCommand = defineCommand({
+  id: "break-into-sub-tickets",
   title: "Break into sub-tickets",
   menus: [
     {
-      slot: "ticket.headerOverflow",
+      slot: ticketSlots.headerOverflow,
       label: l10n("kanbanRenderers.tickets.rowActions.breakIntoSubTickets", "Break into sub-tickets"),
       icon: "list-tree",
     },

@@ -19,7 +19,7 @@ export const registerExtension = (
     packagePath: source.packagePath,
     sourcePath: source.sourcePath,
     sourceKind: source.sourceKind,
-    definition: source.definition,
+    definition: source.definition as NormalizedExtension["definition"],
   };
 
   const existingById = extensionsById.get(manifest.id);

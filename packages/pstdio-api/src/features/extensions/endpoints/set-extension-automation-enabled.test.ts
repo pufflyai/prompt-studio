@@ -82,7 +82,7 @@ const seedScheduledInstance = async (projectId: string) => {
     version: loaded.metadata.version ?? null,
   });
 
-  return { instanceId: result.instance.id, automationId: `${name}.heartbeat` };
+  return { instanceId: result.instance.id, automationId: `test.${name}.schedule.heartbeat` };
 };
 
 const fetchAutomations = async (projectId: string) => {

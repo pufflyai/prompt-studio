@@ -1,17 +1,17 @@
 import { describe, expect, test } from "bun:test";
-import { defineExtension, type HarnessProvider, l10n, params } from "@pstdio/sdk/extensions";
+import { defineExtension, defineHarness, type HarnessProvider, l10n, params } from "@pstdio/sdk/extensions";
 import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "./index";
 
 const session = { done: Promise.resolve({ status: "completed" as const }), stop: () => {} };
 
-const provider: HarnessProvider = {
+const provider = defineHarness({
   id: "my-agent",
   label: l10n("harness.myAgent", "My Agent"),
   capabilities: () => [],
   start: () => session,
   resume: () => session,
-};
+});
 
 const wrap = (name: string, definition: ReturnType<typeof defineExtension>): LoadedExtensionSource => ({
   packagePath: `/fake/${name}`,
@@ -30,14 +30,11 @@ const wrap = (name: string, definition: ReturnType<typeof defineExtension>): Loa
 
 describe("registerProviders", () => {
   test("registers harnesses under the composed extensionId-prefixed id", () => {
-    const runtime = normalizeExtensionSources(
-      [wrap("my-harness", defineExtension({ harnesses: { myAgent: provider } }))],
-      [],
-    );
+    const runtime = normalizeExtensionSources([wrap("my-harness", defineExtension({ harnesses: [provider] }))], []);
 
     expect(runtime.harnesses).toHaveLength(1);
     expect(runtime.harnesses[0]).toMatchObject({
-      id: "pstdio.my-harness.my-agent",
+      id: "pstdio.my-harness.harness.my-agent",
       localId: "my-agent",
       extensionId: "pstdio.my-harness",
       name: "my-harness",
@@ -52,10 +49,7 @@ describe("registerProviders", () => {
         wrap(
           "broken-harness",
           defineExtension({
-            harnesses: {
-              noResume: withoutResume as HarnessProvider,
-              noCapabilities: withoutCapabilities as HarnessProvider,
-            },
+            harnesses: [withoutResume as unknown as HarnessProvider, withoutCapabilities as unknown as HarnessProvider],
           }),
         ),
       ],
@@ -71,9 +65,11 @@ describe("registerProviders", () => {
         wrap(
           "param-harness",
           defineExtension({
-            harnesses: {
-              myAgent: {
+            harnesses: [
+              {
                 ...provider,
+                id: "myAgent",
+                ref: { kind: "harness", id: "myAgent" },
                 params: {
                   mode: params.select({
                     label: "Mode",
@@ -86,7 +82,7 @@ describe("registerProviders", () => {
                   dryRun: params.boolean({ label: "Dry run", defaultValue: false }),
                 },
               },
-            },
+            ],
           }),
         ),
       ],
@@ -106,9 +102,11 @@ describe("registerProviders", () => {
         wrap(
           "bad-param-harness",
           defineExtension({
-            harnesses: {
-              myAgent: {
+            harnesses: [
+              {
                 ...provider,
+                id: "myAgent",
+                ref: { kind: "harness", id: "myAgent" },
                 params: {
                   mode: params.select({
                     label: "Mode",
@@ -121,7 +119,7 @@ describe("registerProviders", () => {
                   thinkingTokens: params.number({ defaultValue: 4096 }),
                 } as unknown as HarnessProvider["params"],
               },
-            },
+            ],
           }),
         ),
       ],
@@ -148,9 +146,11 @@ describe("registerProviders", () => {
         wrap(
           "empty-select-harness",
           defineExtension({
-            harnesses: {
-              myAgent: {
+            harnesses: [
+              {
                 ...provider,
+                id: "myAgent",
+                ref: { kind: "harness", id: "myAgent" },
                 params: {
                   mode: params.select({
                     label: "Mode",
@@ -158,7 +158,7 @@ describe("registerProviders", () => {
                   }),
                 },
               },
-            },
+            ],
           }),
         ),
       ],

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { resolveWorkspaceDiffRequest } from "./workspace-widget-state";
+import { resolveDefaultWorkspaceDiffPath, resolveWorkspaceDiffRequest } from "./workspace-widget-state";
 
 describe("resolveWorkspaceDiffRequest", () => {
   test("loads current changes for current-branch workspaces", () => {
@@ -27,5 +27,17 @@ describe("resolveWorkspaceDiffRequest", () => {
         metadata: { workspaceId: "workspace-metadata", workspaceType: "worktree" },
       }),
     ).toEqual({ workspaceId: "workspace-metadata", mode: "fork_point" });
+  });
+});
+
+describe("resolveDefaultWorkspaceDiffPath", () => {
+  test("starts with the first diff whose content can load automatically", () => {
+    expect(
+      resolveDefaultWorkspaceDiffPath([
+        { filePath: ".agents/skills/generated.ts", change: "added", additions: 1_200, deletions: 0 },
+        { filePath: "assets/logo.png", change: "added", additions: 1, deletions: 0 },
+        { filePath: "changed.ts", change: "modified", additions: 1, deletions: 1 },
+      ]),
+    ).toBe("changed.ts");
   });
 });

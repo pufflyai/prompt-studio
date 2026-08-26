@@ -22,8 +22,8 @@ describe("refine-tickets automation", () => {
     const result = await run(ctx as never);
 
     expect(result).toMatchObject({ ran: true, refined: "T3" });
-    expect(callsTo(calls, "pstdio-planner.refine-ticket")).toEqual([
-      { commandId: "pstdio-planner.refine-ticket", params: { ticket: "T3" } },
+    expect(callsTo(calls, "pstdio.pstdio-planner.command.refine-ticket")).toEqual([
+      { commandId: "pstdio.pstdio-planner.command.refine-ticket", params: { ticket: "T3" } },
     ]);
   });
 
@@ -38,7 +38,7 @@ describe("refine-tickets automation", () => {
     const result = await run(ctx as never);
 
     expect(result).toMatchObject({ ran: true, refined: null });
-    expect(callsTo(calls, "pstdio-planner.refine-ticket")).toEqual([]);
+    expect(callsTo(calls, "pstdio.pstdio-planner.command.refine-ticket")).toEqual([]);
     expect(activities.at(-1)?.message).toContain("no eligible Backlog ticket");
   });
 
@@ -53,7 +53,7 @@ describe("refine-tickets automation", () => {
     const second = await run(ctx as never);
 
     expect(second).toMatchObject({ ran: true, refined: null, running: 1 });
-    expect(callsTo(calls, "pstdio-planner.refine-ticket")).toHaveLength(1);
+    expect(callsTo(calls, "pstdio.pstdio-planner.command.refine-ticket")).toHaveLength(1);
   });
 
   test("moves the ticket to TODO and adds Human Requested when refinement completes", async () => {
@@ -81,7 +81,7 @@ describe("refine-tickets automation", () => {
 
     expect(state.tickets[0]).toMatchObject({ statusId: "backlog", tagIds: [] });
     expect(second).toMatchObject({ ran: true, refined: "T1" });
-    expect(callsTo(calls, "pstdio-planner.refine-ticket")).toHaveLength(2);
+    expect(callsTo(calls, "pstdio.pstdio-planner.command.refine-ticket")).toHaveLength(2);
   });
 
   test("does not promote a ticket a human already moved out of Backlog", async () => {
@@ -96,6 +96,6 @@ describe("refine-tickets automation", () => {
     await run(ctx as never);
 
     expect(state.tickets[0]).toMatchObject({ statusId: "done", tagIds: [] });
-    expect(callsTo(calls, "pstdio-planner.set-ticket-attribute")).toEqual([]);
+    expect(callsTo(calls, "pstdio.pstdio-planner.command.set-ticket-attribute")).toEqual([]);
   });
 });

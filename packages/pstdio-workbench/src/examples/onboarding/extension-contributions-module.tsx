@@ -14,12 +14,11 @@ const EXTENSION_ID = "pstdio.onboarding-lab";
 const PROJECT_ID = "onboarding-project";
 const HOST_WIDGET_ID = "onboarding.extension-contributions.host";
 const HOST_RENDERER_ID = "onboarding.extension-contributions.host.renderer";
-const TREE_ID = "onboarding.lab.tree";
-const TREE_VIEW_ID = "onboarding.lab.tree-view";
-const FOCUS_COMMAND_ID = "onboarding.lab.focus";
-const TREE_BODY_COMMAND_ID = "onboarding.lab.treeBody";
-const SEARCH_COMMAND_ID = "onboarding.lab.search";
-const MODE_ID = "onboarding.lab.review";
+const TREE_VIEW_ID = `${EXTENSION_ID}.view.tree`;
+const FOCUS_COMMAND_ID = `${EXTENSION_ID}.command.focus`;
+const TREE_BODY_COMMAND_ID = `${TREE_VIEW_ID}.tree.body`;
+const SEARCH_COMMAND_ID = `${EXTENSION_ID}.command.search`;
+const MODE_ID = `${EXTENSION_ID}.mode.review`;
 const menuPath = headerTrailingMenuPath("main") satisfies MenuPath;
 
 const success = (commandId: string, value: unknown): CommandExecuteResponse => ({
@@ -61,42 +60,50 @@ const metadata = {
       extensionId: EXTENSION_ID,
       title: "Lab resources",
       resourceKind: "onboarding.lab.resource",
-      queryCommandId: SEARCH_COMMAND_ID,
+      queryHandlerId: SEARCH_COMMAND_ID,
     },
   ],
   modes: [
     {
-      id: "onboarding.lab.review-mode",
+      id: MODE_ID,
+      localId: "review",
       extensionId: EXTENSION_ID,
-      modeId: MODE_ID,
       label: "Lab review",
-      panelRegions: ["main"],
-      modePanels: { [TREE_VIEW_ID]: { region: "main", required: true } },
     },
   ],
-  routes: [],
-  settingsPanels: [],
-  treeItems: [],
-  kanbanRenderers: [],
-  panels: [
+  views: [
     {
       id: TREE_VIEW_ID,
-      extensionId: EXTENSION_ID,
-      show: { region: "main" },
-      title: "Lab tree",
-      renderer: { kind: "tree", id: TREE_ID },
-    },
-  ],
-  treeRenderers: [
-    {
-      id: TREE_ID,
+      localId: "tree",
       extensionId: EXTENSION_ID,
       title: "Lab tree",
       icon: "FlaskConical",
-      bodyHandlerId: TREE_BODY_COMMAND_ID,
-      defaultExpandedSectionIds: ["workflows"],
+      body: {
+        kind: "tree",
+        bodyHandlerId: TREE_BODY_COMMAND_ID,
+        defaultExpandedSectionIds: ["workflows"],
+      },
     },
   ],
+  viewMenus: [],
+  placements: [
+    {
+      id: `${EXTENSION_ID}.placement.tree`,
+      localId: "tree",
+      extensionId: EXTENSION_ID,
+      mode: { extensionId: EXTENSION_ID, kind: "mode", id: "review" },
+      item: { kind: "view", view: { extensionId: EXTENSION_ID, kind: "view", id: "tree" } },
+      region: "main",
+      defaultOpen: true,
+      required: true,
+    },
+  ],
+  resourceKinds: [],
+  resourceViews: [],
+  navigationItems: [],
+  statusBarItems: [],
+  statuses: [],
+  settingsPanels: [],
 } satisfies WorkbenchExtensionMetadata;
 
 const executeExtensionCommand = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
@@ -129,7 +136,13 @@ const executeExtensionCommand = (ctx: Parameters<WorkbenchModuleContribution["ac
             description: "Command palette resource result",
             icon: "FileJson",
             keywords: ["extension", "metadata"],
-            target: { kind: "command", command: FOCUS_COMMAND_ID, params: { source: "resource-provider" } },
+            target: {
+              kind: "command",
+              target: {
+                command: { kind: "command", id: "focus", extensionId: EXTENSION_ID },
+                params: { source: "resource-provider" },
+              },
+            },
           },
         ],
       });
@@ -147,7 +160,7 @@ const ExtensionContributionsPanel = (props: { input: WorkbenchPanelRenderInput }
   const commandCount = input.workbench.commands
     .listCommands()
     .filter((record) => record.command.id.includes("onboarding.lab")).length;
-  const hasTree = Boolean(input.workbench.renderers.getTreeRenderer(TREE_ID));
+  const hasTree = Boolean(input.workbench.renderers.getTreeRenderer(TREE_VIEW_ID));
   const providerCount = input.workbench.commandPaletteResources.listProviders().length;
 
   return (

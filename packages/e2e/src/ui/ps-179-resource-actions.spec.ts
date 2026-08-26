@@ -18,13 +18,13 @@ const prepareDashboard = async (page: Page, projectId: string, repoId: string) =
   await page.addInitScript(
     ({ selectedProjectId, selectedRepoId }) => {
       localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+      localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
       localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
       localStorage.setItem(
         `pstdio-project-settings/projects/${selectedProjectId}/values`,
         JSON.stringify({
           state: {
-            lastSelectedAgent: "pstdio.extension-lab.fake",
+            lastSelectedAgent: "pstdio.extension-lab.harness.fake",
             lastSelectedModels: [],
             lastSelectedRepo: selectedRepoId,
             lastSelectedBranches: [],
@@ -113,7 +113,7 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
       (response) =>
         response.request().method() === "POST" &&
         new URL(response.url()).pathname.endsWith(
-          "/extensions/commands/pstdio-planner.tickets.kanban.onAttributeChange/execute",
+          "/extensions/commands/pstdio.pstdio-planner.view.tickets.kanban.onAttributeChange/execute",
         ) &&
         response.status() === 200,
     );
@@ -172,7 +172,9 @@ test("PS-179 keeps ticket creation and ticket status settings available", async 
   const createResponse = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
-      new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.create-ticket/execute"),
+      new URL(response.url()).pathname.endsWith(
+        "/extensions/commands/pstdio.pstdio-planner.command.create-ticket/execute",
+      ),
   );
   await createDialog.getByRole("button", { name: "Create ticket", exact: true }).click();
   expect((await createResponse).ok()).toBe(true);
@@ -183,10 +185,8 @@ test("PS-179 keeps ticket creation and ticket status settings available", async 
 
   await sidenav.getByRole("option", { name: "Settings", exact: true }).click();
   const settingsDialog = page.getByRole("dialog").last();
-  await expect(settingsDialog.getByRole("option", { name: "Ticket status", exact: true })).toBeVisible();
+  await expect(settingsDialog.getByRole("option", { name: "Statuses", exact: true })).toBeVisible();
   await expect(settingsDialog.getByRole("option", { name: "Ticket tags", exact: true })).toBeVisible();
-  await settingsDialog.getByRole("option", { name: "Ticket status", exact: true }).click();
-  await expect(
-    page.frameLocator('iframe[title="Ticket status"]').getByText("Ticket status", { exact: true }),
-  ).toBeVisible();
+  await settingsDialog.getByRole("option", { name: "Statuses", exact: true }).click();
+  await expect(settingsDialog.getByText("Ticket status", { exact: true })).toBeVisible();
 });

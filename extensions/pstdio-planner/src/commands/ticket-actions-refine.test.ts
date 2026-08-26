@@ -92,7 +92,7 @@ describe("refineTicketCommand", () => {
             role: "primary",
             metadata: {
               shorthand: "T-1",
-              resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+              resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
         ],

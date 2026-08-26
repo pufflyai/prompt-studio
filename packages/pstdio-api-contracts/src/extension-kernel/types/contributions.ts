@@ -1,21 +1,17 @@
 import type { Localizable } from "../l10n";
-import type {
-  WorkbenchMenuTarget,
-  WorkbenchModePanel,
-  WorkbenchSettingsScope,
-  WorkbenchSettingsTarget,
-  WorkbenchTreeTarget,
-} from "../workbench-targets";
 import type { CommandRef, CommandSource } from "./commands";
-import type {
-  ModeDefaultResource,
-  ModePlacementContribution,
-  ModeResourceRecipeContribution,
-  PanelPlacementContribution,
-} from "./composition";
 import type { RendererCallback } from "./context";
+import type {
+  ContributionDefinition,
+  ModeRef,
+  ResourceKindRef,
+  SettingsSectionRef,
+  SettingsSlotRef,
+  StatusRef,
+  ViewRef,
+} from "./contribution-identity";
 import type { JsonObject, JsonValue, Struct } from "./json";
-import type { ExtensionNavigationTarget } from "./navigation-target";
+import type { NavigationTarget } from "./navigation-target";
 import type { ParamObjectSchema } from "./params";
 import type { RendererContributionBase, RendererEventReference } from "./renderer-base";
 import type { PackageAssetDescriptor, RendererContext, ResourceRef } from "./resources";
@@ -31,22 +27,20 @@ export interface CliContribution {
 }
 
 export interface WhenExpression {
-  mode?: string | string[];
+  mode?: ModeRef | readonly ModeRef[];
   source?: CommandSource[];
-  viewId?: string | string[];
-  resourceType?: string[];
+  view?: ViewRef | readonly ViewRef[];
+  resourceType?: readonly ResourceKindRef[];
   metadata?: JsonObject;
 }
 
 export interface MenuContribution<TSlotContext extends Struct = Struct, TParams extends Struct = Struct> {
-  target?: WorkbenchMenuTarget;
-  slot?: SlotRef<TSlotContext, "menu"> | string;
+  slot: SlotRef<TSlotContext, "menu">;
   label?: Localizable<string>;
   group?: string;
   placement?: "first" | "default" | "last";
   icon?: string;
   when?: WhenExpression;
-  command?: CommandRef<TParams, unknown> | string;
   params?: Partial<TParams>;
   presentation?: "menu-item" | "button" | "icon-button";
 }
@@ -62,46 +56,20 @@ export interface CommandPaletteContribution<TParams extends Struct = Struct> {
 
 // An icon-only action in the workbench activity rail. The host renders the rail
 // natively for the declared modes; there is no webview involved.
-export interface ActivityItemContribution<TParams extends Struct = Struct> {
+export interface ActivityItemContribution<TParams extends Struct = Struct>
+  extends ContributionDefinition<"activity-item"> {
   title: Localizable<string>;
   icon: string;
   /** Mode ids whose activity rail shows this item. */
-  modes: readonly string[];
+  modes: readonly ModeRef[];
   placement?: "first" | "default" | "last";
-  command: CommandRef<TParams, unknown> | string;
+  command: CommandRef<TParams, unknown>;
   params?: Partial<TParams>;
 }
 
-export interface TreeItemContribution<TParams extends Struct = Struct> {
-  target: WorkbenchTreeTarget;
-  label: Localizable<string>;
-  /** `null` places the item at the tree root without a section heading. */
-  group?: string | null;
-  placement?: "first" | "default" | "last";
-  icon?: string;
-  when?: WhenExpression;
-  action:
-    | {
-        kind: "command";
-        command: CommandRef<TParams, unknown> | string;
-        params?: Partial<TParams>;
-      }
-    | { kind: "view"; viewId: string }
-    | { kind: "resource"; resource: ResourceRef }
-    | { kind: "href"; href: string };
-}
-
-export interface ModeContribution {
-  id?: string;
+export interface ModeContribution extends ContributionDefinition<"mode"> {
   label: Localizable<string>;
   icon?: string;
-  /** Host panel regions this mode exposes (chrome availability, not persisted layout). */
-  panelRegions?: readonly WorkbenchModePanel[];
-  /** Contextual placement recipes. Keys are local or namespaced resource-kind ids. */
-  resources?: Record<string, ModeResourceRecipeContribution>;
-  /** Mode-wide panels that do not consume the active resource. */
-  modePanels?: Record<string, ModePlacementContribution>;
-  defaultResource?: ModeDefaultResource;
 }
 
 export interface WebviewContribution {
@@ -110,77 +78,15 @@ export interface WebviewContribution {
   capabilities?: WebviewCapabilityDeclaration[];
 }
 
-export type HostTreeDefault = "default" | "none";
-
-interface PanelMenuContributionBase {
-  title: Localizable<string>;
-  side: "left" | "right";
-  group?: string;
-  placement?: "first" | "default" | "last";
-  hostTreeHeader?: HostTreeDefault;
-  hostTreeFooter?: HostTreeDefault;
-}
-
-export type NativeRendererKind = "tree" | "file" | "controls" | "dataTable" | "kanban";
-
-export interface RendererRef {
-  kind: NativeRendererKind;
-  id: string;
-}
-
-type PanelBody =
-  | {
-      webview: WebviewContribution;
-      renderer?: never;
-    }
-  | {
-      webview?: never;
-      renderer: RendererRef;
-    };
-
-export interface PanelContributionBase {
-  title: Localizable<string>;
-  /** Optional project-relative deep-link path for opening this panel as a view. */
-  path?: string;
-  /** Icon shown on the panel's tab and on resources opened for the panel. */
-  icon?: string;
-  /** Default placement for resource kinds owned by this extension, or for its modes. */
-  show?: PanelPlacementContribution | readonly PanelPlacementContribution[];
-  panelMenus?: Record<string, PanelMenuContribution>;
-}
-
-export type PanelMenuContribution = PanelMenuContributionBase & PanelBody;
-export type PanelContribution = PanelContributionBase & PanelBody;
-
-// A status item is a chrome contribution: the host renders it in the status surface
-// and it takes no part in docked layout or persisted placement.
-export interface StatusItemContribution {
-  title: Localizable<string>;
-  when?: WhenExpression;
-  webview: WebviewContribution;
-}
-
-export interface RouteContribution {
-  path: string;
-  label: Localizable<string>;
-  webview: WebviewContribution;
-}
-
-export interface SettingsPanelContribution<TSlotContext extends Struct = Struct> {
-  title: Localizable<string>;
-  target?: WorkbenchSettingsTarget;
-  scope?: WorkbenchSettingsScope;
-  slot?: SlotRef<TSlotContext, "settings"> | string;
-  icon?: string;
-  /** Key of a `settingsSections` entry. Unset panels fall back to the host's scope section. */
-  section?: string;
-  webview: WebviewContribution;
+export interface SettingsPanelContribution extends ContributionDefinition<"settings-panel"> {
+  view: ViewRef;
+  slot: SettingsSlotRef;
+  section?: SettingsSectionRef;
 }
 
 /** A named group in the settings navigation that an extension's panels can sit under. */
-export interface SettingsSectionContribution {
+export interface SettingsSectionContribution extends ContributionDefinition<"settings-section"> {
   title: Localizable<string>;
-  scope?: WorkbenchSettingsScope;
   /** Lower sorts first among sibling sections. */
   order?: number;
 }
@@ -198,6 +104,7 @@ export interface KanbanRendererEnumOption {
 export type KanbanRendererAttributeType =
   | { kind: "enum"; options: KanbanRendererEnumOption[] }
   | { kind: "enum-multi"; options: KanbanRendererEnumOption[] }
+  | { kind: "status"; statuses: StatusRef }
   | { kind: "string" }
   | { kind: "date" }
   | { kind: "number" }
@@ -274,7 +181,7 @@ export interface KanbanRendererQueryResult {
 }
 
 export interface KanbanRendererCreateRowContribution<TParams extends ParamObjectSchema = ParamObjectSchema> {
-  command: CommandRef<Struct, unknown> | string;
+  command: CommandRef<Struct, unknown>;
   title?: Localizable<string>;
   submitLabel?: Localizable<string>;
   columnParam?: string;
@@ -286,7 +193,7 @@ export interface KanbanRendererCreateRowContribution<TParams extends ParamObject
   attributesParam?: string;
   /** Upload selected files after creation, then invoke this command once per uploaded file. */
   attachments?: {
-    command: CommandRef<Struct, unknown> | string;
+    command: CommandRef<Struct, unknown>;
     resourceParam: string;
     fileParam: string;
   };
@@ -304,13 +211,13 @@ export interface KanbanRendererRowAction<TParams extends Struct = Struct> {
   label: Localizable<string>;
   icon?: string;
   /** Invoked with `{ rowId }` when the row's context-menu action is chosen. */
-  command: CommandRef<TParams, unknown> | string;
+  command: CommandRef<TParams, unknown>;
   destructive?: boolean;
 }
 
 export type KanbanRendererRowActivationHandler = RendererCallback<
   { row: KanbanRendererRow },
-  undefined | ExtensionNavigationTarget
+  undefined | NavigationTarget
 >;
 
 export interface KanbanRendererContribution extends RendererContributionBase {
@@ -331,9 +238,8 @@ export interface KanbanRendererContribution extends RendererContributionBase {
 
 /**
  * Command palette resource providers contribute dynamic, searchable palette results
- * (e.g. slides in a presentation) backed by an extension `queryCommand`, instead of
- * static command entries generated at module load. The host queries matching providers
- * as the user types and refreshes results when a declared `refreshEvent` fires.
+ * (e.g. slides in a presentation) backed by a private query callback. The host queries
+ * matching providers as the user types and refreshes results when a declared event fires.
  */
 export interface CommandPaletteResourceQueryParams {
   projectId?: string;
@@ -344,7 +250,7 @@ export interface CommandPaletteResourceQueryParams {
   limit: number;
 }
 
-export type CommandPaletteResourceTarget = ExtensionNavigationTarget;
+export type CommandPaletteResourceTarget = NavigationTarget;
 
 export interface CommandPaletteResourceItem {
   id: string;
@@ -359,12 +265,10 @@ export interface CommandPaletteResourceQueryResult {
   items: CommandPaletteResourceItem[];
 }
 
-export interface CommandPaletteResourceContribution {
+export interface CommandPaletteResourceContribution extends ContributionDefinition<"command-palette-resource"> {
   title: Localizable<string>;
-  resourceKind?: string;
-  queryCommand:
-    | CommandRef<CommandPaletteResourceQueryParams, CommandPaletteResourceQueryResult>
-    | `${string}.${string}`;
+  resourceKind?: ResourceKindRef;
+  query: RendererCallback<CommandPaletteResourceQueryParams, CommandPaletteResourceQueryResult>;
   refreshEvents?: readonly RendererEventReference[];
 }
 
@@ -398,26 +302,26 @@ export interface ExtensionSettingsContribution<
   properties: TProperties;
 }
 
-export interface ArtifactMountContribution {
+export interface ArtifactMountContribution extends ContributionDefinition<"artifact-mount"> {
   /** Relative path under .pstdio/<extension.name>/. */
   path: string;
   label: Localizable<string>;
   repoRole?: "default" | "selected" | "workspace";
 }
 
-export interface TemplateTypeContribution {
+export interface TemplateTypeContribution extends ContributionDefinition<"template-type"> {
   label: Localizable<string>;
   description?: Localizable<string>;
 }
 
-export interface TemplateContribution {
+export interface TemplateContribution extends ContributionDefinition<"template"> {
   title: Localizable<string>;
   type: string;
   source: PackageAssetDescriptor;
   description?: Localizable<string>;
 }
 
-export interface SkillContribution {
+export interface SkillContribution extends ContributionDefinition<"skill"> {
   title: Localizable<string>;
   source: PackageAssetDescriptor;
   description?: Localizable<string>;
@@ -425,7 +329,7 @@ export interface SkillContribution {
 
 export type ThemeMode = "light" | "dark";
 
-export interface ThemeContribution {
+export interface ThemeContribution extends ContributionDefinition<"theme"> {
   title: Localizable<string>;
   source: PackageAssetDescriptor;
   format: "vscode-color-theme";
@@ -433,7 +337,7 @@ export interface ThemeContribution {
   description?: Localizable<string>;
 }
 
-export interface FileIconThemeContribution {
+export interface FileIconThemeContribution extends ContributionDefinition<"file-icon-theme"> {
   title: Localizable<string>;
   source: PackageAssetDescriptor;
   format: "vscode-file-icon-theme";
@@ -447,7 +351,7 @@ export interface FileIconThemeContribution {
  */
 export type KeybindingChord = string;
 
-export interface KeybindingContribution<TParams extends Struct = Struct> {
+export interface KeybindingContribution<TParams extends Struct = Struct> extends ContributionDefinition<"keybinding"> {
   /** Default chord. Used on every platform unless an override is provided. */
   key: KeybindingChord;
   /** macOS override. */
@@ -457,9 +361,9 @@ export interface KeybindingContribution<TParams extends Struct = Struct> {
   /** Windows override. */
   win?: KeybindingChord;
   /** Command this chord executes. */
-  command: CommandRef<TParams, unknown> | string;
+  command: CommandRef<TParams, unknown>;
   /** Optional command params. */
-  args?: Partial<TParams>;
+  params?: Partial<TParams>;
   /** Optional gating predicate. The host evaluates it at dispatch time. */
   when?: WhenExpression;
 }

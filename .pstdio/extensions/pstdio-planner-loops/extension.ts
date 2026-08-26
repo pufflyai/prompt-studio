@@ -1,4 +1,4 @@
-import { commandRef, defineExtension } from "@pstdio/sdk/extensions";
+import { defineExtension, defineSchedule } from "@pstdio/sdk/extensions";
 import { implementTicketsCommand } from "./src/automations/implement-tickets";
 import { refineTicketsCommand } from "./src/automations/refine-tickets";
 import { reviewTicketsCommand } from "./src/automations/review-tickets";
@@ -7,34 +7,33 @@ import { stuckWorkSweepCommand } from "./src/automations/stuck-work-sweep";
 // Repository-owned automation policy. Planner remains the data and command
 // provider; this extension calls only its public command surface.
 export default defineExtension({
-  commands: {
-    "refine-tickets": refineTicketsCommand,
-    "implement-tickets": implementTicketsCommand,
-    "stuck-work-sweep": stuckWorkSweepCommand,
-    "review-tickets": reviewTicketsCommand,
-  },
+  commands: [refineTicketsCommand, implementTicketsCommand, stuckWorkSweepCommand, reviewTicketsCommand],
 
-  schedules: {
-    refineTickets: {
+  schedules: [
+    defineSchedule({
+      id: "refineTickets",
       title: "Refine backlog tickets",
-      cron: "0 * * * *",
-      command: commandRef("pstdio-planner-loops.refine-tickets"),
-    },
-    implementTickets: {
+      schedule: "0 * * * *",
+      command: refineTicketsCommand.ref,
+    }),
+    defineSchedule({
+      id: "implementTickets",
       title: "Implement Todo tickets",
-      cron: "*/5 * * * *",
-      command: commandRef("pstdio-planner-loops.implement-tickets"),
-    },
-    stuckWorkSweep: {
+      schedule: "*/5 * * * *",
+      command: implementTicketsCommand.ref,
+    }),
+    defineSchedule({
+      id: "stuckWorkSweep",
       title: "Sweep stuck in-progress tickets",
-      cron: "0 * * * *",
-      command: commandRef("pstdio-planner-loops.stuck-work-sweep"),
-    },
+      schedule: "0 * * * *",
+      command: stuckWorkSweepCommand.ref,
+    }),
     // Offset from the implementation schedule to reduce same-minute contention.
-    reviewTickets: {
+    defineSchedule({
+      id: "reviewTickets",
       title: "Review in-review tickets",
-      cron: "2-59/5 * * * *",
-      command: commandRef("pstdio-planner-loops.review-tickets"),
-    },
-  },
+      schedule: "2-59/5 * * * *",
+      command: reviewTicketsCommand.ref,
+    }),
+  ],
 });

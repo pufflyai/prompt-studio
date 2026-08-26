@@ -49,7 +49,7 @@ describe("ticketToRow", () => {
       icon: "component",
       metadata: {
         shorthand: "T-1",
-        resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+        resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
       },
     });
     expect(row.attributes).toEqual({
@@ -87,7 +87,7 @@ describe("ticketToRow", () => {
         label: "T-1 Fix the thing",
         metadata: {
           shorthand: "T-1",
-          resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+          resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
         },
       },
     });

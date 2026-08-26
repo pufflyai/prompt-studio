@@ -65,29 +65,30 @@ Everything below uses only host-owned workbench targets and lab-internal command
 
 ### Harnesses
 
-- `fake` registers the deterministic `pstdio.extension-lab.fake` harness used by automated tests and manual smoke checks. It echoes canned messages, supports follow-up resume, and emits a question tool part when the prompt contains `__fake_question_prompt__`.
+- `fake` registers the deterministic `pstdio.extension-lab.harness.fake` harness used by automated tests and manual smoke checks. It echoes canned messages, supports follow-up resume, and emits a question tool part when the prompt contains `__fake_question_prompt__`.
 
-### Modes, routes, views, and tree items
+### Modes, views, placements, and navigation
 
 - `modes.lab` is the single Lab mode: Overview, Artifacts, and Cams as Main tabs, a native activity rail, and a status strip. It omits the `secondary` panel, so no terminal can open inside the Lab.
 - `activityItems` stage the native activity rail for the Lab mode: a create-artifact action and a `Project home` item that returns to Project mode. The rail replaces the dashboard sidenav while the Lab is active.
-- `panels.labStatusBar` is a webview strip in the `status` region showing the artifact count and the selected camera.
-- `panels.labArtifacts` is a Main Sub Panel with a `Create artifacts` panel menu (a controls renderer) on its right side.
-- `panels.labCams` is a Main Sub Panel hosting the footage player, with a `Cameras` tree-renderer panel menu on its left side.
-- `panels.labArtifactDetail` is a side-region inspector bound to `glass-lab-artifact`: selecting a table row opens the detail in the Side Panel without leaving the Lab.
+- `views` define each webview or native body once. The status view shows the artifact count and selected camera.
+- `placements` put Overview, Artifacts, Cams, and Workflow in Main. They also place the artifact inspector resource slot in the Side Panel.
+- `viewMenus` reuse the controls view for `Create artifacts` and the tree view for `Cameras`.
+- `resourceViews` bind the artifact detail view to the `glass-lab-artifact` inspector slot.
+- `statusBarItems` places the status view in the leading status-bar slot without adding it to persisted layout.
 - Switching away and back exercises mode seeding, chrome ownership (sidenav restore), and per-mode layout persistence.
-- `routes.labPage` registers a project-level page at path `lab`, rendered through a webview.
-- `treeItems.labPage` adds a left-tree entry that switches directly into the Lab mode, with the `flask-conical` icon.
+- The Lab page view declares the `lab` deep-link path.
+- `navigationItems` adds the project navigation entry that switches into the Lab mode.
 
 ### Storage
 
 - Counter and Glass Lab artifact state live in extension storage, scoped to the current project.
 
-### Renderers, templates, and skills
+### Native views, templates, and skills
 
-- `dataTableRenderers.glassLabArtifacts` contributes a `glass-lab-artifact` resource table with row deletion and a Side Panel inspector.
-- `controlsRenderers.labArtifactCreate` backs the `Create artifacts` panel menu on the Artifacts panel.
-- `treeRenderers.labCams` lists the surveillance cameras in the Cams panel menu; selecting one drives the procedural canvas "video" player.
+- The Artifacts data-table view contributes a `glass-lab-artifact` table with row deletion and a Side Panel inspector.
+- The artifact-create controls view backs the `Create artifacts` menu on the Artifacts view.
+- The camera tree view lists the surveillance cameras in the Cams menu. Selecting one drives the procedural canvas video player.
 - `templates.labResource` (type `glass-lab-artifact`) and `skills.labResource` exercise `packageAsset` resolution with Glass Lab assets.
 
 > Color themes and file icon themes now ship in the `pstdio-base-themes` extension; the lab no longer contributes appearance assets.

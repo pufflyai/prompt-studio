@@ -27,6 +27,7 @@ const pullTicket = async (input: {
 // `pst tickets pull`: materialize a ticket (or every non-archived ticket) from
 // extension storage into the local `.pstdio/tickets/<shorthand>/` tree.
 export const pullTicketCommand = defineCommand({
+  id: "pull-ticket",
   title: "Pull ticket",
   cli: {
     globalAliases: [["tickets", "pull"]],

@@ -7,7 +7,7 @@ const setupWorkbench = () => {
   const workbench = createWorkbenchCore();
 
   workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
-  workbench.layout.registerWidget({
+  workbench.layout.registerLocation({
     id: "ticket-viewer",
     title: "Ticket",
     region: "main",
@@ -16,7 +16,7 @@ const setupWorkbench = () => {
     rendererId: "noop",
     resourceKinds: [TICKET_KIND],
   });
-  workbench.layout.registerWidget({
+  workbench.layout.registerLocation({
     id: "scratch",
     title: "Scratch",
     region: "main",
@@ -25,7 +25,7 @@ const setupWorkbench = () => {
     reuse: "none",
     rendererId: "noop",
   });
-  workbench.layout.registerWidget({
+  workbench.layout.registerLocation({
     id: "sidenav",
     title: "Sidenav",
     region: "sidenav",
@@ -251,7 +251,7 @@ describe("createHistoryController navigation", () => {
     const opened: string[] = [];
 
     workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "ticket-viewer",
       title: "Ticket",
       region: "main",
@@ -314,14 +314,14 @@ describe("createHistoryController navigation", () => {
 
     workbench.resources.registerKind({ kind: "history.test.board", label: "Board" });
     workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "board-view",
       title: "Board",
       region: "main",
       singleton: true,
       rendererId: "noop",
     });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "ticket-editor",
       title: "Ticket",
       region: "main",
@@ -376,7 +376,7 @@ describe("createHistoryController navigation", () => {
     const workbench = createWorkbenchCore();
     const opened: string[] = [];
     workbench.resources.registerKind({ kind: TICKET_KIND, label: "Ticket" });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "ticket-editor",
       title: "Ticket",
       region: "main",
@@ -447,7 +447,7 @@ describe("createHistoryController mode-aware navigation", () => {
 
     workbench.resources.registerKind({ kind: "history.test.project-item", label: "Project item" });
     workbench.resources.registerKind({ kind: "history.test.workspace-file", label: "Workspace file" });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "project-viewer",
       title: "Project",
       region: "main",
@@ -455,7 +455,7 @@ describe("createHistoryController mode-aware navigation", () => {
       rendererId: "noop",
       resourceKinds: ["history.test.project-item"],
     });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "workspace-viewer",
       title: "Workspace",
       region: "main",
@@ -547,7 +547,7 @@ describe("createHistoryController mode-aware navigation", () => {
     const board = { kind: "board", uri: "board:tickets", id: "tickets", label: "Tickets" };
 
     workbench.resources.registerKind({ kind: "board", label: "Board" });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "board-viewer",
       title: "Board",
       region: "main",
@@ -592,7 +592,7 @@ describe("createHistoryController mode-aware navigation", () => {
       region: "main",
       rendererId: "noop",
     });
-    workbench.layout.registerWidget({
+    workbench.layout.registerLocation({
       id: "ticket-sidenav",
       title: "Ticket sidenav",
       region: "sidenav",

@@ -10,7 +10,17 @@ import type {
 import type { ExtensionRuntime, NormalizedExtension } from "../../types/runtime";
 import type { BuildEnvironmentInput, CommandRunnerHostDeps } from "./types";
 
-export const refId = (ref: CommandRef | EventRef | string): string => (typeof ref === "string" ? ref : ref.id);
+export const refId = (ref: CommandRef | EventRef | string, ownerExtensionId?: string): string => {
+  if (typeof ref === "string") return ref;
+  const extensionId = ref.extensionId ?? ownerExtensionId;
+  if (ref.kind === "command") return extensionId ? `${extensionId}.command.${ref.id}` : ref.id;
+  const lifecycleMatch = /^(command\.(?:requested|started|completed|rejected|failed):)(.+)$/.exec(ref.id);
+  if (lifecycleMatch && extensionId) {
+    return `${lifecycleMatch[1]}${extensionId}.command.${lifecycleMatch[2]}`;
+  }
+  if (!extensionId || extensionId === "pstdio") return ref.id;
+  return `${extensionId}.event.${ref.id}`;
+};
 
 export const lifecycleEventId = (phase: CommandLifecyclePhase, commandId: string) => `command.${phase}:${commandId}`;
 

@@ -12,31 +12,16 @@ import {
   readPackageManifest,
   readPackageManifestMetadata,
 } from "pstdio-extensions";
-import { toKeybindingRecord } from "pstdio-extensions/workbench";
+import { createWorkbenchExtensionMetadata } from "pstdio-extensions/workbench";
 import {
-  collectCheckModes,
   toCheckArtifactMounts,
-  toCheckCommandPaletteResources,
-  toCheckCommands,
-  toCheckControlsRenderers,
-  toCheckDataTableRenderers,
   toCheckFileIconThemes,
-  toCheckFileRenderers,
   toCheckHooks,
-  toCheckKanbanRenderers,
-  toCheckMenuContributions,
   toCheckMiddlewares,
-  toCheckPaletteContributions,
-  toCheckPanels,
-  toCheckRoutes,
   toCheckSchedules,
-  toCheckSettingsDefinitions,
-  toCheckSettingsPanels,
   toCheckSkills,
   toCheckTemplates,
   toCheckThemes,
-  toCheckTreeItems,
-  toCheckTreeRenderers,
 } from "./check-from-runtime";
 import { addDiagnostic, isRecord, type UnknownRecord } from "./extension-diagnostics";
 import { mergeCheck } from "./merge-checks";
@@ -76,16 +61,19 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   menuContributions: [],
   commandPaletteContributions: [],
   modes: [],
-  panels: [],
-  routes: [],
-  treeItems: [],
-  treeRenderers: [],
-  fileRenderers: [],
-  controlsRenderers: [],
+  views: [],
+  viewMenus: [],
+  placements: [],
+  resourceKinds: [],
+  resourceViews: [],
+  resourceHierarchyProviders: [],
+  navigationItems: [],
+  statusBarItems: [],
+  statuses: [],
+  activityItems: [],
+  settingsSections: [],
   keybindings: [],
   settingsPanels: [],
-  kanbanRenderers: [],
-  dataTableRenderers: [],
   commandPaletteResources: [],
   settingsDefinitions: [],
   templates: [],
@@ -116,16 +104,14 @@ const manifestSnapshot = (metadata: ExtensionMetadata, definition: UnknownRecord
   commands: Object.keys((definition.commands as UnknownRecord | undefined) ?? {}),
   hooks: Object.keys((definition.hooks as UnknownRecord | undefined) ?? {}),
   middlewares: Object.keys((definition.middlewares as UnknownRecord | undefined) ?? {}),
-  routes: Object.keys((definition.routes as UnknownRecord | undefined) ?? {}),
-  treeRenderers: Object.keys((definition.treeRenderers as UnknownRecord | undefined) ?? {}),
-  kanbanRenderers: Object.keys((definition.kanbanRenderers as UnknownRecord | undefined) ?? {}),
-  dataTableRenderers: Object.keys((definition.dataTableRenderers as UnknownRecord | undefined) ?? {}),
+  views: Array.isArray(definition.views) ? definition.views : [],
+  navigationItems: Array.isArray(definition.navigationItems) ? definition.navigationItems : [],
+  placements: Array.isArray(definition.placements) ? definition.placements : [],
   commandPaletteResources: Object.keys((definition.commandPaletteResources as UnknownRecord | undefined) ?? {}),
-  controlsRenderers: Object.keys((definition.controlsRenderers as UnknownRecord | undefined) ?? {}),
-  modes: Object.keys((definition.modes as UnknownRecord | undefined) ?? {}),
-  schedules: Object.keys((definition.schedules as UnknownRecord | undefined) ?? {}),
-  skills: Object.keys((definition.skills as UnknownRecord | undefined) ?? {}),
-  templates: Object.keys((definition.templates as UnknownRecord | undefined) ?? {}),
+  modes: Array.isArray(definition.modes) ? definition.modes : [],
+  schedules: Array.isArray(definition.schedules) ? definition.schedules : [],
+  skills: Array.isArray(definition.skills) ? definition.skills : [],
+  templates: Array.isArray(definition.templates) ? definition.templates : [],
 });
 
 export const loadExtensionSource = async (sourcePath: string) => {
@@ -225,30 +211,19 @@ const populateCheckFromRuntime = (
   runtime: ReturnType<typeof normalizeExtensionSources>,
   options: CheckExtensionHostOptions = {},
 ) => {
-  check.commands.push(...toCheckCommands(runtime.commands));
-  check.menuContributions.push(...toCheckMenuContributions(runtime.commands));
-  check.commandPaletteContributions.push(...toCheckPaletteContributions(runtime.commands));
+  const { diagnostics: _runtimeDiagnostics, ...metadata } = createWorkbenchExtensionMetadata({
+    runtime,
+    resolveWebview: ({ webview }) => ({ ...webview, runtimeUrl: "", moduleUrl: "" }),
+  });
+  Object.assign(check, metadata);
   check.middlewares.push(...toCheckMiddlewares(runtime.middlewares));
   check.hooks.push(...toCheckHooks(runtime.hooks));
   check.schedules.push(...toCheckSchedules(runtime.schedules));
   check.artifactMounts.push(...toCheckArtifactMounts(runtime.artifactMounts));
   check.themes.push(...toCheckThemes(runtime.themes));
   check.fileIconThemes.push(...toCheckFileIconThemes(runtime.fileIconThemes));
-  check.panels.push(...toCheckPanels(runtime.panels));
-  check.routes.push(...toCheckRoutes(runtime.routes));
-  check.treeItems.push(...toCheckTreeItems(runtime.treeItems));
-  check.treeRenderers.push(...toCheckTreeRenderers(runtime.treeRenderers));
-  check.fileRenderers.push(...toCheckFileRenderers(runtime.fileRenderers));
-  check.kanbanRenderers.push(...toCheckKanbanRenderers(runtime.kanbanRenderers));
-  check.dataTableRenderers?.push(...toCheckDataTableRenderers(runtime.dataTableRenderers));
-  check.commandPaletteResources.push(...toCheckCommandPaletteResources(runtime.commandPaletteResources));
-  check.controlsRenderers.push(...toCheckControlsRenderers(runtime.controlsRenderers));
-  check.settingsPanels.push(...toCheckSettingsPanels(runtime.settingsPanels));
-  check.settingsDefinitions?.push(...toCheckSettingsDefinitions(runtime.settings));
   check.templates.push(...toCheckTemplates(runtime.templates));
   check.skills.push(...toCheckSkills(runtime.skills));
-  check.keybindings.push(...runtime.keybindings.map(toKeybindingRecord));
-  collectCheckModes(check, runtime);
   const hostCompatibility = checkExtensionHostCompatibility(
     runtime,
     options.hostCapabilities === undefined ? dashboardExtensionHostCapabilities : options.hostCapabilities,
@@ -273,14 +248,6 @@ export const checkExtensionSource = async (
 
   try {
     const loaded = toLoadedExtension(source, diagnostics);
-    check.extensions.push({
-      id: loaded.metadata.id,
-      name: loaded.metadata.name,
-      displayName: loaded.metadata.displayName,
-      sourcePath,
-      version: loaded.metadata.version,
-      description: loaded.metadata.description,
-    });
     const runtime = normalizeExtensionSources([source]);
     populateCheckFromRuntime(check, runtime, options);
     addRuntimeDiagnostics(check, loaded.diagnostics);

@@ -210,7 +210,7 @@ extensions/<name>/
   README.md          # extension-specific docs
 ```
 
-Reference: `extensions/extension-lab/` shows commands, middlewares, hooks, schedules, harnesses, routes, navigation, templates, and skills.
+Reference: `extensions/extension-lab/` shows commands, middleware, hooks, schedules, harnesses, views, placements, navigation, templates, and skills.
 
 ### Managed webview dependencies
 
@@ -222,7 +222,7 @@ While Prompt Studio is running, edits to a webview's local import graph, `packag
 
 The dashboard stores workbench layouts in the browser profile. These layouts are not synced through the API, SDK, CLI, or extension instances.
 
-When an extension changes a panel from a webview to a native renderer, renames a panel, or removes a panel, the dashboard reconciles locally stored layouts for the selected project. Current panels keep their tab order and state where possible. Removed extension panels are pruned. Native dashboard panels and panels from other extensions are preserved.
+When an extension changes, renames, or removes a view, the dashboard reconciles locally stored layouts for the selected project. Current views keep their tab order and state where possible. Removed extension views are pruned. Native dashboard views and views from other extensions are preserved.
 
 Each enabled extension also registers a command palette action named `Reset <extension> layout`. Use it to remove that extension's local placements from the current project's stored layouts and the active workbench. The reset is local to the current browser profile.
 

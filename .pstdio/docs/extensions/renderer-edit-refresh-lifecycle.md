@@ -122,4 +122,4 @@ The Planner browser regression holds a non-collapsed DOM selection, waits beyond
 - Registry envelope: `packages/pstdio-workbench/src/core/registries/renderers/file-renderer-registry.ts`
 - Extension adapter and host refresh: `packages/pstdio-workbench/src/extensions`
 - Dashboard event feed: `packages/pstdio-dashboard/src/shared/extensions/extension-webview-broadcast.ts`
-- Real consumer: Planner `fileRenderers.ticketContent`
+- Real consumer: Planner ticket-content file view

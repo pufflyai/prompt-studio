@@ -17,8 +17,9 @@ import type { ReviewComment } from "../data/attempt-types";
 import { findTicket } from "../data/resolve";
 
 export const readAttemptHistoryCommand = defineCommand({
+  id: "read-attempt-history",
   title: "Read attempt history",
-  cli: true,
+  cli: {},
   params: {
     workspaceId: params.text({ required: true }),
     cursor: params.text(),
@@ -40,8 +41,9 @@ export const readAttemptHistoryCommand = defineCommand({
 });
 
 export const readReviewThreadCommand = defineCommand({
+  id: "read-review-thread",
   title: "Read review thread",
-  cli: true,
+  cli: {},
   params: {
     threadId: params.text({ required: true }),
     cursor: params.text(),
@@ -63,8 +65,9 @@ export const readReviewThreadCommand = defineCommand({
 });
 
 export const addReviewCommentCommand = defineCommand({
+  id: "add-review-comment",
   title: "Add review comment",
-  cli: true,
+  cli: {},
   params: {
     workspaceId: params.text({ required: true }),
     reviewId: params.text({ required: true }),
@@ -109,8 +112,9 @@ export const addReviewCommentCommand = defineCommand({
 });
 
 export const resolveReviewThreadCommand = defineCommand({
+  id: "resolve-review-thread",
   title: "Resolve review thread",
-  cli: true,
+  cli: {},
   params: {
     workspaceId: params.text({ required: true }),
     reviewId: params.text({ required: true }),
@@ -142,8 +146,9 @@ export const resolveReviewThreadCommand = defineCommand({
 });
 
 export const dismissReviewCommand = defineCommand({
+  id: "dismiss-review",
   title: "Dismiss review",
-  cli: true,
+  cli: {},
   params: {
     workspaceId: params.text({ required: true }),
     reviewId: params.text({ required: true }),
@@ -190,8 +195,9 @@ export const dismissReviewCommand = defineCommand({
 });
 
 export const selectAttemptCommand = defineCommand({
+  id: "select-attempt",
   title: "Select ticket attempt",
-  cli: true,
+  cli: {},
   params: {
     ticket: params.text({ required: true }),
     workspaceId: params.text({ required: true }),

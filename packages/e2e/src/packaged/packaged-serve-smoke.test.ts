@@ -272,12 +272,36 @@ describe("packaged pstdio — core default extensions", () => {
           ]),
         );
 
+        const skillsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/skills`, {
+          headers: runtimeAuthorization(started.descriptor),
+        });
+        expect(skillsRes.status).toBe(200);
+        const skills = (await skillsRes.json()) as Array<{
+          files: Array<{ path: string }>;
+          name: string;
+        }>;
+        expect(skills).toContainEqual(
+          expect.objectContaining({
+            name: "create-pstdio-extension",
+            files: expect.arrayContaining([
+              expect.objectContaining({ path: "SKILL.md" }),
+              expect.objectContaining({ path: "references/extension-api.md" }),
+              expect.objectContaining({ path: "references/examples.md" }),
+            ]),
+          }),
+        );
+
         const metadataRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
           headers: runtimeAuthorization(started.descriptor),
         });
         expect(metadataRes.status).toBe(200);
         const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
-        const webview = metadata.settingsPanels.find((panel) => panel.webview)?.webview;
+        const settingsPanel = metadata.settingsPanels.find((panel) => panel.view);
+        const settingsViewId = settingsPanel
+          ? `${settingsPanel.view.extensionId}.view.${settingsPanel.view.id}`
+          : undefined;
+        const settingsView = metadata.views.find((view) => view.id === settingsViewId);
+        const webview = settingsView?.body.kind === "webview" ? settingsView.body.webview : undefined;
         expect(webview?.runtimeUrl).toBeTruthy();
 
         const runtimeRes = await fetch(`${started.baseUrl}${webview!.runtimeUrl}`, {

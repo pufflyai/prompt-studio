@@ -2,7 +2,7 @@ import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
 import type { RendererCallback } from "./context";
 import type { JsonObject, JsonValue, Struct } from "./json";
-import type { ExtensionNavigationTarget } from "./navigation-target";
+import type { NavigationTarget } from "./navigation-target";
 import type { ParamObjectSchema } from "./params";
 import type { RendererContributionBase } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
@@ -30,13 +30,13 @@ export interface TreeRendererActionParams extends TreeRendererQueryParams {
   node?: TreeNode;
 }
 
-export type TreeNodeTarget = ExtensionNavigationTarget;
+export type TreeNodeTarget = NavigationTarget;
 
 export interface TreeAction {
   id: string;
   label?: Localizable<string>;
   icon?: string;
-  command?: CommandRef<Struct, unknown> | string;
+  command?: CommandRef<Struct, unknown>;
   params?: Struct;
   input?: ParamObjectSchema;
   // Confirm-button label for the action's params dialog (defaults to "Run").

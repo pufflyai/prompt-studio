@@ -45,16 +45,22 @@ export const emptyWorkbenchExtensionMetadata = {
   extensions: [],
   menuContributions: [],
   modes: [],
-  routes: [],
-  kanbanRenderers: [],
-  dataTableRenderers: [],
-  treeRenderers: [],
-  fileRenderers: [],
+  views: [],
+  viewMenus: [],
+  placements: [],
+  resourceKinds: [],
+  resourceViews: [],
+  navigationItems: [],
+  statusBarItems: [],
+  statuses: [],
   settingsPanels: [],
   settingsDefinitions: [],
-  treeItems: [],
-  panels: [],
 } satisfies WorkbenchExtensionMetadata;
+
+type CommandContributionMetadata = Pick<
+  WorkbenchExtensionMetadata,
+  "commands" | "commandPaletteContributions" | "menuContributions"
+>;
 
 const defaultWorkbenchExtensionCommandId = (contribution: ExtensionMenuContribution) =>
   `workbench.extension.menu.${contribution.id}`;
@@ -113,7 +119,7 @@ const createPaletteItem = (input: {
 };
 
 export const buildWorkbenchExtensionMenuRegistrations = (input: {
-  metadata: WorkbenchExtensionMetadata;
+  metadata: CommandContributionMetadata;
   menuSlotsById: ReadonlyMap<string, WorkbenchExtensionMenuSlotConfig>;
   menuTargetsById?: ReadonlyMap<string, WorkbenchExtensionMenuSlotConfig>;
   createCommandId?: (contribution: ExtensionMenuContribution) => string;
@@ -166,7 +172,7 @@ export const buildWorkbenchExtensionMenuRegistrations = (input: {
 };
 
 export const buildWorkbenchExtensionCommandPaletteRegistrations = (input: {
-  metadata: WorkbenchExtensionMetadata;
+  metadata: CommandContributionMetadata;
   createCommandId?: (contribution: ExtensionCommandPaletteContribution) => string;
   resolveString?: WorkbenchExtensionStringResolver;
 }) => {

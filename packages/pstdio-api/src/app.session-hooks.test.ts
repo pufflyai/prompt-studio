@@ -27,10 +27,12 @@ const writeSessionHookExtension = () => {
     join(root, "extension.ts"),
     `
       export default {
-        hooks: {
-          rememberSessionStarted: {
-            eventId: "session.started",
-            async handler(ctx, event) {
+        hooks: [
+          {
+            id: "remember-session-started",
+            ref: { kind: "hook", id: "remember-session-started" },
+            event: { extensionId: "pstdio", kind: "event", id: "session.started" },
+            async run(ctx, event) {
               await ctx.storage.set("session.started", {
                 eventId: "session.started",
                 projectId: event.projectId,
@@ -39,9 +41,11 @@ const writeSessionHookExtension = () => {
               });
             },
           },
-          rememberSessionAwaitingInput: {
-            eventId: "session.awaitingInput",
-            async handler(ctx, event) {
+          {
+            id: "remember-session-awaiting-input",
+            ref: { kind: "hook", id: "remember-session-awaiting-input" },
+            event: { extensionId: "pstdio", kind: "event", id: "session.awaitingInput" },
+            async run(ctx, event) {
               await ctx.storage.set("session.awaitingInput", {
                 eventId: "session.awaitingInput",
                 projectId: event.projectId,
@@ -50,9 +54,11 @@ const writeSessionHookExtension = () => {
               });
             },
           },
-          rememberSessionResumed: {
-            eventId: "session.resumed",
-            async handler(ctx, event) {
+          {
+            id: "remember-session-resumed",
+            ref: { kind: "hook", id: "remember-session-resumed" },
+            event: { extensionId: "pstdio", kind: "event", id: "session.resumed" },
+            async run(ctx, event) {
               await ctx.storage.set("session.resumed", {
                 eventId: "session.resumed",
                 projectId: event.projectId,
@@ -61,9 +67,11 @@ const writeSessionHookExtension = () => {
               });
             },
           },
-          rememberSessionFailed: {
-            eventId: "session.failed",
-            async handler(ctx, event) {
+          {
+            id: "remember-session-failed",
+            ref: { kind: "hook", id: "remember-session-failed" },
+            event: { extensionId: "pstdio", kind: "event", id: "session.failed" },
+            async run(ctx, event) {
               await ctx.storage.set("session.failed", {
                 eventId: "session.failed",
                 projectId: event.projectId,
@@ -72,9 +80,11 @@ const writeSessionHookExtension = () => {
               });
             },
           },
-          rememberSessionSucceeded: {
-            eventId: "session.succeeded",
-            async handler(ctx, event) {
+          {
+            id: "remember-session-succeeded",
+            ref: { kind: "hook", id: "remember-session-succeeded" },
+            event: { extensionId: "pstdio", kind: "event", id: "session.succeeded" },
+            async run(ctx, event) {
               await ctx.storage.set("session.succeeded", {
                 eventId: "session.succeeded",
                 projectId: event.projectId,
@@ -83,7 +93,7 @@ const writeSessionHookExtension = () => {
               });
             },
           },
-        },
+        ],
       };
     `,
   );

@@ -5,6 +5,7 @@ import { inferReviewLinkTarget } from "../data/review-links";
 import type { StoredTicketReviewLink } from "../data/types";
 
 export const linkReviewCommand = defineCommand({
+  id: "link-review",
   title: "Link review",
   cli: {
     globalAliases: [["tickets", "link-review"]],

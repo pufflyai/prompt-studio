@@ -5,7 +5,6 @@ import type { Skill } from "../../skills";
 import type { TemplateWithContent } from "../../templates";
 import type {
   CommandHelpersApi,
-  CommandInvocation,
   CommandMiddlewareResult,
   CommandNotice,
   CommandSource,
@@ -329,22 +328,25 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   settings: ExtensionSettingsApi<TSettings>;
 }
 
-export interface CommandContext<
-  TParams extends Struct = Struct,
-  TSettings extends Record<string, unknown> = Record<string, unknown>,
-> extends ExtensionContextBase<TSettings> {
+export interface CommandContext<TSettings extends Record<string, unknown> = Record<string, unknown>>
+  extends ExtensionContextBase<TSettings> {
   commandId: string;
   invocationId: string;
-  invocation: CommandInvocation<TParams>;
+  invocation: {
+    readonly source?: CommandSource;
+    readonly attachment?: WorkbenchAttachmentInvocationContext;
+    readonly slot?: SlotInvocationContext;
+    readonly metadata?: JsonObject;
+  };
   resource?: ResourceRef;
   attachment?: WorkbenchAttachmentInvocationContext;
   slot?: SlotInvocationContext;
 }
 
-export type CommandMiddlewareContext<TParams extends Struct = Struct> = CommandContext<TParams>;
+export type CommandMiddlewareContext = CommandContext;
 
 export type CommandMiddlewareHandler<TParams extends Struct = Struct> = (
-  ctx: CommandMiddlewareContext<TParams>,
+  ctx: CommandMiddlewareContext,
   params: TParams,
 ) => MaybePromise<CommandMiddlewareResult<TParams>>;
 
@@ -352,7 +354,7 @@ export type CommandRunHandler<
   TParams extends Struct = Struct,
   TResult = unknown,
   TSettings extends Record<string, unknown> = Record<string, unknown>,
-> = (ctx: CommandContext<TParams, TSettings>, params: TParams) => MaybePromise<TResult>;
+> = (ctx: CommandContext<TSettings>, params: TParams) => MaybePromise<TResult>;
 
 export type RendererCallback<
   TInput extends Struct = Struct,

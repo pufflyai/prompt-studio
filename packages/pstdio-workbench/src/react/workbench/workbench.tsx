@@ -76,6 +76,9 @@ export const resolveActiveSidePanelSlot = (input: {
 };
 
 const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
+  const statusBarItems = useWorkbenchStore(workbench.statusBar.store, (state) => state.items);
+  useWorkbenchStore(workbench.context.store, (state) => state.values);
+  const activeModeId = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
   return {
     hasNavWidgets: useWorkbenchRegionContent(workbench, "nav"),
     hasActivityBarWidgets: useWorkbenchRegionContent(workbench, "activity"),
@@ -85,7 +88,10 @@ const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
     hasSecondaryWidgets: useWorkbenchRegionContent(workbench, "secondary", { locationScoped: true }),
     hasSideHeaderWidgets: useWorkbenchRegionContent(workbench, "side-header"),
     hasSideWidgets: useWorkbenchRegionContent(workbench, "side", { locationScoped: true }),
-    hasStatusWidgets: useWorkbenchRegionContent(workbench, "status"),
+    hasStatusWidgets:
+      activeModeId === workbench.modes.getActiveModeId() &&
+      Object.keys(statusBarItems).length > 0 &&
+      workbench.statusBar.listVisibleItems().length > 0,
   };
 };
 

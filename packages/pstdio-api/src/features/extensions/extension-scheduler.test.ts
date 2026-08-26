@@ -47,8 +47,10 @@ const writeScheduledExtension = (options: { scheduleDisabled?: boolean } = {}) =
       const state = globalThis.__extensionScheduleState;
 
       export default {
-        commands: {
-          heartbeat: {
+        commands: [
+          {
+            id: "heartbeat",
+            ref: { kind: "command", id: "heartbeat" },
             title: "Heartbeat",
             async run(ctx, commandParams) {
               state.calls.push({
@@ -58,15 +60,17 @@ const writeScheduledExtension = (options: { scheduleDisabled?: boolean } = {}) =
               });
             },
           },
-        },
-        schedules: {
-          heartbeat: {
+        ],
+        schedules: [
+          {
+            id: "heartbeat",
+            ref: { kind: "schedule", id: "heartbeat" },
             title: "Heartbeat",
-            cron: "* * * * *",
-            commandId: "lab.heartbeat",
+            schedule: "* * * * *",
+            command: { kind: "command", id: "heartbeat" },
             params: { from: "schedule" },${options.scheduleDisabled ? "\n            disabled: true," : ""}
           },
-        },
+        ],
       };
     `,
   );
@@ -163,7 +167,7 @@ describe("createExtensionScheduler", () => {
       metadata: {
         reason: "live",
         runId: expect.any(String),
-        scheduleId: "lab.heartbeat",
+        scheduleId: "pstdio.lab.schedule.heartbeat",
         scheduleTitle: "Heartbeat",
         scheduledFor: "2026-05-18T07:56:00.000Z",
       },
@@ -178,7 +182,7 @@ describe("createExtensionScheduler", () => {
     const cron = createTestCronDriver();
     const scheduler = createExtensionScheduler({
       deps: createDeps(sourcePath, [
-        { extension_instance_id: "instance-1", automation_id: "lab.heartbeat", enabled: false },
+        { extension_instance_id: "instance-1", automation_id: "pstdio.lab.schedule.heartbeat", enabled: false },
       ]),
       listProjectIds: async () => ["project-1"],
       watermarkPath: join(createTempRoot(), "extension-schedule-watermarks.json"),
@@ -199,7 +203,7 @@ describe("createExtensionScheduler", () => {
     const cron = createTestCronDriver();
     const scheduler = createExtensionScheduler({
       deps: createDeps(sourcePath, [
-        { extension_instance_id: "instance-1", automation_id: "lab.heartbeat", enabled: true },
+        { extension_instance_id: "instance-1", automation_id: "pstdio.lab.schedule.heartbeat", enabled: true },
       ]),
       listProjectIds: async () => ["project-1"],
       watermarkPath: join(createTempRoot(), "extension-schedule-watermarks.json"),

@@ -3,14 +3,29 @@ import type {
   DataTableRendererQueryParams,
   FileRendererLoadParams,
   KanbanRendererQueryParams,
-  ModePlacementContribution,
-  PanelContribution,
+  NavigationTarget,
   RendererEventReference,
   ResourceRef,
   TreeRendererQueryParams,
-  WorkbenchNavigationTarget,
 } from "./index";
-import { defineExtension, eventRef, packageAsset, params, projectSlots, workspaceSlots } from "./index";
+import {
+  defineCommand,
+  defineExtension,
+  defineMode,
+  defineNavigationItem,
+  definePlacement,
+  defineResourceHierarchyProvider,
+  defineResourceKind,
+  defineResourceView,
+  defineView,
+  eventRef,
+  packageAsset,
+  params,
+  projectSlots,
+  resourceSlotRef,
+  workbenchSlots,
+  workspaceSlots,
+} from "./index";
 
 const extension = defineExtension({
   settings: {
@@ -33,8 +48,9 @@ const extension = defineExtension({
       },
     },
   },
-  commands: {
-    runAttempt: {
+  commands: [
+    defineCommand({
+      id: "run-attempt",
       title: "Run attempt",
       params: {
         ticket: params.text({ required: true }),
@@ -43,8 +59,8 @@ const extension = defineExtension({
       async run(ctx, commandParams) {
         const ticket: string = commandParams.ticket;
         const harness: { harnessId: string; model?: string } | undefined = commandParams.harness;
-        const enabled: boolean | undefined = await ctx.settings.get("counter.enabled");
-        const tone: string | undefined = await ctx.settings.get("greeting.tone");
+        const enabled: unknown = await ctx.settings.get("counter.enabled");
+        const tone: unknown = await ctx.settings.get("greeting.tone");
         const session = await ctx.sessions.create({ title: "Inspect ticket", prompt: ticket });
         const sessionType: "session" = session.type;
         const sessionTitle: string = session.title;
@@ -64,14 +80,12 @@ const extension = defineExtension({
         // @ts-expect-error command params are not stored on the context
         void ctx.params;
 
-        // @ts-expect-error unknown declared setting keys are rejected
-        await ctx.settings.get("counter.missing");
-
-        // @ts-expect-error values must match the declared setting type
-        await ctx.settings.set("counter.step", "large");
+        // @ts-expect-error command params are passed only as the second handler argument
+        void ctx.invocation.params;
       },
-    },
-    inspectWorkspace: {
+    }),
+    defineCommand({
+      id: "inspect-workspace",
       title: "Inspect workspace",
       params: {
         workspaceId: params.text({ required: true }),
@@ -84,59 +98,24 @@ const extension = defineExtension({
         void worktreePath;
         void shorthandWorktreePath;
       },
-    },
-  },
-  modes: {
-    lab: {
-      id: "pstdio.typecheck.lab",
-      label: "Lab",
-      panelRegions: ["main"],
-      modePanels: {
-        labSidenav: { region: "sidenav", required: true },
-        labOverview: { region: "main", required: true },
-      },
-    },
-    focus: {
-      label: "Lab focus",
-      panelRegions: ["main"],
-      modePanels: { labOverview: { region: "main" } },
-    },
-    unsafe: {
-      label: "Unsafe",
-      panelRegions: [
-        // @ts-expect-error mode panel regions are logical Main, Secondary, or Side roles
-        "overlay",
-      ],
-      modePanels: {
-        labOverview: {
-          // @ts-expect-error mode placements use the four docked regions
-          region: "workbench.overlay",
-        },
-      },
-    },
-  },
-  panels: {
-    labSidenav: {
-      title: "Lab sidenav",
-      show: { region: "sidenav" },
-      webview: { entry: packageAsset("./lab-sidenav.tsx", import.meta.url) },
-    },
-    labOverview: {
-      title: "Lab overview",
-      show: { region: "main" },
-      webview: { entry: packageAsset("./lab-overview.tsx", import.meta.url) },
-    },
-  },
+    }),
+  ],
 });
 
 void extension;
+
+// @ts-expect-error alpha.4 contributions use arrays with explicit local ids
+defineExtension({ commands: { legacy: { title: "Legacy", run: async () => undefined } } });
+
+// @ts-expect-error alpha.4 middleware has no commandId alias
+defineExtension({ middlewares: [{ id: "legacy", commandId: "legacy.command", handler: async () => undefined }] });
 
 const invalidBooleanEnum = [true, "false"];
 
 const invalidSettingDeclarations = defineExtension({
   settings: {
     properties: {
-      // @ts-expect-error setting defaults must match the declared setting type
+      // @ts-expect-error setting defaults must match their declared type
       "counter.invalidDefault": {
         type: "number",
         scope: "project",
@@ -145,7 +124,7 @@ const invalidSettingDeclarations = defineExtension({
       "counter.invalidEnum": {
         type: "boolean",
         scope: "project",
-        // @ts-expect-error setting enum values must match the declared setting type
+        // @ts-expect-error setting enum values must match their declared type
         enum: invalidBooleanEnum,
       },
     },
@@ -195,113 +174,84 @@ void treeQueryParams;
 void fileLoadParams;
 void controlsQueryParams;
 
+const ticketKind = defineResourceKind({
+  id: "ticket",
+  surface: "primary",
+  slots: [
+    { id: "primary", cardinality: "one", access: "owner" },
+    { id: "inspector", cardinality: "many", access: "public" },
+  ],
+});
+const ticketPrimary = resourceSlotRef(ticketKind.ref, "primary");
+const ticketEditor = defineView({
+  id: "editor",
+  title: "Ticket editor",
+  body: { kind: "webview", entry: packageAsset("./editor.tsx", import.meta.url) },
+});
+const ticketInsights = defineView({
+  id: "insights",
+  title: "Insights",
+  body: {
+    kind: "controls",
+    refreshEvents: [eventRef({ extensionId: "planner", id: "ticketChanged" }), "planner.ticket-saved"],
+    query: async () => ({ values: {} }),
+  },
+});
+const reviewMode = defineMode({ id: "review", label: "Review" });
+
 const compositionExtension = defineExtension({
-  resourceKinds: {
-    ticket: {
-      surface: "primary",
-      slots: {
-        primary: { cardinality: "one", external: false },
-        navigation: { cardinality: "many", external: true },
-        inspector: { cardinality: "many", external: true },
-      },
-    },
-  },
-  panels: {
-    editor: {
-      title: "Ticket editor",
-      show: { region: "main" },
-      webview: { entry: packageAsset("./editor.tsx", import.meta.url) },
-    },
-    // A cross-extension contribution uses namespaced refresh events; local ones use typed refs.
-    insights: {
-      title: "Insights",
-      show: { region: "side", allowedRegions: ["side", "secondary"] },
-      renderer: { kind: "controls", id: "insightControls" },
-    },
-  },
-  controlsRenderers: {
-    insightControls: {
-      title: "Insight controls",
-      refreshEvents: [eventRef("ticketChanged"), "planner.ticket-saved"],
-      query: async () => ({ values: {} }),
-    },
-  },
-  resourcePanels: {
-    // Bare ids resolve inside the declaring extension.
-    editor: { resourceKind: "ticket", panel: "editor", slot: "primary" },
-    // Cross-extension references use the namespaced form.
-    plannerInsights: { resourceKind: "planner.ticket", panel: "insights", slot: "inspector" },
-  },
-  modes: {
-    review: {
-      label: "Review",
-      defaultResource: { type: "ticket", id: "root" },
-      resources: {
-        ticket: {
-          slots: {
-            primary: { region: "main", required: true },
-            inspector: { region: "side", allowedRegions: ["side", "secondary"] },
-          },
-          panels: {
-            "acme.insights": { region: "secondary" },
-          },
-        },
-      },
-      modePanels: {
-        editor: { region: "main" },
-      },
-    },
-    resolved: {
-      label: "Resolved",
-      defaultResource: { commandId: "review.default-resource" },
-    },
-  },
-  treeItems: {
-    ticketsRoot: {
-      target: "workbench.left.tree",
+  resourceKinds: [ticketKind],
+  views: [ticketEditor, ticketInsights],
+  resourceViews: [
+    defineResourceView({
+      id: "editor",
+      resourceKind: ticketKind.ref,
+      slot: ticketPrimary,
+      view: ticketEditor.ref,
+    }),
+  ],
+  modes: [reviewMode],
+  placements: [
+    definePlacement({
+      id: "editor",
+      mode: reviewMode.ref,
+      item: { kind: "resource-slot", slot: ticketPrimary },
+      region: "main",
+      required: true,
+    }),
+  ],
+  navigationItems: [
+    defineNavigationItem({
+      id: "tickets-root",
+      slot: workbenchSlots.projectNavigation,
       label: "Tickets",
-      // `null` means root placement without a heading; `undefined` keeps default grouping.
-      group: null,
       action: { kind: "resource", resource: { type: "ticket", id: "root" } },
-    },
-    grouped: {
-      target: "workbench.left.tree",
-      label: "Grouped",
-      action: { kind: "view", viewId: "lab.overview" },
-    },
-  },
-  resourceHierarchyProviders: {
-    ticket: {
-      resourceKind: "ticket",
+    }),
+  ],
+  resourceHierarchyProviders: [
+    defineResourceHierarchyProvider({
+      id: "ticket",
+      resourceKind: ticketKind.ref,
       parent: (_ctx, resource) => (resource.id === "root" ? null : null),
-    },
-  },
+    }),
+  ],
 });
 
 void compositionExtension;
 
-const navigationTarget: WorkbenchNavigationTarget = {
-  modeId: "review",
+const navigationTarget: NavigationTarget = {
+  kind: "resource",
   resource: { type: "ticket", id: "PS-1" },
-  replaceActive: true,
 };
 void navigationTarget;
 
-const invalidCompositionPanel: PanelContribution = {
-  title: "Chrome",
-  // @ts-expect-error composition panels accept only the four docked regions
-  show: {
-    region: "activity",
-  },
-  webview: { entry: packageAsset("./chrome.tsx", import.meta.url) },
-};
-void invalidCompositionPanel;
-
-const invalidRecipePlacement: ModePlacementContribution = {
+definePlacement({
+  id: "invalid",
+  mode: reviewMode.ref,
+  item: { kind: "view", view: ticketEditor.ref },
   // @ts-expect-error mode recipes accept only the four docked regions
   region: "overlay",
-};
-void invalidRecipePlacement;
+});
 
 // @ts-expect-error local events use typed refs; raw strings must be namespaced
 const invalidLocalEventReference: RendererEventReference = "changed";

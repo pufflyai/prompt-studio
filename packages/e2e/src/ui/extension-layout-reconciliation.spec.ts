@@ -41,21 +41,31 @@ const fetchExtensionMetadata = async (request: import("@playwright/test").APIReq
 const layoutWidgetIds = (persisted: { layout: { regions: Record<string, { widgets: { widgetId: string }[] }> } }) =>
   Object.values(persisted.layout.regions).flatMap((region) => region.widgets.map((placement) => placement.widgetId));
 
+const refId = (ref: { extensionId: string; kind: string; id: string }) =>
+  ref.extensionId === "pstdio" ? ref.id : `${ref.extensionId}.${ref.kind}.${ref.id}`;
+
 // The layout store discards layouts written by an older schema version, so this
 // covers the live rule instead: a current-version layout is reconciled against the
 // panels an extension still contributes, and the per-extension reset command clears it.
 test("reconciles and locally resets extension layouts across reloads", async ({ page, request }) => {
   const project = await createProject(request);
   const metadata = await fetchExtensionMetadata(request, project.id);
-  const nativePanel = metadata.panels.find((panel) => !panel.webview);
-  expect(nativePanel).toBeDefined();
-  const nativePanelShow = nativePanel!.show;
-  const nativePanelRegion = (Array.isArray(nativePanelShow) ? nativePanelShow[0]?.region : nativePanelShow?.region)!;
-  const extension = metadata.extensions.find((candidate) => candidate.id === nativePanel!.extensionId);
+  const nativeView = metadata.views.find(
+    (view) =>
+      view.body.kind !== "webview" &&
+      metadata.placements.some((placement) => placement.item.kind === "view" && refId(placement.item.view) === view.id),
+  );
+  expect(nativeView).toBeDefined();
+  const nativePlacement = metadata.placements.find(
+    (placement) => placement.item.kind === "view" && refId(placement.item.view) === nativeView!.id,
+  );
+  expect(nativePlacement).toBeDefined();
+  const nativeViewRegion = nativePlacement!.region;
+  const extension = metadata.extensions.find((candidate) => candidate.id === nativeView!.extensionId);
   expect(extension).toBeDefined();
 
-  const legacyWidgetId = `dashboard-workbench.extension-view.${nativePanel!.id}`;
-  const removedPanelId = `${nativePanel!.id}.removed`;
+  const legacyWidgetId = `dashboard-workbench.extension-view.${nativeView!.id}`;
+  const removedPanelId = `${nativeView!.id}.removed`;
   const removedWidgetId = `dashboard-workbench.extension-view.${removedPanelId}`;
   const scope = `project/${project.id}/mode/legacy/aggregate/empty`;
   const layoutKey = `dashboard-wb:layout:${scope}`;
@@ -63,15 +73,15 @@ test("reconciles and locally resets extension layouts across reloads", async ({ 
   const previousCompatibility = JSON.stringify([
     {
       bodyKind: "webview",
-      extensionId: nativePanel!.extensionId,
+      extensionId: nativeView!.extensionId,
       modeIds: [],
-      panelId: nativePanel!.id,
-      region: nativePanelRegion,
+      panelId: nativeView!.id,
+      region: nativeViewRegion,
       widgetId: legacyWidgetId,
     },
     {
       bodyKind: "webview",
-      extensionId: nativePanel!.extensionId,
+      extensionId: nativeView!.extensionId,
       modeIds: [],
       panelId: removedPanelId,
       region: "main",
@@ -95,19 +105,19 @@ test("reconciles and locally resets extension layouts across reloads", async ({ 
       pinned: true,
       resource: {
         kind: "extension-view",
-        id: nativePanel!.id,
+        id: nativeView!.id,
         uri: "resource://legacy",
-        label: nativePanel!.title,
-        metadata: { extensionId: nativePanel!.extensionId },
+        label: nativeView!.title,
+        metadata: { extensionId: nativeView!.extensionId },
       },
       resourceUri: "resource://legacy",
       tabRetention: "persistent",
     },
-    { widgetId: nativePanel!.id, contributionId: nativePanel!.id },
+    { widgetId: nativeView!.id, contributionId: nativeView!.id },
     {
       widgetId: removedWidgetId,
       contributionId: removedWidgetId,
-      resource: { metadata: { extensionId: nativePanel!.extensionId } },
+      resource: { metadata: { extensionId: nativeView!.extensionId } },
     },
     { widgetId: "dashboard.unrelated", contributionId: "dashboard.unrelated" },
   ];
@@ -116,7 +126,7 @@ test("reconciles and locally resets extension layouts across reloads", async ({ 
   await page.addInitScript(
     ({ currentLayoutKey, currentProjectId, currentCompatibilityKey, currentLayout, oldCompatibility }) => {
       localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+      localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
       localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
       const seedKey = `ps-221-layout-seeded:${currentProjectId}`;
       if (localStorage.getItem(seedKey)) return;
@@ -138,21 +148,21 @@ test("reconciles and locally resets extension layouts across reloads", async ({ 
     .poll(() => page.evaluate((key) => localStorage.getItem(key), compatibilityKey))
     .not.toBe(JSON.stringify(previousCompatibility));
   const migrated = await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), layoutKey);
-  expect(layoutWidgetIds(migrated).sort()).toEqual(["dashboard.unrelated", nativePanel!.id].sort());
-  const migratedPlacement = migrated.layout.regions[nativePanelRegion].widgets.find(
-    (placement: { widgetId: string }) => placement.widgetId === nativePanel!.id,
+  expect(layoutWidgetIds(migrated).sort()).toEqual(["dashboard.unrelated", nativeView!.id].sort());
+  const migratedPlacement = migrated.layout.regions[nativeViewRegion].widgets.find(
+    (placement: { widgetId: string }) => placement.widgetId === nativeView!.id,
   );
   expect(migratedPlacement).toMatchObject({
     pinned: true,
-    viewId: nativePanel!.id,
+    viewId: nativeView!.id,
     tabRetention: "persistent",
   });
   expect(migratedPlacement.resource).toBeUndefined();
   expect(migratedPlacement.resourceUri).toBeUndefined();
-  expect(migrated.layout.activeWidgetId).toBe(nativePanel!.id);
-  expect(migrated.layout.activeLocationWidgetId).toBe(nativePanel!.id);
-  expect(migrated.layout.locationSubPanelSelections[`${nativePanel!.id}:${nativePanel!.id}`]).toEqual({
-    [nativePanelRegion]: nativePanel!.id,
+  expect(migrated.layout.activeWidgetId).toBe(nativeView!.id);
+  expect(migrated.layout.activeLocationWidgetId).toBe(nativeView!.id);
+  expect(migrated.layout.locationSubPanelSelections[`${nativeView!.id}:${nativeView!.id}`]).toEqual({
+    [nativeViewRegion]: nativeView!.id,
   });
 
   const extensionName = extension!.displayName || extension!.name || extension!.id;

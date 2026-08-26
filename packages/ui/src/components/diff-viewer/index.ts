@@ -2,6 +2,7 @@ export { CodeDiffEditor, CodeEditor, preloadCodeEditor } from "./code-editor";
 export { DiffBubble } from "./diff-bubble";
 export type { Diff } from "./diff-card";
 export { DiffDrawer } from "./diff-drawer";
+export { isBinaryDiffPath, isGeneratedDiffPath, LARGE_DIFF_LINE_THRESHOLD } from "./diff-size";
 export { DiffViewer, type DiffViewerProps } from "./diff-viewer";
 export { useDiffViewerStore } from "./diff-viewer.store";
 export { FileChangeBadge } from "./file-change-badge";

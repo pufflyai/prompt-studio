@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { workspaceEvents } from "@pstdio/sdk/extensions";
 import type { BuildEnvironmentInput } from "./runner";
 import { createCommandRunner } from "./runner";
 import { buildRuntime, makeRunner, makeStorage, stubEnvironment } from "./test-helpers.test";
@@ -8,14 +9,16 @@ describe("createCommandRunner: hooks and nesting", () => {
     const { api: storage } = makeStorage();
     const syncs: unknown[] = [];
     const runtime = buildRuntime({
-      hooks: {
-        onProvision: {
-          eventId: "workspace.provision",
-          async handler(ctx) {
+      hooks: [
+        {
+          id: "onProvision",
+          ref: { kind: "hook", id: "onProvision" },
+          event: workspaceEvents.provision,
+          async run(ctx) {
             await ctx.workspaceFiles?.syncDir(".claude/skills", []);
           },
         },
-      },
+      ],
     });
     const runner = createCommandRunner(runtime, {
       buildEnvironment: () => ({
@@ -43,25 +46,29 @@ describe("createCommandRunner: hooks and nesting", () => {
 
   test("hook errors are isolated and don't fail the command", async () => {
     const runner = makeRunner({
-      commands: {
-        ping: {
+      commands: [
+        {
+          id: "ping",
+          ref: { kind: "command", id: "ping" },
           title: "Ping",
           async run() {
             return { pong: true };
           },
         },
-      },
-      hooks: {
-        crashy: {
-          eventId: "command.completed:lab.ping",
-          handler: async () => {
+      ],
+      hooks: [
+        {
+          id: "crashy",
+          ref: { kind: "hook", id: "crashy" },
+          event: { kind: "event", id: "command.completed:ping" },
+          run: async () => {
             throw new Error("hook explosion");
           },
         },
-      },
+      ],
     });
 
-    const outcome = await runner.execute({ commandId: "lab.ping", projectId: "p1" });
+    const outcome = await runner.execute({ commandId: "pstdio.lab.command.ping", projectId: "p1" });
     expect(outcome.ok).toBe(true);
   });
 
@@ -69,57 +76,67 @@ describe("createCommandRunner: hooks and nesting", () => {
     const order: string[] = [];
 
     const runner = makeRunner({
-      commands: {
-        outer: {
+      commands: [
+        {
+          id: "outer",
+          ref: { kind: "command", id: "outer" },
           title: "Outer",
           async run(ctx) {
             order.push("outer-start");
-            const result = await ctx.commands.execute("lab.inner", { params: {} });
+            const result = await ctx.commands.execute({ kind: "command", id: "inner" }, { params: {} });
             order.push("outer-end");
             return result;
           },
         },
-        inner: {
+        {
+          id: "inner",
+          ref: { kind: "command", id: "inner" },
           title: "Inner",
           async run() {
             order.push("inner-run");
             return { inner: true };
           },
         },
-      },
-      middlewares: {
-        innerMw: {
-          commandId: "lab.inner",
-          async handler() {
+      ],
+      middlewares: [
+        {
+          id: "innerMw",
+          ref: { kind: "middleware", id: "innerMw" },
+          command: { kind: "command", id: "inner" },
+          async run() {
             order.push("inner-mw");
           },
         },
-      },
+      ],
     });
 
-    const outcome = await runner.execute({ commandId: "lab.outer", projectId: "p1" });
+    const outcome = await runner.execute({ commandId: "pstdio.lab.command.outer", projectId: "p1" });
     expect(outcome.ok).toBe(true);
     expect(order).toEqual(["outer-start", "inner-mw", "inner-run", "outer-end"]);
   });
 
   test("nested command execution keeps workspace-scoped environment", async () => {
     const runtime = buildRuntime({
-      commands: {
-        outer: {
+      commands: [
+        {
+          id: "outer",
+          ref: { kind: "command", id: "outer" },
           title: "Outer",
           async run(ctx) {
-            const result = await ctx.commands.execute("lab.inner", { params: {} });
+            const result = await ctx.commands.execute({ kind: "command", id: "inner" }, { params: {} });
             return result.ok ? result.value : result;
           },
         },
-        inner: {
+        {
+          id: "inner",
+          ref: { kind: "command", id: "inner" },
           title: "Inner",
           async run(ctx) {
             await ctx.workspaceFiles?.writeText("generated.txt", "ok");
             return { workspaceId: ctx.workspaceId, hasWorkspaceFiles: Boolean(ctx.workspaceFiles) };
           },
         },
-      },
+      ],
     });
     const { api: storage } = makeStorage();
     const writes: unknown[] = [];
@@ -138,7 +155,7 @@ describe("createCommandRunner: hooks and nesting", () => {
     });
 
     const outcome = await runner.execute({
-      commandId: "lab.outer",
+      commandId: "pstdio.lab.command.outer",
       projectId: "p1",
       workspaceDir: "/worktree",
       workspaceId: "ws-1",
@@ -155,19 +172,21 @@ describe("createCommandRunner: hooks and nesting", () => {
   test("recursive command execution is rejected past the depth limit", async () => {
     const runner = makeRunner(
       {
-        commands: {
-          loop: {
+        commands: [
+          {
+            id: "loop",
+            ref: { kind: "command", id: "loop" },
             title: "Loop",
             async run(ctx) {
-              return ctx.commands.execute("lab.loop", { params: {} });
+              return ctx.commands.execute({ kind: "command", id: "loop" }, { params: {} });
             },
           },
-        },
+        ],
       },
       { maxDepth: 3 },
     );
 
-    const outcome = await runner.execute({ commandId: "lab.loop", projectId: "p1" });
+    const outcome = await runner.execute({ commandId: "pstdio.lab.command.loop", projectId: "p1" });
     expect(JSON.stringify(outcome)).toContain("nested_depth_exceeded");
   });
 });

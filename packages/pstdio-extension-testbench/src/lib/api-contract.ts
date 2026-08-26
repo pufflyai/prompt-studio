@@ -74,8 +74,8 @@ export type ExtensionBenchSummary = {
   skills: number;
   templateTypes: number;
   templates: number;
-  treeRenderers: number;
-  panels: number;
+  treeViews: number;
+  views: number;
 };
 
 export type ExtensionBenchLoadResponse = {

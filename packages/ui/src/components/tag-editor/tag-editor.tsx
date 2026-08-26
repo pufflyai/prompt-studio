@@ -69,6 +69,7 @@ export const TagEditor = (props: TagEditorProps) => {
     onTitleChange,
     hasChanges,
     isSaving,
+    readOnly,
     addLabel = "Add option",
     addName = "New option",
     actionOptions,
@@ -151,13 +152,18 @@ export const TagEditor = (props: TagEditorProps) => {
         ) : null}
 
         <Stack gap="none">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={readOnly ? undefined : handleDragEnd}
+          >
             <SortableContext items={values.map((value) => value.id)} strategy={verticalListSortingStrategy}>
               {values.map((value, index) => (
                 <TagEditorRow
                   key={value.id}
                   value={value}
                   isSaving={isSaving}
+                  readOnly={readOnly}
                   showDefault={showDefault}
                   showIcons={showIcons}
                   actionOptions={actionOptions}
@@ -174,10 +180,12 @@ export const TagEditor = (props: TagEditorProps) => {
             </SortableContext>
           </DndContext>
 
-          <AddOptionRow type="button" disabled={isSaving} onClick={handleAddOption}>
-            <Icon as={Plus} boxSize="icon-xs" />
-            <Text textStyle="paragraph/S/regular">{addLabel}</Text>
-          </AddOptionRow>
+          {readOnly ? null : (
+            <AddOptionRow type="button" disabled={isSaving} onClick={handleAddOption}>
+              <Icon as={Plus} boxSize="icon-xs" />
+              <Text textStyle="paragraph/S/regular">{addLabel}</Text>
+            </AddOptionRow>
+          )}
         </Stack>
       </Stack>
 

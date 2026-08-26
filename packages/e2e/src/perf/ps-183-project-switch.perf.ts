@@ -56,7 +56,7 @@ const createSession = async (
 ) => {
   const created = await request.post(`${apiBase}/v1/sessions`, {
     data: {
-      agent: "pstdio.extension-lab.fake",
+      agent: "pstdio.extension-lab.harness.fake",
       project_id: projectId,
       prompt: title,
       title,
@@ -98,8 +98,12 @@ const waitForProjectExtensions = async (request: import("@playwright/test").APIR
       async () => {
         const response = await request.get(`${apiBase}/v1/projects/${projectId}/extensions/ui`);
         if (!response.ok()) return false;
-        const metadata = (await response.json()) as { kanbanRenderers?: Array<{ resourceKind?: string }> };
-        return metadata.kanbanRenderers?.some((renderer) => renderer.resourceKind === "ticket") ?? false;
+        const metadata = (await response.json()) as { views?: Array<{ id: string; body?: { kind?: string } }> };
+        return (
+          metadata.views?.some(
+            (view) => view.id === "pstdio.pstdio-planner.view.tickets" && view.body?.kind === "kanban",
+          ) ?? false
+        );
       },
       { timeout: 30_000 },
     )
@@ -188,7 +192,7 @@ test("PS-183 switches projects once and within budget", async ({ page, request }
     await waitForProjectExtensions(request, projectB.id);
     await page.addInitScript((projectId) => {
       localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+      localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
       localStorage.setItem("dashboard-wb:selected-project:global", projectId);
       document.addEventListener(
         "click",

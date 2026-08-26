@@ -1,6 +1,5 @@
 import type { WorkbenchLayout, WorkbenchRegion, WorkbenchWidgetPlacement } from "@pstdio/workbench";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
-import { modeIdsByPanelId } from "./extension-composition";
 import { legacyExtensionViewWidgetId } from "./extension-layout-legacy-aliases";
 
 interface ExtensionLayoutCompatibilityRecord {
@@ -34,40 +33,27 @@ type LayoutRegionEntry = [WorkbenchRegion, WorkbenchLayout["regions"][WorkbenchR
 const compareRecord = (left: ExtensionLayoutCompatibilityRecord, right: ExtensionLayoutCompatibilityRecord) =>
   left.extensionId.localeCompare(right.extensionId) || left.panelId.localeCompare(right.panelId);
 
-const declaredPanelRegion = (panel: DashboardExtensionMetadata["panels"][number]): WorkbenchRegion => {
-  if (!panel.show) return "main";
-  const placements = Array.isArray(panel.show) ? panel.show : [panel.show];
-  return placements[0]?.region ?? "main";
-};
+const refId = (ref: { extensionId: string; kind: string; id: string }) =>
+  ref.extensionId === "pstdio" ? ref.id : `${ref.extensionId}.${ref.kind}.${ref.id}`;
 
 export const createExtensionLayoutCompatibility = (metadata: DashboardExtensionMetadata) => {
-  const panelModeIds = modeIdsByPanelId(metadata);
-  const records = metadata.panels
-    .map(
-      (panel): ExtensionLayoutCompatibilityRecord => ({
-        bodyKind: panel.webview ? "webview" : "native",
-        extensionId: panel.extensionId,
-        modeIds: [...(panelModeIds.get(panel.id) ?? [])].sort(),
-        panelId: panel.id,
-        // A panel's default declaration, not a mode recipe: the fingerprint must
-        // change when its initial placement changes.
-        region: declaredPanelRegion(panel),
-        widgetId: panel.id,
-      }),
-    )
-    .concat(
-      metadata.routes.map((route) => ({
-        bodyKind: "route" as const,
-        extensionId: route.extensionId,
-        modeIds: [],
-        panelId: route.id,
-        path: route.path,
-        region: "main" as const,
-        widgetId: route.id,
-      })),
-    )
+  const records = metadata.views
+    .map((view): ExtensionLayoutCompatibilityRecord => {
+      const placements = metadata.placements.filter(
+        (placement) => placement.item.kind === "view" && refId(placement.item.view) === view.id,
+      );
+      return {
+        bodyKind: view.body.kind === "webview" ? "webview" : "native",
+        extensionId: view.extensionId,
+        modeIds: placements.map((placement) => refId(placement.mode)).sort(),
+        panelId: view.id,
+        path: view.path,
+        region: placements[0]?.region ?? "main",
+        widgetId: view.id,
+      };
+    })
     .sort(compareRecord);
-  return JSON.stringify({ version: 3, records });
+  return JSON.stringify({ version: 4, records });
 };
 
 const parseCompatibility = (value: string | undefined) => {

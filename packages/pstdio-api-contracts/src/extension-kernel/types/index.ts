@@ -1,6 +1,7 @@
 export type * from "./commands";
 export * from "./composition";
 export type * from "./context";
+export type * from "./contribution-identity";
 export type * from "./contributions";
 export type * from "./controls";
 export type * from "./data-table-renderer";
@@ -14,5 +15,7 @@ export type * from "./params";
 export type * from "./renderer-base";
 export type * from "./resources";
 export type * from "./slots";
+export type * from "./statuses";
 export type * from "./tree-renderer";
+export type * from "./views";
 export * from "./webview-capabilities";

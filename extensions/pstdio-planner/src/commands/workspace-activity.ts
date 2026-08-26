@@ -12,6 +12,7 @@ const phaseFromAnchors = (anchors: ResourceAnchor[]) => {
 // workspace-status model. `disconnected` counts as inactive but stays visible in
 // the session list so stuck-work logic can make an explicit decision.
 export const workspaceActivityCommand = defineCommand({
+  id: "workspace-activity",
   title: "Workspace activity",
   params: {
     workspaceId: params.text({ label: "Workspace", required: true }),

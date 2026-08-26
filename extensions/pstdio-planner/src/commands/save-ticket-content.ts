@@ -41,6 +41,7 @@ export const saveTicketContent = async (
 // Save command for the ticket editor. Writes to whichever document the files tree
 // has selected — the body (re-deriving the title) or the selected file.
 export const saveTicketContentCommand = defineCommand({
+  id: "save-ticket-content",
   title: "Save ticket content",
   params: { id: params.text(), content: params.longText({ required: true }) },
   async run(ctx, commandParams) {

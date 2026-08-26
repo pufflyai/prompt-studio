@@ -9,7 +9,6 @@ import type {
   WorkbenchModuleContext,
   WorkbenchModuleContribution,
 } from "@pstdio/workbench";
-import { createElement } from "react";
 import i18n from "@/i18n";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
@@ -33,7 +32,6 @@ import {
   setCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
 import { syncActiveResourceContext } from "./active-resource-context";
-import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { registerDashboardActivityRail } from "./extension-activity-rail";
 import { emptyDashboardExtensionAppearance, registerExtensionAppearance } from "./extension-appearance";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
@@ -46,7 +44,6 @@ import { reconcileStoredExtensionLayouts, registerExtensionLayoutResetCommands }
 import { reconcileExtensionLayout } from "./extension-layout-reconciliation";
 import { refreshExtensionRenderers } from "./extension-module-setup";
 import { createExtensionRefreshQueue } from "./extension-refresh-queue";
-import { registerExtensionSidenavContributions } from "./extension-sidenav-contributions";
 
 type LoadDashboardExtensionMetadata = (projectId: string) => Promise<DashboardExtensionMetadata>;
 type LoadDashboardExtensionAppearance = (projectId: string) => Promise<ListExtensionAppearanceResponse>;
@@ -227,11 +224,6 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         applyMetadata(projectId, rawMetadata);
       };
 
-      registerExtensionSidenavContributions(ctx, () => ({ metadata, projectId }));
-      ctx.renderers.registerRenderer({
-        id: dashboardWidgetIds.extensionPanelRenderer,
-        render: (renderInput) => createElement(ExtensionViewWidget, { input: renderInput }),
-      });
       const activityRail = registerDashboardActivityRail(ctx, () => metadata);
       const activeResourceContext = syncActiveResourceContext(ctx);
 

@@ -2,7 +2,9 @@ import type { CommandDiagnostic } from "./commands";
 import type { Struct } from "./json";
 
 export interface EventRef<TPayload extends Struct = Struct> {
-  id: string;
+  readonly extensionId?: string;
+  readonly kind: "event";
+  readonly id: string;
   payload?: TPayload;
 }
 

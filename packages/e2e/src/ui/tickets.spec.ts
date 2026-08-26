@@ -24,7 +24,7 @@ const openTicketsListFromDetail = async (page: import("@playwright/test").Page) 
 const bypassOnboarding = async (
   page: import("@playwright/test").Page,
   projectId: string,
-  agentId = "pstdio.harness-open-code.opencode",
+  agentId = "pstdio.harness-open-code.harness.opencode",
 ) => {
   await page.addInitScript(
     ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
@@ -124,7 +124,7 @@ const createSessionViaApi = async (
       project_id: projectId,
       title: prompt,
       prompt,
-      agent: "pstdio.extension-lab.fake",
+      agent: "pstdio.extension-lab.harness.fake",
     },
   });
   expect(res.ok()).toBe(true);
@@ -156,7 +156,9 @@ const submitCreateTicketModal = async (
   const createResponse = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
-      new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.create-ticket/execute"),
+      new URL(response.url()).pathname.endsWith(
+        "/extensions/commands/pstdio.pstdio-planner.command.create-ticket/execute",
+      ),
   );
   await dialog.getByRole("button", { name: "Create ticket", exact: true }).click();
   const response = await createResponse;
@@ -319,7 +321,9 @@ test.describe("Ticket list editing and filtering", () => {
     const saveResponse = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
-        new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.update-ticket/execute") &&
+        new URL(response.url()).pathname.endsWith(
+          "/extensions/commands/pstdio.pstdio-planner.command.update-ticket/execute",
+        ) &&
         response.status() === 200,
     );
 
@@ -363,7 +367,9 @@ test.describe("Ticket list editing and filtering", () => {
     const saveResponse = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
-        new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.update-ticket/execute") &&
+        new URL(response.url()).pathname.endsWith(
+          "/extensions/commands/pstdio.pstdio-planner.command.update-ticket/execute",
+        ) &&
         response.status() === 200,
     );
     const editor = page.locator("[data-testid='content-editable']").first();
@@ -551,7 +557,9 @@ test.describe("Ticket list additional coverage", () => {
     const tagPatchResponse = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
-        new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.set-ticket-tags/execute") &&
+        new URL(response.url()).pathname.endsWith(
+          "/extensions/commands/pstdio.pstdio-planner.command.set-ticket-tags/execute",
+        ) &&
         response.status() === 200,
     );
     await page.getByRole("menuitem", { name: optionName, exact: true }).click();

@@ -85,11 +85,13 @@ export const queryGlassLabArtifacts = async (ctx: Pick<ExtensionContextBase, "st
 };
 
 export const queryGlassLabArtifactsCommand = defineCommand({
+  id: "glass-lab-artifacts.query",
   title: l10n("commands.glassLabArtifacts.query.title", "Query Glass Lab artifacts"),
   run: queryGlassLabArtifacts,
 });
 
 export const createGlassLabArtifactCommand = defineCommand({
+  id: "glass-lab-artifacts.create",
   title: l10n("commands.glassLabArtifacts.create.title", "Create random Glass Lab artifact"),
   async run(ctx, _commandParams) {
     const artifact = createRandomArtifact();
@@ -122,6 +124,7 @@ export const queryArtifactMenu = async (_ctx: ExtensionContextBase, _input: obje
 });
 
 export const queryArtifactMenuCommand = defineCommand({
+  id: "artifact-menu.query",
   title: l10n("commands.artifactMenu.query.title", "Query the artifact creation menu"),
   run: queryArtifactMenu,
 });
@@ -149,6 +152,7 @@ export const updateArtifactMenu = async (
 };
 
 export const updateArtifactMenuCommand = defineCommand({
+  id: "artifact-menu.update",
   title: l10n("commands.artifactMenu.update.title", "Create an artifact from the menu"),
   params: {
     controlId: params.text({ required: true }),
@@ -158,6 +162,7 @@ export const updateArtifactMenuCommand = defineCommand({
 });
 
 export const deleteGlassLabArtifactCommand = defineCommand({
+  id: "glass-lab-artifacts.delete",
   title: l10n("commands.glassLabArtifacts.delete.title", "Delete Glass Lab artifact"),
   params: { rowId: params.text({ required: true }) },
   async run(ctx, commandParams) {

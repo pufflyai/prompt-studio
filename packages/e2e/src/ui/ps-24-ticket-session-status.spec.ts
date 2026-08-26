@@ -28,7 +28,7 @@ const createProjectViaApi = async (request: APIRequestContext, name: string) => 
 const bypassOnboarding = async (page: Page, projectId: string) => {
   await page.addInitScript((currentProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
   }, projectId);
 };

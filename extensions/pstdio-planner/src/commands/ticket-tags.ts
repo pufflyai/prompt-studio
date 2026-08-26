@@ -15,6 +15,7 @@ import {
 } from "../data/tag-operations";
 
 export const readTicketTagsCommand = defineCommand({
+  id: "ticketTag.read",
   title: "Read ticket tags",
   cli: { globalAliases: [["tags", "list"]], examples: ["pstdio tags list"] },
   async run(ctx, _commandParams) {
@@ -23,6 +24,7 @@ export const readTicketTagsCommand = defineCommand({
 });
 
 export const createTicketTagCommand = defineCommand({
+  id: "ticketTag.create",
   title: "Create ticket tag",
   cli: { globalAliases: [["tags", "create"]], examples: ["pstdio tags create --name Priority --type single_select"] },
   params: {
@@ -36,6 +38,7 @@ export const createTicketTagCommand = defineCommand({
 });
 
 export const updateTicketTagCommand = defineCommand({
+  id: "ticketTag.update",
   title: "Update ticket tag",
   cli: {
     globalAliases: [["tags", "update"]],
@@ -61,6 +64,7 @@ export const updateTicketTagCommand = defineCommand({
 });
 
 export const deleteTicketTagCommand = defineCommand({
+  id: "ticketTag.delete",
   title: "Delete ticket tag",
   cli: { globalAliases: [["tags", "delete"]], examples: ["pstdio tags delete --tag Priority"] },
   params: {
@@ -74,6 +78,7 @@ export const deleteTicketTagCommand = defineCommand({
 });
 
 export const createTagOptionCommand = defineCommand({
+  id: "ticketTag.createOption",
   title: "Create tag option",
   cli: {
     globalAliases: [["tags", "options", "create"]],
@@ -99,6 +104,7 @@ export const createTagOptionCommand = defineCommand({
 });
 
 export const updateTagOptionCommand = defineCommand({
+  id: "ticketTag.updateOption",
   title: "Update tag option",
   cli: {
     globalAliases: [["tags", "options", "update"]],
@@ -128,6 +134,7 @@ export const updateTagOptionCommand = defineCommand({
 });
 
 export const deleteTagOptionCommand = defineCommand({
+  id: "ticketTag.deleteOption",
   title: "Delete tag option",
   cli: {
     globalAliases: [["tags", "options", "delete"]],
@@ -143,6 +150,7 @@ export const deleteTagOptionCommand = defineCommand({
 });
 
 export const applyTicketTagDraftCommand = defineCommand({
+  id: "ticketTag.applyDraft",
   title: "Apply ticket tag draft",
   cli: {
     globalAliases: [["tags", "apply-draft"]],
@@ -174,6 +182,7 @@ export const applyTicketTagDraftCommand = defineCommand({
 });
 
 export const setTicketTagsCommand = defineCommand({
+  id: "set-ticket-tags",
   title: "Set ticket tags",
   params: {
     rowId: params.text({ label: "Ticket", required: true }),

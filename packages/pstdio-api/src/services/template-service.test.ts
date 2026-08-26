@@ -48,13 +48,15 @@ await Bun.write(countPath, String(currentCount + 1));
 `
         : ""
     }export default {
-  templates: {
-    ${templateKey}: {
+  templates: [
+    {
+      id: "${templateKey}",
+      ref: { kind: "template", id: "${templateKey}" },
       title: "Review code",
       type: "prompt",
       source: { kind: "package-asset", path: "./review-code.md", baseUrl: import.meta.url },
     },
-  },
+  ],
 };`,
   );
   writeFileSync(join(root, "review-code.md"), "EXTENSION CONTENT\n");
@@ -65,32 +67,35 @@ const emptyRuntime = {
   cli: [],
   commandPaletteResources: [],
   commands: [],
-  controlsRenderers: [],
-  dataTableRenderers: [],
   diagnostics: [],
   extensions: [],
   fileIconThemes: [],
-  fileRenderers: [],
   harnesses: [],
   hooks: [],
-  kanbanRenderers: [],
   keybindings: [],
   middlewares: [],
   modes: [],
-  panels: [],
-  routes: [],
+  navigationItems: [],
+  placements: [],
+  privateHandlers: [],
+  resourceHierarchyProviders: [],
+  resourceKinds: [],
+  resourceViews: [],
   schedules: [],
   settings: [],
   settingsPanels: [],
   settingsSections: [],
   skills: [],
+  statusBarItems: [],
+  statuses: [],
   templateTypes: [],
   templates: [],
   themes: [],
   translations: [],
-  treeItems: [],
-  treeRenderers: [],
+  views: [],
+  viewMenus: [],
   workspaceTypes: [],
+  activityItems: [],
 };
 
 describe("TemplateService", () => {

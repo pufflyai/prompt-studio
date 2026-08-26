@@ -50,13 +50,15 @@ const writeSkillExtension = (root: string) => {
     `const asset = (path: string) => ({ kind: "package-asset" as const, path, baseUrl: import.meta.url });
 
 export default {
-  skills: {
-    catalogSkill: {
+  skills: [
+    {
+      id: "catalogSkill",
+      ref: { kind: "skill", id: "catalogSkill" },
       title: "Catalog Skill",
       description: "Skill from an extension.",
       source: asset("./skills/catalog-skill"),
     },
-  },
+  ],
 };
 `,
     "utf8",

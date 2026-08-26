@@ -38,13 +38,13 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
   await page.addInitScript(
     ({ currentProjectId }) => {
       localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+      localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
       localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
       localStorage.setItem(
         `pstdio-project-settings/projects/${currentProjectId}/values`,
         JSON.stringify({
           state: {
-            lastSelectedAgent: "pstdio.extension-lab.fake",
+            lastSelectedAgent: "pstdio.extension-lab.harness.fake",
             lastSelectedBranches: [],
             lastSelectedModels: [],
             lastSelectedRepo: "",
@@ -131,6 +131,11 @@ const getExtensionLoadState = async (
   return { lastError: extension?.lastError ?? null, status: extension?.status };
 };
 
+const expectWebviewAtPath = (metadata: WorkbenchExtensionMetadata, path: string) => {
+  const view = metadata.views.find((candidate) => candidate.path === path);
+  expect(view?.body.kind).toBe("webview");
+};
+
 test.describe("Extension webview live reload", () => {
   test.beforeEach(async ({ request }) => {
     await deleteAllProjects(request);
@@ -147,8 +152,7 @@ test.describe("Extension webview live reload", () => {
       const metadataResponse = await request.get(`${apiBase}/v1/projects/${project.id}/extensions/ui`);
       expect(metadataResponse.ok()).toBe(true);
       const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
-      const labRoute = metadata.routes.find((route) => route.path === "lab");
-      expect(labRoute).toBeDefined();
+      expectWebviewAtPath(metadata, "lab");
       await bypassOnboarding(page, project.id);
 
       await page.goto(`/projects/${project.id}/lab`);
@@ -188,8 +192,7 @@ test.describe("Extension webview live reload", () => {
       const metadataResponse = await request.get(`${apiBase}/v1/projects/${project.id}/extensions/ui`);
       expect(metadataResponse.ok()).toBe(true);
       const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
-      const labRoute = metadata.routes.find((route) => route.path === "lab");
-      expect(labRoute).toBeDefined();
+      expectWebviewAtPath(metadata, "lab");
       await bypassOnboarding(page, project.id);
       await page.goto(`/projects/${project.id}/lab`);
 

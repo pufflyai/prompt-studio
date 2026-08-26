@@ -2,122 +2,30 @@ import type {
   ExtensionKeybindingRecord,
   ExtensionMenuContribution,
   ExtensionSettingDefinitionRecord,
-  ExtensionTreeItemContribution,
-  WorkbenchExtensionCommandPaletteResourceRecord,
-  WorkbenchExtensionKanbanRendererRecord,
   WorkbenchExtensionMetadata,
 } from "@pstdio/sdk/api";
-import type {
-  PackageAssetDescriptor,
-  PanelContribution,
-  PanelMenuContribution,
-  WebviewContribution,
-} from "@pstdio/sdk/extensions";
-import type { WorkbenchExtensionDataTableRendererRecord } from "pstdio-api-contracts";
+import type { ContributionKind, ContributionRef, NavigationTarget, WhenExpression } from "@pstdio/sdk/extensions";
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
-import { resolveResourceKindReference, resourceKindReferences } from "../../runtime/normalize/references";
+import { serializeWhenExpression } from "../../runtime/normalize/references";
 import type { ExtensionRuntime } from "../../types/runtime";
-import { toWorkbenchExtensionModeRecords } from "./workbench-extension-mode-metadata";
+import { commandRef, normalizedRef, refreshEventIds } from "./workbench-extension-metadata-normalizers";
+import {
+  type ResolveWorkbenchExtensionWebview,
+  type ResolveWorkbenchExtensionWebviewInput,
+  toViewRecord,
+} from "./workbench-extension-view-metadata";
 
-type WorkbenchExtensionWebview = NonNullable<WorkbenchExtensionMetadata["panels"][number]["webview"]>;
-type PanelPlacement = Exclude<NonNullable<PanelContribution["show"]>, readonly unknown[]>;
+export type { ResolveWorkbenchExtensionWebview, ResolveWorkbenchExtensionWebviewInput };
 
-export interface ResolveWorkbenchExtensionWebviewInput {
-  extensionId: string;
-  extensionName: string;
-  id: string;
-  sourcePath: string;
-  webview: WebviewContribution & { entry: PackageAssetDescriptor };
-}
-
-export type ResolveWorkbenchExtensionWebview = (
-  input: ResolveWorkbenchExtensionWebviewInput,
-) => WorkbenchExtensionWebview | null | undefined;
+type MetadataNavigationTarget = WorkbenchExtensionMetadata["navigationItems"][number]["action"];
+type MetadataWhen = WorkbenchExtensionMetadata["navigationItems"][number]["when"];
 
 export interface CreateWorkbenchExtensionMetadataInput {
   runtime: ExtensionRuntime;
   resolveWebview?: ResolveWorkbenchExtensionWebview;
 }
 
-const refIdOf = (value: unknown) => {
-  if (typeof value === "string") return value;
-  if (value && typeof value === "object" && "id" in value && typeof (value as { id: unknown }).id === "string") {
-    return (value as { id: string }).id;
-  }
-  return undefined;
-};
-
-const slotIdOf = (slot: unknown) => {
-  if (typeof slot === "string") return slot;
-  if (slot && typeof slot === "object" && "id" in slot && typeof (slot as { id: unknown }).id === "string") {
-    return (slot as { id: string }).id;
-  }
-  return undefined;
-};
-
 const compact = <T>(items: Array<T | null>) => items.filter((item): item is T => item !== null);
-
-const refreshEventIdsOf = (events: readonly unknown[] | undefined) => {
-  const ids = compact((events ?? []).map((event) => refIdOf(event) ?? null)).filter((id) => id.trim().length > 0);
-  const uniqueIds = [...new Set(ids)];
-  return uniqueIds.length > 0 ? uniqueIds : undefined;
-};
-
-const resolveContributionId = (extensionName: string, localOrFullId: string) =>
-  localOrFullId.startsWith(`${extensionName}.`) || localOrFullId.startsWith("workbench.")
-    ? localOrFullId
-    : `${extensionName}.${localOrFullId}`;
-
-const resolveOptionalContributionId = (extensionName: string, localOrFullId: string | undefined) =>
-  localOrFullId ? resolveContributionId(extensionName, localOrFullId) : undefined;
-
-const withResolvedResourceKind = <T extends { resourceKind?: string }>(
-  record: T | null,
-  references: ReadonlyMap<string, string>,
-) => {
-  if (!record?.resourceKind) return record;
-  const resolved = resolveResourceKindReference(record.resourceKind, references);
-  return resolved === record.resourceKind ? record : { ...record, resourceKind: resolved };
-};
-
-// `when.resourceType` names resource kinds, so it follows the same reference rule as a
-// renderer's `resourceKind`: a namespaced entry resolves to the declared kind and a host
-// kind such as `session` stays as written.
-const withResolvedWhenResourceTypes = <T extends { when?: { resourceType?: string[] } }>(
-  record: T,
-  references: ReadonlyMap<string, string>,
-) => {
-  const resourceTypes = record.when?.resourceType;
-  if (!resourceTypes?.length) return record;
-  const resolved = resourceTypes.map((kind) => resolveResourceKindReference(kind, references));
-  if (resolved.every((kind, index) => kind === resourceTypes[index])) return record;
-  return { ...record, when: { ...record.when, resourceType: resolved } };
-};
-
-const includesWhenValue = (value: string | string[] | undefined, expected: string) =>
-  Array.isArray(value) ? value.includes(expected) : value === expected;
-
-const legacyMenuSlotId = (menu: ExtensionRuntime["commands"][number]["menus"][number]) => {
-  const slotId = slotIdOf(menu.slot);
-  if (slotId) return slotId;
-
-  const when = menu.when as ExtensionMenuContribution["when"] | undefined;
-  const resourceTypes = when?.resourceType ?? [];
-  const header =
-    menu.target === "workbench.nav.actions"
-      ? "headerPrimary"
-      : menu.target === "workbench.nav.overflow"
-        ? "headerOverflow"
-        : undefined;
-
-  if (!header) return "unknown";
-  if (resourceTypes.includes("workspace") || includesWhenValue(when?.mode, "workspace")) return `workspace.${header}`;
-  if (resourceTypes.includes("session") || includesWhenValue(when?.mode, "sessions")) return `session.${header}`;
-  return `project.${header}`;
-};
-
-const legacySettingsSlotId = (panel: ExtensionRuntime["settingsPanels"][number]["contribution"]) =>
-  slotIdOf(panel.slot) ?? (panel.scope === "global" ? "global.settingsPanels" : "project.settingsPanels");
 
 const toExtensionRecord = (extension: ExtensionRuntime["extensions"][number]) => ({
   id: extension.id,
@@ -139,400 +47,62 @@ const toCommandRecord = (command: ExtensionRuntime["commands"][number]) => ({
   params: command.params as WorkbenchExtensionMetadata["commands"][number]["params"],
 });
 
-const toMenuContributions = (
-  commands: ExtensionRuntime["commands"],
-  references: ReadonlyMap<string, string> = new Map(),
-): ExtensionMenuContribution[] =>
+const toMenuContributions = (commands: ExtensionRuntime["commands"]): ExtensionMenuContribution[] =>
   commands.flatMap((command) =>
     command.menus.map((menu, index) => ({
       id: `${command.id}.menu.${index}`,
       extensionId: command.extensionId,
-      commandId: resolveOptionalContributionId(command.name, refIdOf(menu.command)) ?? command.id,
-      slotId: legacyMenuSlotId(menu),
-      target: menu.target,
+      commandId: command.id,
+      slotId: menu.slot.id,
       label: menu.label ?? command.title,
       group: menu.group,
       placement: menu.placement,
       icon: menu.icon,
       presentation: menu.presentation,
       params: menu.params as Record<string, unknown> | undefined,
-      when: withResolvedWhenResourceTypes({ when: menu.when as ExtensionMenuContribution["when"] }, references).when,
+      when: serializeWhenExpression(menu.when, command.extensionId) as ExtensionMenuContribution["when"],
     })),
   );
 
-const resolveWebview = (
-  input: CreateWorkbenchExtensionMetadataInput,
-  record: { extensionId: string; id: string; name: string; sourcePath: string },
-  webview: WebviewContribution | undefined,
-) => {
-  if (!webview?.entry || !input.resolveWebview) return null;
-  return (
-    input.resolveWebview({
-      extensionId: record.extensionId,
-      extensionName: record.name,
-      id: record.id,
-      sourcePath: record.sourcePath,
-      webview: webview as WebviewContribution & { entry: PackageAssetDescriptor },
-    }) ?? null
-  );
-};
-
-const toPanelBody = (
-  input: CreateWorkbenchExtensionMetadataInput,
-  panel: ExtensionRuntime["panels"][number],
-  contribution: PanelContribution | PanelMenuContribution,
-  webviewId = panel.id,
-) => {
-  const renderer = contribution.renderer
-    ? { kind: contribution.renderer.kind, id: resolveContributionId(panel.name, contribution.renderer.id) }
-    : undefined;
-  const webview = resolveWebview(input, { ...panel, id: webviewId }, contribution.webview) ?? undefined;
-  if (!renderer && !webview) return null;
-
+const normalizeWhen = (when: WhenExpression | undefined, extensionId: string): MetadataWhen => {
+  if (!when) return undefined;
+  const normalizeRefs = <Kind extends ContributionKind>(
+    value: ContributionRef<Kind> | readonly ContributionRef<Kind>[] | undefined,
+  ) =>
+    value
+      ? Array.isArray(value)
+        ? value.map((ref) => normalizedRef(ref, extensionId))
+        : normalizedRef(value as ContributionRef<Kind>, extensionId)
+      : undefined;
   return {
-    ...(webview ? { webview } : {}),
-    ...(renderer ? { renderer } : {}),
-  };
+    ...when,
+    mode: normalizeRefs(when.mode),
+    view: normalizeRefs(when.view),
+    resourceType: when.resourceType?.map((ref) => normalizedRef(ref, extensionId)),
+  } as MetadataWhen;
 };
 
-const clonePanelPlacement = (placement: PanelPlacement) => ({
-  ...placement,
-  allowedRegions: placement.allowedRegions ? [...placement.allowedRegions] : undefined,
-});
-
-const clonePanelShow = (show: PanelContribution["show"]) => {
-  if (!show) return undefined;
-  if (Array.isArray(show)) return show.map(clonePanelPlacement);
-  return clonePanelPlacement(show as PanelPlacement);
+const normalizeTarget = (target: NavigationTarget, extensionId: string): MetadataNavigationTarget => {
+  if (target.kind === "view") return { ...target, view: normalizedRef(target.view, extensionId) };
+  if (target.kind === "command") {
+    return { ...target, target: { ...target.target, command: commandRef(target.target.command, extensionId) } };
+  }
+  if (target.kind === "compound") {
+    return {
+      ...target,
+      targets: target.targets.map(
+        (item) => normalizeTarget(item, extensionId) as Exclude<MetadataNavigationTarget, { kind: "compound" }>,
+      ),
+    };
+  }
+  return target;
 };
-
-const toPanelRecord = (
-  input: CreateWorkbenchExtensionMetadataInput,
-  panel: ExtensionRuntime["panels"][number],
-): WorkbenchExtensionMetadata["panels"][number] | null => {
-  const body = toPanelBody(input, panel, panel.contribution);
-  if (!body) return null;
-  const panelMenus = Object.entries(panel.contribution.panelMenus ?? {}).flatMap(([localId, menu]) => {
-    const menuId = `${panel.id}.${localId}`;
-    const menuBody = toPanelBody(input, panel, menu, menuId);
-    return menuBody
-      ? [
-          {
-            id: menuId,
-            extensionId: panel.extensionId,
-            ownerPanelId: panel.id,
-            title: menu.title,
-            side: menu.side,
-            group: menu.group,
-            placement: menu.placement,
-            hostTreeHeader: menu.hostTreeHeader,
-            hostTreeFooter: menu.hostTreeFooter,
-            ...menuBody,
-          },
-        ]
-      : [];
-  });
-  return {
-    id: panel.id,
-    extensionId: panel.extensionId,
-    title: panel.contribution.title,
-    path: panel.contribution.path,
-    icon: panel.contribution.icon,
-    show: clonePanelShow(panel.contribution.show),
-    panelMenus: panelMenus.length > 0 ? panelMenus : undefined,
-    ...body,
-  };
-};
-
-const toDataTableRendererRecord = (
-  renderer: ExtensionRuntime["dataTableRenderers"][number],
-): WorkbenchExtensionDataTableRendererRecord | null => {
-  const handlers = renderer.contribution as { queryHandlerId?: string; rowActivationHandlerId?: string };
-  if (!handlers.queryHandlerId) return null;
-  return {
-    id: renderer.id,
-    extensionId: renderer.extensionId,
-    title: renderer.contribution.title,
-    resourceKind: renderer.contribution.resourceKind,
-    columns: renderer.contribution.columns,
-    queryHandlerId: handlers.queryHandlerId,
-    refreshEventIds: refreshEventIdsOf(renderer.contribution.refreshEvents),
-    selectionMode: renderer.contribution.selectionMode,
-    selectionActions: compact(
-      (renderer.contribution.selectionActions ?? []).map((action) => {
-        const commandId = resolveOptionalContributionId(renderer.name, refIdOf(action.command));
-        return commandId
-          ? {
-              id: action.id,
-              label: action.label,
-              icon: action.icon,
-              destructive: action.destructive,
-              commandId,
-            }
-          : null;
-      }),
-    ),
-    rowActions: compact(
-      (renderer.contribution.rowActions ?? []).map((action) => {
-        const commandId = resolveOptionalContributionId(renderer.name, refIdOf(action.command));
-        return commandId
-          ? {
-              id: action.id,
-              label: action.label,
-              icon: action.icon,
-              destructive: action.destructive,
-              commandId,
-            }
-          : null;
-      }),
-    ),
-    rowActivationHandlerId: handlers.rowActivationHandlerId,
-    initialPageSize: renderer.contribution.initialPageSize,
-    pageSizeOptions: renderer.contribution.pageSizeOptions,
-    emptyTitle: renderer.contribution.emptyTitle,
-    emptyDescription: renderer.contribution.emptyDescription,
-  };
-};
-
-const toRouteRecord = (
-  input: CreateWorkbenchExtensionMetadataInput,
-  route: ExtensionRuntime["routes"][number],
-): WorkbenchExtensionMetadata["routes"][number] | null => {
-  const webview = resolveWebview(input, route, route.contribution.webview);
-  if (!webview) return null;
-  return {
-    id: route.id,
-    extensionId: route.extensionId,
-    path: route.contribution.path,
-    label: route.contribution.label,
-    webview,
-  };
-};
-
-const toKanbanRendererCreateRow = (
-  extensionName: string,
-  createRow: ExtensionRuntime["kanbanRenderers"][number]["contribution"]["createRow"],
-): WorkbenchExtensionKanbanRendererRecord["createRow"] => {
-  const commandId = createRow ? resolveOptionalContributionId(extensionName, refIdOf(createRow.command)) : undefined;
-  if (!createRow || !commandId) return undefined;
-  const attachmentCommandId = createRow.attachments
-    ? resolveOptionalContributionId(extensionName, refIdOf(createRow.attachments.command))
-    : undefined;
-  return {
-    commandId,
-    title: createRow.title,
-    submitLabel: createRow.submitLabel,
-    columnParam: createRow.columnParam,
-    params: createRow.params as NonNullable<WorkbenchExtensionKanbanRendererRecord["createRow"]>["params"],
-    attributesParam: createRow.attributesParam,
-    labels: createRow.labels,
-    attachments:
-      createRow.attachments && attachmentCommandId
-        ? {
-            commandId: attachmentCommandId,
-            resourceParam: createRow.attachments.resourceParam,
-            fileParam: createRow.attachments.fileParam,
-          }
-        : undefined,
-  };
-};
-
-const toKanbanRendererRecord = (
-  renderer: ExtensionRuntime["kanbanRenderers"][number],
-): WorkbenchExtensionKanbanRendererRecord | null => {
-  const handlers = renderer.contribution as {
-    queryHandlerId?: string;
-    attributeChangeHandlerId?: string;
-    reorderHandlerId?: string;
-    columnActionHandlerId?: string;
-    rowActivationHandlerId?: string;
-  };
-  if (!handlers.queryHandlerId) return null;
-  return {
-    id: renderer.id,
-    extensionId: renderer.extensionId,
-    title: renderer.contribution.title,
-    resourceKind: renderer.contribution.resourceKind,
-    attributes: renderer.contribution.attributes,
-    queryHandlerId: handlers.queryHandlerId,
-    refreshEventIds: refreshEventIdsOf(renderer.contribution.refreshEvents),
-    attributeChangeHandlerId: handlers.attributeChangeHandlerId,
-    reorderHandlerId: handlers.reorderHandlerId,
-    columnActionHandlerId: handlers.columnActionHandlerId,
-    rowActivationHandlerId: handlers.rowActivationHandlerId,
-    createRow: toKanbanRendererCreateRow(renderer.name, renderer.contribution.createRow),
-    rowActions: compact(
-      (renderer.contribution.rowActions ?? []).map((action) => {
-        const commandId = resolveOptionalContributionId(renderer.name, refIdOf(action.command));
-        if (!commandId) return null;
-        return { id: action.id, label: action.label, icon: action.icon, commandId, destructive: action.destructive };
-      }),
-    ),
-    defaultSettings: renderer.contribution.defaultSettings,
-    defaultFilters: renderer.contribution.defaultFilters,
-    defaultViews: renderer.contribution.defaultViews,
-    defaultActiveViewId: renderer.contribution.defaultActiveViewId,
-    emptyTitle: renderer.contribution.emptyTitle,
-    emptyDescription: renderer.contribution.emptyDescription,
-    hideToolbar: renderer.contribution.hideToolbar,
-  };
-};
-
-const toCommandPaletteResourceRecord = (
-  provider: ExtensionRuntime["commandPaletteResources"][number],
-): WorkbenchExtensionCommandPaletteResourceRecord | null => {
-  const queryCommandId = resolveOptionalContributionId(provider.name, refIdOf(provider.contribution.queryCommand));
-  if (!queryCommandId) return null;
-  return {
-    id: provider.id,
-    extensionId: provider.extensionId,
-    title: provider.contribution.title,
-    resourceKind: provider.contribution.resourceKind,
-    queryCommandId,
-    refreshEventIds: refreshEventIdsOf(provider.contribution.refreshEvents),
-  };
-};
-
-const toTreeRendererRecord = (
-  renderer: ExtensionRuntime["treeRenderers"][number],
-): NonNullable<WorkbenchExtensionMetadata["treeRenderers"]>[number] | null => {
-  const handlers = renderer.contribution as {
-    bodyHandlerId?: string;
-    childrenHandlerId?: string;
-    footerHandlerId?: string;
-  };
-  if (!handlers.bodyHandlerId) return null;
-  return {
-    id: renderer.id,
-    extensionId: renderer.extensionId,
-    title: renderer.contribution.title,
-    icon: renderer.contribution.icon,
-    searchable: renderer.contribution.searchable,
-    searchPlaceholder: renderer.contribution.searchPlaceholder,
-    bodyHandlerId: handlers.bodyHandlerId,
-    refreshEventIds: refreshEventIdsOf(renderer.contribution.refreshEvents),
-    childrenHandlerId: handlers.childrenHandlerId,
-    footerHandlerId: handlers.footerHandlerId,
-    defaultExpandedSectionIds: renderer.contribution.defaultExpandedSectionIds,
-    defaultExpandedNodeIds: renderer.contribution.defaultExpandedNodeIds,
-  };
-};
-
-const toFileRendererRecord = (
-  renderer: ExtensionRuntime["fileRenderers"][number],
-): NonNullable<WorkbenchExtensionMetadata["fileRenderers"]>[number] | null => {
-  const handlers = renderer.contribution as { loadHandlerId?: string; saveHandlerId?: string };
-  if (!handlers.loadHandlerId) return null;
-  return {
-    id: renderer.id,
-    extensionId: renderer.extensionId,
-    title: renderer.contribution.title,
-    icon: renderer.contribution.icon,
-    resourceKind: renderer.contribution.resourceKind,
-    loadHandlerId: handlers.loadHandlerId,
-    refreshEventIds: refreshEventIdsOf(renderer.contribution.refreshEvents),
-    saveHandlerId: handlers.saveHandlerId,
-  };
-};
-
-const toControlsRendererRecord = (
-  renderer: ExtensionRuntime["controlsRenderers"][number],
-): NonNullable<WorkbenchExtensionMetadata["controlsRenderers"]>[number] | null => {
-  const handlers = renderer.contribution as {
-    queryHandlerId?: string;
-    valueChangeHandlerId?: string;
-    applyHandlerId?: string;
-    resetHandlerId?: string;
-  };
-  if (!handlers.queryHandlerId) return null;
-  return {
-    id: renderer.id,
-    extensionId: renderer.extensionId,
-    title: renderer.contribution.title,
-    queryHandlerId: handlers.queryHandlerId,
-    valueChangeHandlerId: handlers.valueChangeHandlerId,
-    applyHandlerId: handlers.applyHandlerId,
-    resetHandlerId: handlers.resetHandlerId,
-    refreshEventIds: refreshEventIdsOf(renderer.contribution.refreshEvents),
-    defaultValues: renderer.contribution.defaultValues,
-    emptyTitle: renderer.contribution.emptyTitle,
-    emptyDescription: renderer.contribution.emptyDescription,
-  };
-};
-
-const toActivityItemRecord = (
-  item: ExtensionRuntime["activityItems"][number],
-): NonNullable<WorkbenchExtensionMetadata["activityItems"]>[number] => ({
-  id: item.id,
-  extensionId: item.extensionId,
-  title: item.contribution.title,
-  icon: item.contribution.icon,
-  modes: [...item.contribution.modes],
-  placement: item.contribution.placement,
-  commandId: resolveOptionalContributionId(item.name, refIdOf(item.contribution.command)) ?? "unknown",
-  params: item.contribution.params as Record<string, unknown> | undefined,
-});
-
-const toTreeItemRecord = (item: ExtensionRuntime["treeItems"][number]): ExtensionTreeItemContribution => {
-  const action = item.contribution.action;
-  return {
-    id: item.id,
-    extensionId: item.extensionId,
-    target: item.contribution.target,
-    label: item.contribution.label,
-    group: item.contribution.group,
-    placement: item.contribution.placement,
-    icon: item.contribution.icon,
-    action:
-      action.kind === "command"
-        ? {
-            kind: "command",
-            commandId: resolveOptionalContributionId(item.name, refIdOf(action.command)) ?? "unknown",
-            args: action.params as Record<string, unknown> | undefined,
-          }
-        : action.kind === "view"
-          ? { kind: "view", viewId: resolveContributionId(item.name, action.viewId) }
-          : action,
-    when: item.contribution.when as ExtensionTreeItemContribution["when"],
-  };
-};
-
-const toSettingsPanelRecord = (
-  input: CreateWorkbenchExtensionMetadataInput,
-  panel: ExtensionRuntime["settingsPanels"][number],
-): WorkbenchExtensionMetadata["settingsPanels"][number] | null => {
-  const webview = resolveWebview(input, panel, panel.contribution.webview);
-  if (!webview) return null;
-  return {
-    id: panel.id,
-    extensionId: panel.extensionId,
-    slotId: legacySettingsSlotId(panel.contribution),
-    target: panel.contribution.target,
-    scope: panel.contribution.scope,
-    title: panel.contribution.title,
-    icon: panel.contribution.icon,
-    // Namespaced the same way contributions are, so a panel points at its own
-    // extension's section and never another's.
-    section: panel.contribution.section ? `${panel.name}.${panel.contribution.section}` : undefined,
-    webview,
-  };
-};
-
-const toSettingsSectionRecord = (section: ExtensionRuntime["settingsSections"][number]) => ({
-  id: section.id,
-  extensionId: section.extensionId,
-  title: section.contribution.title,
-  scope: section.contribution.scope,
-  order: section.contribution.order,
-});
 
 export const toKeybindingRecord = (binding: ExtensionRuntime["keybindings"][number]): ExtensionKeybindingRecord => {
   const overrides: ExtensionKeybindingRecord["platformOverrides"] = {};
   if (binding.contribution.mac) overrides.mac = binding.contribution.mac;
   if (binding.contribution.linux) overrides.linux = binding.contribution.linux;
   if (binding.contribution.win) overrides.win = binding.contribution.win;
-  const hasOverrides = Object.keys(overrides).length > 0;
-
   return {
     id: binding.id,
     extensionId: binding.extensionId,
@@ -540,9 +110,9 @@ export const toKeybindingRecord = (binding: ExtensionRuntime["keybindings"][numb
     key: binding.contribution.key,
     canonicalChord: binding.canonicalChord,
     parsed: binding.parsed,
-    platformOverrides: hasOverrides ? overrides : undefined,
-    when: binding.when as ExtensionKeybindingRecord["when"],
-    args: binding.contribution.args as Record<string, unknown> | undefined,
+    platformOverrides: Object.keys(overrides).length > 0 ? overrides : undefined,
+    when: serializeWhenExpression(binding.when, binding.extensionId) as ExtensionKeybindingRecord["when"],
+    args: binding.contribution.params as Record<string, unknown> | undefined,
   };
 };
 
@@ -559,82 +129,169 @@ const toSettingDefinitionRecord = (
   description: setting.contribution.description,
 });
 
-const toResourceKindRecord = (record: ExtensionRuntime["resourceKinds"][number]) => ({
-  id: record.id,
-  extensionId: record.extensionId,
-  surface: record.contribution.surface,
-  label: record.contribution.label,
-  icon: record.contribution.icon,
-  slots: Object.fromEntries(
-    Object.entries(record.contribution.slots).map(([slotName, slot]) => [
-      slotName,
-      { cardinality: slot.cardinality, external: slot.external },
-    ]),
-  ),
-});
-
-const toResourcePanelRecord = (record: ExtensionRuntime["resourcePanels"][number]) => ({
-  id: record.id,
-  extensionId: record.extensionId,
-  resourceKind: record.resourceKindId,
-  panel: record.panelId,
-  slot: record.slotId,
-});
-
-const toStatusItemRecord = (
-  input: CreateWorkbenchExtensionMetadataInput,
-  item: ExtensionRuntime["statusItems"][number],
-) => {
-  const webview = resolveWebview(input, item, item.contribution.webview) ?? undefined;
-  if (!webview) return null;
+const toCommandPaletteResource = (provider: ExtensionRuntime["commandPaletteResources"][number]) => {
+  const queryHandlerId = (provider.contribution as typeof provider.contribution & { queryHandlerId?: string })
+    .queryHandlerId;
+  if (!queryHandlerId) return null;
   return {
-    id: item.id,
-    extensionId: item.extensionId,
-    title: item.contribution.title,
-    when: item.contribution.when as NonNullable<WorkbenchExtensionMetadata["statusItems"]>[number]["when"],
-    webview,
+    id: provider.id,
+    extensionId: provider.extensionId,
+    title: provider.contribution.title,
+    resourceKind: provider.contribution.resourceKind?.id,
+    queryHandlerId,
+    refreshEventIds: refreshEventIds(provider.contribution.refreshEvents, provider.extensionId),
   };
 };
 
 export const createWorkbenchExtensionMetadata = (
   input: CreateWorkbenchExtensionMetadataInput,
-): WorkbenchExtensionMetadata => {
-  const references = resourceKindReferences(input.runtime.resourceKinds);
-  const modes = toWorkbenchExtensionModeRecords(input.runtime, references);
-  const resolveKinds = <T extends { resourceKind?: string }>(mapped: (T | null)[]) =>
-    mapped.map((record) => withResolvedResourceKind(record, references));
-  return {
-    extensions: input.runtime.extensions.map(toExtensionRecord),
-    commands: input.runtime.commands.map(toCommandRecord),
-    menuContributions: toMenuContributions(input.runtime.commands, references),
-    commandPaletteContributions: toCommandPaletteContributions(input.runtime.commands).map((contribution) =>
-      withResolvedWhenResourceTypes(contribution, references),
-    ),
-    modes: modes.modes,
-    panels: compact(input.runtime.panels.map((panel) => toPanelRecord(input, panel))),
-    resourceKinds: input.runtime.resourceKinds.map(toResourceKindRecord),
-    resourcePanels: input.runtime.resourcePanels.map(toResourcePanelRecord),
-    resourceHierarchyProviders: input.runtime.resourceHierarchyProviders.map((record) => ({
+): WorkbenchExtensionMetadata => ({
+  extensions: input.runtime.extensions.map(toExtensionRecord),
+  commands: input.runtime.commands.map(toCommandRecord),
+  menuContributions: toMenuContributions(input.runtime.commands),
+  commandPaletteContributions: toCommandPaletteContributions(input.runtime.commands).map((contribution) => ({
+    ...contribution,
+    when: serializeWhenExpression(
+      input.runtime.commands.find((command) => command.id === contribution.commandId)?.palette[0]?.when,
+      contribution.extensionId,
+    ) as typeof contribution.when,
+  })),
+  modes: input.runtime.modes.map((mode) => ({
+    id: mode.id,
+    localId: mode.localId,
+    extensionId: mode.extensionId,
+    label: mode.contribution.label,
+    icon: mode.contribution.icon,
+  })),
+  views: compact(input.runtime.views.map((view) => toViewRecord(input, view))),
+  viewMenus: input.runtime.viewMenus.map((menu) => ({
+    id: menu.id,
+    extensionId: menu.extensionId,
+    owner: normalizedRef(menu.contribution.owner, menu.extensionId),
+    view: normalizedRef(menu.contribution.view, menu.extensionId),
+    side: menu.contribution.side,
+    group: menu.contribution.group,
+    placement: menu.contribution.placement,
+    hostTreeHeader: menu.contribution.hostTreeHeader,
+    hostTreeFooter: menu.contribution.hostTreeFooter,
+  })),
+  placements: input.runtime.placements.map((placement) => ({
+    id: placement.id,
+    localId: placement.localId,
+    extensionId: placement.extensionId,
+    mode: normalizedRef(placement.contribution.mode, placement.extensionId),
+    item:
+      placement.contribution.item.kind === "view"
+        ? { kind: "view", view: normalizedRef(placement.contribution.item.view, placement.extensionId) }
+        : {
+            kind: "resource-slot",
+            slot: {
+              ...placement.contribution.item.slot,
+              resourceKind: normalizedRef(placement.contribution.item.slot.resourceKind, placement.extensionId),
+            },
+          },
+    region: placement.contribution.region,
+    order: placement.contribution.order,
+    defaultOpen: placement.contribution.defaultOpen,
+    required: placement.contribution.required,
+    movableTo: placement.contribution.movableTo ? [...placement.contribution.movableTo] : undefined,
+  })),
+  resourceKinds: input.runtime.resourceKinds.map((record) => ({
+    id: record.id,
+    localId: record.localId,
+    extensionId: record.extensionId,
+    surface: record.contribution.surface,
+    label: record.contribution.label,
+    icon: record.contribution.icon,
+    slots: Object.entries(record.contribution.slots).map(([id, slot]) => ({
+      id,
+      cardinality: slot.cardinality,
+      access: slot.external ? ("public" as const) : ("owner" as const),
+    })),
+  })),
+  resourceViews: input.runtime.resourceViews.map((record) => {
+    const contribution = record.contribution as {
+      resourceKind: ContributionRef<"resource-kind">;
+      slot: { resourceKind: ContributionRef<"resource-kind">; id: string };
+      view: ContributionRef<"view">;
+      order?: number;
+    };
+    return {
       id: record.id,
       extensionId: record.extensionId,
-      resourceKind: record.resourceKindId,
-    })),
-    statusItems: compact(input.runtime.statusItems.map((item) => toStatusItemRecord(input, item))),
-    routes: compact(input.runtime.routes.map((route) => toRouteRecord(input, route))),
-    treeItems: input.runtime.treeItems.map((item) => withResolvedWhenResourceTypes(toTreeItemRecord(item), references)),
-    activityItems: input.runtime.activityItems.map(toActivityItemRecord),
-    settingsSections: input.runtime.settingsSections.map(toSettingsSectionRecord),
-    settingsPanels: compact(input.runtime.settingsPanels.map((panel) => toSettingsPanelRecord(input, panel))),
-    kanbanRenderers: compact(resolveKinds(input.runtime.kanbanRenderers.map(toKanbanRendererRecord))),
-    dataTableRenderers: compact(resolveKinds(input.runtime.dataTableRenderers.map(toDataTableRendererRecord))),
-    commandPaletteResources: compact(
-      resolveKinds(input.runtime.commandPaletteResources.map(toCommandPaletteResourceRecord)),
-    ),
-    treeRenderers: compact(resolveKinds(input.runtime.treeRenderers.map(toTreeRendererRecord))),
-    fileRenderers: compact(resolveKinds(input.runtime.fileRenderers.map(toFileRendererRecord))),
-    controlsRenderers: compact(resolveKinds(input.runtime.controlsRenderers.map(toControlsRendererRecord))),
-    keybindings: input.runtime.keybindings.map(toKeybindingRecord),
-    settingsDefinitions: input.runtime.settings.map(toSettingDefinitionRecord),
-    diagnostics: modes.diagnostics,
-  };
-};
+      resourceKind: normalizedRef(contribution.resourceKind, record.extensionId),
+      slot: {
+        ...contribution.slot,
+        resourceKind: normalizedRef(contribution.slot.resourceKind, record.extensionId),
+      },
+      view: normalizedRef(contribution.view, record.extensionId),
+      order: contribution.order,
+    };
+  }),
+  resourceHierarchyProviders: input.runtime.resourceHierarchyProviders.map((record) => ({
+    id: record.id,
+    extensionId: record.extensionId,
+    resourceKind: normalizedRef(record.provider.resourceKind, record.extensionId),
+  })),
+  navigationItems: input.runtime.navigationItems.map((item) => ({
+    id: item.id,
+    extensionId: item.extensionId,
+    slot: normalizedRef(item.contribution.slot, item.extensionId),
+    label: item.contribution.label,
+    icon: item.contribution.icon,
+    group: item.contribution.group,
+    order: item.contribution.order,
+    when: normalizeWhen(item.contribution.when, item.extensionId),
+    action: normalizeTarget(item.contribution.action, item.extensionId),
+  })),
+  statusBarItems: input.runtime.statusBarItems.map((item) => ({
+    id: item.id,
+    extensionId: item.extensionId,
+    view: normalizedRef(item.contribution.view, item.extensionId),
+    slot: item.contribution.slot,
+    order: item.contribution.order,
+    when: normalizeWhen(item.contribution.when, item.extensionId),
+  })),
+  statuses: input.runtime.statuses.map((record) => {
+    const contribution = record.contribution as typeof record.contribution & {
+      queryHandlerId: string;
+      saveHandlerId?: string;
+    };
+    return {
+      id: record.id,
+      localId: record.localId,
+      extensionId: record.extensionId,
+      title: contribution.title,
+      actions: contribution.actions ? [...contribution.actions] : undefined,
+      queryHandlerId: contribution.queryHandlerId,
+      saveHandlerId: contribution.saveHandlerId,
+    };
+  }),
+  activityItems: input.runtime.activityItems.map((item) => ({
+    id: item.id,
+    extensionId: item.extensionId,
+    title: item.contribution.title,
+    icon: item.contribution.icon,
+    modes: item.contribution.modes.map((mode) => normalizedRef(mode, item.extensionId)),
+    placement: item.contribution.placement,
+    command: commandRef(item.contribution.command, item.extensionId),
+    params: item.contribution.params as Record<string, unknown> | undefined,
+  })),
+  settingsSections: input.runtime.settingsSections.map((section) => ({
+    id: section.id,
+    extensionId: section.extensionId,
+    title: section.contribution.title,
+    order: section.contribution.order,
+  })),
+  settingsPanels: input.runtime.settingsPanels.map((panel) => ({
+    id: panel.id,
+    extensionId: panel.extensionId,
+    view: normalizedRef(panel.contribution.view, panel.extensionId),
+    slot: panel.contribution.slot,
+    section: panel.contribution.section ? normalizedRef(panel.contribution.section, panel.extensionId) : undefined,
+  })),
+  commandPaletteResources: compact(input.runtime.commandPaletteResources.map(toCommandPaletteResource)),
+  keybindings: input.runtime.keybindings.map(toKeybindingRecord),
+  settingsDefinitions: input.runtime.settings.map(toSettingDefinitionRecord),
+  diagnostics: [...input.runtime.diagnostics],
+});

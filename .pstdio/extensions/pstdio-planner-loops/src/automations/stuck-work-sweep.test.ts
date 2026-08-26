@@ -23,10 +23,9 @@ describe("stuck-work-sweep automation", () => {
       { ticket: "T1", workspaceId: "workspace-1", decision: "implementation-retried" },
       { ticket: "T2", workspaceId: "workspace-2", decision: "review-retried" },
     ]);
-    expect(callsTo(calls, "pstdio-planner.reconcile-attempt").map((call) => call.params.workspaceId)).toEqual([
-      "workspace-1",
-      "workspace-2",
-    ]);
+    expect(
+      callsTo(calls, "pstdio.pstdio-planner.command.reconcile-attempt").map((call) => call.params.workspaceId),
+    ).toEqual(["workspace-1", "workspace-2"]);
   });
 
   test("does not infer work from ticket status when no managed attempt exists", async () => {
@@ -37,7 +36,7 @@ describe("stuck-work-sweep automation", () => {
     const result = await stuckWorkSweepCommand.run(ctx as never, {});
 
     expect(result.decisions).toEqual([]);
-    expect(callsTo(calls, "pstdio-planner.reconcile-attempt")).toEqual([]);
+    expect(callsTo(calls, "pstdio.pstdio-planner.command.reconcile-attempt")).toEqual([]);
     expect(activities.at(-1)?.message).toContain("no managed attempts");
   });
 });

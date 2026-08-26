@@ -18,7 +18,7 @@ export const createLabInboxNotificationInput = () => ({
       id: "say-hello",
       label: "Say hello",
       kind: "command",
-      command: "extension-lab.say-hello",
+      command: "pstdio.extension-lab.command.say-hello",
       primary: true,
     },
   ],

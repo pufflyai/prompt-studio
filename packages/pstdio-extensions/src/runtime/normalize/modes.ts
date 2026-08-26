@@ -2,19 +2,27 @@ import type { ModeContribution } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
+import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { isLocalizableString } from "./localizable";
-import { contributionId } from "./references";
+import { normalizeContributionRef } from "./references";
 
 export const registerModes = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
-  for (const [localId, mode] of Object.entries(source.definition.modes ?? {})) {
+  const modes = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "mode",
+    contributions: contributionArray<ModeContribution>(source.definition.modes),
+  });
+  for (const mode of modes) {
+    const localId = mode.id;
     if (!isRecord(mode) || !isLocalizableString(mode.label)) continue;
     runtime.modes.push({
-      id: contributionId(ext, localId),
-      localId,
-      extensionId: ext.id,
-      name: ext.name,
-      sourcePath: source.sourcePath,
-      contribution: mode as ModeContribution,
+      ...contributionRecordBase(ext, source, "mode", localId),
+      contribution: {
+        ...mode,
+        ref: normalizeContributionRef(ext, mode.ref),
+      } as ModeContribution,
     });
   }
 };

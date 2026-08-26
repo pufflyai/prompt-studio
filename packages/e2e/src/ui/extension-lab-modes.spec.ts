@@ -14,13 +14,13 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
 const prepareDashboard = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
     localStorage.setItem(
       `pstdio-project-settings/projects/${selectedProjectId}/values`,
       JSON.stringify({
         state: {
-          lastSelectedAgent: "pstdio.extension-lab.fake",
+          lastSelectedAgent: "pstdio.extension-lab.harness.fake",
           lastSelectedModels: [],
           lastSelectedRepo: "",
           lastSelectedBranches: [],
@@ -91,8 +91,9 @@ test("the Cameras tree menu drives the cams player", async ({ page, request }) =
   await expect(camsMenu.getByText("Corridor B — night sweep")).toBeVisible({ timeout: 30_000 });
   const selectResponse = page.waitForResponse(
     (response) =>
-      new URL(response.url()).pathname.endsWith("/extensions/commands/extension-lab.cams.select/execute") &&
-      response.request().method() === "POST",
+      new URL(response.url()).pathname.endsWith(
+        "/extensions/commands/pstdio.extension-lab.command.cams.select/execute",
+      ) && response.request().method() === "POST",
   );
   await camsMenu.getByText("Corridor B — night sweep").click();
   expect((await selectResponse).ok()).toBe(true);
@@ -115,7 +116,7 @@ test("artifacts are created from the panel menu and inspected in the Side Panel"
   const createResponse = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/extension-lab.labArtifactCreate.controls.onValueChange/execute",
+        "/extensions/commands/pstdio.extension-lab.view.artifact-create.controls.onValueChange/execute",
       ) && response.request().method() === "POST",
   );
   await createMenu.getByRole("button", { name: "Random artifact" }).click();
@@ -137,7 +138,7 @@ test("artifacts are created from the panel menu and inspected in the Side Panel"
   const deleteResponse = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/extension-lab.glass-lab-artifacts.delete/execute",
+        "/extensions/commands/pstdio.extension-lab.command.glass-lab-artifacts.delete/execute",
       ) && response.request().method() === "POST",
   );
   await page.getByRole("menuitem", { name: "Delete artifact" }).click();

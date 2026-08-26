@@ -7,22 +7,17 @@ import { registerCommandPaletteResources } from "./command-palette-resources";
 import { registerCommands } from "./commands";
 import { collectCompositionContributions, validateCompositionRelationships } from "./composition";
 import { registerContent } from "./content";
-import { registerControlsRenderers } from "./controls-renderers";
-import { registerDataTableRenderers } from "./data-table-renderers";
 import { validateExtensionDefinition } from "./definition";
-import { registerFileRenderers } from "./file-renderers";
 import { registerHooks } from "./hooks";
 import { registerExtension } from "./identity";
-import { registerKanbanRenderers } from "./kanban-renderers";
 import { registerKeybindings } from "./keybindings";
 import { registerMiddlewares } from "./middlewares";
 import { registerModes } from "./modes";
-import { registerPanelContributions } from "./panels";
 import { registerProviders } from "./providers";
 import { registerSchedules } from "./schedules";
 import { registerSettings } from "./settings";
 import { registerTranslations } from "./translations";
-import { registerTreeRenderers } from "./tree-renderers";
+import { registerUiModel } from "./ui-model";
 import { registerWebviewValidation } from "./webview-validation";
 
 type NormalizeExtensionSourcesOptions = {
@@ -87,7 +82,7 @@ export const normalizeExtensionSources = (
 
   for (const source of resolveSources(sources, runtime, options)) {
     const ext = registerExtension(source, runtime, extensionsById);
-    validateExtensionDefinition(ext, source, runtime);
+    if (!validateExtensionDefinition(ext, source, runtime)) continue;
 
     registerCommands(ext, source, runtime, index);
     collectCompositionContributions(ext, source, runtime);
@@ -98,12 +93,7 @@ export const normalizeExtensionSources = (
     registerSettings(ext, source, runtime);
     registerArtifactMounts(ext, source, runtime, index);
     registerModes(ext, source, runtime);
-    registerTreeRenderers(ext, source, runtime, index);
-    registerFileRenderers(ext, source, runtime, index);
-    registerControlsRenderers(ext, source, runtime, index);
-    registerDataTableRenderers(ext, source, runtime, index);
-    registerKanbanRenderers(ext, source, runtime, index);
-    registerPanelContributions(ext, source, runtime);
+    registerUiModel(ext, source, runtime, index);
     registerCommandPaletteResources(ext, source, runtime, index);
     registerContent(ext, source, runtime);
     registerAppearance(ext, source, runtime, index);

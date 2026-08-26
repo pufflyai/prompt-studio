@@ -4,7 +4,7 @@ import { settingsPanelResource } from "@pstdio/workbench/react";
 import { formatForDisplay } from "@tanstack/hotkeys";
 import { text } from "pstdio-extensions/workbench";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
-import { isPanelForResourceKind } from "../lib/resource-bindings";
+import { isViewForResourceKind } from "../lib/resource-bindings";
 import { contentContributionWidgetId } from "./content-contribution-panel";
 import { MenuSelect } from "./menu-select";
 
@@ -87,14 +87,14 @@ const clearResourcePanels = (workbench: WorkbenchCore) => {
 const viewItems = (props: ContributionExplorerProps) => {
   const { bench, resource, workbench } = props;
 
-  return bench.metadata.panels.map((view) => ({
+  return bench.metadata.views.map((view) => ({
     id: view.id,
     label: text(view.title, view.id),
     description: view.id,
     onActivate: () => {
-      workbench.layout.openPanel(view.id, {
+      void workbench.views.openView(view.id, {
         pinned: true,
-        resource: isPanelForResourceKind(bench.metadata, view.id, resource.kind) ? resource : undefined,
+        resource: isViewForResourceKind(bench.metadata, view.localId, resource.kind) ? resource : undefined,
         title: text(view.title, view.id),
       });
     },
@@ -104,57 +104,58 @@ const viewItems = (props: ContributionExplorerProps) => {
 const dataItems = (props: ContributionExplorerProps) => {
   const { bench, workbench } = props;
 
-  return (bench.metadata.kanbanRenderers ?? []).map((renderer) => ({
-    id: renderer.id,
-    label: text(renderer.title, renderer.id),
-    description: renderer.id,
-    onActivate: () => {
-      clearResourcePanels(workbench);
-      workbench.layout.openPanel(renderer.id, {
-        pinned: true,
-        title: text(renderer.title, renderer.id),
-      });
-    },
-  }));
+  return bench.metadata.views
+    .filter((view) => view.body.kind === "kanban")
+    .map((view) => ({
+      id: view.id,
+      label: text(view.title, view.id),
+      description: view.id,
+      onActivate: () => {
+        clearResourcePanels(workbench);
+        void workbench.views.openView(view.id, {
+          pinned: true,
+          title: text(view.title, view.id),
+        });
+      },
+    }));
 };
 
 const settingsItems = (props: ContributionExplorerProps) => {
   const { bench, workbench } = props;
 
-  return bench.metadata.settingsPanels.map((panel) => ({
-    id: panel.id,
-    label: text(panel.title, panel.id),
-    description: panel.id,
-    onActivate: () =>
-      openResource(
-        workbench,
-        settingsPanelResource({
-          id: panel.id,
-          title: text(panel.title, panel.id),
-        }),
-      ),
-  }));
+  return bench.metadata.settingsPanels.map((panel) => {
+    const view = bench.metadata.views.find((candidate) => candidate.localId === panel.view.id);
+    const title = text(view?.title, panel.id);
+    return {
+      id: panel.id,
+      label: title,
+      description: panel.id,
+      onActivate: () => openResource(workbench, settingsPanelResource({ id: panel.id, title })),
+    };
+  });
 };
 
 const routeItems = (props: ContributionExplorerProps) => {
   const { bench, workbench } = props;
 
-  return bench.metadata.routes.map((route) => ({
-    id: route.id,
-    label: text(route.label, route.id),
-    description: route.path,
-    onActivate: () => void workbench.views.openView(route.id, { pinned: true }),
-  }));
+  return bench.metadata.views
+    .filter((view) => view.path)
+    .map((view) => ({
+      id: view.id,
+      label: text(view.title, view.id),
+      description: view.path,
+      onActivate: () => void workbench.views.openView(view.id, { pinned: true }),
+    }));
 };
 
 const modeItems = (props: ContributionExplorerProps) => {
   const { bench, workbench } = props;
 
   return bench.metadata.modes.map((mode) => ({
-    id: mode.modeId,
-    label: text(mode.label, mode.modeId),
-    description: mode.modeId,
-    onActivate: () => workbench.modes.setActiveMode(mode.modeId),
+    id: mode.id,
+    label: text(mode.label, mode.id),
+    description: mode.id,
+    onActivate: () => workbench.modes.setActiveMode(mode.id),
   }));
 };
 
@@ -206,39 +207,22 @@ const commandItems = (props: ContributionExplorerProps) => {
   });
 };
 
-const treeRendererItems = (props: ContributionExplorerProps) => {
+const treeViewItems = (props: ContributionExplorerProps) => {
   const { bench, resource, workbench } = props;
 
-  return (bench.metadata.treeRenderers ?? []).map((renderer) => {
-    const view = bench.metadata.panels.find(
-      (candidate) => candidate.renderer?.kind === "tree" && candidate.renderer.id === renderer.id,
-    );
-    const widgetId = view?.id ?? `extension-testbench.tree.${renderer.id}`;
-    const title = text(view?.title ?? renderer.title, renderer.id);
-
-    return {
-      id: renderer.id,
-      label: title,
-      description: renderer.id,
-      onActivate: () => {
-        if (!view && !workbench.layout.getPanel(widgetId)) {
-          workbench.layout.registerPanel({
-            id: widgetId,
-            title,
-            region: "main-left-menu",
-            rendererId: renderer.id,
-            resourceKinds: [resource.kind],
-          });
-        }
-
-        workbench.layout.openPanel(widgetId, {
+  return bench.metadata.views
+    .filter((view) => view.body.kind === "tree")
+    .map((view) => ({
+      id: view.id,
+      label: text(view.title, view.id),
+      description: view.id,
+      onActivate: () =>
+        void workbench.views.openView(view.id, {
           pinned: true,
-          resource: !view || isPanelForResourceKind(bench.metadata, view.id, resource.kind) ? resource : undefined,
-          title,
-        });
-      },
-    };
-  });
+          resource: isViewForResourceKind(bench.metadata, view.localId, resource.kind) ? resource : undefined,
+          title: text(view.title, view.id),
+        }),
+    }));
 };
 
 const detail = (...parts: Array<string | undefined>) => parts.filter(Boolean).join(" · ");
@@ -290,14 +274,14 @@ const contributionMenus = (props: ContributionExplorerProps) => {
     { label: "Commands", items: commandItems(props) },
     { label: "Keybindings", items: keybindingItems(props) },
     { label: "Views", items: viewItems(props) },
-    { label: "Trees", items: treeRendererItems(props) },
+    { label: "Trees", items: treeViewItems(props) },
     { label: "Data", items: dataItems(props) },
     { label: "Templates", items: templateItems(props) },
     { label: "Skills", items: skillItems(props) },
     { label: "Themes", items: themeItems(props) },
     { label: "Icons", items: fileIconThemeItems(props) },
     { label: "Settings", items: settingsItems(props) },
-    { label: "Routes", items: routeItems(props) },
+    { label: "Paths", items: routeItems(props) },
     { label: "Modes", items: modeItems(props) },
     { label: "Diagnostics", items: diagnosticItems(props) },
   ];

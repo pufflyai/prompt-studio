@@ -3,7 +3,7 @@ import { allocateTicketIdentity, putTicket, ticketsCollection } from "../data/co
 import { createMemoryStorage } from "../data/memory-storage";
 import { seedDefaultStatuses } from "../data/seed";
 import type { StoredTicket } from "../data/types";
-import { makeCommandArgs, makeCommandContext } from "./command-context.fixture";
+import { commandParamsFor, makeCommandArgs, makeCommandContext } from "./command-context.fixture";
 import { implementTicketCommand } from "./implement-ticket";
 import { ticketWorkspacesCommand, ticketWorktreesListCommand } from "./ticket-workspaces";
 
@@ -60,7 +60,7 @@ describe("implementTicketCommand", () => {
       },
     });
 
-    const result = await implementTicketCommand.run(ctx, ctx.invocation.params);
+    const result = await implementTicketCommand.run(ctx, commandParamsFor(ctx));
 
     expect(result).toEqual(createSessionResource());
     expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("in-progress");

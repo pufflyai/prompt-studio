@@ -1,19 +1,18 @@
+import type { CommandDefinition } from "@pstdio/sdk/extensions";
 import { normalizeCliPath } from "../../artifacts/path-normalization";
 import type { NormalizedExtension, RuntimeCliContribution, RuntimeCommandRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
+import { contributionArray, uniqueContributions } from "./contribution-collection";
 import { asLocalizableString, isLocalizableString } from "./localizable";
 import { hasCompatibleSlotKind } from "./slot-kind";
-import { hasCompatibleWorkbenchTarget } from "./workbench-targets";
 
 const splitCommandKey = (key: string) => key.split(".");
 
 const normalizeCommandPalette = (palette: unknown): RuntimeCommandRecord["palette"] => {
-  if (palette === undefined || palette === false) return [];
-  if (palette === true) return [{}];
   if (Array.isArray(palette)) return palette.filter(isRecord) as RuntimeCommandRecord["palette"];
-  return isRecord(palette) ? ([palette] as RuntimeCommandRecord["palette"]) : [];
+  return [];
 };
 
 const exampleUsesCommandPath = (example: string, routes: string[][]) => {
@@ -58,9 +57,9 @@ const normalizeCommandCli = (
   runtime: Accumulator,
   cliKeys: Map<string, RuntimeCliContribution>,
 ): RuntimeCliContribution | undefined => {
-  if (cli === undefined || cli === false) return undefined;
+  if (!isRecord(cli)) return undefined;
 
-  const customPath = isRecord(cli) && Array.isArray(cli.path) ? (cli.path as string[]) : splitCommandKey(localId);
+  const customPath = Array.isArray(cli.path) ? (cli.path as string[]) : splitCommandKey(localId);
   const normalized = normalizeCliPath(customPath);
   if (!normalized) return undefined;
 
@@ -72,16 +71,14 @@ const normalizeCommandCli = (
     name: ext.name,
     path: normalized.segments,
     pathKey,
-    description: isRecord(cli) ? asLocalizableString(cli.description) : undefined,
-    examples:
-      isRecord(cli) && Array.isArray(cli.examples)
-        ? cli.examples.filter((example): example is string => typeof example === "string")
-        : undefined,
-    hidden: isRecord(cli) && typeof cli.hidden === "boolean" ? cli.hidden : undefined,
-    globalAliases:
-      isRecord(cli) && Array.isArray(cli.globalAliases)
-        ? (cli.globalAliases as string[][]).filter((alias) => Array.isArray(alias))
-        : undefined,
+    description: asLocalizableString(cli.description),
+    examples: Array.isArray(cli.examples)
+      ? cli.examples.filter((example): example is string => typeof example === "string")
+      : undefined,
+    hidden: typeof cli.hidden === "boolean" ? cli.hidden : undefined,
+    globalAliases: Array.isArray(cli.globalAliases)
+      ? (cli.globalAliases as string[][]).filter((alias) => Array.isArray(alias))
+      : undefined,
   };
   validateCliExamples(ext, source, commandId, contribution, runtime);
 
@@ -135,8 +132,17 @@ export const registerCommands = (
   runtime: Accumulator,
   index: RegistryIndex,
 ) => {
-  for (const [localId, command] of Object.entries(source.definition.commands ?? {})) {
-    const commandId = `${ext.name}.${localId}`;
+  const definitions = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "command",
+    contributions: contributionArray<CommandDefinition>(source.definition.commands),
+  });
+
+  for (const command of definitions) {
+    const localId = command.id;
+    const commandId = `${ext.id}.command.${localId}`;
 
     if (!isRecord(command) || !isLocalizableString(command.title) || typeof command.run !== "function") {
       runtime.diagnostics.push(
@@ -155,16 +161,6 @@ export const registerCommands = (
 
     const menus = (Array.isArray(command.menus) ? command.menus : []).filter((menu, index) => {
       if (!isRecord(menu)) return false;
-      if (typeof menu.target === "string") {
-        return hasCompatibleWorkbenchTarget({
-          runtime,
-          source: { extensionId: ext.id, sourcePath: source.sourcePath },
-          expected: "menu",
-          target: menu.target,
-          contributionId: `${commandId}.menu.${index}`,
-        });
-      }
-
       return hasCompatibleSlotKind({
         runtime,
         source: { extensionId: ext.id, sourcePath: source.sourcePath },

@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import type { FileIconThemeContribution, ThemeContribution } from "@pstdio/sdk/extensions";
 import { isPackageAssetDescriptor } from "../../artifacts/asset-validation";
 import { PackageAssetError, resolvePackageAsset } from "../../artifacts/package-assets";
 import type {
@@ -11,6 +12,7 @@ import type {
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
+import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { collectIconFontAssets } from "./icon-fonts";
 import { asLocalizableString, isLocalizableString } from "./localizable";
 
@@ -194,7 +196,15 @@ const registerThemes = (
   runtime: Accumulator,
   index: RegistryIndex,
 ) => {
-  for (const [localId, contribution] of Object.entries(source.definition.themes ?? {})) {
+  const contributions = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "theme",
+    contributions: contributionArray<ThemeContribution>(source.definition.themes),
+  });
+  for (const contribution of contributions) {
+    const localId = contribution.id;
     if (!isRecord(contribution) || !isLocalizableString(contribution.title)) {
       continue;
     }
@@ -211,7 +221,8 @@ const registerThemes = (
     const asset = validateContributionAsset(ext, source, runtime, localId, contribution.source, "theme");
     if (!asset) continue;
     const parsedTheme = readThemeAsset(ext, source, runtime, localId, asset.path);
-    const id = `${ext.name}.${localId}`;
+    const base = contributionRecordBase(ext, source, "theme", localId);
+    const id = base.id;
     const mode = inferMode(parsedTheme, contribution.mode);
     if (index.themeIds.has(id)) {
       addAppearanceDiagnostic(runtime, {
@@ -224,11 +235,7 @@ const registerThemes = (
     }
 
     const record: RuntimeThemeRecord = {
-      id,
-      localId,
-      extensionId: ext.id,
-      name: ext.name,
-      sourcePath: source.sourcePath,
+      ...base,
       title: contribution.title,
       ...(asLocalizableString(contribution.description)
         ? { description: asLocalizableString(contribution.description) }
@@ -283,7 +290,15 @@ const registerFileIconThemes = (
   runtime: Accumulator,
   index: RegistryIndex,
 ) => {
-  for (const [localId, contribution] of Object.entries(source.definition.fileIconThemes ?? {})) {
+  const contributions = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "file-icon-theme",
+    contributions: contributionArray<FileIconThemeContribution>(source.definition.fileIconThemes),
+  });
+  for (const contribution of contributions) {
+    const localId = contribution.id;
     if (!isRecord(contribution) || !isLocalizableString(contribution.title)) {
       continue;
     }
@@ -300,7 +315,8 @@ const registerFileIconThemes = (
     const asset = validateContributionAsset(ext, source, runtime, localId, contribution.source, "file_icon_theme");
     if (!asset) continue;
     const parsedTheme = readFileIconThemeAsset(ext, source, runtime, localId, asset.path);
-    const id = `${ext.name}.${localId}`;
+    const base = contributionRecordBase(ext, source, "file-icon-theme", localId);
+    const id = base.id;
     const fonts = resolveFileIconThemeFonts(ext, source, runtime, id, asset?.path ?? null, parsedTheme);
     if (index.fileIconThemeIds.has(id)) {
       addAppearanceDiagnostic(runtime, {
@@ -313,11 +329,7 @@ const registerFileIconThemes = (
     }
 
     const record: RuntimeFileIconThemeRecord = {
-      id,
-      localId,
-      extensionId: ext.id,
-      name: ext.name,
-      sourcePath: source.sourcePath,
+      ...base,
       title: contribution.title,
       ...(asLocalizableString(contribution.description)
         ? { description: asLocalizableString(contribution.description) }

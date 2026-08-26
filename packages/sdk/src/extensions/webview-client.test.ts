@@ -6,12 +6,14 @@ import { createWebviewClient } from "./webview-client";
 
 const commands = {
   "ticketStatus.read": defineCommand({
+    id: "ticketStatus.read",
     title: "Read ticket statuses",
     async run(_ctx, _commandParams) {
       return { statuses: ["todo"] };
     },
   }),
   "ticketStatus.create": defineCommand({
+    id: "ticketStatus.create",
     title: "Create ticket status",
     params: { label: params.text({ required: true }) },
     async run(_ctx, commandParams) {
@@ -57,7 +59,7 @@ describe("createWebviewClient commands", () => {
     expect(calls).toEqual([
       {
         method: "commands.execute",
-        params: { commandId: "pstdio-planner.ticketStatus.read", params: undefined },
+        params: { commandId: "pstdio-planner.command.ticketStatus.read", params: undefined },
       },
     ]);
   });
@@ -70,7 +72,7 @@ describe("createWebviewClient commands", () => {
 
     expect(created).toEqual({ id: "todo" });
     expect(calls[0]?.params).toEqual({
-      commandId: "pstdio-planner.ticketStatus.create",
+      commandId: "pstdio-planner.command.ticketStatus.create",
       params: { label: "Todo" },
     });
   });
@@ -91,7 +93,7 @@ describe("createWebviewClient commands", () => {
 
     await client.commands["ticketStatus.read"]();
 
-    expect(calls[0]?.params).toEqual({ commandId: "test-extension.ticketStatus.read", params: undefined });
+    expect(calls[0]?.params).toEqual({ commandId: "test-extension.command.ticketStatus.read", params: undefined });
   });
 
   test("throws when no extension id is available", () => {

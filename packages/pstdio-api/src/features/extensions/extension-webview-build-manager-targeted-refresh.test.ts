@@ -32,10 +32,10 @@ const writeExtension = (root: string) => {
   writeFileSync(
     join(root, "extension.ts"),
     `export default {
-      routes: {
-        first: { path: "first", label: "first", webview: { entry: { kind: "package-asset", path: "./src/first.tsx", baseUrl: import.meta.url } } },
-        second: { path: "second", label: "second", webview: { entry: { kind: "package-asset", path: "./src/second.tsx", baseUrl: import.meta.url } } },
-      },
+      views: [
+        { id: "first", title: "first", body: { kind: "webview", entry: { kind: "package-asset", path: "./src/first.tsx", baseUrl: import.meta.url } } },
+        { id: "second", title: "second", body: { kind: "webview", entry: { kind: "package-asset", path: "./src/second.tsx", baseUrl: import.meta.url } } },
+      ],
     };`,
   );
 };
@@ -57,13 +57,11 @@ const writeSingleWebviewExtension = (root: string) => {
   writeFileSync(
     join(root, "extension.ts"),
     `export default {
-      routes: {
-        labPage: {
-          path: "labPage",
-          label: "labPage",
-          webview: { entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: import.meta.url } },
-        },
-      },
+      views: [{
+        id: "labPage",
+        title: "labPage",
+        body: { kind: "webview", entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: import.meta.url } },
+      }],
     };`,
   );
 };
@@ -148,7 +146,7 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
       );
       releaseInitialFirst();
       await waitFor(
-        () => existsSync(join(root, "cache/extension-lab/lab.first/dist")),
+        () => existsSync(join(root, "cache/extension-lab/pstdio.lab.view.first/dist")),
         "First build was not published.",
       );
 
@@ -201,7 +199,7 @@ describe("createExtensionWebviewBuildManager targeted refresh scheduling", () =>
       const targetedRefresh = manager.refresh(sourcePath);
       await waitFor(() => runCount === 1, "Timed out waiting for targeted build.");
 
-      writeFileSync(join(sourcePath, "extension.ts"), "export default { routes: ;");
+      writeFileSync(join(sourcePath, "extension.ts"), "export default { views: ;");
       sourceHash = "hash-2";
       const registrationRefresh = manager.refresh();
       releaseBuild();

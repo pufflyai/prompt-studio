@@ -18,7 +18,7 @@ import {
 } from "./helpers/session-follow-up";
 
 const requiresClaude = process.env.E2E_AGENTS === "claude-code";
-const claudeAgentId = "pstdio.harness-claude-code.claude-code";
+const claudeAgentId = "pstdio.harness-claude-code.harness.claude-code";
 
 test.describe("Claude follow-up ordering repro", () => {
   let projectId: string;

@@ -1,27 +1,25 @@
-import { commandRef, defineExtension, l10n, packageAsset, sessionEvents } from "@pstdio/sdk/extensions";
+import {
+  defineCommandPaletteResource,
+  defineExtension,
+  defineHook,
+  defineSkill,
+  defineTemplate,
+  defineTemplateType,
+  l10n,
+  packageAsset,
+  sessionEvents,
+} from "@pstdio/sdk/extensions";
 import { documentTemplates, sharedPromptTemplates } from "./extension-assets";
 import { plannerCommands } from "./src/commands";
-import { archiveTicketColumnAction } from "./src/commands/archive-ticket";
-import { getTicketContent } from "./src/commands/get-ticket-content";
-import { queryTickets } from "./src/commands/query-tickets";
-import { reorderTicket } from "./src/commands/reorder-ticket";
-import { saveTicketContent } from "./src/commands/save-ticket-content";
-import { setTicketAttribute } from "./src/commands/set-ticket-attribute";
-import { listTicketFilesTree } from "./src/commands/ticket-files";
-import { queryTicketProperties } from "./src/commands/ticket-properties/query";
-import { updateTicketProperty } from "./src/commands/ticket-properties/update";
-import { cleanupLegacyWorkspaceStatus } from "./src/data/cleanup-legacy-workspace-status";
-import {
-  buildTicketAttributes,
-  TICKET_ARCHIVE_STATE_ACTIVE,
-  TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
-} from "./src/data/mappers";
+import { queryTicketResources } from "./src/commands/query-ticket-resources";
 import { findTicket } from "./src/data/resolve";
-import { seedDefaultStatuses, seedDefaultTags } from "./src/data/seed";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
-import { plannerTicketsChanged } from "./src/events";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { notifyBlocked } from "./src/planner-notifications";
+import { ticketStatuses } from "./src/ticket-status-provider";
+import { createPlannerUi, plannerSettingsSection, ticketResourceKind } from "./src/ui-contributions";
+
+const plannerUi = createPlannerUi(import.meta.url);
 
 export default defineExtension({
   settings: {
@@ -47,341 +45,117 @@ export default defineExtension({
   },
 
   commands: plannerCommands,
+  views: plannerUi.views,
+  viewMenus: plannerUi.viewMenus,
+  placements: plannerUi.placements,
+  resourceKinds: [ticketResourceKind],
+  resourceViews: plannerUi.resourceViews,
+  navigationItems: plannerUi.navigationItems,
+  settingsPanels: plannerUi.settingsPanels,
+  statuses: [ticketStatuses],
 
-  settingsSections: {
-    planner: {
-      title: l10n("settingsSections.planner.title", "Planner"),
-      scope: "project",
-      order: 30,
-    },
-  },
+  settingsSections: [plannerSettingsSection],
 
-  settingsPanels: {
-    ticketStatuses: {
-      title: l10n("settingsPanels.ticketStatuses.title", "Ticket status"),
-      target: "workbench.settings",
-      scope: "project",
-      section: "planner",
-      icon: "list-checks",
-      webview: {
-        entry: packageAsset("./src/views/settings-panel.tsx", import.meta.url),
-        capabilities: ["commands.execute"],
-      },
-    },
-    ticketTags: {
-      title: l10n("settingsPanels.ticketTags.title", "Ticket tags"),
-      target: "workbench.settings",
-      scope: "project",
-      section: "planner",
-      icon: "tag",
-      webview: {
-        entry: packageAsset("./src/views/tags-settings-panel.tsx", import.meta.url),
-        capabilities: ["commands.execute"],
-      },
-    },
-  },
-
-  // Automation-driven session behavior and recurring scheduling live in the
-  // repo-local pstdio-planner-loops extension; the planner keeps only hooks that
-  // maintain planner-owned data and notifications.
-  hooks: {
-    worktreeCreated: worktreeCreatedHook,
-    sessionAwaitingInput: {
+  hooks: [
+    worktreeCreatedHook,
+    defineHook({
+      id: "session-awaiting-input",
       event: sessionEvents.awaitingInput,
-      async handler(ctx, payload) {
+      async run(ctx, payload) {
         const ticketRef = ticketRefFromLifecyclePayload(payload);
         const ticket = ticketRef ? await findTicket(ctx.storage, ticketRef) : null;
         if (ticket) await notifyBlocked(ctx, ticket, payload.sessionId);
       },
-    },
-  },
+    }),
+  ],
 
-  commandPaletteResources: {
-    tickets: {
+  commandPaletteResources: [
+    defineCommandPaletteResource({
+      id: "tickets",
       title: l10n("commandPaletteResources.tickets.title", "Tickets"),
-      resourceKind: "ticket",
-      queryCommand: commandRef("pstdio-planner.query-ticket-resources"),
-    },
-  },
+      resourceKind: ticketResourceKind.ref,
+      query: queryTicketResources,
+    }),
+  ],
 
-  treeItems: {
-    tickets: {
-      target: "workbench.left.tree",
-      label: l10n("kanbanRenderers.tickets.title", "Tickets"),
-      icon: "square-kanban",
-      // Tickets is a root item, not an entry under an "Extensions" heading.
-      group: null,
-      placement: "first",
-      action: { kind: "view", viewId: "pstdio-planner.tickets" },
-    },
-  },
+  templateTypes: [
+    defineTemplateType({ id: "ticket", label: "Ticket", description: "Ticket templates" }),
+    defineTemplateType({ id: "prompt", label: "Prompt", description: "Prompt templates" }),
+    defineTemplateType({ id: "document", label: "Document", description: "Document templates" }),
+  ],
 
-  // Reusable properties renderer: serializable params rendered natively through the host
-  // ParamEditor; status/tags edit live and references render as resource tags. A panel
-  // (below) places it into the right panel for the open ticket.
-  controlsRenderers: {
-    ticketProperties: {
-      title: l10n("controls.ticketProperties.title", "Properties"),
-      query: (ctx, input) => queryTicketProperties(ctx, input.renderer.resource),
-      onValueChange: (ctx, input) => updateTicketProperty(ctx, input.renderer.resource, input),
-      refreshEvents: [plannerTicketsChanged],
-      emptyTitle: l10n("controls.ticketProperties.emptyTitle", "No ticket selected"),
-    },
-  },
-  kanbanRenderers: {
-    tickets: {
-      title: l10n("kanbanRenderers.tickets.title", "Tickets"),
-      resourceKind: "ticket",
-      attributes: buildTicketAttributes([]),
-      query: queryTickets,
-      refreshEvents: [plannerTicketsChanged],
-      onRowActivate: (_ctx, { row }) =>
-        row.resource ? { kind: "resource", resource: row.resource, input: { strategy: "replace-active" } } : undefined,
-      onAttributeChange: setTicketAttribute,
-      onReorder: reorderTicket,
-      onColumnAction: archiveTicketColumnAction,
-      defaultFilters: { [TICKET_ARCHIVE_STATE_ATTRIBUTE_ID]: [TICKET_ARCHIVE_STATE_ACTIVE] },
-      createRow: {
-        command: commandRef("pstdio-planner.create-ticket"),
-        columnParam: "statusId",
-        title: l10n("kanbanRenderers.tickets.createRow.title", "New ticket"),
-        submitLabel: l10n("kanbanRenderers.tickets.createRow.submitLabel", "Create ticket"),
-        // Declared literally rather than via params.markdown()/params.files():
-        // the builders ship in @pstdio/sdk > 0.15.0, and this extension resolves
-        // the published SDK at runtime. Swap to the builders after that release.
-        params: {
-          content: {
-            type: "markdown",
-            label: l10n("kanbanRenderers.tickets.createRow.content.label", "Description"),
-            placeholder: l10n("kanbanRenderers.tickets.createRow.content.placeholder", "Describe the ticket..."),
-            required: true,
-          },
-          files: {
-            type: "files",
-            label: l10n("kanbanRenderers.tickets.createRow.attachments.label", "Attach files"),
-            multiple: true,
-          },
-        },
-        attributesParam: "attributes",
-        attachments: {
-          command: commandRef("pstdio-planner.attach-file"),
-          resourceParam: "ticketId",
-          fileParam: "ref",
-        },
-        labels: {
-          cancel: l10n("kanbanRenderers.tickets.createRow.cancel", "Cancel"),
-          properties: l10n("kanbanRenderers.tickets.createRow.properties", "Properties"),
-          submitError: l10n("kanbanRenderers.tickets.createRow.submitError", "Could not create ticket"),
-          removeFile: l10n("kanbanRenderers.tickets.createRow.removeFile", "Remove file"),
-        },
-      },
-      rowActions: [
-        {
-          id: "create-workspace",
-          label: l10n("kanbanRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
-          icon: "git-branch",
-          command: commandRef("pstdio-planner.create-workspace"),
-        },
-        {
-          id: "run-attempt",
-          label: l10n("kanbanRenderers.tickets.rowActions.runAttempt", "Run attempt"),
-          icon: "play",
-          command: commandRef("pstdio-planner.run-attempt"),
-        },
-        {
-          id: "refine-ticket",
-          label: l10n("kanbanRenderers.tickets.rowActions.refineTicket", "Refine ticket"),
-          icon: "sparkles",
-          command: commandRef("pstdio-planner.refine-ticket"),
-        },
-        {
-          id: "break-into-sub-tickets",
-          label: l10n("kanbanRenderers.tickets.rowActions.breakIntoSubTickets", "Break into sub-tickets"),
-          icon: "list-tree",
-          command: commandRef("pstdio-planner.break-into-sub-tickets"),
-        },
-        {
-          id: "archive",
-          label: l10n("kanbanRenderers.tickets.rowActions.archive", "Archive"),
-          icon: "archive",
-          command: commandRef("pstdio-planner.archive-ticket"),
-        },
-        {
-          id: "delete",
-          label: l10n("kanbanRenderers.tickets.rowActions.delete", "Delete"),
-          icon: "trash",
-          destructive: true,
-          command: commandRef("pstdio-planner.delete-ticket"),
-        },
-      ],
-      defaultSettings: {
-        viewMode: "board",
-        columnGrouping: "status",
-        rowGrouping: "none",
-        ordering: { attributeId: "created", direction: "desc" },
-        displayProperties: ["id", "workspace", "type", "priority"],
-      },
-      emptyTitle: l10n("kanbanRenderers.tickets.emptyTitle", "No tickets yet"),
-      emptyDescription: l10n(
-        "kanbanRenderers.tickets.emptyDescription",
-        "Create a ticket to start tracking work for this project.",
-      ),
-    },
-  },
-
-  // The ticket resource owns its extension points: the editor holds the primary
-  // location, the files tree owns navigation, and the properties menu rides on the
-  // editor panel. Other extensions may add inspectors.
-  //
-  // A ticket is a resource, not a mode. Opening one keeps the workbench the user is in,
-  // so each bound panel lands in the region it supports and the project's own chrome
-  // stays put. Declaring a ticket mode instead made opening a ticket reshape the
-  // workbench and lose that chrome.
-  resourceKinds: {
-    ticket: {
-      surface: "primary",
-      label: l10n("resourceKinds.ticket.label", "Ticket"),
-      icon: "component",
-      slots: {
-        primary: { cardinality: "one", external: false },
-        navigation: { cardinality: "one", external: true },
-        inspector: { cardinality: "many", external: true },
-      },
-    },
-  },
-
-  fileRenderers: {
-    // Ticket editor, rendered natively by the host (no webview). Bound to the one
-    // `ticket` resource; the files tree picks which document it shows.
-    ticketContent: {
-      title: l10n("fileRenderers.ticketContent.title", "Ticket"),
-      resourceKind: "ticket",
-      load: (ctx, input) => getTicketContent(ctx, { resource: input.renderer.resource }),
-      refreshEvents: [plannerTicketsChanged],
-      save: (ctx, input) => saveTicketContent(ctx, { content: input.content, resource: input.renderer.resource }),
-    },
-  },
-
-  panels: {
-    tickets: {
-      title: l10n("kanbanRenderers.tickets.title", "Tickets"),
-      path: "tickets",
-      show: { region: "main" },
-      renderer: { kind: "kanban", id: "tickets" },
-    },
-    ticketEditor: {
-      title: l10n("panels.ticketEditor.title", "Ticket"),
-      show: { for: "ticket", region: "main", required: true },
-      renderer: { kind: "file", id: "ticketContent" },
-      panelMenus: {
-        properties: {
-          title: l10n("panels.ticketProperties.title", "Properties"),
-          side: "right",
-          renderer: { kind: "controls", id: "ticketProperties" },
-        },
-      },
-    },
-    // Files tree in the selected ticket's Sidenav resource section. Selecting a node
-    // rebinds the editor to the ticket resource with the chosen document metadata.
-    ticketFiles: {
-      title: l10n("panels.ticketFiles.title", "Files"),
-      show: { for: "ticket", region: "sidenav", required: true },
-      renderer: { kind: "tree", id: "ticketFiles" },
-    },
-  },
-
-  treeRenderers: {
-    ticketFiles: {
-      title: l10n("treeRenderers.ticketFiles.title", "Files"),
-      icon: "Files",
-      body: listTicketFilesTree,
-      refreshEvents: [plannerTicketsChanged],
-      defaultExpandedSectionIds: ["files", "sub-tickets", "workspaces", "sessions"],
-    },
-  },
-
-  async initialSetup(ctx) {
-    await cleanupLegacyWorkspaceStatus(ctx.storage);
-    await seedDefaultStatuses(ctx.storage);
-    await seedDefaultTags(ctx.storage);
-  },
-
-  async migrate(ctx) {
-    await cleanupLegacyWorkspaceStatus(ctx.storage);
-  },
-
-  templateTypes: {
-    ticket: {
-      label: "Ticket",
-      description: "Ticket templates",
-    },
-    prompt: {
-      label: "Prompt",
-      description: "Prompt templates",
-    },
-    document: {
-      label: "Document",
-      description: "Document templates",
-    },
-  },
-
-  templates: {
+  templates: [
     ...documentTemplates,
-    ticket: {
+    defineTemplate({
+      id: "ticket",
       title: "Ticket",
       type: "ticket",
       source: packageAsset("./templates/tickets/ticket.ticket.md", import.meta.url),
-    },
-    bug_fix: {
+    }),
+    defineTemplate({
+      id: "bug_fix",
       title: "Bug fix",
       type: "ticket",
       source: packageAsset("./templates/tickets/bug-fix.ticket.md", import.meta.url),
-    },
-    proposal: {
+    }),
+    defineTemplate({
+      id: "proposal",
       title: "Proposal",
       type: "ticket",
       source: packageAsset("./templates/tickets/proposal.ticket.md", import.meta.url),
-    },
-    create_sub_tickets: {
+    }),
+    defineTemplate({
+      id: "create_sub_tickets",
       title: "Create sub-tickets",
       type: "prompt",
       source: packageAsset("./templates/prompts/create-sub-tickets.prompt.md", import.meta.url),
-    },
-    implement_ticket: {
+    }),
+    defineTemplate({
+      id: "implement_ticket",
       title: "Implement ticket",
       type: "prompt",
       source: packageAsset("./templates/prompts/implement-ticket.prompt.md", import.meta.url),
-    },
-    refine_ticket: {
+    }),
+    defineTemplate({
+      id: "refine_ticket",
       title: "Refine ticket",
       type: "prompt",
       source: packageAsset("./templates/prompts/refine-ticket.prompt.md", import.meta.url),
-    },
-    review_code: {
+    }),
+    defineTemplate({
+      id: "review_code",
       title: "Review code",
       type: "prompt",
       source: packageAsset("./templates/prompts/review-code.prompt.md", import.meta.url),
-    },
+    }),
     ...sharedPromptTemplates,
-  },
+  ],
 
-  skills: {
-    create_proposal: { title: "Create a proposal", source: packageAsset("./skills/create-proposal", import.meta.url) },
-    create_sub_tickets: {
+  skills: [
+    defineSkill({
+      id: "create_proposal",
+      title: "Create a proposal",
+      source: packageAsset("./skills/create-proposal", import.meta.url),
+    }),
+    defineSkill({
+      id: "create_sub_tickets",
       title: "Create sub-tickets",
       source: packageAsset("./skills/create-sub-tickets", import.meta.url),
-    },
-    create_ticket: {
+    }),
+    defineSkill({
+      id: "create_ticket",
       title: "Create a ticket",
       source: packageAsset("./skills/create-ticket", import.meta.url),
-    },
-    implement_ticket: {
+    }),
+    defineSkill({
+      id: "implement_ticket",
       title: "Implement a ticket",
       source: packageAsset("./skills/implement-ticket", import.meta.url),
-    },
-    refine_ticket: {
+    }),
+    defineSkill({
+      id: "refine_ticket",
       title: "Refine a ticket",
       source: packageAsset("./skills/refine-ticket", import.meta.url),
-    },
-  },
+    }),
+  ],
 });

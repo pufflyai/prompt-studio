@@ -6,7 +6,7 @@ import { listTicketFilesTreeCommand } from "./ticket-files";
 
 const treeParams = (ticket: { id: string; shorthand: string }) => ({
   renderer: {
-    rendererId: "pstdio-planner.ticketFiles",
+    rendererId: "pstdio.pstdio-planner.view.ticket-files",
     resource: { type: "ticket", id: ticket.id, label: ticket.shorthand },
   },
 });
@@ -109,7 +109,7 @@ describe("ticket files tree workspace metadata", () => {
                   label: `${parent.shorthand} Parent`,
                   metadata: {
                     shorthand: parent.shorthand,
-                    resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+                    resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
                   },
                 },
               },

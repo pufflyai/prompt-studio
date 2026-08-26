@@ -25,15 +25,7 @@ const findDuplicateKeybinding = (existing: ExtensionKeybindingRecord[], binding:
   return undefined;
 };
 
-export const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCheckResponse) => {
-  target.errorCount += source.errorCount;
-  target.warningCount += source.warningCount;
-  target.extensions.push(...source.extensions);
-  target.commands.push(...source.commands);
-  target.middlewares.push(...source.middlewares);
-  target.hooks.push(...source.hooks);
-  target.schedules.push(...source.schedules);
-  target.artifactMounts.push(...source.artifactMounts);
+const mergeThemes = (target: ExtensionsCheckResponse, source: ExtensionsCheckResponse) => {
   for (const theme of source.themes) {
     if (target.themes.some((candidate) => candidate.id === theme.id)) {
       addDiagnostic(target, {
@@ -46,6 +38,9 @@ export const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCh
     }
     target.themes.push(theme);
   }
+};
+
+const mergeFileIconThemes = (target: ExtensionsCheckResponse, source: ExtensionsCheckResponse) => {
   for (const theme of source.fileIconThemes) {
     if (target.fileIconThemes.some((candidate) => candidate.id === theme.id)) {
       addDiagnostic(target, {
@@ -58,36 +53,27 @@ export const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCh
     }
     target.fileIconThemes.push(theme);
   }
-  target.menuContributions.push(...source.menuContributions);
-  target.commandPaletteContributions.push(...source.commandPaletteContributions);
+};
+
+const mergeModes = (target: ExtensionsCheckResponse, source: ExtensionsCheckResponse) => {
   for (const mode of source.modes) {
-    if (
-      reservedDashboardModeIds.has(mode.modeId) ||
-      target.modes.some((candidate) => candidate.modeId === mode.modeId)
-    ) {
+    if (reservedDashboardModeIds.has(mode.id) || target.modes.some((candidate) => candidate.id === mode.id)) {
       addDiagnostic(target, {
         code: "extension_mode_duplicate",
         extensionId: mode.extensionId,
-        message: `Extension "${mode.extensionId}" declares duplicate workbench mode "${mode.modeId}"`,
+        message: `Extension "${mode.extensionId}" declares duplicate workbench mode "${mode.id}"`,
         severity: "error",
-        metadata: { modeId: mode.modeId },
+        metadata: { modeId: mode.id },
       });
       continue;
     }
     target.modes.push(mode);
   }
-  target.panels.push(...source.panels);
-  target.routes.push(...source.routes);
-  target.treeItems.push(...source.treeItems);
-  target.treeRenderers.push(...source.treeRenderers);
-  target.fileRenderers.push(...source.fileRenderers);
-  target.controlsRenderers.push(...source.controlsRenderers);
-  target.settingsPanels.push(...source.settingsPanels);
-  target.kanbanRenderers.push(...source.kanbanRenderers);
-  target.dataTableRenderers?.push(...(source.dataTableRenderers ?? []));
-  target.commandPaletteResources.push(...source.commandPaletteResources);
-  for (const binding of source.keybindings) {
-    const duplicate = findDuplicateKeybinding(target.keybindings, binding);
+};
+
+const mergeKeybindings = (target: ExtensionsCheckResponse, source: ExtensionsCheckResponse) => {
+  for (const binding of source.keybindings ?? []) {
+    const duplicate = findDuplicateKeybinding(target.keybindings ?? [], binding);
     if (duplicate) {
       addDiagnostic(target, {
         code: "duplicate_keybinding_chord",
@@ -105,8 +91,38 @@ export const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCh
       });
       continue;
     }
-    target.keybindings.push(binding);
+    target.keybindings?.push(binding);
   }
+};
+
+export const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCheckResponse) => {
+  target.errorCount += source.errorCount;
+  target.warningCount += source.warningCount;
+  target.extensions.push(...source.extensions);
+  target.commands.push(...source.commands);
+  target.middlewares.push(...source.middlewares);
+  target.hooks.push(...source.hooks);
+  target.schedules.push(...source.schedules);
+  target.artifactMounts.push(...source.artifactMounts);
+  mergeThemes(target, source);
+  mergeFileIconThemes(target, source);
+  target.menuContributions.push(...source.menuContributions);
+  target.commandPaletteContributions?.push(...(source.commandPaletteContributions ?? []));
+  mergeModes(target, source);
+  target.views.push(...source.views);
+  target.viewMenus.push(...source.viewMenus);
+  target.placements.push(...source.placements);
+  target.resourceKinds.push(...source.resourceKinds);
+  target.resourceViews.push(...source.resourceViews);
+  target.resourceHierarchyProviders?.push(...(source.resourceHierarchyProviders ?? []));
+  target.navigationItems.push(...source.navigationItems);
+  target.statusBarItems.push(...source.statusBarItems);
+  target.statuses.push(...source.statuses);
+  target.activityItems?.push(...(source.activityItems ?? []));
+  target.settingsSections?.push(...(source.settingsSections ?? []));
+  target.settingsPanels.push(...source.settingsPanels);
+  target.commandPaletteResources?.push(...(source.commandPaletteResources ?? []));
+  mergeKeybindings(target, source);
   target.settingsDefinitions?.push(...(source.settingsDefinitions ?? []));
   target.templates.push(...source.templates);
   target.skills.push(...source.skills);

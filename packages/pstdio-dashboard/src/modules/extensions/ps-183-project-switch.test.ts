@@ -131,7 +131,7 @@ describe("PS-183 project-switch extension refresh", () => {
 
         expect(harness.loadMetadata).toHaveBeenCalledTimes(1);
         expect(harness.loadAppearance).toHaveBeenCalledTimes(1);
-        expect(harness.contributionApplications).toHaveLength(2);
+        expect(harness.contributionApplications).toHaveLength(1);
         expect(harness.contributionApplications.every((id) => id.includes("project-b"))).toBe(true);
         expect(harness.sidenavRefreshes).toHaveLength(1);
       } finally {
@@ -162,7 +162,7 @@ describe("PS-183 project-switch extension refresh", () => {
       await harness.settleProject("project-c", "appearance-first");
 
       expect(getCachedDashboardExtensionMetadata("project-c")).toBeDefined();
-      expect(harness.contributionApplications).toHaveLength(2);
+      expect(harness.contributionApplications).toHaveLength(1);
       expect(harness.contributionApplications.every((id) => id.includes("project-c"))).toBe(true);
       expect(harness.sidenavRefreshes).toHaveLength(1);
     } finally {

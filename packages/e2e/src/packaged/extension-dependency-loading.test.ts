@@ -38,7 +38,7 @@ describe("packaged pstdio — extension dependency loading", () => {
         expect(checks.reduce((total, check) => total + check.warningCount, 0)).toBe(0);
         expect(checks.flatMap((check) => check.extensions).map((extension) => extension.name)).toContain("dep-ext");
         expect(checks.flatMap((check) => check.templates).map((template) => template.id)).toContain(
-          "dep-ext.packagedAsset",
+          "test.dep-ext.template.packagedAsset",
         );
       } finally {
         rmSync(home, { recursive: true, force: true });

@@ -5,6 +5,7 @@ import { findTicket } from "../data/resolve";
 // `pst tickets implement`: move the ticket to in-progress in extension storage and
 // launch the implementation agent through the host session capability.
 export const implementTicketCommand = defineCommand({
+  id: "implement-ticket",
   title: "Implement ticket",
   cli: { globalAliases: [["tickets", "implement"]], examples: ["pstdio tickets implement --id PS-1"] },
   params: {

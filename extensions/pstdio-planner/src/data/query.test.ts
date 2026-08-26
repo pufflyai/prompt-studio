@@ -32,7 +32,7 @@ const makeWorkspace = (overrides: Partial<ExtensionWorkspace> & { id: string }):
       label: "T-1",
       metadata: {
         shorthand: "T-1",
-        resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+        resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
       },
     },
   ],
@@ -43,7 +43,7 @@ const makeWorkspace = (overrides: Partial<ExtensionWorkspace> & { id: string }):
 });
 
 describe("runTicketsQuery", () => {
-  test("returns visible ticket rows, status attributes, and board column configs", async () => {
+  test("returns visible ticket rows and a typed status reference", async () => {
     const storage = createMemoryStorage();
     const statuses = await seedDefaultStatuses(storage);
     const todo = statuses.find((status) => status.isDefault)!;
@@ -55,33 +55,32 @@ describe("runTicketsQuery", () => {
 
     expect(result.rows.map((row) => row.title)).toEqual(["First", "Second"]);
     expect(result.attributes?.some((attribute) => attribute.id === "status")).toBe(true);
-    expect(Object.keys(result.boardColumnConfigs ?? {})).toContain(todo.id);
+    expect(result.attributes?.find((attribute) => attribute.id === "status")?.type).toEqual({
+      kind: "status",
+      statuses: { kind: "status", id: "ticket-statuses" },
+    });
+    expect(result.boardColumnConfigs).toBeUndefined();
   });
 
-  test("seeds default statuses when the project has none yet", async () => {
+  test("leaves status ownership with the provider when storage is empty", async () => {
     const storage = createMemoryStorage();
     // No explicit seed — the board must still get status columns.
     await putTicket(storage, makeTicket({ shorthand: "T-1" }));
 
     const result = await runTicketsQuery({ storage, projectId: "proj-1" });
 
-    const statusOptions = result.attributes?.find((attribute) => attribute.id === "status");
-    expect(statusOptions?.type.kind).toBe("enum");
-    expect(Object.keys(result.boardColumnConfigs ?? {}).length).toBeGreaterThan(0);
+    expect(result.attributes?.find((attribute) => attribute.id === "status")?.type).toEqual({
+      kind: "status",
+      statuses: { kind: "status", id: "ticket-statuses" },
+    });
+    expect(result.boardColumnConfigs).toBeUndefined();
   });
 
-  test("exposes only backlog as a creatable default board column", async () => {
+  test("does not copy workflow behavior into board column configs", async () => {
     const storage = createMemoryStorage();
 
     const result = await runTicketsQuery({ storage, projectId: "proj-1" });
-    const configs = result.boardColumnConfigs ?? {};
-
-    expect(configs.backlog?.canCreate).toBe(true);
-    expect(
-      Object.entries(configs)
-        .filter(([statusId]) => statusId !== "backlog")
-        .every(([, config]) => config.canCreate === false),
-    ).toBe(true);
+    expect(result.boardColumnConfigs).toBeUndefined();
   });
 
   test("exposes default display property attributes", async () => {
@@ -163,7 +162,7 @@ describe("runTicketsQuery workspace badges", () => {
               label: "T-2",
               metadata: {
                 shorthand: "T-2",
-                resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+                resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
               },
             },
           ],
@@ -191,7 +190,7 @@ describe("runTicketsQuery workspace badges", () => {
           label: "T-1 Has workspaces",
           metadata: {
             shorthand: "T-1",
-            resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+            resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },
       },
@@ -207,7 +206,7 @@ describe("runTicketsQuery workspace badges", () => {
           label: "T-1 Has workspaces",
           metadata: {
             shorthand: "T-1",
-            resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+            resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },
       },
@@ -258,7 +257,7 @@ describe("runTicketsQuery workspace badges", () => {
               label: "T-1 Parent",
               metadata: {
                 shorthand: "T-1",
-                resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+                resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
               },
             },
           },

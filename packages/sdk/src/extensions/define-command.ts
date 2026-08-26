@@ -1,10 +1,18 @@
 import type {
   CommandDefinition,
+  ContributionDefinition,
   HookDefinition,
   MiddlewareDefinition,
   ParamObjectSchema,
   Struct,
 } from "pstdio-api-contracts/extension-kernel";
+
+type CommandContribution<TSchema extends ParamObjectSchema | undefined, TResult> = CommandDefinition<TSchema, TResult> &
+  ContributionDefinition<"command">;
+type CommandInput<TSchema extends ParamObjectSchema | undefined, TResult> = Omit<
+  CommandDefinition<TSchema, TResult>,
+  "ref"
+>;
 
 /**
  * Define a single command outside an extension's object literal. Use this when commands
@@ -21,22 +29,31 @@ import type {
  *     },
  *   });
  */
-export const defineCommand = <const TSchema extends ParamObjectSchema | undefined, TResult = unknown>(
-  definition: CommandDefinition<TSchema, TResult>,
-): CommandDefinition<TSchema, TResult> => definition;
+export function defineCommand<const TSchema extends ParamObjectSchema | undefined, TResult>(
+  definition: CommandInput<TSchema, TResult>,
+): CommandContribution<TSchema, TResult>;
+export function defineCommand<const TSchema extends ParamObjectSchema | undefined, TResult>(
+  definition: CommandInput<TSchema, TResult>,
+) {
+  return { ...definition, ref: { kind: "command" as const, id: definition.id } };
+}
 
 /**
- * Define middleware for a command. Pass the typed `command` ref (preferred) or
- * `commandId` for cross-extension references where the typed ref isn't importable.
+ * Define middleware for a command.
  */
 export const defineMiddleware = <TParams extends Struct = Struct, TResult = unknown>(
-  definition: MiddlewareDefinition<TParams, TResult>,
-): MiddlewareDefinition<TParams, TResult> => definition;
+  definition: Omit<MiddlewareDefinition<TParams, TResult>, "ref">,
+): MiddlewareDefinition<TParams, TResult> => ({
+  ...definition,
+  ref: { kind: "middleware", id: definition.id },
+});
 
 /**
- * Define a hook for an event. Pass the typed `event` ref (preferred) or `eventId` for
- * cross-extension references where the typed ref isn't importable.
+ * Define a hook for an event.
  */
 export const defineHook = <TPayload extends Struct = Struct>(
-  definition: HookDefinition<TPayload>,
-): HookDefinition<TPayload> => definition;
+  definition: Omit<HookDefinition<TPayload>, "ref">,
+): HookDefinition<TPayload> => ({
+  ...definition,
+  ref: { kind: "hook", id: definition.id },
+});

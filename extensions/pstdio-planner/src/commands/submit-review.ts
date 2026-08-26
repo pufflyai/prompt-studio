@@ -121,8 +121,9 @@ const createFinding = async (
 };
 
 export const submitReviewCommand = defineCommand({
+  id: "submit-review",
   title: "Submit review verdict",
-  cli: true,
+  cli: {},
   params: {
     workspaceId: params.text({ required: true }),
     reviewId: params.text({ required: true }),

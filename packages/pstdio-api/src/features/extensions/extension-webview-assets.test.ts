@@ -10,7 +10,7 @@ import { createExtensionWebviewAssetRoutes } from "./extension-webview-asset-rou
 const webviewAccess = createExtensionWebviewAccess({
   signingKey: Buffer.from("test-webview-signing-key"),
 });
-const webviewScope = { installName: "extension-lab", webviewId: "lab.labPage" };
+const webviewScope = { installName: "extension-lab", webviewId: "pstdio.lab.view.labPage" };
 const webviewBasePath = webviewAccess.runtimeUrl(webviewScope).replace(/\/runtime$/, "");
 
 const writeExtension = (root: string, entry: string) => {
@@ -33,13 +33,11 @@ const writeExtension = (root: string, entry: string) => {
   writeFileSync(
     join(root, "extension.ts"),
     `export default {
-      routes: {
-        labPage: {
-          path: "lab",
-          label: "Lab",
-          webview: { entry: { kind: "package-asset", path: "${entry}", baseUrl: import.meta.url } },
-        },
-      },
+      views: [{
+        id: "labPage",
+        title: "Lab",
+        body: { kind: "webview", entry: { kind: "package-asset", path: "${entry}", baseUrl: import.meta.url } },
+      }],
     };`,
   );
 };
@@ -97,8 +95,11 @@ describe("extension webview asset routes", () => {
     const sourcePath = join(root, "extension");
     const cacheRoot = join(root, "cache");
     writeExtension(sourcePath, "./src/main.tsx");
-    mkdirSync(join(cacheRoot, "extension-lab", "lab.labPage", "dist"), { recursive: true });
-    writeFileSync(join(cacheRoot, "extension-lab", "lab.labPage", "dist", "module.js"), "console.log('managed');");
+    mkdirSync(join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist"), { recursive: true });
+    writeFileSync(
+      join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist", "module.js"),
+      "console.log('managed');",
+    );
 
     try {
       const app = createApp({ cacheRoot, sourcePath });
@@ -126,7 +127,7 @@ describe("extension webview asset routes", () => {
         lastErrorJson: {
           code: "extension_webview_build_failed",
           message: 'Could not resolve: "react"',
-          webviewId: "lab.labPage",
+          webviewId: "pstdio.lab.view.labPage",
         },
       });
       const res = await app.request(`${webviewBasePath}/assets/module.js`);
@@ -162,8 +163,11 @@ describe("extension webview asset routes", () => {
     const sourcePath = join(root, "extension");
     const cacheRoot = join(root, "cache");
     writeExtension(sourcePath, "./src/main.tsx");
-    mkdirSync(join(cacheRoot, "extension-lab", "lab.labPage", "dist"), { recursive: true });
-    writeFileSync(join(cacheRoot, "extension-lab", "lab.labPage", "dist", "module.js"), "console.log('managed');");
+    mkdirSync(join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist"), { recursive: true });
+    writeFileSync(
+      join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist", "module.js"),
+      "console.log('managed');",
+    );
     writeFileSync(join(root, "secret.txt"), "secret");
 
     try {

@@ -63,7 +63,6 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
       }
       if (url.pathname.endsWith("/file") && browserRequest.method() === "PUT") fileWrites.push(url.search);
     });
-
     await prepareDashboard(page, project.id, repo.id);
     await page.goto(`/projects/${project.id}/workspaces`);
     await page

@@ -69,6 +69,7 @@ export const setTicketAttribute = async (
 
 // Backs the board's inline attribute edits and drag-between-columns.
 export const setTicketAttributeCommand = defineCommand({
+  id: "set-ticket-attribute",
   title: "Set ticket attribute",
   params: {
     rowId: params.text({ required: true }),

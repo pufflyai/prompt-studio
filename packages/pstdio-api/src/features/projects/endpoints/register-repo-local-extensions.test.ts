@@ -57,14 +57,16 @@ const writeRepoScopedDefaultExtension = (sourcePath: string, markerPath: string)
     `import { writeFileSync } from "node:fs";
 
 export default {
-  hooks: {
-    marker: {
-      eventId: "workspace.provision",
-      async handler(_ctx, payload) {
+  hooks: [
+    {
+      id: "marker",
+      ref: { kind: "hook", id: "marker" },
+      event: { extensionId: "pstdio", kind: "event", id: "workspace.provision" },
+      async run(_ctx, payload) {
         writeFileSync(${JSON.stringify(markerPath)}, payload.workspaceDir);
       },
     },
-  },
+  ],
 };
 `,
   );
@@ -133,7 +135,7 @@ describe("repo-local default extensions", () => {
         expect.arrayContaining([
           expect.objectContaining({
             eventId: "workspace.provision",
-            id: `${defaultInstallName}.marker`,
+            id: `pstdio.${defaultInstallName}.hook.marker`,
             sourcePath: extensionEntry,
           }),
         ]),

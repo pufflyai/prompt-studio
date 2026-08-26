@@ -96,13 +96,15 @@ const writeSkillExtension = (root: string) => {
     `const asset = (path: string) => ({ kind: "package-asset" as const, path, baseUrl: import.meta.url });
 
 export default {
-  skills: {
-    createTicket: {
+  skills: [
+    {
+      id: "createTicket",
+      ref: { kind: "skill", id: "createTicket" },
       title: "Create ticket",
       description: "Create a ticket.",
       source: asset("./skills/create-ticket"),
     },
-  },
+  ],
 };
 `,
     "utf8",

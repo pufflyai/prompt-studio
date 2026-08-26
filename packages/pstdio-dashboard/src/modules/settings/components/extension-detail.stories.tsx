@@ -67,6 +67,7 @@ const metadata = {
       label: "Create ticket",
     },
   ],
+  commandPaletteContributions: [],
   keybindings: [
     {
       id: "planner.kb.create",
@@ -77,8 +78,14 @@ const metadata = {
     },
   ],
   modes: [],
-  panels: [],
-  routes: [],
+  views: [],
+  viewMenus: [],
+  placements: [],
+  resourceKinds: [],
+  resourceViews: [],
+  navigationItems: [],
+  statusBarItems: [],
+  statuses: [],
   settingsPanels: [],
   diagnostics: [],
 } as never;
@@ -175,7 +182,7 @@ export const IncompatibleApi: Story = {
       lastError: {
         code: "extension_manifest_unsupported_api_version",
         message:
-          'Extension "pstdio-planner" targets extension API 1.0.0-alpha.1 but this host provides 1.0.0-alpha.3. Update Prompt Studio, or install a build of the extension for this version.',
+          'Extension "pstdio-planner" targets extension API 1.0.0-alpha.3 but this host provides 1.0.0-alpha.4. Update Prompt Studio, or install a build of the extension for this version.',
       },
     },
   },

@@ -1,4 +1,4 @@
-import { defineExtension } from "@pstdio/sdk/extensions";
+import { defineExtension, defineHarness, defineHook, workspaceEvents } from "@pstdio/sdk/extensions";
 import { createOpencodeHarness } from "./src/harness";
 
 type ProvisionSkill = {
@@ -39,13 +39,12 @@ export const provisionOpencodeSkills = async (ctx: OpencodeSkillProvisionContext
 };
 
 export default defineExtension({
-  harnesses: {
-    opencode: createOpencodeHarness(),
-  },
-  hooks: {
-    provision: {
-      eventId: "workspace.provision",
-      handler: provisionOpencodeSkills,
-    },
-  },
+  harnesses: [defineHarness(createOpencodeHarness())],
+  hooks: [
+    defineHook({
+      id: "provision",
+      event: workspaceEvents.provision,
+      run: provisionOpencodeSkills,
+    }),
+  ],
 });

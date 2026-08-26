@@ -1,13 +1,14 @@
-import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
+import { defineCommand, l10n, params, projectSlots } from "@pstdio/sdk/extensions";
 import { COUNTER_STORAGE_KEY, LAB_ROUTE_HEADER_WHEN } from "../utils/lab-constants";
 
 export const bumpCounterCommand = defineCommand({
+  id: "counter.bump",
   title: l10n("commands.counter.bump.title", "Bump lab counter"),
-  cli: true,
-  palette: { group: "Lab", label: l10n("commands.counter.bump.title", "Bump lab counter") },
+  cli: {},
+  palette: [{ group: "Lab", label: l10n("commands.counter.bump.title", "Bump lab counter") }],
   menus: [
     {
-      target: "workbench.nav.overflow",
+      slot: projectSlots.headerOverflow,
       label: l10n("commands.counter.bump.title", "Bump lab counter"),
       icon: "plus",
       when: LAB_ROUTE_HEADER_WHEN,
@@ -27,20 +28,22 @@ export const bumpCounterCommand = defineCommand({
 });
 
 export const readCounterCommand = defineCommand({
+  id: "counter.read",
   title: l10n("commands.counter.read.title", "Read lab counter"),
-  cli: true,
+  cli: {},
   async run(ctx, _commandParams) {
     return { counter: (await ctx.storage.get<number>(COUNTER_STORAGE_KEY)) ?? 0 };
   },
 });
 
 export const resetCounterCommand = defineCommand({
+  id: "counter.reset",
   title: l10n("commands.counter.reset.title", "Reset lab counter"),
-  cli: true,
-  palette: { group: "Lab", label: l10n("commands.counter.reset.title", "Reset lab counter") },
+  cli: {},
+  palette: [{ group: "Lab", label: l10n("commands.counter.reset.title", "Reset lab counter") }],
   menus: [
     {
-      target: "workbench.nav.overflow",
+      slot: projectSlots.headerOverflow,
       label: l10n("commands.counter.reset.title", "Reset lab counter"),
       icon: "rotate-ccw",
       when: LAB_ROUTE_HEADER_WHEN,

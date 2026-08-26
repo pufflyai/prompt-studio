@@ -2,7 +2,7 @@ import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
 import type { RendererCallback } from "./context";
 import type { JsonValue, Struct } from "./json";
-import type { ExtensionNavigationTarget } from "./navigation-target";
+import type { NavigationTarget } from "./navigation-target";
 import type { RendererContributionBase } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
 
@@ -60,7 +60,7 @@ export interface DataTableRendererRowAction<TParams extends Struct = Struct> {
   label: Localizable<string>;
   icon?: string;
   destructive?: boolean;
-  command: CommandRef<TParams, unknown> | string;
+  command: CommandRef<TParams, unknown>;
 }
 
 export interface DataTableRendererSelectionAction<TParams extends Struct = Struct> {
@@ -68,12 +68,12 @@ export interface DataTableRendererSelectionAction<TParams extends Struct = Struc
   label: Localizable<string>;
   icon?: string;
   destructive?: boolean;
-  command: CommandRef<TParams, unknown> | string;
+  command: CommandRef<TParams, unknown>;
 }
 
 export type DataTableRendererRowActivationHandler = RendererCallback<
   { row: DataTableRendererRow },
-  undefined | ExtensionNavigationTarget
+  undefined | NavigationTarget
 >;
 
 export interface DataTableRendererContribution extends RendererContributionBase {

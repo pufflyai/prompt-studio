@@ -4,33 +4,46 @@ import { createPreviewResource } from "./preview-resource";
 
 const baseMetadata = {
   commands: [],
-  kanbanRenderers: [],
+  commandPaletteContributions: [],
   diagnostics: [],
   extensions: [],
   menuContributions: [],
   modes: [],
-  routes: [],
+  views: [],
+  viewMenus: [],
+  placements: [],
+  resourceKinds: [],
+  resourceViews: [],
+  resourceHierarchyProviders: [],
+  navigationItems: [],
+  statusBarItems: [],
+  statuses: [],
+  activityItems: [],
+  settingsSections: [],
   settingsDefinitions: [],
   settingsPanels: [],
-  treeItems: [],
-  treeRenderers: [],
-  panels: [],
+  commandPaletteResources: [],
+  keybindings: [],
 } satisfies WorkbenchExtensionMetadata;
 
 describe("createPreviewResource", () => {
-  test("keeps preview data separate from a route-only extension view", () => {
+  test("keeps preview data separate from a path-only extension view", () => {
     const resource = createPreviewResource({
       ...baseMetadata,
-      routes: [
+      views: [
         {
-          id: "extension-lab.labPage",
+          id: "pstdio.extension-lab.view.lab-page",
+          localId: "lab-page",
           extensionId: "pstdio.extension-lab",
-          label: "Lab",
+          title: "Lab",
           path: "lab",
-          webview: {
-            entry: { kind: "package-asset", baseUrl: "file:///extension.ts", path: "./lab.tsx" },
-            moduleUrl: "/lab.js",
-            runtimeUrl: "/runtime.html",
+          body: {
+            kind: "webview",
+            webview: {
+              entry: { kind: "package-asset", baseUrl: "file:///extension.ts", path: "./lab.tsx" },
+              moduleUrl: "/lab.js",
+              runtimeUrl: "/runtime.html",
+            },
           },
         },
       ],
@@ -51,27 +64,10 @@ describe("createPreviewResource", () => {
       resourceKinds: [
         {
           id: "tickets.ticket",
+          localId: "ticket",
           extensionId: "pstdio.tickets",
           surface: "primary",
-          slots: { primary: { cardinality: "one", external: false } },
-        },
-      ],
-      resourcePanels: [
-        {
-          id: "tickets.editorPanel",
-          extensionId: "pstdio.tickets",
-          resourceKind: "tickets.ticket",
-          panel: "tickets.editor",
-          slot: "primary",
-        },
-      ],
-      panels: [
-        {
-          id: "tickets.editor",
-          extensionId: "pstdio.tickets",
-          title: "Ticket",
-          show: { region: "main" },
-          renderer: { kind: "file", id: "tickets.editorRenderer" },
+          slots: [{ id: "primary", cardinality: "one", access: "owner" }],
         },
       ],
     });
@@ -85,25 +81,17 @@ describe("createPreviewResource", () => {
     });
   });
 
-  test("derives the kind from a resource-panel edge when no resource kind is declared", () => {
+  test("derives the kind from a resource-view edge when no resource kind is declared", () => {
+    const noteKind = { extensionId: "pstdio.planner", kind: "resource-kind" as const, id: "note" };
     const resource = createPreviewResource({
       ...baseMetadata,
-      resourcePanels: [
+      resourceViews: [
         {
-          id: "acme.plannerInsights",
+          id: "acme.insights.resource-view.note",
           extensionId: "acme.insights",
-          resourceKind: "planner.note",
-          panel: "acme.insights",
-          slot: "inspector",
-        },
-      ],
-      panels: [
-        {
-          id: "acme.insights",
-          extensionId: "acme.insights",
-          title: "Insights",
-          show: { region: "side", allowedRegions: ["side", "secondary"] },
-          renderer: { kind: "controls", id: "acme.insightControls" },
+          resourceKind: noteKind,
+          slot: { resourceKind: noteKind, id: "inspector" },
+          view: { extensionId: "acme.insights", kind: "view", id: "insights" },
         },
       ],
     });

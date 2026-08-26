@@ -6,19 +6,12 @@ import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
 
-const webviewContributionMaps = ["routes", "settingsPanels", "panels"] as const;
-
-type WebviewMapKey = (typeof webviewContributionMaps)[number];
-
 const managedExtensions = new Set([".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
-
-const codeFor = (mapKey: WebviewMapKey) => (mapKey === "routes" ? "route" : mapKey) as string;
 
 const validateEntry = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
   runtime: Accumulator,
-  mapKey: WebviewMapKey,
   key: string,
   entry: unknown,
 ) => {
@@ -27,8 +20,8 @@ const validateEntry = (
   if (managedExtensions.has(extension)) return;
   runtime.diagnostics.push(
     createDiagnostic({
-      code: `${codeFor(mapKey)}_webview_unsupported`,
-      message: `${mapKey} ${key} webview entry must point to browser source; received ${extension || "no extension"}`,
+      code: "view_webview_unsupported",
+      message: `View ${key} webview entry must point to browser source; received ${extension || "no extension"}`,
       extensionId: ext.id,
       sourcePath: source.sourcePath,
     }),
@@ -54,18 +47,12 @@ const validateCapabilities = (
   }
 };
 
-const validateContributionMap = (
-  ext: NormalizedExtension,
-  source: LoadedExtensionSource,
-  runtime: Accumulator,
-  mapKey: WebviewMapKey,
-) => {
-  const contributions = source.definition[mapKey];
-  if (!isRecord(contributions)) return;
-  for (const [key, contribution] of Object.entries(contributions)) {
-    if (!isRecord(contribution) || !isRecord(contribution.webview)) continue;
-    validateEntry(ext, source, runtime, mapKey, key, contribution.webview.entry);
-    validateCapabilities(ext, source, runtime, contribution.webview.capabilities);
+const validateViews = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
+  if (!Array.isArray(source.definition.views)) return;
+  for (const view of source.definition.views) {
+    if (!isRecord(view) || !isRecord(view.body) || view.body.kind !== "webview") continue;
+    validateEntry(ext, source, runtime, String(view.id), view.body.entry);
+    validateCapabilities(ext, source, runtime, view.body.capabilities);
   }
 };
 
@@ -73,8 +60,4 @@ export const registerWebviewValidation = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
   runtime: Accumulator,
-) => {
-  for (const mapKey of webviewContributionMaps) {
-    validateContributionMap(ext, source, runtime, mapKey);
-  }
-};
+) => validateViews(ext, source, runtime);

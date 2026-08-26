@@ -5,6 +5,7 @@ import { ticketsCollection } from "../data/collections";
 // Returns a data URL the <img> can render in any origin (the attachment's host /
 // blob URL isn't loadable across origins).
 export const readTicketAttachmentCommand = defineCommand({
+  id: "read-ticket-attachment",
   title: "Read ticket attachment",
   params: {
     ticketId: params.text({ required: true }),

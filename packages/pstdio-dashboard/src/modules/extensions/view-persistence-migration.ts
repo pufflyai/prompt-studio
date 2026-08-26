@@ -8,9 +8,27 @@ import type {
 
 const legacyViewPrefix = "dashboard-workbench.extension-view.";
 
-const viewIdFromPlacementId = (value: string | undefined, views: WorkbenchViewRegistry) => {
+const resolveLegacyViewId = (value: string, views: WorkbenchViewRegistry) => {
+  const unwrapped = value.replace(legacyViewPrefix, "");
+  for (const view of views.listViews()) {
+    const marker = ".view.";
+    const markerIndex = view.id.indexOf(marker);
+    if (markerIndex < 0) continue;
+    const extensionId = view.id.slice(0, markerIndex);
+    const localId = view.id.slice(markerIndex + marker.length);
+    const packageName = extensionId.split(".").at(-1);
+    if (unwrapped === `${extensionId}.${localId}` || unwrapped === `${packageName}.${localId}`) return view.id;
+  }
+  return undefined;
+};
+
+export const resolvePersistedViewId = (value: string | undefined, views: WorkbenchViewRegistry) => {
   if (!value) return undefined;
-  return views.resolveViewId(value) ?? views.resolveViewId(value.replace(legacyViewPrefix, ""));
+  return (
+    views.resolveViewId(value) ??
+    views.resolveViewId(value.replace(legacyViewPrefix, "")) ??
+    resolveLegacyViewId(value, views)
+  );
 };
 
 const viewIdFromResource = (resource: ResourceRef | undefined, views: WorkbenchViewRegistry) => {
@@ -25,11 +43,11 @@ const viewIdFromResource = (resource: ResourceRef | undefined, views: WorkbenchV
   if (route && typeof route === "object" && typeof (route as { id?: unknown }).id === "string") {
     return views.resolveViewId((route as { id: string }).id);
   }
-  return resource.id ? views.resolveViewId(resource.id) : undefined;
+  return resolvePersistedViewId(resource.id, views);
 };
 
 const migrateSubPanel = (reference: WorkbenchSubPanelRef, views: WorkbenchViewRegistry) => {
-  const viewId = viewIdFromPlacementId(reference.contributionId, views);
+  const viewId = resolvePersistedViewId(reference.contributionId, views);
   if (!viewId) return reference;
   const panelId = views.getView(viewId)?.panelId ?? viewId;
   return { ...reference, contributionId: panelId, instanceKey: panelId };
@@ -43,7 +61,7 @@ const migrateEntry = (entry: WorkbenchNavigationEntry, views: WorkbenchViewRegis
   const viewId =
     (entry.viewId ? (views.resolveViewId(entry.viewId) ?? entry.viewId) : undefined) ??
     legacyResourceViewId ??
-    viewIdFromPlacementId(entry.contributionId ?? entry.location.contributionId, views);
+    resolvePersistedViewId(entry.contributionId ?? entry.location.contributionId, views);
   if (!viewId) return entry;
 
   const panelId = views.getView(viewId)?.panelId ?? viewId;

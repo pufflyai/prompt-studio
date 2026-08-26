@@ -4,6 +4,8 @@ import type { ExtensionWorkspace } from "./types/context";
 import type { Struct } from "./types/json";
 import type { ResourceAnchor } from "./types/resources";
 
+const hostEventRef = <TPayload extends Struct>(id: string) => eventRef<TPayload>({ extensionId: "pstdio", id });
+
 /** How a workspace's working tree is backed. `root` = the repo checkout itself; `cloud` is reserved. */
 export type WorkspaceType = "worktree" | "root" | "cloud";
 
@@ -90,35 +92,35 @@ export const workspaceSlots = {
 };
 
 export const projectEvents = {
-  opened: eventRef<{ projectId: string }>("project.opened"),
+  opened: hostEventRef<{ projectId: string }>("project.opened"),
 };
 
 export const sessionEvents = {
-  started: eventRef<SessionLifecyclePayload & { anchors?: ResourceAnchor[] }>("session.started"),
-  resumed: eventRef<SessionLifecyclePayload>("session.resumed"),
-  awaitingInput: eventRef<SessionLifecyclePayload>("session.awaitingInput"),
-  succeeded: eventRef<SessionLifecyclePayload>("session.succeeded"),
-  failed: eventRef<SessionLifecyclePayload>("session.failed"),
-  completed: eventRef<SessionLifecyclePayload & { anchors?: ResourceAnchor[] }>("session.completed"),
+  started: hostEventRef<SessionLifecyclePayload & { anchors?: ResourceAnchor[] }>("session.started"),
+  resumed: hostEventRef<SessionLifecyclePayload>("session.resumed"),
+  awaitingInput: hostEventRef<SessionLifecyclePayload>("session.awaitingInput"),
+  succeeded: hostEventRef<SessionLifecyclePayload>("session.succeeded"),
+  failed: hostEventRef<SessionLifecyclePayload>("session.failed"),
+  completed: hostEventRef<SessionLifecyclePayload & { anchors?: ResourceAnchor[] }>("session.completed"),
 };
 
 export const workspaceEvents = {
-  created: eventRef<{ workspace: ExtensionWorkspace }>("workspace.created"),
+  created: hostEventRef<{ workspace: ExtensionWorkspace }>("workspace.created"),
   /** Awaited: harness extensions sync their agent dir into the working tree. Gates workspace readiness. */
-  provision: eventRef<WorkspaceProvisionPayload>("workspace.provision"),
+  provision: hostEventRef<WorkspaceProvisionPayload>("workspace.provision"),
   /** Fire-and-forget after the workspace is ready: background setup (deps install, builds). */
-  ready: eventRef<WorkspaceProvisionPayload>("workspace.ready"),
-  archived: eventRef<{ workspace: ExtensionWorkspace }>("workspace.archived"),
-  deleted: eventRef<{ workspace: ExtensionWorkspace }>("workspace.deleted"),
+  ready: hostEventRef<WorkspaceProvisionPayload>("workspace.ready"),
+  archived: hostEventRef<{ workspace: ExtensionWorkspace }>("workspace.archived"),
+  deleted: hostEventRef<{ workspace: ExtensionWorkspace }>("workspace.deleted"),
 };
 
 export const worktreeEvents = {
-  removed: eventRef<WorktreeRemovedPayload>("worktree.removed"),
+  removed: hostEventRef<WorktreeRemovedPayload>("worktree.removed"),
 };
 
 export const gitEvents = {
-  committed: eventRef<CommitPayload>("git.committed"),
-  rebased: eventRef<RebasePayload>("git.rebased"),
-  merged: eventRef<MergePayload>("git.merged"),
-  conflicted: eventRef<ConflictPayload>("git.conflicted"),
+  committed: hostEventRef<CommitPayload>("git.committed"),
+  rebased: hostEventRef<RebasePayload>("git.rebased"),
+  merged: hostEventRef<MergePayload>("git.merged"),
+  conflicted: hostEventRef<ConflictPayload>("git.conflicted"),
 };

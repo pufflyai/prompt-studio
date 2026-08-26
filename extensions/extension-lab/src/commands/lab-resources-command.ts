@@ -1,4 +1,4 @@
-import { defineCommand } from "@pstdio/sdk/extensions";
+import { type CommandPaletteResourceContribution, defineCommand } from "@pstdio/sdk/extensions";
 
 interface SlideResource {
   id: string;
@@ -27,35 +27,30 @@ const matchesQuery = (slide: SlideResource, query: string) => {
   return [slide.label, slide.description, ...slide.keywords].join(" ").toLowerCase().includes(needle);
 };
 
-export const queryLabResourcesCommand = defineCommand({
-  title: "Query lab palette resources",
-  description: "Returns demo slide resources for the command palette resource provider.",
-  async run(_ctx, commandParams) {
-    const params = commandParams as { query?: string; limit?: number };
-    const query = params.query ?? "";
-    const limit = params.limit ?? slides.length;
+export const queryLabResources: CommandPaletteResourceContribution["query"] = async (_ctx, input) => {
+  const query = input.query ?? "";
+  const limit = input.limit ?? slides.length;
 
-    return {
-      items: slides
-        .filter((slide) => matchesQuery(slide, query))
-        .slice(0, limit)
-        .map((slide) => ({
-          id: slide.id,
-          label: slide.label,
-          description: slide.description,
-          icon: "Presentation",
-          keywords: slide.keywords,
-          target: {
-            kind: "command",
-            command: "extension-lab.command-palette-resources.open",
-            params: { label: slide.label },
-          },
-        })),
-    };
-  },
-});
+  return {
+    items: slides
+      .filter((slide) => matchesQuery(slide, query))
+      .slice(0, limit)
+      .map((slide) => ({
+        id: slide.id,
+        label: slide.label,
+        description: slide.description,
+        icon: "Presentation",
+        keywords: slide.keywords,
+        target: {
+          kind: "command",
+          target: { command: openLabResourceCommand.ref, params: { label: slide.label } },
+        },
+      })),
+  };
+};
 
 export const openLabResourceCommand = defineCommand({
+  id: "command-palette-resources.open",
   title: "Open lab palette resource",
   description: "Invoked when a lab slide is selected from the command palette.",
   async run(ctx, commandParams) {

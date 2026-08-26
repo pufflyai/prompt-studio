@@ -10,6 +10,7 @@ import {
 } from "../data/status-operations";
 
 export const readTicketStatusesCommand = defineCommand({
+  id: "ticketStatus.read",
   title: "Read ticket statuses",
   cli: { globalAliases: [["statuses", "list"]], examples: ["pstdio statuses list"] },
   async run(ctx, _commandParams) {
@@ -25,6 +26,7 @@ const statusActionParams = {
 };
 
 export const createTicketStatusCommand = defineCommand({
+  id: "ticketStatus.create",
   title: "Create ticket status",
   cli: { globalAliases: [["statuses", "create"]], examples: ["pstdio statuses create --label Backlog --color gray"] },
   params: {
@@ -48,6 +50,7 @@ export const createTicketStatusCommand = defineCommand({
 });
 
 export const updateTicketStatusCommand = defineCommand({
+  id: "ticketStatus.update",
   title: "Update ticket status",
   cli: {
     globalAliases: [["statuses", "update"]],
@@ -78,6 +81,7 @@ export const updateTicketStatusCommand = defineCommand({
 });
 
 export const deleteTicketStatusCommand = defineCommand({
+  id: "ticketStatus.delete",
   title: "Delete ticket status",
   cli: { globalAliases: [["statuses", "delete"]], examples: ["pstdio statuses delete --status TODO"] },
   params: {
@@ -91,6 +95,7 @@ export const deleteTicketStatusCommand = defineCommand({
 });
 
 export const setDefaultTicketStatusCommand = defineCommand({
+  id: "ticketStatus.setDefault",
   title: "Set default ticket status",
   cli: { globalAliases: [["statuses", "set-default"]], examples: ["pstdio statuses set-default --status TODO"] },
   params: {
@@ -103,6 +108,7 @@ export const setDefaultTicketStatusCommand = defineCommand({
 });
 
 export const reorderTicketStatusesCommand = defineCommand({
+  id: "ticketStatus.reorder",
   title: "Reorder ticket statuses",
   cli: {
     globalAliases: [["statuses", "reorder"]],

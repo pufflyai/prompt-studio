@@ -4,7 +4,7 @@ import { putTicket } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import { seedDefaultStatuses } from "../data/seed";
 import type { StoredTicket } from "../data/types";
-import { makeCommandContext } from "./command-context.fixture";
+import { commandParamsFor, makeCommandContext } from "./command-context.fixture";
 import { queryTicketsCommand } from "./query-tickets";
 
 const makeTicket = (overrides: Partial<StoredTicket>): StoredTicket => ({
@@ -41,7 +41,7 @@ describe("queryTicketsCommand", () => {
       params: { filters: { archived: ["archived"] } },
     });
 
-    const result = await queryTicketsCommand.run(ctx, ctx.invocation.params);
+    const result = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
 
     expect(result.rows.map((row) => row.title)).toEqual(["Archived"]);
   });
@@ -73,7 +73,7 @@ describe("queryTicketsCommand", () => {
       },
     });
 
-    const result = await queryTicketsCommand.run(ctx, ctx.invocation.params);
+    const result = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
 
     expect(result.rows[0]?.attributes.workspaceItems).toMatchObject([
       { id: "workspace-2", session: { id: "session-latest", status: "in_progress" } },
@@ -94,7 +94,7 @@ describe("queryTicketsCommand", () => {
       },
     });
 
-    const result = await queryTicketsCommand.run(ctx, ctx.invocation.params);
+    const result = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
 
     expect(result.rows[0]?.attributes.workspaceItems).toEqual([
       {
@@ -109,7 +109,7 @@ describe("queryTicketsCommand", () => {
           label: "T-1 Ticket",
           metadata: {
             shorthand: "T-1",
-            resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+            resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },
       },

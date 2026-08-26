@@ -4,6 +4,7 @@ import type { StoredTicketAttachment } from "../data/types";
 import { plannerTicketsChanged } from "../events";
 
 export const attachTicketFileCommand = defineCommand({
+  id: "attach-file",
   title: "Attach file",
   params: {
     ticketId: params.text({ required: true }),
@@ -29,6 +30,7 @@ export const attachTicketFileCommand = defineCommand({
 });
 
 export const detachTicketFileCommand = defineCommand({
+  id: "detach-file",
   title: "Detach file",
   params: {
     ticketId: params.text({ required: true }),

@@ -45,7 +45,7 @@ const baseSkill: ProjectSkillDetails = {
   install_name: "pstdio-planner",
   key: "createTicket",
   enabled: true,
-  installed_agents: ["pstdio.harness-claude-code.claude-code", "pstdio.harness-codex.codex"],
+  installed_agents: ["pstdio.harness-claude-code.harness.claude-code", "pstdio.harness-codex.harness.codex"],
   outdated_agents: [],
   agent_installations: [],
   created_at: "2026-01-01T00:00:00Z",
@@ -64,10 +64,10 @@ export const OutdatedExtensionSkill: Story = {
   args: {
     skill: {
       ...baseSkill,
-      outdated_agents: ["pstdio.harness-claude-code.claude-code", "pstdio.harness-codex.codex"],
+      outdated_agents: ["pstdio.harness-claude-code.harness.claude-code", "pstdio.harness-codex.harness.codex"],
       agent_installations: [
-        installation("pstdio.harness-claude-code.claude-code", "claude-code", "1.1.0", true),
-        installation("pstdio.harness-codex.codex", "codex", "1.1.0", true),
+        installation("pstdio.harness-claude-code.harness.claude-code", "claude-code", "1.1.0", true),
+        installation("pstdio.harness-codex.harness.codex", "codex", "1.1.0", true),
       ],
     },
   },
@@ -79,8 +79,8 @@ export const UpToDateExtensionSkill: Story = {
     skill: {
       ...baseSkill,
       agent_installations: [
-        installation("pstdio.harness-claude-code.claude-code", "claude-code", "1.2.0", false),
-        installation("pstdio.harness-codex.codex", "codex", "1.2.0", false),
+        installation("pstdio.harness-claude-code.harness.claude-code", "claude-code", "1.2.0", false),
+        installation("pstdio.harness-codex.harness.codex", "codex", "1.2.0", false),
       ],
     },
   },

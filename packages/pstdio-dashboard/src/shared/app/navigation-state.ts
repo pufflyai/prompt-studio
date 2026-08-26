@@ -91,6 +91,14 @@ export const applyDashboardNavigationSelection = (
   ctx.context.set(dashboardSelectedResourceContextKey, resource.uri);
 };
 
+export const prepareDashboardNavigationResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
+  const surface = ctx.resources.getSurface(resource);
+  if (surface === "secondary" || surface === "attached") return;
+  applyDashboardNavigationSelection(ctx, resource);
+  syncDashboardLayoutPersistenceScope(ctx);
+  setResourceBreadcrumb(ctx, resource);
+};
+
 const configuredNavigators = new WeakSet<object>();
 
 // Configures the atomic navigator with the dashboard's selection, scope, and

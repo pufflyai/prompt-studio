@@ -9,7 +9,7 @@ const extensionLabPath = join(import.meta.dirname, "../../../../extensions/exten
 const bypassOnboarding = async (
   page: import("@playwright/test").Page,
   projectId: string,
-  agentId = "pstdio.extension-lab.fake",
+  agentId = "pstdio.extension-lab.harness.fake",
 ) => {
   await page.addInitScript(
     ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
@@ -101,6 +101,12 @@ const fetchMetadata = async (request: import("@playwright/test").APIRequestConte
   return (await response.json()) as WorkbenchExtensionMetadata;
 };
 
+const webviewAtPath = (metadata: WorkbenchExtensionMetadata, path: string) => {
+  const view = metadata.views.find((candidate) => candidate.path === path);
+  if (!view || view.body.kind !== "webview") throw new Error(`Missing webview at path: ${path}`);
+  return view.body.webview;
+};
+
 const openExtensionLab = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.goto(`/projects/${projectId}/lab`);
 };
@@ -123,12 +129,12 @@ test.describe("Extension webviews", () => {
     });
 
     const metadata = await fetchMetadata(request, project.id);
-    const labRoute = metadata.routes.find((route) => route.path === "lab");
-    expect(labRoute?.webview.moduleUrl).toBeTruthy();
+    const labWebview = webviewAtPath(metadata, "lab");
+    expect(labWebview.moduleUrl).toBeTruthy();
 
     await expect
       .poll(async () => {
-        const response = await request.get(`${apiBase}${labRoute!.webview.moduleUrl}`);
+        const response = await request.get(`${apiBase}${labWebview.moduleUrl}`);
         return response.status();
       })
       .toBe(200);
@@ -191,8 +197,7 @@ test.describe("Extension webviews", () => {
     });
 
     const metadata = await fetchMetadata(request, project.id);
-    const labRoute = metadata.routes.find((route) => route.path === "lab");
-    expect(labRoute).toBeDefined();
+    webviewAtPath(metadata, "lab");
     await bypassOnboarding(page, project.id);
 
     await openExtensionLab(page, project.id);
@@ -240,7 +245,7 @@ test.describe("Extension webviews", () => {
     });
 
     const metadata = await fetchMetadata(request, project.id);
-    expect(metadata.routes.find((route) => route.path === "lab-terminal")).toBeUndefined();
+    expect(metadata.views.find((view) => view.path === "lab-terminal")).toBeUndefined();
 
     await bypassOnboarding(page, project.id);
     await page.goto(`/projects/${project.id}`);

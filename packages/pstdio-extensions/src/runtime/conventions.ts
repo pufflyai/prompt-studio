@@ -13,12 +13,12 @@ const toKebabIconName = (name: string) =>
     .replace(/([a-zA-Z])([0-9])/g, "$1-$2")
     .toLowerCase();
 
-const refIdOf = (value: unknown) => {
-  if (typeof value === "string") return value;
-  if (value && typeof value === "object" && "id" in value && typeof (value as { id: unknown }).id === "string") {
-    return (value as { id: string }).id;
-  }
-  return undefined;
+const contributionRefId = (value: unknown) => {
+  if (!value || typeof value !== "object") return undefined;
+  const ref = value as { extensionId?: unknown; kind?: unknown; id?: unknown };
+  if (typeof ref.extensionId !== "string" || typeof ref.kind !== "string" || typeof ref.id !== "string")
+    return undefined;
+  return `${ref.extensionId}.${ref.kind}.${ref.id}`;
 };
 
 interface ContributionSite {
@@ -32,8 +32,10 @@ interface ContributionSite {
 const iconSites = (runtime: ExtensionRuntime) => {
   const sites: { record: ContributionSite; icon: unknown; kind: string }[] = [];
   for (const record of runtime.modes) sites.push({ record, icon: record.contribution.icon, kind: "mode" });
-  for (const record of runtime.panels) sites.push({ record, icon: record.contribution.icon, kind: "panel" });
-  for (const record of runtime.treeItems) sites.push({ record, icon: record.contribution.icon, kind: "treeItem" });
+  for (const record of runtime.views) sites.push({ record, icon: record.contribution.icon, kind: "view" });
+  for (const record of runtime.navigationItems) {
+    sites.push({ record, icon: record.contribution.icon, kind: "navigationItem" });
+  }
   for (const record of runtime.activityItems) {
     sites.push({ record, icon: record.contribution.icon, kind: "activityItem" });
   }
@@ -68,13 +70,15 @@ const collectIconDiagnostics = (runtime: ExtensionRuntime) => {
 const localIdRecordsByKind = (runtime: ExtensionRuntime): [string, ContributionSite[]][] => [
   ["command", runtime.commands],
   ["mode", runtime.modes],
-  ["panel", runtime.panels],
-  ["treeItem", runtime.treeItems],
+  ["view", runtime.views],
+  ["viewMenu", runtime.viewMenus],
+  ["placement", runtime.placements],
+  ["navigationItem", runtime.navigationItems],
+  ["statusBarItem", runtime.statusBarItems],
+  ["status", runtime.statuses],
   ["activityItem", runtime.activityItems],
   ["resourceKind", runtime.resourceKinds],
-  ["resourcePanel", runtime.resourcePanels],
-  ["renderer", [...runtime.treeRenderers, ...runtime.fileRenderers, ...runtime.controlsRenderers]],
-  ["renderer", [...runtime.dataTableRenderers, ...runtime.kanbanRenderers]],
+  ["resourceView", runtime.resourceViews],
 ];
 
 const isKebab = (localId: string) => localId.includes("-") && localId === localId.toLowerCase();
@@ -129,28 +133,17 @@ const collectIdCasingDiagnostics = (runtime: ExtensionRuntime) => {
 
 const commandReferenceSites = (runtime: ExtensionRuntime) => {
   const sites: { record: ContributionSite; reference: string | undefined; kind: string }[] = [];
-  for (const record of runtime.treeItems) {
-    const action = record.contribution.action;
-    if (action.kind === "command") sites.push({ record, reference: refIdOf(action.command), kind: "treeItem" });
-  }
   for (const record of runtime.activityItems) {
-    sites.push({ record, reference: refIdOf(record.contribution.command), kind: "activityItem" });
-  }
-  for (const record of runtime.commands) {
-    for (const menu of record.menus) {
-      const reference = refIdOf(menu.command);
-      if (reference) sites.push({ record, reference, kind: "menu" });
-    }
-  }
-  for (const record of runtime.commandPaletteResources) {
-    sites.push({ record, reference: refIdOf(record.contribution.queryCommand), kind: "commandPaletteResource" });
+    sites.push({ record, reference: contributionRefId(record.contribution.command), kind: "activityItem" });
   }
   for (const record of runtime.schedules) sites.push({ record, reference: record.commandId, kind: "schedule" });
-  for (const record of runtime.modes) {
-    const defaultResource = record.contribution.defaultResource;
-    if (defaultResource && typeof defaultResource === "object" && "commandId" in defaultResource) {
-      sites.push({ record, reference: defaultResource.commandId, kind: "mode" });
-    }
+  for (const record of runtime.navigationItems) {
+    const collect = (action: (typeof record.contribution)["action"]) => {
+      if (action.kind === "command")
+        sites.push({ record, reference: contributionRefId(action.target.command), kind: "navigationItem" });
+      if (action.kind === "compound") action.targets.forEach(collect);
+    };
+    collect(record.contribution.action);
   }
   return sites;
 };
@@ -163,16 +156,15 @@ const collectCommandReferenceDiagnostics = (runtime: ExtensionRuntime) => {
     if (!site.reference) continue;
     // Host-owned commands (workbench.*, dashboard.*) are registered at runtime by
     // the application, not by extensions.
-    if (site.reference.startsWith("workbench.") || site.reference.startsWith("dashboard.")) continue;
-    const resolved = site.reference.includes(".") ? site.reference : `${site.record.name}.${site.reference}`;
-    if (known.has(resolved)) continue;
+    if (site.reference.startsWith("pstdio.command.")) continue;
+    if (known.has(site.reference)) continue;
     diagnostics.push(
       createDiagnostic({
         code: "extension_command_reference_missing",
         message: `${site.kind} "${site.record.id}" references command "${site.reference}", which resolves to no registered command`,
         extensionId: site.record.extensionId,
         sourcePath: site.record.sourcePath,
-        metadata: { contributionId: site.record.id, failedReference: resolved },
+        metadata: { contributionId: site.record.id, failedReference: site.reference },
       }),
     );
   }
@@ -181,20 +173,25 @@ const collectCommandReferenceDiagnostics = (runtime: ExtensionRuntime) => {
 
 const collectViewReferenceDiagnostics = (runtime: ExtensionRuntime) => {
   const diagnostics: ExtensionDiagnostic[] = [];
-  const known = new Set([...runtime.panels, ...runtime.routes].map((record) => record.id));
-
-  for (const record of runtime.treeItems) {
-    const action = record.contribution.action;
-    if (action.kind !== "view") continue;
-    const resolved = action.viewId.includes(".") ? action.viewId : `${record.name}.${action.viewId}`;
-    if (known.has(resolved)) continue;
+  const known = new Set(runtime.views.map((record) => record.id));
+  const sites: { record: ContributionSite; reference: string | undefined; kind: string }[] = [];
+  for (const record of runtime.placements) {
+    if (record.contribution.item.kind === "view")
+      sites.push({ record, reference: contributionRefId(record.contribution.item.view), kind: "placement" });
+  }
+  for (const record of runtime.settingsPanels)
+    sites.push({ record, reference: contributionRefId(record.contribution.view), kind: "settingsPanel" });
+  for (const record of runtime.statusBarItems)
+    sites.push({ record, reference: contributionRefId(record.contribution.view), kind: "statusBarItem" });
+  for (const site of sites) {
+    if (!site.reference || known.has(site.reference)) continue;
     diagnostics.push(
       createDiagnostic({
         code: "extension_view_reference_missing",
-        message: `treeItem "${record.id}" references view "${action.viewId}", which resolves to no registered panel or route`,
-        extensionId: record.extensionId,
-        sourcePath: record.sourcePath,
-        metadata: { contributionId: record.id, failedReference: resolved },
+        message: `${site.kind} "${site.record.id}" references unknown view "${site.reference}"`,
+        extensionId: site.record.extensionId,
+        sourcePath: site.record.sourcePath,
+        metadata: { contributionId: site.record.id, failedReference: site.reference },
       }),
     );
   }

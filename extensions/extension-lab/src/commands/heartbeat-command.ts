@@ -1,6 +1,7 @@
 import { defineCommand } from "@pstdio/sdk/extensions";
 
 export const heartbeatCommand = defineCommand({
+  id: "heartbeat",
   title: "Lab heartbeat",
   description: "Log emitted by the heartbeat schedule.",
   async run(ctx, _commandParams) {

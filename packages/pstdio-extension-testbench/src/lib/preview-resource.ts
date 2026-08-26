@@ -2,9 +2,7 @@ import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { ResourceRef } from "@pstdio/workbench";
 import { resourceKindsFromMetadata } from "./resource-bindings";
 
-const resourceKindFromMetadata = (metadata: WorkbenchExtensionMetadata) =>
-  resourceKindsFromMetadata(metadata)[0] ??
-  metadata.kanbanRenderers?.find((renderer) => renderer.resourceKind)?.resourceKind;
+const resourceKindFromMetadata = (metadata: WorkbenchExtensionMetadata) => resourceKindsFromMetadata(metadata)[0];
 
 const ticketPreviewResource = () =>
   ({

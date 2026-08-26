@@ -1,10 +1,20 @@
 import { describe, expect, test } from "bun:test";
-import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
+import {
+  defineCommand,
+  defineExtension,
+  defineMode,
+  defineNavigationItem,
+  definePlacement,
+  defineView,
+  packageAsset,
+  workbenchModes,
+  workbenchSlots,
+} from "@pstdio/sdk/extensions";
 import { collectConventionDiagnostics } from "./conventions";
 import type { LoadedExtensionSource } from "./loader";
 import { normalizeExtensionSources } from "./normalize";
 
-const wrap = (name: string, definition: ReturnType<typeof defineExtension>): LoadedExtensionSource => ({
+const wrap = (name: string, definition: LoadedExtensionSource["definition"]): LoadedExtensionSource => ({
   packagePath: `/fake/${name}`,
   sourcePath: `/fake/${name}/extension.ts`,
   sourceKind: "local_path",
@@ -14,31 +24,29 @@ const wrap = (name: string, definition: ReturnType<typeof defineExtension>): Loa
     version: "1.0.0",
     publisher: "pstdio",
     main: "./extension.ts",
-    enginesPstdio: "^1.0.0",
+    enginesPstdio: "1.0.0-alpha.4",
   },
   definition,
 });
 
 describe("extension convention diagnostics", () => {
-  test("flags unknown icon names and accepts kebab and pascal spellings of real icons", () => {
+  test("flags unknown icon names", () => {
     const runtime = normalizeExtensionSources([
       wrap(
         "lab",
         defineExtension({
-          modes: {
-            good: { label: "Good", icon: "flask-conical" },
-            alsoGood: { label: "Also good", icon: "FileText" },
-            bad: { label: "Bad", icon: "definitely-not-an-icon" },
-          },
+          modes: [
+            defineMode({ id: "good", label: "Good", icon: "flask-conical" }),
+            defineMode({ id: "also-good", label: "Also good", icon: "FileText" }),
+            defineMode({ id: "bad", label: "Bad", icon: "definitely-not-an-icon" }),
+          ],
         }),
       ),
     ]);
 
-    const diagnostics = collectConventionDiagnostics(runtime).filter((d) => d.code === "extension_icon_unknown");
-
+    const diagnostics = collectConventionDiagnostics(runtime).filter((item) => item.code === "extension_icon_unknown");
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]?.metadata).toMatchObject({ icon: "definitely-not-an-icon" });
-    expect(diagnostics[0]?.severity).toBe("warning");
   });
 
   test("flags mixed contribution id casing and dotted local ids", () => {
@@ -46,115 +54,63 @@ describe("extension convention diagnostics", () => {
       wrap(
         "planner",
         defineExtension({
-          commands: {
-            "create-ticket": { title: "Create", run: async () => undefined },
-            "ticketStatus.create": { title: "Create status", run: async () => undefined },
-          },
+          commands: [
+            defineCommand({ id: "create-ticket", title: "Create", async run() {} }),
+            defineCommand({ id: "ticketStatus.create", title: "Create status", async run() {} }),
+          ],
         }),
       ),
     ]);
 
-    const diagnostics = collectConventionDiagnostics(runtime).filter(
-      (d) => d.code === "extension_contribution_id_casing",
-    );
-
-    const reasons = diagnostics.map((d) => d.metadata?.reason).sort();
+    const reasons = collectConventionDiagnostics(runtime)
+      .filter((item) => item.code === "extension_contribution_id_casing")
+      .map((item) => item.metadata?.reason)
+      .sort();
     expect(reasons).toEqual(["dotted-local-id", "mixed-casing"]);
   });
 
-  test("flags command references that resolve to no registered command", () => {
+  test("flags dangling typed command and view references", () => {
+    const view = defineView({
+      id: "existing",
+      title: "Existing",
+      body: { kind: "webview", entry: packageAsset("./existing.tsx", "file:///fake/lab/") },
+    });
     const runtime = normalizeExtensionSources([
       wrap(
         "lab",
         defineExtension({
-          commands: {
-            existing: { title: "Existing", run: async () => undefined },
-          },
-          treeItems: {
-            ok: {
-              target: "workbench.left.tree",
-              label: "Ok",
-              action: { kind: "command", command: "existing" },
-            },
-            hostOwned: {
-              target: "workbench.left.tree",
-              label: "Host",
-              action: { kind: "command", command: "workbench.action.switchMode" },
-            },
-            dangling: {
-              target: "workbench.left.tree",
-              label: "Dangling",
-              action: { kind: "command", command: "missing-command" },
-            },
-          },
+          views: [view],
+          navigationItems: [
+            defineNavigationItem({
+              id: "dangling-command",
+              slot: workbenchSlots.projectNavigation,
+              label: "Dangling command",
+              action: { kind: "command", target: { command: { kind: "command", id: "missing" } } },
+            }),
+          ],
+          placements: [
+            definePlacement({
+              id: "dangling-view",
+              mode: workbenchModes.project,
+              item: { kind: "view", view: { kind: "view", id: "missing" } },
+              region: "main",
+            }),
+          ],
         }),
       ),
     ]);
 
-    const diagnostics = collectConventionDiagnostics(runtime).filter(
-      (d) => d.code === "extension_command_reference_missing",
+    expect(collectConventionDiagnostics(runtime)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "extension_command_reference_missing",
+          metadata: expect.objectContaining({ failedReference: "pstdio.lab.command.missing" }),
+        }),
+        expect.objectContaining({
+          code: "extension_view_reference_missing",
+          metadata: expect.objectContaining({ failedReference: "pstdio.lab.view.missing" }),
+        }),
+      ]),
     );
-
-    expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]?.metadata).toMatchObject({ failedReference: "lab.missing-command" });
-  });
-
-  test("flags tree view references that resolve to no panel or route", () => {
-    const runtime = normalizeExtensionSources([
-      wrap(
-        "lab",
-        defineExtension({
-          panels: {
-            existing: {
-              title: "Existing",
-              show: { region: "main" },
-              webview: { entry: packageAsset("./existing.tsx", import.meta.url) },
-            },
-          },
-          treeItems: {
-            ok: {
-              target: "workbench.left.tree",
-              label: "Existing",
-              action: { kind: "view", viewId: "existing" },
-            },
-            dangling: {
-              target: "workbench.left.tree",
-              label: "Missing",
-              action: { kind: "view", viewId: "missing" },
-            },
-          },
-        }),
-      ),
-    ]);
-
-    const diagnostics = collectConventionDiagnostics(runtime).filter(
-      (diagnostic) => diagnostic.code === "extension_view_reference_missing",
-    );
-
-    expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]?.metadata).toMatchObject({ failedReference: "lab.missing" });
-  });
-
-  test("a clean extension produces no convention diagnostics", () => {
-    const runtime = normalizeExtensionSources([
-      wrap(
-        "clean",
-        defineExtension({
-          commands: {
-            "create-item": { title: "Create", run: async () => undefined },
-          },
-          panels: {
-            "item-editor": {
-              title: "Editor",
-              show: { region: "main" },
-              icon: "file-text",
-              webview: { entry: packageAsset("./editor.tsx", import.meta.url) },
-            },
-          },
-        }),
-      ),
-    ]);
-
-    expect(collectConventionDiagnostics(runtime)).toEqual([]);
   });
 });

@@ -114,7 +114,7 @@ describe("createTicketCommand", () => {
           label: `${parent.shorthand} Parent`,
           metadata: {
             shorthand: parent.shorthand,
-            resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+            resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },
       },

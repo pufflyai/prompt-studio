@@ -24,7 +24,7 @@ const LabCams = () => {
     let cancelled = false;
     void (async () => {
       const response = await host.call<{ outcome: { status: string; value?: unknown } }>("commands.execute", {
-        commandId: "extension-lab.cams.current",
+        commandId: "pstdio.extension-lab.command.cams.current",
         params: {},
       });
       const current = camIdFromValue(response.outcome.value);
@@ -36,7 +36,11 @@ const LabCams = () => {
   }, [host]);
 
   useEffect(() => {
-    if (lastCommand?.commandId !== "extension-lab.cams.select" || lastCommand.outcome.status !== "success") return;
+    if (
+      lastCommand?.commandId !== "pstdio.extension-lab.command.cams.select" ||
+      lastCommand.outcome.status !== "success"
+    )
+      return;
     const selected = camIdFromValue(lastCommand.outcome.value);
     if (selected) setCamId(selected);
   }, [lastCommand]);

@@ -1,8 +1,9 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, params, projectSlots, workbenchModes, workspaceSlots } from "@pstdio/sdk/extensions";
 import { LAB_ROUTE_HEADER_WHEN } from "../utils/lab-constants";
 import { labAwakenCommand } from "./command-refs";
 
 export const awakenCommand = defineCommand({
+  id: "awaken",
   title: "Awaken",
   description: "Internal target used to demo middleware rejection.",
   params: { title: params.text() },
@@ -18,13 +19,14 @@ export const awakenCommand = defineCommand({
 });
 
 export const tryAwakenCommand = defineCommand({
+  id: "demo.try-awaken",
   title: "Demo middleware rejection",
   description: "Invoke lab.awaken with title 'Gain consciousness' and watch the lab middleware refuse.",
-  cli: true,
-  palette: { group: "Lab", label: "Demo middleware rejection" },
+  cli: {},
+  palette: [{ group: "Lab", label: "Demo middleware rejection" }],
   menus: [
     {
-      target: "workbench.nav.overflow",
+      slot: projectSlots.headerOverflow,
       label: "Demo middleware rejection",
       icon: "shield-alert",
       when: LAB_ROUTE_HEADER_WHEN,
@@ -54,13 +56,14 @@ export const tryAwakenCommand = defineCommand({
 });
 
 export const workspaceOnlyCommand = defineCommand({
+  id: "demo.workspace-only",
   title: "Workspace-only lab action",
   menus: [
     {
-      target: "workbench.nav.actions",
+      slot: workspaceSlots.headerPrimary,
       label: "Workspace-only lab action",
       icon: "layers",
-      when: { mode: "workspace" },
+      when: { mode: workbenchModes.workspace },
     },
   ],
   async run(ctx, _commandParams) {

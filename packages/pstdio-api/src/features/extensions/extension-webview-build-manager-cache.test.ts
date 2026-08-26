@@ -23,13 +23,11 @@ const writeExtension = (root: string) => {
   writeFileSync(
     join(root, "extension.ts"),
     `export default {
-      routes: {
-        labPage: {
-          path: "lab",
-          label: "Lab",
-          webview: { entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: import.meta.url } },
-        },
-      },
+      views: [{
+        id: "labPage",
+        title: "Lab",
+        body: { kind: "webview", entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: import.meta.url } },
+      }],
     };`,
   );
 };
@@ -52,18 +50,10 @@ const writeExtensionWithIndependentWebviews = (root: string) => {
   writeFileSync(
     join(root, "extension.ts"),
     `export default {
-      routes: {
-        labPage: {
-          path: "lab",
-          label: "Lab",
-          webview: { entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: import.meta.url } },
-        },
-        faultyPage: {
-          path: "faulty",
-          label: "Faulty",
-          webview: { entry: { kind: "package-asset", path: "./src/faulty.tsx", baseUrl: import.meta.url } },
-        },
-      },
+      views: [
+        { id: "labPage", title: "Lab", body: { kind: "webview", entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: import.meta.url } } },
+        { id: "faultyPage", title: "Faulty", body: { kind: "webview", entry: { kind: "package-asset", path: "./src/faulty.tsx", baseUrl: import.meta.url } } },
+      ],
     };`,
   );
 };
@@ -73,7 +63,7 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-webview-cache-recovery-test-"));
     const sourcePath = join(root, "extension");
     const cacheRoot = join(root, "cache");
-    const distPath = join(cacheRoot, "extension-lab", "lab.labPage", "dist");
+    const distPath = join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist");
     writeExtension(sourcePath);
     let buildCount = 0;
 
@@ -136,9 +126,9 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
     try {
       await manager.refresh();
 
-      expect(failures).toEqual(["lab.faultyPage"]);
-      expect(successes).toEqual(["lab.labPage"]);
-      expect(existsSync(join(cacheRoot, "extension-lab", "lab.labPage", "dist", "module.js"))).toBe(true);
+      expect(failures).toEqual(["pstdio.lab.view.faultyPage"]);
+      expect(successes).toEqual(["pstdio.lab.view.labPage"]);
+      expect(existsSync(join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist", "module.js"))).toBe(true);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -189,7 +179,7 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
       await manager.refresh();
 
       expect(buildCount).toBe(1);
-      expect(existsSync(join(cacheRoot, "extension-lab", "lab.labPage", "dist", "module.js"))).toBe(true);
+      expect(existsSync(join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist", "module.js"))).toBe(true);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -233,7 +223,7 @@ describe("createExtensionWebviewBuildManager cache recovery", () => {
 
       expect(buildCount).toBe(2);
       expect(failures).toEqual([]);
-      expect(existsSync(join(cacheRoot, "extension-lab", "lab.labPage", "dist", "module.js"))).toBe(true);
+      expect(existsSync(join(cacheRoot, "extension-lab", "pstdio.lab.view.labPage", "dist", "module.js"))).toBe(true);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });

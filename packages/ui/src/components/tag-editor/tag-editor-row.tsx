@@ -14,6 +14,7 @@ interface TagEditorRowProps {
   iconOptions?: readonly IconColorPickerIconOption[];
   value: TagEditorValue;
   isSaving?: boolean;
+  readOnly?: boolean;
   showDefault?: boolean;
   showIcons?: boolean;
   onActionsChange: (actions: string[]) => void;
@@ -72,6 +73,7 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
     iconOptions,
     value,
     isSaving,
+    readOnly,
     showDefault,
     showIcons,
     onActionsChange,
@@ -81,7 +83,11 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
     onNameChange,
     onSetDefault,
   } = props;
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: value.id });
+  const disabled = isSaving || readOnly;
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: value.id,
+    disabled,
+  });
 
   return (
     <Flex
@@ -102,7 +108,7 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
       _hover={{ bg: isDragging ? "bg.elevated" : "bg.muted" }}
     >
       <Flex
-        cursor="grab"
+        cursor={readOnly ? "default" : "grab"}
         color="fg.subtle"
         _groupHover={{ color: "fg.muted" }}
         aria-label={`Reorder ${value.name}`}
@@ -119,7 +125,7 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
         showIcons={showIcons}
         onColorChange={onColorChange}
         onIconChange={onIconChange}
-        disabled={isSaving}
+        disabled={disabled}
         aria-label={`Change ${value.name} appearance`}
       />
       <Editable.Root
@@ -131,6 +137,7 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
         // A freshly added option opens straight into its rename input.
         defaultEdit={value.isNew}
         selectOnFocus
+        disabled={disabled}
         onValueCommit={(details) => {
           const trimmed = details.value.trim();
           if (trimmed && trimmed !== value.name) onNameChange(trimmed);
@@ -144,7 +151,7 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
           size="2xs"
           variant={value.isDefault ? "primary" : "ghost"}
           onClick={onSetDefault}
-          disabled={isSaving || value.isDefault}
+          disabled={disabled || value.isDefault}
           aria-label={`Set ${value.name} as default`}
         >
           <Icon as={Check} boxSize="icon-xs" />
@@ -153,7 +160,7 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
       {actionOptions ? (
         <ActionDropdown
           actions={value.actions ?? []}
-          disabled={isSaving}
+          disabled={disabled}
           options={actionOptions}
           onChange={onActionsChange}
         />
@@ -164,7 +171,7 @@ export const TagEditorRow = (props: TagEditorRowProps) => {
         color="fg.subtle"
         _groupHover={{ color: "fg.error", bg: "bg.error" }}
         onClick={onDelete}
-        disabled={isSaving || value.isDefault}
+        disabled={disabled || value.isDefault}
         aria-label={`Delete ${value.name}`}
       >
         <Icon as={Trash2} boxSize="icon-xs" />

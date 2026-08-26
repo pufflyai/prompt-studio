@@ -8,6 +8,7 @@ import {
   type TreeNode,
   type TreeViewSection,
 } from "@pstdio/sdk/extensions";
+
 import { statusesCollection, ticketsCollection } from "../data/collections";
 import { selectedDocumentFromResource } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
@@ -23,6 +24,8 @@ import { isImageAttachment } from "../utils/is-image-attachment";
 import { createWorkspaceCommand } from "./ticket-actions";
 import { buildSessionsSection } from "./ticket-sessions-tree";
 import { buildSubTicketsSection } from "./ticket-sub-tickets-tree";
+
+const ticketResourceKind = { extensionId: "pstdio.pstdio-planner", kind: "resource-kind", id: "ticket" } as const;
 
 const TICKET_BODY_ID = "__ticket__";
 
@@ -106,7 +109,7 @@ const workspaceSectionActions = (ticketId: string): TreeAction[] => [
     id: "create-workspace",
     label: "Create workspace",
     icon: "Plus",
-    command: "pstdio-planner.create-workspace",
+    command: createWorkspaceCommand.ref,
     params: { ticket: ticketId },
     input: createWorkspaceTreeActionParams,
   },
@@ -149,7 +152,7 @@ const fileContextMenuActions = (input: { ticketId: string; fileId: string; fileN
       id: "rename",
       label: "Rename",
       icon: "Pencil",
-      command: "pstdio-planner.rename-ticket-file",
+      command: renameTicketFileCommand.ref,
       params: { ticketId: input.ticketId, fileId: input.fileId, name: input.fileName },
       submitLabel: "Save",
       input: {
@@ -160,7 +163,7 @@ const fileContextMenuActions = (input: { ticketId: string; fileId: string; fileN
       id: "delete",
       label: "Delete",
       icon: "Trash",
-      command: "pstdio-planner.delete-ticket-file",
+      command: deleteTicketFileCommand.ref,
       params: { ticketId: input.ticketId, fileId: input.fileId },
     },
   ];
@@ -168,8 +171,9 @@ const fileContextMenuActions = (input: { ticketId: string; fileId: string; fileN
 };
 
 export const createTicketFileCommand = defineCommand({
+  id: "create-ticket-file",
   title: "Create ticket file",
-  palette: { group: "Tickets", when: { resourceType: ["ticket"] } },
+  palette: [{ group: "Tickets", when: { resourceType: [ticketResourceKind] } }],
   params: {
     ticketId: params.text(),
     name: params.text({ label: "File name" }),
@@ -185,6 +189,7 @@ export const createTicketFileCommand = defineCommand({
 });
 
 export const updateTicketFileCommand = defineCommand({
+  id: "update-ticket-file",
   title: "Update ticket file",
   params: {
     ticketId: params.text({ required: true }),
@@ -206,6 +211,7 @@ export const updateTicketFileCommand = defineCommand({
 });
 
 export const renameTicketFileCommand = defineCommand({
+  id: "rename-ticket-file",
   title: "Rename ticket file",
   params: {
     name: params.text({ label: "File name", required: true }),
@@ -226,6 +232,7 @@ export const renameTicketFileCommand = defineCommand({
 });
 
 export const deleteTicketFileCommand = defineCommand({
+  id: "delete-ticket-file",
   title: "Delete ticket file",
   params: {
     ticketId: params.text({ required: true }),
@@ -243,7 +250,7 @@ export const listTicketFilesTree = async (
   ctx: Pick<ExtensionContextBase, "sessions" | "storage" | "workspaces">,
   input: { renderer?: RendererContext },
 ) => {
-  const renderer = input.renderer ?? { rendererId: "pstdio-planner.ticketFiles" };
+  const renderer = input.renderer ?? { rendererId: "pstdio.pstdio-planner.view.ticket-files" };
   const resource = renderer.resource as TicketTreeResource | undefined;
   const ticketId = resource?.type === "ticket" ? resource.id : undefined;
   if (!ticketId) return [emptyFilesSection()];
@@ -310,7 +317,7 @@ export const listTicketFilesTree = async (
         id: "create",
         label: "New file",
         icon: "Plus",
-        command: "pstdio-planner.create-ticket-file",
+        command: createTicketFileCommand.ref,
         params: { ticketId },
       },
     ],
@@ -351,6 +358,7 @@ export const listTicketFilesTree = async (
 };
 
 export const listTicketFilesTreeCommand = defineCommand({
+  id: "ticket-files.tree.body",
   title: "List ticket files tree",
   params: {
     renderer: params.json<RendererContext>(),

@@ -40,6 +40,7 @@ export const queryTicketProperties = async (
 // Loads the control declarations for the ticket properties panel. Returns an empty
 // result (empty state) when no ticket resource is open.
 export const ticketPropertiesQueryCommand = defineCommand({
+  id: "ticket-properties.query",
   title: "Query ticket properties",
   async run(ctx, _commandParams) {
     return queryTicketProperties(ctx, ctx.resource);

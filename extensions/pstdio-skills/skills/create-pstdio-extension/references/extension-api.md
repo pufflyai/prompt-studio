@@ -13,7 +13,7 @@ Every extension package needs a `package.json` next to its entry file:
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.3"
+    "pstdio": "1.0.0-alpha.4"
   },
   "private": true,
   "type": "module",
@@ -36,10 +36,22 @@ artifact roots, themes, and CLI paths.
 
 ```ts
 import {
+  defineCommand,
   defineExtension,
   packageAsset,
   params,
 } from "@pstdio/sdk/extensions";
+
+const createTicket = defineCommand({
+  id: "tickets.create",
+  title: "Create ticket",
+  cli: true,
+  palette: { label: "Create ticket" },
+  params: { title: params.text({ label: "Title", required: true }) },
+  async run(_ctx, commandParams) {
+    return { title: commandParams.title };
+  },
+});
 
 export default defineExtension({
   settings: {
@@ -49,19 +61,7 @@ export default defineExtension({
     }),
   },
 
-  commands: {
-    "tickets.create": {
-      title: "Create ticket",
-      cli: true,
-      palette: { label: "Create ticket" },
-      params: {
-        title: params.text({ label: "Title", required: true }),
-      },
-      async run(_ctx, commandParams) {
-        return { title: commandParams.title };
-      },
-    },
-  },
+  commands: [createTicket],
 
   templates: {
     ticket: {
@@ -102,20 +102,17 @@ kebab-case. For example `create_pstdio_extension` and `createPstdioExtension` be
 | `schedules`                                       | Run a command on a cron expression.                                               |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                          |
 | `templateTypes`                                   | Add a custom template category.                                                   |
-| `routes`, `panels`, `treeItems`                   | Custom webview pages, workbench panels, and navigation entries.                   |
-| `resourceKinds`, `resourcePanels`                 | Domain resource types with named slots, and panel-to-slot bindings.               |
-| `modes`                                           | Placement recipes that arrange slots and known panels for accepted resources.     |
-| `statusItems`                                     | Status-surface chrome. Not a panel; takes no part in docked layout.               |
+| `views`, `viewMenus`                              | Reusable UI bodies and menus owned by a view.                                      |
+| `placements`, `navigationItems`                   | Mode geometry and typed navigation actions.                                       |
+| `resourceKinds`, `resourceViews`                  | Domain resource slots and typed view-to-slot bindings.                            |
+| `modes`                                           | Typed Workbench modes referenced by placements.                                   |
+| `statusBarItems`                                  | View references rendered outside docked layout.                                   |
+| `statuses`                                        | Workflow status providers shared by boards and settings.                          |
 | `resourceHierarchyProviders`                      | Parent lookup for resources, used for breadcrumbs and hierarchy.                  |
-| `kanbanRenderers`, `dataTableRenderers`           | Native dashboard data surfaces wrapped by panels.                                 |
-| `fileRenderers`                                   | Native markdown, code, and image document content for resources.                  |
-| `treeRenderers`                                   | Native workbench tree panels for resources, outlines, and navigation.             |
-| `controlsRenderers`                               | Reusable callback-backed inspector/property renderers, wrapped by a panel.        |
-| `settingsPanels`                                  | Dashboard configuration UI.                                                       |
+| `settingsPanels`                                  | References from host settings slots to views.                                     |
 | `activityItems`                                   | Activity-rail entries that select a Workbench mode.                               |
 | `artifactMounts`                                  | Safe file access under `.pstdio/<package-name>/`.                                 |
 | `workspaceTypes`, `harnesses`                     | Advanced provider integrations.                                                   |
-| `initialSetup`, `migrate`                         | Install-time and upgrade-time lifecycle work.                                     |
 
 ## Host capability validation
 
@@ -131,22 +128,20 @@ Current dashboard capability names:
 | `menu.v1` | Menu command entries. |
 | `command-palette.v1` | Command palette entries. |
 | `mode.v1` | Workbench modes and resource layouts. |
-| `panel.webview.v1` | Webview panel bodies. |
-| `panel.tree-renderer.v1` | Tree renderer panel bodies. |
-| `panel.file-renderer.v1` | File renderer panel bodies. |
-| `panel.controls-renderer.v1` | Controls renderer panel bodies and menus. |
-| `panel.data-table-renderer.v1` | Data table renderer panel bodies. |
-| `route.webview.v1` | Webview routes. |
-| `tree-item.v1` | Project sidenav tree items. |
+| `view.webview.v1` | Webview bodies. |
+| `view.tree.v1` | Tree bodies. |
+| `view.file.v1` | File bodies. |
+| `view.controls.v1` | Controls bodies and menus. |
+| `view.kanban.v1` | Kanban bodies. |
+| `view.data-table.v1` | Data table bodies. |
+| `placement.v1` | Docked view and resource-slot placements. |
+| `navigation-item.v1` | Fixed host navigation items. |
+| `status-bar-item.v1` | Views placed in the status bar. |
+| `status.v1` | Workflow status providers. |
 | `settings.section.v1` | Settings navigation sections. |
-| `settings.panel.webview.v1` | Settings webview panels. |
+| `settings.panel.v1` | Settings placements that reference views. |
 | `settings.definition.v1` | Extension setting definitions. |
-| `renderer.kanban.v1` | Native kanban renderers. |
-| `renderer.data-table.v1` | Native data table renderers. |
 | `renderer.command-palette-resource.v1` | Command palette resource providers. |
-| `renderer.tree.v1` | Native tree renderers. |
-| `renderer.file.v1` | Native file renderers. |
-| `renderer.controls.v1` | Native controls renderers. |
 | `keybinding.v1` | Dashboard keybindings. |
 | `resource-hierarchy.v1` | Resource hierarchy from native renderers. |
 | `resource-view.v1` | Resource detail views. |
@@ -205,35 +200,32 @@ inside the extension package. Skill assets may point at a directory containing `
 
 ## Webviews
 
-Routes, panels, settings panels, status items, and renderers point at webview entries with `packageAsset()`. Declare only the
-capabilities the webview needs, such as `commands.execute`, `resource.open`, `notification.show`, `preferences.get`,
-and `preferences.set`.
+A view with `body.kind: "webview"` points at an entry with `packageAsset()`. Declare only the capabilities the
+webview needs, such as `commands.execute`, `resource.open`, `notification.show`, `preferences.get`, and
+`preferences.set`. Settings panels and status-bar items reference that view instead of declaring another body.
 
 Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/extensions`.
 
 ## Native resource views
 
-Use native renderers when the host should own the editor or tree chrome instead of loading a custom webview. A native
+Use native view bodies when the host should own the editor or tree chrome instead of loading a custom webview. A native
 resource detail screen usually has:
 
-- A `resourceKinds` contribution that declares the resource's surface and named slots.
-- A `fileRenderers` contribution for the main document/file content.
-- A `treeRenderers` contribution for side-panel navigation or file lists.
-- `panels` that wrap those renderers and declare `show` for resource kinds owned by the extension.
-- `resourcePanels` entries only for panels contributed into another extension's slots.
-- A `modes` contribution whose `resources` recipe accepts the resource and describes any placement changes.
+- a `resourceKinds` contribution that declares the resource's surface and semantic slots
+- `views` with `file`, `tree`, `controls`, `dataTable`, or `kanban` bodies
+- `resourceViews` that bind each view to one semantic slot
+- `placements` that assign those slots to docked regions for a typed mode ref
 
-Each panel must declare exactly one of `webview` or `renderer`. An optional `path` gives the panel's registered view
-a project deep link. An owned placement uses `show` with a docked `region`
-(`sidenav`, `main`, `secondary`, or `side`), optional `for`, `allowedRegions`, and `required`. A native renderer reference has a `kind` (`tree`,
-`file`, `controls`, `dataTable`, or `kanban`) and the renderer contribution's local `id`. In the mode recipe, mark
-the primary panel placement `required: true` so the host restores the editor whenever the mode-resource context activates.
+View bodies never own geometry or a resource kind. `resourceViews` owns the semantic
+binding. `placements` owns `region`, `movableTo`, `required`, and `defaultOpen`.
+Use `defineResourceKind`, `resourceSlotRef`, `defineView`, `defineResourceView`, and
+`definePlacement`, then pass the returned contributions as arrays to `defineExtension`.
 
-`fileRenderers` need `title` and a `load` callback; an optional `save` callback makes text content editable.
+File view bodies need a `load` callback; an optional `save` callback makes text content editable.
 Load callbacks return `{ content }` for markdown/code text, `{ dataUrl }` for images, plus optional `fileName`,
 `mimeType`, and `placeholder`. Images are always read-only.
 
-`treeRenderers` need `title` and a `body` callback; `children` and `footer` callbacks are optional. Body callbacks
+Tree view bodies need a `body` callback; `children` and `footer` callbacks are optional. Body callbacks
 return `TreeViewSection[]`. Children and footer callbacks return `TreeNode[]`.
 
 ### Refresh native renderers with events
@@ -243,16 +235,22 @@ string id for an event owned by another extension. Emit the event only after the
 only renderer callbacks that declared that event; it does not refresh renderers after unrelated commands.
 
 ```ts
+import { defineExtension, defineView, eventRef } from "@pstdio/sdk/extensions";
+
 const ticketsChanged = eventRef<{ ticketId: string }>("example.tickets.changed");
 
-export default defineExtension({
-  dataTableRenderers: {
-    tickets: {
-      title: "Tickets",
-      query: async () => ({ rows: [] }),
-      refreshEvents: [ticketsChanged],
-    },
+const tickets = defineView({
+  id: "tickets",
+  title: "Tickets",
+  body: {
+    kind: "dataTable",
+    query: async () => ({ rows: [] }),
+    refreshEvents: [ticketsChanged],
   },
+});
+
+export default defineExtension({
+  views: [tickets],
   commands: {
     updateTicket: {
       title: "Update ticket",
@@ -265,33 +263,26 @@ export default defineExtension({
 });
 ```
 
-## Project sidenav UI
+## Project navigation UI
 
-For a Planner-style native list or board, define a `kanbanRenderers` contribution with a `query` callback. Add a
-Panel with `renderer: { kind: "kanban", id: "<renderer-id>" }`. To show it in the project sidenav, add a `treeItems`
-contribution whose action opens that Panel.
+For a Planner-style list or board, define a view with `body.kind: "kanban"` and a
+`query` callback. Add a `navigationItems` contribution whose typed action targets the
+view ref. A webview page uses the same model with `body.kind: "webview"`. An optional
+view `path` is only its deep-link path.
 
-For a custom webview page, define a `routes` contribution and add a `treeItems` contribution with
-`action: { kind: "view", viewId: "<package-name>.<route-key>" }`. Routes and panels register views under their
-normalized contribution IDs. An optional route or panel `path` is only the deep-link path.
-Use this for custom webview pages only; native resource screens should use `resourceKinds`, `resourcePanels`,
-`modes`, `panels`, `fileRenderers`, and `treeRenderers`.
-
-For an editable inspector/property panel, define a `controlsRenderers` renderer with a `query` callback (returns
-`{ params?, groups?, values?, readOnly? }` for the ParamEditor) plus optional `onValueChange`, `onApply`, and `onReset`
-callbacks. Nest the menu under its owning panel:
-`panelMenus: { properties: { title: "Properties", side: "right", renderer: { kind: "controls", id: "<id>" } } }`.
-The active owner instance determines when the menu is available, and it retains its attached or collapsed state.
-Bind the owning panel to its resource kind with `show.for`; omitting both
-`onValueChange` and `onApply` makes it read-only. Callback payloads must be JSON. Commit file metadata or
-data URLs, never live `File` objects.
+For an editable inspector, define a `controls` view with a `query` callback plus optional
+`onValueChange`, `onApply`, and `onReset` callbacks. Attach it to an owner with
+`defineViewMenu({ owner: owner.ref, view: inspector.ref, side: "right" })`. Bind resource
+views through semantic slots, and keep all region choices in `placements`. Omitting both
+`onValueChange` and `onApply` makes controls read-only. Callback payloads must be JSON.
+Commit file metadata or data URLs, never live `File` objects.
 
 ## Harnesses
 
 A harness contributes an agent that drives sessions. The host injects an event sink (and, for providers with the
 `Approvals` capability, an approval channel) and owns the session lifecycle: timeouts, persistence, and status
 transitions are keyed off the returned `HarnessSession`. Ids are namespaced as
-`${publisher}.${package-name}.${provider.id}` (for example `pstdio.harness-claude-code.claude-code`).
+`${publisher}.${package-name}.${provider.id}` (for example `pstdio.harness-claude-code.harness.claude-code`).
 
 ```ts
 import { defineExtension, l10n } from "@pstdio/sdk/extensions";

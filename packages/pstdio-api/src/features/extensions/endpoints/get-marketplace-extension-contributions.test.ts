@@ -79,7 +79,7 @@ describe("GET /v1/projects/:projectId/extensions/marketplace/:installName/contri
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.extensions).toContainEqual(expect.objectContaining({ id: loaded.metadata.id }));
-    expect(body.commands).toContainEqual(expect.objectContaining({ id: "pstdio-reports.heartbeat" }));
+    expect(body.commands).toContainEqual(expect.objectContaining({ id: `${loaded.metadata.id}.command.heartbeat` }));
 
     const listed = await (await handle.app.request(`/v1/projects/${project.id}/extensions`)).json();
     expect(listed.extensions).toEqual([]);

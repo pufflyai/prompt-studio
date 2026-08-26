@@ -1,71 +1,65 @@
 import type { CommandExecuteResponse, WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
 
+const labExtensionId = "pstdio.extension-lab";
+const ticketsExtensionId = "pstdio.pstdio-core-tickets";
+const ref = <Kind extends string>(extensionId: string, kind: Kind, id: string) => ({ extensionId, kind, id });
+const webview = (path: string, id: string) => ({
+  entry: { kind: "package-asset" as const, path, baseUrl: "file:///extension/extension.ts" },
+  runtimeUrl: "/v1/extensions/runtime",
+  moduleUrl: `/v1/extensions/installed/extension-lab/webviews/${id}/module.js`,
+});
+
 export const emptyAppearance = { themes: [], fileIconThemes: [], translations: [], diagnostics: [] };
 
 export const metadata = {
-  extensions: [{ id: "pstdio.extension-lab", name: "extension-lab", displayName: "Extension Lab", sourcePath: "" }],
+  extensions: [{ id: labExtensionId, name: "extension-lab", displayName: "Extension Lab", sourcePath: "" }],
   commands: [
-    { id: "extension-lab.say-hello", extensionId: "pstdio.extension-lab", title: "Say hello" },
-    { id: "extension-lab.counter.bump", extensionId: "pstdio.extension-lab", title: "Bump lab counter" },
+    { id: `${labExtensionId}.command.say-hello`, extensionId: labExtensionId, title: "Say hello" },
+    { id: `${labExtensionId}.command.counter.bump`, extensionId: labExtensionId, title: "Bump lab counter" },
   ],
   diagnostics: [],
-  menuContributions: [
-    {
-      id: "extension-lab.say-hello.menu.0",
-      extensionId: "pstdio.extension-lab",
-      commandId: "extension-lab.say-hello",
-      slotId: "project.headerPrimary",
-      target: "workbench.nav.actions",
-      label: "Lab: Say hello",
-      icon: "flask-conical",
-      when: {
-        viewId: "extension-lab.labPage",
-      },
-    },
-    {
-      id: "extension-lab.counter.bump.menu.0",
-      extensionId: "pstdio.extension-lab",
-      commandId: "extension-lab.counter.bump",
-      slotId: "project.headerOverflow",
-      target: "workbench.nav.overflow",
-      label: "Bump lab counter",
-      when: {
-        viewId: "extension-lab.labPage",
-      },
-    },
-  ],
+  menuContributions: [],
+  commandPaletteContributions: [],
   modes: [],
-  routes: [
+  views: [
     {
-      id: "extension-lab.labPage",
-      extensionId: "pstdio.extension-lab",
+      id: `${labExtensionId}.view.labPage`,
+      localId: "labPage",
+      extensionId: labExtensionId,
       path: "lab",
-      label: "Lab",
-      webview: {
-        entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: "file:///extension/extension.ts" },
-        runtimeUrl: "/v1/extensions/runtime",
-        moduleUrl: "/v1/extensions/installed/extension-lab/webviews/extension-lab.labPage/module.js",
-      },
+      title: "Lab",
+      body: { kind: "webview", webview: webview("./src/main.tsx", "labPage") },
     },
   ],
-  settingsPanels: [],
-  treeItems: [
+  viewMenus: [],
+  placements: [],
+  resourceKinds: [],
+  resourceViews: [],
+  resourceHierarchyProviders: [],
+  navigationItems: [
     {
-      id: "extension-lab.labPage",
-      extensionId: "pstdio.extension-lab",
-      target: "workbench.left.tree",
+      id: `${labExtensionId}.navigation-item.labPage`,
+      extensionId: labExtensionId,
+      slot: ref("pstdio", "navigation-item", "project.navigation"),
       group: "Lab",
       label: "Lab",
       icon: "flask-conical",
-      action: { kind: "view", viewId: "extension-lab.labPage" },
+      action: { kind: "view", view: ref(labExtensionId, "view", "labPage") },
     },
   ],
-  panels: [],
+  statusBarItems: [],
+  statuses: [],
+  activityItems: [],
+  settingsSections: [],
+  settingsPanels: [],
+  commandPaletteResources: [],
+  keybindings: [],
+  settingsDefinitions: [],
 } satisfies DashboardExtensionMetadata;
 
 export const response = {
-  commandId: "extension-lab.say-hello",
-  extensionId: "pstdio.extension-lab",
+  commandId: `${labExtensionId}.command.say-hello`,
+  extensionId: labExtensionId,
   outcome: { ok: true, status: "success", value: { message: "hello" } },
 } satisfies CommandExecuteResponse;
 
@@ -73,162 +67,100 @@ export const metadataWithLabMode = {
   ...metadata,
   modes: [
     {
-      id: "extension-lab.lab",
-      extensionId: "pstdio.extension-lab",
-      modeId: "pstdio.extension-lab.lab",
+      id: `${labExtensionId}.mode.lab`,
+      localId: "lab",
+      extensionId: labExtensionId,
       label: "Lab",
       icon: "flask-conical",
-      panelRegions: ["main", "secondary", "side"],
-      modePanels: {
-        "extension-lab.labSidenav": { region: "sidenav", pinned: true, required: true },
-        "extension-lab.labOverview": { region: "main", required: true },
-      },
     },
   ],
-  panels: [
+  views: [
+    ...metadata.views,
     {
-      id: "extension-lab.labSidenav",
-      extensionId: "pstdio.extension-lab",
-      show: { region: "sidenav" },
+      id: `${labExtensionId}.view.labSidenav`,
+      localId: "labSidenav",
+      extensionId: labExtensionId,
       title: "Lab",
-      webview: {
-        entry: { kind: "package-asset", path: "./src/lab-sidenav.tsx", baseUrl: "file:///extension/extension.ts" },
-        runtimeUrl: "/v1/extensions/runtime",
-        moduleUrl: "/v1/extensions/installed/extension-lab/webviews/extension-lab.labSidenav/module.js",
-      },
+      body: { kind: "webview" as const, webview: webview("./src/lab-sidenav.tsx", "labSidenav") },
     },
     {
-      id: "extension-lab.labOverview",
-      extensionId: "pstdio.extension-lab",
-      show: { region: "main" },
+      id: `${labExtensionId}.view.labOverview`,
+      localId: "labOverview",
+      extensionId: labExtensionId,
       title: "Lab overview",
-      webview: {
-        entry: { kind: "package-asset", path: "./src/lab-overview.tsx", baseUrl: "file:///extension/extension.ts" },
-        runtimeUrl: "/v1/extensions/runtime",
-        moduleUrl: "/v1/extensions/installed/extension-lab/webviews/extension-lab.labOverview/module.js",
-      },
+      body: { kind: "webview" as const, webview: webview("./src/lab-overview.tsx", "labOverview") },
+    },
+  ],
+  placements: [
+    {
+      id: `${labExtensionId}.placement.lab-sidenav`,
+      localId: "lab-sidenav",
+      extensionId: labExtensionId,
+      mode: ref(labExtensionId, "mode", "lab"),
+      item: { kind: "view" as const, view: ref(labExtensionId, "view", "labSidenav") },
+      region: "sidenav" as const,
+      required: true,
+    },
+    {
+      id: `${labExtensionId}.placement.lab-overview`,
+      localId: "lab-overview",
+      extensionId: labExtensionId,
+      mode: ref(labExtensionId, "mode", "lab"),
+      item: { kind: "view" as const, view: ref(labExtensionId, "view", "labOverview") },
+      region: "main" as const,
+      required: true,
     },
   ],
 } satisfies DashboardExtensionMetadata;
 
 export const metadataWithTickets = {
   ...metadata,
-  commands: [
-    ...metadata.commands,
-    {
-      id: "pstdio-core-tickets.ticket-files.tree.body",
-      extensionId: "pstdio.pstdio-core-tickets",
-      title: "List ticket files",
-    },
+  extensions: [
+    ...metadata.extensions,
+    { id: ticketsExtensionId, name: "pstdio-core-tickets", displayName: "Tickets", sourcePath: "" },
   ],
-  kanbanRenderers: [
+  views: [
+    ...metadata.views,
     {
-      id: "pstdio-core-tickets.tickets",
-      extensionId: "pstdio.pstdio-core-tickets",
+      id: `${ticketsExtensionId}.view.tickets`,
+      localId: "tickets",
+      extensionId: ticketsExtensionId,
       title: "Tickets",
-      resourceKind: "ticket",
-      queryHandlerId: "pstdio-core-tickets.tickets.query",
+      body: { kind: "kanban" as const, queryHandlerId: `${ticketsExtensionId}.view.tickets.query` },
     },
-  ],
-  treeItems: [
-    ...metadata.treeItems,
     {
-      id: "pstdio-core-tickets.tickets",
-      extensionId: "pstdio.pstdio-core-tickets",
-      target: "workbench.left.tree",
-      label: "Tickets",
-      icon: "square-kanban",
-      action: { kind: "view", viewId: "pstdio-core-tickets.tickets" },
+      id: `${ticketsExtensionId}.view.ticketFiles`,
+      localId: "ticketFiles",
+      extensionId: ticketsExtensionId,
+      title: "Files",
+      body: {
+        kind: "tree" as const,
+        bodyHandlerId: `${ticketsExtensionId}.view.ticketFiles.body`,
+        defaultExpandedSectionIds: ["files"],
+      },
     },
   ],
-  modes: [],
   resourceKinds: [
     {
       id: "ticket",
-      extensionId: "pstdio.pstdio-core-tickets",
-      surface: "primary",
+      localId: "ticket",
+      extensionId: ticketsExtensionId,
+      surface: "primary" as const,
       label: "Ticket",
       icon: "component",
-      slots: {
-        primary: { cardinality: "one", external: false },
-        files: { cardinality: "one", external: false },
-        properties: { cardinality: "many", external: true },
-      },
-    },
-  ],
-  resourcePanels: [
-    {
-      id: "pstdio-core-tickets.ticket.primary",
-      extensionId: "pstdio.pstdio-core-tickets",
-      resourceKind: "ticket",
-      panel: "pstdio-core-tickets.ticketEditor",
-      slot: "primary",
-    },
-    {
-      id: "pstdio-core-tickets.ticket.files",
-      extensionId: "pstdio.pstdio-core-tickets",
-      resourceKind: "ticket",
-      panel: "pstdio-core-tickets.ticketFiles",
-      slot: "files",
-    },
-  ],
-  panels: [
-    {
-      id: "pstdio-core-tickets.tickets",
-      extensionId: "pstdio.pstdio-core-tickets",
-      show: { region: "main" },
-      title: "Tickets",
-      renderer: { kind: "kanban", id: "pstdio-core-tickets.tickets" },
-    },
-    {
-      id: "pstdio-core-tickets.ticketEditor",
-      extensionId: "pstdio.pstdio-core-tickets",
-      show: { region: "main" },
-      title: "Ticket",
-      webview: {
-        entry: {
-          kind: "package-asset",
-          path: "./src/views/ticket-editor.tsx",
-          baseUrl: "file:///extension/extension.ts",
-        },
-        runtimeUrl: "/v1/extensions/runtime",
-        moduleUrl: "/v1/extensions/installed/pstdio-core-tickets/webviews/ticket-editor/module.js",
-      },
-      panelMenus: [
-        {
-          id: "pstdio-core-tickets.ticketProperties",
-          extensionId: "pstdio.pstdio-core-tickets",
-          ownerPanelId: "pstdio-core-tickets.ticketEditor",
-          title: "Properties",
-          side: "right",
-          webview: {
-            entry: {
-              kind: "package-asset",
-              path: "./src/views/ticket-properties.tsx",
-              baseUrl: "file:///extension/extension.ts",
-            },
-            runtimeUrl: "/v1/extensions/runtime",
-            moduleUrl: "/v1/extensions/installed/pstdio-core-tickets/webviews/ticket-properties/module.js",
-          },
-        },
+      slots: [
+        { id: "primary", cardinality: "one" as const, access: "owner" as const },
+        { id: "files", cardinality: "one" as const, access: "owner" as const },
       ],
     },
-    {
-      id: "pstdio-core-tickets.ticketFiles",
-      extensionId: "pstdio.pstdio-core-tickets",
-      title: "Files",
-      show: { region: "sidenav" },
-      renderer: { kind: "tree", id: "pstdio-core-tickets.ticketFiles" },
-    },
   ],
-  treeRenderers: [
+  resourceViews: [
     {
-      id: "pstdio-core-tickets.ticketFiles",
-      extensionId: "pstdio.pstdio-core-tickets",
-      title: "Files",
-      icon: "Files",
-      bodyHandlerId: "pstdio-core-tickets.ticketFiles.body",
-      defaultExpandedSectionIds: ["files"],
+      id: `${ticketsExtensionId}.resource-view.ticket-files`,
+      extensionId: ticketsExtensionId,
+      resourceKind: ref(ticketsExtensionId, "resource-kind", "ticket"),
+      slot: { resourceKind: ref(ticketsExtensionId, "resource-kind", "ticket"), id: "files" },
+      view: ref(ticketsExtensionId, "view", "ticketFiles"),
     },
   ],
 } satisfies DashboardExtensionMetadata;

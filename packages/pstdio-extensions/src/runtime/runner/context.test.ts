@@ -13,15 +13,17 @@ describe("context factory", () => {
 
     let seen: ExtensionTerminalApi | undefined;
     const runtime = buildRuntime({
-      commands: {
-        probe: {
+      commands: [
+        {
+          id: "probe",
+          ref: { kind: "command", id: "probe" },
           title: "Probe",
           async run(ctx) {
             seen = ctx.terminal;
             return {};
           },
         },
-      },
+      ],
     });
 
     const { api: storage } = makeStorage();
@@ -29,7 +31,7 @@ describe("context factory", () => {
       buildEnvironment: () => ({ ...stubEnvironment(storage), terminal }),
     });
 
-    const outcome = await runner.execute({ commandId: "lab.probe", projectId: "p1" });
+    const outcome = await runner.execute({ commandId: "pstdio.lab.command.probe", projectId: "p1" });
     expect(outcome.ok).toBe(true);
     expect(seen).toBe(terminal);
   });
@@ -37,15 +39,17 @@ describe("context factory", () => {
   test("ctx.terminal stays undefined when the environment has no terminal", async () => {
     let seen: unknown = "unset";
     const runtime = buildRuntime({
-      commands: {
-        probe: {
+      commands: [
+        {
+          id: "probe",
+          ref: { kind: "command", id: "probe" },
           title: "Probe",
           async run(ctx) {
             seen = ctx.terminal;
             return {};
           },
         },
-      },
+      ],
     });
 
     const { api: storage } = makeStorage();
@@ -53,7 +57,7 @@ describe("context factory", () => {
       buildEnvironment: () => stubEnvironment(storage),
     });
 
-    const outcome = await runner.execute({ commandId: "lab.probe", projectId: "p1" });
+    const outcome = await runner.execute({ commandId: "pstdio.lab.command.probe", projectId: "p1" });
     expect(outcome.ok).toBe(true);
     expect(seen).toBeUndefined();
   });

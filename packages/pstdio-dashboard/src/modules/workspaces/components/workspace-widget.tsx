@@ -11,7 +11,7 @@ import {
   workspaceDiffFileQueryOptions,
   workspaceDiffFilesQueryOptions,
 } from "../data/workspace-queries";
-import { resolveWorkspaceDiffRequest } from "./workspace-widget-state";
+import { resolveDefaultWorkspaceDiffPath, resolveWorkspaceDiffRequest } from "./workspace-widget-state";
 
 const toDiff = (summary: WorkspaceDiffSummaryFile, body?: WorkspaceDiffSummaryFile | null): Diff => ({
   change: summary.change,
@@ -48,6 +48,7 @@ const useWorkspaceDiffs = (request: { workspaceId: string; mode: WorkspaceDiffMo
   return {
     diffs: files.map((file) => toDiff(file, bodiesByPath.get(workspaceDiffFilePath(file)))),
     paths: files.map(workspaceDiffFilePath),
+    defaultSelectedPath: resolveDefaultWorkspaceDiffPath(files),
     loading: summary.isLoading,
     error: summary.error,
     loadDiff: async (path: string) => {
@@ -67,7 +68,7 @@ export const WorkspaceDiffsPanel = (props: { input: WorkbenchPanelRenderInput })
     resourceId: input.instance.resource?.id,
     metadata: input.instance.resource?.metadata,
   });
-  const { diffs, paths, loading, error, loadDiff } = useWorkspaceDiffs(request);
+  const { diffs, paths, defaultSelectedPath, loading, error, loadDiff } = useWorkspaceDiffs(request);
   const { activeFileIconTheme } = useFileIconThemePreference();
 
   if (error) {
@@ -90,7 +91,7 @@ export const WorkspaceDiffsPanel = (props: { input: WorkbenchPanelRenderInput })
           <DiffViewer
             diffs={diffs}
             changedFilePaths={paths}
-            defaultSelectedPath={paths[0]}
+            defaultSelectedPath={defaultSelectedPath}
             loading={loading}
             onLoadDiff={loadDiff}
             resolveFileIcon={resolveFileIcon}

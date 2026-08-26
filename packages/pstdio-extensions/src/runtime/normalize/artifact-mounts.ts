@@ -1,8 +1,10 @@
+import type { ArtifactMountContribution } from "@pstdio/sdk/extensions";
 import { normalizeArtifactMountPath } from "../../artifacts/path-normalization";
 import type { NormalizedExtension, RuntimeArtifactMount } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
+import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { isLocalizableString } from "./localizable";
 
 export const registerArtifactMounts = (
@@ -11,7 +13,15 @@ export const registerArtifactMounts = (
   runtime: Accumulator,
   index: RegistryIndex,
 ) => {
-  for (const [localId, mount] of Object.entries(source.definition.artifactMounts ?? {})) {
+  const contributions = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "artifact-mount",
+    contributions: contributionArray<ArtifactMountContribution>(source.definition.artifactMounts),
+  });
+  for (const mount of contributions) {
+    const localId = mount.id;
     if (!isRecord(mount) || typeof mount.path !== "string" || !isLocalizableString(mount.label)) continue;
 
     const relativePath = normalizeArtifactMountPath(mount.path);
@@ -43,11 +53,7 @@ export const registerArtifactMounts = (
     }
 
     const record: RuntimeArtifactMount = {
-      id: `${ext.name}.${localId}`,
-      localId,
-      extensionId: ext.id,
-      name: ext.name,
-      sourcePath: source.sourcePath,
+      ...contributionRecordBase(ext, source, "artifact-mount", localId),
       relativePath,
       fullPath,
       label: mount.label,

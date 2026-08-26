@@ -3,6 +3,7 @@ import { ticketsCollection } from "../data/collections";
 import { sortedBySortOrder } from "../utils/sort";
 
 export const readTicketsCommand = defineCommand({
+  id: "read-tickets",
   title: "Read tickets",
   async run(ctx, _commandParams) {
     const tickets = await ticketsCollection(ctx.storage).list();

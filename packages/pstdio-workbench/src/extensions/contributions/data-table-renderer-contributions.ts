@@ -1,4 +1,3 @@
-import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { WorkbenchExtensionDataTableRendererRecord } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
@@ -11,6 +10,7 @@ import type {
 } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { toWorkbenchNavigationTargetResult } from "../host/extension-navigation-target";
+import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import {
   createExtensionSlot,
@@ -22,7 +22,9 @@ import {
   panelMenuDeclarationOffsets,
   panelRendererId,
   registerWorkbenchExtensionPanel,
+  resolveWorkbenchExtensionViewInput,
   toWorkbenchCompositionPanelContribution,
+  type WorkbenchExtensionViewInputResolver,
 } from "./panel-contributions";
 
 type DataTableViewRecord = WorkbenchExtensionMetadata["panels"][number];
@@ -126,7 +128,7 @@ const registerRenderer = (
     onRowActivate: record.rowActivationHandlerId
       ? async (row) => {
           const result = await run(record.rowActivationHandlerId!, { row: originalRows.get(row) ?? row }, row.resource);
-          const target = toWorkbenchNavigationTargetResult(result);
+          const target = toWorkbenchNavigationTargetResult(result, { extensionId: record.extensionId });
           if (target) await context.workbench.navigation.openTarget(target);
         }
       : undefined,
@@ -139,12 +141,15 @@ const registerView = (
   index: number,
   menuDeclarationOffset: number,
   resourcePanels: WorkbenchExtensionMetadata["resourcePanels"],
+  resolveViewInput?: WorkbenchExtensionViewInputResolver,
 ) => {
   const rendererId = panelRendererId(panel, "dataTable");
   if (!rendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: context.workbench,
     path: panel.path,
+    aliases: panel.aliases,
+    resolveInput: resolveWorkbenchExtensionViewInput(resolveViewInput, panel),
     contribution: toWorkbenchCompositionPanelContribution({
       panel,
       rendererId,
@@ -160,11 +165,12 @@ export const registerWorkbenchExtensionDataTableRenderers = (
   records: WorkbenchExtensionDataTableRendererRecord[],
   panels: DataTableViewRecord[],
   resourcePanels: WorkbenchExtensionMetadata["resourcePanels"] = [],
+  resolveViewInput?: WorkbenchExtensionViewInputResolver,
 ): Disposable => {
   const disposables: Disposable[] = records.map((record) => registerRenderer(context, record));
   const menuOffsets = panelMenuDeclarationOffsets(panels);
   panels.forEach((panel, index) => {
-    const disposable = registerView(context, panel, index, menuOffsets[index]!, resourcePanels);
+    const disposable = registerView(context, panel, index, menuOffsets[index]!, resourcePanels, resolveViewInput);
     if (disposable) disposables.push(disposable);
   });
   return {

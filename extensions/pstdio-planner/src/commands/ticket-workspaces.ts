@@ -16,6 +16,7 @@ const workspacesForTicket = async (
 // `pst tickets workspaces`: list the workspaces linked to a ticket with their live
 // activity, derived from anchored sessions.
 export const ticketWorkspacesCommand = defineCommand({
+  id: "ticket-workspaces",
   title: "List ticket workspaces",
   cli: { globalAliases: [["tickets", "workspaces"]], examples: ["pstdio tickets workspaces --id PS-1"] },
   params: { id: params.text({ required: true }) },
@@ -39,6 +40,7 @@ export const ticketWorkspacesCommand = defineCommand({
 // `pst tickets worktrees list`: list the worktrees (workspaces with a worktree path)
 // linked to a ticket.
 export const ticketWorktreesListCommand = defineCommand({
+  id: "ticket-worktrees-list",
   title: "List ticket worktrees",
   cli: { globalAliases: [["tickets", "worktrees", "list"]], examples: ["pstdio tickets worktrees list --id PS-1"] },
   params: { id: params.text({ required: true }) },
@@ -57,6 +59,7 @@ export const ticketWorktreesListCommand = defineCommand({
 // `pst tickets worktrees remove-all`: remove every worktree (and its branch) linked
 // to a ticket. Git work runs in the API via the host process capability.
 export const ticketWorktreesRemoveAllCommand = defineCommand({
+  id: "ticket-worktrees-remove-all",
   title: "Remove ticket worktrees",
   cli: {
     globalAliases: [["tickets", "worktrees", "remove-all"]],

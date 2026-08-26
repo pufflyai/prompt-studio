@@ -22,7 +22,7 @@ This cookbook gives short recipes for the implemented extension API.
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.3"
+    "pstdio": "1.0.0-alpha.4"
   },
   "type": "module",
   "dependencies": {
@@ -189,35 +189,45 @@ export default defineExtension({
 });
 ```
 
-## Add A Route And Sidenav Link
+## Add A View And Navigation Item
 
 ```ts
-import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
+import {
+  defineExtension,
+  defineNavigationItem,
+  defineView,
+  packageAsset,
+  workbenchSlots,
+} from "@pstdio/sdk/extensions";
+
+const planner = defineView({
+  id: "planner",
+  path: "planner",
+  title: "Planner",
+  body: {
+    kind: "webview",
+    entry: packageAsset("./webviews/planner.tsx", import.meta.url),
+    capabilities: ["commands.execute", "notification.show"],
+  },
+});
 
 export default defineExtension({
-  routes: {
-    planner: {
-      path: "planner",
-      label: "Planner",
-      webview: {
-        entry: packageAsset("./webviews/planner.tsx", import.meta.url),
-        capabilities: ["commands.execute", "notification.show"],
-      },
-    },
-  },
-  treeItems: {
-    planner: {
-      target: "workbench.left.tree",
-      group: "Planner",
+  views: [planner],
+  navigationItems: [
+    defineNavigationItem({
+      id: "planner",
+      slot: workbenchSlots.projectNavigation,
       label: "Planner",
       icon: "calendar-check",
-      action: { kind: "view", viewId: "planner.planner" },
-    },
-  },
+      action: { kind: "view", view: planner.ref },
+    }),
+  ],
 });
 ```
 
-The route registers `planner.planner` as its stable view ID and `planner` as its deep-link path. Omit `when.mode` when a route or command should stay visible in every active mode where the host left tree exists. Add `when: { mode: "project" }` for project-only navigation, or use an extension-defined mode id such as `when: { mode: "planner.focus" }` for mode-only navigation.
+The view has the normalized id `publisher.name.view.planner`. Its `path` adds a deep
+link without creating another UI contribution. Use the returned `planner.ref` anywhere
+the extension needs to target this view.
 
 ## Call Commands From A Webview
 
@@ -279,50 +289,57 @@ the settings contribution type as the second type argument for typed `client.set
 
 ## Compose A Resource Screen
 
-Declare the resource kind and its slots, then put each owned panel's default placement beside its body. Keep slot bindings for panels contributed by another extension.
+Declare the resource kind and its slots. Bind views to slots with `resourceViews`, then place the slots in a mode.
 
 ```ts
-import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
+import {
+  defineExtension,
+  definePlacement,
+  defineResourceKind,
+  defineResourceView,
+  defineView,
+  packageAsset,
+  resourceSlotRef,
+  workbenchModes,
+} from "@pstdio/sdk/extensions";
+
+const ticket = defineResourceKind({
+  id: "ticket",
+  surface: "primary",
+  slots: [
+    { id: "primary", cardinality: "one", access: "owner" },
+    { id: "navigation", cardinality: "one", access: "public" },
+  ],
+});
+const primary = resourceSlotRef(ticket.ref, "primary");
+const navigation = resourceSlotRef(ticket.ref, "navigation");
+const editor = defineView({
+  id: "ticket-editor",
+  title: "Ticket",
+  body: { kind: "webview", entry: packageAsset("./webviews/ticket-editor.tsx", import.meta.url) },
+});
+const files = defineView({
+  id: "ticket-files",
+  title: "Files",
+  body: { kind: "tree", body: async () => [] },
+});
 
 export default defineExtension({
-  resourceKinds: {
-    ticket: {
-      surface: "primary",
-      slots: {
-        primary: { cardinality: "one", external: false },
-        navigation: { cardinality: "many", external: true },
-      },
-    },
-  },
-  panels: {
-    ticketEditor: {
-      title: "Ticket",
-      show: { for: "ticket", region: "main", required: true },
-      webview: { entry: packageAsset("./webviews/ticket-editor.tsx", import.meta.url) },
-    },
-    ticketFiles: {
-      title: "Files",
-      show: { for: "ticket", region: "sidenav", required: true },
-      renderer: { kind: "tree", id: "ticketFilesTree" },
-    },
-  },
-  modes: {
-    ticket: {
-      id: "planner.ticket",
-      label: "Ticket",
-      icon: "FileText",
-      panelRegions: ["main", "secondary", "side"],
-      resources: {
-        ticket: {},
-      },
-    },
-  },
+  resourceKinds: [ticket],
+  views: [editor, files],
+  resourceViews: [
+    defineResourceView({ id: "editor", resourceKind: ticket.ref, slot: primary, view: editor.ref }),
+    defineResourceView({ id: "files", resourceKind: ticket.ref, slot: navigation, view: files.ref }),
+  ],
+  placements: [
+    definePlacement({ id: "editor", mode: workbenchModes.project, item: { kind: "resource-slot", slot: primary }, region: "main", required: true }),
+    definePlacement({ id: "files", mode: workbenchModes.project, item: { kind: "resource-slot", slot: navigation }, region: "sidenav", required: true }),
+  ],
 });
 ```
 
-Another extension can add an optional panel to the open `navigation` slot with `resourcePanels: { myPanel: { resourceKind: "planner.ticket", panel: "myPanel", slot: "navigation" } }`.
-
-An owned panel may declare `required` directly. A mode recipe can override that policy when it needs a different layout.
+Another extension can bind its view to the public `navigation` slot by importing the typed
+resource-kind and slot refs. Geometry remains in `placements`; the binding never decides a region.
 
 ## Add Packaged Assets
 

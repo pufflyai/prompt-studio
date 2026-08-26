@@ -8,8 +8,10 @@ describe("createCommandRunner: param validation", () => {
     let handlerRan = false;
 
     const runner = makeRunner({
-      commands: {
-        bump: {
+      commands: [
+        {
+          id: "bump",
+          ref: { kind: "command", id: "bump" },
           title: "Bump",
           params: { amount: params.number({ required: true }) },
           async run() {
@@ -17,19 +19,21 @@ describe("createCommandRunner: param validation", () => {
             return { ok: true };
           },
         },
-      },
-      hooks: {
-        observeRejected: {
-          eventId: "command.rejected:lab.bump",
-          handler: async () => {
+      ],
+      hooks: [
+        {
+          id: "observeRejected",
+          ref: { kind: "hook", id: "observeRejected" },
+          event: { kind: "event", id: "command.rejected:bump" },
+          run: async () => {
             events.push("rejected");
           },
         },
-      },
+      ],
     });
 
     const outcome = await runner.execute({
-      commandId: "lab.bump",
+      commandId: "pstdio.lab.command.bump",
       projectId: "p1",
       params: { amount: "2" as unknown as number },
     });
@@ -48,8 +52,10 @@ describe("createCommandRunner: param validation", () => {
     let handlerRan = false;
 
     const runner = makeRunner({
-      commands: {
-        bump: {
+      commands: [
+        {
+          id: "bump",
+          ref: { kind: "command", id: "bump" },
           title: "Bump",
           params: { amount: params.number({ required: true }) },
           async run() {
@@ -57,10 +63,10 @@ describe("createCommandRunner: param validation", () => {
             return { ok: true };
           },
         },
-      },
+      ],
     });
 
-    const outcome = await runner.execute({ commandId: "lab.bump", projectId: "p1", params: {} });
+    const outcome = await runner.execute({ commandId: "pstdio.lab.command.bump", projectId: "p1", params: {} });
 
     expect(outcome.ok).toBe(false);
     expect(outcome.status).toBe("rejected");
@@ -75,8 +81,10 @@ describe("createCommandRunner: param validation", () => {
     let observed: unknown;
 
     const runner = makeRunner({
-      commands: {
-        bump: {
+      commands: [
+        {
+          id: "bump",
+          ref: { kind: "command", id: "bump" },
           title: "Bump",
           params: { amount: params.number({ required: true }) },
           async run(ctx, commandParams) {
@@ -84,10 +92,14 @@ describe("createCommandRunner: param validation", () => {
             return commandParams;
           },
         },
-      },
+      ],
     });
 
-    const outcome = await runner.execute({ commandId: "lab.bump", projectId: "p1", params: { amount: 2 } });
+    const outcome = await runner.execute({
+      commandId: "pstdio.lab.command.bump",
+      projectId: "p1",
+      params: { amount: 2 },
+    });
 
     expect(outcome.ok).toBe(true);
     expect(observed).toEqual({ commandParams: { amount: 2 }, contextHasParams: false });
@@ -95,18 +107,20 @@ describe("createCommandRunner: param validation", () => {
 
   test("omitting an optional param succeeds", async () => {
     const runner = makeRunner({
-      commands: {
-        bump: {
+      commands: [
+        {
+          id: "bump",
+          ref: { kind: "command", id: "bump" },
           title: "Bump",
           params: { note: params.text() },
           async run(_ctx, commandParams) {
             return commandParams;
           },
         },
-      },
+      ],
     });
 
-    const outcome = await runner.execute({ commandId: "lab.bump", projectId: "p1", params: {} });
+    const outcome = await runner.execute({ commandId: "pstdio.lab.command.bump", projectId: "p1", params: {} });
 
     expect(outcome.ok).toBe(true);
     if (outcome.ok) expect(outcome.value).toEqual({});
@@ -116,8 +130,10 @@ describe("createCommandRunner: param validation", () => {
     let handlerRan = false;
 
     const runner = makeRunner({
-      commands: {
-        bump: {
+      commands: [
+        {
+          id: "bump",
+          ref: { kind: "command", id: "bump" },
           title: "Bump",
           params: { amount: params.number({ required: true }) },
           async run() {
@@ -125,18 +141,24 @@ describe("createCommandRunner: param validation", () => {
             return { ok: true };
           },
         },
-      },
-      middlewares: {
-        breakAmount: {
-          commandId: "lab.bump",
-          async handler(ctx) {
+      ],
+      middlewares: [
+        {
+          id: "breakAmount",
+          ref: { kind: "middleware", id: "breakAmount" },
+          command: { kind: "command", id: "bump" },
+          async run(ctx) {
             return ctx.commands.replaceParams({ amount: "not-a-number" });
           },
         },
-      },
+      ],
     });
 
-    const outcome = await runner.execute({ commandId: "lab.bump", projectId: "p1", params: { amount: 2 } });
+    const outcome = await runner.execute({
+      commandId: "pstdio.lab.command.bump",
+      projectId: "p1",
+      params: { amount: 2 },
+    });
 
     expect(outcome.ok).toBe(false);
     expect(outcome.status).toBe("rejected");
@@ -150,8 +172,10 @@ describe("createCommandRunner: param validation", () => {
     let handlerRan = false;
 
     const runner = makeRunner({
-      commands: {
-        bump: {
+      commands: [
+        {
+          id: "bump",
+          ref: { kind: "command", id: "bump" },
           title: "Bump",
           params: { amount: params.number({ required: true }) },
           async run() {
@@ -159,21 +183,27 @@ describe("createCommandRunner: param validation", () => {
             return { ok: true };
           },
         },
-      },
-      middlewares: {
-        removeParams: {
-          commandId: "lab.bump",
-          async handler(ctx) {
+      ],
+      middlewares: [
+        {
+          id: "removeParams",
+          ref: { kind: "middleware", id: "removeParams" },
+          command: { kind: "command", id: "bump" },
+          async run(ctx) {
             return ctx.commands.replaceInvocation({
               commandId: ctx.commandId,
               resource: { type: "ticket", id: "PS-1" },
             } as never);
           },
         },
-      },
+      ],
     });
 
-    const outcome = await runner.execute({ commandId: "lab.bump", projectId: "p1", params: { amount: 2 } });
+    const outcome = await runner.execute({
+      commandId: "pstdio.lab.command.bump",
+      projectId: "p1",
+      params: { amount: 2 },
+    });
 
     expect(outcome.ok).toBe(false);
     expect(outcome.status).toBe("rejected");
@@ -187,8 +217,10 @@ describe("createCommandRunner: param validation", () => {
     let observed: unknown;
 
     const runner = makeRunner({
-      commands: {
-        bump: {
+      commands: [
+        {
+          id: "bump",
+          ref: { kind: "command", id: "bump" },
           title: "Bump",
           params: { amount: params.number({ required: true }) },
           async run(_ctx, commandParams) {
@@ -196,18 +228,20 @@ describe("createCommandRunner: param validation", () => {
             return commandParams;
           },
         },
-      },
-      middlewares: {
-        fillAmount: {
-          commandId: "lab.bump",
-          async handler(ctx) {
+      ],
+      middlewares: [
+        {
+          id: "fillAmount",
+          ref: { kind: "middleware", id: "fillAmount" },
+          command: { kind: "command", id: "bump" },
+          async run(ctx) {
             return ctx.commands.patchParams({ amount: 5 });
           },
         },
-      },
+      ],
     });
 
-    const outcome = await runner.execute({ commandId: "lab.bump", projectId: "p1" });
+    const outcome = await runner.execute({ commandId: "pstdio.lab.command.bump", projectId: "p1" });
 
     expect(outcome.ok).toBe(true);
     expect(observed).toEqual({ amount: 5 });
@@ -215,18 +249,20 @@ describe("createCommandRunner: param validation", () => {
 
   test("a command with no declared params accepts any params payload", async () => {
     const runner = makeRunner({
-      commands: {
-        passthrough: {
+      commands: [
+        {
+          id: "passthrough",
+          ref: { kind: "command", id: "passthrough" },
           title: "Passthrough",
           async run(_ctx, commandParams) {
             return commandParams;
           },
         },
-      },
+      ],
     });
 
     const outcome = await runner.execute({
-      commandId: "lab.passthrough",
+      commandId: "pstdio.lab.command.passthrough",
       projectId: "p1",
       params: { anything: true, count: 42 },
     });

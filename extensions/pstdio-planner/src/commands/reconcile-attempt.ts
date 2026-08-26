@@ -308,8 +308,9 @@ const reconcileReview = async (ctx: CommandContext, attempt: AttemptRecord) => {
 };
 
 export const reconcileAttemptCommand = defineCommand({
+  id: "reconcile-attempt",
   title: "Reconcile managed attempt",
-  cli: true,
+  cli: {},
   params: { workspaceId: params.text({ required: true }) },
   async run(ctx, commandParams) {
     const attempt = await readAttempt(ctx.storage, commandParams.workspaceId);
@@ -323,8 +324,9 @@ export const reconcileAttemptCommand = defineCommand({
 });
 
 export const listAttemptsCommand = defineCommand({
+  id: "list-attempts",
   title: "List managed attempts",
-  cli: true,
+  cli: {},
   params: {},
   async run(ctx, _commandParams) {
     return listAttempts(ctx.storage);

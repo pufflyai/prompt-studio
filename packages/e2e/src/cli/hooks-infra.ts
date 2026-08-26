@@ -49,7 +49,7 @@ export const createWorkspaceInRepo = async (ctx: HookTestContext, repo: string) 
   };
 
   const attemptRes = await fetch(
-    `${ctx.api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions/commands/pstdio-planner.run-attempt/execute`,
+    `${ctx.api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions/commands/pstdio.pstdio-planner.command.run-attempt/execute`,
     {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -80,7 +80,7 @@ export const createSessionViaApi = async (ctx: HookTestContext, projectId: strin
       project_id: projectId,
       title: "test",
       prompt: "test",
-      agent: "pstdio.extension-lab.fake",
+      agent: "pstdio.extension-lab.harness.fake",
     }),
   });
   return { res, session: (await res.json()) as { id: string } };

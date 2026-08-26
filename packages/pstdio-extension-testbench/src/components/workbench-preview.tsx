@@ -170,9 +170,9 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
   registerContentContributionWidgets(workbench, bench);
   registerPreviewResourceProvider(workbench, bench);
 
-  const initialRoute = bench.metadata.routes[0];
-  if (initialRoute) {
-    void workbench.views.openView(initialRoute.id);
+  const initialView = bench.metadata.views.find((view) => view.path);
+  if (initialView) {
+    void workbench.views.openView(initialView.id);
   } else {
     void workbench.resources.openResource(resource).catch(() => {
       registerResourceKinds(workbench, bench, resource);

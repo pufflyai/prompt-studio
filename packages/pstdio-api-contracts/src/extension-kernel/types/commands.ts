@@ -1,14 +1,19 @@
 import type { WorkbenchAttachmentTarget } from "../workbench-targets";
+import type { ContributionRef } from "./contribution-identity";
 import type { JsonObject, JsonValue, Struct } from "./json";
 import type { RepoContext, ResourceRef } from "./resources";
 import type { SlotInvocationContext } from "./slots";
 
 export type CommandSource = "cli" | "dashboard" | "api" | "schedule" | "event" | "automation" | "command-panel";
 
-export interface CommandRef<TParams extends Struct = Struct, TResult = unknown> {
-  id: string;
+export interface CommandRef<TParams extends Struct = Struct, TResult = unknown> extends ContributionRef<"command"> {
   params?: TParams;
   result?: TResult;
+}
+
+export interface CommandTarget<TParams extends Struct = Struct> {
+  command: CommandRef<TParams, unknown>;
+  params?: TParams;
 }
 
 export interface SerializedError {
@@ -115,7 +120,7 @@ export type CommandOutcome<TResult = unknown> =
 
 export interface CommandHelpersApi {
   execute<TParams extends Struct = Struct, TResult = unknown>(
-    command: CommandRef<TParams, TResult> | string,
+    command: CommandRef<TParams, TResult>,
     invocation: CommandInvocation<TParams>,
   ): Promise<CommandOutcome<TResult>>;
 

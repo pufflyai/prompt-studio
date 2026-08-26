@@ -1,4 +1,4 @@
-import type { CommandExecuteRequest, CommandExecuteResponse, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import type { CommandExecuteRequest, CommandExecuteResponse } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
 import type {
   Disposable,
@@ -9,11 +9,14 @@ import type {
   WorkbenchModuleContext,
 } from "../../core";
 import { unwrapCommandValue } from "../host/command-response";
+import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 import {
   panelMenuDeclarationOffsets,
   panelRendererId,
   registerWorkbenchExtensionPanel,
+  resolveWorkbenchExtensionViewInput,
   toWorkbenchCompositionPanelContribution,
+  type WorkbenchExtensionViewInputResolver,
 } from "./panel-contributions";
 
 type FileRendererRecord = NonNullable<WorkbenchExtensionMetadata["fileRenderers"]>[number];
@@ -23,6 +26,7 @@ export interface RegisterWorkbenchExtensionFileRenderersInput {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
   metadata: WorkbenchExtensionMetadata;
   projectId: string;
+  resolveViewInput?: WorkbenchExtensionViewInputResolver;
   workbench: WorkbenchModuleContext;
 }
 
@@ -153,6 +157,8 @@ const registerFileViewWidget = (
   return registerWorkbenchExtensionPanel({
     workbench: input.workbench,
     path: panel.path,
+    aliases: panel.aliases,
+    resolveInput: resolveWorkbenchExtensionViewInput(input.resolveViewInput, panel),
     contribution: toWorkbenchCompositionPanelContribution({
       panel,
       rendererId,

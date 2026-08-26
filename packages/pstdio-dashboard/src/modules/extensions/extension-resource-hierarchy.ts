@@ -6,7 +6,7 @@ export const registerExtensionResourceHierarchy = (
   ctx: WorkbenchModuleContext,
   input: { metadata: DashboardExtensionMetadata; projectId: string },
 ): Disposable => {
-  const ownerId = input.metadata.extensions[0]?.id ?? input.metadata.panels[0]?.extensionId ?? "unknown";
+  const ownerId = input.metadata.extensions[0]?.id ?? input.metadata.views[0]?.extensionId ?? "unknown";
 
   return ctx.resources.registerHierarchyProvider({
     id: `dashboard.extensions.resource-hierarchy.${input.projectId}.${ownerId}`,

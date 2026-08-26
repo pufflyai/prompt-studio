@@ -27,7 +27,7 @@ Every extension package must include a `package.json` next to its entry file.
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.3"
+    "pstdio": "1.0.0-alpha.4"
   },
   "pstdio": {
     "scope": "user"
@@ -38,8 +38,8 @@ Every extension package must include a `package.json` next to its entry file.
 Required fields:
 
 - `engines.pstdio`: the exact extension API version this extension was built against. While the API
-  is in alpha this is a plain version such as `1.0.0-alpha.3`, never a range: `^1.0.0-alpha.3` also
-  matches `1.0.0-alpha.3`, so a range would accept hosts the extension was never tested on. The host
+  is in alpha this is a plain version such as `1.0.0-alpha.4`, never a range: `^1.0.0-alpha.4` also
+  matches `1.0.0-alpha.4`, so a range would accept hosts the extension was never tested on. The host
   refuses an extension whose value does not match its own `EXTENSION_API_VERSION`, with a single
   diagnostic instead of per-contribution errors. Expect to update this on most releases while the
   API is unstable.
@@ -124,70 +124,30 @@ Extensions are toggled on or off per project. The source is shared. If one proje
 The entry file exports contributions only.
 
 ```ts
-import { defineExtension, packageAsset, params } from "@pstdio/sdk/extensions";
+import { defineCommand, defineExtension, params } from "@pstdio/sdk/extensions";
+
+const createTicket = defineCommand({
+  id: "tickets.create",
+  title: "Create ticket",
+  cli: true,
+  params: { title: params.text({ label: "Title" }) },
+  async run(_ctx, commandParams) {
+    return { created: true, title: commandParams.title };
+  },
+});
 
 export default defineExtension({
-  settings: {
-    defaultStatus: params.text({
-      label: "Default status",
-      defaultValue: "backlog",
-    }),
-  },
-
-  commands: {
-    "tickets.create": {
-      title: "Create ticket",
-      cli: true,
-      params: {
-        title: params.text({ label: "Title" }),
-      },
-      async run(_ctx, commandParams) {
-        return { created: true, title: commandParams.title };
-      },
-    },
-  },
-
-  keybindings: {
-    "tickets.create": {
-      key: "mod+shift+y",
-      mac: "cmd+shift+y",
-      win: "ctrl+shift+y",
-      linux: "ctrl+shift+y",
-      command: "tickets.create",
-      args: { source: "shortcut" },
-      when: { mode: "tickets" },
-    },
-  },
-
-  middlewares: {},
-  hooks: {},
-  schedules: {},
-  treeItems: {},
-  modes: {},
-  routes: {},
-  panels: {},
-  resourceKinds: {},
-  resourcePanels: {},
-  resourceHierarchyProviders: {},
-  statusItems: {},
-  treeRenderers: {},
-  fileRenderers: {},
-  controlsRenderers: {},
-  dataTableRenderers: {},
-  kanbanRenderers: {},
-  settingsPanels: {},
-  activityItems: {},
-  artifactMounts: {},
-  templateTypes: {},
-  templates: {},
-  skills: {},
-  themes: {},
-  fileIconThemes: {},
-  workspaceTypes: {},
-  harnesses: {},
-
-  initialSetup: async () => {},
-  migrate: async () => {},
+  commands: [createTicket],
+  views: [],
+  viewMenus: [],
+  placements: [],
+  navigationItems: [],
+  modes: [],
+  resourceKinds: [],
+  resourceViews: [],
+  statusBarItems: [],
+  statuses: [],
+  settingsPanels: [],
 });
 ```
 
@@ -202,22 +162,20 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 | `middlewares`                                     | Pre-command checks that may continue, patch params, replace invocation data, or reject.           |
 | `hooks`                                           | Event observers that run after a product event is emitted.                                        |
 | `schedules`                                       | Cron-driven command invocation.                                                                   |
-| `routes`                                          | Dashboard pages backed by extension webviews.                                                     |
-| `treeItems`                                       | Sidenav or area-tree navigation entries attached to host targets.                                 |
-| `treeRenderers`, `fileRenderers`                  | Callback-backed native Workbench trees and file content.                                          |
-| `controlsRenderers`, `dataTableRenderers`         | Callback-backed native controls and tabular data.                                                  |
-| `kanbanRenderers`                                 | Callback-backed native boards and lists.                                                           |
-| `panels`                                          | Workbench panels with a webview or native renderer body and optional owned placement.              |
-| `resourceKinds`, `resourcePanels`                 | Domain resource types with named slots, and cross-extension panel-to-slot bindings.                |
+| `views`                                           | Reusable webview, tree, file, controls, table, and Kanban bodies.                                  |
+| `viewMenus`                                       | View bodies attached as menus owned by another view.                                               |
+| `placements`                                      | Geometry for direct views or semantic resource slots in a mode.                                   |
+| `navigationItems`                                 | Typed view, resource, command, link, or compound navigation actions.                               |
+| `resourceKinds`, `resourceViews`                  | Domain resource slots and typed bindings from those slots to views.                               |
 | `resourceHierarchyProviders`                      | Parent lookup for resources, used for breadcrumbs and hierarchy.                                   |
-| `statusItems`                                     | Status-surface chrome rendered by the host; not part of docked layout.                             |
-| `settingsPanels`                                  | Dashboard settings UI for extension-owned configuration.                                          |
-| `modes`                                           | Workbench modes with placement recipes for accepted resource kinds.                                |
+| `statusBarItems`                                  | Views in the host status bar; all visible items render without layout persistence.                 |
+| `statuses`                                        | Workflow status providers shared by Kanban views and the host settings editor.                     |
+| `settingsPanels`                                  | References that place views in host-owned settings slots.                                          |
+| `modes`                                           | Typed Workbench mode contributions.                                                                |
 | `activityItems`                                   | Activity-rail entries that select a Workbench mode.                                                |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                                          |
 | `artifactMounts`                                  | Safe repo-local file access under `.pstdio/<package-name>/`.                                      |
 | `workspaceTypes`, `harnesses`                     | Provider integrations owned by the extension runtime.                                             |
-| `initialSetup`, `migrate`                         | Install-time and upgrade-time lifecycle work.                                                     |
 
 UI-facing contributions attach to implemented host-owned targets. The attachment model is covered in [Dashboard UI attachments](./workbench-attachments.md).
 
@@ -282,6 +240,8 @@ When extension UI needs dashboard placement, attach it to a host-owned target an
 Commands are executable operations used by the CLI, dashboard menus, command palette, schedules, automations, and other commands.
 
 ```ts
+import { defineExtension, params } from "@pstdio/sdk/extensions";
+
 export default defineExtension({
   commands: {
     publish: {
@@ -391,71 +351,61 @@ when a hook should react to a command outcome.
 
 ## Dashboard UI Contributions
 
-Dashboard UI contributions are declarative:
+Dashboard UI contributions have one ownership model:
 
-- menus attach commands to targets such as `workbench.nav.actions` or `workbench.nav.overflow`; command palette entries use the command's own `palette` field
-- tree items attach views, commands, resources, or links to area-tree targets such as `workbench.left.tree`
-- native renderers register Workbench trees, files, controls, tables, boards, and lists backed by callbacks
-- panels wrap webviews or native renderers, use `show` for default placement, and may declare a deep-link `path`
-- resource kinds declare domain resources and named slots; resource panels bind only cross-extension panels to slots
-- modes declare placement overrides for slots and known panels in accepted resource kinds
-- status items contribute status-surface chrome
-- settings panels use webview package assets
+- a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, or `kanban`
+- a placement owns geometry and places either a view or a semantic resource slot in a mode
+- a resource view binds one view to one slot declared by a resource kind
+- a navigation item uses a typed action instead of encoded route or command fields
+- a view menu references its owner view and menu view
+- status-bar and settings contributions reference views; they do not duplicate view bodies
 
-Resources identify domain objects such as tickets, workspaces, and sessions. Views identify openable UI. Every panel
-and route registers a view under its normalized contribution ID, such as `planner.tasks`. An optional panel or route
-`path` resolves to the same view and does not create a resource. The removed `extension-route` and `extension-view` resource kinds are read only
-by the bounded persistence migration and must not be used by current extensions.
-
-Native renderers are reusable contributions. Wrap one in a panel with `renderer`; that
-field is mutually exclusive with `webview`. Put placement for your own resource kind in
-the panel's `show` declaration. Use `resourcePanels` only when the resource kind belongs
-to another extension.
+Local ids are explicit. The runtime normalizes them as
+`${extensionId}.${contributionKind}.${localId}`. Use the `ref` returned by each `define*`
+helper instead of rebuilding that id. Resources still identify domain objects such as
+tickets, workspaces, and sessions. A view `path` is only a deep link to that view.
 
 ```ts
+import {
+  defineExtension,
+  definePlacement,
+  defineResourceKind,
+  defineResourceView,
+  defineView,
+  resourceSlotRef,
+  workbenchModes,
+} from "@pstdio/sdk/extensions";
+
+const ticket = defineResourceKind({
+  id: "ticket",
+  surface: "primary",
+  slots: [{ id: "navigation", cardinality: "one", access: "owner" }],
+});
+const navigation = resourceSlotRef(ticket.ref, "navigation");
+const files = defineView({
+  id: "files",
+  title: "Files",
+  body: {
+    kind: "tree",
+    body: async () => [{ id: "files", label: "Files", nodes: [] }],
+  },
+});
+
 export default defineExtension({
-  treeRenderers: {
-    files: {
-      title: "Files",
-      icon: "Files",
-      body: async () => [
-        {
-          id: "files",
-          label: "Files",
-          nodes: [{ id: "readme", label: "README.md" }],
-        },
-      ],
-      defaultExpandedSectionIds: ["files"],
-    },
-  },
-  resourceKinds: {
-    ticket: {
-      surface: "primary",
-      slots: {
-        primary: { cardinality: "one", external: false },
-        navigation: { cardinality: "many", external: true },
-      },
-    },
-  },
-  panels: {
-    files: {
-      title: "Files",
-      path: "files",
-      show: { for: "ticket", region: "sidenav", required: true },
-      renderer: { kind: "tree", id: "files" },
-    },
-  },
-  modes: {
-    ticket: {
-      id: "planner.ticket",
-      label: "Ticket",
-      icon: "FileText",
-      panelRegions: ["main", "secondary", "side"],
-      resources: {
-        ticket: {},
-      },
-    },
-  },
+  resourceKinds: [ticket],
+  views: [files],
+  resourceViews: [
+    defineResourceView({ id: "ticket-files", resourceKind: ticket.ref, slot: navigation, view: files.ref }),
+  ],
+  placements: [
+    definePlacement({
+      id: "ticket-navigation",
+      mode: workbenchModes.project,
+      item: { kind: "resource-slot", slot: navigation },
+      region: "sidenav",
+      required: true,
+    }),
+  ],
 });
 ```
 
@@ -466,8 +416,8 @@ node context.
 Panel role comes from the resolved placement:
 
 - the `primary` slot of a primary resource kind holds the main content panel; it is closed to external extensions
-- other slots hold supporting panels; a slot with `external: true` accepts panels from other extensions
-- an owned panel uses `show`; a panel with no `show` can still be opened by a `treeItems` view action or contributed to another extension's slot
+- other slots hold supporting views; a slot with `access: "public"` accepts views from other extensions
+- an owned view binds through `resourceViews`; a standalone view can be opened by a `navigationItems` view action
 - a recipe for a primary resource kind needs exactly one `main` placement, and `required` on a slot placement works only when the slot's cardinality is `one`
 
 Visibility can be limited with `when`:
@@ -547,6 +497,8 @@ Terminals are layered: the workbench-native terminal surface is the product UI, 
 Use `packageAsset()` for files shipped inside the extension package.
 
 ```ts
+import { defineExtension, defineView, packageAsset } from "@pstdio/sdk/extensions";
+
 export default defineExtension({
   templates: {
     ticket: {
@@ -555,15 +507,17 @@ export default defineExtension({
       source: packageAsset("./templates/ticket.md", import.meta.url),
     },
   },
-  routes: {
-    planner: {
+  views: [
+    defineView({
+      id: "planner",
       path: "planner",
-      label: "Planner",
-      webview: {
+      title: "Planner",
+      body: {
+        kind: "webview",
         entry: packageAsset("./webviews/planner.tsx", import.meta.url),
       },
-    },
-  },
+    }),
+  ],
 });
 ```
 

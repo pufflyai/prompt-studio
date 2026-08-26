@@ -1,487 +1,176 @@
 import { describe, expect, test } from "bun:test";
-import type { WebviewCapabilityDeclaration } from "pstdio-api-contracts/extension-kernel";
-import { normalizeExtensionSources } from "pstdio-extensions";
+import type {
+  ContributionKind,
+  ExtensionDefinition,
+  WebviewCapabilityDeclaration,
+} from "pstdio-api-contracts/extension-kernel";
+import { type LoadedExtensionSource, normalizeExtensionSources } from "pstdio-extensions";
 import { createExtensionWebviewAccess } from "./extension-webview-access";
 import {
   type BuildWorkbenchExtensionMetadataInput,
-  buildWorkbenchExtensionMetadata as buildWorkbenchExtensionMetadataWithAccess,
+  buildWorkbenchExtensionMetadata as buildMetadata,
 } from "./workbench-extension-metadata";
 
-const webviewUrlIssuer = createExtensionWebviewAccess({
-  signingKey: Buffer.from("test-webview-signing-key"),
-});
+const webviewUrlIssuer = createExtensionWebviewAccess({ signingKey: Buffer.from("test-webview-signing-key") });
+
 const buildWorkbenchExtensionMetadata = (input: Omit<BuildWorkbenchExtensionMetadataInput, "webviewUrlIssuer">) =>
-  buildWorkbenchExtensionMetadataWithAccess({ ...input, webviewUrlIssuer });
+  buildMetadata({ ...input, webviewUrlIssuer });
 
-const asset = (path: string) => ({ kind: "package-asset" as const, path, baseUrl: "file:///extension/extension.ts" });
+const defineContribution = <const Kind extends ContributionKind, Definition extends { id: string }>(
+  kind: Kind,
+  definition: Definition,
+) => ({ ...definition, ref: { kind, id: definition.id } });
 
-const runtimeWithRoute = (entryPath: string, capabilities?: WebviewCapabilityDeclaration[]) =>
-  normalizeExtensionSources([
-    {
-      sourcePath: "/extension/extension.ts",
-      sourceKind: "local_path",
-      packagePath: "/extension",
-      manifest: {
-        id: "pstdio.lab",
-        name: "lab",
-        displayName: "Lab",
-        description: "Lab extension for dashboard experiments.",
-        version: "1.0.0",
-        publisher: "pstdio",
-        main: "./extension.ts",
-        enginesPstdio: "^1.0.0",
-      },
-      definition: {
-        routes: {
-          page: {
-            path: "lab",
-            label: "Lab",
-            webview: { entry: asset(entryPath), capabilities },
-          },
-        },
-      },
+const defineCommand = <Definition extends { id: string }>(definition: Definition) =>
+  defineContribution("command", definition);
+const defineKeybinding = <Definition extends { id: string }>(definition: Definition) =>
+  defineContribution("keybinding", definition);
+const defineMode = <Definition extends { id: string }>(definition: Definition) =>
+  defineContribution("mode", definition);
+const definePlacement = <Definition extends { id: string }>(definition: Definition) =>
+  defineContribution("placement", definition);
+const defineView = <Definition extends { id: string }>(definition: Definition) =>
+  defineContribution("view", definition);
+const defineExtension = <const Definition extends ExtensionDefinition>(definition: Definition) => definition;
+const packageAsset = (path: string, baseUrl: string) => ({ kind: "package-asset" as const, path, baseUrl });
+const projectMode = { extensionId: "pstdio", kind: "mode" as const, id: "project" };
+
+const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensionSource => ({
+  sourcePath: "/extension/extension.ts",
+  sourceKind: "local_path" as const,
+  packagePath: "/extension",
+  manifest: {
+    id: "pstdio.lab",
+    name: "lab",
+    displayName: "Lab",
+    description: "Lab extension for dashboard experiments.",
+    version: "1.0.0",
+    publisher: "pstdio",
+    main: "./extension.ts",
+    enginesPstdio: "1.0.0-alpha.4",
+  },
+  definition,
+});
+
+const webviewRuntime = (entryPath: string, capabilities?: WebviewCapabilityDeclaration[]) => {
+  const view = defineView({
+    id: "page",
+    title: "Lab",
+    path: "lab",
+    body: {
+      kind: "webview" as const,
+      entry: packageAsset(entryPath, "file:///extension/extension.ts"),
+      capabilities,
     },
+  });
+  return normalizeExtensionSources([
+    source(
+      defineExtension({
+        views: [view],
+        placements: [
+          definePlacement({
+            id: "page.project",
+            mode: projectMode,
+            item: { kind: "view", view: view.ref },
+            region: "main",
+          }),
+        ],
+      }),
+    ),
   ]);
+};
 
-describe("buildWorkbenchExtensionMetadata webview assets", () => {
-  test("includes extension description in extension records", () => {
-    const runtime = normalizeExtensionSources([
-      {
-        sourcePath: "/extension/extension.ts",
-        sourceKind: "local_path",
-        packagePath: "/extension",
-        manifest: {
-          id: "pstdio.lab",
-          name: "lab",
-          displayName: "Lab",
-          description: "Lab extension for dashboard experiments.",
-          version: "1.0.0",
-          publisher: "pstdio",
-          main: "./extension.ts",
-          enginesPstdio: "^1.0.0",
-        },
-        definition: {},
-      },
-    ]);
-
+describe("buildWorkbenchExtensionMetadata", () => {
+  test("publishes extension identity and typed mode identity", () => {
+    const mode = defineMode({ id: "review", label: "Review", icon: "message-circle" });
     const metadata = buildWorkbenchExtensionMetadata({
       installNamesByExtensionId: new Map(),
-      runtime,
+      runtime: normalizeExtensionSources([source(defineExtension({ modes: [mode] }))]),
       webviewCacheRoot: "/cache",
     });
 
     expect(metadata.extensions[0]?.description).toBe("Lab extension for dashboard experiments.");
-  });
-
-  test("adds module bridge URLs for managed source webviews", () => {
-    const metadata = buildWorkbenchExtensionMetadata({
-      installNamesByExtensionId: new Map([["pstdio.lab", "extension-lab"]]),
-      runtime: runtimeWithRoute("./src/main.tsx"),
-      webviewCacheRoot: "/cache",
+    expect(metadata.modes[0]).toEqual({
+      id: "pstdio.lab.mode.review",
+      localId: "review",
+      extensionId: "pstdio.lab",
+      label: "Review",
+      icon: "message-circle",
     });
-
-    const webview = metadata.routes[0]?.webview;
-    const basePath = webviewUrlIssuer
-      .runtimeUrl({ installName: "extension-lab", webviewId: "lab.page" })
-      .replace(/\/runtime$/, "");
-
-    expect(webview?.runtimeUrl).toBe(`${basePath}/runtime`);
-    expect(webview?.moduleUrl).toBe(`${basePath}/assets/module.js`);
-    expect(webview).not.toHaveProperty("assetUrl");
   });
 
-  test("cache-busts managed webview module URLs with the completed build revision", () => {
+  test("adds signed bridge URLs and preserves capabilities on managed webview bodies", () => {
     const metadata = buildWorkbenchExtensionMetadata({
       assetRevisionsByExtensionId: new Map([["pstdio.lab", "build-2"]]),
-      extensionInstanceIdsByExtensionId: new Map([["pstdio.lab", "instance-1"]]),
-      installedExtensionIdsByExtensionId: new Map([["pstdio.lab", "installed-1"]]),
       installNamesByExtensionId: new Map([["pstdio.lab", "extension-lab"]]),
-      runtime: runtimeWithRoute("./src/main.tsx"),
+      runtime: webviewRuntime("./src/main.tsx", ["commands.execute", "preferences.set@1"]),
       webviewCacheRoot: "/cache",
     });
 
-    expect(metadata.routes[0]).toMatchObject({
-      extensionInstanceId: "instance-1",
-      installedExtensionId: "installed-1",
-      installName: "extension-lab",
-    });
+    const view = metadata.views[0];
+    expect(view).toMatchObject({ id: "pstdio.lab.view.page", localId: "page", path: "lab" });
+    expect(view?.body.kind).toBe("webview");
+    if (view?.body.kind !== "webview") throw new Error("Expected a webview body");
     const basePath = webviewUrlIssuer
-      .runtimeUrl({ installName: "extension-lab", webviewId: "lab.page" })
+      .runtimeUrl({ installName: "extension-lab", webviewId: "pstdio.lab.view.page" })
       .replace(/\/runtime$/, "");
-    expect(metadata.routes[0]?.webview.moduleUrl).toBe(`${basePath}/assets/module.js?h=build-2`);
+    expect(view.body.webview.runtimeUrl).toBe(`${basePath}/runtime`);
+    expect(view.body.webview.moduleUrl).toBe(`${basePath}/assets/module.js?h=build-2`);
+    expect(view.body.webview.capabilities).toEqual(["commands.execute", "preferences.set@1"]);
   });
 
-  test("keeps pre-build metadata on the previous module URL until build completion changes revision", () => {
-    const input = {
-      installNamesByExtensionId: new Map([["pstdio.lab", "extension-lab"]]),
-      runtime: runtimeWithRoute("./src/main.tsx"),
-      webviewCacheRoot: "/cache",
-    };
-
-    const beforeBuild = buildWorkbenchExtensionMetadata({
-      ...input,
-      assetRevisionsByExtensionId: new Map([["pstdio.lab", "build-1"]]),
-    });
-    const afterBuild = buildWorkbenchExtensionMetadata({
-      ...input,
-      assetRevisionsByExtensionId: new Map([["pstdio.lab", "build-2"]]),
-    });
-
-    const basePath = webviewUrlIssuer
-      .runtimeUrl({ installName: "extension-lab", webviewId: "lab.page" })
-      .replace(/\/runtime$/, "");
-    expect(beforeBuild.routes[0]?.webview.moduleUrl).toBe(`${basePath}/assets/module.js?h=build-1`);
-    expect(afterBuild.routes[0]?.webview.moduleUrl).toBe(`${basePath}/assets/module.js?h=build-2`);
-  });
-
-  test("preserves declared webview capabilities in workbench metadata", () => {
-    const metadata = buildWorkbenchExtensionMetadata({
-      installNamesByExtensionId: new Map([["pstdio.lab", "extension-lab"]]),
-      runtime: runtimeWithRoute("./src/main.tsx", ["commands.execute", "preferences.set@1"]),
-      webviewCacheRoot: "/cache",
-    });
-
-    expect(metadata.routes[0]?.webview.capabilities).toEqual(["commands.execute", "preferences.set@1"]);
-  });
-
-  test("preserves menu when expressions in workbench metadata", () => {
-    const runtime = normalizeExtensionSources([
-      {
-        sourcePath: "/extension/extension.ts",
-        sourceKind: "local_path",
-        packagePath: "/extension",
-        manifest: {
-          id: "pstdio.lab",
-          name: "lab",
-          displayName: "Lab",
-          description: "Lab extension for dashboard experiments.",
-          version: "1.0.0",
-          publisher: "pstdio",
-          main: "./extension.ts",
-          enginesPstdio: "^1.0.0",
-        },
-        definition: {
-          commands: {
-            sayHello: {
-              title: "Say hello",
-              menus: [
-                {
-                  slot: "project.headerPrimary",
-                  label: "Say hello",
-                  when: {
-                    resourceType: ["extension-route"],
-                    metadata: { extensionId: "pstdio.lab", routePath: "lab" },
-                  },
-                },
-              ],
-              run: async () => undefined,
-            },
-          },
-        },
+  test("keeps native callback and typed command metadata on the view body", () => {
+    const restart = defineCommand({ id: "restart", title: "Restart rows", async run() {} });
+    const services = defineView({
+      id: "services",
+      title: "Services",
+      body: {
+        kind: "dataTable" as const,
+        columns: [] as never[],
+        query: async () => ({ rows: [] }),
+        selectionMode: "multiple" as const,
+        selectionActions: [{ id: "restart", label: "Restart selected", command: restart.ref }],
       },
-    ]);
-
+    });
     const metadata = buildWorkbenchExtensionMetadata({
       installNamesByExtensionId: new Map(),
-      runtime,
+      runtime: normalizeExtensionSources([
+        source(
+          defineExtension({
+            commands: [restart],
+            views: [services],
+            keybindings: [defineKeybinding({ id: "restart", key: "mod+shift+r", command: restart.ref })],
+          }),
+        ),
+      ]),
       webviewCacheRoot: "/cache",
     });
 
-    expect(metadata.menuContributions[0]?.when).toEqual({
-      resourceType: ["extension-route"],
-      metadata: { extensionId: "pstdio.lab", routePath: "lab" },
+    expect(metadata.views[0]?.body).toMatchObject({
+      kind: "dataTable",
+      queryHandlerId: "pstdio.lab.view.services.dataTable.query",
+      selectionActions: [
+        {
+          id: "restart",
+          label: "Restart selected",
+          command: { extensionId: "pstdio.lab", kind: "command", id: "restart" },
+        },
+      ],
     });
+    expect(metadata.keybindings?.[0]).toMatchObject({
+      commandId: "pstdio.lab.command.restart",
+      canonicalChord: "Mod+Shift+R",
+    });
+    expect(metadata).not.toHaveProperty("dataTableRenderers");
   });
 
-  test("includes workbench mode contributions", () => {
-    const runtime = normalizeExtensionSources([
-      {
-        sourcePath: "/extension/extension.ts",
-        sourceKind: "local_path",
-        packagePath: "/extension",
-        manifest: {
-          id: "pstdio.mode-lab",
-          name: "mode-lab",
-          displayName: "Mode Lab",
-          description: "Built-in lab workbench mode.",
-          version: "1.0.0",
-          publisher: "pstdio",
-          main: "./extension.ts",
-          enginesPstdio: "^1.0.0",
-        },
-        definition: {
-          modes: {
-            sessions: {
-              id: "sessions",
-              label: "Sessions",
-              icon: "MessageCircle",
-            },
-          },
-        },
-      },
-    ]);
-
-    const metadata = buildWorkbenchExtensionMetadata({
-      installNamesByExtensionId: new Map(),
-      runtime,
-      webviewCacheRoot: "/cache",
-    });
-
-    expect(metadata.modes).toEqual([
-      {
-        id: "mode-lab.sessions",
-        extensionId: "pstdio.mode-lab",
-        modeId: "sessions",
-        label: "Sessions",
-        icon: "MessageCircle",
-      },
-    ]);
-  });
-
-  test("includes DataTable multi-selection contributions", () => {
-    const runtime = normalizeExtensionSources([
-      {
-        sourcePath: "/extension/extension.ts",
-        sourceKind: "local_path",
-        packagePath: "/extension",
-        manifest: {
-          id: "pstdio.lab",
-          name: "lab",
-          displayName: "Lab",
-          version: "1.0.0",
-          publisher: "pstdio",
-          main: "./extension.ts",
-          enginesPstdio: "^1.0.0",
-        },
-        definition: {
-          commands: {
-            restart: { title: "Restart rows", run: async () => undefined },
-          },
-          dataTableRenderers: {
-            services: {
-              title: "Services",
-              query: async () => ({ rows: [] }),
-              onRowActivate: async () => undefined,
-              selectionMode: "multiple",
-              selectionActions: [{ id: "restart", label: "Restart selected", command: "restart" }],
-            },
-          },
-        },
-      },
-    ]);
-
-    const metadata = buildWorkbenchExtensionMetadata({
-      installNamesByExtensionId: new Map(),
-      runtime,
-      webviewCacheRoot: "/cache",
-    });
-
-    expect(metadata.dataTableRenderers).toHaveLength(1);
-    expect(metadata.dataTableRenderers?.[0]).toMatchObject({
-      id: "lab.services",
-      rowActivationHandlerId: "lab.services.dataTable.onRowActivate",
-      selectionMode: "multiple",
-      selectionActions: [{ id: "restart", label: "Restart selected", commandId: "lab.restart" }],
-    });
-  });
-});
-
-describe("buildWorkbenchExtensionMetadata kanban renderers", () => {
-  test("includes workbench kanban renderer contributions", () => {
-    const runtime = normalizeExtensionSources([
-      {
-        sourcePath: "/extension/extension.ts",
-        sourceKind: "local_path",
-        packagePath: "/extension",
-        manifest: {
-          id: "pstdio.planner",
-          name: "planner",
-          displayName: "Planner",
-          version: "1.0.0",
-          publisher: "pstdio",
-          main: "./extension.ts",
-          enginesPstdio: "^1.0.0",
-        },
-        definition: {
-          kanbanRenderers: {
-            tickets: {
-              title: "Tickets",
-              resourceKind: "ticket",
-              query: async () => ({ rows: [] }),
-              onRowActivate: async () => undefined,
-              createRow: {
-                command: "planner.tickets.create",
-                title: "Create ticket",
-                columnParam: "status",
-                params: {
-                  content: { type: "longtext", label: "Ticket content", required: true },
-                },
-                attributesParam: "attributes",
-                attachments: {
-                  command: "planner.attach-file",
-                  resourceParam: "ticketId",
-                  fileParam: "ref",
-                },
-              },
-              defaultSettings: { viewMode: "board", columnGrouping: "status" },
-            },
-          },
-        },
-      },
-    ]);
-
-    const metadata = buildWorkbenchExtensionMetadata({
-      extensionInstanceIdsByExtensionId: new Map([["pstdio.planner", "planner-instance"]]),
-      installNamesByExtensionId: new Map(),
-      runtime,
-      webviewCacheRoot: "/cache",
-    });
-
-    expect(metadata.kanbanRenderers).toEqual([
-      expect.objectContaining({
-        id: "planner.tickets",
-        extensionId: "pstdio.planner",
-        extensionInstanceId: "planner-instance",
-        title: "Tickets",
-        resourceKind: "ticket",
-        queryHandlerId: "planner.tickets.kanban.query",
-        rowActivationHandlerId: "planner.tickets.kanban.onRowActivate",
-        createRow: expect.objectContaining({
-          commandId: "planner.tickets.create",
-          columnParam: "status",
-          attributesParam: "attributes",
-          attachments: {
-            commandId: "planner.attach-file",
-            resourceParam: "ticketId",
-            fileParam: "ref",
-          },
-        }),
-        defaultSettings: { viewMode: "board", columnGrouping: "status" },
-      }),
-    ]);
-  });
-});
-
-describe("buildWorkbenchExtensionMetadata keybindings", () => {
-  test("includes workbench keybinding contributions", () => {
-    const runtime = normalizeExtensionSources([
-      {
-        sourcePath: "/extension/extension.ts",
-        sourceKind: "local_path",
-        packagePath: "/extension",
-        manifest: {
-          id: "pstdio.lab",
-          name: "lab",
-          displayName: "Lab",
-          version: "1.0.0",
-          publisher: "pstdio",
-          main: "./extension.ts",
-          enginesPstdio: "^1.0.0",
-        },
-        definition: {
-          commands: {
-            preview: { title: "Preview", run: async () => null },
-          },
-          keybindings: {
-            preview: {
-              key: "mod+shift+p",
-              command: "lab.preview",
-              when: { resourceType: ["ticket"] },
-            },
-          },
-        },
-      },
-    ]);
-
-    const metadata = buildWorkbenchExtensionMetadata({
-      installNamesByExtensionId: new Map(),
-      runtime,
-      webviewCacheRoot: "/cache",
-    });
-
-    expect(metadata.keybindings).toEqual([
-      expect.objectContaining({
-        id: "lab.preview",
-        commandId: "lab.preview",
-        key: "mod+shift+p",
-        canonicalChord: "Mod+Shift+P",
-        when: { resourceType: ["ticket"] },
-      }),
-    ]);
-  });
-});
-
-describe("buildWorkbenchExtensionMetadata tree renderers", () => {
-  test("includes workbench tree renderer contributions and tree-backed Panels", () => {
-    const runtime = normalizeExtensionSources([
-      {
-        sourcePath: "/extension/extension.ts",
-        sourceKind: "local_path",
-        packagePath: "/extension",
-        manifest: {
-          id: "pstdio.planner",
-          name: "planner",
-          displayName: "Planner",
-          version: "1.0.0",
-          publisher: "pstdio",
-          main: "./extension.ts",
-          enginesPstdio: "^1.0.0",
-        },
-        definition: {
-          treeRenderers: {
-            files: {
-              title: "Files",
-              icon: "Files",
-              body: async () => [],
-              defaultExpandedSectionIds: ["files"],
-            },
-          },
-          panels: {
-            ticketFiles: {
-              title: "Files",
-              show: { region: "sidenav" },
-              renderer: { kind: "tree", id: "files" },
-            },
-          },
-        },
-      },
-    ]);
-
-    const metadata = buildWorkbenchExtensionMetadata({
-      installNamesByExtensionId: new Map(),
-      runtime,
-      webviewCacheRoot: "/cache",
-    });
-
-    expect(metadata.treeRenderers).toEqual([
-      expect.objectContaining({
-        id: "planner.files",
-        extensionId: "pstdio.planner",
-        title: "Files",
-        icon: "Files",
-        bodyHandlerId: "planner.files.tree.body",
-        defaultExpandedSectionIds: ["files"],
-      }),
-    ]);
-    expect(metadata.panels).toEqual([
-      expect.objectContaining({
-        id: "planner.ticketFiles",
-        show: { region: "sidenav" },
-        renderer: { kind: "tree", id: "planner.files" },
-      }),
-    ]);
-    expect(metadata.panels[0]).not.toHaveProperty("webview");
-  });
-});
-
-describe("buildWorkbenchExtensionMetadata webview filtering", () => {
-  test("does not emit html webviews in workbench metadata", () => {
+  test("does not emit unsupported html webviews", () => {
     const metadata = buildWorkbenchExtensionMetadata({
       installNamesByExtensionId: new Map([["pstdio.lab", "extension-lab"]]),
-      runtime: runtimeWithRoute("./static.html"),
+      runtime: webviewRuntime("./static.html"),
       webviewCacheRoot: "/cache",
     });
 
-    expect(metadata.routes).toEqual([]);
+    expect(metadata.views).toEqual([]);
   });
 });

@@ -18,7 +18,7 @@ describe("ticket files tree sub-ticket section", () => {
         storage,
         params: {
           renderer: {
-            rendererId: "pstdio-planner.ticketFiles",
+            rendererId: "pstdio.pstdio-planner.view.ticket-files",
             resource: { type: "ticket", id: parent.id, label: parent.shorthand },
           },
         },
@@ -51,7 +51,7 @@ describe("ticket files tree sub-ticket section", () => {
                   label: `${parent.shorthand} ${parent.title}`,
                   metadata: {
                     shorthand: parent.shorthand,
-                    resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+                    resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
                   },
                 },
               },

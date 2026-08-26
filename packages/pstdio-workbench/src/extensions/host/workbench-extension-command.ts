@@ -1,9 +1,15 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import type { ResourceRef, WorkbenchModuleContext } from "../../core";
+import type { ResourceRef, WorkbenchCommandExecutionContext, WorkbenchModuleContext } from "../../core";
 import { unwrapCommandValue } from "./command-response";
 
 export interface WorkbenchExtensionCommandContext {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
+  prepareCommandArgs?(
+    commandId: string,
+    args: unknown,
+    context?: WorkbenchCommandExecutionContext,
+    onArgsChange?: (args: unknown) => void,
+  ): Promise<unknown> | unknown;
   projectId: string;
   workbench: WorkbenchModuleContext;
 }

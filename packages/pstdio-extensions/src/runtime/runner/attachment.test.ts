@@ -96,19 +96,21 @@ const makeRunner = (definition: ExtensionDefinition) => {
 describe("createCommandRunner attachment context", () => {
   test("exposes workbench attachment context to command handlers", async () => {
     const runner = makeRunner({
-      commands: {
-        inspect: {
+      commands: [
+        {
+          id: "inspect",
+          ref: { kind: "command", id: "inspect" },
           title: "Inspect",
           run: async (ctx) => ({
             attachment: ctx.attachment,
             invocationAttachment: ctx.invocation.attachment,
           }),
         },
-      },
+      ],
     });
 
     const outcome = await runner.execute({
-      commandId: "lab.inspect",
+      commandId: "pstdio.lab.command.inspect",
       projectId: "project-1",
       attachment: {
         target: "workbench.nav.actions",

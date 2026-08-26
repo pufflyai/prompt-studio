@@ -2,10 +2,11 @@ import { defineMiddleware } from "@pstdio/sdk/extensions";
 import { labAwakenCommand } from "../commands";
 
 export const rejectSentientAwakeningMiddleware = defineMiddleware({
+  id: "reject-sentient-awakening",
   get command() {
     return labAwakenCommand;
   },
-  async handler(ctx, commandParams) {
+  async run(ctx, commandParams) {
     const title = String(commandParams.title ?? "");
     if (title.toLowerCase().includes("consciousness")) {
       return ctx.commands.reject({

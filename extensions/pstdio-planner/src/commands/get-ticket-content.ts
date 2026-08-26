@@ -36,6 +36,7 @@ export const getTicketContent = async (
 // files tree picks which document it shows (the body or a file/image), and this
 // resolves the current selection to content the host dispatches by file type.
 export const getTicketContentCommand = defineCommand({
+  id: "get-ticket-content",
   title: "Get ticket content",
   params: { id: params.text() },
   async run(ctx, commandParams) {

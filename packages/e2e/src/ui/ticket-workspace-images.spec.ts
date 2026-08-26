@@ -73,7 +73,7 @@ const bypassOnboarding = async (page: Page, projectId: string, repoId: string) =
   await page.addInitScript(
     ({ currentProjectId, selectedRepoId }: { currentProjectId: string; selectedRepoId: string }) => {
       localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", "pstdio.extension-lab.fake");
+      localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
       localStorage.setItem(
         `pstdio-project-settings/projects/${currentProjectId}/values`,
         JSON.stringify({
@@ -123,7 +123,9 @@ test("ticket detail previews image attachments and creates manual workspaces", a
     const runAttemptResponsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
-        new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.run-attempt/execute"),
+        new URL(response.url()).pathname.endsWith(
+          "/extensions/commands/pstdio.pstdio-planner.command.run-attempt/execute",
+        ),
     );
     await page.getByRole("button", { name: "Run attempt" }).click();
     await expect(page.getByRole("dialog").getByText("Run attempt")).toBeVisible();
@@ -150,7 +152,9 @@ test("ticket detail previews image attachments and creates manual workspaces", a
     const workspaceResponsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
-        new URL(response.url()).pathname.endsWith("/extensions/commands/pstdio-planner.run-attempt/execute"),
+        new URL(response.url()).pathname.endsWith(
+          "/extensions/commands/pstdio.pstdio-planner.command.run-attempt/execute",
+        ),
     );
     await page.getByRole("dialog").getByRole("button", { name: "Create workspace", exact: true }).click();
 

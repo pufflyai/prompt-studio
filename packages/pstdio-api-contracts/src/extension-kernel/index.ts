@@ -7,6 +7,8 @@
  * surface for extension authors; host packages (pstdio-api, pstdio-extensions)
  * consume it directly.
  */
+
+export { workbenchCommands, workbenchModes, workbenchResourceKinds, workbenchSlots } from "./builtin-refs";
 export type {
   CommitPayload,
   ConflictPayload,
@@ -40,30 +42,3 @@ export {
   WEBVIEW_HOST_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITY_VERSION,
 } from "./types/webview-capabilities";
-export {
-  getWorkbenchModeLayoutTargetPanel,
-  getWorkbenchTargetDefinition,
-  normalizeWorkbenchModePanels,
-  type WorkbenchAttachmentTarget,
-  type WorkbenchContributionKind,
-  type WorkbenchLayoutTarget,
-  type WorkbenchMenuTarget,
-  type WorkbenchModeLayoutTarget,
-  type WorkbenchModePanel,
-  type WorkbenchRegion,
-  type WorkbenchSettingsScope,
-  type WorkbenchSettingsTarget,
-  type WorkbenchTargetDefinition,
-  type WorkbenchTargetGranularity,
-  type WorkbenchTreeTarget,
-  type WorkbenchViewTarget,
-  workbenchMenuTargets,
-  workbenchModeLayoutTargets,
-  workbenchModePanels,
-  workbenchRegions,
-  workbenchSettingsScopes,
-  workbenchSettingsTargets,
-  workbenchTargets,
-  workbenchTreeTargets,
-  workbenchViewTargets,
-} from "./workbench-targets";

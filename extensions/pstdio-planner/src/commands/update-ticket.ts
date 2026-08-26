@@ -10,6 +10,7 @@ import { deriveTitle } from "../utils/derive-title";
 // status, tags, and parent inputs are resolved server-side (Decision 3). The
 // ticket title is the start of the body, so a content save re-derives it.
 export const updateTicketCommand = defineCommand({
+  id: "update-ticket",
   title: "Update ticket",
   cli: {
     globalAliases: [["tickets", "update"]],

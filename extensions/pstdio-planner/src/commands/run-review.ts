@@ -1,4 +1,11 @@
-import { defineCommand, l10n, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
+import {
+  defineCommand,
+  l10n,
+  params,
+  type ResourceAnchor,
+  workbenchResourceKinds,
+  workspaceSlots,
+} from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { appendAttemptEvent, putAttempt, readAttempt, reviewLaunchClaimsCollection } from "../data/attempt-storage";
 import type { AttemptReview } from "../data/attempt-types";
@@ -17,14 +24,15 @@ const workspaceIdFrom = (
 };
 
 export const runReviewCommand = defineCommand({
+  id: "runReview",
   title: l10n("commands.runReview.title", "Run review"),
-  cli: true,
+  cli: {},
   menus: [
     {
-      target: "workbench.nav.overflow",
+      slot: workspaceSlots.headerOverflow,
       label: l10n("commands.runReview.menuLabel", "Run review"),
       icon: "clipboard-check",
-      when: { resourceType: ["workspace"] },
+      when: { resourceType: [workbenchResourceKinds.workspace] },
     },
   ],
   params: {

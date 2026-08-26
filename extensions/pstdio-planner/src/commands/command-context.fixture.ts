@@ -2,16 +2,18 @@ import type { CommandContext, ExtensionStorageApi } from "@pstdio/sdk/extensions
 
 // Tests only stub the slice of each context member a command reads, so overrides
 // allow a partial of every member (e.g. a workspaces API with just `list`).
-type CommandContextOverrides<TParams extends Record<string, unknown>> = {
-  [K in keyof CommandContext<TParams>]?: Partial<CommandContext<TParams>[K]>;
+type CommandContextOverrides = {
+  [K in keyof CommandContext]?: Partial<CommandContext[K]>;
 };
 
 interface CommandContextInput<TParams extends Record<string, unknown>> {
   storage: ExtensionStorageApi;
   params: TParams;
   projectId?: string;
-  overrides?: CommandContextOverrides<TParams>;
+  overrides?: CommandContextOverrides;
 }
+
+const paramsByContext = new WeakMap<object, Record<string, unknown>>();
 
 // Tests build only the context surface a command reads, rather than the full runtime.
 // The runtime always provides `workspaces` and `sessions`, so the fixture defaults them to
@@ -21,13 +23,13 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
   storage,
   params,
   projectId = "proj-1",
-}: CommandContextInput<TParams>) =>
-  ({
+}: CommandContextInput<TParams>) => {
+  const context = {
     extensionId: "pstdio-planner",
     storage,
     projectId,
     project: { id: projectId, name: "Test Project", shorthand: "T" },
-    invocation: { params },
+    invocation: {},
     notify: { action: async () => ({}), dismiss: async () => [], resolve: async () => [], toast: async () => {} },
     events: { emit: async () => ({ delivered: 0 }) },
     workspaces: { list: async () => [] },
@@ -43,7 +45,13 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
     },
     settings: { all: async () => ({ "automation.maxInProgress": 2 }) },
     ...overrides,
-  }) as unknown as CommandContext<TParams>;
+  } as unknown as CommandContext;
+  paramsByContext.set(context, params);
+  return context;
+};
+
+export const commandParamsFor = <TParams extends Record<string, unknown>>(context: CommandContext) =>
+  paramsByContext.get(context) as TParams;
 
 export const makeCommandArgs = <TParams extends Record<string, unknown>>(input: CommandContextInput<TParams>) =>
   [makeCommandContext(input), input.params] as const;

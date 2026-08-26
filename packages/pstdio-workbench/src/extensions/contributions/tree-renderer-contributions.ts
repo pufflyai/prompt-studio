@@ -1,4 +1,4 @@
-import type { CommandExecuteRequest, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import type { CommandExecuteRequest } from "@pstdio/sdk/api";
 import { text } from "pstdio-extensions/workbench";
 import type {
   Disposable,
@@ -13,7 +13,8 @@ import type {
 import { FILE_SECTION_NAVIGATION_METADATA_KEY } from "../../core/registries/renderers/file-section-navigation";
 import { unwrapCommandValue } from "../host/command-response";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
-import { panelMenuDeclarationOffsets } from "./panel-contributions";
+import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
+import { panelMenuDeclarationOffsets, type WorkbenchExtensionViewInputResolver } from "./panel-contributions";
 import { localizeParamSchema } from "./param-schema-localization";
 import type {
   ExtensionTreeAction,
@@ -45,6 +46,7 @@ export interface RegisterWorkbenchExtensionTreeRenderersInput {
    * gets a second identity when opened from a tree.
    */
   resolveNodeResource?: (resource: ExtensionTreeResource) => ResourceRef;
+  resolveViewInput?: WorkbenchExtensionViewInputResolver;
   workbench: WorkbenchModuleContext;
 }
 
@@ -57,8 +59,6 @@ const toExtensionResource = (resource: ResourceRef | undefined): ExtensionTreeRe
     metadata: resource.metadata,
   };
 };
-
-const refId = (value: { id?: string } | string | undefined) => (typeof value === "string" ? value : value?.id);
 
 const toWorkbenchResource = (
   resource: ExtensionTreeResource,
@@ -208,15 +208,16 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       kind: "command" as const,
       commandId: runnerCommandId,
       args: {
-        commandId: typeof commandTarget.command === "string" ? commandTarget.command : commandTarget.command.id,
+        commandId: `${commandTarget.target.command.extensionId ?? record.extensionId}.command.${commandTarget.target.command.id}`,
         nodeId: node.id,
-        params: commandTarget.params,
+        params: commandTarget.target.params,
         resource: node.resource ?? toExtensionResource(ctx.resource),
         treeId: record.id,
       } satisfies TargetCommandArgs,
     });
     return toWorkbenchNavigationTarget(target, {
       commandTargetOf,
+      extensionId: record.extensionId,
       resourceOf: (resource, resourceTarget) =>
         resolveResource(
           resource,
@@ -232,7 +233,9 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     node: ExtensionTreeNode | undefined,
     ctx: TreeContext,
   ): TreeAction => {
-    const commandId = refId(action.command);
+    const commandId = action.command
+      ? `${action.command.extensionId ?? record.extensionId}.command.${action.command.id}`
+      : undefined;
     return {
       id: action.id,
       label: text(action.label),
@@ -409,7 +412,11 @@ export const registerWorkbenchExtensionTreeRenderers = (input: RegisterWorkbench
   const menuOffsets = panelMenuDeclarationOffsets(input.metadata.panels);
   input.metadata.panels.forEach((panel, index) => {
     const disposable = registerTreeViewWidget(
-      { workbench: input.workbench, resourcePanels: input.metadata.resourcePanels },
+      {
+        workbench: input.workbench,
+        resourcePanels: input.metadata.resourcePanels,
+        resolveViewInput: input.resolveViewInput,
+      },
       panel,
       index,
       menuOffsets[index]!,

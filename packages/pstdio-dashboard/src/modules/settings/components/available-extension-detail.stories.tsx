@@ -21,9 +21,16 @@ const metadata = {
     },
   ],
   menuContributions: [],
+  commandPaletteContributions: [],
   modes: [],
-  panels: [],
-  routes: [],
+  views: [],
+  viewMenus: [],
+  placements: [],
+  resourceKinds: [],
+  resourceViews: [],
+  navigationItems: [],
+  statusBarItems: [],
+  statuses: [],
   settingsPanels: [],
   skills: [
     {

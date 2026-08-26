@@ -84,8 +84,10 @@ describe("GET /v1/projects/:projectId/extensions/:instanceId/contributions", () 
     const res = await app.request(`/v1/projects/${project.id}/extensions/${result.instance.id}/contributions`);
     expect(res.status).toBe(200);
     const body = await res.json();
-    expect(body.commands.map((command: { id: string }) => command.id)).toContain(`${name}.heartbeat`);
-    expect(body.automations.map((automation: { id: string }) => automation.id)).toContain(`${name}.heartbeat`);
+    expect(body.commands.map((command: { id: string }) => command.id)).toContain(`test.${name}.command.heartbeat`);
+    expect(body.automations.map((automation: { id: string }) => automation.id)).toContain(
+      `test.${name}.schedule.heartbeat`,
+    );
   });
 
   test("returns 404 for an unknown instance", async () => {

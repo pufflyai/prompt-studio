@@ -1,12 +1,11 @@
-import type { ExtensionDefinition } from "@pstdio/sdk/extensions";
-import { labHeartbeatCommand } from "./command-refs";
+import { defineSchedule } from "@pstdio/sdk/extensions";
+import { heartbeatCommand } from "./heartbeat-command";
 
-export const labSchedules = {
-  heartbeat: {
+export const labSchedules = [
+  defineSchedule({
+    id: "heartbeat",
     title: "Lab heartbeat",
-    cron: "* * * * *",
-    get command() {
-      return labHeartbeatCommand;
-    },
-  },
-} satisfies NonNullable<ExtensionDefinition["schedules"]>;
+    schedule: "* * * * *",
+    command: heartbeatCommand.ref,
+  }),
+];

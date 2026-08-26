@@ -82,8 +82,13 @@ export const createWorkbenchCompositionRegistry = (): WorkbenchCompositionRegist
   };
 };
 
+type CompositionLayout = Pick<
+  LayoutModel,
+  "getLayout" | "openWidget" | "reconcilePanelMenus" | "setRegionActiveWidget" | "updateWidgetPlacement"
+>;
+
 interface CompositionReconcileContext {
-  layout: LayoutModel;
+  layout: CompositionLayout;
   notifications: NotificationRegistry;
 }
 

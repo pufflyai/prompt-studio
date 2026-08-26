@@ -2,6 +2,7 @@ import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { reportsCollection } from "../data/collections";
 
 export const readReportCommand = defineCommand({
+  id: "reports.read",
   title: "Read report",
   cli: { globalAliases: [["reports", "read"]], examples: ["pstdio reports read --id <report-id>"] },
   params: {

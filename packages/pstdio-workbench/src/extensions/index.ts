@@ -54,11 +54,19 @@ export {
   type RegisterWorkbenchExtensionTreeRenderersInput,
   registerWorkbenchExtensionTreeRenderers,
 } from "./contributions/tree-renderer-contributions";
+export {
+  isExtensionNavigationTarget,
+  type ToWorkbenchNavigationTargetInput,
+  toWorkbenchNavigationTarget,
+  toWorkbenchNavigationTargetResult,
+} from "./host/extension-navigation-target";
 export type { WorkbenchExtensionCommandContext } from "./host/workbench-extension-command";
 export {
   type RegisterWorkbenchExtensionContributionsInput,
   registerWorkbenchExtensionContributions,
 } from "./host/workbench-extension-host";
+export type { WorkbenchExtensionHostMenuRegistration } from "./host/workbench-extension-host-types";
+export { toWorkbenchWhenExpression } from "./host/workbench-extension-metadata-ref";
 export {
   type RegisterWorkbenchExtensionRendererRefreshEventsInput,
   refreshOpenWorkbenchExtensionWebviews,

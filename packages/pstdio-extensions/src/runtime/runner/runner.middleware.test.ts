@@ -6,34 +6,40 @@ describe("createCommandRunner: middleware", () => {
     const seen: string[] = [];
 
     const runner = makeRunner({
-      commands: {
-        awaken: {
+      commands: [
+        {
+          id: "awaken",
+          ref: { kind: "command", id: "awaken" },
           title: "Awaken",
           async run() {
             seen.push("ran");
             return {};
           },
         },
-      },
-      middlewares: {
-        rejectAwaken: {
-          commandId: "lab.awaken",
-          async handler(ctx) {
+      ],
+      middlewares: [
+        {
+          id: "rejectAwaken",
+          ref: { kind: "middleware", id: "rejectAwaken" },
+          command: { kind: "command", id: "awaken" },
+          async run(ctx) {
             return ctx.commands.reject({ code: "no_consciousness", reason: "refusing" });
           },
         },
-      },
-      hooks: {
-        observeRejected: {
-          eventId: "command.rejected:lab.awaken",
-          handler: async () => {
+      ],
+      hooks: [
+        {
+          id: "observeRejected",
+          ref: { kind: "hook", id: "observeRejected" },
+          event: { kind: "event", id: "command.rejected:awaken" },
+          run: async () => {
             seen.push("rejected");
           },
         },
-      },
+      ],
     });
 
-    const outcome = await runner.execute({ commandId: "lab.awaken", projectId: "p1" });
+    const outcome = await runner.execute({ commandId: "pstdio.lab.command.awaken", projectId: "p1" });
     expect(outcome.ok).toBe(false);
     expect(outcome.status).toBe("rejected");
     if (!outcome.ok && outcome.status === "rejected") {
@@ -47,29 +53,33 @@ describe("createCommandRunner: middleware", () => {
     let observed: unknown;
 
     const runner = makeRunner({
-      commands: {
-        echo: {
+      commands: [
+        {
+          id: "echo",
+          ref: { kind: "command", id: "echo" },
           title: "Echo",
           async run(_ctx, commandParams) {
             observed = commandParams;
             return commandParams;
           },
         },
-      },
-      middlewares: {
-        rewrite: {
-          commandId: "lab.echo",
-          async handler(ctx, commandParams) {
+      ],
+      middlewares: [
+        {
+          id: "rewrite",
+          ref: { kind: "middleware", id: "rewrite" },
+          command: { kind: "command", id: "echo" },
+          async run(ctx, commandParams) {
             expect(commandParams).toEqual({ original: true });
             expect("params" in ctx).toBe(false);
             return ctx.commands.patchParams({ extra: "added" });
           },
         },
-      },
+      ],
     });
 
     const outcome = await runner.execute({
-      commandId: "lab.echo",
+      commandId: "pstdio.lab.command.echo",
       projectId: "p1",
       params: { original: true },
     });
@@ -82,16 +92,18 @@ describe("createCommandRunner: middleware", () => {
     let hostRan = false;
 
     const runner = makeRunner({
-      middlewares: {
-        rejectHostCommand: {
-          commandId: "kernel.workspace.rename",
-          async handler(ctx) {
+      middlewares: [
+        {
+          id: "rejectHostCommand",
+          ref: { kind: "middleware", id: "rejectHostCommand" },
+          command: { extensionId: "pstdio", kind: "command", id: "kernel.workspace.rename" },
+          async run(ctx) {
             expect(ctx.commandId).toBe("kernel.workspace.rename");
             expect(ctx.extensionId).toBe("pstdio.lab");
             return ctx.commands.reject({ code: "blocked", reason: "blocked by middleware" });
           },
         },
-      },
+      ],
     });
 
     const outcome = await runner.executeHostCommand({
@@ -112,14 +124,16 @@ describe("createCommandRunner: middleware", () => {
     let observed: unknown;
 
     const runner = makeRunner({
-      middlewares: {
-        rewriteHostCommand: {
-          commandId: "kernel.workspace.rename",
-          async handler(ctx) {
+      middlewares: [
+        {
+          id: "rewriteHostCommand",
+          ref: { kind: "middleware", id: "rewriteHostCommand" },
+          command: { extensionId: "pstdio", kind: "command", id: "kernel.workspace.rename" },
+          async run(ctx) {
             return ctx.commands.patchParams({ name: "Review workspace" });
           },
         },
-      },
+      ],
     });
 
     const outcome = await runner.executeHostCommand({

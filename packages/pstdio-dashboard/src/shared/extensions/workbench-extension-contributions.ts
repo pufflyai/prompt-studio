@@ -57,7 +57,7 @@ export const clearCachedDashboardExtensionMetadata = (projectId: string | undefi
 export const getCachedDashboardExtensionMetadata = (projectId: string | undefined) =>
   projectId ? metadataByProjectId.get(projectId) : undefined;
 
-const menuSlotsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
+export const dashboardMenuSlotsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
   [projectHeaderPrimarySlotId, { menuPath: workbenchTopHeaderTrailingMenuPath, group: "primary" }],
   [
     projectHeaderOverflowSlotId,
@@ -90,7 +90,7 @@ const menuSlotResourceKindById = new Map<string, string>([
   [ticketHeaderOverflowSlotId, "ticket"],
 ]);
 
-const menuTargetsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
+export const dashboardMenuTargetsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
   ["workbench.nav.actions", { menuPath: workbenchTopHeaderTrailingMenuPath, group: "primary" }],
   [
     "workbench.nav.overflow",
@@ -121,7 +121,7 @@ const modeTerms = (mode: ExtensionWhenExpression["mode"] | undefined) => {
   return modes.map((modeId) => `activeWorkbenchMode == ${contextValue(modeId)}`);
 };
 
-const buildDashboardWorkbenchWhenExpression = (when: ExtensionMenuContribution["when"]) => {
+export const buildDashboardWorkbenchWhenExpression = (when: ExtensionMenuContribution["when"]) => {
   if (!when) return undefined;
 
   const resourceTypeTerms =
@@ -189,8 +189,8 @@ const resourceMenuRegistrations = (registration: BaseDashboardExtensionMenuRegis
 export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExtensionMetadata) =>
   buildWorkbenchExtensionMenuRegistrations({
     metadata,
-    menuSlotsById,
-    menuTargetsById,
+    menuSlotsById: dashboardMenuSlotsById,
+    menuTargetsById: dashboardMenuTargetsById,
     createCommandId: createWorkbenchExtensionCommandId,
     resolveString: resolveLocalizableString,
     createWhenExpression: (contribution) => {

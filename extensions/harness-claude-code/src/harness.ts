@@ -95,7 +95,7 @@ const defaultDeps: ClaudeCodeDeps = {
 
 const MODEL_CACHE_TTL_MS = 5 * 60 * 1_000;
 
-export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {}): HarnessProvider => {
+export const createClaudeCodeHarness = (overrides: Partial<ClaudeCodeDeps> = {}): Omit<HarnessProvider, "ref"> => {
   const deps = { ...defaultDeps, ...overrides };
   let modelCache: { expiresAt: number; value: Promise<AgentModel[]> } | undefined;
 

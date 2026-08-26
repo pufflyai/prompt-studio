@@ -48,8 +48,9 @@ const reconcilePendingRefinements = async (ctx: AutomationContext, backlogId: st
 };
 
 export const refineTicketsCommand = defineCommand({
+  id: "refine-tickets",
   title: "Refine backlog tickets",
-  cli: true,
+  cli: {},
   async run(ctx, _commandParams) {
     const [{ statuses }, { tags }] = await Promise.all([
       executePlanner(ctx, planner.readStatuses, {}),

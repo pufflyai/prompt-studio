@@ -42,16 +42,23 @@ export const createTestScheduledExtensionSource = (fields: {
   writeFileSync(
     join(sourcePath, "extension.ts"),
     `export default {
-  commands: {
-    heartbeat: { title: "Heartbeat", async run(_ctx, _params) {} },
-  },
-  schedules: {
-    heartbeat: {
+  commands: [
+    {
+      id: "heartbeat",
+      ref: { kind: "command", id: "heartbeat" },
       title: "Heartbeat",
-      cron: "0 3 * * *",
-      commandId: ${JSON.stringify(`${fields.name}.heartbeat`)},${fields.scheduleDisabled ? "\n      disabled: true," : ""}
+      async run(_ctx, _params) {},
     },
-  },
+  ],
+  schedules: [
+    {
+      id: "heartbeat",
+      ref: { kind: "schedule", id: "heartbeat" },
+      title: "Heartbeat",
+      schedule: "0 3 * * *",
+      command: { kind: "command", id: "heartbeat" },${fields.scheduleDisabled ? "\n      disabled: true," : ""}
+    },
+  ],
 };
 `,
     "utf8",
@@ -80,12 +87,14 @@ export const createTestSkillExtensionSource = (fields: {
     `const asset = (path: string) => ({ kind: "package-asset" as const, path, baseUrl: import.meta.url });
 
 export default {
-  skills: {
-    ${JSON.stringify(skillKey)}: {
+  skills: [
+    {
+      id: ${JSON.stringify(skillKey)},
+      ref: { kind: "skill", id: ${JSON.stringify(skillKey)} },
       title: "Lab Skill",
       source: asset(${JSON.stringify(`./skills/${skillDir}`)}),
     },
-  },
+  ],
 };
 `,
     "utf8",

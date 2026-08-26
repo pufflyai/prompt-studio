@@ -90,7 +90,7 @@ describe("runAttemptCommand", () => {
             role: "primary",
             metadata: {
               shorthand: "T-1",
-              resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+              resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
         ],
@@ -112,7 +112,7 @@ describe("runAttemptCommand", () => {
             role: "primary",
             metadata: {
               shorthand: "T-1",
-              resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+              resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
           expect.objectContaining({ type: "planner-attempt", id: "workspace-1" }),
@@ -235,7 +235,7 @@ describe("runAttemptCommand guarded launches", () => {
             role: "primary",
             metadata: {
               shorthand: "T-1",
-              resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+              resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
         ],
@@ -339,7 +339,7 @@ describe("createWorkspaceCommand", () => {
             role: "primary",
             metadata: {
               shorthand: "T-1",
-              resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+              resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
         ],
@@ -387,7 +387,7 @@ describe("createWorkspaceCommand", () => {
                 label: `${parent.shorthand} Parent`,
                 metadata: {
                   shorthand: parent.shorthand,
-                  resourceParent: { type: "view", viewId: "pstdio-planner.tickets" },
+                  resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
                 },
               },
             },
@@ -446,7 +446,7 @@ describe("proposal notifications", () => {
     expect(notifications).toEqual([
       expect.objectContaining({
         actions: expect.arrayContaining([
-          expect.objectContaining({ command: "pstdio-planner.approve-proposal", label: "Approve" }),
+          expect.objectContaining({ command: "pstdio.pstdio-planner.command.approve-proposal", label: "Approve" }),
         ]),
         dedupeKey: "pstdio-planner:ticket:T-1:proposal-refined",
         kind: "needs_review",

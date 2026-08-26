@@ -35,21 +35,22 @@ export const writeExtensionWithDependency = (root: string) => {
   );
   writeFileSync(
     join(sdkDir, "extensions.js"),
-    'export const packageAsset = (path, baseUrl) => ({ kind: "package-asset", path, baseUrl });\n',
+    'export const packageAsset = (path, baseUrl) => ({ kind: "package-asset", path, baseUrl });\nexport const defineTemplate = (definition) => ({ ...definition, ref: { kind: "template", id: definition.id } });\n',
   );
   writeFileSync(join(sourceDir, "template.md"), "# Packaged asset template\n");
   writeFileSync(
     join(sourceDir, "contribution.ts"),
     `
-      import { packageAsset } from "@pstdio/sdk/extensions";
+      import { defineTemplate, packageAsset } from "@pstdio/sdk/extensions";
 
-      export const templates = {
-        packagedAsset: {
+      export const templates = [
+        defineTemplate({
+          id: "packagedAsset",
           title: "Packaged Asset",
           type: "ticket",
           source: packageAsset("./template.md", import.meta.url),
-        },
-      };
+        }),
+      ];
     `,
   );
 

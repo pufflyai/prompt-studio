@@ -42,7 +42,7 @@ describe("pstdio agents (harness listing)", () => {
 
       expect(output).toContain("Claude Code");
       expect(output).toContain("OpenCode");
-      expect(output).toContain("pstdio.harness-open-code.opencode");
+      expect(output).toContain("pstdio.harness-open-code.harness.opencode");
     },
     TEST_TIMEOUT,
   );
@@ -52,7 +52,7 @@ describe("pstdio agents (harness listing)", () => {
     () => {
       const output = run("agents setup opencode");
 
-      expect(output).toContain('Using harness "pstdio.harness-open-code.opencode"');
+      expect(output).toContain('Using harness "pstdio.harness-open-code.harness.opencode"');
     },
     TEST_TIMEOUT,
   );

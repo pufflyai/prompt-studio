@@ -12,6 +12,7 @@ import { deriveTitle } from "../utils/derive-title";
 // board passes ids; the CLI passes human names/shorthands, so status/tags/parent
 // are resolved server-side (Decision 3).
 export const createTicketCommand = defineCommand({
+  id: "create-ticket",
   title: "Create ticket",
   cli: {
     globalAliases: [

@@ -4,6 +4,9 @@ import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchRegion } from "../region/region";
 import { useWorkbenchRegionTabsVisible, WorkbenchRegionTabs } from "../region/region-tabs";
+import { WorkbenchWidgetHost } from "../region/widget-host";
+import { useWorkbenchActiveModeId } from "../shared/use-workbench-location-resource";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
 
@@ -77,6 +80,38 @@ interface WorkbenchRegionPanelProps {
 
 export const WORKBENCH_STATUS_BAR_HEIGHT = "2rem";
 
+interface WorkbenchStatusBarItemsProps {
+  workbench: WorkbenchCore;
+  slot: "leading" | "trailing";
+}
+
+const WorkbenchStatusBarItems = (props: WorkbenchStatusBarItemsProps) => {
+  const { slot, workbench } = props;
+  const activeModeId = useWorkbenchActiveModeId(workbench);
+  const items = activeModeId === workbench.modes.getActiveModeId() ? workbench.statusBar.listVisibleItems(slot) : [];
+
+  return items.map((item) => {
+    const view = workbench.views.getView(item.viewId);
+    const widget = view ? workbench.layout.getWidget(view.panelId) : undefined;
+    if (!view || !widget) return null;
+    return (
+      <Box key={item.id} minW="0" h="full">
+        <WorkbenchWidgetHost
+          workbench={workbench}
+          widget={widget}
+          placement={{
+            widgetId: item.id,
+            contributionId: view.panelId,
+            viewId: view.id,
+            title: view.title,
+            closable: false,
+          }}
+        />
+      </Box>
+    );
+  });
+};
+
 export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
   const { workbench } = props;
 
@@ -102,6 +137,7 @@ export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
 
 export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
   const { workbench } = props;
+  useWorkbenchStore(workbench.statusBar.store, (state) => state.items);
 
   return (
     <WorkbenchFocusRegion
@@ -118,7 +154,14 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
       minW="0"
       overflow="hidden"
     >
-      <WorkbenchRegion workbench={workbench} region="status" title="Status" />
+      <Box display="flex" alignItems="stretch" justifyContent="space-between" h="full" minW="0" w="full">
+        <Box display="flex" alignItems="stretch" minW="0" h="full">
+          <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
+        </Box>
+        <Box display="flex" alignItems="stretch" minW="0" h="full">
+          <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
+        </Box>
+      </Box>
     </WorkbenchFocusRegion>
   );
 };

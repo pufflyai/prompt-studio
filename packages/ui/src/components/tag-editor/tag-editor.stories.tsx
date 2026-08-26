@@ -222,6 +222,10 @@ export const WithActions = {
   },
 };
 
+export const ReadOnly = {
+  render: () => <TagEditor title="Release statuses" values={initialItems} onValuesChange={() => undefined} readOnly />,
+};
+
 export const CustomPickerOptions = {
   render: () => {
     const [values, setValues] = useState<TagEditorValue[]>([

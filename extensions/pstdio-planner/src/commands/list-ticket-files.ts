@@ -6,6 +6,7 @@ import { findTicket } from "../data/resolve";
 // `.pstdio/tickets/<shorthand>/files/` directory so the user can see what is and
 // isn't synced.
 export const listTicketFilesCommand = defineCommand({
+  id: "list-ticket-files",
   title: "List ticket files",
   cli: { globalAliases: [["tickets", "files"]], examples: ["pstdio tickets files --id PS-1"] },
   params: { id: params.text({ required: true }) },

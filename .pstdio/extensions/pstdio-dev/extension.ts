@@ -1,17 +1,18 @@
-import { commandRef, defineCommand, defineExtension, eventRef, params, workspaceSlots } from "@pstdio/sdk/extensions";
-
-interface WorkspaceReadyPayload {
-  workspaceDir: string;
-}
-
-const WORKSPACE_READY_EVENT = eventRef<WorkspaceReadyPayload>("workspace.ready");
+import {
+  defineCommand,
+  defineExtension,
+  defineHook,
+  defineSchedule,
+  params,
+  workspaceEvents,
+  workspaceSlots,
+} from "@pstdio/sdk/extensions";
 
 const INSTALL_COMMAND = ["bun", "install", "--frozen-lockfile"];
 const BUILD_COMMAND = ["bun", "run", "build"];
 // Chained via a shell because spawnDetached runs a single executable (no shell operators).
 const PROVISION_COMMAND = ["sh", "-c", `${INSTALL_COMMAND.join(" ")} && ${BUILD_COMMAND.join(" ")}`];
 const ISOLATED_COMMAND = ["bun", "run", "dev:isolated"];
-const DISCOVER_HIGH_IMPACT_ISSUES_COMMAND = commandRef("pstdio-dev.issues.discoverHighImpact");
 const HIGH_IMPACT_ISSUE_DISCOVERY_PROMPT = [
   "Inspect this repository for one high-impact user-facing bug, reliability failure, data-loss risk, security weakness, or material violation of its documented architecture.",
   "Read the applicable AGENTS.md files and relevant documents under .pstdio/docs/architecture/. Run `bun run verify:boundaries`, then inspect documented ownership, layering, dependency direction, public/private package boundaries, and declared sources of truth. Treat only those documents and architecture checks as authoritative; do not invent architecture rules or propose preference-based rewrites.",
@@ -48,126 +49,135 @@ const workspaceIdFrom = (ctx: { resource?: { type: string; id: string } }, comma
   return ctx.resource.id;
 };
 
-export default defineExtension({
-  commands: {
-    "issues.discoverHighImpact": defineCommand({
+const discoverHighImpactIssuesCommand = defineCommand({
+  id: "issues.discoverHighImpact",
+  title: "Discover high-impact issues",
+  async run(ctx, _commandParams) {
+    const session = await ctx.sessions.create({
       title: "Discover high-impact issues",
-      async run(ctx, _commandParams) {
-        const session = await ctx.sessions.create({
-          title: "Discover high-impact issues",
-          prompt: HIGH_IMPACT_ISSUE_DISCOVERY_PROMPT,
-        });
+      prompt: HIGH_IMPACT_ISSUE_DISCOVERY_PROMPT,
+    });
 
-        return { sessionId: session.id };
-      },
-    }),
-    "workspace.openInVscode": defineCommand({
-      title: "Open workspace in VS Code",
-      cli: true,
-      menus: [
-        {
-          slot: workspaceSlots.headerOverflow,
-          label: "Open in VS Code",
-          icon: "code",
-        },
-      ],
-      params: {
-        workspaceId: params.text({ label: "Workspace ID", required: false }),
-      },
-      async run(ctx, commandParams) {
-        const workspaceId = workspaceIdFrom(ctx, commandParams);
-        const workspace = await ctx.workspaces.get(workspaceId);
-        const worktreePath = workspace?.worktree_path?.trim();
-        if (!worktreePath) throw new Error("Workspace worktree path is required.");
-
-        await ctx.process.spawnDetached({
-          command: ["code", worktreePath],
-          cwd: worktreePath,
-        });
-
-        return { worktreePath };
-      },
-    }),
-    "workspace.openInIsolation": defineCommand({
-      title: "Open workspace in isolation",
-      cli: true,
-      menus: [
-        {
-          slot: workspaceSlots.headerOverflow,
-          label: "Open in isolation",
-          icon: "container",
-        },
-      ],
-      params: {
-        workspaceId: params.text({ label: "Workspace ID", required: false }),
-      },
-      async run(ctx, commandParams) {
-        const workspaceId = workspaceIdFrom(ctx, commandParams);
-        const workspace = await ctx.workspaces.get(workspaceId);
-        const worktreePath = workspace?.worktree_path?.trim();
-        if (!worktreePath) throw new Error("Workspace worktree path is required.");
-
-        const stackName = stackNameFrom(workspaceId);
-        const result = await ctx.process.runOrThrow({
-          command: [...ISOLATED_COMMAND, "--", "--name", stackName],
-          cwd: worktreePath,
-        });
-        const dashboardUrl = dashboardUrlFrom(result.stdout);
-
-        await ctx.process.spawnDetached({
-          command: browserOpenCommand(dashboardUrl),
-          cwd: worktreePath,
-        });
-
-        return { dashboardUrl, stackName, worktreePath };
-      },
-    }),
-    "workspace.stopIsolation": defineCommand({
-      title: "Stop workspace isolation",
-      cli: true,
-      menus: [
-        {
-          slot: workspaceSlots.headerOverflow,
-          label: "Stop isolation",
-          icon: "square",
-        },
-      ],
-      params: {
-        workspaceId: params.text({ label: "Workspace ID", required: false }),
-      },
-      async run(ctx, commandParams) {
-        const workspaceId = workspaceIdFrom(ctx, commandParams);
-        const workspace = await ctx.workspaces.get(workspaceId);
-        const worktreePath = workspace?.worktree_path?.trim();
-        if (!worktreePath) throw new Error("Workspace worktree path is required.");
-
-        const stackName = stackNameFrom(workspaceId);
-        await ctx.process.runOrThrow({
-          command: [...ISOLATED_COMMAND, "--", "--name", stackName, "--down"],
-          cwd: worktreePath,
-        });
-
-        return { stackName, worktreePath };
-      },
-    }),
+    return { sessionId: session.id };
   },
-  schedules: {
-    dailyIssueDiscovery: {
-      title: "Daily high-impact issue discovery",
-      cron: "0 12 * * *",
-      command: DISCOVER_HIGH_IMPACT_ISSUES_COMMAND,
+});
+
+const openInVscodeCommand = defineCommand({
+  id: "workspace.openInVscode",
+  title: "Open workspace in VS Code",
+  cli: {},
+  menus: [
+    {
+      slot: workspaceSlots.headerOverflow,
+      label: "Open in VS Code",
+      icon: "code",
     },
+  ],
+  params: {
+    workspaceId: params.text({ label: "Workspace ID", required: false }),
   },
-  hooks: {
+  async run(ctx, commandParams) {
+    const workspaceId = workspaceIdFrom(ctx, commandParams);
+    const workspace = await ctx.workspaces.get(workspaceId);
+    const worktreePath = workspace?.worktree_path?.trim();
+    if (!worktreePath) throw new Error("Workspace worktree path is required.");
+
+    await ctx.process.spawnDetached({
+      command: ["code", worktreePath],
+      cwd: worktreePath,
+    });
+
+    return { worktreePath };
+  },
+});
+
+const openInIsolationCommand = defineCommand({
+  id: "workspace.openInIsolation",
+  title: "Open workspace in isolation",
+  cli: {},
+  menus: [
+    {
+      slot: workspaceSlots.headerOverflow,
+      label: "Open in isolation",
+      icon: "container",
+    },
+  ],
+  params: {
+    workspaceId: params.text({ label: "Workspace ID", required: false }),
+  },
+  async run(ctx, commandParams) {
+    const workspaceId = workspaceIdFrom(ctx, commandParams);
+    const workspace = await ctx.workspaces.get(workspaceId);
+    const worktreePath = workspace?.worktree_path?.trim();
+    if (!worktreePath) throw new Error("Workspace worktree path is required.");
+
+    const stackName = stackNameFrom(workspaceId);
+    const result = await ctx.process.runOrThrow({
+      command: [...ISOLATED_COMMAND, "--", "--name", stackName],
+      cwd: worktreePath,
+    });
+    const dashboardUrl = dashboardUrlFrom(result.stdout);
+
+    await ctx.process.spawnDetached({
+      command: browserOpenCommand(dashboardUrl),
+      cwd: worktreePath,
+    });
+
+    return { dashboardUrl, stackName, worktreePath };
+  },
+});
+
+const stopIsolationCommand = defineCommand({
+  id: "workspace.stopIsolation",
+  title: "Stop workspace isolation",
+  cli: {},
+  menus: [
+    {
+      slot: workspaceSlots.headerOverflow,
+      label: "Stop isolation",
+      icon: "square",
+    },
+  ],
+  params: {
+    workspaceId: params.text({ label: "Workspace ID", required: false }),
+  },
+  async run(ctx, commandParams) {
+    const workspaceId = workspaceIdFrom(ctx, commandParams);
+    const workspace = await ctx.workspaces.get(workspaceId);
+    const worktreePath = workspace?.worktree_path?.trim();
+    if (!worktreePath) throw new Error("Workspace worktree path is required.");
+
+    const stackName = stackNameFrom(workspaceId);
+    await ctx.process.runOrThrow({
+      command: [...ISOLATED_COMMAND, "--", "--name", stackName, "--down"],
+      cwd: worktreePath,
+    });
+
+    return { stackName, worktreePath };
+  },
+});
+
+export default defineExtension({
+  commands: [discoverHighImpactIssuesCommand, openInVscodeCommand, openInIsolationCommand, stopIsolationCommand],
+  schedules: [
+    defineSchedule({
+      id: "dailyIssueDiscovery",
+      title: "Daily high-impact issue discovery",
+      schedule: "0 12 * * *",
+      command: discoverHighImpactIssuesCommand.ref,
+    }),
+  ],
+  hooks: [
     // Install + build run in the background so session launch isn't blocked on them.
-    workspaceReady: {
-      event: WORKSPACE_READY_EVENT,
-      async handler(ctx, payload) {
+    defineHook({
+      id: "workspaceReady",
+      event: workspaceEvents.ready,
+      async run(ctx, payload) {
         await ctx.process.spawnDetached({
           command: PROVISION_COMMAND,
           cwd: payload.workspaceDir,
         });
       },
-    },
-  },
+    }),
+  ],
 });

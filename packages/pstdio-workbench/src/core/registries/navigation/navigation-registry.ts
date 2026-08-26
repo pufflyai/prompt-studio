@@ -33,11 +33,17 @@ export interface NavigationTargetCommand {
   args?: unknown;
 }
 
+export interface NavigationTargetHref {
+  kind: "href";
+  href: string;
+}
+
 export type NavigationTargetItem =
   | NavigationTargetResource
   | NavigationTargetView
   | NavigationTargetPanel
-  | NavigationTargetCommand;
+  | NavigationTargetCommand
+  | NavigationTargetHref;
 
 export interface NavigationTargetCompound {
   kind: "compound";
@@ -77,6 +83,7 @@ export interface NavigationDispatcherContext {
   openPanel(panelId: string, input?: OpenWorkbenchPanelInput): unknown;
   openView(viewId: string, input?: OpenWorkbenchViewInput): Promise<unknown> | unknown;
   executeCommand(commandId: string, args?: unknown): Promise<unknown> | unknown;
+  openHref?(href: string): Promise<unknown> | unknown;
 }
 
 const byPriorityAndId = (left: { id: string; priority: number }, right: { id: string; priority: number }) =>
@@ -114,6 +121,10 @@ const dispatchItem = async (target: NavigationTargetItem, dispatcher: Navigation
   if (target.kind === "resource") return dispatcher.openResource(target.resource, target.input);
   if (target.kind === "view") return dispatcher.openView(target.viewId, target.input);
   if (target.kind === "panel") return dispatcher.openPanel(target.panelId, target.input);
+  if (target.kind === "href") {
+    if (!dispatcher.openHref) throw new Error(`Cannot open navigation href target: ${target.href}`);
+    return dispatcher.openHref(target.href);
+  }
   return dispatcher.executeCommand(target.commandId, target.args);
 };
 

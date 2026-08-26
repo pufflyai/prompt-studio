@@ -27,7 +27,7 @@ describe("extension lab command client", () => {
   test("derives counter state from command completion events", () => {
     expect(
       getCounterFromCommandEvent({
-        commandId: "extension-lab.counter.bump",
+        commandId: "pstdio.extension-lab.command.counter.bump",
         outcome: {
           ok: true,
           status: "success",
@@ -41,7 +41,7 @@ describe("extension lab command client", () => {
   test("ignores command events without counter state", () => {
     expect(
       getCounterFromCommandEvent({
-        commandId: "extension-lab.say-hello",
+        commandId: "pstdio.extension-lab.command.say-hello",
         outcome: {
           ok: true,
           status: "success",
@@ -55,11 +55,11 @@ describe("extension lab command client", () => {
   test("executes package-derived counter command ids", async () => {
     const { host, calls } = createHost();
 
-    await executeCounterCommand({ host, commandId: "extension-lab.counter.bump" });
+    await executeCounterCommand({ host, commandId: "pstdio.extension-lab.command.counter.bump" });
 
     expect(calls).toEqual([
       {
-        commandId: "extension-lab.counter.bump",
+        commandId: "pstdio.extension-lab.command.counter.bump",
         params: undefined,
       },
     ]);
@@ -72,7 +72,7 @@ describe("extension lab command client", () => {
 
     expect(calls).toEqual([
       {
-        commandId: "extension-lab.say-hello",
+        commandId: "pstdio.extension-lab.command.say-hello",
         params: undefined,
       },
     ]);
@@ -80,7 +80,7 @@ describe("extension lab command client", () => {
 
   test("creates non-deduped inbox demo notifications", () => {
     expect(createLabInboxNotificationInput()).toMatchObject({
-      actions: [expect.objectContaining({ command: "extension-lab.say-hello", kind: "command" })],
+      actions: [expect.objectContaining({ command: "pstdio.extension-lab.command.say-hello", kind: "command" })],
       metadata: { demo: true },
     });
     expect(createLabInboxNotificationInput()).not.toHaveProperty("dedupeKey");

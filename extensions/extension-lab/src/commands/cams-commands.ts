@@ -33,8 +33,7 @@ export const listCams = async (ctx: Pick<ExtensionContextBase, "storage">, _inpu
         selected: entry.id === selected,
         target: {
           kind: "command" as const,
-          command: "extension-lab.cams.select",
-          params: { camId: entry.id },
+          target: { command: camsSelectCommand.ref, params: { camId: entry.id } },
         },
       })),
     },
@@ -42,11 +41,13 @@ export const listCams = async (ctx: Pick<ExtensionContextBase, "storage">, _inpu
 };
 
 export const camsTreeCommand = defineCommand({
+  id: "cams.tree",
   title: l10n("commands.cams.tree.title", "List Glass Lab cameras"),
   run: listCams,
 });
 
 export const camsSelectCommand = defineCommand({
+  id: "cams.select",
   title: l10n("commands.cams.select.title", "Select a Glass Lab camera"),
   params: { camId: params.text({ required: true }) },
   async run(ctx, commandParams) {
@@ -58,6 +59,7 @@ export const camsSelectCommand = defineCommand({
 });
 
 export const camsCurrentCommand = defineCommand({
+  id: "cams.current",
   title: l10n("commands.cams.current.title", "Read the selected Glass Lab camera"),
   async run(ctx, _commandParams) {
     return { camId: await selectedCamId(ctx.storage) };

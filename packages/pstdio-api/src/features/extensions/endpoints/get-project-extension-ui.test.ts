@@ -108,14 +108,16 @@ describe("GET /v1/projects/:projectId/extensions/ui", () => {
       `const asset = (path: string) => ({ kind: "package-asset" as const, path, baseUrl: import.meta.url });
 
 export default {
-  themes: {
-    midnight: {
+  themes: [
+    {
+      id: "midnight",
+      ref: { kind: "theme", id: "midnight" },
       title: "Midnight",
       format: "vscode-color-theme",
       mode: "dark",
       source: asset("./midnight-color-theme.json"),
     },
-  },
+  ],
 };
 `,
     );
@@ -134,7 +136,7 @@ export default {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.themes).toContainEqual({
-      id: "themed-extension.midnight",
+      id: "test.themed-extension.theme.midnight",
       localId: "midnight",
       extensionId: "test.themed-extension",
       title: "Midnight",

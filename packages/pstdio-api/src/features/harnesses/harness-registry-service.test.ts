@@ -51,7 +51,7 @@ describe("harness registry", () => {
       const agents = (await res.json()) as Array<{ id: string; name: string; availability: { type: string } }>;
 
       expect(agents).toEqual([
-        { id: "pstdio.extension-lab.fake", name: "Fake Agent", availability: { type: "INSTALLED" } },
+        { id: "pstdio.extension-lab.harness.fake", name: "Fake Agent", availability: { type: "INSTALLED" } },
       ]);
     } finally {
       await close();
@@ -76,7 +76,7 @@ describe("harness registry", () => {
       const agents = (await res.json()) as Array<{ id: string; name: string; availability: { type: string } }>;
 
       expect(agents).toEqual([
-        { id: "pstdio.extension-lab.fake", name: "Fake Agent", availability: { type: "INSTALLED" } },
+        { id: "pstdio.extension-lab.harness.fake", name: "Fake Agent", availability: { type: "INSTALLED" } },
       ]);
     } finally {
       await close();
@@ -101,20 +101,20 @@ describe("harness registry", () => {
         await app.request("/v1/projects", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: "fake-only", agents: ["pstdio.extension-lab.fake"] }),
+          body: JSON.stringify({ name: "fake-only", agents: ["pstdio.extension-lab.harness.fake"] }),
         })
       ).json();
 
       const scoped = (await (await app.request(`/v1/agents/info?project=${project.id}`)).json()) as Array<{
         id: string;
       }>;
-      expect(scoped.map((agent) => agent.id)).toEqual(["pstdio.extension-lab.fake"]);
+      expect(scoped.map((agent) => agent.id)).toEqual(["pstdio.extension-lab.harness.fake"]);
 
       // Globally both harnesses stay installed and listed.
       const globalInfo = (await (await app.request("/v1/agents/info")).json()) as Array<{ id: string }>;
       expect(globalInfo.map((agent) => agent.id).sort()).toEqual([
-        "pstdio.extension-lab.fake",
-        "pstdio.harness-claude-code.claude-code",
+        "pstdio.extension-lab.harness.fake",
+        "pstdio.harness-claude-code.harness.claude-code",
       ]);
 
       // Sessions in that project cannot use the disabled harness.
@@ -125,7 +125,7 @@ describe("harness registry", () => {
           project_id: project.id,
           title: "blocked",
           prompt: "blocked",
-          agent: "pstdio.harness-claude-code.claude-code",
+          agent: "pstdio.harness-claude-code.harness.claude-code",
         }),
       });
       expect(sessionRes.status).toBe(400);

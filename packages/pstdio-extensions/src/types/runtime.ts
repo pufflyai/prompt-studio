@@ -4,38 +4,35 @@ import type {
   CommandPaletteContribution,
   CommandPaletteResourceContribution,
   CommandRunHandler,
-  ControlsRendererContribution,
-  DataTableRendererContribution,
   ExtensionDefinition,
   ExtensionSettingProperty,
   ExtensionSourceKind,
   FileIconThemeContribution,
-  FileRendererContribution,
   HarnessProvider,
   HookDefinition,
   JsonObject,
-  KanbanRendererContribution,
   KeybindingContribution,
   Localizable,
   MenuContribution,
   ModeContribution,
-  PanelContribution,
+  NavigationItemContribution,
   ParamObjectSchema,
+  PlacementContribution,
   RendererCallback,
   ResourceHierarchyProvider,
-  ResourceKindContribution,
-  ResourcePanelContribution,
-  RouteContribution,
+  ResourceKindDefinition,
+  ResourceViewContribution,
   SettingsPanelContribution,
   SettingsSectionContribution,
   SkillContribution,
-  StatusItemContribution,
+  StatusBarItemContribution,
+  StatusContribution,
   TemplateContribution,
   TemplateTypeContribution,
   ThemeContribution,
   ThemeMode,
-  TreeItemContribution,
-  TreeRendererContribution,
+  ViewContribution,
+  ViewMenuContribution,
   WhenExpression,
   WorkspaceTypeProvider,
 } from "@pstdio/sdk/extensions";
@@ -110,7 +107,7 @@ export interface RuntimePrivateHandlerRecord {
   name: string;
   sourcePath: string;
   rendererId: string;
-  rendererKind: "controls" | "dataTable" | "file" | "kanban" | "tree";
+  rendererKind: "commandPaletteResource" | "controls" | "dataTable" | "file" | "kanban" | "status" | "tree";
   operation: string;
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with renderer-specific input
   handler: RendererCallback<any, any>;
@@ -135,7 +132,7 @@ export interface RuntimeHookRecord {
   sourcePath: string;
   eventId: string;
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with event-specific payload
-  handler: HookDefinition<any>["handler"];
+  handler: HookDefinition<any>["run"];
 }
 
 export interface RuntimeArtifactMount {
@@ -167,22 +164,58 @@ export interface RuntimeScheduleRecord {
   disabled?: boolean;
 }
 
-export interface RuntimePanelRecord {
+export interface RuntimeViewRecord {
   id: string;
   localId: string;
   extensionId: string;
   name: string;
   sourcePath: string;
-  contribution: PanelContribution;
+  contribution: ViewContribution;
 }
 
-export interface RuntimeStatusItemRecord {
+export interface RuntimeViewMenuRecord {
   id: string;
   localId: string;
   extensionId: string;
   name: string;
   sourcePath: string;
-  contribution: StatusItemContribution;
+  contribution: ViewMenuContribution;
+}
+
+export interface RuntimePlacementRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: PlacementContribution;
+}
+
+export interface RuntimeNavigationItemRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: NavigationItemContribution;
+}
+
+export interface RuntimeStatusBarItemRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: StatusBarItemContribution;
+}
+
+export interface RuntimeStatusRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: StatusContribution;
 }
 
 export interface RuntimeResourceKindRecord {
@@ -191,19 +224,21 @@ export interface RuntimeResourceKindRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
-  contribution: ResourceKindContribution;
+  contribution: Omit<ResourceKindDefinition, "slots"> & {
+    slots: Record<string, { cardinality: "one" | "many"; external: boolean }>;
+  };
 }
 
-export interface RuntimeResourcePanelRecord {
+export interface RuntimeResourceViewRecord {
   id: string;
   localId: string;
   extensionId: string;
   name: string;
   sourcePath: string;
   resourceKindId: string;
-  panelId: string;
+  viewId: string;
   slotId: string;
-  contribution: ResourcePanelContribution;
+  contribution: ResourceViewContribution;
 }
 
 export interface RuntimeResourceHierarchyProviderRecord {
@@ -214,24 +249,6 @@ export interface RuntimeResourceHierarchyProviderRecord {
   sourcePath: string;
   resourceKindId: string;
   provider: ResourceHierarchyProvider;
-}
-
-export interface RuntimeRouteRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: RouteContribution;
-}
-
-export interface RuntimeTreeItemRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: TreeItemContribution;
 }
 
 export interface RuntimeActivityItemRecord {
@@ -270,24 +287,6 @@ export interface RuntimeSettingsSectionRecord {
   contribution: SettingsSectionContribution;
 }
 
-export interface RuntimeKanbanRendererRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: KanbanRendererContribution;
-}
-
-export interface RuntimeDataTableRendererRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: DataTableRendererContribution;
-}
-
 export interface RuntimeCommandPaletteResourceRecord {
   id: string;
   localId: string;
@@ -322,33 +321,6 @@ export interface RuntimeKeybindingRecord {
   canonicalChord: string;
   parsed: ParsedKeybindingChord;
   when?: WhenExpression;
-}
-
-export interface RuntimeTreeRendererRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: TreeRendererContribution;
-}
-
-export interface RuntimeFileRendererRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: FileRendererContribution;
-}
-
-export interface RuntimeControlsRendererRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: ControlsRendererContribution;
 }
 
 export interface RuntimeExtensionSettingRecord {
@@ -473,22 +445,19 @@ export interface ExtensionRuntime {
   schedules: RuntimeScheduleRecord[];
   artifactMounts: RuntimeArtifactMount[];
   modes: RuntimeModeRecord[];
-  panels: RuntimePanelRecord[];
+  views: RuntimeViewRecord[];
+  viewMenus: RuntimeViewMenuRecord[];
+  placements: RuntimePlacementRecord[];
+  navigationItems: RuntimeNavigationItemRecord[];
+  statusBarItems: RuntimeStatusBarItemRecord[];
+  statuses: RuntimeStatusRecord[];
   resourceKinds: RuntimeResourceKindRecord[];
-  resourcePanels: RuntimeResourcePanelRecord[];
+  resourceViews: RuntimeResourceViewRecord[];
   resourceHierarchyProviders: RuntimeResourceHierarchyProviderRecord[];
-  statusItems: RuntimeStatusItemRecord[];
-  routes: RuntimeRouteRecord[];
-  treeItems: RuntimeTreeItemRecord[];
   activityItems: RuntimeActivityItemRecord[];
   settingsSections: RuntimeSettingsSectionRecord[];
   settingsPanels: RuntimeSettingsPanelRecord[];
-  kanbanRenderers: RuntimeKanbanRendererRecord[];
-  dataTableRenderers: RuntimeDataTableRendererRecord[];
   commandPaletteResources: RuntimeCommandPaletteResourceRecord[];
-  treeRenderers: RuntimeTreeRendererRecord[];
-  fileRenderers: RuntimeFileRendererRecord[];
-  controlsRenderers: RuntimeControlsRendererRecord[];
   keybindings: RuntimeKeybindingRecord[];
   settings: RuntimeExtensionSettingRecord[];
   templateTypes: RuntimeTemplateTypeRecord[];

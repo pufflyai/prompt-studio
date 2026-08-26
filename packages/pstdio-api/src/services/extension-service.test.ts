@@ -39,13 +39,15 @@ const makeExtension = (root: string, input: { name?: string; version?: string; t
   writeFileSync(
     join(root, "extension.ts"),
     `export default {
-  templates: {
-    ${input.templateKey ?? "ticket"}: {
+  templates: [
+    {
+      id: "${input.templateKey ?? "ticket"}",
+      ref: { kind: "template", id: "${input.templateKey ?? "ticket"}" },
       title: "Ticket",
       type: "ticket",
       source: { kind: "package-asset", path: "./ticket.md", baseUrl: import.meta.url },
     },
-  },
+  ],
 };`,
   );
   writeFileSync(join(root, "ticket.md"), "# ticket\n");
@@ -301,7 +303,9 @@ describe("extensionService reload", () => {
       expect(result.installedSource.status).toBe("loaded");
       expect(result.installedSource.display_name).toBe("Reloaded Extension");
       expect(result.installedSource.version).toBe("1.1.0");
-      expect(result.installedSource.manifest_json).toMatchObject({ templates: ["second"] });
+      expect(result.installedSource.manifest_json).toMatchObject({
+        templates: [expect.objectContaining({ id: "second", ref: { kind: "template", id: "second" } })],
+      });
       expect(result.installedSource.source_hash).not.toBe("old-hash");
       expect(result.installedSource.loaded_revision).toBeString();
       expect(result.installedSource.last_error_json).toBeNull();

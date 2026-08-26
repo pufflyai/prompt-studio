@@ -67,6 +67,7 @@ export { buildSettingsTreeBody } from "./settings/settings-tree";
 export { WorkbenchIcon } from "./shared/icon";
 export { useWorkbenchStore } from "./shared/use-workbench-store";
 export { WorkbenchAttachedSidePanel, WorkbenchFloatingSidePanel } from "./side-panel/side-panel";
+export { WorkflowStatusSettings } from "./statuses/workflow-status-settings";
 export {
   createWorkbenchTerminalModule,
   openWorkbenchTerminal,

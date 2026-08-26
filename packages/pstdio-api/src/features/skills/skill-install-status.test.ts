@@ -28,7 +28,7 @@ const deps = (...repoPaths: string[]) =>
     harnessRegistry: {
       list: async () => [
         {
-          id: "pstdio.harness-claude-code.claude-code",
+          id: "pstdio.harness-claude-code.harness.claude-code",
           extensionId: "pstdio.harness-claude-code",
           skills: { dir: ".claude/skills", globalDir: ".claude/skills" },
         },
@@ -65,7 +65,7 @@ describe("getSkillInstallStatus", () => {
       files: catalog("1.2.0"),
     });
 
-    expect(status.outdated_agents).toEqual(["pstdio.harness-claude-code.claude-code"]);
+    expect(status.outdated_agents).toEqual(["pstdio.harness-claude-code.harness.claude-code"]);
     expect(status.agent_installations[0]).toMatchObject({ installed_version: "1.1.0", outdated: true });
   });
 
@@ -81,7 +81,7 @@ describe("getSkillInstallStatus", () => {
       files: [{ path: "SKILL.md", content: "# New body\n", encoding: "utf8" }],
     });
 
-    expect(status.outdated_agents).toEqual(["pstdio.harness-claude-code.claude-code"]);
+    expect(status.outdated_agents).toEqual(["pstdio.harness-claude-code.harness.claude-code"]);
     expect(status.agent_installations[0]).toMatchObject({ installed_version: null, outdated: true });
   });
 
@@ -116,7 +116,7 @@ describe("getSkillInstallStatus", () => {
       files: catalog("1.2.0"),
     });
 
-    expect(status.outdated_agents).toEqual(["pstdio.harness-claude-code.claude-code"]);
+    expect(status.outdated_agents).toEqual(["pstdio.harness-claude-code.harness.claude-code"]);
     expect(status.agent_installations[0]).toMatchObject({ outdated: true });
   });
 
@@ -137,7 +137,7 @@ describe("getSkillInstallStatus", () => {
       files: [{ path: "SKILL.md", content: "# Same body\n", encoding: "utf8" }],
     });
 
-    expect(status.outdated_agents).toEqual(["pstdio.harness-claude-code.claude-code"]);
+    expect(status.outdated_agents).toEqual(["pstdio.harness-claude-code.harness.claude-code"]);
     expect(status.agent_installations[0]).toMatchObject({ outdated: true });
   });
 });

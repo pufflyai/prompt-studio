@@ -34,8 +34,10 @@ const writeExtension = (name: string) => {
   writeFileSync(
     join(extensionRoot, "extension.ts"),
     `export default {
-      commands: {
-        "read-upload": {
+      commands: [
+        {
+          id: "read-upload",
+          ref: { kind: "command", id: "read-upload" },
           title: "Read upload",
           params: { files: { type: "files", required: true } },
           run: async (ctx, commandParams) => {
@@ -43,7 +45,7 @@ const writeExtension = (name: string) => {
             return { text: new TextDecoder().decode(bytes) };
           },
         },
-      },
+      ],
     };`,
   );
   return extensionRoot;
@@ -137,7 +139,7 @@ afterEach(async () => {
 
 describe("extension file endpoints", () => {
   test("uploads a command file to its enabled extension owner and exposes its bytes to the command", async () => {
-    const uploadResponse = await uploadCommandFile(projectId, "lab.read-upload");
+    const uploadResponse = await uploadCommandFile(projectId, "pstdio.lab.command.read-upload");
 
     expect(uploadResponse.status).toBe(201);
     const uploaded = (await uploadResponse.json()) as {
@@ -154,9 +156,12 @@ describe("extension file endpoints", () => {
     });
     expect(uploaded.url).toContain(`/extensions/${labInstanceId}/files/${uploaded.id}/content`);
 
-    const executed = (await createJson(`/v1/projects/${projectId}/extensions/commands/lab.read-upload/execute`, {
-      params: { files: [uploaded.id] },
-    })) as { outcome: { ok: boolean; status: string; value: { text: string } } };
+    const executed = (await createJson(
+      `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.read-upload/execute`,
+      {
+        params: { files: [uploaded.id] },
+      },
+    )) as { outcome: { ok: boolean; status: string; value: { text: string } } };
     expect(executed.outcome).toEqual({ ok: true, status: "success", value: { text: "hello command upload" } });
   });
 
@@ -174,7 +179,7 @@ describe("extension file endpoints", () => {
     });
     expect(disabled.status).toBe(200);
 
-    const response = await uploadCommandFile(projectId, "lab.read-upload");
+    const response = await uploadCommandFile(projectId, "pstdio.lab.command.read-upload");
 
     expect(response.status).toBe(404);
   });
@@ -185,13 +190,17 @@ describe("extension file endpoints", () => {
       agents: [testHarnessId("opencode")],
     });
 
-    const response = await uploadCommandFile(project.id, "lab.read-upload");
+    const response = await uploadCommandFile(project.id, "pstdio.lab.command.read-upload");
 
     expect(response.status).toBe(404);
   });
 
   test("applies the extension file size limit to command uploads", async () => {
-    const response = await uploadCommandFile(projectId, "lab.read-upload", Buffer.alloc(25 * 1024 * 1024 + 1));
+    const response = await uploadCommandFile(
+      projectId,
+      "pstdio.lab.command.read-upload",
+      Buffer.alloc(25 * 1024 * 1024 + 1),
+    );
 
     expect(response.status).toBe(413);
   });

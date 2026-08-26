@@ -1,36 +1,39 @@
 import { describe, expect, test } from "bun:test";
 import { workspaceEvents } from "pstdio-api-contracts/extension-kernel";
+import { defineCommand, defineHook } from "./define-command";
 import { defineExtension } from "./define-extension";
 
 describe("defineExtension", () => {
   test("preserves contribution literals", () => {
     const extension = defineExtension({
-      commands: {
-        hello: {
+      commands: [
+        defineCommand({
+          id: "hello",
           title: "Hello",
           async run(_ctx, _commandParams) {
             return { ok: true };
           },
-        },
-      },
+        }),
+      ],
     });
 
-    expect(extension.commands!.hello.title).toBe("Hello");
+    expect(extension.commands?.[0]?.title).toBe("Hello");
   });
 
   test("supports kernel lifecycle event hooks with workspace file helpers", () => {
     const extension = defineExtension({
-      hooks: {
-        provision: {
+      hooks: [
+        defineHook({
+          id: "provision",
           event: workspaceEvents.provision,
-          async handler(ctx, _payload) {
+          async run(ctx, _payload) {
             await ctx.workspaceFiles?.syncDir(".claude/skills", []);
           },
-        },
-      },
+        }),
+      ],
     });
 
-    expect(extension.hooks!.provision.event?.id).toBe("workspace.provision");
+    expect(extension.hooks?.[0]?.event.id).toBe("workspace.provision");
   });
 });
 

@@ -19,7 +19,7 @@ import {
 } from "./helpers/session-follow-up";
 
 const requiresCodex = process.env.E2E_AGENTS === "codex";
-const codexAgentId = "pstdio.harness-codex.codex";
+const codexAgentId = "pstdio.harness-codex.harness.codex";
 
 test.describe("Codex follow-up ordering", () => {
   let projectId: string;

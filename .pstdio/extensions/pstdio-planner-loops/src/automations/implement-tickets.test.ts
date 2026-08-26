@@ -21,7 +21,11 @@ describe("implement-tickets automation", () => {
       implemented: ["T2", "T3"],
       waits: [{ ticket: "T1", reason: "capacity-full" }],
     });
-    expect(callsTo(calls, "pstdio-planner.run-attempt").map((call) => call.params.ticket)).toEqual(["T2", "T3", "T1"]);
+    expect(callsTo(calls, "pstdio.pstdio-planner.command.run-attempt").map((call) => call.params.ticket)).toEqual([
+      "T2",
+      "T3",
+      "T1",
+    ]);
   });
 
   test("skips tickets carrying the stable Human Requested flag", async () => {

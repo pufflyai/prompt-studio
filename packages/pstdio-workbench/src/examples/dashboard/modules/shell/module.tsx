@@ -28,20 +28,26 @@ const registerChrome = (ctx: WorkbenchModuleContext) => {
     render: (input) => <DashboardSidenavHeader workbench={input.workbench} />,
   });
 
-  ctx.layout.registerPanel(
-    {
-      id: dashboardWidgetIds.status,
-      title: "Dashboard status",
-      region: "status",
-      singleton: true,
-      rendererId: dashboardWidgetIds.status,
-      priority: 50,
-    },
-    { priority: 50 },
-  );
+  ctx.layout.registerPanel({
+    id: dashboardWidgetIds.status,
+    title: "Dashboard status",
+    region: "main",
+    singleton: true,
+    rendererId: dashboardWidgetIds.status,
+  });
   ctx.renderers.registerRenderer({
     id: dashboardWidgetIds.status,
     render: (input) => <StatusWidget input={input} />,
+  });
+  ctx.views.registerView({
+    id: dashboardWidgetIds.status,
+    panelId: dashboardWidgetIds.status,
+    title: "Dashboard status",
+  });
+  ctx.statusBar.registerItem({
+    id: `${dashboardWidgetIds.status}.item`,
+    viewId: dashboardWidgetIds.status,
+    slot: "leading",
   });
 
   ctx.layout.registerPanel(
@@ -61,7 +67,6 @@ const registerChrome = (ctx: WorkbenchModuleContext) => {
   });
 
   ctx.layout.openPanel(SIDENAV_HEADER_WIDGET_ID, { pinned: true });
-  ctx.layout.openPanel(dashboardWidgetIds.status, { pinned: true });
 };
 
 // The shell slice: the project brand and status bar, the global

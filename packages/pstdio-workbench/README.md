@@ -119,7 +119,7 @@ A dense, query-driven table backed by `@pstdio/ui/data-table`. Data table render
 
 - Register with `renderers.registerDataTableRenderer()`
 - Refresh with `renderers.refreshDataTableRenderer()` or provide a contribution subscription
-- Extensions contribute `dataTableRenderers` and place them explicitly with `panels.<id>.dataTableRenderer`
+- Extensions declare a `dataTable` view body and place that view with `placements`
 
 #### Examples
 

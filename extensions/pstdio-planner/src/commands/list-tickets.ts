@@ -7,6 +7,7 @@ import { sortedBySortOrder } from "../utils/sort";
 // (Decision 3); the result is curated display rows so the router renders a tidy
 // table. `--parent` doubles as the "sub-tickets of X" query.
 export const listTicketsCommand = defineCommand({
+  id: "list-tickets",
   title: "List tickets",
   cli: {
     globalAliases: [["tickets", "list"]],

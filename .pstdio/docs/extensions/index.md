@@ -22,11 +22,10 @@ Extension identity is package metadata, not code metadata. `package.json` provid
 - Middleware that runs before commands and can continue, patch params, replace invocation data, or reject.
 - Hooks that observe product events and command lifecycle events after they happen.
 - Cron schedules that invoke extension or host commands.
-- Dashboard routes, sidenav navigation, views, settings panels, and renderers.
+- Dashboard views, placements, navigation items, settings panels, and workflow statuses.
 - Templates, skills, themes, file icon themes, and custom template types.
 - Artifact mounts for safe repo-local files under `.pstdio/<package-name>/`.
 - Workspace type and Harness providers for deeper runtime integrations.
-- Install and upgrade lifecycle work through `initialSetup` and `migrate`.
 
 ## Automation Model
 
@@ -49,11 +48,11 @@ Scheduled contributions (`schedules`) surface in the dashboard as **automations*
 
 ## Dashboard UI Model
 
-The implemented dashboard UI model uses host-owned workbench targets. Extensions attach menus, tree items, and settings panels to targets such as `workbench.nav.actions`, `workbench.left.tree`, and `workbench.settings`.
+The dashboard UI model uses host-owned typed slots. Extensions attach menus, navigation items, status-bar items, and settings panels to those slots.
 
 Targets describe the dashboard surface. Optional `when` expressions restrict visibility by active mode, command source, active resource type, or active resource metadata.
 
-Panels are not attachments. A panel's `show` declaration gives its default placement for the extension's own resources or modes. A mode recipe may move that placement within `allowedRegions`. Use `resourcePanels` only to bind a panel into a slot owned by another extension.
+Views own content. Placements own mode, region, default-open state, required state, order, and allowed movement. Use `resourceViews` to bind a view to a semantic resource slot. A placement can then place that slot without either contribution copying geometry.
 
 ## Lifecycle
 

@@ -1,5 +1,5 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type { WorkbenchAttachmentTarget } from "@pstdio/sdk/extensions";
+import type { WorkbenchAttachmentInvocationContext } from "@pstdio/sdk/extensions";
 
 export type DashboardExtensionMetadata = WorkbenchExtensionMetadata;
 
@@ -23,7 +23,7 @@ export type ExtensionResourceContext = {
 };
 
 export type ExtensionAttachmentContext = {
-  target: WorkbenchAttachmentTarget;
+  target: WorkbenchAttachmentInvocationContext["target"];
   mode?: string;
   projectId?: string;
   resource?: ExtensionResourceContext;

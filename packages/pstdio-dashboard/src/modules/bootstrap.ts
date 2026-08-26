@@ -11,7 +11,7 @@ import {
   subscribeDashboardExtensionsReadyProject,
 } from "@/shared/extensions/extension-readiness";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { migrateLegacyViewHistory } from "./extensions/view-persistence-migration";
+import { migrateLegacyViewHistory, resolvePersistedViewId } from "./extensions/view-persistence-migration";
 import { createDashboardSessions } from "./sessions/data/dashboard-sessions";
 import { createDashboardWorkspaces } from "./workspaces/data/dashboard-workspaces";
 
@@ -131,7 +131,7 @@ const restoreLegacyView = (ctx: Parameters<WorkbenchModuleContribution["activate
 
   const routePath = legacyView.metadata?.routePath;
   const route = typeof routePath === "string" ? ctx.views.resolvePath(routePath) : undefined;
-  const viewId = route?.viewId ?? (legacyView.id ? ctx.views.resolveViewId(legacyView.id) : undefined);
+  const viewId = route?.viewId ?? resolvePersistedViewId(legacyView.id, ctx.views);
   if (viewId && ctx.views.canResolveView(viewId)) {
     return ctx.views.openView(viewId, { strategy: { kind: "replace-active" } }).then(() => {
       if (!guard.isCurrent()) return { resource: undefined, status: "stale" } as const;

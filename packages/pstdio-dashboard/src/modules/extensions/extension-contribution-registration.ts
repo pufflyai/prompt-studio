@@ -1,37 +1,37 @@
-import { type Disposable, type WorkbenchModuleContext, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
+import type { Disposable, OpenWorkbenchViewInput, WorkbenchModuleContext } from "@pstdio/workbench";
 import {
+  BRIDGE_WEBVIEW_RENDERER_ID,
   fileRendererRefreshEnvelopeFromCommand,
-  registerWorkbenchExtensionCommandPaletteResources,
-  registerWorkbenchExtensionDataTableRenderers,
-  registerWorkbenchExtensionFileRenderers,
-  registerWorkbenchExtensionRendererRefreshEvents,
-  registerWorkbenchExtensionTreeRenderers,
-  type WorkbenchCompositionRegistry,
+  registerWorkbenchExtensionContributions,
 } from "@pstdio/workbench/extensions";
+import { createElement } from "react";
+import { buildAbsoluteApiUrl } from "@/lib/api";
+import { prepareDashboardNavigationResource, selectDashboardNavigationView } from "@/shared/app/navigation-state";
+import { uploadExtensionCommandFile } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
-import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
+import {
+  localizeExtensionValue,
+  type ResolvedLocalizable,
+  type ResolvedWorkbenchExtensionMetadata,
+} from "@/shared/extensions/extension-localization";
 import {
   publishExtensionCommandEvent,
   subscribeToExtensionEventFeed,
 } from "@/shared/extensions/extension-webview-broadcast";
 import {
-  buildDashboardExtensionCommandPaletteRegistrations,
   buildDashboardExtensionMenuRegistrations,
+  buildDashboardWorkbenchWhenExpression,
+  dashboardMenuSlotsById,
+  dashboardMenuTargetsById,
 } from "@/shared/extensions/workbench-extension-contributions";
-import { getSidenavContributionFooterNodes } from "@/shared/workbench/contributions/sidenav-tree-contributions";
-import {
-  createExtensionCommandPaletteCommandHandler,
-  createExtensionMenuCommandHandler,
-  type ExecuteDashboardExtensionCommand,
-} from "./extension-command-handler";
-import { createExtensionCompositionRegistry, isExtensionResourceSidenavView } from "./extension-composition";
-import { registerExtensionControlsRenderers } from "./extension-controls-renderers";
-import { registerExtensionKanbanRenderers } from "./extension-kanban-renderers";
-import { registerExtensionModeContributions } from "./extension-mode-layout";
+import { setDashboardSidenavSelection } from "@/shared/workbench/dashboard-sidenav";
+import { registerNavigationOwningMode } from "@/shared/workbench/mode-navigation-ownership";
+import { ExtensionViewWidget } from "./components/extension-view-widget";
+import { type ExecuteDashboardExtensionCommand, prepareExtensionCommandArgs } from "./extension-command-handler";
+import { createDashboardKanbanAdapter, toDashboardExtensionResource } from "./extension-kanban-adapter";
+import { registerExtensionNavigation, withoutDashboardNavigationItems } from "./extension-navigation";
 import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
-import { registerExtensionResourceView } from "./extension-resource-view";
-import { registerExtensionSettingsPanels } from "./extension-settings-panels";
-import { registerExtensionResourceSidenavContributions } from "./extension-sidenav-contributions";
+import { registerExtensionResourceSidenav, withoutIntegratedResourceSidenavViews } from "./extension-resource-sidenav";
 import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
 
 export const disposeExtensionContributions = (disposables: Disposable[]) => {
@@ -46,238 +46,128 @@ interface RegisterExtensionContributionsInput {
   onRegistrationError?: (error: unknown, extensionId: string) => void;
 }
 
-const extensionIdOf = (value: unknown) => {
-  if (!value || typeof value !== "object") return undefined;
-  const extensionId = (value as { extensionId?: unknown }).extensionId;
-  return typeof extensionId === "string" ? extensionId : undefined;
-};
+const contributionRefId = (ref: { extensionId: string; kind: string; id: string }) =>
+  ref.extensionId === "pstdio" ? ref.id : `${ref.extensionId}.${ref.kind}.${ref.id}`;
 
-const extensionMetadataById = (metadata: ResolvedWorkbenchExtensionMetadata, extensionId: string) => {
-  const scoped = <T>(records: T[] | undefined) => records?.filter((record) => extensionIdOf(record) === extensionId);
+export const extensionViewResolveInput =
+  (ctx: WorkbenchModuleContext, view: { id: string; title: string; icon?: string }, navigationItemId = view.id) =>
+  (openInput: OpenWorkbenchViewInput) => {
+    if (openInput.resource) return openInput;
+    selectDashboardNavigationView(ctx, view.id, { modeId: "project" });
+    ctx.breadcrumbs.setItems([{ title: view.title, icon: view.icon }]);
+    setDashboardSidenavSelection(ctx, navigationItemId);
+    return openInput;
+  };
 
+export const registerExtensionActivityNavigationOwnership = (metadata: ResolvedWorkbenchExtensionMetadata) => {
+  const modeIds = new Set((metadata.activityItems ?? []).flatMap((item) => item.modes.map(contributionRefId)));
+  const registrations = [...modeIds].map(registerNavigationOwningMode);
   return {
-    ...metadata,
-    extensions: metadata.extensions.filter((extension) => extension.id === extensionId),
-    commands: scoped(metadata.commands) ?? [],
-    commandPaletteContributions: scoped(metadata.commandPaletteContributions),
-    diagnostics: metadata.diagnostics.filter((diagnostic) => diagnostic.extensionId === extensionId),
-    menuContributions: scoped(metadata.menuContributions) ?? [],
-    modes: scoped(metadata.modes) ?? [],
-    routes: scoped(metadata.routes) ?? [],
-    kanbanRenderers: scoped(metadata.kanbanRenderers),
-    dataTableRenderers: scoped(metadata.dataTableRenderers),
-    commandPaletteResources: scoped(metadata.commandPaletteResources),
-    treeRenderers: scoped(metadata.treeRenderers),
-    fileRenderers: scoped(metadata.fileRenderers),
-    controlsRenderers: scoped(metadata.controlsRenderers),
-    keybindings: scoped(metadata.keybindings),
-    settingsSections: scoped(metadata.settingsSections),
-    settingsPanels: scoped(metadata.settingsPanels) ?? [],
-    settingsDefinitions: scoped(metadata.settingsDefinitions),
-    treeItems: scoped(metadata.treeItems),
-    activityItems: scoped(metadata.activityItems),
-    panels: scoped(metadata.panels) ?? [],
-    // Contributions register one extension at a time, so its composition must be
-    // scoped too: an extension owns the resource kinds, panel bindings, hierarchy
-    // providers, and status chrome it declared, and nothing else.
-    resourceKinds: scoped(metadata.resourceKinds),
-    resourcePanels: scoped(metadata.resourcePanels),
-    resourceHierarchyProviders: scoped(metadata.resourceHierarchyProviders),
-    statusItems: scoped(metadata.statusItems),
-  } satisfies ResolvedWorkbenchExtensionMetadata;
+    dispose() {
+      for (const registration of registrations) registration.dispose();
+    },
+  };
 };
 
-const metadataExtensionIds = (metadata: ResolvedWorkbenchExtensionMetadata) => {
-  const ids = new Set(metadata.extensions.map((extension) => extension.id));
-  for (const records of Object.values(metadata)) {
-    if (!Array.isArray(records)) continue;
-    for (const record of records) {
-      const extensionId = extensionIdOf(record);
-      if (extensionId) ids.add(extensionId);
-    }
-  }
-  return [...ids];
-};
-
-const registerSingleExtensionContributions = (
-  input: Omit<RegisterExtensionContributionsInput, "onRegistrationError"> & {
-    allMetadata: ResolvedWorkbenchExtensionMetadata;
-    compositionRegistry: WorkbenchCompositionRegistry;
-  },
-) => {
-  const { allMetadata, compositionRegistry, ctx, executeCommand, metadata, projectId } = input;
-  const disposables: Disposable[] = [];
-  try {
-    const treeRendererMetadata = {
-      ...metadata,
-      panels: metadata.panels.filter((view) => !isExtensionResourceSidenavView(metadata, view)),
+export const withDashboardWebviewUrls = (
+  metadata: ResolvedWorkbenchExtensionMetadata,
+): ResolvedWorkbenchExtensionMetadata => ({
+  ...metadata,
+  views: metadata.views.map((view) => {
+    if (view.body.kind !== "webview") return view;
+    return {
+      ...view,
+      body: {
+        ...view.body,
+        webview: {
+          ...view.body.webview,
+          runtimeUrl: buildAbsoluteApiUrl(view.body.webview.runtimeUrl),
+          moduleUrl: buildAbsoluteApiUrl(view.body.webview.moduleUrl),
+          styles: view.body.webview.styles?.map((url) => buildAbsoluteApiUrl(url)),
+        },
+      },
     };
+  }),
+});
 
-    for (const registration of buildDashboardExtensionMenuRegistrations(metadata)) {
-      disposables.push(
-        ctx.commands.registerCommand(
-          registration.command,
-          createExtensionMenuCommandHandler({
-            ctx,
-            contribution: registration.contribution,
-            executeCommand,
-            getActiveResource: () => ctx.getPrimaryResource(),
-            projectId,
-          }),
-        ),
-      );
-      for (const item of registration.menuItems) {
-        disposables.push(ctx.layout.registerMenuItem(item.menuPath, item.menuItem));
-      }
-    }
-
-    for (const registration of buildDashboardExtensionCommandPaletteRegistrations(metadata)) {
-      disposables.push(
-        ctx.commands.registerCommand(
-          registration.command,
-          createExtensionCommandPaletteCommandHandler({
-            ctx,
-            contribution: registration.contribution,
-            executeCommand,
-            getActiveResource: () => ctx.getPrimaryResource(),
-            projectId,
-          }),
-        ),
-      );
-      disposables.push(ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, registration.menuItem));
-    }
-
-    disposables.push(...registerExtensionKanbanRenderers(ctx, { executeCommand, metadata, projectId }));
-    disposables.push(
-      registerWorkbenchExtensionDataTableRenderers(
-        {
-          executeCommand: async (commandId, body) => {
-            const response = await executeCommand(projectId, commandId, body);
-            for (const notification of collectExtensionCommandNotifications(response)) {
-              ctx.notifications.show({
-                level: notification.level,
-                title: notification.title,
-                message: notification.message,
-                metadata: notification.metadata,
-              });
-            }
-            publishExtensionCommandEvent(response);
-            return response;
-          },
-          projectId,
-          workbench: ctx,
-        },
-        metadata.dataTableRenderers ?? [],
-        metadata.panels,
-        metadata.resourcePanels,
-      ),
-    );
-    disposables.push(...registerExtensionControlsRenderers(ctx, { metadata, projectId }));
-    disposables.push(
-      registerWorkbenchExtensionFileRenderers({
-        // Publish so an edit that retitles the ticket refreshes the breadcrumb via the
-        // command feed (the load response carries no id, so subscribers ignore it).
-        executeCommand: async (commandId, body) => {
-          const response = await executeCommand(projectId, commandId, body);
-          publishExtensionCommandEvent(response, fileRendererRefreshEnvelopeFromCommand(body, response));
-          return response;
-        },
-        metadata,
-        projectId,
-        workbench: ctx,
-      }),
-    );
-    disposables.push(
-      registerWorkbenchExtensionTreeRenderers({
-        executeCommand: async (commandId, body) => {
-          const response = await executeCommand(projectId, commandId, body);
-          const decoratedResponse = await withWorkspaceDiffMetadata(response);
-          const requestMetadata = (body as { metadata?: { treeId?: unknown } } | undefined)?.metadata;
-          if (typeof requestMetadata?.treeId === "string") publishExtensionCommandEvent(decoratedResponse);
-          return decoratedResponse;
-        },
-        getHostTreeFooterNodes: () => {
-          const mode = ctx.modes.getActiveModeId();
-          return mode ? getSidenavContributionFooterNodes(ctx, mode) : [];
-        },
-        metadata: treeRendererMetadata,
-        projectId,
-        // Tree node resources must share the dashboard's canonical URIs; the
-        // workbench default scheme would give the same resource a second
-        // identity (own layout scope, history entry, and hierarchy key).
-        resolveNodeResource: (resource) => ({
-          kind: resource.type,
-          uri: `dashboard-workbench://${resource.type}/${resource.id}`,
-          id: resource.id,
-          label: resource.label,
-          metadata: { ...resource.metadata, projectId },
-        }),
-        workbench: ctx,
-      }),
-    );
-    disposables.push(registerExtensionResourceSidenavContributions(ctx, metadata));
-    disposables.push(
-      registerWorkbenchExtensionCommandPaletteResources(
-        {
-          executeCommand: (commandId, body) => executeCommand(projectId, commandId, body),
-          projectId,
-          workbench: ctx,
-        },
-        metadata.commandPaletteResources ?? [],
-      ),
-    );
-    disposables.push(
-      ...registerExtensionModeContributions(ctx, metadata, projectId, executeCommand, compositionRegistry),
-    );
-    disposables.push(registerExtensionResourceHierarchy(ctx, { metadata, projectId }));
-    disposables.push(
-      ...registerExtensionResourceView(ctx, {
-        metadata: allMetadata,
-        projectId,
-        resourceKinds: (metadata.resourceKinds ?? []).map((kind) => kind.id),
-      }),
-    );
-    disposables.push(...registerExtensionSettingsPanels(ctx, { metadata, projectId }));
-    disposables.push(
-      registerWorkbenchExtensionRendererRefreshEvents({
-        metadata,
-        subscribe: (listener) => ({
-          dispose: subscribeToExtensionEventFeed((event) => {
-            if (!event.projectId || event.projectId === projectId) listener(event);
-          }),
-        }),
-        workbench: ctx,
-      }),
-    );
-    return disposables;
-  } catch (error) {
-    disposeExtensionContributions(disposables);
-    throw error;
-  }
+export const registerDashboardExtensionWebviewRenderer = (ctx: WorkbenchModuleContext) => {
+  if (ctx.renderers.getRenderer(BRIDGE_WEBVIEW_RENDERER_ID)) return undefined;
+  return ctx.renderers.registerRenderer({
+    id: BRIDGE_WEBVIEW_RENDERER_ID,
+    render: (renderInput) => createElement(ExtensionViewWidget, { input: renderInput }),
+  });
 };
+
+export const localizeDashboardExtensionCommandResponse = <T extends { extensionId: string }>(response: T) =>
+  localizeExtensionValue(response, response.extensionId) as ResolvedLocalizable<T>;
 
 export const registerExtensionContributions = (input: RegisterExtensionContributionsInput) => {
   const disposables: Disposable[] = [];
-  // One registry for every extension: an extension's mode may place a panel that
-  // another extension contributed into one of its open slots.
-  const compositionRegistry = createExtensionCompositionRegistry(input.metadata);
-
-  for (const extensionId of metadataExtensionIds(input.metadata)) {
-    try {
-      disposables.push(
-        ...registerSingleExtensionContributions({
-          allMetadata: input.metadata,
-          compositionRegistry,
-          ctx: input.ctx,
-          executeCommand: input.executeCommand,
-          metadata: extensionMetadataById(input.metadata, extensionId),
-          projectId: input.projectId,
-        }),
-      );
-    } catch (error) {
-      input.onRegistrationError?.(error, extensionId);
-    }
+  try {
+    const webviewRenderer = registerDashboardExtensionWebviewRenderer(input.ctx);
+    if (webviewRenderer) disposables.push(webviewRenderer);
+    const kanban = createDashboardKanbanAdapter(input);
+    disposables.push(kanban.disposable);
+    disposables.push(
+      registerWorkbenchExtensionContributions({
+        createMenuWhenExpression: (contribution) => buildDashboardWorkbenchWhenExpression(contribution.when),
+        executeCommand: async (commandId, body) => {
+          const rawResponse = await input.executeCommand(input.projectId, commandId, body);
+          const treeId = body.slot?.context?.treeId;
+          const decoratedResponse =
+            typeof treeId === "string" ? await withWorkspaceDiffMetadata(rawResponse) : rawResponse;
+          const response = localizeDashboardExtensionCommandResponse(decoratedResponse);
+          for (const notification of collectExtensionCommandNotifications(response)) {
+            input.ctx.notifications.show({
+              level: notification.level,
+              title: notification.title,
+              message: notification.message,
+              metadata: notification.metadata,
+            });
+          }
+          publishExtensionCommandEvent(response, fileRendererRefreshEnvelopeFromCommand(body, response));
+          return response;
+        },
+        kanbanAdapter: kanban.adapter,
+        menuSlotsById: dashboardMenuSlotsById,
+        menuTargetsById: dashboardMenuTargetsById,
+        menuRegistrations: buildDashboardExtensionMenuRegistrations(input.metadata),
+        metadata: withoutIntegratedResourceSidenavViews(
+          withoutDashboardNavigationItems(withDashboardWebviewUrls(input.metadata)),
+        ),
+        prepareCommandArgs: (commandId, args, _context, onArgsChange) =>
+          prepareExtensionCommandArgs({
+            args,
+            commandId,
+            onArgsChange,
+            projectId: input.projectId,
+            uploadFile: uploadExtensionCommandFile,
+          }),
+        prepareResource: (resource) => prepareDashboardNavigationResource(input.ctx, resource),
+        projectId: input.projectId,
+        resolveTreeNodeResource: (resource) => toDashboardExtensionResource(resource, input.projectId)!,
+        resolveViewInput: (view) => {
+          const navigationItem = input.metadata.navigationItems.find(
+            (item) => item.action.kind === "view" && contributionRefId(item.action.view) === view.id,
+          );
+          return extensionViewResolveInput(input.ctx, view, navigationItem?.id);
+        },
+        settingsSectionId: "project",
+        settingsSectionTitle: "Project",
+        subscribeRefreshEvents: (listener) => {
+          const unsubscribe = subscribeToExtensionEventFeed(listener);
+          return { dispose: unsubscribe };
+        },
+        workbench: input.ctx,
+      }),
+      registerExtensionActivityNavigationOwnership(input.metadata),
+      registerExtensionNavigation(input.ctx, input.metadata),
+      registerExtensionResourceSidenav(input.ctx, input.metadata),
+      registerExtensionResourceHierarchy(input.ctx, { metadata: input.metadata, projectId: input.projectId }),
+    );
+  } catch (error) {
+    disposeExtensionContributions(disposables);
+    input.onRegistrationError?.(error, input.metadata.extensions[0]?.id ?? "extensions");
   }
-
   return disposables;
 };

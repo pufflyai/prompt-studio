@@ -6,8 +6,9 @@ import { automatable } from "../selection";
 const AUTOMATION = "review-tickets";
 
 export const reviewTicketsCommand = defineCommand({
+  id: "review-tickets",
   title: "Review ready attempt revisions",
-  cli: true,
+  cli: {},
   async run(ctx, _commandParams) {
     const attempts = await executePlanner(ctx, planner.listAttempts, {});
     const reconciled = [];

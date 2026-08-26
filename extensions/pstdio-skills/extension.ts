@@ -1,14 +1,16 @@
-import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
+import { defineExtension, defineSkill, packageAsset } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
-  skills: {
-    create_pstdio_extension: {
+  skills: [
+    defineSkill({
+      id: "create_pstdio_extension",
       title: "Create a pstdio extension",
       source: packageAsset("./skills/create-pstdio-extension", import.meta.url),
-    },
-    pstdio: {
+    }),
+    defineSkill({
+      id: "pstdio",
       title: "Use pstdio",
       source: packageAsset("./skills/pstdio", import.meta.url),
-    },
-  },
+    }),
+  ],
 });

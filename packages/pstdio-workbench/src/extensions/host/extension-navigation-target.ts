@@ -1,5 +1,5 @@
-import type { ExtensionNavigationTarget, ExtensionPlacementStrategy } from "@pstdio/sdk/extensions";
-import type { NavigationTarget, NavigationTargetCommand, ResourceRef, WorkbenchRegion } from "../../core";
+import type { NavigationTarget as ExtensionNavigationTarget, ExtensionPlacementStrategy } from "@pstdio/sdk/extensions";
+import type { NavigationTarget, NavigationTargetCommand, ResourceRef } from "../../core";
 import { toWorkbenchResource } from "./workbench-extension-command";
 
 export interface ExtensionNavigationSourcePlacement {
@@ -7,8 +7,11 @@ export interface ExtensionNavigationSourcePlacement {
 }
 
 export interface ToWorkbenchNavigationTargetInput {
-  commandIdOf?(command: unknown): string | undefined;
+  commandIdOf?(
+    command: Extract<ExtensionNavigationTarget, { kind: "command" }>["target"]["command"],
+  ): string | undefined;
   commandTargetOf?(target: Extract<ExtensionNavigationTarget, { kind: "command" }>): NavigationTargetCommand;
+  extensionId?: string;
   resourceOf?(
     resource: Parameters<typeof toWorkbenchResource>[0],
     target: Extract<ExtensionNavigationTarget, { kind: "resource" }>,
@@ -19,7 +22,8 @@ export interface ToWorkbenchNavigationTargetInput {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object" && !Array.isArray(value));
 
-const isCommand = (value: unknown) => typeof value === "string" || (isRecord(value) && typeof value.id === "string");
+const isContributionRef = (value: unknown, kind: string) =>
+  isRecord(value) && value.kind === kind && typeof value.id === "string";
 
 const isResource = (value: unknown) =>
   isRecord(value) && typeof value.type === "string" && typeof value.id === "string";
@@ -33,18 +37,16 @@ const isResourceTarget = (target: Record<string, unknown>) => {
 };
 
 const isViewTarget = (target: Record<string, unknown>) => {
-  if (typeof target.viewId !== "string") return false;
+  if (!isContributionRef(target.view, "view")) return false;
   if (target.input === undefined) return true;
   if (!isRecord(target.input)) return false;
   const strategy = target.input.strategy;
-  const region = target.input.region;
   return (
-    (region === undefined || typeof region === "string") &&
-    (strategy === undefined ||
-      strategy === "persistent" ||
-      strategy === "preview" ||
-      strategy === "replace-active" ||
-      strategy === "replace-invoking")
+    strategy === undefined ||
+    strategy === "persistent" ||
+    strategy === "preview" ||
+    strategy === "replace-active" ||
+    strategy === "replace-invoking"
   );
 };
 
@@ -52,7 +54,13 @@ const isItemTarget = (value: unknown): value is Exclude<ExtensionNavigationTarge
   if (!isRecord(value)) return false;
   if (value.kind === "resource") return isResourceTarget(value);
   if (value.kind === "view") return isViewTarget(value);
-  return value.kind === "command" && isCommand(value.command) && (value.params === undefined || isRecord(value.params));
+  if (value.kind === "href") return typeof value.href === "string";
+  return (
+    value.kind === "command" &&
+    isRecord(value.target) &&
+    isContributionRef(value.target.command, "command") &&
+    (value.target.params === undefined || isRecord(value.target.params))
+  );
 };
 
 export const isExtensionNavigationTarget = (value: unknown): value is ExtensionNavigationTarget => {
@@ -75,17 +83,16 @@ const toResourceInput = (
 };
 
 const toViewInput = (
-  input: { region?: string; strategy?: ExtensionPlacementStrategy } | undefined,
+  input: { strategy?: ExtensionPlacementStrategy } | undefined,
   sourcePlacement: ExtensionNavigationSourcePlacement | undefined,
 ) => {
   const strategy = input?.strategy;
-  const shared = input?.region ? { region: input.region as WorkbenchRegion } : {};
-  if (!strategy) return shared;
+  if (!strategy) return {};
   if (strategy === "persistent" || strategy === "preview" || strategy === "replace-active") {
-    return { ...shared, strategy: { kind: strategy } } as const;
+    return { strategy: { kind: strategy } } as const;
   }
   if (!sourcePlacement) throw new Error("replace-invoking requires a live source placement.");
-  return { ...shared, strategy: { kind: "replace-panel", instanceId: sourcePlacement.instanceId } } as const;
+  return { strategy: { kind: "replace-panel", instanceId: sourcePlacement.instanceId } } as const;
 };
 
 const toCommandTarget = (
@@ -94,9 +101,17 @@ const toCommandTarget = (
 ) => {
   const override = input.commandTargetOf?.(target);
   if (override) return override;
+  const command = target.target.command;
+  const extensionId = command.extensionId ?? input.extensionId;
   const commandId =
-    input.commandIdOf?.(target.command) ?? (typeof target.command === "string" ? target.command : target.command.id);
-  return { kind: "command", commandId, args: target.params } satisfies NavigationTargetCommand;
+    input.commandIdOf?.(command) ??
+    (extensionId && extensionId !== "pstdio" ? `${extensionId}.command.${command.id}` : command.id);
+  return { kind: "command", commandId, args: target.target.params } satisfies NavigationTargetCommand;
+};
+
+const viewIdOf = (target: Extract<ExtensionNavigationTarget, { kind: "view" }>, extensionId: string | undefined) => {
+  const owner = target.view.extensionId ?? extensionId;
+  return owner ? `${owner}.view.${target.view.id}` : target.view.id;
 };
 
 // The return type stays explicit: the compound branch recurses, and TypeScript
@@ -119,9 +134,14 @@ export const toWorkbenchNavigationTarget = (
     };
   }
   if (target.kind === "view") {
-    return { kind: "view", viewId: target.viewId, input: toViewInput(target.input, input.sourcePlacement) };
+    return {
+      kind: "view",
+      viewId: viewIdOf(target, input.extensionId),
+      input: toViewInput(target.input, input.sourcePlacement),
+    };
   }
   if (target.kind === "command") return toCommandTarget(target, input);
+  if (target.kind === "href") return target;
   return {
     kind: "compound",
     targets: target.targets.map(

@@ -32,14 +32,16 @@ const writeExtension = (root: string, commandTitle: string) => {
   writeFileSync(
     join(extensionRoot, "extension.ts"),
     `export default {
-      commands: {
-        ping: {
+      commands: [
+        {
+          id: "ping",
+          ref: { kind: "command", id: "ping" },
           title: ${JSON.stringify(commandTitle)},
           async run() {
             return { ok: true };
           },
         },
-      },
+      ],
     };`,
   );
   return extensionRoot;
@@ -103,11 +105,14 @@ describe("project extension runtime snapshot integration", () => {
     const warm = await handle.deps.extensionRuntimeCatalog.get(projectId);
 
     for (let call = 0; call < 2; call += 1) {
-      const execute = await app.request(`/v1/projects/${projectId}/extensions/commands/lab.ping/execute`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ params: {} }),
-      });
+      const execute = await app.request(
+        `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.ping/execute`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ params: {} }),
+        },
+      );
       expect(execute.status).toBe(200);
     }
     expect((await app.request(`/v1/projects/${projectId}/extensions/commands`)).status).toBe(200);
@@ -132,7 +137,9 @@ describe("project extension runtime snapshot integration", () => {
     const commands = (await (await app.request(`/v1/projects/${projectId}/extensions/commands`)).json()) as {
       commands: Array<{ id: string; title: string }>;
     };
-    expect(commands.commands).toContainEqual(expect.objectContaining({ id: "lab.ping", title: "Ping v2" }));
+    expect(commands.commands).toContainEqual(
+      expect.objectContaining({ id: "pstdio.lab.command.ping", title: "Ping v2" }),
+    );
   });
 
   test("toggling extension enablement invalidates only that project's snapshot", async () => {
@@ -141,7 +148,7 @@ describe("project extension runtime snapshot integration", () => {
     expect(labInstance).toBeDefined();
 
     const before = await handle.deps.extensionRuntimeCatalog.get(projectId);
-    expect(before.runtime.commands.map((command) => command.id)).toContain("lab.ping");
+    expect(before.runtime.commands.map((command) => command.id)).toContain("pstdio.lab.command.ping");
 
     await handle.deps.extensionService.setProjectExtensionEnabled(labInstance!.instance.id, false);
     const disabled = await handle.deps.extensionRuntimeCatalog.get(projectId);
@@ -150,6 +157,6 @@ describe("project extension runtime snapshot integration", () => {
 
     await handle.deps.extensionService.setProjectExtensionEnabled(labInstance!.instance.id, true);
     const enabled = await handle.deps.extensionRuntimeCatalog.get(projectId);
-    expect(enabled.runtime.commands.map((command) => command.id)).toContain("lab.ping");
+    expect(enabled.runtime.commands.map((command) => command.id)).toContain("pstdio.lab.command.ping");
   });
 });

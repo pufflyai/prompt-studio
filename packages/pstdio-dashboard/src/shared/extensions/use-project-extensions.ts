@@ -27,14 +27,15 @@ const projectExtensionMetadataQueryKey = (projectId: string | undefined) =>
   ["project-extension-metadata", projectId] as const;
 const extensionSyncTables = new Set<CollectionChange["table"]>(["installed_extension_sources", "extension_instances"]);
 
-const invalidateExtensionQueries = (queryClient: ReturnType<typeof useQueryClient>, projectId: string | undefined) => {
-  queryClient.invalidateQueries({ queryKey: projectExtensionsQueryKey(projectId) });
-  queryClient.invalidateQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) });
-  queryClient.invalidateQueries({ queryKey: ["extension-contributions", projectId] });
-  // Harness availability follows extension enablement.
-  queryClient.invalidateQueries({ queryKey: ["agents-info"] });
-  queryClient.invalidateQueries({ queryKey: ["agent-models"] });
-};
+const invalidateExtensionQueries = (queryClient: ReturnType<typeof useQueryClient>, projectId: string | undefined) =>
+  Promise.all([
+    queryClient.invalidateQueries({ queryKey: projectExtensionsQueryKey(projectId) }),
+    queryClient.invalidateQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) }),
+    queryClient.invalidateQueries({ queryKey: ["extension-contributions", projectId] }),
+    // Harness availability follows extension enablement.
+    queryClient.invalidateQueries({ queryKey: ["agents-info"] }),
+    queryClient.invalidateQueries({ queryKey: ["agent-models"] }),
+  ]);
 
 // Extension installs/enables sync over the live collections, so refresh the
 // project extension queries whenever those tables change.
@@ -45,7 +46,7 @@ const useInvalidateExtensionQueriesOnSync = (projectId: string | undefined) => {
     () =>
       subscribeCollections((change) => {
         if (!change || !extensionSyncTables.has(change.table)) return;
-        invalidateExtensionQueries(queryClient, projectId);
+        void invalidateExtensionQueries(queryClient, projectId);
       }),
     [projectId, queryClient],
   );

@@ -84,13 +84,15 @@ test("keeps package asset urls relative to the source module after packaged bund
     `
       import { packageAsset } from "@pstdio/sdk/extensions";
 
-      export const templates = {
-        sample: {
+      export const templates = [
+        {
+          id: "sample",
+          ref: { kind: "template", id: "sample" },
           title: "Sample",
           type: "sample",
           source: packageAsset("./template.md", import.meta.url),
         },
-      };
+      ];
     `,
   );
   writeFileSync(
@@ -104,8 +106,8 @@ test("keeps package asset urls relative to the source module after packaged bund
 
   const diagnostics: ExtensionDiagnostic[] = [];
   const loaded = await loadExtensionPackage({ path: dir }, diagnostics);
-  const templates = loaded?.definition.templates as Record<string, { source: { baseUrl: string; path: string } }>;
-  const source = templates.sample.source;
+  const templates = loaded?.definition.templates as readonly { source: { baseUrl: string; path: string } }[];
+  const source = templates[0]!.source;
 
   expect(diagnostics).toEqual([]);
   expect(fileURLToPath(new URL(source.path, source.baseUrl))).toBe(join(dir, "src", "template.md"));

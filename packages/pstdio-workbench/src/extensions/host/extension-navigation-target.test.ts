@@ -2,10 +2,30 @@ import { describe, expect, test } from "bun:test";
 import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 
 describe("toWorkbenchNavigationTarget", () => {
+  test("keeps host command references in the host command namespace", () => {
+    expect(
+      toWorkbenchNavigationTarget({
+        kind: "command",
+        target: {
+          command: { extensionId: "pstdio", kind: "command", id: "workbench.action.switchMode" },
+          params: { modeId: "pstdio.extension-lab.mode.lab" },
+        },
+      }),
+    ).toEqual({
+      kind: "command",
+      commandId: "workbench.action.switchMode",
+      args: { modeId: "pstdio.extension-lab.mode.lab" },
+    });
+  });
+
   test("maps view replace-invoking to a host-owned panel replacement strategy", () => {
     expect(
       toWorkbenchNavigationTarget(
-        { kind: "view", viewId: "ticketInspector", input: { strategy: "replace-invoking" } },
+        {
+          kind: "view",
+          view: { kind: "view", id: "ticketInspector" },
+          input: { strategy: "replace-invoking" },
+        },
         { sourcePlacement: { instanceId: "panel-1" } },
       ),
     ).toEqual({
@@ -60,7 +80,7 @@ describe("toWorkbenchNavigationTarget", () => {
     expect(() =>
       toWorkbenchNavigationTarget({
         kind: "view",
-        viewId: "ticketInspector",
+        view: { kind: "view", id: "ticketInspector" },
         input: { strategy: "replace-invoking" },
       }),
     ).toThrow("replace-invoking requires a live source placement.");

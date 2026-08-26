@@ -37,20 +37,24 @@ const writeCatalogExtension = (root: string, options?: { escapeTemplate?: boolea
     `const asset = (path: string) => ({ kind: "package-asset" as const, path, baseUrl: import.meta.url });
 
 export default {
-  templates: {
-    catalogTicket: {
+  templates: [
+    {
+      id: "catalogTicket",
+      ref: { kind: "template", id: "catalogTicket" },
       title: "Catalog Ticket",
       type: "ticket",
       source: asset(${JSON.stringify(options?.escapeTemplate ? "../outside.md" : "./templates/lab-ticket.md")}),
     },
-  },
-  skills: {
-    catalogSkill: {
+  ],
+  skills: [
+    {
+      id: "catalogSkill",
+      ref: { kind: "skill", id: "catalogSkill" },
       title: "Catalog Skill",
       description: "Skill from an extension directory.",
       source: asset("./skills/lab-skill"),
     },
-  },
+  ],
 };
 `,
     "utf8",

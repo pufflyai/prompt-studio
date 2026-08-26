@@ -125,12 +125,12 @@ modes: {
 Root tree placement is explicit:
 
 ~~~ts
-treeItems: {
-  tickets: {
-    group: null,
-    action: { kind: "resource", resource: "tickets-root" },
-  },
-}
+defineNavigationItem({
+  id: "tickets",
+  slot: workbenchSlots.projectNavigation,
+  label: "Tickets",
+  action: { kind: "resource", resource: ticketsRoot },
+});
 ~~~
 
 ## Behavior

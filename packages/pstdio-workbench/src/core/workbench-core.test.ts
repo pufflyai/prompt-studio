@@ -83,7 +83,7 @@ describe("workbench modules", () => {
       region: "main",
       rendererId: "board",
     });
-    workbench.layout.registerWidget({ id: "session", title: "Session", region: "side", rendererId: "session" });
+    workbench.layout.registerLocation({ id: "session", title: "Session", region: "side", rendererId: "session" });
     workbench.resources.registerPresenter({
       id: "dashboard-view",
       canOpen: (resource) => resource.kind === "dashboard-view",
@@ -122,7 +122,7 @@ describe("workbench modules", () => {
       region: "main",
       rendererId: "board",
     });
-    workbench.layout.registerWidget({ id: "session", title: "Session", region: "side", rendererId: "session" });
+    workbench.layout.registerLocation({ id: "session", title: "Session", region: "side", rendererId: "session" });
     workbench.resources.registerPresenter({
       id: "dashboard-view",
       canOpen: (resource) => resource.kind === "dashboard-view",
@@ -158,7 +158,7 @@ describe("workbench modules", () => {
       region: "main",
       rendererId: "workspace",
     });
-    workbench.layout.registerWidget({ id: "session", title: "Session", region: "side", rendererId: "session" });
+    workbench.layout.registerLocation({ id: "session", title: "Session", region: "side", rendererId: "session" });
     workbench.resources.registerPresenter({
       id: "workspace",
       canOpen: (resource) => resource.kind === "workspace",

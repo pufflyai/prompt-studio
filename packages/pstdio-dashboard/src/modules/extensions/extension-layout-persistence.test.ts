@@ -1,116 +1,49 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
-import { createLocalStorageLayoutPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
+import { createWorkbenchCore } from "@pstdio/workbench";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
-import { registerExtensionLayoutResetCommands } from "./extension-layout-persistence";
+import { migrateAlpha3ExtensionLayout } from "./extension-layout-persistence";
+import { metadata } from "./module-test-fixtures";
 
 const extensionId = "pstdio.extension-lab";
-const panelId = "extension-lab.overview";
+const viewId = `${extensionId}.view.overview`;
+const alpha3ViewId = "extension-lab.overview";
 
-const metadata = {
-  extensions: [{ id: extensionId, name: "extension-lab", displayName: "Extension Lab", sourcePath: "" }],
-  commands: [],
-  diagnostics: [],
-  menuContributions: [],
-  modes: [],
-  panels: [
+const alpha4Metadata = {
+  ...metadata,
+  views: [
     {
-      id: panelId,
+      id: viewId,
+      localId: "overview",
       extensionId,
-      show: { region: "main" },
       title: "Overview",
-      renderer: { kind: "tree", id: panelId },
+      body: { kind: "tree" as const, bodyHandlerId: `${viewId}.body` },
     },
   ],
-  routes: [],
-  settingsPanels: [],
 } satisfies ResolvedWorkbenchExtensionMetadata;
 
-const createStorage = (): WorkbenchStorageLike => {
-  const values = new Map<string, string>();
-  return {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => values.set(key, value),
-    removeItem: (key) => values.delete(key),
-  };
-};
+describe("alpha.4 extension layout migration", () => {
+  test("rewrites alpha.3 identities and removes persisted chrome", () => {
+    const layout = createWorkbenchCore().layout.getLayout();
+    layout.regions.main.widgets = [
+      { widgetId: alpha3ViewId, contributionId: alpha3ViewId, viewId: alpha3ViewId, pinned: true },
+    ];
+    layout.regions.main.activeWidgetId = alpha3ViewId;
+    layout.activeWidgetId = alpha3ViewId;
+    layout.regions.status.widgets = [
+      { widgetId: "extension-lab.status", contributionId: "extension-lab.status", pinned: true },
+    ];
+    layout.regions.status.activeWidgetId = "extension-lab.status";
 
-const createLayout = () => {
-  const layout = createWorkbenchCore().layout.getLayout();
-  layout.regions.main.widgets = [
-    { widgetId: panelId, contributionId: panelId, pinned: true },
-    { widgetId: "dashboard.native", contributionId: "dashboard.native" },
-  ];
-  layout.regions.main.activeWidgetId = panelId;
-  layout.activeWidgetId = panelId;
-  return layout;
-};
+    const migrated = migrateAlpha3ExtensionLayout(layout, alpha4Metadata);
 
-describe("extension layout persistence", () => {
-  test("the local reset command updates active and stored project layouts only", async () => {
-    const storage = createStorage();
-    const layoutPersistence = createLocalStorageLayoutPersistence({
-      debounceMs: 60_000,
-      namespace: "dashboard-wb",
-      storage,
+    expect(migrated.regions.main.widgets[0]).toMatchObject({
+      widgetId: viewId,
+      contributionId: viewId,
+      viewId,
+      pinned: true,
     });
-    const projectLayout = createLayout();
-    const resourceLayout = createLayout();
-    const otherProjectLayout = createLayout();
-    layoutPersistence.setLayout(projectLayout, "project/project-1/mode/project/aggregate/empty");
-    layoutPersistence.setLayout(resourceLayout, "project/project-1/mode/project/resource/resource://one");
-    layoutPersistence.setLayout(otherProjectLayout, "project/project-2/mode/project/aggregate/empty");
-    layoutPersistence.flush?.();
-
-    const workbench = createWorkbenchCore();
-    workbench.layout.registerPanel({
-      id: panelId,
-      title: "Overview",
-      region: "main",
-      rendererId: panelId,
-      singleton: true,
-    });
-    workbench.layout.registerPanel({
-      id: "dashboard.native",
-      title: "Native",
-      region: "main",
-      rendererId: "dashboard.native",
-      singleton: true,
-    });
-    workbench.layout.restoreLayout(projectLayout);
-    const disposables = registerExtensionLayoutResetCommands({
-      ctx: workbench,
-      layoutPersistence,
-      metadata,
-      projectId: "project-1",
-    });
-
-    expect(workbench.layout.listMenuItems(workbenchCommandPaletteMenuPath)).toContainEqual(
-      expect.objectContaining({ commandId: `dashboard.extensions.resetLayout.${extensionId}` }),
-    );
-
-    await workbench.commands.executeCommand(`dashboard.extensions.resetLayout.${extensionId}`);
-
-    expect(workbench.layout.getLayout().regions.main.widgets.map((placement) => placement.widgetId)).toEqual([
-      "dashboard.native",
-    ]);
-    expect(
-      layoutPersistence
-        .getLayout("project/project-1/mode/project/aggregate/empty")
-        ?.regions.main.widgets.map((placement) => placement.widgetId),
-    ).toEqual(["dashboard.native"]);
-    expect(
-      layoutPersistence
-        .getLayout("project/project-1/mode/project/resource/resource://one")
-        ?.regions.main.widgets.map((placement) => placement.widgetId),
-    ).toEqual(["dashboard.native"]);
-    expect(
-      layoutPersistence
-        .getLayout("project/project-2/mode/project/aggregate/empty")
-        ?.regions.main.widgets.map((placement) => placement.widgetId),
-    ).toEqual([panelId, "dashboard.native"]);
-
-    for (const disposable of disposables) disposable.dispose();
-    layoutPersistence.dispose?.();
+    expect(migrated.activeWidgetId).toBe(viewId);
+    expect(migrated.regions.status.widgets).toEqual([]);
+    expect(migrated.regions.status.activeWidgetId).toBeUndefined();
   });
 });

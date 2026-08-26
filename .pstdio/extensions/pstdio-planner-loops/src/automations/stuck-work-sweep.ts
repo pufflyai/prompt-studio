@@ -6,8 +6,9 @@ const AUTOMATION = "stuck-work-sweep";
 const reconcilableStates = new Set(["implementing", "changes_requested", "reviewing"]);
 
 export const stuckWorkSweepCommand = defineCommand({
+  id: "stuck-work-sweep",
   title: "Reconcile managed attempts",
-  cli: true,
+  cli: {},
   async run(ctx, _commandParams) {
     const attempts = await executePlanner(ctx, planner.listAttempts, {});
     const decisions = [];

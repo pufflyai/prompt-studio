@@ -5,7 +5,7 @@ import { type APIRequestContext, expect, type Page, test } from "@playwright/tes
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
-const commandId = "ps-256-files.inspect";
+const commandId = "pstdio.ps-256-files.command.inspect";
 
 const deleteAllProjects = async (request: APIRequestContext) => {
   const response = await request.get(`${apiBase}/v1/projects`);
@@ -25,6 +25,7 @@ const createProject = async (request: APIRequestContext) => {
 
 const createFilesExtension = () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-ps-256-files-"));
+  const sdkExtensionsModule = ["@pstdio", "sdk", "extensions"].join("/");
   mkdirSync(root, { recursive: true });
   writeFileSync(
     join(root, "package.json"),
@@ -34,28 +35,29 @@ const createFilesExtension = () => {
       displayName: "PS-256 Files",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "1.0.0-alpha.3" },
+      engines: { pstdio: "1.0.0-alpha.4" },
       type: "module",
     }),
   );
   writeFileSync(
     join(root, "extension.ts"),
-    `export default {
-      commands: {
-        inspect: {
+    `import { defineExtension, params } from "${sdkExtensionsModule}";
+
+    const inspect = {
+          id: "inspect",
+          ref: { kind: "command", id: "inspect" },
           title: "Inspect uploaded files",
           description: "Reads browser files after the dashboard uploads them.",
           params: {
-            files: {
-              type: "files",
+            files: params.files({
               label: "Data files",
               description: "Choose CSV files to inspect.",
               required: true,
               multiple: true,
               accept: ".csv",
-            },
+            }),
           },
-          palette: { label: "Inspect uploaded files", group: "Files" },
+          palette: [{ label: "Inspect uploaded files", group: "Files" }],
           async run(ctx: any, commandParams: any) {
             const files = await Promise.all(
               commandParams.files.map(async (id: string) => ({
@@ -65,9 +67,9 @@ const createFilesExtension = () => {
             );
             return { files };
           },
-        },
-      },
-    };`,
+        };
+
+    export default defineExtension({ commands: [inspect] });`,
   );
   return root;
 };

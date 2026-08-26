@@ -26,6 +26,7 @@ const buildContext = (record: RuntimeHarnessRecord, options?: { projectId?: stri
 const record = (overrides?: Partial<HarnessProvider>, id = "fake"): RuntimeHarnessRecord => {
   const provider: HarnessProvider = {
     id,
+    ref: { kind: "harness", id },
     label: { $l10n: `harness.${id}`, default: id },
     capabilities: () => ["SessionReattach"],
     start: () => session(),
@@ -33,7 +34,7 @@ const record = (overrides?: Partial<HarnessProvider>, id = "fake"): RuntimeHarne
     ...overrides,
   };
   return {
-    id: `pstdio.pstdio-${id}.${id}`,
+    id: `pstdio.pstdio-${id}.harness.${id}`,
     localId: id,
     extensionId: `pstdio.pstdio-${id}`,
     name: `pstdio-${id}`,
@@ -52,8 +53,8 @@ describe("createHarnessRegistry", () => {
   it("resolves handles by namespaced id and lists them", async () => {
     const registry = createHarnessRegistry([record()], buildContext);
 
-    expect(registry.list().map((handle) => handle.id)).toEqual(["pstdio.pstdio-fake.fake"]);
-    expect(registry.get("pstdio.pstdio-fake.fake")?.localId).toBe("fake");
+    expect(registry.list().map((handle) => handle.id)).toEqual(["pstdio.pstdio-fake.harness.fake"]);
+    expect(registry.get("pstdio.pstdio-fake.harness.fake")?.localId).toBe("fake");
     expect(registry.get("fake")).toBeNull();
   });
 
@@ -71,7 +72,7 @@ describe("createHarnessRegistry", () => {
       buildContext,
     );
 
-    await registry.get("pstdio.pstdio-fake.fake")?.start(startInput, { projectId: "p1" });
+    await registry.get("pstdio.pstdio-fake.harness.fake")?.start(startInput, { projectId: "p1" });
 
     expect(seen?.extensionId).toBe("pstdio.pstdio-fake");
     expect(seen?.projectId).toBe("p1");
@@ -79,7 +80,7 @@ describe("createHarnessRegistry", () => {
 
   it("defaults detect to available and listModels to empty for providers without them", async () => {
     const registry = createHarnessRegistry([record()], buildContext);
-    const handle = registry.get("pstdio.pstdio-fake.fake")!;
+    const handle = registry.get("pstdio.pstdio-fake.harness.fake")!;
 
     expect(await handle.detect()).toEqual({ available: true });
     expect(await handle.listModels()).toEqual([]);
@@ -91,7 +92,7 @@ describe("createHarnessRegistry", () => {
       buildContext,
     );
 
-    const started = await registry.get("pstdio.pstdio-fake.fake")!.start(startInput);
+    const started = await registry.get("pstdio.pstdio-fake.harness.fake")!.start(startInput);
 
     expect(await started.done).toEqual({ status: "failed" });
   });
@@ -102,14 +103,14 @@ describe("createHarnessRegistry", () => {
       buildContext,
     );
 
-    const started = await registry.get("pstdio.pstdio-fake.fake")!.start(startInput);
+    const started = await registry.get("pstdio.pstdio-fake.harness.fake")!.start(startInput);
 
     expect(await started.done).toEqual({ status: "failed" });
   });
 
   it("rejects reattach for providers without it and reports reattach support", async () => {
     const registry = createHarnessRegistry([record()], buildContext);
-    const handle = registry.get("pstdio.pstdio-fake.fake")!;
+    const handle = registry.get("pstdio.pstdio-fake.harness.fake")!;
 
     expect(handle.supportsReattach).toBe(false);
     expect(handle.reattach({ sessionId: "s", agentSessionId: "a", events: { push: () => {} } })).rejects.toThrow(
@@ -133,9 +134,9 @@ describe("createHarnessRegistry", () => {
     });
 
     const registry = createHarnessRegistry([first, second], buildContext);
-    await registry.get("pstdio.pstdio-fake.fake")!.start(startInput);
+    await registry.get("pstdio.pstdio-fake.harness.fake")!.start(startInput);
 
-    expect(registry.duplicates).toEqual(["pstdio.pstdio-fake.fake"]);
+    expect(registry.duplicates).toEqual(["pstdio.pstdio-fake.harness.fake"]);
     expect(registry.list()).toHaveLength(1);
     expect(started).toBe("second");
   });
@@ -154,7 +155,7 @@ describe("createHarnessRegistry", () => {
       dryRun: { type: "boolean" as const, defaultValue: false },
     };
     const registry = createHarnessRegistry([record({ params, start })], buildContext);
-    const handle = registry.get("pstdio.pstdio-fake.fake")!;
+    const handle = registry.get("pstdio.pstdio-fake.harness.fake")!;
 
     expect(handle.params).toEqual(params);
 
@@ -185,7 +186,7 @@ describe("createHarnessRegistry", () => {
     );
 
     await expect(
-      registry.get("pstdio.pstdio-fake.fake")!.start({ ...startInput, params: { effort: "medium" } }),
+      registry.get("pstdio.pstdio-fake.harness.fake")!.start({ ...startInput, params: { effort: "medium" } }),
     ).rejects.toThrow('Harness param "effort"');
     expect(start).not.toHaveBeenCalled();
   });
@@ -221,7 +222,7 @@ describe("createHarnessRegistry", () => {
       ],
       buildContext,
     );
-    const handle = registry.get("pstdio.pstdio-fake.fake")!;
+    const handle = registry.get("pstdio.pstdio-fake.harness.fake")!;
 
     await expect(handle.start({ ...startInput, model: "small", params: { effort: "low" } })).rejects.toThrow(
       'Harness param "effort" is not declared.',
@@ -255,7 +256,7 @@ describe("createHarnessRegistry", () => {
       buildContext,
     );
 
-    await expect(registry.get("pstdio.pstdio-fake.fake")!.start({ ...startInput, params: {} })).rejects.toThrow(
+    await expect(registry.get("pstdio.pstdio-fake.harness.fake")!.start({ ...startInput, params: {} })).rejects.toThrow(
       'Harness param "mode" is required.',
     );
     expect(start).not.toHaveBeenCalled();
@@ -266,7 +267,7 @@ describe("harness skills layout", () => {
   it("normalizes a declared skills layout, defaulting globalDir to dir", () => {
     const registry = createHarnessRegistry([record({ skills: { dir: ".claude/skills" } })], buildContext);
 
-    expect(registry.get("pstdio.pstdio-fake.fake")?.skills).toEqual({
+    expect(registry.get("pstdio.pstdio-fake.harness.fake")?.skills).toEqual({
       dir: ".claude/skills",
       globalDir: ".claude/skills",
     });
@@ -278,7 +279,7 @@ describe("harness skills layout", () => {
       buildContext,
     );
 
-    expect(registry.get("pstdio.pstdio-fake.fake")?.skills).toEqual({
+    expect(registry.get("pstdio.pstdio-fake.harness.fake")?.skills).toEqual({
       dir: ".agents/skills",
       globalDir: ".config/agents/skills",
     });
@@ -287,7 +288,7 @@ describe("harness skills layout", () => {
   it("exposes null skills when the provider declares none or an empty dir", () => {
     const registry = createHarnessRegistry([record(), record({ skills: { dir: "" } }, "other")], buildContext);
 
-    expect(registry.get("pstdio.pstdio-fake.fake")?.skills).toBeNull();
-    expect(registry.get("pstdio.pstdio-other.other")?.skills).toBeNull();
+    expect(registry.get("pstdio.pstdio-fake.harness.fake")?.skills).toBeNull();
+    expect(registry.get("pstdio.pstdio-other.harness.other")?.skills).toBeNull();
   });
 });

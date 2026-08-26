@@ -47,13 +47,14 @@ export interface RunnerState {
 
 interface CommandExecutionScope {
   depth: number;
+  extensionId: string;
   projectId: string;
   workspaceDir?: string;
   workspaceId?: string;
 }
 
-const buildEventsApi = (dispatcher: EventDispatcher): ExtensionEventsApi => ({
-  emit: async (event, payload) => dispatcher.dispatch(refId(event), payload as Struct),
+const buildEventsApi = (dispatcher: EventDispatcher, extensionId: string): ExtensionEventsApi => ({
+  emit: async (event, payload) => dispatcher.dispatch(refId(event, extensionId), payload as Struct),
 });
 
 const buildCommandsApi = (
@@ -72,7 +73,7 @@ export const createExecuteBuilder = (runRef: {
   run: (input: InternalExecuteInput) => Promise<CommandOutcome>;
 }): ((scope: CommandExecutionScope) => CommandHelpersApi["execute"]) => {
   return (scope) => async (command, invocation) => {
-    const id = refId(command);
+    const id = refId(command, scope.extensionId);
     const outcome = await runRef.run({
       commandId: id,
       projectId: scope.projectId,
@@ -105,6 +106,7 @@ export const createContextFactory = (
   buildExtensionContext(env, ids, depth) {
     const scope = {
       depth,
+      extensionId: ids.extensionId,
       projectId: ids.projectId,
       workspaceDir: ids.workspaceDir,
       workspaceId: ids.workspaceId,
@@ -127,7 +129,7 @@ export const createContextFactory = (
       workspaces: env.workspaces,
       repos: env.repos,
       commands: buildCommandsApi(createExecute, scope),
-      events: buildEventsApi(dispatcher),
+      events: buildEventsApi(dispatcher, ids.extensionId),
       activity: env.activity,
       notify: env.notify,
       process: env.process,
@@ -154,7 +156,12 @@ export const createContextFactory = (
       ...base,
       commandId,
       invocationId,
-      invocation,
+      invocation: {
+        source,
+        attachment: invocation.attachment,
+        slot: invocation.slot,
+        metadata: invocation.metadata,
+      },
       resource: invocation.resource,
       attachment: invocation.attachment,
       slot: invocation.slot,

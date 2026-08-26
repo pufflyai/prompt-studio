@@ -36,13 +36,13 @@ describe("createExtensionTestbenchApi", () => {
       expect(bench.resources).toContainEqual({
         resource: {
           kind: "fixture-item",
-          uri: "pstdio://extension-resource/fixture-item/renderer-context-fixture.items",
-          id: "renderer-context-fixture.items",
+          uri: "pstdio://extension-resource/fixture-item/pstdio.renderer-context-fixture.view.items",
+          id: "pstdio.renderer-context-fixture.view.items",
           label: "extension-testbench",
         },
         group: "Items",
         searchText:
-          "extension-testbench renderer-context-fixture.items pstdio://extension-resource/fixture-item/renderer-context-fixture.items",
+          "extension-testbench pstdio.renderer-context-fixture.view.items pstdio://extension-resource/fixture-item/pstdio.renderer-context-fixture.view.items",
       });
     } finally {
       api.cleanup();
@@ -77,7 +77,7 @@ describe("createExtensionTestbenchApi", () => {
                 shorthand: "PS-15",
                 resourceParent: {
                   type: "view",
-                  viewId: "pstdio-planner.tickets",
+                  viewId: "pstdio.pstdio-planner.view.tickets",
                 },
               },
             },
@@ -106,11 +106,11 @@ describe("createExtensionTestbenchApi", () => {
         await api.handleRequest(
           jsonRequest(`http://bench${apiPrefix}/command`, {
             benchId: bench.benchId,
-            commandId: "pstdio-planner.ticket-files.tree.body",
+            commandId: "pstdio.pstdio-planner.command.ticket-files.tree.body",
             request: {
               params: {
                 renderer: {
-                  rendererId: "pstdio-planner.ticketFiles",
+                  rendererId: "pstdio.pstdio-planner.view.ticket-files",
                   resource: { type: "ticket", id: "PS-16", label: "PS-16" },
                 },
               },
@@ -144,7 +144,7 @@ describe("createExtensionTestbenchApi", () => {
         await api.handleRequest(
           jsonRequest(`http://bench${apiPrefix}/command`, {
             benchId: bench.benchId,
-            commandId: "extension-lab.awaken",
+            commandId: "pstdio.extension-lab.command.awaken",
             request: {
               params: { title: "Gain consciousness" },
               projectId: bench.projectId,
@@ -178,7 +178,7 @@ describe("createExtensionTestbenchApi", () => {
       expect(bench.inventory.themes).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            id: "pstdio-base-themes.monokai",
+            id: "pstdio.pstdio-base-themes.theme.monokai",
             mode: "dark",
             tokens: expect.objectContaining({ "colors.bg": "#272822" }),
             monacoTheme: expect.objectContaining({ base: "vs-dark" }),
@@ -189,7 +189,7 @@ describe("createExtensionTestbenchApi", () => {
       expect(bench.inventory.fileIconThemes).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
-            id: "pstdio-base-themes.seti",
+            id: "pstdio.pstdio-base-themes.file-icon-theme.seti",
             sourcePath: "./icons/seti-icon-theme.json",
           }),
         ]),

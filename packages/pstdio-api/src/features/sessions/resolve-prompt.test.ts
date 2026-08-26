@@ -58,13 +58,15 @@ const currentCount = Number(await Bun.file(countPath).text().catch(() => "0"));
 await Bun.write(countPath, String(currentCount + 1));
 
 export default {
-  templates: {
-    review_code: {
+  templates: [
+    {
+      id: "review_code",
+      ref: { kind: "template", id: "review_code" },
       title: "Review code",
       type: "prompt",
       source: { kind: "package-asset", path: "./review-code.md", baseUrl: import.meta.url },
     },
-  },
+  ],
 };`,
   );
   writeFileSync(join(root, "review-code.md"), "Fix issues in {{ticket}}/review.md\n");

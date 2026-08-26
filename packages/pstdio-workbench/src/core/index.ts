@@ -434,6 +434,24 @@ export type {
 } from "./registries/settings/settings-registry";
 export { createSettingsRegistry } from "./registries/settings/settings-registry";
 export type {
+  CreateWorkbenchStatusBarRegistryInput,
+  WorkbenchStatusBarItem,
+  WorkbenchStatusBarRegistry,
+  WorkbenchStatusBarRegistryState,
+  WorkbenchStatusBarSlot,
+} from "./registries/status-bar/status-bar-registry";
+export { createStatusBarRegistry } from "./registries/status-bar/status-bar-registry";
+export type {
+  RegisteredWorkbenchStatusSet,
+  WorkbenchStatusRegistry,
+  WorkbenchStatusRegistryState,
+  WorkbenchStatusSetContribution,
+  WorkflowStatus,
+  WorkflowStatusAction,
+  WorkflowStatusBoardRules,
+} from "./registries/statuses/status-registry";
+export { createStatusRegistry } from "./registries/statuses/status-registry";
+export type {
   FileIconThemeFont,
   FileIconThemePreferenceOption,
 } from "./registries/themes/file-icon-theme-contracts";

@@ -1,4 +1,5 @@
-import type { CommandRef } from "./commands";
+import type { CommandTarget } from "./commands";
+import type { ViewRef } from "./contribution-identity";
 import type { FileRendererSectionTarget } from "./file-renderer";
 import type { JsonObject } from "./json";
 import type { ResourceRef } from "./resources";
@@ -10,38 +11,42 @@ export interface ExtensionResourceOpenIntent {
   strategy?: ExtensionResourcePlacementStrategy;
 }
 
-export interface ExtensionViewOpenIntent {
-  region?: string;
+export interface ViewOpenIntent {
   strategy?: ExtensionPlacementStrategy;
 }
 
-export interface ExtensionNavigationTargetResource {
+export interface NavigationTargetResource {
   kind: "resource";
   resource: ResourceRef;
   input?: ExtensionResourceOpenIntent;
   section?: FileRendererSectionTarget;
 }
 
-export interface ExtensionNavigationTargetView {
+export interface NavigationTargetView {
   kind: "view";
-  viewId: string;
-  input?: ExtensionViewOpenIntent;
+  view: ViewRef;
+  input?: ViewOpenIntent;
 }
 
-export interface ExtensionNavigationTargetCommand {
+export interface NavigationTargetCommand {
   kind: "command";
-  command: CommandRef<JsonObject, unknown> | string;
-  params?: JsonObject;
+  target: CommandTarget<JsonObject>;
 }
 
-export type ExtensionNavigationTargetItem =
-  | ExtensionNavigationTargetResource
-  | ExtensionNavigationTargetView
-  | ExtensionNavigationTargetCommand;
+export interface NavigationTargetHref {
+  kind: "href";
+  href: string;
+}
 
-export interface ExtensionNavigationTargetCompound {
+export type NavigationTargetItem =
+  | NavigationTargetResource
+  | NavigationTargetView
+  | NavigationTargetCommand
+  | NavigationTargetHref;
+
+export interface NavigationTargetCompound {
   kind: "compound";
-  targets: ExtensionNavigationTargetItem[];
+  targets: readonly NavigationTargetItem[];
 }
 
-export type ExtensionNavigationTarget = ExtensionNavigationTargetItem | ExtensionNavigationTargetCompound;
+export type NavigationTarget = NavigationTargetItem | NavigationTargetCompound;

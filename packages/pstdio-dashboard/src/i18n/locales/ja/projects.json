@@ -281,15 +281,14 @@
           "harnesses": "ハーネス",
           "commands": "コマンド",
           "modes": "モード",
-          "panels": "ビュー",
-          "routes": "ルート",
+          "views": "ビュー",
+          "placements": "配置",
           "menuContributions": "メニュー項目",
           "settingsPanels": "設定パネル",
-          "renderers": "レンダラー",
           "skills": "スキル",
           "templates": "テンプレート",
           "themes": "テーマ",
-          "treeItems": "ツリー項目",
+          "navigationItems": "ナビゲーション項目",
           "commandPaletteResources": "コマンドパレットリソース"
         }
       },

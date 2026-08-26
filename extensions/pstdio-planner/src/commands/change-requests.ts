@@ -1,4 +1,4 @@
-import { type CommandContext, defineCommand, params } from "@pstdio/sdk/extensions";
+import { type CommandContext, commandRef, defineCommand, params } from "@pstdio/sdk/extensions";
 import { actorFromSource } from "../data/attempt-actors";
 import { rollUpAttemptTicket } from "../data/attempt-rollup";
 import { appendRevision } from "../data/attempt-state";
@@ -6,10 +6,15 @@ import { appendAttemptEvent, putAttempt, readAttempt, reviewThreadsCollection } 
 import type { AttemptRecord } from "../data/attempt-types";
 import { inlineThreadIsOutdated } from "../data/thread-mapping";
 
+const readReportCommand = commandRef<{ id: string }, { id?: string; workspaceId?: string | null; draft?: boolean }>({
+  extensionId: "pstdio.pstdio-reports",
+  id: "reports.read",
+});
+
 export const readReport = async (ctx: Pick<CommandContext, "commands">, reportId: string) => {
-  const outcome = await ctx.commands.execute("pstdio-reports.reports.read", { params: { id: reportId } });
+  const outcome = await ctx.commands.execute(readReportCommand, { params: { id: reportId } });
   if (!outcome.ok) throw new Error(`Unknown report "${reportId}": ${outcome.reason}`);
-  return outcome.value as { id?: string; workspaceId?: string | null; draft?: boolean };
+  return outcome.value;
 };
 
 export const workspaceGitPath = async (ctx: CommandContext, workspaceId: string) => {
@@ -68,8 +73,9 @@ const mapOpenThreads = async (ctx: CommandContext, attempt: AttemptRecord, nextH
 };
 
 export const submitChangeRequestCommand = defineCommand({
+  id: "submit-change-request",
   title: "Submit change request",
-  cli: true,
+  cli: {},
   params: {
     workspaceId: params.text({ required: true }),
     implementationSessionId: params.text(),

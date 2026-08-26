@@ -1,301 +1,145 @@
 import { describe, expect, test } from "bun:test";
-import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import { createWorkbenchCore } from "@pstdio/workbench";
-import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
+import { BRIDGE_WEBVIEW_RENDERER_ID } from "@pstdio/workbench/extensions";
+import { dashboardActiveCollectionContextKey } from "@/shared/app/navigation-state";
+import { modeOwnsNavigation } from "@/shared/workbench/mode-navigation-ownership";
+import { ExtensionViewWidget } from "./components/extension-view-widget";
 import {
-  type DashboardExtensionMetadata,
-  emptyDashboardExtensionMetadata,
-} from "@/shared/extensions/workbench-extension-contributions";
-import { disposeExtensionContributions, registerExtensionContributions } from "./extension-contribution-registration";
+  extensionViewResolveInput,
+  localizeDashboardExtensionCommandResponse,
+  registerDashboardExtensionWebviewRenderer,
+  registerExtensionActivityNavigationOwnership,
+  withDashboardWebviewUrls,
+} from "./extension-contribution-registration";
+import { metadataWithLabMode } from "./module-test-fixtures";
 
-const stubWebview = (name: string) => ({
-  entry: {
-    kind: "package-asset" as const,
-    path: `./src/views/${name}.tsx`,
-    baseUrl: "file:///extensions/test/extension.ts",
-  },
-  runtimeUrl: `/runtime/${name}.html`,
-  moduleUrl: `/modules/${name}.js`,
+describe("extensionViewResolveInput", () => {
+  test("enters Project navigation before opening an extension view", () => {
+    const workbench = createWorkbenchCore();
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+
+    const openInput = { pinned: true };
+    const resolved = extensionViewResolveInput(workbench, {
+      id: "pstdio.extension-lab.view.overview",
+      title: "Overview",
+      icon: "flask",
+    })(openInput);
+
+    expect(resolved).toBe(openInput);
+    expect(workbench.modes.getActiveModeId()).toBe("project");
+    expect(workbench.context.get(dashboardActiveCollectionContextKey)).toBeUndefined();
+    expect(workbench.breadcrumbs.getItems()).toEqual([{ title: "Overview", icon: "flask" }]);
+  });
+
+  test("leaves resource navigation to the resource presenter", () => {
+    const workbench = createWorkbenchCore();
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    const resource = {
+      kind: "ticket",
+      uri: "pstdio://ticket/PS-299",
+      id: "PS-299",
+      label: "PS-299",
+    };
+    const openInput = { resource };
+
+    const resolved = extensionViewResolveInput(workbench, {
+      id: "pstdio.pstdio-planner.view.ticket-editor",
+      title: "Ticket",
+    })(openInput);
+
+    expect(resolved).toBe(openInput);
+    expect(workbench.modes.getActiveModeId()).toBeUndefined();
+    expect(workbench.breadcrumbs.getItems()).toBeUndefined();
+  });
 });
 
-const metadata = {
-  ...emptyDashboardExtensionMetadata,
-  extensions: [
-    { id: "pstdio.extension-lab", name: "extension-lab", displayName: "Extension Lab", sourcePath: "" },
-    { id: "pstdio.pstdio-planner", name: "pstdio-planner", displayName: "Planner", sourcePath: "" },
-  ],
-  panels: [
-    {
-      id: "extension-lab.stale-sidebar",
-      extensionId: "pstdio.extension-lab",
-      show: { region: "sidenav" },
-      title: "Stale Lab sidebar",
-      webview: stubWebview("stale-lab-sidebar"),
-      panelMenus: [
+describe("registerExtensionActivityNavigationOwnership", () => {
+  test("marks modes with activity items as navigation owners", () => {
+    const modeId = "pstdio.extension-lab.mode.lab";
+    const metadata = {
+      ...metadataWithLabMode,
+      activityItems: [
         {
-          id: "extension-lab.stale-sidebar-menu",
+          id: "pstdio.extension-lab.activity-item.home",
           extensionId: "pstdio.extension-lab",
-          ownerPanelId: "extension-lab.stale-sidebar",
-          title: "Invalid Sidenav menu",
-          side: "left",
-          webview: stubWebview("stale-lab-sidebar-menu"),
+          title: "Home",
+          icon: "house",
+          modes: [{ extensionId: "pstdio.extension-lab", kind: "mode" as const, id: "lab" }],
+          command: { extensionId: "pstdio", kind: "command" as const, id: "workbench.action.switchMode" },
         },
       ],
-    },
-  ],
-  settingsPanels: [
-    {
-      id: "pstdio-planner.ticketStatuses",
-      extensionId: "pstdio.pstdio-planner",
-      slotId: "project.settingsPanels",
-      target: "workbench.settings",
-      scope: "project",
-      title: "Ticket statuses",
-      icon: "list-checks",
-      webview: stubWebview("ticket-statuses"),
-    },
-  ],
-} satisfies DashboardExtensionMetadata;
-
-const dataTableMetadata = {
-  ...emptyDashboardExtensionMetadata,
-  extensions: [
-    { id: "pstdio.data-table-demo", name: "data-table-demo", displayName: "DataTable Demo", sourcePath: "" },
-  ],
-  dataTableRenderers: [
-    {
-      id: "data-table-demo.services",
-      extensionId: "pstdio.data-table-demo",
-      title: "Services",
-      queryHandlerId: "data-table-demo.services.query",
-      selectionMode: "multiple",
-      selectionActions: [
-        {
-          id: "restart",
-          label: "Restart selected",
-          commandId: "data-table-demo.services.restart",
-        },
-      ],
-    },
-  ],
-  panels: [
-    {
-      id: "data-table-demo.services",
-      extensionId: "pstdio.data-table-demo",
-      title: "Services",
-      show: { region: "main" },
-      renderer: { kind: "dataTable", id: "data-table-demo.services" },
-    },
-  ],
-} satisfies DashboardExtensionMetadata;
-
-describe("registerExtensionContributions", () => {
-  test("keeps one invalid extension from removing another extension's settings", () => {
-    const workbench = createWorkbenchCore();
-    const errors: Array<{ error: unknown; extensionId: string }> = [];
-
-    workbench.registerModule({
-      id: "test.extension-isolation",
-      activate: (ctx) => {
-        ctx.settings.registerSection({ id: "project", title: "Project" });
-        ctx.settings.registerSection({ id: "workbench", title: "Workbench" });
-        return registerExtensionContributions({
-          ctx,
-          executeCommand: async () => {
-            throw new Error("not used");
-          },
-          metadata,
-          projectId: "project-1",
-          onRegistrationError: (error, extensionId) => errors.push({ error, extensionId }),
-        });
-      },
-    });
-
-    expect(errors).toHaveLength(1);
-    expect(errors[0]).toMatchObject({
-      extensionId: "pstdio.extension-lab",
-      error: expect.any(Error),
-    });
-    expect(workbench.settings.getPanel("pstdio-planner.ticketStatuses")?.title).toBe("Ticket statuses");
-  });
-
-  test("refreshes only data tables whose declared event was delivered", () => {
-    const workbench = createWorkbenchCore();
-    const refreshes: string[] = [];
-    const artifactDataTableMetadata = {
-      ...emptyDashboardExtensionMetadata,
-      dataTableRenderers: [
-        {
-          id: "extension-lab.artifacts",
-          extensionId: "pstdio.extension-lab",
-          title: "Artifacts",
-          queryHandlerId: "extension-lab.artifacts.query",
-          refreshEventIds: ["extension-lab.artifacts.changed"],
-        },
-      ],
-    } satisfies DashboardExtensionMetadata;
-
-    workbench.renderers.onDidRefreshDataTableRenderer((event) => refreshes.push(event.dataTableRendererId));
-    const disposable = registerExtensionContributions({
-      ctx: workbench,
-      executeCommand: async () => ({
-        commandId: "extension-lab.artifacts.query",
-        extensionId: "pstdio.extension-lab",
-        outcome: { ok: true, status: "success", value: { rows: [] } },
-      }),
-      metadata: artifactDataTableMetadata,
-      projectId: "project-1",
-    });
-
-    try {
-      publishExtensionCommandEvent({
-        commandId: "extension-lab.artifacts.create",
-        extensionId: "pstdio.extension-lab",
-        eventIds: ["unrelated.changed"],
-        outcome: { ok: true, status: "success" },
-      });
-      publishExtensionCommandEvent({
-        commandId: "extension-lab.artifacts.create",
-        extensionId: "pstdio.extension-lab",
-        eventIds: ["extension-lab.artifacts.changed"],
-        outcome: { ok: true, status: "success" },
-      });
-
-      expect(refreshes).toEqual(["extension-lab.artifacts"]);
-    } finally {
-      disposeExtensionContributions(disposable);
-    }
-  });
-
-  test("registers extension DataTable renderers and their panels", () => {
-    const workbench = createWorkbenchCore();
-
-    workbench.registerModule({
-      id: "test.data-table-extension",
-      activate: (ctx) =>
-        registerExtensionContributions({
-          ctx,
-          executeCommand: async () => {
-            throw new Error("not used");
-          },
-          metadata: dataTableMetadata,
-          projectId: "project-1",
-        }),
-    });
-
-    expect(workbench.renderers.getDataTableRenderer("data-table-demo.services")).toMatchObject({
-      selectionMode: "multiple",
-      selectionActions: [expect.objectContaining({ id: "restart" })],
-    });
-    expect(workbench.layout.getPanel("data-table-demo.services")).toMatchObject({
-      rendererId: "data-table-demo.services",
-      region: "main",
-    });
-  });
-
-  test("preserves file save correlation through the dashboard event feed", async () => {
-    const workbench = createWorkbenchCore();
-    const fileMetadata = {
-      ...emptyDashboardExtensionMetadata,
-      extensions: [{ id: "pstdio.planner", name: "planner", displayName: "Planner", sourcePath: "" }],
-      fileRenderers: [
-        {
-          id: "planner.ticketContent",
-          extensionId: "pstdio.planner",
-          title: "Ticket",
-          loadHandlerId: "planner.ticket.load",
-          saveHandlerId: "planner.ticket.save",
-          refreshEventIds: ["tickets.changed"],
-        },
-      ],
-    } satisfies DashboardExtensionMetadata;
-    const refreshes: unknown[] = [];
-    workbench.renderers.onDidRefreshFileRenderer((event) => refreshes.push(event));
-    const disposable = registerExtensionContributions({
-      ctx: workbench,
-      executeCommand: async (_projectId, commandId) => ({
-        commandId,
-        extensionId: "pstdio.planner",
-        eventIds: ["tickets.changed"],
-        outcome: { ok: true, status: "success", value: { revision: "3" } },
-      }),
-      metadata: fileMetadata,
-      projectId: "project-1",
-    });
-
-    try {
-      await workbench.renderers.getFileRenderer("planner.ticketContent")?.save?.(
-        {
-          kind: "ticket",
-          id: "ticket-1",
-          uri: "dashboard-workbench://ticket/ticket-1",
-        },
-        "edited",
-        {
-          rendererId: "planner.ticketContent",
-          instanceId: "planner.ticketEditor:1",
-          operationId: "save-1",
-        },
-      );
-
-      expect(refreshes).toEqual([
-        {
-          fileRendererId: "planner.ticketContent",
-          resourceUri: "dashboard-workbench://ticket/ticket-1",
-          origin: {
-            rendererId: "planner.ticketContent",
-            instanceId: "planner.ticketEditor:1",
-            operationId: "save-1",
-          },
-          revision: "3",
-        },
-      ]);
-    } finally {
-      disposeExtensionContributions(disposable);
-    }
-  });
-
-  test("surfaces extension command notices from DataTable selection actions", async () => {
-    const workbench = createWorkbenchCore();
-    const response: CommandExecuteResponse = {
-      commandId: "data-table-demo.services.restart",
-      extensionId: "pstdio.data-table-demo",
-      outcome: {
-        ok: true,
-        status: "success",
-        value: { restartedRowIds: ["gateway", "worker"] },
-        notices: [
-          {
-            type: "success",
-            title: "Services restarted",
-            message: "Restarted 2 services: gateway, worker",
-          },
-        ],
-      },
     };
 
-    workbench.registerModule({
-      id: "test.data-table-extension-notices",
-      activate: (ctx) =>
-        registerExtensionContributions({
-          ctx,
-          executeCommand: async () => response,
-          metadata: dataTableMetadata,
-          projectId: "project-1",
-        }),
+    const registration = registerExtensionActivityNavigationOwnership(metadata);
+    expect(modeOwnsNavigation(modeId)).toBe(true);
+
+    registration.dispose();
+    expect(modeOwnsNavigation(modeId)).toBe(false);
+  });
+});
+
+describe("withDashboardWebviewUrls", () => {
+  test("points extension webviews at the configured API origin", () => {
+    const runtime = globalThis as typeof globalThis & { __PSTDIO_CONFIG__?: { apiBaseUrl?: string } };
+    runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: "http://localhost:19840" };
+
+    try {
+      const resolved = withDashboardWebviewUrls(metadataWithLabMode);
+      const view = resolved.views.find((candidate) => candidate.localId === "labPage");
+
+      expect(view?.body.kind === "webview" ? view.body.webview.runtimeUrl : undefined).toBe(
+        "http://localhost:19840/v1/extensions/runtime",
+      );
+    } finally {
+      delete runtime.__PSTDIO_CONFIG__;
+    }
+  });
+});
+
+describe("registerDashboardExtensionWebviewRenderer", () => {
+  test("uses the dashboard webview host for extension view panels", () => {
+    const workbench = createWorkbenchCore();
+    const registration = registerDashboardExtensionWebviewRenderer(workbench);
+    workbench.layout.registerPanel({
+      id: "extension.view",
+      title: "Extension view",
+      region: "main",
+      rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
+    });
+    const panel = workbench.layout.getWidget("extension.view")!;
+    const renderer = workbench.renderers.getRenderer(BRIDGE_WEBVIEW_RENDERER_ID)!;
+
+    const element = renderer.render({
+      workbench,
+      panel,
+      instance: { instanceId: panel.id, panelId: panel.id, closable: false },
+      refresh: () => undefined,
+    }) as { type: unknown };
+
+    expect(element.type).toBe(ExtensionViewWidget);
+    registration?.dispose();
+  });
+});
+
+describe("localizeDashboardExtensionCommandResponse", () => {
+  test("resolves command result labels before native views render them", () => {
+    const response = localizeDashboardExtensionCommandResponse({
+      extensionId: "pstdio.pstdio-planner",
+      outcome: {
+        status: "success",
+        value: {
+          params: [
+            {
+              id: "created",
+              name: { $l10n: "ticketDetail.createdAt", default: "Created at" },
+              type: "property",
+              value: "2026-08-26",
+            },
+          ],
+        },
+      },
     });
 
-    await workbench.renderers.getDataTableRenderer("data-table-demo.services")?.selectionActions?.[0]?.run([
-      { id: "gateway", values: { service: "Gateway" } },
-      { id: "worker", values: { service: "Worker" } },
-    ]);
-
-    expect(workbench.notifications.listNotifications()).toMatchObject([
-      {
-        level: "success",
-        title: "Services restarted",
-        message: "Restarted 2 services: gateway, worker",
-      },
-    ]);
+    expect(response.outcome.value.params[0]?.name).toBe("Created at");
   });
 });

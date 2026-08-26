@@ -84,7 +84,7 @@ services:
 
         curl -fsS "$${auth_header[@]}" -X PATCH "$$api_url/v1/projects/$$project_id" \
           -H 'content-type: application/json' \
-          --data '{"default_agent_id":"pstdio.harness-codex.codex","default_agent_model":"gpt-5.5"}' >/dev/null
+          --data '{"default_agent_id":"pstdio.harness-codex.harness.codex","default_agent_model":"gpt-5.5"}' >/dev/null
 
         if [ -n "$$dashboard_child" ]; then
           wait -n "$$api_child" "$$dashboard_child"

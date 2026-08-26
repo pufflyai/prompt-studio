@@ -68,7 +68,7 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
 
   const runCommand = async (commandKey: string, params?: unknown) => {
     const response = await host.call<CommandResponse<unknown>>("commands.execute", {
-      commandId: `${extensionId}.${commandKey}`,
+      commandId: `${extensionId}.command.${commandKey}`,
       params,
     });
     return unwrapCommandOutcome(response);

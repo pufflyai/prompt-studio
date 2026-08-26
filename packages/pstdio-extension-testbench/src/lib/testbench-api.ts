@@ -117,20 +117,20 @@ const collectBenchResources = async (input: {
 }) => {
   const resources: ResourceBrowseEntry[] = [];
 
-  for (const renderer of input.metadata.kanbanRenderers ?? []) {
-    if (!renderer.resourceKind) continue;
+  for (const view of input.metadata.views) {
+    if (view.body.kind !== "kanban") continue;
 
     const outcome = await input.runner.execute({
-      commandId: renderer.queryHandlerId,
+      commandId: view.body.queryHandlerId,
       projectId: input.projectId,
       params: {
         renderer: {
-          rendererId: renderer.id,
+          rendererId: view.id,
           projectId: input.projectId,
           invocation: { placement: "background" },
         },
         filters: {},
-        settings: renderer.defaultSettings ?? {},
+        settings: view.body.defaultSettings ?? {},
       },
       source: "dashboard",
     });
@@ -138,7 +138,7 @@ const collectBenchResources = async (input: {
     // Surface query failures: silently dropping them makes a valid contribution look like it has
     // no resources, which is the hardest testbench symptom to diagnose.
     if (!outcome.ok) {
-      console.warn(`[extension-testbench] resource query "${renderer.queryHandlerId}" failed: ${outcome.reason}`);
+      console.warn(`[extension-testbench] resource query "${view.body.queryHandlerId}" failed: ${outcome.reason}`);
       continue;
     }
 
@@ -149,7 +149,7 @@ const collectBenchResources = async (input: {
 
       resources.push({
         resource,
-        group: text(renderer.title, renderer.id),
+        group: text(view.title, view.id),
         searchText: [resource.label, resource.id, resource.uri].filter(Boolean).join(" "),
       });
     }
@@ -214,8 +214,8 @@ const loadExtensionBench = async (input: LoadExtensionBenchInput) => {
       skills: runtime.skills.length,
       templateTypes: runtime.templateTypes.length,
       templates: runtime.templates.length,
-      treeRenderers: runtime.treeRenderers.length,
-      panels: runtime.panels.length,
+      treeViews: runtime.views.filter((view) => view.contribution.body.kind === "tree").length,
+      views: runtime.views.length,
     },
   };
 };

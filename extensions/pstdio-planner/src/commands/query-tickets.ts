@@ -21,6 +21,7 @@ export const queryTickets = async (
 // Backs the tickets kanban-renderer. The host invokes this per query and re-applies
 // filter / sort / group locally after the planner selects the requested archive set.
 export const queryTicketsCommand = defineCommand({
+  id: "query-tickets",
   title: "Query tickets",
   params: {
     filters: params.json<KanbanRendererFilterState>(),

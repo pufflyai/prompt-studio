@@ -11,22 +11,20 @@ export const dashboardExtensionHostCapabilities = {
     "menu.v1": { version: 1, since: "0.1.0" },
     "command-palette.v1": { version: 1, since: "0.1.0" },
     "mode.v1": { version: 1, since: "0.25.0" },
-    "panel.webview.v1": { version: 1, since: "0.1.0" },
-    "panel.tree-renderer.v1": { version: 1, since: "0.23.0" },
-    "panel.file-renderer.v1": { version: 1, since: "0.23.0" },
-    "panel.controls-renderer.v1": { version: 1, since: "0.24.0" },
-    "panel.data-table-renderer.v1": { version: 1, since: "0.25.2" },
-    "route.webview.v1": { version: 1, since: "0.1.0" },
-    "tree-item.v1": { version: 1, since: "0.23.0" },
+    "view.webview.v1": { version: 1, since: "0.26.0" },
+    "view.tree.v1": { version: 1, since: "0.26.0" },
+    "view.file.v1": { version: 1, since: "0.26.0" },
+    "view.controls.v1": { version: 1, since: "0.26.0" },
+    "view.kanban.v1": { version: 1, since: "0.26.0" },
+    "view.data-table.v1": { version: 1, since: "0.26.0" },
+    "placement.v1": { version: 1, since: "0.26.0" },
+    "navigation-item.v1": { version: 1, since: "0.26.0" },
+    "status-bar-item.v1": { version: 1, since: "0.26.0" },
+    "status.v1": { version: 1, since: "0.26.0" },
     "settings.section.v1": { version: 1, since: "0.25.2" },
-    "settings.panel.webview.v1": { version: 1, since: "0.1.0" },
+    "settings.panel.v1": { version: 1, since: "0.26.0" },
     "settings.definition.v1": { version: 1, since: "0.24.0" },
-    "renderer.kanban.v1": { version: 1, since: "0.23.0" },
-    "renderer.data-table.v1": { version: 1, since: "0.25.2" },
     "renderer.command-palette-resource.v1": { version: 1, since: "0.25.0" },
-    "renderer.tree.v1": { version: 1, since: "0.23.0" },
-    "renderer.file.v1": { version: 1, since: "0.23.0" },
-    "renderer.controls.v1": { version: 1, since: "0.24.0" },
     "keybinding.v1": { version: 1, since: "0.24.0" },
     "resource-hierarchy.v1": { version: 1, since: "0.23.0" },
     "resource-view.v1": { version: 1, since: "0.23.0" },
@@ -41,35 +39,6 @@ type CapabilityRequirement = {
   extensionId: string;
   sourcePath?: string;
   surface: string;
-};
-
-const panelBodyRequirements = (panel: ExtensionRuntime["panels"][number]) => {
-  const requirements: CapabilityRequirement[] = [];
-  const addBody = (
-    contributionId: string,
-    body: {
-      webview?: unknown;
-      treeRenderer?: unknown;
-      fileRenderer?: unknown;
-      controlsRenderer?: unknown;
-      dataTableRenderer?: unknown;
-    },
-  ) => {
-    if (body.webview) requirements.push(requirement(panel, contributionId, "panel", "panel.webview.v1"));
-    if (body.treeRenderer) requirements.push(requirement(panel, contributionId, "panel", "panel.tree-renderer.v1"));
-    if (body.fileRenderer) requirements.push(requirement(panel, contributionId, "panel", "panel.file-renderer.v1"));
-    if (body.controlsRenderer)
-      requirements.push(requirement(panel, contributionId, "panel", "panel.controls-renderer.v1"));
-    if (body.dataTableRenderer) {
-      requirements.push(requirement(panel, contributionId, "panel", "panel.data-table-renderer.v1"));
-    }
-  };
-
-  addBody(panel.id, panel.contribution);
-  for (const [localId, menu] of Object.entries(panel.contribution.panelMenus ?? {})) {
-    addBody(`${panel.id}.${localId}`, menu);
-  }
-  return requirements;
 };
 
 const requirement = (
@@ -92,31 +61,26 @@ const runtimeRequirements = (runtime: ExtensionRuntime) => [
     record.palette.map(() => requirement(record, record.id, "commandPalette", "command-palette.v1")),
   ),
   ...runtime.modes.map((record) => requirement(record, record.id, "mode", "mode.v1")),
-  ...runtime.panels.flatMap(panelBodyRequirements),
-  ...runtime.routes.map((record) => requirement(record, record.id, "route", "route.webview.v1")),
-  ...runtime.treeItems.map((record) => requirement(record, record.id, "treeItem", "tree-item.v1")),
+  ...runtime.views.map((record) =>
+    requirement(
+      record,
+      record.id,
+      "view",
+      `view.${record.contribution.body.kind === "dataTable" ? "data-table" : record.contribution.body.kind}.v1`,
+    ),
+  ),
+  ...runtime.placements.map((record) => requirement(record, record.id, "placement", "placement.v1")),
+  ...runtime.navigationItems.map((record) => requirement(record, record.id, "navigationItem", "navigation-item.v1")),
+  ...runtime.statusBarItems.map((record) => requirement(record, record.id, "statusBarItem", "status-bar-item.v1")),
+  ...runtime.statuses.map((record) => requirement(record, record.id, "status", "status.v1")),
   ...runtime.settingsSections.map((record) => requirement(record, record.id, "settingsSection", "settings.section.v1")),
-  ...runtime.settingsPanels.map((record) =>
-    requirement(record, record.id, "settingsPanel", "settings.panel.webview.v1"),
-  ),
+  ...runtime.settingsPanels.map((record) => requirement(record, record.id, "settingsPanel", "settings.panel.v1")),
   ...runtime.settings.map((record) => requirement(record, record.id, "setting", "settings.definition.v1")),
-  ...runtime.kanbanRenderers.map((record) => requirement(record, record.id, "kanbanRenderer", "renderer.kanban.v1")),
-  ...runtime.kanbanRenderers
-    .filter((record) => record.contribution.resourceKind)
-    .map((record) => requirement(record, record.id, "kanbanRenderer", "resource-hierarchy.v1")),
-  ...runtime.dataTableRenderers.map((record) =>
-    requirement(record, record.id, "dataTableRenderer", "renderer.data-table.v1"),
-  ),
   ...runtime.commandPaletteResources.map((record) =>
     requirement(record, record.id, "commandPaletteResource", "renderer.command-palette-resource.v1"),
   ),
-  ...runtime.treeRenderers.map((record) => requirement(record, record.id, "treeRenderer", "renderer.tree.v1")),
-  ...runtime.fileRenderers.map((record) => requirement(record, record.id, "fileRenderer", "renderer.file.v1")),
-  ...runtime.controlsRenderers.map((record) =>
-    requirement(record, record.id, "controlsRenderer", "renderer.controls.v1"),
-  ),
   ...runtime.keybindings.map((record) => requirement(record, record.id, "keybinding", "keybinding.v1")),
-  ...runtime.resourcePanels.map((record) => requirement(record, record.id, "resourcePanel", "resource-view.v1")),
+  ...runtime.resourceViews.map((record) => requirement(record, record.id, "resourceView", "resource-view.v1")),
 ];
 
 const missingCapabilityDiagnostic = (

@@ -1,5 +1,5 @@
-import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { TreeContext, TreeNode } from "../../core";
+import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 import type { ExtensionTreeRendererRecord, ExtensionTreeViewRecord } from "./tree-renderer-contribution-types";
 
 export interface HostTreeDefaultNodesInput {

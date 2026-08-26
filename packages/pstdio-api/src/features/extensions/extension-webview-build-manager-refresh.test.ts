@@ -30,13 +30,11 @@ const writeExtension = (root: string) => {
   writeFileSync(
     join(root, "extension.ts"),
     `export default {
-      routes: {
-        labPage: {
-          path: "labPage",
-          label: "labPage",
-          webview: { entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: import.meta.url } },
-        },
-      },
+      views: [{
+        id: "labPage",
+        title: "labPage",
+        body: { kind: "webview", entry: { kind: "package-asset", path: "./src/main.tsx", baseUrl: import.meta.url } },
+      }],
     };`,
   );
 };
@@ -59,10 +57,10 @@ const writeTwoWebviewExtension = (root: string) => {
   writeFileSync(
     join(root, "extension.ts"),
     `export default {
-      routes: {
-        first: { path: "first", label: "first", webview: { entry: { kind: "package-asset", path: "./src/first.tsx", baseUrl: import.meta.url } } },
-        second: { path: "second", label: "second", webview: { entry: { kind: "package-asset", path: "./src/second.tsx", baseUrl: import.meta.url } } },
-      },
+      views: [
+        { id: "first", title: "first", body: { kind: "webview", entry: { kind: "package-asset", path: "./src/first.tsx", baseUrl: import.meta.url } } },
+        { id: "second", title: "second", body: { kind: "webview", entry: { kind: "package-asset", path: "./src/second.tsx", baseUrl: import.meta.url } } },
+      ],
     };`,
   );
 };
@@ -166,12 +164,12 @@ describe("createExtensionWebviewBuildManager refresh scheduling", () => {
       releaseFirst();
       await Bun.sleep(10);
 
-      expect(successes).toEqual(["lab.first"]);
+      expect(successes).toEqual(["pstdio.lab.view.first"]);
 
       releaseSecond();
       await refresh;
 
-      expect(successes.sort()).toEqual(["lab.first", "lab.second"]);
+      expect(successes.sort()).toEqual(["pstdio.lab.view.first", "pstdio.lab.view.second"]);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
@@ -270,7 +268,7 @@ describe("createExtensionWebviewBuildManager refresh serialization", () => {
       releaseSecond();
       await Promise.all([firstRefresh, secondRefresh]);
 
-      expect(successes).toEqual(["lab.labPage"]);
+      expect(successes).toEqual(["pstdio.lab.view.labPage"]);
     } finally {
       manager.dispose();
       rmSync(root, { recursive: true, force: true });
