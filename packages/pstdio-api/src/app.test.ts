@@ -3,9 +3,9 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { createApp } from "./app";
 import type { ExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
 import type { RuntimeHost } from "./features/runtime/routes";
+import { createTestApp } from "./test-utils/create-test-app";
 import type { AppBindings } from "./types";
 
 setDefaultTimeout(10_000);
@@ -25,20 +25,18 @@ const runtimeOrigin = "http://127.0.0.1:43123";
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-app-test-"));
 
-  const result = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+  const result = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
   });
   app = result.app;
   closeDb = result.close;
   unsecuredWebviewAccess = result.deps.extensionWebviewAccess;
 
-  const resultAuth = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage-auth"),
-    filesRoot: "",
-    apiToken: "test-token",
+  const resultAuth = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage-auth"),
+    host: { kind: "standalone", token: "test-token" },
   });
   appWithAuth = resultAuth.app;
   closeDbAuth = resultAuth.close;
@@ -53,11 +51,10 @@ beforeAll(async () => {
     subscribe: () => () => {},
     token: "runtime-secret",
   };
-  const resultRuntime = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage-runtime"),
-    filesRoot: "",
-    runtimeHost,
+  const resultRuntime = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage-runtime"),
+    host: { kind: "runtime", runtime: runtimeHost },
   });
   appWithRuntime = resultRuntime.app;
   runtimeWebviewAccess = resultRuntime.deps.extensionWebviewAccess;
@@ -375,5 +372,43 @@ describe("api authentication", () => {
     expect(response.status).toBe(500);
     const body = (await response.json()) as { error: string };
     expect(body.error).toBe("failed with [Redacted]");
+  });
+});
+
+describe("app host ownership", () => {
+  test("uses the runtime token when a different standalone token is present", async () => {
+    const previousToken = process.env.PSTDIO_API_TOKEN;
+    process.env.PSTDIO_API_TOKEN = "standalone-secret";
+    const runtimeHost: RuntimeHost = {
+      announceShutdown: () => {},
+      instanceId: "runtime-with-ambient-token",
+      origin: () => runtimeOrigin,
+      ownerType: () => "persistent",
+      promote: async () => {},
+      shutdown: async () => {},
+      subscribe: () => () => {},
+      token: "runtime-secret",
+    };
+
+    const handle = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage-runtime-ambient-token"),
+      host: { kind: "runtime", runtime: runtimeHost },
+    });
+
+    try {
+      const response = await handle.app.request(`${runtimeOrigin}/runtime/ready`, {
+        headers: { authorization: "Bearer runtime-secret" },
+      });
+
+      expect(response.status).toBe(200);
+    } finally {
+      await handle.close();
+      if (previousToken === undefined) {
+        delete process.env.PSTDIO_API_TOKEN;
+      } else {
+        process.env.PSTDIO_API_TOKEN = previousToken;
+      }
+    }
   });
 });

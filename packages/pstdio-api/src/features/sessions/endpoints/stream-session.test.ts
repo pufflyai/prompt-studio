@@ -5,7 +5,7 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { HarnessExit, HarnessSession, JsonPatch, SessionMessage } from "pstdio-api-contracts";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import { waitForSyncEvent } from "../../../test-utils/wait-for-sync-event";
 import type { AppBindings } from "../../../types";
 import {
@@ -76,10 +76,9 @@ const createFakeHarnessRecord = (): RuntimeHarnessRecord => {
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-test-"));
 
-  ({ app, close, eventBus } = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+  ({ app, close, eventBus } = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
     harnessRegistry: createTestHarnessRegistry([createFakeHarnessRecord()]),
   }));
 });
@@ -316,10 +315,9 @@ describe("GET /v1/sessions/:id/stream", () => {
       app: heartbeatApp,
       close: closeHeartbeatApp,
       eventBus: heartbeatEventBus,
-    } = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(heartbeatRoot, "storage"),
-      filesRoot: "",
+    } = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(heartbeatRoot, "storage"),
       harnessRegistry: createTestHarnessRegistry([createSlowFakeRecord(1200)]),
     });
 
@@ -379,10 +377,9 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
       app: replayApp,
       close: closeReplayApp,
       eventBus: replayEventBus,
-    } = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(replayRoot, "storage"),
-      filesRoot: "",
+    } = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(replayRoot, "storage"),
       harnessRegistry: createTestHarnessRegistry([
         createHistoryReplayRecord({
           initialPatches,
@@ -450,10 +447,9 @@ describe("GET /v1/sessions/:id/stream active session replay", () => {
       app: overlapApp,
       close: closeOverlapApp,
       eventBus: overlapEventBus,
-    } = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(overlapRoot, "storage"),
-      filesRoot: "",
+    } = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(overlapRoot, "storage"),
       harnessRegistry: createTestHarnessRegistry([createResumeOverlapRecord()]),
     });
 

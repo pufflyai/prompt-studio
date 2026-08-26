@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { git } from "pstdio-wt";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
 
 setDefaultTimeout(10_000);
@@ -29,10 +29,9 @@ beforeAll(async () => {
   await git(repoDir, ["commit", "-m", "initial"]);
   await git(repoDir, ["branch", "feature-a"]);
 
-  const result = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+  const result = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
   });
   app = result.app;
   closeDb = result.close;

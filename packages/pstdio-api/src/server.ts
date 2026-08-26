@@ -1,5 +1,4 @@
-import { apiWebSocket, createApp } from "./app";
-import { resolveApiFilesRoot } from "./default-files-root";
+import { apiWebSocket, createApp, resolveAppConfig } from "./app";
 import { disableExtensionMutationTimeout } from "./features/extensions/extension-request-timeout";
 import { apiLogger } from "./lib/logger";
 
@@ -10,7 +9,8 @@ const startServer = async () => {
 
   try {
     const appHandle = await createApp({
-      filesRoot: resolveApiFilesRoot(),
+      config: resolveAppConfig({ env: process.env }),
+      host: { kind: "standalone", token: process.env.PSTDIO_API_TOKEN },
     });
     const { app } = appHandle;
     close = appHandle.close;

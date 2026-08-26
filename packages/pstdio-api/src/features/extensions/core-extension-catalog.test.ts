@@ -2,12 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { createApp } from "../../app";
 import type { createExtensionService } from "../../services/extension-service";
+import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestHarnessRecord, createTestHarnessRegistry } from "../harnesses/test-harness-registry";
 import { hashExtensionSource, loadExtensionSource } from "./extension-runtime";
 
-type AppHandle = Awaited<ReturnType<typeof createApp>>;
+type AppHandle = Awaited<ReturnType<typeof createTestApp>>;
 
 const enableSource = async (
   extensionService: ReturnType<typeof createExtensionService>,
@@ -47,11 +47,10 @@ beforeEach(async () => {
   previousPstdioHome = process.env.PSTDIO_HOME;
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-core-extension-catalog-test-"));
   process.env.PSTDIO_HOME = join(tempRoot, "home");
-  handle = await createApp({
+  handle = await createTestApp({
     harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("claude-code", { availability: "INSTALLED" })]),
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
   });
 });
 

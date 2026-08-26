@@ -3,13 +3,13 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { createApp } from "../../app";
 import type { createExtensionService } from "../../services/extension-service";
+import { createTestApp } from "../../test-utils/create-test-app";
 import { writeProvisionHarnessExtension } from "../../test-utils/write-provision-harness-extension";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { hashExtensionSource, loadExtensionSource } from "./extension-runtime";
 
-type AppHandle = Awaited<ReturnType<typeof createApp>>;
+type AppHandle = Awaited<ReturnType<typeof createTestApp>>;
 
 const CLAUDE_CODE_ID = testHarnessId("claude-code");
 
@@ -110,11 +110,10 @@ let tempRoot: string;
 
 beforeEach(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-catalog-test-"));
-  handle = await createApp({
+  handle = await createTestApp({
     harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("claude-code", { availability: "INSTALLED" })]),
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
   });
 });
 
@@ -298,11 +297,10 @@ describe("extension-backed skill catalog", () => {
 
   test("installs extension catalog skills to repos for available harnesses", async () => {
     await handle.close();
-    handle = await createApp({
+    handle = await createTestApp({
       harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("claude-code")]),
-      dbPath: ":memory:",
-      storagePath: join(tempRoot, "isolated-storage"),
-      filesRoot: "",
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "isolated-storage"),
     });
 
     const project = await createProject(handle, "Agent Setup Project");

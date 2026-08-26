@@ -5,8 +5,8 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { HarnessEventSink, HarnessSession, SessionMessage } from "pstdio-api-contracts";
 import { createEventStore } from "pstdio-api-runtime-host";
-import { createApp } from "../../app";
 import { createSessionService } from "../../services/session-service";
+import { createTestApp } from "../../test-utils/create-test-app";
 import type { AppBindings } from "../../types";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { resolveOrphanedSessions } from "./startup";
@@ -79,10 +79,9 @@ const waitForSessionStatus = async (sessionId: string, expectedStatus: string) =
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-startup-test-"));
 
-  ({ app, close } = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+  ({ app, close } = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
     harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("fake", { provider: createFakeProvider() })]),
   }));
 });

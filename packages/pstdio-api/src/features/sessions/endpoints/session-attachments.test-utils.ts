@@ -9,7 +9,7 @@ import type {
   HarnessStartInput,
   SessionMessage,
 } from "pstdio-api-contracts";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -171,10 +171,9 @@ export const createIsolatedApp = async (harnessOptions?: Parameters<typeof creat
   const tempRoot = join(tmpdir(), `pstdio-session-attachments-test-${crypto.randomUUID()}`);
   tempRoots.push(tempRoot);
   const harness = createAttachmentHarness(harnessOptions);
-  const appHandle = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+  const appHandle = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
     harnessRegistry: harness.registry,
   });
   return { ...appHandle, harness };

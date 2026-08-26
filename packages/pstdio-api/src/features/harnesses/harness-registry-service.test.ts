@@ -2,7 +2,7 @@ import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { createApp } from "../../app";
+import { createTestApp } from "../../test-utils/create-test-app";
 import { installExtensionSource } from "../extensions/install-extension-source";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../../../..");
@@ -40,10 +40,9 @@ describe("harness registry", () => {
       { source: resolve(REPO_ROOT, "extensions/extension-lab"), installName: "extension-lab", skipInstall: true },
     ]);
 
-    const { app, close } = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(tempRoot, "storage-defaults"),
-      filesRoot: "",
+    const { app, close } = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage-defaults"),
     });
 
     try {
@@ -65,10 +64,9 @@ describe("harness registry", () => {
     process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
     await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/extension-lab"), skipInstall: true });
 
-    const { app, close } = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(tempRoot, "storage"),
-      filesRoot: "",
+    const { app, close } = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage"),
     });
 
     try {
@@ -89,10 +87,9 @@ describe("harness registry", () => {
     await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/extension-lab"), skipInstall: true });
     await installExtensionSource({ source: resolve(REPO_ROOT, "extensions/harness-claude-code"), skipInstall: true });
 
-    const { app, close } = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(tempRoot, "storage-selection"),
-      filesRoot: "",
+    const { app, close } = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage-selection"),
     });
 
     try {

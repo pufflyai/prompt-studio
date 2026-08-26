@@ -2,12 +2,11 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createApp } from "../../../app";
-import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import { hashExtensionSource, loadExtensionSource } from "../extension-runtime";
 import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
 
-type AppHandle = Awaited<ReturnType<typeof createApp>>;
+type AppHandle = Awaited<ReturnType<typeof createTestApp>>;
 
 let handle: AppHandle;
 let tempRoot: string;
@@ -62,11 +61,11 @@ describe("POST /v1/projects/:projectId/extensions/marketplace/:installName/insta
       } as never;
     });
 
-    handle = await createApp({
-      dbPath: ":memory:",
-      filesRoot: resolveTestFilesRoot(),
+    handle = await createTestApp({
+      databasePath: ":memory:",
       installExtensionSource,
-      storagePath: join(tempRoot, "storage"),
+      release: { source: "git", ref: "pstdio@0.27.0" },
+      storageRoot: join(tempRoot, "storage"),
     });
     const createResponse = await handle.app.request("/v1/projects", {
       body: JSON.stringify({ name: "Marketplace Install Project" }),

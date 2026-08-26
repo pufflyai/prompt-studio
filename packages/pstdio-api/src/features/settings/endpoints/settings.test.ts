@@ -2,9 +2,9 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 
-type SettingsTestContext = Awaited<ReturnType<typeof createApp>> & {
+type SettingsTestContext = Awaited<ReturnType<typeof createTestApp>> & {
   cleanup: () => Promise<void>;
 };
 
@@ -20,10 +20,9 @@ beforeAll(async () => {
   process.env.HOME = testHome;
   process.env.PSTDIO_HOME = join(testHome, ".pstdio");
 
-  const appContext = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+  const appContext = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
   });
 
   context = {

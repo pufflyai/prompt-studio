@@ -2,59 +2,22 @@ import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
 import { sessionEvents } from "pstdio-api-contracts/extension-kernel";
-import {
-  createActivityEventsDBService,
-  createDb,
-  createExtensionAutomationPreferencesDBService,
-  createExtensionFilesDBService,
-  createExtensionInstancesDBService,
-  createExtensionSettingsDBService,
-  createExtensionSkillPreferencesDBService,
-  createExtensionStorageDBService,
-  createExtensionTemplatePreferencesDBService,
-  createExtensionUserDataDBService,
-  createFilesDBService,
-  createInstalledExtensionSourcesDBService,
-  createNotificationsDBService,
-  createProjectsDBService,
-  createProjectTemplateDefaultsDBService,
-  createReposDBService,
-  createSessionQueueEntriesDBService,
-  createSessionsDBService,
-  createSettingsDBService,
-  createSkillsDBService,
-  createTemplatesDBService,
-  createWorkspaceSessionsDBService,
-  createWorkspacesDBService,
-  type DbClient,
-  resolveDbPath,
-} from "pstdio-db";
-import { createFilesStorageService, ensureStorageRoot, resolveStorageRoot } from "pstdio-storage";
+import { createFilesStorageService, ensureStorageRoot } from "pstdio-storage";
+import type { AppDependencies, CreateAppInput } from "./app-contracts";
+import { createAppDatabaseServices, openAppDatabase } from "./app-database";
+import { productionAppDependencies, wireAppExtensionServices } from "./app-extension-services";
 import { registerApi } from "./app-routing";
 import type { RouteDeps } from "./features/deps";
-import { subscribeExtensionEnablementInvalidation } from "./features/extensions/extension-enablement-invalidation";
-import type { LoadedExtension } from "./features/extensions/extension-runtime";
 import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
 import { createTerminalSupervisor } from "./features/extensions/extension-terminal-runtime";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
-import type { installExtensionSource } from "./features/extensions/install-extension-source";
-import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
-import { createProjectExtensionRuntimeCatalog } from "./features/extensions/project-extension-runtime-catalog";
-import { subscribeRepoLinkExtensionRefresh } from "./features/extensions/repo-link-extension-refresh";
-import {
-  createHarnessRegistryService,
-  type HarnessRegistryService,
-} from "./features/harnesses/harness-registry-service";
 import { fireSessionLifecycleEventAsync, type SessionHookDeps } from "./features/hooks/session-hooks";
 import type { RuntimeHost } from "./features/runtime/routes";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
-import { isPgliteCheckpointFailure, pgliteRecoverySteps } from "./lib/pglite-recovery-hint";
 import { createExtensionFileService } from "./services/extension-file-service";
-import { createExtensionService } from "./services/extension-service";
-import { createExtensionUpgradeService } from "./services/extension-upgrade-service";
 import { createFileService } from "./services/file-service";
 import { createNotificationService } from "./services/notification-service";
 import { createProjectService } from "./services/project-service";
@@ -72,42 +35,9 @@ import type { AppBindings } from "./types";
 const EXTENSION_SCHEDULE_WATERMARK_FILE = "extension-schedule-watermarks.json";
 
 export const apiWebSocket = websocket;
-
-interface AppOptions {
-  dbPath?: string;
-  storagePath?: string;
-  filesRoot: string;
-  apiToken?: string;
-  eventBusBufferSize?: number;
-  extensionWebviewBuilds?: boolean;
-  /** Test seam: overrides the extension-backed harness registry. */
-  harnessRegistry?: HarnessRegistryService;
-  runtimeHost?: RuntimeHost;
-  extensionReleaseRef?: string;
-  installExtensionSource?: typeof installExtensionSource;
-  terminalOrigins?: string[];
-  onDatabaseLockAcquired?: () => void;
-}
-
-const readTerminalOrigins = () =>
-  process.env.PSTDIO_TERMINAL_ORIGINS?.split(",")
-    .map((origin) => origin.trim())
-    .filter(Boolean) ?? [];
-
-const resolveEventBusBufferSize = (value: string | undefined) => {
-  if (!value) return undefined;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 1) return undefined;
-  return Math.floor(parsed);
-};
-
-const resolveExtensionWebviewBuilds = (value: boolean | undefined) => {
-  if (value !== undefined) return value;
-  return process.env.PSTDIO_EXTENSION_WEBVIEW_BUILDS !== "0";
-};
-
-const resolveExtensionReleaseRef = (configured: string | undefined) =>
-  configured ?? process.env.PSTDIO_EXTENSION_RELEASE_REF;
+export type { AppConfig, ExtensionRelease } from "./app-config";
+export { resolveAppConfig } from "./app-config";
+export type { AppDependencies, AppHost, AppLifecycle, CreateAppInput } from "./app-contracts";
 
 const sessionStatusEventFor = (status: string) => {
   if (status === "awaiting_input") return sessionEvents.awaitingInput;
@@ -116,8 +46,6 @@ const sessionStatusEventFor = (status: string) => {
   return null;
 };
 
-// Process-scoped PTY supervisor: every extension command environment shares it,
-// and app close force-kills any session still live. Logs lifecycle only.
 const createAppTerminalSupervisor = () =>
   createTerminalSupervisor({
     logger: {
@@ -160,52 +88,9 @@ const createRuntimeRouteDeps = (input: {
   };
 };
 
-const pgliteRecoveryHint = (error: unknown, dbPath: string | undefined) => {
-  const message = error instanceof Error ? `${error.message}\n${error.stack ?? ""}` : String(error);
-  if (!isPgliteCheckpointFailure(message)) return null;
-
-  const resolved = resolveDbPath(dbPath);
-  return `PGlite failed to open ${resolved}. ${pgliteRecoverySteps(resolved)}.`;
-};
-
-const openDb = async (dbPath: string | undefined, onLockAcquired?: () => void) => {
-  try {
-    return await createDb({ path: dbPath, onLockAcquired });
-  } catch (err) {
-    const hint = pgliteRecoveryHint(err, dbPath);
-    apiLogger.error({ dataDir: dbPath, err, event: "db.open.failed", hint }, hint ?? "PGlite database failed to open");
-    if (!hint) throw err;
-
-    throw new Error(hint, { cause: err });
-  }
-};
-
-const createDBServices = (db: DbClient) => ({
-  projectsDBService: createProjectsDBService(db),
-  reposDBService: createReposDBService(db),
-  sessionQueueEntriesService: createSessionQueueEntriesDBService(db),
-  sessionsDBService: createSessionsDBService(db),
-  settingsDBService: createSettingsDBService(db),
-  workspacesDBService: createWorkspacesDBService(db),
-  workspaceSessionsDBService: createWorkspaceSessionsDBService(db),
-  skillsDBService: createSkillsDBService(db),
-  templatesDBService: createTemplatesDBService(db),
-  filesDBService: createFilesDBService(db),
-  activityEventsService: createActivityEventsDBService(db),
-  notificationsDbService: createNotificationsDBService(db),
-  installedExtensionSourcesService: createInstalledExtensionSourcesDBService(db),
-  extensionInstancesService: createExtensionInstancesDBService(db),
-  extensionFilesDBService: createExtensionFilesDBService(db),
-  extensionTemplatePreferencesDBService: createExtensionTemplatePreferencesDBService(db),
-  extensionSkillPreferencesDBService: createExtensionSkillPreferencesDBService(db),
-  extensionAutomationPreferencesService: createExtensionAutomationPreferencesDBService(db),
-  extensionStorageService: createExtensionStorageDBService(db),
-  extensionSettingsDBService: createExtensionSettingsDBService(db),
-});
-
 const createCoreDomainServices = (input: {
-  db: DbClient;
-  dbs: ReturnType<typeof createDBServices>;
+  db: Parameters<typeof createAppDatabaseServices>[0];
+  dbs: ReturnType<typeof createAppDatabaseServices>;
   eventBus: EventBus;
   storageRoot: string;
 }) => {
@@ -252,99 +137,16 @@ const startNotificationWakeTimer = (notificationService: ReturnType<typeof creat
   return timer;
 };
 
-const openAppDb = (options: AppOptions) =>
-  openDb(options.dbPath ?? process.env.PSTDIO_DB_PATH, options.onDatabaseLockAcquired);
-
-// Wires the extension service, the process-owned runtime snapshot catalog, the
-// harness registry, the installed-source runtime processes, and the event-bus
-// subscriptions that keep catalog snapshots invalidated.
-const wireExtensionRuntimeServices = async (input: {
-  db: DbClient;
-  eventBus: EventBus;
-  extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
-  installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
-  options: AppOptions;
-  projectService: ReturnType<typeof createProjectService>;
-  repoService: ReturnType<typeof createRepoService>;
-}) => {
-  const { db, eventBus, extensionInstancesService, installedExtensionSourcesService, options } = input;
-  const { projectService, repoService } = input;
-  let refreshInstalledExtensionProcesses: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void> =
-    async () => {};
-  const extensionService = createExtensionService({
-    extensionInstancesService,
-    installedExtensionSourcesService,
-    extensionUserDataService: createExtensionUserDataDBService(db),
-    eventBus,
-    onInstalledSourcesChanged: async (sourcePath, validatedSource) => {
-      // An in-place source reload keeps the same paths, so the registry's path-set
-      // signature won't change on its own — drop its cache explicitly.
-      harnessRegistry.invalidate();
-      await refreshInstalledExtensionProcesses(sourcePath, validatedSource);
-    },
-    projectService,
-  });
-  const extensionUpgradeService = createExtensionUpgradeService({
-    extensionService,
-    installExtensionSource: options.installExtensionSource,
-    releaseRef: resolveExtensionReleaseRef(options.extensionReleaseRef),
-    repoService,
-  });
-  const extensionRuntimeCatalog = createProjectExtensionRuntimeCatalog({
-    extensionService,
-    projectService,
-    repoService,
-  });
-  const harnessRegistry =
-    options.harnessRegistry ??
-    createHarnessRegistryService({ installedExtensionSourcesService, extensionRuntimeCatalog });
-  const extensionRuntime = await createInstalledExtensionRuntime({
-    extensionService,
-    harnessRegistry,
-    installedExtensionSourcesService,
-    projectRuntimeCatalog: extensionRuntimeCatalog,
-    projectService,
-    repoService,
-    webviewBuilds: resolveExtensionWebviewBuilds(options.extensionWebviewBuilds),
-  });
-  refreshInstalledExtensionProcesses = extensionRuntime.refresh;
-  const unsubscribeRepoLinkRefresh = subscribeRepoLinkExtensionRefresh({
-    eventBus,
-    invalidate: extensionRuntimeCatalog.invalidate,
-    refreshWatchers: () => extensionRuntime.refreshWatchers(),
-    onError: (err) =>
-      apiLogger.error(
-        { err, event: "extensions.repo_link_refresh.error" },
-        "Failed to refresh extensions after repo link change",
-      ),
-  });
-  const unsubscribeEnablementInvalidation = subscribeExtensionEnablementInvalidation({
-    eventBus,
-    invalidate: extensionRuntimeCatalog.invalidate,
-  });
-
-  return {
-    extensionRuntime,
-    extensionRuntimeCatalog,
-    extensionService,
-    extensionUpgradeService,
-    harnessRegistry,
-    unsubscribeExtensionEvents: () => {
-      unsubscribeRepoLinkRefresh();
-      unsubscribeEnablementInvalidation();
-    },
-  };
-};
-
-export const createApp = async (options: AppOptions) => {
-  const { db, close: closeDb } = await openAppDb(options);
-  const securityToken = options?.apiToken ?? process.env.PSTDIO_API_TOKEN ?? options.runtimeHost?.token;
+export const createApp = async (input: CreateAppInput, dependencies: AppDependencies = productionAppDependencies) => {
+  const { db, close: closeDb } = await openAppDatabase(input.config.database.path, input.lifecycle);
+  const runtimeHost = input.host.kind === "runtime" ? input.host.runtime : undefined;
+  const securityToken = input.host.kind === "runtime" ? input.host.runtime.token : input.host.token;
   const app = new OpenAPIHono<AppBindings>();
 
-  const storageRoot = options?.storagePath ?? resolveStorageRoot(process.env.PSTDIO_STORAGE_PATH);
+  const storageRoot = input.config.storage.root;
   ensureStorageRoot(storageRoot);
 
-  const dbs = createDBServices(db);
+  const dbs = createAppDatabaseServices(db);
   const {
     activityEventsService,
     extensionAutomationPreferencesService,
@@ -362,12 +164,8 @@ export const createApp = async (options: AppOptions) => {
     templatesDBService,
   } = dbs;
 
-  // --- infrastructure ---
-  const eventBus = new EventBus({
-    bufferSize: options.eventBusBufferSize ?? resolveEventBusBufferSize(process.env.PSTDIO_EVENT_BUS_BUFFER_SIZE),
-  });
+  const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
 
-  // --- domain services ---
   const {
     extensionFileService,
     extensionSettingsService,
@@ -386,12 +184,13 @@ export const createApp = async (options: AppOptions) => {
     extensionUpgradeService,
     harnessRegistry,
     unsubscribeExtensionEvents,
-  } = await wireExtensionRuntimeServices({
+  } = await wireAppExtensionServices({
+    config: input.config.extensions,
     db,
+    dependencies,
     eventBus,
     extensionInstancesService,
     installedExtensionSourcesService,
-    options,
     projectService,
     repoService,
   });
@@ -399,7 +198,7 @@ export const createApp = async (options: AppOptions) => {
     extensionRuntimeCatalog,
     extensionTemplatePreferencesDBService,
     fileService,
-    projectTemplateDefaultsDBService: createProjectTemplateDefaultsDBService(db),
+    projectTemplateDefaultsDBService: dbs.projectTemplateDefaultsDBService,
     templatesDBService,
   });
   const skillService = createSkillService({
@@ -459,11 +258,9 @@ export const createApp = async (options: AppOptions) => {
     onCapacityAvailable: () => drainSessionQueue(),
   });
 
-  // --- ONLY DOMAIN SERVICES ARE PASSED TO ROUTES ---
   const terminalSupervisor = createAppTerminalSupervisor();
 
   const deps: RouteDeps = {
-    filesRoot: options.filesRoot,
     extensionWebviewAccess: createExtensionWebviewAccess(),
     readiness: { database: true, storage: true },
     closeDb,
@@ -505,7 +302,7 @@ export const createApp = async (options: AppOptions) => {
 
   const runtimeDeps = createRuntimeRouteDeps({
     extensionScheduler,
-    host: options.runtimeHost,
+    host: runtimeHost,
     sessionService,
     terminalSupervisor,
   });
@@ -519,10 +316,10 @@ export const createApp = async (options: AppOptions) => {
     security: securityToken
       ? {
           token: securityToken,
-          ...(options.runtimeHost ? { origin: options.runtimeHost.origin } : {}),
+          ...(runtimeHost ? { origin: runtimeHost.origin } : {}),
         }
       : undefined,
-    terminalOrigins: options.terminalOrigins ?? readTerminalOrigins(),
+    terminalOrigins: input.config.transport.terminalOrigins,
   });
 
   const startupAbort = new AbortController();

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessResumeInput, HarnessStartInput } from "pstdio-api-contracts";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -25,7 +25,7 @@ const resumeParamAgent = mock((_ctx: unknown, input: HarnessResumeInput) => ({
   stop: () => {},
 }));
 
-let handle: Awaited<ReturnType<typeof createApp>>;
+let handle: Awaited<ReturnType<typeof createTestApp>>;
 let tempRoot: string;
 
 const waitForStart = async () => {
@@ -37,10 +37,9 @@ const waitForStart = async () => {
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-create-session-harness-params-test-"));
-  handle = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+  handle = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
     harnessRegistry: createTestHarnessRegistry([
       createTestHarnessRecord("param-agent", {
         provider: {

@@ -5,28 +5,27 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
-let appHandle: Awaited<ReturnType<typeof createApp>>;
+let appHandle: Awaited<ReturnType<typeof createTestApp>>;
 let tempRoot: string;
-let storagePath: string;
+let storageRoot: string;
 
 let previousPstdioHomeEnv: string | undefined;
 let previousDefaultExtensionsEnv: string | undefined;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-remove-project-test-"));
-  storagePath = join(tempRoot, "storage");
+  storageRoot = join(tempRoot, "storage");
   previousPstdioHomeEnv = process.env.PSTDIO_HOME;
   previousDefaultExtensionsEnv = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   process.env.PSTDIO_HOME = join(tempRoot, "pstdio-home");
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
-  appHandle = await createApp({
-    dbPath: ":memory:",
-    storagePath,
-    filesRoot: "",
+  appHandle = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot,
   });
   app = appHandle.app;
 });
@@ -114,7 +113,7 @@ describe("DELETE /v1/projects/:id", () => {
       mime_type: "text/plain",
     });
 
-    const projectDir = join(storagePath, project.id);
+    const projectDir = join(storageRoot, project.id);
     expect(existsSync(projectDir)).toBe(true);
 
     await app.request(`/v1/projects/${project.id}`, { method: "DELETE" });

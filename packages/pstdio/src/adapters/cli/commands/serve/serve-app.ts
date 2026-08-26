@@ -1,9 +1,8 @@
-import { apiWebSocket, createApp } from "pstdio-api/app";
+import { apiWebSocket, createApp, resolveAppConfig } from "pstdio-api/app";
 import { disableExtensionMutationTimeout } from "pstdio-api/extensions/extension-request-timeout";
 import { type RuntimeHost, type RuntimeOwnerType, runtimeSessionCookie } from "pstdio-api/runtime";
 import { createLogger } from "pstdio-logging";
 import { CLI_VERSION } from "@/features/cli-version";
-import { resolveFilesRoot } from "@/features/resolve-files-root";
 import { injectConfig } from "../../dashboard/serve-dashboard";
 import { isCompiledBinary, loadEmbeddedAssets, resolveMimeType } from "./embedded-assets";
 import { loadFilesystemAssets } from "./filesystem-assets";
@@ -75,10 +74,11 @@ const reportStartupError = (error: Error) => {
 const defaultDeps: ServeAppDeps = {
   createApp: async (runtimeHost, onDatabaseLockAcquired) =>
     createApp({
-      filesRoot: await resolveFilesRoot(),
-      onDatabaseLockAcquired,
-      runtimeHost,
-      extensionReleaseRef: `pstdio@${CLI_VERSION}`,
+      config: resolveAppConfig({ env: process.env, defaultExtensionReleaseRef: `pstdio@${CLI_VERSION}` }),
+      host: runtimeHost
+        ? { kind: "runtime", runtime: runtimeHost }
+        : { kind: "standalone", token: process.env.PSTDIO_API_TOKEN },
+      lifecycle: { onDatabaseLockAcquired },
     }),
   injectConfig,
   isCompiledBinary,

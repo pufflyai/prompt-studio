@@ -5,7 +5,7 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { HarnessExit, HarnessSession, SessionMessage } from "pstdio-api-contracts";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
 import {
   createTestHarnessRecord,
@@ -104,10 +104,9 @@ const createSession = async (
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-followup-test-"));
 
-  ({ app } = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+  ({ app } = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
     harnessRegistry: createTestHarnessRegistry([createOpencodeRecord()]),
   }));
 });
@@ -270,10 +269,9 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
 
   test("follow-up marks session as failed when opencode harness returns an error", async () => {
     const failTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-followup-fail-"));
-    const { app: failApp } = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(failTempRoot, "storage"),
-      filesRoot: "",
+    const { app: failApp } = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(failTempRoot, "storage"),
       harnessRegistry: createTestHarnessRegistry([createOpencodeRecord({ failOnResume: true })]),
     });
 

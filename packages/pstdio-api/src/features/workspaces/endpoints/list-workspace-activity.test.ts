@@ -3,20 +3,19 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
-let appHandle: Awaited<ReturnType<typeof createApp>>;
+let appHandle: Awaited<ReturnType<typeof createTestApp>>;
 let tempRoot: string;
 let projectId: string;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-list-workspace-activity-test-"));
-  appHandle = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+  appHandle = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
   });
   app = appHandle.app;
 

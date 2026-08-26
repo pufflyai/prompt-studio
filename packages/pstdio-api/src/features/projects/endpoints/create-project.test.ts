@@ -4,14 +4,14 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
 import { testHarnessId } from "../../harnesses/test-harness-registry";
 
 const OPENCODE_ID = testHarnessId("opencode");
 
 let app: OpenAPIHono<AppBindings>;
-let appHandle: Awaited<ReturnType<typeof createApp>>;
+let appHandle: Awaited<ReturnType<typeof createTestApp>>;
 let tempRoot: string;
 let previousPstdioHome: string | undefined;
 let previousDefaultExtensions: string | undefined;
@@ -55,10 +55,9 @@ beforeAll(async () => {
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
   process.env.PSTDIO_LOG_TARGETS = "stdout";
 
-  appHandle = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+  appHandle = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
   });
   app = appHandle.app;
 });
@@ -131,7 +130,7 @@ describe("POST /v1/projects", () => {
 
   test("creates the project with a warning when default extension setup fails", async () => {
     const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-create-project-rollback-test-"));
-    const dbPath = join(isolatedRoot, "db.sqlite");
+    const databasePath = join(isolatedRoot, "db.sqlite");
     const projectName = "Project With Extension Warning";
     const missingExtension = join(isolatedRoot, "missing-extension");
     const previous = {
@@ -144,10 +143,9 @@ describe("POST /v1/projects", () => {
     ]);
 
     try {
-      const handle = await createApp({
-        dbPath,
-        storagePath: join(isolatedRoot, "storage"),
-        filesRoot: "",
+      const handle = await createTestApp({
+        databasePath,
+        storageRoot: join(isolatedRoot, "storage"),
       });
 
       try {
@@ -172,10 +170,9 @@ describe("POST /v1/projects", () => {
         await handle.close();
       }
 
-      const verification = await createApp({
-        dbPath,
-        storagePath: join(isolatedRoot, "verification-storage"),
-        filesRoot: "",
+      const verification = await createTestApp({
+        databasePath,
+        storageRoot: join(isolatedRoot, "verification-storage"),
       });
 
       try {
@@ -209,10 +206,9 @@ describe("POST /v1/projects", () => {
     ]);
 
     try {
-      const handle = await createApp({
-        dbPath: ":memory:",
-        storagePath: join(isolatedRoot, "storage"),
-        filesRoot: "",
+      const handle = await createTestApp({
+        databasePath: ":memory:",
+        storageRoot: join(isolatedRoot, "storage"),
       });
 
       try {

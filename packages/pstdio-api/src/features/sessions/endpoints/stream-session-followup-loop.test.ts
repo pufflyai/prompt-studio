@@ -5,7 +5,7 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { HarnessExit, JsonPatch } from "pstdio-api-contracts";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
 import {
   createTestHarnessRecord,
@@ -184,10 +184,9 @@ beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-followup-loop-"));
   const spy = createSpyRecord();
   firstExit = spy.firstExit;
-  ({ app, close } = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+  ({ app, close } = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
     harnessRegistry: createTestHarnessRegistry([spy.record]),
   }));
 });
@@ -248,10 +247,9 @@ describe("GET /v1/sessions/:id/stream follow-up resume continuity", () => {
 
   test("shifts the first live follow-up patch when replay history is initially empty", async () => {
     const delayedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-stream-delayed-offset-"));
-    const delayedApp = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(delayedRoot, "storage"),
-      filesRoot: "",
+    const delayedApp = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(delayedRoot, "storage"),
       harnessRegistry: createTestHarnessRegistry([createDelayedResumeRecord()]),
     });
 

@@ -32,7 +32,6 @@ const createMockDeps = (
       overrides.template ??
       (overrides.fileContent !== undefined ? { id: "t1", content: overrides.fileContent ?? "" } : null),
   },
-  filesRoot: "",
 });
 
 // Writes a minimal installed-extension source that contributes a prompt
@@ -166,7 +165,7 @@ describe("resolvePrompt", () => {
       manifest: {},
     });
 
-    const deps = { templateService, filesRoot: "" };
+    const deps = { templateService };
     expect(await resolvePrompt({ template: "review-code", vars: { ticket: "PS-7" } }, project.id, deps)).toBe(
       "Fix issues in PS-7/review.md\n",
     );

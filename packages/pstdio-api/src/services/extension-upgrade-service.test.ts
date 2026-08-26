@@ -69,7 +69,7 @@ describe("extension upgrade service", () => {
           throw new Error("should not register");
         },
       },
-      releaseRef: releaseCommit,
+      release: { source: "git", ref: releaseCommit },
       repoService: { listByProject: async () => [] },
     });
 
@@ -95,7 +95,7 @@ describe("extension upgrade service", () => {
           throw new Error("should not register");
         },
       },
-      releaseRef: "pstdio@0.27.0",
+      release: { source: "git", ref: "pstdio@0.27.0" },
       resolveReleaseCommit,
       repoService: { listByProject: async () => [] },
     });
@@ -121,7 +121,7 @@ describe("extension upgrade service", () => {
           throw new Error("should not register");
         },
       },
-      releaseRef: "c".repeat(40),
+      release: { source: "git", ref: "c".repeat(40) },
       repoService: { listByProject: async () => [] },
     });
 
@@ -146,7 +146,7 @@ describe("extension upgrade service", () => {
         registerInstalledSource,
       },
       installExtensionSource,
-      releaseRef: "pstdio@0.27.0",
+      release: { source: "git", ref: "pstdio@0.27.0" },
       repoService: { listByProject: async () => [] },
     });
 
@@ -191,7 +191,7 @@ describe("extension upgrade service", () => {
         },
       },
       installExtensionSource: installExtensionSource as never,
-      releaseRef: "pstdio@0.27.0",
+      release: { source: "git", ref: "pstdio@0.27.0" },
       repoService: { listByProject: async () => [] },
     });
 
@@ -216,6 +216,34 @@ describe("extension upgrade service", () => {
     expect(await second).toBe(installed);
   });
 
+  test("loads marketplace sources from the configured workspace release", async () => {
+    const installExtensionSource = mock(async () => installed as never);
+    const service = createExtensionUpgradeService({
+      extensionService: {
+        enableInstalledSourceForProject: async () => {
+          throw new Error("should not enable");
+        },
+        getInstalledSource: async () => null as never,
+        getProjectExtensionInstance: async () => null as never,
+        registerInstalledSource: async () => {
+          throw new Error("should not register");
+        },
+      },
+      installExtensionSource,
+      release: { source: "workspace", ref: "workspace-release", root: "/workspace/prompt-studio" },
+      repoService: { listByProject: async () => [] },
+    });
+
+    await service.prepareMarketplaceExtensionSource("pstdio-planner");
+
+    expect(installExtensionSource).toHaveBeenCalledWith({
+      force: true,
+      installName: "pstdio-planner",
+      skipInstall: true,
+      source: "/workspace/prompt-studio/extensions/pstdio-planner",
+    });
+  });
+
   test("refuses to replace a local source", async () => {
     const service = createExtensionUpgradeService({
       extensionService: {
@@ -235,7 +263,7 @@ describe("extension upgrade service", () => {
       installExtensionSource: async () => {
         throw new Error("should not install");
       },
-      releaseRef: "pstdio@0.27.0",
+      release: { source: "git", ref: "pstdio@0.27.0" },
       repoService: { listByProject: async () => [] },
     });
 
@@ -261,7 +289,7 @@ describe("extension upgrade service", () => {
       installExtensionSource: async () => {
         throw new Error("should not install");
       },
-      releaseRef: "pstdio@0.27.0",
+      release: { source: "git", ref: "pstdio@0.27.0" },
       repoService: { listByProject: async () => [] },
     });
 

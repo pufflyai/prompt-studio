@@ -3,13 +3,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
 let tempRoot: string;
 let projectId: string;
-let deps: Awaited<ReturnType<typeof createApp>>["deps"];
+let deps: Awaited<ReturnType<typeof createTestApp>>["deps"];
 
 const makeAgentSessionId = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
 
@@ -39,7 +39,7 @@ const createMappedSession = async (input: {
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-resolve-session-id-test-"));
-  const created = await createApp({ dbPath: ":memory:", storagePath: join(tempRoot, "storage"), filesRoot: "" });
+  const created = await createTestApp({ databasePath: ":memory:", storageRoot: join(tempRoot, "storage") });
 
   app = created.app;
   deps = created.deps;

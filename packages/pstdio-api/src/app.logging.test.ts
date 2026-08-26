@@ -57,11 +57,10 @@ describe("api logging", () => {
     process.env.PSTDIO_LOG_PATH = logPath;
     process.env.PSTDIO_LOG_LEVEL = "info";
 
-    const { createApp } = await import("./app");
-    const appResult = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(tempRoot, "storage"),
-      filesRoot: "",
+    const { createTestApp } = await import("./test-utils/create-test-app");
+    const appResult = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage"),
     });
 
     app = appResult.app;

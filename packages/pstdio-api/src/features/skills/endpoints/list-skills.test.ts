@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import { writeProvisionHarnessExtension } from "../../../test-utils/write-provision-harness-extension";
 import { hashExtensionSource, loadExtensionSource } from "../../extensions/extension-runtime";
 import {
@@ -12,7 +12,7 @@ import {
   testHarnessId,
 } from "../../harnesses/test-harness-registry";
 
-type AppHandle = Awaited<ReturnType<typeof createApp>>;
+type AppHandle = Awaited<ReturnType<typeof createTestApp>>;
 
 let handle: AppHandle;
 let tempRoot: string;
@@ -81,10 +81,9 @@ const enableSource = async (sourcePath: string, installName: string) => {
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-skills-test-"));
-  handle = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+  handle = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
     harnessRegistry: createTestHarnessRegistry([
       createTestHarnessRecord("claude-code"),
       createTestHarnessRecord("codex"),

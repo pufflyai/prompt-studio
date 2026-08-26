@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit, HarnessSession, HarnessStartInput } from "pstdio-api-contracts";
 import type { HarnessContext } from "pstdio-api-contracts/extension-kernel";
-import { createApp } from "../../app";
+import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 
 const FAKE_ID = testHarnessId("fake");
@@ -56,12 +56,11 @@ afterEach(() => {
 describe("session scheduler startup recovery", () => {
   test("recovers direct dispatched start attachments before transcript persistence", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-direct-attachment-recovery-test-"));
-    const dbPath = join(tempRoot, "db");
-    const storagePath = join(tempRoot, "storage");
-    const firstApp = await createApp({
-      dbPath,
-      storagePath,
-      filesRoot: "",
+    const databasePath = join(tempRoot, "db");
+    const storageRoot = join(tempRoot, "storage");
+    const firstApp = await createTestApp({
+      databasePath,
+      storageRoot,
       harnessRegistry: createBlockedRegistry(3),
     });
     let projectId = "";
@@ -107,7 +106,7 @@ describe("session scheduler startup recovery", () => {
     }
 
     startSession.mockClear();
-    const recoveredApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
+    const recoveredApp = await createTestApp({ databasePath, storageRoot, harnessRegistry: createRegistry() });
 
     try {
       for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -127,9 +126,9 @@ describe("session scheduler startup recovery", () => {
 
   test("dispatches persisted queued runtime work with the original prompt", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-session-queue-recovery-test-"));
-    const dbPath = join(tempRoot, "db");
-    const storagePath = join(tempRoot, "storage");
-    const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
+    const databasePath = join(tempRoot, "db");
+    const storageRoot = join(tempRoot, "storage");
+    const firstApp = await createTestApp({ databasePath, storageRoot, harnessRegistry: createRegistry() });
     let projectId = "";
 
     try {
@@ -160,7 +159,7 @@ describe("session scheduler startup recovery", () => {
     }
 
     startSession.mockClear();
-    const recoveredApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
+    const recoveredApp = await createTestApp({ databasePath, storageRoot, harnessRegistry: createRegistry() });
 
     try {
       for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -181,9 +180,9 @@ describe("session scheduler startup recovery", () => {
 
   test("recovers a queued entry claimed before dispatch was initiated", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-session-claimed-queue-recovery-test-"));
-    const dbPath = join(tempRoot, "db");
-    const storagePath = join(tempRoot, "storage");
-    const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
+    const databasePath = join(tempRoot, "db");
+    const storageRoot = join(tempRoot, "storage");
+    const firstApp = await createTestApp({ databasePath, storageRoot, harnessRegistry: createRegistry() });
 
     try {
       const projectRes = await firstApp.app.request("/v1/projects", {
@@ -216,7 +215,7 @@ describe("session scheduler startup recovery", () => {
     }
 
     startSession.mockClear();
-    const recoveredApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
+    const recoveredApp = await createTestApp({ databasePath, storageRoot, harnessRegistry: createRegistry() });
 
     try {
       for (let attempt = 0; attempt < 20; attempt += 1) {
@@ -236,9 +235,9 @@ describe("session scheduler startup recovery", () => {
 
   test("requeues and dispatches pending follow-ups for orphaned active sessions", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-active-followup-recovery-test-"));
-    const dbPath = join(tempRoot, "db");
-    const storagePath = join(tempRoot, "storage");
-    const firstApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
+    const databasePath = join(tempRoot, "db");
+    const storageRoot = join(tempRoot, "storage");
+    const firstApp = await createTestApp({ databasePath, storageRoot, harnessRegistry: createRegistry() });
     let sessionId = "";
 
     try {
@@ -270,7 +269,7 @@ describe("session scheduler startup recovery", () => {
       await firstApp.close();
     }
 
-    const recoveredApp = await createApp({ dbPath, storagePath, filesRoot: "", harnessRegistry: createRegistry() });
+    const recoveredApp = await createTestApp({ databasePath, storageRoot, harnessRegistry: createRegistry() });
 
     try {
       for (let attempt = 0; attempt < 40; attempt += 1) {

@@ -4,11 +4,11 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
-let appHandle: Awaited<ReturnType<typeof createApp>>;
+let appHandle: Awaited<ReturnType<typeof createTestApp>>;
 let tempRoot: string;
 let projectId: string;
 let previousPstdioHomeEnv: string | undefined;
@@ -50,7 +50,7 @@ beforeAll(async () => {
   previousDefaultExtensionsEnv = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   process.env.PSTDIO_HOME = join(tempRoot, "pstdio-home");
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
-  appHandle = await createApp({ dbPath: ":memory:", storagePath: join(tempRoot, "storage"), filesRoot: "" });
+  appHandle = await createTestApp({ databasePath: ":memory:", storageRoot: join(tempRoot, "storage") });
   app = appHandle.app;
 
   const projectRes = await app.request("/v1/projects", {

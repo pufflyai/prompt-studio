@@ -4,14 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { createApp } from "../../../app";
-import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import { writeProvisionHarnessExtension } from "../../../test-utils/write-provision-harness-extension";
 import type { AppBindings } from "../../../types";
 import { hashExtensionSource, loadExtensionSource } from "../../extensions/extension-runtime";
 import { createTestHarnessRecord, createTestHarnessRegistry } from "../../harnesses/test-harness-registry";
 
-type AppHandle = Awaited<ReturnType<typeof createApp>>;
+type AppHandle = Awaited<ReturnType<typeof createTestApp>>;
 
 let app: OpenAPIHono<AppBindings>;
 let handle: AppHandle;
@@ -50,11 +49,10 @@ beforeAll(async () => {
     defaultExtensions: [{ source: repoDefaultSourcePath, installName: repoDefaultInstallName, skipInstall: true }],
   });
   process.env.PSTDIO_HOME = join(tempRoot, "home");
-  handle = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: resolveTestFilesRoot(),
-    extensionWebviewBuilds: false,
+  handle = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
+    buildWebviews: false,
     harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("claude-code")]),
   });
   app = handle.app;
@@ -241,14 +239,13 @@ describe("POST /v1/projects/:id/repos - basic behavior", () => {
 
   test("installs extension-backed skills without any prior agent configuration", async () => {
     const isolatedRoot = mkdtempSync(join(tmpdir(), "pstdio-api-register-repo-agent-install-test-"));
-    const handle = await createApp({
+    const handle = await createTestApp({
       harnessRegistry: createTestHarnessRegistry([
         createTestHarnessRecord("claude-code", { availability: "INSTALLED" }),
       ]),
-      dbPath: ":memory:",
-      storagePath: join(isolatedRoot, "storage"),
-      filesRoot: resolveTestFilesRoot(),
-      extensionWebviewBuilds: false,
+      databasePath: ":memory:",
+      storageRoot: join(isolatedRoot, "storage"),
+      buildWebviews: false,
     });
 
     try {

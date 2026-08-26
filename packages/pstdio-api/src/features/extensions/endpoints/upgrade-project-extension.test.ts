@@ -2,13 +2,12 @@ import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createApp } from "../../../app";
-import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import { createTestHarnessRegistry } from "../../harnesses/test-harness-registry";
 import { hashExtensionSource, loadExtensionSource } from "../extension-runtime";
 import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
 
-type AppHandle = Awaited<ReturnType<typeof createApp>>;
+type AppHandle = Awaited<ReturnType<typeof createTestApp>>;
 
 let handle: AppHandle;
 let originalDefaultExtensions: string | undefined;
@@ -65,12 +64,11 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
       targetPath: sourcePath,
     })) as never;
 
-    handle = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(tempRoot, "storage"),
-      filesRoot: resolveTestFilesRoot(),
+    handle = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage"),
       harnessRegistry: createTestHarnessRegistry([]),
-      extensionReleaseRef: "pstdio@0.27.0",
+      release: { source: "git", ref: "pstdio@0.27.0" },
       installExtensionSource,
     });
     const project = await createProject();

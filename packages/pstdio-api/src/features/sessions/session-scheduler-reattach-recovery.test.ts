@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
 import type { HarnessContext } from "pstdio-api-contracts/extension-kernel";
-import { createApp } from "../../app";
+import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 
 const OPENCODE_ID = testHarnessId("opencode");
@@ -81,13 +81,12 @@ afterAll(() => {
 describe("session scheduler reattach recovery", () => {
   test("cleans dispatch-started attachment rows after a reattached session completes", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-reattach-attachment-recovery-test-"));
-    const dbPath = join(tempRoot, "db");
-    const storagePath = join(tempRoot, "storage");
-    const firstApp = await createApp({
-      dbPath,
-      storagePath,
-      filesRoot: "",
-      extensionWebviewBuilds: false,
+    const databasePath = join(tempRoot, "db");
+    const storageRoot = join(tempRoot, "storage");
+    const firstApp = await createTestApp({
+      databasePath,
+      storageRoot,
+      buildWebviews: false,
       harnessRegistry: createReattachRegistry(),
     });
     await Bun.sleep(100);
@@ -136,11 +135,10 @@ describe("session scheduler reattach recovery", () => {
       await firstApp.close();
     }
 
-    const recoveredApp = await createApp({
-      dbPath,
-      storagePath,
-      filesRoot: "",
-      extensionWebviewBuilds: false,
+    const recoveredApp = await createTestApp({
+      databasePath,
+      storageRoot,
+      buildWebviews: false,
       harnessRegistry: createReattachRegistry({ reattachCompletes: true }),
     });
 
@@ -169,13 +167,12 @@ describe("session scheduler reattach recovery", () => {
 
   test("cleans dispatch-started attachment rows when reattach fails", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-reattach-failure-cleanup-test-"));
-    const dbPath = join(tempRoot, "db");
-    const storagePath = join(tempRoot, "storage");
-    const firstApp = await createApp({
-      dbPath,
-      storagePath,
-      filesRoot: "",
-      extensionWebviewBuilds: false,
+    const databasePath = join(tempRoot, "db");
+    const storageRoot = join(tempRoot, "storage");
+    const firstApp = await createTestApp({
+      databasePath,
+      storageRoot,
+      buildWebviews: false,
       harnessRegistry: createReattachRegistry(),
     });
     await Bun.sleep(100);
@@ -224,11 +221,10 @@ describe("session scheduler reattach recovery", () => {
       await firstApp.close();
     }
 
-    const recoveredApp = await createApp({
-      dbPath,
-      storagePath,
-      filesRoot: "",
-      extensionWebviewBuilds: false,
+    const recoveredApp = await createTestApp({
+      databasePath,
+      storageRoot,
+      buildWebviews: false,
       harnessRegistry: createReattachRegistry({ reattachFails: true }),
     });
 

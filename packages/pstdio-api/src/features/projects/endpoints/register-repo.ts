@@ -145,7 +145,7 @@ export const registerRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<ty
       await rm(join(pstdioPath, "tickets"), { recursive: true, force: true });
     }
 
-    await bootstrapProjectRepo(path, id, deps.filesRoot);
+    await bootstrapProjectRepo(path, id);
     await installRepoDefaultExtensions({
       repoPath: repo.path,
       defaultExtensions: resolveDefaultExtensionsConfig().defaultExtensions,

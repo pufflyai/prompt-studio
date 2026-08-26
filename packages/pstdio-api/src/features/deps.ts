@@ -40,7 +40,6 @@ export interface ReadinessChecks {
 // and handlers should accept the narrow per-feature deps so adding a service
 // here does not silently widen every feature's surface.
 export interface RouteDeps {
-  filesRoot: string;
   extensionWebviewAccess: ExtensionWebviewAccess;
   readiness: ReadinessChecks;
   closeDb: () => Promise<void>;

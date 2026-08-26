@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -34,10 +34,9 @@ afterEach(() => {
 describe("PATCH /v1/settings queue draining", () => {
   test("starts queued sessions when the concurrency setting is raised", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-settings-drain-queue-test-"));
-    const isolated = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(tempRoot, "storage"),
-      filesRoot: "",
+    const isolated = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage"),
       harnessRegistry: createRegistry(),
     });
 
@@ -88,10 +87,9 @@ describe("PATCH /v1/settings queue draining", () => {
 
   test("drains all queued sessions when concurrency becomes unlimited", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-settings-unlimited-drain-queue-test-"));
-    const isolated = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(tempRoot, "storage"),
-      filesRoot: "",
+    const isolated = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage"),
       harnessRegistry: createRegistry(),
     });
 

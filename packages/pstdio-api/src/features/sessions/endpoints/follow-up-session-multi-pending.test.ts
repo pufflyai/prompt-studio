@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -35,10 +35,9 @@ const resumePrompts = (calls: Array<unknown[]>) =>
 
 const createIsolatedApp = async () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-multi-pending-test-"));
-  const app = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+  const app = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
     harnessRegistry: createTestHarnessRegistry([
       createTestHarnessRecord("fake", {
         provider: { start: startSession, resume: resumeSession, getMessages: () => [] },

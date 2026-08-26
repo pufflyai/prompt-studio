@@ -4,12 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { createApp } from "../../../app";
-import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
 import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
 
-type AppHandle = Awaited<ReturnType<typeof createApp>>;
+type AppHandle = Awaited<ReturnType<typeof createTestApp>>;
 
 let app: OpenAPIHono<AppBindings>;
 let handle: AppHandle;
@@ -24,10 +23,9 @@ beforeEach(async () => {
   process.env.PSTDIO_HOME = join(tempRoot, "home");
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
 
-  handle = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: resolveTestFilesRoot(),
+  handle = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
   });
   app = handle.app;
 });

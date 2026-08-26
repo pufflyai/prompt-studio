@@ -3,12 +3,12 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import { waitForSyncEvent } from "../../../test-utils/wait-for-sync-event";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
-let appHandle: Awaited<ReturnType<typeof createApp>>;
+let appHandle: Awaited<ReturnType<typeof createTestApp>>;
 let tempRoot: string;
 let previousDefaultExtensions: string | undefined;
 let previousLogTargets: string | undefined;
@@ -20,11 +20,10 @@ beforeAll(async () => {
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
   process.env.PSTDIO_LOG_TARGETS = "stdout";
 
-  appHandle = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
-    extensionWebviewBuilds: false,
+  appHandle = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
+    buildWebviews: false,
   });
   app = appHandle.app;
 });

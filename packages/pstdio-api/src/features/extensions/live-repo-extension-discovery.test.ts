@@ -4,14 +4,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { createApp } from "../../app";
-import { resolveTestFilesRoot } from "../../test-utils/resolve-test-files-root";
+import { createTestApp } from "../../test-utils/create-test-app";
 
 // Real end-to-end coverage for live repo-local extension discovery: it boots the actual app
 // (real installed-extension runtime + real `fs.watch`, no fakes), links an empty repo, then adds
 // and edits an extension while the API keeps running — proving discovery without a restart/relink.
 
-type AppHandle = Awaited<ReturnType<typeof createApp>>;
+type AppHandle = Awaited<ReturnType<typeof createTestApp>>;
 
 const tempRoots: string[] = [];
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -102,11 +101,10 @@ describe("live repo-local extension discovery", () => {
     let handle: AppHandle | undefined;
 
     try {
-      handle = await createApp({
-        dbPath: ":memory:",
-        storagePath: join(root, "storage"),
-        filesRoot: resolveTestFilesRoot(),
-        extensionWebviewBuilds: false,
+      handle = await createTestApp({
+        databasePath: ":memory:",
+        storageRoot: join(root, "storage"),
+        buildWebviews: false,
       });
 
       const repoPath = createGitRepo(root, "live-repo");

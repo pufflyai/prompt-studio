@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -28,15 +28,14 @@ const createRegistry = () =>
     }),
   ]);
 
-let handle: Awaited<ReturnType<typeof createApp>>;
+let handle: Awaited<ReturnType<typeof createTestApp>>;
 let tempRoot: string;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-session-queue-draining-test-"));
-  handle = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
+  handle = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
     harnessRegistry: createRegistry(),
   });
 });
@@ -169,10 +168,9 @@ describe("POST /v1/sessions queue draining", () => {
 describe("POST /v1/sessions isolated queue draining", () => {
   test("serializes concurrent follow-ups against the global concurrency limit", async () => {
     const isolatedTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-concurrent-followup-queue-test-"));
-    const isolated = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(isolatedTempRoot, "storage"),
-      filesRoot: "",
+    const isolated = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(isolatedTempRoot, "storage"),
       harnessRegistry: createRegistry(),
     });
 
@@ -232,10 +230,9 @@ describe("POST /v1/sessions isolated queue draining", () => {
 
   test("starts the next queued session when capacity opens", async () => {
     const isolatedTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-drain-session-queue-test-"));
-    const isolated = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(isolatedTempRoot, "storage"),
-      filesRoot: "",
+    const isolated = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(isolatedTempRoot, "storage"),
       harnessRegistry: createRegistry(),
     });
 

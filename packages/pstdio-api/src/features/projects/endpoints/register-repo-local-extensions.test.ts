@@ -4,8 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { createApp } from "../../../app";
-import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
+import { createTestApp } from "../../../test-utils/create-test-app";
 
 const tempRoots: string[] = [];
 
@@ -70,7 +69,7 @@ export default {
   );
 };
 
-const createProject = async (app: Awaited<ReturnType<typeof createApp>>["app"]) => {
+const createProject = async (app: Awaited<ReturnType<typeof createTestApp>>["app"]) => {
   const response = await app.request("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -105,10 +104,9 @@ describe("repo-local default extensions", () => {
       defaultExtensions: [{ source: defaultSourcePath, installName: defaultInstallName, skipInstall: true }],
     });
 
-    const handle = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(root, "storage"),
-      filesRoot: resolveTestFilesRoot(),
+    const handle = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(root, "storage"),
     });
 
     try {

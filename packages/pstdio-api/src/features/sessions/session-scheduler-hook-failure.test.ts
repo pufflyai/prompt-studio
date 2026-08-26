@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
-import { createApp } from "../../app";
+import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { createSessionScheduler } from "./session-scheduler";
 
@@ -24,10 +24,9 @@ afterEach(() => {
 describe("session scheduler pre-start hook failures", () => {
   test("fails the created session without deadlocking the scheduler", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-scheduler-hook-failure-test-"));
-    const handle = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(tempRoot, "storage"),
-      filesRoot: "",
+    const handle = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage"),
       harnessRegistry: createTestHarnessRegistry([
         createTestHarnessRecord("fake", {
           provider: { start: startSession, resume: () => pendingSession(), getMessages: () => [] },

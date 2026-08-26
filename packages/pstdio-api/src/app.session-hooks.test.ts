@@ -3,10 +3,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
-import { createApp } from "./app";
 import { createTestHarnessRegistry } from "./features/harnesses/test-harness-registry";
+import { createTestApp } from "./test-utils/create-test-app";
 
-let handle: Awaited<ReturnType<typeof createApp>>;
+let handle: Awaited<ReturnType<typeof createTestApp>>;
 let tempRoot: string;
 
 const writeSessionHookExtension = () => {
@@ -105,11 +105,10 @@ const waitForStoredEvent = async (extensionInstanceId: string, projectId: string
 
 beforeEach(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-session-hooks-"));
-  handle = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: "",
-    extensionWebviewBuilds: false,
+  handle = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
+    buildWebviews: false,
     harnessRegistry: createTestHarnessRegistry([]),
   });
 });

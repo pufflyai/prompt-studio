@@ -3,14 +3,13 @@ import { mkdtempSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
-import { createApp } from "../../../app";
-import { resolveTestFilesRoot } from "../../../test-utils/resolve-test-files-root";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
 import { createTestHarnessRecord, createTestHarnessRegistry } from "../../harnesses/test-harness-registry";
 import { hashExtensionSource, loadExtensionSource } from "../extension-runtime";
 import { createTestExtensionSource } from "../test-utils/create-test-extension-source";
 
-type AppHandle = Awaited<ReturnType<typeof createApp>>;
+type AppHandle = Awaited<ReturnType<typeof createTestApp>>;
 
 let app: OpenAPIHono<AppBindings>;
 let handle: AppHandle;
@@ -25,10 +24,9 @@ beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-reload-project-extension-test-"));
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
   process.env.PSTDIO_HOME = join(tempRoot, "pstdio-home");
-  handle = await createApp({
-    dbPath: ":memory:",
-    storagePath: join(tempRoot, "storage"),
-    filesRoot: resolveTestFilesRoot(),
+  handle = await createTestApp({
+    databasePath: ":memory:",
+    storageRoot: join(tempRoot, "storage"),
     harnessRegistry: createTestHarnessRegistry([createTestHarnessRecord("claude-code")]),
   });
   app = handle.app;

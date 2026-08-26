@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit } from "pstdio-api-contracts";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -35,7 +35,7 @@ const waitForCall = async (fn: ReturnType<typeof mock>) => {
   throw new Error("Timed out waiting for call");
 };
 
-const waitForAgentSessionId = async (app: Awaited<ReturnType<typeof createApp>>["app"], sessionId: string) => {
+const waitForAgentSessionId = async (app: Awaited<ReturnType<typeof createTestApp>>["app"], sessionId: string) => {
   for (let index = 0; index < 20; index += 1) {
     const res = await app.request(`/v1/sessions/${sessionId}`);
     expect(res.status).toBe(200);
@@ -48,7 +48,7 @@ const waitForAgentSessionId = async (app: Awaited<ReturnType<typeof createApp>>[
 };
 
 const waitForSessionStoreRemoval = (
-  sessionService: Awaited<ReturnType<typeof createApp>>["deps"]["sessionService"],
+  sessionService: Awaited<ReturnType<typeof createTestApp>>["deps"]["sessionService"],
   sessionId: string,
 ) => {
   const { promise, resolve } = Promise.withResolvers<void>();
@@ -78,10 +78,9 @@ describe("PATCH /v1/sessions/:id/status", () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-update-session-status-test-"));
     const { promise: done, resolve: resolveExit } = Promise.withResolvers<HarnessExit>();
     const stop = mock(() => {});
-    const handle = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(tempRoot, "storage"),
-      filesRoot: "",
+    const handle = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage"),
       harnessRegistry: createCancellableRegistry(stop, done),
     });
 
@@ -140,10 +139,9 @@ describe("PATCH /v1/sessions/:id/status", () => {
 
   test("does not emit duplicate activity when status is unchanged", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-update-session-status-noop-test-"));
-    const handle = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(tempRoot, "storage"),
-      filesRoot: "",
+    const handle = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage"),
       harnessRegistry: createTestHarnessRegistry([]),
     });
 
@@ -195,10 +193,9 @@ describe("PATCH /v1/sessions/:id/status", () => {
 
   test("rejects queued status because queue ownership belongs to the scheduler", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-update-session-status-queued-test-"));
-    const handle = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(tempRoot, "storage"),
-      filesRoot: "",
+    const handle = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage"),
       harnessRegistry: createTestHarnessRegistry([]),
     });
 
@@ -232,10 +229,9 @@ describe("PATCH /v1/sessions/:id/status", () => {
 
   test("removes queue entries when queued sessions transition to terminal statuses", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-update-queued-terminal-test-"));
-    const handle = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(tempRoot, "storage"),
-      filesRoot: "",
+    const handle = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage"),
       harnessRegistry: createTestHarnessRegistry([]),
     });
 

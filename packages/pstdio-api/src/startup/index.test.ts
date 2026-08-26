@@ -2,7 +2,7 @@ import { afterAll, afterEach, describe, expect, test } from "bun:test";
 import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { createApp } from "../app";
+import { createTestApp } from "../test-utils/create-test-app";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../../..");
 
@@ -51,10 +51,9 @@ describe("startup default extensions", () => {
       },
     ]);
 
-    const { close } = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(tempRoot, "storage-defaults"),
-      filesRoot: "",
+    const { close } = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage-defaults"),
     });
 
     await close();
@@ -74,10 +73,9 @@ describe("startup default extensions", () => {
     process.env.PSTDIO_DISABLE_EMBED_MANIFEST = "1";
     process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify(["extension-lab"]);
 
-    const { close } = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(tempRoot, "storage-source-refresh"),
-      filesRoot: "",
+    const { close } = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(tempRoot, "storage-source-refresh"),
     });
 
     await close();

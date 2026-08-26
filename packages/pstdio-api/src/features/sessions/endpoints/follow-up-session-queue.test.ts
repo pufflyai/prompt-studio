@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
-import { createApp } from "../../../app";
+import { createTestApp } from "../../../test-utils/create-test-app";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -46,10 +46,9 @@ const resumePrompts = (calls: Array<unknown[]>) =>
 describe("POST /v1/sessions multi-pending follow-ups", () => {
   test("edits, removes, and reorders pending follow-ups", async () => {
     const isolatedTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-queued-followup-actions-test-"));
-    const isolated = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(isolatedTempRoot, "storage"),
-      filesRoot: "",
+    const isolated = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(isolatedTempRoot, "storage"),
       harnessRegistry: createRegistry(),
     });
 
@@ -123,10 +122,9 @@ describe("POST /v1/sessions multi-pending follow-ups", () => {
 
   test("queues multiple follow-ups against an active session and dispatches them FIFO", async () => {
     const isolatedTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-multi-pending-followup-test-"));
-    const isolated = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(isolatedTempRoot, "storage"),
-      filesRoot: "",
+    const isolated = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(isolatedTempRoot, "storage"),
       harnessRegistry: createRegistry(),
     });
 
@@ -188,10 +186,9 @@ describe("POST /v1/sessions multi-pending follow-ups", () => {
 describe("POST /v1/sessions active follow-up cancellation", () => {
   test("cancelling an active session removes pending follow-ups without dispatching", async () => {
     const isolatedTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-active-cancel-followup-test-"));
-    const isolated = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(isolatedTempRoot, "storage"),
-      filesRoot: "",
+    const isolated = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(isolatedTempRoot, "storage"),
       harnessRegistry: createRegistry(),
     });
 
@@ -234,10 +231,9 @@ describe("POST /v1/sessions active follow-up cancellation", () => {
 
   test("cancellation removes a follow-up inserted after cancellation cleanup", async () => {
     const isolatedTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-active-cancel-race-followup-test-"));
-    const isolated = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(isolatedTempRoot, "storage"),
-      filesRoot: "",
+    const isolated = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(isolatedTempRoot, "storage"),
       harnessRegistry: createRegistry(),
     });
 
@@ -295,10 +291,9 @@ describe("POST /v1/sessions active follow-up cancellation", () => {
 describe("POST /v1/sessions follow-up terminal races", () => {
   test("dispatches a pending active follow-up when insert happens before terminal transition", async () => {
     const isolatedTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-insert-first-followup-test-"));
-    const isolated = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(isolatedTempRoot, "storage"),
-      filesRoot: "",
+    const isolated = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(isolatedTempRoot, "storage"),
       harnessRegistry: createRegistry(),
     });
 
@@ -340,10 +335,9 @@ describe("POST /v1/sessions follow-up terminal races", () => {
 
   test("dispatches a follow-up posted after terminal transition without leaving pending work", async () => {
     const isolatedTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-terminal-first-followup-test-"));
-    const isolated = await createApp({
-      dbPath: ":memory:",
-      storagePath: join(isolatedTempRoot, "storage"),
-      filesRoot: "",
+    const isolated = await createTestApp({
+      databasePath: ":memory:",
+      storageRoot: join(isolatedTempRoot, "storage"),
       harnessRegistry: createRegistry(),
     });
 
