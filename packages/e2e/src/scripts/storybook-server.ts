@@ -1,6 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { resolve } from "node:path";
+import { chromium } from "@playwright/test";
 import { stopChildProcess } from "./child-process";
 
 export const STORYBOOK_BOOT_TIMEOUT_MS = 60_000;
@@ -20,7 +21,7 @@ const sharedStorybooks = [
   },
   {
     packageName: "pstdio-workbench",
-    probeStoryId: "pstdio-workbench-examples--workbench-modes",
+    probeStoryId: "pstdio-workbench-examples--dashboard-workbench",
     urlEnvironmentVariable: "E2E_STORYBOOK_WORKBENCH_URL",
   },
 ] as const satisfies ReadonlyArray<{
@@ -73,7 +74,23 @@ const waitForStorybook = async (baseUrl: string, process: ChildProcess, probeSto
     await new Promise((resolveWait) => setTimeout(resolveWait, 500));
   }
 
-  throw new Error("Timed out waiting for Storybook");
+  throw new Error(`Timed out waiting for Storybook story ${probeStoryId}`);
+};
+
+const warmStorybook = async (baseUrl: string, probeStoryId: string) => {
+  const startedAt = Date.now();
+  const remainingTime = () => Math.max(1, STORYBOOK_BOOT_TIMEOUT_MS - (Date.now() - startedAt));
+  const browser = await chromium.launch({ timeout: remainingTime() });
+  try {
+    const page = await browser.newPage();
+    await page.goto(`${baseUrl}/iframe.html?id=${probeStoryId}`, {
+      timeout: remainingTime(),
+      waitUntil: "domcontentloaded",
+    });
+    await page.locator("#storybook-root > *").first().waitFor({ state: "attached", timeout: remainingTime() });
+  } finally {
+    await browser.close();
+  }
 };
 
 export const startStorybookServer = async (probeStoryId: string, packageName: StorybookPackageName = "ui") => {
@@ -109,6 +126,7 @@ export const startStorybookServer = async (probeStoryId: string, packageName: St
 
   try {
     await waitForStorybook(baseUrl, storybook, probeStoryId);
+    await warmStorybook(baseUrl, probeStoryId);
   } catch (error) {
     await stopChildProcess(storybook);
     throw error;

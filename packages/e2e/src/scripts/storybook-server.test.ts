@@ -10,8 +10,8 @@ describe("shared Storybook servers", () => {
 
     const stop = await startSharedStorybooks({
       env,
-      start: async (_probeStoryId, packageName) => {
-        started.push(packageName);
+      start: async (probeStoryId, packageName) => {
+        started.push(`${packageName}:${probeStoryId}`);
         return {
           baseUrl: `http://${packageName}.test`,
           storybook: packageName as unknown as ChildProcess,
@@ -22,7 +22,11 @@ describe("shared Storybook servers", () => {
       },
     });
 
-    expect(started).toEqual(["ui", "pstdio-dashboard", "pstdio-workbench"]);
+    expect(started).toEqual([
+      "ui:patterns-editors-mermaid-renderer--default",
+      "pstdio-dashboard:dashboard-sidenav--workspace-mode",
+      "pstdio-workbench:pstdio-workbench-examples--dashboard-workbench",
+    ]);
     expect(getSharedStorybookBaseUrl("ui", env)).toBe("http://ui.test");
     expect(getSharedStorybookBaseUrl("pstdio-dashboard", env)).toBe("http://pstdio-dashboard.test");
     expect(getSharedStorybookBaseUrl("pstdio-workbench", env)).toBe("http://pstdio-workbench.test");
