@@ -1,46 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { Workspace } from "@pstdio/sdk/resources";
+import { homedir } from "node:os";
 import { mergeWorkspace } from "./merge-workspace";
-
-const providerFields = {
-  provider_id: "pstdio.worktree",
-  provider_params_json: {},
-  provider_ref_json: null,
-  provider_state: "ready" as const,
-  execution_kind: "local" as const,
-  provider_operation_id: null,
-  provider_operation_kind: null,
-  provider_error_json: null,
-  provider_capabilities_json: {
-    files: "write" as const,
-    diff: true,
-    merge: true,
-    rebase: true,
-    archive: true,
-    delete: true,
-  },
-  display_path: null,
-};
-
-const makeWorkspace = (shorthand: string): Workspace => ({
-  id: "ws-1",
-  project_id: "proj-1",
-  name: shorthand,
-  branch: `workspace/${shorthand}`,
-  worktree_path: `~/.pstdio/workspaces/${shorthand}`,
-  is_default: false,
-  archived: false,
-  workspace_shorthand: shorthand,
-  startup_log_file_id: null,
-  anchors_json: [],
-  created_at: "",
-  updated_at: "",
-  deleted_at: null,
-  ...providerFields,
-});
+import { makeWorkspace } from "./workspace.test-fixture";
 
 const baseDeps = {
-  getWorkspace: async () => makeWorkspace("PS-1_A1") as never,
+  getWorkspace: async () => makeWorkspace({ workspace_shorthand: "PS-1_A1" }) as never,
   deleteWorkspace: async () => {},
   isCleanWorkingTree: async () => true,
   squashMerge: async () => {},
@@ -75,7 +39,7 @@ describe("mergeWorkspace", () => {
     expect(fireGitMerged).toHaveBeenCalledWith("proj-1", {
       projectId: "proj-1",
       repoPath: "/repo",
-      worktreePath: "~/.pstdio/workspaces/PS-1_A1",
+      worktreePath: `${homedir()}/.pstdio/workspaces/PS-1_A1`,
       branch: "workspace/PS-1_A1",
       workspace: {
         id: "ws-1",
@@ -83,10 +47,10 @@ describe("mergeWorkspace", () => {
         project_id: "proj-1",
         workspace_shorthand: "PS-1_A1",
         branch: "workspace/PS-1_A1",
-        worktree_path: "~/.pstdio/workspaces/PS-1_A1",
+        worktree_path: `${homedir()}/.pstdio/workspaces/PS-1_A1`,
         anchors_json: [],
-        created_at: "",
-        updated_at: "",
+        created_at: "2026-03-05T00:00:00.000Z",
+        updated_at: "2026-03-05T00:00:00.000Z",
       },
       anchors: [],
     });
@@ -176,5 +140,53 @@ describe("mergeWorkspace", () => {
         { ...baseDeps, getWorkspace: async () => null },
       ),
     ).rejects.toThrow("Workspace not found: PS-1_A99");
+  });
+
+  test("refuses to merge a remote workspace", async () => {
+    const squashMerge = mock(async () => {});
+
+    await expect(
+      mergeWorkspace(
+        { repoRoot: "/repo", projectId: "proj-1", workspaceShorthand: "PS-1_A1" },
+        {
+          ...baseDeps,
+          getWorkspace: async () =>
+            makeWorkspace({
+              execution_kind: "remote",
+              worktree_path: null,
+              provider_capabilities_json: {
+                files: "none",
+                diff: false,
+                merge: false,
+                rebase: false,
+                archive: true,
+                delete: true,
+              },
+            }) as never,
+          squashMerge,
+        },
+      ),
+    ).rejects.toThrow(/cannot be merged/);
+
+    expect(squashMerge).not.toHaveBeenCalled();
+  });
+
+  test("refuses to merge a root checkout", async () => {
+    await expect(
+      mergeWorkspace(
+        { repoRoot: "/repo", projectId: "proj-1", workspaceShorthand: "default" },
+        {
+          ...baseDeps,
+          getWorkspace: async () =>
+            makeWorkspace({
+              workspace_shorthand: "default",
+              provider_id: "pstdio.root",
+              branch: "main",
+              worktree_path: null,
+              is_default: true,
+            }) as never,
+        },
+      ),
+    ).rejects.toThrow(/cannot be merged/);
   });
 });

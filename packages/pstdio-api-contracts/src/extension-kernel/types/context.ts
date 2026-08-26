@@ -11,10 +11,10 @@ import type {
   WorkbenchAttachmentInvocationContext,
 } from "./commands";
 import type { EventDeliveryResult, EventRef } from "./events";
-import type { WorkspaceCapabilities, WorkspaceProviderResult, WorkspaceProviderState } from "./extension";
 import type { JsonObject, MaybePromise, Struct } from "./json";
 import type { RendererContext, RepoContext, ResourceAnchor, ResourceRef } from "./resources";
 import type { SlotInvocationContext } from "./slots";
+import type { ExtensionWorkspacesApi } from "./workspaces";
 
 export interface ExtensionStorageCollectionApi<TItem = unknown> {
   get(id: string): Promise<TItem | undefined>;
@@ -190,46 +190,6 @@ export interface ExtensionSessionsApi {
 export interface ExtensionHarnessInput {
   harnessId: string;
   model?: string;
-}
-
-export interface ExtensionWorkspace {
-  id: string;
-  name?: string;
-  project_id?: string;
-  workspace_shorthand?: string;
-  branch?: string | null;
-  worktree_path?: string | null;
-  provider_id?: string;
-  provider_state?: WorkspaceProviderState;
-  execution_kind?: "local" | "remote";
-  display_path?: string | null;
-  provider_capabilities_json?: WorkspaceCapabilities;
-  anchors_json?: ResourceAnchor[];
-  initializing?: boolean;
-  created_at?: string;
-  updated_at?: string;
-}
-
-export interface CreateExtensionWorkspaceInput {
-  project_id?: string;
-  shorthand_base: string;
-  provider_id?: string;
-  params?: JsonObject;
-  anchors?: ResourceAnchor[];
-  mode?: "worktree" | "current_branch";
-  repo_id?: string;
-  base?: string;
-}
-
-export interface ExtensionWorkspacesApi {
-  list(): Promise<ExtensionWorkspace[]>;
-  get(id: string): Promise<ExtensionWorkspace | null>;
-  getByShorthand(shorthand: string): Promise<ExtensionWorkspace | null>;
-  create(input: CreateExtensionWorkspaceInput): Promise<ExtensionWorkspace>;
-  resolve(id: string): Promise<WorkspaceProviderResult>;
-  cancel(id: string): Promise<ExtensionWorkspace>;
-  archive(id: string): Promise<ExtensionWorkspace>;
-  delete(id: string): Promise<void>;
 }
 
 export interface ExtensionReposApi {

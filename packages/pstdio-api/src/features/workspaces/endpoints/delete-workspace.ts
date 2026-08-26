@@ -48,6 +48,9 @@ export const deleteWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
     if (workspace?.is_default) {
       return c.json({ error: "Default workspace cannot be deleted." }, 409);
     }
+    if (workspace && !workspace.provider_capabilities_json.delete) {
+      return c.json({ error: "Workspace provider does not allow deletion." }, 409);
+    }
 
     // The provider must release its backing resource before the row disappears;
     // a failed provider delete keeps the row so the operation can be retried.

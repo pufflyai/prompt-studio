@@ -1,8 +1,8 @@
 import { eventRef } from "./refs";
 import { defineSlot } from "./slots";
-import type { ExtensionWorkspace } from "./types/context";
 import type { Struct } from "./types/json";
 import type { ResourceAnchor } from "./types/resources";
+import type { ExtensionWorkspace } from "./types/workspaces";
 
 const hostEventRef = <TPayload extends Struct>(id: string) => eventRef<TPayload>({ extensionId: "pstdio", id });
 

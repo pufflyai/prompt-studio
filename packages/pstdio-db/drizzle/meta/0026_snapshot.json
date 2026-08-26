@@ -1,5 +1,5 @@
 {
-  "id": "214dc1ec-0435-4bd5-a901-89fd42056d30",
+  "id": "9188d955-7ec3-4bbb-95d1-261989a6f175",
   "prevId": "322b3567-2c4f-4365-bc53-40e4452b4e67",
   "version": "7",
   "dialect": "postgresql",
@@ -2751,7 +2751,7 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "default": "'pstdio.worktree'"
+          "default": "'pstdio.root'"
         },
         "provider_params_json": {
           "name": "provider_params_json",

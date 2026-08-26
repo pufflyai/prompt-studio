@@ -1,6 +1,8 @@
 import type { runWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
+import type { deleteProviderBackedWorkspace } from "../../workspaces/workspace-provider-lifecycle";
 import type { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
 import type { ExtensionsRouteDeps } from "../deps";
+import type { fireExtensionEventAsync } from "../extension-event-runtime";
 
 export type EnabledSource = Awaited<
   ReturnType<ExtensionsRouteDeps["extensionService"]["listEnabledSourcesForProject"]>
@@ -9,6 +11,8 @@ export type EnabledSource = Awaited<
 export type CommandEnvironmentRuntimeDeps = {
   setupWorkspaceWorktree: typeof setupWorkspaceWorktree;
   runWorkspaceProvisioning: typeof runWorkspaceProvisioning;
+  deleteProviderBackedWorkspace?: typeof deleteProviderBackedWorkspace;
+  fireExtensionEventAsync?: typeof fireExtensionEventAsync;
 };
 
 export const findEnabledSource = (enabledSources: EnabledSource[], extensionId: string) =>

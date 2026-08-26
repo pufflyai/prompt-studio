@@ -123,7 +123,7 @@ export const createAnchoredWorkspace = async (
     project_id: ctx.projectId,
     shorthand_base: shorthand,
     anchors: [anchor],
-    mode: attemptMode,
+    provider_id: attemptMode === "current_branch" ? "pstdio.root" : "pstdio.worktree",
     ...(repo ? { repo_id: repo.repoId } : {}),
     ...((base ?? repo?.branch) ? { base: base ?? repo?.branch } : {}),
   });

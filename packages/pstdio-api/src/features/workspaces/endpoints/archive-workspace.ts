@@ -46,10 +46,18 @@ export const archiveWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHand
     if (workspace.archived) {
       return c.json({ error: `Workspace already archived: ${id}` }, 409);
     }
+    if (!workspace.provider_capabilities_json.archive) {
+      return c.json({ error: "Workspace provider does not allow archiving." }, 409);
+    }
 
     const updated = await archiveWorkspaceCascade(deps, workspace);
     if (!updated) {
       return c.json({ error: `Workspace not found: ${id}` }, 404);
+    }
+
+    if (!updated.archived) {
+      const message = updated.provider_error_json?.message ?? `Workspace archive is ${updated.provider_state}.`;
+      return c.json({ error: message }, 409);
     }
 
     await emitActivityEvent(deps, {

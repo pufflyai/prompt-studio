@@ -144,7 +144,7 @@ describe("repo-local default extensions", () => {
       const workspaceResponse = await handle.app.request("/v1/workspaces", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ project_id: project.id, repo_id: repo.id, type: "worktree" }),
+        body: JSON.stringify({ project_id: project.id, repo_id: repo.id }),
       });
       expect(workspaceResponse.status).toBe(201);
       const workspace = (await workspaceResponse.json()) as { worktree_path: string };

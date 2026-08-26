@@ -1,41 +1,48 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
-import { createProviderBackedWorkspace } from "./workspace-provider-service";
+import { makeWorkspace, remoteWorkspaceCapabilities } from "./workspace-provider.test-fixture";
+import {
+  createProviderBackedWorkspace,
+  normalizeResult,
+  resolveWorkspaceExecutionTarget,
+} from "./workspace-provider-service";
 
-const makeWorkspace = (id: string) => ({
-  id,
-  project_id: "project-1",
-  name: "WS-1",
-  branch: null,
-  worktree_path: null,
-  provider_id: "pocketcoder.remote",
-  provider_params_json: {},
-  provider_ref_json: null,
-  provider_state: "provisioning" as const,
-  execution_kind: "remote" as const,
-  provider_operation_id: null,
-  provider_operation_kind: null,
-  provider_error_json: null,
-  provider_capabilities_json: {
-    files: "none" as const,
-    diff: false,
-    merge: false,
-    rebase: false,
-    archive: true,
-    delete: true,
-  },
-  display_path: null,
-  is_default: false,
-  archived: false,
-  workspace_shorthand: "WS-1",
-  initializing: false,
-  setup_error: null,
-  startup_log_file_id: null,
-  anchors_json: [],
-  created_at: "2026-08-26T00:00:00.000Z",
-  updated_at: "2026-08-26T00:00:00.000Z",
-  deleted_at: null,
-});
+const makeCreateDeps = (provider: Record<string, unknown>) => {
+  let workspace = makeWorkspace({
+    provider_ref_json: null,
+    provider_state: "provisioning",
+    provider_operation_id: "op-create-1",
+    provider_operation_kind: "create",
+  });
+  const createStandalone = mock(async (input: Record<string, unknown>) => {
+    workspace = { ...workspace, ...input };
+    return workspace;
+  });
+  const updateProviderProjection = mock(async (_id: string, patch: Record<string, unknown>) => {
+    workspace = { ...workspace, ...patch };
+    return workspace;
+  });
+
+  return {
+    deps: {
+      workspaceService: { createStandalone, updateProviderProjection },
+      workspaceProviderRuntime: {
+        find: async () => ({ context: {} as never, provider: provider as never }),
+      },
+      extensionRuntimeCatalog: {
+        get: async () => ({
+          project: { id: "project-1", name: "Project", shorthand: "PS" },
+          enabledSources: [],
+          runtime: {
+            workspaceTypes: [{ id: "pocketcoder.remote", extensionId: "pocketcoder", name: "remote", provider }],
+          },
+        }),
+      },
+    } as never,
+    createStandalone,
+    updateProviderProjection,
+  };
+};
 
 describe("createProviderBackedWorkspace", () => {
   test("stores a remote provider result without a worktree path", async () => {
@@ -59,38 +66,17 @@ describe("createProviderBackedWorkspace", () => {
         delete: true,
       },
     };
-    const create = mock(async () => makeWorkspace("ws-1"));
-    const updateProviderProjection = mock(async (_id: string, patch: Record<string, unknown>) => ({
-      ...makeWorkspace("ws-1"),
-      ...patch,
-    }));
+    const { deps, updateProviderProjection } = makeCreateDeps({
+      create: mock(async () => providerResult),
+      resolve: mock(async () => providerResult),
+    });
 
-    const workspace = await createProviderBackedWorkspace(
-      {
-        workspaceService: {
-          createStandalone: create,
-          updateProviderProjection,
-        },
-        extensionRuntimeCatalog: {
-          get: async () => ({
-            runtime: {
-              workspaceTypes: [
-                {
-                  id: "pocketcoder.remote",
-                  provider: { create: mock(async () => providerResult), resolve: mock(async () => providerResult) },
-                },
-              ],
-            },
-          }),
-        },
-      } as never,
-      {
-        projectId: "project-1",
-        providerId: "pocketcoder.remote",
-        params: { repository: "repo" },
-        standalone: true,
-      },
-    );
+    const workspace = await createProviderBackedWorkspace(deps, {
+      projectId: "project-1",
+      providerId: "pocketcoder.remote",
+      params: { repository: "repo" },
+      standalone: true,
+    });
 
     expect(workspace.execution_kind).toBe("remote");
     expect(workspace.worktree_path).toBeNull();
@@ -103,5 +89,112 @@ describe("createProviderBackedWorkspace", () => {
         display_path: "Pocket Coder remote-1",
       }),
     );
+  });
+
+  test("keeps retry metadata when provider create throws", async () => {
+    const { deps, createStandalone, updateProviderProjection } = makeCreateDeps({
+      create: mock(async () => {
+        throw new Error("remote API unavailable");
+      }),
+      resolve: mock(async () => {
+        throw new Error("unused");
+      }),
+    });
+
+    const workspace = await createProviderBackedWorkspace(deps, {
+      projectId: "project-1",
+      providerId: "pocketcoder.remote",
+      standalone: true,
+    });
+
+    expect(workspace.provider_state).toBe("failed");
+    expect(updateProviderProjection.mock.calls.at(-1)?.[1]).toMatchObject({
+      provider_operation_id: createStandalone.mock.calls[0]?.[0].provider_operation_id,
+      provider_operation_kind: "create",
+      provider_error_json: { retryable: true },
+    });
+  });
+
+  test("keeps the create operation when an async provider has no reference yet", async () => {
+    const result: WorkspaceProviderResult = {
+      state: "provisioning",
+      executionKind: "remote",
+      capabilities: remoteWorkspaceCapabilities,
+    };
+    const { deps, createStandalone, updateProviderProjection } = makeCreateDeps({
+      create: mock(async () => result),
+      resolve: mock(async () => result),
+    });
+
+    const workspace = await createProviderBackedWorkspace(deps, {
+      projectId: "project-1",
+      providerId: "pocketcoder.remote",
+      standalone: true,
+    });
+
+    expect(updateProviderProjection.mock.calls.at(-1)?.[1]).not.toHaveProperty("provider_operation_id");
+    expect(workspace).toMatchObject({
+      provider_operation_id: createStandalone.mock.calls[0]?.[0].provider_operation_id,
+      provider_operation_kind: "create",
+      provider_state: "provisioning",
+    });
+  });
+});
+
+describe("normalizeResult", () => {
+  test("reads branch from the declared result field and leaves opaque provider refs alone", () => {
+    const normalized = normalizeResult("pocketcoder.remote", {
+      branch: "remote/WS-1",
+      providerRef: {
+        version: 1,
+        data: { branch: "provider-owned-value", page_token: "next-page", client_credential_id: "public-id" },
+      },
+      state: "ready",
+      executionKind: "remote",
+      capabilities: remoteWorkspaceCapabilities,
+    });
+
+    expect(normalized.branch).toBe("remote/WS-1");
+    expect(normalized.provider_ref_json).toEqual({
+      version: 1,
+      data: { branch: "provider-owned-value", page_token: "next-page", client_credential_id: "public-id" },
+    });
+    expect(normalized.provider_state).toBe("ready");
+  });
+
+  test("handles cyclic provider values without overflowing", () => {
+    const data: Record<string, unknown> = {};
+    data.self = data;
+
+    expect(() =>
+      normalizeResult("pocketcoder.remote", {
+        providerRef: { version: 1, data: data as never },
+        state: "ready",
+        executionKind: "remote",
+        capabilities: remoteWorkspaceCapabilities,
+      }),
+    ).not.toThrow();
+  });
+});
+
+describe("resolveWorkspaceExecutionTarget", () => {
+  test("does not fall back to a project repository for remote workspaces", async () => {
+    const result = await resolveWorkspaceExecutionTarget(
+      {
+        workspaceService: {
+          get: async () =>
+            makeWorkspace({
+              id: "ws-remote",
+              provider_state: "ready",
+              execution_kind: "remote",
+              worktree_path: null,
+            }),
+        },
+        repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] },
+      } as never,
+      "ws-remote",
+    );
+
+    expect(result).toBeUndefined();
   });
 });

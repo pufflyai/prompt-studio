@@ -9,14 +9,12 @@ export const builder = (yargs: Argv) =>
   yargs
     .option("base", { type: "string", describe: "Base branch/ref. Defaults to HEAD" })
     .option("provider", { type: "string", describe: "Workspace provider ID. Defaults to pstdio.worktree" })
-    .option("params", { type: "string", describe: "Provider parameters as a JSON object" })
-    .option("target", { type: "string", default: "worktree", describe: "Workspace target (only 'worktree')" });
+    .option("params", { type: "string", describe: "Provider parameters as a JSON object" });
 
 type CreateArgs = {
   base?: string;
   provider?: string;
   params?: string;
-  target: string;
 };
 
 type Deps = {
@@ -47,10 +45,6 @@ const parseParams = (raw?: string) => {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<CreateArgs>) => {
-    if (argv.target !== "worktree") {
-      throw new Error(`Invalid target: ${argv.target}. Must be 'worktree'.`);
-    }
-
     const root = deps.findGitRoot(deps.cwd());
     if (!root) throw new Error("Not inside a git repository.");
 

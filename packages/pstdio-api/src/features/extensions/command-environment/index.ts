@@ -22,7 +22,7 @@ import { createReposApi, resolveRegisteredRepoPath } from "./repos";
 import { createSessionsApi } from "./sessions";
 import { createSettingsApi } from "./settings";
 import { createStorageApi } from "./storage";
-import { type EnabledSource, findEnabledSource } from "./types";
+import { type CommandEnvironmentRuntimeDeps, type EnabledSource, findEnabledSource } from "./types";
 import { createWorkspacesApi } from "./workspaces";
 
 export const createCommandEnvironment = (
@@ -39,7 +39,7 @@ export const createCommandEnvironment = (
     workspaceDir?: string;
     workspaceId?: string;
   },
-  runtimeDeps = { setupWorkspaceWorktree, runWorkspaceProvisioning },
+  runtimeDeps: CommandEnvironmentRuntimeDeps = { setupWorkspaceWorktree, runWorkspaceProvisioning },
 ): CommandRunnerEnvironment => {
   const enabledSource = findEnabledSource(enabledSources, input.extensionId);
   if (!enabledSource) throw new Error(`Enabled extension instance not found: ${input.extensionId}`);

@@ -31,6 +31,15 @@ export type WorkspaceCapabilities = {
   delete: boolean;
 };
 
+export const defaultLocalWorkspaceCapabilities: WorkspaceCapabilities = {
+  files: "write",
+  diff: true,
+  merge: true,
+  rebase: true,
+  archive: true,
+  delete: true,
+};
+
 export type WorkspaceProviderError = {
   code: string;
   message: string;
@@ -48,7 +57,9 @@ export const workspaces = pgTable(
     name: text("name").notNull(),
     branch: text("branch"),
     worktree_path: text("worktree_path"),
-    provider_id: text("provider_id").notNull().default("pstdio.worktree"),
+    // An unspecified workspace is a root checkout. Isolated worktrees are created only through
+    // the provider flow, which always writes pstdio.worktree explicitly.
+    provider_id: text("provider_id").notNull().default("pstdio.root"),
     provider_params_json: jsonb("provider_params_json").$type<JsonObject>().notNull().default({}),
     provider_ref_json: jsonb("provider_ref_json").$type<WorkspaceProviderRef>(),
     provider_state: text("provider_state").$type<WorkspaceProviderState>().notNull().default("ready"),
@@ -59,7 +70,7 @@ export const workspaces = pgTable(
     provider_capabilities_json: jsonb("provider_capabilities_json")
       .$type<WorkspaceCapabilities>()
       .notNull()
-      .default({ files: "write", diff: true, merge: true, rebase: true, archive: true, delete: true }),
+      .default(defaultLocalWorkspaceCapabilities),
     display_path: text("display_path"),
     // Marks the auto-created workspace that targets the project's root repo on
     // its current branch (no isolated worktree). At most one per project.

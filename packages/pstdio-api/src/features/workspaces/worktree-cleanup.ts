@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { removeWorktreeAndBranch } from "pstdio-wt";
 import type { WorkspacesRouteDeps } from "./deps";
 
@@ -16,6 +17,7 @@ export const cleanupWorkspaceWorktree = async (
 
   const repos = await deps.repoService.listByProject(workspace.project_id);
   if (repos.length === 0) return false;
+  if (repos.some((repo) => resolve(repo.path) === resolve(workspace.worktree_path!))) return false;
 
   const branch = workspace.branch ?? `workspace/${workspace.workspace_shorthand}`;
 

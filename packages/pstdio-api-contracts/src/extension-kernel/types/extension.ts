@@ -99,6 +99,8 @@ export interface WorkspaceCapabilities {
 
 export interface WorkspaceProviderResult {
   providerRef?: WorkspaceProviderRef;
+  /** Git branch exposed to host merge and diff features. Provider refs stay opaque. */
+  branch?: string;
   state: WorkspaceProviderState;
   executionKind: "local" | "remote";
   executionTarget?: WorkspaceExecutionTarget;

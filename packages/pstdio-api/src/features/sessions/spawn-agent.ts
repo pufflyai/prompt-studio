@@ -76,6 +76,13 @@ const ensureWorkspaceReady = async (deps: SpawnDeps, sessionId: string) => {
   if (workspace?.setup_error) {
     throw new Error(`Workspace ${workspace.id} failed to provision: ${workspace.setup_error}`);
   }
+  if (workspace?.provider_state && workspace.provider_state !== "ready") {
+    const message = workspace.provider_error_json?.message ?? `provider state is ${workspace.provider_state}`;
+    throw new Error(`Workspace ${workspace.id} is not ready: ${message}`);
+  }
+  if (workspace?.execution_kind === "remote") {
+    throw new Error(`Workspace ${workspace.id} cannot run a local harness session.`);
+  }
 };
 
 // Spawns a new harness session and tracks its lifecycle

@@ -1,15 +1,21 @@
 import { z } from "zod";
 import { listActivityInputSchema, listActivityResponseSchema } from "./activity";
+import type {
+  WorkspaceCapabilities,
+  WorkspaceProviderRef,
+  WorkspaceProviderState,
+} from "./extension-kernel/types/extension";
 import { extensionResourceRefSchema } from "./extensions";
+import { jsonObjectSchema } from "./extensions/common";
 
-const jsonObjectSchema: z.ZodType<Record<string, unknown>> = z.record(z.string(), z.unknown());
-
-export const workspaceProviderRefSchema = z.object({
+const workspaceProviderRefShape = {
   version: z.number().int().positive(),
   data: jsonObjectSchema,
-});
+} satisfies Record<keyof WorkspaceProviderRef, z.ZodType>;
 
-export const workspaceProviderStateSchema = z.enum([
+export const workspaceProviderRefSchema = z.object(workspaceProviderRefShape);
+
+const workspaceProviderStates = [
   "provisioning",
   "ready",
   "failed",
@@ -18,11 +24,13 @@ export const workspaceProviderStateSchema = z.enum([
   "archived",
   "deleting",
   "provider_missing",
-]);
+] as const satisfies readonly WorkspaceProviderState[];
+
+export const workspaceProviderStateSchema: z.ZodType<WorkspaceProviderState> = z.enum(workspaceProviderStates);
 
 export const workspaceExecutionKindSchema = z.enum(["local", "remote"]);
 
-export const workspaceCapabilitiesSchema = z.object({
+export const workspaceCapabilitiesSchema: z.ZodType<WorkspaceCapabilities> = z.object({
   files: z.enum(["none", "read", "write"]),
   diff: z.boolean(),
   merge: z.boolean(),
@@ -70,8 +78,6 @@ export const workspaceListItemSchema = workspaceSchema;
 
 export const createWorkspaceInputSchema = z.object({
   project_id: z.string().min(1),
-  /** Built-in compatibility target. Prefer provider_id and params for new callers. */
-  type: z.enum(["worktree", "current_branch"]).optional(),
   /** Workspace provider. Defaults to pstdio.worktree. */
   provider_id: z.string().optional(),
   /** Provider parameters. Built-in worktree accepts repo_id and base. */

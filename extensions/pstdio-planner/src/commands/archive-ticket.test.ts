@@ -68,6 +68,7 @@ describe("archive ticket", () => {
             list: async () => workspaces,
             archive: async (id: string) => {
               archived.push(id);
+              return workspaces.find((workspace) => workspace.id === id)!;
             },
           },
         },
@@ -101,6 +102,7 @@ describe("archive ticket", () => {
                 archiveStarted.resolve();
                 await cascadeSettled.promise;
                 archived.push(id);
+                return workspaces.find((workspace) => workspace.id === id)!;
               },
             },
           },
@@ -146,6 +148,7 @@ describe("archive ticket", () => {
             list: async () => workspaces,
             archive: async (id: string) => {
               archived.push(id);
+              return workspaces.find((workspace) => workspace.id === id)!;
             },
           },
         },
@@ -179,6 +182,7 @@ describe("archive ticket", () => {
               archive: async () => {
                 archiveStarted.resolve();
                 await cascadeSettled.promise;
+                return workspaces[0]!;
               },
             },
           },

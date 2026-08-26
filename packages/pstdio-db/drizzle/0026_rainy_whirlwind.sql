@@ -1,4 +1,4 @@
-ALTER TABLE "workspaces" ADD COLUMN "provider_id" text DEFAULT 'pstdio.worktree' NOT NULL;--> statement-breakpoint
+ALTER TABLE "workspaces" ADD COLUMN "provider_id" text DEFAULT 'pstdio.root' NOT NULL;--> statement-breakpoint
 ALTER TABLE "workspaces" ADD COLUMN "provider_params_json" jsonb DEFAULT '{}'::jsonb NOT NULL;--> statement-breakpoint
 ALTER TABLE "workspaces" ADD COLUMN "provider_ref_json" jsonb;--> statement-breakpoint
 ALTER TABLE "workspaces" ADD COLUMN "provider_state" text DEFAULT 'ready' NOT NULL;--> statement-breakpoint

@@ -422,7 +422,7 @@ describe("createCommandEnvironment workspaces", () => {
 
     const workspace = await env.workspaces.create({
       shorthand_base: "T-1",
-      mode: "current_branch",
+      provider_id: "pstdio.root",
       anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
     });
 
@@ -466,6 +466,52 @@ describe("createCommandEnvironment workspaces", () => {
     });
   });
 
+  test("resolves a ref-less default workspace as a local execution target", async () => {
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] },
+        workspaceService: {
+          get: async () => ({
+            id: "default",
+            project_id: "project-1",
+            provider_id: "pstdio.root",
+            provider_ref_json: null,
+            provider_state: "ready",
+            execution_kind: "local",
+            worktree_path: null,
+            display_path: null,
+            provider_capabilities_json: {
+              files: "write",
+              diff: true,
+              merge: true,
+              rebase: true,
+              archive: true,
+              delete: true,
+            },
+            provider_error_json: null,
+            is_default: true,
+          }),
+        },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+      },
+    );
+
+    await expect(env.workspaces.resolve("default")).resolves.toMatchObject({
+      state: "ready",
+      executionKind: "local",
+      executionTarget: { kind: "local", rootPath: "/repo" },
+    });
+  });
+});
+
+describe("createCommandEnvironment workspace lifecycle", () => {
   test("archive cascades to the workspace's active sessions", async () => {
     const archivedWorkspaces: string[] = [];
     const archivedSessions: string[] = [];
@@ -529,6 +575,54 @@ describe("createCommandEnvironment workspaces", () => {
 
     expect(archivedWorkspaces).toEqual(["ws-1"]);
     expect(archivedSessions).toEqual(["session-1"]);
+  });
+
+  test("fires worktree.removed after extension-initiated deletion", async () => {
+    const softDelete = mock(async () => {});
+    const remove = mock(async () => true);
+    const fireRemoved = mock(() => {});
+    const workspace = {
+      id: "ws-1",
+      project_id: "project-1",
+      workspace_shorthand: "T-1_A1",
+      anchors_json: [],
+      branch: "workspace/T-1_A1",
+      worktree_path: "/repo/.worktrees/T-1_A1",
+      provider_id: "pstdio.worktree",
+      provider_ref_json: null,
+      provider_state: "ready",
+      execution_kind: "local",
+    };
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        workspaceService: { get: async () => workspace, softDelete },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+      },
+      {
+        deleteProviderBackedWorkspace: remove as never,
+        fireExtensionEventAsync: fireRemoved as never,
+        runWorkspaceProvisioning: async (_deps, input) => input.workspace,
+        setupWorkspaceWorktree: async () => ({ branch: "unused", worktreePath: "/unused" }),
+      },
+    );
+
+    await env.workspaces.delete("ws-1");
+
+    expect(remove).toHaveBeenCalledTimes(1);
+    expect(softDelete).toHaveBeenCalledWith("ws-1");
+    expect(fireRemoved).toHaveBeenCalledWith(
+      expect.anything(),
+      "project-1",
+      expect.objectContaining({ id: "worktree.removed" }),
+      expect.objectContaining({ workspaceId: "ws-1", worktreePath: workspace.worktree_path }),
+    );
   });
 
   test("does not expose legacy ticket helpers", async () => {
@@ -891,7 +985,6 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
 
     await env.workspaces.create({
       shorthand_base: "T-1",
-      mode: "worktree",
       anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
     });
 

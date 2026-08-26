@@ -3,12 +3,19 @@ import type {
   WorkspaceCapabilities,
   WorkspaceProviderRef,
   WorkspaceProviderResult,
-  WorkspaceTypeProvider,
 } from "pstdio-api-contracts/extension-kernel";
+import { defaultLocalWorkspaceCapabilities } from "pstdio-db";
 import type { WorkspacesRouteDeps } from "./deps";
+import {
+  failedOperationPatch,
+  missingProviderPatch,
+  operationSettlementPatch,
+  providerError,
+  resultError,
+  type WorkspaceRecord,
+} from "./workspace-provider-projection";
+import { findWorkspaceProvider, runWorkspaceProviderCall } from "./workspace-provider-runtime";
 import { setupWorkspaceWorktree } from "./worktree-setup";
-
-type WorkspaceRecord = NonNullable<Awaited<ReturnType<WorkspacesRouteDeps["workspaceService"]["get"]>>>;
 
 export const rootProviderId = "pstdio.root";
 export const worktreeProviderId = "pstdio.worktree";
@@ -16,35 +23,38 @@ export const worktreeProviderId = "pstdio.worktree";
 export const isBuiltInProviderId = (providerId: string) =>
   providerId === rootProviderId || providerId === worktreeProviderId;
 
-export const localWorkspaceCapabilities: WorkspaceCapabilities = {
-  files: "write",
-  diff: true,
-  merge: true,
-  rebase: true,
-  archive: true,
-  delete: true,
-};
-
-export const remoteReadOnlyCapabilities: WorkspaceCapabilities = {
+export const remoteReadOnlyCapabilities = {
   files: "none",
   diff: false,
   merge: false,
   rebase: false,
   archive: true,
   delete: true,
-};
+} satisfies WorkspaceCapabilities;
 
 const asString = (value: unknown) => (typeof value === "string" && value.trim() ? value : undefined);
 
-const containsSecretLikeKey = (value: unknown): boolean => {
-  if (!value || typeof value !== "object") return false;
+const secretKeyPattern =
+  /^(?:access[_-]?token|auth[_-]?token|api[_-]?key|secret|password|credential|private[_-]?key)$/i;
+const MAX_PROVIDER_VALUE_DEPTH = 32;
 
-  for (const [key, child] of Object.entries(value)) {
-    if (/token|secret|password|credential|private[_-]?key/i.test(key)) return true;
-    if (containsSecretLikeKey(child)) return true;
+const inspectProviderValue = (root: unknown) => {
+  const seen = new WeakSet<object>();
+  const pending = [{ value: root, depth: 0 }];
+
+  while (pending.length > 0) {
+    const entry = pending.pop()!;
+    if (!entry.value || typeof entry.value !== "object") continue;
+    if (entry.depth > MAX_PROVIDER_VALUE_DEPTH || seen.has(entry.value)) return "invalid" as const;
+    seen.add(entry.value);
+
+    for (const [key, child] of Object.entries(entry.value)) {
+      if (secretKeyPattern.test(key)) return "secret" as const;
+      pending.push({ value: child, depth: entry.depth + 1 });
+    }
   }
 
-  return false;
+  return null;
 };
 
 const safeProviderRef = (providerId: string, data: JsonObject): WorkspaceProviderRef => ({
@@ -52,49 +62,59 @@ const safeProviderRef = (providerId: string, data: JsonObject): WorkspaceProvide
   data: { providerId, ...data },
 });
 
-const providerError = (error: WorkspaceProviderResult["error"]) =>
-  error
-    ? {
-        code: error.code,
-        message: error.message,
-        retryable: error.retryable,
-        occurred_at: new Date().toISOString(),
-      }
-    : null;
-
-export const normalizeResult = (providerId: string, result: WorkspaceProviderResult) => {
-  if (containsSecretLikeKey(result.providerRef) || containsSecretLikeKey(result.error)) {
+export const normalizeResult = (
+  providerId: string,
+  result: WorkspaceProviderResult,
+  options: { providerRef?: WorkspaceProviderRef | null } = {},
+) => {
+  const inspection = inspectProviderValue(result.providerRef) ?? inspectProviderValue(result.error);
+  if (inspection) {
     return {
-      provider_ref_json: null,
       provider_state: "failed" as const,
       execution_kind: result.executionKind,
       worktree_path: null,
-      provider_error_json: {
-        code: "provider_result_contains_secret",
-        message: "Provider result contains secret-like fields.",
-        retryable: false,
-        occurred_at: new Date().toISOString(),
-      },
+      provider_error_json: providerError(
+        inspection === "secret"
+          ? {
+              code: "provider_result_contains_secret",
+              message: "Provider result contains secret fields.",
+              retryable: false,
+            }
+          : {
+              code: "provider_result_invalid",
+              message: "Provider result is cyclic or exceeds the supported depth.",
+              retryable: false,
+            },
+      ),
       provider_capabilities_json: remoteReadOnlyCapabilities,
       display_path: null,
+      provider_operation_id: null,
+      provider_operation_kind: null,
     };
   }
 
   const target = result.executionTarget;
   const localRoot = target?.kind === "local" ? target.rootPath : null;
-  const branch = typeof result.providerRef?.data.branch === "string" ? result.providerRef.data.branch : undefined;
+  const providerRef = result.providerRef ?? (target?.kind === "remote" ? target.providerRef : options.providerRef);
   return {
-    branch,
-    provider_ref_json: result.providerRef ?? (target?.kind === "remote" ? target.providerRef : null),
+    ...(result.branch !== undefined ? { branch: result.branch } : {}),
+    ...(providerRef ? { provider_ref_json: providerRef } : {}),
     provider_state: result.state,
     execution_kind: result.executionKind,
-    worktree_path: localRoot,
-    provider_error_json: providerError(result.error),
+    ...(target ? { worktree_path: localRoot } : {}),
+    provider_error_json: resultError(result.error),
     provider_capabilities_json: result.capabilities,
-    display_path:
-      result.displayPath ??
-      target?.displayPath ??
-      (target?.kind === "remote" ? `${providerId} remote workspace` : localRoot),
+    ...((result.displayPath ??
+    target?.displayPath ??
+    (target?.kind === "remote" ? `${providerId} remote workspace` : localRoot))
+      ? {
+          display_path:
+            result.displayPath ??
+            target?.displayPath ??
+            (target?.kind === "remote" ? `${providerId} remote workspace` : localRoot),
+        }
+      : {}),
+    ...operationSettlementPatch(result),
   };
 };
 
@@ -105,21 +125,23 @@ const resolveRepo = async (deps: WorkspacesRouteDeps, projectId: string, repoId?
   return repos[0] ?? null;
 };
 
-const builtInCreate = async (
-  deps: WorkspacesRouteDeps,
-  input: {
-    providerId: string;
-    projectId: string;
-    workspace: WorkspaceRecord;
-    params: JsonObject;
-    setupWorktree: typeof setupWorkspaceWorktree;
-  },
-): Promise<WorkspaceProviderResult> => {
-  const repoId = asString(input.params.repo_id);
-  const repo = await resolveRepo(deps, input.projectId, repoId);
-  if (!repo) {
-    throw new Error(`No repository found for project ${input.projectId}`);
-  }
+export class WorkspaceRepoNotFoundError extends Error {}
+
+export const mergeProviderParams = (input: { params?: JsonObject; repoId?: string; base?: string }) => ({
+  ...(input.params ?? {}),
+  ...(input.repoId ? { repo_id: input.repoId } : {}),
+  ...(input.base ? { base: input.base } : {}),
+});
+
+const builtInCreate = async (input: {
+  providerId: string;
+  projectId: string;
+  workspace: WorkspaceRecord;
+  params: JsonObject;
+  repo: { id: string; path: string };
+  setupWorktree: typeof setupWorkspaceWorktree;
+}): Promise<WorkspaceProviderResult> => {
+  const { repo } = input;
 
   if (input.providerId === rootProviderId) {
     return {
@@ -128,7 +150,7 @@ const builtInCreate = async (
       executionKind: "local",
       executionTarget: { kind: "local", rootPath: repo.path, displayPath: repo.path },
       displayPath: repo.path,
-      capabilities: localWorkspaceCapabilities,
+      capabilities: defaultLocalWorkspaceCapabilities,
     };
   }
 
@@ -140,18 +162,13 @@ const builtInCreate = async (
 
   return {
     providerRef: safeProviderRef(worktreeProviderId, { repo_id: repo.id, branch }),
+    branch,
     state: "ready",
     executionKind: "local",
     executionTarget: { kind: "local", rootPath: worktreePath, displayPath: worktreePath },
     displayPath: worktreePath,
-    capabilities: localWorkspaceCapabilities,
+    capabilities: defaultLocalWorkspaceCapabilities,
   };
-};
-
-export const findExtensionProvider = async (deps: WorkspacesRouteDeps, projectId: string, providerId: string) => {
-  const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
-  const record = snapshot.runtime.workspaceTypes.find((candidate) => candidate.id === providerId);
-  return record?.provider as WorkspaceTypeProvider | undefined;
 };
 
 export const createProviderBackedWorkspace = async (
@@ -163,12 +180,21 @@ export const createProviderBackedWorkspace = async (
     anchors?: WorkspaceRecord["anchors_json"];
     providerId?: string;
     params?: JsonObject;
+    repoId?: string;
+    base?: string;
     standalone?: boolean;
     setupWorktree?: typeof setupWorkspaceWorktree;
+    provision?: (workspace: WorkspaceRecord, repoPath: string) => Promise<WorkspaceRecord>;
   },
 ) => {
   const providerId = input.providerId ?? worktreeProviderId;
-  const params = input.params ?? {};
+  const params = mergeProviderParams(input);
+  const repo = isBuiltInProviderId(providerId)
+    ? await resolveRepo(deps, input.projectId, asString(params.repo_id))
+    : null;
+  if (isBuiltInProviderId(providerId) && !repo) {
+    throw new WorkspaceRepoNotFoundError(`No repository found for project ${input.projectId}`);
+  }
   const operationId = crypto.randomUUID();
   const createInput = {
     project_id: input.projectId,
@@ -188,77 +214,93 @@ export const createProviderBackedWorkspace = async (
           anchors: input.anchors,
         });
 
-  try {
-    const provider = isBuiltInProviderId(providerId)
-      ? null
-      : await findExtensionProvider(deps, input.projectId, providerId);
-    if (!isBuiltInProviderId(providerId) && !provider) {
+  const updated = await (async () => {
+    try {
+      const handle = isBuiltInProviderId(providerId)
+        ? null
+        : await findWorkspaceProvider(deps, {
+            projectId: input.projectId,
+            providerId,
+            workspaceId: workspace.id,
+          });
+      if (!isBuiltInProviderId(providerId) && !handle) {
+        return (
+          (await deps.workspaceService.updateProviderProjection(workspace.id, {
+            ...missingProviderPatch(workspace),
+            execution_kind: "remote",
+            provider_capabilities_json: remoteReadOnlyCapabilities,
+          })) ?? workspace
+        );
+      }
+
+      const result = handle
+        ? await runWorkspaceProviderCall(() =>
+            handle.provider.create(handle.context, {
+              operationId,
+              projectId: input.projectId,
+              workspaceId: workspace.id,
+              params,
+            }),
+          )
+        : await builtInCreate({
+            providerId,
+            projectId: input.projectId,
+            workspace,
+            params,
+            repo: repo!,
+            setupWorktree: input.setupWorktree ?? setupWorkspaceWorktree,
+          });
+
+      const normalized = normalizeResult(providerId, result);
       return (
         (await deps.workspaceService.updateProviderProjection(workspace.id, {
-          provider_state: "provider_missing",
-          execution_kind: "remote",
-          worktree_path: null,
-          provider_ref_json: null,
-          provider_error_json: {
-            code: "provider_unavailable",
-            message: `Workspace provider is not available: ${providerId}`,
-            retryable: true,
-            occurred_at: new Date().toISOString(),
-          },
+          ...normalized,
+          branch: normalized.branch ?? workspace.branch,
+        })) ?? workspace
+      );
+    } catch (error) {
+      return (
+        (await deps.workspaceService.updateProviderProjection(workspace.id, {
+          ...failedOperationPatch(workspace, {
+            kind: "create",
+            operationId,
+            state: "failed",
+            error,
+          }),
+          execution_kind: isBuiltInProviderId(providerId) ? "local" : "remote",
           provider_capabilities_json: remoteReadOnlyCapabilities,
-          display_path: null,
         })) ?? workspace
       );
     }
+  })();
 
-    const result = provider
-      ? await provider.create({} as never, {
-          operationId,
-          projectId: input.projectId,
-          workspaceId: workspace.id,
-          params,
-        })
-      : await builtInCreate(deps, {
-          providerId,
-          projectId: input.projectId,
-          workspace,
-          params,
-          setupWorktree: input.setupWorktree ?? setupWorkspaceWorktree,
-        });
-
-    const normalized = normalizeResult(providerId, result);
-    return (
-      (await deps.workspaceService.updateProviderProjection(workspace.id, {
-        branch: normalized.branch ?? workspace.branch,
-        ...normalized,
-      })) ?? workspace
-    );
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return (
-      (await deps.workspaceService.updateProviderProjection(workspace.id, {
-        provider_state: "failed",
-        execution_kind: isBuiltInProviderId(providerId) ? "local" : "remote",
-        worktree_path: null,
-        provider_ref_json: null,
-        provider_error_json: {
-          code: "provider_create_failed",
-          message,
-          retryable: true,
-          occurred_at: new Date().toISOString(),
-        },
-        provider_capabilities_json: remoteReadOnlyCapabilities,
-        display_path: null,
-      })) ?? workspace
-    );
+  const provisioningRepoPath = repo?.path ?? updated.worktree_path;
+  if (
+    input.provision &&
+    updated.provider_state === "ready" &&
+    updated.execution_kind === "local" &&
+    updated.worktree_path &&
+    provisioningRepoPath
+  ) {
+    return input.provision(updated, provisioningRepoPath);
   }
+  return updated;
 };
 
-export const resolveWorkspaceExecutionTarget = async (deps: WorkspacesRouteDeps, workspaceId: string) => {
+export const resolveWorkspaceExecutionTarget = async (
+  deps: WorkspacesRouteDeps,
+  workspaceId: string,
+  access?: "files:read" | "files:write" | "diff",
+) => {
   const workspace = await deps.workspaceService.get(workspaceId);
   if (!workspace) return undefined;
   if (workspace.provider_state && workspace.provider_state !== "ready") return undefined;
+  if (workspace.setup_error) return undefined;
   if (workspace.execution_kind === "remote") return undefined;
+  const capabilities = workspace.provider_capabilities_json;
+  if (access === "files:read" && capabilities?.files === "none") return undefined;
+  if (access === "files:write" && capabilities && capabilities.files !== "write") return undefined;
+  if (access === "diff" && capabilities && !capabilities.diff) return undefined;
   if (workspace.worktree_path) return { workspace, root: workspace.worktree_path };
   if (workspace.provider_id && workspace.provider_id !== rootProviderId && !workspace.is_default) return undefined;
 

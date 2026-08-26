@@ -19,3 +19,4 @@ export type * from "./statuses";
 export type * from "./tree-renderer";
 export type * from "./views";
 export * from "./webview-capabilities";
+export type * from "./workspaces";

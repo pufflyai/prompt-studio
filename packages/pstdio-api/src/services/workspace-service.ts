@@ -30,6 +30,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   const getByShorthand = raw.getByShorthand;
   const getDefault = raw.getDefault;
   const list = raw.list;
+  const listForProviderReconciliation = raw.listForProviderReconciliation;
 
   // --- mutations (orchestrated) ---
   const create = async (input: Parameters<typeof raw.create>[0]) => {
@@ -85,15 +86,6 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   const setStartupLogFileId = async (id: string, fileId: string) =>
     emitOrLog("set", id, await raw.setStartupLogFileId(id, fileId));
 
-  const updateGitMetadata = async (id: string, patch: Parameters<typeof raw.updateGitMetadata>[1]) =>
-    emitOrLog("set", id, await raw.updateGitMetadata(id, patch));
-
-  const normalizeProviderDefaults = async (projectId: string) => {
-    const rows = await raw.normalizeProviderDefaults(projectId);
-    for (const row of rows) deps.eventBus.emit("workspaces", "set", row);
-    return rows;
-  };
-
   const updateProviderProjection = async (id: string, patch: Parameters<typeof raw.updateProviderProjection>[1]) =>
     emitOrLog("set", id, await raw.updateProviderProjection(id, patch));
 
@@ -102,6 +94,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     getByShorthand,
     getDefault,
     list,
+    listForProviderReconciliation,
     create,
     createStandalone,
     ensureDefault,
@@ -110,8 +103,6 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     setInitializing,
     setSetupError,
     setStartupLogFileId,
-    updateGitMetadata,
-    normalizeProviderDefaults,
     updateProviderProjection,
     rename,
   };

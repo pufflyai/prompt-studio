@@ -9,12 +9,34 @@ import { syncRepoExtensionsForLinkedRepos } from "../features/extensions/repo-ex
 import { ensureProjectReposScaffolded } from "../features/projects/startup";
 import { resolveOrphanedSessions } from "../features/sessions/startup";
 import { provisionProjectWorkspaces } from "../features/workspaces/provision-coordinator";
-import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-lifecycle";
+import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-reconciliation";
 import { apiLogger } from "../lib/logger";
 
 interface StartupTaskOptions {
+  onBackgroundTask?: (task: Promise<void>) => void;
   recoverQueuedSessions?: () => Promise<void>;
 }
+
+const scheduleWorkspaceRecovery = (deps: RouteDeps, projectIds: string[], signal?: AbortSignal) => {
+  return Promise.allSettled(
+    projectIds.map(async (projectId) => {
+      if (signal?.aborted) return;
+      await reconcileProviderWorkspaces(deps, projectId, { signal });
+      if (signal?.aborted) return;
+      await provisionProjectWorkspaces(deps, projectId);
+    }),
+  )
+    .then((results) => {
+      for (const [index, result] of results.entries()) {
+        if (result.status === "fulfilled") continue;
+        apiLogger.warn(
+          { err: result.reason, event: "startup.workspace_recovery.error", project_id: projectIds[index] },
+          "Workspace recovery failed during startup",
+        );
+      }
+    })
+    .then(() => undefined);
+};
 
 const ensureDefaultExtensionsInstalled = async (deps: RouteDeps) => {
   if ((await deps.projectService.list()).length > 0) return;
@@ -64,10 +86,8 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
       repoService: deps.repoService,
     });
   }
-  // Reconcile each project's workspaces so harness extensions sync skills to the current catalog.
-  for (const project of await deps.projectService.list()) {
-    await deps.workspaceService.normalizeProviderDefaults(project.id);
-    await reconcileProviderWorkspaces(deps, project.id);
-    await provisionProjectWorkspaces(deps, project.id);
-  }
+  const projectIds = (await deps.projectService.list()).map((project) => project.id);
+  const workspaceRecovery = scheduleWorkspaceRecovery(deps, projectIds, signal);
+  options?.onBackgroundTask?.(workspaceRecovery);
+  if (!options?.onBackgroundTask) void workspaceRecovery;
 };
