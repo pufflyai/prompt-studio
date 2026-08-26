@@ -85,6 +85,33 @@ describe("syncRepoExtensionsForProject", () => {
     expect(instances[0]?.enabled).toBe(true);
   });
 
+  test("keeps a repo-local extension disabled during later discovery", async () => {
+    const project = await projectService.create({ name: "Disabled Repo Extension" });
+    const repoPath = join(tempRoot, "repo");
+    const extensionPath = join(repoPath, ".pstdio", "extensions", "worktree-bootstrap");
+    writeExtension(extensionPath, "worktree-bootstrap");
+
+    await syncRepoExtensionsForProject({
+      extensionService,
+      installedExtensionSourcesService,
+      projectId: project.id,
+      repoPath,
+    });
+    const [instance] = await extensionInstancesService.list({ scope_id: project.id, scope_type: "project" });
+    expect(instance).toBeDefined();
+    await extensionService.setProjectExtensionEnabled(instance!.id, false);
+
+    await syncRepoExtensionsForProject({
+      extensionService,
+      installedExtensionSourcesService,
+      projectId: project.id,
+      repoPath,
+    });
+
+    const disabled = await extensionInstancesService.get(instance!.id);
+    expect(disabled?.enabled).toBe(false);
+  });
+
   test("marks removed repo-local folders missing without deleting rows", async () => {
     const project = await projectService.create({ name: "Repo Extensions" });
     const repoPath = join(tempRoot, "repo");

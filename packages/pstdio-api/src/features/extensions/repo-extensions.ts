@@ -1,12 +1,15 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
-import type { createExtensionService } from "../../services/extension-service";
+import type { createExtensionService, SyncInstalledSourceInput } from "../../services/extension-service";
 import { hashExtensionSource, loadExtensionSource } from "./extension-runtime";
 
 type ExtensionService = Pick<
   ReturnType<typeof createExtensionService>,
-  "enableInstalledSourceForProject" | "listProjectExtensionInstances" | "setProjectExtensionEnabled"
+  | "enableInstalledSourceForProject"
+  | "listProjectExtensionInstances"
+  | "setProjectExtensionEnabled"
+  | "syncInstalledSourceForProject"
 >;
 
 type InstalledSourcesService = Pick<
@@ -53,6 +56,8 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
   const enabled: string[] = [];
   const skipped: string[] = [];
   const presentSourcePaths = new Set<string>();
+  const instances = await input.extensionService.listProjectExtensionInstances(input.projectId);
+  const instancesBySourcePath = new Map(instances.map((record) => [record.installedSource.source_path, record]));
 
   for (const name of input.discover === false ? [] : listExtensionDirs(root)) {
     const sourcePath = join(root, name);
@@ -66,7 +71,7 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
     }
 
     presentSourcePaths.add(sourcePath);
-    await input.extensionService.enableInstalledSourceForProject({
+    const sourceInput = {
       displayName: loaded.metadata.displayName,
       extensionId: loaded.metadata.id,
       installName: name,
@@ -77,13 +82,18 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
       sourceKind: "local_path",
       sourcePath,
       version: loaded.metadata.version,
-    });
-    enabled.push(name);
+    } satisfies SyncInstalledSourceInput;
+    const existing = instancesBySourcePath.get(sourcePath);
+    if (existing) {
+      await input.extensionService.syncInstalledSourceForProject(sourceInput);
+    } else {
+      await input.extensionService.enableInstalledSourceForProject(sourceInput);
+    }
+    if (!existing || existing.instance.enabled) enabled.push(name);
   }
 
   const missing: string[] = [];
   const sources = await input.installedExtensionSourcesService.listBySourcePathPrefix(root);
-  const instances = await input.extensionService.listProjectExtensionInstances(input.projectId);
   for (const source of sources) {
     if (presentSourcePaths.has(source.source_path)) continue;
 
