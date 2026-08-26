@@ -6,7 +6,6 @@ import {
   Bot,
   Boxes,
   Braces,
-  ChartNoAxesCombined,
   Columns3,
   Command,
   Compass,
@@ -16,7 +15,6 @@ import {
   LayoutPanelLeft,
   MessagesSquare,
   Package,
-  PenTool,
   Plug,
   Scale,
   Server,
@@ -131,14 +129,11 @@ export interface ProjectTab {
   icon: LucideIcon;
 }
 
-export type ProjectTabId = "docs" | "agentic-kanban" | "agentic-design" | "agentic-data-analysis" | "workflow-builder";
+export type ProjectTabId = "docs" | "agentic-kanban";
 
 export const PROJECT_TABS: ProjectTab[] = [
-  { id: "docs", label: "Docs", icon: BookOpen },
-  { id: "agentic-kanban", label: "Agentic kanban", icon: Columns3 },
-  { id: "agentic-design", label: "Agentic design", icon: PenTool },
-  { id: "agentic-data-analysis", label: "Agentic data analysis", icon: ChartNoAxesCombined },
-  { id: "workflow-builder", label: "Workflow builder", icon: Workflow },
+  { id: "docs", label: "Prompt Studio Docs", icon: BookOpen },
+  { id: "agentic-kanban", label: "Project Roadmap", icon: Columns3 },
 ];
 
 export interface ChangelogEntry {

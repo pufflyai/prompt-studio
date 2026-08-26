@@ -9,6 +9,7 @@ interface WorkbenchNavProps {
   docPath?: string;
   resourceMarkdown?: string;
   resourceTitle?: string;
+  sidebarAvailable: boolean;
   sidebarOpen: boolean;
   showPostListOpener: boolean;
   onSelectTab: (tab: ProjectTabId) => void;
@@ -36,7 +37,9 @@ const buildBreadcrumbs = (props: WorkbenchNavProps): BreadcrumbItem[] => {
   const { activeTab, activeView, docPath, resourceTitle, onNavigate, onNavigateDoc } = props;
   const activeProjectTab = PROJECT_TABS.find((tab) => tab.id === activeTab) ?? PROJECT_TABS[0];
 
-  if (activeTab !== "docs") return [{ title: crumbTitle(activeProjectTab.icon, activeProjectTab.label) }];
+  if (activeTab !== "docs") {
+    return [{ title: crumbTitle(activeProjectTab.icon, activeProjectTab.label) }, { title: "Release plan" }];
+  }
 
   const items: BreadcrumbItem[] = [
     {
@@ -68,6 +71,7 @@ export const WorkbenchNav = (props: WorkbenchNavProps) => {
     activeTab,
     activeView,
     resourceMarkdown,
+    sidebarAvailable,
     sidebarOpen,
     showPostListOpener,
     onSelectTab,
@@ -208,7 +212,7 @@ export const WorkbenchNav = (props: WorkbenchNavProps) => {
             </IconButton>
           </Tooltip>
         )}
-        {!sidebarOpen && (
+        {sidebarAvailable && !sidebarOpen && (
           <Tooltip content="Open sidebar">
             <IconButton aria-label="Open sidebar" variant="ghost" size="2xs" onClick={onToggleSidebar}>
               <PanelLeft size={13} />
