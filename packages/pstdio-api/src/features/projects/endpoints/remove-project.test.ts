@@ -125,6 +125,23 @@ describe("DELETE /v1/projects/:id", () => {
     }
   });
 
+  test("keeps a committed project deletion successful when secret cleanup must retry", async () => {
+    const project = await createProject("cleanup-retry");
+    const originalPrepareConnectionRemoval = appHandle.deps.extensionConnectionService.prepareProjectRemoval;
+    appHandle.deps.extensionConnectionService.prepareProjectRemoval = async () => async () => {
+      throw new Error("secret cleanup failed");
+    };
+
+    try {
+      const res = await app.request(`/v1/projects/${project.id}`, { method: "DELETE" });
+
+      expect(res.status).toBe(204);
+      expect((await app.request(`/v1/projects/${project.id}`)).status).toBe(404);
+    } finally {
+      appHandle.deps.extensionConnectionService.prepareProjectRemoval = originalPrepareConnectionRemoval;
+    }
+  });
+
   test("removes project storage directory on disk", async () => {
     const project = await createProject("file-cleanup");
     await appHandle.deps.fileService.upload({

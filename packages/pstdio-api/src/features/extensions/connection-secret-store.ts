@@ -1,10 +1,11 @@
-import { chmod, mkdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { chmod, mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export interface ConnectionSecretStore {
   get(ref: string): Promise<string | null>;
   set(value: string, ref?: string): Promise<string>;
   delete(ref: string): Promise<void>;
+  listRefs(): Promise<string[]>;
 }
 
 const validRef = (ref: string) => /^[0-9a-f-]{36}$/i.test(ref);
@@ -41,6 +42,18 @@ export const createFileConnectionSecretStore = (storageRoot: string): Connection
         if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
       }
     },
+    listRefs: async () => {
+      try {
+        const entries = await readdir(root, { withFileTypes: true });
+        return entries
+          .filter((entry) => entry.isFile() && entry.name.endsWith(".secret"))
+          .map((entry) => entry.name.slice(0, -".secret".length))
+          .filter(validRef);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+        throw error;
+      }
+    },
   };
 };
 
@@ -56,5 +69,6 @@ export const createMemoryConnectionSecretStore = (): ConnectionSecretStore => {
     delete: async (ref) => {
       secrets.delete(ref);
     },
+    listRefs: async () => [...secrets.keys()],
   };
 };

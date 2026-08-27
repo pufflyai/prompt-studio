@@ -202,4 +202,14 @@ describe("project extension lifecycle", () => {
 
     expect(order).toEqual(["extension", "connections"]);
   });
+
+  test("keeps a committed extension uninstall successful when connection cleanup must retry", async () => {
+    const { deps } = createDeps();
+    deps.extensionConnectionService.removeExtension.mockRejectedValue(new Error("connection cleanup failed"));
+    const lifecycle = createProjectExtensionLifecycle(deps as never);
+
+    await expect(
+      lifecycle.uninstall({ projectId: "project-1", instanceId: "instance-1", deleteUserData: true }),
+    ).resolves.toBe("removed");
+  });
 });

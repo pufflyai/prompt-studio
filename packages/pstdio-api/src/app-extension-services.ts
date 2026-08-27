@@ -78,6 +78,15 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
         (record) => record.extensionId === extensionId && record.localId === connectionId,
       )?.contribution;
     },
+    isExtensionInstalled: async (projectId, extensionId) =>
+      (await extensionService.listProjectExtensionInstances(projectId)).some(
+        ({ installedSource }) => installedSource.extension_id === extensionId,
+      ),
+    onCleanupError: (error, context) =>
+      apiLogger.error(
+        { err: error, event: "extension.connection_cleanup.deferred", ...context },
+        "Extension connection cleanup will retry at startup",
+      ),
     onRequestComplete: (audit) =>
       apiLogger.info(
         {
@@ -96,6 +105,7 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
         "Extension connection request completed",
       ),
   });
+  await extensionConnectionService.reconcile();
   const harnessRegistry = input.dependencies.createHarnessRegistry({
     installedExtensionSourcesService: input.installedExtensionSourcesService,
     extensionRuntimeCatalog,

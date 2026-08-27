@@ -27,6 +27,8 @@ export const createExtensionConnectionsDBService = (db: DbClient) => {
   const listByProject = (projectId: string) =>
     db.select().from(extension_connections).where(eq(extension_connections.project_id, projectId));
 
+  const listAll = () => db.select().from(extension_connections);
+
   const listByExtension = (projectId: string, extensionId: string) =>
     db
       .select()
@@ -85,5 +87,5 @@ export const createExtensionConnectionsDBService = (db: DbClient) => {
   const recordCheck = (input: ConnectionKey, check: ExtensionConnectionCheck) =>
     db.update(extension_connections).set({ last_check_json: check }).where(whereKey(input));
 
-  return { get, listByExtension, listByProject, recordCheck, remove, upsert };
+  return { get, listAll, listByExtension, listByProject, recordCheck, remove, upsert };
 };

@@ -22,6 +22,8 @@ export type ExtensionConnectionServiceDeps = {
   connectionsDBService: ReturnType<typeof createExtensionConnectionsDBService>;
   secretStore: ConnectionSecretStore;
   getContribution: (input: ConnectionKey) => Promise<ExtensionConnectionContribution | null | undefined>;
+  isExtensionInstalled?: (projectId: string, extensionId: string) => Promise<boolean>;
+  onCleanupError?: (error: unknown, context: { operation: string; secretRef?: string }) => void;
   fetch?: typeof fetch;
   onRequestComplete?: (audit: ConnectionRequestAudit) => void | Promise<void>;
 };

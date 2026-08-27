@@ -40,6 +40,7 @@ export const createConnectionTestService = (
       get: async () => "credential-canary",
       set: async () => "secret-1",
       delete: async () => {},
+      listRefs: async () => ["secret-1"],
     },
     getContribution: async () => contributionOverride,
     fetch: fetchFn,

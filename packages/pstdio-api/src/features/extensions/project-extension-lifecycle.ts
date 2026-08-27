@@ -1,4 +1,5 @@
 import type { ProjectExtensionInstance, WorkbenchExtensionAutomationRecord } from "pstdio-api-contracts";
+import { apiLogger } from "../../lib/logger";
 import { ExtensionUpgradeUnavailableError } from "../../services/extension-upgrade-service";
 import { provisionProjectWorkspaces } from "../workspaces/provision-coordinator";
 import type { ExtensionsRouteDeps } from "./deps";
@@ -112,7 +113,14 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     const result = await deps.extensionService.uninstallProjectExtension(input);
     if (!result) return null;
     if (input.deleteUserData) {
-      await deps.extensionConnectionService.removeExtension(input.projectId, existing.installedSource.extension_id);
+      try {
+        await deps.extensionConnectionService.removeExtension(input.projectId, existing.installedSource.extension_id);
+      } catch (error) {
+        apiLogger.error(
+          { err: error, event: "extension.connection_cleanup.deferred", projectId: input.projectId },
+          "Extension connection cleanup will retry at startup",
+        );
+      }
     }
 
     await provisionWhenRequired(input.projectId, requiresProvisioning);

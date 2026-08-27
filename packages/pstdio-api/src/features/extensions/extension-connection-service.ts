@@ -14,8 +14,24 @@ const prepareProjectConnectionRemoval = async (deps: ExtensionConnectionServiceD
   const configured = await deps.connectionsDBService.listByProject(projectId);
   const secretRefs = configured.flatMap((connection) => (connection.secret_ref ? [connection.secret_ref] : []));
   return async () => {
-    for (const secretRef of secretRefs) await deps.secretStore.delete(secretRef);
+    for (const secretRef of secretRefs) await deleteSecret(deps, secretRef, "remove_project_secret");
   };
+};
+
+const reportCleanupError = (
+  deps: ExtensionConnectionServiceDeps,
+  error: unknown,
+  context: { operation: string; secretRef?: string },
+) => {
+  deps.onCleanupError?.(error, context);
+};
+
+const deleteSecret = async (deps: ExtensionConnectionServiceDeps, secretRef: string, operation: string) => {
+  try {
+    await deps.secretStore.delete(secretRef);
+  } catch (error) {
+    reportCleanupError(deps, error, { operation, secretRef });
+  }
 };
 
 const removeExtensionConnections = async (
@@ -25,11 +41,47 @@ const removeExtensionConnections = async (
 ) => {
   const configured = await deps.connectionsDBService.listByExtension(projectId, extensionId);
   for (const connection of configured) {
-    await removeConnection(deps, {
-      projectId,
-      extensionId,
-      connectionId: connection.contribution_id,
-    });
+    try {
+      await removeConnection(deps, {
+        projectId,
+        extensionId,
+        connectionId: connection.contribution_id,
+      });
+    } catch (error) {
+      reportCleanupError(deps, error, { operation: "remove_extension_connection" });
+    }
+  }
+};
+
+const reconcileConnections = async (deps: ExtensionConnectionServiceDeps) => {
+  if (deps.isExtensionInstalled) {
+    const configured = await deps.connectionsDBService.listAll();
+    const installed = new Map<string, Promise<boolean>>();
+    for (const connection of configured) {
+      const ownerKey = `${connection.project_id}\0${connection.extension_id}`;
+      const ownerExists =
+        installed.get(ownerKey) ?? deps.isExtensionInstalled(connection.project_id, connection.extension_id);
+      installed.set(ownerKey, ownerExists);
+      try {
+        if (await ownerExists) continue;
+        await removeConnection(deps, {
+          projectId: connection.project_id,
+          extensionId: connection.extension_id,
+          connectionId: connection.contribution_id,
+        });
+      } catch (error) {
+        reportCleanupError(deps, error, { operation: "reconcile_extension_connection" });
+      }
+    }
+  }
+
+  const referenced = new Set(
+    (await deps.connectionsDBService.listAll()).flatMap((connection) =>
+      connection.secret_ref ? [connection.secret_ref] : [],
+    ),
+  );
+  for (const secretRef of await deps.secretStore.listRefs()) {
+    if (!referenced.has(secretRef)) await deleteSecret(deps, secretRef, "reconcile_orphan_secret");
   }
 };
 
@@ -99,17 +151,10 @@ const removeConnection = async (deps: ExtensionConnectionServiceDeps, input: Con
   const key = connectionKey(input);
   const existing = await deps.connectionsDBService.get(key);
   if (!existing) return false;
-  const secret = existing.secret_ref ? await deps.secretStore.get(existing.secret_ref) : null;
-  if (existing.secret_ref) {
-    if (!secret) throw new Error(`Connection credential is not configured: ${input.connectionId}`);
-    await deps.secretStore.delete(existing.secret_ref);
-  }
-  try {
-    return Boolean(await deps.connectionsDBService.remove(key));
-  } catch (error) {
-    if (existing.secret_ref && secret) await deps.secretStore.set(secret, existing.secret_ref);
-    throw error;
-  }
+  const removed = await deps.connectionsDBService.remove(key);
+  if (!removed) return false;
+  if (existing.secret_ref) await deleteSecret(deps, existing.secret_ref, "remove_connection_secret");
+  return true;
 };
 
 export const createExtensionConnectionService = (deps: ExtensionConnectionServiceDeps) => {
@@ -118,11 +163,12 @@ export const createExtensionConnectionService = (deps: ExtensionConnectionServic
   const list = async (projectId: string) =>
     (await deps.connectionsDBService.listByProject(projectId)).map(toConnectionRecord);
   const remove = (input: ConnectionKey) => removeConnection(deps, input);
+  const reconcile = () => reconcileConnections(deps);
   const prepareProjectRemoval = (projectId: string) => prepareProjectConnectionRemoval(deps, projectId);
   const removeExtension = (projectId: string, extensionId: string) =>
     removeExtensionConnections(deps, projectId, extensionId);
 
-  return { ...requestService, configure, list, prepareProjectRemoval, remove, removeExtension };
+  return { ...requestService, configure, list, prepareProjectRemoval, reconcile, remove, removeExtension };
 };
 
 export const createExtensionConnectionsApi = (
