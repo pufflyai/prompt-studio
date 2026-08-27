@@ -19,4 +19,15 @@ describe("resolveCommandWorkspaceDir", () => {
   test("falls back to the first linked repo when the request carries no repo context", () => {
     expect(resolveCommandWorkspaceDir({ worktreePath: null, repos, repoId: undefined })).toBe("/repo-a");
   });
+
+  test("does not mount a local repo for a remote workspace", () => {
+    expect(
+      resolveCommandWorkspaceDir({
+        worktreePath: null,
+        repos,
+        repoId: "repo-b",
+        executionKind: "remote",
+      }),
+    ).toBeUndefined();
+  });
 });
