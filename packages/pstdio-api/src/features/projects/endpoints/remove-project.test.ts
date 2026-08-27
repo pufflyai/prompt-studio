@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { Buffer } from "node:buffer";
 import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -101,6 +101,28 @@ describe("DELETE /v1/projects/:id", () => {
 
     const res = await app.request(`/v1/projects/${project.id}`, { method: "DELETE" });
     expect(res.status).toBe(404);
+  });
+
+  test("keeps connection credentials when project deletion fails", async () => {
+    const project = await createProject("failed-delete");
+    const originalHardDelete = appHandle.deps.projectService.hardDelete;
+    const originalPrepareConnectionRemoval = appHandle.deps.extensionConnectionService.prepareProjectRemoval;
+    const removeConnectionSecrets = mock(async () => {});
+    appHandle.deps.projectService.hardDelete = async () => {
+      throw new Error("project deletion failed");
+    };
+    appHandle.deps.extensionConnectionService.prepareProjectRemoval = async () => removeConnectionSecrets;
+
+    try {
+      const res = await app.request(`/v1/projects/${project.id}`, { method: "DELETE" });
+
+      expect(res.status).toBe(500);
+      expect(removeConnectionSecrets).not.toHaveBeenCalled();
+      expect((await app.request(`/v1/projects/${project.id}`)).status).toBe(200);
+    } finally {
+      appHandle.deps.projectService.hardDelete = originalHardDelete;
+      appHandle.deps.extensionConnectionService.prepareProjectRemoval = originalPrepareConnectionRemoval;
+    }
   });
 
   test("removes project storage directory on disk", async () => {

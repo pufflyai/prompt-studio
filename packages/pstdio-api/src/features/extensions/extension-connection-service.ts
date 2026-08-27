@@ -10,11 +10,12 @@ import {
 } from "./extension-connection-service-types";
 import { validateBaseUrl } from "./extension-connection-transport";
 
-const removeProjectConnectionSecrets = async (deps: ExtensionConnectionServiceDeps, projectId: string) => {
+const prepareProjectConnectionRemoval = async (deps: ExtensionConnectionServiceDeps, projectId: string) => {
   const configured = await deps.connectionsDBService.listByProject(projectId);
-  for (const connection of configured) {
-    if (connection.secret_ref) await deps.secretStore.delete(connection.secret_ref);
-  }
+  const secretRefs = configured.flatMap((connection) => (connection.secret_ref ? [connection.secret_ref] : []));
+  return async () => {
+    for (const secretRef of secretRefs) await deps.secretStore.delete(secretRef);
+  };
 };
 
 const removeExtensionConnections = async (
@@ -117,11 +118,11 @@ export const createExtensionConnectionService = (deps: ExtensionConnectionServic
   const list = async (projectId: string) =>
     (await deps.connectionsDBService.listByProject(projectId)).map(toConnectionRecord);
   const remove = (input: ConnectionKey) => removeConnection(deps, input);
-  const removeProject = (projectId: string) => removeProjectConnectionSecrets(deps, projectId);
+  const prepareProjectRemoval = (projectId: string) => prepareProjectConnectionRemoval(deps, projectId);
   const removeExtension = (projectId: string, extensionId: string) =>
     removeExtensionConnections(deps, projectId, extensionId);
 
-  return { ...requestService, configure, list, remove, removeExtension, removeProject };
+  return { ...requestService, configure, list, prepareProjectRemoval, remove, removeExtension };
 };
 
 export const createExtensionConnectionsApi = (

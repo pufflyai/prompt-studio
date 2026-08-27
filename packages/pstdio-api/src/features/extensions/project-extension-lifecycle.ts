@@ -109,12 +109,11 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
         `Extension still owns ${providerWorkspaces.length} provider-backed workspace(s). Delete them before uninstalling.`,
       );
     }
+    const result = await deps.extensionService.uninstallProjectExtension(input);
+    if (!result) return null;
     if (input.deleteUserData) {
       await deps.extensionConnectionService.removeExtension(input.projectId, existing.installedSource.extension_id);
     }
-
-    const result = await deps.extensionService.uninstallProjectExtension(input);
-    if (!result) return null;
 
     await provisionWhenRequired(input.projectId, requiresProvisioning);
     return result.retainedData ? ("retained-disabled" as const) : ("removed" as const);

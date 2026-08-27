@@ -68,7 +68,7 @@ describe("extension connection service", () => {
     expect(fetchFn).not.toHaveBeenCalled();
   });
 
-  test("deletes host credentials before project metadata is removed", async () => {
+  test("captures project credentials and deletes them after project metadata is removed", async () => {
     const deleteSecret = mock(async () => {});
     const service = createExtensionConnectionService({
       connectionsDBService: {
@@ -83,8 +83,10 @@ describe("extension connection service", () => {
       fetch,
     });
 
-    await service.removeProject("project-1");
+    const removeSecrets = await service.prepareProjectRemoval("project-1");
 
+    expect(deleteSecret).not.toHaveBeenCalled();
+    await removeSecrets();
     expect(deleteSecret).toHaveBeenCalledTimes(1);
     expect(deleteSecret).toHaveBeenCalledWith("secret-1");
   });

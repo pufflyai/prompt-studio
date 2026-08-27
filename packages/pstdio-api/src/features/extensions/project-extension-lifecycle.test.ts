@@ -175,7 +175,18 @@ describe("project extension lifecycle", () => {
     expect(deps.extensionService.uninstallProjectExtension).not.toHaveBeenCalled();
   });
 
-  test("removes named connection credentials before deleting extension user data", async () => {
+  test("keeps connection credentials when extension uninstall fails", async () => {
+    const { deps } = createDeps();
+    deps.extensionService.uninstallProjectExtension.mockRejectedValue(new Error("extension uninstall failed"));
+    const lifecycle = createProjectExtensionLifecycle(deps as never);
+
+    await expect(
+      lifecycle.uninstall({ projectId: "project-1", instanceId: "instance-1", deleteUserData: true }),
+    ).rejects.toThrow("extension uninstall failed");
+    expect(deps.extensionConnectionService.removeExtension).not.toHaveBeenCalled();
+  });
+
+  test("removes named connection credentials after extension uninstall commits", async () => {
     const { deps } = createDeps();
     const order: string[] = [];
     deps.extensionConnectionService.removeExtension.mockImplementation(async () => {
@@ -189,6 +200,6 @@ describe("project extension lifecycle", () => {
 
     await lifecycle.uninstall({ projectId: "project-1", instanceId: "instance-1", deleteUserData: true });
 
-    expect(order).toEqual(["connections", "extension"]);
+    expect(order).toEqual(["extension", "connections"]);
   });
 });
