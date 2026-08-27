@@ -14356,6 +14356,7 @@
                       "type": "frame",
                       "id": "Tboo4",
                       "name": "cmp/Chip",
+                      "context": "General compact chip. The optional leading icon is disabled by default. Kanban attribute badges enable it and override the chip to a 20px pill with Onest 10px medium text.",
                       "reusable": true,
                       "height": 20,
                       "fill": "$ds-surface",
@@ -14369,6 +14370,19 @@
                       ],
                       "alignItems": "center",
                       "children": [
+                        {
+                          "type": "icon",
+                          "id": "nyn9n",
+                          "x": 0,
+                          "y": 0,
+                          "name": "Icon",
+                          "enabled": false,
+                          "width": 14,
+                          "height": 14,
+                          "icon": "tag",
+                          "library": "lucide",
+                          "fill": "$ds-fg-muted"
+                        },
                         {
                           "type": "text",
                           "id": "L109Bg",
@@ -16988,9 +17002,9 @@
                       "type": "frame",
                       "id": "jRZz3",
                       "name": "cmp/KanbanCard",
-                      "context": "The unit of the kanban display. Same resource as cmp/CollectionListRow, drawn as a draggable card instead of a row. radius 6, bg on a border hairline so it lifts off the column's bg.subtle. Top: mono id + spacer + assignee. Title 12/1.35 wraps to two lines. Meta carries the same attribute chips the list shows as columns — the board hides no data, it re-lays it out. Drag target styling is the accent border, not a shadow.\n\nNo state ring: the card sits in a column, and the column header already names and colours the state. Repeating it on every card restates the column ten times over. This holds while the board groups by status — group by something else (assignee, priority) and the state has no other carrier here, so the ring has to come back onto the card.",
+                      "context": "Shared Kanban renderer ticket card. Uses the same 10px mono eyebrow, 12px body title, 10px padding, 8px stack gap, 6px radius, border, and 20px attribute badge as @pstdio/ui KanbanRendererCard. Attribute badges enable cmp/Chip leading icons and override the chip to the renderer pill contract. Design is purple and platform is blue. Workspace badges are optional and disabled in the roadmap.",
                       "reusable": true,
-                      "width": 240,
+                      "width": 322,
                       "fill": "$ds-bg",
                       "cornerRadius": 6,
                       "stroke": "$ds-border",
@@ -17005,15 +17019,16 @@
                           "id": "M7e7uR",
                           "name": "Top",
                           "width": "fill_container",
-                          "gap": 6,
+                          "gap": 4,
                           "alignItems": "center",
                           "children": [
                             {
                               "type": "text",
                               "id": "f0MFjy",
                               "name": "ID",
-                              "fill": "$ds-fg-subtle",
+                              "fill": "$ds-fg-muted",
                               "content": "PS-171",
+                              "lineHeight": 1.5,
                               "fontFamily": "$font-mono",
                               "fontSize": 10,
                               "fontWeight": "normal"
@@ -17074,7 +17089,7 @@
                           "id": "VA4ON",
                           "name": "Meta",
                           "width": "fill_container",
-                          "gap": 6,
+                          "gap": 4,
                           "alignItems": "center",
                           "children": [
                             {
@@ -17082,11 +17097,27 @@
                               "type": "ref",
                               "ref": "Tboo4",
                               "name": "Chip",
-                              "fill": "$ds-surface",
+                              "fill": "$ds-bg-subtle",
                               "stroke": [],
+                              "height": 20,
+                              "cornerRadius": 999,
+                              "gap": 4,
+                              "padding": [
+                                0,
+                                6
+                              ],
                               "descendants": {
+                                "nyn9n": {
+                                  "enabled": true,
+                                  "fill": "$ds-review"
+                                },
                                 "L109Bg": {
-                                  "content": "design"
+                                  "content": "design",
+                                  "fill": "$ds-fg-muted",
+                                  "fontFamily": "$font-heading",
+                                  "fontSize": 10,
+                                  "fontWeight": "500",
+                                  "lineHeight": 1.5
                                 }
                               }
                             },
@@ -17876,6 +17907,9 @@
                                     "dHDLZ": {
                                       "content": "Bubblify the side panel across resources"
                                     },
+                                    "M0eqp6/nyn9n": {
+                                      "fill": "$ds-review"
+                                    },
                                     "M0eqp6/L109Bg": {
                                       "content": "design"
                                     },
@@ -17909,6 +17943,9 @@
                                     "dHDLZ": {
                                       "content": "Saved filters for collection views"
                                     },
+                                    "M0eqp6/nyn9n": {
+                                      "fill": "$ds-review"
+                                    },
                                     "M0eqp6/L109Bg": {
                                       "content": "design"
                                     },
@@ -17941,6 +17978,9 @@
                                     },
                                     "dHDLZ": {
                                       "content": "Extension-declared mode layouts"
+                                    },
+                                    "M0eqp6/nyn9n": {
+                                      "fill": "$ds-info"
                                     },
                                     "M0eqp6/L109Bg": {
                                       "content": "platform"
@@ -18079,6 +18119,9 @@
                                     "dHDLZ": {
                                       "content": "Inherit workspace terminal cwd"
                                     },
+                                    "M0eqp6/nyn9n": {
+                                      "fill": "$ds-info"
+                                    },
                                     "M0eqp6/L109Bg": {
                                       "content": "platform"
                                     },
@@ -18111,6 +18154,9 @@
                                     },
                                     "dHDLZ": {
                                       "content": "Chat scroll jumps while streaming"
+                                    },
+                                    "M0eqp6/nyn9n": {
+                                      "fill": "$ds-review"
                                     },
                                     "M0eqp6/L109Bg": {
                                       "content": "design"
@@ -18249,6 +18295,9 @@
                                     "dHDLZ": {
                                       "content": "Show sidebar shortcuts at rest"
                                     },
+                                    "M0eqp6/nyn9n": {
+                                      "fill": "$ds-review"
+                                    },
                                     "M0eqp6/L109Bg": {
                                       "content": "design"
                                     },
@@ -18282,6 +18331,9 @@
                                     "dHDLZ": {
                                       "content": "Harness run parameters"
                                     },
+                                    "M0eqp6/nyn9n": {
+                                      "fill": "$ds-info"
+                                    },
                                     "M0eqp6/L109Bg": {
                                       "content": "platform"
                                     },
@@ -18314,6 +18366,9 @@
                                     },
                                     "dHDLZ": {
                                       "content": "Split planner loops into an extension"
+                                    },
+                                    "M0eqp6/nyn9n": {
+                                      "fill": "$ds-info"
                                     },
                                     "M0eqp6/L109Bg": {
                                       "content": "platform"
@@ -18452,6 +18507,9 @@
                                     "dHDLZ": {
                                       "content": "Improve chat and data tables"
                                     },
+                                    "M0eqp6/nyn9n": {
+                                      "fill": "$ds-review"
+                                    },
                                     "M0eqp6/L109Bg": {
                                       "content": "design"
                                     },
@@ -18484,6 +18542,9 @@
                                     },
                                     "dHDLZ": {
                                       "content": "Feature-slice @pstdio/ui"
+                                    },
+                                    "M0eqp6/nyn9n": {
+                                      "fill": "$ds-review"
                                     },
                                     "M0eqp6/L109Bg": {
                                       "content": "design"
@@ -124978,6 +125039,9 @@
                             "dHDLZ": {
                               "content": "Show sidebar shortcuts at rest"
                             },
+                            "M0eqp6/nyn9n": {
+                              "fill": "$ds-review"
+                            },
                             "M0eqp6/L109Bg": {
                               "content": "design"
                             },
@@ -124999,6 +125063,9 @@
                             "dHDLZ": {
                               "content": "Harness run parameters"
                             },
+                            "M0eqp6/nyn9n": {
+                              "fill": "$ds-info"
+                            },
                             "M0eqp6/L109Bg": {
                               "content": "platform"
                             },
@@ -125019,6 +125086,9 @@
                             },
                             "dHDLZ": {
                               "content": "Split planner loops into an extension"
+                            },
+                            "M0eqp6/nyn9n": {
+                              "fill": "$ds-info"
                             },
                             "M0eqp6/L109Bg": {
                               "content": "platform"
