@@ -9,6 +9,7 @@ import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
 import { createWorkspacesModule } from "./module";
+import { ensureWorkspaceTerminalResource } from "./workspace-resource-actions";
 
 describe("createWorkspacesModule terminal integration", () => {
   test("resolves the effective path when an alternate workspace resource omits it", async () => {
@@ -49,6 +50,50 @@ describe("createWorkspacesModule terminal integration", () => {
     } finally {
       getWriter("project_repos")?.truncateAndWrite([]);
       getWriter("repos")?.truncateAndWrite([]);
+      getWriter("workspaces")?.truncateAndWrite([]);
+    }
+  });
+
+  test("refreshes the effective path on a restored terminal placement", async () => {
+    const workbench = createWorkbenchCore();
+    const workspace = createDashboardResource("workspace", "workspace-1", "PS-296_A1", "GitBranch", "project-1", {
+      workspaceId: "workspace-1",
+      workspaceExecutionKind: "local",
+      workspaceProviderState: "ready",
+      workspaceShorthand: "PS-296_A1",
+    });
+
+    getWriter("workspaces")?.truncateAndWrite([
+      {
+        id: "workspace-1",
+        project_id: "project-1",
+        name: "PS-296_A1",
+        branch: "bugfix/ps-296",
+        worktree_path: "/repo/.pstdio/workspaces/PS-296_A1",
+        workspace_shorthand: "PS-296_A1",
+        is_default: false,
+      },
+    ]);
+    workbench.registerModule(createWorkbenchTerminalModule());
+    workbench.registerModule(createWorkspacesModule());
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+
+    try {
+      await workbench.resources.openResource(workspace, { replaceActive: true });
+      const opened = workbench.layout
+        .listPanelInstances("secondary")
+        .find((panel) => panel.panelId === WORKBENCH_TERMINAL_WIDGET_ID)!;
+      workbench.layout.updatePanel(opened.instanceId, { resource: workspace, title: opened.title });
+
+      ensureWorkspaceTerminalResource(workbench, workspace);
+
+      const terminal = workbench.layout
+        .listPanelInstances("secondary")
+        .find((panel) => panel.panelId === WORKBENCH_TERMINAL_WIDGET_ID);
+      expect(terminal?.resource?.metadata).toMatchObject({
+        workspacePath: "/repo/.pstdio/workspaces/PS-296_A1",
+      });
+    } finally {
       getWriter("workspaces")?.truncateAndWrite([]);
     }
   });

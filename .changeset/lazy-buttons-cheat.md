@@ -4,4 +4,4 @@
 "@pstdio/ui": patch
 ---
 
-Fix PS-296 workspace, shortcut, chat tool, and skill ownership regressions.
+Fix PS-296 workspace, terminal, shortcut, chat tool, and skill ownership regressions.

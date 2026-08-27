@@ -63,10 +63,15 @@ export interface WorkbenchTerminalController {
   isAvailable(): boolean;
   setSessionOpener(opener: WorkbenchTerminalSessionOpener | null): void;
   /** Opens a session; the live adapter stays host-side and only the id is returned. */
-  open(input: { request: WorkbenchTerminalSessionRequest; title?: string }): Promise<{ sessionId: string }>;
+  open(input: {
+    bindingId?: string;
+    request: WorkbenchTerminalSessionRequest;
+    title?: string;
+  }): Promise<{ sessionId: string }>;
   write(input: { sessionId: string; data: string | Uint8Array }): void;
   resize(input: { sessionId: string; cols: number; rows: number }): void;
   kill(input: { sessionId: string; signal?: string }): Promise<void>;
+  killBinding(bindingId: string): Promise<void>;
   subscribe(sessionId: string, sink: WorkbenchTerminalSessionSink): () => void;
   getSession(sessionId: string): WorkbenchTerminalSessionModel | undefined;
   listSessions(): WorkbenchTerminalSessionModel[];
@@ -75,7 +80,7 @@ export interface WorkbenchTerminalController {
 }
 
 const DEFAULT_SESSION_TITLE = "Terminal";
-const INITIAL_DATA_BUFFER_LIMIT = 200;
+const SESSION_HISTORY_LIMIT = 200;
 
 export const createWorkbenchTerminalController = (): WorkbenchTerminalController => {
   const store = createWorkbenchStore<WorkbenchTerminalState>({
@@ -86,8 +91,11 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
   let opener: WorkbenchTerminalSessionOpener | null = null;
   const adapters = new Map<string, WorkbenchTerminalSessionAdapter>();
   const adapterDisposers = new Map<string, Array<() => void>>();
-  const initialDataBuffers = new Map<string, Uint8Array[]>();
-  const sessionsWithDataSubscribers = new Set<string>();
+  const dataHistory = new Map<string, Uint8Array[]>();
+  const dataSubscribers = new Map<string, Set<(chunk: Uint8Array) => void>>();
+  const sessionIdByBindingId = new Map<string, string>();
+  const bindingIdBySessionId = new Map<string, string>();
+  const pendingSessionByBindingId = new Map<string, Promise<{ sessionId: string }>>();
 
   const patchSession = (sessionId: string, patch: Partial<WorkbenchTerminalSessionModel>, action: string) => {
     const snapshot = store.getState();
@@ -108,20 +116,23 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
 
   const cleanupSession = (sessionId: string) => {
     adapters.delete(sessionId);
-    initialDataBuffers.delete(sessionId);
-    sessionsWithDataSubscribers.delete(sessionId);
+    dataHistory.delete(sessionId);
+    dataSubscribers.delete(sessionId);
+    const bindingId = bindingIdBySessionId.get(sessionId);
+    bindingIdBySessionId.delete(sessionId);
+    if (bindingId && sessionIdByBindingId.get(bindingId) === sessionId) sessionIdByBindingId.delete(bindingId);
     const disposers = adapterDisposers.get(sessionId) ?? [];
     adapterDisposers.delete(sessionId);
     for (const dispose of disposers) dispose();
   };
 
-  const bufferInitialData = (sessionId: string, chunk: Uint8Array) => {
-    if (sessionsWithDataSubscribers.has(sessionId)) return;
-    const buffer = initialDataBuffers.get(sessionId);
-    if (!buffer) return;
-
-    buffer.push(chunk);
-    if (buffer.length > INITIAL_DATA_BUFFER_LIMIT) buffer.shift();
+  const publishData = (sessionId: string, chunk: Uint8Array) => {
+    const history = dataHistory.get(sessionId);
+    if (!history) return;
+    const snapshot = new Uint8Array(chunk);
+    history.push(snapshot);
+    if (history.length > SESSION_HISTORY_LIMIT) history.shift();
+    for (const subscriber of dataSubscribers.get(sessionId) ?? []) subscriber(snapshot);
   };
 
   const kill = async (input: { sessionId: string; signal?: string }) => {
@@ -131,22 +142,40 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
     cleanupSession(input.sessionId);
   };
 
-  return {
-    store,
+  const killBinding = async (bindingId: string) => {
+    const sessionId = sessionIdByBindingId.get(bindingId);
+    if (sessionId && adapters.has(sessionId)) {
+      await kill({ sessionId });
+      return;
+    }
 
-    isAvailable: () => opener !== null,
+    const pending = pendingSessionByBindingId.get(bindingId);
+    if (!pending) return;
+    const opened = await pending.catch(() => undefined);
+    if (opened && adapters.has(opened.sessionId)) await kill({ sessionId: opened.sessionId });
+  };
 
-    setSessionOpener(next) {
-      opener = next;
-    },
+  const open = async (input: { bindingId?: string; request: WorkbenchTerminalSessionRequest; title?: string }) => {
+    if (!opener) throw new Error("Terminal sessions are not available in this workbench host.");
 
-    async open(input) {
-      if (!opener) throw new Error("Terminal sessions are not available in this workbench host.");
+    if (input.bindingId) {
+      const sessionId = sessionIdByBindingId.get(input.bindingId);
+      if (sessionId && adapters.has(sessionId)) return { sessionId };
+      const pending = pendingSessionByBindingId.get(input.bindingId);
+      if (pending) return await pending;
+    }
+
+    const openSession = (async () => {
       const adapter = await opener(input.request);
       adapters.set(adapter.id, adapter);
-      initialDataBuffers.set(adapter.id, []);
+      dataHistory.set(adapter.id, []);
+      dataSubscribers.set(adapter.id, new Set());
+      if (input.bindingId) {
+        sessionIdByBindingId.set(input.bindingId, adapter.id);
+        bindingIdBySessionId.set(adapter.id, input.bindingId);
+      }
 
-      const disposers = [adapter.onData((chunk) => bufferInitialData(adapter.id, chunk))];
+      const disposers = [adapter.onData((chunk) => publishData(adapter.id, chunk))];
       const unsubscribeTitle = adapter.onTitle?.((title) =>
         patchSession(adapter.id, { title }, "terminalSessionTitleChanged"),
       );
@@ -175,7 +204,28 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
       );
 
       return { sessionId: adapter.id };
+    })();
+
+    if (input.bindingId) pendingSessionByBindingId.set(input.bindingId, openSession);
+    try {
+      return await openSession;
+    } finally {
+      if (input.bindingId && pendingSessionByBindingId.get(input.bindingId) === openSession) {
+        pendingSessionByBindingId.delete(input.bindingId);
+      }
+    }
+  };
+
+  return {
+    store,
+
+    isAvailable: () => opener !== null,
+
+    setSessionOpener(next) {
+      opener = next;
     },
+
+    open,
 
     write(input) {
       requireAdapter(input.sessionId).write(input.data);
@@ -187,15 +237,17 @@ export const createWorkbenchTerminalController = (): WorkbenchTerminalController
 
     kill,
 
+    killBinding,
+
     subscribe(sessionId, sink) {
       const adapter = requireAdapter(sessionId);
       const unsubscribes: Array<(() => void) | undefined> = [];
       if (sink.onData) {
-        const bufferedData = initialDataBuffers.get(sessionId) ?? [];
-        initialDataBuffers.delete(sessionId);
-        sessionsWithDataSubscribers.add(sessionId);
-        unsubscribes.push(adapter.onData(sink.onData));
-        for (const chunk of bufferedData) sink.onData(chunk);
+        const onData = sink.onData;
+        const subscribers = dataSubscribers.get(sessionId);
+        subscribers?.add(onData);
+        unsubscribes.push(() => subscribers?.delete(onData));
+        for (const chunk of dataHistory.get(sessionId) ?? []) onData(chunk);
       }
       unsubscribes.push(
         sink.onExit ? adapter.onExit(sink.onExit) : undefined,

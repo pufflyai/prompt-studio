@@ -12,6 +12,7 @@ import {
   WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
   WORKBENCH_TERMINAL_WIDGET_ID,
 } from "./terminal-module";
+import { terminalPlacementBindingId } from "./terminal-placement-binding";
 
 const setup = () => {
   const workbench = createWorkbenchCore();
@@ -293,6 +294,45 @@ describe("createWorkbenchTerminalModule", () => {
       .getLayout()
       .regions.secondary.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
     expect(terminal?.resource).toBe(workspaceResource);
+  });
+});
+
+describe("terminal session lifecycle", () => {
+  test("keeps a terminal alive across scope changes and kills it when its tab closes", async () => {
+    const layouts = new Map<string | undefined, WorkbenchLayout>();
+    const workbench = createWorkbenchCore({
+      layoutPersistence: {
+        getLayout: (scope) => layouts.get(scope),
+        setLayout: (layout, scope) => layouts.set(scope, structuredClone(layout)),
+      },
+    });
+    workbench.registerModule(createWorkbenchTerminalModule());
+    const killSignals: Array<string | undefined> = [];
+    workbench.terminal.setSessionOpener(async () => ({
+      id: "session-1",
+      write() {},
+      resize() {},
+      kill(signal) {
+        killSignals.push(signal);
+      },
+      onData: () => () => undefined,
+      onExit: () => () => undefined,
+      onError: () => () => undefined,
+    }));
+    workbench.layout.setPersistenceScope("workspace-1");
+    const placement = openWorkbenchTerminal(workbench);
+    await workbench.terminal.open({
+      bindingId: terminalPlacementBindingId("workspace-1", placement.instanceId),
+      request: { cols: 80, rows: 24 },
+    });
+
+    workbench.layout.setPersistenceScope("workspaces");
+    expect(killSignals).toEqual([]);
+    workbench.layout.setPersistenceScope("workspace-1");
+    workbench.layout.closePanel(placement.instanceId);
+    await Promise.resolve();
+
+    expect(killSignals).toEqual([undefined]);
   });
 });
 

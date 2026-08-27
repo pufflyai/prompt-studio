@@ -71,6 +71,22 @@ describe("createWorkbenchTerminalController", () => {
     expect(terminal.listSessions()).toMatchObject([{ id: "s1", status: "running", title: "Shell" }]);
   });
 
+  test("reuses a live session for the same terminal placement binding", async () => {
+    const fake = createFakeAdapter("s1");
+    const terminal = createWorkbenchTerminalController();
+    let openCount = 0;
+    terminal.setSessionOpener(async () => {
+      openCount += 1;
+      return fake.adapter;
+    });
+
+    const first = await terminal.open({ bindingId: "workspace-1/terminal-1", request });
+    const restored = await terminal.open({ bindingId: "workspace-1/terminal-1", request });
+
+    expect(restored).toEqual(first);
+    expect(openCount).toBe(1);
+  });
+
   test("write, resize, and kill address the session by id", async () => {
     const fake = createFakeAdapter("s1");
     const terminal = createWorkbenchTerminalController();
@@ -120,6 +136,35 @@ describe("createWorkbenchTerminalController", () => {
     });
 
     expect(chunks).toEqual([new Uint8Array([112, 114, 111, 109, 112, 116])]);
+  });
+
+  test("replays terminal history when a renderer subscribes again", async () => {
+    const fake = createFakeAdapter("s1");
+    const terminal = createWorkbenchTerminalController();
+    terminal.setSessionOpener(async () => fake.adapter);
+    await terminal.open({ bindingId: "workspace-1/terminal-1", request });
+
+    fake.emitData(new Uint8Array([111, 110, 101]));
+    const unsubscribe = terminal.subscribe("s1", { onData: () => undefined });
+    unsubscribe();
+    fake.emitData(new Uint8Array([116, 119, 111]));
+
+    const restored: Uint8Array[] = [];
+    terminal.subscribe("s1", { onData: (chunk) => restored.push(chunk) });
+
+    expect(restored).toEqual([new Uint8Array([111, 110, 101]), new Uint8Array([116, 119, 111])]);
+  });
+
+  test("kills a live session by terminal placement binding", async () => {
+    const fake = createFakeAdapter("s1");
+    const terminal = createWorkbenchTerminalController();
+    terminal.setSessionOpener(async () => fake.adapter);
+    await terminal.open({ bindingId: "workspace-1/terminal-1", request });
+
+    await terminal.killBinding("workspace-1/terminal-1");
+
+    expect(fake.calls).toEqual(["kill:default"]);
+    expect(terminal.getSession("s1")?.status).toBe("killed");
   });
 
   test("reflects the session's foreground process name as its title", async () => {

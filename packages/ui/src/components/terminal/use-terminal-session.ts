@@ -68,7 +68,7 @@ export const useTerminalSession = ({ bridge, request, killOnUnmount = true }: Us
       .openSession(requestSnapshot)
       .then((session) => {
         if (cancelled) {
-          void session.kill();
+          if (killOnUnmount) void session.kill();
           return;
         }
         activeSession = session;

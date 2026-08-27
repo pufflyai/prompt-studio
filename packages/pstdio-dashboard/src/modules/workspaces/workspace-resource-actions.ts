@@ -130,7 +130,13 @@ export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, res
     });
   }
 
-  if (existing) return existing;
+  if (existing) {
+    if (existing.resource?.metadata?.workspacePath === terminalResource.metadata?.workspacePath) return existing;
+    return ctx.layout.updatePanel(existing.widgetId, {
+      resource: terminalResource,
+      title: existing.title,
+    });
+  }
 
   autoOpenedUris.add(resource.uri);
   return openWorkbenchTerminal(ctx, { resource: terminalResource, reveal: false });

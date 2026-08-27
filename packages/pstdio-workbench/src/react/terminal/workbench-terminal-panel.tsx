@@ -4,8 +4,10 @@ import { Terminal, type TerminalBridge } from "@pstdio/ui/terminal";
 import { useEffect, useRef, useState } from "react";
 import type { ResourceRef, WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
+import { terminalPlacementBindingId } from "./terminal-placement-binding";
 
 interface ControllerTerminalBridgeOptions {
+  getBindingId?: () => string | undefined;
   getResource?: () => ResourceRef | undefined;
   getTitle?: () => string | undefined;
 }
@@ -33,6 +35,7 @@ export const createControllerTerminalBridge = (
 ): TerminalBridge => ({
   async openSession(request) {
     const { sessionId } = await terminal.open({
+      bindingId: options.getBindingId?.(),
       request: withTerminalRequestDefaults(request, options.getResource?.()),
       title: options.getTitle?.(),
     });
@@ -57,8 +60,8 @@ interface WorkbenchTerminalPanelProps {
  * Body of the host-owned terminal panel. Chrome (tab, title, close action,
  * resize) comes from the workbench `secondary` region; this component only mounts
  * the terminal bound to the workbench terminal controller. Collapsing the panel
- * keeps the terminal mounted. Closing its tab unmounts the terminal and kills
- * its session (close = kill).
+ * keeps the terminal mounted. Scope changes keep the session alive; the terminal
+ * module ends it when its tab is explicitly closed.
  */
 export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
   const { placement, workbench } = props;
@@ -67,6 +70,8 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
   placementRef.current = placement;
   const [bridge] = useState(() =>
     createControllerTerminalBridge(workbench.terminal, {
+      getBindingId: () =>
+        terminalPlacementBindingId(workbench.layout.getPersistenceScope(), placementRef.current.instanceId),
       getResource: () => placementRef.current.resource,
       getTitle: () => placementRef.current.title,
     }),
@@ -103,6 +108,7 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
         bridge={bridge}
         theme={/dark/i.test(themePreference) ? "dark" : "light"}
         autoFocus={active}
+        killOnUnmount={false}
         onSessionOpen={setSessionId}
       />
     </Box>

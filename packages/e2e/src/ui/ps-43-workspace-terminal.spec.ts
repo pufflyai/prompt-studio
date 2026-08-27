@@ -21,6 +21,19 @@ const openWorkspaceTerminal = async (page: import("@playwright/test").Page, work
   await expect(page.getByRole("region", { name: "Secondary Panel" })).toBeVisible();
 };
 
+const openWorkspace = async (page: import("@playwright/test").Page, workspaceName: string) => {
+  const workspaceRow = page.getByRole("row").filter({ hasText: workspaceName }).first();
+  await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
+  await workspaceRow.click();
+  await expect(page.getByRole("link", { name: workspaceName, exact: true })).toBeVisible();
+};
+
+const showSecondaryPanel = async (page: import("@playwright/test").Page) => {
+  const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
+  if (await showSecondary.isVisible()) await showSecondary.click();
+  await expect(page.getByRole("region", { name: "Secondary Panel" })).toBeVisible();
+};
+
 const expectTerminalPwd = async (page: import("@playwright/test").Page, expectedPath: string) => {
   const terminalInput = page.getByRole("textbox", { name: "Terminal input" });
   await expect(terminalInput).toBeFocused();
@@ -121,5 +134,56 @@ test("PS-43 restores the first terminal when the hidden launcher was persisted a
     await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__ps43_restored_terminal__");
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
+  }
+});
+
+test("PS-296 keeps a workspace terminal in its worktree and alive when the workspace is reopened", async ({
+  page,
+  request,
+}) => {
+  const projectResponse = await request.post(`${apiBase}/v1/projects`, {
+    data: { name: "PS-296 Workspace Terminal Return" },
+  });
+  expect(projectResponse.ok()).toBe(true);
+  const project = (await projectResponse.json()) as { id: string };
+  const repoRoot = createGitRepo("pstdio-ps-296-terminal-", "workspace terminal return e2e");
+
+  try {
+    const repo = await registerRepoViaApi(request, apiBase, project.id, "ps-296-terminal-repo", repoRoot);
+    const workspaceResponse = await request.post(`${apiBase}/v1/workspaces`, {
+      data: { project_id: project.id, repo_id: repo.id },
+    });
+    expect(workspaceResponse.ok()).toBe(true);
+    const workspace = (await workspaceResponse.json()) as {
+      workspace_shorthand: string;
+      worktree_path: string;
+    };
+
+    await prepareDashboard(page, project.id);
+    await page.goto(`/projects/${project.id}/workspaces`);
+    await openWorkspace(page, workspace.workspace_shorthand);
+    await showSecondaryPanel(page);
+    await page.locator(".xterm:visible").click();
+    await expectTerminalPwd(page, workspace.worktree_path);
+
+    const terminalInput = page.getByRole("textbox", { name: "Terminal input" });
+    await terminalInput.pressSequentially(
+      "export PSTDIO_TERMINAL_RETURN_STATE=kept; printf '__ps296_set__%s__\\n' \"$PSTDIO_TERMINAL_RETURN_STATE\"",
+    );
+    await terminalInput.press("Enter");
+    await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__ps296_set__kept__");
+
+    await page.getByRole("button", { name: "Navigate back" }).click();
+    await expect(page.getByRole("row").filter({ hasText: workspace.workspace_shorthand }).first()).toBeVisible();
+    await openWorkspace(page, workspace.workspace_shorthand);
+    await showSecondaryPanel(page);
+    await page.locator(".xterm:visible").click();
+    await terminalInput.pressSequentially("printf '__ps296_state__%s__\\n' \"$PSTDIO_TERMINAL_RETURN_STATE\"");
+    await terminalInput.press("Enter");
+
+    await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__ps296_state__kept__");
+  } finally {
+    await request.delete(`${apiBase}/v1/projects/${project.id}`);
+    rmSync(repoRoot, { recursive: true, force: true });
   }
 });

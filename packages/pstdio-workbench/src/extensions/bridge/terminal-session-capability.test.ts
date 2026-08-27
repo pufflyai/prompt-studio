@@ -107,7 +107,7 @@ describe("createTerminalSessionCapability", () => {
     await capability({ operation: "subscribe", sessionId: "session-1" });
 
     expect(scripted.handlerCounts()).toEqual({
-      data: beforeSubscribe.data + 1,
+      data: beforeSubscribe.data,
       exit: beforeSubscribe.exit + 1,
     });
 

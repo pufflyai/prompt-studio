@@ -1,4 +1,5 @@
 import type { WorkbenchCoreContributionContext, WorkbenchModuleContribution } from "../../core";
+import { terminalPlacementBindingId } from "./terminal-placement-binding";
 import { WorkbenchTerminalPanel } from "./workbench-terminal-panel";
 
 // The host-owned terminal panel in the workbench `secondary` (bottom) region.
@@ -19,6 +20,53 @@ type OpenWorkbenchTerminalOptions = OpenWorkbenchTerminalInput & {
 type TerminalResource = OpenWorkbenchTerminalOptions["resource"];
 
 export const WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID = "workbench.terminal.launcher";
+
+const terminalInstanceIds = (ctx: WorkbenchCoreContributionContext) =>
+  new Set(
+    ctx.layout
+      .listPanelInstances("secondary")
+      .filter((placement) => placement.panelId === WORKBENCH_TERMINAL_WIDGET_ID)
+      .map((placement) => placement.instanceId),
+  );
+
+const watchClosedTerminalPlacements = (ctx: WorkbenchCoreContributionContext) => {
+  // A scope rotation temporarily removes every placement. Only an explicit tab
+  // close should end the PTY bound to that placement.
+  let changingScope = false;
+  const willChangeScope = ctx.layout.onWillChangePersistenceScope(() => {
+    changingScope = true;
+  });
+  const didChangeScope = ctx.layout.onDidChangePersistenceScope(() => {
+    changingScope = false;
+  });
+  const unsubscribeLayout = ctx.layout.store.subscribe((state, previousState) => {
+    if (changingScope) return;
+    const currentIds = new Set(
+      state.layout.regions.secondary.widgets
+        .filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID)
+        .map((placement) => placement.widgetId),
+    );
+    const previousIds = previousState.layout.regions.secondary.widgets
+      .filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID)
+      .map((placement) => placement.widgetId);
+    const scope = ctx.layout.getPersistenceScope();
+    for (const instanceId of previousIds) {
+      if (!currentIds.has(instanceId)) void ctx.terminal.killBinding(terminalPlacementBindingId(scope, instanceId));
+    }
+  });
+
+  return {
+    dispose() {
+      unsubscribeLayout();
+      willChangeScope.dispose();
+      didChangeScope.dispose();
+      const scope = ctx.layout.getPersistenceScope();
+      for (const instanceId of terminalInstanceIds(ctx)) {
+        void ctx.terminal.killBinding(terminalPlacementBindingId(scope, instanceId));
+      }
+    },
+  };
+};
 
 const restoreTerminalSelectionFromLauncher = (ctx: WorkbenchCoreContributionContext, launcherInstanceId: string) => {
   const secondary = ctx.layout.getLayout().regions.secondary;
@@ -145,6 +193,7 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         regionSize: TERMINAL_PANEL_SIZE,
       }),
       ctx.layout.onDidChangePersistenceScope(() => ensureTerminalLauncher(ctx)),
+      watchClosedTerminalPlacements(ctx),
       ctx.commands.registerCommand(
         {
           id: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
