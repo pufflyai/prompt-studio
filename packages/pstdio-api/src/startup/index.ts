@@ -14,7 +14,7 @@ import { apiLogger } from "../lib/logger";
 
 interface StartupTaskOptions {
   onBackgroundTask?: (task: Promise<void>) => void;
-  prepareDefaultExtensions?: () => Promise<void>;
+  prepareDefaultExtensions?: (signal?: AbortSignal) => Promise<void>;
   recoverQueuedAutomation?: () => Promise<void>;
   recoverQueuedSessions?: () => Promise<void>;
 }
@@ -46,13 +46,14 @@ const provisionRecoveredWorkspaces = (deps: RouteDeps, projectIds: string[], sig
     }),
   ).then(() => undefined);
 
-const ensureDefaultExtensionsInstalled = async (deps: RouteDeps) => {
+const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortSignal) => {
   if ((await deps.projectService.list()).length > 0) return;
 
   try {
     const installed = await installDefaultExtensions({
       forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
       onInstallFailure: ({ error, installName, source }) => {
+        if (signal?.aborted) return;
         apiLogger.warn(
           {
             err: error,
@@ -64,9 +65,12 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps) => {
         );
       },
       releaseRef: deps.extensionUpgradeService.releaseRef,
+      signal,
     });
+    signal?.throwIfAborted();
     await registerInstalledExtensionSources(deps.extensionService, installed);
   } catch (err) {
+    if (signal?.aborted) return;
     apiLogger.warn(
       { err, event: "startup.default_extension_install.error" },
       "Default extension install failed during startup",
@@ -76,8 +80,8 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps) => {
 
 export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, options?: StartupTaskOptions) => {
   const defaultExtensionPreparation = options?.prepareDefaultExtensions
-    ? options.prepareDefaultExtensions()
-    : ensureDefaultExtensionsInstalled(deps);
+    ? options.prepareDefaultExtensions(signal)
+    : ensureDefaultExtensionsInstalled(deps, signal);
   const projectIds = (await deps.projectService.list()).map((project) => project.id);
   await reconcileProjectWorkspaces(deps, projectIds, signal);
   await options?.recoverQueuedSessions?.();

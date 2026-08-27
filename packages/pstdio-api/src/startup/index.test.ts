@@ -7,6 +7,14 @@ import { runStartupTasks } from ".";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../../..");
 
+const waitFor = async (predicate: () => boolean) => {
+  const deadline = Date.now() + 10_000;
+  while (!predicate()) {
+    if (Date.now() >= deadline) throw new Error("Timed out waiting for startup background work");
+    await Bun.sleep(10);
+  }
+};
+
 describe("startup default extensions", () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-startup-default-extensions-"));
   const previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
@@ -58,6 +66,8 @@ describe("startup default extensions", () => {
       filesRoot: "",
     });
 
+    await waitFor(() => existsSync(join(pstdioHome, "extensions/extension-lab")));
+    await waitFor(() => existsSync(join(pstdioHome, "extensions/pstdio-base-themes")));
     await close();
 
     expect(existsSync(join(pstdioHome, "extensions/extension-lab"))).toBe(true);
@@ -81,6 +91,7 @@ describe("startup default extensions", () => {
       filesRoot: "",
     });
 
+    await waitFor(() => readFileSync(join(installed, "README.md"), "utf8") !== "stale extension lab");
     await close();
 
     expect(readFileSync(join(installed, "README.md"), "utf8")).toBe(readFileSync(join(source, "README.md"), "utf8"));
@@ -124,6 +135,42 @@ describe("startup default extensions", () => {
       expect(backgroundSettled).toBe(true);
     } finally {
       preparation.resolve();
+    }
+  });
+
+  test("releases tracked default extension preparation when runtime startup is aborted", async () => {
+    process.env.PSTDIO_HOME = join(tempRoot, "home-aborted-defaults");
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+    const controller = new AbortController();
+    const fallback = Promise.withResolvers<void>();
+    let preparationSignal: AbortSignal | undefined;
+    let backgroundTask: Promise<void> | undefined;
+    const deps = {
+      projectService: { list: async () => [] },
+      sessionService: { listByStatus: async () => [] },
+    } as unknown as Parameters<typeof runStartupTasks>[0];
+
+    try {
+      await runStartupTasks(deps, controller.signal, {
+        onBackgroundTask: (task) => {
+          backgroundTask = task;
+        },
+        prepareDefaultExtensions: (signal) => {
+          preparationSignal = signal;
+          if (!signal) return fallback.promise;
+          return new Promise<void>((resolve) => signal.addEventListener("abort", () => resolve(), { once: true }));
+        },
+      });
+
+      expect(preparationSignal).toBe(controller.signal);
+      expect(backgroundTask).toBeDefined();
+      if (!backgroundTask) throw new Error("Startup did not register its background work");
+
+      controller.abort();
+      const closed = await Promise.race([backgroundTask.then(() => true), Bun.sleep(100).then(() => false)]);
+      expect(closed).toBe(true);
+    } finally {
+      fallback.resolve();
     }
   });
 });

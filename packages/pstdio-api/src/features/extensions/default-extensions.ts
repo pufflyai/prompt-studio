@@ -91,17 +91,30 @@ type InstallDefaultExtensionsDeps = {
   onInstallFailure?: (failure: { error: unknown; installName: string; source: string }) => void;
   prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
   releaseRef?: string;
+  signal?: AbortSignal;
 };
 
 let defaultExtensionInstallQueue: Promise<void> = Promise.resolve();
 
-const enqueueDefaultExtensionInstall = <T>(install: () => Promise<T>) => {
-  const result = defaultExtensionInstallQueue.then(install);
-  defaultExtensionInstallQueue = result.then(
+const enqueueDefaultExtensionInstall = <T>(install: () => Promise<T>, signal?: AbortSignal) => {
+  const queued = defaultExtensionInstallQueue.then(() => {
+    signal?.throwIfAborted();
+    return install();
+  });
+  defaultExtensionInstallQueue = queued.then(
     () => undefined,
     () => undefined,
   );
-  return result;
+  if (!signal) return queued;
+
+  const abort = Promise.withResolvers<never>();
+  const onAbort = () => abort.reject(signal.reason);
+  if (signal.aborted) {
+    onAbort();
+  } else {
+    signal.addEventListener("abort", onAbort, { once: true });
+  }
+  return Promise.race([queued, abort.promise]).finally(() => signal.removeEventListener("abort", onAbort));
 };
 
 type LoadScope = "user" | "repo";
@@ -144,6 +157,7 @@ const prepareDefaultCheckouts = async (
   input: {
     prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
     releaseRef?: string;
+    signal?: AbortSignal;
   },
 ) => {
   const namedByRef = new Map<string | undefined, string[]>();
@@ -157,16 +171,24 @@ const prepareDefaultCheckouts = async (
   const prepareShared = input.prepareSharedCheckout ?? createSharedNamedSourceCheckout;
   const sharedByRef = new Map<string | undefined, SharedCheckout>();
   for (const [ref, names] of namedByRef) {
-    sharedByRef.set(ref, await prepareShared(names, ref ? { ref } : {}));
+    input.signal?.throwIfAborted();
+    sharedByRef.set(
+      ref,
+      await prepareShared(names, {
+        ...(ref ? { ref } : {}),
+        ...(input.signal ? { signal: input.signal } : {}),
+      }),
+    );
   }
   return sharedByRef;
 };
 
 const createPreparedSourceResolver = (sharedByRef: Map<string | undefined, SharedCheckout>, releaseRef?: string) => {
-  const prepareNamedSource: SharedCheckout["prepareNamedSource"] = async (name, _tempDir, ref) => {
+  const prepareNamedSource: SharedCheckout["prepareNamedSource"] = async (name, _tempDir, ref, signal) => {
+    signal?.throwIfAborted();
     const shared = sharedByRef.get(ref ?? releaseRef);
     if (!shared) throw new Error(`No prepared checkout for extension: ${name}`);
-    return shared.prepareNamedSource(name, "", ref);
+    return shared.prepareNamedSource(name, "", ref, signal);
   };
   return prepareNamedSource;
 };
@@ -178,6 +200,7 @@ const withResolvedDefaultEntries = async <T>(
     onEntryFailure?: (failure: { entry: DefaultExtensionEntry; error: unknown; source: string }) => void;
     prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
     releaseRef?: string;
+    signal?: AbortSignal;
     sourceMode?: boolean;
   },
   fn: (
@@ -196,11 +219,12 @@ const withResolvedDefaultEntries = async <T>(
   try {
     const resolved: ResolvedDefaultEntry[] = [];
     for (const entry of entries) {
+      input.signal?.throwIfAborted();
       const source = sourceFor(entry);
       try {
         const sourcePath = isLocalExtensionSource(source)
           ? resolveLocalSource(source)
-          : (await prepareNamedSource(source, "", entryRef(entry) ?? input.releaseRef)).path;
+          : (await prepareNamedSource(source, "", entryRef(entry) ?? input.releaseRef, input.signal)).path;
         if (!sourcePath) continue;
 
         resolved.push({
@@ -249,10 +273,12 @@ const runDefaultExtensionInstall = async (
       prepareSharedCheckout: deps.prepareSharedCheckout,
       forceSourceDefaults: deps.forceSourceDefaults,
       releaseRef: deps.releaseRef,
+      signal: deps.signal,
       sourceMode: context.sourceMode,
     },
     async (entries, prepareNamedSource) => {
       for (const resolved of entries) {
+        deps.signal?.throwIfAborted();
         if (resolved.scope !== "user") continue;
         try {
           installed.push(
@@ -261,6 +287,7 @@ const runDefaultExtensionInstall = async (
               env: context.env,
               existsOk: true,
               prepareNamedSource,
+              signal: deps.signal,
             }),
           );
         } catch (error) {
@@ -271,6 +298,7 @@ const runDefaultExtensionInstall = async (
     },
   );
 
+  deps.signal?.throwIfAborted();
   return installed;
 };
 
@@ -281,7 +309,7 @@ export const installDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}
     env,
     sourceMode: !deps.config,
   };
-  return enqueueDefaultExtensionInstall(() => runDefaultExtensionInstall(deps, context));
+  return enqueueDefaultExtensionInstall(() => runDefaultExtensionInstall(deps, context), deps.signal);
 };
 
 export const registerInstalledExtensionSources = async (

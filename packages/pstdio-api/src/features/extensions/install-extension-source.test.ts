@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import {
+  createSharedNamedSourceCheckout,
   ExtensionAlreadyInstalledError,
   installExtensionSource,
   namedSourceRef,
@@ -447,5 +448,27 @@ describe("installExtensionSource dependency reinstall", () => {
     });
 
     expect(runCommand).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("createSharedNamedSourceCheckout", () => {
+  test("passes cancellation to every Git operation", async () => {
+    const controller = new AbortController();
+    const calls: Array<{ signal?: AbortSignal }> = [];
+    const runCommand = mock(async (_command: string, _args: string[], options: { signal?: AbortSignal }) => {
+      calls.push(options);
+      return { exitCode: 0, stderr: "", stdout: "commit" };
+    });
+    const checkout = await createSharedNamedSourceCheckout(["pstdio-planner"], {
+      runCommand,
+      signal: controller.signal,
+    });
+
+    try {
+      expect(runCommand).toHaveBeenCalledTimes(3);
+      expect(calls.every((call) => call.signal === controller.signal)).toBe(true);
+    } finally {
+      checkout.cleanup();
+    }
   });
 });

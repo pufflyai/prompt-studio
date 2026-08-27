@@ -167,7 +167,47 @@ describe("installDefaultExtensions", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+});
 
+describe("installDefaultExtensions cancellation", () => {
+  test("settles cancellation while an active installer is stopping", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-default-cancel-"));
+    const source = join(root, "pstdio-planner");
+    writeExtension(source, "pstdio-planner");
+    const installStarted = Promise.withResolvers<void>();
+    const installReleased = Promise.withResolvers<void>();
+    const controller = new AbortController();
+    const result = installDefaultExtensions({
+      config: { defaultExtensions: [{ source }] },
+      installExtensionSource: async () => {
+        installStarted.resolve();
+        await installReleased.promise;
+        return installed;
+      },
+      signal: controller.signal,
+    });
+
+    try {
+      await installStarted.promise;
+      controller.abort();
+      const cancelled = await Promise.race([
+        result.then(
+          () => false,
+          () => true,
+        ),
+        Bun.sleep(100).then(() => false),
+      ]);
+
+      expect(cancelled).toBe(true);
+    } finally {
+      installReleased.resolve();
+      await installDefaultExtensions({ config: { defaultExtensions: [] } });
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("installDefaultExtensions sources", () => {
   test("uses local source packages for production defaults when running from source", async () => {
     const calls: Array<Record<string, unknown>> = [];
     const installExtensionSource = mock(async (input: Record<string, unknown>) => {
@@ -275,22 +315,27 @@ describe("installDefaultExtensions", () => {
     const prepareNamedSource = mock(async (name: string) => ({ path: join(root, name), ref: "ref" }));
     const cleanup = mock();
     const prepareSharedCheckout = mock(async () => ({ prepareNamedSource, cleanup }));
+    const controller = new AbortController();
 
     try {
       await installDefaultExtensions({
         config: { defaultExtensions: ["pstdio-planner", "pstdio-skills"] },
         installExtensionSource,
         prepareSharedCheckout,
+        signal: controller.signal,
       });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
 
     expect(prepareSharedCheckout).toHaveBeenCalledTimes(1);
-    expect(prepareSharedCheckout).toHaveBeenCalledWith(["pstdio-planner", "pstdio-skills"], {});
+    expect(prepareSharedCheckout).toHaveBeenCalledWith(["pstdio-planner", "pstdio-skills"], {
+      signal: controller.signal,
+    });
     expect(installExtensionSource).toHaveBeenCalledTimes(2);
     expect(calls[0]?.existsOk).toBe(true);
     expect(calls[0]?.prepareNamedSource).toEqual(expect.any(Function));
+    expect(calls.every((call) => call.signal === controller.signal)).toBe(true);
     expect(cleanup).toHaveBeenCalledTimes(1);
   });
 
