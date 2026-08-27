@@ -2,7 +2,13 @@ import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import { readPackageManifestMetadata } from "pstdio-extensions";
-import { extensionMarketplace, marketplaceExtensionRepositoryPath } from "./extension-marketplace";
+import { enqueueDefaultExtensionInstall } from "./default-extension-install-queue";
+import {
+  type DefaultExtensionEntry,
+  type DefaultExtensionsConfig,
+  resolveDefaultExtensionsConfig,
+} from "./default-extensions-config";
+import { marketplaceExtensionRepositoryPath } from "./extension-marketplace";
 import {
   createSharedNamedSourceCheckout,
   type InstallExtensionSourceInput,
@@ -12,49 +18,13 @@ import {
   toExtensionEnableInput,
 } from "./install-extension-source";
 
+export {
+  type DefaultExtensionEntry,
+  type DefaultExtensionsConfig,
+  defaultExtensions,
+  resolveDefaultExtensionsConfig,
+} from "./default-extensions-config";
 export { syncInstalledExtensionsForProject, syncInstalledExtensionsForProjects } from "./installed-extension-sync";
-
-export type DefaultExtensionEntry =
-  | string
-  | {
-      force?: boolean;
-      installName?: string;
-      ref?: string;
-      skipInstall?: boolean;
-      source: string;
-    };
-
-export type DefaultExtensionsConfig = {
-  defaultExtensions: DefaultExtensionEntry[];
-};
-
-export const defaultExtensions: DefaultExtensionsConfig = {
-  defaultExtensions: extensionMarketplace.map((extension) => extension.installName),
-};
-
-const toConfig = (parsed: unknown): DefaultExtensionsConfig => {
-  if (Array.isArray(parsed)) return { defaultExtensions: parsed as DefaultExtensionEntry[] };
-  if (parsed && typeof parsed === "object" && "defaultExtensions" in parsed) {
-    return {
-      defaultExtensions: (parsed as { defaultExtensions: DefaultExtensionEntry[] }).defaultExtensions,
-    };
-  }
-  throw new Error("PSTDIO_DEFAULT_EXTENSIONS must be a JSON array or object with defaultExtensions");
-};
-
-export const resolveDefaultExtensionsConfig = (env: Record<string, string | undefined> = process.env) => {
-  const raw = env.PSTDIO_DEFAULT_EXTENSIONS;
-  if (!raw) return defaultExtensions;
-
-  try {
-    return toConfig(JSON.parse(raw) as unknown);
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new Error(`Invalid PSTDIO_DEFAULT_EXTENSIONS JSON: ${error.message}`);
-    }
-    throw error;
-  }
-};
 
 const entryRef = (entry: DefaultExtensionEntry) => (typeof entry === "string" ? undefined : entry.ref);
 
@@ -92,29 +62,6 @@ type InstallDefaultExtensionsDeps = {
   prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
   releaseRef?: string;
   signal?: AbortSignal;
-};
-
-let defaultExtensionInstallQueue: Promise<void> = Promise.resolve();
-
-const enqueueDefaultExtensionInstall = <T>(install: () => Promise<T>, signal?: AbortSignal) => {
-  const queued = defaultExtensionInstallQueue.then(() => {
-    signal?.throwIfAborted();
-    return install();
-  });
-  defaultExtensionInstallQueue = queued.then(
-    () => undefined,
-    () => undefined,
-  );
-  if (!signal) return queued;
-
-  const abort = Promise.withResolvers<never>();
-  const onAbort = () => abort.reject(signal.reason);
-  if (signal.aborted) {
-    onAbort();
-  } else {
-    signal.addEventListener("abort", onAbort, { once: true });
-  }
-  return Promise.race([queued, abort.promise]).finally(() => signal.removeEventListener("abort", onAbort));
 };
 
 type LoadScope = "user" | "repo";
