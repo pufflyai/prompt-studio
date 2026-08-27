@@ -1,4 +1,4 @@
-import { defineCommand, projectSlots, workbenchModes, workspaceSlots } from "@pstdio/sdk/extensions";
+import { defineCommand, projectSlots, workbenchResourceKinds, workspaceSlots } from "@pstdio/sdk/extensions";
 import { LAB_ROUTE_HEADER_WHEN } from "../utils/lab-constants";
 import { awakenCommand } from "./awaken-command";
 
@@ -47,7 +47,7 @@ export const workspaceOnlyCommand = defineCommand({
       slot: workspaceSlots.headerPrimary,
       label: "Workspace-only lab action",
       icon: "layers",
-      when: { mode: workbenchModes.workspace },
+      when: { resourceType: [workbenchResourceKinds.workspace] },
     },
   ],
   async run(ctx, _commandParams) {

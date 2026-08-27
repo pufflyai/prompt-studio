@@ -5,7 +5,6 @@ import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { setDashboardSidenavSelection, showDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
@@ -29,14 +28,6 @@ const openCreateWorkspace = (ctx: WorkbenchModuleContext) => {
 
   return ctx.layout.openPanel(dashboardWidgetIds.createWorkspace, { title: "Create workspace", closable: true });
 };
-
-// The unified sidenav is mode-reactive (it opens and recomposes itself on mode change), so the
-// dashboard modes only activate their own chrome (e.g. the session bubble) here.
-const enterProjectSidenavChrome = (modeCtx: WorkbenchModuleContext) =>
-  activateModeChromeContributions(modeCtx, "project");
-
-const enterWorkspaceSidenavChrome = (modeCtx: WorkbenchModuleContext) =>
-  activateModeChromeContributions(modeCtx, "workspace");
 
 const workspaceNavigationNode = (): TreeNode => ({
   id: dashboardViews.workspaces.id,
@@ -228,7 +219,7 @@ const openWorkspaceSubPanels = (ctx: WorkbenchModuleContext, resource: ResourceR
 };
 
 // The workspaces slice owns the project navigation shell, the workspaces board,
-// and the workspace-detail chrome used when a workspace resource opens.
+// and the workspace panels used when a workspace resource opens.
 export const createWorkspacesModule = () =>
   ({
     id: "dashboard.workspaces",
@@ -278,14 +269,6 @@ export const createWorkspacesModule = () =>
         label: "Project",
         panels: ["main", "secondary", "side"],
         activate: () => undefined,
-        enter: enterProjectSidenavChrome,
-      });
-      ctx.modes.registerMode({
-        id: "workspace",
-        label: "Workspace",
-        panels: ["main", "secondary", "side"],
-        activate: () => undefined,
-        enter: enterWorkspaceSidenavChrome,
       });
 
       ctx.commands.registerCommand(
@@ -325,7 +308,7 @@ export const createWorkspacesModule = () =>
       registerResourceRoute(ctx, {
         id: "dashboard.workspace.presenter",
         match: (resource) => resource.kind === "workspace",
-        mode: "workspace",
+        mode: "project",
         panelId: dashboardWidgetIds.workspace,
         title: (resource) => resource.label ?? "Workspace",
         beforeOpen: ({ resource }) => {

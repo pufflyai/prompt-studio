@@ -37,9 +37,7 @@ const createDefaultWorkspaceResource = (ctx: WorkbenchModuleContext) => {
   return createDashboardWorkspaceOptionResource(workspace, projectId);
 };
 
-const getWorkspaceModeResource = (ctx: WorkbenchModuleContext) => {
-  if (ctx.modes.getActiveModeId() !== "workspace") return undefined;
-
+const getPrimaryWorkspaceResource = (ctx: WorkbenchModuleContext) => {
   const resource = ctx.getPrimaryResource();
   return resource?.kind === "workspace" ? resource : undefined;
 };
@@ -110,7 +108,7 @@ const openNewSessionDraft = (
   ctx: WorkbenchModuleContext,
   input: { workspace?: ResourceRef; replaceWidgetId?: string; tabRetention?: WorkbenchTabRetention } = {},
 ) => {
-  const workspace = input.workspace ?? getWorkspaceModeResource(ctx) ?? createDefaultWorkspaceResource(ctx);
+  const workspace = input.workspace ?? getPrimaryWorkspaceResource(ctx) ?? createDefaultWorkspaceResource(ctx);
   const draftResource = createNewSessionDraftResource(workspace);
   forgetDashboardSession(ctx);
   selectSidenavSessionNode(ctx, undefined);
@@ -165,7 +163,7 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
         });
         if (
           selectWorkspaceSidenav &&
-          ctx.modes.getActiveModeId() === "workspace" &&
+          getPrimaryWorkspaceResource(ctx) &&
           ctx.commands.getCommand(dashboardCommandIds.selectWorkspaceSidenavSession)
         ) {
           await ctx.commands.executeCommand(dashboardCommandIds.selectWorkspaceSidenavSession, {

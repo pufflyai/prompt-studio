@@ -16,7 +16,7 @@ const sharedStorybooks = [
   },
   {
     packageName: "pstdio-dashboard",
-    probeStoryId: "dashboard-sidenav--workspace-mode",
+    probeStoryId: "dashboard-sidenav--workspace-resource",
     urlEnvironmentVariable: "E2E_STORYBOOK_DASHBOARD_URL",
   },
   {

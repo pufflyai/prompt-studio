@@ -1,6 +1,6 @@
 import type { ResourceRef, TreeNode, TreeViewSection, WorkbenchModuleContext } from "@pstdio/workbench";
 
-// Mode ids are an OPEN SET of strings: dashboard-owned ("project" | "sessions" | "workspace")
+// Mode ids are an OPEN SET of strings: dashboard-owned ("project" | "sessions")
 // plus any extension-declared mode id (e.g. "ticket", contributed by the tickets extension
 // through extension-mode-layout). The registry never hardcodes a closed union — keying by mode
 // is what lets extension contexts compose for free.
@@ -8,7 +8,7 @@ type SidenavModeId = string;
 
 type SidenavContributionRegion = "header" | "body" | "footer";
 
-// A contribution targeting this mode applies to every mode (mirrors the mode-chrome registry).
+// A contribution targeting this mode applies to every mode.
 const allModes = "*";
 
 interface SidenavContributionInput {

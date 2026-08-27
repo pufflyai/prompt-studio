@@ -21,6 +21,6 @@ test("opens the Workspaces view and workspace resources with stable identities",
   });
   await workbench.resources.openResource(workspace, { replaceActive: true });
 
-  expect(workbench.modes.getActiveModeId()).toBe("workspace");
+  expect(workbench.modes.getActiveModeId()).toBe("project");
   expect(workbench.getPrimaryResource()?.uri).toBe(workspace.uri);
 });

@@ -76,7 +76,9 @@ describe("extension-lab workbench attachments", () => {
         expect.objectContaining({ slot: expect.objectContaining({ id: "project.headerOverflow" }) }),
         expect.objectContaining({
           slot: expect.objectContaining({ id: "workspace.headerPrimary" }),
-          when: { mode: { extensionId: "pstdio", id: "workspace", kind: "mode" } },
+          when: {
+            resourceType: [{ extensionId: "pstdio", id: "workspace", kind: "resource-kind" }],
+          },
         }),
       ]),
     );

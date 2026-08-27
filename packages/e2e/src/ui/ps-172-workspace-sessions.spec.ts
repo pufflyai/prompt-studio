@@ -3,8 +3,9 @@ import { expect, test } from "@playwright/test";
 import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 import { STORY_RENDER_TIMEOUT_MS, startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
-const workspaceModeStoryId = "dashboard-sidenav--workspace-mode";
+const workspaceResourceStoryId = "dashboard-sidenav--workspace-resource";
 const sessionModeStoryId = "dashboard-sidenav--session-mode";
+const ticketWorkspaceBackStoryId = "dashboard-sidenav--ticket-workspace-back-journey";
 
 test.describe("PS-172 workspace sessions", () => {
   test.slow();
@@ -13,7 +14,7 @@ test.describe("PS-172 workspace sessions", () => {
   let storybook: ChildProcessWithoutNullStreams | undefined;
 
   test.beforeAll(async () => {
-    ({ baseUrl, storybook } = await startStorybook(workspaceModeStoryId, "pstdio-dashboard"));
+    ({ baseUrl, storybook } = await startStorybook(workspaceResourceStoryId, "pstdio-dashboard"));
   });
 
   test.afterAll(async () => {
@@ -22,7 +23,7 @@ test.describe("PS-172 workspace sessions", () => {
 
   test("keeps the workspace session list in the Sidenav and opens sessions in the Side Panel", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
-    await page.goto(storyUrl(baseUrl, workspaceModeStoryId));
+    await page.goto(storyUrl(baseUrl, workspaceResourceStoryId));
 
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     await expect(sidenav).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
@@ -44,6 +45,25 @@ test.describe("PS-172 workspace sessions", () => {
     await expect(sidePanel).toBeVisible();
     await expect(sidePanel.getByText("Wire up board", { exact: true })).toBeVisible();
     await expect(breadcrumb.getByText("Mode-driven sidenav", { exact: true })).toBeVisible();
+  });
+
+  test("restores ticket sections after workspace Back and Forward navigation", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto(storyUrl(baseUrl, ticketWorkspaceBackStoryId));
+
+    const sidenav = page.locator('[data-workbench-region="sidenav"]');
+    const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
+    await expect(sidenav.getByRole("option", { name: "research.md", exact: true })).toBeVisible({
+      timeout: STORY_RENDER_TIMEOUT_MS,
+    });
+    await expect(sidenav.getByRole("option", { name: "PS-164_A1", exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "Navigate forward" }).click();
+    await expect(breadcrumb.getByText("PS-164_A1", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "Navigate back" }).click();
+    await expect(sidenav.getByRole("option", { name: "research.md", exact: true })).toBeVisible();
+    await expect(sidenav.getByRole("option", { name: "PS-164_A1", exact: true })).toBeVisible();
   });
 
   test("creates a new session from the expanded Sessions group in sessions view", async ({ page }) => {

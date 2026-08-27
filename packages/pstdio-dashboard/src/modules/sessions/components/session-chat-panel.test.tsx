@@ -22,7 +22,7 @@ const sessionView = {
 
 const registerWorkspaceOpener = (workbench: ReturnType<typeof createWorkbenchCore>) => {
   workbench.resources.registerKind({ kind: "workspace", label: "Workspace", icon: "GitBranch" });
-  workbench.modes.registerMode({ id: "workspace", label: "Workspace", activate: () => undefined });
+  workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   workbench.layout.registerPanel({
     id: dashboardWidgetIds.workspace,
     title: "Workspace",
@@ -35,7 +35,7 @@ const registerWorkspaceOpener = (workbench: ReturnType<typeof createWorkbenchCor
     priority: 1000,
     canOpen: (resource) => resource.kind === "workspace",
     open: (resource, input) => {
-      workbench.modes.setActiveMode("workspace");
+      workbench.modes.setActiveMode("project");
       return workbench.layout.openPanel(dashboardWidgetIds.workspace, {
         strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
         resource,
@@ -59,7 +59,7 @@ describe("openReviewWorkspace", () => {
     });
 
     expect(workbench.commandPalette.isOpen()).toBe(false);
-    expect(workbench.modes.getActiveModeId()).toBe("workspace");
+    expect(workbench.modes.getActiveModeId()).toBe("project");
     expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
     expect(mainPlacement?.resource).toMatchObject({
       kind: "workspace",
@@ -100,7 +100,7 @@ describe("openSelectedWorkspace", () => {
       return placement.contributionId === dashboardWidgetIds.workspace;
     });
 
-    expect(workbench.modes.getActiveModeId()).toBe("workspace");
+    expect(workbench.modes.getActiveModeId()).toBe("project");
     expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
     expect(mainPlacement?.resource).toMatchObject({
       kind: "workspace",

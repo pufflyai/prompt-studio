@@ -30,7 +30,7 @@ const registerTicketHierarchy = (workbench: ReturnType<typeof createWorkbenchCor
 };
 
 describe("createWorkspacesModule", () => {
-  test("opens workspace resources in workspace mode", async () => {
+  test("opens workspace resources in project mode", async () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
@@ -43,7 +43,8 @@ describe("createWorkspacesModule", () => {
 
     await workbench.resources.openResource(workspace, { replaceActive: true });
 
-    expect(workbench.modes.getActiveModeId()).toBe("workspace");
+    expect(workbench.modes.getActiveModeId()).toBe("project");
+    expect(workbench.modes.getMode("workspace")).toBeUndefined();
     expect(workbench.layout.getLayout().regions.sidenav.widgets.map((widget) => widget.contributionId)).toEqual([
       dashboardWidgetIds.dashboardSidenav,
     ]);
@@ -200,7 +201,7 @@ describe("createWorkspacesModule navigation", () => {
 });
 
 describe("createWorkspacesModule sidenav state", () => {
-  test("keeps persistent Side Panel tabs when workspace navigation changes the active mode", async () => {
+  test("keeps persistent Side Panel tabs when a workspace resource opens", async () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
@@ -226,7 +227,7 @@ describe("createWorkspacesModule sidenav state", () => {
     ]);
   });
 
-  test("keeps the sidenav collapsed when workspace navigation changes the active mode", async () => {
+  test("keeps the sidenav collapsed when a workspace resource opens", async () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",

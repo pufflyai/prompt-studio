@@ -78,13 +78,13 @@ describe("createSessionBubbleModule workspace resolution", () => {
     }
   });
 
-  test("opens an unscoped session draft on the active workspace in workspace mode", async () => {
+  test("opens an unscoped session draft on the primary workspace resource", async () => {
     const workbench = createWorkbenchCore();
 
     getWriter("workspaces")?.truncateAndWrite([
       {
         id: "workspace-default",
-        project_id: "project-workspace-mode",
+        project_id: "project-workspace-resource",
         name: "Root repo",
         branch: "main",
         archived: false,
@@ -96,7 +96,7 @@ describe("createSessionBubbleModule workspace resolution", () => {
       },
       {
         id: "workspace-active",
-        project_id: "project-workspace-mode",
+        project_id: "project-workspace-resource",
         name: "Active workspace",
         branch: "workspace/PS-307_A1",
         worktree_path: "/repo/.pstdio/workspaces/PS-307_A1",
@@ -108,7 +108,7 @@ describe("createSessionBubbleModule workspace resolution", () => {
         deleted_at: null,
       },
     ]);
-    selectDashboardProject(workbench, { id: "project-workspace-mode", name: "Prompt Studio" });
+    selectDashboardProject(workbench, { id: "project-workspace-resource", name: "Prompt Studio" });
     workbench.registerModule(createSessionBubbleModule());
     workbench.registerModule(createWorkspacesModule());
 
@@ -124,7 +124,7 @@ describe("createSessionBubbleModule workspace resolution", () => {
         .getLayout()
         .regions.side.widgets.find((widget) => widget.resource?.kind === "session-draft");
 
-      expect(workbench.modes.getActiveModeId()).toBe("workspace");
+      expect(workbench.modes.getActiveModeId()).toBe("project");
       expect(workbench.getPrimaryResource()?.id).toBe("workspace-active");
       expect(placement?.resource?.kind).toBe("session-draft");
       expect(placement?.resource?.metadata).toMatchObject({

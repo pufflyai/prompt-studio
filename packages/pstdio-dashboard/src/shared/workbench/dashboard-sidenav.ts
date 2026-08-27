@@ -12,7 +12,7 @@ import {
 import { modeOwnsNavigation } from "@/shared/workbench/mode-navigation-ownership";
 
 // The unified sidenav composes its body/footer from mode-gated contributions. The active
-// mode is the gate, so dashboard-owned modes (project/sessions/workspace) and extension-declared
+// mode is the gate, so dashboard-owned modes (project/sessions) and extension-declared
 // modes (e.g. ticket) reshape the same widget without opening a different one.
 const composeSidenavBody = async (ctx: WorkbenchModuleContext) => {
   const mode = ctx.modes.getActiveModeId();
@@ -100,7 +100,7 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   };
 
   const modeSubscription = ctx.modes.onDidChangeActive(() => syncSidenavForActiveMode(ctx));
-  // Mode-scoped contributions read the primary resource (e.g. the sessions list scopes to the
+  // Resource-scoped contributions read the primary resource (e.g. the sessions list scopes to the
   // open workspace), but the tree only recomputes on refresh. A workspace→workspace switch
   // crosses no mode boundary and changes no data, so without this the list keeps the previous
   // primary's scope (or none, showing every session). The primary change fires after placement,

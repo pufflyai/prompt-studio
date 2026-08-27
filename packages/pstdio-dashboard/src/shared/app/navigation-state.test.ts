@@ -15,10 +15,10 @@ describe("resolveDashboardLayoutPersistenceScope", () => {
     expect(
       resolveDashboardLayoutPersistenceScope({
         projectId: "project-1",
-        modeId: "workspace",
+        modeId: "project",
         resource: { kind: "workspace", uri: "dashboard-workbench://workspace/workspace-1" },
       }),
-    ).toBe("project/project-1/mode/workspace/resource/dashboard-workbench://workspace/workspace-1");
+    ).toBe("project/project-1/mode/project/resource/dashboard-workbench://workspace/workspace-1");
     expect(
       resolveDashboardLayoutPersistenceScope({
         activeCollection: "tickets",
@@ -93,7 +93,6 @@ describe("selectDashboardNavigationResource", () => {
   test("preserves a preview Side Panel tab across same-project navigation scopes", () => {
     const workbench = createWorkbenchCore();
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.modes.registerMode({ id: "workspace", label: "Workspace", activate: () => undefined });
     workbench.layout.registerPanel({
       id: "dashboard.session",
       title: "Session",
@@ -120,7 +119,7 @@ describe("selectDashboardNavigationResource", () => {
         id: "workspace-1",
         label: "Workspace one",
       },
-      { modeId: "workspace" },
+      { modeId: "project" },
     );
     selectDashboardNavigationView(workbench, dashboardViews.sessions.id, { modeId: "project" });
 

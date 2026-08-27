@@ -4,6 +4,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:f
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { e2eExtensions } from "../default-extensions";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
@@ -176,6 +177,46 @@ describe("packaged pstdio — self-hosted serve", () => {
           sourceControlToken: null,
           providerKey: null,
         });
+      } finally {
+        if (child) {
+          await stopProcess(child);
+        }
+        rmSync(tempRoot, { recursive: true, force: true });
+      }
+    },
+    SMOKE_TEST_TIMEOUT,
+  );
+
+  test(
+    "targets packaged workspace actions by resource kind",
+    async () => {
+      const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
+      let child: ChildProcess | null = null;
+
+      try {
+        const started = await startPackagedServe(tempRoot, {
+          PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("extension-lab"),
+        });
+        child = started.child;
+
+        const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
+          method: "POST",
+          headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+          body: JSON.stringify({ name: "packaged-workspace-action-project" }),
+        });
+        expect(createRes.status).toBe(201);
+
+        const project = (await createRes.json()) as { id: string };
+        const metadataRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
+          headers: runtimeAuthorization(started.descriptor),
+        });
+        expect(metadataRes.status).toBe(200);
+
+        const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
+        const workspaceAction = metadata.menuContributions.find(
+          (contribution) => contribution.label === "Workspace-only lab action",
+        );
+        expect(workspaceAction?.when).toEqual({ resourceType: ["pstdio.resource-kind.workspace"] });
       } finally {
         if (child) {
           await stopProcess(child);

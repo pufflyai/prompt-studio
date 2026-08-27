@@ -105,8 +105,7 @@ const createTicketsNavigationModule = () => ({
       id: "story.ticket-presenter",
       canOpen: (resource) => resource.kind === "ticket",
       open: (resource, openInput) => {
-        ctx.modes.setActiveMode("pstdio-planner.ticket");
-        selectDashboardNavigationResource(ctx, resource);
+        selectDashboardNavigationResource(ctx, resource, { modeId: "pstdio-planner.ticket" });
         setResourceBreadcrumb(ctx, resource);
         return ctx.layout.openPanel(STORY_TICKET_WIDGET_ID, {
           strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
@@ -284,7 +283,10 @@ const bootstrapWorkbench = () => {
   return workbench;
 };
 
-const openInMode = (workbench: WorkbenchCore, resource: Parameters<WorkbenchCore["resources"]["openResource"]>[0]) => {
+const openResource = (
+  workbench: WorkbenchCore,
+  resource: Parameters<WorkbenchCore["resources"]["openResource"]>[0],
+) => {
   void workbench.resources.openResource(resource, { replaceActive: true });
 };
 
@@ -339,13 +341,13 @@ export const WorkspacesViewHover: Story = {
 // F17: a separator marks the boundary before the ticket's resource tree.
 export const TicketMode: Story = {
   name: "Ticket resource separator",
-  render: () => <SidenavStory open={(workbench) => openInMode(workbench, ticketResource)} />,
+  render: () => <SidenavStory open={(workbench) => openResource(workbench, ticketResource)} />,
 };
 
 // F22: the linked resource keeps the ticket ancestry and Back restores the selected ticket.
 export const TicketWorkspaceBackJourney: Story = {
   name: "Ticket linked workspace and back",
-  render: () => <SidenavStory open={(workbench) => openInMode(workbench, ticketResource)} />,
+  render: () => <SidenavStory open={(workbench) => openResource(workbench, ticketResource)} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("option", { name: "PS-164_A1" }));
@@ -363,15 +365,15 @@ export const SessionMode: Story = {
   render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.sessions.id)} />,
 };
 
-// Workspace mode: global collections stay fixed above the expanded, workspace-scoped Sessions group.
-export const WorkspaceMode: Story = {
+// Workspace resource: global collections stay fixed above the expanded, workspace-scoped Sessions group.
+export const WorkspaceResource: Story = {
   render: () => (
     <SidenavStory
       open={(workbench) => {
         const workspace = workbench.resources
           .listResources("")
           .find((entry) => entry.resource.kind === "workspace")?.resource;
-        if (workspace) openInMode(workbench, workspace);
+        if (workspace) openResource(workbench, workspace);
       }}
     />
   ),

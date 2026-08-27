@@ -44,10 +44,10 @@ describe("registerDashboardSidenav", () => {
     const workbench = createWorkbenchCore();
     const resourceReads: Array<string | undefined> = [];
 
-    workbench.modes.registerMode({ id: "workspace", label: "Workspace", activate: () => undefined });
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     registerSidenavContribution(workbench, {
       id: "test.resource-sections",
-      modes: ["workspace"],
+      modes: ["project"],
       getSections: (_ctx, input) => {
         resourceReads.push(input.resource?.uri);
         return [
@@ -64,7 +64,7 @@ describe("registerDashboardSidenav", () => {
       },
     });
     registerDashboardSidenav(workbench);
-    workbench.modes.setActiveMode("workspace");
+    workbench.modes.setActiveMode("project");
 
     expect(await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav)).toEqual([
       { id: "resource", nodes: [{ id: "aggregate", label: "Aggregate" }] },

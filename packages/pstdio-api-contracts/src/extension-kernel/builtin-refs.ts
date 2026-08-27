@@ -9,7 +9,6 @@ export const workbenchCommands = {
 export const workbenchModes = {
   project: hostRef("mode", "project"),
   settings: hostRef("mode", "settings"),
-  workspace: hostRef("mode", "workspace"),
 };
 
 export const workbenchResourceKinds = {

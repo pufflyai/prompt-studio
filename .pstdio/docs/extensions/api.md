@@ -391,6 +391,7 @@ import {
   defineView,
   resourceSlotRef,
   workbenchModes,
+  workbenchResourceKinds,
 } from "@pstdio/sdk/extensions";
 
 const ticket = defineResourceKind({
@@ -444,10 +445,13 @@ menus: [
   {
     target: "workbench.nav.actions",
     label: "Run review",
-    when: { mode: "workspace", resourceType: ["workspace"] },
+    when: { resourceType: [workbenchResourceKinds.workspace] },
   },
 ];
 ```
+
+Workspace resources use the host project mode. Target workspace actions with
+`workbenchResourceKinds.workspace`; the SDK does not export a host workspace mode.
 
 See [Dashboard UI attachments](./workbench-attachments.md) and [Extension modes](./modes-and-layout.md) for the current product contract.
 

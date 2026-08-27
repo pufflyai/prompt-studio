@@ -103,7 +103,7 @@ describe("session auto-open", () => {
 
     const session = sidePanelSession(workbench, "session-older");
 
-    expect(workbench.modes.getActiveModeId()).toBe("workspace");
+    expect(workbench.modes.getActiveModeId()).toBe("project");
     expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://workspace/workspace-1");
     expect(session?.tabRetention).toBe("preview");
     expect(workbench.layout.getLayout().regions.side.widgets[0]?.widgetId).toBe(session!.instanceId);

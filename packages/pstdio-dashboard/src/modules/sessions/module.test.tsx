@@ -10,8 +10,6 @@ import {
   getSidenavContributionHeaderNodes,
   getSidenavContributionSections,
 } from "@/shared/workbench/contributions/sidenav-tree-contributions";
-import { createSidenavModule } from "../sidenav/module";
-import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionBubbleModule } from "./bubble/module";
 import { createSessionsModule } from "./module";
 
@@ -28,19 +26,22 @@ describe("createSessionsModule", () => {
     expect(workbench.layout.getPanel(dashboardWidgetIds.session)).toMatchObject({ floatingPanels: "hidden" });
   });
 
-  test("renders the Sessions group in session and workspace modes but not the project mode", async () => {
+  test("renders aggregate sessions in sessions mode and scoped sessions for a workspace resource", async () => {
     const workbench = createWorkbenchCore();
+    const workspace = createDashboardResource("workspace", "workspace-1", "Workspace one", "GitBranch", "project-1");
+    const ticket = createDashboardResource("ticket", "ticket-1", "PS-1", "FileText", "project-1");
 
     workbench.registerModule(createSessionsModule());
 
-    const nodeIdsForMode = async (mode: string) =>
-      (await getSidenavContributionSections(workbench, mode))
+    const nodeIdsForContext = async (mode: string, resource?: typeof workspace) =>
+      (await getSidenavContributionSections(workbench, mode, resource ? { resource } : {}))
         .flatMap((section) => section.nodes)
         .map((node) => node.id);
 
-    expect(await nodeIdsForMode("project")).not.toContain("sessions");
-    expect(await nodeIdsForMode("sessions")).toContain("workspace-sessions");
-    expect(await nodeIdsForMode("workspace")).toContain("workspace-sessions");
+    expect(await nodeIdsForContext("sessions")).toContain("workspace-sessions");
+    expect(await nodeIdsForContext("project", workspace)).toContain("workspace-sessions");
+    expect(await nodeIdsForContext("project", ticket)).not.toContain("workspace-sessions");
+    expect(await nodeIdsForContext("project")).not.toContain("workspace-sessions");
   });
 
   test("adds sessions navigation to the persistent sidenav header", async () => {
@@ -208,177 +209,6 @@ describe("createSessionsModule", () => {
     expect(
       layout.regions.main.widgets.some((widget) => widget.resource?.uri === "dashboard-workbench://session/session-1"),
     ).toBe(false);
-  });
-});
-
-describe("createSessionsModule workspace session scoping", () => {
-  test("scopes the workspace-mode session list to the open workspace", async () => {
-    getWriter("workspaces")?.truncateAndWrite([
-      {
-        id: "workspace-1",
-        project_id: "project-1",
-        name: "Workspace one",
-        branch: "workspace/PS-1",
-        worktree_path: "/repo/.pstdio/workspaces/PS-1",
-        archived: false,
-        workspace_shorthand: "PS-1",
-        setup_error: null,
-        created_at: "2026-06-01T08:00:00Z",
-        updated_at: "2026-06-01T08:00:00Z",
-        deleted_at: null,
-      },
-    ]);
-    getWriter("sessions")?.truncateAndWrite([
-      {
-        id: "session-linked",
-        project_id: "project-1",
-        title: "Linked session",
-        status: "completed",
-        agent: null,
-        last_selected_model: null,
-        archived: false,
-        created_at: "2026-06-02T10:00:00Z",
-        updated_at: "2026-06-02T10:00:00Z",
-        deleted_at: null,
-      },
-      {
-        id: "session-unlinked",
-        project_id: "project-1",
-        title: "Unlinked session",
-        status: "completed",
-        agent: null,
-        last_selected_model: null,
-        archived: false,
-        created_at: "2026-06-02T11:00:00Z",
-        updated_at: "2026-06-02T11:00:00Z",
-        deleted_at: null,
-      },
-    ]);
-    getWriter("workspace_sessions")?.truncateAndWrite([
-      { id: "link-1", workspace_id: "workspace-1", session_id: "session-linked" },
-    ]);
-
-    const workbench = createWorkbenchCore();
-    workbench.registerModule(createSidenavModule());
-    workbench.registerModule(createSessionBubbleModule());
-    workbench.registerModule(createWorkspacesModule());
-    workbench.registerModule(createSessionsModule());
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-
-    const workspace = workbench.resources
-      .listResources("")
-      .find((entry) => entry.resource.kind === "workspace")?.resource;
-    await workbench.resources.openResource(workspace!, { replaceActive: true });
-
-    const sessionsGroup = (await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav, {}))
-      .flatMap((section) => section.nodes)
-      .find((node) => node.id === "workspace-sessions");
-    const sessionRowIds = (sessionsGroup?.children ?? [])
-      .filter((node) => node.resource || node.target)
-      .map((node) => node.id);
-
-    expect(sessionRowIds).toEqual(["dashboard-workbench://session/session-linked"]);
-  });
-
-  test("rescopes the session list when switching between workspaces", async () => {
-    getWriter("workspaces")?.truncateAndWrite([
-      {
-        id: "workspace-1",
-        project_id: "project-1",
-        name: "Workspace one",
-        branch: "workspace/PS-1",
-        worktree_path: "/repo/.pstdio/workspaces/PS-1",
-        archived: false,
-        workspace_shorthand: "PS-1",
-        setup_error: null,
-        created_at: "2026-06-01T08:00:00Z",
-        updated_at: "2026-06-01T08:00:00Z",
-        deleted_at: null,
-      },
-      {
-        id: "workspace-2",
-        project_id: "project-1",
-        name: "Workspace two",
-        branch: "workspace/PS-2",
-        worktree_path: "/repo/.pstdio/workspaces/PS-2",
-        archived: false,
-        workspace_shorthand: "PS-2",
-        setup_error: null,
-        created_at: "2026-06-01T09:00:00Z",
-        updated_at: "2026-06-01T09:00:00Z",
-        deleted_at: null,
-      },
-    ]);
-    getWriter("sessions")?.truncateAndWrite([
-      {
-        id: "session-one",
-        project_id: "project-1",
-        title: "Session one",
-        status: "completed",
-        agent: null,
-        last_selected_model: null,
-        archived: false,
-        created_at: "2026-06-02T10:00:00Z",
-        updated_at: "2026-06-02T10:00:00Z",
-        deleted_at: null,
-      },
-      {
-        id: "session-two",
-        project_id: "project-1",
-        title: "Session two",
-        status: "completed",
-        agent: null,
-        last_selected_model: null,
-        archived: false,
-        created_at: "2026-06-02T11:00:00Z",
-        updated_at: "2026-06-02T11:00:00Z",
-        deleted_at: null,
-      },
-    ]);
-    getWriter("workspace_sessions")?.truncateAndWrite([
-      { id: "link-1", workspace_id: "workspace-1", session_id: "session-one" },
-      { id: "link-2", workspace_id: "workspace-2", session_id: "session-two" },
-    ]);
-
-    const workbench = createWorkbenchCore();
-    workbench.registerModule(createSidenavModule());
-    workbench.registerModule(createSessionBubbleModule());
-    workbench.registerModule(createWorkspacesModule());
-    workbench.registerModule(createSessionsModule());
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-
-    // Mirror the live sidenav widget: its React effect only recomputes getBody on refresh events
-    // (its deps don't include the primary resource), so scoping is only correct if a refresh fires
-    // while the switched-to workspace is the primary resource.
-    let displayed: Awaited<ReturnType<typeof workbench.renderers.getBody>> = [];
-    const renderSidenav = async () => {
-      displayed = await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav, {});
-    };
-    const refreshSubscription = workbench.renderers.onDidRefresh((event) => {
-      if (event.treeId === dashboardWidgetIds.dashboardSidenav) void renderSidenav();
-    });
-    await renderSidenav();
-
-    const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
-    const displayedSessionRowIds = () =>
-      (displayed.flatMap((section) => section.nodes).find((node) => node.id === "workspace-sessions")?.children ?? [])
-        .filter((node) => node.resource || node.target)
-        .map((node) => node.id);
-    const workspaceResource = (id: string) =>
-      workbench.resources.listResources("").find((entry) => entry.resource.id === id)?.resource;
-
-    await workbench.resources.openResource(workspaceResource("workspace-1")!, { replaceActive: true });
-    // A data-sync refresh accompanies entering a freshly opened/created workspace, so the first
-    // workspace scopes correctly; simulate that settled state before the pure switch.
-    workbench.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
-    await flush();
-    expect(displayedSessionRowIds()).toEqual(["dashboard-workbench://session/session-one"]);
-
-    await workbench.resources.openResource(workspaceResource("workspace-2")!, { replaceActive: true });
-    await flush();
-    expect(displayedSessionRowIds()).toEqual(["dashboard-workbench://session/session-two"]);
-
-    refreshSubscription.dispose();
   });
 });
 

@@ -3,7 +3,6 @@ import { createWorkbenchCore } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { activateModeChromeContributions } from "@/shared/workbench/contributions/mode-chrome-contributions";
 import { createSessionBubbleModule } from "./module";
 
 describe("createSessionBubbleModule", () => {
@@ -32,22 +31,6 @@ describe("createSessionBubbleModule", () => {
     expect(canOpenLocation?.({ viewId: "pstdio-planner.tickets" })).toBe(true);
     expect(canOpenLocation?.({ viewId: "font-editor" })).toBe(true);
     expect(canOpenLocation?.({ resource: { kind: "workspace", uri: "workspace://one" } })).toBe(true);
-  });
-
-  test("does not synthesize a session tab when mode chrome reactivates", () => {
-    const workbench = createWorkbenchCore();
-
-    workbench.registerModule(createSessionBubbleModule());
-    workbench.sidePanel.setMode("closed");
-    workbench.layout.clearRegion("side");
-    workbench.layout.clearRegion("side-header");
-
-    activateModeChromeContributions(workbench, "workspace");
-    const layout = workbench.layout.getLayout();
-
-    expect(workbench.sidePanel.getMode()).toBe("closed");
-    expect(layout.regions.side.widgets).toEqual([]);
-    expect(layout.regions["side-header"].widgets).toEqual([]);
   });
 
   test("opens a workspace-linked session draft from the create session command", async () => {
