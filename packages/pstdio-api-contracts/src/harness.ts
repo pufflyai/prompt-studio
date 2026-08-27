@@ -117,6 +117,8 @@ export type HarnessReattachInput = {
   cwd?: string;
   workspace?: HarnessWorkspaceContext;
   events: HarnessEventSink;
+  /** Aborted when the host stops orphan recovery, including during shutdown. */
+  signal?: AbortSignal;
 };
 
 export type HarnessMessagesInput = {

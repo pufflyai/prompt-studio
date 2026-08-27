@@ -239,26 +239,50 @@ type ReattachInput = {
   cwd?: string;
   submittedAttachmentFileIds?: string[];
   submittedQueuePosition?: number;
+  signal?: AbortSignal;
+};
+
+const waitForHarnessReattach = <T>(task: Promise<T>, signal?: AbortSignal) => {
+  if (!signal) return task;
+  return new Promise<T>((resolve, reject) => {
+    const finish = (settle: () => void) => {
+      signal.removeEventListener("abort", onAbort);
+      settle();
+    };
+    const onAbort = () => finish(() => reject(signal.reason));
+    task.then(
+      (value) => finish(() => resolve(value)),
+      (error) => finish(() => reject(error)),
+    );
+    if (signal.aborted) onAbort();
+    else signal.addEventListener("abort", onAbort, { once: true });
+  });
 };
 
 // Reattaches to a harness session that was orphaned (e.g. by a server restart)
 export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps) => {
+  input.signal?.throwIfAborted();
   const harness = await resolveHarness(deps, input.agentId, input.projectId);
   if (!harness.supportsReattach) throw new Error(`Harness does not support reattach: ${input.agentId}`);
 
   const entry = createStoreEntry(deps, input.sessionId);
 
   const workspace = await resolveHarnessWorkspace(deps, input, harness);
+  input.signal?.throwIfAborted();
 
-  const session = await harness.reattach(
-    {
-      sessionId: input.sessionId,
-      agentSessionId: input.agentSessionId,
-      cwd: input.cwd,
-      workspace,
-      events: entry.eventStore,
-    },
-    { projectId: input.projectId },
+  const session = await waitForHarnessReattach(
+    harness.reattach(
+      {
+        sessionId: input.sessionId,
+        agentSessionId: input.agentSessionId,
+        cwd: input.cwd,
+        workspace,
+        events: entry.eventStore,
+        signal: input.signal,
+      },
+      { projectId: input.projectId },
+    ),
+    input.signal,
   );
 
   deps.sessionService.store.setSession(input.sessionId, session);

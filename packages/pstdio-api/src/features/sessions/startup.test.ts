@@ -375,9 +375,14 @@ describe("resolveOrphanedSessions resolution", () => {
     }));
     const controller = new AbortController();
     let reattachAttempts = 0;
-    const reattach = mock(() => {
+    let providerSignal: AbortSignal | undefined;
+    const reattach = mock((_ctx: unknown, input: unknown) => {
       reattachAttempts += 1;
-      if (reattachAttempts === 4) controller.abort();
+      if (reattachAttempts === 4) {
+        providerSignal = (input as { signal?: AbortSignal }).signal;
+        controller.abort();
+        return new Promise<never>(() => {});
+      }
       throw new Error("opencode unreachable");
     });
 
@@ -410,9 +415,16 @@ describe("resolveOrphanedSessions resolution", () => {
       db: {},
     } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
 
-    await resolveOrphanedSessions(deps, controller.signal);
+    const recovery = resolveOrphanedSessions(deps, controller.signal);
+    await Promise.race([
+      recovery,
+      Bun.sleep(3_000).then(() => {
+        throw new Error("Recovery did not stop after aborting an in-flight reattach");
+      }),
+    ]);
 
     expect(reattach).toHaveBeenCalledTimes(4);
+    expect(providerSignal).toBe(controller.signal);
     expect(controller.signal.aborted).toBe(true);
     expect(transitionStatus).not.toHaveBeenCalled();
   });

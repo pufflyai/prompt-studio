@@ -54,12 +54,14 @@ const reattachOrphanedSession = async (deps: Deps, session: OrphanedSession, sig
           cwd: session.cwd ?? undefined,
           submittedAttachmentFileIds: dispatchEntry?.attachments_json?.map((attachment) => attachment.file_id),
           submittedQueuePosition: dispatchEntry?.queue_position,
+          signal,
         },
         deps,
       );
       return;
     } catch (error) {
       deps.sessionService.store.remove(session.id);
+      if (signal?.aborted) return;
       if (error instanceof WorkspaceSessionNotReadyError && !error.retryable) throw error;
       sessionLogger.warn(
         { err: error, event: "session.reattach.failed", retry_delay_ms: retryDelayMs, session_id: session.id },
