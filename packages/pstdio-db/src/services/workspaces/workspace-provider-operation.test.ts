@@ -44,4 +44,39 @@ describe("workspace provider operations", () => {
 
     expect(pending).toMatchObject({ provider_operation_id: "op-cancel", provider_operation_kind: "cancel" });
   });
+
+  test("rejects a create projection after a lifecycle operation takes ownership", async () => {
+    const ws = await workspacesService.create({
+      project_id: projectId,
+      shorthand_base: "PS-1",
+      provider_id: "example.remote",
+      provider_state: "provisioning",
+      provider_operation_id: "op-create",
+      provider_operation_kind: "create",
+    });
+    await workspacesService.beginProviderOperation(ws.id, {
+      operationId: "op-delete",
+      kind: "delete",
+      state: "deleting",
+    });
+
+    const updated = await workspacesService.updateProviderOperationProjection(ws.id, {
+      operationId: "op-create",
+      operationKind: "create",
+      patch: {
+        provider_state: "ready",
+        execution_kind: "remote",
+        provider_operation_id: null,
+        provider_operation_kind: null,
+        provider_capabilities_json: ws.provider_capabilities_json,
+      },
+    });
+
+    expect(updated).toBeNull();
+    expect(await workspacesService.get(ws.id)).toMatchObject({
+      provider_state: "deleting",
+      provider_operation_id: "op-create",
+      provider_operation_kind: "delete",
+    });
+  });
 });

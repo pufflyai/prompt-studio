@@ -12,17 +12,20 @@ import {
   failedOperationPatch,
   missingProviderPatch,
   pendingCreateCancellationPatch,
-  projectionBase,
   type WorkspaceRecord,
 } from "./workspace-provider-projection";
 import { normalizeResult } from "./workspace-provider-result";
 import { findWorkspaceProvider, runWorkspaceProviderCall } from "./workspace-provider-runtime";
 import type { setupWorkspaceWorktree } from "./worktree-setup";
 
+type ProviderProjectionPatch = Parameters<
+  WorkspacesRouteDeps["workspaceService"]["updateProviderOperationProjection"]
+>[1]["patch"];
+
 const asString = (value: unknown) => (typeof value === "string" && value.trim() ? value : undefined);
 
-const safeProviderRef = (providerId: string, data: JsonObject): WorkspaceProviderRef => ({
-  version: 1,
+const safeProviderRef = (providerId: string, data: JsonObject) => ({
+  version: 1 as const,
   data: { providerId, ...data },
 });
 
@@ -32,7 +35,7 @@ const builtInCreate = async (input: {
   params: JsonObject;
   repo: { id: string; path: string };
   setupWorktree: typeof setupWorkspaceWorktree;
-}): Promise<WorkspaceProviderResult> => {
+}) => {
   const { repo } = input;
 
   if (input.providerId === rootProviderId) {
@@ -43,7 +46,7 @@ const builtInCreate = async (input: {
       executionTarget: { kind: "local", rootPath: repo.path, displayPath: repo.path },
       displayPath: repo.path,
       capabilities: defaultLocalWorkspaceCapabilities,
-    };
+    } satisfies WorkspaceProviderResult;
   }
 
   const { branch, worktreePath } = await input.setupWorktree({
@@ -60,6 +63,24 @@ const builtInCreate = async (input: {
     executionTarget: { kind: "local", rootPath: worktreePath, displayPath: worktreePath },
     displayPath: worktreePath,
     capabilities: defaultLocalWorkspaceCapabilities,
+  } satisfies WorkspaceProviderResult;
+};
+
+const updateCreateProjection = async (
+  deps: WorkspacesRouteDeps,
+  workspace: WorkspaceRecord,
+  operationId: string,
+  patch: ProviderProjectionPatch,
+) => {
+  const updated = await deps.workspaceService.updateProviderOperationProjection(workspace.id, {
+    operationId,
+    operationKind: "create",
+    patch,
+  });
+  if (updated) return { applied: true, workspace: updated };
+  return {
+    applied: false,
+    workspace: (await deps.workspaceService.get(workspace.id)) ?? workspace,
   };
 };
 
@@ -83,20 +104,19 @@ const cleanUpAcceptedCreate = async (
       input.workspace.provider_operation_id ?? input.createOperationId,
       new Error("The accepted provider create did not return a reference."),
     );
-    return (await deps.workspaceService.updateProviderProjection(input.workspace.id, patch)) ?? input.workspace;
+    return (await updateCreateProjection(deps, input.workspace, input.createOperationId, patch)).workspace;
   }
 
-  const operationId = crypto.randomUUID();
   const operationKind = input.handle.provider.delete && !input.handle.provider.cancel ? "delete" : "cancel";
   const pendingState = operationKind === "cancel" ? "provisioning" : "deleting";
-  const pending =
-    (await deps.workspaceService.updateProviderProjection(input.workspace.id, {
-      ...projectionBase(input.workspace),
-      provider_state: pendingState,
-      provider_operation_id: operationId,
-      provider_operation_kind: operationKind,
-      provider_error_json: null,
-    })) ?? input.workspace;
+  const pending = await deps.workspaceService.beginProviderOperation(input.workspace.id, {
+    operationId: crypto.randomUUID(),
+    kind: operationKind,
+    state: pendingState,
+  });
+  if (!pending) return input.workspace;
+  if (pending.provider_operation_kind !== operationKind || !pending.provider_operation_id) return pending;
+  const operationId = pending.provider_operation_id;
 
   try {
     if (input.handle.provider.cancel) {
@@ -186,26 +206,31 @@ const resolveAcceptedCreate = async (
           }),
         { signal: input.signal },
       );
-      current =
-        (await deps.workspaceService.updateProviderProjection(
-          current.id,
-          normalizeResult(current.provider_id, result, {
-            providerRef: current.provider_ref_json as WorkspaceProviderRef,
-          }),
-        )) ?? current;
+      const projection = await updateCreateProjection(
+        deps,
+        current,
+        input.operationId,
+        normalizeResult(current.provider_id, result, {
+          providerRef: current.provider_ref_json as WorkspaceProviderRef,
+        }),
+      );
+      current = projection.workspace;
+      if (!projection.applied) return current;
     } catch (error) {
       if (input.signal?.aborted) return current;
       return (
-        (await deps.workspaceService.updateProviderProjection(
-          current.id,
+        await updateCreateProjection(
+          deps,
+          current,
+          input.operationId,
           failedOperationPatch(current, {
             kind: "create",
             operationId: input.operationId,
             state: "failed",
             error,
           }),
-        )) ?? current
-      );
+        )
+      ).workspace;
     }
     if (current.provider_state === "provisioning") {
       if (!(await waitForNextProviderResolution(input.signal))) return current;
@@ -213,16 +238,18 @@ const resolveAcceptedCreate = async (
   }
   if (current.provider_state !== "provisioning") return current;
   return (
-    (await deps.workspaceService.updateProviderProjection(
-      current.id,
+    await updateCreateProjection(
+      deps,
+      current,
+      input.operationId,
       failedOperationPatch(current, {
         kind: "create",
         operationId: input.operationId,
         state: "failed",
         error: new Error("Workspace provider did not become ready before the deadline."),
       }),
-    )) ?? current
-  );
+    )
+  ).workspace;
 };
 
 export const provisionProviderWorkspace = async (
@@ -250,12 +277,12 @@ export const provisionProviderWorkspace = async (
         });
     if (!builtIn && !handle) {
       return (
-        (await deps.workspaceService.updateProviderProjection(input.workspace.id, {
+        await updateCreateProjection(deps, input.workspace, input.operationId, {
           ...missingProviderPatch(input.workspace),
           execution_kind: "remote",
           provider_capabilities_json: remoteReadOnlyCapabilities,
-        })) ?? input.workspace
-      );
+        })
+      ).workspace;
     }
 
     const result = handle
@@ -277,11 +304,12 @@ export const provisionProviderWorkspace = async (
         });
 
     const normalized = normalizeResult(input.providerId, result);
-    let persisted =
-      (await deps.workspaceService.updateProviderProjection(input.workspace.id, {
-        ...normalized,
-        branch: normalized.branch ?? input.workspace.branch,
-      })) ?? input.workspace;
+    const projection = await updateCreateProjection(deps, input.workspace, input.operationId, {
+      ...normalized,
+      branch: normalized.branch ?? input.workspace.branch,
+    });
+    if (!projection.applied) return projection.workspace;
+    let persisted = projection.workspace;
     if (handle && persisted.provider_state === "provisioning" && persisted.provider_ref_json) {
       persisted = await resolveAcceptedCreate(deps, {
         handle,
@@ -301,10 +329,10 @@ export const provisionProviderWorkspace = async (
   } catch (error) {
     if (input.signal?.aborted) {
       const patch = pendingCreateCancellationPatch(input.workspace, input.operationId, error);
-      return (await deps.workspaceService.updateProviderProjection(input.workspace.id, patch)) ?? input.workspace;
+      return (await updateCreateProjection(deps, input.workspace, input.operationId, patch)).workspace;
     }
     return (
-      (await deps.workspaceService.updateProviderProjection(input.workspace.id, {
+      await updateCreateProjection(deps, input.workspace, input.operationId, {
         ...failedOperationPatch(input.workspace, {
           kind: "create",
           operationId: input.operationId,
@@ -313,7 +341,7 @@ export const provisionProviderWorkspace = async (
         }),
         execution_kind: isBuiltInProviderId(input.providerId) ? "local" : "remote",
         provider_capabilities_json: remoteReadOnlyCapabilities,
-      })) ?? input.workspace
-    );
+      })
+    ).workspace;
   }
 };

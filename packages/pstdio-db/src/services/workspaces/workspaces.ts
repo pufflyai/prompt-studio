@@ -20,40 +20,63 @@ import {
   standalonePrefix,
 } from "./workspace-record";
 
-const updateProviderProjection = async (
+interface ProviderProjectionInput {
+  branch?: string | null;
+  worktree_path?: string | null;
+  provider_ref_json?: WorkspaceProviderRef | null;
+  provider_state: WorkspaceProviderState;
+  execution_kind: "local" | "remote";
+  provider_operation_id?: string | null;
+  provider_operation_kind?: "create" | "cancel" | "archive" | "delete" | null;
+  provider_error_json?: WorkspaceProviderError | null;
+  provider_capabilities_json: WorkspaceCapabilities;
+  display_path?: string | null;
+}
+
+const providerProjectionValues = (input: ProviderProjectionInput) => ({
+  ...(Object.hasOwn(input, "branch") ? { branch: input.branch } : {}),
+  ...(Object.hasOwn(input, "worktree_path") ? { worktree_path: input.worktree_path } : {}),
+  ...(Object.hasOwn(input, "provider_ref_json") ? { provider_ref_json: input.provider_ref_json } : {}),
+  provider_state: input.provider_state,
+  execution_kind: input.execution_kind,
+  ...(Object.hasOwn(input, "provider_operation_id") ? { provider_operation_id: input.provider_operation_id } : {}),
+  ...(Object.hasOwn(input, "provider_operation_kind")
+    ? { provider_operation_kind: input.provider_operation_kind }
+    : {}),
+  ...(Object.hasOwn(input, "provider_error_json") ? { provider_error_json: input.provider_error_json } : {}),
+  provider_capabilities_json: input.provider_capabilities_json,
+  ...(Object.hasOwn(input, "display_path") ? { display_path: input.display_path } : {}),
+  updated_at: nowTimestamp(),
+});
+
+const updateProviderProjection = async (db: DbClient, id: string, input: ProviderProjectionInput) => {
+  const [updated] = await db
+    .update(workspaces)
+    .set(providerProjectionValues(input))
+    .where(eq(workspaces.id, id))
+    .returning();
+  return updated ?? null;
+};
+
+const updateProviderOperationProjection = async (
   db: DbClient,
   id: string,
   input: {
-    branch?: string | null;
-    worktree_path?: string | null;
-    provider_ref_json?: WorkspaceProviderRef | null;
-    provider_state: WorkspaceProviderState;
-    execution_kind: "local" | "remote";
-    provider_operation_id?: string | null;
-    provider_operation_kind?: "create" | "cancel" | "archive" | "delete" | null;
-    provider_error_json?: WorkspaceProviderError | null;
-    provider_capabilities_json: WorkspaceCapabilities;
-    display_path?: string | null;
+    operationId: string;
+    operationKind: "create" | "cancel" | "archive" | "delete";
+    patch: ProviderProjectionInput;
   },
 ) => {
   const [updated] = await db
     .update(workspaces)
-    .set({
-      ...(Object.hasOwn(input, "branch") ? { branch: input.branch } : {}),
-      ...(Object.hasOwn(input, "worktree_path") ? { worktree_path: input.worktree_path } : {}),
-      ...(Object.hasOwn(input, "provider_ref_json") ? { provider_ref_json: input.provider_ref_json } : {}),
-      provider_state: input.provider_state,
-      execution_kind: input.execution_kind,
-      ...(Object.hasOwn(input, "provider_operation_id") ? { provider_operation_id: input.provider_operation_id } : {}),
-      ...(Object.hasOwn(input, "provider_operation_kind")
-        ? { provider_operation_kind: input.provider_operation_kind }
-        : {}),
-      ...(Object.hasOwn(input, "provider_error_json") ? { provider_error_json: input.provider_error_json } : {}),
-      provider_capabilities_json: input.provider_capabilities_json,
-      ...(Object.hasOwn(input, "display_path") ? { display_path: input.display_path } : {}),
-      updated_at: nowTimestamp(),
-    })
-    .where(eq(workspaces.id, id))
+    .set(providerProjectionValues(input.patch))
+    .where(
+      and(
+        eq(workspaces.id, id),
+        eq(workspaces.provider_operation_id, input.operationId),
+        eq(workspaces.provider_operation_kind, input.operationKind),
+      ),
+    )
     .returning();
   return updated ?? null;
 };
@@ -285,6 +308,8 @@ export const createWorkspacesDBService = (db: DbClient) => {
     setStartupLogFileId,
     updateProviderProjection: (id: string, input: Parameters<typeof updateProviderProjection>[2]) =>
       updateProviderProjection(db, id, input),
+    updateProviderOperationProjection: (id: string, input: Parameters<typeof updateProviderOperationProjection>[2]) =>
+      updateProviderOperationProjection(db, id, input),
     beginProviderOperation: (id: string, input: Parameters<typeof beginProviderOperation>[2]) =>
       beginProviderOperation(db, id, input),
     rename,

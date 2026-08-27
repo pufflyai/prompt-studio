@@ -398,11 +398,11 @@ describe("createCommandEnvironment workspaces", () => {
             created.push(input);
             return { id: "ws-1", workspace_shorthand: "T-1_A1", anchors_json: [], ...(input as object) };
           },
-          updateProviderProjection: async (id: string, patch: unknown) => ({
+          updateProviderOperationProjection: async (id: string, input: { patch: unknown }) => ({
             id,
             workspace_shorthand: "T-1_A1",
             anchors_json: [],
-            ...(patch as object),
+            ...(input.patch as object),
           }),
         },
         eventBus: { emit: () => {} },
@@ -955,11 +955,11 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
             anchors_json: [],
             ...(input as object),
           }),
-          updateProviderProjection: async (id: string, patch: unknown) => ({
+          updateProviderOperationProjection: async (id: string, input: { patch: unknown }) => ({
             id,
             workspace_shorthand: "T-1_A1",
             anchors_json: [],
-            ...(patch as object),
+            ...(input.patch as object),
           }),
         },
         eventBus: { emit: () => {} },

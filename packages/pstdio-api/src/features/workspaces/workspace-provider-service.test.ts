@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { JsonObject, WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
 import { makeWorkspace, remoteWorkspaceCapabilities } from "./workspace-provider.test-fixture";
+import type { WorkspaceRecord } from "./workspace-provider-projection";
 import { createProviderBackedWorkspace, normalizeResult } from "./workspace-provider-service";
 
 const makeCreateDeps = (provider: Record<string, unknown>) => {
@@ -9,7 +10,7 @@ const makeCreateDeps = (provider: Record<string, unknown>) => {
     provider_state: "provisioning",
     provider_operation_id: "op-create-1",
     provider_operation_kind: "create",
-  });
+  }) as WorkspaceRecord;
   const createStandalone = mock(async (input: Record<string, unknown>) => {
     workspace = { ...workspace, ...input };
     return workspace;
@@ -18,10 +19,46 @@ const makeCreateDeps = (provider: Record<string, unknown>) => {
     workspace = { ...workspace, ...patch };
     return workspace;
   });
+  const updateProviderOperationProjection = mock(
+    async (_id: string, input: { operationId: string; operationKind: string; patch: Record<string, unknown> }) => {
+      if (
+        workspace.provider_operation_id !== input.operationId ||
+        workspace.provider_operation_kind !== input.operationKind
+      ) {
+        return null;
+      }
+      workspace = { ...workspace, ...input.patch };
+      return workspace;
+    },
+  );
+  const beginProviderOperation = mock(
+    async (
+      _id: string,
+      input: {
+        operationId: string;
+        kind: "cancel" | "archive" | "delete";
+        state: "provisioning" | "archiving" | "deleting";
+      },
+    ) => {
+      workspace = {
+        ...workspace,
+        provider_state: input.state,
+        provider_operation_id: workspace.provider_operation_id ?? input.operationId,
+        provider_operation_kind: input.kind,
+      };
+      return workspace;
+    },
+  );
 
   return {
     deps: {
-      workspaceService: { createStandalone, updateProviderProjection },
+      workspaceService: {
+        createStandalone,
+        updateProviderProjection,
+        updateProviderOperationProjection,
+        beginProviderOperation,
+        get: async () => workspace,
+      },
       workspaceProviderRuntime: {
         find: async () => ({ context: {} as never, provider: provider as never }),
       },
@@ -35,6 +72,7 @@ const makeCreateDeps = (provider: Record<string, unknown>) => {
         }),
       },
     } as never,
+    beginProviderOperation,
     createStandalone,
     updateProviderProjection,
   };
@@ -62,7 +100,7 @@ describe("createProviderBackedWorkspace", () => {
         delete: true,
       },
     };
-    const { deps, updateProviderProjection } = makeCreateDeps({
+    const { deps } = makeCreateDeps({
       create: mock(async () => providerResult),
       resolve: mock(async () => providerResult),
     });
@@ -74,21 +112,16 @@ describe("createProviderBackedWorkspace", () => {
       standalone: true,
     });
 
-    expect(workspace.execution_kind).toBe("remote");
-    expect(workspace.worktree_path).toBeNull();
-    expect(workspace.provider_state).toBe("ready");
-    expect(updateProviderProjection).toHaveBeenCalledWith(
-      "ws-1",
-      expect.objectContaining({
-        execution_kind: "remote",
-        worktree_path: null,
-        display_path: "Pocket Coder remote-1",
-      }),
-    );
+    expect(workspace).toMatchObject({
+      execution_kind: "remote",
+      worktree_path: null,
+      provider_state: "ready",
+      display_path: "Pocket Coder remote-1",
+    });
   });
 
   test("keeps retry metadata when provider create throws", async () => {
-    const { deps, createStandalone, updateProviderProjection } = makeCreateDeps({
+    const { deps, createStandalone } = makeCreateDeps({
       create: mock(async () => {
         throw new Error("remote API unavailable");
       }),
@@ -103,8 +136,8 @@ describe("createProviderBackedWorkspace", () => {
       standalone: true,
     });
 
-    expect(workspace.provider_state).toBe("failed");
-    expect(updateProviderProjection.mock.calls.at(-1)?.[1]).toMatchObject({
+    expect(workspace).toMatchObject({
+      provider_state: "failed",
       provider_operation_id: createStandalone.mock.calls[0]?.[0].provider_operation_id,
       provider_operation_kind: "create",
       provider_error_json: { retryable: true },
@@ -131,13 +164,50 @@ describe("createProviderBackedWorkspace", () => {
     expect(workspace.provider_state).toBe("ready");
   });
 
+  test("does not clear a lifecycle operation claimed while provider create is running", async () => {
+    const providerStarted = Promise.withResolvers<void>();
+    const providerResult = Promise.withResolvers<WorkspaceProviderResult>();
+    const ready: WorkspaceProviderResult = {
+      providerRef: { version: 1, data: { remoteId: "remote-1" } },
+      state: "ready",
+      executionKind: "remote",
+      capabilities: remoteWorkspaceCapabilities,
+    };
+    const { deps, beginProviderOperation, createStandalone } = makeCreateDeps({
+      create: mock(async () => {
+        providerStarted.resolve();
+        return providerResult.promise;
+      }),
+    });
+
+    const creating = createProviderBackedWorkspace(deps, {
+      projectId: "project-1",
+      providerId: "pocketcoder.remote",
+      standalone: true,
+    });
+    await providerStarted.promise;
+    await beginProviderOperation("ws-1", {
+      operationId: "op-delete",
+      kind: "delete",
+      state: "deleting",
+    });
+    providerResult.resolve(ready);
+
+    const workspace = await creating;
+    expect(workspace).toMatchObject({
+      provider_state: "deleting",
+      provider_operation_id: createStandalone.mock.calls[0]?.[0].provider_operation_id,
+      provider_operation_kind: "delete",
+    });
+  });
+
   test("keeps the create operation recoverable when an async provider omits its reference", async () => {
     const result: WorkspaceProviderResult = {
       state: "provisioning",
       executionKind: "remote",
       capabilities: remoteWorkspaceCapabilities,
     };
-    const { deps, createStandalone, updateProviderProjection } = makeCreateDeps({
+    const { deps, createStandalone } = makeCreateDeps({
       create: mock(async () => result),
       resolve: mock(async () => result),
     });
@@ -148,7 +218,6 @@ describe("createProviderBackedWorkspace", () => {
       standalone: true,
     });
 
-    expect(updateProviderProjection.mock.calls.at(-1)?.[1]).not.toHaveProperty("provider_operation_id");
     expect(workspace).toMatchObject({
       provider_operation_id: createStandalone.mock.calls[0]?.[0].provider_operation_id,
       provider_operation_kind: "create",
@@ -159,7 +228,7 @@ describe("createProviderBackedWorkspace", () => {
 
   test("keeps an aborted accepted create recoverable when its response is lost", async () => {
     const controller = new AbortController();
-    const { deps, createStandalone, updateProviderProjection } = makeCreateDeps({
+    const { deps, createStandalone } = makeCreateDeps({
       create: mock(async (_ctx: unknown, input: { signal?: AbortSignal }) => {
         await new Promise<void>((resolve) => input.signal?.addEventListener("abort", () => resolve(), { once: true }));
         throw new DOMException("The response was lost after acceptance.", "AbortError");
@@ -180,9 +249,6 @@ describe("createProviderBackedWorkspace", () => {
       provider_ref_json: null,
       provider_state: "provisioning",
       provider_operation_id: createStandalone.mock.calls[0]?.[0].provider_operation_id,
-      provider_operation_kind: "cancel",
-    });
-    expect(updateProviderProjection.mock.calls.at(-1)?.[1]).toMatchObject({
       provider_operation_kind: "cancel",
       provider_error_json: { retryable: true },
     });

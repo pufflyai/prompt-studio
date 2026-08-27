@@ -45,10 +45,7 @@ const inspectProviderValue = (root: unknown, maxBytes: number) => {
   }
 };
 
-const invalidResult = (
-  executionKind: WorkspaceProviderResult["executionKind"],
-  inspection: string,
-): ProviderProjectionPatch => ({
+const invalidResult = (executionKind: WorkspaceProviderResult["executionKind"], inspection: string) => ({
   provider_state: "failed" as const,
   execution_kind: executionKind,
   worktree_path: null,
