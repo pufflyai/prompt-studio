@@ -41,6 +41,7 @@ export type HarnessHandle = {
   skills: { dir: string; globalDir: string } | null;
   /** Discrete run params declared by the harness, if any. */
   params: HarnessParamsSchema | null;
+  cwdRequirement: "required" | "optional";
   supportsReattach: boolean;
   capabilities(options?: HarnessCallOptions): Promise<AgentCapability[]>;
   detect(options?: HarnessCallOptions): Promise<HarnessDetectionResult>;
@@ -157,6 +158,7 @@ const toHandle = (record: RuntimeHarnessRecord, buildContext: HarnessContextFact
     label: provider.label,
     skills: normalizeSkills(provider.skills),
     params,
+    cwdRequirement: provider.cwdRequirement ?? "required",
     supportsReattach: typeof provider.reattach === "function",
     capabilities: async (options) => provider.capabilities(await ctx(options)),
     detect: async (options) => (provider.detect ? provider.detect(await ctx(options)) : { available: true }),

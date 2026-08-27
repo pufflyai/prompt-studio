@@ -4,6 +4,7 @@ import type {
   CommandPaletteResourceContribution,
   ContributionDefinition,
   ContributionKind,
+  ExtensionConnectionContribution,
   FileIconThemeContribution,
   HarnessProvider,
   KeybindingContribution,
@@ -160,6 +161,12 @@ export const defineWorkspaceType = defineContribution("workspace-type") as <
 export const defineHarness = defineContribution("harness") as <Definition extends Omit<HarnessProvider, "ref">>(
   definition: Definition,
 ) => Definition & ContributionDefinition<"harness">;
+
+export const defineConnection = defineContribution("connection") as <
+  Definition extends Omit<ExtensionConnectionContribution, "ref">,
+>(
+  definition: Definition,
+) => Definition & ContributionDefinition<"connection">;
 
 export const defineResourceHierarchyProvider = (definition: Omit<ResourceHierarchyProvider, "ref">) => ({
   ...definition,

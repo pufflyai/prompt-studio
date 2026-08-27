@@ -3,6 +3,7 @@ export type ContributionKind =
   | "artifact-mount"
   | "command"
   | "command-palette-resource"
+  | "connection"
   | "file-icon-theme"
   | "harness"
   | "hook"
@@ -39,6 +40,8 @@ export interface ContributionDefinition<Kind extends ContributionKind> {
 }
 
 export type ContributionInput<Kind extends ContributionKind> = Omit<ContributionDefinition<Kind>, "ref">;
+
+export type ConnectionRef = ContributionRef<"connection">;
 
 export type ModeRef = ContributionRef<"mode">;
 export type NavigationSlotRef = ContributionRef<"navigation-item">;

@@ -298,4 +298,29 @@ describe("createWorkspacesDBService lookups and mutations", () => {
     expect(await workspacesService.list(projectId)).toEqual([]);
     expect((await workspacesService.listForProviderReconciliation(projectId)).map((row) => row.id)).toContain(ws.id);
   });
+
+  test("atomically reuses one provider operation id for concurrent cleanup", async () => {
+    const ws = await workspacesService.create({
+      project_id: projectId,
+      shorthand_base: "PS-1",
+      provider_id: "example.remote",
+      provider_state: "ready",
+    });
+
+    const [first, second] = await Promise.all([
+      workspacesService.beginProviderOperation(ws.id, {
+        operationId: "op-delete-first",
+        kind: "delete",
+        state: "deleting",
+      }),
+      workspacesService.beginProviderOperation(ws.id, {
+        operationId: "op-delete-second",
+        kind: "delete",
+        state: "deleting",
+      }),
+    ]);
+
+    expect(first?.provider_operation_id).toBe(second?.provider_operation_id);
+    expect(["op-delete-first", "op-delete-second"]).toContain(first?.provider_operation_id ?? "");
+  });
 });

@@ -3,6 +3,8 @@
 // neutral HarnessSession handle. Providers never control persistence or status;
 // they emit JSON patches and settle `done`.
 
+import type { WorkspaceExecutionTarget } from "./extension-kernel/types/extension";
+
 export type JsonPatch = {
   op: "add" | "replace" | "remove";
   path: string;
@@ -64,6 +66,11 @@ export type HarnessApprovalChannel = {
 export type HarnessParamValue = string | boolean;
 export type HarnessParams = Record<string, HarnessParamValue>;
 
+export type HarnessWorkspaceContext = {
+  workspaceId: string;
+  executionTarget: WorkspaceExecutionTarget;
+};
+
 export type HarnessExitStatus = "completed" | "failed" | "cancelled" | "disconnected";
 
 export type HarnessExit = {
@@ -87,10 +94,13 @@ export type HarnessStartInput = {
   /** Host session id (correlation / env injection). */
   sessionId: string;
   cwd?: string;
+  workspace?: HarnessWorkspaceContext;
   model?: string | null;
   params?: HarnessParams;
   attachments?: HarnessAttachment[];
   events: HarnessEventSink;
+  /** Aborted when the host cancels the request that started or resumed this session. */
+  signal?: AbortSignal;
 };
 
 export type HarnessResumeInput = HarnessStartInput & {
@@ -105,10 +115,12 @@ export type HarnessReattachInput = {
   sessionId: string;
   agentSessionId: string;
   cwd?: string;
+  workspace?: HarnessWorkspaceContext;
   events: HarnessEventSink;
 };
 
 export type HarnessMessagesInput = {
   agentSessionId: string;
   cwd?: string;
+  workspace?: HarnessWorkspaceContext;
 };

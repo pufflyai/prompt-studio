@@ -5,6 +5,14 @@ import { createClaudeCodeHarness } from "./harness";
 const ctx: HarnessContext = {
   extensionId: "pstdio.harness-claude-code",
   name: "harness-claude-code",
+  connections: {
+    request: async () => {
+      throw new Error("No connections are configured in this test");
+    },
+    stream: async function* () {
+      yield { type: "end" } as const;
+    },
+  },
   process: {
     run: async () => ({ exitCode: 0, stdout: "1.0.0", stderr: "" }),
     runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),

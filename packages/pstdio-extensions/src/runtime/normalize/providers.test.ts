@@ -1,5 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { defineExtension, defineHarness, type HarnessProvider, l10n, params } from "@pstdio/sdk/extensions";
+import {
+  defineConnection,
+  defineExtension,
+  defineHarness,
+  type HarnessProvider,
+  l10n,
+  params,
+} from "@pstdio/sdk/extensions";
 import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "./index";
 
@@ -29,6 +36,29 @@ const wrap = (name: string, definition: ReturnType<typeof defineExtension>): Loa
 });
 
 describe("registerProviders", () => {
+  test("registers a host-managed connection with its request policy", () => {
+    const controlPlane = defineConnection({
+      id: "control-plane",
+      label: "Control plane",
+      transport: "http",
+      auth: { type: "bearer" },
+      allowedMethods: ["GET", "POST"],
+      allowedPathPrefixes: ["/v1/workspaces"],
+      supportsStreaming: true,
+    });
+
+    const runtime = normalizeExtensionSources([wrap("remote", defineExtension({ connections: [controlPlane] }))], []);
+
+    expect(runtime.connections).toEqual([
+      expect.objectContaining({
+        id: "pstdio.remote.connection.control-plane",
+        extensionId: "pstdio.remote",
+        localId: "control-plane",
+        contribution: expect.objectContaining({ allowedPathPrefixes: ["/v1/workspaces"] }),
+      }),
+    ]);
+  });
+
   test("registers harnesses under the composed extensionId-prefixed id", () => {
     const runtime = normalizeExtensionSources([wrap("my-harness", defineExtension({ harnesses: [provider] }))], []);
 

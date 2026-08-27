@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import {
   type WorkspaceCapabilities,
@@ -56,6 +56,45 @@ const updateProviderProjection = async (
     .where(eq(workspaces.id, id))
     .returning();
   return updated ?? null;
+};
+
+const beginProviderOperation = async (
+  db: DbClient,
+  id: string,
+  input: {
+    operationId: string;
+    kind: "cancel" | "archive" | "delete";
+    state: "provisioning" | "archiving" | "deleting";
+  },
+) => {
+  const [updated] = await db
+    .update(workspaces)
+    .set({
+      provider_state: input.state,
+      provider_operation_id: sql`case
+        when ${workspaces.provider_operation_kind} = 'create' and ${workspaces.provider_ref_json} is not null
+          then ${input.operationId}
+        else coalesce(${workspaces.provider_operation_id}, ${input.operationId})
+      end`,
+      provider_operation_kind: input.kind,
+      provider_error_json: null,
+      updated_at: nowTimestamp(),
+    })
+    .where(
+      and(
+        eq(workspaces.id, id),
+        or(
+          isNull(workspaces.provider_operation_kind),
+          eq(workspaces.provider_operation_kind, input.kind),
+          eq(workspaces.provider_operation_kind, "create"),
+        ),
+      ),
+    )
+    .returning();
+  if (updated) return updated;
+
+  const [current] = await db.select().from(workspaces).where(eq(workspaces.id, id));
+  return current ?? null;
 };
 
 export const createWorkspacesDBService = (db: DbClient) => {
@@ -246,6 +285,8 @@ export const createWorkspacesDBService = (db: DbClient) => {
     setStartupLogFileId,
     updateProviderProjection: (id: string, input: Parameters<typeof updateProviderProjection>[2]) =>
       updateProviderProjection(db, id, input),
+    beginProviderOperation: (id: string, input: Parameters<typeof beginProviderOperation>[2]) =>
+      beginProviderOperation(db, id, input),
     rename,
   };
 };

@@ -6,6 +6,14 @@ import { createCodexHarness } from "./harness";
 const ctx: HarnessContext = {
   extensionId: "pstdio.harness-codex",
   name: "harness-codex",
+  connections: {
+    request: async () => {
+      throw new Error("No connections are configured in this test");
+    },
+    stream: async function* () {
+      yield { type: "end" } as const;
+    },
+  },
   process: {
     run: async () => ({ exitCode: 0, stdout: "codex-cli 0.130.0\n", stderr: "" }),
     runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),

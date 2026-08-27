@@ -9,7 +9,8 @@ import type {
 } from "../../harness";
 import type { SessionMessage } from "../../session-messages";
 import type { Localizable } from "../l10n";
-import type { ExtensionLoggerApi, ExtensionNetApi, ExtensionProcessApi } from "./context";
+import type { ExtensionConnectionsApi, ExtensionLoggerApi } from "./connections";
+import type { ExtensionNetApi, ExtensionProcessApi } from "./context";
 import type { ContributionDefinition } from "./contribution-identity";
 import type { MaybePromise } from "./json";
 import type { BooleanParam, SelectParam } from "./params";
@@ -65,6 +66,7 @@ export interface HarnessContext {
   name: string;
   process: ExtensionProcessApi;
   net: ExtensionNetApi;
+  connections: ExtensionConnectionsApi;
   logger: ExtensionLoggerApi;
 }
 
@@ -95,6 +97,8 @@ export interface HarnessProvider extends ContributionDefinition<"harness"> {
   skills?: HarnessSkillsLayout;
   /** Discrete run params the host can render, persist as defaults, validate, and pass to start/resume. */
   params?: HarnessParamsSchema;
+  /** Defaults to required. Optional harnesses can run against remote workspace execution targets. */
+  cwdRequirement?: "required" | "optional";
   capabilities(ctx: HarnessContext): MaybePromise<AgentCapability[]>;
   detect?(ctx: HarnessContext): MaybePromise<HarnessDetectionResult>;
   listModels?(ctx: HarnessContext): MaybePromise<AgentModel[]>;

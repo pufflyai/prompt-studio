@@ -53,6 +53,14 @@ export const createTestHarnessRegistry = (
       spawnDetached: async () => ({}),
     },
     net: { findFreePort: async () => 0 },
+    connections: {
+      request: async () => {
+        throw new Error("No test connection configured.");
+      },
+      stream: async function* () {
+        yield await Promise.reject(new Error("No test connection configured."));
+      },
+    },
     logger: { info: () => {}, warn: () => {}, error: () => {} },
   }));
 

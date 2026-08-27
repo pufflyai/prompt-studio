@@ -20,6 +20,14 @@ const buildContext = (record: RuntimeHarnessRecord, options?: { projectId?: stri
     spawnDetached: async () => ({ pid: 1 }),
   },
   net: { findFreePort: async () => 0 },
+  connections: {
+    request: async () => {
+      throw new Error("No test connection configured.");
+    },
+    stream: async function* () {
+      yield await Promise.reject(new Error("No test connection configured."));
+    },
+  },
   logger: { info: () => {}, warn: () => {}, error: () => {} },
 });
 
@@ -55,7 +63,14 @@ describe("createHarnessRegistry", () => {
 
     expect(registry.list().map((handle) => handle.id)).toEqual(["pstdio.pstdio-fake.harness.fake"]);
     expect(registry.get("pstdio.pstdio-fake.harness.fake")?.localId).toBe("fake");
+    expect(registry.get("pstdio.pstdio-fake.harness.fake")?.cwdRequirement).toBe("required");
     expect(registry.get("fake")).toBeNull();
+  });
+
+  it("preserves an optional cwd requirement", () => {
+    const registry = createHarnessRegistry([record({ cwdRequirement: "optional" })], buildContext);
+
+    expect(registry.get("pstdio.pstdio-fake.harness.fake")?.cwdRequirement).toBe("optional");
   });
 
   it("builds a context carrying the extension identity and project of the call", async () => {

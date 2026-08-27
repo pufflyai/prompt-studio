@@ -66,6 +66,7 @@ export {
   readPackageManifest,
   readPackageManifestMetadata,
   toCommandPaletteContributions,
+  validateCommandParams,
 } from "./runtime";
 export { collectConventionDiagnostics } from "./runtime/conventions";
 export { collectIconFontAssets } from "./runtime/normalize/icon-fonts";
