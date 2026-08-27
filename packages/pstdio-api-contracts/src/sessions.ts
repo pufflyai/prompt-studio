@@ -54,8 +54,6 @@ export const createSessionInputSchema = z.object({
   project_id: z.string().min(1),
   title: z.string().min(1),
   prompt: z.string().min(1).optional(),
-  template: z.string().min(1).optional(),
-  vars: z.record(z.string(), z.string()).optional(),
   agent: z.string().min(1).optional(),
   workspace_id: z.string().optional(),
   anchors: z.array(extensionResourceRefSchema).optional(),
@@ -71,8 +69,6 @@ export const questionResponseSchema = z.object({
 
 export const followUpInputSchema = z.object({
   prompt: z.string().min(1).optional(),
-  template: z.string().min(1).optional(),
-  vars: z.record(z.string(), z.string()).optional(),
   agent: z.string().optional(),
   model: z.string().optional(),
   question_response: questionResponseSchema.optional(),

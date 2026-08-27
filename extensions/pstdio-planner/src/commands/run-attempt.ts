@@ -4,6 +4,7 @@ import { appendAttemptEvent, launchClaimsCollection, putAttempt } from "../data/
 import type { AttemptLaunchClaim, AttemptRecord, HumanRequestReason } from "../data/attempt-types";
 import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
+import { renderOwnedTemplate } from "../data/template-store";
 import { ticketMenuSlots } from "../resource-kinds";
 import { loadAttemptReadiness } from "./attempt-readiness";
 import { requestHuman } from "./human-requests";
@@ -98,8 +99,10 @@ export const runAttemptCommand = defineCommand({
         workspaceId: workspace.id,
         anchors: [anchor, attemptAnchor],
         ...harnessInput(agent),
-        template: "implement-ticket",
-        vars: { ticket: anchor.label ?? ticketIdentity.shorthand, workspaceId: workspace.id },
+        prompt: await renderOwnedTemplate(ctx, "implement-ticket", {
+          ticket: anchor.label ?? ticketIdentity.shorthand,
+          workspaceId: workspace.id,
+        }),
       });
       const timestamp = new Date().toISOString();
       const attempt: AttemptRecord = {

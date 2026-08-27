@@ -334,6 +334,19 @@ export const workbenchExtensionMetadataSchema = z.object({
       }),
     )
     .optional(),
+  templateTypes: z
+    .array(
+      z.object({
+        id: z.string(),
+        localId: z.string(),
+        extensionId: z.string(),
+        label: localizableStringSchema,
+        description: localizableStringSchema.optional(),
+        order: z.number().optional(),
+        commands: z.object({ list: z.string(), read: z.string(), save: z.string(), delete: z.string() }).optional(),
+      }),
+    )
+    .optional(),
   themes: z
     .array(
       z.object({

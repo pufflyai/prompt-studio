@@ -122,7 +122,7 @@ test("PS-171 restores resource Panel state across A to B to A and reload", async
         key.includes(`/resource/dashboard-workbench://workspace/${attemptB.workspace.id}`),
       ),
     ).toBe(true);
-    expect(persistedLayoutKeys.some((key) => key.endsWith("/aggregate/workspaces"))).toBe(true);
+    expect(persistedLayoutKeys.some((key) => key.endsWith("/view/workspaces"))).toBe(true);
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

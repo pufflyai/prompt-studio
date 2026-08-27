@@ -55,7 +55,7 @@ export const enableCoreSkillsExtension = (
   projectId: string,
 ) => enableCoreExtension(request, apiBase, projectId, "pstdio-skills");
 
-export const enableCoreTemplatesExtension = (
+export const enablePlannerExtension = (
   request: Parameters<typeof enableCoreExtension>[0],
   apiBase: string,
   projectId: string,

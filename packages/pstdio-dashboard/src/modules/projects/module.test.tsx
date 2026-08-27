@@ -41,7 +41,7 @@ describe("createProjectsModule", () => {
     expect(workbench.layout.getActivePanel("main")).toBeUndefined();
     expect(findProjectPicker(workbench)).toBeUndefined();
     expect(workbench.getPrimaryResource()).toBeUndefined();
-    expect(workbench.host.getPersistenceScope()).toBe("project/project-1/mode/none/aggregate/empty");
+    expect(workbench.host.getPersistenceScope()).toBe("project/project-1/mode/none/view/empty");
     expect(workbench.history.getPersistenceScope()).toBe("project:project-1");
   });
 
@@ -232,7 +232,7 @@ describe("createProjectsModule selection restoration", () => {
       setSnapshot: (snapshot, scope) => snapshots.set(scope, structuredClone(snapshot)),
     } satisfies WorkbenchPersistenceAdapter;
     const seed = createWorkbenchCore({ persistence });
-    seed.host.setPersistenceScope("project/project-1/mode/none/aggregate/empty");
+    seed.host.setPersistenceScope("project/project-1/mode/none/view/empty");
     seed.layout.registerPanel({ id: "start", title: "Start", region: "main", rendererId: "noop" });
     seed.layout.registerPanel({
       id: "terminal",

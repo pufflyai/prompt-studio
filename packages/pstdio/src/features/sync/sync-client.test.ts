@@ -43,7 +43,6 @@ describe("startSync", () => {
           { id: "p1", name: "Project 1" },
           { id: "p2", name: "Project 2" },
         ],
-        templates: [{ id: "t1", name: "Template 1" }],
       },
       seq: 5,
     });
@@ -53,9 +52,6 @@ describe("startSync", () => {
     const projectsCol = getCollection("projects");
     expect(projectsCol.state.size).toBe(2);
     expect(projectsCol.get("p1")?.name).toBe("Project 1");
-
-    const templatesCol = getCollection("templates");
-    expect(templatesCol.state.size).toBe(1);
 
     expect(client.connected).toBe(true);
     client.close();

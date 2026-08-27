@@ -37,7 +37,7 @@ describe("project mode navigation sync", () => {
 
     expect(getDashboardSelectedResource(workbench)).toBeUndefined();
     expect(workbench.breadcrumbs.getItems()).toBeUndefined();
-    expect(workbench.host.getPersistenceScope()).toBe("project/project-1/mode/lab/aggregate/empty");
+    expect(workbench.host.getPersistenceScope()).toBe("project/project-1/mode/lab/view/empty");
     expect([...snapshots.keys()]).not.toContain("project/project-1/mode/lab/resource/pstdio://ticket/PS-258");
   });
 

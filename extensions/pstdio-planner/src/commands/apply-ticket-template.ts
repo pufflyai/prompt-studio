@@ -1,7 +1,8 @@
-import { renderPrompt } from "@pstdio/sdk/prompts";
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { extractTicketTitle } from "../data/frontmatter";
+import { renderPrompt } from "@pstdio/sdk/prompts";
 import { readTicketMarkdown, requireRepoFiles, ticketMarkdownPath, writeTicketText } from "../data/draft-storage";
+import { extractTicketTitle } from "../data/frontmatter";
+import { readOwnedTemplate } from "../data/template-store";
 
 const parseVariables = (values: string[] | undefined) => {
   const variables: Record<string, string> = {};
@@ -31,9 +32,9 @@ export const applyTicketTemplateCommand = defineCommand({
     const current = await readTicketMarkdown(repoFiles, commandParams.id);
     if (current === null) throw new Error(`Ticket not found: ${commandParams.id}`);
 
-    const template = await ctx.templates.get(commandParams.template);
+    const template = await readOwnedTemplate(ctx, commandParams.template);
     if (!template) throw new Error(`Template not found: ${commandParams.template}`);
-    if (template.template_type !== "ticket") throw new Error(`Template is not a ticket template: ${commandParams.template}`);
+    if (template.type !== "ticket") throw new Error(`Template is not a ticket template: ${commandParams.template}`);
 
     const path = ticketMarkdownPath(commandParams.id);
     await writeTicketText(

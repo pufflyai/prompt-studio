@@ -32,7 +32,6 @@ const staticTopLevelCommands = new Set([
   "projects",
   "serve",
   "sessions",
-  "templates",
   "workspaces",
 ]);
 

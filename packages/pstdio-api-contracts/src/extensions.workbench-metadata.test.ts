@@ -73,4 +73,27 @@ describe("workbench extension metadata", () => {
 
     expect(parsed.success).toBe(false);
   });
+
+  test("carries ordered template types and their provider commands", () => {
+    const parsed = workbenchExtensionMetadataSchema.parse({
+      ...metadata(),
+      templateTypes: [
+        {
+          id: "pstdio.lab.template-type.report",
+          localId: "report",
+          extensionId: "pstdio.lab",
+          label: "Report",
+          order: 40,
+          commands: {
+            list: "pstdio.lab.command.templates.list",
+            read: "pstdio.lab.command.templates.read",
+            save: "pstdio.lab.command.templates.save",
+            delete: "pstdio.lab.command.templates.delete",
+          },
+        },
+      ],
+    });
+
+    expect(parsed.templateTypes?.[0]).toMatchObject({ label: "Report", order: 40 });
+  });
 });

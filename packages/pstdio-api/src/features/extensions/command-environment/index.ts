@@ -21,9 +21,9 @@ import { createRepoFilesApi } from "../repo-files-api";
 import { createActivityApi } from "./activity";
 import { createArtifactsApi } from "./artifacts";
 import { createExtensionFilesApi } from "./extension-files";
-import { createExtensionPackageFilesApi } from "./package-files";
 import { createFilesApi } from "./files";
 import { createNotifyApi } from "./notifications";
+import { createExtensionPackageFilesApi } from "./package-files";
 import { createReposApi, resolveRegisteredRepoPath } from "./repos";
 import { createSessionsApi } from "./sessions";
 import { createSettingsApi } from "./settings";
@@ -106,7 +106,6 @@ export const createCommandEnvironment = (
       : undefined,
     files: createFilesApi(deps, input.projectId),
     skills: { list: () => deps.skillService.list(input.projectId) },
-    templates: { get: (name) => deps.templateService.getWithContent(input.projectId, name) },
     sessions: hostApis.sessions,
     workspaces: hostApis.workspaces,
     repos: createReposApi(deps, input.projectId),

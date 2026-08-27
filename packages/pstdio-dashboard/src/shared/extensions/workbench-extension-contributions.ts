@@ -164,7 +164,7 @@ const contextMenuResourceKinds = (
   if (resourceTypes.length > 0) return resourceTypes;
 
   const slotResourceKind = resourceKindsBySlotId.get(contribution.slotId);
-  return slotResourceKind ? [slotResourceKind] : [];
+  return slotResourceKind && slotResourceKind !== "project" ? [slotResourceKind] : [];
 };
 
 const resourceMenuRegistrations = (
@@ -195,9 +195,7 @@ export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExte
     },
   });
   const registrations = result.registrations.map((registration): DashboardExtensionMenuRegistration => {
-    const slot = menuSlotsById.get(registration.contribution.slotId);
-    const resourceMenuItems =
-      slot?.menuPath[1] === "resource" ? resourceMenuRegistrations(registration, resourceKindsBySlotId) : [];
+    const resourceMenuItems = resourceMenuRegistrations(registration, resourceKindsBySlotId);
     const { menuItem, menuPath, ...rest } = registration;
     return {
       ...rest,

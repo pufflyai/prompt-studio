@@ -79,23 +79,31 @@ describe("core extension catalog", () => {
       resolve(import.meta.dirname, "../../../../../extensions/pstdio-skills"),
       "pstdio-skills",
     );
-    const templatesRes = await handle.app.request(`/v1/projects/${project.id}/templates`);
-    const templates = await templatesRes.json();
+    const metadataRes = await handle.app.request(`/v1/projects/${project.id}/extensions/ui`);
+    const metadata = (await metadataRes.json()) as {
+      templates: Array<{ localId: string; extensionId: string }>;
+      templateTypes: Array<{ localId: string; label: string; commands?: Record<string, string> }>;
+    };
     expect(
-      templates.some(
-        (template: { install_name?: string; name: string; source_kind: string }) =>
-          template.name === "implement-ticket" &&
-          template.source_kind === "extension" &&
-          template.install_name === "pstdio-planner",
+      metadata.templates.some(
+        (template) => template.localId === "implement_ticket" && template.extensionId === "pstdio.pstdio-planner",
       ),
     ).toBe(true);
 
     expect(
-      templates.some(
-        (template: { install_name?: string; name: string; source_kind: string }) =>
-          template.name === "prd" && template.source_kind === "extension" && template.install_name === "pstdio-planner",
+      metadata.templates.some(
+        (template) => template.localId === "prd" && template.extensionId === "pstdio.pstdio-planner",
       ),
     ).toBe(true);
+    expect(metadata.templateTypes.find((type) => type.localId === "ticket")).toMatchObject({
+      label: "Ticket",
+      commands: {
+        list: "pstdio.pstdio-planner.command.templates.list",
+        read: "pstdio.pstdio-planner.command.templates.read",
+        save: "pstdio.pstdio-planner.command.templates.save",
+        delete: "pstdio.pstdio-planner.command.templates.delete",
+      },
+    });
 
     const skillsRes = await handle.app.request(`/v1/projects/${project.id}/skills`);
     const skills = await skillsRes.json();
@@ -131,6 +139,7 @@ describe("core extension catalog", () => {
       "SKILL.md",
       "references/examples.md",
       "references/extension-api.md",
+      "references/host-storage-and-workspaces.md",
       "references/scope.md",
       "references/validation.md",
     ]);

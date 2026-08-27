@@ -11,7 +11,6 @@ import type {
   RepoParam,
   ResourceParam,
   SelectParam,
-  TemplateParam,
   TextParam,
 } from "pstdio-api-contracts/extension-kernel";
 
@@ -72,19 +71,6 @@ export const params = {
   harness: <const TOptions extends ParamOptions<HarnessParam> | undefined = undefined>(
     options?: TOptions,
   ): HarnessParam<RequiredOf<TOptions>> => ({ type: "harness", ...options }) as HarnessParam<RequiredOf<TOptions>>,
-
-  template: <const TOptions extends Omit<TemplateParam, "type" | "templateType"> & { type: string }>(
-    options: TOptions,
-  ): TemplateParam<RequiredOf<TOptions>> =>
-    ({
-      label: options.label,
-      description: options.description,
-      required: options.required,
-      defaultValue: options.defaultValue,
-      metadata: options.metadata,
-      type: "template",
-      templateType: options.type,
-    }) as TemplateParam<RequiredOf<TOptions>>,
 
   resource: <const TOptions extends ParamOptions<ResourceParam>>(
     options: TOptions,

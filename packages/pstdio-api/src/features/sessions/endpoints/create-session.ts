@@ -5,7 +5,6 @@ import { emitActivityEvent } from "../../activity/activity-events";
 import type { SessionsRouteDeps } from "../deps";
 import { createSessionBodySchema, sessionResponseSchema } from "../dto";
 import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
-import { resolvePrompt } from "../resolve-prompt";
 import { resolveSessionCwd } from "../resolve-session-cwd";
 import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
 import { createSessionScheduler } from "../session-scheduler";
@@ -95,7 +94,7 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
     });
     if (resolvedParams.type === "error") return c.json({ error: resolvedParams.error }, 400);
 
-    const prompt = await resolvePrompt(input, input.project_id, deps);
+    const prompt = input.prompt ?? "";
     const scheduler = createSessionScheduler(deps);
 
     try {

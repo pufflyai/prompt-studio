@@ -117,9 +117,8 @@ describe("runAttemptCommand", () => {
           },
           expect.objectContaining({ type: "planner-attempt", id: "workspace-1" }),
         ]),
-        template: "implement-ticket",
+        prompt: expect.stringContaining("T-1"),
         title: "Implement ticket: T-1",
-        vars: { ticket: "T-1", workspaceId: "workspace-1" },
         workspaceId: "workspace-1",
       }),
     ]);
@@ -190,9 +189,8 @@ describe("runAttemptCommand", () => {
           expect.objectContaining({ type: "planner-attempt", id: "workspace-1" }),
         ]),
         harness: { harnessId: "codex", model: "gpt-5" },
-        template: "implement-ticket",
+        prompt: expect.stringContaining("PS-304"),
         title: "Implement ticket: PS-304",
-        vars: { ticket: "PS-304", workspaceId: "workspace-1" },
         workspaceId: "workspace-1",
       }),
     ]);
@@ -517,11 +515,7 @@ describe("breakIntoSubTicketsCommand", () => {
         ],
         title: "Break into sub-tickets: ticket-1",
         harness: { harnessId: "codex", model: "gpt-5" },
-        template: "create-sub-tickets",
-        vars: {
-          ticket: "ticket-1",
-          templateName: "ticket",
-        },
+        prompt: expect.stringContaining("ticket-1"),
       },
     ]);
   });

@@ -24,8 +24,6 @@ export type {
   MarketplaceExtension,
   ProjectExtensionInstance,
   UpdateExtensionSettingRequest,
-  UpdateInstalledExtensionTemplateInput,
-  UpdateInstalledExtensionTemplateResponse,
   UpgradeProjectExtensionResponse,
   WorkbenchExtensionAutomationRecord,
   WorkbenchExtensionCommandPaletteResourceRecord,

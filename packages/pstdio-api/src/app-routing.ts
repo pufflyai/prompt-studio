@@ -23,7 +23,6 @@ import { createSessionRoutes } from "./features/sessions/routes";
 import { createSettingsRoutes } from "./features/settings/routes";
 import { createSkillRoutes } from "./features/skills/routes";
 import { createSyncRoutes } from "./features/sync/routes";
-import { createTemplateRoutes } from "./features/templates/routes";
 import { createTerminalRoutes } from "./features/terminal/routes";
 import { createWorkspaceRoutes } from "./features/workspaces/routes";
 import { apiLogger } from "./lib/logger";
@@ -156,7 +155,6 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps, termi
   app.route("/v1", createExtensionRoutes(deps));
   app.route("/v1", createAgentRoutes(deps));
   app.route("/v1", createSkillRoutes(deps));
-  app.route("/v1", createTemplateRoutes(deps));
   app.route("/v1", createNotificationsRoutes(deps));
   app.route("/v1", createSessionRoutes(deps));
   app.route("/v1", createSettingsRoutes(deps));

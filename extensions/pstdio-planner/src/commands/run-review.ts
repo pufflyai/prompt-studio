@@ -9,6 +9,7 @@ import {
 import { actorFromSource } from "../data/attempt-actors";
 import { appendAttemptEvent, putAttempt, readAttempt, reviewLaunchClaimsCollection } from "../data/attempt-storage";
 import type { AttemptReview } from "../data/attempt-types";
+import { renderOwnedTemplate } from "../data/template-store";
 
 const workspaceIdFrom = (
   ctx: {
@@ -106,14 +107,13 @@ export const runReviewCommand = defineCommand({
         title: `Code review: ${attempt.ticketShorthand} revision ${revision.revision}`,
         anchors,
         harness: commandParams.harness,
-        template: "review-code",
-        vars: {
+        prompt: await renderOwnedTemplate(ctx, "review-code", {
           ticket: attempt.ticketShorthand,
           workspaceId,
           reviewId,
           revision: String(revision.revision),
           headSha: revision.headSha,
-        },
+        }),
       });
       review.sessionId = session.id;
       const revisions = attempt.revisions.map((candidate) =>

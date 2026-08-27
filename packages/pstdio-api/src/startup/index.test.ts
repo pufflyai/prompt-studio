@@ -82,7 +82,9 @@ describe("startup default extensions", () => {
 
     process.env.PSTDIO_HOME = pstdioHome;
     process.env.PSTDIO_DISABLE_EMBED_MANIFEST = "1";
-    process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify(["extension-lab"]);
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([
+      { source, installName: "extension-lab", skipInstall: true, force: true },
+    ]);
 
     const { close } = await createTestApp({
       databasePath: ":memory:",

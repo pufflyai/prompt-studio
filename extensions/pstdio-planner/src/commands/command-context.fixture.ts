@@ -43,6 +43,10 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
       run: async () => ({ exitCode: 0, stdout: "main-sha\n", stderr: "" }),
       runOrThrow: async () => ({ exitCode: 0, stdout: "main-sha\n", stderr: "" }),
     },
+    packageFiles: {
+      readText: async () =>
+        "{{ticket}} {{workspaceId}} {{templateName}} {{additionalContext}} {{reviewId}} {{revision}} {{headSha}}",
+    },
     settings: { all: async () => ({ "automation.maxInProgress": 2 }) },
     ...overrides,
   } as unknown as CommandContext;

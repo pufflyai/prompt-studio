@@ -143,7 +143,6 @@ export const createContextFactory = (
       extensionFiles: env.extensionFiles,
       files: env.files,
       skills: env.skills,
-      templates: env.templates,
       sessions: env.sessions,
       workspaces: env.workspaces,
       repos: env.repos,

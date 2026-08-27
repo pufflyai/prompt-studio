@@ -40,7 +40,6 @@ const environment: CommandRunnerEnvironment = {
     createText: async () => ({ id: "" }),
     delete: async () => {},
   },
-  templates: { get: async () => null },
   sessions: {
     get: async () => null,
     list: async () => [],

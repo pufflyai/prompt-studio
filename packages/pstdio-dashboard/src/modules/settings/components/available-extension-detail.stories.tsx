@@ -48,6 +48,21 @@ const metadata = {
       title: "Change request",
     },
   ],
+  templateTypes: [
+    {
+      id: "pstdio.pstdio-reports.template-type.report",
+      localId: "report",
+      extensionId: "pstdio.pstdio-reports",
+      label: "Report",
+      order: 40,
+      commands: {
+        list: "pstdio.pstdio-reports.command.templates.list",
+        read: "pstdio.pstdio-reports.command.templates.read",
+        save: "pstdio.pstdio-reports.command.templates.save",
+        delete: "pstdio.pstdio-reports.command.templates.delete",
+      },
+    },
+  ],
   diagnostics: [],
 } as never;
 

@@ -1,8 +1,9 @@
+import { readFileSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { z } from "@hono/zod-openapi";
 import { expandHomePath, resolvePstdioHome } from "pstdio-paths";
-import packagedCatalogJson from "../../../files/extension-catalog.json";
+import packagedCatalogFile from "../../../files/extension-catalog.json" with { type: "file" };
 
 const gitOriginSchema = z.object({
   kind: z.literal("git"),
@@ -41,9 +42,11 @@ export const parseExtensionCatalog = (value: unknown) => {
   return catalog;
 };
 
-export const packagedExtensionCatalog = parseExtensionCatalog(packagedCatalogJson);
-
 const parseCatalogText = (text: string) => parseExtensionCatalog(JSON.parse(text) as unknown);
+
+export const packagedExtensionCatalog = parseCatalogText(
+  readFileSync(packagedCatalogFile as unknown as string, "utf8"),
+);
 
 const writeAtomic = async (path: string, content: string) => {
   await mkdir(dirname(path), { recursive: true });

@@ -115,7 +115,7 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   const primaryResourceSubscription = ctx.onDidChangePrimaryResource(refresh);
   const unsubscribeDashboardData = subscribeDashboardData(refresh);
   const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refresh);
-  const unsubscribeSidenavContributions = subscribeSidenavContributions(ctx, refresh);
+  const unsubscribeSidenavContributions = subscribeSidenavContributions(ctx, () => syncSidenavForActiveMode(ctx));
 
   return {
     dispose: () => {

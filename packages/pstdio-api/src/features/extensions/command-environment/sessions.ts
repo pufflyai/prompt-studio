@@ -77,7 +77,7 @@ export const createSessionsApi = (
     const model = await resolveCreateSessionModel(harness.model, project, resolvedAgent.agentId, deps.harnessRegistry, {
       requestAgentWasOmitted: !harness.agent,
     });
-    const prompt = await resolveExtensionPrompt(deps, input.projectId, sessionInput);
+    const prompt = resolveExtensionPrompt(sessionInput);
     const attachments = await resolveSessionAttachments(deps, input.projectId, sessionInput.attachments);
     const cwd = repoPath ?? (await resolveSessionCwd(deps, input.projectId, workspace?.id));
     const session = await createSessionScheduler(deps).createAndStartSession({
@@ -116,7 +116,7 @@ export const createSessionsApi = (
     const session = await deps.sessionService.get(followupInput.sessionId);
     if (!session || session.project_id !== input.projectId)
       throw new Error(`Session not found: ${followupInput.sessionId}`);
-    const prompt = await resolveExtensionPrompt(deps, session.project_id ?? input.projectId, followupInput);
+    const prompt = resolveExtensionPrompt(followupInput);
     const projectId = session.project_id ?? input.projectId;
     const attachments = await resolveSessionAttachments(deps, projectId, followupInput.attachments);
     await createSessionScheduler(deps).startOrQueueExisting({

@@ -172,28 +172,6 @@ export const extension_files = pgTable(
   ],
 );
 
-export const extension_template_preferences = pgTable(
-  "extension_template_preferences",
-  {
-    project_id: text("project_id")
-      .notNull()
-      .references(() => projects.id, { onDelete: "cascade" }),
-    extension_instance_id: text("extension_instance_id")
-      .notNull()
-      .references(() => extension_instances.id, { onDelete: "restrict" }),
-    template_key: text("template_key").notNull(),
-    enabled: boolean("enabled").notNull().default(true),
-    display_name_override: text("display_name_override"),
-    metadata_json: jsonb("metadata_json").$type<JsonObject>().notNull().default({}),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.project_id, table.extension_instance_id, table.template_key] }),
-    index("extension_template_prefs_instance_idx").on(table.extension_instance_id),
-  ],
-);
-
 export const extension_automation_preferences = pgTable(
   "extension_automation_preferences",
   {

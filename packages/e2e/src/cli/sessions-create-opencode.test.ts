@@ -166,9 +166,9 @@ const startOpencodeServer = async () => {
 };
 
 const pointApiAtOpencodeServer = (url: string) => {
-  const storeDir = join(api.homePath, ".pstdio");
+  const storeDir = join(api.homePath, "state");
   mkdirSync(storeDir, { recursive: true });
-  writeFileSync(join(storeDir, "opencode-server.txt"), url);
+  writeFileSync(join(storeDir, "pstdio.harness-open-code.json"), `${JSON.stringify({ serverUrl: url }, null, 2)}\n`);
 };
 
 const waitForCompletedSession = async (createdSessionId: string) => {

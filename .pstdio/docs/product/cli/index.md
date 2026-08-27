@@ -21,7 +21,6 @@ Run `pst --help`, `pst <group> --help`, or `pst <group> <command> --help` for th
 | `pst agents` | Configure agents and install skills. |
 | `pst sessions` | Run and inspect agent sessions. |
 | `pst workspaces` | Manage standalone worktree-backed workspaces. |
-| `pst templates` | Manage templates and write them to files. |
 | `pst extensions` | Install, develop, and validate extensions. |
 | `pst notifications` | Create and manage project notifications. |
 | `pst inbox` | List pending project notifications. |
@@ -33,7 +32,6 @@ Run `pst --help`, `pst <group> --help`, or `pst <group> <command> --help` for th
 - [Agents](./agents.md)
 - [Sessions](./sessions.md)
 - [Workspaces](./workspaces.md)
-- [Templates](./templates.md)
 - [Notifications](./notifications.md)
 - [CLI output](./feedback.md)
 

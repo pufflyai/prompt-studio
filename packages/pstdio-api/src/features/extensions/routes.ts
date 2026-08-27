@@ -81,10 +81,6 @@ import {
   uninstallProjectExtensionHandler,
   uninstallProjectExtensionRoute,
 } from "./endpoints/uninstall-project-extension";
-import {
-  updateInstalledExtensionTemplateHandler,
-  updateInstalledExtensionTemplateRoute,
-} from "./endpoints/update-installed-extension-template";
 import { upgradeProjectExtensionHandler, upgradeProjectExtensionRoute } from "./endpoints/upgrade-project-extension";
 import {
   createProjectExtensionLifecycle,
@@ -95,7 +91,6 @@ type ExtensionRoutes = OpenAPIHono<AppBindings>;
 
 const registerInstalledExtensionRoutes = (routes: ExtensionRoutes, deps: ExtensionsRouteDeps) => {
   routes.openapi(enableInstalledExtensionRoute, enableInstalledExtensionHandler(deps));
-  routes.openapi(updateInstalledExtensionTemplateRoute, updateInstalledExtensionTemplateHandler(deps));
 };
 
 const registerExtensionWorkbenchRoutes = (

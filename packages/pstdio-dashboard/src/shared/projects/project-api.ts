@@ -1,6 +1,6 @@
-import type { Project as ProjectResponse, Template as TemplateResponse } from "@pstdio/sdk/resources";
+import type { Project as ProjectResponse } from "@pstdio/sdk/resources";
 import { apiRequest } from "@/lib/api";
-import type { ProjectRepository, ProjectTemplateAsset, ProjectTemplateAssetType, RepoBranch } from "./project-types";
+import type { ProjectRepository, RepoBranch } from "./project-types";
 
 export type ApiRepo = {
   id: string;
@@ -49,98 +49,4 @@ export const getRepoBranches = async (repoId: string): Promise<RepoBranch[]> => 
     isRemote: branch.is_remote,
     lastCommitDate: branch.last_commit_date,
   }));
-};
-
-export const getProjectTemplateAssets = async (projectId: string) => {
-  const templates = await apiRequest<TemplateResponse[]>(`/v1/projects/${projectId}/templates`);
-  return templates.map((t) => ({
-    id: t.id,
-    projectId: t.project_id ?? projectId,
-    name: t.name,
-    title: t.title,
-    templateType: t.template_type,
-    sourceKind: t.source_kind,
-    installName: t.install_name,
-    key: t.key,
-    fileId: t.file_id,
-    content: "",
-    isDefault: t.is_default,
-    enabled: t.enabled,
-    createdAt: t.created_at,
-    updatedAt: t.updated_at,
-  }));
-};
-
-export const getProjectTemplate = async (projectId: string, name: string) => {
-  const t = await apiRequest<TemplateResponse & { content: string }>(
-    `/v1/projects/${projectId}/templates/${encodeURIComponent(name)}`,
-  );
-
-  return {
-    id: t.id,
-    projectId: t.project_id ?? projectId,
-    name: t.name,
-    title: t.title,
-    templateType: t.template_type,
-    sourceKind: t.source_kind,
-    installName: t.install_name,
-    key: t.key,
-    fileId: t.file_id,
-    content: t.content,
-    isDefault: t.is_default,
-    enabled: t.enabled,
-    createdAt: t.created_at,
-    updatedAt: t.updated_at,
-  } satisfies ProjectTemplateAsset;
-};
-
-export const createProjectTemplate = async (
-  projectId: string,
-  input: { name: string; templateType: ProjectTemplateAssetType; content?: string; isDefault?: boolean },
-) => {
-  const created = await apiRequest<TemplateResponse>(`/v1/projects/${projectId}/templates`, {
-    method: "POST",
-    body: {
-      name: input.name,
-      template_type: input.templateType,
-      ...(input.content != null && { content: input.content }),
-      is_default: input.isDefault,
-    },
-  });
-
-  return {
-    id: created.id,
-    projectId: created.project_id ?? projectId,
-    name: created.name,
-    title: created.title,
-    templateType: created.template_type,
-    sourceKind: created.source_kind,
-    fileId: created.file_id,
-    content: input.content ?? "",
-    isDefault: created.is_default,
-    enabled: created.enabled,
-    createdAt: created.created_at,
-    updatedAt: created.updated_at,
-  } satisfies ProjectTemplateAsset;
-};
-
-export const updateProjectTemplate = async (
-  projectId: string,
-  name: string,
-  input: { content?: string; isDefault?: boolean; templateType?: ProjectTemplateAssetType },
-) => {
-  await apiRequest(`/v1/projects/${projectId}/templates/${encodeURIComponent(name)}`, {
-    method: "PUT",
-    body: {
-      ...(input.content !== undefined ? { content: input.content } : {}),
-      ...(input.isDefault !== undefined ? { is_default: input.isDefault } : {}),
-      ...(input.templateType !== undefined ? { template_type: input.templateType } : {}),
-    },
-  });
-};
-
-export const deleteProjectTemplate = async (projectId: string, name: string) => {
-  await apiRequest(`/v1/projects/${projectId}/templates/${encodeURIComponent(name)}`, {
-    method: "DELETE",
-  });
 };

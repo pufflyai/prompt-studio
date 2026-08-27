@@ -119,7 +119,9 @@ describe("readPackageManifest", () => {
     expect(result.manifest).toBeNull();
     expect(result.diagnostics.map((diagnostic) => diagnostic.message)).toContain("pstdio must be an object");
   });
+});
 
+describe("readPackageManifest validation", () => {
   test("reports each missing required field", () => {
     const dir = createPackage({ name: "broken", version: "1.0.0" });
 

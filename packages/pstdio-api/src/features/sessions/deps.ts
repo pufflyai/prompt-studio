@@ -12,7 +12,6 @@ export type SessionsRouteDeps = Pick<
   | "sessionQueueEntriesService"
   | "sessionService"
   | "settingsService"
-  | "templateService"
   | "workspaceService"
   | "workspaceSessionService"
 >;

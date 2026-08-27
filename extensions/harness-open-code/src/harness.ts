@@ -11,8 +11,8 @@ import { l10n, params } from "@pstdio/sdk/extensions";
 import { parseOpencodeModels } from "./models";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
 import { pollOpencodeQuestionReply } from "./opencode-question-reply-poller";
-import { createOpencodeService } from "./opencode-service";
 import { createHarnessServerStore } from "./opencode-server";
+import { createOpencodeService } from "./opencode-service";
 import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-poller";
 
 // --- Detection ---

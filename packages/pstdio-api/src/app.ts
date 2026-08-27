@@ -30,7 +30,6 @@ import { createSessionService } from "./services/session-service";
 import { createSettingsService } from "./services/settings-service";
 import { createSkillService } from "./services/skill-service";
 import { createSyncService } from "./services/sync-service";
-import { createTemplateService } from "./services/template-service";
 import { createWorkspaceService } from "./services/workspace-service";
 import { createWorkspaceSessionService } from "./services/workspace-session-service";
 import type { AppBindings } from "./types";
@@ -113,14 +112,12 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     extensionSettingsDBService,
     extensionSkillPreferencesDBService,
     extensionStorageService,
-    extensionTemplatePreferencesDBService,
     installedExtensionSourcesService,
     notificationsDbService,
     sessionQueueEntriesService,
     sessionsDBService,
     settingsDBService,
     skillsDBService,
-    templatesDBService,
   } = dbs;
 
   const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
@@ -155,13 +152,6 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     projectService,
     repoService,
     storageRoot,
-  });
-  const templateService = createTemplateService({
-    extensionRuntimeCatalog,
-    extensionTemplatePreferencesDBService,
-    fileService,
-    projectTemplateDefaultsDBService: dbs.projectTemplateDefaultsDBService,
-    templatesDBService,
   });
   const skillService = createSkillService({
     extensionRuntimeCatalog,
@@ -198,7 +188,6 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     skillService,
     notificationService,
     settingsService,
-    templateService,
     workspaceService,
     workspaceSessionService,
   });
@@ -244,7 +233,6 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     settingsService,
     workspaceService,
     workspaceSessionService,
-    templateService,
     skillService,
     fileService,
     notificationsDbService,

@@ -3,15 +3,15 @@ import {
   defineExtension,
   defineHook,
   defineSkill,
-  defineTemplate,
   defineTemplateType,
   l10n,
   packageAsset,
   sessionEvents,
 } from "@pstdio/sdk/extensions";
-import { documentTemplates, sharedPromptTemplates } from "./extension-assets";
+import { plannerTemplates } from "./extension-assets";
 import { plannerCommands } from "./src/commands";
 import { queryTicketResources } from "./src/commands/query-ticket-resources";
+import { templateCommands } from "./src/commands/template-commands";
 import { findTicket } from "./src/data/resolve";
 import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link";
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
@@ -20,6 +20,13 @@ import { ticketStatuses } from "./src/ticket-status-provider";
 import { createPlannerUi, plannerSettingsSection, ticketResourceKind } from "./src/ui-contributions";
 
 const plannerUi = createPlannerUi(import.meta.url);
+
+const templateCommandRefs = {
+  list: templateCommands.list.ref,
+  read: templateCommands.read.ref,
+  save: templateCommands.save.ref,
+  delete: templateCommands.delete.ref,
+};
 
 export default defineExtension({
   settings: {
@@ -79,57 +86,30 @@ export default defineExtension({
   ],
 
   templateTypes: [
-    defineTemplateType({ id: "ticket", label: "Ticket", description: "Ticket templates" }),
-    defineTemplateType({ id: "prompt", label: "Prompt", description: "Prompt templates" }),
-    defineTemplateType({ id: "document", label: "Document", description: "Document templates" }),
+    defineTemplateType({
+      id: "ticket",
+      label: "Ticket",
+      description: "Ticket templates",
+      order: 10,
+      commands: templateCommandRefs,
+    }),
+    defineTemplateType({
+      id: "prompt",
+      label: "Prompt",
+      description: "Prompt templates",
+      order: 20,
+      commands: templateCommandRefs,
+    }),
+    defineTemplateType({
+      id: "document",
+      label: "Document",
+      description: "Document templates",
+      order: 30,
+      commands: templateCommandRefs,
+    }),
   ],
 
-  templates: [
-    ...documentTemplates,
-    defineTemplate({
-      id: "ticket",
-      title: "Ticket",
-      type: "ticket",
-      source: packageAsset("./templates/tickets/ticket.ticket.md", import.meta.url),
-    }),
-    defineTemplate({
-      id: "bug_fix",
-      title: "Bug fix",
-      type: "ticket",
-      source: packageAsset("./templates/tickets/bug-fix.ticket.md", import.meta.url),
-    }),
-    defineTemplate({
-      id: "proposal",
-      title: "Proposal",
-      type: "ticket",
-      source: packageAsset("./templates/tickets/proposal.ticket.md", import.meta.url),
-    }),
-    defineTemplate({
-      id: "create_sub_tickets",
-      title: "Create sub-tickets",
-      type: "prompt",
-      source: packageAsset("./templates/prompts/create-sub-tickets.prompt.md", import.meta.url),
-    }),
-    defineTemplate({
-      id: "implement_ticket",
-      title: "Implement ticket",
-      type: "prompt",
-      source: packageAsset("./templates/prompts/implement-ticket.prompt.md", import.meta.url),
-    }),
-    defineTemplate({
-      id: "refine_ticket",
-      title: "Refine ticket",
-      type: "prompt",
-      source: packageAsset("./templates/prompts/refine-ticket.prompt.md", import.meta.url),
-    }),
-    defineTemplate({
-      id: "review_code",
-      title: "Review code",
-      type: "prompt",
-      source: packageAsset("./templates/prompts/review-code.prompt.md", import.meta.url),
-    }),
-    ...sharedPromptTemplates,
-  ],
+  templates: plannerTemplates,
 
   skills: [
     defineSkill({

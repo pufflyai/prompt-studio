@@ -3,11 +3,7 @@ import type { DbClient } from "../../db/connection.pglite";
 import { createDb } from "../../db/connection.pglite";
 import { activity_events } from "../../db/schemas.pg";
 import { createProjectsDBService } from "../projects/projects";
-import {
-  ACTIVITY_ACTOR_TYPES,
-  ACTIVITY_EVENT_SOURCES,
-  createActivityEventsDBService,
-} from "./activity-events";
+import { ACTIVITY_ACTOR_TYPES, ACTIVITY_EVENT_SOURCES, createActivityEventsDBService } from "./activity-events";
 
 let db: DbClient;
 let close: () => Promise<void>;

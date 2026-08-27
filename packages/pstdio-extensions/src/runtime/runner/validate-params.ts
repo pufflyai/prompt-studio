@@ -19,7 +19,6 @@ const checkDescriptor = (key: string, descriptor: ParamDescriptor, value: unknow
     case "text":
     case "longtext":
     case "select":
-    case "template":
       if (typeof value !== "string") return `Param "${key}" must be a string (got ${describeValue(value)})`;
       return undefined;
     case "number":

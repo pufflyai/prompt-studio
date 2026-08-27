@@ -1,5 +1,5 @@
-import { archiveTicketColumnActionCommand, archiveTicketCommand } from "./archive-ticket";
 import { applyTicketTemplateCommand } from "./apply-ticket-template";
+import { archiveTicketColumnActionCommand, archiveTicketCommand } from "./archive-ticket";
 import { attachTicketFileCommand, detachTicketFileCommand } from "./attach-ticket-file";
 import {
   addReviewCommentCommand,
@@ -34,6 +34,12 @@ import { saveTicketCommand } from "./save-ticket";
 import { saveTicketContentCommand } from "./save-ticket-content";
 import { setTicketAttributeCommand } from "./set-ticket-attribute";
 import { submitReviewCommand } from "./submit-review";
+import {
+  deleteTemplateCommand,
+  listTemplatesCommand,
+  readTemplateCommand,
+  saveTemplateCommand,
+} from "./template-commands";
 import {
   approveProposalCommand,
   breakIntoSubTicketsCommand,
@@ -79,6 +85,10 @@ import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
+  listTemplatesCommand,
+  readTemplateCommand,
+  saveTemplateCommand,
+  deleteTemplateCommand,
   applyTicketTemplateCommand,
   automationPolicyCommand,
   attemptReadinessCommand,

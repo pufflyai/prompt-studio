@@ -45,11 +45,7 @@ describe("refineTicketCommand", () => {
             metadata: { shorthand: "PS-304" },
           },
         ],
-        template: "refine-ticket",
-        vars: {
-          ticket: "PS-304",
-          additionalContext: "Tighten the acceptance criteria.",
-        },
+        prompt: expect.stringContaining("Tighten the acceptance criteria."),
       },
     ]);
   });
@@ -97,12 +93,7 @@ describe("refineTicketCommand", () => {
           },
         ],
         harness: { harnessId: "codex", model: "gpt-5" },
-        template: "refine-ticket",
-        vars: {
-          ticket: "T-1",
-          templateName: "bug_fix",
-          additionalContext: "Tighten the acceptance criteria.",
-        },
+        prompt: expect.stringContaining("bug_fix"),
       },
     ]);
   });

@@ -6,5 +6,4 @@ export type { Project } from "./project";
 export type { Session, SessionStatus } from "./session";
 export type { Settings } from "./settings";
 export type { Skill, SkillFile, SkillWithContent } from "./skill";
-export type { Template, TemplateType, TemplateWithContent } from "./template";
 export type { Workspace, WorkspaceListItem } from "./workspace";

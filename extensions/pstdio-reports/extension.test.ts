@@ -8,6 +8,10 @@ describe("pstdio-reports extension", () => {
       "reports.read",
       "reports.save",
       "reports.write",
+      "templates.delete",
+      "templates.list",
+      "templates.read",
+      "templates.save",
     ]);
     expect(extension.templateTypes?.find((templateType) => templateType.id === "report")).toMatchObject({
       label: "Report",

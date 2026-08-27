@@ -1,7 +1,6 @@
 import type { Arguments, Argv } from "yargs";
 import { findGitRoot, readConfig } from "@/features/config/config";
 import { createSession as defaultCreateSession } from "@/features/sessions/api/create-session";
-import { parseVars } from "../parse-vars";
 import { deleteCliSessionAttachments, uploadCliSessionAttachments } from "./session-attachments";
 
 export const command = "create";
@@ -10,8 +9,6 @@ export const describe = "Create a new session and launch an agent";
 export const builder = (yargs: Argv) =>
   yargs
     .option("prompt", { type: "string", describe: "Initial prompt" })
-    .option("template", { type: "string", describe: "Prompt template name (mutually exclusive with --prompt)" })
-    .option("var", { type: "string", array: true, describe: "Template variable in key=value format" })
     .option("title", { type: "string", describe: "Session title (defaults to prompt excerpt)" })
     .option("workspace-id", { type: "string", describe: "Workspace ID or shorthand" })
     .option("project-id", { type: "string", describe: "Project ID" })
@@ -20,15 +17,12 @@ export const builder = (yargs: Argv) =>
     .option("attach", { type: "string", array: true, describe: "Local file to attach to the session prompt" })
     .option("original-session-id", { type: "string", describe: "ID of the session that triggered this one" })
     .check((argv) => {
-      if (!argv.prompt && !argv.template) throw new Error("At least one of --prompt or --template is required.");
-      if (argv.prompt && argv.template) throw new Error("--prompt and --template are mutually exclusive");
+      if (!argv.prompt) throw new Error("--prompt is required.");
       return true;
     });
 
 export type CreateArgs = {
   prompt?: string;
-  template?: string;
-  var?: string[];
   title?: string;
   "workspace-id"?: string;
   "project-id"?: string;
@@ -71,7 +65,7 @@ export const createHandler =
       projectId = config.project_id;
     }
 
-    const title = argv.title ?? (argv.prompt ?? argv.template ?? "").slice(0, 50);
+    const title = argv.title ?? (argv.prompt ?? "").slice(0, 50);
     const agent = argv.agent;
     const attachments = argv.attach?.length
       ? await deps.uploadAttachments({
@@ -86,8 +80,6 @@ export const createHandler =
         project_id: projectId,
         title,
         prompt: argv.prompt,
-        template: argv.template,
-        vars: parseVars(argv.var),
         agent,
         attachments,
         workspace_id: argv["workspace-id"],

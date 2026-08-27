@@ -59,18 +59,6 @@ pst workspaces delete --id <id>
 
 Core workspace creation is standalone. Planner creates ticket-linked workspaces through managed attempts.
 
-## Templates
-
-```sh
-pst templates list
-pst templates create --name <name> --type <type> --file <path|-> [--default]
-pst templates update --name <name> [--file <path|->] [--default]
-pst templates write --name <name> (--target <path> | --ticket <id>) [--var KEY=value...]
-pst templates delete --name <name>
-```
-
-The template type can come from the default catalog or an enabled extension.
-
 ## Extensions
 
 ```sh

@@ -130,13 +130,19 @@ export const createBenchEnvironment = (seed?: BenchStorageSeed): CommandRunnerEn
   project: { id: "bench-project", name: "Bench Project", shorthand: "BP" },
   storage: createStorage(seed),
   artifacts: { mount: () => ({}) as never },
+  packageFiles: {
+    exists: async () => false,
+    list: async () => [],
+    listDirs: async () => [],
+    readBytes: async () => new Uint8Array(),
+    readText: async () => "",
+  },
   files: {
     createText: async () => ({ id: crypto.randomUUID() }),
     delete: async () => {},
     readText: async () => "",
     writeText: async () => {},
   },
-  templates: { get: async () => null },
   sessions: {
     addAnchors: async () => {},
     get: async () => null,
@@ -158,6 +164,7 @@ export const createBenchEnvironment = (seed?: BenchStorageSeed): CommandRunnerEn
     delete: async () => {},
     get: async () => null,
     getByShorthand: async () => null,
+    removeWorktree: async () => ({ removed: true }),
     resolve: async () => ({}) as never,
   },
   repos: {

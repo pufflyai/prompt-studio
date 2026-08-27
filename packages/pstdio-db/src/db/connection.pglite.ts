@@ -6,6 +6,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { normalizeEmbeddedFileName } from "pstdio-paths";
+import { migrateLegacyTemplates } from "./legacy-template-migration";
 import { ensureDbDirectory, resolveDbPath } from "./paths";
 import { acquirePgliteLock } from "./pglite-lock";
 import * as schema from "./schemas.pg";
@@ -99,6 +100,7 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
     const db = drizzle(pglite, { schema });
     const migrationsFolder = await resolveMigrationsFolder();
     if (fs.existsSync(migrationsFolder)) {
+      await migrateLegacyTemplates(pglite);
       await migrate(db, { migrationsFolder });
     }
 

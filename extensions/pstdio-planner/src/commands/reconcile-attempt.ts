@@ -10,6 +10,7 @@ import {
 } from "../data/attempt-storage";
 import type { AttemptBlocker, AttemptRecord, AttemptReview } from "../data/attempt-types";
 import { ticketsCollection } from "../data/collections";
+import { renderOwnedTemplate } from "../data/template-store";
 import { requestHuman } from "./human-requests";
 
 const liveStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
@@ -205,14 +206,13 @@ const retryReview = async (ctx: CommandContext, attempt: AttemptRecord, review: 
     originalSessionId: review.sessionId ?? undefined,
     title: `Retry review: ${attempt.ticketShorthand} revision ${revision.revision}`,
     anchors,
-    template: "review-code",
-    vars: {
+    prompt: await renderOwnedTemplate(ctx, "review-code", {
       ticket: attempt.ticketShorthand,
       workspaceId: attempt.workspaceId,
       reviewId,
       revision: String(revision.revision),
       headSha: revision.headSha,
-    },
+    }),
   });
   await appendReviewRetryEvents(ctx, pending, disconnected, retry, session.id);
   const { next, attached } = await attachReviewSession(ctx, pending, retry, session.id);

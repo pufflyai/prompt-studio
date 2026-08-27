@@ -14,6 +14,16 @@ const skill = (id: string) => extension.skills?.find((contribution) => contribut
 const template = (id: string) => extension.templates?.find((contribution) => contribution.id === id);
 const templateType = (id: string) => extension.templateTypes?.find((contribution) => contribution.id === id);
 
+const fileMount = (root: string) => ({
+  exists: async (path: string) => existsSync(join(root, path)),
+  readText: async (path: string) => readFileSync(join(root, path), "utf8"),
+  writeText: async (path: string, content: string) => {
+    const absolutePath = join(root, path);
+    mkdirSync(join(absolutePath, ".."), { recursive: true });
+    writeFileSync(absolutePath, content);
+  },
+});
+
 const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>) =>
   putTicket(storage, {
     id: "ticket-1",
@@ -163,27 +173,36 @@ describe("pstdio planner extension contributions", () => {
     });
     expect(extension.statuses?.[0]?.title).toBe("Ticket status");
   });
+});
 
+describe("pstdio planner workspace contributions", () => {
   test("copies the linked ticket file when a ticket worktree is created", async () => {
     const storage = createMemoryStorage();
     const ticket = await seedBacklogTicket(storage);
     const worktreePath = mkdtempSync(join(tmpdir(), "planner-worktree-"));
 
     try {
-      await hook("worktree-created")?.run({ storage } as never, {
-        projectId: "project-1",
-        workspaceId: "workspace-1",
-        repoPath: "/repo",
-        workspaceDir: worktreePath,
-        type: "worktree",
-        branch: "workspace/T-1_A1",
-        workspace: {
-          id: "workspace-1",
-          anchors_json: [
-            { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
-          ],
+      await hook("worktree-created")?.run(
+        {
+          storage,
+          repoFiles: fileMount(worktreePath),
+          workspaceFiles: fileMount(worktreePath),
+        } as never,
+        {
+          projectId: "project-1",
+          workspaceId: "workspace-1",
+          repoPath: "/repo",
+          workspaceDir: worktreePath,
+          type: "worktree",
+          branch: "workspace/T-1_A1",
+          workspace: {
+            id: "workspace-1",
+            anchors_json: [
+              { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
+            ],
+          },
         },
-      });
+      );
 
       const path = join(worktreePath, ticketMarkdownPath(ticket.shorthand));
       expect(existsSync(path)).toBe(true);
@@ -204,20 +223,27 @@ describe("pstdio planner extension contributions", () => {
     writeFileSync(repoTicketPath, localContent);
 
     try {
-      await hook("worktree-created")?.run({ storage } as never, {
-        projectId: "project-1",
-        workspaceId: "workspace-1",
-        repoPath,
-        workspaceDir: worktreePath,
-        type: "worktree",
-        branch: "workspace/T-1_A1",
-        workspace: {
-          id: "workspace-1",
-          anchors_json: [
-            { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
-          ],
+      await hook("worktree-created")?.run(
+        {
+          storage,
+          repoFiles: fileMount(repoPath),
+          workspaceFiles: fileMount(worktreePath),
+        } as never,
+        {
+          projectId: "project-1",
+          workspaceId: "workspace-1",
+          repoPath,
+          workspaceDir: worktreePath,
+          type: "worktree",
+          branch: "workspace/T-1_A1",
+          workspace: {
+            id: "workspace-1",
+            anchors_json: [
+              { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
+            ],
+          },
         },
-      });
+      );
 
       expect(readFileSync(join(worktreePath, ticketMarkdownPath(ticket.shorthand)), "utf8")).toBe(localContent);
     } finally {

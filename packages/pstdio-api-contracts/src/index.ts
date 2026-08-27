@@ -14,5 +14,4 @@ export * from "./session-messages";
 export * from "./sessions";
 export * from "./settings";
 export * from "./skills";
-export * from "./templates";
 export * from "./workspaces";

@@ -10,6 +10,7 @@ const makeEnabledSources = () => [
     installedSource: {
       id: "source-1",
       extension_id: "pstdio.extension-lab",
+      source_path: "/fake/extension-lab",
     },
   },
 ];

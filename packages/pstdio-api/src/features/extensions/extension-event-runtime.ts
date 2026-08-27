@@ -36,6 +36,11 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
 ) => {
   const eventId = eventIdFor(event);
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
+  const repoPath = (payload as { repoPath?: unknown }).repoPath;
+  const eventRepo =
+    typeof repoPath === "string"
+      ? (await deps.repoService.listByProject(projectId)).find((repo) => repo.path === repoPath)
+      : undefined;
   const runner = createCommandRunner(snapshot.runtime, {
     logger: extensionEventLogger,
     buildEnvironment: (input) =>
@@ -45,7 +50,7 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
         name: input.name,
         project: snapshot.project,
         projectId: input.projectId,
-        repo: input.repo,
+        repo: eventRepo ? { projectId, repoId: eventRepo.id, path: eventRepo.path } : input.repo,
         workspaceDir: input.workspaceDir,
         workspaceId: input.workspaceId,
         settings: snapshot.runtime.settings,

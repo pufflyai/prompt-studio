@@ -22,6 +22,9 @@ const toViewRecord = (record: {
   title: record.contribution.title as never,
 });
 
+const commandId = (ref: { extensionId?: string; id: string }) =>
+  ref.extensionId && ref.extensionId !== "pstdio" ? `${ref.extensionId}.command.${ref.id}` : ref.id;
+
 const supplementalMetadata = (runtime: ExtensionRuntime) => ({
   harnesses: runtime.harnesses.map((harness) => ({
     id: harness.id,
@@ -31,6 +34,24 @@ const supplementalMetadata = (runtime: ExtensionRuntime) => ({
   })),
   skills: runtime.skills.map(toViewRecord),
   templates: runtime.templates.map(toViewRecord),
+  templateTypes: runtime.templateTypes.map((record) => ({
+    id: record.id,
+    localId: record.localId,
+    extensionId: record.extensionId,
+    label: record.contribution.label,
+    description: record.contribution.description,
+    order: record.contribution.order,
+    ...(record.contribution.commands
+      ? {
+          commands: {
+            list: commandId(record.contribution.commands.list),
+            read: commandId(record.contribution.commands.read),
+            save: commandId(record.contribution.commands.save),
+            delete: commandId(record.contribution.commands.delete),
+          },
+        }
+      : {}),
+  })),
   themes: [...runtime.themes, ...runtime.fileIconThemes].map((record) => ({
     id: record.id,
     localId: record.localId,

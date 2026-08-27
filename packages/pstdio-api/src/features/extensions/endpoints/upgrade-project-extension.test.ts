@@ -100,8 +100,12 @@ describe("POST /v1/projects/:projectId/extensions/:instanceId/upgrade", () => {
         version: "2.0.0",
       },
     });
-    expect(installExtensionSource).toHaveBeenCalledWith(
-      expect.objectContaining({ ref: "f".repeat(40), source: "pstdio-planner" }),
-    );
+    expect(installExtensionSource).toHaveBeenCalledWith({
+      force: true,
+      hostReleaseRef: "f".repeat(40),
+      installName: "pstdio-planner",
+      reuseInstalledDependencies: true,
+      source: "pstdio-planner",
+    });
   });
 });

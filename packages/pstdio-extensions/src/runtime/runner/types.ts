@@ -20,7 +20,6 @@ import type {
   ExtensionSettingsApi,
   ExtensionSkillsApi,
   ExtensionStorageApi,
-  ExtensionTemplatesApi,
   ExtensionTerminalApi,
   ExtensionWorkspacesApi,
   JsonObject,
@@ -45,7 +44,6 @@ export interface CommandRunnerEnvironment {
   extensionFiles?: ArtifactMount;
   files: ExtensionFilesApi;
   skills?: ExtensionSkillsApi;
-  templates: ExtensionTemplatesApi;
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
   repos: ExtensionReposApi;

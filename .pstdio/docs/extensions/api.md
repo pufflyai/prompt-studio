@@ -522,6 +522,15 @@ Terminals are layered: the workbench-native terminal surface is the product UI, 
 
 Use `packageAsset()` for files shipped inside the extension package.
 
+Template files are extension defaults, not host records. If users can edit them, declare a template type with `list`, `read`, `save`, and `delete` command refs. Keep overrides in `ctx.storage` and read untouched defaults through `ctx.packageFiles`. The dashboard discovers the type and calls those commands; it does not know the extension's storage format.
+
+The command values use these shapes:
+
+- `list`: returns `{ name, title, type }[]`.
+- `read`: accepts `{ name }` and returns `{ name, title, type, content } | null`.
+- `save`: accepts `{ name, title?, type, content }` and returns the saved item.
+- `delete`: accepts `{ name }`.
+
 ```ts
 import { defineExtension, defineView, packageAsset } from "@pstdio/sdk/extensions";
 

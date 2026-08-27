@@ -15,7 +15,6 @@ export type ExtensionsRouteDeps = Pick<
   | "sessionQueueEntriesService"
   | "settingsService"
   | "skillService"
-  | "templateService"
   | "workspaceSessionService"
 > & {
   activityEventsService: RouteDeps["activityEventsService"];

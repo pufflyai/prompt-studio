@@ -24,7 +24,6 @@ describe("createClient", () => {
     expect(client.projects).toBeDefined();
     expect(client.workspaces).toBeDefined();
     expect(client.sessions).toBeDefined();
-    expect(client.templates).toBeDefined();
     expect(client.skills).toBeDefined();
     expect(client.agents).toBeDefined();
     expect("actions" in client).toBe(false);
@@ -172,30 +171,6 @@ describe("createClient", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]!.url).toBe("http://test:1234/v1/workspaces/ws-1/remove-worktree");
     expect(calls[0]!.method).toBe("POST");
-  });
-
-  it("client.templates.update calls PUT /v1/projects/:id/templates/:name", async () => {
-    const { fetchFn, calls } = trackingFetch();
-    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
-
-    await client.templates.update("proj-1", "adr", { content: "# Updated", is_default: true });
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/proj-1/templates/adr");
-    expect(calls[0]!.method).toBe("PUT");
-    expect(JSON.parse(calls[0]!.body!)).toEqual({ content: "# Updated", is_default: true });
-  });
-
-  it("client.extensions.updateInstalledTemplate calls PUT /v1/extensions/installed/:name/templates/:key", async () => {
-    const { fetchFn, calls } = trackingFetch();
-    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
-
-    await client.extensions.updateInstalledTemplate("catalog", "catalogTicket", { content: "# Updated" });
-
-    expect(calls).toHaveLength(1);
-    expect(calls[0]!.url).toBe("http://test:1234/v1/extensions/installed/catalog/templates/catalogTicket");
-    expect(calls[0]!.method).toBe("PUT");
-    expect(JSON.parse(calls[0]!.body!)).toEqual({ content: "# Updated" });
   });
 
   it("client.extensions.listProject calls GET /v1/projects/:id/extensions", async () => {

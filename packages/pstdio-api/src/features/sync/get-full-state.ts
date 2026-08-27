@@ -9,7 +9,6 @@ import {
   projects,
   repos,
   sessions,
-  templates,
   workspace_sessions,
   workspaces,
 } from "pstdio-db";
@@ -25,7 +24,6 @@ const tableMap = {
   workspaces,
   files,
   workspace_sessions,
-  templates,
 } as const;
 
 export const SYNCED_TABLES = Object.keys(tableMap) as (keyof typeof tableMap)[];

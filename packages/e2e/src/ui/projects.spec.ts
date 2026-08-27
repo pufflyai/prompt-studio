@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync } from "node:f
 import { basename, dirname, join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
-import { enableCoreSkillsExtension, enableCoreTemplatesExtension } from "../extension-helpers";
+import { enableCoreSkillsExtension } from "../extension-helpers";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -432,43 +432,6 @@ test.describe("Project creation", () => {
     await createProjectDialog.getByRole("button", { name: "Create project", exact: true }).click();
 
     await expect(createProjectDialog.getByText("Select at least one harness.")).toBeVisible();
-  });
-
-  test("creates alphabetically sorted templates when creating a project via the dialog", async ({ page, request }) => {
-    const repoPath = createTempGitRepo();
-    tempRepoPaths.push(repoPath);
-
-    await bypassOnboarding(page);
-    await mockAvailableAgents(page);
-    await page.goto("/projects");
-
-    await openCreateProjectFromPicker(page);
-    await page.getByPlaceholder("Project name").fill("Templates Project");
-    await selectRepoFromFolderPicker(page, repoPath);
-    await getCreateProjectDialog(page).getByRole("button", { name: "Next", exact: true }).click();
-
-    const createProjectDone = page.waitForResponse(
-      (response) =>
-        response.url().endsWith("/v1/projects") && response.request().method() === "POST" && response.status() === 201,
-    );
-    const createProjectButton = getCreateProjectDialog(page).getByRole("button", {
-      name: "Create project",
-      exact: true,
-    });
-    await expect(createProjectButton).toBeEnabled();
-    await createProjectButton.click();
-    const createdProjectResponse = await createProjectDone;
-    const createdProject = (await createdProjectResponse.json()) as { id: string; name: string };
-    await enableCoreTemplatesExtension(request, apiBase, createdProject.id);
-
-    const templatesResponse = await request.get(`${apiBase}/v1/projects/${createdProject.id}/templates`);
-    expect(templatesResponse.ok()).toBe(true);
-    const templates = (await templatesResponse.json()) as Array<{ name: string; is_default: boolean }>;
-    const names = templates.map((template) => template.name);
-
-    expect(templates.length).toBeGreaterThan(0);
-    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
-    expect(templates.every((template) => !template.is_default)).toBe(true);
   });
 
   test("shows validation errors when submitting empty form", async ({ page }) => {

@@ -49,8 +49,6 @@ export type {
   MarketplaceExtension,
   ProjectExtensionInstance,
   UpdateExtensionSettingRequest,
-  UpdateInstalledExtensionTemplateInput,
-  UpdateInstalledExtensionTemplateResponse,
   UpgradeProjectExtensionResponse,
   WorkbenchExtensionAutomationRecord,
   WorkbenchExtensionCommandPaletteResourceRecord,
@@ -73,7 +71,6 @@ export type {
 export { sessionAttachmentMimeTypesByExtension } from "./sessions";
 export type { Settings, UpdateSettingsInput } from "./settings";
 export type { UpdateSkillInput } from "./skills";
-export type { CreateTemplateInput, UpdateTemplateInput } from "./templates";
 export type {
   TerminalHostEvent,
   TerminalSessionOperation,

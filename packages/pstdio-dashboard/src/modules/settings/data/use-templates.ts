@@ -1,24 +1,29 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteProjectTemplate, getProjectTemplate, updateProjectTemplate } from "@/shared/projects/project-api";
+import {
+  deleteProjectTemplate,
+  getProjectTemplate,
+  type ProjectTemplateAsset,
+  saveProjectTemplate,
+} from "./template-provider-api";
 
-const templateQueryKey = (projectId: string, name: string) => ["project-template", projectId, name];
+const templateQueryKey = (template: ProjectTemplateAsset) => ["project-template", template.projectId, template.id];
 
-export const useProjectTemplate = (projectId: string, name: string) =>
+export const useProjectTemplate = (template: ProjectTemplateAsset) =>
   useQuery({
-    queryKey: templateQueryKey(projectId, name),
-    queryFn: () => getProjectTemplate(projectId, name),
+    queryKey: templateQueryKey(template),
+    queryFn: () => getProjectTemplate(template),
   });
 
-export const useUpdateProjectTemplate = (projectId: string, name: string) => {
+export const useUpdateProjectTemplate = (template: ProjectTemplateAsset) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (content: string) => updateProjectTemplate(projectId, name, { content }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: templateQueryKey(projectId, name) }),
+    mutationFn: (content: string) => saveProjectTemplate(template, content),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: templateQueryKey(template) }),
   });
 };
 
-export const useDeleteProjectTemplate = (projectId: string) =>
+export const useDeleteProjectTemplate = () =>
   useMutation({
-    mutationFn: (name: string) => deleteProjectTemplate(projectId, name),
+    mutationFn: deleteProjectTemplate,
   });

@@ -16,25 +16,6 @@ export interface RepoBranch {
   lastCommitDate: string;
 }
 
-export type ProjectTemplateAssetType = string;
-
-export interface ProjectTemplateAsset {
-  id: string;
-  projectId: string;
-  name: string;
-  title: string;
-  templateType: ProjectTemplateAssetType;
-  sourceKind: "project" | "extension";
-  installName?: string;
-  key?: string;
-  fileId?: string;
-  content: string;
-  isDefault: boolean;
-  enabled?: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export type Project = ContractProject & {
   repositories: ProjectRepository[];
 };

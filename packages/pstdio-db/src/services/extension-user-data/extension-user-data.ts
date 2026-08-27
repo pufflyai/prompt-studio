@@ -5,7 +5,6 @@ import {
   extension_files,
   extension_kv,
   extension_skill_preferences,
-  extension_template_preferences,
 } from "../../db/schemas.pg";
 
 // Every table that anchors user-owned data to an extension instance. The instance row is a
@@ -15,7 +14,6 @@ const userDataTables = [
   extension_collection_items,
   extension_kv,
   extension_files,
-  extension_template_preferences,
   extension_skill_preferences,
 ] as const;
 

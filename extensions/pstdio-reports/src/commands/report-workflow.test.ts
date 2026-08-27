@@ -4,6 +4,7 @@ import { reportsCollection } from "../data/collections";
 import { reportFilesDir, reportMarkdownPath } from "../data/draft-storage";
 import { parseReportFrontmatter, stripFrontmatter } from "../data/frontmatter";
 import { createMemoryStorage } from "../data/memory-storage";
+import { saveReportTemplate } from "../data/template-store";
 import { makeCommandArgs } from "./command-context.fixture";
 import { deleteReportCommand } from "./delete-report";
 import { readReportCommand } from "./read-report";
@@ -102,33 +103,18 @@ describe("report workflow", () => {
 
   test("write uses a selected registered report template", async () => {
     const { storage, repoFiles } = setup();
+    const context = makeCommandArgs({ storage, params: {} })[0];
+    await saveReportTemplate(context, {
+      name: "review",
+      title: "Review report",
+      content: "# Review Template\n\nSelected body.",
+    });
 
     await writeReportCommand.run(
       ...makeCommandArgs({
         storage,
         params: { workspace: "PS-116_A1", kind: "review", name: "pre-merge", template: "review" },
-        overrides: {
-          repoFiles,
-          templates: {
-            get: async (name) =>
-              name === "review"
-                ? {
-                    id: "template-1",
-                    project_id: "proj-1",
-                    name: "review",
-                    title: "Review report",
-                    template_type: "report",
-                    source_kind: "project",
-                    is_default: false,
-                    editable: true,
-                    content: "# Review Template\n\nSelected body.",
-                    created_at: "2026-01-01T00:00:00.000Z",
-                    updated_at: "2026-01-01T00:00:00.000Z",
-                    deleted_at: null,
-                  }
-                : null,
-          },
-        },
+        overrides: { repoFiles },
       }),
     );
 

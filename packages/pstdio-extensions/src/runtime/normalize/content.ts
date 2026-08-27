@@ -12,6 +12,7 @@ import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { isLocalizableString } from "./localizable";
+import { normalizeContributionRef } from "./references";
 
 const registerTemplateTypes = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   const contributions = uniqueContributions({
@@ -26,7 +27,19 @@ const registerTemplateTypes = (ext: NormalizedExtension, source: LoadedExtension
     if (!isRecord(type) || !isLocalizableString(type.label)) continue;
     runtime.templateTypes.push({
       ...contributionRecordBase(ext, source, "template-type", localId),
-      contribution: type as RuntimeTemplateTypeRecord["contribution"],
+      contribution: {
+        ...type,
+        ...(type.commands
+          ? {
+              commands: {
+                list: normalizeContributionRef(ext, type.commands.list),
+                read: normalizeContributionRef(ext, type.commands.read),
+                save: normalizeContributionRef(ext, type.commands.save),
+                delete: normalizeContributionRef(ext, type.commands.delete),
+              },
+            }
+          : {}),
+      } as RuntimeTemplateTypeRecord["contribution"],
     });
   }
 };

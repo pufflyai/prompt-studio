@@ -11,21 +11,6 @@ interface CommandContextInput<TParams extends Record<string, unknown>> {
   overrides?: CommandContextOverrides<TParams>;
 }
 
-const reviewTemplate = {
-  id: "template-review",
-  project_id: "proj-1",
-  name: "review",
-  title: "Review",
-  template_type: "report",
-  source_kind: "extension",
-  is_default: false,
-  editable: false,
-  content: "## Confidence Score\n",
-  created_at: "2026-01-01T00:00:00.000Z",
-  updated_at: "2026-01-01T00:00:00.000Z",
-  deleted_at: null,
-};
-
 export const makeCommandContext = <TParams extends Record<string, unknown>>({
   overrides,
   storage,
@@ -40,7 +25,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>({
     project: { id: projectId, name: "Test Project", shorthand: "T" },
     invocation: { params },
     events: { emit: async () => ({ delivered: 0 }) },
-    templates: { get: async (name: string) => (name === "review" ? reviewTemplate : null) },
+    packageFiles: { readText: async () => "## Confidence Score\n" },
     notify: { action: async () => ({}), dismiss: async () => [], resolve: async () => [], toast: async () => {} },
     workspaces: { list: async () => [], get: async () => null, getByShorthand: async () => null },
     sessions: { list: async () => [] },

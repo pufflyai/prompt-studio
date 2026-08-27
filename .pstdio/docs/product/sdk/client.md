@@ -36,7 +36,6 @@ The client is organized by resource type:
 client.projects; // Project CRUD
 client.workspaces; // Workspace CRUD
 client.sessions; // Session CRUD, follow-up, approval, stream
-client.templates; // Template CRUD
 client.skills; // Skill listing (read-only)
 client.agents; // Agent configuration
 client.extensions; // Extension command execution and metadata
@@ -101,18 +100,6 @@ const created = await client.workspaces.create({
   type: "worktree",
 });
 await client.workspaces.delete(workspaceId);
-```
-
-## Templates
-
-```ts
-const templates = await client.templates.list(projectId);
-const template = await client.templates.get(projectId, templateId);
-await client.templates.create(projectId, {
-  name: "bug-report",
-  template_type: "ticket",
-  content: "# Bug Report\n\n## Steps to Reproduce\n...",
-});
 ```
 
 ## Skills

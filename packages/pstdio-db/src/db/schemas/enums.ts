@@ -24,5 +24,3 @@ export const extensionLoadStatusEnum = pgEnum("extension_load_status", [
 ]);
 
 export const extensionReloadStatusEnum = pgEnum("extension_reload_status", ["success", "error", "skipped"]);
-
-export const templateDefaultSourceEnum = pgEnum("template_default_source", ["project_template", "extension_template"]);

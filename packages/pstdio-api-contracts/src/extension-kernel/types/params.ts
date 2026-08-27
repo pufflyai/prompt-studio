@@ -13,7 +13,6 @@ export type ParamType =
   | "files"
   | "repo"
   | "harness"
-  | "template"
   | "resource"
   | "json"
   | "list";
@@ -102,14 +101,6 @@ export type HarnessParam<TRequired extends boolean | undefined = boolean | undef
   type: "harness";
 };
 
-export type TemplateParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
-  string,
-  TRequired
-> & {
-  type: "template";
-  templateType: string;
-};
-
 export type ResourceParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<
   ResourceRef,
   TRequired
@@ -142,7 +133,6 @@ export type ParamDescriptor<TValue = unknown, TRequired extends boolean | undefi
   | FilesParam<TRequired>
   | RepoParam<TRequired>
   | HarnessParam<TRequired>
-  | TemplateParam<TRequired>
   | ResourceParam<TRequired>
   | JsonParam<TValue, TRequired>
   | ListParam<TRequired>;

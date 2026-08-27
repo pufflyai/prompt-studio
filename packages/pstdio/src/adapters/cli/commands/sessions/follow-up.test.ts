@@ -105,21 +105,7 @@ describe("sessions follow-up", () => {
     const deps = makeDeps();
     const handler = createHandler(deps);
 
-    expect(handler(argv({ id: "s_1" }))).rejects.toThrow(
-      "At least one of --prompt, --template, or --summary-of is required.",
-    );
-  });
-
-  test("passes template and vars to API", async () => {
-    const deps = makeDeps();
-    const handler = createHandler(deps);
-
-    await handler(argv({ id: "s_1", template: "fix-it", var: ["ticket=PS-7", "output=error log"] }));
-
-    expect(deps.followUpSession).toHaveBeenCalledWith("s_1", {
-      template: "fix-it",
-      vars: { ticket: "PS-7", output: "error log" },
-    });
+    expect(handler(argv({ id: "s_1" }))).rejects.toThrow("At least one of --prompt or --summary-of is required.");
   });
 
   test("uploads attached files before sending the follow-up", async () => {
@@ -158,15 +144,6 @@ describe("sessions follow-up", () => {
       projectId: "proj-1",
       attachments: [{ file_id: "file-1" }, { file_id: "file-2" }],
     });
-  });
-
-  test("rejects --prompt and --template together", async () => {
-    const deps = makeDeps();
-    const handler = createHandler(deps);
-
-    expect(handler(argv({ id: "s_1", prompt: "inline", template: "tpl" }))).rejects.toThrow(
-      "--prompt and --template are mutually exclusive",
-    );
   });
 
   test("propagates API errors", async () => {

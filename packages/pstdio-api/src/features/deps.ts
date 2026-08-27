@@ -20,7 +20,6 @@ import type { createSessionService } from "../services/session-service";
 import type { createSettingsService } from "../services/settings-service";
 import type { createSkillService } from "../services/skill-service";
 import type { createSyncService } from "../services/sync-service";
-import type { createTemplateService } from "../services/template-service";
 import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
 import type { createAutomationService } from "./automation/automation-service";
@@ -55,7 +54,6 @@ export interface RouteDeps {
   settingsService: ReturnType<typeof createSettingsService>;
   workspaceService: ReturnType<typeof createWorkspaceService>;
   workspaceSessionService: ReturnType<typeof createWorkspaceSessionService>;
-  templateService: ReturnType<typeof createTemplateService>;
   skillService: ReturnType<typeof createSkillService>;
   fileService: ReturnType<typeof createFileService>;
   notificationsDbService: ReturnType<typeof createNotificationsDBService>;

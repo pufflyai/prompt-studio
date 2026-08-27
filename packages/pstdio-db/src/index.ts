@@ -13,10 +13,7 @@ export { createExtensionConnectionsDBService } from "./services/extension-connec
 export { createExtensionFilesDBService } from "./services/extension-files/extension-files";
 export { createExtensionInstancesDBService } from "./services/extension-instances/extension-instances";
 export { createExtensionAutomationPreferencesDBService } from "./services/extension-preferences/automation-preferences";
-export {
-  createExtensionSkillPreferencesDBService,
-  createExtensionTemplatePreferencesDBService,
-} from "./services/extension-preferences/extension-preferences";
+export { createExtensionSkillPreferencesDBService } from "./services/extension-preferences/extension-preferences";
 export {
   createExtensionSettingsDBService,
   type ExtensionSettingOwnerType,
@@ -26,14 +23,12 @@ export { createExtensionUserDataDBService } from "./services/extension-user-data
 export { createFilesDBService } from "./services/files/files";
 export { createInstalledExtensionSourcesDBService } from "./services/installed-extension-sources/installed-extension-sources";
 export { createNotificationsDBService } from "./services/notifications/notifications";
-export { createProjectTemplateDefaultsDBService } from "./services/project-template-defaults/project-template-defaults";
 export { createProjectsDBService } from "./services/projects/projects";
 export { createReposDBService } from "./services/repos/repos";
 export { createSessionQueueEntriesDBService } from "./services/session-queue-entries/session-queue-entries";
 export { createSessionsDBService } from "./services/sessions/sessions";
 export { createSettingsDBService } from "./services/settings/settings";
 export { createSkillsDBService } from "./services/skills/skills";
-export { createTemplatesDBService } from "./services/templates/templates";
 export { createWorkspaceSessionsDBService } from "./services/workspace-sessions/workspace-sessions";
 export {
   WorkspaceNameConflictError,

@@ -82,21 +82,6 @@ describe("sessions create", () => {
     );
   });
 
-  test("passes template and vars to API", async () => {
-    const createSession = mock(async () => makeSessionResponse({ id: "s_1", title: "fix-it" }));
-    const deps = makeDeps({ createSession });
-    const handler = createHandler(deps);
-
-    await handler(argv({ template: "fix-it", var: ["ticket=PS-7"] }));
-
-    expect(createSession).toHaveBeenCalledWith(
-      expect.objectContaining({
-        template: "fix-it",
-        vars: { ticket: "PS-7" },
-      }),
-    );
-  });
-
   test("uploads attached files before creating the session", async () => {
     const createSession = mock(async () => makeSessionResponse({ id: "s_1" }));
     const uploadAttachments = mock(async () => [{ file_id: "file-1" }, { file_id: "file-2" }]);
@@ -134,16 +119,6 @@ describe("sessions create", () => {
       projectId: "proj-1",
       attachments: [{ file_id: "file-1" }, { file_id: "file-2" }],
     });
-  });
-
-  test("derives title from template name when no --title or --prompt", async () => {
-    const createSession = mock(async () => makeSessionResponse({ id: "s_1", title: "fix-it" }));
-    const deps = makeDeps({ createSession });
-    const handler = createHandler(deps);
-
-    await handler(argv({ template: "fix-it" }));
-
-    expect(createSession).toHaveBeenCalledWith(expect.objectContaining({ title: "fix-it" }));
   });
 
   test("throws when no project context", async () => {

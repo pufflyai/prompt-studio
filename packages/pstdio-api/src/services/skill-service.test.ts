@@ -7,15 +7,12 @@ import {
   createDb,
   createExtensionInstancesDBService,
   createExtensionSkillPreferencesDBService,
-  createExtensionTemplatePreferencesDBService,
   createExtensionUserDataDBService,
   createFilesDBService,
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
-  createProjectTemplateDefaultsDBService,
   createReposDBService,
   createSkillsDBService,
-  createTemplatesDBService,
 } from "pstdio-db";
 import { createFilesStorageService } from "pstdio-storage";
 import { createProjectExtensionRuntimeCatalog } from "../features/extensions/project-extension-runtime-catalog";
@@ -24,7 +21,6 @@ import { createFileService } from "./file-service";
 import { createProjectService } from "./project-service";
 import { createRepoService } from "./repo-service";
 import { createSkillService } from "./skill-service";
-import { createTemplateService } from "./template-service";
 
 const emptyRuntime = {
   artifactMounts: [],
@@ -157,28 +153,6 @@ describe("SkillService", () => {
     expect(first).toHaveLength(1);
     expect(second).toHaveLength(1);
     expect(third).toHaveLength(1);
-    expect(await Bun.file(importCountPath).text()).toBe("1");
-
-    await close();
-    rmSync(tempRoot, { recursive: true, force: true });
-  });
-
-  test("skill and template reads share one snapshot from the same catalog", async () => {
-    const { catalog, close, db, fileService, importCountPath, project, service, tempRoot } =
-      await setupServiceWithExtension();
-    const templateService = createTemplateService({
-      extensionRuntimeCatalog: catalog,
-      extensionTemplatePreferencesDBService: createExtensionTemplatePreferencesDBService(db),
-      fileService: fileService as never,
-      projectTemplateDefaultsDBService: createProjectTemplateDefaultsDBService(db),
-      templatesDBService: createTemplatesDBService(db),
-    });
-
-    const before = await catalog.get(project.id);
-    await Promise.all([service.list(project.id), templateService.list(project.id)]);
-
-    // Both services read the one published snapshot; the source imported once.
-    expect(await catalog.get(project.id)).toBe(before);
     expect(await Bun.file(importCountPath).text()).toBe("1");
 
     await close();

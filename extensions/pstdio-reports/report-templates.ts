@@ -1,18 +1,27 @@
 import { defineTemplate, packageAsset } from "@pstdio/sdk/extensions";
 
-export const reportTemplates = [
-  defineTemplate({
+export const reportTemplateAssets = [
+  {
     id: "review",
     title: "Review",
     type: "report",
-    source: packageAsset("./templates/review.md", import.meta.url),
-  }),
-  defineTemplate({
+    path: "templates/review.md",
+  },
+  {
     id: "change_request",
     title: "Change request",
     type: "report",
-    source: packageAsset("./templates/change_request.md", import.meta.url),
-  }),
+    path: "templates/change_request.md",
+  },
 ];
 
-export const reportTemplateNames = reportTemplates.map((template) => template.id.replaceAll("_", "-")).sort();
+export const reportTemplates = reportTemplateAssets.map((template) =>
+  defineTemplate({
+    id: template.id,
+    title: template.title,
+    type: template.type,
+    source: packageAsset(`./${template.path}`, import.meta.url),
+  }),
+);
+
+export const reportTemplateNames = reportTemplateAssets.map((template) => template.id.replaceAll("_", "-")).sort();

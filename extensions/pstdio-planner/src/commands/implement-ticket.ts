@@ -1,6 +1,7 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
+import { renderOwnedTemplate } from "../data/template-store";
 
 // `pst tickets implement`: move the ticket to in-progress in extension storage and
 // launch the implementation agent through the host session capability.
@@ -22,8 +23,7 @@ export const implementTicketCommand = defineCommand({
     return ctx.sessions.create({
       title: `Implement ticket: ${ticket.shorthand}`,
       ...(commandParams.agent ? { harness: commandParams.agent } : {}),
-      template: "implement-ticket",
-      vars: { ticket: ticket.id },
+      prompt: await renderOwnedTemplate(ctx, "implement-ticket", { ticket: ticket.id }),
     });
   },
 });

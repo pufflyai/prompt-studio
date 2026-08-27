@@ -40,6 +40,26 @@ describe("registerDashboardSidenav", () => {
     });
   });
 
+  test("applies section defaults from contributions registered after the sidenav", () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    registerDashboardSidenav(workbench);
+    workbench.modes.setActiveMode("project");
+
+    registerSidenavContribution(workbench, {
+      id: "test.late-sections",
+      modes: ["project"],
+      defaultExpandedSectionIds: ["files", "sessions"],
+    });
+
+    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedSectionIds).toEqual([
+      "sessions-wrap",
+      "files",
+      "sessions",
+    ]);
+  });
+
   test("reads mode sections without a concrete resource and passes one when selected", async () => {
     const workbench = createWorkbenchCore();
     const resourceReads: Array<string | undefined> = [];

@@ -11,7 +11,6 @@ import {
   repos,
   sessions,
   sql,
-  templates,
   workspace_sessions,
   workspaces,
 } from "pstdio-db";
@@ -28,7 +27,6 @@ const tableMap = {
   workspaces,
   files,
   workspace_sessions,
-  templates,
 } as const;
 
 export const SYNCED_TABLES = Object.keys(tableMap) as (keyof typeof tableMap)[];
@@ -56,9 +54,6 @@ const emitProjectDependents = async (db: DbClient, projectId: string, bus: Event
 
   const projectNotifications = await db.select().from(notifications).where(eq(notifications.project_id, projectId));
   for (const row of projectNotifications) bus.emit("notifications", "delete", { id: row.id });
-
-  const tmpl = await db.select().from(templates).where(eq(templates.project_id, projectId));
-  for (const row of tmpl) bus.emit("templates", "delete", { id: row.id });
 };
 
 export const createSyncService = (deps: SyncServiceDeps) => {

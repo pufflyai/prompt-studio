@@ -46,9 +46,3 @@ const enableCoreExtension = async (apiUrl: string, projectId: string, name: Core
 
 export const enableCoreSkillsExtension = (apiUrl: string, projectId: string) =>
   enableCoreExtension(apiUrl, projectId, "pstdio-skills");
-
-export const enableCoreTemplatesExtension = (apiUrl: string, projectId: string) =>
-  enableCoreExtension(apiUrl, projectId, "pstdio-planner");
-
-export const enableCoreTicketsExtension = (apiUrl: string, projectId: string) =>
-  enableCoreExtension(apiUrl, projectId, "pstdio-planner");

@@ -109,7 +109,7 @@ describe("POST /v1/projects", () => {
     expect(res.status).toBe(400);
   });
 
-  test("does not seed package-internal templates or skills", async () => {
+  test("does not seed package-internal skills", async () => {
     const createRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -118,10 +118,6 @@ describe("POST /v1/projects", () => {
     expect(createRes.status).toBe(201);
 
     const project = (await createRes.json()) as { id: string };
-
-    const templatesRes = await app.request(`/v1/projects/${project.id}/templates`);
-    expect(templatesRes.status).toBe(200);
-    expect(await templatesRes.json()).toEqual([]);
 
     const skillsRes = await app.request(`/v1/projects/${project.id}/skills`);
     expect(skillsRes.status).toBe(200);

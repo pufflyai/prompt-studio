@@ -85,16 +85,6 @@ export const installMarketplaceExtensionResponseSchema = z.object({
   extension: projectExtensionInstanceSchema,
 });
 
-export const updateInstalledExtensionTemplateInputSchema = z.object({
-  content: z.string().min(1),
-});
-
-export const updateInstalledExtensionTemplateResponseSchema = z.object({
-  installName: z.string(),
-  key: z.string(),
-  content: z.string(),
-});
-
 export const setupProjectExtensionResponseSchema = z.object({
   extensionId: z.string(),
   name: z.string(),
@@ -119,6 +109,4 @@ export type SetExtensionAutomationEnabledRequest = z.infer<typeof setExtensionAu
 export type AttemptExtensionFixResponse = z.infer<typeof attemptExtensionFixResponseSchema>;
 export type UpgradeProjectExtensionResponse = z.infer<typeof upgradeProjectExtensionResponseSchema>;
 export type InstallMarketplaceExtensionResponse = z.infer<typeof installMarketplaceExtensionResponseSchema>;
-export type UpdateInstalledExtensionTemplateInput = z.infer<typeof updateInstalledExtensionTemplateInputSchema>;
-export type UpdateInstalledExtensionTemplateResponse = z.infer<typeof updateInstalledExtensionTemplateResponseSchema>;
 export type SetupProjectExtensionResponse = z.infer<typeof setupProjectExtensionResponseSchema>;

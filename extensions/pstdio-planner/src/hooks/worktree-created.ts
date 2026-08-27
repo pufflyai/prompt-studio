@@ -1,9 +1,9 @@
 import {
-  defineHook,
   type ArtifactMount,
+  defineHook,
   type ExtensionStorageApi,
-  type WorkspaceProvisionPayload,
   type WorkspaceFilesMount,
+  type WorkspaceProvisionPayload,
   workspaceEvents,
 } from "@pstdio/sdk/extensions";
 import { ticketMarkdownPath, ticketToMarkdown } from "../data/draft-storage";

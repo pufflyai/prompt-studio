@@ -25,5 +25,4 @@ export {
   type SyncWriter,
   type SyncWriterProvider,
 } from "./sync";
-export type { TemplateClient } from "./templates";
 export type { WorkspaceClient } from "./workspaces";

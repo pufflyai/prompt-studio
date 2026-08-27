@@ -6,7 +6,6 @@ import type { SessionsRouteDeps } from "../deps";
 import { followUpBodySchema, followUpResponseSchema, notFoundResponseSchema } from "../dto";
 import { getSessionMessages } from "../get-session-messages";
 import { HarnessParamError, resolveHarnessRunParams } from "../harness-params";
-import { resolvePrompt } from "../resolve-prompt";
 import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
 import { createSessionScheduler } from "../session-scheduler";
 
@@ -43,16 +42,13 @@ type ExistingSession = NonNullable<Awaited<ReturnType<SessionsRouteDeps["session
 const buildFollowUpPrompt = async (
   input: {
     prompt?: string;
-    template?: string;
-    vars?: Record<string, string>;
     summary_from_session_id?: string;
     summary_format?: "brief" | "detailed";
     summary_role?: "assistant" | "all";
   },
-  projectId: string,
   deps: SessionsRouteDeps,
 ) => {
-  let prompt = await resolvePrompt(input, projectId, deps);
+  let prompt = input.prompt ?? "";
 
   if (input.summary_from_session_id) {
     const messages = await getSessionMessages(input.summary_from_session_id, deps);
@@ -106,7 +102,7 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
       return c.json({ error: `Session not found: ${id}` }, 404);
     }
 
-    const prompt = await buildFollowUpPrompt(input, session.project_id!, deps);
+    const prompt = await buildFollowUpPrompt(input, deps);
     const cwd = session.cwd ?? undefined;
     const resolvedParams = await resolveFollowUpParams(deps, session, input);
     if (resolvedParams.type === "error") return c.json({ error: resolvedParams.error }, 400);

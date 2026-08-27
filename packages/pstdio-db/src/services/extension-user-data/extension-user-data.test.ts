@@ -5,7 +5,6 @@ import {
   extension_files,
   extension_kv,
   extension_skill_preferences,
-  extension_template_preferences,
   files,
   projects,
 } from "../../db/schemas.pg";
@@ -63,13 +62,6 @@ const seedAllTables = async () => {
     scope_type: "project",
     scope_id: projectId,
     created_at: timestamp,
-  });
-  await db.insert(extension_template_preferences).values({
-    project_id: projectId,
-    extension_instance_id: instanceId,
-    template_key: "tpl",
-    created_at: timestamp,
-    updated_at: timestamp,
   });
   await db.insert(extension_skill_preferences).values({
     project_id: projectId,

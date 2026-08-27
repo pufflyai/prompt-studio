@@ -56,7 +56,7 @@ describe("defaultWorkspaceProviderRuntime", () => {
           enabledSources: [
             {
               instance: { id: "instance-1" },
-              installedSource: { id: "source-1", extension_id: "example.extension" },
+              installedSource: { id: "source-1", extension_id: "example.extension", source_path: "/fake/example" },
             },
           ],
           project: { id: "project-1", name: "Example", shorthand: "EX" },

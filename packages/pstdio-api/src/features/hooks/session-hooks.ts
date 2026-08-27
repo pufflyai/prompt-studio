@@ -43,7 +43,6 @@ export type SessionHookDeps = Pick<
   | "sessionService"
   | "skillService"
   | "settingsService"
-  | "templateService"
   | "workspaceService"
   | "workspaceSessionService"
 >;

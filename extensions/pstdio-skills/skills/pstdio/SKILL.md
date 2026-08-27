@@ -36,10 +36,6 @@ The extension store holds the saved ticket. `pst tickets write` or `pst tickets 
 
 Skills are Markdown instructions for project workflows. `pst agents setup` installs enabled skills into an agent's skill directory. Prompt Studio does not overwrite an existing skill with the same name.
 
-### Templates
-
-Templates are Markdown files with `{{PLACEHOLDER}}` tokens. Ticket templates create ticket bodies. Document templates create pages such as ADRs, cookbooks, and lessons learned.
-
 ### Agents
 
 Agents are external coding tools such as Claude Code, Codex, and OpenCode. Prompt Studio detects available agents, installs skills for them, and starts sessions through their harness extensions.
@@ -65,9 +61,7 @@ A session records a conversation with an agent. It can belong to a workspace and
 │   └── <name>/
 │       ├── report*.md    # Numbered report content created with pst reports write
 │       └── files*/       # Test output, logs, screenshots, and other evidence
-├── templates/            # Project-level template overrides
-├── skills/               # Project-level skill overrides
-└── prompts/              # Project-level prompt template overrides
+└── skills/               # Project-level skill overrides
 ```
 
 ## Set up a project

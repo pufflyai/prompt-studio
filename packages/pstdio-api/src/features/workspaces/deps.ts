@@ -23,7 +23,6 @@ export type WorkspacesRouteDeps = Pick<
   | "sessionService"
   | "skillService"
   | "settingsService"
-  | "templateService"
   | "workspaceService"
   | "workspaceSessionService"
 > & { workspaceProviderRuntime?: WorkspaceProviderRuntime };

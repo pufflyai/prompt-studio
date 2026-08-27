@@ -112,7 +112,7 @@ describe("dashboard workbench extension menu contributions", () => {
     ]);
   });
 
-  test("maps workspace actions to the declared header placement", () => {
+  test("maps workspace actions to the declared resource header", () => {
     const { registrations } = buildDashboardExtensionMenuRegistrations(metadata);
     const workspaceRegistration = registrations.find(
       (registration) => registration.contribution.id === "pstdio.extension-lab.command.run-review.header",
@@ -122,7 +122,7 @@ describe("dashboard workbench extension menu contributions", () => {
       expect.objectContaining({
         menuItems: [
           expect.objectContaining({
-            menuPath: workbenchTopHeaderTrailingMenuPath,
+            menuPath: resourceContextMenuPath("workspace"),
             menuItem: expect.objectContaining({
               commandId: "dashboard.extension.menu.pstdio.extension-lab.command.run-review.header",
               group: "primary",

@@ -2,7 +2,7 @@ import { Button, HStack, Spinner, Stack, Text, Textarea } from "@chakra-ui/react
 import { DeleteConfirmationModal, toaster } from "@pstdio/ui";
 import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { ProjectTemplateAsset } from "@/shared/projects/project-types";
+import type { ProjectTemplateAsset } from "../data/template-provider-api";
 import { useDeleteProjectTemplate, useProjectTemplate, useUpdateProjectTemplate } from "../data/use-templates";
 
 interface TemplateSettingsEditorProps {
@@ -14,9 +14,9 @@ interface TemplateSettingsEditorProps {
 // template id at the call site, so local edit state resets per template.
 export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
   const { template, onDeleted } = props;
-  const { data, isLoading } = useProjectTemplate(template.projectId, template.name);
-  const updateTemplate = useUpdateProjectTemplate(template.projectId, template.name);
-  const deleteTemplate = useDeleteProjectTemplate(template.projectId);
+  const { data, isLoading } = useProjectTemplate(template);
+  const updateTemplate = useUpdateProjectTemplate(template);
+  const deleteTemplate = useDeleteProjectTemplate();
   const [content, setContent] = useState("");
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
@@ -30,7 +30,7 @@ export const TemplateSettingsEditor = (props: TemplateSettingsEditorProps) => {
   };
 
   const remove = async () => {
-    await deleteTemplate.mutateAsync(template.name);
+    await deleteTemplate.mutateAsync(template);
     onDeleted();
   };
 

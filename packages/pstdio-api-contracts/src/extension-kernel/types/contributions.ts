@@ -312,6 +312,13 @@ export interface ArtifactMountContribution extends ContributionDefinition<"artif
 export interface TemplateTypeContribution extends ContributionDefinition<"template-type"> {
   label: Localizable<string>;
   description?: Localizable<string>;
+  order?: number;
+  commands?: {
+    list: CommandRef;
+    read: CommandRef;
+    save: CommandRef;
+    delete: CommandRef;
+  };
 }
 
 export interface TemplateContribution extends ContributionDefinition<"template"> {

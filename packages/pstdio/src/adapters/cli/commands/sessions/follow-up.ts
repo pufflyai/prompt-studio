@@ -2,7 +2,6 @@ import type { SessionAttachmentRef } from "@pstdio/sdk/api";
 import type { Arguments, Argv } from "yargs";
 import { apiClient } from "@/features/api-client";
 import { followUpSession as defaultFollowUp } from "@/features/sessions/api/follow-up-session";
-import { parseVars } from "../parse-vars";
 import { deleteCliSessionAttachments, uploadCliSessionAttachments } from "./session-attachments";
 
 export const command = "follow-up";
@@ -12,8 +11,6 @@ export const builder = (yargs: Argv) =>
   yargs
     .option("id", { type: "string", demandOption: true, describe: "Session ID" })
     .option("prompt", { type: "string", describe: "The follow-up prompt" })
-    .option("template", { type: "string", describe: "Prompt template name (mutually exclusive with --prompt)" })
-    .option("var", { type: "string", array: true, describe: "Template variable in key=value format" })
     .option("summary-of", { type: "string", describe: "Source session ID to summarize" })
     .option("summary-format", {
       type: "string",
@@ -32,8 +29,6 @@ export const builder = (yargs: Argv) =>
 export type FollowUpArgs = {
   id: string;
   prompt?: string;
-  template?: string;
-  var?: string[];
   "summary-of"?: string;
   "summary-format"?: "brief" | "detailed";
   "summary-role"?: "assistant" | "all";
@@ -62,8 +57,6 @@ const defaultDeps: Deps = {
 
 type FollowUpApiInput = {
   prompt?: string;
-  template?: string;
-  vars?: Record<string, string>;
   agent?: string;
   model?: string;
   summary_from_session_id?: string;
@@ -73,18 +66,12 @@ type FollowUpApiInput = {
 };
 
 const buildFollowUpInput = (argv: Arguments<FollowUpArgs>) => {
-  if (!argv.prompt && !argv.template && !argv["summary-of"]) {
-    throw new Error("At least one of --prompt, --template, or --summary-of is required.");
-  }
-  if (argv.prompt && argv.template) {
-    throw new Error("--prompt and --template are mutually exclusive");
+  if (!argv.prompt && !argv["summary-of"]) {
+    throw new Error("At least one of --prompt or --summary-of is required.");
   }
 
   const input: FollowUpApiInput = {};
   if (argv.prompt) input.prompt = argv.prompt;
-  if (argv.template) input.template = argv.template;
-  const vars = parseVars(argv.var);
-  if (vars) input.vars = vars;
   if (argv.agent) input.agent = argv.agent;
   if (argv.model) input.model = argv.model;
   if (argv["summary-of"]) input.summary_from_session_id = argv["summary-of"];

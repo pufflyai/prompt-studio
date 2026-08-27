@@ -1,4 +1,5 @@
 import { defineCommand } from "@pstdio/sdk/extensions";
+import { listOwnedTemplates } from "../data/template-store";
 
 export const listTicketTemplatesCommand = defineCommand({
   id: "list-ticket-templates",
@@ -8,8 +9,6 @@ export const listTicketTemplatesCommand = defineCommand({
     examples: ["pstdio tickets templates"],
   },
   async run(ctx) {
-    const names = ["ticket", "bug-fix", "proposal"];
-    const templates = await Promise.all(names.map((name) => ctx.templates.get(name)));
-    return templates.filter((template) => template?.template_type === "ticket").map((template) => template!.name);
+    return (await listOwnedTemplates(ctx, "ticket")).map((template) => template.name);
   },
 });

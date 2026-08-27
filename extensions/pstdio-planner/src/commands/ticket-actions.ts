@@ -1,6 +1,7 @@
 import { type CommandContext, defineCommand, l10n, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
+import { renderOwnedTemplate } from "../data/template-store";
 import { ticketResourceHierarchyMetadata } from "../data/ticket-resource-hierarchy";
 import type { StoredTicket } from "../data/types";
 import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
@@ -172,22 +173,22 @@ export const refineTicketCommand = defineCommand({
   ],
   params: {
     ...selectedTicketParams,
-    template: params.template({ label: "Template", type: "ticket", required: false }),
+    template: params.text({ label: "Ticket template", required: false }),
     context: params.longText({ label: "Additional context", required: false }),
   },
   async run(ctx, commandParams) {
     const { agent, context, template } = commandParams;
     const ticketRef = resolveTicket(ctx, commandParams);
     const { anchor, shorthand } = await resolveTicketAnchor(ctx, ticketRef);
+    const variables = {
+      ...ticketTemplateVars(shorthand, template),
+      ...(context ? { additionalContext: context } : {}),
+    };
     const session = await ctx.sessions.create({
       title: `Refine ticket: ${shorthand}`,
       anchors: [anchor],
       ...harnessInput(agent),
-      template: "refine-ticket",
-      vars: {
-        ...ticketTemplateVars(shorthand, template),
-        ...(context ? { additionalContext: context } : {}),
-      },
+      prompt: await renderOwnedTemplate(ctx, "refine-ticket", variables),
     });
 
     return session;
@@ -239,7 +240,7 @@ export const breakIntoSubTicketsCommand = defineCommand({
   ],
   params: {
     ...ticketActionParams,
-    template: params.template({ label: "Template", type: "ticket", required: false }),
+    template: params.text({ label: "Ticket template", required: false }),
   },
   async run(ctx, commandParams) {
     const { agent, template } = commandParams;
@@ -250,8 +251,7 @@ export const breakIntoSubTicketsCommand = defineCommand({
       title: `Break into sub-tickets: ${shorthand}`,
       anchors: [anchor],
       ...harnessInput(agent),
-      template: "create-sub-tickets",
-      vars: ticketTemplateVars(shorthand, template),
+      prompt: await renderOwnedTemplate(ctx, "create-sub-tickets", ticketTemplateVars(shorthand, template)),
     });
   },
 });

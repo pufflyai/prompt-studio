@@ -65,7 +65,10 @@ describe("implementTicketCommand", () => {
     expect(result).toEqual(createSessionResource());
     expect((await ticketsCollection(storage).get(ticket.id))!.statusId).toBe("in-progress");
     expect(created).toEqual([
-      { title: `Implement ticket: ${ticket.shorthand}`, template: "implement-ticket", vars: { ticket: ticket.id } },
+      expect.objectContaining({
+        title: `Implement ticket: ${ticket.shorthand}`,
+        prompt: expect.stringContaining(ticket.id),
+      }),
     ]);
   });
 });
