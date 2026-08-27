@@ -1,3 +1,7 @@
+# Mission
+
+Read [MISSION.md](MISSION.md) first. Every feature, fix, and trade-off must pass its test.
+
 # Repository rules
 
 - This is a **Lerna monorepo** managed with **Bun**. It uses **Nx caching**.
