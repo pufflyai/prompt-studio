@@ -1,4 +1,5 @@
 import type { WorkbenchLayout, WorkbenchRegion, WorkbenchWidgetPlacement } from "@pstdio/workbench";
+import { toWorkbenchContributionId } from "@/shared/extensions/contribution-ref";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { legacyExtensionViewWidgetId } from "./extension-layout-legacy-aliases";
 
@@ -33,19 +34,16 @@ type LayoutRegionEntry = [WorkbenchRegion, WorkbenchLayout["regions"][WorkbenchR
 const compareRecord = (left: ExtensionLayoutCompatibilityRecord, right: ExtensionLayoutCompatibilityRecord) =>
   left.extensionId.localeCompare(right.extensionId) || left.panelId.localeCompare(right.panelId);
 
-const refId = (ref: { extensionId: string; kind: string; id: string }) =>
-  ref.extensionId === "pstdio" ? ref.id : `${ref.extensionId}.${ref.kind}.${ref.id}`;
-
 export const createExtensionLayoutCompatibility = (metadata: DashboardExtensionMetadata) => {
   const records = metadata.views
     .map((view): ExtensionLayoutCompatibilityRecord => {
       const placements = metadata.placements.filter(
-        (placement) => placement.item.kind === "view" && refId(placement.item.view) === view.id,
+        (placement) => placement.item.kind === "view" && toWorkbenchContributionId(placement.item.view) === view.id,
       );
       return {
         bodyKind: view.body.kind === "webview" ? "webview" : "native",
         extensionId: view.extensionId,
-        modeIds: placements.map((placement) => refId(placement.mode)).sort(),
+        modeIds: placements.map((placement) => toWorkbenchContributionId(placement.mode)).sort(),
         panelId: view.id,
         path: view.path,
         region: placements[0]?.region ?? "main",

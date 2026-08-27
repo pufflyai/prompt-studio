@@ -81,6 +81,17 @@ export const prepareNamedSource = async (
   };
 };
 
+export const prepareGitExtensionSource = async (
+  origin: GitExtensionOrigin,
+  tempDir: string,
+  releaseRef: string,
+  signal?: AbortSignal,
+) => {
+  const checkoutPath = join(tempDir, "extension-source");
+  const commit = await cloneRepoSparse(checkoutPath, [origin.path], runCommand, origin.url, releaseRef, signal);
+  return { path: join(checkoutPath, origin.path), ref: namedSourceRef(commit, origin) };
+};
+
 export const createSharedNamedSourceCheckout = async (
   names: string[],
   options: {

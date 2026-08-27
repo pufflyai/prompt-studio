@@ -46,6 +46,11 @@ describe("isolated development paths", () => {
     expect(config.defaultExtensions).toContain("pstdio-planner");
     expect(config.defaultExtensions).toContain("pstdio-planner-loops");
     expect(config.defaultExtensions).toContainEqual({
+      installName: "extension-lab",
+      skipInstall: true,
+      source: resolve("/repo/extensions/extension-lab"),
+    });
+    expect(config.defaultExtensions).toContainEqual({
       installName: "local-example",
       skipInstall: true,
       source: resolve("/repo/infra/local/extensions/local-example"),

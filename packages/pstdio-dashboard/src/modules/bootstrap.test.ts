@@ -5,7 +5,12 @@ import { dashboardViews } from "@/shared/app/resources";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { createBootstrapModule } from "./bootstrap";
 import { createExtensionsModule } from "./extensions/module";
-import { emptyAppearance, flushMicrotasks, metadata, metadataWithTickets } from "./extensions/module-test-fixtures";
+import {
+  emptyAppearance,
+  flushMicrotasks,
+  metadata,
+  metadataWithResourceExtension,
+} from "./extensions/module-test-fixtures";
 import { createStartModule } from "./start/module";
 
 const activeViewId = (workbench: ReturnType<typeof createWorkbenchCore>) => {
@@ -33,16 +38,16 @@ describe("createBootstrapModule", () => {
   });
 
   test("restores a domain resource after extension metadata registers its presenter", async () => {
-    const ticket = {
-      kind: "ticket",
-      uri: "dashboard-workbench://ticket/PS-10",
-      id: "PS-10",
-      label: "PS-10 Ticket",
+    const issue = {
+      kind: "issue",
+      uri: "acme://issue/ISSUE-10",
+      id: "ISSUE-10",
+      label: "Issue 10",
       metadata: { projectId: "project-1" },
     } satisfies ResourceRef;
-    let savedResource: ResourceRef | undefined = ticket;
-    let resolveMetadata: (value: typeof metadataWithTickets) => void = () => undefined;
-    const metadataPromise = new Promise<typeof metadataWithTickets>((resolve) => {
+    let savedResource: ResourceRef | undefined = issue;
+    let resolveMetadata: (value: typeof metadataWithResourceExtension) => void = () => undefined;
+    const metadataPromise = new Promise<typeof metadataWithResourceExtension>((resolve) => {
       resolveMetadata = resolve;
     });
     const workbench = createWorkbenchCore({
@@ -69,10 +74,10 @@ describe("createBootstrapModule", () => {
       await flushMicrotasks();
       expect(workbench.getPrimaryResource()).toBeUndefined();
 
-      resolveMetadata(metadataWithTickets);
+      resolveMetadata(metadataWithResourceExtension);
       await flushMicrotasks();
 
-      expect(workbench.getPrimaryResource()?.uri).toBe(ticket.uri);
+      expect(workbench.getPrimaryResource()?.uri).toBe(issue.uri);
     } finally {
       bootstrap.dispose();
       extensions.dispose();

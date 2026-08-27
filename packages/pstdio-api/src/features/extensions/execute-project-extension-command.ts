@@ -1,6 +1,8 @@
 import type { CommandExecuteBody, JsonObject } from "pstdio-api-contracts";
+import type { RepoContext } from "pstdio-api-contracts/extension-kernel";
 import { createCommandRunner } from "pstdio-extensions";
 import { createCommandEnvironment } from "./command-environment";
+import { resolveWorkspaceRepoId } from "./command-environment/repos";
 import type { ExtensionsRouteDeps } from "./deps";
 
 export class ExtensionCommandNotFoundError extends Error {
@@ -12,6 +14,21 @@ export class ExtensionCommandNotFoundError extends Error {
 export class CommandWorkspaceNotFoundError extends Error {
   constructor(readonly workspaceId: string) {
     super(`Workspace "${workspaceId}" was not found in this project`);
+  }
+}
+
+export class CommandRepoNotFoundError extends Error {
+  constructor(readonly repoId: string) {
+    super(`Repo "${repoId}" was not found in this project`);
+  }
+}
+
+export class CommandWorkspaceRepoMismatchError extends Error {
+  constructor(
+    readonly workspaceId: string,
+    readonly repoId: string,
+  ) {
+    super(`Workspace "${workspaceId}" does not belong to repo "${repoId}"`);
   }
 }
 
@@ -27,6 +44,44 @@ export const resolveCommandWorkspaceDir = (input: {
   return invoked?.path ?? input.repos[0]?.path;
 };
 
+const resolveCommandInvocationContext = async (
+  deps: ExtensionsRouteDeps,
+  projectId: string,
+  body: CommandExecuteBody,
+) => {
+  const repos = body.repo || body.workspaceId ? await deps.repoService.listByProject(projectId) : [];
+  const registeredRepo = body.repo
+    ? repos.find((candidate) => candidate.id === body.repo?.repoId && body.repo.projectId === projectId)
+    : undefined;
+  if (body.repo && !registeredRepo) throw new CommandRepoNotFoundError(body.repo.repoId);
+
+  if (!body.workspaceId) {
+    const repo: RepoContext | undefined = registeredRepo
+      ? { projectId, repoId: registeredRepo.id, path: registeredRepo.path, role: "selected" }
+      : undefined;
+    return { repo, workspaceDir: undefined };
+  }
+
+  const workspace = await deps.workspaceService.get(body.workspaceId);
+  if (!workspace || workspace.project_id !== projectId) throw new CommandWorkspaceNotFoundError(body.workspaceId);
+
+  const workspaceRepoId = resolveWorkspaceRepoId(workspace);
+  if (body.repo && workspace.worktree_path && workspaceRepoId !== body.repo.repoId) {
+    throw new CommandWorkspaceRepoMismatchError(body.workspaceId, body.repo.repoId);
+  }
+
+  const workspaceDir = resolveCommandWorkspaceDir({
+    worktreePath: workspace.worktree_path,
+    repos,
+    repoId: workspaceRepoId ?? body.repo?.repoId,
+    executionKind: workspace.execution_kind,
+  });
+  const repo: RepoContext | undefined = registeredRepo
+    ? { projectId, repoId: registeredRepo.id, path: workspaceDir ?? registeredRepo.path, role: "workspace" }
+    : undefined;
+  return { repo, workspaceDir };
+};
+
 export const executeProjectExtensionCommand = async (
   deps: ExtensionsRouteDeps,
   input: { projectId: string; commandId: string; body: CommandExecuteBody; signal?: AbortSignal },
@@ -38,18 +93,7 @@ export const executeProjectExtensionCommand = async (
     snapshot.runtime.privateHandlers.find((candidate) => candidate.id === commandId);
   if (!handler) throw new ExtensionCommandNotFoundError(commandId);
 
-  let workspaceDir: string | undefined;
-  if (body.workspaceId) {
-    const workspace = await deps.workspaceService.get(body.workspaceId);
-    if (!workspace || workspace.project_id !== projectId) throw new CommandWorkspaceNotFoundError(body.workspaceId);
-    const repos = await deps.repoService.listByProject(projectId);
-    workspaceDir = resolveCommandWorkspaceDir({
-      worktreePath: workspace.worktree_path,
-      repos,
-      repoId: body.repo?.repoId,
-      executionKind: workspace.execution_kind,
-    });
-  }
+  const invocation = await resolveCommandInvocationContext(deps, projectId, body);
 
   const eventIds = new Set<string>();
   const runner = createCommandRunner(snapshot.runtime, {
@@ -71,11 +115,11 @@ export const executeProjectExtensionCommand = async (
     commandId,
     projectId,
     workspaceId: body.workspaceId,
-    workspaceDir,
+    workspaceDir: invocation.workspaceDir,
     params: body.params as JsonObject | undefined,
     resource: body.resource as never,
     attachment: body.attachment as never,
-    repo: body.repo as never,
+    repo: invocation.repo,
     slot: body.slot as never,
     source: body.source ?? "api",
     metadata: body.metadata as JsonObject | undefined,

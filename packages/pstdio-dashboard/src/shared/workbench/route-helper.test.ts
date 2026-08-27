@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench";
 import { describeResourceRouteContract, type RouteContractHarness } from "@pstdio/workbench/testing";
-import { getDashboardActiveCollection, getDashboardSelectedResource } from "@/shared/app/navigation-state";
+import { getDashboardSelectedResource } from "@/shared/app/navigation-state";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { registerResourceRoute } from "./route-helper";
 
@@ -78,12 +78,10 @@ describe("registerResourceRoute navigation state", () => {
 
     await workbench.resources.openResource(ROOT);
 
-    expect(getDashboardActiveCollection(workbench)).toBeUndefined();
     expect(getDashboardSelectedResource(workbench)).toEqual(ROOT);
 
     await workbench.resources.openResource(detail, { replaceActive: true });
 
-    expect(getDashboardActiveCollection(workbench)).toBeUndefined();
     expect(getDashboardSelectedResource(workbench)).toEqual(detail);
   });
 

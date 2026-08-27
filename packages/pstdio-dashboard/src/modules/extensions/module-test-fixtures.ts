@@ -1,7 +1,7 @@
 import type { CommandExecuteResponse, WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@pstdio/sdk/api";
 
 const labExtensionId = "pstdio.extension-lab";
-const ticketsExtensionId = "pstdio.pstdio-core-tickets";
+const issuesExtensionId = "acme.issue-tracker";
 const ref = <Kind extends string>(extensionId: string, kind: Kind, id: string) => ({ extensionId, kind, id });
 const webview = (path: string, id: string) => ({
   entry: { kind: "package-asset" as const, path, baseUrl: "file:///extension/extension.ts" },
@@ -113,40 +113,40 @@ export const metadataWithLabMode = {
   ],
 } satisfies DashboardExtensionMetadata;
 
-export const metadataWithTickets = {
+export const metadataWithResourceExtension = {
   ...metadata,
   extensions: [
     ...metadata.extensions,
-    { id: ticketsExtensionId, name: "pstdio-core-tickets", displayName: "Tickets", sourcePath: "" },
+    { id: issuesExtensionId, name: "issue-tracker", displayName: "Issue Tracker", sourcePath: "" },
   ],
   views: [
     ...metadata.views,
     {
-      id: `${ticketsExtensionId}.view.tickets`,
-      localId: "tickets",
-      extensionId: ticketsExtensionId,
-      title: "Tickets",
-      body: { kind: "kanban" as const, queryHandlerId: `${ticketsExtensionId}.view.tickets.query` },
+      id: `${issuesExtensionId}.view.issues`,
+      localId: "issues",
+      extensionId: issuesExtensionId,
+      title: "Issues",
+      body: { kind: "kanban" as const, queryHandlerId: `${issuesExtensionId}.view.issues.query` },
     },
     {
-      id: `${ticketsExtensionId}.view.ticketFiles`,
-      localId: "ticketFiles",
-      extensionId: ticketsExtensionId,
+      id: `${issuesExtensionId}.view.issueFiles`,
+      localId: "issueFiles",
+      extensionId: issuesExtensionId,
       title: "Files",
       body: {
         kind: "tree" as const,
-        bodyHandlerId: `${ticketsExtensionId}.view.ticketFiles.body`,
+        bodyHandlerId: `${issuesExtensionId}.view.issueFiles.body`,
         defaultExpandedSectionIds: ["files"],
       },
     },
   ],
   resourceKinds: [
     {
-      id: "ticket",
-      localId: "ticket",
-      extensionId: ticketsExtensionId,
+      id: "issue",
+      localId: "issue",
+      extensionId: issuesExtensionId,
       surface: "primary" as const,
-      label: "Ticket",
+      label: "Issue",
       icon: "component",
       slots: [
         { id: "primary", cardinality: "one" as const, access: "owner" as const },
@@ -156,11 +156,11 @@ export const metadataWithTickets = {
   ],
   resourceViews: [
     {
-      id: `${ticketsExtensionId}.resource-view.ticket-files`,
-      extensionId: ticketsExtensionId,
-      resourceKind: ref(ticketsExtensionId, "resource-kind", "ticket"),
-      slot: { resourceKind: ref(ticketsExtensionId, "resource-kind", "ticket"), id: "files" },
-      view: ref(ticketsExtensionId, "view", "ticketFiles"),
+      id: `${issuesExtensionId}.resource-view.issue-files`,
+      extensionId: issuesExtensionId,
+      resourceKind: ref(issuesExtensionId, "resource-kind", "issue"),
+      slot: { resourceKind: ref(issuesExtensionId, "resource-kind", "issue"), id: "files" },
+      view: ref(issuesExtensionId, "view", "issueFiles"),
     },
   ],
 } satisfies DashboardExtensionMetadata;

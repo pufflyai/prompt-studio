@@ -48,8 +48,8 @@ export type SessionHookDeps = Pick<
 >;
 
 // The session lifecycle payload carries only generic fields. A domain extension
-// (e.g. pstdio-planner) derives its ticket from the workspace's resource anchors;
-// the host stays decoupled from any specific extension.
+// derives its resource from the workspace anchors, so the host stays decoupled
+// from any specific extension.
 export const resolveSessionLifecyclePayload = async (deps: SessionHookDeps, session: SessionRecord) => {
   const sessionAnchors = session.anchors_json ?? [];
   const base = {

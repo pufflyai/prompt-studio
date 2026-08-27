@@ -34,6 +34,7 @@ const writeExtension = (
       event: { extensionId: "pstdio", kind: "event", id: "workspace.provision" },
       async run(ctx, event) {
         await ctx.storage.set("last-worktree", event.workspaceDir);
+        await ctx.storage.set("last-workspace-id", ctx.workspaceId ?? null);
       },
     },
   `,
@@ -107,11 +108,21 @@ describe("fireExtensionEvent", () => {
           get: async () => ({ id: "project-1", name: "Project One", shorthand: "PO" }),
         },
         sessionService: {},
-        workspaceService: {},
+        workspaceService: {
+          get: async () => ({
+            id: "workspace-1",
+            project_id: "project-1",
+            execution_kind: "local",
+            worktree_path: "/trusted/worktree",
+            branch: "workspace/one",
+            provider_params_json: {},
+            provider_ref_json: null,
+          }),
+        },
       }) as never,
       "project-1",
       "workspace.provision",
-      { workspaceDir: "/tmp/worktree" },
+      { workspaceId: "workspace-1", workspaceDir: "/tmp/forged" },
     );
 
     expect(result.delivered).toBe(1);
@@ -122,8 +133,131 @@ describe("fireExtensionEvent", () => {
         project_id: "project-1",
         scope_id: "project-1",
         scope_type: "project",
-        value_json: "/tmp/worktree",
+        value_json: "/trusted/worktree",
       },
+      {
+        extension_instance_id: "instance-1",
+        key: "last-workspace-id",
+        project_id: "project-1",
+        scope_id: "project-1",
+        scope_type: "project",
+        value_json: "workspace-1",
+      },
+    ]);
+  });
+
+  test("rejects a workspace owned by another project before hooks run", async () => {
+    const sourcePath = writeExtension();
+    const writes: unknown[] = [];
+    const deps = withRuntimeCatalog({
+      extensionService: {
+        listEnabledSourcesForProject: async () => [
+          {
+            instance: { id: "instance-1" },
+            installedSource: {
+              id: "source-1",
+              extension_id: "pstdio.extension-lab",
+              source_kind: "local_path",
+              source_path: sourcePath,
+              status: "loaded",
+            },
+          },
+        ],
+      },
+      extensionStorageService: {
+        getKv: async () => null,
+        setKv: async (input: unknown) => writes.push(input),
+        deleteKv: async () => {},
+        getCollectionItem: async () => null,
+        listCollection: async () => [],
+        setCollectionItem: async () => {},
+        deleteCollectionItem: async () => {},
+      },
+      activityEventsService: {},
+      fileService: {},
+      repoService: { listByProject: async () => [] },
+      projectService: { get: async () => ({ id: "project-1", name: "Project One", shorthand: "PO" }) },
+      sessionService: {},
+      workspaceService: {
+        get: async () => ({ id: "workspace-2", project_id: "project-2" }),
+      },
+    }) as never;
+
+    await expect(
+      fireExtensionEvent(deps, "project-1", "workspace.provision", {
+        workspaceId: "workspace-2",
+        workspaceDir: "/tmp/forged",
+      }),
+    ).rejects.toThrow("Workspace not found for project: workspace-2");
+    expect(writes).toEqual([]);
+  });
+
+  test("does not mount the main repo as workspace files after a worktree is removed", async () => {
+    const sourcePath = writeExtension(`
+      {
+        id: "inspect-removed-worktree",
+        ref: { kind: "hook", id: "inspect-removed-worktree" },
+        event: { extensionId: "pstdio", kind: "event", id: "worktree.removed" },
+        async run(ctx, event) {
+          await ctx.storage.set("removed-context", {
+            repoFiles: Boolean(ctx.repoFiles),
+            workspaceFiles: Boolean(ctx.workspaceFiles),
+            workspaceDir: event.workspaceDir ?? null,
+          });
+        },
+      },
+    `);
+    const writes: Array<{ value_json?: unknown }> = [];
+
+    await fireExtensionEvent(
+      withRuntimeCatalog({
+        extensionService: {
+          listEnabledSourcesForProject: async () => [
+            {
+              instance: { id: "instance-1" },
+              installedSource: {
+                id: "source-1",
+                extension_id: "pstdio.extension-lab",
+                source_kind: "local_path",
+                source_path: sourcePath,
+                status: "loaded",
+              },
+            },
+          ],
+        },
+        extensionStorageService: {
+          getKv: async () => null,
+          setKv: async (value: { value_json?: unknown }) => writes.push(value),
+          deleteKv: async () => {},
+          getCollectionItem: async () => null,
+          listCollection: async () => [],
+          setCollectionItem: async () => {},
+          deleteCollectionItem: async () => {},
+        },
+        activityEventsService: {},
+        fileService: {},
+        repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] },
+        projectService: { get: async () => ({ id: "project-1", name: "Project One", shorthand: "PO" }) },
+        sessionService: {},
+        workspaceService: {
+          get: async () => ({
+            id: "workspace-1",
+            project_id: "project-1",
+            execution_kind: "local",
+            provider_id: "pstdio.worktree",
+            provider_params_json: { repo_id: "repo-1" },
+            provider_ref_json: null,
+            worktree_path: null,
+          }),
+        },
+      }) as never,
+      "project-1",
+      "worktree.removed",
+      { workspaceId: "workspace-1" },
+    );
+
+    expect(writes.map((value) => value.value_json)).toEqual([
+      { repoFiles: true, workspaceDir: null, workspaceFiles: false },
     ]);
   });
 

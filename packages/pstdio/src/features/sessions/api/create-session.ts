@@ -5,8 +5,6 @@ export const createSession = async (input: {
   project_id: string;
   title: string;
   prompt?: string;
-  template?: string;
-  vars?: Record<string, string>;
   agent?: string;
   attachments?: SessionAttachmentRef[];
   workspace_id?: string;

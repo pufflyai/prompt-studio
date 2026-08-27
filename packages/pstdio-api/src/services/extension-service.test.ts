@@ -9,6 +9,7 @@ import {
   createExtensionUserDataDBService,
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
+  legacyTemplateOwnerSourcePath,
 } from "pstdio-db";
 import { EventBus } from "../features/sync/event-bus";
 import { createExtensionService, ProjectNotFoundError } from "./extension-service";
@@ -132,7 +133,48 @@ describe("extensionService", () => {
     expect(second.instance.id).toBe(first.instance.id);
     expect(second.instance.enabled).toBe(true);
   });
+});
 
+describe("extensionService legacy template owner adoption", () => {
+  test("adopts a legacy template owner source without replacing its project instance", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+    const migratedSource = await installedExtensionSourcesService.register({
+      install_name: "pstdio-planner",
+      extension_id: "pstdio.pstdio-planner",
+      display_name: "pstdio-planner",
+      source_kind: "local_path",
+      source_path: legacyTemplateOwnerSourcePath("pstdio.pstdio-planner"),
+      manifest_json: { id: "pstdio.pstdio-planner" },
+      status: "loaded",
+    });
+    const migratedInstance = await extensionInstancesService.create({
+      installed_extension_id: migratedSource.id,
+      scope_id: project.id,
+      scope_type: "project",
+      enabled: true,
+    });
+
+    const synced = await service.syncInstalledSourceForProject({
+      projectId: project.id,
+      installName: "pstdio-planner",
+      extensionId: "pstdio.pstdio-planner",
+      name: "pstdio-planner",
+      displayName: "Planner",
+      version: "2.0.0",
+      sourceKind: "local_path",
+      sourcePath: "/home/user/.pstdio/extensions/pstdio-planner",
+      sourceHash: "hash-2",
+      manifest: { id: "pstdio.pstdio-planner", version: "2.0.0" },
+    });
+
+    expect(synced.installedSource.id).toBe(migratedSource.id);
+    expect(synced.installedSource.source_path).toBe("/home/user/.pstdio/extensions/pstdio-planner");
+    expect(synced.instance.id).toBe(migratedInstance.id);
+    expect(synced.instance.enabled).toBe(true);
+  });
+});
+
+describe("extensionService", () => {
   test("sync keeps the adopted registration when the folder on disk changed", async () => {
     const project = await projectService.create({ name: "Extension Project" });
 

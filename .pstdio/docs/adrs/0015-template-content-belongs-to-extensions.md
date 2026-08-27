@@ -24,7 +24,9 @@ Ideally, the owning extension would migrate its old rows after the extension run
 
 As a temporary, isolated workaround, the database startup migration maps the existing built-in template types to their current owners: `prompt`, `ticket`, and `document` to planner, and `report` to reports. It moves each live row into that extension instance's `templates` collection without copying the underlying file. The migration stops with a clear error if any live row has no owner, so content is never dropped silently. It is idempotent and runs immediately before the generated schema migration drops the old tables.
 
-This workaround lives only in the legacy template migration module. Remove it after every supported database version has passed the schema migration that drops the old tables. A future migration system should allow extensions to run owned data migrations before core schema removal.
+For a database older than extension storage, startup first runs the generated migrations through migration 0017. It then creates the missing owner identity, moves the data, and continues through the table-drop migration. If the real owner package is not installed, the imported source uses a migration-only path. Startup attempts to install that owner and adopts the same source and instance when installation succeeds. If the package or catalog is unavailable, startup preserves the sentinel owner and migrated data, continues without those template commands, and retries on a later start. This keeps offline upgrades usable without detaching the migrated storage namespace from its eventual extension owner.
+
+This workaround is isolated to the legacy template migration, its startup repair, and source adoption. Remove all three after every supported database version has passed the schema migration that drops the old tables. A future migration system should allow extensions to run owned data migrations before core schema removal.
 
 ## Consequences
 

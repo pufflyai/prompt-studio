@@ -8,9 +8,13 @@ const writes = new Map<string, Promise<void>>();
 const readValues = async (path: string) => {
   try {
     const value = JSON.parse(await readFile(path, "utf8"));
-    return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
-  } catch {
-    return {};
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+      throw new Error(`Harness state must contain a JSON object: ${path}`);
+    }
+    return value as Record<string, unknown>;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return {};
+    throw error;
   }
 };
 

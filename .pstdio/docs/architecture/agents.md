@@ -163,7 +163,7 @@ Session transcripts are stored at `~/.claude/projects/{project-hash}/{sessionId}
 
 ### OpenCode — HTTP server
 
-OpenCode runs a persistent HTTP server on `127.0.0.1:4096`. Prompt Studio starts the server if it isn't already running and stores the URL in `~/.pstdio/opencode-server.txt`.
+OpenCode runs a persistent HTTP server on `127.0.0.1:4096`. Prompt Studio starts the server if it isn't already running and stores its extension-owned state in `~/.pstdio/state/pstdio.opencode.json`.
 
 ```
 pst                               opencode (HTTP server :4096)

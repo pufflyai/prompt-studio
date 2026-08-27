@@ -292,6 +292,7 @@ describe("GET /v1/projects/:projectId/extensions", () => {
           origin: {
             kind: "git",
             path: "extensions/pstdio-planner",
+            ref: "{hostRelease}",
             url: "https://github.com/pufflyai/prompt-studio",
           },
           publisher: "pufflyai",

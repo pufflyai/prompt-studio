@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { loadExtensionCatalog, packagedExtensionCatalog, parseExtensionCatalog } from "./extension-catalog";
@@ -48,13 +48,16 @@ describe("extension catalog", () => {
   test("uses the cached remote catalog when the network is unavailable", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-catalog-"));
     const pstdioHome = join(root, "home");
-    const cachePath = join(pstdioHome, "cache", "extension-catalog", "catalog.json");
-    mkdirSync(join(cachePath, ".."), { recursive: true });
-    writeFileSync(cachePath, JSON.stringify({ version: 1, extensions: [entry("cached")] }));
+    const url = "https://catalog.example/extensions.json";
 
     try {
+      await loadExtensionCatalog({
+        env: { PSTDIO_EXTENSION_CATALOG: url },
+        fetch: async () => new Response(JSON.stringify({ version: 1, extensions: [entry("cached")] })),
+        pstdioHome,
+      });
       const catalog = await loadExtensionCatalog({
-        env: { PSTDIO_EXTENSION_CATALOG: "https://catalog.example/extensions.json" },
+        env: { PSTDIO_EXTENSION_CATALOG: url },
         fetch: async () => {
           throw new Error("offline");
         },
@@ -62,7 +65,30 @@ describe("extension catalog", () => {
       });
 
       expect(catalog.extensions[0]?.installName).toBe("cached");
-      expect(JSON.parse(readFileSync(cachePath, "utf8")).extensions).toHaveLength(1);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("does not reuse a cached catalog from another URL", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-catalog-"));
+    const pstdioHome = join(root, "home");
+    try {
+      await loadExtensionCatalog({
+        env: { PSTDIO_EXTENSION_CATALOG: "https://first.example/extensions.json" },
+        fetch: async () => new Response(JSON.stringify({ version: 1, extensions: [entry("first")] })),
+        pstdioHome,
+      });
+
+      await expect(
+        loadExtensionCatalog({
+          env: { PSTDIO_EXTENSION_CATALOG: "https://second.example/extensions.json" },
+          fetch: async () => {
+            throw new Error("second offline");
+          },
+          pstdioHome,
+        }),
+      ).rejects.toThrow("second offline");
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

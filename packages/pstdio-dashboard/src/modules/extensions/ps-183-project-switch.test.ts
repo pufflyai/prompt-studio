@@ -11,7 +11,7 @@ import {
   getCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
 import { createExtensionsModule } from "./module";
-import { emptyAppearance, flushMicrotasks, metadataWithTickets } from "./module-test-fixtures";
+import { emptyAppearance, flushMicrotasks, metadataWithResourceExtension } from "./module-test-fixtures";
 
 interface Deferred<TValue> {
   promise: Promise<TValue>;
@@ -64,6 +64,10 @@ const createBaselineHarness = () => {
   const refreshSubscription = workbench.renderers.onDidRefresh((event) => {
     if (event.treeId === dashboardWidgetIds.dashboardSidenav) sidenavRefreshes.push(event.treeId);
   });
+  const settingsRefreshes: number[] = [];
+  const settingsSubscription = workbench.settings.store.subscribe((state, previous) => {
+    if (state.revision !== previous.revision) settingsRefreshes.push(state.revision);
+  });
 
   selectDashboardProject(workbench, { id: "project-a", name: "Project A" });
   const moduleDisposable = workbench.registerModule(createExtensionsModule({ loadAppearance, loadMetadata }));
@@ -75,13 +79,13 @@ const createBaselineHarness = () => {
     expect(appearanceRequest).toBeDefined();
 
     if (order === "metadata-first") {
-      metadataRequest?.resolve(metadataWithTickets);
+      metadataRequest?.resolve(metadataWithResourceExtension);
       await flushMicrotasks();
       appearanceRequest?.resolve(emptyAppearance);
     } else {
       appearanceRequest?.resolve(emptyAppearance);
       await flushMicrotasks();
-      metadataRequest?.resolve(metadataWithTickets);
+      metadataRequest?.resolve(metadataWithResourceExtension);
     }
     await flushMicrotasks();
     await flushMicrotasks();
@@ -90,6 +94,7 @@ const createBaselineHarness = () => {
   const resetCounts = () => {
     contributionApplications.length = 0;
     sidenavRefreshes.length = 0;
+    settingsRefreshes.length = 0;
     loadAppearance.mockClear();
     loadMetadata.mockClear();
   };
@@ -97,6 +102,7 @@ const createBaselineHarness = () => {
   const dispose = () => {
     moduleDisposable.dispose();
     refreshSubscription.dispose();
+    settingsSubscription();
     unsubscribeResources();
     for (const projectId of ["project-a", "project-b", "project-c"]) {
       clearCachedDashboardExtensionMetadata(projectId);
@@ -112,6 +118,7 @@ const createBaselineHarness = () => {
     metadataRequests,
     resetCounts,
     settleProject,
+    settingsRefreshes,
     sidenavRefreshes,
     workbench,
   };
@@ -134,6 +141,7 @@ describe("PS-183 project-switch extension refresh", () => {
         expect(harness.contributionApplications).toHaveLength(1);
         expect(harness.contributionApplications.every((id) => id.includes("project-b"))).toBe(true);
         expect(harness.sidenavRefreshes).toHaveLength(1);
+        expect(harness.settingsRefreshes.length).toBeGreaterThan(0);
       } finally {
         harness.dispose();
       }
@@ -150,7 +158,7 @@ describe("PS-183 project-switch extension refresh", () => {
       selectDashboardProject(harness.workbench, { id: "project-b", name: "Project B" });
       selectDashboardProject(harness.workbench, { id: "project-c", name: "Project C" });
 
-      harness.metadataRequests.get("project-b")?.resolve(metadataWithTickets);
+      harness.metadataRequests.get("project-b")?.resolve(metadataWithResourceExtension);
       harness.appearanceRequests.get("project-b")?.resolve(emptyAppearance);
       await flushMicrotasks();
       await flushMicrotasks();

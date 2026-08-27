@@ -162,14 +162,15 @@ Available param builders include `params.text`, `params.longText`, `params.numbe
 `params.select`, `params.multiSelect`, `params.repo`, `params.harness`, `params.resource`, and
 `params.json`.
 
-`ctx` in a command includes:
+Command params are the handler's second argument. `ctx` in a command includes:
 
-- `projectId`, `extensionId`, `name`, `repo`, `source`, `resource`, `params`
+- `projectId`, `workspaceId`, `project`, `extensionId`, `name`, `repo`, `source`, and `resource`
+- `commandId`, `invocationId`, `signal`, `invocation`, `attachment`, and `slot`
 - `attachment` for host-owned workbench invocations, including the target, mode, project, and active resource
 - `storage`, `artifacts`, `files`, read-only `packageFiles`, and repo-scoped `extensionFiles`
-- `tickets`, `sessions`, `workspaces`, `worktrees`, `repos`
+- `repoFiles`, `workspaceFiles`, `skills`, `sessions`, `workspaces`, and `repos`
 - `commands`, `events`, `activity`, `notify`
-- `process`, `net`, `logger`, `settings`
+- `process`, optional `terminal`, `net`, `connections`, `logger`, and `settings`
 
 Harness handlers also receive host-wide, extension-scoped `state`. See `host-storage-and-workspaces.md` for storage and workspace recipes.
 

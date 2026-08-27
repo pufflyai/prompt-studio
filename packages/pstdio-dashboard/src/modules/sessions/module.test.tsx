@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { getDashboardActiveCollection, getDashboardSelectedResource } from "@/shared/app/navigation-state";
+import { getDashboardSelectedResource } from "@/shared/app/navigation-state";
 import { dashboardSelectedProjectIdContextKey, selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -162,7 +162,6 @@ describe("createSessionsModule", () => {
     await workbench.commands.executeCommand(dashboardCommandIds.openSessions);
 
     expect(workbench.layout.getLayout().regions.main.widgets[0]?.viewId).toBe(dashboardViews.sessions.id);
-    expect(getDashboardActiveCollection(workbench)).toBe("sessions");
     expect(getDashboardSelectedResource(workbench)).toBeUndefined();
   });
 

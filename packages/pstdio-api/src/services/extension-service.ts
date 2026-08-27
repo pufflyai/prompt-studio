@@ -1,7 +1,8 @@
-import type {
-  createExtensionInstancesDBService,
-  createExtensionUserDataDBService,
-  createInstalledExtensionSourcesDBService,
+import {
+  type createExtensionInstancesDBService,
+  type createExtensionUserDataDBService,
+  type createInstalledExtensionSourcesDBService,
+  legacyTemplateOwnerSourcePath,
 } from "pstdio-db";
 import type {
   checkExtensionSource,
@@ -140,6 +141,18 @@ const hasUnchangedInstalledSourceRegistration = (
   existing.version === values.version &&
   jsonEquals(existing.last_error_json, values.last_error_json);
 
+const findInstalledSourceForRegistration = async (
+  service: ExtensionServiceDeps["installedExtensionSourcesService"],
+  input: RegisterInstalledSourceInput,
+) => {
+  const existing = await service.getBySourcePath(input.sourcePath);
+  if (existing) return existing;
+  return service.getBySourcePath(legacyTemplateOwnerSourcePath(input.extensionId));
+};
+
+const refreshPathForRegistration = (existingPath: string, input: RegisterInstalledSourceInput) =>
+  existingPath === legacyTemplateOwnerSourcePath(input.extensionId) ? undefined : input.sourcePath;
+
 export const createExtensionService = (deps: ExtensionServiceDeps) => {
   const emitInstalledSource = (source: unknown) => {
     deps.eventBus?.emit("installed_extension_sources", "set", source);
@@ -162,7 +175,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   };
 
   const registerInstalledSource = async (input: RegisterInstalledSourceInput) => {
-    const existing = await deps.installedExtensionSourcesService.getBySourcePath(input.sourcePath);
+    const existing = await findInstalledSourceForRegistration(deps.installedExtensionSourcesService, input);
     const values = {
       display_name: input.displayName,
       extension_id: input.extensionId,
@@ -183,7 +196,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
       const updated = await deps.installedExtensionSourcesService.updateRegistration(existing.id, values);
       if (!updated) throw new Error(`Installed extension not found: ${input.installName}`);
       emitInstalledSource(updated);
-      await notifyInstalledSourcesChanged(input.sourcePath);
+      await notifyInstalledSourcesChanged(refreshPathForRegistration(existing.source_path, input));
       return updated;
     }
 

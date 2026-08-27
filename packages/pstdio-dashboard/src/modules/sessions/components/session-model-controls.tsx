@@ -13,8 +13,6 @@ import { resolveRuntimeAgentSelection, resolveRuntimeModelSelection } from "../r
 import { HarnessParamInlineControls } from "./harness-param-inline-controls";
 import { filterHarnessParamValues, type HarnessParamValues, harnessParamValuesEqual } from "./harness-param-values";
 
-const fallbackAgentId = "pstdio.harness-open-code.harness.opencode";
-
 interface SessionModelControlsProps {
   view: DashboardSessionView;
   projectId: string | undefined;
@@ -46,7 +44,7 @@ export const SessionModelControls = (props: SessionModelControlsProps) => {
     disabled: agent.availability.type === "NOT_FOUND",
   }));
   const selectedAgentInfo = agents.find((agent) => agent.id === selectedAgent);
-  const defaultAgent = project?.default_agent_id ?? fallbackAgentId;
+  const defaultAgent = project?.default_agent_id;
   // A stored selection can point at a harness whose extension is disabled; treat it as
   // unselected so the menu shows its empty state instead of fetching 404ing models.
   const isResolvedAgent = agents.some((agent) => agent.id === selectedAgent);

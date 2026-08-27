@@ -24,7 +24,6 @@ const SEEDED_RELEASE_EXTENSIONS = [
   "pstdio-planner",
   "pstdio-planner-loops",
   "pstdio-skills",
-  "extension-lab",
 ];
 
 const usage = `Usage:
@@ -93,6 +92,11 @@ export const resolveIsolatedDefaultExtensions = (
   JSON.stringify({
     defaultExtensions: [
       ...SEEDED_RELEASE_EXTENSIONS,
+      {
+        source: resolve(repoRoot, "extensions/extension-lab"),
+        installName: "extension-lab",
+        skipInstall: true,
+      },
       {
         source: resolve(repoRoot, "infra/local/extensions/local-example"),
         installName: "local-example",

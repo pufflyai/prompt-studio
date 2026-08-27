@@ -306,7 +306,7 @@ describe("catalog extension installation and upgrades", () => {
         getProjectExtensionInstance: async () =>
           ({
             instance,
-            installedSource: { ...installedSource, install_name: "extension-lab" },
+            installedSource: { ...installedSource, install_name: "extension-lab", source_ref: null },
           }) as never,
       },
       installExtensionSource: async () => {
@@ -317,6 +317,45 @@ describe("catalog extension installation and upgrades", () => {
     });
 
     expect(service.upgrade("project-1", "instance-1")).rejects.toBeInstanceOf(ExtensionUpgradeUnavailableError);
+  });
+
+  test("upgrades a source-ref extension without a catalog entry", async () => {
+    const originUrl = "https://example.com/acme/extensions.git";
+    const sourceRef = `${originUrl}@${"1".repeat(40)}#extensions/recipes`;
+    const installExtensionSource = mock(async (input: { prepareNamedSource?: (...args: never[]) => unknown }) => {
+      expect(input.prepareNamedSource).toBeFunction();
+      return installed as never;
+    });
+    const registerInstalledSource = mock(
+      async () =>
+        ({
+          ...installedSource,
+          install_name: "acme-recipes",
+          source_ref: `${originUrl}@${"2".repeat(40)}#extensions/recipes`,
+        }) as never,
+    );
+    const service = createExtensionUpgradeService({
+      extensionService: {
+        ...idleExtensionService,
+        getProjectExtensionInstance: async () =>
+          ({
+            instance,
+            installedSource: { ...installedSource, install_name: "acme-recipes", source_ref: sourceRef },
+          }) as never,
+        registerInstalledSource,
+      },
+      installExtensionSource: installExtensionSource as never,
+      release: { source: "git", ref: "v2.0.0" },
+      resolveReleaseCommit: async () => "2".repeat(40),
+      repoService: emptyRepoService,
+    });
+
+    const result = await service.upgrade("project-1", "instance-1");
+
+    expect(installExtensionSource).toHaveBeenCalledWith(
+      expect.objectContaining({ source: "acme-recipes", ref: "v2.0.0", force: true }),
+    );
+    expect(result?.changed).toBe(true);
   });
 
   test("offers catalog-managed upgrades from a third-party repository", async () => {

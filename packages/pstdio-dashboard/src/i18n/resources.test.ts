@@ -10,8 +10,6 @@ describe("dashboard i18n resources", () => {
       expect(localeResources?.common).toBeDefined();
       expect(localeResources?.projects).toBeDefined();
       expect(localeResources?.settings).toBeDefined();
-      expect(localeResources?.tickets).toBeDefined();
-      expect(localeResources?.organization).toBeDefined();
       expect(localeResources?.projects).not.toBe(localeResources?.common);
       expect(localeResources?.settings).not.toBe(localeResources?.common);
     }

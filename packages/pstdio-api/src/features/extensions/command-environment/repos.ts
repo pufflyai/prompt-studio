@@ -3,6 +3,16 @@ import type { RepoContext } from "pstdio-api-contracts/extension-kernel";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 
+type WorkspaceRepoProjection = {
+  provider_params_json?: Record<string, unknown>;
+  provider_ref_json?: { data?: Record<string, unknown> } | null;
+};
+
+const nonEmptyString = (value: unknown) => (typeof value === "string" && value.trim() ? value : undefined);
+
+export const resolveWorkspaceRepoId = (workspace: WorkspaceRepoProjection) =>
+  nonEmptyString(workspace.provider_params_json?.repo_id) ?? nonEmptyString(workspace.provider_ref_json?.data?.repo_id);
+
 export const createReposApi = (deps: ExtensionsRouteDeps, projectId: string): CommandRunnerEnvironment["repos"] => {
   const toContext = (repo: { id: string; path: string }, role?: "default") => ({
     projectId,
@@ -17,7 +27,7 @@ export const createReposApi = (deps: ExtensionsRouteDeps, projectId: string): Co
       return repos.map((repo, index) => toContext(repo, index === 0 ? "default" : undefined));
     },
     async get(repoId) {
-      const repo = await deps.repoService.get(repoId);
+      const repo = (await deps.repoService.listByProject(projectId)).find((candidate) => candidate.id === repoId);
       if (!repo) throw new Error(`Repo not found: ${repoId}`);
       return toContext(repo);
     },
@@ -26,7 +36,7 @@ export const createReposApi = (deps: ExtensionsRouteDeps, projectId: string): Co
       return repo ? toContext(repo, "default") : undefined;
     },
     async resolvePath(repoId, relativePath) {
-      const repo = await deps.repoService.get(repoId);
+      const repo = (await deps.repoService.listByProject(projectId)).find((candidate) => candidate.id === repoId);
       if (!repo) throw new Error(`Repo not found: ${repoId}`);
       return join(repo.path, relativePath);
     },
@@ -46,7 +56,10 @@ export const resolveRegisteredRepoPath = async (deps: ExtensionsRouteDeps, proje
 
   const workspaces = await deps.workspaceService.list(projectId);
   const matched = workspaces.find(
-    (workspace) => workspace.worktree_path && resolve(workspace.worktree_path) === resolve(repo.path),
+    (workspace) =>
+      resolveWorkspaceRepoId(workspace) === repo.repoId &&
+      workspace.worktree_path &&
+      resolve(workspace.worktree_path) === resolve(repo.path),
   );
   return matched ? resolve(repo.path) : registered.path;
 };

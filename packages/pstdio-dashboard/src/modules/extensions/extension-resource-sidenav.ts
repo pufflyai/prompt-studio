@@ -1,13 +1,11 @@
 import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { toWorkbenchContributionId } from "@/shared/extensions/contribution-ref";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 
 type Metadata = ResolvedWorkbenchExtensionMetadata;
 type ResourceView = Metadata["resourceViews"][number];
-
-const refId = (ref: { extensionId: string; id: string }) =>
-  ref.extensionId === "pstdio" ? ref.id : `${ref.extensionId}.view.${ref.id}`;
 
 const sameResourceSlot = (
   left: { id: string; resourceKind: { extensionId: string; id: string } },
@@ -23,7 +21,7 @@ const slotPlacements = (metadata: Metadata, edge: ResourceView) =>
   );
 
 const isIntegratedResourceTree = (metadata: Metadata, edge: ResourceView) => {
-  const view = metadata.views.find((candidate) => candidate.id === refId(edge.view));
+  const view = metadata.views.find((candidate) => candidate.id === toWorkbenchContributionId(edge.view));
   if (view?.body.kind !== "tree") return false;
   const placements = slotPlacements(metadata, edge);
   return (
@@ -69,7 +67,7 @@ export const registerExtensionResourceSidenav = (ctx: WorkbenchModuleContext, me
   const viewIds = new Set<string>();
 
   integratedResourceSidenavViews(metadata).forEach((edge, index) => {
-    const viewId = refId(edge.view);
+    const viewId = toWorkbenchContributionId(edge.view);
     viewIds.add(viewId);
     disposables.push(mirrorSelection(ctx, viewId));
 

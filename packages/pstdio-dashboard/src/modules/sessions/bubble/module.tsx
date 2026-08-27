@@ -78,7 +78,7 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext, drafts?: Dash
       eligibleLocations: {
         canOpenLocation: ({ resource, viewId }) =>
           viewId !== dashboardViews.sessions.id &&
-          (Boolean(viewId) || resource?.kind === "ticket" || resource?.kind === "workspace"),
+          (Boolean(viewId) || Boolean(resource && resource.kind !== "session" && ctx.resources.getKind(resource.kind))),
       },
       icon: "MessageCircle",
       tab: {

@@ -8,6 +8,8 @@ import { createSessionBubbleModule } from "./module";
 describe("createSessionBubbleModule", () => {
   test("registers the Session Panel for project home without opening a rogue tab", () => {
     const workbench = createWorkbenchCore();
+    workbench.resources.registerKind({ kind: "workspace", label: "Workspace" });
+    workbench.resources.registerKind({ kind: "recipe", label: "Recipe" });
 
     workbench.registerModule(createSessionBubbleModule());
 
@@ -31,6 +33,9 @@ describe("createSessionBubbleModule", () => {
     expect(canOpenLocation?.({ viewId: "pstdio-planner.tickets" })).toBe(true);
     expect(canOpenLocation?.({ viewId: "font-editor" })).toBe(true);
     expect(canOpenLocation?.({ resource: { kind: "workspace", uri: "workspace://one" } })).toBe(true);
+    expect(canOpenLocation?.({ resource: { kind: "recipe", uri: "recipe://one" } })).toBe(true);
+    expect(canOpenLocation?.({ resource: { kind: "session", uri: "session://one" } })).toBe(false);
+    expect(canOpenLocation?.({ resource: { kind: "unknown", uri: "unknown://one" } })).toBe(false);
   });
 
   test("opens a workspace-linked session draft from the create session command", async () => {

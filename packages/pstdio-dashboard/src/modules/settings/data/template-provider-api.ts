@@ -79,8 +79,8 @@ export const saveProjectTemplate = (template: ProjectTemplateAsset, content: str
     content,
   });
 
-export const createProjectTemplate = async (projectId: string, existingNames: string[]) => {
-  const type = templateTypesForProject(projectId)[0];
+export const createProjectTemplate = async (projectId: string, existingNames: string[], templateTypeId: string) => {
+  const type = templateTypesForProject(projectId).find((candidate) => candidate.id === templateTypeId);
   if (!type?.commands) throw new Error("No extension provides editable templates.");
   const taken = new Set(existingNames);
   let name = "new-template";
@@ -89,7 +89,12 @@ export const createProjectTemplate = async (projectId: string, existingNames: st
     name = `new-template-${index}`;
     index += 1;
   }
-  return commandValue(projectId, type.commands.save, { name, title: "New template", type: type.localId, content: "" });
+  return commandValue(projectId, type.commands.save, {
+    name,
+    title: `New ${type.label.toLowerCase()} template`,
+    type: type.localId,
+    content: "",
+  });
 };
 
 export const deleteProjectTemplate = (template: ProjectTemplateAsset) =>

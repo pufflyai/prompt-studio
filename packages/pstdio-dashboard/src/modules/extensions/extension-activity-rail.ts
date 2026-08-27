@@ -1,11 +1,9 @@
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { createElement } from "react";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { toWorkbenchContributionId } from "@/shared/extensions/contribution-ref";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { ExtensionActivityRailWidget } from "./components/extension-activity-rail";
-
-const contributionRefId = (ref: { extensionId: string; kind: string; id: string }) =>
-  ref.extensionId === "pstdio" ? ref.id : `${ref.extensionId}.${ref.kind}.${ref.id}`;
 
 // The rail is dashboard chrome: it opens for modes with extension activity items
 // and leaves the region with them, so other modes render no empty rail.
@@ -29,7 +27,7 @@ export const registerDashboardActivityRail = (
     const activeModeId = ctx.modes.getActiveModeId();
     const items = getMetadata()?.activityItems ?? [];
     const hasItems = Boolean(
-      activeModeId && items.some((item) => item.modes.some((mode) => contributionRefId(mode) === activeModeId)),
+      activeModeId && items.some((item) => item.modes.some((mode) => toWorkbenchContributionId(mode) === activeModeId)),
     );
     // Layouts persisted before the rail existed have no activity region entry.
     const placement = ctx.layout

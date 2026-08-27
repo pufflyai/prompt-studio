@@ -72,6 +72,7 @@ type InstallDefaultExtensionsDeps = {
   config?: DefaultExtensionsConfig;
   env?: Record<string, string | undefined>;
   forceSourceDefaults?: boolean;
+  installNames?: string[];
   installExtensionSource?: (input: InstallExtensionSourceInput) => Promise<InstalledExtensionSource>;
   onInstallFailure?: (failure: { error: unknown; installName: string; source: string }) => void;
   prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
@@ -279,7 +280,9 @@ export const installDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}
   return enqueueDefaultExtensionInstall(async () => {
     const catalog = deps.config ? undefined : await loadExtensionCatalog({ env });
     const context = {
-      config: deps.config ?? (await resolveDefaultExtensionsConfig(env)),
+      config:
+        deps.config ??
+        (deps.installNames ? { defaultExtensions: deps.installNames } : await resolveDefaultExtensionsConfig(env)),
       env,
       sourceMode: !deps.config,
       catalog,

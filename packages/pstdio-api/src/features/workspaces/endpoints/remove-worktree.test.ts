@@ -100,8 +100,21 @@ describe("POST /v1/workspaces/:id/remove-worktree", () => {
 
     const listRes = await app.request(`/v1/workspaces?project_id=${projectId}`);
     expect(listRes.status).toBe(200);
-    const workspaces = await listRes.json();
-    expect(workspaces.some((item: { id: string }) => item.id === workspace.id)).toBe(true);
+    const workspaces = (await listRes.json()) as Array<{
+      id: string;
+      branch: string | null;
+      worktree_path: string | null;
+    }>;
+    expect(workspaces.find((item) => item.id === workspace.id)).toMatchObject({
+      branch: null,
+      worktree_path: null,
+    });
+
+    const repeatedRes = await app.request(`/v1/workspaces/${workspace.id}/remove-worktree`, {
+      method: "POST",
+    });
+    expect(repeatedRes.status).toBe(200);
+    expect(await repeatedRes.json()).toEqual({ removed: false });
   });
 
   test("returns 404 when workspace does not exist", async () => {

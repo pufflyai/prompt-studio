@@ -1,11 +1,62 @@
 import { afterAll, afterEach, describe, expect, test } from "bun:test";
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { PGlite } from "@electric-sql/pglite";
+import { drizzle } from "drizzle-orm/pglite";
+import { migrate } from "drizzle-orm/pglite/migrator";
+import { legacyTemplateOwnerSourcePath } from "pstdio-db";
 import { createTestApp } from "../test-utils/create-test-app";
-import { runStartupTasks } from ".";
+import { repairLegacyTemplateOwners, runStartupTasks } from ".";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../../..");
+const MIGRATIONS_ROOT = join(REPO_ROOT, "packages/pstdio-db/drizzle");
+
+const createPreExtensionTemplateDatabase = async (root: string, storagePath: string) => {
+  const databasePath = join(root, "database");
+  const migrationsPath = join(root, "old-migrations");
+  mkdirSync(databasePath);
+  mkdirSync(join(migrationsPath, "meta"), { recursive: true });
+  const journal = JSON.parse(readFileSync(join(MIGRATIONS_ROOT, "meta/_journal.json"), "utf8")) as {
+    entries: Array<{ tag: string }>;
+  };
+  journal.entries = journal.entries.slice(0, 11);
+  writeFileSync(join(migrationsPath, "meta/_journal.json"), JSON.stringify(journal));
+  for (const entry of journal.entries) {
+    cpSync(join(MIGRATIONS_ROOT, `${entry.tag}.sql`), join(migrationsPath, `${entry.tag}.sql`));
+  }
+
+  const pglite = new PGlite(databasePath);
+  await pglite.waitReady;
+  await migrate(drizzle(pglite), { migrationsFolder: migrationsPath });
+  await pglite.exec(`INSERT INTO projects
+       (id, name, shorthand, created_at, updated_at, selected_agents)
+     VALUES ('project-1', 'Legacy project', 'LEG', '2026-01-01', '2026-01-01', '[]')`);
+  await pglite.query(
+    `INSERT INTO files
+       (id, project_id, file_name, file_kind, storage_path, mime_type, size_bytes, hash, created_at, updated_at)
+     VALUES ('file-1', 'project-1', 'implement_ticket.md', 'template', $1, 'text/markdown', 24,
+             'legacy-hash', '2026-01-01', '2026-01-01')`,
+    [storagePath],
+  );
+  await pglite.exec(`INSERT INTO templates
+       (id, project_id, name, template_type, file_id, is_default, created_at, updated_at, deleted_at)
+     VALUES ('template-1', 'project-1', 'implement_ticket', 'prompt', 'file-1', true,
+             '2026-01-01', '2026-01-01', NULL)`);
+  await pglite.close();
+  return databasePath;
+};
+
+const invokePlannerTemplate = (
+  app: Awaited<ReturnType<typeof createTestApp>>["app"],
+  command: string,
+  params: unknown,
+) =>
+  app.request(`/v1/projects/project-1/extensions/commands/pstdio.pstdio-planner.command.templates.${command}/execute`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ params }),
+  });
 
 const waitFor = async (predicate: () => boolean) => {
   const deadline = Date.now() + 10_000;
@@ -172,5 +223,87 @@ describe("startup default extensions", () => {
     } finally {
       fallback.resolve();
     }
+  });
+
+  test("repairs a pre-extension template owner and keeps its content editable through extension commands", async () => {
+    const root = join(tempRoot, "legacy-template-upgrade");
+    const pstdioHome = join(root, "home");
+    const storageRoot = join(root, "storage");
+    const legacyFile = join(root, "implement_ticket.md");
+    mkdirSync(root, { recursive: true });
+    writeFileSync(legacyFile, "Legacy template content\n");
+    const databasePath = await createPreExtensionTemplateDatabase(root, legacyFile);
+    process.env.PSTDIO_HOME = pstdioHome;
+    process.env.PSTDIO_DISABLE_EMBED_MANIFEST = "1";
+
+    const handle = await createTestApp({ databasePath, storageRoot });
+    try {
+      let read: Response | undefined;
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        read = await invokePlannerTemplate(handle.app, "read", { name: "implement-ticket" });
+        if (read.status === 200) break;
+        await Bun.sleep(50);
+      }
+      const failure = read?.status === 200 ? null : await read?.clone().json();
+      expect({ failure, status: read?.status }).toEqual({
+        failure: null,
+        status: 200,
+      });
+      expect(await read?.json()).toMatchObject({
+        outcome: { value: { content: "Legacy template content\n", name: "implement-ticket", type: "prompt" } },
+      });
+
+      const saved = await invokePlannerTemplate(handle.app, "save", {
+        name: "implement-ticket",
+        title: "Implement ticket",
+        type: "prompt",
+        content: "Updated after migration\n",
+      });
+      expect(saved.status).toBe(200);
+      expect(await saved.json()).toMatchObject({ outcome: { value: { content: "Updated after migration\n" } } });
+
+      const instances = await handle.deps.extensionService.listProjectExtensionInstances("project-1");
+      expect(
+        instances.filter(
+          ({ installedSource, instance }) =>
+            installedSource.extension_id === "pstdio.pstdio-planner" && instance.enabled,
+        ),
+      ).toHaveLength(1);
+    } finally {
+      await handle.close();
+    }
+  }, 40_000);
+
+  test("keeps a legacy template owner available for retry when its extension install fails", async () => {
+    const sourcePath = legacyTemplateOwnerSourcePath("pstdio.pstdio-planner");
+    let registered = false;
+
+    await expect(
+      repairLegacyTemplateOwners(
+        {
+          installedExtensionSourcesService: {
+            list: async () => [
+              {
+                extension_id: "pstdio.pstdio-planner",
+                install_name: "pstdio-planner",
+                source_path: sourcePath,
+              },
+            ],
+          },
+          extensionService: {
+            registerInstalledSource: async () => {
+              registered = true;
+            },
+          },
+          extensionUpgradeService: { releaseRef: undefined },
+        } as never,
+        async () => {
+          throw new Error("catalog unavailable");
+        },
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(registered).toBe(false);
+    expect(sourcePath).toBe(legacyTemplateOwnerSourcePath("pstdio.pstdio-planner"));
   });
 });

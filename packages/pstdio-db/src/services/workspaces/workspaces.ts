@@ -158,7 +158,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
     return record;
   };
 
-  // Ticketless workspaces use project-scoped `WS-<n>` shorthands and no ticket-workspace link.
+  // Standalone workspaces use project-scoped `WS-<n>` shorthands.
   const createStandalone = async (input: {
     project_id: string;
     name?: string;
@@ -289,6 +289,15 @@ export const createWorkspacesDBService = (db: DbClient) => {
     return updated ?? null;
   };
 
+  const clearWorktree = async (id: string) => {
+    const [updated] = await db
+      .update(workspaces)
+      .set({ branch: null, display_path: null, worktree_path: null, updated_at: nowTimestamp() })
+      .where(eq(workspaces.id, id))
+      .returning();
+    return updated ?? null;
+  };
+
   const rename = (id: string, name: string) => renameWorkspace(db, id, name);
 
   return {
@@ -303,6 +312,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
     getByShorthand,
     softDelete,
     archive,
+    clearWorktree,
     setInitializing,
     setSetupError,
     setStartupLogFileId,

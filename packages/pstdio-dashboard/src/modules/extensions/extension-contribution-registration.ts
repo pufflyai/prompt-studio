@@ -9,6 +9,7 @@ import { buildAbsoluteApiUrl } from "@/lib/api";
 import { prepareDashboardNavigationResource, selectDashboardNavigationView } from "@/shared/app/navigation-state";
 import { uploadExtensionCommandFile } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
+import { toWorkbenchContributionId } from "@/shared/extensions/contribution-ref";
 import {
   localizeExtensionValue,
   type ResolvedLocalizable,
@@ -45,9 +46,6 @@ interface RegisterExtensionContributionsInput {
   onRegistrationError?: (error: unknown, extensionId: string) => void;
 }
 
-const contributionRefId = (ref: { extensionId: string; kind: string; id: string }) =>
-  ref.extensionId === "pstdio" ? ref.id : `${ref.extensionId}.${ref.kind}.${ref.id}`;
-
 export const extensionViewResolveInput =
   (ctx: WorkbenchModuleContext, view: { id: string; title: string; icon?: string }, navigationItemId = view.id) =>
   (openInput: OpenWorkbenchViewInput) => {
@@ -59,7 +57,7 @@ export const extensionViewResolveInput =
   };
 
 export const registerExtensionActivityNavigationOwnership = (metadata: ResolvedWorkbenchExtensionMetadata) => {
-  const modeIds = new Set((metadata.activityItems ?? []).flatMap((item) => item.modes.map(contributionRefId)));
+  const modeIds = new Set((metadata.activityItems ?? []).flatMap((item) => item.modes.map(toWorkbenchContributionId)));
   const registrations = [...modeIds].map(registerNavigationOwningMode);
   return {
     dispose() {
@@ -156,7 +154,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         resolveTreeNodeResource: (resource) => toDashboardExtensionResource(resource, input.projectId)!,
         resolveViewInput: (view) => {
           const navigationItem = input.metadata.navigationItems.find(
-            (item) => item.action.kind === "view" && contributionRefId(item.action.view) === view.id,
+            (item) => item.action.kind === "view" && toWorkbenchContributionId(item.action.view) === view.id,
           );
           return extensionViewResolveInput(input.ctx, view, navigationItem?.id);
         },

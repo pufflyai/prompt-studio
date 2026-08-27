@@ -106,34 +106,30 @@ export default defineExtension({
 Middleware runs before a command. Use it when the extension needs to validate, reject, or rewrite command invocation.
 
 ```ts
-import { defineExtension, workspaceCommands } from "@pstdio/sdk/extensions";
+import { defineCommand, defineExtension, defineMiddleware, params } from "@pstdio/sdk/extensions";
 
-export default defineExtension({
-  middlewares: {
-    requireReviewReadyChecks: {
-      command: workspaceCommands.setAttemptStatus,
-      async handler(ctx, commandParams) {
-        if (commandParams.status !== "review-ready")
-          return ctx.commands.continue();
-
-        const workspace = await ctx.workspaces.get(commandParams.workspaceId);
-        if (!workspace?.worktree_path) return ctx.commands.continue();
-
-        const result = await ctx.process.run({
-          command: ["bun", "run", "test"],
-          cwd: workspace.worktree_path,
-        });
-
-        if (result.exitCode === 0) return ctx.commands.continue();
-
-        return ctx.commands.reject({
-          code: "review_ready_checks_failed",
-          reason: "Tests must pass before marking an attempt review-ready.",
-        });
-      },
-    },
+const publishWorkspace = defineCommand({
+  id: "publish-workspace",
+  title: "Publish workspace",
+  params: { workspaceId: params.text({ required: true }) },
+  async run(_ctx, commandParams) {
+    return { published: commandParams.workspaceId };
   },
 });
+
+const requirePassingChecks = defineMiddleware<{ workspaceId: string }>({
+  id: "require-passing-checks",
+  command: publishWorkspace.ref,
+  async run(ctx, commandParams) {
+    const workspace = await ctx.workspaces.get(commandParams.workspaceId);
+    if (!workspace?.worktree_path) return ctx.commands.continue();
+    const result = await ctx.process.run({ command: ["bun", "run", "test"], cwd: workspace.worktree_path });
+    if (result.exitCode === 0) return ctx.commands.continue();
+    return ctx.commands.reject({ code: "checks_failed", reason: "Tests must pass before publishing." });
+  },
+});
+
+export default defineExtension({ commands: [publishWorkspace], middlewares: [requirePassingChecks] });
 ```
 
 Middleware can return:
@@ -158,7 +154,7 @@ export default defineExtension({
       event: sessionEvents.started,
       async handler(ctx, event) {
         await ctx.storage.set(
-          `session:${event.session.id}:started`,
+          `session:${event.sessionId}:started`,
           new Date().toISOString(),
         );
       },
@@ -450,5 +446,5 @@ bun run validate
 When bundled runtime artifacts change, also run:
 
 ```bash
-bun run scripts/verify-packages.ts
+bun run --cwd scripts verify:packages
 ```

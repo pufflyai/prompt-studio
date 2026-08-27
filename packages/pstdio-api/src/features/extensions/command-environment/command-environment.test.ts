@@ -2,7 +2,9 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createFilesApi } from "./files";
 import { createCommandEnvironment } from "./index";
+import { createSessionsApi } from "./sessions";
 
 const tempRoots: string[] = [];
 
@@ -256,7 +258,15 @@ describe("createCommandEnvironment host primitives", () => {
       {
         extensionStorageService: makeStorageService(),
         repoService: { listByProject: async () => [{ id: "repo-1", path: repoRoot }] },
-        workspaceService: { list: async () => [{ id: "ws-1", worktree_path: worktreeRoot }] },
+        workspaceService: {
+          list: async () => [
+            {
+              id: "ws-1",
+              worktree_path: worktreeRoot,
+              provider_params_json: { repo_id: "repo-1" },
+            },
+          ],
+        },
       } as never,
       makeEnabledSources() as never,
       {
@@ -331,6 +341,81 @@ describe("createCommandEnvironment storage scopes", () => {
       "resource storage scope requires resource.id",
     );
     expect(() => env.storage.scope({ type: "custom" } as never)).toThrow("custom storage scope requires id");
+  });
+});
+
+describe("createCommandEnvironment session scopes", () => {
+  test("does not read or mutate sessions, workspaces, or repos from another project", async () => {
+    const listByWorkspace = mock(async () => []);
+    const updateSession = mock(async () => null);
+    const foreignSession = {
+      id: "session-foreign",
+      project_id: "project-2",
+      cwd: "/foreign",
+      anchors_json: [],
+    };
+    const sessions = createSessionsApi(
+      {
+        repoService: {
+          get: mock(async () => ({ id: "repo-foreign", path: "/foreign" })),
+          listByProject: async () => [{ id: "repo-local", path: "/local" }],
+        },
+        sessionService: {
+          get: async () => foreignSession,
+          list: async () => [],
+          update: updateSession,
+        },
+        workspaceService: {
+          get: async () => ({ id: "workspace-foreign", project_id: "project-2" }),
+          getByShorthand: async () => null,
+        },
+        workspaceSessionService: { listByWorkspace },
+      } as never,
+      { project: projectContext, projectId: "project-1" },
+    );
+
+    await expect(sessions.get("session-foreign")).resolves.toBeNull();
+    await expect(sessions.listByWorkspace("workspace-foreign")).rejects.toThrow(
+      "Workspace not found: workspace-foreign",
+    );
+    await expect(sessions.create({ title: "Forged", prompt: "x", workspaceId: "workspace-foreign" })).rejects.toThrow(
+      "Workspace not found: workspace-foreign",
+    );
+    await expect(sessions.create({ title: "Forged", prompt: "x", repoId: "repo-foreign" })).rejects.toThrow(
+      "Repo not found: repo-foreign",
+    );
+    await expect(
+      sessions.create({ title: "Forged", prompt: "x", originalSessionId: "session-foreign" }),
+    ).rejects.toThrow("Session not found: session-foreign");
+    await expect(sessions.followup({ sessionId: "session-foreign", prompt: "x" })).rejects.toThrow(
+      "Session not found: session-foreign",
+    );
+    await expect(sessions.addAnchors("session-foreign", [])).rejects.toThrow("Session not found: session-foreign");
+    expect(listByWorkspace).not.toHaveBeenCalled();
+    expect(updateSession).not.toHaveBeenCalled();
+  });
+});
+
+describe("createCommandEnvironment file scopes", () => {
+  test("does not read, overwrite, or delete a file from another project", async () => {
+    const update = mock(async () => null);
+    const remove = mock(async () => false);
+    const files = createFilesApi(
+      {
+        fileService: {
+          get: async () => ({ id: "file-foreign", project_id: "project-2", storage_path: "/foreign" }),
+          update,
+          remove,
+        },
+      } as never,
+      "project-1",
+    );
+
+    await expect(files.readText("file-foreign")).rejects.toThrow("File not found: file-foreign");
+    await expect(files.writeText("file-foreign", "changed")).rejects.toThrow("File not found: file-foreign");
+    await expect(files.delete("file-foreign")).rejects.toThrow("File not found: file-foreign");
+    expect(update).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
   });
 });
 
@@ -453,6 +538,7 @@ describe("createCommandEnvironment workspaces", () => {
     );
 
     const workspace = await env.workspaces.create({
+      project_id: "project-2",
       shorthand_base: "T-1",
       provider_id: "pstdio.root",
       anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
@@ -675,10 +761,11 @@ describe("createCommandEnvironment workspace lifecycle", () => {
       provider_state: "ready",
       execution_kind: "local",
     };
+    const clearWorktree = mock(async () => ({ ...workspace, branch: null, worktree_path: null }));
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-        workspaceService: { get: async () => workspace, softDelete },
+        workspaceService: { clearWorktree, get: async () => workspace, softDelete },
       } as never,
       makeEnabledSources() as never,
       {
@@ -697,6 +784,7 @@ describe("createCommandEnvironment workspace lifecycle", () => {
 
     await expect(env.workspaces.removeWorktree("ws-1")).resolves.toEqual({ removed: true });
     expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(clearWorktree).toHaveBeenCalledWith("ws-1");
     expect(softDelete).not.toHaveBeenCalled();
     expect(fireRemoved).toHaveBeenCalledWith(
       expect.anything(),
@@ -704,6 +792,73 @@ describe("createCommandEnvironment workspace lifecycle", () => {
       expect.objectContaining({ id: "worktree.removed" }),
       expect.objectContaining({ workspaceId: "ws-1", worktreePath: workspace.worktree_path }),
     );
+  });
+
+  test("does not expose or mutate a workspace owned by another project", async () => {
+    const cleanup = mock(async () => true);
+    const softDelete = mock(async () => {});
+    const workspace = {
+      id: "other-workspace",
+      project_id: "project-2",
+      workspace_shorthand: "OTHER_A1",
+      anchors_json: [],
+      branch: "workspace/OTHER_A1",
+      worktree_path: "/repo/.worktrees/OTHER_A1",
+      provider_id: "pstdio.worktree",
+      provider_ref_json: null,
+      provider_state: "ready",
+      execution_kind: "local",
+    };
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        workspaceService: { get: async () => workspace, softDelete },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+      },
+      {
+        cleanupWorkspaceWorktree: cleanup as never,
+        runWorkspaceProvisioning: async (_deps, input) => input.workspace,
+        setupWorkspaceWorktree: async () => ({ branch: "unused", worktreePath: "/unused" }),
+      },
+    );
+
+    await expect(env.workspaces.get("other-workspace")).resolves.toBeNull();
+    await expect(env.workspaces.removeWorktree("other-workspace")).rejects.toThrow(
+      "Workspace not found: other-workspace",
+    );
+    await expect(env.workspaces.delete("other-workspace")).rejects.toThrow("Workspace not found: other-workspace");
+    expect(cleanup).not.toHaveBeenCalled();
+    expect(softDelete).not.toHaveBeenCalled();
+  });
+});
+
+describe("createCommandEnvironment project boundaries", () => {
+  test("does not expose a repo owned by another project", async () => {
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        repoService: {
+          get: async () => ({ id: "other-repo", path: "/other" }),
+          listByProject: async () => [{ id: "own-repo", path: "/own" }],
+        },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+      },
+    );
+
+    await expect(env.repos.get("other-repo")).rejects.toThrow("Repo not found: other-repo");
+    await expect(env.repos.resolvePath("other-repo", "README.md")).rejects.toThrow("Repo not found: other-repo");
   });
 
   test("does not expose legacy ticket helpers", async () => {

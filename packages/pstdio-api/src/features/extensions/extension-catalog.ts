@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve } from "node:path";
@@ -69,7 +70,8 @@ export const loadExtensionCatalog = async (input: LoadExtensionCatalogInput = {}
   if (!configured) return packagedExtensionCatalog;
 
   const pstdioHome = input.pstdioHome ?? resolvePstdioHome({ env });
-  const cachePath = join(pstdioHome, "cache", "extension-catalog", "catalog.json");
+  const cacheName = createHash("sha256").update(configured).digest("hex");
+  const cachePath = join(pstdioHome, "cache", "extension-catalog", `${cacheName}.json`);
   if (configured.startsWith("https://")) {
     try {
       const response = await (input.fetch ?? globalThis.fetch)(configured);

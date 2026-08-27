@@ -24,6 +24,22 @@ export const dashboardSettingsDefaultPanel = { id: "runtime", title: "Runtime", 
 // settings registry. The unified surface (`createWorkbenchSettingsModule`) turns
 // these into the navigation tree and dispatching panel.
 export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContext) => {
+  ctx.commands.registerCommand<{ templateType: string }>(
+    { id: dashboardCommandIds.createTemplate, label: "New template" },
+    {
+      execute: async ({ templateType }) => {
+        const projectId = getDashboardSelectedProjectId(ctx);
+        if (!projectId) return;
+        const existing = await getProjectTemplateAssets(projectId);
+        await createProjectTemplate(
+          projectId,
+          existing.map((template) => template.name),
+          templateType,
+        );
+        ctx.settings.refresh();
+      },
+    },
+  );
   ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 10, scope: "global" });
   ctx.settings.registerSection({ id: "project", title: "Project", order: 20, scope: "project" });
 
@@ -114,15 +130,27 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
         id: "create",
         label: "New template",
         icon: "Plus",
-        run: async () => {
+        run: () => {
           const projectId = getDashboardSelectedProjectId(ctx);
           if (!projectId) return;
-          const existing = await getProjectTemplateAssets(projectId);
-          await createProjectTemplate(
-            projectId,
-            existing.map((template) => template.name),
-          );
-          ctx.settings.refresh();
+          const types = templateTypesForProject(projectId);
+          ctx.commandPalette.requestParams({
+            record: {
+              command: {
+                id: dashboardCommandIds.createTemplate,
+                label: "New template",
+                params: {
+                  templateType: {
+                    type: "select",
+                    label: "Template type",
+                    required: true,
+                    options: types.map((type) => ({ label: type.label, value: type.id })),
+                  },
+                },
+              },
+            },
+            label: "New template",
+          });
         },
       },
     ],

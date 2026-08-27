@@ -41,7 +41,6 @@ If an auto-started process exits before becoming healthy, the CLI reports its ex
 | `PSTDIO_HOME` | `~/.pstdio` | Root for Prompt Studio runtime state. Default database, storage, workspaces, extensions, caches, and logs derive from this directory. |
 | `PSTDIO_DB_PATH` | `$PSTDIO_HOME/pstdio.db` | Narrow database path override. Use for tests and debugging; normal dev isolation should prefer `PSTDIO_HOME`. |
 | `PSTDIO_STORAGE_PATH` | `$PSTDIO_HOME/storage` | Narrow file-storage override. Use only when storage must move independently from the rest of Prompt Studio state. |
-| `PSTDIO_FILES_ROOT` | bundled/package files root | Override for packaged seed files such as built-in templates and skills. Mostly for source-tree and packaging tests. |
 
 Workspaces always derive from `PSTDIO_HOME` as `$PSTDIO_HOME/workspaces`.
 

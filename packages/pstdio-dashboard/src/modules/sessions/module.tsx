@@ -201,7 +201,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
         order: 30,
       });
       const unsubscribeDashboardData = subscribeDashboardData(() => hydrateOpenSessionsView(ctx));
-      // Workspaces and tickets both carry a conversation; opening one brings it along.
+      // Workspaces and extension-owned resources can carry a conversation; opening one brings it along.
       ctx.onDidChangePrimaryResource((resource) => {
         if (resource) openResourceSessionPreview(ctx, resource);
       });

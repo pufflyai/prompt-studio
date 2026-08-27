@@ -5,6 +5,8 @@ import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppBindings, AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
 import {
+  CommandRepoNotFoundError,
+  CommandWorkspaceRepoMismatchError,
   CommandWorkspaceNotFoundError,
   ExtensionCommandNotFoundError,
   executeProjectExtensionCommand,
@@ -18,10 +20,6 @@ const errorSchema = z.object({
   commandId: z.string().optional(),
 });
 
-// Where a command's `ctx.workspaceFiles` mounts. A worktree-backed workspace runs in its own
-// tree; a root/current-branch workspace spans every linked repo, so it mounts the repo the
-// command was invoked for (body.repo), falling back to the first linked repo only when the
-// request carries no repo context.
 export const executeExtensionCommandRoute = createRoute({
   method: "post",
   path: "/projects/{projectId}/extensions/commands/{commandId}/execute",
@@ -66,6 +64,12 @@ export const executeExtensionCommandHandler = (
       }
       if (error instanceof CommandWorkspaceNotFoundError) {
         return c.json({ error: error.message, code: "workspace_not_found" }, 404);
+      }
+      if (error instanceof CommandRepoNotFoundError) {
+        return c.json({ error: error.message, code: "repo_not_found" }, 404);
+      }
+      if (error instanceof CommandWorkspaceRepoMismatchError) {
+        return c.json({ error: error.message, code: "workspace_repo_mismatch" }, 404);
       }
       throw error;
     }

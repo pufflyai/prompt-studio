@@ -6,6 +6,7 @@ import {
 } from "pstdio-api-contracts/extension-kernel";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 import { archiveWorkspaceCascade } from "../../workspaces/archive-workspace-cascade";
+import { removeWorkspaceWorktree } from "../../workspaces/remove-workspace-worktree";
 import {
   assertWorkspaceDeleteAllowed,
   cancelProviderBackedWorkspace,
@@ -82,13 +83,19 @@ export const createWorkspacesApi = (
   input: { projectId: string; signal?: AbortSignal },
   runtimeDeps: CommandEnvironmentRuntimeDeps,
 ): CommandRunnerEnvironment["workspaces"] => {
-  const getProjectWorkspace = async (id: string) => {
+  const getScopedWorkspace = async (id: string) => {
     const workspace = await deps.workspaceService.get(id);
     return workspace?.project_id === input.projectId ? workspace : null;
   };
+  const requireScopedWorkspace = async (id: string) => {
+    const workspace = await getScopedWorkspace(id);
+    if (!workspace) throw new Error(`Workspace not found: ${id}`);
+    return workspace;
+  };
+
   return {
     list: async () => (await deps.workspaceService.list(input.projectId)) as ExtensionWorkspace[],
-    get: async (id) => (await getProjectWorkspace(id)) as ExtensionWorkspace | null,
+    get: async (id) => (await getScopedWorkspace(id)) as ExtensionWorkspace | null,
     getByShorthand: async (shorthand) =>
       (await deps.workspaceService.getByShorthand(input.projectId, shorthand)) as ExtensionWorkspace | null,
     create: async (workspaceInput) => {
@@ -102,8 +109,7 @@ export const createWorkspacesApi = (
       return workspace as ExtensionWorkspace;
     },
     resolve: async (id) => {
-      const workspace = await getProjectWorkspace(id);
-      if (!workspace) throw new Error(`Workspace not found: ${id}`);
+      const workspace = await requireScopedWorkspace(id);
       const localTarget = await resolveWorkspaceExecutionTarget(deps, id);
       const providerRef = workspace.provider_ref_json as WorkspaceProviderRef | null;
       if (workspace.execution_kind === "remote" && !providerRef) {
@@ -130,36 +136,25 @@ export const createWorkspacesApi = (
       };
     },
     cancel: async (id) => {
-      const workspace = await getProjectWorkspace(id);
-      if (!workspace) throw new Error(`Workspace not found: ${id}`);
+      const workspace = await requireScopedWorkspace(id);
       return (await cancelProviderBackedWorkspace(deps, workspace)) as ExtensionWorkspace;
     },
     archive: async (id) => {
-      const workspace = await getProjectWorkspace(id);
+      const workspace = await getScopedWorkspace(id);
       // Cascade archive: also archive the workspace's sessions and remove its worktree.
       if (workspace) return (await archiveWorkspaceCascade(deps, workspace)) as ExtensionWorkspace;
       throw new Error(`Workspace not found: ${id}`);
     },
     removeWorktree: async (id) => {
-      const workspace = await getProjectWorkspace(id);
-      if (!workspace) throw new Error(`Workspace not found: ${id}`);
-      const cleanup = runtimeDeps.cleanupWorkspaceWorktree ?? cleanupWorkspaceWorktree;
-      const removed = await cleanup(deps, workspace);
-      if (removed && workspace.worktree_path) {
-        const { anchors_json: _anchors, ...eventWorkspace } = workspace;
-        const fireRemoved = runtimeDeps.fireExtensionEventAsync ?? fireExtensionEventAsync;
-        fireRemoved(deps, workspace.project_id, worktreeEvents.removed, {
-          projectId: workspace.project_id,
-          worktreePath: workspace.worktree_path,
-          workspace: eventWorkspace as ExtensionWorkspace,
-          workspaceId: workspace.id,
-        });
-      }
+      const workspace = await requireScopedWorkspace(id);
+      const removed = await removeWorkspaceWorktree(deps, workspace, {
+        cleanup: runtimeDeps.cleanupWorkspaceWorktree ?? cleanupWorkspaceWorktree,
+        fireEvent: runtimeDeps.fireExtensionEventAsync ?? fireExtensionEventAsync,
+      });
       return { removed };
     },
     delete: async (id) => {
-      const workspace = await getProjectWorkspace(id);
-      if (!workspace) throw new Error(`Workspace not found: ${id}`);
+      const workspace = await requireScopedWorkspace(id);
       assertWorkspaceDeleteAllowed(workspace);
       const remove = runtimeDeps.deleteProviderBackedWorkspace ?? deleteProviderBackedWorkspace;
       const removed = await remove(deps, workspace);

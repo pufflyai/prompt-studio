@@ -1,17 +1,8 @@
 import { createRoute, z } from "@hono/zod-openapi";
-import { type ExtensionWorkspace, worktreeEvents } from "pstdio-api-contracts/extension-kernel";
 import type { AppRouteHandler } from "../../../types";
-import { fireExtensionEventAsync } from "../../extensions/extension-event-runtime";
 import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
-import { cleanupWorkspaceWorktree } from "../worktree-cleanup";
-
-type WorkspaceRecord = NonNullable<Awaited<ReturnType<WorkspacesRouteDeps["workspaceService"]["get"]>>>;
-
-const toWorkspaceEventPayload = (workspace: WorkspaceRecord) => {
-  const { anchors_json: _anchors, ...payload } = workspace;
-  return payload as ExtensionWorkspace;
-};
+import { removeWorkspaceWorktree } from "../remove-workspace-worktree";
 
 export const removeWorkspaceWorktreeRoute = createRoute({
   method: "post",
@@ -49,15 +40,7 @@ export const removeWorkspaceWorktreeHandler = (
       return c.json({ error: `Workspace not found: ${id}` }, 404);
     }
 
-    const removed = await cleanupWorkspaceWorktree(deps, workspace);
-    if (removed && workspace.worktree_path) {
-      fireExtensionEventAsync(deps, workspace.project_id, worktreeEvents.removed, {
-        projectId: workspace.project_id,
-        worktreePath: workspace.worktree_path,
-        workspace: toWorkspaceEventPayload(workspace),
-        workspaceId: workspace.id,
-      });
-    }
+    const removed = await removeWorkspaceWorktree(deps, workspace);
     return c.json({ removed }, 200);
   };
 };

@@ -43,7 +43,7 @@ pst serve           # starts or promotes the shared persistent runtime
 
 A compiled single binary MUST NOT depend on sibling files on disk. Hono's `serveStatic` resolves files relative to the process's current working directory, which breaks when the binary runs from an arbitrary location. All assets the binary needs must be embedded inside it.
 
-This applies to project seeding inputs too. Default templates and default skills must be resolved from embedded assets in compiled mode (with filesystem fallback only for workspace/dev execution), otherwise `POST /v1/projects` can fail with 500 in published binaries.
+This applies to project setup inputs too. Default skills and the extension catalog must be resolved from embedded assets in compiled mode (with filesystem fallback only for workspace/dev execution), otherwise project setup can fail in published binaries. Template content belongs to installed extensions rather than the host binary.
 
 ### Entry point change
 
@@ -403,7 +403,7 @@ All packages share the same version. Platform packages publish before the wrappe
 
 1. start `<platform-binary> serve` with isolated `PSTDIO_HOME`
 2. call `POST /v1/projects`
-3. assert default templates and default skills were seeded via API
+3. assert default extensions and skills are available through their public APIs
 
 This closes the gap where binary presence was verified but core packaged behavior was not.
 

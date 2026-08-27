@@ -35,7 +35,12 @@ const response = (enabled: boolean): ListProjectExtensionsResponse => ({
       displayName: "Example",
       description: "Example extension",
       installed: true,
-      origin: { kind: "git", url: "https://example.com/extensions.git", path: "extensions/example" },
+      origin: {
+        kind: "git",
+        url: "https://example.com/extensions.git",
+        path: "extensions/example",
+        ref: "v1.0.0",
+      },
     },
   ],
 });

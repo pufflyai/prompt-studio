@@ -4,13 +4,12 @@ import { WorkbenchIcon, type WorkbenchPanelRenderInput } from "@pstdio/workbench
 import { useEffect, useState } from "react";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { executeExtensionCommand } from "@/shared/extensions/api";
+import { toWorkbenchContributionId } from "@/shared/extensions/contribution-ref";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { publishExtensionCommandEvent } from "@/shared/extensions/extension-webview-broadcast";
 import { getCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 
 const placementRank = { first: 0, default: 1, last: 2 } as const;
-const contributionRefId = (ref: { extensionId: string; kind: string; id: string }) =>
-  ref.extensionId === "pstdio" ? ref.id : `${ref.extensionId}.${ref.kind}.${ref.id}`;
 
 // Renders extension activity items natively: an icon column that executes the
 // declared command on click. No webview is involved, so the rail paints with the
@@ -29,11 +28,13 @@ export const ExtensionActivityRailWidget = (props: { input: WorkbenchPanelRender
 
   const projectId = getDashboardSelectedProjectId(workbench);
   const items = (getCachedDashboardExtensionMetadata(projectId)?.activityItems ?? [])
-    .filter((item) => Boolean(activeModeId && item.modes.some((mode) => contributionRefId(mode) === activeModeId)))
+    .filter((item) =>
+      Boolean(activeModeId && item.modes.some((mode) => toWorkbenchContributionId(mode) === activeModeId)),
+    )
     .sort((a, b) => placementRank[a.placement ?? "default"] - placementRank[b.placement ?? "default"]);
 
   const run = async (item: (typeof items)[number]) => {
-    const commandId = contributionRefId(item.command);
+    const commandId = toWorkbenchContributionId(item.command);
     if (commandId.startsWith("workbench.")) {
       await workbench.commands.executeCommand(commandId, item.params);
       return;

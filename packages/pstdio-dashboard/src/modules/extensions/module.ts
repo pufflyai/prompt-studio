@@ -133,6 +133,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           projectId: nextProjectId,
         });
         setCachedDashboardExtensionMetadata(nextProjectId, metadata);
+        ctx.settings.refresh();
         if (contributionsAreCurrent) {
           primaryResourceBeforeRefresh = undefined;
           setDashboardExtensionsReadyProject(ctx, nextProjectId);

@@ -29,8 +29,8 @@ export type CreateInput = {
 
 export const nowTimestamp = () => new Date().toISOString();
 
-const getAttemptNumber = (ticketShorthand: string, workspaceShorthand: string) => {
-  const prefix = `${ticketShorthand}_A`;
+const getAttemptNumber = (shorthandBase: string, workspaceShorthand: string) => {
+  const prefix = `${shorthandBase}_A`;
   if (!workspaceShorthand.startsWith(prefix)) return null;
   const suffix = workspaceShorthand.slice(prefix.length);
   return /^\d+$/.test(suffix) ? Number(suffix) : null;

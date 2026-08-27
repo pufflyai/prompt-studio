@@ -54,6 +54,7 @@ export const marketplaceExtensionSchema = z.object({
     kind: z.literal("git"),
     url: z.string(),
     path: z.string(),
+    ref: z.string(),
   }),
   publisher: z.string().optional(),
 });

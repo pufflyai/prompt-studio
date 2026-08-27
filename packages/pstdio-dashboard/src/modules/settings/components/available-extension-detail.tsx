@@ -50,7 +50,7 @@ export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) =
             </Text>
             <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle" truncate>
               {extension.publisher ? `${extension.publisher} · ` : ""}
-              {extension.origin.url}#{extension.origin.path}
+              {extension.origin.url}@{extension.origin.ref}#{extension.origin.path}
             </Text>
           </Stack>
           <Button

@@ -2,8 +2,12 @@ import { afterEach, describe, expect, it } from "bun:test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { PGlite } from "@electric-sql/pglite";
+import { drizzle } from "drizzle-orm/pglite";
+import { migrate } from "drizzle-orm/pglite/migrator";
 
 import { createDb, resolveMigrationsFolder, resolvePgliteOptions } from "./connection.pglite";
+import * as schema from "./schemas.pg";
 
 const originalDbPath = process.env.PSTDIO_DB_PATH;
 
@@ -112,6 +116,77 @@ describe("createDb", () => {
 
     const client = await createDb({ path: dbPath });
     await client.close();
+
+    fs.rmSync(tempRoot, { force: true, recursive: true });
+  });
+
+  it("upgrades a pre-extension-storage template into readable extension storage", async () => {
+    const { dbPath, tempRoot } = createTempDbPath();
+    const pglite = new PGlite(dbPath);
+    await pglite.waitReady;
+    const oldDb = drizzle(pglite, { schema });
+    const migrationsFolder = await resolveMigrationsFolder();
+    const oldMigrationsFolder = path.join(tempRoot, "old-migrations");
+    fs.mkdirSync(path.join(oldMigrationsFolder, "meta"), { recursive: true });
+    const journal = JSON.parse(fs.readFileSync(path.join(migrationsFolder, "meta/_journal.json"), "utf8")) as {
+      entries: Array<{ tag: string }>;
+    };
+    journal.entries = journal.entries.slice(0, 11);
+    fs.writeFileSync(path.join(oldMigrationsFolder, "meta/_journal.json"), JSON.stringify(journal));
+    for (const entry of journal.entries) {
+      fs.copyFileSync(
+        path.join(migrationsFolder, `${entry.tag}.sql`),
+        path.join(oldMigrationsFolder, `${entry.tag}.sql`),
+      );
+    }
+    await migrate(oldDb, { migrationsFolder: oldMigrationsFolder });
+    await pglite.exec(`
+      INSERT INTO projects
+        (id, name, shorthand, created_at, updated_at, selected_agents)
+      VALUES
+        ('project-1', 'Legacy project', 'LEG', '2026-01-01', '2026-01-01', '[]');
+      INSERT INTO files
+        (id, project_id, file_name, file_kind, storage_path, mime_type, size_bytes, hash, created_at, updated_at)
+      VALUES
+        ('file-1', 'project-1', 'implement_ticket.md', 'template', '/legacy/implement_ticket.md',
+         'text/markdown', 14, 'legacy-hash', '2026-01-01', '2026-01-01');
+      INSERT INTO templates
+        (id, project_id, name, template_type, file_id, is_default, created_at, updated_at, deleted_at)
+      VALUES
+        ('template-1', 'project-1', 'implement_ticket', 'prompt', 'file-1', true,
+         '2026-01-01', '2026-01-01', NULL);
+    `);
+    await pglite.close();
+
+    const current = await createDb({ path: dbPath });
+    const templates = await current.pglite.query<{
+      extension_instance_id: string;
+      item_id: string;
+      value_json: { blobId: string; type: string };
+    }>(
+      `SELECT extension_instance_id, item_id, value_json
+         FROM extension_collection_items
+        WHERE collection = 'templates'`,
+    );
+    expect(templates.rows).toEqual([
+      {
+        extension_instance_id: expect.any(String),
+        item_id: "implement-ticket",
+        value_json: expect.objectContaining({ blobId: "file-1", type: "prompt" }),
+      },
+    ]);
+    const linkedFile = await current.pglite.query<{ storage_path: string }>(
+      `SELECT files.storage_path
+         FROM extension_files
+         JOIN files ON files.id = extension_files.file_id`,
+    );
+    expect(linkedFile.rows).toEqual([{ storage_path: "/legacy/implement_ticket.md" }]);
+    const legacyTable = await current.pglite.query<{ name: string | null }>(
+      "SELECT to_regclass('public.templates')::text AS name",
+    );
+    expect(legacyTable.rows).toEqual([{ name: null }]);
+
+    await current.close();
 
     fs.rmSync(tempRoot, { force: true, recursive: true });
   });

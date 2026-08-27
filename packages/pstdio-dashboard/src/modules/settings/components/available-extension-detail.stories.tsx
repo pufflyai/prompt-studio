@@ -80,6 +80,7 @@ const meta: Meta<typeof AvailableExtensionDetail> = {
         kind: "git",
         url: "https://github.com/pufflyai/prompt-studio",
         path: "extensions/pstdio-reports",
+        ref: "pstdio@0.28.0",
       },
       publisher: "pufflyai",
     },

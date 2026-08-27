@@ -6,7 +6,11 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { normalizeEmbeddedFileName } from "pstdio-paths";
-import { migrateLegacyTemplates } from "./legacy-template-migration";
+import {
+  ensureLegacyTemplateOwners,
+  hasLegacyTemplatesTable,
+  migrateLegacyTemplates,
+} from "./legacy-template-migration";
 import { ensureDbDirectory, resolveDbPath } from "./paths";
 import { acquirePgliteLock } from "./pglite-lock";
 import * as schema from "./schemas.pg";
@@ -20,6 +24,27 @@ const DRIZZLE_PREFIX = "../../pstdio-db/drizzle/";
 const DRIZZLE_EXTRACT_DIR = "pstdio-drizzle";
 const PGLITE_WASM_SUFFIX = "/pstdio-db/vendor/pglite/pglite.wasm";
 const PGLITE_DATA_SUFFIX = "/pstdio-db/vendor/pglite/pglite.data";
+const LEGACY_TEMPLATE_STORAGE_MIGRATION = 17;
+
+const migrateThroughLegacyTemplateStorage = async (db: PgliteDatabase<typeof schema>, migrationsFolder: string) => {
+  const stageRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-template-migrations-"));
+  const stageMeta = path.join(stageRoot, "meta");
+  fs.mkdirSync(stageMeta);
+  try {
+    const journalPath = path.join(migrationsFolder, "meta/_journal.json");
+    const journal = JSON.parse(fs.readFileSync(journalPath, "utf8")) as {
+      entries: Array<{ idx: number; tag: string }>;
+    };
+    const entries = journal.entries.filter((entry) => entry.idx <= LEGACY_TEMPLATE_STORAGE_MIGRATION);
+    fs.writeFileSync(path.join(stageMeta, "_journal.json"), JSON.stringify({ ...journal, entries }));
+    for (const entry of entries) {
+      fs.copyFileSync(path.join(migrationsFolder, `${entry.tag}.sql`), path.join(stageRoot, `${entry.tag}.sql`));
+    }
+    await migrate(db, { migrationsFolder: stageRoot });
+  } finally {
+    fs.rmSync(stageRoot, { force: true, recursive: true });
+  }
+};
 
 const getEmbeddedFiles = (): EmbeddedFile[] => {
   try {
@@ -90,17 +115,28 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
 
   const releaseLock = dbPath === ":memory:" ? () => {} : acquirePgliteLock(dbPath);
 
+  let pglite: PGlite | undefined;
   try {
     options?.onLockAcquired?.();
     const pgliteOpts = await resolvePgliteOptions();
-    const pglite = dbPath === ":memory:" ? new PGlite(pgliteOpts) : new PGlite(dbPath, pgliteOpts);
-    await pglite.waitReady;
+    pglite = dbPath === ":memory:" ? new PGlite(pgliteOpts) : new PGlite(dbPath, pgliteOpts);
+    const openedPglite = pglite;
+    await openedPglite.waitReady;
     console.log("[createDb] PGlite ready");
 
-    const db = drizzle(pglite, { schema });
+    const db = drizzle(openedPglite, { schema });
     const migrationsFolder = await resolveMigrationsFolder();
     if (fs.existsSync(migrationsFolder)) {
-      await migrateLegacyTemplates(pglite);
+      if (await hasLegacyTemplatesTable(openedPglite)) {
+        const storage = await openedPglite.query<{ extension_files: string | null }>(
+          "SELECT to_regclass('public.extension_files')::text AS extension_files",
+        );
+        if (!storage.rows[0]?.extension_files) {
+          await migrateThroughLegacyTemplateStorage(db, migrationsFolder);
+        }
+        await ensureLegacyTemplateOwners(openedPglite);
+      }
+      await migrateLegacyTemplates(openedPglite);
       await migrate(db, { migrationsFolder });
     }
 
@@ -112,7 +148,7 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
 
       closed = true;
       try {
-        await pglite.close();
+        await openedPglite.close();
       } finally {
         releaseLock();
       }
@@ -122,9 +158,10 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
       close,
       db,
       path: dbPath,
-      pglite,
+      pglite: openedPglite,
     };
   } catch (error) {
+    await pglite?.close();
     releaseLock();
     throw error;
   }

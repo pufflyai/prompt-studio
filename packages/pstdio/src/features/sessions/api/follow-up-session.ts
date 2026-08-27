@@ -5,8 +5,6 @@ export const followUpSession = async (
   sessionId: string,
   input: {
     prompt?: string;
-    template?: string;
-    vars?: Record<string, string>;
     agent?: string;
     attachments?: SessionAttachmentRef[];
     model?: string;

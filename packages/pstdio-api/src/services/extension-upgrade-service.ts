@@ -10,6 +10,7 @@ import { runCommand } from "../features/extensions/install-extension-dependencie
 import {
   type InstallExtensionSourceInput,
   installExtensionSource as installExtensionSourceDefault,
+  prepareGitExtensionSource,
   resolvePstdioHome,
   toExtensionEnableInput,
 } from "../features/extensions/install-extension-source";
@@ -42,6 +43,25 @@ type UpgradeSource = {
   manifest_json?: unknown;
   source_ref: string | null;
 };
+
+type InstallExtension = (input: InstallExtensionSourceInput) => ReturnType<typeof installExtensionSourceDefault>;
+
+const installFromRecordedOrigin = (input: {
+  install: InstallExtension;
+  installName: string;
+  origin: { kind: "git"; url: string; path: string; ref: string };
+  repoPath?: string;
+}) =>
+  input.install({
+    source: input.installName,
+    installName: input.installName,
+    force: true,
+    ref: input.origin.ref,
+    prepareNamedSource: (_name, tempDir, ref) =>
+      prepareGitExtensionSource(input.origin, tempDir, ref ?? input.origin.ref),
+    ...(input.repoPath ? { repoPath: input.repoPath } : {}),
+    reuseInstalledDependencies: true,
+  });
 
 export class ExtensionUpgradeUnavailableError extends Error {
   constructor(message: string) {
@@ -124,7 +144,6 @@ export const resolveExtensionReleaseCommit = async (originUrl: string, releaseRe
 export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps) => {
   const install = deps.installExtensionSource ?? installExtensionSourceDefault;
   const catalog = deps.catalog ? Promise.resolve(deps.catalog) : getExtensionCatalog();
-  const enabled = true;
   const releaseCommits = new Map<string, Promise<string>>();
   const previewSources = new Map<string, ReturnType<typeof install>>();
   const catalogEntry = async (installName: string) =>
@@ -307,21 +326,39 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const upgrade = async (projectId: string, instanceId: string) => {
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return null;
-    await requireCatalogEntry(existing.installedSource.install_name);
     if (!(await canUpgrade(existing.installedSource))) {
       throw new ExtensionUpgradeUnavailableError("This extension is already up to date.");
     }
 
     const repoPath = await repoForSource(deps, projectId, existing.installedSource.source_path);
-    const installed = await installForRelease(existing.installedSource.install_name, repoPath);
+    const entry = await catalogEntry(existing.installedSource.install_name);
+    const parsed = parseExtensionSourceRef(existing.installedSource.source_ref);
+    let installed: Awaited<ReturnType<typeof install>>;
+    if (entry) {
+      installed = await installForRelease(existing.installedSource.install_name, repoPath);
+    } else if (parsed && deps.release?.ref) {
+      const origin = { kind: "git" as const, url: parsed.url, path: parsed.path, ref: deps.release.ref };
+      installed = await installFromRecordedOrigin({
+        install,
+        installName: existing.installedSource.install_name,
+        origin,
+        repoPath,
+      });
+    } else {
+      throw new ExtensionUpgradeUnavailableError(
+        `No upgrade origin for extension: ${existing.installedSource.install_name}`,
+      );
+    }
     const installedSource = await deps.extensionService.registerInstalledSource({
       installName: installed.installName,
       ...toExtensionEnableInput(installed),
     });
     const installedOrigin = parseExtensionSourceRef(installedSource.source_ref);
-    const entry = await requireCatalogEntry(existing.installedSource.install_name);
     if (installedOrigin) {
-      releaseCommits.set(`${installedOrigin.url}\0${releaseRefFor(entry)}`, Promise.resolve(installedOrigin.commit));
+      const releaseRef = entry ? releaseRefFor(entry) : deps.release?.ref;
+      if (releaseRef) {
+        releaseCommits.set(`${installedOrigin.url}\0${releaseRef}`, Promise.resolve(installedOrigin.commit));
+      }
     }
 
     return {
@@ -333,7 +370,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
 
   return {
     canUpgrade,
-    enabled,
+    enabled: true,
     installMarketplaceExtension,
     prepareMarketplaceExtensionSource,
     releaseRef: deps.release?.ref,

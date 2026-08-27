@@ -92,7 +92,7 @@ describe("packaged pstdio — self-hosted serve", () => {
         const extensionCatalog = (await extensionsRes.json()) as {
           marketplace: Array<{
             installName: string;
-            origin: { kind: "git"; path: string; url: string };
+            origin: { kind: "git"; path: string; ref: string; url: string };
             publisher?: string;
           }>;
         };
@@ -102,6 +102,7 @@ describe("packaged pstdio — self-hosted serve", () => {
             origin: {
               kind: "git",
               path: "extensions/pstdio-planner",
+              ref: "{hostRelease}",
               url: "https://github.com/pufflyai/prompt-studio",
             },
             publisher: "pufflyai",

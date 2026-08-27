@@ -6,12 +6,12 @@ import {
   type WorkspaceProvisionPayload,
   workspaceEvents,
 } from "@pstdio/sdk/extensions";
-import { ticketMarkdownPath, ticketToMarkdown } from "../data/draft-storage";
+import { ensureTicketDraftsIgnored, ticketMarkdownPath, ticketToMarkdown } from "../data/draft-storage";
 import { findTicket } from "../data/resolve";
 import type { StoredTicket } from "../data/types";
 import { ticketRefFromAnchors } from "../data/workspace-ticket-link";
 
-const copyOrWriteTicketFile = async (input: {
+export const copyOrWriteTicketFile = async (input: {
   repoFiles: ArtifactMount;
   storage: ExtensionStorageApi;
   ticket: StoredTicket;
@@ -21,6 +21,7 @@ const copyOrWriteTicketFile = async (input: {
   const content = (await input.repoFiles.exists(relativePath))
     ? await input.repoFiles.readText(relativePath)
     : await ticketToMarkdown(input.storage, input.ticket);
+  await ensureTicketDraftsIgnored(input.workspaceFiles);
   await input.workspaceFiles.writeText(relativePath, content);
 };
 

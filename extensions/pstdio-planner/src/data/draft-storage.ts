@@ -11,7 +11,7 @@ export const ticketMarkdownPath = (shorthand: string) => `${ticketDir(shorthand)
 export const ticketFilesDir = (shorthand: string) => `${ticketDir(shorthand)}/files`;
 export const ticketFilesPattern = (shorthand: string) => `${ticketFilesDir(shorthand)}/**`;
 
-const ensureTicketDraftsIgnored = async (repoFiles: ArtifactMount) => {
+export const ensureTicketDraftsIgnored = async (repoFiles: ArtifactMount) => {
   const path = ".pstdio/.gitignore";
   const existing = (await repoFiles.exists(path)) ? await repoFiles.readText(path) : "";
   const lines = existing.split("\n").filter(Boolean);

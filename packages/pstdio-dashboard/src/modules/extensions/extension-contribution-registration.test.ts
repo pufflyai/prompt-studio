@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench";
 import { BRIDGE_WEBVIEW_RENDERER_ID } from "@pstdio/workbench/extensions";
-import { dashboardActiveCollectionContextKey } from "@/shared/app/navigation-state";
 import { modeOwnsNavigation } from "@/shared/workbench/mode-navigation-ownership";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
 import {
@@ -27,7 +26,6 @@ describe("extensionViewResolveInput", () => {
 
     expect(resolved).toBe(openInput);
     expect(workbench.modes.getActiveModeId()).toBe("project");
-    expect(workbench.context.get(dashboardActiveCollectionContextKey)).toBeUndefined();
     expect(workbench.breadcrumbs.getItems()).toEqual([{ title: "Overview", icon: "flask" }]);
   });
 

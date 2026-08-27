@@ -87,6 +87,9 @@ test.describe("Project settings", () => {
     );
     await page.getByText("Templates", { exact: true }).hover();
     await page.getByRole("button", { name: "New template" }).click();
+    await page.getByText("Template type").click();
+    await page.getByText("Prompt", { exact: true }).last().click();
+    await page.getByRole("button", { name: "Run" }).click();
     await createResponse;
 
     const templates = await executePlannerCommand<Array<{ name: string; type: string }>>(
@@ -95,7 +98,7 @@ test.describe("Project settings", () => {
       project.id,
       "templates.list",
     );
-    expect(templates).toContainEqual(expect.objectContaining({ name: "new-template", type: "ticket" }));
+    expect(templates).toContainEqual(expect.objectContaining({ name: "new-template", type: "prompt" }));
   });
 
   test("saves edited template content", async ({ page, request }) => {
