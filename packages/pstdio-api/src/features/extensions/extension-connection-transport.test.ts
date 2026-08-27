@@ -100,6 +100,41 @@ describe("extension connection transport", () => {
     await expect(consume()).rejects.toThrow("reflected");
   });
 
+  test("rejects a JSON-escaped credential in a streaming response", async () => {
+    const encoder = new TextEncoder();
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(encoder.encode('{"reflected":"credential\\u'));
+        controller.enqueue(encoder.encode('002dcanary"}'));
+        controller.close();
+      },
+    });
+    const service = createConnectionTestService(
+      (async () => new Response(body, { headers: { "content-type": "application/json" } })) as unknown as typeof fetch,
+      {
+        ...contribution,
+        supportsStreaming: true,
+      },
+    );
+    const decoder = new TextDecoder();
+    let exposed = "";
+
+    const consume = async () => {
+      for await (const event of service.stream({
+        projectId: "project-1",
+        extensionId: "pstdio.remote",
+        connectionId: "control-plane",
+        input: { method: "GET", path: "/v1/workspaces/remote-1" },
+      })) {
+        if (event.type === "data") exposed += decoder.decode(event.data, { stream: true });
+      }
+    };
+
+    await expect(consume()).rejects.toThrow("reflected");
+    exposed += decoder.decode();
+    expect(exposed).not.toContain("credential\\u002dcanary");
+  });
+
   test("cancels the upstream body when a stream consumer stops early", async () => {
     const cancel = mock(async () => {});
     const responseBody = { cancel } as unknown as ReadableStream<Uint8Array>;

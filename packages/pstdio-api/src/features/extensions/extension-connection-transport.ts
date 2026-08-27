@@ -54,6 +54,26 @@ export const containsBytes = (input: Uint8Array, candidate: Uint8Array) => {
   return inputBuffer.indexOf(candidateBuffer) >= 0;
 };
 
+const JSON_ESCAPES: Record<string, string> = {
+  '"': '"',
+  "\\": "\\",
+  "/": "/",
+  b: "\b",
+  f: "\f",
+  n: "\n",
+  r: "\r",
+  t: "\t",
+};
+
+const decodeJsonEscapes = (value: string) =>
+  value.replace(/\\(?:["\\/bfnrt]|u[\da-fA-F]{4})/g, (sequence) => {
+    if (sequence[1] === "u") return String.fromCharCode(Number.parseInt(sequence.slice(2), 16));
+    return JSON_ESCAPES[sequence[1]] ?? sequence;
+  });
+
+const containsJsonEncodedSecret = (input: Uint8Array, secret: string) =>
+  secret.length > 0 && decodeJsonEscapes(new TextDecoder().decode(input)).includes(secret);
+
 export const readBoundedBody = async (body: ReadableStream<Uint8Array> | null) => {
   if (!body) return new Uint8Array();
   const reader = body.getReader();
@@ -85,6 +105,7 @@ export const readSafeStream = async function* (
   const reader = body?.getReader();
   if (!reader) return;
   const secretBytes = new TextEncoder().encode(secret);
+  const protectedBytes = Math.max(secretBytes.byteLength, secret.length * 6);
   let pending = new Uint8Array();
   let completed = false;
   try {
@@ -94,10 +115,10 @@ export const readSafeStream = async function* (
       state.total += chunk.value.byteLength;
       if (state.total > MAX_RESPONSE_BYTES) throw new Error("Connection response body is too large.");
       const combined = concatBytes([pending, chunk.value], pending.byteLength + chunk.value.byteLength);
-      if (containsBytes(combined, secretBytes)) {
+      if (containsBytes(combined, secretBytes) || containsJsonEncodedSecret(combined, secret)) {
         throw new Error("Connection response reflected the configured credential.");
       }
-      const safeLength = Math.max(0, combined.byteLength - secretBytes.byteLength + 1);
+      const safeLength = Math.max(0, combined.byteLength - protectedBytes + 1);
       if (safeLength > 0) yield combined.subarray(0, safeLength);
       pending = combined.slice(safeLength);
     }
