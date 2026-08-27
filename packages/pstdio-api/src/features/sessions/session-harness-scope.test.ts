@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { SessionMessage } from "pstdio-api-contracts";
+import { createEventStore } from "pstdio-api-runtime-host";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 import { getSessionMessages } from "./get-session-messages";
 import { createSessionScheduler } from "./session-scheduler";
@@ -234,7 +235,15 @@ describe("project-scoped session harness reads", () => {
       sessionQueueEntriesService: { listDispatchStarted: async () => [], remove: async () => {} },
       sessionService: {
         listByStatus: async () => [staleSession],
-        store: { get: () => null, remove: () => {}, create: () => ({ eventStore: { push: () => {} } }) },
+        store: {
+          get: () => null,
+          remove: () => {},
+          create: () => ({
+            eventStore: createEventStore(),
+            approvalService: { handleResponse: () => {}, dispose: () => {} },
+          }),
+          setSession: () => true,
+        },
         transitionStatus: async () => null,
       },
       workspaceSessionService: { getWorkspaceBySessionId: async () => null },

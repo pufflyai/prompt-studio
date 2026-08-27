@@ -89,34 +89,6 @@ describe("openReviewWorkspace", () => {
       },
     });
   });
-
-  test("opens a remote review with its canonical capability metadata", async () => {
-    const workbench = createWorkbenchCore();
-    registerWorkspaceOpener(workbench);
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-
-    await openReviewWorkspace({ workbench }, sessionView, [
-      {
-        ...localWorkspace,
-        executionKind: "remote",
-        supportsFiles: false,
-        supportsDiff: false,
-        workspacePath: null,
-      },
-    ]);
-
-    const placement = workbench.layout
-      .getLayout()
-      .regions.main.widgets.find((candidate) => candidate.contributionId === dashboardWidgetIds.workspace);
-    expect(placement?.resource?.metadata).toMatchObject({
-      workspaceExecutionKind: "remote",
-      workspaceSupportsFiles: false,
-      workspaceSupportsDiff: false,
-      workspaceSupportsArchive: true,
-      workspaceSupportsDelete: true,
-    });
-    expect(placement?.resource?.metadata).not.toHaveProperty("workspacePath");
-  });
 });
 
 describe("openSelectedWorkspace", () => {

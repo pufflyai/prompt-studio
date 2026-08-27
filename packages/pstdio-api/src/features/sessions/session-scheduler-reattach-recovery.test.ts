@@ -230,11 +230,11 @@ describe("session scheduler reattach recovery", () => {
 
     try {
       for (let attempt = 0; attempt < 120; attempt += 1) {
-        if (failedReattachSession.mock.calls.length === 3) break;
+        if (failedReattachSession.mock.calls.length >= 4) break;
         await Bun.sleep(25);
       }
 
-      expect(failedReattachSession).toHaveBeenCalledTimes(3);
+      expect(failedReattachSession.mock.calls.length).toBeGreaterThanOrEqual(4);
       expect(await recoveredApp.deps.sessionService.get(sessionId)).toMatchObject({ status: "in_progress" });
       expect(await recoveredApp.deps.sessionQueueEntriesService.listDispatchStarted()).toHaveLength(1);
       expect(recoveredApp.deps.sessionService.store.get(sessionId)).toBeNull();

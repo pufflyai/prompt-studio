@@ -360,7 +360,7 @@ describe("resolveOrphanedSessions resolution", () => {
     expect(transitionStatus).not.toHaveBeenCalled();
   });
 
-  test("keeps an orphan active when reattach fails transiently", async () => {
+  test("keeps retrying a transient reattach while the session remains active", async () => {
     const staleSession = {
       id: "session-reattach-fail",
       agent: OPENCODE_ID,
@@ -373,6 +373,13 @@ describe("resolveOrphanedSessions resolution", () => {
       eventStore: createEventStore(),
       approvalService: { handleResponse: () => {}, dispose: () => {} },
     }));
+    const controller = new AbortController();
+    let reattachAttempts = 0;
+    const reattach = mock(() => {
+      reattachAttempts += 1;
+      if (reattachAttempts === 4) controller.abort();
+      throw new Error("opencode unreachable");
+    });
 
     const deps = {
       repoService: {},
@@ -380,9 +387,7 @@ describe("resolveOrphanedSessions resolution", () => {
         createTestHarnessRecord("opencode", {
           provider: {
             capabilities: () => ["SessionReattach"],
-            reattach: () => {
-              throw new Error("opencode unreachable");
-            },
+            reattach,
           },
         }),
       ]),
@@ -405,8 +410,10 @@ describe("resolveOrphanedSessions resolution", () => {
       db: {},
     } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
 
-    await resolveOrphanedSessions(deps);
+    await resolveOrphanedSessions(deps, controller.signal);
 
+    expect(reattach).toHaveBeenCalledTimes(4);
+    expect(controller.signal.aborted).toBe(true);
     expect(transitionStatus).not.toHaveBeenCalled();
   });
 

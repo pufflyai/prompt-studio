@@ -27,11 +27,24 @@ const getDispatchStartedEntryForSession = async (deps: Deps, sessionId: string) 
 
 type OrphanedSession = Awaited<ReturnType<Deps["sessionService"]["listByStatus"]>>[number];
 
+const waitForReattachRetry = (delayMs: number, signal?: AbortSignal) =>
+  new Promise<boolean>((resolve) => {
+    const finish = (shouldRetry: boolean) => {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      resolve(shouldRetry);
+    };
+    const onAbort = () => finish(false);
+    const timer = setTimeout(() => finish(true), delayMs);
+    if (signal?.aborted) onAbort();
+    else signal?.addEventListener("abort", onAbort, { once: true });
+  });
+
 const reattachOrphanedSession = async (deps: Deps, session: OrphanedSession, signal?: AbortSignal) => {
-  const dispatchEntry = await getDispatchStartedEntryForSession(deps, session.id);
-  let lastError: unknown;
-  for (let attempt = 0; attempt < 3 && !signal?.aborted; attempt += 1) {
+  let retryDelayMs = 250;
+  while (!signal?.aborted) {
     try {
+      const dispatchEntry = await getDispatchStartedEntryForSession(deps, session.id);
       await reattachAgentSession(
         {
           sessionId: session.id,
@@ -46,48 +59,46 @@ const reattachOrphanedSession = async (deps: Deps, session: OrphanedSession, sig
       );
       return;
     } catch (error) {
-      lastError = error;
       deps.sessionService.store.remove(session.id);
-      if (attempt < 2) await Bun.sleep(250);
+      if (error instanceof WorkspaceSessionNotReadyError && !error.retryable) throw error;
+      sessionLogger.warn(
+        { err: error, event: "session.reattach.failed", retry_delay_ms: retryDelayMs, session_id: session.id },
+        "Failed to reattach orphaned session; retrying",
+      );
+      if (!(await waitForReattachRetry(retryDelayMs, signal))) return;
+      retryDelayMs = Math.min(retryDelayMs * 2, 30_000);
     }
   }
-  if (lastError) throw lastError;
+};
+
+const resolveOrphanedSession = async (deps: Deps, session: OrphanedSession, signal?: AbortSignal) => {
+  if (signal?.aborted || deps.sessionService.store.get(session.id)) return;
+
+  const harness = await getSessionHarness(deps.harnessRegistry, session);
+  const canReattach =
+    harness?.supportsReattach &&
+    (await harness.capabilities({ projectId: session.project_id ?? undefined })).includes("SessionReattach") &&
+    session.agent_session_id;
+
+  if (!canReattach) {
+    await deps.sessionService.transitionStatus(session.id, "disconnected");
+    return;
+  }
+
+  try {
+    await reattachOrphanedSession(deps, session, signal);
+  } catch (err) {
+    if (err instanceof WorkspaceSessionNotReadyError && !err.retryable) {
+      deps.sessionService.store.remove(session.id);
+      await removeDispatchStartedEntriesForSession(deps, session.id);
+      await deps.sessionService.transitionStatus(session.id, "disconnected");
+      return;
+    }
+    throw err;
+  }
 };
 
 export const resolveOrphanedSessions = async (deps: Deps, signal?: AbortSignal) => {
   const staleSessions = await deps.sessionService.listByStatus("in_progress");
-  if (staleSessions.length === 0) return;
-
-  for (const session of staleSessions) {
-    if (signal?.aborted) return;
-
-    if (deps.sessionService.store.get(session.id)) continue;
-
-    const harness = await getSessionHarness(deps.harnessRegistry, session);
-    const canReattach =
-      harness?.supportsReattach &&
-      (await harness.capabilities({ projectId: session.project_id ?? undefined })).includes("SessionReattach") &&
-      session.agent_session_id;
-
-    if (!canReattach) {
-      await deps.sessionService.transitionStatus(session.id, "disconnected");
-      continue;
-    }
-
-    try {
-      await reattachOrphanedSession(deps, session, signal);
-    } catch (err) {
-      if (err instanceof WorkspaceSessionNotReadyError && !err.retryable) {
-        deps.sessionService.store.remove(session.id);
-        await removeDispatchStartedEntriesForSession(deps, session.id);
-        await deps.sessionService.transitionStatus(session.id, "disconnected");
-        continue;
-      }
-      sessionLogger.warn(
-        { err, event: "session.reattach.failed", session_id: session.id },
-        "Failed to reattach orphaned session; leaving it active for recovery",
-      );
-      deps.sessionService.store.remove(session.id);
-    }
-  }
+  await Promise.all(staleSessions.map((session) => resolveOrphanedSession(deps, session, signal)));
 };

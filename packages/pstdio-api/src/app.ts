@@ -323,7 +323,13 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
   });
 
   const startupAbort = new AbortController();
+  const startupBackgroundTasks: Promise<void>[] = [];
   const startupDone = runStartupTasks(deps, startupAbort.signal, {
+    onBackgroundTask: (task) => {
+      startupBackgroundTasks.push(
+        task.catch((err) => apiLogger.error({ err, event: "api.startup.background.error" }, "Startup task failed")),
+      );
+    },
     recoverQueuedSessions: () => createSessionScheduler(deps).recoverQueuedSessions(),
   }).catch((err) => apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed"));
 
@@ -332,6 +338,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     closePromise ??= (async () => {
       startupAbort.abort();
       await startupDone;
+      await Promise.all(startupBackgroundTasks);
       clearInterval(notificationWakeTimer);
       unsubscribeExtensionEvents();
       extensionRuntime.dispose();

@@ -47,16 +47,23 @@ const rows: DashboardRows = {
 };
 
 describe("dashboard workspace options", () => {
-  test("carries effective paths into resources for default and worktree workspaces", () => {
+  test("carries local paths and remote capabilities into workspace resources", () => {
     const options = buildDashboardWorkspaceOptionsFromRows(rows, "project-1");
     const resources = options.map((workspace) => createDashboardWorkspaceOptionResource(workspace, "project-1"));
 
     expect(resources).toEqual([
       expect.objectContaining({ metadata: expect.objectContaining({ workspacePath: "/repo/prompt-studio" }) }),
-      expect.not.objectContaining({ metadata: expect.objectContaining({ workspacePath: expect.any(String) }) }),
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          workspaceExecutionKind: "remote",
+          workspaceSupportsFiles: false,
+          workspaceSupportsDiff: false,
+        }),
+      }),
       expect.objectContaining({
         metadata: expect.objectContaining({ workspacePath: "/repo/.pstdio/workspaces/PS-43_A1" }),
       }),
     ]);
+    expect(resources[1]?.metadata).not.toHaveProperty("workspacePath");
   });
 });

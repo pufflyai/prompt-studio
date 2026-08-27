@@ -17,6 +17,16 @@ interface StartupTaskOptions {
   recoverQueuedSessions?: () => Promise<void>;
 }
 
+const registerBackgroundTask = (task: Promise<void>, options?: StartupTaskOptions) => {
+  if (options?.onBackgroundTask) {
+    options.onBackgroundTask(task);
+    return;
+  }
+  void task.catch((err) =>
+    apiLogger.error({ err, event: "api.startup.background.error" }, "Startup background task failed"),
+  );
+};
+
 const scheduleWorkspaceRecovery = (deps: RouteDeps, projectIds: string[], signal?: AbortSignal) => {
   return Promise.allSettled(
     projectIds.map(async (projectId) => {
@@ -69,7 +79,7 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps) => {
 export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, options?: StartupTaskOptions) => {
   await ensureDefaultExtensionsInstalled(deps);
   await options?.recoverQueuedSessions?.();
-  await resolveOrphanedSessions(deps, signal);
+  registerBackgroundTask(resolveOrphanedSessions(deps, signal), options);
   await ensureProjectReposScaffolded(deps);
   await syncInstalledExtensionsForProjects({
     extensionService: deps.extensionService,
@@ -87,7 +97,5 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
     });
   }
   const projectIds = (await deps.projectService.list()).map((project) => project.id);
-  const workspaceRecovery = scheduleWorkspaceRecovery(deps, projectIds, signal);
-  options?.onBackgroundTask?.(workspaceRecovery);
-  if (!options?.onBackgroundTask) void workspaceRecovery;
+  registerBackgroundTask(scheduleWorkspaceRecovery(deps, projectIds, signal), options);
 };

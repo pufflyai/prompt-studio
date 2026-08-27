@@ -17,7 +17,7 @@ import { createWorkspacesModule } from "./module";
 
 const WORKSPACE_ID = "PS-118_A5";
 
-type WorkspaceStoryState = "diffs" | "files" | "text" | "image" | "default" | "collapsed";
+type WorkspaceStoryState = "diffs" | "files" | "text" | "image" | "default" | "collapsed" | "remote";
 
 const selectedPathForStory = (state: WorkspaceStoryState) => {
   if (state === "text" || state === "default" || state === "collapsed") return "README.md";
@@ -37,8 +37,15 @@ const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
       projectId: "prompt-studio",
       workspaceId: WORKSPACE_ID,
       workspaceShorthand: WORKSPACE_ID,
-      workspaceType: state === "default" ? "current_branch" : "worktree",
+      workspaceType: state === "default" || state === "remote" ? "current_branch" : "worktree",
       workspaceView: state === "diffs" ? "diffs" : "files",
+      ...(state === "remote"
+        ? {
+            workspaceExecutionKind: "remote",
+            workspaceSupportsFiles: false,
+            workspaceSupportsDiff: false,
+          }
+        : {}),
       ...(selectedPath ? { workspaceFilePath: selectedPath } : {}),
     },
   };
@@ -159,3 +166,5 @@ export const ImagePreview: Story = { args: { state: "image" } };
 export const DefaultWorkspace: Story = { args: { state: "default" } };
 
 export const CollapsedFilesMenu: Story = { args: { state: "collapsed" } };
+
+export const RemoteWithoutFileViews: Story = { args: { state: "remote" } };
