@@ -51,6 +51,6 @@ export const listAgentModelsHandler = (deps: AgentsRouteDeps): AppRouteHandler<t
       return c.json({ error: `Agent not found: ${agentId}` }, 404);
     }
 
-    return c.json(await harness.listModels(), 200);
+    return c.json(await harness.listModels({ projectId: project }), 200);
   };
 };

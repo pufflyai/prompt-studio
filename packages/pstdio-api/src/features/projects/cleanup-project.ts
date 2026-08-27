@@ -1,20 +1,26 @@
-import fs from "node:fs";
+import { cleanupProviderBackedWorkspace } from "../workspaces/workspace-provider-lifecycle";
+import { isBuiltInProviderId, rootProviderId } from "../workspaces/workspace-provider-service";
 import type { ProjectsRouteDeps } from "./deps";
 
 export const cleanupProjectArtifacts = async (
-  workspaceService: ProjectsRouteDeps["workspaceService"],
+  deps: ProjectsRouteDeps,
   projectId: string,
-  deps: {
+  options: {
+    deleteProviderWorkspace?: typeof cleanupProviderBackedWorkspace;
     removeProjectStorage: (projectId: string) => void;
   },
 ) => {
-  const projectWorkspaces = await workspaceService.list(projectId);
+  const projectWorkspaces = await deps.workspaceService.listForProviderReconciliation(projectId);
+  const remove = options.deleteProviderWorkspace ?? cleanupProviderBackedWorkspace;
 
   for (const ws of projectWorkspaces) {
-    if (ws.worktree_path && fs.existsSync(ws.worktree_path)) {
-      fs.rmSync(ws.worktree_path, { recursive: true, force: true });
+    if (ws.is_default || ws.provider_id === rootProviderId) continue;
+    const removedWorktree = await remove(deps, ws);
+    if (isBuiltInProviderId(ws.provider_id) && ws.worktree_path && !removedWorktree) {
+      throw new Error(`Workspace worktree could not be removed: ${ws.id}`);
     }
+    await deps.workspaceService.softDelete(ws.id);
   }
 
-  deps.removeProjectStorage(projectId);
+  options.removeProjectStorage(projectId);
 };

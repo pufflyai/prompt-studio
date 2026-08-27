@@ -4,6 +4,7 @@ import type {
   CommandInvocation,
   CommandOutcome,
   CommandSource,
+  ExtensionConnectionsApi,
   ExtensionContextBase,
   ExtensionEventsApi,
   ExtensionLoggerApi,
@@ -33,6 +34,7 @@ export interface ContextFactory {
     repo: RepoContext | undefined,
     depth: number,
     workspace?: { workspaceDir?: string; workspaceId?: string },
+    signal?: AbortSignal,
   ): CommandContext;
 }
 
@@ -51,10 +53,24 @@ interface CommandExecutionScope {
   projectId: string;
   workspaceDir?: string;
   workspaceId?: string;
+  signal?: AbortSignal;
 }
 
 const buildEventsApi = (dispatcher: EventDispatcher, extensionId: string): ExtensionEventsApi => ({
   emit: async (event, payload) => dispatcher.dispatch(refId(event, extensionId), payload as Struct),
+});
+
+const connectionsWithSignal = (connections: ExtensionConnectionsApi, signal: AbortSignal): ExtensionConnectionsApi => ({
+  request: <TBody>(connectionId: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) =>
+    connections.request<TBody>(connectionId, {
+      ...input,
+      signal: input.signal ? AbortSignal.any([signal, input.signal]) : signal,
+    }),
+  stream: (connectionId, input) =>
+    connections.stream(connectionId, {
+      ...input,
+      signal: input.signal ? AbortSignal.any([signal, input.signal]) : signal,
+    }),
 });
 
 const buildCommandsApi = (
@@ -92,6 +108,7 @@ export const createExecuteBuilder = (runRef: {
       workspaceId: scope.workspaceId,
       source: "api",
       metadata: invocation?.metadata,
+      signal: scope.signal,
       depth: scope.depth + 1,
     });
     return outcome as CommandOutcome<never>;
@@ -134,13 +151,33 @@ export const createContextFactory = (
       notify: env.notify,
       process: env.process,
       net: env.net,
+      connections: env.connections ?? {
+        request: async () => {
+          throw new Error("Extension connections are not available in this host.");
+        },
+        stream: async function* () {
+          yield await Promise.reject(new Error("Extension connections are not available in this host."));
+        },
+      },
       terminal: env.terminal,
       logger,
       settings: env.settings,
     };
   },
 
-  buildCommandContext(env, owner, commandId, invocation, invocationId, projectId, source, repo, depth, workspace) {
+  buildCommandContext(
+    env,
+    owner,
+    commandId,
+    invocation,
+    invocationId,
+    projectId,
+    source,
+    repo,
+    depth,
+    workspace,
+    signal,
+  ) {
     const base = this.buildExtensionContext(
       env,
       {
@@ -152,10 +189,25 @@ export const createContextFactory = (
       },
       depth,
     );
+    const commandSignal = signal ?? new AbortController().signal;
+    const connections = signal ? connectionsWithSignal(base.connections, signal) : base.connections;
+    const scopedEnvironment = signal ? env.withSignal?.(signal) : undefined;
     return {
       ...base,
+      commands: buildCommandsApi(createExecute, {
+        depth,
+        extensionId: owner.extensionId,
+        projectId,
+        workspaceDir: workspace?.workspaceDir,
+        workspaceId: workspace?.workspaceId,
+        signal,
+      }),
+      connections,
+      sessions: scopedEnvironment?.sessions ?? base.sessions,
+      workspaces: scopedEnvironment?.workspaces ?? base.workspaces,
       commandId,
       invocationId,
+      signal: commandSignal,
       invocation: {
         source,
         attachment: invocation.attachment,

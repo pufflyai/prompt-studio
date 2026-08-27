@@ -15,6 +15,7 @@ import {
   formatDashboardWorkspaceDiffOverview,
   getDashboardWorkspaceDiffSummaries,
 } from "@/shared/workspaces/workspace-diff-summary-data";
+import { createDashboardWorkspaceCapabilityMetadata } from "@/shared/workspaces/workspace-options";
 
 export interface DashboardWorkspaceAttributes {
   id: string;
@@ -44,6 +45,9 @@ export interface DashboardWorkspace {
   worktreePath: string | null;
   isDefault: boolean;
   setupError: string | null;
+  displayPath: string | null;
+  provider: string;
+  providerState: string;
   resource: ResourceRef;
 }
 
@@ -77,16 +81,27 @@ const createWorkspaceResourceMetadata = (input: {
   summary?: DashboardWorkspaceDiffSummary;
 }) => {
   const branch = input.workspace.branch as string | null;
-  const executionKind = input.workspace.execution_kind as string | undefined;
-  const providerState = input.workspace.provider_state as string | undefined;
+  const executionKind = input.workspace.execution_kind === "remote" ? "remote" : "local";
+  const providerState = (input.workspace.provider_state as string | undefined) ?? "ready";
   const providerError = input.workspace.provider_error_json as { message?: string } | null | undefined;
+  const providerCapabilities = input.workspace.provider_capabilities_json as
+    | { archive?: boolean; delete?: boolean; diff?: boolean; files?: "none" | "read" | "write" }
+    | undefined;
   const metadata: Record<string, unknown> = {
     workspaceId: input.workspace.id,
     ...(input.workspacePath ? { workspacePath: input.workspacePath } : {}),
     workspaceShorthand: input.workspace.workspace_shorthand as string,
     workspaceType: input.workspace.worktree_path ? "worktree" : "current_branch",
-    ...(executionKind ? { workspaceExecutionKind: executionKind } : {}),
-    ...(providerState ? { workspaceProviderState: providerState } : {}),
+    ...createDashboardWorkspaceCapabilityMetadata({
+      executionKind,
+      providerState,
+      supportsArchive: providerCapabilities?.archive === true,
+      supportsDelete: providerCapabilities?.delete === true,
+      supportsFiles: providerCapabilities ? providerCapabilities.files !== "none" : executionKind === "local",
+      supportsDiff: providerCapabilities ? providerCapabilities.diff === true : executionKind === "local",
+    }),
+    ...(input.workspace.provider_id ? { workspaceProviderId: input.workspace.provider_id } : {}),
+    ...(input.workspace.display_path ? { workspaceDisplayPath: input.workspace.display_path } : {}),
     ...(providerError?.message ? { workspaceError: providerError.message } : {}),
     // Resource-scoped action menus (header overflow, tree context menu) gate the
     // rename/archive/delete actions on this flag so the default workspace stays permanent.
@@ -139,6 +154,9 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
         worktreePath: (workspace.worktree_path as string | null) ?? null,
         isDefault: Boolean(workspace.is_default),
         setupError: (workspace.setup_error as string | null) ?? providerError?.message ?? null,
+        displayPath: (workspace.display_path as string | null) ?? null,
+        provider: (workspace.provider_id as string | undefined) ?? "pstdio.root",
+        providerState: (workspace.provider_state as string | undefined) ?? "ready",
         resource: createDashboardResource(
           "workspace",
           workspace.id,
@@ -170,7 +188,10 @@ export const toWorkspaceRow = (workspace: DashboardWorkspace): DashboardWorkspac
     isDefault: workspace.isDefault,
     created: workspace.createdAt,
     updated: workspace.updatedAt,
+    provider: workspace.provider,
+    state: workspace.providerState,
     ...(workspace.setupError ? { error: workspace.setupError } : {}),
+    ...(workspace.displayPath ? { location: workspace.displayPath } : {}),
     ...(workspace.diffOverview !== undefined
       ? {
           diffOverview: workspace.diffOverview,

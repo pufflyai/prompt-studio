@@ -1,4 +1,5 @@
 import { type AgentClient, createAgentClient } from "./agents";
+import { type AutomationClient, createAutomationClient } from "./automation";
 import { createExtensionClient, type ExtensionClient } from "./extensions";
 import { createNotificationsClient, type NotificationsClient } from "./notifications";
 import { createProjectClient, type ProjectClient } from "./projects";
@@ -19,6 +20,7 @@ export type PstdioClient = {
   templates: TemplateClient;
   skills: SkillClient;
   agents: AgentClient;
+  automation: AutomationClient;
   notifications: NotificationsClient;
   extensions: ExtensionClient;
   settings: SettingsClient;
@@ -35,6 +37,7 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
     templates: createTemplateClient(request),
     skills: createSkillClient(request),
     agents: createAgentClient(request),
+    automation: createAutomationClient(request),
     notifications: createNotificationsClient(request),
     extensions: createExtensionClient(request),
     settings: createSettingsClient(request),

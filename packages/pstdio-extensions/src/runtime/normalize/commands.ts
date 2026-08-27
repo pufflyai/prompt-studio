@@ -183,6 +183,7 @@ export const registerCommands = (
       menus: menus as RuntimeCommandRecord["menus"],
       palette: normalizeCommandPalette(command.palette),
       cli,
+      automation: command.automation === true,
       run: command.run as RuntimeCommandRecord["run"],
     };
 

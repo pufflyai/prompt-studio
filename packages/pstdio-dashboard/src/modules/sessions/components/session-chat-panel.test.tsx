@@ -5,6 +5,23 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { openReviewWorkspace, openSelectedWorkspace } from "./session-chat-panel";
 
+const localWorkspace = {
+  id: "workspace-1",
+  title: "Dashboard workbench datalayer",
+  shorthand: "PS-307_A1",
+  branch: "workspace/PS-307_A1",
+  type: "worktree" as const,
+  isDefault: false,
+  executionKind: "local" as const,
+  providerState: "ready",
+  supportsFiles: true,
+  supportsDiff: true,
+  supportsArchive: true,
+  supportsDelete: true,
+  workspacePath: "/repo/.pstdio/workspaces/PS-307_A1",
+  updatedAt: "2026-05-22T08:55:00Z",
+};
+
 const sessionView = {
   id: "session-1",
   draftKey: "session-1",
@@ -52,7 +69,7 @@ describe("openReviewWorkspace", () => {
     registerWorkspaceOpener(workbench);
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
-    await openReviewWorkspace({ workbench }, sessionView);
+    await openReviewWorkspace({ workbench }, sessionView, [localWorkspace]);
 
     const mainPlacement = workbench.layout.getLayout().regions.main.widgets.find((placement) => {
       return placement.contributionId === dashboardWidgetIds.workspace;
@@ -72,6 +89,34 @@ describe("openReviewWorkspace", () => {
       },
     });
   });
+
+  test("opens a remote review with its canonical capability metadata", async () => {
+    const workbench = createWorkbenchCore();
+    registerWorkspaceOpener(workbench);
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+
+    await openReviewWorkspace({ workbench }, sessionView, [
+      {
+        ...localWorkspace,
+        executionKind: "remote",
+        supportsFiles: false,
+        supportsDiff: false,
+        workspacePath: null,
+      },
+    ]);
+
+    const placement = workbench.layout
+      .getLayout()
+      .regions.main.widgets.find((candidate) => candidate.contributionId === dashboardWidgetIds.workspace);
+    expect(placement?.resource?.metadata).toMatchObject({
+      workspaceExecutionKind: "remote",
+      workspaceSupportsFiles: false,
+      workspaceSupportsDiff: false,
+      workspaceSupportsArchive: true,
+      workspaceSupportsDelete: true,
+    });
+    expect(placement?.resource?.metadata).not.toHaveProperty("workspacePath");
+  });
 });
 
 describe("openSelectedWorkspace", () => {
@@ -90,6 +135,12 @@ describe("openSelectedWorkspace", () => {
         branch: "workspace/PS-307_A2",
         type: "worktree",
         isDefault: false,
+        executionKind: "local",
+        providerState: "ready",
+        supportsFiles: true,
+        supportsDiff: true,
+        supportsArchive: true,
+        supportsDelete: true,
         workspacePath: "/repo/.pstdio/workspaces/PS-307_A2",
         updatedAt: "2026-05-22T08:55:00Z",
       },
@@ -111,6 +162,8 @@ describe("openSelectedWorkspace", () => {
         workspaceBranch: "workspace/PS-307_A2",
         workspaceShorthand: "PS-307_A2",
         workspaceIsDefault: false,
+        workspaceSupportsArchive: true,
+        workspaceSupportsDelete: true,
         workspacePath: "/repo/.pstdio/workspaces/PS-307_A2",
       },
     });

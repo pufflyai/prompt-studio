@@ -219,6 +219,24 @@
   "projectSettings": {
     "title": "プロジェクト設定",
     "skills": "スキル",
+    "machineTokens": {
+      "title": "マシントークン",
+      "description": "このプロジェクトの特定の自動化コマンドに、有効期限付きの認証情報を発行します。",
+      "issuedTitle": "今すぐこのトークンをコピーしてください",
+      "issuedDescription": "生のトークンは一度だけ表示され、後から復元できません。",
+      "copy": "コピー",
+      "issueTitle": "トークンを発行",
+      "name": "所有者と目的",
+      "scopes": "許可するコマンド ID",
+      "scopesHint": "自動化が有効な正確なコマンド ID を1行に1つ入力してください。",
+      "expiry": "有効日数",
+      "issue": "トークンを発行",
+      "issueFailed": "マシントークンを発行できませんでした",
+      "activeTitle": "有効なトークン",
+      "empty": "有効なマシントークンはありません。",
+      "expires": "有効期限: {{date}}",
+      "revoke": "取り消す"
+    },
     "extensionsPanel": {
       "empty": "このプロジェクトにはインストール済みの拡張機能がありません。",
       "loadError": "拡張機能の読み込みに失敗しました。",
@@ -265,6 +283,24 @@
         "cron": "cron {{cron}}",
         "stateOn": "オン",
         "stateOff": "オフ"
+      },
+      "connections": {
+        "title": "接続",
+        "description": "この拡張機能をリモートサービスに接続します。認証情報は Prompt Studio ホスト内に保持されます。",
+        "endpoint": "エンドポイント",
+        "credential": "認証情報",
+        "credentialUnchanged": "現在の認証情報を保持するには空欄にします",
+        "credentialRequired": "認証情報を入力してください",
+        "connected": "認証済み",
+        "notConnected": "未接続",
+        "lastCheckOk": "前回の確認は成功しました ({{status}})",
+        "lastCheckFailed": "前回の確認は失敗しました ({{status}})",
+        "connect": "接続",
+        "reconnect": "再接続",
+        "check": "確認",
+        "revoke": "取り消す",
+        "saved": "接続を保存しました",
+        "actionFailed": "接続操作に失敗しました"
       },
       "detail": {
         "back": "拡張機能",

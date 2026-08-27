@@ -31,6 +31,18 @@ const rows: DashboardRows = {
       created_at: "2026-06-02T10:00:00Z",
       updated_at: "2026-06-02T10:00:00Z",
     },
+    {
+      id: "workspace-remote",
+      project_id: "project-1",
+      name: "Remote workspace",
+      branch: null,
+      execution_kind: "remote",
+      worktree_path: null,
+      workspace_shorthand: "REMOTE-1",
+      is_default: false,
+      created_at: "2026-06-03T10:00:00Z",
+      updated_at: "2026-06-03T10:00:00Z",
+    },
   ],
 };
 
@@ -41,6 +53,7 @@ describe("dashboard workspace options", () => {
 
     expect(resources).toEqual([
       expect.objectContaining({ metadata: expect.objectContaining({ workspacePath: "/repo/prompt-studio" }) }),
+      expect.not.objectContaining({ metadata: expect.objectContaining({ workspacePath: expect.any(String) }) }),
       expect.objectContaining({
         metadata: expect.objectContaining({ workspacePath: "/repo/.pstdio/workspaces/PS-43_A1" }),
       }),

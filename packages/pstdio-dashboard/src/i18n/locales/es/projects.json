@@ -224,6 +224,24 @@
   "projectSettings": {
     "title": "Configuración del proyecto",
     "skills": "Habilidades",
+    "machineTokens": {
+      "title": "Tokens de máquina",
+      "description": "Emite credenciales con caducidad para comandos de automatización exactos de este proyecto.",
+      "issuedTitle": "Copia este token ahora",
+      "issuedDescription": "El token completo solo se muestra una vez y no se puede recuperar.",
+      "copy": "Copiar",
+      "issueTitle": "Emitir token",
+      "name": "Responsable y propósito",
+      "scopes": "IDs de comandos permitidos",
+      "scopesHint": "Introduce un ID de comando habilitado para automatización por línea.",
+      "expiry": "Caduca en días",
+      "issue": "Emitir token",
+      "issueFailed": "No se pudo emitir el token de máquina",
+      "activeTitle": "Tokens activos",
+      "empty": "No hay tokens de máquina activos.",
+      "expires": "Caduca el {{date}}",
+      "revoke": "Revocar"
+    },
     "extensionsPanel": {
       "empty": "No hay extensiones instaladas para este proyecto.",
       "loadError": "Error al cargar las extensiones.",
@@ -270,6 +288,24 @@
         "cron": "cron {{cron}}",
         "stateOn": "activada",
         "stateOff": "desactivada"
+      },
+      "connections": {
+        "title": "Conexiones",
+        "description": "Conecta esta extensión con sus servicios remotos. Las credenciales permanecen en el host de Prompt Studio.",
+        "endpoint": "Endpoint",
+        "credential": "Credencial",
+        "credentialUnchanged": "Déjalo vacío para conservar la credencial actual",
+        "credentialRequired": "Introduce una credencial",
+        "connected": "Autenticada",
+        "notConnected": "Sin conexión",
+        "lastCheckOk": "Última comprobación correcta ({{status}})",
+        "lastCheckFailed": "Última comprobación fallida ({{status}})",
+        "connect": "Conectar",
+        "reconnect": "Reconectar",
+        "check": "Comprobar",
+        "revoke": "Revocar",
+        "saved": "Conexión guardada",
+        "actionFailed": "Falló la acción de conexión"
       },
       "detail": {
         "back": "Extensiones",

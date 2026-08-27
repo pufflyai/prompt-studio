@@ -14,16 +14,15 @@ import { apiLogger } from "../lib/logger";
 
 interface StartupTaskOptions {
   onBackgroundTask?: (task: Promise<void>) => void;
+  recoverQueuedAutomation?: () => Promise<void>;
   recoverQueuedSessions?: () => Promise<void>;
 }
 
-const scheduleWorkspaceRecovery = (deps: RouteDeps, projectIds: string[], signal?: AbortSignal) => {
+const reconcileProjectWorkspaces = (deps: RouteDeps, projectIds: string[], signal?: AbortSignal) => {
   return Promise.allSettled(
     projectIds.map(async (projectId) => {
       if (signal?.aborted) return;
-      await reconcileProviderWorkspaces(deps, projectId, { signal });
-      if (signal?.aborted) return;
-      await provisionProjectWorkspaces(deps, projectId);
+      await reconcileProviderWorkspaces(deps, projectId, { signal, retryUntilReadyMs: 5_000 });
     }),
   )
     .then((results) => {
@@ -37,6 +36,14 @@ const scheduleWorkspaceRecovery = (deps: RouteDeps, projectIds: string[], signal
     })
     .then(() => undefined);
 };
+
+const provisionRecoveredWorkspaces = (deps: RouteDeps, projectIds: string[], signal?: AbortSignal) =>
+  Promise.allSettled(
+    projectIds.map(async (projectId) => {
+      if (signal?.aborted) return;
+      await provisionProjectWorkspaces(deps, projectId);
+    }),
+  ).then(() => undefined);
 
 const ensureDefaultExtensionsInstalled = async (deps: RouteDeps) => {
   if ((await deps.projectService.list()).length > 0) return;
@@ -68,8 +75,11 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps) => {
 
 export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, options?: StartupTaskOptions) => {
   await ensureDefaultExtensionsInstalled(deps);
+  const projectIds = (await deps.projectService.list()).map((project) => project.id);
+  await reconcileProjectWorkspaces(deps, projectIds, signal);
   await options?.recoverQueuedSessions?.();
   await resolveOrphanedSessions(deps, signal);
+  await options?.recoverQueuedAutomation?.();
   await ensureProjectReposScaffolded(deps);
   await syncInstalledExtensionsForProjects({
     extensionService: deps.extensionService,
@@ -86,8 +96,7 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
       repoService: deps.repoService,
     });
   }
-  const projectIds = (await deps.projectService.list()).map((project) => project.id);
-  const workspaceRecovery = scheduleWorkspaceRecovery(deps, projectIds, signal);
-  options?.onBackgroundTask?.(workspaceRecovery);
-  if (!options?.onBackgroundTask) void workspaceRecovery;
+  const workspaceProvisioning = provisionRecoveredWorkspaces(deps, projectIds, signal);
+  options?.onBackgroundTask?.(workspaceProvisioning);
+  if (!options?.onBackgroundTask) void workspaceProvisioning;
 };

@@ -34,6 +34,7 @@ export type RegistryIndex = {
 export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Accumulator => ({
   extensions: [],
   commands: [],
+  connections: [],
   privateHandlers: [],
   middlewares: [],
   hooks: [],

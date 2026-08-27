@@ -9,5 +9,6 @@ export const toCommandRecord = (command: RuntimeCommandRecord): ExtensionCommand
   cliPath: command.cli?.pathKey,
   cliAliases: command.cli?.globalAliases?.map((alias) => alias.join(" ")),
   examples: command.cli?.examples,
+  automation: command.automation,
   params: command.params as ExtensionCommandRecord["params"],
 });

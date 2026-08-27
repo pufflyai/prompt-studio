@@ -1,6 +1,6 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { AppRouteHandler } from "../../../types";
-import type { ProjectExtensionLifecycleRouteDeps } from "../project-extension-lifecycle";
+import { ExtensionProviderInUseError, type ProjectExtensionLifecycleRouteDeps } from "../project-extension-lifecycle";
 
 const errorSchema = z.object({ error: z.string() });
 
@@ -32,6 +32,10 @@ export const uninstallProjectExtensionRoute = createRoute({
       description: "Extension instance not found for project.",
       content: { "application/json": { schema: errorSchema } },
     },
+    409: {
+      description: "Extension still owns provider-backed workspaces.",
+      content: { "application/json": { schema: errorSchema } },
+    },
   },
 });
 
@@ -42,7 +46,13 @@ export const uninstallProjectExtensionHandler = (
     const { projectId, instanceId } = c.req.valid("param");
     const deleteUserData = c.req.valid("query").deleteUserData === "true";
 
-    const removed = await deps.projectExtensionLifecycle.uninstall({ projectId, instanceId, deleteUserData });
+    let removed: Awaited<ReturnType<typeof deps.projectExtensionLifecycle.uninstall>>;
+    try {
+      removed = await deps.projectExtensionLifecycle.uninstall({ projectId, instanceId, deleteUserData });
+    } catch (error) {
+      if (error instanceof ExtensionProviderInUseError) return c.json({ error: error.message }, 409);
+      throw error;
+    }
     if (!removed) return c.json({ error: `Extension instance not found: ${instanceId}` }, 404);
     return c.body(null, 204);
   };

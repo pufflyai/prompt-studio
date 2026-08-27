@@ -1,56 +1,44 @@
 import type {
-  ActivityItemContribution,
   CommandMiddlewareHandler,
   CommandPaletteContribution,
-  CommandPaletteResourceContribution,
   CommandRunHandler,
+  ExtensionConnectionContribution,
   ExtensionDefinition,
-  ExtensionSettingProperty,
   ExtensionSourceKind,
-  FileIconThemeContribution,
   HarnessProvider,
   HookDefinition,
   JsonObject,
-  KeybindingContribution,
   Localizable,
   MenuContribution,
-  ModeContribution,
-  NavigationItemContribution,
   ParamObjectSchema,
-  PlacementContribution,
   RendererCallback,
-  ResourceHierarchyProvider,
-  ResourceKindDefinition,
-  ResourceViewContribution,
-  SettingsPanelContribution,
-  SettingsSectionContribution,
-  SkillContribution,
-  StatusBarItemContribution,
-  StatusContribution,
-  TemplateContribution,
-  TemplateTypeContribution,
-  ThemeContribution,
-  ThemeMode,
-  ViewContribution,
-  ViewMenuContribution,
-  WhenExpression,
   WorkspaceTypeProvider,
 } from "@pstdio/sdk/extensions";
+import type {
+  RuntimeActivityItemRecord,
+  RuntimeCommandPaletteResourceRecord,
+  RuntimeExtensionSettingRecord,
+  RuntimeFileIconThemeRecord,
+  RuntimeKeybindingRecord,
+  RuntimeModeRecord,
+  RuntimeNavigationItemRecord,
+  RuntimePlacementRecord,
+  RuntimeResourceHierarchyProviderRecord,
+  RuntimeResourceKindRecord,
+  RuntimeResourceViewRecord,
+  RuntimeSettingsPanelRecord,
+  RuntimeSettingsSectionRecord,
+  RuntimeSkillRecord,
+  RuntimeStatusBarItemRecord,
+  RuntimeStatusRecord,
+  RuntimeTemplateRecord,
+  RuntimeTemplateTypeRecord,
+  RuntimeThemeRecord,
+  RuntimeViewMenuRecord,
+  RuntimeViewRecord,
+} from "./runtime-ui";
 
-export type ThemePreferenceTokens = Record<string, string>;
-
-export interface RuntimeThemePreference {
-  id: string;
-  mode: ThemeMode;
-  tokens: ThemePreferenceTokens;
-}
-
-export interface RuntimeMonacoTheme {
-  base: "vs" | "vs-dark";
-  inherit: true;
-  rules: { token: string; foreground?: string; fontStyle?: string }[];
-  colors: Record<string, string>;
-}
+export * from "./runtime-ui";
 
 export interface NormalizedExtension {
   /** Derived `${publisher}.${name}` from the package manifest. */
@@ -96,8 +84,18 @@ export interface RuntimeCommandRecord {
   menus: MenuContribution[];
   palette: CommandPaletteContribution[];
   cli?: RuntimeCliContribution;
+  automation: boolean;
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with extension-specific params
   run: CommandRunHandler<any, any>;
+}
+
+export interface RuntimeConnectionRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: ExtensionConnectionContribution;
 }
 
 export interface RuntimePrivateHandlerRecord {
@@ -164,240 +162,6 @@ export interface RuntimeScheduleRecord {
   disabled?: boolean;
 }
 
-export interface RuntimeViewRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: ViewContribution;
-}
-
-export interface RuntimeViewMenuRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: ViewMenuContribution;
-}
-
-export interface RuntimePlacementRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: PlacementContribution;
-}
-
-export interface RuntimeNavigationItemRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: NavigationItemContribution;
-}
-
-export interface RuntimeStatusBarItemRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: StatusBarItemContribution;
-}
-
-export interface RuntimeStatusRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: StatusContribution;
-}
-
-export interface RuntimeResourceKindRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: Omit<ResourceKindDefinition, "slots"> & {
-    slots: Record<string, { cardinality: "one" | "many"; external: boolean }>;
-  };
-}
-
-export interface RuntimeResourceViewRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  resourceKindId: string;
-  viewId: string;
-  slotId: string;
-  contribution: ResourceViewContribution;
-}
-
-export interface RuntimeResourceHierarchyProviderRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  resourceKindId: string;
-  provider: ResourceHierarchyProvider;
-}
-
-export interface RuntimeActivityItemRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: ActivityItemContribution;
-}
-
-export interface RuntimeModeRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: ModeContribution;
-}
-
-export interface RuntimeSettingsPanelRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: SettingsPanelContribution;
-}
-
-export interface RuntimeSettingsSectionRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: SettingsSectionContribution;
-}
-
-export interface RuntimeCommandPaletteResourceRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: CommandPaletteResourceContribution;
-}
-
-export interface ParsedKeybindingChord {
-  key: string;
-  ctrl: boolean;
-  shift: boolean;
-  alt: boolean;
-  meta: boolean;
-  modifiers: string[];
-}
-
-export interface RuntimeKeybindingRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  commandId: string;
-  contribution: KeybindingContribution;
-  /**
-   * Platform-independent canonical chord string produced by TanStack's
-   * `normalizeHotkey(input, "mac")`. Two contributions with the same
-   * canonical chord and `when` predicate collide.
-   */
-  canonicalChord: string;
-  parsed: ParsedKeybindingChord;
-  when?: WhenExpression;
-}
-
-export interface RuntimeExtensionSettingRecord {
-  id: string;
-  key: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: ExtensionSettingProperty;
-}
-
-export interface RuntimeTemplateTypeRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: TemplateTypeContribution;
-}
-
-export interface RuntimeTemplateRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: TemplateContribution;
-}
-
-export interface RuntimeSkillRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  contribution: SkillContribution;
-}
-
-export interface RuntimeThemeRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  title: Localizable<string>;
-  description?: Localizable<string>;
-  format: ThemeContribution["format"];
-  mode: ThemeMode;
-  source: ThemeContribution["source"];
-  preference: RuntimeThemePreference;
-  monacoTheme: RuntimeMonacoTheme;
-}
-
-export interface RuntimeFileIconThemeFont {
-  fontFamily: string;
-  src: { url: string; format?: string }[];
-  weight?: string;
-  style?: string;
-}
-
-export interface RuntimeFileIconThemeRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  title: Localizable<string>;
-  description?: Localizable<string>;
-  format: FileIconThemeContribution["format"];
-  source: FileIconThemeContribution["source"];
-  definitions: Record<string, unknown>;
-  fileExtensions: Record<string, string>;
-  fileNames: Record<string, string>;
-  defaults: { file?: string; folder?: string };
-  fonts: RuntimeFileIconThemeFont[];
-}
-
 export interface RuntimeHarnessRecord {
   /** Composed `${extensionId}.${localId}`. */
   id: string;
@@ -438,6 +202,7 @@ export interface ExtensionDiagnostic {
 export interface ExtensionRuntime {
   extensions: NormalizedExtension[];
   commands: RuntimeCommandRecord[];
+  connections: RuntimeConnectionRecord[];
   privateHandlers: RuntimePrivateHandlerRecord[];
   middlewares: RuntimeMiddlewareRecord[];
   hooks: RuntimeHookRecord[];

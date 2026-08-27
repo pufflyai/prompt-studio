@@ -15,6 +15,8 @@ export type ProjectExtensionLifecycleRouteDeps = ExtensionsRouteDeps & {
   projectExtensionLifecycle: ProjectExtensionLifecycle;
 };
 
+export class ExtensionProviderInUseError extends Error {}
+
 export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
   const changesWorkspaceProvisioning = (
     installedSource: Awaited<ReturnType<LifecycleDeps["extensionService"]["getInstalledSource"]>>,
@@ -98,6 +100,18 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     const existing = await deps.extensionService.getProjectExtensionInstance(input.projectId, input.instanceId);
     if (!existing) return null;
     const requiresProvisioning = await changesWorkspaceProvisioning(existing.installedSource);
+    const providerPrefix = `${existing.installedSource.extension_id}.workspace-type.`;
+    const providerWorkspaces = (await deps.workspaceService.listForProviderReconciliation(input.projectId)).filter(
+      (workspace) => workspace.provider_id.startsWith(providerPrefix),
+    );
+    if (providerWorkspaces.length > 0) {
+      throw new ExtensionProviderInUseError(
+        `Extension still owns ${providerWorkspaces.length} provider-backed workspace(s). Delete them before uninstalling.`,
+      );
+    }
+    if (input.deleteUserData) {
+      await deps.extensionConnectionService.removeExtension(input.projectId, existing.installedSource.extension_id);
+    }
 
     const result = await deps.extensionService.uninstallProjectExtension(input);
     if (!result) return null;

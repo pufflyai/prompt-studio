@@ -53,6 +53,8 @@ export interface WorkspaceProviderCreateInput {
   projectId: string;
   workspaceId: string;
   params: JsonObject;
+  /** Host-owned cancellation for the workspace creation request. */
+  signal?: AbortSignal;
 }
 
 export interface WorkspaceProviderResolveInput {
@@ -128,6 +130,8 @@ export interface CommandDefinition<
   menus?: readonly MenuContribution[];
   palette?: readonly CommandPaletteContribution<SchemaParams<TSchema>>[];
   cli?: true | CliContribution;
+  /** Exposes this exact command and its params schema to scoped machine tokens. */
+  automation?: true;
   run: CommandRunHandler<SchemaParams<TSchema>, TResult, TSettings>;
 }
 
@@ -171,6 +175,19 @@ export interface WorkspaceTypeProvider extends ContributionDefinition<"workspace
   cancel?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<WorkspaceProviderResult>;
   archive?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<WorkspaceProviderResult>;
   delete?(ctx: ExtensionContextBase, input: WorkspaceProviderMutationInput): MaybePromise<void>;
+}
+
+export interface ExtensionConnectionContribution extends ContributionDefinition<"connection"> {
+  label: Localizable<string>;
+  transport: "http";
+  auth: { type: "bearer" } | { type: "header"; headerName: string };
+  allowedMethods: readonly ("GET" | "POST" | "PUT" | "PATCH" | "DELETE")[];
+  allowedPathPrefixes: readonly string[];
+  check?: {
+    method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+    path: string;
+  };
+  supportsStreaming?: boolean;
 }
 
 export interface LocalExtensionSource {
@@ -253,6 +270,7 @@ export interface AssetContributions {
 
 /** Provider contributions: harnesses, workspace types. */
 export interface ProviderContributions {
+  connections?: readonly ExtensionConnectionContribution[];
   workspaceTypes?: readonly WorkspaceTypeProvider[];
   harnesses?: readonly HarnessProvider[];
   resourceHierarchyProviders?: readonly ResourceHierarchyProvider[];

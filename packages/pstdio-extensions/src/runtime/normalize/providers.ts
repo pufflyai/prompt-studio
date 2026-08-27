@@ -1,5 +1,10 @@
-import type { HarnessProvider, WorkspaceTypeProvider } from "@pstdio/sdk/extensions";
-import type { NormalizedExtension, RuntimeHarnessRecord, RuntimeWorkspaceTypeRecord } from "../../types/runtime";
+import type { ExtensionConnectionContribution, HarnessProvider, WorkspaceTypeProvider } from "@pstdio/sdk/extensions";
+import type {
+  NormalizedExtension,
+  RuntimeConnectionRecord,
+  RuntimeHarnessRecord,
+  RuntimeWorkspaceTypeRecord,
+} from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
@@ -47,7 +52,27 @@ const normalizeHarnessParams = (schema: unknown) => {
   return { params, invalidParams };
 };
 
-export const registerProviders = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
+const registerConnections = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
+  const connections = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "connection",
+    contributions: contributionArray<ExtensionConnectionContribution>(source.definition.connections),
+  });
+  for (const connection of connections) {
+    if (!isRecord(connection) || typeof connection.id !== "string" || !isLocalizableString(connection.label)) continue;
+    if (connection.transport !== "http") continue;
+    if (!Array.isArray(connection.allowedMethods) || !Array.isArray(connection.allowedPathPrefixes)) continue;
+    const record: RuntimeConnectionRecord = {
+      ...contributionRecordBase(ext, source, "connection", connection.id),
+      contribution: connection as RuntimeConnectionRecord["contribution"],
+    };
+    runtime.connections.push(record);
+  }
+};
+
+const registerHarnesses = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   const harnesses = uniqueContributions({
     ext,
     source,
@@ -83,7 +108,9 @@ export const registerProviders = (ext: NormalizedExtension, source: LoadedExtens
     };
     runtime.harnesses.push(record);
   }
+};
 
+const registerWorkspaceTypes = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   const workspaceTypes = uniqueContributions({
     ext,
     source,
@@ -100,4 +127,10 @@ export const registerProviders = (ext: NormalizedExtension, source: LoadedExtens
     };
     runtime.workspaceTypes.push(record);
   }
+};
+
+export const registerProviders = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
+  registerConnections(ext, source, runtime);
+  registerHarnesses(ext, source, runtime);
+  registerWorkspaceTypes(ext, source, runtime);
 };

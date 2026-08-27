@@ -13,6 +13,7 @@ import {
   localizableStringSchema,
   workbenchExtensionWebviewSchema,
 } from "./common";
+import { workbenchExtensionConnectionRecordSchema } from "./connections";
 import { extensionControlsRendererRecordSchema } from "./controls-renderer";
 import { extensionDataTableRendererRecordSchema } from "./data-table-renderer";
 import { extensionResourceRefSchema } from "./execute";
@@ -291,6 +292,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   keybindings: z.array(extensionKeybindingRecordSchema).optional(),
   settingsDefinitions: z.array(extensionSettingDefinitionRecordSchema).optional(),
   automations: z.array(workbenchExtensionAutomationRecordSchema).optional(),
+  connections: z.array(workbenchExtensionConnectionRecordSchema).optional(),
   harnesses: z
     .array(
       z.object({

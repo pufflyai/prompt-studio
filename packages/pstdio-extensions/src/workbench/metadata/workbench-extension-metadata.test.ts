@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  defineConnection,
   defineExtension,
   defineMode,
   defineNavigationItem,
@@ -28,6 +29,32 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
 });
 
 describe("createWorkbenchExtensionMetadata", () => {
+  test("publishes named connection settings metadata without credentials", () => {
+    const connection = defineConnection({
+      id: "control-plane",
+      label: "Control plane",
+      transport: "http",
+      auth: { type: "bearer" },
+      allowedMethods: ["GET"],
+      allowedPathPrefixes: ["/v1/workspaces"],
+      check: { method: "GET", path: "/v1/workspaces/health" },
+    });
+    const runtime = normalizeExtensionSources([source(defineExtension({ connections: [connection] }))]);
+
+    const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
+
+    expect(metadata.connections).toEqual([
+      {
+        id: "pstdio.lab.connection.control-plane",
+        localId: "control-plane",
+        extensionId: "pstdio.lab",
+        label: "Control plane",
+        authType: "bearer",
+        supportsCheck: true,
+      },
+    ]);
+  });
+
   test("publishes alpha.4 view, placement, and navigation arrays without renderer records", () => {
     const mode = defineMode({ id: "review", label: "Review" });
     const view = defineView({

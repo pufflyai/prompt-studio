@@ -31,7 +31,7 @@ const createSessionService = () => {
         return entry;
       }),
       get: mock((id: string) => storeEntries.get(id) ?? null),
-      setSession: mock(() => {}),
+      setSession: mock(() => true),
       remove: mock(() => {}),
     },
   };

@@ -20,7 +20,7 @@ const renderWorkspaceDiffOverview = (_value: unknown, row: KanbanRendererRow) =>
   return createElement(DiffBubble, { additions, deletions, variant: "ghost", size: "small", fileName: undefined });
 };
 
-const workspaceAttributes: AttributeDescriptor[] = [
+export const workspaceAttributes: AttributeDescriptor[] = [
   { id: "id", label: "Attempt", type: { kind: "string" }, displayable: true },
   {
     id: "type",
@@ -39,6 +39,36 @@ const workspaceAttributes: AttributeDescriptor[] = [
   { id: "created", label: "Created", type: { kind: "date" }, sortable: true, displayable: true },
   { id: "updated", label: "Updated", type: { kind: "date" }, sortable: true, displayable: true },
   {
+    id: "provider",
+    label: "Provider",
+    type: { kind: "string" },
+    filterable: true,
+    groupable: true,
+    displayable: true,
+  },
+  {
+    id: "state",
+    label: "State",
+    type: {
+      kind: "enum",
+      options: [
+        { value: "provisioning", label: "Provisioning", color: "blue" },
+        { value: "ready", label: "Ready", color: "green" },
+        { value: "failed", label: "Failed", color: "red" },
+        { value: "cancelled", label: "Cancelled", color: "gray" },
+        { value: "archiving", label: "Archiving", color: "orange" },
+        { value: "archived", label: "Archived", color: "gray" },
+        { value: "deleting", label: "Deleting", color: "orange" },
+        { value: "provider_missing", label: "Provider missing", color: "red" },
+      ],
+    },
+    filterable: true,
+    groupable: true,
+    displayable: true,
+  },
+  { id: "location", label: "Location", type: { kind: "string" }, displayable: true },
+  { id: "error", label: "Provider error", type: { kind: "string" }, displayable: true },
+  {
     id: "diffOverview",
     label: "Diff",
     type: { kind: "string" },
@@ -47,12 +77,12 @@ const workspaceAttributes: AttributeDescriptor[] = [
   },
 ];
 
-const workspaceDefaultSettings: Partial<KanbanRendererSettings> = {
+export const workspaceDefaultSettings: Partial<KanbanRendererSettings> = {
   viewMode: "list",
   columnGrouping: "none",
   rowGrouping: "none",
   ordering: { attributeId: "created", direction: "asc" },
-  displayProperties: ["id", "type", "diffOverview"],
+  displayProperties: ["id", "type", "provider", "state", "location", "error", "diffOverview"],
 };
 
 const subscribeWorkspaceData = (ctx: WorkbenchModuleContext, listener: () => void) => {

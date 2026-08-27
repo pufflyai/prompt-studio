@@ -300,6 +300,24 @@
         "stateOn": "on",
         "stateOff": "off"
       },
+      "connections": {
+        "title": "Connections",
+        "description": "Connect this extension to its remote services. Credentials stay in the Prompt Studio host.",
+        "endpoint": "Endpoint",
+        "credential": "Credential",
+        "credentialUnchanged": "Leave blank to keep the current credential",
+        "credentialRequired": "Enter a credential",
+        "connected": "Authenticated",
+        "notConnected": "Not connected",
+        "lastCheckOk": "Last check passed ({{status}})",
+        "lastCheckFailed": "Last check failed ({{status}})",
+        "connect": "Connect",
+        "reconnect": "Reconnect",
+        "check": "Check",
+        "revoke": "Revoke",
+        "saved": "Connection saved",
+        "actionFailed": "Connection action failed"
+      },
       "detail": {
         "back": "Extensions",
         "tabs": {
@@ -338,6 +356,24 @@
         "deleteDataLabel": "Also delete this extension's data (cannot be undone)",
         "button": "Delete"
       }
+    },
+    "machineTokens": {
+      "title": "Machine tokens",
+      "description": "Issue expiring credentials for exact automation commands in this project.",
+      "issuedTitle": "Copy this token now",
+      "issuedDescription": "The raw token is shown once and cannot be recovered later.",
+      "copy": "Copy",
+      "issueTitle": "Issue token",
+      "name": "Owner and purpose",
+      "scopes": "Allowed command IDs",
+      "scopesHint": "Enter one exact automation-enabled command ID per line.",
+      "expiry": "Expires in days",
+      "issue": "Issue token",
+      "issueFailed": "Failed to issue machine token",
+      "activeTitle": "Active tokens",
+      "empty": "No active machine tokens.",
+      "expires": "Expires {{date}}",
+      "revoke": "Revoke"
     }
   },
   "list": {

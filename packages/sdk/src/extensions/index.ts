@@ -55,6 +55,7 @@ export {
   defineActivityItem,
   defineArtifactMount,
   defineCommandPaletteResource,
+  defineConnection,
   defineFileIconTheme,
   defineHarness,
   defineKeybinding,

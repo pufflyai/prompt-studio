@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { ExtensionConnectionRequest, ExtensionConnectionsApi } from "pstdio-api-contracts/extension-kernel";
 import type { HarnessRegistry } from "pstdio-api-runtime-host";
 import { createHarnessRegistry } from "pstdio-api-runtime-host";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
@@ -21,6 +22,14 @@ const buildFakeRegistry = (records: RuntimeHarnessRecord[]): HarnessRegistry =>
       spawnDetached: async () => ({}),
     },
     net: { findFreePort: async () => 0 },
+    connections: {
+      request: async () => {
+        throw new Error("No test connection configured.");
+      },
+      stream: async function* () {
+        yield await Promise.reject(new Error("No test connection configured."));
+      },
+    },
     logger: { info: () => {}, warn: () => {}, error: () => {} },
   }));
 
@@ -47,6 +56,7 @@ const makeService = (opts: {
   build?: (input: { paths: Map<string, string> }) => Promise<HarnessRegistry>;
   now?: () => number;
   detectCacheTtlMs?: number;
+  createConnectionsApi?: Parameters<typeof createHarnessRegistryService>[0]["createConnectionsApi"];
 }) =>
   createHarnessRegistryService({
     installedExtensionSourcesService: { list: async () => opts.installedSources?.() ?? [] } as never,
@@ -55,6 +65,7 @@ const makeService = (opts: {
     installDefaultExtensions: (async () => {}) as never,
     now: opts.now,
     detectCacheTtlMs: opts.detectCacheTtlMs,
+    createConnectionsApi: opts.createConnectionsApi,
   });
 
 const SCOPE = { projectId: "p1" };
@@ -131,6 +142,35 @@ describe("harness registry host-scope caching", () => {
 });
 
 describe("harness registry project scope", () => {
+  test("gives a project harness only its host-managed connection client", async () => {
+    const request = mock(async (_connectionId: string, _input: ExtensionConnectionRequest) => ({
+      status: 200,
+      headers: {},
+      body: { id: "remote-1" },
+    }));
+    const start = mock(async (ctx: { connections: ExtensionConnectionsApi }) => {
+      await ctx.connections.request("control-plane", { method: "POST", path: "/v1/workspaces" });
+      return { done: Promise.resolve({ status: "completed" as const }), stop: () => {} };
+    });
+    const service = makeService({
+      snapshot: () => fakeSnapshot(1, [createTestHarnessRecord("remote", { provider: { start } as never })]),
+      createConnectionsApi: () => ({
+        request: request as unknown as ExtensionConnectionsApi["request"],
+        stream: async function* () {
+          yield { type: "end" as const };
+        },
+      }),
+    });
+
+    const harness = await service.get(testHarnessId("remote"), SCOPE);
+    await harness?.start({ prompt: "run", sessionId: "session-1", events: { push: () => {} } }, SCOPE);
+
+    expect(request).toHaveBeenCalledWith("control-plane", {
+      method: "POST",
+      path: "/v1/workspaces",
+    });
+  });
+
   test("builds handles from the project's runtime snapshot", async () => {
     const service = makeService({
       snapshot: () => fakeSnapshot(1, [createTestHarnessRecord("fake")]),

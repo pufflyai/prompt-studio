@@ -219,6 +219,24 @@
   "projectSettings": {
     "title": "프로젝트 설정",
     "skills": "스킬",
+    "machineTokens": {
+      "title": "머신 토큰",
+      "description": "이 프로젝트의 정확한 자동화 명령에 만료되는 자격 증명을 발급합니다.",
+      "issuedTitle": "지금 이 토큰을 복사하세요",
+      "issuedDescription": "원본 토큰은 한 번만 표시되며 나중에 복구할 수 없습니다.",
+      "copy": "복사",
+      "issueTitle": "토큰 발급",
+      "name": "소유자 및 용도",
+      "scopes": "허용된 명령 ID",
+      "scopesHint": "자동화가 활성화된 정확한 명령 ID를 한 줄에 하나씩 입력하세요.",
+      "expiry": "만료 일수",
+      "issue": "토큰 발급",
+      "issueFailed": "머신 토큰을 발급하지 못했습니다",
+      "activeTitle": "활성 토큰",
+      "empty": "활성 머신 토큰이 없습니다.",
+      "expires": "{{date}} 만료",
+      "revoke": "폐기"
+    },
     "extensionsPanel": {
       "empty": "이 프로젝트에 설치된 확장이 없습니다.",
       "loadError": "확장을 불러오지 못했습니다.",
@@ -265,6 +283,24 @@
         "cron": "cron {{cron}}",
         "stateOn": "켜짐",
         "stateOff": "꺼짐"
+      },
+      "connections": {
+        "title": "연결",
+        "description": "이 확장 프로그램을 원격 서비스에 연결합니다. 자격 증명은 Prompt Studio 호스트에 유지됩니다.",
+        "endpoint": "엔드포인트",
+        "credential": "자격 증명",
+        "credentialUnchanged": "현재 자격 증명을 유지하려면 비워 두세요",
+        "credentialRequired": "자격 증명을 입력하세요",
+        "connected": "인증됨",
+        "notConnected": "연결되지 않음",
+        "lastCheckOk": "마지막 확인 성공 ({{status}})",
+        "lastCheckFailed": "마지막 확인 실패 ({{status}})",
+        "connect": "연결",
+        "reconnect": "다시 연결",
+        "check": "확인",
+        "revoke": "폐기",
+        "saved": "연결을 저장했습니다",
+        "actionFailed": "연결 작업에 실패했습니다"
       },
       "detail": {
         "back": "확장",

@@ -48,7 +48,9 @@ describe("registerWorkspaceResourceActions", () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
+      workspaceExecutionKind: "local",
       workspacePath: "/repo/.pstdio/workspaces/PS-307_A1",
+      workspaceProviderState: "ready",
       workspaceShorthand: "PS-307_A1",
       workspaceType: "worktree",
     });
@@ -91,7 +93,9 @@ describe("registerWorkspaceResourceActions", () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
+      workspaceExecutionKind: "local",
       workspacePath: "/repo/.pstdio/workspaces/PS-307_A1",
+      workspaceProviderState: "ready",
       workspaceShorthand: "PS-307_A1",
       workspaceType: "worktree",
     });
@@ -115,14 +119,18 @@ describe("registerWorkspaceResourceActions", () => {
     const workbench = createWorkbenchCore();
     const defaultWorkspace = createDashboardResource("workspace", "default", "project", "GitBranch", "project-1", {
       workspaceId: "default",
+      workspaceExecutionKind: "local",
       workspaceIsDefault: true,
+      workspaceProviderState: "ready",
       workspaceShorthand: "default",
       workspaceType: "current_branch",
     });
     const worktreeWorkspace = createDashboardResource("workspace", "workspace-1", "WS-1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
+      workspaceExecutionKind: "local",
       workspaceIsDefault: false,
       workspacePath: "/repo/.pstdio/workspaces/WS-1",
+      workspaceProviderState: "ready",
       workspaceShorthand: "WS-1",
       workspaceType: "worktree",
     });

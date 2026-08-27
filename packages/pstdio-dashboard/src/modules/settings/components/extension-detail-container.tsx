@@ -144,6 +144,7 @@ export const ExtensionDetailContainer = (props: ExtensionDetailContainerProps) =
   return (
     <>
       <ExtensionDetail
+        projectId={projectId}
         extension={extension}
         metadata={contributions}
         automations={automations}

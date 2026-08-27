@@ -82,8 +82,8 @@ export const createSessionService = (deps: SessionServiceDeps) => {
       }
     }
 
-    const entry = store.get(id);
-    void Promise.resolve(entry?.session?.stop()).catch(() => {});
+    const entry = store.markCancellationRequested(id);
+    await entry?.session?.stop();
 
     const updated = await transitionStatus(id, "cancelled");
     if (updated) {

@@ -4,6 +4,7 @@ import { buildDiff, emitActivityEvent } from "../../activity/activity-events";
 import { archiveWorkspaceCascade } from "../archive-workspace-cascade";
 import type { WorkspacesRouteDeps } from "../deps";
 import { notFoundResponseSchema, workspaceResponseSchema } from "../dto";
+import { assertWorkspaceArchiveAllowed } from "../workspace-provider-lifecycle";
 
 export const archiveWorkspaceRoute = createRoute({
   method: "post",
@@ -46,8 +47,10 @@ export const archiveWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHand
     if (workspace.archived) {
       return c.json({ error: `Workspace already archived: ${id}` }, 409);
     }
-    if (!workspace.provider_capabilities_json.archive) {
-      return c.json({ error: "Workspace provider does not allow archiving." }, 409);
+    try {
+      assertWorkspaceArchiveAllowed(workspace);
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : String(error) }, 409);
     }
 
     const updated = await archiveWorkspaceCascade(deps, workspace);

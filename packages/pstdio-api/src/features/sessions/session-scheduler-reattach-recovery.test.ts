@@ -167,7 +167,7 @@ describe("session scheduler reattach recovery", () => {
     }
   });
 
-  test("cleans dispatch-started attachment rows when reattach fails", async () => {
+  test("preserves dispatch-started attachments when transient reattach retries fail", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-reattach-failure-cleanup-test-"));
     const dbPath = join(tempRoot, "db");
     const storagePath = join(tempRoot, "storage");
@@ -233,20 +233,20 @@ describe("session scheduler reattach recovery", () => {
     });
 
     try {
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        const session = await recoveredApp.deps.sessionService.get(sessionId);
-        if (session?.status === "disconnected") break;
+      for (let attempt = 0; attempt < 120; attempt += 1) {
+        if (failedReattachSession.mock.calls.length === 3) break;
         await Bun.sleep(25);
       }
 
-      expect(failedReattachSession).toHaveBeenCalledTimes(1);
-      expect(await recoveredApp.deps.sessionQueueEntriesService.listDispatchStarted()).toEqual([]);
+      expect(failedReattachSession).toHaveBeenCalledTimes(3);
+      expect(await recoveredApp.deps.sessionService.get(sessionId)).toMatchObject({ status: "in_progress" });
+      expect(await recoveredApp.deps.sessionQueueEntriesService.listDispatchStarted()).toHaveLength(1);
       expect(recoveredApp.deps.sessionService.store.get(sessionId)).toBeNull();
 
       const deleteRes = await recoveredApp.app.request(`/v1/projects/${projectId}/session-attachments/${fileId}`, {
         method: "DELETE",
       });
-      expect(deleteRes.status).toBe(204);
+      expect(deleteRes.status).toBe(409);
     } finally {
       await recoveredApp.close();
       rmSync(tempRoot, { recursive: true, force: true });

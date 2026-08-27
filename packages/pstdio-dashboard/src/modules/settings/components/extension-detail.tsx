@@ -20,10 +20,12 @@ import {
 import { useTranslation } from "react-i18next";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import type { DashboardExtensionMetadata } from "@/shared/extensions/types";
+import { ExtensionConnectionsCard } from "./extension-connections-card";
 import { ExtensionContributions } from "./extension-contributions";
 import { settingsToParams, settingsToValues } from "./extension-settings-params";
 
 export interface ExtensionDetailProps {
+  projectId?: string;
   extension: ProjectExtensionInstance;
   metadata: DashboardExtensionMetadata | undefined;
   automations: WorkbenchExtensionAutomationRecord[];
@@ -55,6 +57,7 @@ const errorText = (error: Record<string, unknown> | null | undefined, key: "code
 export const ExtensionDetail = (props: ExtensionDetailProps) => {
   const {
     extension,
+    projectId,
     metadata,
     automations,
     diagnostics,
@@ -246,6 +249,10 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
                   icon={<SlidersHorizontal />}
                 />
               )}
+
+              {projectId && metadata?.connections?.length ? (
+                <ExtensionConnectionsCard projectId={projectId} definitions={metadata.connections} />
+              ) : null}
 
               {automations.length > 0 && (
                 <Stack gap="2xs">

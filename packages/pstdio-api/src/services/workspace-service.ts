@@ -89,6 +89,9 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
   const updateProviderProjection = async (id: string, patch: Parameters<typeof raw.updateProviderProjection>[1]) =>
     emitOrLog("set", id, await raw.updateProviderProjection(id, patch));
 
+  const beginProviderOperation = async (id: string, input: Parameters<typeof raw.beginProviderOperation>[1]) =>
+    emitOrLog("set", id, await raw.beginProviderOperation(id, input));
+
   return {
     get,
     getByShorthand,
@@ -104,6 +107,7 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     setSetupError,
     setStartupLogFileId,
     updateProviderProjection,
+    beginProviderOperation,
     rename,
   };
 };

@@ -26,6 +26,7 @@ export type SessionHookDeps = Pick<
   | "activityEventsService"
   | "eventBus"
   | "extensionAutomationPreferencesService"
+  | "extensionConnectionService"
   | "extensionFileService"
   | "extensionInstancesService"
   | "extensionRuntimeCatalog"

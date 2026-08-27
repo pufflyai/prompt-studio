@@ -37,11 +37,11 @@ export const removeProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
       return c.json({ error: "Project not found" }, 404);
     }
 
-    await deps.syncService.emitCascadeDeletes("projects", id);
-
-    await cleanupProjectArtifacts(deps.workspaceService, id, {
+    await cleanupProjectArtifacts(deps, id, {
       removeProjectStorage: deps.fileService.removeProjectStorage,
     });
+    await deps.extensionConnectionService.removeProject(id);
+    await deps.syncService.emitCascadeDeletes("projects", id);
 
     await deps.projectService.hardDelete(id);
     return c.body(null, 204);

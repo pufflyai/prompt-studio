@@ -38,6 +38,16 @@ describe("packaged pstdio — self-hosted serve", () => {
     expect(result.stdout).toContain("extensions dev <source>");
   });
 
+  test("includes scoped automation and machine-token commands", () => {
+    const automation = spawnSync(PACKAGED_BINARY_PATH, ["automation", "--help"], { encoding: "utf8" });
+    const tokens = spawnSync(PACKAGED_BINARY_PATH, ["auth", "tokens", "--help"], { encoding: "utf8" });
+
+    expect(automation.status).toBe(0);
+    expect(automation.stdout).toContain("automation run");
+    expect(tokens.status).toBe(0);
+    expect(tokens.stdout).toContain("auth tokens issue");
+  });
+
   test(
     "serves the dashboard and API from the same origin",
     async () => {

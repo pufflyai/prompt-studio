@@ -8,6 +8,14 @@ import { recordingSink } from "./opencode-session-poller.test-helpers";
 const ctx: HarnessContext = {
   extensionId: "pstdio.harness-open-code",
   name: "harness-open-code",
+  connections: {
+    request: async () => {
+      throw new Error("No connections are configured in this test");
+    },
+    stream: async function* () {
+      yield { type: "end" } as const;
+    },
+  },
   process: {
     run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),

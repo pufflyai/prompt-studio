@@ -6,6 +6,7 @@ import type {
   EventDeliveryResult,
   ExtensionActivityApi,
   ExtensionArtifactApi,
+  ExtensionConnectionsApi,
   ExtensionContextBase,
   ExtensionFilesApi,
   ExtensionLoggerApi,
@@ -49,9 +50,12 @@ export interface CommandRunnerEnvironment {
   notify: ExtensionNotifyApi;
   process: ExtensionProcessApi;
   net: ExtensionNetApi;
+  connections?: ExtensionConnectionsApi;
   /** Host PTY supervisor; absent when the host does not support terminals. */
   terminal?: ExtensionTerminalApi;
   settings: ExtensionSettingsApi;
+  /** Rebinds host helpers that must participate in a command's cancellation scope. */
+  withSignal?: (signal: AbortSignal) => Pick<CommandRunnerEnvironment, "sessions" | "workspaces">;
 }
 
 export interface BuildEnvironmentInput {
@@ -93,6 +97,8 @@ export interface CommandExecuteInput {
   workspaceId?: string;
   source?: CommandSource;
   metadata?: JsonObject;
+  /** Host-owned cancellation for the complete command chain. */
+  signal?: AbortSignal;
 }
 
 export interface HostCommandExecuteInput<TResult = unknown> extends CommandExecuteInput {

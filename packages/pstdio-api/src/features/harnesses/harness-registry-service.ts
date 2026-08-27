@@ -1,7 +1,7 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentAvailabilityType } from "pstdio-api-contracts";
-import { isLocalizedString } from "pstdio-api-contracts/extension-kernel";
+import { type ExtensionConnectionsApi, isLocalizedString } from "pstdio-api-contracts/extension-kernel";
 import type { HarnessContextFactory, HarnessHandle, HarnessRegistry } from "pstdio-api-runtime-host";
 import { createHarnessRegistry } from "pstdio-api-runtime-host";
 import type { createInstalledExtensionSourcesDBService } from "pstdio-db";
@@ -68,13 +68,26 @@ export const createHarnessRegistryService = (input: {
   /** Clock for the detect() TTL memo; defaults to Date.now. */
   now?: () => number;
   detectCacheTtlMs?: number;
+  createConnectionsApi?: (scope: { projectId: string; extensionId: string }) => ExtensionConnectionsApi;
 }): HarnessRegistryService => {
+  const unavailableConnections: ExtensionConnectionsApi = {
+    request: async () => {
+      throw new Error("Extension connections are not available in this host.");
+    },
+    stream: async function* () {
+      yield await Promise.reject(new Error("Extension connections are not available in this host."));
+    },
+  };
   const buildContext: HarnessContextFactory = (record, options) => ({
     projectId: options?.projectId,
     extensionId: record.extensionId,
     name: record.name,
     process: createProcessApi(),
     net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
+    connections:
+      options?.projectId && input.createConnectionsApi
+        ? input.createConnectionsApi({ projectId: options.projectId, extensionId: record.extensionId })
+        : unavailableConnections,
     logger: harnessLogger(record.extensionId),
   });
 

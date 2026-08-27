@@ -13,6 +13,16 @@ import { dispatchExtensionEventHandler, dispatchExtensionEventRoute } from "./en
 import { enableInstalledExtensionHandler, enableInstalledExtensionRoute } from "./endpoints/enable-installed-extension";
 import { executeExtensionCommandHandler, executeExtensionCommandRoute } from "./endpoints/execute-extension-command";
 import {
+  checkExtensionConnectionHandler,
+  checkExtensionConnectionRoute,
+  configureExtensionConnectionHandler,
+  configureExtensionConnectionRoute,
+  deleteExtensionConnectionHandler,
+  deleteExtensionConnectionRoute,
+  listExtensionConnectionsHandler,
+  listExtensionConnectionsRoute,
+} from "./endpoints/extension-connections";
+import {
   deleteExtensionFileHandler,
   deleteExtensionFileRoute,
   getExtensionFileContentHandler,
@@ -125,6 +135,10 @@ const registerProjectExtensionRoutes = (
 };
 
 const registerExtensionSettingsRoutes = (routes: ExtensionRoutes, deps: ExtensionsRouteDeps) => {
+  routes.openapi(listExtensionConnectionsRoute, listExtensionConnectionsHandler(deps));
+  routes.openapi(configureExtensionConnectionRoute, configureExtensionConnectionHandler(deps));
+  routes.openapi(checkExtensionConnectionRoute, checkExtensionConnectionHandler(deps));
+  routes.openapi(deleteExtensionConnectionRoute, deleteExtensionConnectionHandler(deps));
   routes.openapi(listProjectExtensionSettingsRoute, listProjectExtensionSettingsHandler(deps));
   routes.openapi(getProjectExtensionSettingRoute, getProjectExtensionSettingHandler(deps));
   routes.openapi(updateProjectExtensionSettingRoute, updateProjectExtensionSettingHandler(deps));

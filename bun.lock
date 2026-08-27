@@ -110,6 +110,16 @@
         "@types/react-dom": "^19.2.0",
       },
     },
+    "examples/remote-execution-extension": {
+      "name": "remote-execution",
+      "version": "1.0.0",
+      "dependencies": {
+        "@pstdio/sdk": "^0.20.0",
+      },
+      "devDependencies": {
+        "typescript": "6.0.2",
+      },
+    },
     "extensions/extension-lab": {
       "name": "extension-lab",
       "version": "0.8.2",
@@ -3865,6 +3875,8 @@
     "regex-utilities": ["regex-utilities@2.3.0", "", {}, "sha512-8VhliFJAWRaUiVvREIiW2NXXTmHs4vMNnSzuJVhscgmGav3g9VDxLrQndI3dZZVVdp0ZO/5v0xmX516/7M9cng=="],
 
     "release-zalgo": ["release-zalgo@1.0.0", "", { "dependencies": { "es6-error": "^4.0.1" } }, "sha512-gUAyHVHPPC5wdqX/LG4LWtRYtgjxyX78oanFNTMMyFEfOqdC54s3eE82imuWKbOeqYht2CrNf64Qb8vgmmtZGA=="],
+
+    "remote-execution": ["remote-execution@workspace:examples/remote-execution-extension"],
 
     "repeat-string": ["repeat-string@1.6.1", "", {}, "sha512-PV0dzCYDNfRi1jCDbJzpW7jNNDRuCOG/jI5ctQcGKt/clZD+YcPS3yIlWuTJMmESC8aevCFmWJy5wjAFgNqN6w=="],
 

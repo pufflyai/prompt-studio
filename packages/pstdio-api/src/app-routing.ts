@@ -1,7 +1,10 @@
 import type { OpenAPIHono } from "@hono/zod-openapi";
+import type { Context, Next } from "hono";
 import { cors } from "hono/cors";
 import { redactSensitiveText } from "pstdio-logging";
 import { createAgentRoutes } from "./features/agents/routes";
+import { bearerTokenFrom, MAX_INPUT_BYTES } from "./features/automation/automation-policy";
+import { createAutomationRoutes } from "./features/automation/routes";
 import type { RouteDeps } from "./features/deps";
 import { createExtensionWebviewAssetRoutes } from "./features/extensions/extension-webview-asset-routes";
 import { createExtensionRoutes } from "./features/extensions/routes";
@@ -28,6 +31,40 @@ import { swagger } from "./swagger";
 import type { AppBindings } from "./types";
 
 const isPublicPath = (path: string) => path === "/healthz" || path === "/ping";
+const isMachineAutomationPath = (path: string) => /^\/v1\/projects\/[^/]+\/automation-runs(?:\/|$)/.test(path);
+const isCreateAutomationPath = (method: string, path: string) =>
+  method === "POST" && /^\/v1\/projects\/[^/]+\/automation-runs$/.test(path);
+
+const automationBodyTooLarge = (c: Context<AppBindings>) =>
+  c.json({ error: "Automation input is too large.", code: "invalid_automation_input" }, 413);
+
+const enforceAutomationBodyLimit = async (c: Context<AppBindings>, next: Next) => {
+  const contentLength = Number(c.req.header("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > MAX_INPUT_BYTES) return automationBodyTooLarge(c);
+  if (!c.req.raw.body) return next();
+
+  const chunks: Uint8Array[] = [];
+  const reader = c.req.raw.body.getReader();
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > MAX_INPUT_BYTES) {
+      await reader.cancel();
+      return automationBodyTooLarge(c);
+    }
+    chunks.push(value);
+  }
+  const body = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  c.req.raw = new Request(c.req.raw, { body });
+  return next();
+};
 
 const registerSecureTransport = (app: OpenAPIHono<AppBindings>, security: RuntimeSecurity) => {
   app.use("*", async (c, next) => {
@@ -61,7 +98,11 @@ const registerSecureTransport = (app: OpenAPIHono<AppBindings>, security: Runtim
   });
 };
 
-const registerApiMiddleware = (app: OpenAPIHono<AppBindings>, security: RuntimeSecurity | undefined) => {
+const registerApiMiddleware = (
+  app: OpenAPIHono<AppBindings>,
+  deps: RouteDeps,
+  security: RuntimeSecurity | undefined,
+) => {
   app.use("*", async (c, next) => {
     const start = performance.now();
     try {
@@ -81,6 +122,10 @@ const registerApiMiddleware = (app: OpenAPIHono<AppBindings>, security: RuntimeS
     }
   });
 
+  app.use("*", (c, next) =>
+    isCreateAutomationPath(c.req.method, c.req.path) ? enforceAutomationBodyLimit(c, next) : next(),
+  );
+
   if (!security) {
     const permissiveCors = cors();
     app.use("*", permissiveCors);
@@ -94,7 +139,8 @@ const registerApiMiddleware = (app: OpenAPIHono<AppBindings>, security: RuntimeS
       await next();
       return;
     }
-    if (!isRuntimeRequestAuthorized(c.req.raw, security)) {
+    if (!isMachineAutomationPath(c.req.path) && !isRuntimeRequestAuthorized(c.req.raw, security)) {
+      await deps.automationService.auditDeniedRoute(bearerTokenFrom(c.req.raw), c.req.path).catch(() => undefined);
       return c.json({ error: "Unauthorized" }, 401);
     }
     await next();
@@ -105,6 +151,7 @@ const registerApiRoutes = (app: OpenAPIHono<AppBindings>, deps: RouteDeps, termi
   app.route("/", createHealthRoutes(deps));
   if (deps.runtime) app.route("/runtime", createRuntimeRoutes(deps.runtime));
   app.route("/v1", createProjectRoutes(deps));
+  app.route("/v1", createAutomationRoutes(deps));
   app.route("/v1", createFilesystemRoutes(deps));
   app.route("/v1", createExtensionRoutes(deps));
   app.route("/v1", createAgentRoutes(deps));
@@ -144,7 +191,7 @@ export const registerApi = (
   input: { security: RuntimeSecurity | undefined; terminalOrigins: string[] },
 ) => {
   app.route("/v1", createExtensionWebviewAssetRoutes(deps));
-  registerApiMiddleware(app, input.security);
+  registerApiMiddleware(app, deps, input.security);
   registerApiRoutes(app, deps, input.terminalOrigins);
   registerApiErrorHandler(app, input.security);
   swagger(app);

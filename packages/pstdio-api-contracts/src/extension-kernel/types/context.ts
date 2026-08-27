@@ -10,6 +10,7 @@ import type {
   CommandSource,
   WorkbenchAttachmentInvocationContext,
 } from "./commands";
+import type { ExtensionConnectionsApi, ExtensionLoggerApi } from "./connections";
 import type { EventDeliveryResult, EventRef } from "./events";
 import type { JsonObject, MaybePromise, Struct } from "./json";
 import type { RendererContext, RepoContext, ResourceAnchor, ResourceRef } from "./resources";
@@ -253,12 +254,6 @@ export interface ExtensionNetApi {
   findFreePort(input?: { host?: string }): Promise<number>;
 }
 
-export interface ExtensionLoggerApi {
-  info(message: string, metadata?: JsonObject): void;
-  warn(message: string, metadata?: JsonObject): void;
-  error(message: string, metadata?: JsonObject): void;
-}
-
 export interface ExtensionSettingsApi<TSettings extends Record<string, unknown> = Record<string, unknown>> {
   all(): Promise<Partial<TSettings>>;
   get<TKey extends keyof TSettings & string>(key: TKey): Promise<TSettings[TKey] | undefined>;
@@ -303,6 +298,7 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   /** Interactive PTY sessions. Present only where the host wires a terminal supervisor (e.g. the workbench panel). */
   terminal?: ExtensionTerminalApi;
   net: ExtensionNetApi;
+  connections: ExtensionConnectionsApi;
   logger: ExtensionLoggerApi;
   settings: ExtensionSettingsApi<TSettings>;
 }
@@ -311,6 +307,8 @@ export interface CommandContext<TSettings extends Record<string, unknown> = Reco
   extends ExtensionContextBase<TSettings> {
   commandId: string;
   invocationId: string;
+  /** Aborts when the host cancels this command run. Handlers must stop external side effects when it fires. */
+  signal: AbortSignal;
   invocation: {
     readonly source?: CommandSource;
     readonly attachment?: WorkbenchAttachmentInvocationContext;

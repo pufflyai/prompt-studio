@@ -64,6 +64,7 @@ describe("createCommandEnvironment sessions listByWorkspace", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
+        workspaceService: { get: async () => ({ id: "workspace-1", project_id: "project-1" }) },
         workspaceSessionService: { listByWorkspace },
       } as never,
       makeEnabledSources() as never,
@@ -160,7 +161,7 @@ describe("createCommandEnvironment sessions attachments", () => {
               submittedAttachmentFileIds: new Set<string>(),
             })),
             get: mock(() => null),
-            setSession: mock(() => {}),
+            setSession: mock(() => true),
             remove: mock(() => {}),
           },
         },

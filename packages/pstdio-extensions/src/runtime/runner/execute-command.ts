@@ -36,6 +36,7 @@ export const executeExtensionCommand = async (
   state: RunnerState,
   input: InternalExecuteInput,
 ): Promise<CommandOutcome> => {
+  if (input.signal?.aborted) throw input.signal.reason;
   if (input.depth > state.maxDepth) {
     return {
       ok: false,
@@ -93,6 +94,7 @@ export const executeExtensionCommand = async (
       input.repo,
       input.depth,
       { workspaceDir: input.workspaceDir, workspaceId: input.workspaceId },
+      input.signal,
     );
   const buildMiddlewareCtx = async (invocation: CommandInvocation, middleware: RuntimeMiddlewareRecord) =>
     state.factory.buildCommandContext(
@@ -106,6 +108,7 @@ export const executeExtensionCommand = async (
       input.repo,
       input.depth,
       { workspaceDir: input.workspaceDir, workspaceId: input.workspaceId },
+      input.signal,
     );
 
   const requestedPayload = buildRequestPayload(
@@ -168,6 +171,7 @@ export const executeExtensionCommand = async (
 
   const start = Date.now();
   try {
+    if (input.signal?.aborted) throw input.signal.reason;
     const value = await record.run(buildCommandCtx(finalInvocation), finalInvocation.params);
     const elapsedMs = Date.now() - start;
     await state.dispatcher.dispatch(lifecycleEventId("completed", record.id), {

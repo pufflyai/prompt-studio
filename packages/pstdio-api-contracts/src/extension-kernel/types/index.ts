@@ -1,5 +1,6 @@
 export type * from "./commands";
 export * from "./composition";
+export type * from "./connections";
 export type * from "./context";
 export type * from "./contribution-identity";
 export type * from "./contributions";

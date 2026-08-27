@@ -224,6 +224,24 @@
   "projectSettings": {
     "title": "Paramètres du projet",
     "skills": "Compétences",
+    "machineTokens": {
+      "title": "Jetons machine",
+      "description": "Émettez des identifiants temporaires pour des commandes d’automatisation précises de ce projet.",
+      "issuedTitle": "Copiez ce jeton maintenant",
+      "issuedDescription": "Le jeton brut n’est affiché qu’une fois et ne pourra pas être récupéré.",
+      "copy": "Copier",
+      "issueTitle": "Émettre un jeton",
+      "name": "Responsable et objectif",
+      "scopes": "Identifiants de commande autorisés",
+      "scopesHint": "Saisissez un identifiant de commande activée pour l’automatisation par ligne.",
+      "expiry": "Expire dans (jours)",
+      "issue": "Émettre le jeton",
+      "issueFailed": "Échec de l’émission du jeton machine",
+      "activeTitle": "Jetons actifs",
+      "empty": "Aucun jeton machine actif.",
+      "expires": "Expire le {{date}}",
+      "revoke": "Révoquer"
+    },
     "extensionsPanel": {
       "empty": "Aucune extension installée pour ce projet.",
       "loadError": "Échec du chargement des extensions.",
@@ -270,6 +288,24 @@
         "cron": "cron {{cron}}",
         "stateOn": "activé",
         "stateOff": "désactivé"
+      },
+      "connections": {
+        "title": "Connexions",
+        "description": "Connectez cette extension à ses services distants. Les identifiants restent dans l’hôte Prompt Studio.",
+        "endpoint": "Point de terminaison",
+        "credential": "Identifiant",
+        "credentialUnchanged": "Laissez vide pour conserver l’identifiant actuel",
+        "credentialRequired": "Saisissez un identifiant",
+        "connected": "Authentifiée",
+        "notConnected": "Non connectée",
+        "lastCheckOk": "Dernière vérification réussie ({{status}})",
+        "lastCheckFailed": "Dernière vérification échouée ({{status}})",
+        "connect": "Connecter",
+        "reconnect": "Reconnecter",
+        "check": "Vérifier",
+        "revoke": "Révoquer",
+        "saved": "Connexion enregistrée",
+        "actionFailed": "Échec de l’action sur la connexion"
       },
       "detail": {
         "back": "Extensions",
