@@ -48,7 +48,7 @@ const createRun = (idempotencyKey: string) =>
     inputJson: { commandId: "pstdio.test.command.run", input: {} },
   });
 
-describe("automation run retention", () => {
+describe("automation run persistence", () => {
   test("preserves idempotency across token rotation for one principal", async () => {
     const first = await createRun("rotation-safe");
     const rotatedTokenId = crypto.randomUUID();
@@ -77,6 +77,52 @@ describe("automation run retention", () => {
     expect(rotated.principal.id).toBe(principalId);
     expect(retry.created).toBe(false);
     expect(retry.run.id).toBe(first.run.id);
+  });
+
+  test("rejects runs whose project, principal, and token do not share ownership", async () => {
+    const peerTokenId = crypto.randomUUID();
+    const peer = await service.createToken({
+      name: "peer principal",
+      createdBy: "test",
+      tokenId: peerTokenId,
+      tokenPrefix: `pst_at_${peerTokenId}`,
+      tokenDigest: "peer-digest",
+      projectId,
+      commandScopes: ["pstdio.test.command.run"],
+      expiresAt: "2099-01-01T00:00:00.000Z",
+    });
+    const foreignProjectId = (await createProjectsDBService(db).create({ name: "other-project" })).id;
+    const foreignTokenId = crypto.randomUUID();
+    const foreign = await service.createToken({
+      name: "foreign principal",
+      createdBy: "test",
+      tokenId: foreignTokenId,
+      tokenPrefix: `pst_at_${foreignTokenId}`,
+      tokenDigest: "foreign-digest",
+      projectId: foreignProjectId,
+      commandScopes: ["pstdio.test.command.run"],
+      expiresAt: "2099-01-01T00:00:00.000Z",
+    });
+    const input = {
+      projectId,
+      principalId,
+      tokenId: peer.token.id,
+      commandId: "pstdio.test.command.run",
+      idempotencyKey: "mismatched-owner",
+      inputHash: "mismatched-owner",
+      inputJson: { commandId: "pstdio.test.command.run", input: {} },
+    };
+
+    await expect(service.createRun(input)).rejects.toThrow("ownership");
+    await expect(
+      service.createRun({
+        ...input,
+        principalId: foreign.principal.id,
+        tokenId: foreign.token.id,
+        idempotencyKey: "foreign-project",
+      }),
+    ).rejects.toThrow("ownership");
+    expect(await db.select().from(automation_runs)).toEqual([]);
   });
 
   test("deletes project-scoped principals with their project", async () => {

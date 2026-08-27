@@ -149,4 +149,39 @@ describe("createCommandRunner: middleware", () => {
     expect(outcome.ok).toBe(true);
     expect(observed).toEqual({ workspaceId: "ws-1", name: "Review workspace" });
   });
+
+  test("host-owned command middleware receives the host cancellation signal", async () => {
+    const controller = new AbortController();
+    let middlewareSignal: AbortSignal | undefined;
+    let hostRan = false;
+    const runner = makeRunner({
+      middlewares: [
+        {
+          id: "observeHostSignal",
+          ref: { kind: "middleware", id: "observeHostSignal" },
+          command: { extensionId: "pstdio", kind: "command", id: "kernel.workspace.rename" },
+          async run(ctx) {
+            middlewareSignal = ctx.signal;
+            controller.abort(new Error("cancelled"));
+            return ctx.commands.continue();
+          },
+        },
+      ],
+    });
+
+    const outcome = await runner.executeHostCommand({
+      commandId: "kernel.workspace.rename",
+      projectId: "p1",
+      params: { workspaceId: "ws-1", name: "Renamed" },
+      signal: controller.signal,
+      run: async () => {
+        hostRan = true;
+        return { ok: true };
+      },
+    });
+
+    expect(middlewareSignal).toBe(controller.signal);
+    expect(hostRan).toBe(false);
+    expect(outcome.status).toBe("error");
+  });
 });

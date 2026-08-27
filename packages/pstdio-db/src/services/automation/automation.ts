@@ -188,6 +188,24 @@ const createAutomationRunDBService = (db: DbClient) => {
   }) => {
     return db.transaction(async (tx) => {
       const createdAt = nowTimestamp();
+      const [owner] = await tx
+        .select({ tokenId: automation_tokens.id })
+        .from(automation_tokens)
+        .innerJoin(
+          automation_principals,
+          and(
+            eq(automation_tokens.principal_id, automation_principals.id),
+            eq(automation_tokens.project_id, automation_principals.project_id),
+          ),
+        )
+        .where(
+          and(
+            eq(automation_tokens.id, input.tokenId),
+            eq(automation_principals.id, input.principalId),
+            eq(automation_principals.project_id, input.projectId),
+          ),
+        );
+      if (!owner) throw new Error("Automation run ownership does not match.");
       const [created] = await tx
         .insert(automation_runs)
         .values({

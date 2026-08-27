@@ -35,6 +35,7 @@ export const executeHostCommand = async <TResult>(
   state: RunnerState,
   input: HostCommandExecuteInput<TResult>,
 ): Promise<CommandOutcome<TResult>> => {
+  if (input.signal?.aborted) throw input.signal.reason;
   const notices: CommandNotice[] = [];
   const envFor = createEnvironmentCache(state.deps, input.projectId, input.repo, notices, {
     workspaceDir: input.workspaceDir,
@@ -73,6 +74,7 @@ export const executeHostCommand = async <TResult>(
       input.repo,
       0,
       { workspaceDir: input.workspaceDir, workspaceId: input.workspaceId },
+      input.signal,
     );
 
   let middlewareResult: MiddlewareChainResult;
@@ -112,6 +114,7 @@ export const executeHostCommand = async <TResult>(
 
   const start = Date.now();
   try {
+    if (input.signal?.aborted) throw input.signal.reason;
     const value = await input.run(finalInvocation);
     const elapsedMs = Date.now() - start;
     await state.dispatcher.dispatch(lifecycleEventId("completed", input.commandId), {
