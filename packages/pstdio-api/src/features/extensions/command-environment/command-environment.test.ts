@@ -538,7 +538,6 @@ describe("createCommandEnvironment workspaces", () => {
     );
 
     const workspace = await env.workspaces.create({
-      project_id: "project-2",
       shorthand_base: "T-1",
       provider_id: "pstdio.root",
       anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
