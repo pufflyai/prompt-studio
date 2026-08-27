@@ -119,7 +119,9 @@ describe("dashboard workspaces", () => {
             ...rows.workspaces[0],
             worktree_path: null,
             execution_kind: "remote",
+            provider_id: "example.remote-execution.workspace-type.remote",
             provider_state: "failed",
+            display_path: "remote://runner-42/workspace",
             provider_error_json: { message: "remote create failed" },
           },
         ],
@@ -134,7 +136,12 @@ describe("dashboard workspaces", () => {
       workspaceError: "remote create failed",
     });
     expect(workspace.resource.metadata).not.toHaveProperty("workspacePath");
-    expect(toWorkspaceRow(workspace).attributes).toMatchObject({ error: "remote create failed" });
+    expect(toWorkspaceRow(workspace).attributes).toMatchObject({
+      provider: "example.remote-execution.workspace-type.remote",
+      state: "failed",
+      location: "remote://runner-42/workspace",
+      error: "remote create failed",
+    });
   });
 
   test("carries ticket anchors in resource metadata so breadcrumbs stay ticket-scoped", () => {

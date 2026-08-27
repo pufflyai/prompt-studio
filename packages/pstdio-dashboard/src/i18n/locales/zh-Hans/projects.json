@@ -219,6 +219,24 @@
   "projectSettings": {
     "title": "项目设置",
     "skills": "技能",
+    "machineTokens": {
+      "title": "机器令牌",
+      "description": "为此项目中的指定自动化命令签发有过期时间的凭据。",
+      "issuedTitle": "立即复制此令牌",
+      "issuedDescription": "原始令牌只显示一次，之后无法恢复。",
+      "copy": "复制",
+      "issueTitle": "签发令牌",
+      "name": "所有者和用途",
+      "scopes": "允许的命令 ID",
+      "scopesHint": "每行输入一个已启用自动化的确切命令 ID。",
+      "expiry": "有效天数",
+      "issue": "签发令牌",
+      "issueFailed": "无法签发机器令牌",
+      "activeTitle": "有效令牌",
+      "empty": "没有有效的机器令牌。",
+      "expires": "到期时间：{{date}}",
+      "revoke": "撤销"
+    },
     "extensionsPanel": {
       "empty": "此项目未安装任何扩展。",
       "loadError": "加载扩展失败。",
@@ -265,6 +283,24 @@
         "cron": "cron {{cron}}",
         "stateOn": "开",
         "stateOff": "关"
+      },
+      "connections": {
+        "title": "连接",
+        "description": "将此扩展连接到远程服务。凭据保留在 Prompt Studio 主机中。",
+        "endpoint": "端点",
+        "credential": "凭据",
+        "credentialUnchanged": "留空以保留当前凭据",
+        "credentialRequired": "输入凭据",
+        "connected": "已认证",
+        "notConnected": "未连接",
+        "lastCheckOk": "上次检查通过 ({{status}})",
+        "lastCheckFailed": "上次检查失败 ({{status}})",
+        "connect": "连接",
+        "reconnect": "重新连接",
+        "check": "检查",
+        "revoke": "撤销",
+        "saved": "连接已保存",
+        "actionFailed": "连接操作失败"
       },
       "detail": {
         "back": "扩展",

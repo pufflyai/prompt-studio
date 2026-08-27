@@ -3,13 +3,28 @@ import { type ExtensionWorkspace, worktreeEvents } from "pstdio-api-contracts/ex
 import type { AppRouteHandler } from "../../../types";
 import { fireExtensionEventAsync } from "../../extensions/extension-event-runtime";
 import type { WorkspacesRouteDeps } from "../deps";
-import { deleteProviderBackedWorkspace } from "../workspace-provider-lifecycle";
+import { assertWorkspaceDeleteAllowed, deleteProviderBackedWorkspace } from "../workspace-provider-lifecycle";
 
 type WorkspaceRecord = NonNullable<Awaited<ReturnType<WorkspacesRouteDeps["workspaceService"]["get"]>>>;
 
 const toWorkspaceEventPayload = (workspace: WorkspaceRecord) => {
   const { anchors_json: _anchors, ...payload } = workspace;
   return payload as ExtensionWorkspace;
+};
+
+const releaseWorkspaceBackingResource = async (deps: WorkspacesRouteDeps, workspace: WorkspaceRecord) => {
+  assertWorkspaceDeleteAllowed(workspace);
+  return deleteProviderBackedWorkspace(deps, workspace);
+};
+
+const fireWorkspaceRemovedEvent = (deps: WorkspacesRouteDeps, workspace: WorkspaceRecord) => {
+  if (!workspace.worktree_path) return;
+  fireExtensionEventAsync(deps, workspace.project_id, worktreeEvents.removed, {
+    projectId: workspace.project_id,
+    worktreePath: workspace.worktree_path,
+    workspace: toWorkspaceEventPayload(workspace),
+    workspaceId: workspace.id,
+  });
 };
 
 export const deleteWorkspaceRoute = createRoute({
@@ -43,21 +58,12 @@ export const deleteWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
 
     const workspace = await deps.workspaceService.get(id);
 
-    // The default workspace is the project's root-repo entry; deleting it would
-    // strip the only always-available option, so it cannot be removed.
-    if (workspace?.is_default) {
-      return c.json({ error: "Default workspace cannot be deleted." }, 409);
-    }
-    if (workspace && !workspace.provider_capabilities_json.delete) {
-      return c.json({ error: "Workspace provider does not allow deletion." }, 409);
-    }
-
     // The provider must release its backing resource before the row disappears;
     // a failed provider delete keeps the row so the operation can be retried.
     let removed = false;
     if (workspace) {
       try {
-        removed = await deleteProviderBackedWorkspace(deps, workspace);
+        removed = await releaseWorkspaceBackingResource(deps, workspace);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         return c.json({ error: message }, 409);
@@ -66,16 +72,7 @@ export const deleteWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
 
     await deps.workspaceService.softDelete(id);
 
-    if (workspace) {
-      if (removed && workspace.worktree_path) {
-        fireExtensionEventAsync(deps, workspace.project_id, worktreeEvents.removed, {
-          projectId: workspace.project_id,
-          worktreePath: workspace.worktree_path,
-          workspace: toWorkspaceEventPayload(workspace),
-          workspaceId: workspace.id,
-        });
-      }
-    }
+    if (workspace && removed) fireWorkspaceRemovedEvent(deps, workspace);
 
     return c.json({ deleted: true }, 200);
   };

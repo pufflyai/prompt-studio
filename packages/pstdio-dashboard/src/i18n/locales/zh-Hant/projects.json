@@ -219,6 +219,24 @@
   "projectSettings": {
     "title": "專案設定",
     "skills": "技能",
+    "machineTokens": {
+      "title": "機器權杖",
+      "description": "為此專案中的指定自動化命令簽發有到期時間的憑證。",
+      "issuedTitle": "立即複製此權杖",
+      "issuedDescription": "原始權杖只顯示一次，之後無法復原。",
+      "copy": "複製",
+      "issueTitle": "簽發權杖",
+      "name": "擁有者和用途",
+      "scopes": "允許的命令 ID",
+      "scopesHint": "每行輸入一個已啟用自動化的確切命令 ID。",
+      "expiry": "有效天數",
+      "issue": "簽發權杖",
+      "issueFailed": "無法簽發機器權杖",
+      "activeTitle": "有效權杖",
+      "empty": "沒有有效的機器權杖。",
+      "expires": "到期時間：{{date}}",
+      "revoke": "撤銷"
+    },
     "extensionsPanel": {
       "empty": "此專案未安裝任何擴充功能。",
       "loadError": "載入擴充功能失敗。",
@@ -265,6 +283,24 @@
         "cron": "cron {{cron}}",
         "stateOn": "開",
         "stateOff": "關"
+      },
+      "connections": {
+        "title": "連線",
+        "description": "將此擴充功能連線到遠端服務。憑證保留在 Prompt Studio 主機中。",
+        "endpoint": "端點",
+        "credential": "憑證",
+        "credentialUnchanged": "留空以保留目前的憑證",
+        "credentialRequired": "輸入憑證",
+        "connected": "已驗證",
+        "notConnected": "未連線",
+        "lastCheckOk": "上次檢查通過 ({{status}})",
+        "lastCheckFailed": "上次檢查失敗 ({{status}})",
+        "connect": "連線",
+        "reconnect": "重新連線",
+        "check": "檢查",
+        "revoke": "撤銷",
+        "saved": "連線已儲存",
+        "actionFailed": "連線操作失敗"
       },
       "detail": {
         "back": "擴充功能",

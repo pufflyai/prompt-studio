@@ -35,6 +35,12 @@ const workspaceLabel = (resource: ResourceRef) => {
   return typeof shorthand === "string" ? shorthand : (resource.label ?? resource.id ?? "workspace");
 };
 
+const isLocalReadyWorkspace = (resource: ResourceRef) =>
+  resource.metadata?.workspaceExecutionKind === "local" &&
+  resource.metadata.workspaceProviderState === "ready" &&
+  typeof resource.metadata.workspacePath === "string" &&
+  resource.metadata.workspacePath.length > 0;
+
 const resolveWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (typeof resource.metadata?.workspacePath === "string" && resource.metadata.workspacePath.length > 0) {
     return resource;
@@ -98,8 +104,10 @@ export const openRenameWorkspaceResource = (ctx: WorkbenchModuleContext, resourc
 export const openWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
   if (!ctx.layout.getPanel(WORKBENCH_TERMINAL_WIDGET_ID)) return;
+  const terminalResource = resolveWorkspaceTerminalResource(ctx, resource);
+  if (!isLocalReadyWorkspace(terminalResource)) return;
 
-  return openWorkbenchTerminal(ctx, { resource: resolveWorkspaceTerminalResource(ctx, resource) });
+  return openWorkbenchTerminal(ctx, { resource: terminalResource });
 };
 
 export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
@@ -107,6 +115,7 @@ export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, res
   if (!ctx.layout.getPanel(WORKBENCH_TERMINAL_WIDGET_ID)) return;
 
   const terminalResource = resolveWorkspaceTerminalResource(ctx, resource);
+  if (!isLocalReadyWorkspace(terminalResource)) return;
   const autoOpenedUris = getAutoOpenedWorkspaceTerminalUris(ctx);
   const existing = ctx.layout
     .getLayout()
@@ -130,19 +139,40 @@ export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, res
 
 // The default workspace (root repo) is permanent: hide every action when the active or
 // right-clicked resource is the default workspace.
-const workspaceActionWhen = `${workbenchResourceKindContextKey} == "workspace" && !${workbenchResourceMetadataContextKey("workspaceIsDefault")}`;
-const workspaceTerminalActionWhen = `${workbenchResourceKindContextKey} == "workspace"`;
+const mutableWorkspaceWhen = `${workbenchResourceKindContextKey} == "workspace" && !${workbenchResourceMetadataContextKey("workspaceIsDefault")}`;
+const workspaceTerminalActionWhen = `${workbenchResourceKindContextKey} == "workspace" && ${workbenchResourceMetadataContextKey("workspaceExecutionKind")} == "local" && ${workbenchResourceMetadataContextKey("workspaceProviderState")} == "ready"`;
+const workspaceArchiveActionWhen = `${mutableWorkspaceWhen} && ${workbenchResourceMetadataContextKey("workspaceSupportsArchive")}`;
+const workspaceDeleteActionWhen = `${mutableWorkspaceWhen} && ${workbenchResourceMetadataContextKey("workspaceSupportsDelete")}`;
 
 const workspaceActions = [
-  { commandId: dashboardCommandIds.renameWorkspace, label: "Rename workspace", icon: "Pencil", order: 10 },
-  { commandId: dashboardCommandIds.archiveWorkspace, label: "Archive workspace", icon: "Archive", order: 20 },
-  { commandId: dashboardCommandIds.deleteWorkspace, label: "Delete workspace", icon: "Trash2", order: 30 },
+  {
+    commandId: dashboardCommandIds.renameWorkspace,
+    label: "Rename workspace",
+    icon: "Pencil",
+    order: 10,
+    when: mutableWorkspaceWhen,
+  },
+  {
+    commandId: dashboardCommandIds.archiveWorkspace,
+    label: "Archive workspace",
+    icon: "Archive",
+    order: 20,
+    when: workspaceArchiveActionWhen,
+  },
+  {
+    commandId: dashboardCommandIds.deleteWorkspace,
+    label: "Delete workspace",
+    icon: "Trash2",
+    order: 30,
+    when: workspaceDeleteActionWhen,
+  },
 ] as const;
 const workspaceTerminalAction = {
   commandId: dashboardCommandIds.openWorkspaceTerminal,
   label: "Open terminal",
   icon: "SquareTerminal",
   order: 5,
+  when: workspaceTerminalActionWhen,
 } as const;
 const workspaceActionGroup = "kernel";
 
@@ -174,10 +204,7 @@ export const registerWorkspaceResourceActions = (ctx: WorkbenchModuleContext) =>
       commandId: action.commandId,
       label: action.label,
       icon: action.icon,
-      when:
-        action.commandId === dashboardCommandIds.openWorkspaceTerminal
-          ? workspaceTerminalActionWhen
-          : workspaceActionWhen,
+      when: action.when,
       group: workspaceActionGroup,
       order: action.order,
     });

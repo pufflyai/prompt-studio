@@ -1,11 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
+import type { JsonObject, WorkspaceProviderResult } from "pstdio-api-contracts/extension-kernel";
 import { makeWorkspace, remoteWorkspaceCapabilities } from "./workspace-provider.test-fixture";
-import {
-  createProviderBackedWorkspace,
-  normalizeResult,
-  resolveWorkspaceExecutionTarget,
-} from "./workspace-provider-service";
+import { createProviderBackedWorkspace, normalizeResult } from "./workspace-provider-service";
 
 const makeCreateDeps = (provider: Record<string, unknown>) => {
   let workspace = makeWorkspace({
@@ -115,7 +111,27 @@ describe("createProviderBackedWorkspace", () => {
     });
   });
 
-  test("keeps the create operation when an async provider has no reference yet", async () => {
+  test("resolves an accepted asynchronous create before returning it to session launch", async () => {
+    const provisioning: WorkspaceProviderResult = {
+      providerRef: { version: 1, data: { remoteId: "remote-1" } },
+      state: "provisioning",
+      executionKind: "remote",
+      capabilities: remoteWorkspaceCapabilities,
+    };
+    const resolve = mock(async () => ({ ...provisioning, state: "ready" as const }));
+    const { deps } = makeCreateDeps({ create: async () => provisioning, resolve });
+
+    const workspace = await createProviderBackedWorkspace(deps, {
+      projectId: "project-1",
+      providerId: "pocketcoder.remote",
+      standalone: true,
+    });
+
+    expect(resolve).toHaveBeenCalledTimes(1);
+    expect(workspace.provider_state).toBe("ready");
+  });
+
+  test("keeps the create operation recoverable when an async provider omits its reference", async () => {
     const result: WorkspaceProviderResult = {
       state: "provisioning",
       executionKind: "remote",
@@ -136,12 +152,93 @@ describe("createProviderBackedWorkspace", () => {
     expect(workspace).toMatchObject({
       provider_operation_id: createStandalone.mock.calls[0]?.[0].provider_operation_id,
       provider_operation_kind: "create",
+      provider_state: "failed",
+      provider_error_json: { code: "provider_ref_missing", retryable: true },
+    });
+  });
+
+  test("keeps an aborted accepted create recoverable when its response is lost", async () => {
+    const controller = new AbortController();
+    const { deps, createStandalone, updateProviderProjection } = makeCreateDeps({
+      create: mock(async (_ctx: unknown, input: { signal?: AbortSignal }) => {
+        await new Promise<void>((resolve) => input.signal?.addEventListener("abort", () => resolve(), { once: true }));
+        throw new DOMException("The response was lost after acceptance.", "AbortError");
+      }),
+    });
+
+    const creating = createProviderBackedWorkspace(deps, {
+      projectId: "project-1",
+      providerId: "pocketcoder.remote",
+      standalone: true,
+      signal: controller.signal,
+    });
+    await Bun.sleep(0);
+    controller.abort();
+    const workspace = await creating;
+
+    expect(workspace).toMatchObject({
+      provider_ref_json: null,
       provider_state: "provisioning",
+      provider_operation_id: createStandalone.mock.calls[0]?.[0].provider_operation_id,
+      provider_operation_kind: "cancel",
+    });
+    expect(updateProviderProjection.mock.calls.at(-1)?.[1]).toMatchObject({
+      provider_operation_kind: "cancel",
+      provider_error_json: { retryable: true },
+    });
+  });
+
+  test("does not settle an accepted create when the provider cannot clean up its resource", async () => {
+    const controller = new AbortController();
+    const result: WorkspaceProviderResult = {
+      providerRef: { version: 1, data: { remoteId: "remote-1" } },
+      state: "ready",
+      executionKind: "remote",
+      capabilities: remoteWorkspaceCapabilities,
+    };
+    const { deps, updateProviderProjection } = makeCreateDeps({
+      create: mock(async () => {
+        controller.abort();
+        return result;
+      }),
+    });
+
+    const workspace = await createProviderBackedWorkspace(deps, {
+      projectId: "project-1",
+      providerId: "pocketcoder.remote",
+      standalone: true,
+      signal: controller.signal,
+    });
+
+    expect(workspace).toMatchObject({
+      provider_ref_json: result.providerRef,
+      provider_state: "provisioning",
+      provider_operation_kind: "cancel",
+      provider_error_json: { retryable: true },
+    });
+    expect(updateProviderProjection.mock.calls.at(-1)?.[1]).toMatchObject({
+      provider_ref_json: result.providerRef,
+      provider_operation_kind: "cancel",
     });
   });
 });
 
 describe("normalizeResult", () => {
+  test("keeps a remote create recoverable when a ready result omits its provider reference", () => {
+    const normalized = normalizeResult("pocketcoder.remote", {
+      state: "ready",
+      executionKind: "remote",
+      capabilities: remoteWorkspaceCapabilities,
+    });
+
+    expect(normalized).toMatchObject({
+      provider_state: "failed",
+      execution_kind: "remote",
+      provider_error_json: { code: "provider_ref_missing", retryable: true },
+    });
+    expect(normalized).not.toHaveProperty("provider_operation_id");
+  });
+
   test("reads branch from the declared result field and leaves opaque provider refs alone", () => {
     const normalized = normalizeResult("pocketcoder.remote", {
       branch: "remote/WS-1",
@@ -175,26 +272,72 @@ describe("normalizeResult", () => {
       }),
     ).not.toThrow();
   });
-});
 
-describe("resolveWorkspaceExecutionTarget", () => {
-  test("does not fall back to a project repository for remote workspaces", async () => {
-    const result = await resolveWorkspaceExecutionTarget(
-      {
-        workspaceService: {
-          get: async () =>
-            makeWorkspace({
-              id: "ws-remote",
-              provider_state: "ready",
-              execution_kind: "remote",
-              worktree_path: null,
-            }),
-        },
-        repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] },
-      } as never,
-      "ws-remote",
-    );
+  test("rejects nested provider credential fields", () => {
+    for (const data of [
+      { authorization: "Bearer credential" },
+      { nested: { clientSecret: "credential" } },
+      { nested: { refresh_token: "credential" } },
+      { nested: { secretAccessKey: "credential" } },
+      { nested: { token: "credential" } },
+    ] as JsonObject[]) {
+      const normalized = normalizeResult("pocketcoder.remote", {
+        providerRef: { version: 1, data },
+        state: "ready",
+        executionKind: "remote",
+        capabilities: remoteWorkspaceCapabilities,
+      });
+      expect(normalized).toMatchObject({
+        provider_state: "failed",
+        provider_error_json: { code: "provider_result_contains_secret", retryable: false },
+      });
+      expect(normalized).not.toHaveProperty("provider_operation_id");
+      expect(normalized).not.toHaveProperty("provider_operation_kind");
+    }
+  });
 
-    expect(result).toBeUndefined();
+  test("rejects oversized provider references and errors", () => {
+    const oversizedRef = normalizeResult("pocketcoder.remote", {
+      providerRef: { version: 1, data: { value: "å".repeat(33_000) } },
+      state: "ready",
+      executionKind: "remote",
+      capabilities: remoteWorkspaceCapabilities,
+    });
+    const oversizedError = normalizeResult("pocketcoder.remote", {
+      providerRef: { version: 1, data: { remoteId: "remote-1" } },
+      state: "failed",
+      executionKind: "remote",
+      capabilities: remoteWorkspaceCapabilities,
+      error: { code: "remote_failure", message: "å".repeat(2_000), retryable: true },
+    });
+
+    expect(oversizedRef).toMatchObject({
+      provider_state: "failed",
+      provider_error_json: { code: "provider_result_too_large" },
+    });
+    expect(oversizedError).toMatchObject({
+      provider_state: "failed",
+      provider_error_json: { code: "provider_result_too_large" },
+    });
+  });
+
+  test("rejects execution targets that disagree with their execution kind", () => {
+    expect(
+      normalizeResult("pocketcoder.remote", {
+        providerRef: { version: 1, data: { remoteId: "remote-1" } },
+        state: "ready",
+        executionKind: "remote",
+        executionTarget: { kind: "local", rootPath: "/tmp/not-remote" },
+        capabilities: remoteWorkspaceCapabilities,
+      }),
+    ).toMatchObject({ provider_state: "failed", provider_error_json: { code: "provider_result_invalid" } });
+
+    expect(
+      normalizeResult("pocketcoder.local-provider", {
+        state: "ready",
+        executionKind: "local",
+        capabilities: remoteWorkspaceCapabilities,
+      }),
+    ).toMatchObject({ provider_state: "failed", provider_error_json: { code: "provider_result_invalid" } });
   });
 });

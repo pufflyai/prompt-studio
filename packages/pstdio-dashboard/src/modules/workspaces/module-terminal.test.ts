@@ -15,6 +15,8 @@ describe("createWorkspacesModule terminal integration", () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "Root repo", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
+      workspaceExecutionKind: "local",
+      workspaceProviderState: "ready",
       workspaceShorthand: "ROOT",
     });
 
@@ -55,7 +57,9 @@ describe("createWorkspacesModule terminal integration", () => {
     const workbench = createWorkbenchCore({ defaultPanelOpenByRegionId: { secondary: false } });
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
+      workspaceExecutionKind: "local",
       workspacePath: "/repo/.pstdio/workspaces/PS-307_A1",
+      workspaceProviderState: "ready",
       workspaceShorthand: "PS-307_A1",
       workspaceType: "worktree",
     });
@@ -88,7 +92,9 @@ describe("createWorkspacesModule terminal integration", () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
+      workspaceExecutionKind: "local",
       workspacePath: "/repo/.pstdio/workspaces/PS-307_A1",
+      workspaceProviderState: "ready",
       workspaceShorthand: "PS-307_A1",
       workspaceType: "worktree",
     });
@@ -115,7 +121,9 @@ describe("createWorkspacesModule terminal integration", () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
+      workspaceExecutionKind: "local",
       workspacePath: "/repo/.pstdio/workspaces/PS-307_A1",
+      workspaceProviderState: "ready",
       workspaceShorthand: "PS-307_A1",
       workspaceType: "worktree",
     });
@@ -139,7 +147,9 @@ describe("createWorkspacesModule terminal integration", () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
+      workspaceExecutionKind: "local",
       workspacePath: "/repo/.pstdio/workspaces/PS-307_A1",
+      workspaceProviderState: "ready",
       workspaceShorthand: "PS-307_A1",
       workspaceType: "worktree",
     });

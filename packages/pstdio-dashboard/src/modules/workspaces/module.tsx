@@ -16,6 +16,7 @@ import { DeleteWorkspaceEntryWidget } from "./components/delete-workspace-entry-
 import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
 import { WorkspaceDiffsPanel } from "./components/workspace-widget";
 import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
+import { resourceMetadataBoolean, resourceMetadataString } from "./resource-metadata";
 import { registerWorkspaceFileContributions } from "./workspace-file-contributions";
 import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
 
@@ -55,11 +56,6 @@ const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContext) => {
     order: 30,
     getHeaderNodes: () => [workspaceNavigationNode()],
   });
-};
-
-const metadataString = (resource: ResourceRef, key: string) => {
-  const value = resource.metadata?.[key];
-  return typeof value === "string" ? value : undefined;
 };
 
 // A rename streams back through the synced rows, but the breadcrumb was built from the
@@ -194,28 +190,37 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
 };
 
 const openWorkspaceSubPanels = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
+  const isRemote = resourceMetadataString(resource, "workspaceExecutionKind") === "remote";
+  const supportsFiles = resourceMetadataBoolean(resource, "workspaceSupportsFiles") ?? !isRemote;
+  const supportsDiff = resourceMetadataBoolean(resource, "workspaceSupportsDiff") ?? !isRemote;
   const ownedPanels = () =>
     ctx.layout.listPanelInstances("main").filter((panel) => panel.ownerResourceUri === resource.uri);
   let files = ownedPanels().find((panel) => panel.panelId === dashboardWidgetIds.workspaceFiles);
   let diffs = ownedPanels().find((panel) => panel.panelId === dashboardWidgetIds.workspaceDiffs);
   const firstOpen = !files && !diffs;
 
-  files ??= ctx.layout.openPanel(dashboardWidgetIds.workspaceFiles, {
-    closable: false,
-    resource,
-    strategy: { kind: "persistent" },
-    title: "Files",
-  });
-  diffs ??= ctx.layout.openPanel(dashboardWidgetIds.workspaceDiffs, {
-    closable: false,
-    resource,
-    strategy: { kind: "persistent" },
-    title: "Changes",
-  });
+  if (supportsFiles) {
+    files ??= ctx.layout.openPanel(dashboardWidgetIds.workspaceFiles, {
+      closable: false,
+      resource,
+      strategy: { kind: "persistent" },
+      title: "Files",
+    });
+  }
+  if (supportsDiff) {
+    diffs ??= ctx.layout.openPanel(dashboardWidgetIds.workspaceDiffs, {
+      closable: false,
+      resource,
+      strategy: { kind: "persistent" },
+      title: "Changes",
+    });
+  }
 
-  const requestedView = metadataString(resource, "workspaceView");
-  if (requestedView === "files") ctx.layout.activatePanel(files.instanceId);
-  else if (requestedView === "diffs" || firstOpen) ctx.layout.activatePanel(diffs.instanceId);
+  const requestedView = resourceMetadataString(resource, "workspaceView");
+  if (requestedView === "files" && files) ctx.layout.activatePanel(files.instanceId);
+  else if (requestedView === "diffs" && diffs) ctx.layout.activatePanel(diffs.instanceId);
+  else if (firstOpen && diffs) ctx.layout.activatePanel(diffs.instanceId);
+  else if (firstOpen && files) ctx.layout.activatePanel(files.instanceId);
 };
 
 // The workspaces slice owns the project navigation shell, the workspaces board,
@@ -246,7 +251,7 @@ export const createWorkspacesModule = () =>
         priority: 100,
         canResolve: (resource) => resource.kind === "workspace",
         getParent: (resource) => {
-          const projectId = metadataString(resource, "projectId") ?? getDashboardSelectedProjectId(ctx);
+          const projectId = resourceMetadataString(resource, "projectId") ?? getDashboardSelectedProjectId(ctx);
           if (!projectId) return { type: "view", viewId: dashboardViews.workspaces.id };
           return (
             dashboardResourceParent(ctx, resource, projectId) ?? {
