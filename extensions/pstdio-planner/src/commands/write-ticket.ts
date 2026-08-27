@@ -9,6 +9,7 @@ import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 // draft is later reconciled with edits by `pst tickets save`.
 export const writeTicketCommand = defineCommand({
   id: "write-ticket",
+  mutating: true,
   title: "Write draft ticket",
   cli: {
     globalAliases: [["tickets", "write"]],

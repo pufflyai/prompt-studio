@@ -4,9 +4,9 @@ import { createCliCommandTracker, isMutatingCliCommand, MUTATING_CLI_COMMANDS } 
 describe("isMutatingCliCommand", () => {
   test("returns true for known mutating command paths", () => {
     expect(isMutatingCliCommand(["projects", "create"])).toBe(true);
-    expect(isMutatingCliCommand(["tickets", "update"])).toBe(true);
+    expect(isMutatingCliCommand(["tickets", "update"], true)).toBe(true);
     expect(isMutatingCliCommand(["workspace", "merge"])).toBe(true);
-    expect(isMutatingCliCommand(["tickets", "worktrees", "remove-all"])).toBe(true);
+    expect(isMutatingCliCommand(["tickets", "worktrees", "remove-all"], true)).toBe(true);
     expect(isMutatingCliCommand(["agents", "install-skills"])).toBe(true);
   });
 
@@ -18,12 +18,28 @@ describe("isMutatingCliCommand", () => {
 
   test("exports the mutating command registry", () => {
     expect(MUTATING_CLI_COMMANDS.has("projects create")).toBe(true);
-    expect(MUTATING_CLI_COMMANDS.has("tickets update")).toBe(true);
+    expect(MUTATING_CLI_COMMANDS.has("tickets update")).toBe(false);
     expect(MUTATING_CLI_COMMANDS.has("tickets list")).toBe(false);
   });
 });
 
 describe("createCliCommandTracker", () => {
+  test("logs a command after extension metadata marks it as mutating", () => {
+    const events: unknown[] = [];
+    const tracker = createCliCommandTracker({
+      logger: {
+        error: (data) => events.push(data),
+        info: (data) => events.push(data),
+      },
+      rawArgs: ["tickets", "update"],
+    });
+
+    tracker.setMutating(true);
+    tracker.logStart();
+    tracker.logSuccess();
+
+    expect(events).toHaveLength(2);
+  });
   test("logs start and completion for mutating commands", () => {
     const events: { data: Record<string, unknown>; level: "info" | "error"; message: string }[] = [];
 
@@ -44,6 +60,7 @@ describe("createCliCommandTracker", () => {
     });
 
     tracker.captureArgv({ _: ["tickets", "update"] });
+    tracker.setMutating(true);
     tracker.logStart();
     tracker.logSuccess();
 
@@ -86,6 +103,7 @@ describe("createCliCommandTracker", () => {
         rawArgs: ["tickets", "update", "--content", "runtime-secret"],
       });
       tracker.captureArgv({ _: ["tickets", "update"] });
+      tracker.setMutating(true);
       tracker.logFailure(new Error("failed with runtime-secret"));
 
       expect(JSON.stringify(events)).not.toContain("runtime-secret");

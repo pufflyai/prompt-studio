@@ -10,9 +10,9 @@ A proposal is a Planner ticket built from the `proposal` template. Use the `pst 
 ## Workflow
 
 1. Derive a short, verb-led title from the request, such as `add-`, `update-`, `remove-`, `refactor-`, or `fix-`.
-2. Confirm the `proposal` template exists with `pst templates list`.
+2. Confirm the `proposal` template exists with `pst tickets templates`.
 3. Run `pst tickets write --title "<title>"`. This creates `.pstdio/tickets/<shorthand>/ticket.md`.
-4. Run `pst templates write --name proposal --ticket <shorthand>` to apply the template.
+4. Run `pst tickets apply-template --id <shorthand> --template proposal` to apply the template.
 5. Read the relevant code and documentation before editing the ticket. Record concrete findings that a reviewer can check.
 6. Complete every applicable template section. Use specific, testable statements. Mark unanswered questions with `[MISSING INFORMATION]`.
 7. Create each supporting file required by the table below. Fill it with findings from the research, not placeholders.

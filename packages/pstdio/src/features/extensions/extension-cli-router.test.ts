@@ -3,7 +3,6 @@ import type { CommandExecuteResponse, ExtensionCommandRecord } from "@pstdio/sdk
 import {
   buildExtensionCommandTable,
   dispatchExtensionCliCommand,
-  formatMissingCommandRecovery,
   missingRequiredParams,
   parseExtensionCommandArgs,
   renderCommandHelp,
@@ -19,6 +18,7 @@ const labCommands: ExtensionCommandRecord[] = [
     cliPath: "lab counter bump",
     params: { amount: { type: "number", defaultValue: 1 } },
     examples: ["pstdio lab counter bump --amount 2"],
+    mutating: true,
   },
   {
     id: "lab.counter.read",
@@ -192,9 +192,11 @@ describe("extension CLI router dispatch", () => {
     const execute = mock(async (_commandId: string, _request: unknown) => successResponse);
     const listCommands = mock(async () => ({ commands: labCommands, diagnostics: [] }));
     const log = mock();
+    const onCommandResolved = mock();
 
     const exitCode = await dispatchExtensionCliCommand({
       rawArgs: ["lab", "counter", "bump", "--amount", "2"],
+      onCommandResolved,
       deps: {
         cwd: () => "/repo",
         execute,
@@ -215,6 +217,7 @@ describe("extension CLI router dispatch", () => {
     });
 
     expect(exitCode).toBe(0);
+    expect(onCommandResolved).toHaveBeenCalledWith(expect.objectContaining({ mutating: true }));
     expect(execute).toHaveBeenCalledWith("lab.counter.bump", {
       projectId: "project-1",
       params: { amount: 2 },
@@ -292,10 +295,6 @@ describe("extension CLI router dispatch", () => {
         process.env.PSTDIO_SESSION_ID = previousSessionId;
       }
     }
-  });
-
-  test("prints missing-command recovery when a known path has moved to an extension", () => {
-    expect(formatMissingCommandRecovery(["planner", "tickets", "pull"])).toContain("pstdio.planner");
   });
 
   test("lists namespace commands when a bare namespace is invoked", async () => {

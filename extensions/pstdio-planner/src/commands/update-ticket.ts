@@ -11,6 +11,7 @@ import { deriveTitle } from "../utils/derive-title";
 // ticket title is the start of the body, so a content save re-derives it.
 export const updateTicketCommand = defineCommand({
   id: "update-ticket",
+  mutating: true,
   title: "Update ticket",
   cli: {
     globalAliases: [["tickets", "update"]],

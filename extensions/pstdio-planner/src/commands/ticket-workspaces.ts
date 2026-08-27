@@ -60,6 +60,7 @@ export const ticketWorktreesListCommand = defineCommand({
 // to a ticket through the workspace lifecycle API.
 export const ticketWorktreesRemoveAllCommand = defineCommand({
   id: "ticket-worktrees-remove-all",
+  mutating: true,
   title: "Remove ticket worktrees",
   cli: {
     globalAliases: [["tickets", "worktrees", "remove-all"]],

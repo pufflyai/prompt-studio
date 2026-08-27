@@ -11,6 +11,14 @@ export const ticketMarkdownPath = (shorthand: string) => `${ticketDir(shorthand)
 export const ticketFilesDir = (shorthand: string) => `${ticketDir(shorthand)}/files`;
 export const ticketFilesPattern = (shorthand: string) => `${ticketFilesDir(shorthand)}/**`;
 
+const ensureTicketDraftsIgnored = async (repoFiles: ArtifactMount) => {
+  const path = ".pstdio/.gitignore";
+  const existing = (await repoFiles.exists(path)) ? await repoFiles.readText(path) : "";
+  const lines = existing.split("\n").filter(Boolean);
+  if (lines.includes("/tickets")) return;
+  await repoFiles.writeText(path, `${[...lines, "/tickets"].join("\n")}\n`);
+};
+
 // repoFiles paths are repo-root relative; the basename relative to the files dir
 // is the ticket file's name.
 export const fileNameFromPath = (shorthand: string, path: string) => path.slice(`${ticketFilesDir(shorthand)}/`.length);
@@ -54,8 +62,13 @@ export const ticketToMarkdown = async (storage: ExtensionStorageApi, ticket: Sto
   return applyFrontmatter(frontmatter, ticket.content);
 };
 
+export const writeTicketText = async (repoFiles: ArtifactMount, shorthand: string, content: string) => {
+  await ensureTicketDraftsIgnored(repoFiles);
+  await repoFiles.writeText(ticketMarkdownPath(shorthand), content);
+};
+
 export const writeTicketMarkdown = (repoFiles: ArtifactMount, ticket: StoredTicket, content: string) =>
-  repoFiles.writeText(ticketMarkdownPath(ticket.shorthand), content);
+  writeTicketText(repoFiles, ticket.shorthand, content);
 
 export const readTicketMarkdown = async (repoFiles: ArtifactMount, shorthand: string) => {
   const path = ticketMarkdownPath(shorthand);

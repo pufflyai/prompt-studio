@@ -132,6 +132,8 @@ export interface CommandDefinition<
   cli?: true | CliContribution;
   /** Exposes this exact command and its params schema to scoped machine tokens. */
   automation?: true;
+  /** Records CLI invocations of this command as mutations. */
+  mutating?: true;
   run: CommandRunHandler<SchemaParams<TSchema>, TResult, TSettings>;
 }
 

@@ -2,7 +2,6 @@ import { and, desc, eq, gte, lt, lte, or } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { activity_events } from "../../db/schemas.pg";
 
-export const ACTIVITY_CORE_RESOURCE_TYPES = ["ticket", "workspace", "session"] as const;
 export const ACTIVITY_ACTOR_TYPES = ["user", "agent", "system"] as const;
 export const ACTIVITY_EVENT_SOURCES = ["ui", "api", "hook", "system", "agent"] as const;
 

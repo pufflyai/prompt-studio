@@ -13,6 +13,7 @@ import { deriveTitle } from "../utils/derive-title";
 // are resolved server-side (Decision 3).
 export const createTicketCommand = defineCommand({
   id: "create-ticket",
+  mutating: true,
   title: "Create ticket",
   cli: {
     globalAliases: [

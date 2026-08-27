@@ -20,30 +20,17 @@ export const MUTATING_CLI_COMMANDS = new Set([
   "sessions deny",
   "sessions follow-up",
   "sessions stop",
-  "statuses create",
-  "statuses delete",
-  "statuses set-default",
-  "tags create",
-  "tags delete",
   "templates create",
   "templates delete",
   "templates update",
   "templates write",
-  "tickets archive",
-  "tickets create",
-  "tickets delete",
-  "tickets implement",
-  "tickets pull",
-  "tickets save",
-  "tickets update",
-  "tickets worktrees remove-all",
-  "tickets write",
   "workspace create",
   "workspace delete",
   "workspace merge",
 ]);
 
-export const isMutatingCliCommand = (tokens: string[]) => MUTATING_CLI_COMMANDS.has(normalizeCommandPath(tokens));
+export const isMutatingCliCommand = (tokens: string[], extensionMutating = false) =>
+  extensionMutating || MUTATING_CLI_COMMANDS.has(normalizeCommandPath(tokens));
 
 const asStringArray = (values: unknown[]) => values.filter((value): value is string => typeof value === "string");
 
@@ -84,6 +71,7 @@ export const createCliCommandTracker = (input: TrackerInput) => {
   let tokens = extractCommandTokensFromRawArgs(input.rawArgs);
   let startedAt = 0;
   let started = false;
+  let extensionMutating = false;
 
   const logger = () => {
     if (resolvedLogger) {
@@ -101,7 +89,7 @@ export const createCliCommandTracker = (input: TrackerInput) => {
       return true;
     }
 
-    if (!isMutatingCliCommand(tokens)) {
+    if (!isMutatingCliCommand(tokens, extensionMutating)) {
       return false;
     }
 
@@ -119,6 +107,9 @@ export const createCliCommandTracker = (input: TrackerInput) => {
   };
 
   return {
+    setMutating(value: boolean) {
+      extensionMutating = value;
+    },
     captureArgv(argv: Record<string, unknown>) {
       const list = Array.isArray(argv._) ? argv._ : [];
       const nextTokens = asStringArray(list);

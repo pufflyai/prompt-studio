@@ -84,6 +84,7 @@ const archiveLinkedWorkspacesSafely = async (ctx: ArchiveTicketsContext, tickets
 
 export const archiveTicketCommand = defineCommand({
   id: "archive-ticket",
+  mutating: true,
   title: "Archive ticket",
   cli: { globalAliases: [["tickets", "archive"]], examples: ["pstdio tickets archive --id PS-1"] },
   menus: [

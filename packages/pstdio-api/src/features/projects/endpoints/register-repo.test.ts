@@ -332,7 +332,7 @@ describe("POST /v1/projects/:id/repos - repo bootstrap", () => {
     );
   });
 
-  test("overrides stale config when the linked project no longer exists and clears local tickets", async () => {
+  test("overrides stale config when the linked project no longer exists without deleting extension files", async () => {
     const project = await createProject("Relink Target");
 
     const repoPath = join(tempRoot, "stale-config-repo");
@@ -347,7 +347,7 @@ describe("POST /v1/projects/:id/repos - repo bootstrap", () => {
     const res = await registerRepo(project.id, "stale-config-repo", repoPath);
 
     expect(res.status).toBe(201);
-    expect(existsSync(join(repoPath, ".pstdio", "tickets"))).toBe(false);
+    expect(existsSync(join(repoPath, ".pstdio", "tickets"))).toBe(true);
 
     const config = JSON.parse(readFileSync(staleConfigPath, "utf8"));
     expect(config.project_id).toBe(project.id);

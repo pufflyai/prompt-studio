@@ -40,6 +40,7 @@ const resolveDependencyIds = async (
 // files) back into extension storage and clear the draft flag.
 export const saveTicketCommand = defineCommand({
   id: "save-ticket",
+  mutating: true,
   title: "Save draft ticket",
   cli: {
     globalAliases: [["tickets", "save"]],

@@ -28,6 +28,7 @@ const pullTicket = async (input: {
 // extension storage into the local `.pstdio/tickets/<shorthand>/` tree.
 export const pullTicketCommand = defineCommand({
   id: "pull-ticket",
+  mutating: true,
   title: "Pull ticket",
   cli: {
     globalAliases: [["tickets", "pull"]],

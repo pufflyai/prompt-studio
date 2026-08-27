@@ -11,7 +11,7 @@ Refine a Planner ticket by adding researched detail and applying a template when
 
 1. Identify the ticket. Pass its shorthand, such as `PS-12`, to `--id`.
 2. Run `pst tickets pull --id <shorthand>`. This writes `.pstdio/tickets/<shorthand>/ticket.md`. Without `--force`, it preserves existing local edits. Read the current body before changing it.
-3. If the user requested a template, confirm it exists with `pst templates list`, then run `pst templates write --name <template> --ticket <shorthand>`. Keep useful existing content and remove placeholders that do not apply.
+3. If the user requested a template, confirm it exists with `pst tickets templates`, then run `pst tickets apply-template --id <shorthand> --template <template>`. Keep useful existing content and remove placeholders that do not apply.
 4. Research the code and documentation. Add the missing detail needed for implementation:
    - References, scope, implementation notes with the real files/modules to touch.
    - Implementation steps in the order to do them.

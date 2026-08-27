@@ -1,4 +1,5 @@
 import { archiveTicketColumnActionCommand, archiveTicketCommand } from "./archive-ticket";
+import { applyTicketTemplateCommand } from "./apply-ticket-template";
 import { attachTicketFileCommand, detachTicketFileCommand } from "./attach-ticket-file";
 import {
   addReviewCommentCommand,
@@ -19,6 +20,7 @@ import { requestHumanCommand, resolveHumanRequestCommand } from "./human-request
 import { implementTicketCommand } from "./implement-ticket";
 import { linkReviewCommand } from "./link-review";
 import { listTicketFilesCommand } from "./list-ticket-files";
+import { listTicketTemplatesCommand } from "./list-ticket-templates";
 import { listTicketsCommand } from "./list-tickets";
 import { pullTicketCommand } from "./pull-ticket";
 import { queryTicketsCommand } from "./query-tickets";
@@ -77,6 +79,7 @@ import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
+  applyTicketTemplateCommand,
   automationPolicyCommand,
   attemptReadinessCommand,
   submitChangeRequestCommand,
@@ -125,6 +128,7 @@ export const plannerCommands = [
   saveTicketCommand,
   pullTicketCommand,
   listTicketFilesCommand,
+  listTicketTemplatesCommand,
   implementTicketCommand,
   ticketWorkspacesCommand,
   ticketWorktreesListCommand,

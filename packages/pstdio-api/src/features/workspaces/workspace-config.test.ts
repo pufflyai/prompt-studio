@@ -32,6 +32,7 @@ describe("ensureWorkspaceConfig", () => {
     await ensureWorkspaceConfig(worktreePath, repoPath, "ws_host_1");
 
     expect(readConfig(worktreePath)).toEqual({ project_id: "proj_1", extra: "keep", workspace_id: "ws_host_1" });
+    expect(readFileSync(join(worktreePath, ".pstdio", ".gitignore"), "utf8")).toBe("config.json\n");
   });
 
   it("merges the workspace id into an existing config (root workspace at the repo root)", async () => {

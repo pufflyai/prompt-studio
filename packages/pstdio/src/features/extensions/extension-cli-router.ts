@@ -39,11 +39,6 @@ type DispatchDeps = {
   ) => { projectId: string; root: string | null; workspaceId?: string };
 };
 
-export const missingCommandHints = new Map([
-  ["planner tickets pull", "pstdio.planner"],
-  ["planner tickets create", "pstdio.planner"],
-]);
-
 const pathParts = (path: string) => path.split(/\s+/).filter(Boolean);
 
 const displayString = (value: LocalizableString | undefined) => {
@@ -342,16 +337,9 @@ export const parseExtensionCommandArgs = (command: ExtensionCommandRecord, args:
   return { help, json, params };
 };
 
-export const formatMissingCommandRecovery = (parts: string[]) => {
-  const path = parts.join(" ");
-  const extensionId = missingCommandHints.get(path);
-  if (!extensionId) return null;
-  return `Command "${path}" is provided by ${extensionId}. Install and enable that extension for this project.`;
-};
-
 const hasExtensionCommandRoute = (parts: string[], table: ExtensionCommandTable) => {
   const namespace = parts[0];
-  return Boolean(namespace && (table.byNamespace.has(namespace) || formatMissingCommandRecovery(parts)));
+  return Boolean(namespace && table.byNamespace.has(namespace));
 };
 
 const resolveRepoContext = async (deps: DispatchDeps, projectId: string, root: string | null) => {
@@ -365,7 +353,11 @@ const resolveRepoContext = async (deps: DispatchDeps, projectId: string, root: s
   return { projectId, repoId: repo.id, path: resolvePath(root) };
 };
 
-export const dispatchExtensionCliCommand = async (input: { rawArgs: string[]; deps?: Partial<DispatchDeps> }) => {
+export const dispatchExtensionCliCommand = async (input: {
+  rawArgs: string[];
+  deps?: Partial<DispatchDeps>;
+  onCommandResolved?: (command: ExtensionCommandRecord) => void;
+}) => {
   const deps = { ...defaultDeps(), ...input.deps };
   const global = extractGlobalOptions(input.rawArgs);
   const { projectId, root, workspaceId } = deps.resolveProjectId(deps.cwd(), global.projectId);
@@ -385,18 +377,14 @@ export const dispatchExtensionCliCommand = async (input: { rawArgs: string[]; de
 
   const command = table.byPath.get(commandPath);
   if (!command) {
-    const recovery = formatMissingCommandRecovery(commandPathParts);
-    if (recovery) {
-      deps.error?.(recovery);
-      return 1;
-    }
-
     // A known namespace with no matching leaf command (bare `pstdio <ns>`,
     // `pstdio <ns> --help`, or a mistyped subcommand) lists the namespace's
     // commands, matching how yargs command groups respond.
     deps.log(renderNamespaceHelp(commandPathParts[0]!, table));
     return 0;
   }
+
+  input.onCommandResolved?.(command);
 
   const commandArgs = global.args.slice(pathParts(commandPath).length);
   const parsed = parseExtensionCommandArgs(command, commandArgs);

@@ -16,6 +16,7 @@ export const extensionCommandRecordSchema = z.object({
   cliAliases: z.array(z.string()).optional(),
   examples: z.array(z.string()).optional(),
   automation: z.boolean().optional(),
+  mutating: z.boolean().optional(),
   params: z.record(z.string(), z.object({ type: z.string() }).catchall(z.unknown())).optional(),
 });
 

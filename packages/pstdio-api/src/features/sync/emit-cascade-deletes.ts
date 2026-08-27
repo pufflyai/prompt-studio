@@ -12,7 +12,7 @@ import {
 } from "pstdio-db";
 import type { EventBus } from "./event-bus";
 
-// FK cascade graph: parent → children that cascade-delete via project_id, ticket_id, etc.
+// FK cascade graph: parent → children that cascade-delete through their foreign keys.
 // Order matters: emit children first, parent last.
 const projectDependents = async (db: DbClient, projectId: string, bus: EventBus) => {
   const ws = await db.select().from(workspaces).where(eq(workspaces.project_id, projectId));

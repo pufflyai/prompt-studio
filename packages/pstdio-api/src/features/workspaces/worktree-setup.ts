@@ -5,7 +5,7 @@ import { createWorktree, resolveLatestBase } from "pstdio-wt";
 export const resolveWorkspacesRoot = () => resolvePstdioWorkspacesPath({ env: process.env });
 
 // Creates the git worktree backing a workspace and returns its branch + path. Shared by
-// ticketless workspace creation and the legacy ticket-attempt flow so both produce
+// workspace creation and extension-managed workflows so both produce
 // identical `workspace/<shorthand>` branches under the same root. The worktree's
 // `.pstdio/config.json` (incl. the workspace id) is materialized later by the provision
 // lifecycle, uniformly for every workspace type.

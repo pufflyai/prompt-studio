@@ -7,6 +7,7 @@ import { ticketRefFromCommandContext } from "./ticket-command-ref";
 
 export const deleteTicketCommand = defineCommand({
   id: "delete-ticket",
+  mutating: true,
   title: "Delete ticket",
   cli: { globalAliases: [["tickets", "delete"]], examples: ["pstdio tickets delete --id PS-1"] },
   menus: [

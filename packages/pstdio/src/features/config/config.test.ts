@@ -64,6 +64,7 @@ describe("writeConfig", () => {
 
     const raw = readFileSync(join(root, ".pstdio", "config.json"), "utf8");
     expect(raw).toContain("xyz-789");
+    expect(readFileSync(join(root, ".pstdio", ".gitignore"), "utf8")).toBe("config.json\n");
   });
 
   test("creates .pstdio directory if missing", () => {

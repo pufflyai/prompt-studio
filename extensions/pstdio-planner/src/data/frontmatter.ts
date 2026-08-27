@@ -50,6 +50,14 @@ export const stripFrontmatter = (content: string) => {
   return content.slice(delimiter.end);
 };
 
+export const extractTicketTitle = (content: string) => {
+  for (const line of stripFrontmatter(content).split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("# ")) return trimmed.slice(2).trim() || null;
+  }
+  return null;
+};
+
 export const applyFrontmatter = (frontmatter: string, content: string) => {
   const body = stripFrontmatter(content).replace(/^\n+/, "");
   if (!body) return frontmatter;

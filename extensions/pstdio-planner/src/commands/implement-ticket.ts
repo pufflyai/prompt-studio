@@ -6,6 +6,7 @@ import { findTicket } from "../data/resolve";
 // launch the implementation agent through the host session capability.
 export const implementTicketCommand = defineCommand({
   id: "implement-ticket",
+  mutating: true,
   title: "Implement ticket",
   cli: { globalAliases: [["tickets", "implement"]], examples: ["pstdio tickets implement --id PS-1"] },
   params: {

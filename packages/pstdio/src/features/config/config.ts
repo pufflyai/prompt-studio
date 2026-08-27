@@ -4,10 +4,9 @@ import { dirname, join, sep } from "node:path";
 const CONFIG_DIR = ".pstdio";
 const CONFIG_FILE = "config.json";
 
-// config.json carries a per-workspace id and tickets are a local cache, so neither should
-// be committed; drop a .pstdio/.gitignore by default so every project ignores them.
+// config.json carries host-owned workspace identity and must stay out of git.
 const GITIGNORE_FILE = ".gitignore";
-const DEFAULT_GITIGNORE = "/tickets\nconfig.json\n";
+const DEFAULT_GITIGNORE = "config.json\n";
 
 type PstdioConfig = {
   project_id: string;

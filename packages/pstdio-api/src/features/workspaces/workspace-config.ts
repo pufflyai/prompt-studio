@@ -2,11 +2,10 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 
-// Keep the per-workspace config (and ticket cache) out of git inside the working dir,
-// even if the project never committed a .pstdio/.gitignore.
+// Keep the per-workspace config out of git inside the working dir.
 const ensureConfigGitignore = async (pstdioDir: string) => {
   const gitignorePath = join(pstdioDir, ".gitignore");
-  if (!existsSync(gitignorePath)) await writeFile(gitignorePath, "/tickets\nconfig.json\n");
+  if (!existsSync(gitignorePath)) await writeFile(gitignorePath, "config.json\n");
 };
 
 // Stamps the host workspace id into the workspace's working-dir `.pstdio/config.json`

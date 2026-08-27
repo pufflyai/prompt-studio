@@ -184,6 +184,7 @@ export const registerCommands = (
       palette: normalizeCommandPalette(command.palette),
       cli,
       automation: command.automation === true,
+      mutating: command.mutating === true,
       run: command.run as RuntimeCommandRecord["run"],
     };
 

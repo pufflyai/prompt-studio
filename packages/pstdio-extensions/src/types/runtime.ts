@@ -85,6 +85,7 @@ export interface RuntimeCommandRecord {
   palette: CommandPaletteContribution[];
   cli?: RuntimeCliContribution;
   automation: boolean;
+  mutating: boolean;
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with extension-specific params
   run: CommandRunHandler<any, any>;
 }

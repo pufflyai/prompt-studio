@@ -99,8 +99,13 @@ if (shouldDispatchExtensionCommand()) {
     const requestedApiUrl = resolveRequestedApiUrl();
     await ensureApi(requestedApiUrl);
     commandTracker.captureArgv({ _: rawArgs });
-    commandTracker.logStart();
-    const exitCode = await dispatchExtensionCliCommand({ rawArgs });
+    const exitCode = await dispatchExtensionCliCommand({
+      rawArgs,
+      onCommandResolved: (command) => {
+        commandTracker.setMutating(command.mutating === true);
+        commandTracker.logStart();
+      },
+    });
     if (exitCode === null) {
       // The token was not an extension namespace; fall through to yargs so root help/error formatting stays canonical.
     } else {
