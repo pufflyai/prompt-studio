@@ -368,3 +368,11 @@ describe("packaged pstdio — core default extensions", () => {
     CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT,
   );
 });
+
+test("packaged CLI includes automation and machine authentication", () => {
+  const result = spawnSync(PACKAGED_BINARY_PATH, ["--help"], { encoding: "utf8" });
+
+  expect(result.status).toBe(0);
+  expect(result.stdout).toContain("pstdio automation [command]");
+  expect(result.stdout).toContain("pstdio auth [command]");
+});

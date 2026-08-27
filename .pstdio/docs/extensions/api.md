@@ -13,6 +13,7 @@ Identity is not declared in code. The runtime reads package identity before impo
 - [Dashboard UI attachments](./workbench-attachments.md): implemented target-based UI attachment model.
 - [Extension modes](./modes-and-layout.md): current mode metadata support.
 - [Extension cookbook](./cookbook.md): small authoring recipes for common extension tasks.
+- [Remote execution migration](./remote-execution-migration.md): named connections, remote workspaces, harnesses, and automation.
 
 ## Package Manifest
 
@@ -176,6 +177,7 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                                          |
 | `artifactMounts`                                  | Safe repo-local file access under `.pstdio/<package-name>/`.                                      |
 | `workspaceTypes`, `harnesses`                     | Provider integrations owned by the extension runtime.                                             |
+| `connections`                                     | Host-managed HTTP access to a declared remote control plane.                                       |
 
 UI-facing contributions attach to implemented host-owned targets. The attachment model is covered in [Dashboard UI attachments](./workbench-attachments.md).
 
@@ -256,6 +258,8 @@ When extension UI needs dashboard placement, attach it to a host-owned target an
 
 Commands are executable operations used by the CLI, dashboard menus, command palette, schedules, automations, and other commands.
 
+Set `automation: true` only on commands that a scoped machine token may run. The host validates the declared params before it creates a durable automation run. Commands without this flag cannot be added to a machine token.
+
 ```ts
 import { defineExtension, params } from "@pstdio/sdk/extensions";
 
@@ -275,6 +279,46 @@ export default defineExtension({
   },
 });
 ```
+
+## Named connections
+
+Extensions declare remote HTTP access by name. The host stores the base URL and credential. Extension code receives request and stream methods, never the secret value.
+
+```ts
+import { defineConnection, defineExtension } from "@pstdio/sdk/extensions";
+
+const controlPlane = defineConnection({
+  id: "control-plane",
+  label: "Remote control plane",
+  transport: "http",
+  auth: { type: "bearer" },
+  allowedMethods: ["GET", "POST"],
+  allowedPathPrefixes: ["/v1/workspaces", "/v1/sessions"],
+  check: { method: "GET", path: "/v1/workspaces/health" },
+  supportsStreaming: true,
+});
+
+export default defineExtension({
+  connections: [controlPlane],
+  commands: [
+    {
+      id: "remote-status",
+      ref: { kind: "command", id: "remote-status" },
+      title: "Read remote status",
+      async run(ctx) {
+        return ctx.connections.request("control-plane", {
+          method: "GET",
+          path: "/v1/workspaces/current",
+        });
+      },
+    },
+  ],
+});
+```
+
+Connection requests must use a relative path. The host rejects undeclared methods, paths outside the declared prefixes, cross-origin redirects, oversized bodies, and non-HTTPS URLs outside loopback development. It replaces caller authentication with the stored credential. A declared `check` gives the settings UI, SDK, and `pst connections check` a fixed safe health probe.
+
+Harnesses that can use a remote execution target set `cwdRequirement: "optional"`. Their start, resume, reattach, and message inputs receive `workspace.executionTarget`. A remote target contains the provider id and its opaque provider reference. It does not contain a local path.
 
 Command outcomes must be transport-safe:
 

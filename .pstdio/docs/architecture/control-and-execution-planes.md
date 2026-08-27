@@ -28,7 +28,7 @@ This split explains why local projects still run Git commands on the developer m
 ┌────────────────────────────────────────────────────────────┐
 │ Execution plane (where repo/worktree is mounted)          │
 │ - local mode: developer machine                            │
-│ - remote mode (future): server workspace VM/container      │
+│ - remote mode: provider workspace VM/container             │
 └────────────────────────────────────────────────────────────┘
 ```
 
@@ -56,14 +56,15 @@ In local mode, the repository and worktrees live on the developer machine. Lifec
 
 See also: `architecture/worktrees.md` and `architecture/local-and-remote.md`.
 
-### Remote mode (future)
+### Remote mode
 
-In remote mode, the same lifecycle operations run where the remote workspaces live (server-side VM/container). The execution plane moves to the server environment, while control plane responsibilities stay API-managed.
+In remote mode, a workspace provider supplies an opaque remote execution target. A compatible extension harness receives that target for session start, resume, reattach, and message reads. It reaches its remote control plane through a host-managed named connection. The execution plane moves to the provider environment, while control plane responsibilities stay API-managed.
 
 - Worktree-local callbacks move with the lifecycle action to server-side.
 - API still owns record/state orchestration.
 
 See also: `architecture/local-and-remote.md`.
+See also: `architecture/remote-execution-and-automation.md`.
 
 ## Lifecycle Automation Locality Rule
 
