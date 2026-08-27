@@ -47,7 +47,7 @@ The release path is:
 
 ### Operational Requirements
 
-- The workflow uses Bun 1.3.13 and Node.js 22.14+ (npm upgraded to the latest CLI for trusted publishing).
+- The workflow reads Bun 1.3.14 from the root `packageManager` field and uses Node.js 22.14+ (npm upgraded to the latest CLI for trusted publishing).
 - The workflow requires write permissions for contents and pull requests.
 - npm trusted publisher entries must point to `.github/workflows/release-packages.yml` for `pstdio`, `@pstdio/ui`, and `@pstdio/sdk`.
 

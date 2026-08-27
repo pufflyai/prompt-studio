@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.13 AS deps
+FROM oven/bun:1.3.14 AS deps
 
 WORKDIR /app
 
@@ -17,7 +17,7 @@ COPY scripts scripts
 RUN bun install --frozen-lockfile --ignore-scripts --production
 
 
-FROM oven/bun:1.3.13-slim AS runner
+FROM oven/bun:1.3.14-slim AS runner
 
 WORKDIR /app
 

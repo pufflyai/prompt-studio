@@ -21,7 +21,7 @@
     "@pstdio/sdk": "^0.20.0"
   },
   "devDependencies": {
-    "@types/bun": "1.3.13",
+    "@types/bun": "1.3.14",
     "typescript": "6.0.2"
   }
 }
