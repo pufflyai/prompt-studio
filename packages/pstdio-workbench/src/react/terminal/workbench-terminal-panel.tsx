@@ -15,6 +15,9 @@ const workspacePathFromResource = (resource: ResourceRef | undefined) => {
   return typeof workspacePath === "string" && workspacePath.length > 0 ? workspacePath : undefined;
 };
 
+export const terminalSessionBindingKey = (scope: string | undefined, resource: ResourceRef | undefined) =>
+  JSON.stringify([scope, resource?.uri, workspacePathFromResource(resource)]);
+
 const withTerminalRequestDefaults = (
   request: Parameters<TerminalBridge["openSession"]>[0],
   resource: ResourceRef | undefined,
@@ -53,6 +56,34 @@ interface WorkbenchTerminalPanelProps {
   workbench: WorkbenchCore;
 }
 
+interface WorkbenchTerminalSessionProps extends WorkbenchTerminalPanelProps {
+  active: boolean;
+  theme: "dark" | "light";
+}
+
+const WorkbenchTerminalSession = (props: WorkbenchTerminalSessionProps) => {
+  const { active, placement, theme, workbench } = props;
+  const placementRef = useRef(placement);
+  placementRef.current = placement;
+  const [bridge] = useState(() =>
+    createControllerTerminalBridge(workbench.terminal, {
+      getResource: () => placementRef.current.resource,
+      getTitle: () => placementRef.current.title,
+    }),
+  );
+  const [sessionId, setSessionId] = useState<string>();
+  const processTitle = useWorkbenchStore(workbench.terminal.store, (state) =>
+    sessionId ? state.sessionsById[sessionId]?.title : undefined,
+  );
+
+  useEffect(() => {
+    if (!sessionId || !processTitle) return;
+    workbench.layout.updatePanel(placement.instanceId, { title: processTitle });
+  }, [sessionId, processTitle, placement.instanceId, workbench.layout]);
+
+  return <Terminal bridge={bridge} theme={theme} autoFocus={active} onSessionOpen={setSessionId} />;
+};
+
 /**
  * Body of the host-owned terminal panel. Chrome (tab, title, close action,
  * resize) comes from the workbench `secondary` region; this component only mounts
@@ -63,29 +94,10 @@ interface WorkbenchTerminalPanelProps {
 export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
   const { placement, workbench } = props;
   const { themePreference } = useThemePreference();
-  const placementRef = useRef(placement);
-  placementRef.current = placement;
-  const [bridge] = useState(() =>
-    createControllerTerminalBridge(workbench.terminal, {
-      getResource: () => placementRef.current.resource,
-      getTitle: () => placementRef.current.title,
-    }),
-  );
-  const [sessionId, setSessionId] = useState<string>();
-  // The controller tracks the session's foreground process name; mirror it onto
-  // the tab so terminals read like VSCode (e.g. `zsh`, `opencode`).
-  const processTitle = useWorkbenchStore(workbench.terminal.store, (state) =>
-    sessionId ? state.sessionsById[sessionId]?.title : undefined,
-  );
   const active = useWorkbenchStore(workbench.layout.store, (state) => {
     const region = state.layout.regions.secondary;
     return (region.activeWidgetId ?? region.widgets[0]?.widgetId) === placement.instanceId;
   });
-
-  useEffect(() => {
-    if (!sessionId || !processTitle) return;
-    workbench.layout.updatePanel(placement.instanceId, { title: processTitle });
-  }, [sessionId, processTitle, placement.instanceId, workbench.layout]);
 
   if (!workbench.terminal.isAvailable()) {
     return (
@@ -97,13 +109,16 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
     );
   }
 
+  const sessionBinding = terminalSessionBindingKey(workbench.layout.getPersistenceScope(), placement.resource);
+
   return (
     <Box h="full" minH="0" minW="0" w="full">
-      <Terminal
-        bridge={bridge}
+      <WorkbenchTerminalSession
+        key={sessionBinding}
+        active={active}
+        placement={placement}
         theme={/dark/i.test(themePreference) ? "dark" : "light"}
-        autoFocus={active}
-        onSessionOpen={setSessionId}
+        workbench={workbench}
       />
     </Box>
   );

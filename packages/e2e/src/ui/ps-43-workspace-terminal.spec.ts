@@ -21,6 +21,12 @@ const openWorkspaceTerminal = async (page: import("@playwright/test").Page, work
   await expect(page.getByRole("region", { name: "Secondary Panel" })).toBeVisible();
 };
 
+const openWorkspace = async (page: import("@playwright/test").Page, workspaceName: string) => {
+  const workspaceRow = page.getByRole("option").filter({ hasText: workspaceName }).first();
+  await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
+  await workspaceRow.getByRole("paragraph").filter({ hasText: workspaceName }).click();
+};
+
 const expectTerminalPwd = async (page: import("@playwright/test").Page, expectedPath: string) => {
   const terminalInput = page.getByRole("textbox", { name: "Terminal input" });
   await expect(terminalInput).toBeFocused();
@@ -121,5 +127,57 @@ test("PS-43 restores the first terminal when the hidden launcher was persisted a
     await expect(page.locator(".xterm:visible .xterm-rows")).toContainText("__ps43_restored_terminal__");
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
+  }
+});
+
+test("PS-43 restores workspace terminal paths and tab controls after returning to a workspace", async ({
+  page,
+  request,
+}) => {
+  const projectResponse = await request.post(`${apiBase}/v1/projects`, {
+    data: { name: "PS-43 Workspace Terminal Return" },
+  });
+  expect(projectResponse.ok()).toBe(true);
+  const project = (await projectResponse.json()) as { id: string };
+  const repoRoot = createGitRepo("pstdio-ps-43-return-", "workspace terminal return e2e");
+
+  try {
+    const repo = await registerRepoViaApi(request, apiBase, project.id, "ps-43-return-repo", repoRoot);
+    const workspaceResponse = await request.post(`${apiBase}/v1/workspaces`, {
+      data: { project_id: project.id, repo_id: repo.id },
+    });
+    expect(workspaceResponse.ok()).toBe(true);
+    const workspace = (await workspaceResponse.json()) as {
+      workspace_shorthand: string;
+      worktree_path: string;
+    };
+
+    await prepareDashboard(page, project.id);
+    await page.goto(`/projects/${project.id}/workspaces`);
+    await openWorkspace(page, workspace.workspace_shorthand);
+    await page.getByRole("button", { name: "Show Secondary Panel" }).click();
+    await page.locator(".xterm:visible").click();
+    await expectTerminalPwd(page, workspace.worktree_path);
+
+    await page.getByRole("button", { name: "Navigate back" }).click();
+    await expect(page.getByRole("option").filter({ hasText: workspace.workspace_shorthand }).first()).toBeVisible();
+    await page.getByRole("button", { name: "Show Secondary Panel" }).click();
+    await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
+    await openWorkspace(page, workspace.workspace_shorthand);
+    await page.locator(".xterm:visible").click();
+    await expectTerminalPwd(page, workspace.worktree_path);
+
+    const secondaryHeader = page.locator('[data-workbench-panel-header="secondary"]');
+    const terminalTabs = secondaryHeader.getByRole("tab");
+    await secondaryHeader.getByRole("button", { name: "Add panel" }).click();
+    await expect(terminalTabs).toHaveCount(2);
+    await terminalTabs
+      .last()
+      .getByRole("button", { name: /^Close / })
+      .click();
+    await expect(terminalTabs).toHaveCount(1);
+  } finally {
+    await request.delete(`${apiBase}/v1/projects/${project.id}`);
+    rmSync(repoRoot, { recursive: true, force: true });
   }
 });

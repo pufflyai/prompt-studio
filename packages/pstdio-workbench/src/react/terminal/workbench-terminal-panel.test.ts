@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchTerminalController, type ResourceRef, type WorkbenchTerminalSessionRequest } from "../../core";
-import { createControllerTerminalBridge } from "./workbench-terminal-panel";
+import { createControllerTerminalBridge, terminalSessionBindingKey } from "./workbench-terminal-panel";
 
 const workspaceResource: ResourceRef = {
   kind: "workspace",
@@ -55,5 +55,13 @@ describe("createControllerTerminalBridge", () => {
     await bridge.openSession({ cols: 80, rows: 24, cwd: "/tmp/manual" });
 
     expect(requests).toEqual([{ cols: 80, rows: 24, cwd: "/tmp/manual" }]);
+  });
+});
+
+describe("terminalSessionBindingKey", () => {
+  test("keeps live sessions separate across layout scopes", () => {
+    expect(terminalSessionBindingKey("project/one/aggregate/workspaces", undefined)).not.toBe(
+      terminalSessionBindingKey("project/one/resource/workspace-1", workspaceResource),
+    );
   });
 });
