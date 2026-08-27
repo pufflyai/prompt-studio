@@ -43,10 +43,10 @@ type SidecarManifest = {
   checksum: string;
 };
 
-const expectedTargets: DesktopReleaseTarget[] = ["darwin-arm64", "darwin-x64", "linux-x64", "win32-x64"];
+const activeReleaseTargets: DesktopReleaseTarget[] = ["darwin-arm64", "darwin-x64", "linux-x64"];
 
 export const parseDesktopReleaseTarget = (value: string) => {
-  const target = expectedTargets.find((candidate) => candidate === value);
+  const target = activeReleaseTargets.find((candidate) => candidate === value);
   if (!target) throw new Error(`Unsupported desktop release target ${value}`);
   return target;
 };
@@ -224,7 +224,7 @@ export const verifyDesktopReleaseSet = (root: string) => {
         return [manifest.target, manifest] as const;
       }),
   );
-  for (const target of expectedTargets) {
+  for (const target of activeReleaseTargets) {
     if (!manifests.has(target)) throw new Error(`Missing desktop release target ${target}`);
   }
   const [first] = manifests.values();

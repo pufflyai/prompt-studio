@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   type DesktopReleaseManifest,
+  parseDesktopReleaseTarget,
   prepareDesktopReleaseArtifacts,
   verifyDesktopReleaseSet,
 } from "./release-artifacts";
@@ -98,10 +99,17 @@ describe("prepareDesktopReleaseArtifacts", () => {
   });
 });
 
+test("parseDesktopReleaseTarget disables Windows until its release lane is restored", () => {
+  expect(parseDesktopReleaseTarget("darwin-arm64")).toBe("darwin-arm64");
+  expect(parseDesktopReleaseTarget("darwin-x64")).toBe("darwin-x64");
+  expect(parseDesktopReleaseTarget("linux-x64")).toBe("linux-x64");
+  expect(() => parseDesktopReleaseTarget("win32-x64")).toThrow("Unsupported desktop release target win32-x64");
+});
+
 test("verifyDesktopReleaseSet requires one version and the complete native matrix", () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-desktop-release-set-"));
   roots.push(root);
-  const targets = ["darwin-arm64", "darwin-x64", "linux-x64", "win32-x64"] as const;
+  const targets = ["darwin-arm64", "darwin-x64", "linux-x64"] as const;
   for (const target of targets) {
     const manifest: DesktopReleaseManifest = {
       schemaVersion: 1,
@@ -122,6 +130,6 @@ test("verifyDesktopReleaseSet requires one version and the complete native matri
   }
 
   expect(verifyDesktopReleaseSet(root)).toEqual({ version: "1.2.3", releaseTag: "pstdio@1.2.3" });
-  rmSync(join(root, "win32-x64"), { recursive: true });
-  expect(() => verifyDesktopReleaseSet(root)).toThrow("Missing desktop release target win32-x64");
+  rmSync(join(root, "linux-x64"), { recursive: true });
+  expect(() => verifyDesktopReleaseSet(root)).toThrow("Missing desktop release target linux-x64");
 });

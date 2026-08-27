@@ -57,7 +57,12 @@ resources/
 
 `app.asar` contains the Electron application. The architecture-matched Bun executable stays outside ASAR with executable permissions. Its manifest records the schema, platform, architecture, application version, executable name, and SHA-256 checksum. Desktop validates the target, permissions, checksum, manifest version, and executable-reported version before spawning it. A corrupt or incompatible package opens recovery with reinstall guidance and is never launched.
 
-Supported package targets are macOS arm64/x64, Linux x64, and Windows x64. Forge produces ZIP and DMG artifacts on macOS, ZIP and DEB artifacts on Linux, and Squirrel artifacts on Windows. The package enables ASAR integrity and an explicit full Electron fuse policy that disables Node execution, Node options, CLI inspection, and privileged `file://` behavior.
+Active release targets are macOS arm64/x64 and Linux x64. Forge retains the
+Windows x64 Squirrel configuration for the later signed Windows release, but CI
+does not build or publish it. Forge produces ZIP and DMG artifacts on macOS and
+ZIP and DEB artifacts on Linux. The package enables ASAR integrity and an
+explicit full Electron fuse policy that disables Node execution, Node options,
+CLI inspection, and privileged `file://` behavior.
 
 ## Native releases and updates
 
@@ -73,21 +78,21 @@ update metadata.
 | --- | --- | --- | --- |
 | macOS arm64 | DMG and ZIP | Developer ID signature, notarization staple, Gatekeeper, clean-home launch | Electron updater through release-owned JSON metadata |
 | macOS x64 | DMG and ZIP | Developer ID signature, notarization staple, Gatekeeper, clean-home launch | Electron updater through release-owned JSON metadata |
-| Windows x64 | Squirrel Setup EXE, full NuGet package, `RELEASES` | Authenticode on the app, sidecar, and installer plus clean-home launch | Electron Squirrel updater through release-owned `RELEASES` metadata |
 | Linux x64 | DEB and portable ZIP | DEB inspection and clean-home launch | Distribution package manager or GitHub release page |
 
 Every target audits the packaged Electron fuse wire and emits a target manifest
-plus SHA-256 checksums. The publish job requires the complete four-target set,
+plus SHA-256 checksums. The publish job requires the complete three-target set,
 revalidates every checksum and component version, uploads the artifacts to the
 existing draft release, and only then publishes it. Native jobs receive read-only
 repository access; only the final publisher receives `contents: write`.
 
-The native updater is configured only in a packaged macOS or Windows app. It
-resolves the newest complete `pstdio@<version>` release and points Electron at
-that release's update metadata. This avoids depending on services that require
-plain SemVer Git tags, which do not match the monorepo tag format. Source builds
-and Linux open the release page instead. Release assets keep explicit platform
-and architecture names.
+The active native updater is configured only in a packaged macOS app. It resolves
+the newest complete `pstdio@<version>` release and points Electron at that
+release's update metadata. This avoids depending on services that require plain
+SemVer Git tags, which do not match the monorepo tag format. Source builds and
+Linux open the release page instead. The deferred Windows updater code remains
+inactive until the signed Windows lane returns. Release assets keep explicit
+platform and architecture names.
 
 ## Development and tests
 

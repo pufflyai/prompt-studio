@@ -23,9 +23,9 @@ on:
       APPLE_API_ISSUER:
         required: true
       WINDOWS_CERTIFICATE:
-        required: true
+        required: false
       WINDOWS_CERTIFICATE_PASSWORD:
-        required: true
+        required: false
   workflow_dispatch:
     inputs:
       version:
@@ -52,6 +52,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Windows x64 stays disabled until its trusted signing lane is available.
         include:
           - target: darwin-arm64
             platform: darwin
@@ -61,10 +62,6 @@ jobs:
             platform: darwin
             arch: x64
             os: macos-15-intel
-          - target: win32-x64
-            platform: win32
-            arch: x64
-            os: windows-latest
           - target: linux-x64
             platform: linux
             arch: x64
