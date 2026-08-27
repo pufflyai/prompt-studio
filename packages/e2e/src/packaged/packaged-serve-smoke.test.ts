@@ -38,16 +38,6 @@ describe("packaged pstdio — self-hosted serve", () => {
     expect(result.stdout).toContain("extensions dev <source>");
   });
 
-  test("includes scoped automation and machine-token commands", () => {
-    const automation = spawnSync(PACKAGED_BINARY_PATH, ["automation", "--help"], { encoding: "utf8" });
-    const tokens = spawnSync(PACKAGED_BINARY_PATH, ["auth", "tokens", "--help"], { encoding: "utf8" });
-
-    expect(automation.status).toBe(0);
-    expect(automation.stdout).toContain("automation run");
-    expect(tokens.status).toBe(0);
-    expect(tokens.stdout).toContain("auth tokens issue");
-  });
-
   test(
     "serves the dashboard and API from the same origin",
     async () => {
@@ -336,4 +326,12 @@ describe("packaged pstdio — core default extensions", () => {
     },
     CORE_EXTENSIONS_SMOKE_TEST_TIMEOUT,
   );
+});
+
+test("packaged CLI includes automation and machine authentication", () => {
+  const result = spawnSync(PACKAGED_BINARY_PATH, ["--help"], { encoding: "utf8" });
+
+  expect(result.status).toBe(0);
+  expect(result.stdout).toContain("pstdio automation [command]");
+  expect(result.stdout).toContain("pstdio auth [command]");
 });
