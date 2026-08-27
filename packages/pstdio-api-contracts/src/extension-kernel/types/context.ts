@@ -86,6 +86,8 @@ export interface ArtifactMount {
   delete(path: string): Promise<void>;
 }
 
+export type ExtensionPackageFilesApi = Pick<ArtifactMount, "exists" | "readText" | "readBytes" | "list" | "listDirs">;
+
 export interface WorkspaceSyncFile {
   /** Path relative to the `dir` passed to {@link WorkspaceFilesMount.syncDir}. */
   path: string;
@@ -283,6 +285,8 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   repoFiles?: ArtifactMount;
   /** Files of the workspace this context targets, scoped to its working dir. */
   workspaceFiles?: WorkspaceFilesMount;
+  /** Read-only files packaged with the installed extension, scoped to its package root. */
+  extensionFiles: ExtensionPackageFilesApi;
   files: ExtensionFilesApi;
   /** Project skill catalog. Present where the host wires it (command/event contexts). */
   skills?: ExtensionSkillsApi;

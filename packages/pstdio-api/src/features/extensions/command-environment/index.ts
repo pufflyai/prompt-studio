@@ -20,6 +20,7 @@ import { createProcessApi, findFreePort } from "../extension-process-api";
 import { createRepoFilesApi } from "../repo-files-api";
 import { createActivityApi } from "./activity";
 import { createArtifactsApi } from "./artifacts";
+import { createExtensionPackageFilesApi } from "./extension-files";
 import { createFilesApi } from "./files";
 import { createNotifyApi } from "./notifications";
 import { createReposApi, resolveRegisteredRepoPath } from "./repos";
@@ -92,6 +93,7 @@ export const createCommandEnvironment = (
           syncStateRoot: workspaceSyncStateRoot({ ...input, workspaceDir: input.workspaceDir }),
         })
       : undefined,
+    extensionFiles: createExtensionPackageFilesApi(enabledSource.installedSource.source_path),
     files: createFilesApi(deps, input.projectId),
     skills: { list: () => deps.skillService.list(input.projectId) },
     templates: { get: (name) => deps.templateService.getWithContent(input.projectId, name) },

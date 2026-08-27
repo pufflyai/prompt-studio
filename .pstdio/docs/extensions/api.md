@@ -549,6 +549,8 @@ export default defineExtension({
 
 Package asset paths must be relative and stay inside the package.
 
+Command and hook handlers can read other packaged files through `ctx.extensionFiles`. This API is read-only and scoped to the installed package root. Files omitted from an installed copy by `.gitignore` are unavailable at runtime.
+
 ## Artifact Mounts And Storage
 
 Artifact mounts are constrained to the package-name root under each repo:
@@ -564,6 +566,12 @@ For package `planner`, the default scoped root is:
 ```
 
 Extension storage is API-owned and scoped by extension instance. Project-owned storage also carries the project id.
+
+Artifact mounts create their directories on the first write. Before that, `exists()` returns false and `list()` returns an empty array.
+
+## Workspace Cleanup
+
+`ctx.workspaces.removeWorktree(id)` removes the local worktree and branch but preserves the workspace record. `ctx.workspaces.delete(id)` performs the full provider cleanup and deletes the workspace. Both operations emit `worktree.removed` when they remove a local worktree.
 
 ## Appearance Contributions
 

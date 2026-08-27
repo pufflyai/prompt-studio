@@ -139,6 +139,7 @@ export const createContextFactory = (
       artifacts: env.artifacts,
       repoFiles: env.repoFiles,
       workspaceFiles: env.workspaceFiles,
+      extensionFiles: env.extensionFiles,
       files: env.files,
       skills: env.skills,
       templates: env.templates,

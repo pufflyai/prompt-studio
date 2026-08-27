@@ -12,6 +12,7 @@ import type {
   ExtensionLoggerApi,
   ExtensionNetApi,
   ExtensionNotifyApi,
+  ExtensionPackageFilesApi,
   ExtensionProcessApi,
   ExtensionProjectContext,
   ExtensionReposApi,
@@ -40,6 +41,7 @@ export interface CommandRunnerEnvironment {
   artifacts: ExtensionArtifactApi;
   repoFiles?: ArtifactMount;
   workspaceFiles?: WorkspaceFilesMount;
+  extensionFiles: ExtensionPackageFilesApi;
   files: ExtensionFilesApi;
   skills?: ExtensionSkillsApi;
   templates: ExtensionTemplatesApi;

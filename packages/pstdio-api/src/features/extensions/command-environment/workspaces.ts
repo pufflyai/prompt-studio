@@ -15,6 +15,7 @@ import {
   createProviderBackedWorkspace,
   resolveWorkspaceExecutionTarget,
 } from "../../workspaces/workspace-provider-service";
+import { cleanupWorkspaceWorktree } from "../../workspaces/worktree-cleanup";
 import type { ExtensionsRouteDeps } from "../deps";
 import { fireExtensionEventAsync } from "../extension-event-runtime";
 import type { CommandEnvironmentRuntimeDeps } from "./types";
@@ -138,6 +139,23 @@ export const createWorkspacesApi = (
       // Cascade archive: also archive the workspace's sessions and remove its worktree.
       if (workspace) return (await archiveWorkspaceCascade(deps, workspace)) as ExtensionWorkspace;
       throw new Error(`Workspace not found: ${id}`);
+    },
+    removeWorktree: async (id) => {
+      const workspace = await getProjectWorkspace(id);
+      if (!workspace) throw new Error(`Workspace not found: ${id}`);
+      const cleanup = runtimeDeps.cleanupWorkspaceWorktree ?? cleanupWorkspaceWorktree;
+      const removed = await cleanup(deps, workspace);
+      if (removed && workspace.worktree_path) {
+        const { anchors_json: _anchors, ...eventWorkspace } = workspace;
+        const fireRemoved = runtimeDeps.fireExtensionEventAsync ?? fireExtensionEventAsync;
+        fireRemoved(deps, workspace.project_id, worktreeEvents.removed, {
+          projectId: workspace.project_id,
+          worktreePath: workspace.worktree_path,
+          workspace: eventWorkspace as ExtensionWorkspace,
+          workspaceId: workspace.id,
+        });
+      }
+      return { removed };
     },
     delete: async (id) => {
       const workspace = await getProjectWorkspace(id);

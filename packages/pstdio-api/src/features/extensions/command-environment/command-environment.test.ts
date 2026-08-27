@@ -21,6 +21,7 @@ const makeEnabledSources = () => [
     installedSource: {
       id: "source-1",
       extension_id: "pstdio.extension-lab",
+      source_path: "/tmp/extension-lab",
     },
   },
 ];
@@ -100,6 +101,29 @@ const makeSettingsService = () => {
 };
 
 describe("createCommandEnvironment host primitives", () => {
+  test("reads packaged extension files without exposing writes", async () => {
+    const sourcePath = mkdtempSync(join(tmpdir(), "pstdio-extension-files-"));
+    tempRoots.push(sourcePath);
+    writeFileSync(join(sourcePath, "guide.md"), "# Guide");
+    const enabledSources = makeEnabledSources();
+    enabledSources[0]!.installedSource.source_path = sourcePath;
+    const env = createCommandEnvironment(
+      { extensionStorageService: makeStorageService() } as never,
+      enabledSources as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+      },
+    );
+
+    expect(await env.extensionFiles.readText("guide.md")).toBe("# Guide");
+    expect(await env.extensionFiles.list()).toEqual([expect.objectContaining({ path: "guide.md" })]);
+    expect("writeText" in env.extensionFiles).toBe(false);
+    await expect(env.extensionFiles.readText("../secret.md")).rejects.toThrow("escapes");
+  });
+
   test("defaults terminal sessions to the workspace directory", () => {
     const requests: unknown[] = [];
     const terminal = {
@@ -619,6 +643,53 @@ describe("createCommandEnvironment workspace lifecycle", () => {
 
     expect(remove).toHaveBeenCalledTimes(1);
     expect(softDelete).toHaveBeenCalledWith("ws-1");
+    expect(fireRemoved).toHaveBeenCalledWith(
+      expect.anything(),
+      "project-1",
+      expect.objectContaining({ id: "worktree.removed" }),
+      expect.objectContaining({ workspaceId: "ws-1", worktreePath: workspace.worktree_path }),
+    );
+  });
+
+  test("removes a worktree without deleting its workspace", async () => {
+    const softDelete = mock(async () => {});
+    const cleanup = mock(async () => true);
+    const fireRemoved = mock(() => {});
+    const workspace = {
+      id: "ws-1",
+      project_id: "project-1",
+      workspace_shorthand: "T-1_A1",
+      anchors_json: [],
+      branch: "workspace/T-1_A1",
+      worktree_path: "/repo/.worktrees/T-1_A1",
+      provider_id: "pstdio.worktree",
+      provider_ref_json: null,
+      provider_state: "ready",
+      execution_kind: "local",
+    };
+    const env = createCommandEnvironment(
+      {
+        extensionStorageService: makeStorageService(),
+        workspaceService: { get: async () => workspace, softDelete },
+      } as never,
+      makeEnabledSources() as never,
+      {
+        extensionId: "pstdio.extension-lab",
+        name: "extension-lab",
+        project: projectContext,
+        projectId: "project-1",
+      },
+      {
+        cleanupWorkspaceWorktree: cleanup as never,
+        fireExtensionEventAsync: fireRemoved as never,
+        runWorkspaceProvisioning: async (_deps, input) => input.workspace,
+        setupWorkspaceWorktree: async () => ({ branch: "unused", worktreePath: "/unused" }),
+      },
+    );
+
+    await expect(env.workspaces.removeWorktree("ws-1")).resolves.toEqual({ removed: true });
+    expect(cleanup).toHaveBeenCalledTimes(1);
+    expect(softDelete).not.toHaveBeenCalled();
     expect(fireRemoved).toHaveBeenCalledWith(
       expect.anything(),
       "project-1",

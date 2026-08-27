@@ -27,6 +27,13 @@ const environment: CommandRunnerEnvironment = {
   project: { id: "project-1", name: "Project One", shorthand: "PO" },
   storage,
   artifacts: { mount: () => ({}) as never },
+  extensionFiles: {
+    exists: async () => false,
+    readText: async () => "",
+    readBytes: async () => new Uint8Array(),
+    list: async () => [],
+    listDirs: async () => [],
+  },
   files: {
     readText: async () => "",
     writeText: async () => {},
@@ -50,6 +57,7 @@ const environment: CommandRunnerEnvironment = {
     resolve: async () => ({}) as never,
     cancel: async () => ({ id: "" }),
     archive: async () => ({ id: "" }),
+    removeWorktree: async () => ({ removed: true }),
     delete: async () => {},
   },
   repos: {

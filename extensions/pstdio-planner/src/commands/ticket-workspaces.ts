@@ -57,7 +57,7 @@ export const ticketWorktreesListCommand = defineCommand({
 });
 
 // `pst tickets worktrees remove-all`: remove every worktree (and its branch) linked
-// to a ticket. Git work runs in the API via the host process capability.
+// to a ticket through the workspace lifecycle API.
 export const ticketWorktreesRemoveAllCommand = defineCommand({
   id: "ticket-worktrees-remove-all",
   title: "Remove ticket worktrees",
@@ -67,21 +67,13 @@ export const ticketWorktreesRemoveAllCommand = defineCommand({
   },
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {
-    const repoPath = ctx.repo?.path;
-    if (!repoPath) throw new Error("This command must be run inside a project repository.");
-
     const { workspaces } = await workspacesForTicket(ctx, commandParams.id);
     const worktrees = workspaces.filter((ws) => ws.worktree_path);
 
     let removed = 0;
     for (const ws of worktrees) {
-      const branch = ws.branch ?? `workspace/${ws.workspace_shorthand ?? ws.id}`;
-      const result = await ctx.process.run({
-        command: ["git", "-C", repoPath, "worktree", "remove", "--force", ws.worktree_path as string],
-      });
-      if (result.exitCode !== 0) continue;
-      await ctx.process.run({ command: ["git", "-C", repoPath, "branch", "-D", branch] });
-      removed += 1;
+      const result = await ctx.workspaces.removeWorktree(ws.id);
+      if (result.removed) removed += 1;
     }
 
     return { removed };

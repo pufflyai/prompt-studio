@@ -55,32 +55,51 @@ export default defineExtension({
 });
 ```
 
-## Add A Dashboard Header Action
+## Add A Resource Header Action
 
 ```ts
-import { defineExtension } from "@pstdio/sdk/extensions";
+import {
+  defineCommand,
+  defineExtension,
+  defineResourceKind,
+  params,
+  resourceMenuSlotRef,
+} from "@pstdio/sdk/extensions";
 
-export default defineExtension({
-  commands: {
-    runAttempt: {
-      title: "Run attempt",
-      cli: true,
-      menus: [
-        {
-          target: "workbench.nav.actions",
-          label: "Run attempt",
-          icon: "play",
-          presentation: "button",
-          when: { resourceType: ["ticket"] },
-        },
-      ],
-      async run(ctx, _commandParams) {
-        return { ticket: ctx.resource?.id };
-      },
+const ticket = defineResourceKind({
+  id: "ticket",
+  surface: "primary",
+  menuSlots: [
+    { id: "headerActions", placement: "header-primary", access: "owner" },
+  ],
+});
+
+const runAttempt = defineCommand({
+  id: "run-attempt",
+  title: "Run attempt",
+  menus: [
+    {
+      slot: resourceMenuSlotRef(ticket.ref, "headerActions"),
+      label: "Run attempt",
+      icon: "play",
+      presentation: "button",
     },
+  ],
+  params: {
+    ticketId: params.text({ resolvedFrom: "resource" }),
+  },
+  async run(ctx) {
+    return { ticket: ctx.resource?.id };
   },
 });
+
+export default defineExtension({
+  resourceKinds: [ticket],
+  commands: [runAttempt],
+});
 ```
+
+`resolvedFrom: "resource"` tells the host not to show that parameter in a command form. The command reads the active resource from `ctx.resource`.
 
 ## Add Middleware
 
@@ -360,6 +379,45 @@ export default defineExtension({
     },
   },
 });
+```
+
+## Read Files Packaged With The Extension
+
+`ctx.extensionFiles` is read-only and scoped to the installed extension package. Paths cannot leave that package.
+
+```ts
+const guide = await ctx.extensionFiles.readText("docs/guide.md");
+const examples = await ctx.extensionFiles.list("examples/**/*.json");
+```
+
+Files excluded from the installed package by its `.gitignore` are not available. Keep every runtime asset out of ignored paths.
+
+## Store Extension Data
+
+Use `ctx.storage` for private structured data and blobs. Use a declared artifact mount for files users should see in the project repository.
+
+```ts
+const preferences = ctx.storage.collection<{ id: string; enabled: boolean }>("preferences");
+await preferences.put("defaults", { id: "defaults", enabled: true });
+
+const reports = ctx.artifacts.mount("reports");
+await reports.writeText("latest/summary.md", "# Summary\n");
+```
+
+Artifact directories are created on the first write. Before then, `exists()` is false, `list()` is empty, and direct reads fail. Mounts stay under `.pstdio/<extension-name>/` and reject path escapes.
+
+## Work With Repositories And Workspaces
+
+- `ctx.repoFiles` reads and writes the invocation repository. It is absent when no repository is in scope.
+- `ctx.workspaceFiles` reads and writes the active workspace. It is absent when no local workspace is in scope.
+- `ctx.workspaces.removeWorktree(id)` removes a workspace worktree and branch without deleting the workspace record.
+- `ctx.workspaces.delete(id)` deletes the workspace and performs its full provider cleanup.
+
+Use `removeWorktree` for cleanup commands that must preserve workspace history:
+
+```ts
+const result = await ctx.workspaces.removeWorktree(workspaceId);
+return { removed: result.removed };
 ```
 
 ## Validate An Extension
