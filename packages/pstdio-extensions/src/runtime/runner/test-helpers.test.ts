@@ -36,7 +36,7 @@ export const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): C
     project: { id: "p1", name: "Prompt Studio", shorthand: "PS" },
     storage,
     artifacts: { mount: () => ({}) as never },
-    extensionFiles: {
+    packageFiles: {
       exists: async () => false,
       readText: async () => "",
       readBytes: async () => new Uint8Array(),

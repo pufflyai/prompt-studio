@@ -41,7 +41,8 @@ export interface CommandRunnerEnvironment {
   artifacts: ExtensionArtifactApi;
   repoFiles?: ArtifactMount;
   workspaceFiles?: WorkspaceFilesMount;
-  extensionFiles: ExtensionPackageFilesApi;
+  packageFiles: ExtensionPackageFilesApi;
+  extensionFiles?: ArtifactMount;
   files: ExtensionFilesApi;
   skills?: ExtensionSkillsApi;
   templates: ExtensionTemplatesApi;

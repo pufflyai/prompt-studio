@@ -93,11 +93,14 @@ const readJson = (file: string) => JSON.parse(readFileSync(file, "utf8"));
 
 const listDirs = (parent: string) =>
   readdirSync(path.join(ROOT, parent), { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && !entry.name.startsWith("_") && !entry.name.startsWith("."))
+    .filter((entry) => entry.isDirectory() && !entry.name.startsWith("_"))
     .map((entry) => path.join(parent, entry.name));
 
 const discoverPackages = () => {
-  const dirs = [...listDirs("packages"), ...listDirs("extensions"), ...listDirs("clients"), "scripts"];
+  const rootManifest = readJson(path.join(ROOT, "package.json")) as { workspaces?: string[] };
+  const dirs = (rootManifest.workspaces ?? []).flatMap((workspace) =>
+    workspace.endsWith("/*") ? listDirs(workspace.slice(0, -2)) : [workspace],
+  );
   const packages: WorkspacePackage[] = [];
   for (const dir of dirs) {
     const manifestPath = path.join(ROOT, dir, "package.json");
@@ -118,7 +121,7 @@ const discoverPackages = () => {
       dir,
       declared,
       dependencies,
-      isExtension: dir.startsWith("extensions/"),
+      isExtension: Boolean((manifest.engines as { pstdio?: unknown } | undefined)?.pstdio),
       version: manifest.version,
     });
   }

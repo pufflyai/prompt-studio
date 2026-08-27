@@ -27,7 +27,7 @@ const environment: CommandRunnerEnvironment = {
   project: { id: "project-1", name: "Project One", shorthand: "PO" },
   storage,
   artifacts: { mount: () => ({}) as never },
-  extensionFiles: {
+  packageFiles: {
     exists: async () => false,
     readText: async () => "",
     readBytes: async () => new Uint8Array(),

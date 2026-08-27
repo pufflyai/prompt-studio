@@ -27,6 +27,19 @@ describe("resolveProjectId", () => {
     expect(result.projectId).toBe("explicit-id");
   });
 
+  test("keeps the workspace id when an explicit project is provided", () => {
+    const root = join(tmpBase, "explicit-worktree");
+    mkdirSync(join(root, ".git"), { recursive: true });
+    mkdirSync(join(root, ".pstdio"), { recursive: true });
+    writeFileSync(join(root, ".pstdio", "config.json"), '{"project_id":"other","workspace_id":"ws_host_1"}');
+
+    expect(resolveProjectId(root, "explicit-id")).toEqual({
+      projectId: "explicit-id",
+      root,
+      workspaceId: "ws_host_1",
+    });
+  });
+
   test("returns root and projectId from config when no explicit ID", () => {
     const root = join(tmpBase, "repo");
     mkdirSync(join(root, ".git"), { recursive: true });

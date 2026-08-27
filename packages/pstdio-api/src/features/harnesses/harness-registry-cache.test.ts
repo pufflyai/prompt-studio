@@ -31,6 +31,7 @@ const buildFakeRegistry = (records: RuntimeHarnessRecord[]): HarnessRegistry =>
       },
     },
     logger: { info: () => {}, warn: () => {}, error: () => {} },
+    state: { get: async () => undefined, set: async () => {}, delete: async () => {} },
   }));
 
 type SourceRow = { source_path: string; source_kind: "local_path" };

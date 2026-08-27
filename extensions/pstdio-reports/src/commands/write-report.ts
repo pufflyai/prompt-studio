@@ -64,7 +64,7 @@ export const writeReportCommand = defineCommand({
     const kind = commandParams.kind ?? "report";
     const directoryName = resolveReportName(commandParams.name, kind);
     const templateBody = await resolveTemplateBody(ctx, commandParams.template);
-    const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, repoFiles, commandParams.workspace);
+    const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, commandParams.workspace);
     const { name, path, filesPath } = await resolveAvailableReport(ctx, repoFiles, workspaceShorthand, directoryName);
 
     const now = new Date().toISOString();

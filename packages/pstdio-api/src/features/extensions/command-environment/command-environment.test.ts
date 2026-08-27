@@ -101,27 +101,37 @@ const makeSettingsService = () => {
 };
 
 describe("createCommandEnvironment host primitives", () => {
-  test("reads packaged extension files without exposing writes", async () => {
+  test("separates read-only package files from allocated repo files", async () => {
     const sourcePath = mkdtempSync(join(tmpdir(), "pstdio-extension-files-"));
+    const repoPath = mkdtempSync(join(tmpdir(), "pstdio-extension-repo-files-"));
     tempRoots.push(sourcePath);
+    tempRoots.push(repoPath);
     writeFileSync(join(sourcePath, "guide.md"), "# Guide");
     const enabledSources = makeEnabledSources();
     enabledSources[0]!.installedSource.source_path = sourcePath;
     const env = createCommandEnvironment(
-      { extensionStorageService: makeStorageService() } as never,
+      {
+        extensionStorageService: makeStorageService(),
+        repoService: { listByProject: async () => [{ id: "repo-1", path: repoPath }] },
+      } as never,
       enabledSources as never,
       {
         extensionId: "pstdio.extension-lab",
         name: "extension-lab",
         project: projectContext,
         projectId: "project-1",
+        repo: { projectId: "project-1", repoId: "repo-1", path: repoPath },
       },
     );
 
-    expect(await env.extensionFiles.readText("guide.md")).toBe("# Guide");
-    expect(await env.extensionFiles.list()).toEqual([expect.objectContaining({ path: "guide.md" })]);
-    expect("writeText" in env.extensionFiles).toBe(false);
-    await expect(env.extensionFiles.readText("../secret.md")).rejects.toThrow("escapes");
+    expect(await env.packageFiles.readText("guide.md")).toBe("# Guide");
+    expect("writeText" in env.packageFiles).toBe(false);
+    await env.extensionFiles?.writeText("cache/index.json", "{}");
+    expect(readFileSync(join(repoPath, ".pstdio/ext/pstdio.extension-lab/cache/index.json"), "utf8")).toBe("{}");
+    expect(readFileSync(join(repoPath, ".pstdio/.gitignore"), "utf8")).toContain(
+      "/ext/pstdio.extension-lab/",
+    );
+    await expect(env.extensionFiles?.readText("../secret.md")).rejects.toThrow("escapes");
   });
 
   test("defaults terminal sessions to the workspace directory", () => {

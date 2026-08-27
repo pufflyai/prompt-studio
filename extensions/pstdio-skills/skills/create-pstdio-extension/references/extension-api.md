@@ -26,6 +26,8 @@ Every extension package needs a `package.json` next to its entry file:
 }
 ```
 
+Set `pstdio.repoFiles.tracked` when the extension uses its allocated repo directory. It defaults to false.
+
 Required fields are `name`, `version`, `publisher`, `main`, and `engines.pstdio`. The extension id is derived as
 `${publisher}.${name}`. Keep the package `name` lowercase kebab-case because it scopes command ids, catalog names,
 artifact roots, themes, and CLI paths.
@@ -160,10 +162,12 @@ Available param builders include `params.text`, `params.longText`, `params.numbe
 
 - `projectId`, `extensionId`, `name`, `repo`, `source`, `resource`, `params`
 - `attachment` for host-owned workbench invocations, including the target, mode, project, and active resource
-- `storage`, `artifacts`, `files`
+- `storage`, `artifacts`, `files`, read-only `packageFiles`, and repo-scoped `extensionFiles`
 - `tickets`, `sessions`, `workspaces`, `worktrees`, `repos`
 - `commands`, `events`, `activity`, `notify`
 - `process`, `net`, `logger`, `settings`
+
+Harness handlers also receive host-wide, extension-scoped `state`. See `host-storage-and-workspaces.md` for storage and workspace recipes.
 
 Return transport-safe JSON values from commands. To reject before a command runs, use middleware and
 `ctx.commands.reject({ code, reason })`.

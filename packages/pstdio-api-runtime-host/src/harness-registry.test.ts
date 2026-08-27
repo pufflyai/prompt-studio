@@ -29,6 +29,7 @@ const buildContext = (record: RuntimeHarnessRecord, options?: { projectId?: stri
     },
   },
   logger: { info: () => {}, warn: () => {}, error: () => {} },
+  state: { get: async () => undefined, set: async () => {}, delete: async () => {} },
 });
 
 const record = (overrides?: Partial<HarnessProvider>, id = "fake"): RuntimeHarnessRecord => {

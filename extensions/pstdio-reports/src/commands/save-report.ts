@@ -71,7 +71,7 @@ export const saveReportCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const repoFiles = requireRepoFiles(ctx.repoFiles);
-    const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, repoFiles, commandParams.workspace);
+    const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, commandParams.workspace);
     let name = commandParams.name;
 
     if (!name) {

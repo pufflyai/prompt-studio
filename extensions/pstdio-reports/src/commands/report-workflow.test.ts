@@ -52,7 +52,7 @@ const failBlobDeletes = (storage: ExtensionStorageApi): ExtensionStorageApi => (
 describe("report workflow", () => {
   test("write creates a workspace draft report with frontmatter", async () => {
     const { storage, repoFiles, events } = setup();
-    repoFiles.files.set(".pstdio/config.json", new TextEncoder().encode(JSON.stringify({ workspace_id: "ws-1" })));
+    repoFiles.files.set(".pstdio/config.json", new TextEncoder().encode(JSON.stringify({ workspace_id: "stale" })));
 
     const result = await writeReportCommand.run(
       ...makeCommandArgs({
@@ -61,6 +61,7 @@ describe("report workflow", () => {
         overrides: {
           events: recordEvents(events),
           repoFiles,
+          workspaceId: "ws-1",
           workspaces: {
             get: async () => ({ id: "ws-1", workspace_shorthand: "PS-116_A1" }),
           },
@@ -149,7 +150,7 @@ describe("report workflow", () => {
     ).rejects.toThrow("Report template is required. Available templates: change-request, review");
   });
 
-  test("write infers the workspace from the current worktree path when config has no workspace id", async () => {
+  test("write infers the workspace from the current worktree path when context has no workspace id", async () => {
     const { storage, repoFiles } = setup();
     const worktreePath = "/workspaces/PS-116_A1";
     repoFiles.files.set(".pstdio/config.json", new TextEncoder().encode(JSON.stringify({ project_id: "proj-1" })));
@@ -174,7 +175,7 @@ describe("report workflow", () => {
     expect(report).toMatchObject({ workspaceId: "ws-1", workspaceShorthand: "PS-116_A1" });
   });
 
-  test("write treats a malformed config as a missing workspace id and falls back to the worktree path", async () => {
+  test("write ignores host config content and falls back to the worktree path", async () => {
     const { storage, repoFiles } = setup();
     const worktreePath = "/workspaces/PS-116_A1";
     repoFiles.files.set(".pstdio/config.json", new TextEncoder().encode("{ not valid json"));

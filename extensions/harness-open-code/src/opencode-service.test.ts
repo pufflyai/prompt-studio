@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createOpencodeService } from "./opencode-service";
+import { createHarnessServerStore } from "./opencode-server";
 
 let customHome: string;
 let originalHome: string | undefined;
@@ -144,11 +145,18 @@ describe("request timeouts", () => {
   });
 });
 
-test("createOpencodeService stores discovered server url under ~/.pstdio", async () => {
+test("the harness server store persists through host state", async () => {
+  const values = new Map<string, unknown>();
+  const store = createHarnessServerStore({
+    get: async (key) => values.get(key) as never,
+    set: async (key, value) => void values.set(key, value),
+    delete: async (key) => void values.delete(key),
+  });
   const service = createOpencodeService({
     startServer: async () => "http://127.0.0.1:4900",
     isPortOpen: async () => false,
     pingServer: async () => false,
+    serverStore: store,
     fetcher: async (input) => {
       const url = String(input);
 
@@ -166,9 +174,7 @@ test("createOpencodeService stores discovered server url under ~/.pstdio", async
 
   await service.startSession({ prompt: "Start session", cwd: customHome });
 
-  const storePath = join(customHome, ".pstdio", "opencode-server.txt");
-  const storedServerUrl = readFileSync(storePath, "utf8").trim();
-  expect(storedServerUrl).toBe("http://127.0.0.1:4900");
+  expect(await store.read()).toBe("http://127.0.0.1:4900");
 });
 
 test("startSession applies selected model to session creation and initial prompt message", async () => {

@@ -12,6 +12,7 @@ import { parseOpencodeModels } from "./models";
 import { normalizeOpencodeMessage } from "./opencode-normalizer";
 import { pollOpencodeQuestionReply } from "./opencode-question-reply-poller";
 import { createOpencodeService } from "./opencode-service";
+import { createHarnessServerStore } from "./opencode-server";
 import { pollOpencodeMessages, pollOpencodeUntilIdle } from "./opencode-session-poller";
 
 // --- Detection ---
@@ -97,7 +98,9 @@ export const createOpencodeHarness = (
   serviceOverrides: Parameters<typeof createOpencodeService>[0] = {},
 ): Omit<HarnessProvider, "ref"> => {
   const deps = { ...defaultDeps, ...overrides };
-  const opencode = createOpencodeService(serviceOverrides);
+  const fixedService = serviceOverrides.serverStore ? createOpencodeService(serviceOverrides) : null;
+  const serviceFor = (ctx: HarnessContext) =>
+    fixedService ?? createOpencodeService({ ...serviceOverrides, serverStore: createHarnessServerStore(ctx.state) });
   let modelCache: { expiresAt: number; value: Promise<ReturnType<typeof parseOpencodeModels>> } | undefined;
 
   const listModels = async (ctx: HarnessContext) => {
@@ -116,8 +119,9 @@ export const createOpencodeHarness = (
     return value;
   };
 
-  const fetchBaselineCount = async (sessionId: string, cwd: string | undefined) => {
+  const fetchBaselineCount = async (ctx: HarnessContext, sessionId: string, cwd: string | undefined) => {
     try {
+      const opencode = serviceFor(ctx);
       const existing = await opencode.getSessionMessages(sessionId, cwd);
       return existing.length;
     } catch {
@@ -125,7 +129,12 @@ export const createOpencodeHarness = (
     }
   };
 
-  const resumeQuestionReply = async (input: HarnessResumeInput, questionResponse: QuestionResponse) => {
+  const resumeQuestionReply = async (
+    ctx: HarnessContext,
+    input: HarnessResumeInput,
+    questionResponse: QuestionResponse,
+  ) => {
+    const opencode = serviceFor(ctx);
     const pendingQuestions = await opencode.listPendingQuestions(input.cwd);
     const pendingQuestion = pendingQuestions.find((question) => question.sessionID === input.agentSessionId);
     const messageComplete = pendingQuestion
@@ -162,7 +171,8 @@ export const createOpencodeHarness = (
 
     listModels,
 
-    start: async (_ctx, input) => {
+    start: async (ctx, input) => {
+      const opencode = serviceFor(ctx);
       const { sessionId, messageComplete } = await opencode.startSession({
         prompt: input.prompt,
         attachments: input.attachments,
@@ -190,12 +200,13 @@ export const createOpencodeHarness = (
       });
     },
 
-    resume: async (_ctx, input) => {
+    resume: async (ctx, input) => {
+      const opencode = serviceFor(ctx);
       if (input.questionResponse) {
-        return resumeQuestionReply(input, input.questionResponse);
+        return resumeQuestionReply(ctx, input, input.questionResponse);
       }
 
-      const baselineCount = await fetchBaselineCount(input.agentSessionId, input.cwd);
+      const baselineCount = await fetchBaselineCount(ctx, input.agentSessionId, input.cwd);
 
       const { messageComplete } = opencode.sendSessionMessage({
         sessionId: input.agentSessionId,
@@ -224,7 +235,8 @@ export const createOpencodeHarness = (
       });
     },
 
-    reattach: (_ctx, input) => {
+    reattach: (ctx, input) => {
+      const opencode = serviceFor(ctx);
       const abortController = new AbortController();
       const done = pollOpencodeUntilIdle({
         loadMessages: opencode.getSessionMessages,
@@ -242,7 +254,8 @@ export const createOpencodeHarness = (
       });
     },
 
-    getMessages: async (_ctx, input) => {
+    getMessages: async (ctx, input) => {
+      const opencode = serviceFor(ctx);
       const messages = await opencode.getSessionMessages(input.agentSessionId, input.cwd);
       return messages.map(normalizeOpencodeMessage);
     },

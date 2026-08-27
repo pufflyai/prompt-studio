@@ -286,7 +286,9 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   /** Files of the workspace this context targets, scoped to its working dir. */
   workspaceFiles?: WorkspaceFilesMount;
   /** Read-only files packaged with the installed extension, scoped to its package root. */
-  extensionFiles: ExtensionPackageFilesApi;
+  packageFiles: ExtensionPackageFilesApi;
+  /** Repo directory allocated to this extension. Present wherever repoFiles is present. */
+  extensionFiles?: ArtifactMount;
   files: ExtensionFilesApi;
   /** Project skill catalog. Present where the host wires it (command/event contexts). */
   skills?: ExtensionSkillsApi;

@@ -1,9 +1,7 @@
 import { spawn } from "node:child_process";
-import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { connect } from "node:net";
-import { homedir } from "node:os";
-import { dirname, join } from "node:path";
 import { createInterface } from "node:readline";
+import type { HarnessStateApi } from "@pstdio/sdk/extensions";
 import { isConnectionError } from "./opencode-http";
 
 export type OpencodeServerStarter = (options: { host: string; port: number }) => Promise<string>;
@@ -27,33 +25,12 @@ const defaultServerHost = "127.0.0.1";
 const defaultServerPort = 4096;
 const maxServerPortAttempts = 20;
 
-const resolveHome = () => process.env.HOME ?? process.env.USERPROFILE ?? homedir();
-
-export const defaultServerStorePath = () => join(resolveHome(), ".pstdio", "opencode-server.txt");
-
 const buildServerUrl = (host: string, port: number) => `http://${host}:${port}`;
 
-export const createFileServerStore = (path: string): OpencodeServerStore => ({
-  read: async () => {
-    try {
-      const raw = await readFile(path, "utf8");
-      const value = raw.trim();
-      return value.length > 0 ? value : null;
-    } catch {
-      return null;
-    }
-  },
-  write: async (url: string) => {
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, `${url}\n`, "utf8");
-  },
-  clear: async () => {
-    try {
-      await unlink(path);
-    } catch {
-      return;
-    }
-  },
+export const createHarnessServerStore = (state: HarnessStateApi): OpencodeServerStore => ({
+  read: async () => (await state.get<string>("serverUrl")) ?? null,
+  write: (url) => state.set("serverUrl", url),
+  clear: () => state.delete("serverUrl"),
 });
 
 export const canConnectToHost = ({ host, port }: { host: string; port: number }) =>

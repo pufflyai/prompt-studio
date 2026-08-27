@@ -383,14 +383,28 @@ export default defineExtension({
 
 ## Read Files Packaged With The Extension
 
-`ctx.extensionFiles` is read-only and scoped to the installed extension package. Paths cannot leave that package.
+`ctx.packageFiles` is read-only and scoped to the installed extension package. Paths cannot leave that package.
 
 ```ts
-const guide = await ctx.extensionFiles.readText("docs/guide.md");
-const examples = await ctx.extensionFiles.list("examples/**/*.json");
+const guide = await ctx.packageFiles.readText("docs/guide.md");
+const examples = await ctx.packageFiles.list("examples/**/*.json");
 ```
 
 Files excluded from the installed package by its `.gitignore` are not available. Keep every runtime asset out of ignored paths.
+
+## Store Private Repo Files
+
+Declare `pstdio.repoFiles.tracked` in `package.json`, then use the extension-scoped mount:
+
+```json
+{ "pstdio": { "repoFiles": { "tracked": false } } }
+```
+
+```ts
+await ctx.extensionFiles?.writeText("cache/index.json", JSON.stringify(index));
+```
+
+The host allocates `.pstdio/ext/<publisher>.<name>/` and keeps it out of git when `tracked` is false.
 
 ## Store Extension Data
 

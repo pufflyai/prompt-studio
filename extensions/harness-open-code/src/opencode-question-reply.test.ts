@@ -22,6 +22,7 @@ const ctx: HarnessContext = {
   },
   net: { findFreePort: async () => 0 },
   logger: { info: () => {}, warn: () => {}, error: () => {} },
+  state: { get: async () => undefined, set: async () => {}, delete: async () => {} },
 };
 
 const serviceOverrides = () => ({

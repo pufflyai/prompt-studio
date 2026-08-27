@@ -44,6 +44,8 @@ export const resolvePstdioLogPath = (input: ResolvePstdioHomeInput = {}) =>
 export const resolvePstdioRuntimeDescriptorPath = (input: ResolvePstdioHomeInput = {}) =>
   join(resolvePstdioHome(input), "runtime.json");
 
+export const resolvePstdioStatePath = (input: ResolvePstdioHomeInput = {}) => join(resolvePstdioHome(input), "state");
+
 export const resolvePstdioStoragePath = (input: ResolvePstdioHomeInput = {}) =>
   join(resolvePstdioHome(input), "storage");
 

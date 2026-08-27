@@ -11,10 +11,8 @@ import {
 import { createQuestionApi } from "./opencode-questions";
 import {
   canConnectToHost,
-  createFileServerStore,
   createServerConnection,
   defaultPingServer,
-  defaultServerStorePath,
   defaultStartServer,
   type OpencodeServerStarter,
   type OpencodeServerStore,
@@ -120,7 +118,7 @@ const buildMessageParts = async (prompt: string, attachments: HarnessAttachment[
 export const createOpencodeService = (overrides: Partial<OpencodeServiceDeps> = {}) => {
   const deps: OpencodeServiceDeps = {
     startServer: overrides.startServer ?? defaultStartServer,
-    serverStore: overrides.serverStore ?? createFileServerStore(defaultServerStorePath()),
+    serverStore: overrides.serverStore ?? { read: async () => null, write: async () => {}, clear: async () => {} },
     pingServer: overrides.pingServer ?? defaultPingServer,
     isPortOpen: overrides.isPortOpen ?? canConnectToHost,
     fetcher: overrides.fetcher ?? fetch,

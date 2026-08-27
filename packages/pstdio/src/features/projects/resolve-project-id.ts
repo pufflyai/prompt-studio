@@ -1,7 +1,10 @@
 import { findGitRoot, readConfig } from "@/features/config/config";
 
 export const resolveProjectId = (cwd: string, explicitId?: string) => {
-  if (explicitId) return { projectId: explicitId, root: findGitRoot(cwd) };
+  if (explicitId) {
+    const root = findGitRoot(cwd);
+    return { projectId: explicitId, root, workspaceId: root ? readConfig(root)?.workspace_id : undefined };
+  }
 
   const envProjectId = process.env.PSTDIO_PROJECT_ID?.trim();
   const root = findGitRoot(cwd);

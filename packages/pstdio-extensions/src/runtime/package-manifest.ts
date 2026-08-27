@@ -19,6 +19,7 @@ export interface PackageManifest {
   enginesPstdio: string;
   pstdio?: {
     scope?: ExtensionLoadScope;
+    repoFiles?: { tracked: boolean };
   };
   id: string;
 }
@@ -91,17 +92,36 @@ const validatePstdioMetadata = (
   }
 
   const scope = value.scope;
-  if (scope === undefined) return undefined;
-  if (scope === "user" || scope === "repo") return { scope };
+  if (scope !== undefined && scope !== "user" && scope !== "repo") {
+    diagnostics.push(
+      createDiagnostic({
+        code: "extension_manifest_invalid_value",
+        message: `pstdio.scope "${String(scope)}" must be "user" or "repo"`,
+        sourcePath: packagePath,
+      }),
+    );
+    return null;
+  }
 
-  diagnostics.push(
-    createDiagnostic({
-      code: "extension_manifest_invalid_value",
-      message: `pstdio.scope "${String(scope)}" must be "user" or "repo"`,
-      sourcePath: packagePath,
-    }),
-  );
-  return null;
+  const repoFiles = value.repoFiles;
+  if (repoFiles !== undefined) {
+    if (!isStringRecord(repoFiles) || typeof repoFiles.tracked !== "boolean") {
+      diagnostics.push(
+        createDiagnostic({
+          code: "extension_manifest_invalid_value",
+          message: "pstdio.repoFiles.tracked must be a boolean",
+          sourcePath: packagePath,
+        }),
+      );
+      return null;
+    }
+  }
+
+  if (scope === undefined && repoFiles === undefined) return undefined;
+  return {
+    ...(scope ? { scope } : {}),
+    ...(repoFiles ? { repoFiles: { tracked: repoFiles.tracked as boolean } } : {}),
+  };
 };
 
 const resolveEntry = (diagnostics: ExtensionDiagnostic[], packagePath: string, packageDir: string, main: string) => {

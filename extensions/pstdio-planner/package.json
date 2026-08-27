@@ -5,9 +5,6 @@
   "description": "Built-in Prompt Studio planner: tickets, managed attempts, reviews, and templates.",
   "publisher": "pstdio",
   "main": "./extension.ts",
-  "exports": {
-    "./command-refs": "./src/public-command-refs.ts"
-  },
   "engines": {
     "pstdio": "1.0.0-alpha.5"
   },

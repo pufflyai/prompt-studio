@@ -51,6 +51,7 @@ metadata:
 ## References
 
 - [references/extension-api.md](references/extension-api.md) - package manifest, contribution types, ids, context APIs, and asset rules.
+- [references/host-storage-and-workspaces.md](references/host-storage-and-workspaces.md) - harness state, worktree cleanup, workspace identity, and repo file storage.
 - [references/examples.md](references/examples.md) - compact examples for common extension use cases.
 - [references/scope.md](references/scope.md) - repo-local vs user extension source selection.
 - [references/validation.md](references/validation.md) - typecheck, install, runtime, package, and dashboard validation guidance.

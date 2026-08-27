@@ -1,10 +1,9 @@
-import { existsSync } from "node:fs";
-import { copyFile, mkdir, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
 import {
   defineHook,
+  type ArtifactMount,
   type ExtensionStorageApi,
   type WorkspaceProvisionPayload,
+  type WorkspaceFilesMount,
   workspaceEvents,
 } from "@pstdio/sdk/extensions";
 import { ticketMarkdownPath, ticketToMarkdown } from "../data/draft-storage";
@@ -13,22 +12,16 @@ import type { StoredTicket } from "../data/types";
 import { ticketRefFromAnchors } from "../data/workspace-ticket-link";
 
 const copyOrWriteTicketFile = async (input: {
-  repoPath: string;
+  repoFiles: ArtifactMount;
   storage: ExtensionStorageApi;
   ticket: StoredTicket;
-  worktreePath: string;
+  workspaceFiles: WorkspaceFilesMount;
 }) => {
   const relativePath = ticketMarkdownPath(input.ticket.shorthand);
-  const sourcePath = join(input.repoPath, relativePath);
-  const targetPath = join(input.worktreePath, relativePath);
-
-  await mkdir(dirname(targetPath), { recursive: true });
-  if (existsSync(sourcePath)) {
-    await copyFile(sourcePath, targetPath);
-    return;
-  }
-
-  await writeFile(targetPath, await ticketToMarkdown(input.storage, input.ticket), "utf8");
+  const content = (await input.repoFiles.exists(relativePath))
+    ? await input.repoFiles.readText(relativePath)
+    : await ticketToMarkdown(input.storage, input.ticket);
+  await input.workspaceFiles.writeText(relativePath, content);
 };
 
 export const worktreeCreatedHook = defineHook<WorkspaceProvisionPayload>({
@@ -40,12 +33,13 @@ export const worktreeCreatedHook = defineHook<WorkspaceProvisionPayload>({
 
     const ticket = await findTicket(ctx.storage, ticketRef);
     if (!ticket) return;
+    if (!ctx.repoFiles || !ctx.workspaceFiles) throw new Error("Workspace file mounts are unavailable.");
 
     await copyOrWriteTicketFile({
-      repoPath: payload.repoPath,
+      repoFiles: ctx.repoFiles,
       storage: ctx.storage,
       ticket,
-      worktreePath: payload.workspaceDir,
+      workspaceFiles: ctx.workspaceFiles,
     });
   },
 });

@@ -17,7 +17,7 @@ export const deleteReportCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const repoFiles = requireRepoFiles(ctx.repoFiles);
-    const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, repoFiles, commandParams.workspace);
+    const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, commandParams.workspace);
     const name = commandParams.name;
     assertSafeReportName(name);
     const report = await findReport(ctx.storage, workspaceShorthand, name);

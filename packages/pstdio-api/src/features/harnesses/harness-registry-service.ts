@@ -13,6 +13,7 @@ import { resolvePstdioHome } from "../extensions/install-extension-source";
 import { selectExistingSources } from "../extensions/installed-extension-runtime";
 import type { ProjectExtensionRuntimeCatalog } from "../extensions/project-extension-runtime-catalog";
 import type { ProjectExtensionRuntimeSnapshot } from "../extensions/project-extension-runtime-snapshot";
+import { createHarnessStateApi } from "./harness-state";
 
 export type HarnessScopeOptions = {
   /** Restrict to harnesses from extensions enabled for this project. */
@@ -89,6 +90,7 @@ export const createHarnessRegistryService = (input: {
         ? input.createConnectionsApi({ projectId: options.projectId, extensionId: record.extensionId })
         : unavailableConnections,
     logger: harnessLogger(record.extensionId),
+    state: createHarnessStateApi(record.extensionId),
   });
 
   // Sources registered in the DB only exist once a project synced them, but agents are

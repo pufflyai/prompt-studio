@@ -62,6 +62,7 @@ export const createTestHarnessRegistry = (
       },
     },
     logger: { info: () => {}, warn: () => {}, error: () => {} },
+    state: { get: async () => undefined, set: async () => {}, delete: async () => {} },
   }));
 
   const isDisabled = (id: string, projectId?: string) =>

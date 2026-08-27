@@ -37,6 +37,40 @@ describe("readPackageManifest", () => {
     expect(result.diagnostics).toEqual([]);
   });
 
+  test("reads repo file tracking when declared", () => {
+    const dir = createPackage({
+      name: "repo-extension",
+      version: "1.0.0",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: EXTENSION_API_VERSION },
+      pstdio: { repoFiles: { tracked: true } },
+    });
+
+    const result = readPackageManifest(dir);
+
+    expect(result.manifest?.pstdio?.repoFiles).toEqual({ tracked: true });
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  test("rejects invalid repo file tracking declarations", () => {
+    const dir = createPackage({
+      name: "repo-extension",
+      version: "1.0.0",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: EXTENSION_API_VERSION },
+      pstdio: { repoFiles: { tracked: "sometimes" } },
+    });
+
+    const result = readPackageManifest(dir);
+
+    expect(result.manifest).toBeNull();
+    expect(result.diagnostics.map((diagnostic) => diagnostic.message)).toContain(
+      "pstdio.repoFiles.tracked must be a boolean",
+    );
+  });
+
   test("allows package manifests without pstdio scope", () => {
     const dir = createPackage({
       name: "user-extension",

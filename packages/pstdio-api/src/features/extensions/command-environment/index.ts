@@ -20,7 +20,8 @@ import { createProcessApi, findFreePort } from "../extension-process-api";
 import { createRepoFilesApi } from "../repo-files-api";
 import { createActivityApi } from "./activity";
 import { createArtifactsApi } from "./artifacts";
-import { createExtensionPackageFilesApi } from "./extension-files";
+import { createExtensionFilesApi } from "./extension-files";
+import { createExtensionPackageFilesApi } from "./package-files";
 import { createFilesApi } from "./files";
 import { createNotifyApi } from "./notifications";
 import { createReposApi, resolveRegisteredRepoPath } from "./repos";
@@ -79,21 +80,30 @@ export const createCommandEnvironment = (
     workspaces: createWorkspacesApi(deps, { projectId: input.projectId, signal }, runtimeDeps),
   });
   const hostApis = scopedHostApis();
+  const resolveRepoPath = () => resolveRegisteredRepoPath(deps, input.projectId, input.repo as RepoContext);
+  const manifest = (enabledSource.installedSource.manifest_json ?? {}) as {
+    pstdio?: { repoFiles?: { tracked?: boolean } };
+  };
 
   return {
     project: input.project,
     workspaceId: input.workspaceId,
     storage,
     artifacts: createArtifactsApi(deps, input),
-    repoFiles: input.repo
-      ? createRepoFilesApi(() => resolveRegisteredRepoPath(deps, input.projectId, input.repo as RepoContext))
-      : undefined,
+    repoFiles: input.repo ? createRepoFilesApi(resolveRepoPath) : undefined,
     workspaceFiles: input.workspaceDir
       ? createWorkspaceFilesMount(input.workspaceDir, {
           syncStateRoot: workspaceSyncStateRoot({ ...input, workspaceDir: input.workspaceDir }),
         })
       : undefined,
-    extensionFiles: createExtensionPackageFilesApi(enabledSource.installedSource.source_path),
+    packageFiles: createExtensionPackageFilesApi(enabledSource.installedSource.source_path),
+    extensionFiles: input.repo
+      ? createExtensionFilesApi({
+          extensionId: input.extensionId,
+          resolveRepoPath,
+          tracked: manifest.pstdio?.repoFiles?.tracked === true,
+        })
+      : undefined,
     files: createFilesApi(deps, input.projectId),
     skills: { list: () => deps.skillService.list(input.projectId) },
     templates: { get: (name) => deps.templateService.getWithContent(input.projectId, name) },

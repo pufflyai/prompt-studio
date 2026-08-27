@@ -549,7 +549,9 @@ export default defineExtension({
 
 Package asset paths must be relative and stay inside the package.
 
-Command and hook handlers can read other packaged files through `ctx.extensionFiles`. This API is read-only and scoped to the installed package root. Files omitted from an installed copy by `.gitignore` are unavailable at runtime.
+Command and hook handlers can read other packaged files through `ctx.packageFiles`. This API is read-only and scoped to the installed package root. Files omitted from an installed copy by `.gitignore` are unavailable at runtime.
+
+Set `pstdio.repoFiles.tracked` in the package manifest to control the allocated `ctx.extensionFiles` repo mount. It is rooted at `.pstdio/ext/<publisher>.<name>/`. The host adds an ignore entry on the first write unless `tracked` is true.
 
 ## Artifact Mounts And Storage
 
