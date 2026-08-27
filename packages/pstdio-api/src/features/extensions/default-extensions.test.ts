@@ -14,23 +14,20 @@ afterEach(() => {
 });
 
 describe("resolveDefaultExtensionsConfig", () => {
-  test("returns the production defaults when the env override is absent", () => {
-    const config = resolveDefaultExtensionsConfig({});
+  test("returns the production defaults when the env override is absent", async () => {
+    const config = await resolveDefaultExtensionsConfig({});
 
     expect(config.defaultExtensions).toEqual([
       "harness-claude-code",
       "harness-codex",
       "harness-open-code",
       "pstdio-base-themes",
-      "pstdio-planner",
-      "pstdio-planner-loops",
-      "pstdio-reports",
       "pstdio-skills",
     ]);
   });
 
-  test("uses PSTDIO_DEFAULT_EXTENSIONS JSON when set", () => {
-    const config = resolveDefaultExtensionsConfig({
+  test("uses PSTDIO_DEFAULT_EXTENSIONS JSON when set", async () => {
+    const config = await resolveDefaultExtensionsConfig({
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
         { source: "./extensions/pstdio-planner", installName: "planner-dev", skipInstall: true },
       ]),
@@ -39,6 +36,42 @@ describe("resolveDefaultExtensionsConfig", () => {
     expect(config.defaultExtensions).toEqual([
       { source: "./extensions/pstdio-planner", installName: "planner-dev", skipInstall: true },
     ]);
+  });
+
+  test("derives defaults from an operator catalog", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-default-catalog-"));
+    const catalogPath = join(root, "catalog.json");
+    writeFileSync(
+      catalogPath,
+      JSON.stringify({
+        version: 1,
+        extensions: [
+          {
+            installName: "recipes",
+            displayName: "Recipes",
+            description: "Recipe tools.",
+            origin: {
+              kind: "git",
+              url: "https://example.com/extensions.git",
+              path: "extensions/recipes",
+              ref: "v1.0.0",
+            },
+            default: true,
+          },
+        ],
+      }),
+    );
+
+    try {
+      expect(
+        await resolveDefaultExtensionsConfig({
+          PSTDIO_EXTENSION_CATALOG: catalogPath,
+          PSTDIO_HOME: join(root, "home"),
+        }),
+      ).toEqual({ defaultExtensions: ["recipes"] });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
 
@@ -140,8 +173,6 @@ describe("installDefaultExtensions sources", () => {
       "harness-codex",
       "harness-open-code",
       "pstdio-base-themes",
-      "pstdio-planner",
-      "pstdio-reports",
       "pstdio-skills",
     ]);
     expect(
@@ -169,19 +200,19 @@ describe("installDefaultExtensions sources", () => {
     const prepareSharedCheckout = mock(async () => ({ prepareNamedSource, cleanup }));
 
     await installDefaultExtensions({
-      env: { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([extensionName]) },
+      config: { defaultExtensions: [extensionName] },
       installExtensionSource,
       prepareSharedCheckout,
       releaseRef: "pstdio@0.27.0",
     });
 
-    expect(prepareSharedCheckout).toHaveBeenCalledWith([extensionName], { ref: "pstdio@0.27.0" });
+    expect(prepareSharedCheckout).toHaveBeenCalledWith([extensionName], { hostReleaseRef: "pstdio@0.27.0" });
     expect(installExtensionSource).toHaveBeenCalledTimes(1);
     expect(calls[0]).toMatchObject({
       allowUnsupportedApiVersion: true,
       existsOk: true,
       prepareNamedSource: expect.any(Function),
-      ref: "pstdio@0.27.0",
+      hostReleaseRef: "pstdio@0.27.0",
       source: extensionName,
     });
     expect(cleanup).toHaveBeenCalledTimes(1);
@@ -206,7 +237,10 @@ describe("installDefaultExtensions sources", () => {
       releaseRef: "pstdio@0.27.0",
     });
 
-    expect(prepareSharedCheckout).toHaveBeenCalledWith([extensionName], { ref: "pstdio@0.26.2" });
+    expect(prepareSharedCheckout).toHaveBeenCalledWith([extensionName], {
+      hostReleaseRef: "pstdio@0.27.0",
+      ref: "pstdio@0.26.2",
+    });
     expect(calls[0]).toMatchObject({
       allowUnsupportedApiVersion: true,
       existsOk: true,

@@ -54,8 +54,9 @@ layer-map change.
 
 8. **Packaging glue**
    `pstdio` may include generated packaging glue for compiled runtime artifacts.
-   Default extensions are release-pinned Marketplace installs and are not embedded
-   in the host binary. Cross-package relative imports are only allowed for the
+   The host embeds the default extension catalog as data. Extension source is fetched
+   from each entry's pinned Git origin and is not embedded in the host binary.
+   Cross-package relative imports are only allowed for the
    generated embed manifest allowlist enforced by the boundary checker.
 
 ## Rules

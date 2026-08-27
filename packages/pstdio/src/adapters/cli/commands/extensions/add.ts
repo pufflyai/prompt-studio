@@ -4,6 +4,7 @@ import {
   type InstallExtensionSourceInput,
   type InstalledExtensionSource,
   installExtensionSource,
+  isLocalExtensionSource,
 } from "pstdio-api/extensions/install-extension-source";
 import type { Arguments, Argv } from "yargs";
 import { CLI_VERSION } from "@/features/cli-version";
@@ -63,11 +64,6 @@ const defaultDeps: Deps = {
   readConfig,
 };
 
-// A bare name installs the extension that belongs to this release, never whatever the default
-// branch happens to hold. A branch is opt-in, because it is a moving target.
-export const resolveNamedSourceRef = (branch: string | undefined, cliVersion = CLI_VERSION) =>
-  branch ?? `pstdio@${cliVersion}`;
-
 const resolveLinkedProject = (deps: Pick<Deps, "cwd" | "findGitRoot" | "readConfig">) => {
   const root = deps.findGitRoot(deps.cwd());
   if (!root) return null;
@@ -85,7 +81,8 @@ export const createHandler =
         source: argv.source,
         installName: argv.name,
         force: argv.force,
-        ref: resolveNamedSourceRef(argv.branch),
+        ref: argv.branch,
+        ...(!isLocalExtensionSource(argv.source) ? { hostReleaseRef: `pstdio@${CLI_VERSION}` } : {}),
         ...(project ? { repoPath: project.root } : {}),
         skipInstall: argv["skip-install"],
       });

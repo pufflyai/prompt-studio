@@ -1,4 +1,4 @@
-import { extensionMarketplace } from "./extension-marketplace";
+import { loadExtensionCatalog, packagedExtensionCatalog } from "./extension-catalog";
 
 export type DefaultExtensionEntry =
   | string
@@ -15,7 +15,9 @@ export type DefaultExtensionsConfig = {
 };
 
 export const defaultExtensions: DefaultExtensionsConfig = {
-  defaultExtensions: extensionMarketplace.map((extension) => extension.installName),
+  defaultExtensions: packagedExtensionCatalog.extensions
+    .filter((extension) => extension.default)
+    .map((extension) => extension.installName),
 };
 
 const toConfig = (parsed: unknown): DefaultExtensionsConfig => {
@@ -28,9 +30,16 @@ const toConfig = (parsed: unknown): DefaultExtensionsConfig => {
   throw new Error("PSTDIO_DEFAULT_EXTENSIONS must be a JSON array or object with defaultExtensions");
 };
 
-export const resolveDefaultExtensionsConfig = (env: Record<string, string | undefined> = process.env) => {
+export const resolveDefaultExtensionsConfig = async (env: Record<string, string | undefined> = process.env) => {
   const raw = env.PSTDIO_DEFAULT_EXTENSIONS;
-  if (!raw) return defaultExtensions;
+  if (!raw) {
+    const catalog = await loadExtensionCatalog({ env });
+    return {
+      defaultExtensions: catalog.extensions
+        .filter((extension) => extension.default)
+        .map((extension) => extension.installName),
+    };
+  }
 
   try {
     return toConfig(JSON.parse(raw) as unknown);

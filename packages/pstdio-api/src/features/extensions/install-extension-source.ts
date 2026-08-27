@@ -34,7 +34,6 @@ import type {
 export {
   createSharedNamedSourceCheckout,
   namedSourceRef,
-  PSTDIO_REPOSITORY_URL,
 } from "./extension-source-checkout";
 export type {
   ExtensionEnableInput,
@@ -199,7 +198,13 @@ const resolveSource = async (input: InstallExtensionSourceInput, tempDir: string
     return { kind: "local" as const, path, ref: undefined };
   }
 
-  const named = await (input.prepareNamedSource ?? prepareNamedSource)(input.source, tempDir, input.ref, input.signal);
+  const named = await (input.prepareNamedSource ?? prepareNamedSource)(
+    input.source,
+    tempDir,
+    input.ref,
+    input.signal,
+    input.hostReleaseRef,
+  );
   return { kind: "named" as const, name: input.source, path: named.path, ref: named.ref };
 };
 

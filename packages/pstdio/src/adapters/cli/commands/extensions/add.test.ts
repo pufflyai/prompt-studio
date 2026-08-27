@@ -89,7 +89,8 @@ describe("extensions add", () => {
       source: "planner",
       installName: "planner-dev",
       force: true,
-      ref: `pstdio@${CLI_VERSION}`,
+      ref: undefined,
+      hostReleaseRef: `pstdio@${CLI_VERSION}`,
       repoPath: "/repo",
       skipInstall: true,
     });
@@ -109,7 +110,9 @@ describe("extensions add", () => {
 
     await handler(argv({ source: "planner", branch: "feature/new-renderer" }));
 
-    expect(deps.installExtensionSource).toHaveBeenCalledWith(expect.objectContaining({ ref: "feature/new-renderer" }));
+    expect(deps.installExtensionSource).toHaveBeenCalledWith(
+      expect.objectContaining({ hostReleaseRef: `pstdio@${CLI_VERSION}`, ref: "feature/new-renderer" }),
+    );
   });
 
   test("skips enablement when outside a linked project", async () => {
@@ -122,7 +125,7 @@ describe("extensions add", () => {
       source: "./planner",
       installName: undefined,
       force: undefined,
-      ref: `pstdio@${CLI_VERSION}`,
+      ref: undefined,
       skipInstall: undefined,
     });
     expect(deps.ensureApi).not.toHaveBeenCalled();

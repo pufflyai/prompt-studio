@@ -48,6 +48,10 @@ export const AvailableExtensionDetail = (props: AvailableExtensionDetailProps) =
             <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle">
               {extension.installName}
             </Text>
+            <Text textStyle="label/XS" fontFamily="mono" color="fg.subtle" truncate>
+              {extension.publisher ? `${extension.publisher} · ` : ""}
+              {extension.origin.url}#{extension.origin.path}
+            </Text>
           </Stack>
           <Button
             variant="outline"

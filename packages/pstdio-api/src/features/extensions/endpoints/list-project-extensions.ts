@@ -4,7 +4,7 @@ import { listProjectExtensionsResponseSchema } from "pstdio-api-contracts";
 import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
-import { extensionMarketplace } from "../extension-marketplace";
+import { getExtensionCatalog } from "../extension-catalog";
 import { hashExtensionSource } from "../extension-runtime";
 import { toProjectExtensionInstance } from "../project-extension-instance";
 
@@ -46,10 +46,17 @@ export const listProjectExtensionsHandler = (
         ),
       );
       const installedNames = new Set(installedRecords.map(({ installedSource }) => installedSource.install_name));
-      const marketplace = extensionMarketplace.map((extension) => ({
+      const catalog = await getExtensionCatalog();
+      const marketplace = catalog.extensions.map((extension) => ({
         installName: extension.installName,
         displayName: extension.displayName,
         description: extension.description,
+        origin: {
+          kind: extension.origin.kind,
+          path: extension.origin.path,
+          url: extension.origin.url,
+        },
+        publisher: extension.publisher,
         installed: installedNames.has(extension.installName),
       }));
       return c.json({ extensions, marketplace }, 200);

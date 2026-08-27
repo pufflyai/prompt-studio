@@ -29,7 +29,15 @@ const extension = (enabled: boolean): ProjectExtensionInstance => ({
 
 const response = (enabled: boolean): ListProjectExtensionsResponse => ({
   extensions: [extension(enabled)],
-  marketplace: [{ installName: "example", displayName: "Example", description: "Example extension", installed: true }],
+  marketplace: [
+    {
+      installName: "example",
+      displayName: "Example",
+      description: "Example extension",
+      installed: true,
+      origin: { kind: "git", url: "https://example.com/extensions.git", path: "extensions/example" },
+    },
+  ],
 });
 
 describe("project extension cache", () => {

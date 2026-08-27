@@ -61,7 +61,8 @@ Workspaces always derive from `PSTDIO_HOME` as `$PSTDIO_HOME/workspaces`.
 | -------- | ------- | ------- |
 | `PSTDIO_API_TOKEN` | discovered descriptor token | Bearer token published for authenticated runtime-control requests. |
 | `PSTDIO_AGENTS` | `claude-code,opencode` | Comma-separated agent registry override. Tests commonly use `fake`. |
-| `PSTDIO_DEFAULT_EXTENSIONS` | core skills, templates, and automation extensions | JSON array or `{ "defaultExtensions": [...] }` object installed by each extension's `pstdio.scope` and enabled for new projects. Tests can set `[]`. |
+| `PSTDIO_EXTENSION_CATALOG` | packaged extension catalog | Local JSON path or HTTPS URL. Remote data is cached under the active Prompt Studio home. |
+| `PSTDIO_DEFAULT_EXTENSIONS` | catalog entries marked as defaults | JSON array or `{ "defaultExtensions": [...] }` override installed by each extension's `pstdio.scope` and enabled for new projects. Tests can set `[]`. |
 | `PSTDIO_EVENT_BUS_BUFFER_SIZE` | service default | Optional positive integer for the sync event bus replay buffer. |
 | `PSTDIO_LOG_LEVEL` | `error` | Runtime log level. |
 | `PSTDIO_LOG_PATH` | derived from state path | Explicit log file path. |

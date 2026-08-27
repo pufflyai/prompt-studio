@@ -2,15 +2,14 @@ import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 import type { ExtensionRelease } from "../app-config";
 import {
-  getMarketplaceExtension,
-  isMarketplaceExtension,
-  marketplaceExtensionRepositoryPath,
-} from "../features/extensions/extension-marketplace";
+  type ExtensionCatalog,
+  type ExtensionCatalogEntry,
+  getExtensionCatalog,
+} from "../features/extensions/extension-catalog";
 import { runCommand } from "../features/extensions/install-extension-dependencies";
 import {
   type InstallExtensionSourceInput,
   installExtensionSource as installExtensionSourceDefault,
-  PSTDIO_REPOSITORY_URL,
   resolvePstdioHome,
   toExtensionEnableInput,
 } from "../features/extensions/install-extension-source";
@@ -32,8 +31,9 @@ type RepoService = Pick<ReturnType<typeof createRepoService>, "listByProject">;
 type ExtensionUpgradeServiceDeps = {
   extensionService: ExtensionService;
   installExtensionSource?: (input: InstallExtensionSourceInput) => ReturnType<typeof installExtensionSourceDefault>;
+  catalog?: ExtensionCatalog;
   release: ExtensionRelease | null;
-  resolveReleaseCommit?: (releaseRef: string) => Promise<string>;
+  resolveReleaseCommit?: (originUrl: string, releaseRef: string) => Promise<string>;
   repoService: RepoService;
 };
 
@@ -55,24 +55,55 @@ const repoForSource = async (deps: ExtensionUpgradeServiceDeps, projectId: strin
   return repos.find((repo) => resolve(repo.path, ".pstdio/extensions") === resolve(sourcePath, ".."))?.path;
 };
 
-const gitCommitPattern = /^[0-9a-f]{40}$/i;
-
-const commitFromSourceRef = (source: UpgradeSource) => {
-  if (!source.source_ref) return null;
-  const prefix = `${PSTDIO_REPOSITORY_URL}@`;
-  const suffix = `#${marketplaceExtensionRepositoryPath(source.install_name)}`;
-  if (!source.source_ref.startsWith(prefix) || !source.source_ref.endsWith(suffix)) return null;
-  const commit = source.source_ref.slice(prefix.length, -suffix.length);
-  return gitCommitPattern.test(commit) ? commit.toLowerCase() : null;
+const extensionScope = (manifest: unknown) => {
+  if (!manifest || typeof manifest !== "object" || !("pstdio" in manifest)) return "user";
+  const pstdio = manifest.pstdio;
+  return pstdio && typeof pstdio === "object" && "scope" in pstdio && pstdio.scope === "repo" ? "repo" : "user";
 };
 
-export const resolveExtensionReleaseCommit = async (releaseRef: string, run = runCommand) => {
+const enableExisting = async (
+  deps: ExtensionUpgradeServiceDeps,
+  projectId: string,
+  source: NonNullable<Awaited<ReturnType<ExtensionService["getInstalledSource"]>>>,
+) => {
+  const manifest = (source.manifest_json ?? {}) as Record<string, unknown>;
+  const name = typeof manifest.name === "string" ? manifest.name : source.install_name;
+  return deps.extensionService.enableInstalledSourceForProject({
+    displayName: source.display_name,
+    extensionId: source.extension_id,
+    installName: source.install_name,
+    manifest,
+    name,
+    projectId,
+    sourceHash: source.source_hash,
+    sourceKind: source.source_kind as "git" | "local_path" | "registry",
+    sourcePath: source.source_path,
+    sourceRef: source.source_ref,
+    version: source.version,
+  });
+};
+
+const gitCommitPattern = /^[0-9a-f]{40}$/i;
+
+export const parseExtensionSourceRef = (sourceRef: string | null) => {
+  if (!sourceRef) return null;
+  const pathSeparator = sourceRef.lastIndexOf("#");
+  const commitSeparator = sourceRef.lastIndexOf("@", pathSeparator);
+  if (pathSeparator < 1 || commitSeparator < 1) return null;
+  const commit = sourceRef.slice(commitSeparator + 1, pathSeparator);
+  const path = sourceRef.slice(pathSeparator + 1);
+  const url = sourceRef.slice(0, commitSeparator);
+  if (!url || !path || !gitCommitPattern.test(commit)) return null;
+  return { commit: commit.toLowerCase(), path, url };
+};
+
+export const resolveExtensionReleaseCommit = async (originUrl: string, releaseRef: string, run = runCommand) => {
   if (gitCommitPattern.test(releaseRef)) return releaseRef.toLowerCase();
 
   const tagRef = releaseRef.startsWith("refs/") ? releaseRef : `refs/tags/${releaseRef}`;
   const branchRef = releaseRef.startsWith("refs/") ? null : `refs/heads/${releaseRef}`;
   const refs = [`${tagRef}^{}`, tagRef, ...(branchRef ? [branchRef] : [])];
-  const result = await run("git", ["ls-remote", PSTDIO_REPOSITORY_URL, ...refs], { cwd: process.cwd() });
+  const result = await run("git", ["ls-remote", originUrl, ...refs], { cwd: process.cwd() });
   if (result.exitCode !== 0) {
     throw new Error(result.stderr.trim() || result.stdout.trim() || `Could not resolve ${releaseRef}`);
   }
@@ -92,113 +123,100 @@ export const resolveExtensionReleaseCommit = async (releaseRef: string, run = ru
 
 export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps) => {
   const install = deps.installExtensionSource ?? installExtensionSourceDefault;
-  const enabled = deps.release !== null;
-  let releaseCommit: Promise<string> | undefined;
+  const catalog = deps.catalog ? Promise.resolve(deps.catalog) : getExtensionCatalog();
+  const enabled = true;
+  const releaseCommits = new Map<string, Promise<string>>();
   const previewSources = new Map<string, ReturnType<typeof install>>();
-  const currentReleaseCommit = () => {
-    if (!deps.release) return Promise.reject(new Error("No extension release ref is configured"));
-    releaseCommit ??= (deps.resolveReleaseCommit ?? resolveExtensionReleaseCommit)(deps.release.ref);
-    return releaseCommit;
+  const catalogEntry = async (installName: string) =>
+    (await catalog).extensions.find((entry) => entry.installName === installName);
+  const releaseRefFor = (entry: ExtensionCatalogEntry) => {
+    if (entry.origin.ref !== "{hostRelease}") return entry.origin.ref;
+    if (deps.release) return deps.release.ref;
+    throw new ExtensionUpgradeUnavailableError("This extension requires a Prompt Studio host release ref.");
   };
-  // The marketplace catalog decides whether an install slot is release-managed. Stored install
-  // provenance must not gate this: rows created by discovery carry none, and hiding the upgrade
-  // for them would remove the only recovery path after an extension API change. A source with no
-  // recorded commit is offered the release build only when the host can no longer load it — a
-  // healthy source without provenance is usually a deliberate local install.
+  const currentReleaseCommit = (originUrl: string, releaseRef: string) => {
+    const key = `${originUrl}\0${releaseRef}`;
+    let commit = releaseCommits.get(key);
+    if (!commit) {
+      commit = (deps.resolveReleaseCommit ?? resolveExtensionReleaseCommit)(originUrl, releaseRef);
+      releaseCommits.set(key, commit);
+    }
+    return commit;
+  };
   const canUpgrade = async (source: UpgradeSource) => {
-    if (!enabled || !isMarketplaceExtension(source.install_name)) return false;
-    const installedCommit = commitFromSourceRef(source);
-    if (!installedCommit) return compatibilityError(source) !== null;
+    const entry = await catalogEntry(source.install_name);
+    const parsed = parseExtensionSourceRef(source.source_ref);
+    if (!entry && !parsed) return false;
+    if (entry && parsed && (entry.origin.url !== parsed.url || entry.origin.path !== parsed.path)) return false;
+    let releaseRef: string | undefined;
     try {
-      return installedCommit !== (await currentReleaseCommit());
+      releaseRef = entry ? releaseRefFor(entry) : deps.release?.ref;
+    } catch {
+      return false;
+    }
+    if (!parsed) return compatibilityError(source) !== null;
+    if (!releaseRef) return false;
+    try {
+      return parsed.commit !== (await currentReleaseCommit(parsed.url, releaseRef));
     } catch {
       // Keep the recovery action available when the release ref cannot be checked yet.
       return true;
     }
   };
 
-  const assertMarketplaceInstall = (installName: string) => {
-    if (!deps.release) {
-      throw new ExtensionUpgradeUnavailableError("This Prompt Studio host does not provide a release extension ref.");
-    }
-    if (!isMarketplaceExtension(installName)) {
-      throw new ExtensionUpgradeUnavailableError(
-        `Extension is not available in the Prompt Studio marketplace: ${installName}`,
-      );
-    }
-  };
-
-  const enableExisting = async (
-    projectId: string,
-    source: NonNullable<Awaited<ReturnType<ExtensionService["getInstalledSource"]>>>,
-  ) => {
-    const manifest = (source.manifest_json ?? {}) as Record<string, unknown>;
-    const name = typeof manifest.name === "string" ? manifest.name : source.install_name;
-    return deps.extensionService.enableInstalledSourceForProject({
-      displayName: source.display_name,
-      extensionId: source.extension_id,
-      installName: source.install_name,
-      manifest,
-      name,
-      projectId,
-      sourceHash: source.source_hash,
-      sourceKind: source.source_kind as "git" | "local_path" | "registry",
-      sourcePath: source.source_path,
-      sourceRef: source.source_ref,
-      version: source.version,
-    });
+  const requireCatalogEntry = async (installName: string) => {
+    const entry = await catalogEntry(installName);
+    if (!entry) throw new ExtensionUpgradeUnavailableError(`No catalog entry for extension: ${installName}`);
+    releaseRefFor(entry);
+    return entry;
   };
 
   const installForRelease = async (installName: string, repoPath?: string) => {
-    assertMarketplaceInstall(installName);
-    const release = deps.release!;
+    const entry = await requireCatalogEntry(installName);
+    const workspaceSource = deps.release?.source === "workspace" && entry.origin.ref === "{hostRelease}";
     const source =
-      release.source === "workspace"
-        ? join(release.root, marketplaceExtensionRepositoryPath(installName))
+      workspaceSource && deps.release?.source === "workspace"
+        ? join(deps.release.root, entry.origin.path)
         : installName;
     const installed = await install({
       source,
       installName,
       force: true,
-      ...(release.source === "workspace" ? { skipInstall: true } : { ref: release.ref }),
+      ...(workspaceSource ? { skipInstall: true } : { hostReleaseRef: deps.release?.ref }),
       ...(repoPath ? { repoPath } : {}),
       reuseInstalledDependencies: true,
     });
-    const installedCommit =
-      installed.source.kind === "named"
-        ? commitFromSourceRef({
-            install_name: installed.installName,
-            source_ref: installed.source.ref,
-          })
-        : null;
-    if (installedCommit) releaseCommit = Promise.resolve(installedCommit);
+    const installedOrigin = installed.source.kind === "named" ? parseExtensionSourceRef(installed.source.ref) : null;
+    if (installedOrigin) {
+      releaseCommits.set(`${installedOrigin.url}\0${releaseRefFor(entry)}`, Promise.resolve(installedOrigin.commit));
+    }
     return installed;
   };
 
-  const prepareMarketplaceExtensionSource = (installName: string) => {
-    assertMarketplaceInstall(installName);
-    const release = deps.release!;
+  const prepareMarketplaceExtensionSource = async (installName: string) => {
+    const entry = await requireCatalogEntry(installName);
     const existing = previewSources.get(installName);
     if (existing) return existing;
 
+    const releaseRef = releaseRefFor(entry);
     const previewHome = join(
       resolvePstdioHome({ env: process.env }),
       "cache",
       "extension-catalog",
-      encodeURIComponent(release.ref),
+      encodeURIComponent(`${entry.origin.url}@${releaseRef}`),
     );
-    const extension = getMarketplaceExtension(installName);
+    const workspaceSource = deps.release?.source === "workspace" && entry.origin.ref === "{hostRelease}";
     const source =
-      release.source === "workspace"
-        ? join(release.root, marketplaceExtensionRepositoryPath(installName))
+      workspaceSource && deps.release?.source === "workspace"
+        ? join(deps.release.root, entry.origin.path)
         : installName;
     const preview = install({
       env: { ...process.env, PSTDIO_HOME: previewHome },
       source,
       installName,
       force: true,
-      ...(release.source === "workspace" ? { skipInstall: true } : { ref: release.ref }),
-      ...(extension?.scope === "repo" ? { repoPath: join(previewHome, "repo") } : {}),
+      ...(workspaceSource ? { skipInstall: true } : { hostReleaseRef: deps.release?.ref }),
+      repoPath: join(previewHome, "repo"),
       reuseInstalledDependencies: true,
     }).catch((error) => {
       if (previewSources.get(installName) === preview) previewSources.delete(installName);
@@ -209,29 +227,34 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   };
 
   const installMarketplaceExtension = async (projectId: string, installName: string) => {
-    assertMarketplaceInstall(installName);
-    const extension = getMarketplaceExtension(installName)!;
-    if (extension.scope === "repo") {
-      const repos = [...(await deps.repoService.listByProject(projectId))].sort((left, right) =>
-        left.path.localeCompare(right.path),
-      );
+    const requestedEntry = await requireCatalogEntry(installName);
+    const repos = [...(await deps.repoService.listByProject(projectId))].sort((left, right) =>
+      left.path.localeCompare(right.path),
+    );
+    const records = await deps.extensionService.listProjectExtensionInstances(projectId);
+    const knownRepoScope = records.some(
+      (record) =>
+        record.installedSource.install_name === installName &&
+        extensionScope(record.installedSource.manifest_json) === "repo",
+    );
+
+    const installRepoCopies = async (firstInstalled?: Awaited<ReturnType<typeof installForRelease>>) => {
       if (repos.length === 0) {
         throw new ExtensionUpgradeUnavailableError("Link a repository before installing this repo-scoped extension.");
       }
-
-      const records = await deps.extensionService.listProjectExtensionInstances(projectId);
       const installedResults = [];
-      for (const repo of repos) {
+      for (const [index, repo] of repos.entries()) {
         const targetPath = resolve(repo.path, ".pstdio/extensions", installName);
         const existing = records.find(
           (record) => resolve(record.installedSource.source_path) === targetPath && existsSync(targetPath),
         );
         if (existing) {
-          installedResults.push(await enableExisting(projectId, existing.installedSource));
+          installedResults.push(await enableExisting(deps, projectId, existing.installedSource));
           continue;
         }
 
-        const installed = await installForRelease(installName, repo.path);
+        const installed =
+          index === 0 && firstInstalled ? firstInstalled : await installForRelease(installName, repo.path);
         installedResults.push(
           await deps.extensionService.enableInstalledSourceForProject({
             installName: installed.installName,
@@ -241,14 +264,39 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
         );
       }
       return installedResults[0]!;
-    }
+    };
+
+    if (knownRepoScope) return installRepoCopies();
 
     const existing = await deps.extensionService.getInstalledSource(installName);
-    if (existing && existsSync(join(existing.source_path, "package.json"))) {
-      return enableExisting(projectId, existing);
+    const existingOrigin = parseExtensionSourceRef(existing?.source_ref ?? null);
+    if (
+      existingOrigin &&
+      (existingOrigin.url !== requestedEntry.origin.url || existingOrigin.path !== requestedEntry.origin.path)
+    ) {
+      throw new ExtensionUpgradeUnavailableError(
+        `Extension ${installName} is already installed from ${existingOrigin.url}#${existingOrigin.path}`,
+      );
+    }
+    if (
+      existing &&
+      extensionScope(existing.manifest_json) === "user" &&
+      existsSync(join(existing.source_path, "package.json"))
+    ) {
+      return enableExisting(deps, projectId, existing);
     }
 
-    const installed = await installForRelease(installName);
+    let installed: Awaited<ReturnType<typeof installForRelease>>;
+    try {
+      installed = await installForRelease(installName, repos[0]?.path);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes("must be installed from a linked repo")) {
+        throw new ExtensionUpgradeUnavailableError("Link a repository before installing this repo-scoped extension.");
+      }
+      throw error;
+    }
+    if (extensionScope(installed.manifest) === "repo") return installRepoCopies(installed);
+
     return deps.extensionService.enableInstalledSourceForProject({
       installName: installed.installName,
       projectId,
@@ -259,7 +307,7 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
   const upgrade = async (projectId: string, instanceId: string) => {
     const existing = await deps.extensionService.getProjectExtensionInstance(projectId, instanceId);
     if (!existing) return null;
-    assertMarketplaceInstall(existing.installedSource.install_name);
+    await requireCatalogEntry(existing.installedSource.install_name);
     if (!(await canUpgrade(existing.installedSource))) {
       throw new ExtensionUpgradeUnavailableError("This extension is already up to date.");
     }
@@ -270,8 +318,11 @@ export const createExtensionUpgradeService = (deps: ExtensionUpgradeServiceDeps)
       installName: installed.installName,
       ...toExtensionEnableInput(installed),
     });
-    const installedCommit = commitFromSourceRef(installedSource);
-    if (installedCommit) releaseCommit = Promise.resolve(installedCommit);
+    const installedOrigin = parseExtensionSourceRef(installedSource.source_ref);
+    const entry = await requireCatalogEntry(existing.installedSource.install_name);
+    if (installedOrigin) {
+      releaseCommits.set(`${installedOrigin.url}\0${releaseRefFor(entry)}`, Promise.resolve(installedOrigin.commit));
+    }
 
     return {
       changed: existing.installedSource.source_hash !== installed.sourceHash,

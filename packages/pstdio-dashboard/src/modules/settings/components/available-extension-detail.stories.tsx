@@ -61,6 +61,12 @@ const meta: Meta<typeof AvailableExtensionDetail> = {
       displayName: "Prompt Studio Reports",
       description: "Workspace reports for agent handoffs.",
       installed: false,
+      origin: {
+        kind: "git",
+        url: "https://github.com/pufflyai/prompt-studio",
+        path: "extensions/pstdio-reports",
+      },
+      publisher: "pufflyai",
     },
     metadata,
     loadingContributions: false,

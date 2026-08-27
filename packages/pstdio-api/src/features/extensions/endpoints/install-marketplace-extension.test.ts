@@ -127,7 +127,7 @@ describe("POST /v1/projects/:projectId/extensions/marketplace/:installName/insta
     expect(installExtensionSource).toHaveBeenLastCalledWith(
       expect.objectContaining({
         installName: "pstdio-planner",
-        ref: "pstdio@0.27.0",
+        hostReleaseRef: "pstdio@0.27.0",
         source: "pstdio-planner",
       }),
     );

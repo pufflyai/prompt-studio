@@ -226,7 +226,7 @@ describe("installExtensionSource", () => {
     makeExtension(namedSource, { id: "pstdio.planner", namespace: "planner", name: "Planner" });
 
     const result = await installExtensionSource({
-      source: "planner",
+      source: "pstdio-planner",
       installName: "planner-dev",
       skipInstall: true,
       env: { PSTDIO_HOME: pstdioHome },
@@ -249,7 +249,7 @@ describe("installExtensionSource", () => {
     const requestedRefs: Array<string | undefined> = [];
 
     const result = await installExtensionSource({
-      source: "planner",
+      source: "pstdio-planner",
       ref: "pstdio@0.26.2",
       skipInstall: true,
       env: { PSTDIO_HOME: pstdioHome },
@@ -267,9 +267,20 @@ describe("installExtensionSource", () => {
     // The pin is the commit, not the tag that was asked for: a tag can move, a commit cannot.
     expect(result.source).toMatchObject({
       kind: "named",
-      name: "planner",
-      ref: "https://github.com/pufflyai/prompt-studio@0f1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c#extensions/planner",
+      name: "pstdio-planner",
+      ref: "https://github.com/pufflyai/prompt-studio@0f1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c#extensions/pstdio-planner",
     });
+  });
+
+  test("rejects an unknown extension name before cloning", async () => {
+    await expect(
+      installExtensionSource({
+        source: "missing-extension",
+        hostReleaseRef: "pstdio@0.27.0",
+        skipInstall: true,
+        env: { PSTDIO_HOME: pstdioHome },
+      }),
+    ).rejects.toThrow("No catalog entry for extension: missing-extension");
   });
 
   test("refuses to copy an extension into itself", async () => {

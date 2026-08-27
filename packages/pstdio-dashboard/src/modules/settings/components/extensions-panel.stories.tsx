@@ -108,12 +108,24 @@ const marketplace = [
     displayName: "Prompt Studio Reports",
     description: "Workspace reports for agent handoffs.",
     installed: false,
+    origin: {
+      kind: "git" as const,
+      url: "https://github.com/pufflyai/prompt-studio",
+      path: "extensions/pstdio-reports",
+    },
+    publisher: "pufflyai",
   },
   {
     installName: "pstdio-planner",
     displayName: "Prompt Studio Planner",
     description: "Tickets, managed attempts, reviews, and templates.",
     installed: false,
+    origin: {
+      kind: "git" as const,
+      url: "https://github.com/pufflyai/prompt-studio",
+      path: "extensions/pstdio-planner",
+    },
+    publisher: "pufflyai",
   },
 ];
 

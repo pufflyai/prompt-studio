@@ -39,7 +39,7 @@ export const projectExtensionInstanceSchema = z.object({
   lastError: jsonObjectSchema.nullable().optional(),
   enabled: z.boolean(),
   config: z.record(z.string(), z.unknown()),
-  /** A newer source is available for this Git-backed marketplace extension in the running Prompt Studio release. */
+  /** A newer pinned release is available for this extension's source. */
   canUpgrade: z.boolean(),
   /** New source is waiting in the extensions root. The project keeps running the adopted version until a person takes it. */
   updateAvailable: z.boolean(),
@@ -50,6 +50,12 @@ export const marketplaceExtensionSchema = z.object({
   displayName: z.string(),
   description: z.string(),
   installed: z.boolean(),
+  origin: z.object({
+    kind: z.literal("git"),
+    url: z.string(),
+    path: z.string(),
+  }),
+  publisher: z.string().optional(),
 });
 
 export const listProjectExtensionsResponseSchema = z.object({

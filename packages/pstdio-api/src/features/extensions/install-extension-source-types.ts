@@ -10,6 +10,8 @@ export type InstallExtensionSourceInput = {
   force?: boolean;
   homedir?: () => string;
   installName?: string;
+  /** Running host release used by catalog origins whose ref is `{hostRelease}`. */
+  hostReleaseRef?: string;
   repoPath?: string;
   isPackagedRuntime?: () => boolean;
   bunCacheDir?: string;
@@ -18,6 +20,7 @@ export type InstallExtensionSourceInput = {
     tempDir: string,
     ref?: string,
     signal?: AbortSignal,
+    hostReleaseRef?: string,
   ) => Promise<{ path: string; ref: string }>;
   /** Git ref for a named source. Omitting it takes the default branch, which only development does. */
   ref?: string;

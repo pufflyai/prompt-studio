@@ -148,7 +148,7 @@ export const registerRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<ty
     await bootstrapProjectRepo(path, id);
     await installRepoDefaultExtensions({
       repoPath: repo.path,
-      defaultExtensions: resolveDefaultExtensionsConfig().defaultExtensions,
+      defaultExtensions: (await resolveDefaultExtensionsConfig()).defaultExtensions,
     });
     await syncRepoExtensionsForProject({
       extensionService: deps.extensionService,

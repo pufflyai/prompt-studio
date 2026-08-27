@@ -85,6 +85,24 @@ describe("packaged pstdio — self-hosted serve", () => {
         expect(createRes.status).toBe(201);
 
         const project = (await createRes.json()) as { id: string };
+        const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
+          headers: runtimeAuthorization(started.descriptor),
+        });
+        expect(extensionsRes.status).toBe(200);
+        const extensionCatalog = (await extensionsRes.json()) as {
+          marketplace: Array<{ installName: string; origin: { path: string; url: string }; publisher?: string }>;
+        };
+        expect(extensionCatalog.marketplace).toContainEqual(
+          expect.objectContaining({
+            installName: "pstdio-planner",
+            origin: {
+              path: "extensions/pstdio-planner",
+              url: "https://github.com/pufflyai/prompt-studio",
+            },
+            publisher: "pufflyai",
+          }),
+        );
+
         const templatesRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/templates`, {
           headers: runtimeAuthorization(started.descriptor),
         });

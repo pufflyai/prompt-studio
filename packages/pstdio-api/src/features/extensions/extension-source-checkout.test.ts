@@ -10,6 +10,7 @@ describe("createSharedNamedSourceCheckout", () => {
       return { exitCode: 0, stderr: "", stdout: "commit" };
     });
     const checkout = await createSharedNamedSourceCheckout(["pstdio-planner"], {
+      hostReleaseRef: "main",
       runCommand,
       signal: controller.signal,
     });

@@ -1,0 +1,109 @@
+{
+  "version": 1,
+  "extensions": [
+    {
+      "installName": "harness-claude-code",
+      "displayName": "Claude Code",
+      "description": "Contributes the Claude Code agent harness.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/harness-claude-code",
+        "ref": "{hostRelease}"
+      },
+      "publisher": "pufflyai",
+      "default": true
+    },
+    {
+      "installName": "harness-codex",
+      "displayName": "Codex",
+      "description": "Contributes the Codex agent harness.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/harness-codex",
+        "ref": "{hostRelease}"
+      },
+      "publisher": "pufflyai",
+      "default": true
+    },
+    {
+      "installName": "harness-open-code",
+      "displayName": "OpenCode",
+      "description": "Contributes the OpenCode agent harness.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/harness-open-code",
+        "ref": "{hostRelease}"
+      },
+      "publisher": "pufflyai",
+      "default": true
+    },
+    {
+      "installName": "pstdio-base-themes",
+      "displayName": "Prompt Studio Base Themes",
+      "description": "Color themes and the Seti file icon theme.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-base-themes",
+        "ref": "{hostRelease}"
+      },
+      "publisher": "pufflyai",
+      "default": true
+    },
+    {
+      "installName": "pstdio-planner",
+      "displayName": "Prompt Studio Planner",
+      "description": "Tickets, managed attempts, reviews, and templates.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-planner",
+        "ref": "{hostRelease}"
+      },
+      "publisher": "pufflyai",
+      "default": false
+    },
+    {
+      "installName": "pstdio-planner-loops",
+      "displayName": "Prompt Studio Planner Automation",
+      "description": "Repository-owned planner refinement, implementation, reconciliation, and review automation.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": ".pstdio/extensions/pstdio-planner-loops",
+        "ref": "{hostRelease}"
+      },
+      "publisher": "pufflyai",
+      "default": false
+    },
+    {
+      "installName": "pstdio-reports",
+      "displayName": "Prompt Studio Reports",
+      "description": "Workspace reports for agent handoffs.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-reports",
+        "ref": "{hostRelease}"
+      },
+      "publisher": "pufflyai",
+      "default": false
+    },
+    {
+      "installName": "pstdio-skills",
+      "displayName": "Prompt Studio Skills",
+      "description": "Skills for using Prompt Studio and authoring extensions.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-skills",
+        "ref": "{hostRelease}"
+      },
+      "publisher": "pufflyai",
+      "default": true
+    }
+  ]
+}

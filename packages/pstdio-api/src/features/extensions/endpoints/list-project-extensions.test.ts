@@ -289,6 +289,12 @@ describe("GET /v1/projects/:projectId/extensions", () => {
           displayName: "Prompt Studio Planner",
           installName: "pstdio-planner",
           installed: false,
+          origin: {
+            kind: "git",
+            path: "extensions/pstdio-planner",
+            url: "https://github.com/pufflyai/prompt-studio",
+          },
+          publisher: "pufflyai",
         }),
         expect.objectContaining({
           displayName: "Prompt Studio Planner Automation",

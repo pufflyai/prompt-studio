@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { packagedExtensionCatalog } from "../features/extensions/extension-catalog";
 import { namedSourceRef } from "../features/extensions/install-extension-source";
 import {
   createExtensionUpgradeService,
@@ -68,7 +69,14 @@ describe("extension upgrade service", () => {
       stdout: `${"a".repeat(40)}\trefs/tags/pstdio@0.27.0\n${releaseCommit}\trefs/tags/pstdio@0.27.0^{}\n`,
     }));
 
-    expect(await resolveExtensionReleaseCommit("pstdio@0.27.0", run)).toBe(releaseCommit);
+    expect(await resolveExtensionReleaseCommit("https://example.com/extensions.git", "pstdio@0.27.0", run)).toBe(
+      releaseCommit,
+    );
+    expect(run).toHaveBeenCalledWith(
+      "git",
+      expect.arrayContaining(["https://example.com/extensions.git"]),
+      expect.any(Object),
+    );
   });
 
   test("does not offer an upgrade when the installed source matches the host release", async () => {
@@ -171,7 +179,9 @@ describe("extension upgrade service", () => {
       }),
     ).toBe(false);
   });
+});
 
+describe("catalog extension installation and upgrades", () => {
   test("replaces a named extension with the source from the host release", async () => {
     const installExtensionSource = mock(async () => installed as never);
     const registerInstalledSource = mock(async () => ({ ...installedSource, source_hash: "new-hash" }) as never);
@@ -200,7 +210,7 @@ describe("extension upgrade service", () => {
       expect.objectContaining({
         force: true,
         installName: "pstdio-planner",
-        ref: "pstdio@0.27.0",
+        hostReleaseRef: "pstdio@0.27.0",
         source: "pstdio-planner",
       }),
     );
@@ -232,16 +242,18 @@ describe("extension upgrade service", () => {
 
     const first = service.prepareMarketplaceExtensionSource("pstdio-planner");
     const second = service.prepareMarketplaceExtensionSource("pstdio-planner");
+    await Bun.sleep(0);
 
     expect(installExtensionSource).toHaveBeenCalledTimes(1);
     expect(installExtensionSource).toHaveBeenCalledWith(
       expect.objectContaining({
         env: expect.objectContaining({
-          PSTDIO_HOME: expect.stringContaining("cache/extension-catalog/pstdio%400.27.0"),
+          PSTDIO_HOME: expect.stringContaining("cache/extension-catalog/https%3A%2F%2Fgithub.com"),
         }),
         force: true,
         installName: "pstdio-planner",
-        ref: "pstdio@0.27.0",
+        hostReleaseRef: "pstdio@0.27.0",
+        repoPath: expect.stringContaining("cache/extension-catalog"),
         source: "pstdio-planner",
       }),
     );
@@ -280,7 +292,7 @@ describe("extension upgrade service", () => {
       expect.objectContaining({
         force: true,
         installName: "pstdio-planner",
-        ref: "pstdio@0.27.0",
+        hostReleaseRef: "pstdio@0.27.0",
         source: "pstdio-planner",
       }),
     );
@@ -305,5 +317,40 @@ describe("extension upgrade service", () => {
     });
 
     expect(service.upgrade("project-1", "instance-1")).rejects.toBeInstanceOf(ExtensionUpgradeUnavailableError);
+  });
+
+  test("offers catalog-managed upgrades from a third-party repository", async () => {
+    const oldCommit = "1".repeat(40);
+    const newCommit = "2".repeat(40);
+    const originUrl = "https://example.com/acme/extensions.git";
+    const resolveReleaseCommit = mock(async () => newCommit);
+    const service = createExtensionUpgradeService({
+      catalog: {
+        version: 1,
+        extensions: [
+          ...packagedExtensionCatalog.extensions,
+          {
+            installName: "acme-recipes",
+            displayName: "Recipes",
+            description: "Recipe tools.",
+            origin: { kind: "git", url: originUrl, path: "extensions/recipes", ref: "v2.0.0" },
+            publisher: "acme",
+            default: false,
+          },
+        ],
+      },
+      extensionService: idleExtensionService,
+      release: null,
+      repoService: emptyRepoService,
+      resolveReleaseCommit,
+    });
+
+    expect(
+      await service.canUpgrade({
+        install_name: "acme-recipes",
+        source_ref: `${originUrl}@${oldCommit}#extensions/recipes`,
+      }),
+    ).toBe(true);
+    expect(resolveReleaseCommit).toHaveBeenCalledWith(originUrl, "v2.0.0");
   });
 });

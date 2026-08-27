@@ -23,7 +23,7 @@ describe("marketplace extension installation", () => {
     expect(installExtensionSource).toHaveBeenCalledWith(
       expect.objectContaining({
         env: expect.objectContaining({
-          PSTDIO_HOME: expect.stringContaining("cache/extension-catalog/workspace-ref"),
+          PSTDIO_HOME: expect.stringContaining("cache/extension-catalog/https%3A%2F%2Fgithub.com"),
         }),
         force: true,
         installName: "pstdio-planner",

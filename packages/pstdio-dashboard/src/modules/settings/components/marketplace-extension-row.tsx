@@ -57,6 +57,10 @@ export const MarketplaceExtensionRow = (props: MarketplaceExtensionRowProps) => 
         <Text textStyle="label/XS" color="fg.muted" truncate>
           {extension.description}
         </Text>
+        <Text textStyle="label/XS" color="fg.subtle" fontFamily="mono" truncate>
+          {extension.publisher ? `${extension.publisher} · ` : ""}
+          {extension.origin.url}#{extension.origin.path}
+        </Text>
       </Stack>
       <Button
         variant="outline"

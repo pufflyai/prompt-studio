@@ -8,7 +8,11 @@ import {
   type DefaultExtensionsConfig,
   resolveDefaultExtensionsConfig,
 } from "./default-extensions-config";
-import { marketplaceExtensionRepositoryPath } from "./extension-marketplace";
+import {
+  type ExtensionCatalog,
+  findExtensionCatalogEntry,
+  loadExtensionCatalog,
+} from "./extension-catalog";
 import {
   createSharedNamedSourceCheckout,
   type InstallExtensionSourceInput,
@@ -31,12 +35,15 @@ const entryRef = (entry: DefaultExtensionEntry) => (typeof entry === "string" ? 
 const toInstallInput = (entry: DefaultExtensionEntry, releaseRef?: string): InstallExtensionSourceInput => {
   const source = sourceFor(entry);
   const local = isLocalExtensionSource(source);
-  const ref = local ? entryRef(entry) : (entryRef(entry) ?? releaseRef);
-  if (typeof entry === "string") return { allowUnsupportedApiVersion: true, source: entry, ref };
+  const ref = entryRef(entry);
+  if (typeof entry === "string") {
+    return { allowUnsupportedApiVersion: true, source: entry, ref, hostReleaseRef: releaseRef };
+  }
   return {
     source: entry.source,
     installName: entry.installName,
     ref,
+    hostReleaseRef: local ? undefined : releaseRef,
     skipInstall: entry.skipInstall,
     force: entry.force,
     ...(!local ? { allowUnsupportedApiVersion: true } : {}),
@@ -45,10 +52,18 @@ const toInstallInput = (entry: DefaultExtensionEntry, releaseRef?: string): Inst
 
 const sourceFor = (entry: DefaultExtensionEntry) => (typeof entry === "string" ? entry : entry.source);
 
-const sourceModeDefaultEntry = async (entry: DefaultExtensionEntry, force: boolean): Promise<DefaultExtensionEntry> => {
+const sourceModeDefaultEntry = async (
+  entry: DefaultExtensionEntry,
+  force: boolean,
+  catalog?: ExtensionCatalog,
+): Promise<DefaultExtensionEntry> => {
   if (typeof entry !== "string") return entry;
 
-  const localSource = join(import.meta.dirname, "../../../../../", marketplaceExtensionRepositoryPath(entry));
+  const catalogEntry =
+    catalog?.extensions.find((candidate) => candidate.installName === entry) ??
+    (await findExtensionCatalogEntry(entry));
+  if (!catalogEntry) throw new Error(`No catalog entry for extension: ${entry}`);
+  const localSource = join(import.meta.dirname, "../../../../../", catalogEntry.origin.path);
   if (existsSync(localSource)) return { source: localSource, installName: entry, force, skipInstall: true };
   return entry;
 };
@@ -111,7 +126,7 @@ const prepareDefaultCheckouts = async (
   for (const entry of entries) {
     const source = sourceFor(entry);
     if (isLocalExtensionSource(source)) continue;
-    const ref = entryRef(entry) ?? input.releaseRef;
+    const ref = entryRef(entry);
     namedByRef.set(ref, [...(namedByRef.get(ref) ?? []), source]);
   }
 
@@ -123,6 +138,7 @@ const prepareDefaultCheckouts = async (
       ref,
       await prepareShared(names, {
         ...(ref ? { ref } : {}),
+        hostReleaseRef: input.releaseRef,
         ...(input.signal ? { signal: input.signal } : {}),
       }),
     );
@@ -133,7 +149,7 @@ const prepareDefaultCheckouts = async (
 const createPreparedSourceResolver = (sharedByRef: Map<string | undefined, SharedCheckout>, releaseRef?: string) => {
   const prepareNamedSource: SharedCheckout["prepareNamedSource"] = async (name, _tempDir, ref, signal) => {
     signal?.throwIfAborted();
-    const shared = sharedByRef.get(ref ?? releaseRef);
+    const shared = sharedByRef.get(ref) ?? (ref === releaseRef ? sharedByRef.get(undefined) : undefined);
     if (!shared) throw new Error(`No prepared checkout for extension: ${name}`);
     return shared.prepareNamedSource(name, "", ref, signal);
   };
@@ -149,6 +165,7 @@ const withResolvedDefaultEntries = async <T>(
     releaseRef?: string;
     signal?: AbortSignal;
     sourceMode?: boolean;
+    catalog?: ExtensionCatalog;
   },
   fn: (
     entries: ResolvedDefaultEntry[],
@@ -157,7 +174,9 @@ const withResolvedDefaultEntries = async <T>(
 ) => {
   const entries = input.sourceMode
     ? await Promise.all(
-        input.config.defaultExtensions.map((entry) => sourceModeDefaultEntry(entry, input.forceSourceDefaults ?? true)),
+        input.config.defaultExtensions.map((entry) =>
+          sourceModeDefaultEntry(entry, input.forceSourceDefaults ?? true, input.catalog),
+        ),
       )
     : input.config.defaultExtensions;
   const sharedByRef = await prepareDefaultCheckouts(entries, input);
@@ -194,7 +213,12 @@ const withResolvedDefaultEntries = async <T>(
 
 const runDefaultExtensionInstall = async (
   deps: InstallDefaultExtensionsDeps,
-  context: { config: DefaultExtensionsConfig; env: Record<string, string | undefined>; sourceMode: boolean },
+  context: {
+    catalog?: ExtensionCatalog;
+    config: DefaultExtensionsConfig;
+    env: Record<string, string | undefined>;
+    sourceMode: boolean;
+  },
 ) => {
   const install = deps.installExtensionSource ?? installExtensionSource;
   const installed: InstalledExtensionSource[] = [];
@@ -222,6 +246,7 @@ const runDefaultExtensionInstall = async (
       releaseRef: deps.releaseRef,
       signal: deps.signal,
       sourceMode: context.sourceMode,
+      catalog: context.catalog,
     },
     async (entries, prepareNamedSource) => {
       for (const resolved of entries) {
@@ -251,12 +276,16 @@ const runDefaultExtensionInstall = async (
 
 export const installDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}) => {
   const env = { ...(deps.env ?? process.env) };
-  const context = {
-    config: deps.config ?? resolveDefaultExtensionsConfig(env),
-    env,
-    sourceMode: !deps.config,
-  };
-  return enqueueDefaultExtensionInstall(() => runDefaultExtensionInstall(deps, context), deps.signal);
+  return enqueueDefaultExtensionInstall(async () => {
+    const catalog = deps.config ? undefined : await loadExtensionCatalog({ env });
+    const context = {
+      config: deps.config ?? (await resolveDefaultExtensionsConfig(env)),
+      env,
+      sourceMode: !deps.config,
+      catalog,
+    };
+    return runDefaultExtensionInstall(deps, context);
+  }, deps.signal);
 };
 
 export const registerInstalledExtensionSources = async (
