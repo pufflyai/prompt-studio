@@ -26,6 +26,7 @@ Extension identity is package metadata, not code metadata. `package.json` provid
 - Templates, skills, themes, file icon themes, and custom template types.
 - Artifact mounts for safe repo-local files under `.pstdio/<package-name>/`.
 - Workspace type and Harness providers for deeper runtime integrations.
+- Named host-managed connections for remote provider control planes.
 
 ## Automation Model
 
@@ -66,6 +67,7 @@ Views own content. Placements own mode, region, default-open state, required sta
 ## Docs
 
 - [Extension API](./api.md)
+- [Remote execution migration](./remote-execution-migration.md)
 - [Extension notifications](./notifications.md)
 - [Extension runtime loader](../architecture/extensions-runtime.md)
 - [Dashboard UI attachments](./workbench-attachments.md)
