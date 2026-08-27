@@ -1,5 +1,18 @@
 # harness-open-code
 
+## 0.3.9
+
+_2026-08-27_
+
+### Patch Changes
+
+- 5329cb7: Replace overlapping extension UI contracts with alpha.4 views, placements, navigation, and shared workflow statuses.
+- 40e4fd6: Add provider-backed workspace creation.
+- d7a5b16: Add extension package files, host state, safe worktree cleanup, and scoped repository files.
+- 545d925: Add stable workbench views and migrate extension navigation.
+- 82138c3: Update the Bun toolchain requirement to 1.3.14.
+- Updated internal dependencies: `@pstdio/sdk@0.21.0`
+
 ## 0.3.8
 
 _2026-08-25_

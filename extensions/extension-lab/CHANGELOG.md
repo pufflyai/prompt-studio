@@ -1,5 +1,21 @@
 # extension-lab
 
+## 0.8.3
+
+_2026-08-27_
+
+### Patch Changes
+
+- 004b96c: Preserve extension command responses, register extension shortcuts, and restore artifact workflow behavior.
+- 5329cb7: Replace overlapping extension UI contracts with alpha.4 views, placements, navigation, and shared workflow statuses.
+- 40e4fd6: Add provider-backed workspace creation.
+- d7a5b16: Add generic resource menus, dashboard anchors, and contribution diagnostics.
+- d63d57d: Remove the host workspace mode and target workspace actions with workbenchResourceKinds.workspace.
+- 545d925: Pass command and middleware parameters as the second handler argument across the extension API.
+- 545d925: Add stable workbench views and migrate extension navigation.
+- 82138c3: Update the Bun toolchain requirement to 1.3.14.
+- Updated internal dependencies: `@pstdio/sdk@0.21.0`, `@pstdio/ui@0.21.0`
+
 ## 0.8.2
 
 _2026-08-25_

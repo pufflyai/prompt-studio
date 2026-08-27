@@ -1,6 +1,6 @@
 {
   "name": "remote-execution",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "Remote Execution Example",
   "description": "Shows remote workspaces, a cwd-free harness, named connections, and scoped automation.",
   "private": true,
@@ -16,7 +16,7 @@
     "test": "bun test"
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.20.0"
+    "@pstdio/sdk": "^0.21.0"
   },
   "devDependencies": {
     "typescript": "6.0.2"

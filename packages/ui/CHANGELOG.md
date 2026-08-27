@@ -1,5 +1,17 @@
 # @pstdio/ui
 
+## 0.21.0
+
+_2026-08-27_
+
+### Minor Changes
+
+- 5329cb7: Replace overlapping extension UI contracts with alpha.4 views, placements, navigation, and shared workflow statuses.
+
+### Patch Changes
+
+- 24fcc75: Fix PS-296 workspace, terminal, shortcut, chat tool, and skill ownership regressions.
+
 ## 0.20.1
 
 _2026-08-24_

@@ -1,5 +1,42 @@
 # pstdio
 
+## 0.30.0
+
+_2026-08-27_
+
+### Minor Changes
+
+- 3e31835: Add CLI, SDK, and dashboard clients for automation tokens, runs, and managed connections.
+- 42dfbd6: Wire managed connections and durable automation into API routes, startup, and extension command execution.
+- 5329cb7: Replace overlapping extension UI contracts with alpha.4 views, placements, navigation, and shared workflow statuses.
+- d429bb5: Add persistence and public contracts for remote execution, managed connections, and automation runs.
+- 40e4fd6: Add provider-backed workspace creation.
+- d7a5b16: Move template content and editing workflows from core into owning extensions.
+- d7a5b16: Move ticket templates and mutating command metadata into Planner.
+- d7a5b16: Load marketplace releases and default extensions from the extension catalog.
+- d7a5b16: Add generic resource menus, dashboard anchors, and contribution diagnostics.
+- d7a5b16: Add extension package files, host state, safe worktree cleanup, and scoped repository files.
+- 936fd7b: Add host-managed extension connection services with policy-bound requests and secret storage.
+- b870bbc: Persist and manage provider-backed remote workspaces.
+- 244f93a: Run, follow up, cancel, and recover sessions without a local workspace path.
+- d63d57d: Remove the host workspace mode and target workspace actions with workbenchResourceKinds.workspace.
+- 545d925: Pass command and middleware parameters as the second handler argument across the extension API.
+- 2d8e585: Ship a tested remote execution extension example and include examples in packaged images.
+- 5ef3bec: Add durable scoped automation execution, token policy, idempotency, and cancellation services.
+- 545d925: Add stable workbench views and migrate extension navigation.
+
+### Patch Changes
+
+- 004b96c: Preserve extension command responses, register extension shortcuts, and restore artifact workflow behavior.
+- b9a58c6: Scope session harness reads to the enabled project runtime.
+- 5329cb7: Fix default repo-local extension installation, removal, enable, and disable lifecycle.
+- d3fc6bd: Select dashboard projects without opening the project picker as an intermediate panel.
+- 41afefb: Centralize extension lifecycle transitions and prevent stale settings state.
+- a935c4f: Separate API app configuration, host, lifecycle, and dependency contracts.
+- 24fcc75: Fix PS-296 workspace, terminal, shortcut, chat tool, and skill ownership regressions.
+- 362f369: Persist non-secret desktop project and resource selection across application relaunches.
+- 82138c3: Update the Bun toolchain requirement to 1.3.14.
+
 ## 0.29.0
 
 _2026-08-25_

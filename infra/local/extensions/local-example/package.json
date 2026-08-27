@@ -14,6 +14,6 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@pstdio/sdk": "^0.20.0"
+    "@pstdio/sdk": "^0.21.0"
   }
 }

@@ -1,5 +1,25 @@
 # @pstdio/sdk
 
+## 0.21.0
+
+_2026-08-27_
+
+### Minor Changes
+
+- 3e31835: Add CLI, SDK, and dashboard clients for automation tokens, runs, and managed connections.
+- 5329cb7: Replace overlapping extension UI contracts with alpha.4 views, placements, navigation, and shared workflow statuses.
+- d429bb5: Add persistence and public contracts for remote execution, managed connections, and automation runs.
+- 40e4fd6: Add provider-backed workspace creation.
+- d7a5b16: Move template content and editing workflows from core into owning extensions.
+- d7a5b16: Add extension package files, host state, safe worktree cleanup, and scoped repository files.
+- d63d57d: Remove the host workspace mode and target workspace actions with workbenchResourceKinds.workspace.
+- 545d925: Pass command and middleware parameters as the second handler argument across the extension API.
+- 545d925: Add stable workbench views and migrate extension navigation.
+
+### Patch Changes
+
+- 82138c3: Update the Bun toolchain requirement to 1.3.14.
+
 ## 0.20.0
 
 _2026-08-25_
