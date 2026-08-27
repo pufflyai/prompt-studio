@@ -3,6 +3,7 @@ import type { FilePart, SessionMessage, SessionMessagePart, TextPart } from "pst
 import type { SessionsRouteDeps } from "./deps";
 import { getSessionHarness } from "./get-session-harness";
 import { buildMessagesFromPatches } from "./session-messages";
+import { resolveSessionWorkspaceContext } from "./session-workspace-context";
 
 const textParts = (message: SessionMessage) => message.parts.filter((part): part is TextPart => part.type === "text");
 
@@ -96,6 +97,7 @@ const getPersistedMessages = async (sessionFileId: string, deps: SessionsRouteDe
 
 const getAgentMessages = async (
   session: {
+    id: string;
     agent: string | null;
     agent_session_id: string | null;
     cwd: string | null;
@@ -108,8 +110,16 @@ const getAgentMessages = async (
   const harness = await getSessionHarness(deps.harnessRegistry, session);
   if (!harness) return null;
 
-  return harness.getMessages({
-    agentSessionId: session.agent_session_id,
-    cwd: session.cwd ?? undefined,
-  });
+  const workspace = deps.workspaceSessionService
+    ? await resolveSessionWorkspaceContext(deps.workspaceSessionService, session.id, session.cwd ?? undefined)
+    : undefined;
+
+  return harness.getMessages(
+    {
+      agentSessionId: session.agent_session_id,
+      cwd: session.cwd ?? undefined,
+      workspace,
+    },
+    { projectId: session.project_id ?? undefined },
+  );
 };

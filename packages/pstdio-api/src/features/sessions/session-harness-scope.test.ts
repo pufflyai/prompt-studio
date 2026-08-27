@@ -150,4 +150,98 @@ describe("project-scoped session harness reads", () => {
     expect(getMessages).not.toHaveBeenCalled();
     expect(messages).toEqual([persistedMessage]);
   });
+
+  test("message reads pass the stored remote target and project connection scope to the harness", async () => {
+    const projectScopes: Array<string | undefined> = [];
+    const getMessages = mock((ctx: { projectId?: string }) => {
+      projectScopes.push(ctx.projectId);
+      return [];
+    });
+    const registry = createTestHarnessRegistry([
+      createTestHarnessRecord("opencode", { provider: { cwdRequirement: "optional", getMessages } }),
+    ]);
+    const session = {
+      id: "session-remote",
+      agent: AGENT_ID,
+      agent_session_id: "agent-session-remote",
+      cwd: null,
+      project_id: PROJECT_ID,
+      session_file_id: null,
+    };
+    const deps = {
+      fileService: { get: async () => null },
+      harnessRegistry: registry,
+      sessionService: {
+        get: async () => session,
+        store: { get: () => null },
+      },
+      workspaceSessionService: {
+        getWorkspaceBySessionId: async () => ({
+          id: "workspace-remote",
+          provider_id: "pstdio.remote",
+          provider_ref_json: { version: 1, data: { id: "remote-1" } },
+          execution_kind: "remote" as const,
+          display_path: "remote://remote-1",
+        }),
+      },
+    } as unknown as Parameters<typeof getSessionMessages>[1];
+
+    await getSessionMessages(session.id, deps);
+
+    expect(projectScopes).toEqual([PROJECT_ID]);
+    expect(getMessages).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        cwd: undefined,
+        workspace: {
+          workspaceId: "workspace-remote",
+          executionTarget: {
+            kind: "remote",
+            providerId: "pstdio.remote",
+            providerRef: { version: 1, data: { id: "remote-1" } },
+            displayPath: "remote://remote-1",
+          },
+        },
+      }),
+    );
+  });
+
+  test("orphan recovery checks capabilities with the session project connection scope", async () => {
+    const projectScopes: Array<string | undefined> = [];
+    const reattach = mock(() => ({ done: new Promise<never>(() => {}), stop: () => {} }));
+    const registry = createTestHarnessRegistry([
+      createTestHarnessRecord("opencode", {
+        provider: {
+          capabilities: (ctx) => {
+            projectScopes.push(ctx.projectId);
+            return ["SessionReattach"];
+          },
+          reattach,
+        },
+      }),
+    ]);
+    const staleSession = {
+      id: "session-project-scope",
+      agent: AGENT_ID,
+      agent_session_id: "agent-session-project-scope",
+      cwd: null,
+      project_id: PROJECT_ID,
+    };
+    const deps = {
+      eventBus: { emit: () => {} },
+      fileService: {},
+      harnessRegistry: registry,
+      sessionQueueEntriesService: { listDispatchStarted: async () => [], remove: async () => {} },
+      sessionService: {
+        listByStatus: async () => [staleSession],
+        store: { get: () => null, remove: () => {}, create: () => ({ eventStore: { push: () => {} } }) },
+        transitionStatus: async () => null,
+      },
+      workspaceSessionService: { getWorkspaceBySessionId: async () => null },
+    } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
+
+    await resolveOrphanedSessions(deps);
+
+    expect(projectScopes).toEqual([PROJECT_ID]);
+  });
 });

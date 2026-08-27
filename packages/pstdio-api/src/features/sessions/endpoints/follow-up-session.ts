@@ -107,7 +107,7 @@ export const followUpSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler
     }
 
     const prompt = await buildFollowUpPrompt(input, session.project_id!, deps);
-    const cwd = session.cwd!;
+    const cwd = session.cwd ?? undefined;
     const resolvedParams = await resolveFollowUpParams(deps, session, input);
     if (resolvedParams.type === "error") return c.json({ error: resolvedParams.error }, 400);
     const scheduler = createSessionScheduler(deps);

@@ -16,9 +16,12 @@ const toExtensionSession = (session: unknown) => session as Awaited<ReturnType<E
 
 export const createSessionsApi = (
   deps: ExtensionsRouteDeps,
-  input: { projectId: string; project: ExtensionProjectContext },
+  input: { projectId: string; project: ExtensionProjectContext; signal?: AbortSignal },
 ): CommandRunnerEnvironment["sessions"] => ({
-  get: async (id) => toExtensionSession(await deps.sessionService.get(id)),
+  get: async (id) => {
+    const session = await deps.sessionService.get(id);
+    return toExtensionSession(session?.project_id === input.projectId ? session : null);
+  },
   list: async () => {
     const sessions = await deps.sessionService.list(input.projectId);
     return sessions.map((session) => ({
@@ -32,6 +35,8 @@ export const createSessionsApi = (
     }));
   },
   listByWorkspace: async (workspaceId) => {
+    const workspace = await deps.workspaceService.get(workspaceId);
+    if (!workspace || workspace.project_id !== input.projectId) throw new Error(`Workspace not found: ${workspaceId}`);
     const sessions = await deps.workspaceSessionService.listByWorkspace(workspaceId);
     return sessions.map((session) => ({
       id: session.id,
@@ -43,12 +48,18 @@ export const createSessionsApi = (
     }));
   },
   create: async (sessionInput) => {
+    input.signal?.throwIfAborted();
     const workspace =
       sessionInput.workspaceId != null
         ? ((await deps.workspaceService.get(sessionInput.workspaceId)) ??
           (await deps.workspaceService.getByShorthand(input.projectId, sessionInput.workspaceId)))
         : null;
-    const repoPath = sessionInput.repoId ? (await deps.repoService.get(sessionInput.repoId))?.path : undefined;
+    if (sessionInput.workspaceId != null && workspace?.project_id !== input.projectId) {
+      throw new Error(`Workspace not found: ${sessionInput.workspaceId}`);
+    }
+    const projectRepos = sessionInput.repoId ? await deps.repoService.listByProject(input.projectId) : [];
+    const repoPath = projectRepos.find((repo) => repo.id === sessionInput.repoId)?.path;
+    if (sessionInput.repoId && !repoPath) throw new Error(`Repository not found: ${sessionInput.repoId}`);
     const project = await deps.projectService.get(input.projectId);
     if (!project) throw new Error(`Project not found: ${input.projectId}`);
 
@@ -80,6 +91,7 @@ export const createSessionsApi = (
       originalSessionId: sessionInput.originalSessionId,
       cwd,
       anchors: sessionInput.anchors,
+      signal: input.signal,
       onBeforeStartedHook: async (createdSession) => {
         if (!workspace) return;
 
@@ -100,24 +112,26 @@ export const createSessionsApi = (
     return { type: "session", id: session.id, title: session.title, status: session.status };
   },
   followup: async (followupInput) => {
+    input.signal?.throwIfAborted();
     const session = await deps.sessionService.get(followupInput.sessionId);
-    if (!session) throw new Error(`Session not found: ${followupInput.sessionId}`);
-    if (!session.cwd) throw new Error(`Session has no cwd: ${followupInput.sessionId}`);
+    if (!session || session.project_id !== input.projectId)
+      throw new Error(`Session not found: ${followupInput.sessionId}`);
     const prompt = await resolveExtensionPrompt(deps, session.project_id ?? input.projectId, followupInput);
     const projectId = session.project_id ?? input.projectId;
     const attachments = await resolveSessionAttachments(deps, projectId, followupInput.attachments);
     await createSessionScheduler(deps).startOrQueueExisting({
       session,
       prompt,
-      cwd: session.cwd,
+      cwd: session.cwd ?? undefined,
       respectCapacity: true,
       attachments,
       attachmentRefs: followupInput.attachments,
+      signal: input.signal,
     });
   },
   addAnchors: async (sessionId, anchors) => {
     const session = await deps.sessionService.get(sessionId);
-    if (!session) throw new Error(`Session not found: ${sessionId}`);
+    if (!session || session.project_id !== input.projectId) throw new Error(`Session not found: ${sessionId}`);
     const merged = [...(session.anchors_json ?? [])];
     for (const anchor of anchors) {
       const index = merged.findIndex((candidate) => candidate.type === anchor.type && candidate.id === anchor.id);

@@ -7,6 +7,7 @@ import type { AppBindings } from "../../../types";
 import type { SessionsRouteDeps } from "../deps";
 import { getSessionHarness } from "../get-session-harness";
 import { buildMessagesFromPatches, resolveMessagePatchIndexOffset } from "../session-messages";
+import { resolveSessionWorkspaceContext } from "../session-workspace-context";
 
 const SESSION_STREAM_HEARTBEAT_MS = 1000;
 
@@ -41,8 +42,17 @@ const fetchAgentMessages = async (session: SessionRecord, deps: SessionsRouteDep
   const harness = await getSessionHarness(deps.harnessRegistry, session);
   if (!harness) return null;
 
+  const workspace = await resolveSessionWorkspaceContext(
+    deps.workspaceSessionService,
+    session.id,
+    session.cwd ?? undefined,
+  );
+
   return harness
-    .getMessages({ agentSessionId: session.agent_session_id, cwd: session.cwd ?? undefined })
+    .getMessages(
+      { agentSessionId: session.agent_session_id, cwd: session.cwd ?? undefined, workspace },
+      { projectId: session.project_id },
+    )
     .catch(() => null);
 };
 

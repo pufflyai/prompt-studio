@@ -6,11 +6,11 @@ import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { ArrowUpRight } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
-import { createDashboardResource } from "@/shared/app/resources";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { readRecentHarnessSelection } from "@/shared/command-params/recent-harness-param";
 import {
   createDashboardWorkspaceOptionResource,
+  createDashboardWorkspaceOptions,
   type DashboardWorkspaceOption,
 } from "@/shared/workspaces/workspace-options";
 import { splitQueuedFollowUps } from "../chat/queued-follow-ups";
@@ -59,28 +59,22 @@ type SessionWorkspaceReviewView = Pick<
   "workspaceBranch" | "workspaceId" | "workspaceShorthand" | "workspaceTitle"
 >;
 
-const createSessionWorkspaceResource = (view: SessionWorkspaceReviewView, projectId: string | undefined) => {
+const createSessionWorkspaceResource = (
+  view: SessionWorkspaceReviewView,
+  projectId: string | undefined,
+  workspaces: readonly DashboardWorkspaceOption[],
+) => {
   if (!view.workspaceId) return undefined;
-
-  return createDashboardResource(
-    "workspace",
-    view.workspaceId,
-    view.workspaceTitle || view.workspaceShorthand || "Workspace",
-    "GitBranch",
-    projectId,
-    {
-      workspaceId: view.workspaceId,
-      ...(view.workspaceBranch ? { workspaceBranch: view.workspaceBranch } : {}),
-      ...(view.workspaceShorthand ? { workspaceShorthand: view.workspaceShorthand } : {}),
-    },
-  );
+  const workspace = workspaces.find((candidate) => candidate.id === view.workspaceId);
+  return workspace ? createDashboardWorkspaceOptionResource(workspace, projectId) : undefined;
 };
 
 export const openReviewWorkspace = (
   input: Pick<WorkbenchPanelRenderInput, "workbench">,
   view: SessionWorkspaceReviewView,
+  workspaces = createDashboardWorkspaceOptions(getDashboardSelectedProjectId(input.workbench)),
 ) => {
-  const resource = createSessionWorkspaceResource(view, getDashboardSelectedProjectId(input.workbench));
+  const resource = createSessionWorkspaceResource(view, getDashboardSelectedProjectId(input.workbench), workspaces);
   if (!resource) return undefined;
 
   return input.workbench.resources.openResource(resource, { replaceActive: true });

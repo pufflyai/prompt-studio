@@ -93,7 +93,7 @@ const createDeps = () => {
             approvalService: { handleResponse: () => {}, dispose: () => {} },
           })),
           get: mock(() => null),
-          setSession: mock(() => {}),
+          setSession: mock(() => true),
           remove: mock(() => {}),
         },
       },

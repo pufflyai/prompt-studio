@@ -589,9 +589,11 @@ describe("createCommandEnvironment workspace lifecycle", () => {
       branch: "workspace/T-1_A1",
       worktree_path: "/repo/.worktrees/T-1_A1",
       provider_id: "pstdio.worktree",
+      provider_capabilities_json: { archive: true, delete: true },
       provider_ref_json: null,
       provider_state: "ready",
       execution_kind: "local",
+      is_default: false,
     };
     const env = createCommandEnvironment(
       {
@@ -645,7 +647,7 @@ describe("createCommandEnvironment workspace lifecycle", () => {
     expect("setAttemptStatus" in env.workspaces).toBe(false);
   });
 
-  test("queues session follow-ups from extension context helpers", async () => {
+  test("queues remote session follow-ups without a local cwd", async () => {
     const inserted: unknown[] = [];
     const session = {
       id: "session-1",
@@ -653,7 +655,7 @@ describe("createCommandEnvironment workspace lifecycle", () => {
       status: "in_progress",
       agent: "fake",
       agent_session_id: "agent-session-1",
-      cwd: "/repo",
+      cwd: null,
       last_selected_model: null,
     };
     const env = createCommandEnvironment(
@@ -761,7 +763,7 @@ describe("createCommandEnvironment sessions", () => {
               approvalService: { handleResponse: () => {}, dispose: () => {} },
             })),
             get: mock(() => null),
-            setSession: mock(() => {}),
+            setSession: mock(() => true),
             remove: mock(() => {}),
           },
         },

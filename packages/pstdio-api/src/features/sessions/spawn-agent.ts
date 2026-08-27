@@ -1,16 +1,13 @@
-import type {
-  ApprovalRequest,
-  HarnessAttachment,
-  HarnessParams,
-  HarnessSession,
-  QuestionResponse,
-  SessionMessage,
-} from "pstdio-api-contracts";
-import { resolveHarnessExit } from "pstdio-api-runtime-host";
-import { sessionLogger } from "../../lib/logger";
+import type { ApprovalRequest, HarnessAttachment, HarnessParams, QuestionResponse } from "pstdio-api-contracts";
 import { waitForWorkspaceReady } from "../workspaces/wait-for-ready";
 import type { SessionsRouteDeps } from "./deps";
-import { persistSessionMessages } from "./session-messages";
+import {
+  bindSessionCancellation,
+  rejectPersistedSessionCancellation,
+  rejectStoreSessionCancellation,
+} from "./session-request-cancellation";
+import { toHarnessWorkspaceContext } from "./session-workspace-context";
+import { trackHarnessSession } from "./track-harness-session";
 
 type SpawnInput = {
   sessionId: string;
@@ -23,6 +20,7 @@ type SpawnInput = {
   params?: HarnessParams;
   cwd?: string;
   submittedQueuePosition?: number;
+  signal?: AbortSignal;
 };
 
 type SpawnDeps = Pick<SessionsRouteDeps, "harnessRegistry" | "eventBus" | "fileService" | "sessionService"> & {
@@ -31,7 +29,14 @@ type SpawnDeps = Pick<SessionsRouteDeps, "harnessRegistry" | "eventBus" | "fileS
   workspaceSessionService?: SessionsRouteDeps["workspaceSessionService"];
 };
 
-const DEFAULT_PROCESS_EXIT_TIMEOUT_MS = 10 * 60 * 1000;
+export class WorkspaceSessionNotReadyError extends Error {
+  constructor(
+    message: string,
+    readonly retryable: boolean,
+  ) {
+    super(message);
+  }
+}
 
 const resolveHarness = async (deps: SpawnDeps, agentId: string, projectId?: string) => {
   const harness = await deps.harnessRegistry.get(agentId, { projectId });
@@ -67,31 +72,55 @@ const markSubmittedAttachments = (
 // If provisioning is still running past the cap, or it failed (which clears `initializing` but
 // records `setup_error`), fail loudly instead of launching into a half-synced tree.
 const ensureWorkspaceReady = async (deps: SpawnDeps, sessionId: string) => {
-  if (!deps.workspaceSessionService) return;
+  if (!deps.workspaceSessionService) return null;
 
   const workspace = await waitForWorkspaceReady({ workspaceSessionService: deps.workspaceSessionService }, sessionId);
   if (workspace?.initializing) {
-    throw new Error(`Workspace ${workspace.id} is still provisioning; refusing to start the session.`);
+    throw new WorkspaceSessionNotReadyError(
+      `Workspace ${workspace.id} is still provisioning; refusing to start the session.`,
+      true,
+    );
   }
   if (workspace?.setup_error) {
-    throw new Error(`Workspace ${workspace.id} failed to provision: ${workspace.setup_error}`);
+    throw new WorkspaceSessionNotReadyError(
+      `Workspace ${workspace.id} failed to provision: ${workspace.setup_error}`,
+      false,
+    );
   }
   if (workspace?.provider_state && workspace.provider_state !== "ready") {
     const message = workspace.provider_error_json?.message ?? `provider state is ${workspace.provider_state}`;
-    throw new Error(`Workspace ${workspace.id} is not ready: ${message}`);
+    const retryable =
+      workspace.provider_error_json?.retryable === true ||
+      workspace.provider_state === "provisioning" ||
+      workspace.provider_state === "provider_missing";
+    throw new WorkspaceSessionNotReadyError(`Workspace ${workspace.id} is not ready: ${message}`, retryable);
   }
-  if (workspace?.execution_kind === "remote") {
-    throw new Error(`Workspace ${workspace.id} cannot run a local harness session.`);
+  return workspace;
+};
+
+const resolveHarnessWorkspace = async (
+  deps: SpawnDeps,
+  input: { sessionId: string; cwd?: string },
+  harness: { cwdRequirement: "required" | "optional" },
+) => {
+  const workspace = await ensureWorkspaceReady(deps, input.sessionId);
+  const context = toHarnessWorkspaceContext(workspace, input.cwd);
+  if (workspace?.execution_kind === "remote" && harness.cwdRequirement === "required") {
+    throw new Error(`Harness requires a local cwd and cannot run remote workspace ${workspace.id}.`);
   }
+  return context;
 };
 
 // Spawns a new harness session and tracks its lifecycle
 export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
+  input.signal?.throwIfAborted();
   const harness = await resolveHarness(deps, input.agentId, input.projectId);
+  input.signal?.throwIfAborted();
   const entry = createStoreEntry(deps, input.sessionId);
   markSubmittedAttachments(entry, input.attachments);
 
-  await ensureWorkspaceReady(deps, input.sessionId);
+  const workspace = await resolveHarnessWorkspace(deps, input, harness);
+  input.signal?.throwIfAborted();
 
   const session = await harness.start(
     {
@@ -100,17 +129,25 @@ export const spawnAgentSession = async (input: SpawnInput, deps: SpawnDeps) => {
       model: input.model,
       params: input.params,
       cwd: input.cwd,
+      workspace,
       sessionId: input.sessionId,
       events: entry.eventStore,
+      signal: input.signal,
     },
     { projectId: input.projectId },
   );
+  const throwIfCancelled = await bindSessionCancellation(input.signal, session, deps, input.sessionId);
 
   if (session.agentSessionId) {
     await deps.sessionService.update(input.sessionId, { agent_session_id: session.agentSessionId });
   }
+  await throwIfCancelled();
+  await rejectPersistedSessionCancellation(session, deps, input.sessionId);
+  await throwIfCancelled();
 
-  deps.sessionService.store.setSession(input.sessionId, session);
+  if (!deps.sessionService.store.setSession(input.sessionId, session)) {
+    await rejectStoreSessionCancellation(session, deps, input.sessionId);
+  }
   trackHarnessSession(input.sessionId, session, entry.eventStore.subscribe(), deps, {
     submittedAttachmentFileIds: submittedAttachmentFileIds(input.attachments),
     submittedQueuePosition: input.submittedQueuePosition,
@@ -132,22 +169,26 @@ type ResumeInput = {
   messageOffset?: number;
   questionResponse?: QuestionResponse;
   submittedQueuePosition?: number;
+  signal?: AbortSignal;
 };
 
 // Resumes an existing harness session with a follow-up prompt
 export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) => {
+  input.signal?.throwIfAborted();
   const harness = await resolveHarness(deps, input.agentId, input.projectId);
+  input.signal?.throwIfAborted();
   const entry = createStoreEntry(deps, input.sessionId);
   markSubmittedAttachments(entry, input.attachments);
 
-  await ensureWorkspaceReady(deps, input.sessionId);
+  const workspace = await resolveHarnessWorkspace(deps, input, harness);
+  input.signal?.throwIfAborted();
 
   // Resume streams emit index-based message patches, so we align indices with existing history.
   let messageOffset = input.messageOffset;
   if (messageOffset === undefined) {
     try {
       const messages = await harness.getMessages(
-        { agentSessionId: input.agentSessionId, cwd: input.cwd },
+        { agentSessionId: input.agentSessionId, cwd: input.cwd, workspace },
         { projectId: input.projectId },
       );
       messageOffset = messages.length;
@@ -164,16 +205,24 @@ export const resumeAgentSession = async (input: ResumeInput, deps: SpawnDeps) =>
       model: input.model,
       params: input.params,
       cwd: input.cwd,
+      workspace,
       sessionId: input.sessionId,
       events: entry.eventStore,
       messageOffset,
       questionResponse: input.questionResponse,
       approvals: entry.approvalService,
+      signal: input.signal,
     },
     { projectId: input.projectId },
   );
+  const throwIfCancelled = await bindSessionCancellation(input.signal, session, deps, input.sessionId);
+  await throwIfCancelled();
+  await rejectPersistedSessionCancellation(session, deps, input.sessionId);
+  await throwIfCancelled();
 
-  deps.sessionService.store.setSession(input.sessionId, session);
+  if (!deps.sessionService.store.setSession(input.sessionId, session)) {
+    await rejectStoreSessionCancellation(session, deps, input.sessionId);
+  }
   trackHarnessSession(input.sessionId, session, entry.eventStore.subscribe(), deps, {
     submittedAttachmentFileIds: submittedAttachmentFileIds(input.attachments),
     submittedQueuePosition: input.submittedQueuePosition,
@@ -199,13 +248,14 @@ export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps
 
   const entry = createStoreEntry(deps, input.sessionId);
 
-  await ensureWorkspaceReady(deps, input.sessionId);
+  const workspace = await resolveHarnessWorkspace(deps, input, harness);
 
   const session = await harness.reattach(
     {
       sessionId: input.sessionId,
       agentSessionId: input.agentSessionId,
       cwd: input.cwd,
+      workspace,
       events: entry.eventStore,
     },
     { projectId: input.projectId },
@@ -222,99 +272,3 @@ export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps
 
 const submittedAttachmentFileIds = (attachments: HarnessAttachment[] | undefined) =>
   attachments?.map((attachment) => attachment.fileId) ?? [];
-
-const messagesReferenceFile = (messages: SessionMessage[], fileId: string) =>
-  messages.some((message) => message.parts.some((part) => part.type === "file" && part.fileId === fileId));
-
-const messagesReferenceSubmittedAttachments = (messages: SessionMessage[], fileIds: string[]) =>
-  fileIds.every((fileId) => messagesReferenceFile(messages, fileId));
-
-const trackHarnessSession = (
-  sessionId: string,
-  session: Pick<HarnessSession, "done" | "stop" | "timeoutStrategy">,
-  activity: AsyncIterable<unknown>,
-  deps: SpawnDeps,
-  submitted?: { submittedAttachmentFileIds: string[]; submittedQueuePosition?: number },
-) => {
-  resolveHarnessExit({
-    session,
-    activity,
-    timeoutMs: deps.processExitTimeoutMs ?? DEFAULT_PROCESS_EXIT_TIMEOUT_MS,
-    onTimeout: () =>
-      sessionLogger.error(
-        {
-          event: "session.process.timeout",
-          session_id: sessionId,
-          timeout_ms: deps.processExitTimeoutMs ?? DEFAULT_PROCESS_EXIT_TIMEOUT_MS,
-        },
-        "Harness session timed out without new events; stopping it",
-      ),
-  })
-    .then(async (exit) => {
-      const entry = deps.sessionService.store.get(sessionId);
-      if (entry) {
-        const patches = entry.eventStore.getHistory();
-        const messages = await persistSessionMessages(sessionId, patches, deps).catch((err) => {
-          sessionLogger.error(
-            {
-              err,
-              event: "session.messages.persist.error",
-              session_id: sessionId,
-            },
-            "Failed to persist session messages on session exit",
-          );
-          return null;
-        });
-
-        // The dispatch-started guard entry keeps the attachment file undeletable until
-        // its prompt is durably persisted. On exit we release it once the persisted
-        // messages reference the attachment, or when persistence failed entirely —
-        // a failed persist leaves no message to hand protection off to, so keeping the
-        // orphaned entry would block deletion of the attachment forever.
-        if (submitted?.submittedQueuePosition !== undefined && deps.sessionQueueEntriesService) {
-          const persistedReference =
-            messages !== null && messagesReferenceSubmittedAttachments(messages, submitted.submittedAttachmentFileIds);
-
-          if (messages === null || persistedReference) {
-            await deps.sessionQueueEntriesService.remove(submitted.submittedQueuePosition);
-          }
-        }
-      } else {
-        sessionLogger.warn(
-          {
-            event: "session.store.missing_on_exit",
-            session_id: sessionId,
-          },
-          "No store entry found on session exit; messages were not persisted",
-        );
-      }
-
-      const current = await deps.sessionService.get(sessionId);
-      if (current?.status === "cancelled") {
-        deps.sessionService.store.remove(sessionId);
-        return;
-      }
-
-      if (exit.status === "failed") {
-        sessionLogger.error(
-          {
-            event: "session.process.exit.failed",
-            session_id: sessionId,
-          },
-          "Harness session exited with failure",
-        );
-      }
-      deps.sessionService.store.remove(sessionId);
-      await deps.sessionService.transitionStatus(sessionId, exit.status);
-    })
-    .catch((err) => {
-      sessionLogger.error(
-        {
-          err,
-          event: "session.process.exit_tracking.error",
-          session_id: sessionId,
-        },
-        "Session exit tracking failed",
-      );
-    });
-};

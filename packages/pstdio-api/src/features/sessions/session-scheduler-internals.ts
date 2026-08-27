@@ -12,7 +12,7 @@ export type PendingQueueEntry = Awaited<
 export type StartExistingInput = {
   session: ExistingSession;
   prompt: string;
-  cwd: string;
+  cwd?: string;
   agentId?: string;
   model?: string;
   respectCapacity?: boolean;
@@ -20,6 +20,7 @@ export type StartExistingInput = {
   attachments?: HarnessAttachment[];
   attachmentRefs?: SessionAttachmentRef[];
   params?: HarnessParams;
+  signal?: AbortSignal;
 };
 
 export type DispatchContext = StartExistingInput & {
@@ -226,7 +227,7 @@ export const dispatchQueuedEntry = async (
         attachments,
         model,
         params,
-        cwd: cwd ?? "",
+        cwd,
         questionResponse: entry.question_response_json as { answers: string[][] } | undefined,
         submittedQueuePosition,
       },
@@ -274,40 +275,66 @@ export const dispatchExisting = async (deps: SessionsRouteDeps, input: DispatchC
   const fail = (error: unknown) =>
     logStartupFailure(deps, { error, session: dispatchSession, agentId, cwd, model, submittedQueuePosition });
 
+  const launch = async (starting: Promise<unknown>) => {
+    if (!input.signal) {
+      void starting.catch(fail);
+      return;
+    }
+    try {
+      await starting;
+    } catch (error) {
+      if (input.signal.aborted) {
+        if (submittedQueuePosition !== undefined) {
+          await deps.sessionQueueEntriesService.remove(submittedQueuePosition);
+        }
+        await deps.sessionService.cancel(session.id);
+      } else {
+        await fail(error);
+      }
+      throw error;
+    }
+  };
+
   if (!switchingAgent && session.agent_session_id) {
-    resumeAgentSession(
+    await launch(
+      resumeAgentSession(
+        {
+          sessionId: session.id,
+          projectId: projectIdForAgentEnv(session),
+          agentSessionId: session.agent_session_id,
+          agentId,
+          prompt,
+          attachments: input.attachments,
+          model,
+          params,
+          cwd,
+          questionResponse: input.questionResponse,
+          submittedQueuePosition,
+          signal: input.signal,
+        },
+        deps,
+      ),
+    );
+    deps.sessionService.emitResumedHook?.(dispatchSession);
+    return;
+  }
+
+  await launch(
+    spawnAgentSession(
       {
         sessionId: session.id,
         projectId: projectIdForAgentEnv(session),
-        agentSessionId: session.agent_session_id,
         agentId,
         prompt,
         attachments: input.attachments,
         model,
         params,
         cwd,
-        questionResponse: input.questionResponse,
         submittedQueuePosition,
+        signal: input.signal,
       },
       deps,
-    ).catch(fail);
-    deps.sessionService.emitResumedHook?.(dispatchSession);
-    return;
-  }
-
-  spawnAgentSession(
-    {
-      sessionId: session.id,
-      projectId: projectIdForAgentEnv(session),
-      agentId,
-      prompt,
-      attachments: input.attachments,
-      model,
-      params,
-      cwd,
-      submittedQueuePosition,
-    },
-    deps,
-  ).catch(fail);
+    ),
+  );
   deps.sessionService.emitResumedHook?.(dispatchSession);
 };

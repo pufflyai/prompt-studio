@@ -72,7 +72,7 @@ describe("createSessionHandler hooks", () => {
         store: {
           create: mock(() => createStoreEntry()),
           get: mock(() => null),
-          setSession: mock(() => {}),
+          setSession: mock(() => true),
           remove: mock(() => {}),
         },
       },
@@ -156,7 +156,7 @@ describe("createSessionHandler hooks", () => {
         store: {
           create: mock(() => createStoreEntry()),
           get: mock(() => null),
-          setSession: mock(() => {}),
+          setSession: mock(() => true),
           remove: mock(() => {}),
         },
       },
@@ -222,7 +222,7 @@ describe("createSessionHandler hooks", () => {
         store: {
           create: mock(() => createStoreEntry()),
           get: mock(() => null),
-          setSession: mock(() => {}),
+          setSession: mock(() => true),
           remove: mock(() => {}),
         },
       },

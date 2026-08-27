@@ -40,8 +40,8 @@ const createSessionServiceMock = () => {
   const storeEntries = new Map<string, unknown>();
   return {
     get: mock(async () => null),
-    update: async () => null,
-    transitionStatus: async () => null,
+    update: mock(async () => null),
+    transitionStatus: mock(async () => null),
     store: {
       create: mock((id: string) => {
         const entry = createStoreEntry();
@@ -49,7 +49,7 @@ const createSessionServiceMock = () => {
         return entry;
       }),
       get: mock((id: string) => storeEntries.get(id) ?? null),
-      setSession: mock(() => {}),
+      setSession: mock(() => true),
       remove: mock(() => {}),
     },
   };
@@ -195,104 +195,56 @@ describe("workspace readiness gate", () => {
 
     expect(start).not.toHaveBeenCalled();
   });
-});
 
-describe("spawnAgentSession lifecycle", () => {
-  test("fires status hooks when the spawned session exits", async () => {
+  test("spawnAgentSession passes a remote execution target to a harness that accepts it", async () => {
     const start = mock((_ctx: unknown, _input: unknown) => completedSession());
-    const registry = createTestHarnessRegistry([createTestHarnessRecord("claude-code", { provider: { start } })]);
-
-    const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "completed" }));
+    const registry = createTestHarnessRegistry([
+      createTestHarnessRecord("remote", {
+        provider: { cwdRequirement: "optional", start } as never,
+      }),
+    ]);
+    const sessionService = createSessionServiceMock();
 
     await spawnAgentSession(
       {
-        sessionId: "session_1",
-        agentId: CLAUDE_CODE_ID,
-        prompt: "hello",
-        cwd: "/repo",
+        sessionId: "s_remote",
+        projectId: "project_1",
+        agentId: testHarnessId("remote"),
+        prompt: "start remotely",
       },
       {
         harnessRegistry: registry,
-        eventBus: {
-          emit: () => {},
-        },
-        workspaceSessionService: readyWorkspaceSession,
-        fileService: {
-          get: async () => null,
-          upload: async () => ({ id: "file_1" }),
-          update: async () => null,
-        },
-        sessionService: {
-          get: mock(async () => ({ id: "session_1", project_id: "project_1", status: "in_progress" })),
-          update: async () => null,
-          transitionStatus,
-          store: {
-            create: mock(() => ({
-              ...createStoreEntry(),
-            })),
-            get: mock(() => null),
-            setSession: mock(() => {}),
-            remove: mock(() => {}),
-          },
+        sessionService,
+        eventBus: { emit: () => {} },
+        workspaceSessionService: {
+          getWorkspaceBySessionId: async () => ({
+            id: "w_remote",
+            initializing: false,
+            setup_error: null,
+            provider_id: "pstdio.remote",
+            provider_ref_json: { version: 1, data: { workspace: "remote_1" } },
+            provider_state: "ready",
+            execution_kind: "remote",
+            display_path: "remote://workspace/remote_1",
+          }),
         },
       } as unknown as Parameters<typeof spawnAgentSession>[1],
     );
 
-    for (let index = 0; index < 20; index += 1) {
-      if (transitionStatus.mock.calls.length > 0) break;
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-
-    expect(transitionStatus).toHaveBeenCalledWith("session_1", "completed");
-  });
-
-  test("does not overwrite a cancelled session when the session exits later", async () => {
-    const start = mock((_ctx: unknown, _input: unknown) => completedSession());
-    const registry = createTestHarnessRegistry([createTestHarnessRecord("claude-code", { provider: { start } })]);
-
-    const transitionStatus = mock(async () => ({ id: "session_1", project_id: "project_1", status: "completed" }));
-    const remove = mock(() => {});
-
-    await spawnAgentSession(
-      {
-        sessionId: "session_1",
-        agentId: CLAUDE_CODE_ID,
-        prompt: "hello",
-        cwd: "/repo",
-      },
-      {
-        harnessRegistry: registry,
-        eventBus: {
-          emit: () => {},
-        },
-        workspaceSessionService: readyWorkspaceSession,
-        fileService: {
-          get: async () => null,
-          upload: async () => ({ id: "file_1" }),
-          update: async () => null,
-        },
-        sessionService: {
-          get: mock(async () => ({ id: "session_1", project_id: "project_1", status: "cancelled" })),
-          update: async () => null,
-          transitionStatus,
-          store: {
-            create: mock(() => ({
-              ...createStoreEntry(),
-            })),
-            get: mock(() => null),
-            setSession: mock(() => {}),
-            remove,
+    expect(start).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        cwd: undefined,
+        workspace: {
+          workspaceId: "w_remote",
+          executionTarget: {
+            kind: "remote",
+            providerId: "pstdio.remote",
+            providerRef: { version: 1, data: { workspace: "remote_1" } },
+            displayPath: "remote://workspace/remote_1",
           },
         },
-      } as unknown as Parameters<typeof spawnAgentSession>[1],
+      }),
     );
-
-    for (let index = 0; index < 20; index += 1) {
-      if (remove.mock.calls.length > 0) break;
-      await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-
-    expect(remove).toHaveBeenCalledWith("session_1");
-    expect(transitionStatus).not.toHaveBeenCalled();
   });
 });

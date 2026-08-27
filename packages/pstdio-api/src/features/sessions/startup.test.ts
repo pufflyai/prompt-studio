@@ -341,7 +341,7 @@ describe("resolveOrphanedSessions resolution", () => {
         store: {
           get: () => undefined,
           create: storeCreate,
-          setSession: () => {},
+          setSession: () => true,
           remove: () => {},
         },
         listByStatus: async () => [staleSession],
@@ -360,7 +360,7 @@ describe("resolveOrphanedSessions resolution", () => {
     expect(transitionStatus).not.toHaveBeenCalled();
   });
 
-  test("falls back to disconnected when reattach throws", async () => {
+  test("keeps an orphan active when reattach fails transiently", async () => {
     const staleSession = {
       id: "session-reattach-fail",
       agent: OPENCODE_ID,
@@ -396,7 +396,7 @@ describe("resolveOrphanedSessions resolution", () => {
         store: {
           get: () => undefined,
           create: storeCreate,
-          setSession: () => {},
+          setSession: () => true,
           remove: () => {},
         },
         listByStatus: async () => [staleSession],
@@ -407,7 +407,7 @@ describe("resolveOrphanedSessions resolution", () => {
 
     await resolveOrphanedSessions(deps);
 
-    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected");
+    expect(transitionStatus).not.toHaveBeenCalled();
   });
 
   test("message lookup failure does not imply failed", async () => {
@@ -539,7 +539,7 @@ describe("resolveOrphanedSessions readiness gate", () => {
       },
       sessionQueueEntriesService: { listDispatchStarted: async () => [], remove: async () => {} },
       sessionService: {
-        store: { get: () => undefined, create: storeCreate, setSession: () => {}, remove: () => {} },
+        store: { get: () => undefined, create: storeCreate, setSession: () => true, remove: () => {} },
         listByStatus: async () => [staleSession],
         transitionStatus,
       },

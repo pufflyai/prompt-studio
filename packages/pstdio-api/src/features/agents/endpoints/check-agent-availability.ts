@@ -30,7 +30,9 @@ export const checkAgentAvailabilityHandler = (
   return async (c) => {
     const { agent: agentId, project } = c.req.valid("query");
     const harness = await deps.harnessRegistry.get(agentId, { projectId: project });
-    const availability = harness ? toAvailabilityInfo(await harness.detect()) : { type: "NOT_FOUND" as const };
+    const availability = harness
+      ? toAvailabilityInfo(await harness.detect({ projectId: project }))
+      : { type: "NOT_FOUND" as const };
 
     return c.json(availability, 200);
   };

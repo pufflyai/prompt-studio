@@ -143,6 +143,25 @@ describe("SessionService", () => {
   });
 
   describe("cancel", () => {
+    test("keeps a session active and tracked when remote cleanup is unconfirmed", async () => {
+      const { deps, mocks } = buildDeps();
+      const service = createSessionService(deps);
+      service.store.create("s1", () => {});
+      service.store.setSession("s1", {
+        agentSessionId: "agent_1",
+        done: new Promise(() => {}),
+        stop: async () => {
+          throw new Error("remote delete failed");
+        },
+      });
+
+      await expect(service.cancel("s1")).rejects.toThrow("remote delete failed");
+
+      expect(mocks.updateStatus).not.toHaveBeenCalledWith("s1", "cancelled");
+      expect(mocks.updateStatus).not.toHaveBeenCalledWith("s1", "failed");
+      expect(service.store.get("s1")?.session).toBeDefined();
+    });
+
     test("stops the active harness session and transitions the session to cancelled", async () => {
       const { deps, mocks } = buildDeps();
       const service = createSessionService(deps);

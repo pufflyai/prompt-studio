@@ -1,0 +1,108 @@
+import type { HarnessSession, SessionMessage } from "pstdio-api-contracts";
+import { resolveHarnessExit } from "pstdio-api-runtime-host";
+import { sessionLogger } from "../../lib/logger";
+import type { SessionsRouteDeps } from "./deps";
+import { persistSessionMessages } from "./session-messages";
+
+type TrackingDeps = Pick<SessionsRouteDeps, "fileService" | "sessionService"> & {
+  processExitTimeoutMs?: number;
+  sessionQueueEntriesService?: SessionsRouteDeps["sessionQueueEntriesService"];
+};
+
+const DEFAULT_PROCESS_EXIT_TIMEOUT_MS = 10 * 60 * 1000;
+
+const messagesReferenceFile = (messages: SessionMessage[], fileId: string) =>
+  messages.some((message) => message.parts.some((part) => part.type === "file" && part.fileId === fileId));
+
+const messagesReferenceSubmittedAttachments = (messages: SessionMessage[], fileIds: string[]) =>
+  fileIds.every((fileId) => messagesReferenceFile(messages, fileId));
+
+export const trackHarnessSession = (
+  sessionId: string,
+  session: Pick<HarnessSession, "done" | "stop" | "timeoutStrategy">,
+  activity: AsyncIterable<unknown>,
+  deps: TrackingDeps,
+  submitted?: { submittedAttachmentFileIds: string[]; submittedQueuePosition?: number },
+) => {
+  resolveHarnessExit({
+    session,
+    activity,
+    timeoutMs: deps.processExitTimeoutMs ?? DEFAULT_PROCESS_EXIT_TIMEOUT_MS,
+    onTimeout: () =>
+      sessionLogger.error(
+        {
+          event: "session.process.timeout",
+          session_id: sessionId,
+          timeout_ms: deps.processExitTimeoutMs ?? DEFAULT_PROCESS_EXIT_TIMEOUT_MS,
+        },
+        "Harness session timed out without new events; stopping it",
+      ),
+  })
+    .then(async (exit) => {
+      const entry = deps.sessionService.store.get(sessionId);
+      if (entry) {
+        const patches = entry.eventStore.getHistory();
+        const messages = await persistSessionMessages(sessionId, patches, deps).catch((err) => {
+          sessionLogger.error(
+            {
+              err,
+              event: "session.messages.persist.error",
+              session_id: sessionId,
+            },
+            "Failed to persist session messages on session exit",
+          );
+          return null;
+        });
+
+        // The dispatch-started guard entry keeps the attachment file undeletable until
+        // its prompt is durably persisted. On exit we release it once the persisted
+        // messages reference the attachment, or when persistence failed entirely —
+        // a failed persist leaves no message to hand protection off to, so keeping the
+        // orphaned entry would block deletion of the attachment forever.
+        if (submitted?.submittedQueuePosition !== undefined && deps.sessionQueueEntriesService) {
+          const persistedReference =
+            messages !== null && messagesReferenceSubmittedAttachments(messages, submitted.submittedAttachmentFileIds);
+
+          if (messages === null || persistedReference) {
+            await deps.sessionQueueEntriesService.remove(submitted.submittedQueuePosition);
+          }
+        }
+      } else {
+        sessionLogger.warn(
+          {
+            event: "session.store.missing_on_exit",
+            session_id: sessionId,
+          },
+          "No store entry found on session exit; messages were not persisted",
+        );
+      }
+
+      const current = await deps.sessionService.get(sessionId);
+      if (current?.status === "cancelled") {
+        deps.sessionService.store.remove(sessionId);
+        return;
+      }
+
+      if (exit.status === "failed") {
+        sessionLogger.error(
+          {
+            event: "session.process.exit.failed",
+            session_id: sessionId,
+          },
+          "Harness session exited with failure",
+        );
+      }
+      deps.sessionService.store.remove(sessionId);
+      await deps.sessionService.transitionStatus(sessionId, exit.status);
+    })
+    .catch((err) => {
+      sessionLogger.error(
+        {
+          err,
+          event: "session.process.exit_tracking.error",
+          session_id: sessionId,
+        },
+        "Session exit tracking failed",
+      );
+    });
+};

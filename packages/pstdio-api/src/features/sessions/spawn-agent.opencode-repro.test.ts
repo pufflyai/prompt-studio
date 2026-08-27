@@ -52,7 +52,7 @@ const createDeps = (
           eventStore,
           approvalService: { handleResponse: () => {}, dispose: () => {} },
         })),
-        setSession: mock(() => {}),
+        setSession: mock(() => true),
         remove,
       },
     },

@@ -29,6 +29,20 @@ describe("session-store", () => {
     expect(store.get("s1")!.session).toBe(harnessSession);
   });
 
+  test("setSession refuses publication when cancellation won the install race", () => {
+    const store = createSessionStore();
+    store.create("s1", mock());
+    store.markCancellationRequested("s1");
+    const harnessSession: HarnessSession = {
+      agentSessionId: "agent_1",
+      done: new Promise(() => {}),
+      stop: mock(),
+    };
+
+    expect(store.setSession("s1", harnessSession)).toBe(false);
+    expect(store.get("s1")?.session).toBe(harnessSession);
+  });
+
   test("remove cleans up session", () => {
     const store = createSessionStore();
     store.create("s1", mock());
