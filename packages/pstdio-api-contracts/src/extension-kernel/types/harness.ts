@@ -83,6 +83,9 @@ export interface HarnessSkillsLayout {
   globalDir?: string;
 }
 
+/** A reattach error is permanent unless the provider explicitly marks it retryable. */
+export type RetryableHarnessReattachError = Error & { readonly retryable: true };
+
 export type HarnessParamDescriptor = SelectParam | BooleanParam;
 export type HarnessParamsSchema = Record<string, HarnessParamDescriptor>;
 
@@ -104,7 +107,7 @@ export interface HarnessProvider extends ContributionDefinition<"harness"> {
   listModels?(ctx: HarnessContext): MaybePromise<AgentModel[]>;
   start(ctx: HarnessContext, input: HarnessStartInput): MaybePromise<HarnessSession>;
   resume(ctx: HarnessContext, input: HarnessResumeInput): MaybePromise<HarnessSession>;
-  /** Re-bind to an orphaned provider session after a host restart. Requires the SessionReattach capability. */
+  /** Re-bind after a host restart. Throw a `RetryableHarnessReattachError` only when another attempt may succeed. */
   reattach?(ctx: HarnessContext, input: HarnessReattachInput): MaybePromise<HarnessSession>;
   getMessages?(ctx: HarnessContext, input: HarnessMessagesInput): MaybePromise<SessionMessage[]>;
 }

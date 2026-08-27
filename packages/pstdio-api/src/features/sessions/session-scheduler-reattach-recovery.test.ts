@@ -39,7 +39,7 @@ const reattachCompletedSession = mock((_ctx: HarnessContext, input: { agentSessi
   completedSession(input.agentSessionId),
 );
 const failedReattachSession = mock(() => {
-  throw new Error("reattach failed");
+  throw Object.assign(new Error("reattach failed"), { retryable: true });
 });
 
 const createReattachRegistry = (options?: { reattachFails?: boolean; reattachCompletes?: boolean }) => {

@@ -359,7 +359,9 @@ describe("resolveOrphanedSessions resolution", () => {
     );
     expect(transitionStatus).not.toHaveBeenCalled();
   });
+});
 
+describe("resolveOrphanedSessions reattach failures", () => {
   test("keeps retrying a transient reattach while the session remains active", async () => {
     const staleSession = {
       id: "session-reattach-fail",
@@ -376,14 +378,16 @@ describe("resolveOrphanedSessions resolution", () => {
     const controller = new AbortController();
     let reattachAttempts = 0;
     let providerSignal: AbortSignal | undefined;
+    const lateReattach = Promise.withResolvers<HarnessSession>();
+    const stopLateSession = mock(() => {});
     const reattach = mock((_ctx: unknown, input: unknown) => {
       reattachAttempts += 1;
       if (reattachAttempts === 4) {
         providerSignal = (input as { signal?: AbortSignal }).signal;
         controller.abort();
-        return new Promise<never>(() => {});
+        return lateReattach.promise;
       }
-      throw new Error("opencode unreachable");
+      throw Object.assign(new Error("opencode unreachable"), { retryable: true });
     });
 
     const deps = {
@@ -427,8 +431,63 @@ describe("resolveOrphanedSessions resolution", () => {
     expect(providerSignal).toBe(controller.signal);
     expect(controller.signal.aborted).toBe(true);
     expect(transitionStatus).not.toHaveBeenCalled();
+
+    lateReattach.resolve({ done: new Promise(() => {}), stop: stopLateSession });
+    await Bun.sleep(0);
+    expect(stopLateSession).toHaveBeenCalledTimes(1);
   });
 
+  test("disconnects an orphan after a permanent reattach failure", async () => {
+    const staleSession = {
+      id: "session-reattach-gone",
+      agent: OPENCODE_ID,
+      agent_session_id: "oc-gone",
+      cwd: "/work",
+      project_id: "p1",
+    };
+    const transitionStatus = mock(async () => ({ ...staleSession, status: "disconnected" }));
+    const removeQueueEntry = mock(async () => {});
+    const controller = new AbortController();
+    const reattach = mock(() => {
+      if (reattach.mock.calls.length === 2) controller.abort();
+      throw new Error("provider session not found");
+    });
+
+    const deps = {
+      harnessRegistry: createTestHarnessRegistry([
+        createTestHarnessRecord("opencode", {
+          provider: { capabilities: () => ["SessionReattach"], reattach },
+        }),
+      ]),
+      eventBus: { emit: () => {} },
+      workspaceSessionService: { getWorkspaceBySessionId: async () => null },
+      sessionQueueEntriesService: {
+        listDispatchStarted: async () => [{ session_id: staleSession.id, queue_position: 3 }],
+        remove: removeQueueEntry,
+      },
+      sessionService: {
+        store: {
+          get: () => undefined,
+          create: () => ({
+            eventStore: createEventStore(),
+            approvalService: { handleResponse: () => {}, dispose: () => {} },
+          }),
+          remove: () => {},
+        },
+        listByStatus: async () => [staleSession],
+        transitionStatus,
+      },
+    } as unknown as Parameters<typeof resolveOrphanedSessions>[0];
+
+    await resolveOrphanedSessions(deps, controller.signal);
+
+    expect(reattach).toHaveBeenCalledTimes(1);
+    expect(removeQueueEntry).toHaveBeenCalledWith(3);
+    expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected");
+  });
+});
+
+describe("resolveOrphanedSessions message lookup", () => {
   test("message lookup failure does not imply failed", async () => {
     const staleSession = {
       id: "session-fetch-error",

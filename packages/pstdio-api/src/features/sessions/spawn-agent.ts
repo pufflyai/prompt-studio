@@ -1,4 +1,11 @@
-import type { ApprovalRequest, HarnessAttachment, HarnessParams, QuestionResponse } from "pstdio-api-contracts";
+import type {
+  ApprovalRequest,
+  HarnessAttachment,
+  HarnessParams,
+  HarnessSession,
+  QuestionResponse,
+} from "pstdio-api-contracts";
+import { sessionLogger } from "../../lib/logger";
 import { waitForWorkspaceReady } from "../workspaces/wait-for-ready";
 import type { SessionsRouteDeps } from "./deps";
 import {
@@ -242,16 +249,33 @@ type ReattachInput = {
   signal?: AbortSignal;
 };
 
-const waitForHarnessReattach = <T>(task: Promise<T>, signal?: AbortSignal) => {
+const stopSessionReturnedAfterReattachAbort = (session: HarnessSession, sessionId: string) => {
+  void Promise.resolve()
+    .then(() => session.stop())
+    .catch((error) =>
+      sessionLogger.error(
+        { err: error, event: "session.reattach_late_stop.failed", session_id: sessionId },
+        "Failed to stop a harness session returned after reattach was aborted",
+      ),
+    );
+};
+
+const waitForHarnessReattach = (task: Promise<HarnessSession>, sessionId: string, signal?: AbortSignal) => {
   if (!signal) return task;
-  return new Promise<T>((resolve, reject) => {
+  let settled = false;
+  return new Promise<HarnessSession>((resolve, reject) => {
     const finish = (settle: () => void) => {
+      if (settled) return false;
+      settled = true;
       signal.removeEventListener("abort", onAbort);
       settle();
+      return true;
     };
     const onAbort = () => finish(() => reject(signal.reason));
     task.then(
-      (value) => finish(() => resolve(value)),
+      (session) => {
+        if (!finish(() => resolve(session))) stopSessionReturnedAfterReattachAbort(session, sessionId);
+      },
       (error) => finish(() => reject(error)),
     );
     if (signal.aborted) onAbort();
@@ -282,8 +306,13 @@ export const reattachAgentSession = async (input: ReattachInput, deps: SpawnDeps
       },
       { projectId: input.projectId },
     ),
+    input.sessionId,
     input.signal,
   );
+  if (input.signal?.aborted) {
+    stopSessionReturnedAfterReattachAbort(session, input.sessionId);
+    input.signal.throwIfAborted();
+  }
 
   deps.sessionService.store.setSession(input.sessionId, session);
   trackHarnessSession(input.sessionId, session, entry.eventStore.subscribe(), deps, {
