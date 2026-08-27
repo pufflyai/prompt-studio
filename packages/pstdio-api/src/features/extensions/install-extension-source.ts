@@ -11,32 +11,38 @@ import {
 } from "node:fs";
 import { homedir as osHomedir, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
-import type { ExtensionsCheckResponse } from "pstdio-api-contracts";
 import { readPackageManifest, readPackageManifestMetadata } from "pstdio-extensions";
 import { expandHomePath, resolvePstdioHome as resolveRuntimePstdioHome } from "pstdio-paths";
 import { createExtensionIgnoreMatcher } from "./extension-ignore";
-import { marketplaceExtensionRepositoryPath } from "./extension-marketplace";
 import {
   checkExtensionSource,
   checkExtensionsRoot,
-  type ExtensionMetadata,
   formatExtensionsCheck,
   hashExtensionSource,
   readExtensionSourceMetadata,
 } from "./extension-runtime";
+import { prepareNamedSource } from "./extension-source-checkout";
 import { hashExtensionDependencyInputs } from "./hash-extension-dependency-inputs";
-import {
-  type CommandOptions,
-  type CommandResult,
-  installDependencies,
-  runCommand,
-  shouldInstallDependencies,
-} from "./install-extension-dependencies";
+import { installDependencies, shouldInstallDependencies } from "./install-extension-dependencies";
 import { linkUsableNodeModules } from "./install-extension-source-node-modules";
+import type {
+  ExtensionEnableInput,
+  InstallExtensionSourceInput,
+  InstalledExtensionSource,
+} from "./install-extension-source-types";
 
+export {
+  createSharedNamedSourceCheckout,
+  namedSourceRef,
+  PSTDIO_REPOSITORY_URL,
+} from "./extension-source-checkout";
+export type {
+  ExtensionEnableInput,
+  InstallExtensionSourceInput,
+  InstalledExtensionSource,
+} from "./install-extension-source-types";
 export { checkExtensionsRoot, formatExtensionsCheck };
 
-export const PSTDIO_REPOSITORY_URL = "https://github.com/pufflyai/prompt-studio";
 export const EXTENSION_INSTALLING_MARKER = ".pstdio-installing";
 
 export class ExtensionAlreadyInstalledError extends Error {
@@ -48,57 +54,6 @@ export class ExtensionAlreadyInstalledError extends Error {
     this.targetPath = targetPath;
   }
 }
-
-export type InstallExtensionSourceInput = {
-  /** Keep a managed source installed so the dashboard can repair it after an extension API change. */
-  allowUnsupportedApiVersion?: boolean;
-  env?: NodeJS.ProcessEnv | Record<string, string | undefined>;
-  existsOk?: boolean;
-  force?: boolean;
-  homedir?: () => string;
-  installName?: string;
-  repoPath?: string;
-  isPackagedRuntime?: () => boolean;
-  bunCacheDir?: string;
-  prepareNamedSource?: (name: string, tempDir: string, ref?: string) => Promise<{ path: string; ref: string }>;
-  /** Git ref for a named source. Omitting it takes the default branch, which only development does. */
-  ref?: string;
-  processExecPath?: string;
-  reuseInstalledDependencies?: boolean;
-  runCommand?: (command: string, args: string[], options: CommandOptions) => Promise<CommandResult>;
-  saveLockfile?: boolean;
-  skipInstall?: boolean;
-  signal?: AbortSignal;
-  source: string;
-};
-
-export type InstalledExtensionSource = {
-  check: ExtensionsCheckResponse;
-  installName: string;
-  manifest: Record<string, unknown>;
-  metadata: ExtensionMetadata;
-  source:
-    | { kind: "local"; path: string; ref?: string }
-    | {
-        kind: "named";
-        name: string;
-        ref: string;
-      };
-  sourceHash: string;
-  targetPath: string;
-};
-
-export type ExtensionEnableInput = {
-  displayName: string;
-  extensionId: string;
-  manifest: Record<string, unknown>;
-  name: string;
-  sourceHash: string;
-  sourceKind: "git" | "local_path";
-  sourcePath: string;
-  sourceRef: string | null;
-  version: string | null;
-};
 
 export const toExtensionEnableInput = (installed: InstalledExtensionSource): ExtensionEnableInput => ({
   displayName: installed.metadata.displayName,
@@ -231,90 +186,6 @@ const prepareInstallDependencies = async (input: {
   return linkedInstalledDependencies;
 };
 
-/**
- * Clones the extension monorepo and reports the commit that was checked out.
- *
- * The commit sha is the pin: a tag can be moved and a branch always moves, so recording the ref a
- * caller asked for would not tell us later what was actually installed. `ref` may be a tag, branch,
- * or sha; omitting it takes the default branch, which only the development flag does.
- */
-const cloneRepoSparse = async (
-  checkoutPath: string,
-  paths: string[],
-  run: (command: string, args: string[], options: { cwd: string }) => Promise<CommandResult>,
-  ref?: string,
-) => {
-  const tempParent = dirname(checkoutPath);
-  const cloneArgs = ["clone", "--depth", "1", "--filter=blob:none", "--sparse"];
-  if (ref) cloneArgs.push("--branch", ref);
-  const clone = await run("git", [...cloneArgs, PSTDIO_REPOSITORY_URL, checkoutPath], { cwd: tempParent });
-  if (clone.exitCode !== 0) {
-    const detail = clone.stderr.trim() || clone.stdout.trim();
-    throw new Error(`Failed to clone ${PSTDIO_REPOSITORY_URL}${ref ? ` at ${ref}` : ""}: ${detail}`);
-  }
-
-  const sparse = await run("git", ["sparse-checkout", "set", ...paths], { cwd: checkoutPath });
-  if (sparse.exitCode !== 0) {
-    throw new Error(`Failed to fetch ${paths.join(", ")}: ${sparse.stderr.trim() || sparse.stdout.trim()}`);
-  }
-
-  const head = await run("git", ["rev-parse", "HEAD"], { cwd: checkoutPath });
-  if (head.exitCode !== 0) {
-    throw new Error(`Failed to resolve the installed commit: ${head.stderr.trim() || head.stdout.trim()}`);
-  }
-
-  return head.stdout.trim();
-};
-
-export const namedSourceRef = (commit: string, name: string) =>
-  `${PSTDIO_REPOSITORY_URL}@${commit}#${marketplaceExtensionRepositoryPath(name)}`;
-
-const prepareNamedSource = async (name: string, tempDir: string, ref?: string) => {
-  const checkoutPath = join(tempDir, "prompt-studio");
-  const repositoryPath = marketplaceExtensionRepositoryPath(name);
-  const commit = await cloneRepoSparse(checkoutPath, [repositoryPath], runCommand, ref);
-  return {
-    path: join(checkoutPath, repositoryPath),
-    ref: namedSourceRef(commit, name),
-  };
-};
-
-export const createSharedNamedSourceCheckout = async (
-  names: string[],
-  options: {
-    ref?: string;
-    runCommand?: (command: string, args: string[], opts: { cwd: string }) => Promise<CommandResult>;
-  } = {},
-) => {
-  const tempDir = mkdtempSync(join(tmpdir(), "pstdio-extension-shared-"));
-  const cleanup = () => rmSync(tempDir, { recursive: true, force: true });
-
-  if (names.length === 0) {
-    return { prepareNamedSource: prepareNamedSource, cleanup };
-  }
-
-  const checkoutPath = join(tempDir, "prompt-studio");
-  let commit: string;
-  try {
-    commit = await cloneRepoSparse(
-      checkoutPath,
-      names.map(marketplaceExtensionRepositoryPath),
-      options.runCommand ?? runCommand,
-      options.ref,
-    );
-  } catch (error) {
-    cleanup();
-    throw error;
-  }
-
-  const shared = async (name: string) => ({
-    path: join(checkoutPath, marketplaceExtensionRepositoryPath(name)),
-    ref: namedSourceRef(commit, name),
-  });
-
-  return { prepareNamedSource: shared, cleanup };
-};
-
 export const isLocalExtensionSource = (source: string) => isLocalSource(source);
 
 export const formatAlreadyInstalledMessage = (error: ExtensionAlreadyInstalledError) =>
@@ -328,7 +199,7 @@ const resolveSource = async (input: InstallExtensionSourceInput, tempDir: string
     return { kind: "local" as const, path, ref: undefined };
   }
 
-  const named = await (input.prepareNamedSource ?? prepareNamedSource)(input.source, tempDir, input.ref);
+  const named = await (input.prepareNamedSource ?? prepareNamedSource)(input.source, tempDir, input.ref, input.signal);
   return { kind: "named" as const, name: input.source, path: named.path, ref: named.ref };
 };
 
@@ -404,7 +275,9 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
   let stagingRoot: string | null = null;
 
   try {
+    input.signal?.throwIfAborted();
     const resolvedSource = await resolveSource(input, tempDir);
+    input.signal?.throwIfAborted();
     failIfInvalidSource(resolvedSource.path);
     const extensionsRoot = resolveExtensionsRoot(input, pstdioHome, resolvedSource.path);
 
@@ -436,12 +309,14 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
       source: resolvedSource,
       targetPath,
     });
+    input.signal?.throwIfAborted();
 
     const { check, loaded } = await validatePreparedInstall(
       installPath,
       extensionsRoot,
       input.allowUnsupportedApiVersion === true,
     );
+    input.signal?.throwIfAborted();
 
     if (installPath !== targetPath) {
       const preserveDependencies = linkedInstalledDependencies;

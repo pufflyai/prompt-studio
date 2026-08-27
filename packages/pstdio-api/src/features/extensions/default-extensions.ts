@@ -2,7 +2,13 @@ import { existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import { readPackageManifestMetadata } from "pstdio-extensions";
-import { extensionMarketplace, marketplaceExtensionRepositoryPath } from "./extension-marketplace";
+import { enqueueDefaultExtensionInstall } from "./default-extension-install-queue";
+import {
+  type DefaultExtensionEntry,
+  type DefaultExtensionsConfig,
+  resolveDefaultExtensionsConfig,
+} from "./default-extensions-config";
+import { marketplaceExtensionRepositoryPath } from "./extension-marketplace";
 import {
   createSharedNamedSourceCheckout,
   type InstallExtensionSourceInput,
@@ -12,49 +18,13 @@ import {
   toExtensionEnableInput,
 } from "./install-extension-source";
 
+export {
+  type DefaultExtensionEntry,
+  type DefaultExtensionsConfig,
+  defaultExtensions,
+  resolveDefaultExtensionsConfig,
+} from "./default-extensions-config";
 export { syncInstalledExtensionsForProject, syncInstalledExtensionsForProjects } from "./installed-extension-sync";
-
-export type DefaultExtensionEntry =
-  | string
-  | {
-      force?: boolean;
-      installName?: string;
-      ref?: string;
-      skipInstall?: boolean;
-      source: string;
-    };
-
-export type DefaultExtensionsConfig = {
-  defaultExtensions: DefaultExtensionEntry[];
-};
-
-export const defaultExtensions: DefaultExtensionsConfig = {
-  defaultExtensions: extensionMarketplace.map((extension) => extension.installName),
-};
-
-const toConfig = (parsed: unknown): DefaultExtensionsConfig => {
-  if (Array.isArray(parsed)) return { defaultExtensions: parsed as DefaultExtensionEntry[] };
-  if (parsed && typeof parsed === "object" && "defaultExtensions" in parsed) {
-    return {
-      defaultExtensions: (parsed as { defaultExtensions: DefaultExtensionEntry[] }).defaultExtensions,
-    };
-  }
-  throw new Error("PSTDIO_DEFAULT_EXTENSIONS must be a JSON array or object with defaultExtensions");
-};
-
-export const resolveDefaultExtensionsConfig = (env: Record<string, string | undefined> = process.env) => {
-  const raw = env.PSTDIO_DEFAULT_EXTENSIONS;
-  if (!raw) return defaultExtensions;
-
-  try {
-    return toConfig(JSON.parse(raw) as unknown);
-  } catch (error) {
-    if (error instanceof SyntaxError) {
-      throw new Error(`Invalid PSTDIO_DEFAULT_EXTENSIONS JSON: ${error.message}`);
-    }
-    throw error;
-  }
-};
 
 const entryRef = (entry: DefaultExtensionEntry) => (typeof entry === "string" ? undefined : entry.ref);
 
@@ -91,17 +61,7 @@ type InstallDefaultExtensionsDeps = {
   onInstallFailure?: (failure: { error: unknown; installName: string; source: string }) => void;
   prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
   releaseRef?: string;
-};
-
-let defaultExtensionInstallQueue: Promise<void> = Promise.resolve();
-
-const enqueueDefaultExtensionInstall = <T>(install: () => Promise<T>) => {
-  const result = defaultExtensionInstallQueue.then(install);
-  defaultExtensionInstallQueue = result.then(
-    () => undefined,
-    () => undefined,
-  );
-  return result;
+  signal?: AbortSignal;
 };
 
 type LoadScope = "user" | "repo";
@@ -144,6 +104,7 @@ const prepareDefaultCheckouts = async (
   input: {
     prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
     releaseRef?: string;
+    signal?: AbortSignal;
   },
 ) => {
   const namedByRef = new Map<string | undefined, string[]>();
@@ -157,16 +118,24 @@ const prepareDefaultCheckouts = async (
   const prepareShared = input.prepareSharedCheckout ?? createSharedNamedSourceCheckout;
   const sharedByRef = new Map<string | undefined, SharedCheckout>();
   for (const [ref, names] of namedByRef) {
-    sharedByRef.set(ref, await prepareShared(names, ref ? { ref } : {}));
+    input.signal?.throwIfAborted();
+    sharedByRef.set(
+      ref,
+      await prepareShared(names, {
+        ...(ref ? { ref } : {}),
+        ...(input.signal ? { signal: input.signal } : {}),
+      }),
+    );
   }
   return sharedByRef;
 };
 
 const createPreparedSourceResolver = (sharedByRef: Map<string | undefined, SharedCheckout>, releaseRef?: string) => {
-  const prepareNamedSource: SharedCheckout["prepareNamedSource"] = async (name, _tempDir, ref) => {
+  const prepareNamedSource: SharedCheckout["prepareNamedSource"] = async (name, _tempDir, ref, signal) => {
+    signal?.throwIfAborted();
     const shared = sharedByRef.get(ref ?? releaseRef);
     if (!shared) throw new Error(`No prepared checkout for extension: ${name}`);
-    return shared.prepareNamedSource(name, "", ref);
+    return shared.prepareNamedSource(name, "", ref, signal);
   };
   return prepareNamedSource;
 };
@@ -178,6 +147,7 @@ const withResolvedDefaultEntries = async <T>(
     onEntryFailure?: (failure: { entry: DefaultExtensionEntry; error: unknown; source: string }) => void;
     prepareSharedCheckout?: typeof createSharedNamedSourceCheckout;
     releaseRef?: string;
+    signal?: AbortSignal;
     sourceMode?: boolean;
   },
   fn: (
@@ -196,11 +166,12 @@ const withResolvedDefaultEntries = async <T>(
   try {
     const resolved: ResolvedDefaultEntry[] = [];
     for (const entry of entries) {
+      input.signal?.throwIfAborted();
       const source = sourceFor(entry);
       try {
         const sourcePath = isLocalExtensionSource(source)
           ? resolveLocalSource(source)
-          : (await prepareNamedSource(source, "", entryRef(entry) ?? input.releaseRef)).path;
+          : (await prepareNamedSource(source, "", entryRef(entry) ?? input.releaseRef, input.signal)).path;
         if (!sourcePath) continue;
 
         resolved.push({
@@ -249,10 +220,12 @@ const runDefaultExtensionInstall = async (
       prepareSharedCheckout: deps.prepareSharedCheckout,
       forceSourceDefaults: deps.forceSourceDefaults,
       releaseRef: deps.releaseRef,
+      signal: deps.signal,
       sourceMode: context.sourceMode,
     },
     async (entries, prepareNamedSource) => {
       for (const resolved of entries) {
+        deps.signal?.throwIfAborted();
         if (resolved.scope !== "user") continue;
         try {
           installed.push(
@@ -261,6 +234,7 @@ const runDefaultExtensionInstall = async (
               env: context.env,
               existsOk: true,
               prepareNamedSource,
+              signal: deps.signal,
             }),
           );
         } catch (error) {
@@ -271,6 +245,7 @@ const runDefaultExtensionInstall = async (
     },
   );
 
+  deps.signal?.throwIfAborted();
   return installed;
 };
 
@@ -281,7 +256,7 @@ export const installDefaultExtensions = (deps: InstallDefaultExtensionsDeps = {}
     env,
     sourceMode: !deps.config,
   };
-  return enqueueDefaultExtensionInstall(() => runDefaultExtensionInstall(deps, context));
+  return enqueueDefaultExtensionInstall(() => runDefaultExtensionInstall(deps, context), deps.signal);
 };
 
 export const registerInstalledExtensionSources = async (

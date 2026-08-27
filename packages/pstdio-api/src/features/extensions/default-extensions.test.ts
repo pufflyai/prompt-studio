@@ -1,101 +1,13 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import {
   installDefaultExtensions,
   installRepoDefaultExtensions,
   resolveDefaultExtensionsConfig,
-  syncInstalledExtensionsForProject,
-  syncInstalledExtensionsForProjects,
 } from "./default-extensions";
-
-const installed = {
-  installName: "pstdio-planner",
-  targetPath: "/home/user/.pstdio/extensions/pstdio-planner",
-  source: { kind: "named" as const, name: "pstdio-planner", ref: "repo#main:extensions/pstdio-planner" },
-  metadata: {
-    id: "pstdio.pstdio-planner",
-    name: "pstdio-planner",
-    displayName: "Prompt Studio Planner",
-    version: "0.1.0",
-    enginesPstdio: "^1.0.0",
-  },
-  manifest: { id: "pstdio.pstdio-planner" },
-  sourceHash: "hash",
-  check: {
-    extensionsRoot: "/home/user/.pstdio/extensions",
-    extensionsRootExists: true,
-    errorCount: 0,
-    warningCount: 0,
-    extensions: [],
-    commands: [],
-    middlewares: [],
-    hooks: [],
-    schedules: [],
-    artifactMounts: [],
-    commandPaletteContributions: [],
-    commandPaletteResources: [],
-    themes: [],
-    fileIconThemes: [],
-    menuContributions: [],
-    modes: [],
-    views: [],
-    viewMenus: [],
-    placements: [],
-    resourceKinds: [],
-    resourceViews: [],
-    resourceHierarchyProviders: [],
-    navigationItems: [],
-    statusBarItems: [],
-    statuses: [],
-    activityItems: [],
-    settingsSections: [],
-    settingsPanels: [],
-    keybindings: [],
-    settingsDefinitions: [],
-    templates: [],
-    skills: [],
-    diagnostics: [],
-    hostCompatibility: {
-      status: "verified" as const,
-      host: { host: "dashboard" as const, hostVersion: "0.25.2", capabilities: {} },
-      diagnostics: [],
-    },
-  },
-};
-
-const writeExtension = (
-  dir: string,
-  namespace: string,
-  scope?: "repo" | "user",
-  apiVersion = EXTENSION_API_VERSION,
-) => {
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(
-    join(dir, "package.json"),
-    JSON.stringify({
-      name: namespace,
-      version: "1.0.0",
-      publisher: "pstdio",
-      main: "./extension.ts",
-      engines: { pstdio: apiVersion },
-      ...(scope ? { pstdio: { scope } } : {}),
-    }),
-  );
-  writeFileSync(join(dir, "extension.ts"), `export default {};`);
-};
-
-const writeInvalidExtension = (dir: string) => {
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(
-    join(dir, "extension.ts"),
-    `export default {
-  broken: true,
-};`,
-  );
-};
+import { installed, writeExtension } from "./default-extensions-test-fixtures";
 
 afterEach(() => {
   rmSync(join(tmpdir(), "pstdio-default-extensions"), { recursive: true, force: true });
@@ -167,7 +79,47 @@ describe("installDefaultExtensions", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+});
 
+describe("installDefaultExtensions cancellation", () => {
+  test("settles cancellation while an active installer is stopping", async () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-default-cancel-"));
+    const source = join(root, "pstdio-planner");
+    writeExtension(source, "pstdio-planner");
+    const installStarted = Promise.withResolvers<void>();
+    const installReleased = Promise.withResolvers<void>();
+    const controller = new AbortController();
+    const result = installDefaultExtensions({
+      config: { defaultExtensions: [{ source }] },
+      installExtensionSource: async () => {
+        installStarted.resolve();
+        await installReleased.promise;
+        return installed;
+      },
+      signal: controller.signal,
+    });
+
+    try {
+      await installStarted.promise;
+      controller.abort();
+      const cancelled = await Promise.race([
+        result.then(
+          () => false,
+          () => true,
+        ),
+        Bun.sleep(100).then(() => false),
+      ]);
+
+      expect(cancelled).toBe(true);
+    } finally {
+      installReleased.resolve();
+      await installDefaultExtensions({ config: { defaultExtensions: [] } });
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("installDefaultExtensions sources", () => {
   test("uses local source packages for production defaults when running from source", async () => {
     const calls: Array<Record<string, unknown>> = [];
     const installExtensionSource = mock(async (input: Record<string, unknown>) => {
@@ -275,22 +227,27 @@ describe("installDefaultExtensions", () => {
     const prepareNamedSource = mock(async (name: string) => ({ path: join(root, name), ref: "ref" }));
     const cleanup = mock();
     const prepareSharedCheckout = mock(async () => ({ prepareNamedSource, cleanup }));
+    const controller = new AbortController();
 
     try {
       await installDefaultExtensions({
         config: { defaultExtensions: ["pstdio-planner", "pstdio-skills"] },
         installExtensionSource,
         prepareSharedCheckout,
+        signal: controller.signal,
       });
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
 
     expect(prepareSharedCheckout).toHaveBeenCalledTimes(1);
-    expect(prepareSharedCheckout).toHaveBeenCalledWith(["pstdio-planner", "pstdio-skills"], {});
+    expect(prepareSharedCheckout).toHaveBeenCalledWith(["pstdio-planner", "pstdio-skills"], {
+      signal: controller.signal,
+    });
     expect(installExtensionSource).toHaveBeenCalledTimes(2);
     expect(calls[0]?.existsOk).toBe(true);
     expect(calls[0]?.prepareNamedSource).toEqual(expect.any(Function));
+    expect(calls.every((call) => call.signal === controller.signal)).toBe(true);
     expect(cleanup).toHaveBeenCalledTimes(1);
   });
 
@@ -381,196 +338,6 @@ describe("installRepoDefaultExtensions", () => {
       expect(first).toEqual({ materialized: ["source-extension"], skipped: [] });
       expect(second).toEqual({ materialized: [], skipped: ["source-extension"] });
       expect(existsSync(join(repo, ".pstdio", "extensions", "user-extension", "extension.ts"))).toBe(false);
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-});
-
-describe("syncInstalledExtensionsForProject", () => {
-  test("syncs every installed extension found on disk for the project", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-"));
-    writeExtension(join(root, "worktree-setup"), "worktree-setup");
-    writeExtension(join(root, "planner"), "planner");
-    const calls: Array<Record<string, unknown>> = [];
-    const syncInstalledSourceForProject = mock(async (input: Record<string, unknown>) => {
-      calls.push(input);
-      return {};
-    });
-
-    try {
-      const synced = await syncInstalledExtensionsForProject({
-        extensionService: { syncInstalledSourceForProject },
-        extensionsRoot: root,
-        projectId: "project-1",
-      });
-
-      expect(synced.map((entry) => entry.installName)).toEqual(["planner", "worktree-setup"]);
-      expect(syncInstalledSourceForProject).toHaveBeenCalledTimes(2);
-      expect(calls[0]?.installName).toBe("planner");
-      expect(calls[0]?.name).toBe("planner");
-      expect(calls[0]).not.toHaveProperty("defaultTemplates");
-      expect(calls[0]).not.toHaveProperty("sourceKind");
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
-  test("prunes project extension instances missing from the installed extensions folder", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-prune-"));
-    writeExtension(join(root, "planner"), "planner");
-    const syncInstalledSourceForProject = mock(async () => ({}));
-    const pruneProjectExtensionInstances = mock(async () => []);
-
-    try {
-      const synced = await syncInstalledExtensionsForProject({
-        extensionService: { pruneProjectExtensionInstances, syncInstalledSourceForProject },
-        extensionsRoot: root,
-        projectId: "project-1",
-      });
-
-      expect(synced.map((entry) => entry.installName)).toEqual(["planner"]);
-      expect(pruneProjectExtensionInstances).toHaveBeenCalledWith({
-        activeSourcePaths: [join(root, "planner")],
-        projectId: "project-1",
-        snapshotStartedAt: expect.any(String),
-        sourcePathPrefix: root,
-      });
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
-  test("returns empty when the extensions root does not exist", async () => {
-    const syncInstalledSourceForProject = mock(async () => ({}));
-    const pruneProjectExtensionInstances = mock(async () => []);
-    const synced = await syncInstalledExtensionsForProject({
-      extensionService: { pruneProjectExtensionInstances, syncInstalledSourceForProject },
-      extensionsRoot: "/nonexistent-pstdio-root",
-      projectId: "project-1",
-    });
-
-    expect(synced).toEqual([]);
-    expect(syncInstalledSourceForProject).not.toHaveBeenCalled();
-    expect(pruneProjectExtensionInstances).not.toHaveBeenCalled();
-  });
-
-  test("skips invalid installed extensions while syncing the valid ones", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-invalid-"));
-    writeExtension(join(root, "planner"), "planner");
-    writeInvalidExtension(join(root, "extension-lab"));
-    const syncInstalledSourceForProject = mock(async () => ({}));
-    const failures: Array<{ installName: string; message: string; sourcePath: string }> = [];
-
-    try {
-      const synced = await syncInstalledExtensionsForProject({
-        extensionService: { syncInstalledSourceForProject },
-        extensionsRoot: root,
-        onLoadFailure: ({ error, installName, sourcePath }) => {
-          failures.push({
-            installName,
-            message: error instanceof Error ? error.message : String(error),
-            sourcePath,
-          });
-        },
-        projectId: "project-1",
-      });
-
-      expect(synced.map((entry) => entry.installName)).toEqual(["planner"]);
-      expect(syncInstalledSourceForProject).toHaveBeenCalledTimes(1);
-      expect(failures).toEqual([
-        {
-          installName: "extension-lab",
-          message: expect.stringContaining("package.json"),
-          sourcePath: join(root, "extension-lab"),
-        },
-      ]);
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
-  test("keeps an incompatible installed extension discoverable for dashboard recovery", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-incompatible-"));
-    writeExtension(join(root, "pstdio-planner"), "pstdio-planner", undefined, "1.0.0-alpha.1");
-    const calls: Array<Record<string, unknown>> = [];
-    const syncInstalledSourceForProject = mock(async (input: Record<string, unknown>) => {
-      calls.push(input);
-      return {};
-    });
-
-    try {
-      const synced = await syncInstalledExtensionsForProject({
-        extensionService: { syncInstalledSourceForProject },
-        extensionsRoot: root,
-        projectId: "project-1",
-      });
-
-      expect(synced).toEqual([
-        {
-          installName: "pstdio-planner",
-          sourceHash: expect.any(String),
-        },
-      ]);
-      expect(calls[0]).toMatchObject({
-        installName: "pstdio-planner",
-        manifest: { enginesPstdio: "1.0.0-alpha.1", version: "1.0.0" },
-        version: "1.0.0",
-      });
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
-  test("prunes invalid installed extension folders from project instances", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-invalid-prune-"));
-    writeExtension(join(root, "planner"), "planner");
-    writeInvalidExtension(join(root, "extension-lab"));
-    const syncInstalledSourceForProject = mock(async () => ({}));
-    const pruneProjectExtensionInstances = mock(async () => []);
-
-    try {
-      const synced = await syncInstalledExtensionsForProject({
-        extensionService: { pruneProjectExtensionInstances, syncInstalledSourceForProject },
-        extensionsRoot: root,
-        projectId: "project-1",
-      });
-
-      expect(synced.map((entry) => entry.installName)).toEqual(["planner"]);
-      expect(pruneProjectExtensionInstances).toHaveBeenCalledWith({
-        activeSourcePaths: [join(root, "planner")],
-        projectId: "project-1",
-        snapshotStartedAt: expect.any(String),
-        sourcePathPrefix: root,
-      });
-    } finally {
-      rmSync(root, { recursive: true, force: true });
-    }
-  });
-
-  test("syncs installed extensions for every existing project", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-default-extensions-projects-"));
-    writeExtension(join(root, "planner"), "planner");
-    const calls: Array<Record<string, unknown>> = [];
-    const syncInstalledSourceForProject = mock(async (input: Record<string, unknown>) => {
-      calls.push(input);
-      return {};
-    });
-
-    try {
-      const synced = await syncInstalledExtensionsForProjects({
-        extensionService: { syncInstalledSourceForProject },
-        extensionsRoot: root,
-        projectService: {
-          list: mock(async () => [{ id: "project-1" }, { id: "project-2" }]),
-        },
-      });
-
-      expect(synced.map(({ installName, projectId }) => ({ installName, projectId }))).toEqual([
-        { installName: "planner", projectId: "project-1" },
-        { installName: "planner", projectId: "project-2" },
-      ]);
-      expect(calls.map((call) => call.projectId)).toEqual(["project-1", "project-2"]);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
