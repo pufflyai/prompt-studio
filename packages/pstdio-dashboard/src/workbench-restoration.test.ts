@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { createDashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { flushMicrotasks } from "./modules/extensions/module-test-fixtures";
 import { createDashboardWorkbench, dashboardWorkbenchStorageNamespace } from "./workbench";
@@ -16,13 +17,6 @@ const createStorage = (): WorkbenchStorageLike => {
       values.delete(key);
     },
   };
-};
-
-const projectResource = {
-  kind: "project",
-  uri: "dashboard-workbench://project/project-1",
-  id: "project-1",
-  label: "Project one",
 };
 
 const sessionResource = {
@@ -63,6 +57,11 @@ const sidePanelSessionUris = (workbench: ReturnType<typeof createDashboardWorkbe
     .filter((panel) => panel.resource?.kind === "session")
     .map((panel) => panel.resource?.uri);
 
+const selectProject = (workbench: ReturnType<typeof createDashboardWorkbench>) =>
+  workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
+    project: { id: "project-1", name: "Project one" },
+  });
+
 // Synced rows are process-wide; leave the tables empty so other suites start clean.
 afterEach(() => {
   getWriter("projects")?.truncateAndWrite([]);
@@ -77,7 +76,7 @@ describe("createDashboardWorkbench restoration", () => {
     seedSyncedRows();
 
     const first = createDashboardWorkbench({ storage });
-    await first.resources.openResource(projectResource);
+    await selectProject(first);
     await flushMicrotasks();
     await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
     first.sidePanel.setMode("attached");
@@ -103,7 +102,7 @@ describe("createDashboardWorkbench restoration", () => {
     seedSyncedRows();
 
     const first = createDashboardWorkbench({ storage });
-    await first.resources.openResource(projectResource);
+    await selectProject(first);
     await flushMicrotasks();
     await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
 
@@ -120,7 +119,7 @@ describe("createDashboardWorkbench restoration", () => {
     seedSyncedRows();
 
     const first = createDashboardWorkbench({ storage });
-    await first.resources.openResource(projectResource);
+    await selectProject(first);
     await flushMicrotasks();
     await first.views.openView("workspaces", { strategy: { kind: "replace-active" } });
     await flushMicrotasks();
@@ -141,7 +140,7 @@ describe("createDashboardWorkbench restoration", () => {
     seedSyncedRows();
 
     const first = createDashboardWorkbench({ storage });
-    await first.resources.openResource(projectResource);
+    await selectProject(first);
     await flushMicrotasks();
     await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
     await first.resources.openResource(sessionResource, { replaceActive: true });

@@ -19,5 +19,13 @@ export const dashboardCommandIds = {
   openWorkspaceTerminal: "dashboard.openWorkspaceTerminal",
   openWorkspaces: "dashboard.openWorkspaces",
   productInfo: "dashboard.productInfo",
+  selectProject: "dashboard.selectProject",
   selectWorkspaceSidenavSession: "dashboard.selectWorkspaceSidenavSession",
 } as const;
+
+export interface SelectProjectInput {
+  project: {
+    id: string;
+    name: string;
+  };
+}

@@ -1,5 +1,6 @@
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
+import type { SelectProjectInput } from "@/shared/app/commands";
 import {
   clearDashboardNavigationState,
   registerDashboardNavigator,
@@ -44,6 +45,36 @@ export const resetProjectModeOnProjectChange = (
   ctx.modes.setActiveMode(undefined);
 };
 
+const validateProjectSelection = (input: SelectProjectInput) => {
+  const project = input?.project;
+  if (!project || typeof project.id !== "string" || project.id.trim().length === 0) {
+    throw new Error("Project selection requires a project ID");
+  }
+  if (typeof project.name !== "string" || project.name.trim().length === 0) {
+    throw new Error("Project selection requires a project name");
+  }
+  return project;
+};
+
+export const selectProject = (
+  ctx: WorkbenchModuleContext,
+  selectedProjectContext: DashboardProjectSelectionContext,
+  persistence: DashboardProjectSelectionPersistence | undefined,
+  input: SelectProjectInput,
+) => {
+  const project = validateProjectSelection(input);
+  const previousProjectId = getDashboardSelectedProjectId(ctx);
+
+  closeProjectSelectionOverlays(ctx);
+  if (previousProjectId === project.id) return;
+
+  resetProjectModeOnProjectChange(ctx, previousProjectId, project.id);
+  selectDashboardProject(selectedProjectContext, project, persistence);
+  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
+    ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
+  }
+};
+
 export const registerProjectWorkbenchScope = (ctx: WorkbenchModuleContext) => {
   let currentProjectId = getDashboardSelectedProjectId(ctx);
 
@@ -83,6 +114,7 @@ export const clearSelectedProject = (
 
 const selectPersistedProject = (
   ctx: WorkbenchModuleContext,
+  selectedProjectContext: DashboardProjectSelectionContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
 ) => {
   const projectId = persistence?.getSelectedProjectId();
@@ -91,17 +123,17 @@ const selectPersistedProject = (
   const project = findDashboardProject(projectId);
   if (!project) return undefined;
 
-  resetProjectModeOnProjectChange(ctx, getDashboardSelectedProjectId(ctx), project.id);
-  selectDashboardProject({ context: ctx.context.createScope("dashboard.selectedProject") }, project, persistence);
+  selectProject(ctx, selectedProjectContext, persistence, { project });
   return project;
 };
 
 export const registerPersistedProjectSelection = (
   ctx: WorkbenchModuleContext,
+  selectedProjectContext: DashboardProjectSelectionContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
 ) => {
   if (!persistence?.getSelectedProjectId()) return undefined;
-  if (selectPersistedProject(ctx, persistence)) return undefined;
+  if (selectPersistedProject(ctx, selectedProjectContext, persistence)) return undefined;
   if (isInitialCollectionsSyncComplete()) {
     persistence.setSelectedProjectId(undefined);
     return undefined;
@@ -113,7 +145,7 @@ export const registerPersistedProjectSelection = (
       return;
     }
 
-    if (selectPersistedProject(ctx, persistence)) {
+    if (selectPersistedProject(ctx, selectedProjectContext, persistence)) {
       unsubscribeDashboardData();
       return;
     }
@@ -157,12 +189,7 @@ const selectOnlySyncedProject = (
   const projects = createDashboardProjects();
   if (projects.length !== 1) return false;
 
-  resetProjectModeOnProjectChange(ctx, undefined, projects[0].id);
-  selectDashboardProject(selectedProjectContext, projects[0], persistence);
-  closeProjectSelectionOverlays(ctx);
-  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
-    ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
-  }
+  selectProject(ctx, selectedProjectContext, persistence, { project: projects[0] });
   return true;
 };
 

@@ -5,22 +5,21 @@ import {
   workbenchCommandPaletteMenuPath,
   workbenchRegions,
 } from "@pstdio/workbench";
-import { dashboardCommandIds } from "@/shared/app/commands";
-import { getDashboardSelectedProjectId, selectDashboardProject } from "@/shared/app/project-context";
+import { dashboardCommandIds, type SelectProjectInput } from "@/shared/app/commands";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { CreateProjectWidget } from "./components/create-project-widget";
 import { ProjectPickerWidget } from "./components/project-picker-widget";
-import { createDashboardProjects, findDashboardProject } from "./data/project-data";
+import { createDashboardProjects } from "./data/project-data";
 import {
   clearSelectedProject,
-  closeProjectSelectionOverlays,
   type DashboardProjectSelectionContext,
   registerPersistedProjectSelection,
   registerProjectWorkbenchScope,
   registerSelectedProjectDeletionSync,
   registerSingleProjectSelectionSync,
-  resetProjectModeOnProjectChange,
+  selectProject,
 } from "./project-selection-sync";
 
 interface CreateProjectsModuleInput {
@@ -114,11 +113,7 @@ const registerProjectSelectionMode = (ctx: WorkbenchModuleContext) => {
   });
 };
 
-const registerProjects = (
-  ctx: WorkbenchModuleContext,
-  selectedProjectContext: DashboardProjectSelectionContext,
-  persistence: DashboardProjectSelectionPersistence | undefined,
-) => {
+const registerProjects = (ctx: WorkbenchModuleContext) => {
   ctx.resources.registerKind({ kind: "project", label: "Project", icon: standardResourceIcons.project });
 
   ctx.resources.registerProvider({
@@ -138,35 +133,11 @@ const registerProjects = (
         resource: project.resource,
         description: project.repoPath ?? undefined,
         group: "Projects",
+        activate: () =>
+          ctx.commands.executeCommand(dashboardCommandIds.selectProject, {
+            project: { id: project.id, name: project.name },
+          } satisfies SelectProjectInput),
       }));
-    },
-  });
-
-  ctx.resources.registerPresenter({
-    id: "dashboard.projects.presenter",
-    priority: 1000,
-    canOpen: (resource) => resource.kind === "project",
-    open: (resource) => {
-      const project = findDashboardProject(resource.id) ?? {
-        id: resource.id ?? resource.uri,
-        name: resource.label ?? resource.id ?? resource.uri,
-      };
-      const previousProjectId = getDashboardSelectedProjectId(ctx);
-
-      closeProjectSelectionOverlays(ctx);
-      resetProjectModeOnProjectChange(ctx, previousProjectId, project.id);
-      selectDashboardProject(selectedProjectContext, project, persistence);
-      if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
-        ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
-      }
-      // The bootstrap module subscribes to selection changes and runs the
-      // landing flow (restore the project's last view or fall back to start),
-      // so selecting a different project leaves the per-project decision to
-      // bootstrap. Re-selecting the same project stays on the current view.
-      return (
-        ctx.layout.getActivePanel("main") ??
-        ctx.layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects", closable: true })
-      );
     },
   });
 };
@@ -176,6 +147,15 @@ const registerProjectCommands = (
   selectedProjectContext: DashboardProjectSelectionContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
 ) => {
+  ctx.commands.registerCommand<SelectProjectInput, void>(
+    {
+      id: dashboardCommandIds.selectProject,
+      label: "Select project",
+      category: "Dashboard",
+      icon: standardResourceIcons.project,
+    },
+    { execute: (selection) => selectProject(ctx, selectedProjectContext, persistence, selection) },
+  );
   ctx.commands.registerCommand(
     {
       id: dashboardCommandIds.clearSelectedProject,
@@ -228,10 +208,14 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
 
       registerProjectWidgets(ctx);
       registerProjectSelectionMode(ctx);
-      registerProjects(ctx, selectedProjectContext, input.projectSelectionPersistence);
+      registerProjects(ctx);
       registerProjectCommands(ctx, selectedProjectContext, input.projectSelectionPersistence);
       const projectWorkbenchScope = registerProjectWorkbenchScope(ctx);
-      const persistedProjectSelection = registerPersistedProjectSelection(ctx, input.projectSelectionPersistence);
+      const persistedProjectSelection = registerPersistedProjectSelection(
+        ctx,
+        selectedProjectContext,
+        input.projectSelectionPersistence,
+      );
       const singleProjectSelection = registerSingleProjectSelectionSync(
         ctx,
         selectedProjectContext,

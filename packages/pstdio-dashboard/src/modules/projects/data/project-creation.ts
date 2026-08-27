@@ -1,7 +1,5 @@
 import type { Project as ProjectResponse } from "@pstdio/sdk/resources";
-import { standardResourceIcons } from "@pstdio/workbench";
 import { apiRequest } from "@/lib/api";
-import { createDashboardResource } from "@/shared/app/resources";
 
 export interface CreateProjectRepositoryInput {
   path: string;
@@ -20,7 +18,6 @@ export interface CreatedDashboardProject {
   createdAt: string;
   updatedAt: string;
   repoPath: string | null;
-  resource: ReturnType<typeof createDashboardResource>;
 }
 
 interface ApiRepo {
@@ -51,7 +48,6 @@ const toCreatedDashboardProject = (
   createdAt: project.created_at,
   updatedAt: project.updated_at,
   repoPath: repositories[0]?.path ?? null,
-  resource: createDashboardResource("project", project.id, project.name, standardResourceIcons.project, project.id),
 });
 
 export const registerProjectRepository = async (

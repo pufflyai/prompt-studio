@@ -22,11 +22,6 @@ const filterProjects = (projects: DashboardProject[], searchTerm: string, _dataV
   });
 };
 
-const isPlacementOpen = (input: WorkbenchPanelRenderInput) =>
-  Object.values(input.workbench.layout.getLayout().regions).some((region) =>
-    region.widgets.some((placement) => placement.widgetId === input.instance.instanceId),
-  );
-
 interface ProjectPickerRowsProps {
   projects: DashboardProject[];
   selectedProjectId: string | undefined;
@@ -132,10 +127,8 @@ export const ProjectPickerWidget = (props: { input: WorkbenchPanelRenderInput })
   });
 
   const handleSelectProject = (project: DashboardProject) => {
-    void input.workbench.resources.openResource(project.resource, { replaceActive: true }).then(() => {
-      if (input.instance.closable === true && isPlacementOpen(input)) {
-        input.workbench.layout.closePanel(input.instance.instanceId);
-      }
+    void input.workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
+      project: { id: project.id, name: project.name },
     });
   };
 

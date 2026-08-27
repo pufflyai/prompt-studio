@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { AgentInfo } from "@/shared/agents/agent-types";
 import { useAgents } from "@/shared/agents/use-agents";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { createProject } from "../data/project-creation";
 import {
   canSubmitAgentSelection,
@@ -73,7 +74,9 @@ export const CreateProjectWidget = (props: { input: WorkbenchPanelRenderInput })
         agents: selectedAgentIds,
       });
       toaster.create({ type: "success", title: t("projects:list.projectCreated"), description: project.name });
-      await input.workbench.resources.openResource(project.resource, { replaceActive: true });
+      await input.workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
+        project: { id: project.id, name: project.name },
+      });
     } catch (createError) {
       const message = createError instanceof Error ? createError.message : "Unable to create project.";
       toaster.create({ type: "error", title: t("projects:list.createProjectFailed"), description: message });

@@ -29,19 +29,17 @@ describe("createProjectsModule", () => {
     expect(findProjectPicker(workbench)?.closable).toBe(true);
   });
 
-  test("updates the selection without forcing a landing resource (bootstrap owns landing)", async () => {
+  test("selects a project without opening the picker when the main region is empty", async () => {
     const workbench = createWorkbenchCore();
-
     workbench.registerModule(createProjectsModule());
 
-    await workbench.resources.openResource({
-      kind: "project",
-      uri: "dashboard-workbench://project/project-1",
-      id: "project-1",
-      label: "Prompt Studio",
+    await workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
+      project: { id: "project-1", name: "Prompt Studio" },
     });
 
     expect(getDashboardSelectedProjectId(workbench)).toBe("project-1");
+    expect(workbench.layout.getActivePanel("main")).toBeUndefined();
+    expect(findProjectPicker(workbench)).toBeUndefined();
     expect(workbench.getPrimaryResource()).toBeUndefined();
     expect(workbench.host.getPersistenceScope()).toBe("project/project-1/mode/none/aggregate/empty");
     expect(workbench.history.getPersistenceScope()).toBe("project:project-1");
@@ -57,12 +55,8 @@ describe("createProjectsModule", () => {
     });
     workbench.registerModule(createProjectsModule());
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    const project = (id: string) => ({
-      kind: "project",
-      uri: `dashboard-workbench://project/${id}`,
-      id,
-      label: id,
-    });
+    const selectProject = (id: string) =>
+      workbench.commands.executeCommand(dashboardCommandIds.selectProject, { project: { id, name: id } });
     const sessions = {
       kind: "dashboard-view",
       uri: "dashboard-workbench://sessions",
@@ -70,13 +64,13 @@ describe("createProjectsModule", () => {
       label: "Sessions",
     };
 
-    await workbench.resources.openResource(project("project-a"));
+    await selectProject("project-a");
     selectDashboardNavigationResource(workbench, sessions, { modeId: "project" });
     await workbench.commands.executeCommand(dashboardCommandIds.openProjects);
-    await workbench.resources.openResource(project("project-b"));
+    await selectProject("project-b");
     selectDashboardNavigationResource(workbench, sessions, { modeId: "project" });
     await workbench.commands.executeCommand(dashboardCommandIds.openProjects);
-    await workbench.resources.openResource(project("project-a"));
+    await selectProject("project-a");
     selectDashboardNavigationResource(workbench, sessions, { modeId: "project" });
 
     expect(
@@ -257,6 +251,33 @@ describe("createProjectsModule", () => {
       expect(workbench.layout.getLayout().regions.secondary.widgets.map((widget) => widget.contributionId)).toEqual([
         "terminal",
       ]);
+    } finally {
+      projects.dispose();
+      getWriter("projects")?.truncateAndWrite([]);
+    }
+  });
+});
+
+describe("project resource search", () => {
+  test("activates results through the selection command without a presenter", async () => {
+    const workbench = createWorkbenchCore();
+    getWriter("projects")?.truncateAndWrite([
+      { id: "project-1", name: "First project", created_at: "2026-01-01T00:00:00.000Z" },
+      { id: "project-2", name: "Second project", created_at: "2026-01-02T00:00:00.000Z" },
+    ]);
+    const projects = workbench.registerModule(createProjectsModule());
+
+    try {
+      const provider = workbench.resources
+        .listProviders()
+        .find((candidate) => candidate.id === "dashboard-workbench.projects");
+      const entry = provider?.list("Second", {})[0];
+
+      expect(entry?.activate).toBeFunction();
+      await entry?.activate?.(entry.resource);
+
+      expect(getDashboardSelectedProjectId(workbench)).toBe("project-2");
+      expect(workbench.resources.listPresenters().some((presenter) => presenter.canOpen(entry!.resource))).toBe(false);
     } finally {
       projects.dispose();
       getWriter("projects")?.truncateAndWrite([]);

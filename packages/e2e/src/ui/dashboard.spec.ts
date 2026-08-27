@@ -229,13 +229,63 @@ test("project picker stays open when the background is clicked", async ({ page, 
   }, firstProject.id);
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Switch project" }).click();
+  await page.getByRole("button", { name: "Switch project", exact: true }).click();
 
   const picker = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search projects...") });
   await expect(picker).toBeVisible();
   await page.mouse.click(100, 100);
 
   await expect(picker).toBeVisible();
+});
+
+test("switching projects never reopens the picker while restoring the landing view", async ({ page, request }) => {
+  await deleteAllProjects(request);
+  const firstProject = await createProjectViaApi(request, "First Switch Project");
+  const secondProject = await createProjectViaApi(request, "Second Switch Project");
+  await page.addInitScript((projectId) => {
+    window.localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+  }, firstProject.id);
+
+  await page.goto("/");
+  await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Switch project", exact: true }).click();
+
+  const picker = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search projects...") });
+  await expect(picker).toBeVisible();
+  await page.evaluate(() => {
+    const dashboardWindow = window as unknown as {
+      __projectPickerOpenedAfterSelection?: boolean;
+      __pstdioDashboardWorkbench?: {
+        layout: {
+          openPanel: (id: string, input?: unknown) => unknown;
+        };
+      };
+    };
+    const layout = dashboardWindow.__pstdioDashboardWorkbench?.layout;
+    if (!layout) throw new Error("Dashboard workbench is not available");
+    const openPanel = layout.openPanel.bind(layout);
+    dashboardWindow.__projectPickerOpenedAfterSelection = false;
+    layout.openPanel = (id, input) => {
+      if (id === "dashboard-workbench.project-picker") {
+        dashboardWindow.__projectPickerOpenedAfterSelection = true;
+      }
+      return openPanel(id, input);
+    };
+  });
+
+  await picker.getByText(secondProject.name, { exact: true }).click();
+
+  await expect(picker).not.toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb:selected-project:global")))
+    .toBe(secondProject.id);
+  await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { __projectPickerOpenedAfterSelection?: boolean }).__projectPickerOpenedAfterSelection,
+    ),
+  ).toBe(false);
 });
 
 test("dashboard opens the start page for a selected project without a saved location", async ({ page, request }) => {
@@ -246,12 +296,39 @@ test("dashboard opens the start page for a selected project without a saved loca
 
   await page.addInitScript((selectedProjectId) => {
     window.localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    const dashboardWindow = window as typeof window & { __projectPickerAppearedDuringStartup?: boolean };
+    dashboardWindow.__projectPickerAppearedDuringStartup = false;
+    const observeProjectPicker = () => {
+      const observer = new MutationObserver((records) => {
+        for (const record of records) {
+          for (const node of record.addedNodes) {
+            if (
+              node instanceof Element &&
+              (node.matches('input[placeholder="Search projects..."]') ||
+                node.querySelector('input[placeholder="Search projects..."]'))
+            ) {
+              dashboardWindow.__projectPickerAppearedDuringStartup = true;
+            }
+          }
+        }
+      });
+      observer.observe(document.documentElement, { childList: true, subtree: true });
+    };
+    if (document.documentElement) observeProjectPicker();
+    else window.addEventListener("DOMContentLoaded", observeProjectPicker, { once: true });
   }, project.id);
 
   await page.goto("/");
 
   await expect(page.getByRole("option", { name: "Start" })).toHaveCount(0);
   await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () =>
+        (window as typeof window & { __projectPickerAppearedDuringStartup?: boolean })
+          .__projectPickerAppearedDuringStartup,
+    ),
+  ).toBe(false);
   await page
     .getByLabel("Main")
     .getByRole("button", { name: /Recent start session/ })
