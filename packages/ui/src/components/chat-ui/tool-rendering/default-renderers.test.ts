@@ -52,7 +52,6 @@ describe("shell renderer", () => {
         truncate: true,
         monospace: true,
       },
-      { kind: "text", text: "queued", muted: true },
     ]);
     expect(item.blocks).toEqual([]);
   });

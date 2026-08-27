@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbenchResourceActions } from "@pstdio/workbench/react";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { syncDashboardLayoutPersistenceScope } from "@/shared/app/navigation-state";
@@ -30,6 +31,31 @@ const registerTicketHierarchy = (workbench: ReturnType<typeof createWorkbenchCor
 };
 
 describe("createWorkspacesModule", () => {
+  test("registers the workspace collection as a data table", () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.registerModule(createWorkspacesModule());
+
+    expect(workbench.renderers.getDataTableRenderer(dashboardWidgetIds.workspaces)).toBeDefined();
+    expect(workbench.renderers.getKanbanRenderer(dashboardWidgetIds.workspaces)).toBeUndefined();
+
+    const workspace = createDashboardResource("workspace", "workspace-1", "PS-296_A1", "GitBranch", "project-1", {
+      workspaceId: "workspace-1",
+      workspaceShorthand: "PS-296_A1",
+      workspaceIsDefault: false,
+      workspaceExecutionKind: "local",
+      workspaceProviderState: "ready",
+      workspaceSupportsArchive: true,
+      workspaceSupportsDelete: true,
+    });
+    expect(createWorkbenchResourceActions(workbench, workspace).map((action) => action.label)).toEqual([
+      "Open terminal",
+      "Rename workspace",
+      "Archive workspace",
+      "Delete workspace",
+    ]);
+  });
+
   test("opens workspace resources in project mode", async () => {
     const workbench = createWorkbenchCore();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {

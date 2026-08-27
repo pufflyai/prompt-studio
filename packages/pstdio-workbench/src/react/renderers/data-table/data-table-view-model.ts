@@ -1,3 +1,4 @@
+import type { ResourceContextAction } from "@pstdio/ui";
 import type { DataTableSelectionAction, RowData } from "@pstdio/ui/data-table";
 import type { ReactNode } from "react";
 import type {
@@ -44,6 +45,23 @@ export const resolveDataTableRendererSelectionActions = (
       void action.run(rows);
     },
   }));
+
+export const resolveDataTableRendererResourceActions = (
+  data: RowData,
+  rowByData: WeakMap<RowData, DataTableRendererRow>,
+  resolveResourceActions: (resource: NonNullable<DataTableRendererRow["resource"]>) => ResourceContextAction[],
+) => {
+  const resource = rowByData.get(data)?.resource;
+  if (!resource) return [];
+
+  return resolveResourceActions(resource)
+    .filter((action) => !action.isDisabled)
+    .map((action) => ({
+      label: action.label,
+      icon: action.icon,
+      onSelect: (_context?: unknown) => void action.onClick(),
+    }));
+};
 
 export const resolveDataTableRendererStorageKey = (rendererId: string, placement: WorkbenchPanelInstance) => {
   const resourceKey = placement.resource?.uri ?? placement.resource?.id ?? "unscoped";

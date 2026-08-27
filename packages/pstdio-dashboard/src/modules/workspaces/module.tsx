@@ -10,7 +10,7 @@ import { setDashboardSidenavSelection, showDashboardSidenav } from "@/shared/wor
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerDashboardViewRoute, registerResourceRoute } from "@/shared/workbench/route-helper";
-import { registerWorkspaceKanbanRenderer } from "./collections/workspace-kanban-renderer";
+import { registerWorkspaceDataTableRenderer } from "./collections/workspace-data-table-renderer";
 import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
 import { DeleteWorkspaceEntryWidget } from "./components/delete-workspace-entry-widget";
 import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
@@ -263,7 +263,7 @@ export const createWorkspacesModule = () =>
       });
 
       registerWorkspaceResourceActions(ctx);
-      registerWorkspaceKanbanRenderer(ctx);
+      registerWorkspaceDataTableRenderer(ctx);
       registerWorkspaceDetailWidgets(ctx);
       watchOpenWorkspaceRename(ctx);
 

@@ -367,7 +367,7 @@ test("dashboard-wb discovers extension root additions and offers source edits as
     await page.goto(`/projects/${project.id}/settings?panel=extensions`);
     await expect(row).toContainText("Updated hot reload extension.", { timeout: 10_000 });
 
-    await page.keyboard.press("ControlOrMeta+KeyK");
+    await page.keyboard.press("ControlOrMeta+KeyP");
     const paletteInput = page.getByPlaceholder("Search or type > for commands");
     await expect(paletteInput).toBeVisible();
     await paletteInput.fill("> hot reload");

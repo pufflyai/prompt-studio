@@ -1,7 +1,7 @@
 import { Badge, Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { KanbanRenderer } from "./kanban-renderer";
 import { attributes, initialRows, type StoryRow } from "./kanban-renderer-story-fixtures";
 import type { AttributeDescriptor } from "./types";
@@ -163,7 +163,10 @@ export const EditableMultiSelectBadge: Story = {
 
     if (!card) throw new Error("Expected the ticket card to render in the Todo column");
 
-    await userEvent.click(within(card as HTMLElement).getByText("Bug"));
+    const tag = within(card as HTMLElement).getByText("Bug");
+    await userEvent.hover(tag);
+    await waitFor(() => expect(within(document.body).queryByRole("menu")).not.toBeInTheDocument());
+    await userEvent.click(tag);
     await userEvent.click(within(document.body).getByRole("menuitemcheckbox", { name: "Regression" }));
 
     await expect(within(document.body).getByRole("menuitemcheckbox", { name: "Bug" })).toHaveAttribute(

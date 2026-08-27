@@ -44,7 +44,7 @@ export const OverlaysSection = () => {
               <Copy size={16} />
             </Button>
           </Tooltip>
-          <PaletteShortcut binding="Mod+K" />
+          <PaletteShortcut binding="Mod+P" />
         </HStack>
       </GalleryCard>
 

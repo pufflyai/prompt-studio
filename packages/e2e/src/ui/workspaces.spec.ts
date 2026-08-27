@@ -253,7 +253,7 @@ test.describe("Workspace diff", () => {
   });
 });
 
-test.describe("Workspace rename", () => {
+test.describe("Workspace table", () => {
   let projectId: string;
   const repoDirs: string[] = [];
 
@@ -286,9 +286,10 @@ test.describe("Workspace rename", () => {
     }, projectId);
 
     await page.goto(`/projects/${projectId}/workspaces`);
-    await expect(page.getByRole("option", { name: workspace.workspace_shorthand })).toBeVisible();
+    const workspaceRow = page.getByRole("row").filter({ hasText: workspace.workspace_shorthand }).first();
+    await expect(workspaceRow).toBeVisible();
 
-    await page.getByRole("option", { name: workspace.workspace_shorthand }).click({ button: "right" });
+    await workspaceRow.getByRole("button", { name: "Row actions" }).click();
     await page.getByRole("menuitem", { name: "Rename workspace" }).click();
 
     const dialog = page.getByRole("dialog", { name: "Rename workspace" });
@@ -296,11 +297,30 @@ test.describe("Workspace rename", () => {
     await dialog.getByRole("textbox", { name: "Workspace name" }).fill(nextName);
     await dialog.getByRole("button", { name: "Rename workspace", exact: true }).click();
 
-    await expect(page.getByRole("option", { name: nextName })).toBeVisible();
+    await expect(page.getByRole("row").filter({ hasText: nextName }).first()).toBeVisible();
 
     const listRes = await request.get(`${apiBase}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
     expect(listRes.ok()).toBe(true);
     const workspaces = (await listRes.json()) as Array<Workspace & { name: string }>;
     expect(workspaces.find((item) => item.id === workspace.id)?.name).toBe(nextName);
+  });
+
+  test("shows archived workspaces with their state", async ({ page, request }) => {
+    const repoRoot = createGitRepo();
+    repoDirs.push(repoRoot);
+    const repo = await registerRepoViaApi(request, projectId, "archive-repo", repoRoot);
+    const workspace = await createWorkspaceViaApi(request, projectId, repo.id);
+    const archiveResponse = await request.post(`${apiBase}/v1/workspaces/${workspace.id}/archive`);
+    expect(archiveResponse.ok()).toBe(true);
+
+    await page.addInitScript((selectedProjectId) => {
+      window.localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    }, projectId);
+
+    await page.goto(`/projects/${projectId}/workspaces`);
+
+    const workspaceRow = page.getByRole("row").filter({ hasText: workspace.workspace_shorthand }).first();
+    await expect(workspaceRow).toBeVisible();
+    await expect(workspaceRow.getByText("Archived", { exact: true })).toBeVisible();
   });
 });

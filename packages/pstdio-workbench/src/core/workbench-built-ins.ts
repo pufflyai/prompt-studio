@@ -24,15 +24,14 @@ interface BuiltinCommand {
 }
 
 // Defaults use `Mod` so a single chord works on macOS (Cmd), Windows, and
-// Linux (Ctrl). Chords listed here must not clash with browser, OS, or
-// developer-tool shortcuts — see `findReservedKeybindingConflict` in
-// `pstdio-extensions` for the reserved table.
+// Linux (Ctrl). The command palette intentionally claims the browser print
+// chord. Other built-ins must avoid the reserved table in `pstdio-extensions`.
 const builtinCommands: BuiltinCommand[] = [
   {
     id: "workbench.toggleCommandPalette",
     label: "Toggle Command Palette",
     icon: "Command",
-    keybinding: "Mod+K",
+    keybinding: "Mod+P",
     execute: (workbench: WorkbenchCore) => workbench.commandPalette.toggle(),
   },
   {

@@ -311,6 +311,30 @@ export const RowActions = {
   },
 };
 
+export const DynamicRowActions = {
+  args: {
+    data: [
+      { Invoice: "INV-001", Status: "Open" },
+      { Invoice: "INV-002", Status: "Archived" },
+    ],
+    getRowActions: (row: RowData) => (row.Status === "Archived" ? [] : rowActions),
+    compactHeaders,
+    toolbarStorageKey: "storybook-data-table-dynamic-row-actions",
+  },
+  render: (args: DataTableProps) => {
+    return <DataTableStoryContainer args={args} maxWidth="1080px" height="520px" marginX="auto" />;
+  },
+  play: async ({ canvasElement }: PlayContext) => {
+    const canvas = within(canvasElement);
+    const rows = canvas.getAllByRole("row").slice(1);
+
+    await userEvent.click(within(rows[0]!).getByRole("button", { name: "Row actions" }));
+    await expect(within(document.body).getByRole("menuitem", { name: "Archive invoice" })).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    await expect(within(rows[1]!).queryByRole("button", { name: "Row actions" })).not.toBeInTheDocument();
+  },
+};
+
 export const RowActivation = {
   args: {
     data: generateTableRows(36),

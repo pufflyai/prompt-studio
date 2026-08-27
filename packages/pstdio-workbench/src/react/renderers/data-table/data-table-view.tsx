@@ -15,9 +15,11 @@ import type {
   WorkbenchCore,
   WorkbenchPanelInstance,
 } from "../../../core";
+import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import {
   buildDataTableRendererData,
   resolveDataTableRendererColumns,
+  resolveDataTableRendererResourceActions,
   resolveDataTableRendererSelectionActions,
   resolveDataTableRendererStorageKey,
 } from "./data-table-view-model";
@@ -39,6 +41,7 @@ const resultCacheKey = (contributionId: string, placement: WorkbenchPanelInstanc
 
 export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const { workbench, contribution, placement } = props;
+  const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
   const cacheKey = resultCacheKey(contribution.id, placement);
   const [result, setResult] = useState(() => lastResults.get(cacheKey) ?? initialResult);
   const [loading, setLoading] = useState(() => !lastResults.has(cacheKey));
@@ -145,11 +148,15 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
         selectionMode={contribution.selectionMode}
         selectionActions={selectionActions}
         rowActions={rowActions}
+        getRowActions={(data) => resolveDataTableRendererResourceActions(data, model.rowByData, resolveResourceActions)}
         onRowClick={openRow}
         isRowInteractive={(data) => {
           const row = model.rowByData.get(data);
           return Boolean(row && contribution.onRowActivate);
         }}
+        getCellContextMenuActions={(context) =>
+          resolveDataTableRendererResourceActions(context.row, model.rowByData, resolveResourceActions)
+        }
         fullWidth
       />
     </Stack>

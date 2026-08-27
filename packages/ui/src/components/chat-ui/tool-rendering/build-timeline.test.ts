@@ -80,6 +80,19 @@ describe("buildTimelineDocFromInvocations", () => {
     ]);
   });
 
+  test("does not repeat queued state on a pending generic tool", () => {
+    const doc = buildTimelineDocFromInvocations([
+      {
+        type: "tool",
+        tool: "custom_tool",
+        status: "pending",
+        state: { status: "pending", input: { path: "src/app.ts" } },
+      },
+    ]);
+
+    expect(doc.items[0]?.title).toEqual([{ kind: "text", text: "Custom Tool", bold: true }]);
+  });
+
   test("renders file-like generic output as a code preview", () => {
     const doc = buildTimelineDocFromInvocations([
       {

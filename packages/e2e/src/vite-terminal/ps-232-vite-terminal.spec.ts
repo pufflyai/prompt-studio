@@ -14,9 +14,9 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
 };
 
 const openWorkspaceTerminal = async (page: import("@playwright/test").Page, workspaceName: string) => {
-  const workspaceRow = page.getByRole("option", { name: workspaceName, exact: true });
+  const workspaceRow = page.getByRole("row").filter({ hasText: workspaceName });
   await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
-  await workspaceRow.click({ button: "right" });
+  await workspaceRow.getByRole("button", { name: "Row actions" }).click();
   await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
   await expect(page.getByRole("textbox", { name: "Terminal input" })).toBeFocused();
 };

@@ -1,5 +1,5 @@
 ---
-"@pstdio/sdk": major
+"@pstdio/sdk": minor
 "pstdio": minor
 "extension-lab": patch
 ---

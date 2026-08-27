@@ -38,9 +38,9 @@ export const prepareDashboard = async (page: Page, projectId: string, repoId: st
 };
 
 export const openWorkspace = async (page: Page, shorthand: string) => {
-  const row = page.getByRole("option").filter({ hasText: shorthand }).first();
+  const row = page.getByRole("row").filter({ hasText: shorthand }).first();
   await expect(row).toBeVisible({ timeout: 30_000 });
-  await row.getByText(shorthand, { exact: true }).click();
+  await row.getByRole("cell").filter({ hasText: shorthand }).first().click();
 };
 
 export const expectStandardFileSearch = async (search: Locator) => {

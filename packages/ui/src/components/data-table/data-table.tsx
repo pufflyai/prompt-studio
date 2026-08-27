@@ -76,6 +76,7 @@ const DatasetDataTable = (props: DataTableProps) => {
     initialPageSize,
     pageSizeOptions = [10, 20, 30, 50, 100],
     rowActions = [],
+    getRowActions,
     getRowId,
     toolbarStorageKey,
     enableRowActivation = false,
@@ -119,6 +120,7 @@ const DatasetDataTable = (props: DataTableProps) => {
     compactHeaders,
     enableSelection,
     rowActions,
+    getRowActions,
     selectedRowIds: rowSelection,
     columnRenderers,
   });

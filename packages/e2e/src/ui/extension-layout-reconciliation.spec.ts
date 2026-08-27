@@ -167,7 +167,7 @@ test("reconciles and locally resets extension layouts across reloads", async ({ 
 
   const extensionName = extension!.displayName || extension!.name || extension!.id;
   const resetLabel = `Reset ${extensionName} layout`;
-  await page.keyboard.press("ControlOrMeta+KeyK");
+  await page.keyboard.press("ControlOrMeta+KeyP");
   const paletteInput = page.getByRole("dialog").getByRole("textbox");
   await expect(paletteInput).toBeVisible();
   await paletteInput.fill("> reset");

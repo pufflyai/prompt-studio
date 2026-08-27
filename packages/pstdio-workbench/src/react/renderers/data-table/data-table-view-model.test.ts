@@ -3,6 +3,7 @@ import type { DataTableRendererRow } from "../../../core";
 import {
   buildDataTableRendererData,
   resolveDataTableRendererColumns,
+  resolveDataTableRendererResourceActions,
   resolveDataTableRendererSelectionActions,
   resolveDataTableRendererStorageKey,
 } from "./data-table-view-model";
@@ -51,6 +52,51 @@ describe("data table renderer view model", () => {
 
     expect(actions[0]).toMatchObject({ label: "Restart", destructive: true });
     expect(calls).toEqual([[rows[1], rows[0]]]);
+  });
+
+  test("maps resource actions for the row under a data table cell", () => {
+    const row = {
+      id: "one",
+      values: { name: "API" },
+      resource: { kind: "service", uri: "pstdio://service/one" },
+    };
+    const model = buildDataTableRendererData([row], [{ id: "name" }]);
+    const calls: string[] = [];
+
+    const actions = resolveDataTableRendererResourceActions(model.data[0]!, model.rowByData, (resource) => [
+      {
+        key: "open",
+        label: "Open",
+        onClick: () => {
+          calls.push(resource.uri);
+        },
+      },
+      {
+        key: "disabled",
+        label: "Disabled",
+        isDisabled: true,
+        onClick: () => {
+          calls.push("disabled");
+        },
+      },
+    ]);
+
+    expect(actions.map((action) => action.label)).toEqual(["Open"]);
+    actions[0]?.onSelect({ row: model.data[0]!, rowId: "one", columnId: "name", value: "API" });
+    expect(calls).toEqual(["pstdio://service/one"]);
+
+    const rowActions = resolveDataTableRendererResourceActions(model.data[0]!, model.rowByData, (resource) => [
+      {
+        key: "archive",
+        label: "Archive",
+        onClick: () => {
+          calls.push(resource.uri);
+        },
+      },
+    ]);
+    expect(rowActions.map((action) => action.label)).toEqual(["Archive"]);
+    rowActions[0]?.onSelect(model.data[0]!);
+    expect(calls).toEqual(["pstdio://service/one", "pstdio://service/one"]);
   });
 
   test("scopes persisted controls to the renderer, placement, and resource", () => {

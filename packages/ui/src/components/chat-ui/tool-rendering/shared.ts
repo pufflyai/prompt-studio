@@ -15,11 +15,9 @@ const TOOL_LABELS: Record<string, string> = {
 };
 
 const STATE_LABELS: Record<string, string> = {
-  pending: "queued",
   error: "failed",
   "output-error": "failed",
   input_streaming: "running",
-  input_available: "queued",
   running: "running",
   completed: "completed",
   failed: "failed",

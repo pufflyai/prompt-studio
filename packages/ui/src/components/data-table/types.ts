@@ -101,6 +101,7 @@ export interface DataTableProps {
   selectionMode?: "none" | "multiple";
   selectionActions?: DataTableSelectionAction[];
   rowActions?: DataTableRowAction[];
+  getRowActions?: (row: RowData) => DataTableRowAction[];
   compactHeaders?: Partial<Record<string, string>>;
   getRowId?: (row: RowData, index: number) => string;
   toolbarStorageKey?: string;

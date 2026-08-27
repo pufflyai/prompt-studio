@@ -1,5 +1,4 @@
-import type { KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
-import type { ResourceRef } from "@pstdio/workbench";
+import type { DataTableRendererRow, ResourceRef } from "@pstdio/workbench";
 import type { SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
 import { indexFirstProjectRepoPaths } from "@/shared/projects/project-repo-path";
@@ -17,19 +16,6 @@ import {
 } from "@/shared/workspaces/workspace-diff-summary-data";
 import { createDashboardWorkspaceCapabilityMetadata } from "@/shared/workspaces/workspace-options";
 
-export interface DashboardWorkspaceAttributes {
-  id: string;
-  type: "worktree" | "current_branch";
-  isDefault: boolean;
-  created: string;
-  updated: string;
-  diffOverview?: string;
-  diffAdditions?: number;
-  diffDeletions?: number;
-  diffFileCount?: number;
-  [key: string]: unknown;
-}
-
 export interface DashboardWorkspace {
   id: string;
   title: string;
@@ -44,6 +30,7 @@ export interface DashboardWorkspace {
   branch: string | null;
   worktreePath: string | null;
   isDefault: boolean;
+  archived: boolean;
   setupError: string | null;
   displayPath: string | null;
   provider: string;
@@ -51,13 +38,13 @@ export interface DashboardWorkspace {
   resource: ResourceRef;
 }
 
-export interface DashboardWorkspaceRow extends KanbanRendererRow {
+export interface DashboardWorkspaceRow extends DataTableRendererRow {
   resource: ResourceRef;
-  attributes: DashboardWorkspaceAttributes;
 }
 
 interface DashboardWorkspaceOptions {
   projectId?: string;
+  includeArchived?: boolean;
   diffSummariesByWorkspaceId?: Map<string, DashboardWorkspaceDiffSummary>;
 }
 
@@ -125,7 +112,11 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
   const repoPathByProjectId = indexFirstProjectRepoPaths(rows.projectRepos, rows.repos);
 
   return rows.workspaces
-    .filter((workspace) => isVisibleDashboardRow(workspace) && isDashboardProjectRow(workspace, options.projectId))
+    .filter(
+      (workspace) =>
+        (options.includeArchived ? !workspace.deleted_at : isVisibleDashboardRow(workspace)) &&
+        isDashboardProjectRow(workspace, options.projectId),
+    )
     .map((workspace) => {
       const title = (workspace.name as string | null) ?? (workspace.workspace_shorthand as string);
       const type: DashboardWorkspace["type"] = workspace.worktree_path ? "worktree" : "current_branch";
@@ -153,6 +144,7 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
         branch: (workspace.branch as string | null) ?? null,
         worktreePath: (workspace.worktree_path as string | null) ?? null,
         isDefault: Boolean(workspace.is_default),
+        archived: Boolean(workspace.archived),
         setupError: (workspace.setup_error as string | null) ?? providerError?.message ?? null,
         displayPath: (workspace.display_path as string | null) ?? null,
         provider: (workspace.provider_id as string | undefined) ?? "pstdio.root",
@@ -170,35 +162,37 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 };
 
-export const createDashboardWorkspaces = (projectId?: string) => {
+export const createDashboardWorkspaces = (projectId?: string, options: { includeArchived?: boolean } = {}) => {
   const rows = readDashboardRows();
   return buildDashboardWorkspacesFromRows(rows, {
     projectId,
-    diffSummariesByWorkspaceId: getDashboardWorkspaceDiffSummaries(rows.workspaces.map((workspace) => workspace.id)),
+    includeArchived: options.includeArchived,
+    diffSummariesByWorkspaceId: getDashboardWorkspaceDiffSummaries(
+      rows.workspaces.filter((workspace) => !workspace.archived).map((workspace) => workspace.id),
+    ),
   });
 };
 
-export const toWorkspaceRow = (workspace: DashboardWorkspace): DashboardWorkspaceRow => ({
+const formatWorkspaceState = (workspace: DashboardWorkspace) => {
+  const state = workspace.archived ? "archived" : workspace.providerState;
+  const label = state.replaceAll("_", " ");
+  return `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
+};
+
+export const toWorkspaceDataTableRow = (workspace: DashboardWorkspace): DashboardWorkspaceRow => ({
   id: workspace.resource.uri,
-  title: workspace.title,
   resource: workspace.resource,
-  attributes: {
-    id: workspace.shorthand,
-    type: workspace.type,
-    isDefault: workspace.isDefault,
+  values: {
+    attempt: workspace.shorthand,
+    name: workspace.title,
+    type: workspace.type === "worktree" ? "Worktree" : "Current branch",
+    provider: workspace.provider,
+    state: formatWorkspaceState(workspace),
+    branch: workspace.branch ?? "",
     created: workspace.createdAt,
     updated: workspace.updatedAt,
-    provider: workspace.provider,
-    state: workspace.providerState,
     ...(workspace.setupError ? { error: workspace.setupError } : {}),
     ...(workspace.displayPath ? { location: workspace.displayPath } : {}),
-    ...(workspace.diffOverview !== undefined
-      ? {
-          diffOverview: workspace.diffOverview,
-          diffAdditions: workspace.additions,
-          diffDeletions: workspace.deletions,
-          diffFileCount: workspace.diffFileCount,
-        }
-      : {}),
+    ...(workspace.diffOverview !== undefined ? { diff: workspace.diffOverview } : {}),
   },
 });

@@ -38,7 +38,7 @@ test.describe("Command palette follow-up modals", () => {
     await bypassOnboarding(page);
     await page.goto(`/projects/${projectId}/tickets`);
 
-    await page.keyboard.press("ControlOrMeta+KeyK");
+    await page.keyboard.press("ControlOrMeta+KeyP");
 
     const paletteInput = page.getByPlaceholder("Search or type > for commands");
     await expect(paletteInput).toBeVisible();
@@ -56,7 +56,7 @@ test.describe("Command palette follow-up modals", () => {
     await bypassOnboarding(page);
     await page.goto(`/projects/${projectId}/tickets`);
 
-    await page.keyboard.press("ControlOrMeta+KeyK");
+    await page.keyboard.press("ControlOrMeta+KeyP");
 
     const paletteInput = page.getByPlaceholder("Search or type > for commands");
     await expect(paletteInput).toBeVisible();

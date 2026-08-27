@@ -6,11 +6,9 @@ import { createDefaultToolRenderers } from "./default-renderers";
 import type { ToolRenderersMap, ToolTimelineBuilderOptions } from "./types";
 
 const STATE_LABELS: Record<string, string> = {
-  pending: "queued",
   error: "failed",
   "output-error": "failed",
   "input-streaming": "running",
-  "input-available": "queued",
 };
 
 const toTitleCase = (value: string) => {

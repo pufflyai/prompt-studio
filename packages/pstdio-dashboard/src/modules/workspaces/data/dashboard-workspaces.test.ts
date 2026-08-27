@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildDashboardWorkspacesFromRows, toWorkspaceRow } from "./dashboard-workspaces";
+import { buildDashboardWorkspacesFromRows, toWorkspaceDataTableRow } from "./dashboard-workspaces";
 
 const rows = {
   files: [],
@@ -136,9 +136,9 @@ describe("dashboard workspaces", () => {
       workspaceError: "remote create failed",
     });
     expect(workspace.resource.metadata).not.toHaveProperty("workspacePath");
-    expect(toWorkspaceRow(workspace).attributes).toMatchObject({
+    expect(toWorkspaceDataTableRow(workspace).values).toMatchObject({
       provider: "example.remote-execution.workspace-type.remote",
-      state: "failed",
+      state: "Failed",
       location: "remote://runner-42/workspace",
       error: "remote create failed",
     });
@@ -222,7 +222,7 @@ describe("dashboard workspaces", () => {
     });
   });
 
-  test("maps a workspace into a board row with diff attributes", () => {
+  test("maps a workspace into a data table row with diff values", () => {
     const [workspace] = buildDashboardWorkspacesFromRows(rows, {
       projectId: "project-1",
       diffSummariesByWorkspaceId: new Map([
@@ -230,16 +230,37 @@ describe("dashboard workspaces", () => {
       ]),
     });
 
-    expect(toWorkspaceRow(workspace)).toMatchObject({
+    expect(toWorkspaceDataTableRow(workspace)).toMatchObject({
       id: "dashboard-workbench://workspace/workspace-1",
-      title: "Dashboard workbench datalayer",
-      attributes: { id: "PS-307_A1", type: "worktree", diffOverview: "+0 -0", diffAdditions: 0, diffDeletions: 0 },
+      values: {
+        attempt: "PS-307_A1",
+        name: "Dashboard workbench datalayer",
+        type: "Worktree",
+        provider: "pstdio.root",
+        state: "Ready",
+        diff: "+0 -0",
+      },
     });
   });
 
-  test("omits diff attributes when no summary is available", () => {
+  test("omits the diff value when no summary is available", () => {
     const [workspace] = buildDashboardWorkspacesFromRows(rows, { projectId: "project-1" });
 
-    expect(toWorkspaceRow(workspace).attributes).not.toHaveProperty("diffOverview");
+    expect(toWorkspaceDataTableRow(workspace).values).not.toHaveProperty("diff");
+  });
+
+  test("includes archived workspaces only when the collection asks for them", () => {
+    const archivedWorkspace = { ...rows.workspaces[0], id: "workspace-archived", archived: true };
+    const rowsWithArchive = { ...rows, workspaces: [...rows.workspaces, archivedWorkspace] };
+
+    expect(buildDashboardWorkspacesFromRows(rowsWithArchive, { projectId: "project-1" })).toHaveLength(1);
+
+    const workspaces = buildDashboardWorkspacesFromRows(rowsWithArchive, {
+      projectId: "project-1",
+      includeArchived: true,
+    });
+
+    expect(workspaces.map((workspace) => workspace.id)).toEqual(["workspace-1", "workspace-archived"]);
+    expect(toWorkspaceDataTableRow(workspaces[1]!).values.state).toBe("Archived");
   });
 });

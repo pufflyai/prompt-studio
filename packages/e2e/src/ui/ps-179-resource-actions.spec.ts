@@ -99,7 +99,10 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
     await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
     await expect(ticketCard).toBeVisible();
 
-    await ticketCard.getByRole("button", { name: "Type", exact: true }).click();
+    const typeTag = ticketCard.getByRole("button", { name: "Type", exact: true });
+    await typeTag.hover();
+    await expect(page.getByRole("menuitemradio", { name: "Bug", exact: true })).toHaveCount(0);
+    await typeTag.click();
     const bugMenuItem = page.getByRole("menuitemradio", {
       name: "Bug",
       exact: true,
@@ -131,13 +134,13 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
     await expect(page.getByRole("menuitem", { name: "Run attempt", exact: true })).toBeHidden();
 
     await workspacesNavigation.click();
-    const workspaceRow = page.getByRole("option").filter({ hasText: attempt.workspace.workspace_shorthand }).first();
+    const workspaceRow = page.getByRole("row").filter({ hasText: attempt.workspace.workspace_shorthand }).first();
     await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
-    await workspaceRow.click({ button: "right" });
+    await workspaceRow.getByRole("button", { name: "Row actions" }).click();
     await expectMenuItems(page, ["Open terminal", "Rename workspace", "Archive workspace", "Delete workspace"]);
     await page.keyboard.press("Escape");
 
-    await workspaceRow.getByRole("paragraph").filter({ hasText: attempt.workspace.workspace_shorthand }).click();
+    await workspaceRow.getByRole("cell", { name: "Worktree", exact: true }).click();
     await expect(breadcrumbAction).toBeVisible();
     await breadcrumbAction.click();
     await expectMenuItems(page, ["Open terminal", "Rename workspace", "Archive workspace", "Delete workspace"]);

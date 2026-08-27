@@ -48,6 +48,7 @@ interface BuildColumnsOptions {
   compactHeaders?: Partial<Record<string, string>>;
   enableSelection?: boolean;
   rowActions?: DataTableRowAction[];
+  getRowActions?: (row: RowData) => DataTableRowAction[];
   selectedRowIds?: RowSelectionState;
   columnRenderers?: Partial<Record<string, DataTableColumnRenderer>>;
 }
@@ -86,8 +87,21 @@ const SelectionCell = (props: CellContext<RowData, unknown> & { selectedRowIds?:
   );
 };
 
-const RowActionsCell = (props: CellContext<RowData, unknown> & { actions: DataTableRowAction[] }) => {
-  const { row, actions } = props;
+const mergeRowActions = (rowActions: DataTableRowAction[], dynamicActions: DataTableRowAction[]) => {
+  const dynamicLabels = new Set(dynamicActions.map((action) => action.label));
+  return [...dynamicActions, ...rowActions.filter((action) => !dynamicLabels.has(action.label))];
+};
+
+const RowActionsCell = (
+  props: CellContext<RowData, unknown> & {
+    actions: DataTableRowAction[];
+    getActions?: (row: RowData) => DataTableRowAction[];
+  },
+) => {
+  const { row, actions, getActions } = props;
+  const resolvedActions = mergeRowActions(actions, getActions?.(row.original) ?? []);
+
+  if (resolvedActions.length === 0) return null;
 
   return (
     <Menu.Root>
@@ -99,7 +113,7 @@ const RowActionsCell = (props: CellContext<RowData, unknown> & { actions: DataTa
       <Portal>
         <Menu.Positioner>
           <Menu.Content zIndex="popover" bg="bg">
-            {actions.map((action) => (
+            {resolvedActions.map((action) => (
               <Menu.Item key={action.label} value={action.label} asChild>
                 <ListRow
                   asChild
@@ -191,6 +205,7 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
     compactHeaders,
     enableSelection = false,
     rowActions = [],
+    getRowActions,
     selectedRowIds,
     columnRenderers,
   } = options;
@@ -265,7 +280,7 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
   const rowActionsColumn = columnHelper.display({
     id: "rowActions",
     header: "",
-    cell: (info) => <RowActionsCell {...info} actions={rowActions} />,
+    cell: (info) => <RowActionsCell {...info} actions={rowActions} getActions={getRowActions} />,
     enableResizing: false,
     enableSorting: false,
     size: 36,
@@ -275,6 +290,6 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
     rowIndexColumn,
     ...(enableSelection ? [selectionColumn] : []),
     ...dataColumns,
-    ...(rowActions.length > 0 ? [rowActionsColumn] : []),
+    ...(rowActions.length > 0 || getRowActions ? [rowActionsColumn] : []),
   ];
 }

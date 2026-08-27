@@ -35,7 +35,8 @@ test.describe("PS-172 workspace sessions", () => {
 
     const workspacesNavigation = await showHiddenSidenavEntry(page, "Workspaces");
     await workspacesNavigation.click();
-    await page.getByRole("option", { name: /^Mode-driven sidenav/ }).click();
+    const workspaceRow = page.getByRole("row").filter({ hasText: "Mode-driven sidenav" });
+    await workspaceRow.getByRole("cell", { name: "Mode-driven sidenav", exact: true }).click();
     await expect(sidenav.getByRole("option", { name: "Refactor sidenav", exact: true })).toBeVisible();
 
     const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });

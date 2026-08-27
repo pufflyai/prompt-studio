@@ -32,7 +32,7 @@ describe("workbench built-ins", () => {
     ]);
     expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.toggleCommandPalette")).toMatchObject({
       commandId: "workbench.toggleCommandPalette",
-      keybinding: "Mod+K",
+      keybinding: "Mod+P",
     });
     expect(keybindings.find((keybinding) => keybinding.commandId === "workbench.action.showCommands")).toMatchObject({
       commandId: "workbench.action.showCommands",
@@ -58,6 +58,7 @@ describe("workbench built-ins", () => {
     const workbench = createWorkbenchCore();
 
     for (const keybinding of workbench.keybindings.listKeybindings()) {
+      if (keybinding.commandId === "workbench.toggleCommandPalette") continue;
       // Only the first step of a sequence is typed in isolation, so it is the
       // step that can collide with browser/OS chords. Later steps fire only
       // after the workbench has captured the sequence prefix.

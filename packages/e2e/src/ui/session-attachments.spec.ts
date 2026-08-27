@@ -47,7 +47,7 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
 const openSessionsView = async (page: import("@playwright/test").Page) => {
   await page.goto("/");
   await expect(page.locator('[data-workbench-region="main"]')).toBeVisible();
-  await page.keyboard.press("ControlOrMeta+KeyK");
+  await page.keyboard.press("ControlOrMeta+KeyP");
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
   await dialog.getByRole("textbox").fill("> open sessions");

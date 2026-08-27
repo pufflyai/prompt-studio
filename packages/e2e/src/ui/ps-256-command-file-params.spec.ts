@@ -119,7 +119,7 @@ test("PS-256 uploads file parameters before extension command execution", async 
     await page.goto(`/projects/${project.id}`);
     await expect(page.getByRole("button", { name: /PS-256 Command Files/ })).toBeVisible();
 
-    await page.keyboard.press("ControlOrMeta+KeyK");
+    await page.keyboard.press("ControlOrMeta+KeyP");
     const palette = page.getByRole("dialog");
     await palette.getByRole("textbox").fill("> inspect uploaded files");
     await palette.getByText("Inspect uploaded files", { exact: true }).click();

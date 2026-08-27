@@ -41,9 +41,9 @@ const prepareDashboard = async (page: Page, projectId: string, repoId: string) =
 };
 
 const openWorkspace = async (page: Page, shorthand: string) => {
-  const row = page.getByRole("option").filter({ hasText: shorthand }).first();
+  const row = page.getByRole("row").filter({ hasText: shorthand }).first();
   await expect(row).toBeVisible({ timeout: 30_000 });
-  await row.getByRole("paragraph").filter({ hasText: shorthand }).click();
+  await row.getByRole("cell").filter({ hasText: shorthand }).first().click();
 };
 
 test("PS-171 restores resource Panel state across A to B to A and reload", async ({ page, request }) => {

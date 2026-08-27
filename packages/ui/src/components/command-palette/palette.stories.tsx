@@ -168,7 +168,7 @@ const PaletteStory = (props: PaletteStoryProps) => {
         footerStart={
           <HStack gap="2" color="fg.muted">
             <Text textStyle="label/XS">Open palette</Text>
-            <PaletteShortcut binding="Mod+K" />
+            <PaletteShortcut binding="Mod+P" />
           </HStack>
         }
         footerEnd={
