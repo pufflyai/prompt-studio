@@ -9,6 +9,7 @@ import {
   defineResourceView,
   defineView,
   packageAsset,
+  resourceMenuSlotRef,
   resourceSlotRef,
   workbenchCommands,
   workbenchModes,
@@ -40,6 +41,7 @@ describe("extension contribution definitions", () => {
       id: "ticket",
       surface: "primary",
       slots: [{ id: "primary", cardinality: "one", access: "owner" }],
+      menuSlots: [{ id: "headerOverflow", placement: "header-overflow", access: "public" }],
     });
     const resourceView = defineResourceView({
       id: "ticket.editor",
@@ -54,6 +56,10 @@ describe("extension contribution definitions", () => {
     expect(mode.ref).toEqual({ kind: "mode", id: "review" });
     expect(command.ref).toEqual({ kind: "command", id: "tickets.open" });
     expect(resourceKind.ref).toEqual({ kind: "resource-kind", id: "ticket" });
+    expect(resourceMenuSlotRef(resourceKind.ref, "headerOverflow")).toEqual({
+      id: "ticket.headerOverflow",
+      kind: "menu",
+    });
     expect(resourceView.ref).toEqual({ kind: "resource-view", id: "ticket.editor" });
     expect(workbenchCommands.switchMode).toEqual({
       extensionId: "pstdio",

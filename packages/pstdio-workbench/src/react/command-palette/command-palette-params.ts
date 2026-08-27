@@ -95,15 +95,22 @@ const dedupeOptions = (options: CommandParamDescriptor["options"]) => {
   });
 };
 
-export const hasCommandParameters = (params: CommandParamSchema | undefined) => Object.keys(params ?? {}).length > 0;
+export const hasCommandParameters = (params: CommandParamSchema | undefined) =>
+  listCommandParamEntries(params).length > 0;
 
 export const listCommandParamEntries = (params: CommandParamSchema | undefined): CommandParamEntry[] =>
-  Object.entries(params ?? {}).map(([key, param]) => ({
-    ...param,
-    options: dedupeOptions(param.options),
-    key,
-    label: param.label ?? humanize(key),
-  }));
+  Object.entries(params ?? {}).flatMap(([key, param]) =>
+    param.resolvedFrom === "resource"
+      ? []
+      : [
+          {
+            ...param,
+            options: dedupeOptions(param.options),
+            key,
+            label: param.label ?? humanize(key),
+          },
+        ],
+  );
 
 export const buildCommandParamInitialValues = (
   params: CommandParamSchema | undefined,

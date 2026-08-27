@@ -4,7 +4,7 @@ import { appendAttemptEvent, launchClaimsCollection, putAttempt } from "../data/
 import type { AttemptLaunchClaim, AttemptRecord, HumanRequestReason } from "../data/attempt-types";
 import { moveTicketToInProgress } from "../data/move-to-in-progress";
 import { findTicket } from "../data/resolve";
-import { ticketSlots } from "../slots";
+import { ticketMenuSlots } from "../resource-kinds";
 import { loadAttemptReadiness } from "./attempt-readiness";
 import { requestHuman } from "./human-requests";
 import {
@@ -29,7 +29,7 @@ export const runAttemptCommand = defineCommand({
   cli: { examples: ["pst pstdio-planner run-attempt --ticket PS-1"] },
   menus: [
     {
-      slot: ticketSlots.headerOverflow,
+      slot: ticketMenuSlots.headerOverflow,
       label: l10n("kanbanRenderers.tickets.rowActions.runAttempt", "Run attempt"),
       icon: "play",
     },

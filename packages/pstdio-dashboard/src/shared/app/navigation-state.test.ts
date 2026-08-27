@@ -21,17 +21,17 @@ describe("resolveDashboardLayoutPersistenceScope", () => {
     ).toBe("project/project-1/mode/project/resource/dashboard-workbench://workspace/workspace-1");
     expect(
       resolveDashboardLayoutPersistenceScope({
-        activeCollection: "tickets",
+        viewId: "pstdio.pstdio-planner.view.tickets",
         modeId: "project",
         projectId: "project-1",
       }),
-    ).toBe("project/project-1/mode/project/aggregate/tickets");
+    ).toBe("project/project-1/mode/project/view/pstdio.pstdio-planner.view.tickets");
     expect(
       resolveDashboardLayoutPersistenceScope({
         modeId: "project",
         projectId: "project-1",
       }),
-    ).toBe("project/project-1/mode/project/aggregate/empty");
+    ).toBe("project/project-1/mode/project/view/empty");
     expect(resolveDashboardLayoutPersistenceScope({ modeId: "project" })).toBeUndefined();
   });
 });

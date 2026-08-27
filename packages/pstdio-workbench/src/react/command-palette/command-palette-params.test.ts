@@ -62,6 +62,15 @@ describe("command palette params", () => {
     ]);
   });
 
+  test("omits parameters resolved from the active resource", () => {
+    expect(
+      listCommandParamEntries({
+        ticketId: { type: "text", required: true, resolvedFrom: "resource" },
+        context: { type: "longtext" },
+      }).map((entry) => entry.key),
+    ).toEqual(["context"]);
+  });
+
   test("builds editable resource param initial values from command context", () => {
     expect(
       buildCommandParamInitialValues(

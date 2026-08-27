@@ -38,6 +38,11 @@ export interface WorkbenchExtensionCommandPaletteRegistration {
   targetCommandId: string;
 }
 
+export interface UnresolvedWorkbenchExtensionMenuContribution {
+  contribution: ExtensionMenuContribution;
+  targetId: string;
+}
+
 export const emptyWorkbenchExtensionMetadata = {
   commands: [],
   commandPaletteContributions: [],
@@ -135,12 +140,16 @@ export const buildWorkbenchExtensionMenuRegistrations = (input: {
     resolveString = text,
   } = input;
   const registrations: WorkbenchExtensionMenuRegistration[] = [];
+  const unresolved: UnresolvedWorkbenchExtensionMenuContribution[] = [];
 
   metadata.menuContributions.forEach((contribution, index) => {
     const slot = contribution.target
       ? menuTargetsById?.get(contribution.target)
       : menuSlotsById.get(contribution.slotId);
-    if (!slot) return;
+    if (!slot) {
+      unresolved.push({ contribution, targetId: contribution.target ?? contribution.slotId });
+      return;
+    }
 
     const commandId = createCommandId(contribution);
     const command = metadata.commands.find((candidate) => candidate.id === contribution.commandId);
@@ -168,7 +177,7 @@ export const buildWorkbenchExtensionMenuRegistrations = (input: {
     });
   });
 
-  return registrations;
+  return { registrations, unresolved };
 };
 
 export const buildWorkbenchExtensionCommandPaletteRegistrations = (input: {

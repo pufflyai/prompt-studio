@@ -100,8 +100,17 @@ export interface RuntimeResourceKindRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
-  contribution: Omit<ResourceKindDefinition, "slots"> & {
+  contribution: Omit<ResourceKindDefinition, "slots" | "menuSlots"> & {
     slots: Record<string, { cardinality: "one" | "many"; external: boolean }>;
+    menuSlots: Record<
+      string,
+      {
+        placement: "header-primary" | "header-overflow" | "context-menu";
+        label?: Localizable<string>;
+        external: boolean;
+        order?: number;
+      }
+    >;
   };
 }
 

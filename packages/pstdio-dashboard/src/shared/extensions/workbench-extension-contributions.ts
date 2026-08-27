@@ -1,5 +1,5 @@
+import { workbenchResourceKindDefinitions } from "@pstdio/sdk/extensions";
 import {
-  type CommandParamSchema,
   type MenuItem,
   type MenuPath,
   resourceContextMenuPath,
@@ -18,13 +18,7 @@ import {
 import type { ResolvedWorkbenchExtensionMetadata } from "./extension-localization";
 import { resolveLocalizableString } from "./extension-localization";
 
-export const projectHeaderPrimarySlotId = "project.headerPrimary";
-export const projectHeaderOverflowSlotId = "project.headerOverflow";
 export const projectCommandPanelSlotId = "project.commandPanel";
-export const workspaceHeaderPrimarySlotId = "workspace.headerPrimary";
-export const workspaceHeaderOverflowSlotId = "workspace.headerOverflow";
-export const ticketHeaderPrimarySlotId = "ticket.headerPrimary";
-export const ticketHeaderOverflowSlotId = "ticket.headerOverflow";
 export const dashboardActiveResourceKindContextKey = "dashboard.activeResource.kind";
 export const dashboardActiveResourceIdContextKey = "dashboard.activeResource.id";
 export const dashboardActiveResourceMetadataContextKey = (key: string) => `dashboard.activeResource.metadata.${key}`;
@@ -36,7 +30,8 @@ type ResourceScopedMenuContribution = {
   slotId: string;
   when?: { resourceType?: string[] };
 };
-type BaseDashboardExtensionMenuRegistration = ReturnType<typeof buildWorkbenchExtensionMenuRegistrations>[number];
+type WorkbenchMenuResult = ReturnType<typeof buildWorkbenchExtensionMenuRegistrations>;
+type BaseDashboardExtensionMenuRegistration = WorkbenchMenuResult["registrations"][number];
 type DashboardExtensionMenuRegistration = Omit<BaseDashboardExtensionMenuRegistration, "menuPath" | "menuItem"> & {
   menuItems: { menuPath: MenuPath; menuItem: MenuItem }[];
 };
@@ -57,38 +52,48 @@ export const clearCachedDashboardExtensionMetadata = (projectId: string | undefi
 export const getCachedDashboardExtensionMetadata = (projectId: string | undefined) =>
   projectId ? metadataByProjectId.get(projectId) : undefined;
 
-export const dashboardMenuSlotsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
-  [projectHeaderPrimarySlotId, { menuPath: workbenchTopHeaderTrailingMenuPath, group: "primary" }],
-  [
-    projectHeaderOverflowSlotId,
-    { menuPath: workbenchTopHeaderTrailingMenuPath, group: "overflow", overflowLabel: "Extension actions" },
-  ],
-  [projectCommandPanelSlotId, { menuPath: workbenchCommandPaletteMenuPath }],
-  [workspaceHeaderPrimarySlotId, { menuPath: workbenchTopHeaderTrailingMenuPath, group: "primary" }],
-  [
-    workspaceHeaderOverflowSlotId,
-    { menuPath: workbenchTopHeaderTrailingMenuPath, group: "overflow", overflowLabel: "Workspace actions" },
-  ],
-  [ticketHeaderPrimarySlotId, { menuPath: workbenchTopHeaderTrailingMenuPath, group: "primary" }],
-  [
-    ticketHeaderOverflowSlotId,
-    { menuPath: workbenchTopHeaderTrailingMenuPath, group: "overflow", overflowLabel: "Ticket actions" },
-  ],
-]);
+type ResourceKindMenuMetadata = Pick<DashboardExtensionMetadata["resourceKinds"][number], "id" | "label" | "menuSlots">;
 
-const defaultMenuSlotWhenById = new Map<string, string>([
-  [workspaceHeaderPrimarySlotId, `${workbenchResourceKindContextKey} == "workspace"`],
-  [workspaceHeaderOverflowSlotId, `${workbenchResourceKindContextKey} == "workspace"`],
-  [ticketHeaderPrimarySlotId, `${workbenchResourceKindContextKey} == "ticket"`],
-  [ticketHeaderOverflowSlotId, `${workbenchResourceKindContextKey} == "ticket"`],
-]);
+const hostResourceKinds = Object.values(workbenchResourceKindDefinitions) as ResourceKindMenuMetadata[];
 
-const menuSlotResourceKindById = new Map<string, string>([
-  [workspaceHeaderPrimarySlotId, "workspace"],
-  [workspaceHeaderOverflowSlotId, "workspace"],
-  [ticketHeaderPrimarySlotId, "ticket"],
-  [ticketHeaderOverflowSlotId, "ticket"],
-]);
+const menuSlotConfig = (
+  resourceKind: ResourceKindMenuMetadata,
+  slot: NonNullable<ResourceKindMenuMetadata["menuSlots"]>[number],
+): WorkbenchExtensionMenuSlotConfig => {
+  if (slot.placement === "context-menu") {
+    return {
+      menuPath: resourceContextMenuPath(resourceKind.id),
+      group: "overflow",
+      overflowLabel: slot.label ?? `${resourceKind.label ?? "Resource"} actions`,
+    };
+  }
+  if (slot.placement === "header-primary") {
+    return { menuPath: workbenchTopHeaderTrailingMenuPath, group: "primary" };
+  }
+  return {
+    menuPath: workbenchTopHeaderTrailingMenuPath,
+    group: "overflow",
+    overflowLabel: slot.label ?? `${resourceKind.label ?? "Resource"} actions`,
+  };
+};
+
+export const buildDashboardMenuSlotRegistry = (metadata: DashboardExtensionMetadata) => {
+  const menuSlotsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
+    [projectCommandPanelSlotId, { menuPath: workbenchCommandPaletteMenuPath }],
+  ]);
+  const resourceKindsBySlotId = new Map<string, string>();
+  const resourceKinds = [...hostResourceKinds, ...metadata.resourceKinds];
+
+  for (const resourceKind of resourceKinds) {
+    for (const slot of resourceKind.menuSlots ?? []) {
+      const slotId = `${resourceKind.id}.${slot.id}`;
+      menuSlotsById.set(slotId, menuSlotConfig(resourceKind, slot));
+      resourceKindsBySlotId.set(slotId, resourceKind.id);
+    }
+  }
+
+  return { menuSlotsById, resourceKindsBySlotId };
+};
 
 export const dashboardMenuTargetsById = new Map<string, WorkbenchExtensionMenuSlotConfig>([
   ["workbench.nav.actions", { menuPath: workbenchTopHeaderTrailingMenuPath, group: "primary" }],
@@ -151,62 +156,56 @@ export const buildDashboardWorkbenchWhenExpression = (when: ExtensionMenuContrib
     .join(" || ");
 };
 
-// Parameters the dashboard resolves from the active resource at execution time must not
-// be surfaced as user input fields. The backend command handlers read these from
-// `ctx.resource` (e.g. the planner's resolveTicket falls back to ctx.resource.id), so the
-// action modal only asks for genuine input (agent/model, repo, template, context).
-const resourceResolvedParamKeys = new Set([
-  "ticket",
-  "ticketId",
-  "ticketShorthand",
-  "rowId",
-  "workspaceId",
-  "workspace",
-  "workspaceShorthand",
-  "sessionId",
-]);
-
-const stripResourceResolvedParams = (params: CommandParamSchema | undefined) => {
-  if (!params) return params;
-  const userFacing = Object.entries(params).filter(([key]) => !resourceResolvedParamKeys.has(key));
-  return userFacing.length > 0 ? Object.fromEntries(userFacing) : undefined;
-};
-
-const contextMenuResourceKinds = (contribution: ResourceScopedMenuContribution) => {
+const contextMenuResourceKinds = (
+  contribution: ResourceScopedMenuContribution,
+  resourceKindsBySlotId: ReadonlyMap<string, string>,
+) => {
   const resourceTypes = contribution.when?.resourceType ?? [];
   if (resourceTypes.length > 0) return resourceTypes;
 
-  const slotResourceKind = menuSlotResourceKindById.get(contribution.slotId);
+  const slotResourceKind = resourceKindsBySlotId.get(contribution.slotId);
   return slotResourceKind ? [slotResourceKind] : [];
 };
 
-const resourceMenuRegistrations = (registration: BaseDashboardExtensionMenuRegistration) =>
-  contextMenuResourceKinds(registration.contribution).map((resourceKind) => ({
+const resourceMenuRegistrations = (
+  registration: BaseDashboardExtensionMenuRegistration,
+  resourceKindsBySlotId: ReadonlyMap<string, string>,
+) =>
+  contextMenuResourceKinds(registration.contribution, resourceKindsBySlotId).map((resourceKind) => ({
     menuPath: resourceContextMenuPath(resourceKind),
     menuItem: { ...registration.menuItem },
   }));
 
-export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExtensionMetadata) =>
-  buildWorkbenchExtensionMenuRegistrations({
+export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExtensionMetadata) => {
+  const { menuSlotsById, resourceKindsBySlotId } = buildDashboardMenuSlotRegistry(metadata);
+  const result = buildWorkbenchExtensionMenuRegistrations({
     metadata,
-    menuSlotsById: dashboardMenuSlotsById,
+    menuSlotsById,
     menuTargetsById: dashboardMenuTargetsById,
     createCommandId: createWorkbenchExtensionCommandId,
     resolveString: resolveLocalizableString,
     createWhenExpression: (contribution) => {
-      const defaultWhen = contribution.target ? undefined : defaultMenuSlotWhenById.get(contribution.slotId);
+      const resourceKind = contribution.target ? undefined : resourceKindsBySlotId.get(contribution.slotId);
+      const defaultWhen =
+        resourceKind && resourceKind !== "project"
+          ? `${workbenchResourceKindContextKey} == ${contextValue(resourceKind)}`
+          : undefined;
       const contributionWhen = buildDashboardWorkbenchWhenExpression(contribution.when);
       return [defaultWhen, contributionWhen].filter(Boolean).join(" && ") || undefined;
     },
-  }).map((registration): DashboardExtensionMenuRegistration => {
-    const resourceMenuItems = resourceMenuRegistrations(registration);
+  });
+  const registrations = result.registrations.map((registration): DashboardExtensionMenuRegistration => {
+    const slot = menuSlotsById.get(registration.contribution.slotId);
+    const resourceMenuItems =
+      slot?.menuPath[1] === "resource" ? resourceMenuRegistrations(registration, resourceKindsBySlotId) : [];
     const { menuItem, menuPath, ...rest } = registration;
     return {
       ...rest,
-      command: { ...registration.command, params: stripResourceResolvedParams(registration.command.params) },
       menuItems: resourceMenuItems.length > 0 ? resourceMenuItems : [{ menuPath, menuItem }],
     };
   });
+  return { registrations, unresolved: result.unresolved, menuSlotsById };
+};
 
 export const buildDashboardExtensionCommandPaletteRegistrations = (metadata: DashboardExtensionMetadata) =>
   buildWorkbenchExtensionCommandPaletteRegistrations({

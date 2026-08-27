@@ -16,11 +16,20 @@ export interface ResourceSlotDefinition {
   readonly access: "owner" | "public";
 }
 
+export interface ResourceMenuSlotDefinition {
+  readonly id: string;
+  readonly placement: "header-primary" | "header-overflow" | "context-menu";
+  readonly label?: Localizable<string>;
+  readonly access: "owner" | "public";
+  readonly order?: number;
+}
+
 export interface ResourceKindDefinition extends ContributionDefinition<"resource-kind"> {
   readonly surface: ResourceSurface;
   readonly label?: Localizable<string>;
   readonly icon?: string;
   readonly slots?: readonly ResourceSlotDefinition[];
+  readonly menuSlots?: readonly ResourceMenuSlotDefinition[];
 }
 
 export interface ResourceViewContribution extends ContributionDefinition<"resource-view"> {

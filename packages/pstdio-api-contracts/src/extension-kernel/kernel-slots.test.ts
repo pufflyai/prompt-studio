@@ -1,10 +1,22 @@
 import { describe, expect, test } from "bun:test";
-import { gitEvents, sessionEvents, workspaceSlots, worktreeEvents } from "./kernel-slots";
+import { workbenchResourceKindDefinitions } from "./builtin-refs";
+import { gitEvents, projectSlots, sessionEvents, sessionSlots, workspaceSlots, worktreeEvents } from "./kernel-slots";
 
 describe("kernel slots", () => {
   test("exposes workspace header menu slots for workspace-scoped extension actions", () => {
     expect(workspaceSlots.headerPrimary.id).toBe("workspace.headerPrimary");
     expect(workspaceSlots.headerOverflow.id).toBe("workspace.headerOverflow");
+  });
+
+  test("declares host menu slots on their resource kinds", () => {
+    expect(workbenchResourceKindDefinitions.project.menuSlots).toEqual([
+      { id: "headerPrimary", placement: "header-primary", access: "public" },
+      { id: "headerOverflow", placement: "header-overflow", access: "public" },
+    ]);
+    expect(workbenchResourceKindDefinitions.session.menuSlots).toHaveLength(2);
+    expect(workbenchResourceKindDefinitions.workspace.menuSlots).toHaveLength(2);
+    expect(projectSlots.headerPrimary.id).toBe("project.headerPrimary");
+    expect(sessionSlots).not.toHaveProperty("transcriptActions");
   });
 
   test("exposes lifecycle events for extension automation", () => {

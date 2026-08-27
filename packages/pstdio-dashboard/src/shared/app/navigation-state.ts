@@ -11,6 +11,7 @@ export const dashboardSelectedResourceContextKey = "dashboard.navigation.selecte
 type DashboardNavigationContext = Pick<WorkbenchModuleContext, "context" | "layout" | "modes" | "panels">;
 
 const activeCollectionByWorkbench = new WeakMap<WorkbenchModuleContext["context"]["store"], DashboardCollection>();
+const activeViewByWorkbench = new WeakMap<WorkbenchModuleContext["context"]["store"], string>();
 const selectedResourceByWorkbench = new WeakMap<WorkbenchModuleContext["context"]["store"], ResourceRef>();
 const projectOwnedRegions = [
   "nav",
@@ -36,17 +37,19 @@ export const getDashboardSelectedResource = (ctx: DashboardNavigationContext) =>
   selectedResourceByWorkbench.get(ctx.context.store);
 
 interface DashboardLayoutPersistenceScopeInput {
-  activeCollection?: DashboardCollection;
   modeId?: string;
   projectId?: string;
   resource?: ResourceRef;
+  viewId?: string;
 }
 
 export const resolveDashboardLayoutPersistenceScope = (input: DashboardLayoutPersistenceScopeInput) => {
   if (!input.projectId) return undefined;
   const modeId = input.modeId ?? "none";
   if (input.resource) return `project/${input.projectId}/mode/${modeId}/resource/${input.resource.uri}`;
-  return `project/${input.projectId}/mode/${modeId}/aggregate/${input.activeCollection ?? "empty"}`;
+  return input.viewId
+    ? `project/${input.projectId}/mode/${modeId}/view/${input.viewId}`
+    : `project/${input.projectId}/mode/${modeId}/view/empty`;
 };
 
 export const syncDashboardLayoutPersistenceScope = (
@@ -54,10 +57,10 @@ export const syncDashboardLayoutPersistenceScope = (
   modeId = ctx.modes.getActiveModeId(),
 ) => {
   const scope = resolveDashboardLayoutPersistenceScope({
-    activeCollection: getDashboardActiveCollection(ctx),
     modeId,
     projectId: getDashboardSelectedProjectId(ctx),
     resource: getDashboardSelectedResource(ctx),
+    viewId: activeViewByWorkbench.get(ctx.context.store),
   });
   ctx.panels.setPersistenceScope(scope);
   const currentProjectId = ctx.layout.getPersistenceScope()?.match(/^project\/([^/]+)\//)?.[1];
@@ -69,6 +72,7 @@ export const syncDashboardLayoutPersistenceScope = (
 export const clearDashboardNavigationState = (ctx: DashboardNavigationContext) => {
   ctx.layout.expirePreviewTabs();
   activeCollectionByWorkbench.delete(ctx.context.store);
+  activeViewByWorkbench.delete(ctx.context.store);
   selectedResourceByWorkbench.delete(ctx.context.store);
   ctx.context.delete(dashboardActiveCollectionContextKey);
   ctx.context.delete(dashboardSelectedResourceContextKey);
@@ -86,6 +90,7 @@ export const applyDashboardNavigationSelection = (
     return;
   }
   activeCollectionByWorkbench.delete(ctx.context.store);
+  activeViewByWorkbench.delete(ctx.context.store);
   ctx.context.delete(dashboardActiveCollectionContextKey);
   selectedResourceByWorkbench.set(ctx.context.store, resource);
   ctx.context.set(dashboardSelectedResourceContextKey, resource.uri);
@@ -139,6 +144,7 @@ export const selectDashboardNavigationView = (
   input: { modeId?: string } = {},
 ) => {
   registerDashboardNavigator(ctx);
+  activeViewByWorkbench.set(ctx.context.store, viewId);
   const collection = collectionFromViewId(viewId);
   if (collection) {
     activeCollectionByWorkbench.set(ctx.context.store, collection);

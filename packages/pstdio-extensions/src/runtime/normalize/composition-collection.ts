@@ -23,6 +23,38 @@ const recordBase = (ext: NormalizedExtension, source: LoadedExtensionSource, loc
   sourcePath: source.sourcePath,
 });
 
+const normalizeResourceSlots = (value: unknown) =>
+  Array.isArray(value)
+    ? Object.fromEntries(
+        value.flatMap((slot) =>
+          isRecord(slot) && typeof slot.id === "string" && typeof slot.cardinality === "string"
+            ? [[slot.id, { cardinality: slot.cardinality, external: slot.access === "public" }]]
+            : [],
+        ),
+      )
+    : (value ?? {});
+
+const normalizeResourceMenuSlots = (value: unknown) =>
+  Array.isArray(value)
+    ? Object.fromEntries(
+        value.flatMap((slot) =>
+          isRecord(slot) && typeof slot.id === "string" && typeof slot.placement === "string"
+            ? [
+                [
+                  slot.id,
+                  {
+                    placement: slot.placement,
+                    label: slot.label,
+                    external: slot.access === "public",
+                    order: slot.order,
+                  },
+                ],
+              ]
+            : [],
+        ),
+      )
+    : (value ?? {});
+
 export const collectCompositionContributions = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
@@ -38,16 +70,10 @@ export const collectCompositionContributions = (
   for (const contribution of resourceKinds) {
     const localId = contribution.id;
     if (!isRecord(contribution) || typeof contribution.surface !== "string") continue;
-    const slots = Array.isArray(contribution.slots)
-      ? Object.fromEntries(
-          contribution.slots.flatMap((slot) =>
-            isRecord(slot) && typeof slot.id === "string" && typeof slot.cardinality === "string"
-              ? [[slot.id, { cardinality: slot.cardinality, external: slot.access === "public" }]]
-              : [],
-          ),
-        )
-      : contribution.slots;
+    const slots = normalizeResourceSlots(contribution.slots);
     if (!isRecord(slots)) continue;
+    const menuSlots = normalizeResourceMenuSlots(contribution.menuSlots);
+    if (!isRecord(menuSlots)) continue;
     runtime.resourceKinds.push({
       ...recordBase(ext, source, localId),
       // A resource kind keeps the plain name it was declared with. See
@@ -56,6 +82,7 @@ export const collectCompositionContributions = (
       contribution: {
         ...contribution,
         slots,
+        menuSlots,
         ...(isRecord(contribution.ref)
           ? { ref: normalizeContributionRef(ext, contribution.ref as unknown as ResourceKindDefinition["ref"]) }
           : {}),

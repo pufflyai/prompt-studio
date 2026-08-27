@@ -4,6 +4,7 @@ import { subscribeDashboardSelectedProject } from "@/shared/app/project-context"
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import {
+  getSidenavContributionDefaultExpandedSectionIds,
   getSidenavContributionFooterNodes,
   getSidenavContributionHeaderNodes,
   getSidenavContributionSections,
@@ -41,6 +42,12 @@ export const showDashboardSidenav = (ctx: WorkbenchModuleContext, options: { sel
   ctx.layout.openPanel(dashboardWidgetIds.dashboardSidenav, { pinned: true });
   if ("selectedNode" in options) {
     ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, options.selectedNode ?? undefined);
+  }
+  const mode = ctx.modes.getActiveModeId();
+  if (mode) {
+    for (const sectionId of getSidenavContributionDefaultExpandedSectionIds(ctx, mode)) {
+      ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
+    }
   }
   ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
   // Route and mode changes own sidenav content, not the user's open/collapsed

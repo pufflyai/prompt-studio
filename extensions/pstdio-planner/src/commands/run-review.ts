@@ -36,7 +36,7 @@ export const runReviewCommand = defineCommand({
     },
   ],
   params: {
-    workspaceId: params.text({ label: "Workspace", required: false }),
+    workspaceId: params.text({ label: "Workspace", required: false, resolvedFrom: "resource" }),
     harness: params.harness({ label: "Harness", required: false }),
   },
   async run(ctx, commandParams) {

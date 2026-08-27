@@ -268,6 +268,17 @@ export const toInternalWorkbenchExtensionMetadata = (
           { cardinality: slot.cardinality, external: slot.access === "public" },
         ]),
       ),
+      menuSlots: Object.fromEntries(
+        (kind.menuSlots ?? []).map((slot) => [
+          slot.id,
+          {
+            placement: slot.placement,
+            label: slot.label,
+            external: slot.access === "public",
+            order: slot.order,
+          },
+        ]),
+      ),
     })),
     resourcePanels: metadata.resourceViews.map((edge) => ({
       id: edge.id,

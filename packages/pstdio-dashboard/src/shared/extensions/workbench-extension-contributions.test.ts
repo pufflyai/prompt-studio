@@ -8,12 +8,11 @@ import { buildDashboardExtensionMenuRegistrations } from "./workbench-extension-
 import { extensionLabMetadata as metadata } from "./workbench-extension-metadata.fixture";
 
 const labViewWhenExpression = 'workbench.view.id == "pstdio.extension-lab.view.labPage"';
-const workspaceResourceContextMenuPath = resourceContextMenuPath("workspace");
 const ticketResourceContextMenuPath = resourceContextMenuPath("ticket");
 
 describe("dashboard workbench extension menu contributions", () => {
   test("maps extension view actions into the header with view context", () => {
-    const registrations = buildDashboardExtensionMenuRegistrations(metadata);
+    const { registrations } = buildDashboardExtensionMenuRegistrations(metadata);
     const headerRegistrations = registrations.filter(
       (registration) =>
         registration.contribution.id.endsWith(".header") && registration.contribution.slotId.startsWith("project."),
@@ -55,7 +54,7 @@ describe("dashboard workbench extension menu contributions", () => {
   });
 
   test("keeps resource-scoped modern targets beside their resource", () => {
-    const registrations = buildDashboardExtensionMenuRegistrations({
+    const { registrations } = buildDashboardExtensionMenuRegistrations({
       ...metadata,
       menuContributions: [
         {
@@ -113,8 +112,8 @@ describe("dashboard workbench extension menu contributions", () => {
     ]);
   });
 
-  test("maps workspace actions only beside workspace resources", () => {
-    const registrations = buildDashboardExtensionMenuRegistrations(metadata);
+  test("maps workspace actions to the declared header placement", () => {
+    const { registrations } = buildDashboardExtensionMenuRegistrations(metadata);
     const workspaceRegistration = registrations.find(
       (registration) => registration.contribution.id === "pstdio.extension-lab.command.run-review.header",
     );
@@ -123,7 +122,7 @@ describe("dashboard workbench extension menu contributions", () => {
       expect.objectContaining({
         menuItems: [
           expect.objectContaining({
-            menuPath: workspaceResourceContextMenuPath,
+            menuPath: workbenchTopHeaderTrailingMenuPath,
             menuItem: expect.objectContaining({
               commandId: "dashboard.extension.menu.pstdio.extension-lab.command.run-review.header",
               group: "primary",
@@ -138,9 +137,19 @@ describe("dashboard workbench extension menu contributions", () => {
 });
 
 describe("dashboard workbench extension ticket menu contributions", () => {
-  test("strips resource-resolved params from action commands, keeping user-facing input", () => {
-    const registrations = buildDashboardExtensionMenuRegistrations({
+  test("keeps parameter resolution in the contribution contract", () => {
+    const { registrations } = buildDashboardExtensionMenuRegistrations({
       ...metadata,
+      resourceKinds: [
+        {
+          id: "ticket",
+          localId: "ticket",
+          extensionId: "pstdio.pstdio-planner",
+          surface: "primary",
+          slots: [],
+          menuSlots: [{ id: "headerPrimary", placement: "header-primary", access: "owner" }],
+        },
+      ],
       commands: [
         ...metadata.commands,
         {
@@ -148,8 +157,8 @@ describe("dashboard workbench extension ticket menu contributions", () => {
           extensionId: "pstdio.pstdio-planner",
           title: "Run attempt",
           params: {
-            ticket: { type: "text", label: "Ticket" },
-            rowId: { type: "text", label: "Ticket row" },
+            ticket: { type: "text", label: "Ticket", resolvedFrom: "resource" },
+            rowId: { type: "text", label: "Ticket row", resolvedFrom: "resource" },
             agent: { type: "harness", label: "Agent" },
             repo: { type: "repo", label: "Repository" },
           },
@@ -167,14 +176,26 @@ describe("dashboard workbench extension ticket menu contributions", () => {
     });
 
     expect(registrations[0]?.command.params).toEqual({
+      ticket: { type: "text", label: "Ticket", resolvedFrom: "resource" },
+      rowId: { type: "text", label: "Ticket row", resolvedFrom: "resource" },
       agent: { type: "harness", label: "Agent" },
       repo: { type: "repo", label: "Repository" },
     });
   });
 
   test("maps ticket actions only beside ticket resources", () => {
-    const registrations = buildDashboardExtensionMenuRegistrations({
+    const { registrations } = buildDashboardExtensionMenuRegistrations({
       ...metadata,
+      resourceKinds: [
+        {
+          id: "ticket",
+          localId: "ticket",
+          extensionId: "pstdio.pstdio-planner",
+          surface: "primary",
+          slots: [],
+          menuSlots: [{ id: "headerOverflow", placement: "context-menu", access: "owner", label: "Ticket actions" }],
+        },
+      ],
       commands: [
         ...metadata.commands,
         { id: "pstdio-planner.refine-ticket", extensionId: "pstdio.pstdio-planner", title: "Refine ticket" },

@@ -74,15 +74,13 @@ export const registerExtensionResourceSidenav = (ctx: WorkbenchModuleContext, me
     disposables.push(mirrorSelection(ctx, viewId));
 
     const tree = ctx.renderers.getTreeRenderer(viewId);
-    for (const sectionId of tree?.defaultExpandedSectionIds ?? []) {
-      ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
-    }
 
     disposables.push(
       registerSidenavContribution(ctx, {
         id: `dashboard.extensions.resource-sidenav.${edge.id}`,
         modes: ["project"],
         order: 200 + index,
+        defaultExpandedSectionIds: tree?.defaultExpandedSectionIds,
         getSections: async (_workbench, input) => {
           if (input.resource?.kind !== edge.resourceKind.id) return [];
           const sections = await ctx.renderers.getBody(viewId, { resource: input.resource, viewId });

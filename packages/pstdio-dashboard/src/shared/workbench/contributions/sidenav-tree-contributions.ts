@@ -23,6 +23,7 @@ interface SidenavContribution {
   modes: SidenavModeId[];
   order?: number;
   region?: SidenavContributionRegion;
+  defaultExpandedSectionIds?: string[];
   getSections?: (
     ctx: WorkbenchModuleContext,
     input: SidenavContributionInput,
@@ -113,3 +114,6 @@ export const getSidenavContributionHeaderNodes = (
 
 export const getSidenavContributionFooterNodes = (ctx: WorkbenchModuleContext, mode: SidenavModeId) =>
   matchingContributions(ctx, mode, "footer").flatMap((contribution) => contribution.getFooterNodes?.(ctx) ?? []);
+
+export const getSidenavContributionDefaultExpandedSectionIds = (ctx: SidenavTreeContext, mode: SidenavModeId) =>
+  matchingContributions(ctx, mode, "body").flatMap((contribution) => contribution.defaultExpandedSectionIds ?? []);

@@ -1,7 +1,6 @@
 import {
   defineNavigationItem,
   definePlacement,
-  defineResourceKind,
   defineResourceView,
   defineSettingsPanel,
   defineSettingsSection,
@@ -29,18 +28,10 @@ import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
 import { plannerTicketsChanged } from "./events";
+import { ticketResourceKind } from "./resource-kinds";
 import { ticketStatuses } from "./ticket-status-provider";
 
-export const ticketResourceKind = defineResourceKind({
-  id: "ticket",
-  surface: "primary",
-  label: l10n("resourceKinds.ticket.label", "Ticket"),
-  icon: "component",
-  slots: [
-    { id: "primary", cardinality: "one", access: "owner" },
-    { id: "navigation", cardinality: "one", access: "public" },
-  ],
-});
+export { ticketResourceKind } from "./resource-kinds";
 
 export const plannerSettingsSection = defineSettingsSection({
   id: "planner",

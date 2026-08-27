@@ -13,16 +13,15 @@ const belongsToResource = (session: DashboardSession, resource: ResourceRef) => 
   if (resource.kind === "workspace") {
     return session.workspaceId === (resource.id ?? metadataString(resource, "workspaceId"));
   }
-  if (resource.kind === "ticket") return session.ticketId === resource.id;
-  return false;
+  return session.anchors.some((anchor) => anchor.type === resource.kind && anchor.id === resource.id);
 };
 
 // Sessions are sorted by last activity, so the first match is the conversation the user
-// was most recently having about this workspace or ticket.
+// was most recently having about this workspace or anchored resource.
 export const findLatestSessionForResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) =>
   createDashboardSessions(getDashboardSelectedProjectId(ctx)).find((session) => belongsToResource(session, resource));
 
-// Opening a workspace or a ticket brings its conversation along in the Side Panel. It is a
+// Opening a workspace or an anchored resource brings its conversation along in the Side Panel. It is a
 // preview, it leaves the Side Panel presentation alone, and it hands activation straight back
 // to the resource the user actually navigated to.
 export const openResourceSessionPreview = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {

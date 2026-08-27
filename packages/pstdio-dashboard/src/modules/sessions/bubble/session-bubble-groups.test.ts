@@ -16,7 +16,7 @@ const session = (input: { id: string; workspaceId?: string | null; updatedAt?: s
     workspaceId: input.workspaceId ?? null,
     workspaceBranch: null,
     workspaceShorthand: "",
-    ticketId: null,
+    anchors: [],
     resource: { kind: "session", uri: `dashboard-workbench://session/${input.id}`, id: input.id, label: input.id },
   } satisfies DashboardSession & { resource: ResourceRef };
 };

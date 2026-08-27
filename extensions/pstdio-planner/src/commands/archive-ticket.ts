@@ -11,7 +11,7 @@ import { findTicket } from "../data/resolve";
 import type { StoredTicket } from "../data/types";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { plannerTicketsChanged } from "../events";
-import { ticketSlots } from "../slots";
+import { ticketMenuSlots } from "../resource-kinds";
 import { ticketRefFromCommandContext } from "./ticket-command-ref";
 
 const ARCHIVE_ALL_COLUMN_ACTION = "archive_all";
@@ -88,7 +88,7 @@ export const archiveTicketCommand = defineCommand({
   cli: { globalAliases: [["tickets", "archive"]], examples: ["pstdio tickets archive --id PS-1"] },
   menus: [
     {
-      slot: ticketSlots.headerOverflow,
+      slot: ticketMenuSlots.headerOverflow,
       label: l10n("kanbanRenderers.tickets.rowActions.archive", "Archive"),
       icon: "archive",
       placement: "last",

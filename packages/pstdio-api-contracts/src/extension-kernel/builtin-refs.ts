@@ -1,3 +1,4 @@
+import type { ResourceKindDefinition } from "./types/composition";
 import type { ContributionKind } from "./types/contribution-identity";
 
 const hostRef = <Kind extends ContributionKind>(kind: Kind, id: string) => ({ extensionId: "pstdio", kind, id });
@@ -11,10 +12,33 @@ export const workbenchModes = {
   settings: hostRef("mode", "settings"),
 };
 
+const hostResourceKind = (
+  id: string,
+  label: string,
+  menuSlots: ResourceKindDefinition["menuSlots"],
+): ResourceKindDefinition => ({
+  id,
+  ref: hostRef("resource-kind", id),
+  surface: "primary",
+  label,
+  menuSlots,
+});
+
+const headerMenuSlots = [
+  { id: "headerPrimary", placement: "header-primary", access: "public" },
+  { id: "headerOverflow", placement: "header-overflow", access: "public" },
+] as const;
+
+export const workbenchResourceKindDefinitions = {
+  project: hostResourceKind("project", "Extension", headerMenuSlots),
+  session: hostResourceKind("session", "Session", headerMenuSlots),
+  workspace: hostResourceKind("workspace", "Workspace", headerMenuSlots),
+};
+
 export const workbenchResourceKinds = {
-  project: hostRef("resource-kind", "project"),
-  session: hostRef("resource-kind", "session"),
-  workspace: hostRef("resource-kind", "workspace"),
+  project: workbenchResourceKindDefinitions.project.ref,
+  session: workbenchResourceKindDefinitions.session.ref,
+  workspace: workbenchResourceKindDefinitions.workspace.ref,
 };
 
 export const workbenchSlots = {

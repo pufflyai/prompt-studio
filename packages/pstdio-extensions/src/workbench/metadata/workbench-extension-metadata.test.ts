@@ -5,6 +5,7 @@ import {
   defineMode,
   defineNavigationItem,
   definePlacement,
+  defineResourceKind,
   defineView,
   packageAsset,
   workbenchSlots,
@@ -29,6 +30,25 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
 });
 
 describe("createWorkbenchExtensionMetadata", () => {
+  test("publishes resource menu slot declarations", () => {
+    const resourceKind = defineResourceKind({
+      id: "note",
+      surface: "primary",
+      menuSlots: [
+        { id: "headerPrimary", placement: "header-primary", access: "owner", order: 20 },
+        { id: "context", placement: "context-menu", access: "public" },
+      ],
+    });
+    const runtime = normalizeExtensionSources([source(defineExtension({ resourceKinds: [resourceKind] }))]);
+
+    const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
+
+    expect(metadata.resourceKinds[0]?.menuSlots).toEqual([
+      { id: "headerPrimary", placement: "header-primary", access: "owner", order: 20 },
+      { id: "context", placement: "context-menu", access: "public" },
+    ]);
+  });
+
   test("publishes named connection settings metadata without credentials", () => {
     const connection = defineConnection({
       id: "control-plane",

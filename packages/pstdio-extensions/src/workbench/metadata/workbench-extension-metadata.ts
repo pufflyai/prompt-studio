@@ -209,6 +209,13 @@ export const createWorkbenchExtensionMetadata = (
       cardinality: slot.cardinality,
       access: slot.external ? ("public" as const) : ("owner" as const),
     })),
+    menuSlots: Object.entries(record.contribution.menuSlots ?? {}).map(([id, slot]) => ({
+      id,
+      placement: slot.placement,
+      label: slot.label,
+      access: slot.external ? ("public" as const) : ("owner" as const),
+      order: slot.order,
+    })),
   })),
   resourceViews: input.runtime.resourceViews.map((record) => {
     const contribution = record.contribution as {

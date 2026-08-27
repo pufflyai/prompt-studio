@@ -29,6 +29,7 @@ import type {
   ViewMenuContribution,
   WorkspaceTypeProvider,
 } from "pstdio-api-contracts/extension-kernel";
+import { defineSlot } from "pstdio-api-contracts/extension-kernel";
 
 const defineContribution =
   <Kind extends ContributionKind>(_kind: Kind) =>
@@ -61,6 +62,9 @@ export const resourceSlotRef = (resourceKind: ResourceKindRef, id: string): Reso
   resourceKind,
   id,
 });
+
+export const resourceMenuSlotRef = (resourceKind: ResourceKindRef, id: string) =>
+  defineSlot(`${resourceKind.id}.${id}`, { kind: "menu" });
 
 export const defineResourceView = defineContribution("resource-view") as <
   Definition extends Omit<ResourceViewContribution, "ref">,

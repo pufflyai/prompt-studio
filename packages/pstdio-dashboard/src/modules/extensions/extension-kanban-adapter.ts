@@ -18,7 +18,7 @@ import type { ExecuteDashboardExtensionCommand } from "./extension-command-handl
 import { createWorkspaceBadgeRenderer } from "./extension-workspace-badge-renderer";
 
 type KanbanRecord = Parameters<NonNullable<WorkbenchExtensionKanbanRendererAdapter["resolveRowResource"]>>[0];
-type MenuRegistration = ReturnType<typeof buildDashboardExtensionMenuRegistrations>[number];
+type MenuRegistration = ReturnType<typeof buildDashboardExtensionMenuRegistrations>["registrations"][number];
 
 const isWorkbenchResource = (resource: unknown): resource is ResourceRef =>
   Boolean(resource && typeof resource === "object" && typeof (resource as { kind?: unknown }).kind === "string");
@@ -138,7 +138,7 @@ export const createDashboardKanbanAdapter = (input: {
   projectId: string;
 }) => {
   const { ctx, executeCommand, metadata, projectId } = input;
-  const menuRegistrations = buildDashboardExtensionMenuRegistrations(metadata);
+  const menuRegistrations = buildDashboardExtensionMenuRegistrations(metadata).registrations;
   const adapter: WorkbenchExtensionKanbanRendererAdapter = {
     decorateAttribute: (_record, attribute) => decorateAttribute(ctx, projectId, attribute),
     resolveRowResource: (_record, row) => toDashboardExtensionResource(row.resource, projectId),

@@ -8,7 +8,7 @@ import {
   isVisibleDashboardRow,
   readDashboardRows,
 } from "@/shared/sync/dashboard-rows";
-import { findResourceAnchor } from "@/shared/sync/resource-anchors";
+import { type DashboardResourceAnchor, listResourceAnchors } from "@/shared/sync/resource-anchors";
 import { getDashboardWorkspaceDiffSummary } from "@/shared/workspaces/workspace-diff-summary-data";
 
 export interface DashboardSession {
@@ -22,9 +22,7 @@ export interface DashboardSession {
   workspaceId: string | null;
   workspaceBranch: string | null;
   workspaceShorthand: string;
-  // The ticket this session belongs to, either anchored directly (refine, break down) or
-  // inherited from the workspace it runs in (an attempt).
-  ticketId: string | null;
+  anchors: DashboardResourceAnchor[];
   resource: ResourceRef;
 }
 
@@ -52,6 +50,8 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
   const title = (session.title as string | null) ?? "Session";
   const projectId = (session.project_id as string | null | undefined) ?? (workspace?.project_id as string | undefined);
   const updatedAt = (session.updated_at as string) ?? (session.created_at as string) ?? "";
+  const anchors = [...listResourceAnchors(session), ...(workspace ? listResourceAnchors(workspace) : [])];
+  const parent = anchors[0];
 
   return {
     id: session.id,
@@ -64,11 +64,10 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
     workspaceId: (workspace?.id as string | undefined) ?? null,
     workspaceBranch: (workspace?.branch as string | null) ?? null,
     workspaceShorthand: (workspace?.workspace_shorthand as string | undefined) ?? "",
-    ticketId:
-      findResourceAnchor(session, "ticket")?.id ??
-      (workspace ? (findResourceAnchor(workspace, "ticket")?.id ?? null) : null),
+    anchors,
     resource: createDashboardResource("session", session.id, title, "MessageCircle", projectId, {
       status: (session.status as string) ?? "unknown",
+      ...(parent ? { resourceParent: parent } : {}),
     }),
   };
 };

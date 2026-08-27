@@ -8,7 +8,7 @@ import {
 } from "./extensions";
 
 describe("extension composition contracts", () => {
-  test("round-trips resource slots, panel capabilities, and mode recipes in declaration order", () => {
+  test("round-trips resource and menu slots, panel capabilities, and mode recipes in declaration order", () => {
     const resource = extensionResourceKindRecordSchema.parse({
       id: "planner.ticket",
       extensionId: "pstdio.planner",
@@ -16,6 +16,10 @@ describe("extension composition contracts", () => {
       slots: {
         primary: { cardinality: "one", external: false },
         inspector: { cardinality: "many", external: true },
+      },
+      menuSlots: {
+        header: { placement: "header-primary", external: false, order: 10 },
+        more: { placement: "header-overflow", label: "Ticket actions", external: true },
       },
     });
     const panel = extensionCompositionPanelRecordSchema.parse({
@@ -42,6 +46,12 @@ describe("extension composition contracts", () => {
     });
 
     expect(Object.keys(resource.slots)).toEqual(["primary", "inspector"]);
+    expect(Object.keys(resource.menuSlots)).toEqual(["header", "more"]);
+    expect(resource.menuSlots.more).toEqual({
+      placement: "header-overflow",
+      label: "Ticket actions",
+      external: true,
+    });
     expect(panel.show).toEqual({ region: "side", allowedRegions: ["side", "secondary"] });
     expect(edge.slot).toBe("inspector");
     expect(Object.keys(mode.resources)).toEqual(["planner.ticket"]);

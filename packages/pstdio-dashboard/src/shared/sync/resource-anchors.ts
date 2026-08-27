@@ -14,9 +14,12 @@ const isResourceAnchor = (value: unknown): value is DashboardResourceAnchor =>
   isRecord(value) && typeof value.type === "string" && typeof value.id === "string";
 
 // Sessions and workspaces both carry `anchors_json`: the domain resources they belong to.
-export const findResourceAnchor = (row: SyncedRow, type: string) => {
+export const listResourceAnchors = (row: SyncedRow) => {
   const anchors = row.anchors_json;
-  if (!Array.isArray(anchors)) return undefined;
+  if (!Array.isArray(anchors)) return [];
+  return anchors.filter(isResourceAnchor);
+};
 
-  return anchors.find((anchor): anchor is DashboardResourceAnchor => isResourceAnchor(anchor) && anchor.type === type);
+export const findResourceAnchor = (row: SyncedRow, type: string) => {
+  return listResourceAnchors(row).find((anchor) => anchor.type === type);
 };

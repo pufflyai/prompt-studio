@@ -33,7 +33,7 @@ const session = (input: { id: string; workspaceId?: string | null; updatedAt?: s
     workspaceId: input.workspaceId ?? null,
     workspaceBranch: null,
     workspaceShorthand: "",
-    ticketId: null,
+    anchors: [],
     resource: sessionResource(input.id),
   };
 };

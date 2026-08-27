@@ -86,16 +86,17 @@ const registerMenus = (
   context: WorkbenchExtensionCommandContext,
 ) => {
   if (!input.menuSlotsById) return [] as Disposable[];
-  const registrations = buildWorkbenchExtensionMenuRegistrations({
+  const { registrations } = buildWorkbenchExtensionMenuRegistrations({
     metadata: input.metadata,
     menuSlotsById: input.menuSlotsById,
     menuTargetsById: input.menuTargetsById,
     createWhenExpression: input.createMenuWhenExpression,
-  }).map(({ menuItem, menuPath, ...registration }) => ({
+  });
+  const defaultRegistrations = registrations.map(({ menuItem, menuPath, ...registration }) => ({
     ...registration,
     menuItems: [{ menuItem, menuPath }],
   }));
-  const resolvedRegistrations = input.menuRegistrations ?? registrations;
+  const resolvedRegistrations = input.menuRegistrations ?? defaultRegistrations;
 
   return resolvedRegistrations.flatMap((registration) => [
     input.workbench.commands.registerCommand(registration.command, {

@@ -29,6 +29,7 @@ type ParamBase<TValue, TRequired extends boolean | undefined = boolean | undefin
   description?: Localizable<string>;
   defaultValue?: TValue;
   metadata?: JsonObject;
+  resolvedFrom?: "resource";
 } & ParamRequired<TRequired>;
 
 export type TextParam<TRequired extends boolean | undefined = boolean | undefined> = ParamBase<string, TRequired> & {

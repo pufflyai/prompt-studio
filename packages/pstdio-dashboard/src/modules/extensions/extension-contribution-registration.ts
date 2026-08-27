@@ -21,7 +21,6 @@ import {
 import {
   buildDashboardExtensionMenuRegistrations,
   buildDashboardWorkbenchWhenExpression,
-  dashboardMenuSlotsById,
   dashboardMenuTargetsById,
 } from "@/shared/extensions/workbench-extension-contributions";
 import { setDashboardSidenavSelection } from "@/shared/workbench/dashboard-sidenav";
@@ -104,6 +103,14 @@ export const localizeDashboardExtensionCommandResponse = <T extends { extensionI
 export const registerExtensionContributions = (input: RegisterExtensionContributionsInput) => {
   const disposables: Disposable[] = [];
   try {
+    const menuResult = buildDashboardExtensionMenuRegistrations(input.metadata);
+    for (const unresolved of menuResult.unresolved) {
+      input.ctx.notifications.show({
+        level: "warning",
+        title: "Extension action unavailable",
+        message: `The menu target “${unresolved.targetId}” for “${unresolved.contribution.label}” is not available.`,
+      });
+    }
     const webviewRenderer = registerDashboardExtensionWebviewRenderer(input.ctx);
     if (webviewRenderer) disposables.push(webviewRenderer);
     const kanban = createDashboardKanbanAdapter(input);
@@ -130,9 +137,9 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
           return response;
         },
         kanbanAdapter: kanban.adapter,
-        menuSlotsById: dashboardMenuSlotsById,
+        menuSlotsById: menuResult.menuSlotsById,
         menuTargetsById: dashboardMenuTargetsById,
-        menuRegistrations: buildDashboardExtensionMenuRegistrations(input.metadata),
+        menuRegistrations: menuResult.registrations,
         metadata: withoutIntegratedResourceSidenavViews(
           withoutDashboardNavigationItems(withDashboardWebviewUrls(input.metadata)),
         ),

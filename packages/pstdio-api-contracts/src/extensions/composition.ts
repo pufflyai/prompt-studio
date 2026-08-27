@@ -10,6 +10,13 @@ export const extensionResourceSlotSchema = z.object({
   external: z.boolean(),
 });
 
+export const extensionResourceMenuSlotSchema = z.object({
+  placement: z.enum(["header-primary", "header-overflow", "context-menu"]),
+  label: localizableStringSchema.optional(),
+  external: z.boolean(),
+  order: z.number().optional(),
+});
+
 export const extensionResourceKindRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
@@ -17,6 +24,7 @@ export const extensionResourceKindRecordSchema = z.object({
   label: localizableStringSchema.optional(),
   icon: z.string().optional(),
   slots: z.record(z.string(), extensionResourceSlotSchema),
+  menuSlots: z.record(z.string(), extensionResourceMenuSlotSchema).default({}),
 });
 
 export const extensionResourcePanelRecordSchema = z.object({

@@ -1,3 +1,4 @@
+import { workbenchResourceKinds } from "./builtin-refs";
 import { eventRef } from "./refs";
 import { defineSlot } from "./slots";
 import type { Struct } from "./types/json";
@@ -5,6 +6,9 @@ import type { ResourceAnchor } from "./types/resources";
 import type { ExtensionWorkspace } from "./types/workspaces";
 
 const hostEventRef = <TPayload extends Struct>(id: string) => eventRef<TPayload>({ extensionId: "pstdio", id });
+
+const resourceMenuSlotRef = (resourceKind: { id: string }, id: string) =>
+  defineSlot<Struct, "menu">(`${resourceKind.id}.${id}`, { kind: "menu" });
 
 /** How a workspace's working tree is backed. `root` = the repo checkout itself; `cloud` is reserved. */
 export type WorkspaceType = "worktree" | "root" | "cloud";
@@ -74,20 +78,19 @@ export interface ConflictPayload {
 
 export const projectSlots = {
   sidenav: defineSlot<Struct, "panel">("project.sidenav", { kind: "panel" }),
-  headerPrimary: defineSlot<Struct, "menu">("project.headerPrimary", { kind: "menu" }),
-  headerOverflow: defineSlot<Struct, "menu">("project.headerOverflow", { kind: "menu" }),
+  headerPrimary: resourceMenuSlotRef(workbenchResourceKinds.project, "headerPrimary"),
+  headerOverflow: resourceMenuSlotRef(workbenchResourceKinds.project, "headerOverflow"),
   settingsPanels: defineSlot<Struct, "settings">("project.settingsPanels", { kind: "settings" }),
 };
 
 export const sessionSlots = {
-  headerPrimary: defineSlot<Struct, "menu">("session.headerPrimary", { kind: "menu" }),
-  headerOverflow: defineSlot<Struct, "menu">("session.headerOverflow", { kind: "menu" }),
-  transcriptActions: defineSlot<Struct, "menu">("session.transcriptActions", { kind: "menu" }),
+  headerPrimary: resourceMenuSlotRef(workbenchResourceKinds.session, "headerPrimary"),
+  headerOverflow: resourceMenuSlotRef(workbenchResourceKinds.session, "headerOverflow"),
 };
 
 export const workspaceSlots = {
-  headerPrimary: defineSlot<Struct, "menu">("workspace.headerPrimary", { kind: "menu" }),
-  headerOverflow: defineSlot<Struct, "menu">("workspace.headerOverflow", { kind: "menu" }),
+  headerPrimary: resourceMenuSlotRef(workbenchResourceKinds.workspace, "headerPrimary"),
+  headerOverflow: resourceMenuSlotRef(workbenchResourceKinds.workspace, "headerOverflow"),
   sidenav: defineSlot<Struct, "panel">("workspace.sidenav", { kind: "panel" }),
 };
 

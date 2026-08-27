@@ -43,6 +43,7 @@ export {
   WEBVIEW_HOST_CAPABILITY_VERSION,
   workbenchCommands,
   workbenchModes,
+  workbenchResourceKindDefinitions,
   workbenchResourceKinds,
   workbenchSlots,
   workspaceEvents,
@@ -77,6 +78,7 @@ export {
   defineView,
   defineViewMenu,
   defineWorkspaceType,
+  resourceMenuSlotRef,
   resourceSlotRef,
 } from "./define-contribution";
 export { defineExtension } from "./define-extension";

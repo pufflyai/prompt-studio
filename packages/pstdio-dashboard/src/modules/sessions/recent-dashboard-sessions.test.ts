@@ -14,7 +14,7 @@ const makeSession = (id: string, updatedAt: string, lastActivityAt = updatedAt):
   workspaceId: null,
   workspaceBranch: null,
   workspaceShorthand: "",
-  ticketId: null,
+  anchors: [],
   resource: createDashboardResource("session", id, id, "MessageCircle"),
 });
 

@@ -8,7 +8,13 @@
  * consume it directly.
  */
 
-export { workbenchCommands, workbenchModes, workbenchResourceKinds, workbenchSlots } from "./builtin-refs";
+export {
+  workbenchCommands,
+  workbenchModes,
+  workbenchResourceKindDefinitions,
+  workbenchResourceKinds,
+  workbenchSlots,
+} from "./builtin-refs";
 export type {
   CommitPayload,
   ConflictPayload,

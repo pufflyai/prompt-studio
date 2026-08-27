@@ -4,11 +4,11 @@ import { findTicket } from "../data/resolve";
 import { ticketResourceHierarchyMetadata } from "../data/ticket-resource-hierarchy";
 import type { StoredTicket } from "../data/types";
 import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
-import { ticketSlots } from "../slots";
+import { ticketMenuSlots } from "../resource-kinds";
 
 export const ticketActionParams = {
-  ticket: params.text({ label: "Ticket" }),
-  rowId: params.text({ label: "Ticket row" }),
+  ticket: params.text({ label: "Ticket", resolvedFrom: "resource" }),
+  rowId: params.text({ label: "Ticket row", resolvedFrom: "resource" }),
   agent: params.harness({ label: "Model" }),
 };
 
@@ -136,7 +136,7 @@ export const createWorkspaceCommand = defineCommand({
   title: "Create workspace",
   menus: [
     {
-      slot: ticketSlots.headerOverflow,
+      slot: ticketMenuSlots.headerOverflow,
       label: l10n("kanbanRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
       icon: "git-branch",
       placement: "first",
@@ -165,7 +165,7 @@ export const refineTicketCommand = defineCommand({
   title: "Refine ticket",
   menus: [
     {
-      slot: ticketSlots.headerOverflow,
+      slot: ticketMenuSlots.headerOverflow,
       label: l10n("kanbanRenderers.tickets.rowActions.refineTicket", "Refine ticket"),
       icon: "sparkles",
     },
@@ -232,7 +232,7 @@ export const breakIntoSubTicketsCommand = defineCommand({
   title: "Break into sub-tickets",
   menus: [
     {
-      slot: ticketSlots.headerOverflow,
+      slot: ticketMenuSlots.headerOverflow,
       label: l10n("kanbanRenderers.tickets.rowActions.breakIntoSubTickets", "Break into sub-tickets"),
       icon: "list-tree",
     },

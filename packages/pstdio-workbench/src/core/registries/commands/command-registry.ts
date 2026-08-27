@@ -40,6 +40,7 @@ export interface CommandParamDescriptor {
   accept?: string;
   multiple?: boolean;
   metadata?: Record<string, unknown>;
+  resolvedFrom?: "resource";
 }
 
 export type CommandParamSchema = Record<string, CommandParamDescriptor>;

@@ -8,7 +8,7 @@ import {
   isVisibleDashboardRow,
   readDashboardRows,
 } from "@/shared/sync/dashboard-rows";
-import { findResourceAnchor } from "@/shared/sync/resource-anchors";
+import { listResourceAnchors } from "@/shared/sync/resource-anchors";
 import {
   type DashboardWorkspaceDiffSummary,
   formatDashboardWorkspaceDiffOverview,
@@ -48,8 +48,8 @@ interface DashboardWorkspaceOptions {
   diffSummariesByWorkspaceId?: Map<string, DashboardWorkspaceDiffSummary>;
 }
 
-const ticketMetadataFromWorkspace = (workspace: SyncedRow) => {
-  const anchor = findResourceAnchor(workspace, "ticket");
+const anchorMetadataFromWorkspace = (workspace: SyncedRow) => {
+  const anchor = listResourceAnchors(workspace)[0];
   if (!anchor) return {};
 
   return {
@@ -93,7 +93,7 @@ const createWorkspaceResourceMetadata = (input: {
     // Resource-scoped action menus (header overflow, tree context menu) gate the
     // rename/archive/delete actions on this flag so the default workspace stays permanent.
     workspaceIsDefault: Boolean(input.workspace.is_default),
-    ...ticketMetadataFromWorkspace(input.workspace),
+    ...anchorMetadataFromWorkspace(input.workspace),
     // Sessions created from a workspace inherit this so the composer stays locked to the workspace branch.
     ...(branch ? { workspaceBranch: branch } : {}),
   };
