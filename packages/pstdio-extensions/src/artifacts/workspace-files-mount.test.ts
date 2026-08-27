@@ -12,6 +12,9 @@ const createTempDir = () => {
   return dir;
 };
 
+const createSyncMount = (root: string) =>
+  createWorkspaceFilesMount(root, { syncStateRoot: join(root, ".workspace-sync-state") });
+
 afterEach(() => {
   for (const dir of tempDirs.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
@@ -19,7 +22,7 @@ afterEach(() => {
 describe("createWorkspaceFilesMount.syncDir", () => {
   test("writes the given set, then updates and prunes to match a smaller set", async () => {
     const root = createTempDir();
-    const mount = createWorkspaceFilesMount(root);
+    let mount = createSyncMount(root);
 
     await mount.syncDir(".claude/skills", [
       { path: "a/SKILL.md", content: "A" },
@@ -28,14 +31,29 @@ describe("createWorkspaceFilesMount.syncDir", () => {
     expect(readFileSync(join(root, ".claude/skills/a/SKILL.md"), "utf8")).toBe("A");
     expect(readFileSync(join(root, ".claude/skills/b/SKILL.md"), "utf8")).toBe("B");
 
+    mount = createSyncMount(root);
     await mount.syncDir(".claude/skills", [{ path: "a/SKILL.md", content: "A2" }]);
     expect(readFileSync(join(root, ".claude/skills/a/SKILL.md"), "utf8")).toBe("A2");
     expect(existsSync(join(root, ".claude/skills/b/SKILL.md"))).toBe(false);
   });
 
+  test("preserves repository files that were not installed by Prompt Studio", async () => {
+    const root = createTempDir();
+    mkdirSync(join(root, ".claude/skills/local-skill"), { recursive: true });
+    writeFileSync(join(root, ".claude/skills/local-skill/SKILL.md"), "Local");
+    let mount = createSyncMount(root);
+
+    await mount.syncDir(".claude/skills", [{ path: "extension-skill/SKILL.md", content: "Extension" }]);
+    mount = createSyncMount(root);
+    await mount.syncDir(".claude/skills", []);
+
+    expect(readFileSync(join(root, ".claude/skills/local-skill/SKILL.md"), "utf8")).toBe("Local");
+    expect(existsSync(join(root, ".claude/skills/extension-skill/SKILL.md"))).toBe(false);
+  });
+
   test("leaves files outside the synced dir untouched", async () => {
     const root = createTempDir();
-    const mount = createWorkspaceFilesMount(root);
+    const mount = createSyncMount(root);
 
     await mount.writeText(".pstdio/config.json", "{}");
     await mount.syncDir(".claude/skills", [{ path: "a/SKILL.md", content: "A" }]);
@@ -45,7 +63,7 @@ describe("createWorkspaceFilesMount.syncDir", () => {
 
   test("rejects file paths that escape the synced dir", async () => {
     const root = createTempDir();
-    const mount = createWorkspaceFilesMount(root);
+    const mount = createSyncMount(root);
 
     await expect(mount.syncDir(".claude/skills", [{ path: "../outside.txt", content: "x" }])).rejects.toThrow(
       /escapes/,

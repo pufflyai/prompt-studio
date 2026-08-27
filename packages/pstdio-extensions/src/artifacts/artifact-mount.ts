@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join, posix, resolve } from "node:path";
 import type { ArtifactFile, ArtifactMount, WorkspaceFilesMount } from "@pstdio/sdk/extensions";
@@ -106,16 +107,49 @@ export const createFileMount = (mountRoot: string): ArtifactMount => createFileM
 
 let syncTmpCounter = 0;
 
+type WorkspaceSyncState = {
+  version: 1;
+  dir: string;
+  files: string[];
+};
+
+const workspaceSyncStateFile = (dir: string) => `${createHash("sha256").update(dir).digest("hex")}.json`;
+
+const isPathInSyncDir = (dir: string, path: string) => (dir ? path.startsWith(`${dir}/`) : Boolean(path));
+
+const readWorkspaceSyncState = async (stateMount: ArtifactMount, dir: string) => {
+  const stateFile = workspaceSyncStateFile(dir);
+  if (!(await stateMount.exists(stateFile))) return { stateFile, managedFiles: [] };
+
+  const state = JSON.parse(await stateMount.readText(stateFile)) as WorkspaceSyncState;
+  if (state.version !== 1 || state.dir !== dir || !Array.isArray(state.files)) {
+    throw new Error(`Invalid workspace sync state for "${dir}"`);
+  }
+
+  const managedFiles = state.files.map((path) => normalizeMountRelativePath(path));
+  if (managedFiles.some((path) => !isPathInSyncDir(dir, path))) {
+    throw new Error(`Invalid workspace sync state for "${dir}"`);
+  }
+  return { stateFile, managedFiles };
+};
+
 /**
- * A file mount with {@link WorkspaceFilesMount.syncDir}: reconciles a subtree to exactly the given set —
- * each file written atomically (temp + rename), anything else under `dir` pruned. Harness extensions use
- * it to materialize their agent dir (e.g. `.claude/skills`) from the project skill catalog.
+ * A file mount with {@link WorkspaceFilesMount.syncDir}: writes the given files atomically and prunes only
+ * files recorded as managed by an earlier sync. Harness extensions use it to materialize their agent dir
+ * (e.g. `.claude/skills`) without deleting repository-owned skills in the same directory.
  */
-export const createWorkspaceFilesMount = (mountRoot: string): WorkspaceFilesMount & WorkspaceFileAccess => {
+export const createWorkspaceFilesMount = (
+  mountRoot: string,
+  options: { syncStateRoot?: string } = {},
+): WorkspaceFilesMount & WorkspaceFileAccess => {
   const { mount, safeRoot } = createFileMountState(mountRoot);
 
   const syncDir: WorkspaceFilesMount["syncDir"] = async (dir, files) => {
+    if (!options.syncStateRoot) throw new Error("Workspace sync state root is required");
+
     const dirRel = normalizeMountRelativePath(dir);
+    const stateMount = createFileMount(options.syncStateRoot);
+    const { stateFile, managedFiles } = await readWorkspaceSyncState(stateMount, dirRel);
     const wanted = new Map<string, string>();
     for (const file of files) {
       const rel = normalizeMountRelativePath(posix.join(dirRel, file.path));
@@ -136,9 +170,12 @@ export const createWorkspaceFilesMount = (mountRoot: string): WorkspaceFilesMoun
       await rename(tmpPath, absolutePath);
     }
 
-    for (const file of await mount.list(dirRel ? `${dirRel}/**` : undefined)) {
-      if (!wanted.has(file.path)) await mount.delete(file.path);
+    for (const path of managedFiles) {
+      if (!wanted.has(path) && (await mount.exists(path))) await mount.delete(path);
     }
+
+    const state: WorkspaceSyncState = { version: 1, dir: dirRel, files: [...wanted.keys()].sort() };
+    await stateMount.writeText(stateFile, `${JSON.stringify(state)}\n`);
   };
 
   return { ...mount, ...createWorkspaceFileAccess(safeRoot), syncDir };

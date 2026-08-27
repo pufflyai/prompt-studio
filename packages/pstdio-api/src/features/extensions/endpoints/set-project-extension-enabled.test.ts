@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
@@ -172,13 +172,17 @@ describe("PATCH /v1/projects/:projectId/extensions/:instanceId", () => {
     expect(row?.enabled).toBe(false);
   });
 
-  test("removes extension skills from configured agent repos when disabled", async () => {
+  test("removes extension skills without deleting repository-local skills when disabled", async () => {
     const project = await createProject("Toggle Skill Disable Project");
     await enableProvisionHarness(project.id);
     const { instanceId } = await seedEnabledSkillInstance(project.id);
     const repoPath = await registerClaudeRepo(project.id, "toggle-skill-disable-repo");
     const skillPath = join(repoPath, ".claude", "skills", "lab", "SKILL.md");
+    const localSkillDir = join(repoPath, ".claude", "skills", "local");
+    const localSkillPath = join(localSkillDir, "SKILL.md");
     expect(existsSync(skillPath)).toBe(true);
+    mkdirSync(localSkillDir, { recursive: true });
+    writeFileSync(localSkillPath, "Local skill");
 
     const res = await app.request(`/v1/projects/${project.id}/extensions/${instanceId}`, {
       method: "PATCH",
@@ -189,6 +193,7 @@ describe("PATCH /v1/projects/:projectId/extensions/:instanceId", () => {
     expect(res.status).toBe(200);
     // Disabling the skill extension drops its skill from the catalog; the next provision prunes it.
     expect(existsSync(skillPath)).toBe(false);
+    expect(readFileSync(localSkillPath, "utf8")).toBe("Local skill");
   });
 
   test("flips enabled back to true", async () => {

@@ -94,9 +94,9 @@ export interface WorkspaceSyncFile {
 
 export interface WorkspaceFilesMount extends ArtifactMount {
   /**
-   * Reconcile `dir` to exactly `files`: write each file atomically (temp + rename) and prune anything
-   * else under `dir`. Idempotent — safe to re-run on every catalog change; a live agent's dir-watcher
-   * only ever sees complete files.
+   * Write each file atomically (temp + rename) and prune files managed by an earlier sync that are no
+   * longer present. Other files under `dir` are preserved. Idempotent and safe to re-run on every
+   * catalog change; a live agent's dir-watcher only ever sees complete files.
    */
   syncDir(dir: string, files: WorkspaceSyncFile[]): Promise<void>;
 }

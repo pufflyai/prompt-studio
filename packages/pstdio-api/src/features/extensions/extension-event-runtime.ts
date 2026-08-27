@@ -47,6 +47,7 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
         projectId: input.projectId,
         repo: input.repo,
         workspaceDir: input.workspaceDir,
+        workspaceId: input.workspaceId,
         settings: snapshot.runtime.settings,
       }),
   });
@@ -94,6 +95,7 @@ export const runExtensionCommand = async <TParams extends Struct, TResult>(
         projectId: input.projectId,
         repo: input.repo,
         workspaceDir: input.workspaceDir,
+        workspaceId: input.workspaceId,
         settings: snapshot.runtime.settings,
       }),
   });
@@ -126,6 +128,7 @@ export const runExtensionHostCommand = async <TParams extends Struct, TResult>(
         projectId: input.projectId,
         repo: input.repo,
         workspaceDir: input.workspaceDir,
+        workspaceId: input.workspaceId,
         settings: snapshot.runtime.settings,
       }),
   });

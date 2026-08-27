@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { join, resolve } from "node:path";
 import type {
   ExtensionProjectContext,
   RepoContext,
@@ -9,6 +11,7 @@ import {
   type RuntimeArtifactMount,
   type RuntimeExtensionSettingRecord,
 } from "pstdio-extensions";
+import { resolvePstdioHome } from "pstdio-paths";
 import { runWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
 import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
 import type { ExtensionsRouteDeps } from "../deps";
@@ -24,6 +27,13 @@ import { createSettingsApi } from "./settings";
 import { createStorageApi } from "./storage";
 import { type CommandEnvironmentRuntimeDeps, type EnabledSource, findEnabledSource } from "./types";
 import { createWorkspacesApi } from "./workspaces";
+
+const workspaceSyncStateRoot = (input: { projectId: string; workspaceDir: string; workspaceId?: string }) => {
+  const key = createHash("sha256")
+    .update(JSON.stringify([input.projectId, input.workspaceId ?? null, resolve(input.workspaceDir)]))
+    .digest("hex");
+  return join(resolvePstdioHome({ env: process.env }), "state", "workspace-files", key);
+};
 
 export const createCommandEnvironment = (
   deps: ExtensionsRouteDeps,
@@ -71,7 +81,11 @@ export const createCommandEnvironment = (
     repoFiles: input.repo
       ? createRepoFilesApi(() => resolveRegisteredRepoPath(deps, input.projectId, input.repo as RepoContext))
       : undefined,
-    workspaceFiles: input.workspaceDir ? createWorkspaceFilesMount(input.workspaceDir) : undefined,
+    workspaceFiles: input.workspaceDir
+      ? createWorkspaceFilesMount(input.workspaceDir, {
+          syncStateRoot: workspaceSyncStateRoot({ ...input, workspaceDir: input.workspaceDir }),
+        })
+      : undefined,
     files: createFilesApi(deps, input.projectId),
     skills: { list: () => deps.skillService.list(input.projectId) },
     templates: { get: (name) => deps.templateService.getWithContent(input.projectId, name) },
