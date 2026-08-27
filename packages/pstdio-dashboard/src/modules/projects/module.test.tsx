@@ -109,7 +109,9 @@ describe("createProjectsModule", () => {
     expect(workbench.history.store.getState().entries).toEqual([]);
     expect(workbench.history.store.getState().cursor).toBe(-1);
   });
+});
 
+describe("createProjectsModule selection restoration", () => {
   test("clears a persisted project that is missing after initial sync", () => {
     const workbench = createWorkbenchCore();
     let persistedProjectId: string | undefined = "deleted-project";
@@ -133,6 +135,34 @@ describe("createProjectsModule", () => {
       ]);
       markInitialCollectionsSyncComplete();
 
+      expect(getDashboardSelectedProjectId(workbench)).toBeUndefined();
+      expect(persistedProjectId).toBeUndefined();
+    } finally {
+      projects.dispose();
+      getWriter("projects")?.truncateAndWrite([]);
+    }
+  });
+
+  test("does not replace a missing persisted project with the only remaining project", () => {
+    const workbench = createWorkbenchCore();
+    let persistedProjectId: string | undefined = "deleted-project";
+    getWriter("projects")?.truncateAndWrite([
+      { id: "current-project", name: "Current project", created_at: "2026-01-01T00:00:00.000Z" },
+    ]);
+    markInitialCollectionsSyncComplete();
+
+    const projects = workbench.registerModule(
+      createProjectsModule({
+        projectSelectionPersistence: {
+          getSelectedProjectId: () => persistedProjectId,
+          setSelectedProjectId: (projectId) => {
+            persistedProjectId = projectId;
+          },
+        },
+      }),
+    );
+
+    try {
       expect(getDashboardSelectedProjectId(workbench)).toBeUndefined();
       expect(persistedProjectId).toBeUndefined();
     } finally {
@@ -215,7 +245,7 @@ describe("createProjectsModule", () => {
     });
     seed.layout.openPanel("terminal");
 
-    let selectedProjectId: string | undefined = "project-1";
+    let selectedProjectId: string | undefined;
     const workbench = createWorkbenchCore({ persistence });
     workbench.layout.registerPanel({
       id: "start",

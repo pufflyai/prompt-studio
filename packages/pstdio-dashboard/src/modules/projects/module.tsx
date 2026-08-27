@@ -205,6 +205,7 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
     id: "dashboard.projects",
     activate(ctx) {
       const selectedProjectContext = { context: ctx.context.createScope("dashboard.selectedProject") };
+      const startedWithPersistedProject = Boolean(input.projectSelectionPersistence?.getSelectedProjectId());
 
       registerProjectWidgets(ctx);
       registerProjectSelectionMode(ctx);
@@ -216,11 +217,9 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
         selectedProjectContext,
         input.projectSelectionPersistence,
       );
-      const singleProjectSelection = registerSingleProjectSelectionSync(
-        ctx,
-        selectedProjectContext,
-        input.projectSelectionPersistence,
-      );
+      const singleProjectSelection = startedWithPersistedProject
+        ? undefined
+        : registerSingleProjectSelectionSync(ctx, selectedProjectContext, input.projectSelectionPersistence);
       const selectedProjectDeletionSync = registerSelectedProjectDeletionSync(
         ctx,
         selectedProjectContext,
@@ -230,7 +229,7 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
       return [
         ...(persistedProjectSelection ? [persistedProjectSelection] : []),
         projectWorkbenchScope,
-        singleProjectSelection,
+        ...(singleProjectSelection ? [singleProjectSelection] : []),
         selectedProjectDeletionSync,
       ];
     },
