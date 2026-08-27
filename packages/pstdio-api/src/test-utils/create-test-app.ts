@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { createApp } from "../app";
 import type { ExtensionRelease } from "../app-config";
 import type { AppHost, AppLifecycle } from "../app-contracts";
+import type { ConnectionSecretStore } from "../features/extensions/connection-secret-store";
 import { installExtensionSource } from "../features/extensions/install-extension-source";
 import {
   createHarnessRegistryService,
@@ -14,6 +15,7 @@ export interface TestAppOptions {
   databasePath?: string;
   storageRoot?: string;
   eventBufferSize?: number;
+  automationRunsPerMinute?: number;
   buildWebviews?: boolean;
   release?: ExtensionRelease | null;
   terminalOrigins?: string[];
@@ -21,6 +23,7 @@ export interface TestAppOptions {
   lifecycle?: AppLifecycle;
   harnessRegistry?: HarnessRegistryService;
   installExtensionSource?: typeof installExtensionSource;
+  connectionSecretStore?: ConnectionSecretStore;
 }
 
 export const createTestApp = async (options: TestAppOptions = {}) => {
@@ -33,6 +36,7 @@ export const createTestApp = async (options: TestAppOptions = {}) => {
           database: { path: options.databasePath ?? ":memory:" },
           storage: { root: options.storageRoot ?? join(tempRoot, "storage") },
           sync: { eventBufferSize: options.eventBufferSize ?? 1000 },
+          automation: { runsPerMinute: options.automationRunsPerMinute ?? 60 },
           extensions: {
             buildWebviews: options.buildWebviews ?? false,
             release: options.release ?? null,
@@ -45,6 +49,7 @@ export const createTestApp = async (options: TestAppOptions = {}) => {
       {
         createHarnessRegistry: harnessRegistry ? () => harnessRegistry : createHarnessRegistryService,
         installExtensionSource: options.installExtensionSource ?? installExtensionSource,
+        connectionSecretStore: options.connectionSecretStore,
       },
     );
     const closeApp = handle.close;

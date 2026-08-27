@@ -1,4 +1,3 @@
-import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { websocket } from "hono/bun";
 import { sessionEvents } from "pstdio-api-contracts/extension-kernel";
@@ -7,16 +6,21 @@ import type { AppDependencies, CreateAppInput } from "./app-contracts";
 import { createAppDatabaseServices, openAppDatabase } from "./app-database";
 import { productionAppDependencies, wireAppExtensionServices } from "./app-extension-services";
 import { registerApi } from "./app-routing";
+import {
+  createAppTerminalSupervisor,
+  createRuntimeRouteDeps,
+  sessionStatusEventFor,
+  startAppExtensionScheduler,
+  startAppLifecycle,
+  startNotificationWakeTimer,
+} from "./app-runtime";
+import { createAutomationService } from "./features/automation/automation-service";
 import type { RouteDeps } from "./features/deps";
-import { createExtensionScheduler } from "./features/extensions/extension-scheduler";
 import { createExtensionSettingsService } from "./features/extensions/extension-settings-service";
-import { createTerminalSupervisor } from "./features/extensions/extension-terminal-runtime";
 import { createExtensionWebviewAccess } from "./features/extensions/extension-webview-access";
 import { fireSessionLifecycleEventAsync, type SessionHookDeps } from "./features/hooks/session-hooks";
-import type { RuntimeHost } from "./features/runtime/routes";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
-import { apiLogger } from "./lib/logger";
 import { createExtensionFileService } from "./services/extension-file-service";
 import { createFileService } from "./services/file-service";
 import { createNotificationService } from "./services/notification-service";
@@ -29,64 +33,14 @@ import { createSyncService } from "./services/sync-service";
 import { createTemplateService } from "./services/template-service";
 import { createWorkspaceService } from "./services/workspace-service";
 import { createWorkspaceSessionService } from "./services/workspace-session-service";
-import { runStartupTasks } from "./startup";
 import type { AppBindings } from "./types";
 
-const EXTENSION_SCHEDULE_WATERMARK_FILE = "extension-schedule-watermarks.json";
+const AUTOMATION_RUN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
 export const apiWebSocket = websocket;
 export type { AppConfig, ExtensionRelease } from "./app-config";
 export { resolveAppConfig } from "./app-config";
 export type { AppDependencies, AppHost, AppLifecycle, CreateAppInput } from "./app-contracts";
-
-const sessionStatusEventFor = (status: string) => {
-  if (status === "awaiting_input") return sessionEvents.awaitingInput;
-  if (status === "completed") return sessionEvents.succeeded;
-  if (status === "failed") return sessionEvents.failed;
-  return null;
-};
-
-const createAppTerminalSupervisor = () =>
-  createTerminalSupervisor({
-    logger: {
-      info: (message, metadata) =>
-        apiLogger.info({ event: "extension.terminal.log", metadata: metadata ?? {} }, message),
-      warn: (message, metadata) =>
-        apiLogger.warn({ event: "extension.terminal.log", metadata: metadata ?? {} }, message),
-      error: (message, metadata) =>
-        apiLogger.error({ event: "extension.terminal.log", metadata: metadata ?? {} }, message),
-    },
-  });
-
-const createRuntimeRouteDeps = (input: {
-  extensionScheduler: ReturnType<typeof createExtensionScheduler>;
-  host: RuntimeHost | undefined;
-  sessionService: ReturnType<typeof createSessionService>;
-  terminalSupervisor: ReturnType<typeof createTerminalSupervisor>;
-}) => {
-  if (!input.host) return undefined;
-
-  const activeSessions = async () => {
-    const rows = await Promise.all(
-      (["queued", "in_progress", "awaiting_input"] as const).map((status) => input.sessionService.listByStatus(status)),
-    );
-    return rows.flat().map((session) => ({ id: session.id, label: session.title }));
-  };
-
-  return {
-    host: input.host,
-    activity: async () => ({
-      sessions: await activeSessions(),
-      terminals: input.terminalSupervisor.activity(),
-      jobs: input.extensionScheduler.activity(),
-    }),
-    cancelActivity: async () => {
-      const sessions = await activeSessions();
-      await Promise.all(sessions.map((session) => input.sessionService.cancel(session.id)));
-      await Promise.all([input.terminalSupervisor.dispose(), input.extensionScheduler.dispose()]);
-    },
-  };
-};
 
 const createCoreDomainServices = (input: {
   db: Parameters<typeof createAppDatabaseServices>[0];
@@ -125,22 +79,25 @@ const createCoreDomainServices = (input: {
   };
 };
 
-const startNotificationWakeTimer = (notificationService: ReturnType<typeof createNotificationService>) => {
-  const timer = setInterval(() => {
-    notificationService
-      .wakeDueSnoozed()
-      .catch((err) =>
-        apiLogger.error({ err, event: "notifications.snooze_wakeup.error" }, "Failed to wake notifications"),
-      );
-  }, 30_000);
-  timer.unref?.();
-  return timer;
+const createAppAutomationService = async (input: {
+  automationDBService: ReturnType<typeof createAppDatabaseServices>["automationDBService"];
+  getCommandDeps: () => RouteDeps;
+  maxRunsPerMinute: number;
+}) => {
+  const service = createAutomationService(input);
+  await input.automationDBService.recoverInterruptedRuns();
+  await input.automationDBService.pruneTerminalRuns(new Date(Date.now() - AUTOMATION_RUN_RETENTION_MS).toISOString());
+  return service;
 };
+
+const appHostSecurity = (host: CreateAppInput["host"]) =>
+  host.kind === "runtime"
+    ? { runtimeHost: host.runtime, securityToken: host.runtime.token }
+    : { runtimeHost: undefined, securityToken: host.token };
 
 export const createApp = async (input: CreateAppInput, dependencies: AppDependencies = productionAppDependencies) => {
   const { db, close: closeDb } = await openAppDatabase(input.config.database.path, input.lifecycle);
-  const runtimeHost = input.host.kind === "runtime" ? input.host.runtime : undefined;
-  const securityToken = input.host.kind === "runtime" ? input.host.runtime.token : input.host.token;
+  const { runtimeHost, securityToken } = appHostSecurity(input.host);
   const app = new OpenAPIHono<AppBindings>();
 
   const storageRoot = input.config.storage.root;
@@ -149,7 +106,9 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
   const dbs = createAppDatabaseServices(db);
   const {
     activityEventsService,
+    automationDBService,
     extensionAutomationPreferencesService,
+    extensionConnectionsDBService,
     extensionInstancesService,
     extensionSettingsDBService,
     extensionSkillPreferencesDBService,
@@ -178,6 +137,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     workspaceService,
   } = createCoreDomainServices({ db, dbs, eventBus, storageRoot });
   const {
+    extensionConnectionService,
     extensionRuntime,
     extensionRuntimeCatalog,
     extensionService,
@@ -190,9 +150,11 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     dependencies,
     eventBus,
     extensionInstancesService,
+    extensionConnectionsDBService,
     installedExtensionSourcesService,
     projectService,
     repoService,
+    storageRoot,
   });
   const templateService = createTemplateService({
     extensionRuntimeCatalog,
@@ -208,10 +170,18 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     skillsDBService,
   });
 
+  let deps!: RouteDeps;
+  const automationService = await createAppAutomationService({
+    automationDBService,
+    getCommandDeps: () => deps,
+    maxRunsPerMinute: input.config.automation.runsPerMinute,
+  });
+
   const sessionHookDeps = (): SessionHookDeps => ({
     activityEventsService,
     eventBus,
     extensionAutomationPreferencesService,
+    extensionConnectionService,
     extensionFileService,
     extensionInstancesService,
     extensionRuntimeCatalog,
@@ -260,11 +230,12 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
 
   const terminalSupervisor = createAppTerminalSupervisor();
 
-  const deps: RouteDeps = {
+  deps = {
     extensionWebviewAccess: createExtensionWebviewAccess(),
     readiness: { database: true, storage: true },
     closeDb,
     eventBus,
+    automationService,
     harnessRegistry,
     projectService,
     repoService,
@@ -281,6 +252,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     installedExtensionSourcesService,
     extensionInstancesService,
     extensionAutomationPreferencesService,
+    extensionConnectionService,
     extensionFileService,
     extensionRuntimeCatalog,
     extensionSettingsDBService,
@@ -293,11 +265,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     terminal: terminalSupervisor.api,
   };
 
-  const extensionScheduler = createExtensionScheduler({
-    deps,
-    listProjectIds: async () => (await projectService.list()).map((project) => project.id),
-    watermarkPath: join(storageRoot, EXTENSION_SCHEDULE_WATERMARK_FILE),
-  });
+  const extensionScheduler = startAppExtensionScheduler(deps, projectService, storageRoot);
   const notificationWakeTimer = startNotificationWakeTimer(notificationService);
 
   const runtimeDeps = createRuntimeRouteDeps({
@@ -308,9 +276,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
   });
   if (runtimeDeps) deps.runtime = runtimeDeps;
 
-  drainSessionQueue = async (input) => {
-    await createSessionScheduler(deps).drainQueue(input);
-  };
+  drainSessionQueue = (input) => createSessionScheduler(deps).drainQueue(input);
 
   registerApi(app, deps, {
     security: securityToken
@@ -322,32 +288,15 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     terminalOrigins: input.config.transport.terminalOrigins,
   });
 
-  const startupAbort = new AbortController();
-  const startupBackgroundTasks: Promise<void>[] = [];
-  const startupDone = runStartupTasks(deps, startupAbort.signal, {
-    onBackgroundTask: (task) => {
-      startupBackgroundTasks.push(
-        task.catch((err) => apiLogger.error({ err, event: "api.startup.background.error" }, "Startup task failed")),
-      );
-    },
-    recoverQueuedSessions: () => createSessionScheduler(deps).recoverQueuedSessions(),
-  }).catch((err) => apiLogger.error({ err, event: "api.startup.error" }, "Startup task failed"));
-
-  let closePromise: Promise<void> | null = null;
-  const close = async () => {
-    closePromise ??= (async () => {
-      startupAbort.abort();
-      await startupDone;
-      await Promise.all(startupBackgroundTasks);
-      clearInterval(notificationWakeTimer);
-      unsubscribeExtensionEvents();
-      extensionRuntime.dispose();
-      await extensionScheduler.dispose();
-      await terminalSupervisor.dispose();
-      await closeDb();
-    })();
-
-    await closePromise;
-  };
+  const close = await startAppLifecycle({
+    deps,
+    notificationWakeTimer,
+    unsubscribeExtensionEvents,
+    extensionRuntime,
+    extensionScheduler,
+    automationService,
+    terminalSupervisor,
+    closeDb,
+  });
   return { app, close, deps, eventBus };
 };

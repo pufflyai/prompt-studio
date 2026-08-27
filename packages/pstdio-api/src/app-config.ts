@@ -1,6 +1,7 @@
 import { expandHomePath, resolvePstdioDbPath, resolvePstdioStoragePath } from "pstdio-paths";
 
 const DEFAULT_EVENT_BUFFER_SIZE = 1000;
+const DEFAULT_AUTOMATION_RUNS_PER_MINUTE = 60;
 
 export type ExtensionRelease = { source: "git"; ref: string } | { source: "workspace"; ref: string; root: string };
 
@@ -8,6 +9,7 @@ export interface AppConfig {
   database: { path: string };
   storage: { root: string };
   sync: { eventBufferSize: number };
+  automation: { runsPerMinute: number };
   extensions: {
     buildWebviews: boolean;
     release: ExtensionRelease | null;
@@ -24,6 +26,13 @@ const resolveEventBufferSize = (value: string | undefined) => {
   if (!value) return DEFAULT_EVENT_BUFFER_SIZE;
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 1) return DEFAULT_EVENT_BUFFER_SIZE;
+  return Math.floor(parsed);
+};
+
+const resolveAutomationRunsPerMinute = (value: string | undefined) => {
+  if (!value) return DEFAULT_AUTOMATION_RUNS_PER_MINUTE;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) return DEFAULT_AUTOMATION_RUNS_PER_MINUTE;
   return Math.floor(parsed);
 };
 
@@ -52,6 +61,9 @@ export const resolveAppConfig = (input: ResolveAppConfigInput): AppConfig => {
       root: resolvePath(input.env.PSTDIO_STORAGE_PATH, resolvePstdioStoragePath({ env: input.env }), home),
     },
     sync: { eventBufferSize: resolveEventBufferSize(input.env.PSTDIO_EVENT_BUS_BUFFER_SIZE) },
+    automation: {
+      runsPerMinute: resolveAutomationRunsPerMinute(input.env.PSTDIO_AUTOMATION_RUNS_PER_MINUTE),
+    },
     extensions: {
       buildWebviews: input.env.PSTDIO_EXTENSION_WEBVIEW_BUILDS !== "0",
       release: resolveRelease(input),

@@ -23,6 +23,8 @@ import type { createSyncService } from "../services/sync-service";
 import type { createTemplateService } from "../services/template-service";
 import type { createWorkspaceService } from "../services/workspace-service";
 import type { createWorkspaceSessionService } from "../services/workspace-session-service";
+import type { createAutomationService } from "./automation/automation-service";
+import type { createExtensionConnectionService } from "./extensions/extension-connection-service";
 import type { createExtensionSettingsService } from "./extensions/extension-settings-service";
 import type { ExtensionWebviewAccess } from "./extensions/extension-webview-access";
 import type { ProjectExtensionRuntimeCatalog } from "./extensions/project-extension-runtime-catalog";
@@ -44,6 +46,7 @@ export interface RouteDeps {
   readiness: ReadinessChecks;
   closeDb: () => Promise<void>;
   eventBus: EventBus;
+  automationService: ReturnType<typeof createAutomationService>;
   harnessRegistry: HarnessRegistryService;
   projectService: ReturnType<typeof createProjectService>;
   repoService: ReturnType<typeof createRepoService>;
@@ -61,6 +64,7 @@ export interface RouteDeps {
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
   extensionAutomationPreferencesService: ReturnType<typeof createExtensionAutomationPreferencesDBService>;
   extensionFileService: ReturnType<typeof createExtensionFileService>;
+  extensionConnectionService: ReturnType<typeof createExtensionConnectionService>;
   extensionSettingsDBService: ReturnType<typeof createExtensionSettingsDBService>;
   extensionService: ReturnType<typeof createExtensionService>;
   extensionUpgradeService: ReturnType<typeof createExtensionUpgradeService>;

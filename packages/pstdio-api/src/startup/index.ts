@@ -14,6 +14,8 @@ import { apiLogger } from "../lib/logger";
 
 interface StartupTaskOptions {
   onBackgroundTask?: (task: Promise<void>) => void;
+  prepareDefaultExtensions?: (signal?: AbortSignal) => Promise<void>;
+  recoverQueuedAutomation?: () => Promise<void>;
   recoverQueuedSessions?: () => Promise<void>;
 }
 
@@ -27,13 +29,11 @@ const registerBackgroundTask = (task: Promise<void>, options?: StartupTaskOption
   );
 };
 
-const scheduleWorkspaceRecovery = (deps: RouteDeps, projectIds: string[], signal?: AbortSignal) => {
+const reconcileProjectWorkspaces = (deps: RouteDeps, projectIds: string[], signal?: AbortSignal) => {
   return Promise.allSettled(
     projectIds.map(async (projectId) => {
       if (signal?.aborted) return;
-      await reconcileProviderWorkspaces(deps, projectId, { signal });
-      if (signal?.aborted) return;
-      await provisionProjectWorkspaces(deps, projectId);
+      await reconcileProviderWorkspaces(deps, projectId, { signal, retryUntilReadyMs: 5_000 });
     }),
   )
     .then((results) => {
@@ -48,13 +48,22 @@ const scheduleWorkspaceRecovery = (deps: RouteDeps, projectIds: string[], signal
     .then(() => undefined);
 };
 
-const ensureDefaultExtensionsInstalled = async (deps: RouteDeps) => {
+const provisionRecoveredWorkspaces = (deps: RouteDeps, projectIds: string[], signal?: AbortSignal) =>
+  Promise.allSettled(
+    projectIds.map(async (projectId) => {
+      if (signal?.aborted) return;
+      await provisionProjectWorkspaces(deps, projectId);
+    }),
+  ).then(() => undefined);
+
+const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortSignal) => {
   if ((await deps.projectService.list()).length > 0) return;
 
   try {
     const installed = await installDefaultExtensions({
       forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
       onInstallFailure: ({ error, installName, source }) => {
+        if (signal?.aborted) return;
         apiLogger.warn(
           {
             err: error,
@@ -66,9 +75,12 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps) => {
         );
       },
       releaseRef: deps.extensionUpgradeService.releaseRef,
+      signal,
     });
+    signal?.throwIfAborted();
     await registerInstalledExtensionSources(deps.extensionService, installed);
   } catch (err) {
+    if (signal?.aborted) return;
     apiLogger.warn(
       { err, event: "startup.default_extension_install.error" },
       "Default extension install failed during startup",
@@ -77,9 +89,14 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps) => {
 };
 
 export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, options?: StartupTaskOptions) => {
-  await ensureDefaultExtensionsInstalled(deps);
+  const defaultExtensionPreparation = options?.prepareDefaultExtensions
+    ? options.prepareDefaultExtensions(signal)
+    : ensureDefaultExtensionsInstalled(deps, signal);
+  const projectIds = (await deps.projectService.list()).map((project) => project.id);
+  await reconcileProjectWorkspaces(deps, projectIds, signal);
   await options?.recoverQueuedSessions?.();
   registerBackgroundTask(resolveOrphanedSessions(deps, signal), options);
+  await options?.recoverQueuedAutomation?.();
   await ensureProjectReposScaffolded(deps);
   await syncInstalledExtensionsForProjects({
     extensionService: deps.extensionService,
@@ -96,6 +113,9 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
       repoService: deps.repoService,
     });
   }
-  const projectIds = (await deps.projectService.list()).map((project) => project.id);
-  registerBackgroundTask(scheduleWorkspaceRecovery(deps, projectIds, signal), options);
+  const backgroundTasks = Promise.all([
+    defaultExtensionPreparation,
+    provisionRecoveredWorkspaces(deps, projectIds, signal),
+  ]).then(() => undefined);
+  registerBackgroundTask(backgroundTasks, options);
 };

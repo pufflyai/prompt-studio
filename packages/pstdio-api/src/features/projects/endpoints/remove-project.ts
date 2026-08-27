@@ -40,6 +40,7 @@ export const removeProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
     await cleanupProjectArtifacts(deps, id, {
       removeProjectStorage: deps.fileService.removeProjectStorage,
     });
+    await deps.extensionConnectionService.removeProject(id);
     await deps.syncService.emitCascadeDeletes("projects", id);
 
     await deps.projectService.hardDelete(id);

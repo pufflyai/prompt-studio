@@ -15,6 +15,7 @@ import { resolvePstdioHome } from "pstdio-paths";
 import { runWorkspaceProvisioning } from "../../workspaces/provision-coordinator";
 import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
 import type { ExtensionsRouteDeps } from "../deps";
+import { createExtensionConnectionsApi } from "../extension-connection-service";
 import { createProcessApi, findFreePort } from "../extension-process-api";
 import { createRepoFilesApi } from "../repo-files-api";
 import { createActivityApi } from "./activity";
@@ -72,6 +73,11 @@ export const createCommandEnvironment = (
             hostTerminal.openSession({ ...request, cwd: request.cwd ?? input.workspaceDir }),
         }
       : hostTerminal;
+  const scopedHostApis = (signal?: AbortSignal) => ({
+    sessions: createSessionsApi(deps, { projectId: input.projectId, project: input.project, signal }),
+    workspaces: createWorkspacesApi(deps, { projectId: input.projectId, signal }, runtimeDeps),
+  });
+  const hostApis = scopedHostApis();
 
   return {
     project: input.project,
@@ -89,14 +95,19 @@ export const createCommandEnvironment = (
     files: createFilesApi(deps, input.projectId),
     skills: { list: () => deps.skillService.list(input.projectId) },
     templates: { get: (name) => deps.templateService.getWithContent(input.projectId, name) },
-    sessions: createSessionsApi(deps, { projectId: input.projectId, project: input.project }),
-    workspaces: createWorkspacesApi(deps, { projectId: input.projectId }, runtimeDeps),
+    sessions: hostApis.sessions,
+    workspaces: hostApis.workspaces,
     repos: createReposApi(deps, input.projectId),
     activity: createActivityApi(deps, { projectId: input.projectId, enabledSource }),
     notify: createNotifyApi(deps, { projectId: input.projectId, enabledSource }),
     process: createProcessApi(),
     net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
+    connections: createExtensionConnectionsApi(deps.extensionConnectionService, {
+      projectId: input.projectId,
+      extensionId: input.extensionId,
+    }),
     terminal,
     settings,
+    withSignal: (signal) => scopedHostApis(signal),
   };
 };

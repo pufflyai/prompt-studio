@@ -1,4 +1,5 @@
 import {
+  type createExtensionConnectionsDBService,
   type createExtensionInstancesDBService,
   createExtensionUserDataDBService,
   type createInstalledExtensionSourcesDBService,
@@ -6,6 +7,11 @@ import {
 } from "pstdio-db";
 import type { AppConfig } from "./app-config";
 import type { AppDependencies } from "./app-contracts";
+import { createFileConnectionSecretStore } from "./features/extensions/connection-secret-store";
+import {
+  createExtensionConnectionService,
+  createExtensionConnectionsApi,
+} from "./features/extensions/extension-connection-service";
 import { subscribeExtensionEnablementInvalidation } from "./features/extensions/extension-enablement-invalidation";
 import type { LoadedExtension } from "./features/extensions/extension-runtime";
 import { installExtensionSource } from "./features/extensions/install-extension-source";
@@ -26,9 +32,11 @@ interface WireExtensionServicesInput {
   dependencies: AppDependencies;
   eventBus: EventBus;
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
+  extensionConnectionsDBService: ReturnType<typeof createExtensionConnectionsDBService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   projectService: ReturnType<typeof createProjectService>;
   repoService: ReturnType<typeof createRepoService>;
+  storageRoot: string;
 }
 
 export const productionAppDependencies: AppDependencies = {
@@ -61,9 +69,37 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
     projectService: input.projectService,
     repoService: input.repoService,
   });
+  const extensionConnectionService = createExtensionConnectionService({
+    connectionsDBService: input.extensionConnectionsDBService,
+    secretStore: input.dependencies.connectionSecretStore ?? createFileConnectionSecretStore(input.storageRoot),
+    getContribution: async ({ projectId, extensionId, connectionId }) => {
+      const snapshot = await extensionRuntimeCatalog.get(projectId);
+      return snapshot.runtime.connections.find(
+        (record) => record.extensionId === extensionId && record.localId === connectionId,
+      )?.contribution;
+    },
+    onRequestComplete: (audit) =>
+      apiLogger.info(
+        {
+          connection_id: audit.connectionId,
+          duration_ms: Math.round(audit.durationMs),
+          error: audit.error,
+          event: "extension.connection.request.completed",
+          extension_id: audit.extensionId,
+          method: audit.method,
+          path: audit.path,
+          project_id: audit.projectId,
+          response_bytes: audit.responseBytes,
+          status: audit.status,
+          success: audit.ok,
+        },
+        "Extension connection request completed",
+      ),
+  });
   const harnessRegistry = input.dependencies.createHarnessRegistry({
     installedExtensionSourcesService: input.installedExtensionSourcesService,
     extensionRuntimeCatalog,
+    createConnectionsApi: (scope) => createExtensionConnectionsApi(extensionConnectionService, scope),
   });
   const extensionRuntime = await createInstalledExtensionRuntime({
     extensionService,
@@ -93,6 +129,7 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
   return {
     extensionRuntime,
     extensionRuntimeCatalog,
+    extensionConnectionService,
     extensionService,
     extensionUpgradeService,
     harnessRegistry,
