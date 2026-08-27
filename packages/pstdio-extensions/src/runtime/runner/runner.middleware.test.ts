@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { makeRunner } from "./test-helpers.test";
+import { createCommandRunner } from "./runner";
+import { buildRuntime, makeRunner, makeStorage, stubEnvironment } from "./test-helpers.test";
 
 describe("createCommandRunner: middleware", () => {
   test("middleware reject short-circuits and emits command.rejected", async () => {
@@ -183,5 +184,39 @@ describe("createCommandRunner: middleware", () => {
     expect(middlewareSignal).toBe(controller.signal);
     expect(hostRan).toBe(false);
     expect(outcome.status).toBe("error");
+  });
+
+  test("signaled host commands fail before middleware when host helpers cannot be scoped", async () => {
+    let middlewareRan = false;
+    let hostRan = false;
+    const runtime = buildRuntime({
+      middlewares: [
+        {
+          id: "unsafeHostSignal",
+          ref: { kind: "middleware", id: "unsafeHostSignal" },
+          command: { extensionId: "pstdio", kind: "command", id: "kernel.workspace.rename" },
+          async run(ctx) {
+            middlewareRan = true;
+            return ctx.commands.continue();
+          },
+        },
+      ],
+    });
+    const { api: storage } = makeStorage();
+    const { withSignal: _withSignal, ...unscopedEnvironment } = stubEnvironment(storage);
+    const runner = createCommandRunner(runtime, { buildEnvironment: () => unscopedEnvironment });
+
+    const outcome = await runner.executeHostCommand({
+      commandId: "kernel.workspace.rename",
+      projectId: "p1",
+      signal: new AbortController().signal,
+      run: async () => {
+        hostRan = true;
+      },
+    });
+
+    expect(outcome.status).toBe("error");
+    expect(middlewareRan).toBe(false);
+    expect(hostRan).toBe(false);
   });
 });

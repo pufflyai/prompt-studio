@@ -192,6 +192,9 @@ export const createContextFactory = (
     const commandSignal = signal ?? new AbortController().signal;
     const connections = signal ? connectionsWithSignal(base.connections, signal) : base.connections;
     const scopedEnvironment = signal ? env.withSignal?.(signal) : undefined;
+    if (signal && !scopedEnvironment) {
+      throw new Error("Command environment cannot scope host helpers to cancellation.");
+    }
     return {
       ...base,
       commands: buildCommandsApi(createExecute, {

@@ -31,61 +31,65 @@ export const makeStorage = () => {
 
 const createSessionResource = () => ({ type: "session" as const, id: "", title: "", status: "in_progress" as const });
 
-export const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): CommandRunnerEnvironment => ({
-  project: { id: "p1", name: "Prompt Studio", shorthand: "PS" },
-  storage,
-  artifacts: { mount: () => ({}) as never },
-  files: {
-    readText: async () => "",
-    writeText: async () => {},
-    createText: async () => ({ id: "" }),
-    delete: async () => {},
-  },
-  templates: { get: async () => null },
-  sessions: {
-    get: async () => null,
-    list: async () => [],
-    listByWorkspace: async () => [],
-    create: async () => createSessionResource(),
-    followup: async () => {},
-    addAnchors: async () => {},
-  },
-  workspaces: {
-    list: async () => [],
-    get: async () => null,
-    getByShorthand: async () => null,
-    create: async () => ({ id: "" }),
-    resolve: async () => ({}) as never,
-    cancel: async () => ({ id: "" }),
-    archive: async () => ({ id: "" }),
-    delete: async () => {},
-  },
-  repos: {
-    list: async () => [],
-    get: async () => ({}) as never,
-    getDefault: async () => undefined,
-    resolvePath: async (_repoId, relativePath) => relativePath,
-  },
-  activity: { record: async () => ({ id: "" }) },
-  notify: {
-    toast: async () => {},
-    action: async () => ({}) as never,
-    resolve: async () => [],
-    dismiss: async () => [],
-  },
-  process: {
-    run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
-    runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
-    spawnDetached: async () => ({}),
-  },
-  net: { findFreePort: async () => 0 },
-  settings: {
-    all: async () => ({}),
-    get: async () => undefined,
-    set: async () => {},
-    delete: async () => {},
-  },
-});
+export const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): CommandRunnerEnvironment => {
+  const environment: CommandRunnerEnvironment = {
+    project: { id: "p1", name: "Prompt Studio", shorthand: "PS" },
+    storage,
+    artifacts: { mount: () => ({}) as never },
+    files: {
+      readText: async () => "",
+      writeText: async () => {},
+      createText: async () => ({ id: "" }),
+      delete: async () => {},
+    },
+    templates: { get: async () => null },
+    sessions: {
+      get: async () => null,
+      list: async () => [],
+      listByWorkspace: async () => [],
+      create: async () => createSessionResource(),
+      followup: async () => {},
+      addAnchors: async () => {},
+    },
+    workspaces: {
+      list: async () => [],
+      get: async () => null,
+      getByShorthand: async () => null,
+      create: async () => ({ id: "" }),
+      resolve: async () => ({}) as never,
+      cancel: async () => ({ id: "" }),
+      archive: async () => ({ id: "" }),
+      delete: async () => {},
+    },
+    repos: {
+      list: async () => [],
+      get: async () => ({}) as never,
+      getDefault: async () => undefined,
+      resolvePath: async (_repoId, relativePath) => relativePath,
+    },
+    activity: { record: async () => ({ id: "" }) },
+    notify: {
+      toast: async () => {},
+      action: async () => ({}) as never,
+      resolve: async () => [],
+      dismiss: async () => [],
+    },
+    process: {
+      run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
+      runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
+      spawnDetached: async () => ({}),
+    },
+    net: { findFreePort: async () => 0 },
+    settings: {
+      all: async () => ({}),
+      get: async () => undefined,
+      set: async () => {},
+      delete: async () => {},
+    },
+    withSignal: () => ({ sessions: environment.sessions, workspaces: environment.workspaces }),
+  };
+  return environment;
+};
 
 export const buildRuntime = (definition: LoadedExtensionSource["definition"]): ExtensionRuntime =>
   normalizeExtensionSources([
