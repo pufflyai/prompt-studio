@@ -8,11 +8,7 @@ import {
   type DefaultExtensionsConfig,
   resolveDefaultExtensionsConfig,
 } from "./default-extensions-config";
-import {
-  type ExtensionCatalog,
-  findExtensionCatalogEntry,
-  loadExtensionCatalog,
-} from "./extension-catalog";
+import { type ExtensionCatalog, findExtensionCatalogEntry, loadExtensionCatalog } from "./extension-catalog";
 import {
   createSharedNamedSourceCheckout,
   type InstallExtensionSourceInput,
