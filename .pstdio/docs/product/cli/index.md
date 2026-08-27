@@ -25,6 +25,9 @@ Run `pst --help`, `pst <group> --help`, or `pst <group> <command> --help` for th
 | `pst extensions` | Install, develop, and validate extensions. |
 | `pst notifications` | Create and manage project notifications. |
 | `pst inbox` | List pending project notifications. |
+| `pst auth tokens` | Issue, list, and revoke scoped machine tokens. |
+| `pst automation` | Create and inspect durable automation runs. |
+| `pst connections check` | Run an extension's declared connection health check. |
 
 ## Command guides
 
@@ -35,6 +38,7 @@ Run `pst --help`, `pst <group> --help`, or `pst <group> <command> --help` for th
 - [Workspaces](./workspaces.md)
 - [Templates](./templates.md)
 - [Notifications](./notifications.md)
+- [Remote automation](./automation.md)
 - [CLI output](./feedback.md)
 
 Extension commands live with their extensions:

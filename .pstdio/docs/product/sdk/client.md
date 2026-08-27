@@ -40,6 +40,7 @@ client.templates; // Template CRUD
 client.skills; // Skill listing (read-only)
 client.agents; // Agent configuration
 client.extensions; // Extension command execution and metadata
+client.automation; // Scoped tokens and durable automation runs
 client.settings; // Global settings
 client.sync; // SSE sync helpers
 client.runtime; // Browser-session provisioning
@@ -147,6 +148,47 @@ API when they need direct command results:
 await client.extensions.execute("pstdio-planner.list-tickets", {
   projectId,
   params: {},
+});
+```
+
+## Connections and remote automation
+
+Runtime-authenticated clients configure named extension connections. The secret is sent only when it is created or replaced and is never returned by list calls.
+
+```ts
+await client.extensions.configureConnection(projectId, "pstdio.remote", "control-plane", {
+  baseUrl: "https://control.example.com",
+  secret: process.env.REMOTE_CONTROL_TOKEN,
+});
+const checked = await client.extensions.checkConnection(projectId, "pstdio.remote", "control-plane");
+
+const issued = await client.automation.issueToken({
+  name: "notion-trigger",
+  projectId,
+  commandScopes: ["pstdio.planner.command.start-attempt"],
+  expiresInSeconds: 30 * 24 * 60 * 60,
+});
+```
+
+Token rotation can preserve the same project-scoped principal and idempotency history by passing the `principalId` returned with the original token:
+
+```ts
+const replacement = await client.automation.issueToken({
+  name: "notion-trigger-rotated",
+  projectId,
+  principalId: issued.principalId,
+  commandScopes: ["pstdio.planner.command.start-attempt"],
+  expiresInSeconds: 30 * 24 * 60 * 60,
+});
+```
+
+Create a second client with the returned machine token. That client can call its allowed automation routes but cannot use normal project or settings routes.
+
+```ts
+const machine = createClient({ baseUrl, token: issued.token });
+const run = await machine.automation.createRun(projectId, "notion-page-123-revision-7", {
+  commandId: "pstdio.planner.command.start-attempt",
+  input: { params: { ticketId: "PS-294" } },
 });
 ```
 

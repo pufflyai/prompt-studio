@@ -1,4 +1,5 @@
 export type { AgentClient } from "./agents";
+export type { AutomationClient } from "./automation";
 export { createClient, type PstdioClient } from "./client";
 export type { ExtensionClient } from "./extensions";
 export type { NotificationsClient } from "./notifications";

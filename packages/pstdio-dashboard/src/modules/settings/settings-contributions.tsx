@@ -5,6 +5,7 @@ import { getDashboardSelectedProjectId, getDashboardSelectedProjectName } from "
 import { createProjectTemplate, getProjectTemplateAssets } from "@/shared/projects/project-api";
 import type { ProjectTemplateAsset, ProjectTemplateAssetType } from "@/shared/projects/project-types";
 import { ExtensionsPanel } from "./components/extensions-panel";
+import { MachineTokensPanel } from "./components/machine-tokens-panel";
 import { ProjectDangerZone } from "./components/project-danger-zone";
 import { ProjectRepositoriesPanel } from "./components/project-repositories-panel";
 import { RuntimeSettingsPanel } from "./components/runtime-settings-panel";
@@ -137,6 +138,17 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
         },
       },
     ],
+  });
+
+  ctx.settings.registerPanel({
+    kind: "custom",
+    id: "machine-tokens",
+    title: "Machine tokens",
+    section: "project",
+    scope: "project",
+    order: 50,
+    icon: "KeyRound",
+    render: () => <MachineTokensPanel projectId={getDashboardSelectedProjectId(ctx)} />,
   });
 
   ctx.settings.registerPanel({

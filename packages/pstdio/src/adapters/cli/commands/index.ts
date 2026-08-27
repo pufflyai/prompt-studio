@@ -1,5 +1,8 @@
 import * as agentsCommand from "./agents";
+import * as authCommand from "./auth";
+import * as automationCommand from "./automation";
 import * as closeCommand from "./close";
+import * as connectionsCommand from "./connections";
 import * as extensionsCommand from "./extensions";
 import * as inboxCommand from "./inbox";
 import * as logsCommand from "./logs";
@@ -12,7 +15,10 @@ import * as workspaceCommand from "./workspace";
 
 export const topLevelCommandModules = [
   agentsCommand,
+  authCommand,
+  automationCommand,
   closeCommand,
+  connectionsCommand,
   extensionsCommand,
   inboxCommand,
   logsCommand,
