@@ -3,6 +3,7 @@ import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } 
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createApp } from "../app";
+import { runStartupTasks } from ".";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../../..");
 
@@ -84,4 +85,45 @@ describe("startup default extensions", () => {
 
     expect(readFileSync(join(installed, "README.md"), "utf8")).toBe(readFileSync(join(source, "README.md"), "utf8"));
   }, 40_000);
+
+  test("tracks default extension preparation without blocking runtime readiness", async () => {
+    process.env.PSTDIO_HOME = join(tempRoot, "home-background-defaults");
+    process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+    const preparation = Promise.withResolvers<void>();
+    let prepareCalled = false;
+    let backgroundTask: Promise<void> | undefined;
+    const deps = {
+      projectService: { list: async () => [] },
+      sessionService: { listByStatus: async () => [] },
+    } as unknown as Parameters<typeof runStartupTasks>[0];
+
+    try {
+      await runStartupTasks(deps, undefined, {
+        onBackgroundTask: (task) => {
+          backgroundTask = task;
+        },
+        prepareDefaultExtensions: async () => {
+          prepareCalled = true;
+          await preparation.promise;
+        },
+      });
+
+      expect(prepareCalled).toBe(true);
+      expect(backgroundTask).toBeDefined();
+      if (!backgroundTask) throw new Error("Startup did not register its background work");
+
+      let backgroundSettled = false;
+      void backgroundTask.then(() => {
+        backgroundSettled = true;
+      });
+      await Bun.sleep(0);
+      expect(backgroundSettled).toBe(false);
+
+      preparation.resolve();
+      await backgroundTask;
+      expect(backgroundSettled).toBe(true);
+    } finally {
+      preparation.resolve();
+    }
+  });
 });

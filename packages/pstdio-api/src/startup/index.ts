@@ -14,6 +14,7 @@ import { apiLogger } from "../lib/logger";
 
 interface StartupTaskOptions {
   onBackgroundTask?: (task: Promise<void>) => void;
+  prepareDefaultExtensions?: () => Promise<void>;
   recoverQueuedAutomation?: () => Promise<void>;
   recoverQueuedSessions?: () => Promise<void>;
 }
@@ -74,7 +75,9 @@ const ensureDefaultExtensionsInstalled = async (deps: RouteDeps) => {
 };
 
 export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, options?: StartupTaskOptions) => {
-  await ensureDefaultExtensionsInstalled(deps);
+  const defaultExtensionPreparation = options?.prepareDefaultExtensions
+    ? options.prepareDefaultExtensions()
+    : ensureDefaultExtensionsInstalled(deps);
   const projectIds = (await deps.projectService.list()).map((project) => project.id);
   await reconcileProjectWorkspaces(deps, projectIds, signal);
   await options?.recoverQueuedSessions?.();
@@ -96,7 +99,10 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
       repoService: deps.repoService,
     });
   }
-  const workspaceProvisioning = provisionRecoveredWorkspaces(deps, projectIds, signal);
-  options?.onBackgroundTask?.(workspaceProvisioning);
-  if (!options?.onBackgroundTask) void workspaceProvisioning;
+  const backgroundTasks = Promise.all([
+    defaultExtensionPreparation,
+    provisionRecoveredWorkspaces(deps, projectIds, signal),
+  ]).then(() => undefined);
+  options?.onBackgroundTask?.(backgroundTasks);
+  if (!options?.onBackgroundTask) void backgroundTasks;
 };
