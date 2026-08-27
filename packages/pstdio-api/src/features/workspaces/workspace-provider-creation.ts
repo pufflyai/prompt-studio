@@ -7,6 +7,7 @@ import {
   rootProviderId,
   worktreeProviderId,
 } from "./workspace-provider-identity";
+import { handOffLateCreateProjection, updateCreateProjection } from "./workspace-provider-operation-projection";
 import {
   cancelledProviderPatch,
   failedOperationPatch,
@@ -17,10 +18,6 @@ import {
 import { normalizeResult } from "./workspace-provider-result";
 import { findWorkspaceProvider, runWorkspaceProviderCall } from "./workspace-provider-runtime";
 import type { setupWorkspaceWorktree } from "./worktree-setup";
-
-type ProviderProjectionPatch = Parameters<
-  WorkspacesRouteDeps["workspaceService"]["updateProviderOperationProjection"]
->[1]["patch"];
 
 const asString = (value: unknown) => (typeof value === "string" && value.trim() ? value : undefined);
 
@@ -64,24 +61,6 @@ const builtInCreate = async (input: {
     displayPath: worktreePath,
     capabilities: defaultLocalWorkspaceCapabilities,
   } satisfies WorkspaceProviderResult;
-};
-
-const updateCreateProjection = async (
-  deps: WorkspacesRouteDeps,
-  workspace: WorkspaceRecord,
-  operationId: string,
-  patch: ProviderProjectionPatch,
-) => {
-  const updated = await deps.workspaceService.updateProviderOperationProjection(workspace.id, {
-    operationId,
-    operationKind: "create",
-    patch,
-  });
-  if (updated) return { applied: true, workspace: updated };
-  return {
-    applied: false,
-    workspace: (await deps.workspaceService.get(workspace.id)) ?? workspace,
-  };
 };
 
 const persistCancelledCreate = (deps: WorkspacesRouteDeps, workspace: WorkspaceRecord) =>
@@ -304,11 +283,12 @@ export const provisionProviderWorkspace = async (
         });
 
     const normalized = normalizeResult(input.providerId, result);
-    const projection = await updateCreateProjection(deps, input.workspace, input.operationId, {
+    const resultPatch = {
       ...normalized,
       branch: normalized.branch ?? input.workspace.branch,
-    });
-    if (!projection.applied) return projection.workspace;
+    };
+    const projection = await updateCreateProjection(deps, input.workspace, input.operationId, resultPatch);
+    if (!projection.applied) return handOffLateCreateProjection(deps, projection.workspace, resultPatch);
     let persisted = projection.workspace;
     if (handle && persisted.provider_state === "provisioning" && persisted.provider_ref_json) {
       persisted = await resolveAcceptedCreate(deps, {

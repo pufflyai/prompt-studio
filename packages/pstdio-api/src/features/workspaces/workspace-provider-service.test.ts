@@ -164,7 +164,7 @@ describe("createProviderBackedWorkspace", () => {
     expect(workspace.provider_state).toBe("ready");
   });
 
-  test("does not clear a lifecycle operation claimed while provider create is running", async () => {
+  test("hands a late create reference to a lifecycle operation without clearing ownership", async () => {
     const providerStarted = Promise.withResolvers<void>();
     const providerResult = Promise.withResolvers<WorkspaceProviderResult>();
     const ready: WorkspaceProviderResult = {
@@ -195,6 +195,7 @@ describe("createProviderBackedWorkspace", () => {
 
     const workspace = await creating;
     expect(workspace).toMatchObject({
+      provider_ref_json: ready.providerRef,
       provider_state: "deleting",
       provider_operation_id: createStandalone.mock.calls[0]?.[0].provider_operation_id,
       provider_operation_kind: "delete",
