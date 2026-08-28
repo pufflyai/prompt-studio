@@ -22,14 +22,21 @@ type BoardRule = "canCreate" | "canDragIn" | "canDragOut";
 
 interface StatusRuleRowProps {
   status: StoredStatus;
+  t: Translate;
   disabled?: boolean;
   onChange: (rule: BoardRule, checked: boolean) => void;
 }
 
 export const StatusRuleRow = (props: StatusRuleRowProps) => {
-  const { status, disabled = false, onChange } = props;
+  const { status, t, disabled = false, onChange } = props;
   return (
-    <Stack gap="sm" borderTopWidth="1px" borderColor="border.subtle" py="md">
+    <Stack
+      gap="sm"
+      borderTopWidth="1px"
+      borderColor="border.subtle"
+      py="md"
+      data-testid={`status-board-rule-${status.id}`}
+    >
       <Text textStyle="label/M/medium">{status.name}</Text>
       <HStack gap="lg" flexWrap="wrap">
         <Switch
@@ -38,7 +45,7 @@ export const StatusRuleRow = (props: StatusRuleRowProps) => {
           disabled={disabled}
           onCheckedChange={({ checked }) => onChange("canCreate", checked === true)}
         >
-          Create in column
+          {t("settings.ticketBoard.canCreate", "Create in column")}
         </Switch>
         <Switch
           size="sm"
@@ -46,7 +53,7 @@ export const StatusRuleRow = (props: StatusRuleRowProps) => {
           disabled={disabled}
           onCheckedChange={({ checked }) => onChange("canDragIn", checked === true)}
         >
-          Drag in
+          {t("settings.ticketBoard.canDragIn", "Drag in")}
         </Switch>
         <Switch
           size="sm"
@@ -54,7 +61,7 @@ export const StatusRuleRow = (props: StatusRuleRowProps) => {
           disabled={disabled}
           onCheckedChange={({ checked }) => onChange("canDragOut", checked === true)}
         >
-          Drag out
+          {t("settings.ticketBoard.canDragOut", "Drag out")}
         </Switch>
       </HStack>
     </Stack>
@@ -86,14 +93,19 @@ const StatusBoardSettingsPanel = (props: { host: GuestHost; t: Translate }) => {
         </Box>
       </Flex>
       {error ? (
-        <AlertMessage status="error" colorPalette="red" title="Unable to update ticket board" size="sm">
+        <AlertMessage
+          status="error"
+          colorPalette="red"
+          title={t("settings.ticketBoard.errorTitle", "Unable to update ticket board")}
+          size="sm"
+        >
           {error instanceof Error ? error.message : String(error)}
         </AlertMessage>
       ) : null}
       {statusesQuery.isPending ? (
         <HStack gap="sm" color="fg.muted">
           <Spinner size="sm" />
-          <Text textStyle="paragraph/S/regular">Loading...</Text>
+          <Text textStyle="paragraph/S/regular">{t("settings.ticketBoard.loading", "Loading...")}</Text>
         </HStack>
       ) : (
         <Stack gap="none">
@@ -101,6 +113,7 @@ const StatusBoardSettingsPanel = (props: { host: GuestHost; t: Translate }) => {
             <StatusRuleRow
               key={status.id}
               status={status}
+              t={t}
               disabled={updateStatus.isPending}
               onChange={(rule, checked) => updateStatus.mutate({ statusId: status.id, rule, checked })}
             />

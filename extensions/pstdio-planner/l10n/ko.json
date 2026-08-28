@@ -17,6 +17,13 @@
   "displayMenu.propertyOptions.updatedAt": "업데이트",
   "settingsPanels.ticketBoard.title": "티켓 보드",
   "settingsPanels.ticketTags.title": "태그",
+  "settings.ticketBoard.title": "티켓 보드",
+  "settings.ticketBoard.description": "각 티켓 열의 생성 및 드래그 규칙을 설정합니다.",
+  "settings.ticketBoard.errorTitle": "티켓 보드를 업데이트할 수 없습니다",
+  "settings.ticketBoard.loading": "불러오는 중...",
+  "settings.ticketBoard.canCreate": "열에서 생성",
+  "settings.ticketBoard.canDragIn": "열로 드래그",
+  "settings.ticketBoard.canDragOut": "열 밖으로 드래그",
   "ticketDetail.none": "없음",
   "ticketDetail.parent": "상위"
 }

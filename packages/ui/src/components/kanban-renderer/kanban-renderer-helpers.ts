@@ -97,12 +97,15 @@ export const renderBadgeListDisplay = (
   const selectedItem = items.find((item) => item.id === selectedId) ?? items[0];
   if (!selectedItem) return null;
 
-  return createElement(CollectionBadge, {
-    label: selectedItem.label,
-    icon: selectedItem.icon,
-    overflowCount: items.length - 1,
-    onClick: selectedItem.resource && openResource ? () => openResource(selectedItem.resource!) : undefined,
-  });
+  const orderedItems = [selectedItem, ...items.filter((item) => item.id !== selectedItem.id)];
+  return orderedItems.map((item) =>
+    createElement(CollectionBadge, {
+      key: item.id,
+      label: item.label,
+      icon: item.icon,
+      onClick: item.resource && openResource ? () => openResource(item.resource!) : undefined,
+    }),
+  );
 };
 
 /**

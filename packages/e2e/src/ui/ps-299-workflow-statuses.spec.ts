@@ -120,3 +120,55 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
   });
   await expect(page.getByTestId("board-column-backlog")).not.toContainText("Concept");
 });
+
+test("saved ticket board rules control the matching column", async ({ page, request }) => {
+  test.slow();
+  const project = await createProject(request);
+  const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
+  const backlog = statuses.find((status) => status.name === "Backlog");
+  expect(backlog).toBeDefined();
+  await createPlannerTicket(request, apiBase, project.id, {
+    content: "Keep the backlog column visible",
+    statusId: backlog!.id,
+  });
+  await prepareDashboard(page, project.id);
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  await page.goto(`/projects/${project.id}/tickets`);
+  const backlogColumn = page.getByTestId(`board-column-${backlog!.id}`);
+  await expect(backlogColumn).toContainText("Keep the backlog column visible", { timeout: 30_000 });
+  await expect(backlogColumn.getByRole("button", { name: "Create row" })).toBeVisible();
+
+  await page.getByRole("option", { name: "Settings", exact: true }).click();
+  const settings = page.getByRole("dialog");
+  await expect(settings).toBeVisible({ timeout: 30_000 });
+  await settings.getByRole("option", { name: "Ticket board", exact: true }).click();
+
+  const boardSettings = settings.frameLocator("iframe");
+  const backlogRules = boardSettings.getByTestId(`status-board-rule-${backlog!.id}`);
+  const canCreate = backlogRules.getByRole("checkbox", { name: "Create in column" });
+  await expect(canCreate).toBeChecked({ timeout: 30_000 });
+  const updateResponse = page.waitForResponse(
+    (response) =>
+      response.request().method() === "POST" &&
+      new URL(response.url()).pathname.endsWith(
+        "/extensions/commands/pstdio.pstdio-planner.command.ticketStatus.update/execute",
+      ),
+  );
+  await backlogRules.getByText("Create in column", { exact: true }).click();
+  expect((await updateResponse).ok()).toBe(true);
+  await expect(canCreate).not.toBeChecked();
+
+  await settings.getByRole("button", { name: "Close Ticket board" }).click();
+  await expect(settings).not.toBeVisible();
+  await page.reload();
+  await expect(backlogColumn).toContainText("Keep the backlog column visible", { timeout: 30_000 });
+  await expect(backlogColumn.getByRole("button", { name: "Create row" })).toHaveCount(0);
+
+  await page.getByRole("option", { name: "Settings", exact: true }).click();
+  await settings.getByRole("option", { name: "Ticket board", exact: true }).click();
+  const savedCanCreate = boardSettings
+    .getByTestId(`status-board-rule-${backlog!.id}`)
+    .getByRole("checkbox", { name: "Create in column" });
+  await expect(savedCanCreate).not.toBeChecked({ timeout: 30_000 });
+});

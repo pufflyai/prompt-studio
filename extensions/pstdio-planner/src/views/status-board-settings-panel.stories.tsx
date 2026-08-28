@@ -18,6 +18,7 @@ const meta = {
       canDragOut: false,
       columnActions: [],
     },
+    t: (_key, fallback) => fallback ?? _key,
     onChange: fn(),
   },
 } satisfies Meta<typeof StatusRuleRow>;
