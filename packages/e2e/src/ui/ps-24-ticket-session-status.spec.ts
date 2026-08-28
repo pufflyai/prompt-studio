@@ -101,5 +101,16 @@ test.describe("PS-24 session status on ticket workspace badges", () => {
     await indicator.click();
     await expect(page.getByRole("dialog", { name: "Side Panel" })).toBeVisible({ timeout: 15_000 });
     await expect(card).toBeVisible();
+
+    await page.getByRole("button", { name: "Close Side Panel" }).click();
+    await expect(page.getByRole("dialog", { name: "Side Panel" })).toHaveCount(0);
+
+    const workspaceBadgeTrigger = card.getByTestId("workspace-badge-trigger");
+    await expect(workspaceBadgeTrigger).toHaveRole("button");
+    await workspaceBadgeTrigger.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(
+      attempt.workspace.workspace_shorthand,
+    );
   });
 });

@@ -96,13 +96,13 @@ export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspace
 export const createWorkspaceBadgeResource = (item: ExtensionWorkspaceBadgeItem, projectId: string): ResourceRef =>
   createDashboardResource(
     item.resource?.type ?? "workspace",
-    item.id,
+    item.resource?.id ?? item.id,
     item.resource?.label ?? item.label,
     item.icon ?? "GitBranch",
     projectId,
     {
       ...item.resource?.metadata,
-      workspaceId: item.id,
+      workspaceId: item.resource?.id ?? item.id,
       ...(item.resourceParent ? { resourceParent: item.resourceParent } : {}),
     },
   );
@@ -128,6 +128,8 @@ const WorkspaceDiffTotals = (props: { workspaceId: string }) => {
 
 const stopWorkspaceBadgeRowActivation = (event: { stopPropagation: () => void }) => event.stopPropagation();
 
+const workspaceIdFromBadgeItem = (item: ExtensionWorkspaceBadgeItem) => item.resource?.id ?? item.id;
+
 export const createWorkspaceBadgeInteractionProps = (onActivate?: () => void) => ({
   onClick: (event: { stopPropagation: () => void }) => {
     stopWorkspaceBadgeRowActivation(event);
@@ -149,8 +151,10 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
   const [, setDiffVersion] = useState(0);
   const selectedId = typeof value === "string" ? value : undefined;
   const selectedItem = items.find((item) => item.id === selectedId) ?? items[0];
-  const workspaceIdsKey = items.map((item) => item.id).join("\n");
-  const selectedSummary = selectedItem ? getDashboardWorkspaceDiffSummary(selectedItem.id) : undefined;
+  const workspaceIdsKey = items.map(workspaceIdFromBadgeItem).join("\n");
+  const selectedSummary = selectedItem
+    ? getDashboardWorkspaceDiffSummary(workspaceIdFromBadgeItem(selectedItem))
+    : undefined;
   const badgeLabel = selectedItem?.label;
 
   useEffect(() => {
@@ -194,14 +198,14 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
 
   if (items.length === 1) {
     return (
-      <Box
-        as="span"
-        display="inline-flex"
-        minW="0"
-        cursor="pointer"
-        {...createWorkspaceBadgeInteractionProps(() => openItem(selectedItem))}
-      >
-        {badge}
+      <Box asChild display="inline-flex" minW="0" appearance="none" border="0" bg="transparent" p="0" cursor="pointer">
+        <button
+          type="button"
+          data-testid="workspace-badge-trigger"
+          {...createWorkspaceBadgeInteractionProps(() => openItem(selectedItem))}
+        >
+          {badge}
+        </button>
       </Box>
     );
   }
@@ -222,7 +226,7 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
                 variant="compact"
                 label={item.label}
                 icon={<Icon as={GitBranch} boxSize="16px" />}
-                endContent={<WorkspaceDiffTotals workspaceId={item.id} />}
+                endContent={<WorkspaceDiffTotals workspaceId={workspaceIdFromBadgeItem(item)} />}
                 onActivate={() => openItem(item)}
               />
             </Menu.Item>

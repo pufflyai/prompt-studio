@@ -161,4 +161,26 @@ describe("extension workspace badge renderer", () => {
       },
     });
   });
+
+  test("uses the attached workspace resource id instead of the badge item id", () => {
+    const resource = createWorkspaceBadgeResource(
+      {
+        id: "membership-7",
+        label: "Member",
+        resource: {
+          type: "workspace",
+          id: "workspace-42",
+          label: "Workspace 42",
+          metadata: { workspaceType: "worktree" },
+        },
+      },
+      "project-1",
+    );
+
+    expect(resource).toMatchObject({
+      id: "workspace-42",
+      uri: "dashboard-workbench://workspace/workspace-42",
+      metadata: { workspaceId: "workspace-42" },
+    });
+  });
 });
