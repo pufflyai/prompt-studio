@@ -24,6 +24,7 @@ const rows = [
     title: "Roasted tomato soup",
     attributes: {
       status: "draft",
+      season: "Summer",
       contributors: "ada",
       contributorItems: [
         {
@@ -40,6 +41,7 @@ const rows = [
     title: "Seeded rye bread",
     attributes: {
       status: "published",
+      season: "Winter",
       contributors: "sam",
       contributorItems: [
         { id: "sam", label: "Sam", icon: "ChefHat" },

@@ -39,6 +39,9 @@ export const isEnumOptionsSource = (options: EnumOptions): options is EnumOption
 
 export type AttributeKind = AttributeType["kind"];
 
+// Keep the display and badge contracts below aligned with
+// pstdio-api-contracts/src/extension-kernel/types/kanban-renderer.ts. This published
+// package cannot import the private contracts package, so it owns a structural copy.
 export type AttributeDisplayDescriptor = { kind: "badge-list"; itemsAttributeId: string };
 
 type CollectionBadgeJsonValue =
