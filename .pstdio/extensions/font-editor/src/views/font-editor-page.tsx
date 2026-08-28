@@ -3,11 +3,11 @@ import type { GuestHost, WebviewFilesClient } from "@pstdio/sdk/extensions";
 import { AlertMessage, EmptyState, ScrollArea } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { AddGlyphDialog } from "./add-glyph-dialog";
-import { executeFontCommand, loadFontEditor, showError } from "./font-editor-api";
+import { createFontEditorCommands, loadFontEditor, showError } from "./font-editor-api";
 import { GlyphCard } from "./glyph-card";
 import { GlyphInspector } from "./glyph-inspector";
 import { SettingsDialog } from "./settings-dialog";
-import type { FontConfigView, FontInspectionView, FontOperationView, FontPreviewView, GlyphView } from "./types";
+import type { FontConfigView, FontInspectionView, FontPreviewView, GlyphView } from "./types";
 
 interface FontEditorPageProps {
   host: GuestHost;
@@ -53,8 +53,7 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
   }, [host]);
 
   const run = async <TResult,>(
-    commandId: string,
-    params: Record<string, unknown> | undefined,
+    operation: (commands: ReturnType<typeof createFontEditorCommands>) => Promise<TResult>,
     successMessage: (result: TResult) => string,
     nextSelection?: string | null,
   ) => {
@@ -62,7 +61,7 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
     setError(undefined);
     setSuccess(undefined);
     try {
-      const result = await executeFontCommand<TResult>(host, commandId, params);
+      const result = await operation(createFontEditorCommands(host));
       await reload();
       if (nextSelection === null) setSelectedName(undefined);
       else if (nextSelection) setSelectedName(nextSelection);
@@ -130,9 +129,8 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
             variant="outline"
             loading={busy}
             onClick={() =>
-              run<FontOperationView>(
-                "font-editor.verify",
-                undefined,
+              run(
+                (commands) => commands.verify(),
                 (result) => `Verified ${result.glyphCount} glyphs across ${result.formats.length} font formats.`,
               )
             }
@@ -143,9 +141,8 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
             variant="outline"
             loading={busy}
             onClick={() =>
-              run<FontOperationView>(
-                "font-editor.build",
-                undefined,
+              run(
+                (commands) => commands.build(),
                 (result) => `Built ${result.glyphCount} glyphs and regenerated every font and CSS output.`,
               )
             }
@@ -194,25 +191,22 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
             family={preview.family}
             busy={busy}
             onRename={async (glyph: GlyphView, name: string) => {
-              await run<FontOperationView>(
-                "font-editor.glyph.rename",
-                { glyph: glyph.name, name },
+              await run(
+                (commands) => commands["glyph.rename"]({ glyph: glyph.name, name }),
                 () => `Renamed ${glyph.name} to ${name} and rebuilt every output.`,
                 name,
               );
             }}
             onCodepoint={async (glyph: GlyphView, codepoint: string) => {
-              await run<FontOperationView>(
-                "font-editor.glyph.codepoint",
-                { glyph: glyph.name, codepoint },
+              await run(
+                (commands) => commands["glyph.codepoint"]({ glyph: glyph.name, codepoint }),
                 () => `Moved ${glyph.name} to ${codepoint.toUpperCase()} and rebuilt every output.`,
                 glyph.name,
               );
             }}
             onRemove={async (glyph: GlyphView) => {
-              await run<FontOperationView>(
-                "font-editor.glyph.remove",
-                { glyph: glyph.name },
+              await run(
+                (commands) => commands["glyph.remove"]({ glyph: glyph.name }),
                 (result) => `Removed ${glyph.name}. ${result.glyphCount} glyphs remain.`,
                 null,
               );
@@ -235,9 +229,8 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
         files={files}
         onClose={() => setAddOpen(false)}
         onAdd={async (input) => {
-          await run<FontOperationView>(
-            "font-editor.glyph.add",
-            input,
+          await run(
+            (commands) => commands["glyph.add"](input),
             () => `Added ${input.name} and rebuilt every output.`,
             input.name,
           );
@@ -249,18 +242,18 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
         config={config}
         onClose={() => setSettingsOpen(false)}
         onSave={async (next) => {
-          await run<FontConfigView>(
-            "font-editor.config.set",
-            {
-              family: next.family,
-              fileName: next.fileName,
-              cssPrefix: next.cssPrefix,
-              fontsUrl: next.fontsUrl,
-              outputDir: next.outputDir,
-              cssFile: next.cssFile,
-              startCodepoint: next.startCodepoint,
-              endCodepoint: next.endCodepoint,
-            },
+          await run(
+            (commands) =>
+              commands["config.set"]({
+                family: next.family,
+                fileName: next.fileName,
+                cssPrefix: next.cssPrefix,
+                fontsUrl: next.fontsUrl,
+                outputDir: next.outputDir,
+                cssFile: next.cssFile,
+                startCodepoint: next.startCodepoint,
+                endCodepoint: next.endCodepoint,
+              }),
             () => "Saved font settings and rebuilt every output.",
           );
           setSettingsOpen(false);

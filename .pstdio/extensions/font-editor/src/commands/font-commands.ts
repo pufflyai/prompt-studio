@@ -170,8 +170,8 @@ const verifyInternal = defineCommand({
   },
 });
 
-export const fontCommands = [
-  defineCommand({
+export const fontEditorCommands = {
+  inspect: defineCommand({
     id: "inspect",
     title: "Inspect font",
     description: "List font metadata and glyph mappings.",
@@ -180,7 +180,7 @@ export const fontCommands = [
       return inRepository(ctx, inspectInternal.ref, {}, inspectRepositoryFont);
     },
   }),
-  defineCommand({
+  preview: defineCommand({
     id: "preview",
     title: "Load font preview",
     description: "Return the canonical TTF as a browser-safe data URL.",
@@ -189,7 +189,7 @@ export const fontCommands = [
       return inRepository(ctx, previewInternal.ref, {}, previewRepositoryFont);
     },
   }),
-  defineCommand({
+  "glyph.add": defineCommand({
     id: "glyph.add",
     title: "Add SVG glyph",
     description: "Add one SVG path to the icon font and regenerate every output.",
@@ -208,7 +208,7 @@ export const fontCommands = [
       });
     },
   }),
-  defineCommand({
+  "glyph.rename": defineCommand({
     id: "glyph.rename",
     title: "Rename glyph",
     description: "Rename a glyph without changing its contours.",
@@ -221,7 +221,7 @@ export const fontCommands = [
       );
     },
   }),
-  defineCommand({
+  "glyph.codepoint": defineCommand({
     id: "glyph.codepoint",
     title: "Set glyph codepoint",
     description: "Move a glyph to an unused Unicode codepoint.",
@@ -234,7 +234,7 @@ export const fontCommands = [
       );
     },
   }),
-  defineCommand({
+  "glyph.remove": defineCommand({
     id: "glyph.remove",
     title: "Remove glyph",
     description: "Remove a glyph and regenerate every output.",
@@ -245,7 +245,7 @@ export const fontCommands = [
       return inRepository(ctx, removeInternal.ref, values, (mount) => removeRepositoryGlyph(mount, values.glyph));
     },
   }),
-  defineCommand({
+  "config.get": defineCommand({
     id: "config.get",
     title: "Get font editor configuration",
     cli: true,
@@ -253,7 +253,7 @@ export const fontCommands = [
       return inRepository(ctx, configGetInternal.ref, {}, readRepositoryConfig);
     },
   }),
-  defineCommand({
+  "config.set": defineCommand({
     id: "config.set",
     title: "Set font editor configuration",
     description: "Update settings and rebuild verified outputs.",
@@ -264,7 +264,7 @@ export const fontCommands = [
       return inRepository(ctx, configSetInternal.ref, values, (mount) => updateRepositoryConfig(mount, values));
     },
   }),
-  defineCommand({
+  build: defineCommand({
     id: "build",
     title: "Build font",
     description: "Regenerate and verify every font and CSS output.",
@@ -273,7 +273,7 @@ export const fontCommands = [
       return inRepository(ctx, buildInternal.ref, {}, buildRepositoryFont);
     },
   }),
-  defineCommand({
+  verify: defineCommand({
     id: "verify",
     title: "Verify font",
     description: "Verify generated formats and CSS against the canonical TTF.",
@@ -282,6 +282,10 @@ export const fontCommands = [
       return inRepository(ctx, verifyInternal.ref, {}, verifyRepositoryFont);
     },
   }),
+};
+
+export const fontCommands = [
+  ...Object.values(fontEditorCommands),
   inspectInternal,
   previewInternal,
   addInternal,

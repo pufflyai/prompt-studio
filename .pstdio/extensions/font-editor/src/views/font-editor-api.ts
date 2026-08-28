@@ -1,31 +1,15 @@
-import type { GuestHost } from "@pstdio/sdk/extensions";
-import type { FontConfigView, FontInspectionView, FontPreviewView } from "./types";
+import { createWebviewClient, type GuestHost } from "@pstdio/sdk/extensions";
+import type { fontEditorCommands } from "../commands/font-commands";
 
-interface CommandResponse<TResult> {
-  outcome: {
-    status: "success" | "rejected" | "error";
-    reason?: string;
-    value?: TResult;
-  };
-}
-
-export const executeFontCommand = async <TResult>(
-  host: GuestHost,
-  commandId: string,
-  params?: Record<string, unknown>,
-) => {
-  const response = await host.call<CommandResponse<TResult>>("commands.execute", { commandId, params });
-  if (response.outcome.status !== "success") {
-    throw new Error(response.outcome.reason ?? `${commandId} failed.`);
-  }
-  return response.outcome.value as TResult;
-};
+export const createFontEditorCommands = (host: GuestHost) =>
+  createWebviewClient<typeof fontEditorCommands>(host).commands;
 
 export const loadFontEditor = async (host: GuestHost) => {
+  const commands = createFontEditorCommands(host);
   const [inspection, preview, config] = await Promise.all([
-    executeFontCommand<FontInspectionView>(host, "font-editor.inspect"),
-    executeFontCommand<FontPreviewView>(host, "font-editor.preview"),
-    executeFontCommand<FontConfigView>(host, "font-editor.config.get"),
+    commands.inspect(),
+    commands.preview(),
+    commands["config.get"](),
   ]);
   return { inspection, preview, config };
 };
