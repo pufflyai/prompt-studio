@@ -59,4 +59,18 @@ describe("createStatusRegistry", () => {
     await expect(registry.query("invalid")).rejects.toThrow('Status set "invalid" contains duplicate id "same"');
     await expect(registry.query("valid")).resolves.toEqual(validStatuses);
   });
+
+  test("accepts only actions declared by the status provider", async () => {
+    const registry = createStatusRegistry();
+    registry.registerStatusSet({
+      id: "planner.ticket",
+      title: "Ticket statuses",
+      actions: [{ id: "archive_all", label: "Archive all" }],
+      query: async () => [{ ...validStatuses[1]!, actions: ["archive_all"] }],
+    });
+
+    await expect(registry.query("planner.ticket")).resolves.toEqual([
+      { ...validStatuses[1]!, actions: ["archive_all"] },
+    ]);
+  });
 });

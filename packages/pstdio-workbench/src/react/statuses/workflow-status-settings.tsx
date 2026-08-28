@@ -1,32 +1,9 @@
 import { Stack } from "@chakra-ui/react";
-import { type SaveTagSettingsInput, type TagEditorValue, TagSettingsPanel } from "@pstdio/ui";
+import { type SaveTagSettingsInput, TagSettingsPanel } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { RegisteredWorkbenchStatusSet, WorkbenchStatusRegistry, WorkflowStatus } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
-
-const toEditorValue = (status: WorkflowStatus): TagEditorValue => ({
-  id: status.id,
-  name: status.label,
-  color: status.color,
-  icon: status.icon,
-  sortOrder: status.sortOrder,
-  isDefault: status.isDefault,
-});
-
-const statusNeedsUpdate = (original: WorkflowStatus, draft: TagEditorValue) =>
-  original.label !== draft.name ||
-  original.color !== draft.color ||
-  original.icon !== draft.icon ||
-  original.isDefault !== draft.isDefault;
-
-const toWorkflowStatus = (draft: TagEditorValue): WorkflowStatus => ({
-  id: draft.id,
-  label: draft.name,
-  color: draft.color,
-  icon: draft.icon,
-  sortOrder: draft.sortOrder,
-  isDefault: draft.isDefault,
-});
+import { statusNeedsUpdate, toStatusEditorValue, toWorkflowStatus } from "./workflow-status-settings-model";
 
 interface WorkflowStatusSectionProps {
   statusSet: RegisteredWorkbenchStatusSet;
@@ -69,11 +46,12 @@ const WorkflowStatusSection = (props: WorkflowStatusSectionProps) => {
       values={statuses}
       loadError={loadError}
       onSave={save}
-      toEditorValue={toEditorValue}
+      toEditorValue={toStatusEditorValue}
       valueNeedsUpdate={statusNeedsUpdate}
       readOnly={!statusSet.save}
       title={statusSet.title}
       description={statusSet.save ? "Configure this workflow's columns." : "This status set is read-only."}
+      actionOptions={statusSet.actions?.map((action) => ({ value: action.id, label: action.label }))}
       showDefault
       errorTitle={`Unable to update ${statusSet.title}`}
       addLabel="Add status"

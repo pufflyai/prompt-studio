@@ -348,6 +348,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
     let columnGrouping = initialColumnGrouping(record);
     const originalRows = new WeakMap<KanbanRendererRow, KanbanRendererRow>();
     let columnConfigs: ColumnConfigRecord | undefined;
+    let latestQueryId = 0;
     const rowResource = (row: KanbanRendererRow) => resolveRowResource(record, row);
     const toActivatedRow = (row: KanbanRendererRow) => originalRows.get(row) ?? row;
 
@@ -377,28 +378,31 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           ),
         onRowActivate: toRowClick(context, record, adapter, resolveRowResource, toActivatedRow),
         executeQuery: async (state: KanbanRendererQueryState) => {
+          latestQueryId += 1;
+          const queryId = latestQueryId;
           const value = await executeKanbanRendererCommand(context, record, record.queryHandlerId, {
             settings: state.settings,
             filters: state.filters,
           });
-          columnGrouping = state.settings.columnGrouping;
-          if (Array.isArray(value)) {
-            return value.map((row) => {
+          const mapRows = (rows: unknown[]) =>
+            rows.map((row) => {
               const mapped = toWorkbenchRow(row, rowResource);
               originalRows.set(mapped, row as KanbanRendererRow);
               return mapped;
             });
+          if (queryId !== latestQueryId) {
+            if (Array.isArray(value)) return mapRows(value);
+            return isQueryResult(value) ? mapRows(value.rows ?? []) : [];
           }
+
+          columnGrouping = state.settings.columnGrouping;
+          if (Array.isArray(value)) return mapRows(value);
           if (!isQueryResult(value)) return [];
           const nextAttributes = value.attributes ?? wireAttributes;
           wireAttributes = nextAttributes;
           attributes.set(nextAttributes);
           columnConfigs = value.boardColumnConfigs;
-          return (value.rows ?? []).map((row) => {
-            const mapped = toWorkbenchRow(row, rowResource);
-            originalRows.set(mapped, row as KanbanRendererRow);
-            return mapped;
-          });
+          return mapRows(value.rows ?? []);
         },
         onAttributeChange: record.attributeChangeHandlerId
           ? (rowId, attributeId, value) =>

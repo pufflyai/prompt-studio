@@ -11,6 +11,7 @@ export interface WorkflowStatus {
   readonly icon?: string | null;
   readonly sortOrder: number;
   readonly isDefault?: boolean;
+  readonly actions?: readonly string[];
 }
 
 export interface StatusActionDefinition {

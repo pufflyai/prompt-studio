@@ -65,4 +65,18 @@ describe("ticketStatuses", () => {
       columnActions: [],
     });
   });
+
+  test("loads and saves provider action selections", async () => {
+    const storage = createMemoryStorage();
+    const current = await ticketStatuses.query(context(storage));
+    const done = current.statuses.find((status) => status.id === "done")!;
+    expect(done.actions).toEqual(["archive_all"]);
+
+    await ticketStatuses.save?.(context(storage), {
+      statuses: current.statuses.map((status) => (status.id === done.id ? { ...status, actions: [] } : status)),
+    });
+
+    const reloaded = await ticketStatuses.query(context(storage));
+    expect(reloaded.statuses.find((status) => status.id === "done")?.actions).toEqual([]);
+  });
 });

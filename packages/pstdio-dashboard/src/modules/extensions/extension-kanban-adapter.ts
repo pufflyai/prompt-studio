@@ -23,9 +23,10 @@ type MenuRegistration = ReturnType<typeof buildDashboardExtensionMenuRegistratio
 const isWorkbenchResource = (resource: unknown): resource is ResourceRef =>
   Boolean(resource && typeof resource === "object" && typeof (resource as { kind?: unknown }).kind === "string");
 
-const hasWorkspaceBadgeResource = (value: unknown) =>
+const hasOnlyWorkspaceBadgeResources = (value: unknown) =>
   Array.isArray(value) &&
-  value.some((item) => {
+  value.length > 0 &&
+  value.every((item) => {
     if (!item || typeof item !== "object") return false;
     const resource = (item as { resource?: unknown }).resource;
     return Boolean(resource && typeof resource === "object" && (resource as { type?: unknown }).type === "workspace");
@@ -95,7 +96,9 @@ const decorateAttribute = (
     ...attribute,
     render: (value, row) => {
       const items = row.attributes[itemsAttributeId];
-      return hasWorkspaceBadgeResource(items) ? workspaceRender(value, row) : (genericRender?.(value, row) ?? null);
+      return hasOnlyWorkspaceBadgeResources(items)
+        ? workspaceRender(value, row)
+        : (genericRender?.(value, row) ?? null);
     },
   };
 };

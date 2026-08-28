@@ -13,6 +13,7 @@ const toWorkflowStatus = (status: StoredStatus): WorkflowStatus => ({
   icon: status.icon,
   sortOrder: status.sortOrder,
   isDefault: status.isDefault,
+  actions: status.columnActions,
 });
 
 const toStoredStatus = (status: WorkflowStatus, stored: StoredStatus | undefined): StoredStatus => ({
@@ -25,7 +26,7 @@ const toStoredStatus = (status: WorkflowStatus, stored: StoredStatus | undefined
   canCreate: stored?.canCreate ?? false,
   canDragIn: stored?.canDragIn ?? true,
   canDragOut: stored?.canDragOut ?? true,
-  columnActions: [...(stored?.columnActions ?? [])],
+  columnActions: [...(status.actions ?? [])],
 });
 
 export const ticketStatuses = defineStatuses({

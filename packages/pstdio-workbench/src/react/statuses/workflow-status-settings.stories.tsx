@@ -16,6 +16,7 @@ const ticketStatuses: WorkflowStatus[] = [
     label: "Done",
     color: "green",
     sortOrder: 200,
+    actions: ["archive_all"],
   },
 ];
 
@@ -23,6 +24,7 @@ const severalProvidersWorkbench = createWorkbenchCore();
 severalProvidersWorkbench.statuses.registerStatusSet({
   id: "planner.ticket",
   title: "Ticket statuses",
+  actions: [{ id: "archive_all", label: "Archive all", icon: "archive" }],
   query: async () => ticketStatuses,
   save: async (statuses) => statuses,
 });

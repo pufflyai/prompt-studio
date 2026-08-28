@@ -14,6 +14,7 @@ export interface WorkflowStatus {
   icon?: string | null;
   sortOrder: number;
   isDefault?: boolean;
+  actions?: readonly string[];
 }
 
 export interface WorkflowStatusAction {
@@ -48,8 +49,21 @@ export interface WorkbenchStatusRegistry {
   save(id: string, statuses: readonly WorkflowStatus[]): Promise<readonly WorkflowStatus[]>;
 }
 
+const validateStatusActions = (
+  set: WorkbenchStatusSetContribution,
+  status: WorkflowStatus,
+  actionIds: ReadonlySet<string>,
+) => {
+  for (const actionId of status.actions ?? []) {
+    if (!actionIds.has(actionId)) {
+      throw new Error(`Status "${set.id}.${status.id}" references unknown action "${actionId}"`);
+    }
+  }
+};
+
 const validateStatuses = (set: WorkbenchStatusSetContribution, statuses: readonly WorkflowStatus[]) => {
   const ids = new Set<string>();
+  const actionIds = new Set((set.actions ?? []).map((action) => action.id));
   let defaultCount = 0;
 
   for (const status of statuses) {
@@ -59,6 +73,7 @@ const validateStatuses = (set: WorkbenchStatusSetContribution, statuses: readonl
     if (!status.label.trim()) throw new Error(`Status "${set.id}.${status.id}" must have a label`);
     if (!status.color.trim()) throw new Error(`Status "${set.id}.${status.id}" must have a color`);
     if (!Number.isFinite(status.sortOrder)) throw new Error(`Status "${set.id}.${status.id}" must have a finite order`);
+    validateStatusActions(set, status, actionIds);
     if (status.isDefault) defaultCount += 1;
   }
 
