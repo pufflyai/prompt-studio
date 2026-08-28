@@ -242,6 +242,54 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
     expect(renderer?.getBoardColumnConfig?.("draft").color).toBe("orange");
   });
 
+  test("uses the status color from the active column grouping", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.statuses.registerStatusSet({
+      id: "example.recipes.status.workflow",
+      title: "Workflow",
+      query: () => [{ id: "todo", label: "Todo", color: "blue", sortOrder: 0 }],
+    });
+    workbench.statuses.registerStatusSet({
+      id: "example.recipes.status.review",
+      title: "Review",
+      query: () => [{ id: "todo", label: "Todo", color: "purple", sortOrder: 0 }],
+    });
+    await Promise.all([
+      workbench.statuses.query("example.recipes.status.workflow"),
+      workbench.statuses.query("example.recipes.status.review"),
+    ]);
+    const record = {
+      id: "recipes",
+      extensionId: "example.recipes",
+      title: "Recipes",
+      queryHandlerId: "recipes.query",
+      attributes: [
+        {
+          id: "workflow",
+          label: "Workflow",
+          type: { kind: "status", statuses: { kind: "status", id: "workflow" } },
+        },
+        {
+          id: "review",
+          label: "Review",
+          type: { kind: "status", statuses: { kind: "status", id: "review" } },
+        },
+      ],
+    } satisfies WorkbenchExtensionKanbanRendererRecord;
+    registerWorkbenchExtensionKanbanRenderers(
+      { projectId: "project-1", workbench, executeCommand: async () => ({ rows: [] }) },
+      [record],
+    );
+
+    const renderer = workbench.renderers.getKanbanRenderer("recipes");
+    await renderer?.executeQuery({
+      ...queryState,
+      settings: { ...queryState.settings, columnGrouping: "review" },
+    });
+
+    expect(renderer?.getBoardColumnConfig?.("todo").color).toBe("purple");
+  });
+
   test("reports an unknown display kind and falls back to the attribute type", () => {
     const workbench = createWorkbenchCore();
     const record = {

@@ -168,16 +168,20 @@ const statusColorConfig = (
   context: WorkbenchExtensionCommandContext,
   record: WorkbenchExtensionKanbanRendererRecord,
   attributes: WorkbenchExtensionKanbanRendererRecord["attributes"],
+  groupingAttributeId: string | undefined,
   groupKey: string,
 ): WireBoardColumnConfig | undefined => {
-  for (const attribute of attributes ?? []) {
-    if (attribute.type.kind !== "status") continue;
-    const id = statusSetId(record, attribute.type.statuses);
-    const status = context.workbench.statuses.getStatuses(id)?.find((candidate) => candidate.id === groupKey);
-    if (!status) continue;
-    return { color: status.color };
-  }
-  return undefined;
+  const attribute = attributes?.find((candidate) => candidate.id === groupingAttributeId);
+  if (attribute?.type.kind !== "status") return undefined;
+  const id = statusSetId(record, attribute.type.statuses);
+  const status = context.workbench.statuses.getStatuses(id)?.find((candidate) => candidate.id === groupKey);
+  return status ? { color: status.color } : undefined;
+};
+
+const initialColumnGrouping = (record: WorkbenchExtensionKanbanRendererRecord) => {
+  if (record.defaultSettings?.columnGrouping) return record.defaultSettings.columnGrouping;
+  const statusAttributes = record.attributes?.filter((attribute) => attribute.type.kind === "status") ?? [];
+  return statusAttributes.length === 1 ? statusAttributes[0]?.id : undefined;
 };
 
 const createRowActionIcon = (icon: string | undefined) =>
@@ -341,6 +345,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
       reportUnknownDisplay,
     );
     let wireAttributes = record.attributes;
+    let columnGrouping = initialColumnGrouping(record);
     const originalRows = new WeakMap<KanbanRendererRow, KanbanRendererRow>();
     let columnConfigs: ColumnConfigRecord | undefined;
     const rowResource = (row: KanbanRendererRow) => resolveRowResource(record, row);
@@ -367,7 +372,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
         createRow: toCreateRowConfig(record, localize),
         getBoardColumnConfig: (groupKey) =>
           toWorkbenchBoardColumnConfig(
-            columnConfigs?.[groupKey] ?? statusColorConfig(context, record, wireAttributes, groupKey),
+            columnConfigs?.[groupKey] ?? statusColorConfig(context, record, wireAttributes, columnGrouping, groupKey),
             localize,
           ),
         onRowActivate: toRowClick(context, record, adapter, resolveRowResource, toActivatedRow),
@@ -376,6 +381,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
             settings: state.settings,
             filters: state.filters,
           });
+          columnGrouping = state.settings.columnGrouping;
           if (Array.isArray(value)) {
             return value.map((row) => {
               const mapped = toWorkbenchRow(row, rowResource);

@@ -29,7 +29,10 @@ const kanbanRendererAttributeTypeSchema = z.discriminatedUnion("kind", [
 
 const kanbanRendererAttributeDisplaySchema = z.union([
   z.object({ kind: z.literal("badge-list"), itemsAttributeId: z.string() }),
-  z.object({ kind: z.string() }).passthrough(),
+  z
+    .object({ kind: z.string() })
+    .passthrough()
+    .refine((display) => display.kind !== "badge-list"),
 ]);
 
 const kanbanRendererAttributeSchema = z.object({

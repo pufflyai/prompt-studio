@@ -90,4 +90,23 @@ describe("extension kanban renderer contracts", () => {
       itemsAttributeId: "contributorItems",
     });
   });
+
+  test("rejects a badge list without its items attribute", () => {
+    const result = extensionKanbanRendererRecordSchema.safeParse({
+      id: "recipes",
+      extensionId: "example.recipes",
+      title: "Recipes",
+      queryHandlerId: "recipes.query",
+      attributes: [
+        {
+          id: "contributors",
+          label: "Contributors",
+          type: { kind: "string" },
+          display: { kind: "badge-list" },
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+  });
 });

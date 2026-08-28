@@ -23,6 +23,14 @@ type MenuRegistration = ReturnType<typeof buildDashboardExtensionMenuRegistratio
 const isWorkbenchResource = (resource: unknown): resource is ResourceRef =>
   Boolean(resource && typeof resource === "object" && typeof (resource as { kind?: unknown }).kind === "string");
 
+const hasWorkspaceBadgeResource = (value: unknown) =>
+  Array.isArray(value) &&
+  value.some((item) => {
+    if (!item || typeof item !== "object") return false;
+    const resource = (item as { resource?: unknown }).resource;
+    return Boolean(resource && typeof resource === "object" && (resource as { type?: unknown }).type === "workspace");
+  });
+
 export const toDashboardExtensionResource = (resource: unknown, projectId: string): ResourceRef | undefined => {
   if (!resource || typeof resource !== "object") return undefined;
   if (isWorkbenchResource(resource)) return resource;
@@ -76,13 +84,19 @@ const decorateAttribute = (
   attribute: AttributeDescriptor,
 ): AttributeDescriptor => {
   if (attribute.display?.kind !== "badge-list") return attribute;
+  const genericRender = attribute.render;
+  const itemsAttributeId = attribute.display.itemsAttributeId;
+  const workspaceRender = createBadgeListRenderer({
+    itemsAttributeId,
+    projectId,
+    openResource: (resource) => void ctx.resources.openResource(resource, { replaceActive: true }),
+  });
   return {
     ...attribute,
-    render: createBadgeListRenderer({
-      itemsAttributeId: attribute.display.itemsAttributeId,
-      projectId,
-      openResource: (resource) => void ctx.resources.openResource(resource, { replaceActive: true }),
-    }),
+    render: (value, row) => {
+      const items = row.attributes[itemsAttributeId];
+      return hasWorkspaceBadgeResource(items) ? workspaceRender(value, row) : (genericRender?.(value, row) ?? null);
+    },
   };
 };
 
