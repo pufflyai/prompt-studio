@@ -56,6 +56,7 @@ const sourceRow = (input: {
   id: string;
   extensionId: string;
   kind?: "local_path" | "git";
+  lastError?: Record<string, unknown> | null;
   path: string;
   status?: string;
 }) => ({
@@ -63,6 +64,7 @@ const sourceRow = (input: {
   installedSource: {
     id: input.id,
     extension_id: input.extensionId,
+    last_error_json: input.lastError ?? null,
     source_kind: input.kind ?? ("local_path" as const),
     source_path: input.path,
     status: input.status ?? "loaded",
@@ -160,6 +162,7 @@ describe("project extension runtime catalog with real sources", () => {
     expect(snapshot.runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain(
       "extension_overridden_by_local",
     );
+    expect(snapshot.enabledSources.map(({ installedSource }) => installedSource.id)).toEqual(["local-source"]);
   });
 
   test("skips enabled sources whose package manifest was removed", async () => {
@@ -184,7 +187,7 @@ describe("project extension runtime catalog with real sources", () => {
     );
   });
 
-  // Writing to a source file leaves it briefly not "loaded". Dropping it from the
+  // Reloading a source leaves it briefly "pending". Dropping it from the
   // snapshot tells every consumer the extension is gone, and the views it owns are torn
   // down instead of refreshed.
   test("keeps the last healthy contributions of a source that is reloading", async () => {
@@ -201,8 +204,52 @@ describe("project extension runtime catalog with real sources", () => {
       "pstdio.hello.command.healthy",
     ]);
 
-    status = "loading";
+    status = "pending";
     catalog.invalidate({ sourcePath: path, reason: "source_changed" });
+
+    expect((await catalog.get("p1")).runtime.commands.map((command) => command.id)).toEqual([
+      "pstdio.hello.command.healthy",
+    ]);
+  });
+
+  test("removes last healthy contributions after a persistent source error", async () => {
+    const root = createTempDir();
+    const path = join(root, "failed");
+    writeRuntimeExtension(path, "healthy");
+    let status = "loaded";
+
+    const catalog = createCatalog({
+      sources: () => [sourceRow({ id: "failed-source", extensionId: "pstdio.hello", path, status })],
+    });
+
+    expect((await catalog.get("p1")).runtime.commands.map((command) => command.id)).toEqual([
+      "pstdio.hello.command.healthy",
+    ]);
+
+    status = "error";
+    catalog.invalidate({ sourcePath: path, reason: "source_changed" });
+
+    expect((await catalog.get("p1")).runtime.commands).toEqual([]);
+  });
+
+  test("keeps the published runtime when only its webview build failed", async () => {
+    const root = createTempDir();
+    const path = join(root, "failed-webview");
+    writeRuntimeExtension(path, "healthy");
+    let status = "loaded";
+    let lastError: Record<string, unknown> | null = null;
+
+    const catalog = createCatalog({
+      sources: () => [sourceRow({ id: "failed-webview-source", extensionId: "pstdio.hello", path, status, lastError })],
+    });
+
+    expect((await catalog.get("p1")).runtime.commands.map((command) => command.id)).toEqual([
+      "pstdio.hello.command.healthy",
+    ]);
+
+    status = "error";
+    lastError = { code: "extension_webview_build_failed" };
+    catalog.invalidate({ sourcePath: path, reason: "webviews_built" });
 
     expect((await catalog.get("p1")).runtime.commands.map((command) => command.id)).toEqual([
       "pstdio.hello.command.healthy",

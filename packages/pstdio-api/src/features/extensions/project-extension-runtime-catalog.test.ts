@@ -74,7 +74,7 @@ describe("project extension runtime catalog", () => {
     expect(second).toBe(first);
     expect(first.generation).toBe(1);
     expect(first.project).toEqual({ id: "p1", name: "Project p1", shorthand: "PS" });
-    expect(first.enabledSources).toHaveLength(1);
+    expect(first.enabledSources).toHaveLength(0);
     expect(first.stale).toBeNull();
     expect(harness.loaderCalls).toHaveLength(1);
     expect(harness.loadStarts).toHaveLength(1);
@@ -176,7 +176,7 @@ describe("project extension runtime catalog", () => {
     expect(captured.generation).toBe(1);
     expect(replacement.generation).toBe(2);
     expect(captured.runtime).toBe(capturedRuntime);
-    expect(captured.enabledSources).toHaveLength(1);
+    expect(captured.enabledSources).toHaveLength(0);
   });
 
   test("a source-path invalidation affects only projects using that source", async () => {

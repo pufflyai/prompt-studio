@@ -72,6 +72,27 @@ describe("installExtensionSource replacement", () => {
     expect(existsSync(join(target, "old.txt"))).toBe(false);
   });
 
+  test("syncs a canonical repo-scoped development source in place", async () => {
+    const repoPath = join(root, "repo");
+    source = join(repoPath, ".pstdio", "extensions", "source-extension");
+    target = source;
+    writeExtension();
+    const manifest = JSON.parse(readFileSync(join(source, "package.json"), "utf8"));
+    writeFileSync(join(source, "package.json"), JSON.stringify({ ...manifest, pstdio: { scope: "repo" } }));
+    mkdirSync(join(source, "node_modules", "example"), { recursive: true });
+    writeFileSync(join(source, "user-edit.txt"), "preserve");
+
+    const result = await syncExtensionDevelopmentSource({
+      source,
+      repoPath,
+      env: { PSTDIO_HOME: pstdioHome },
+      homedir: () => "/unused",
+    });
+
+    expect(result.targetPath).toBe(source);
+    expect(readFileSync(join(source, "user-edit.txt"), "utf8")).toBe("preserve");
+  });
+
   test("keeps the live install available while preparing its replacement", async () => {
     writeExistingInstall();
     const runCommand = mock(async (_file: string, _args: readonly string[], options: { cwd: string }) => {

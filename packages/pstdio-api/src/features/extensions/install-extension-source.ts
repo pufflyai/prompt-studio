@@ -292,10 +292,11 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
     validateInstallName(installName);
 
     const targetPath = join(extensionsRoot, installName);
-    assertCanCopy(resolvedSource.path, targetPath);
+    const sourceIsTarget = resolve(resolvedSource.path) === resolve(targetPath);
+    if (!sourceIsTarget || !input.existsOk) assertCanCopy(resolvedSource.path, targetPath);
 
     const targetExists = existsSync(targetPath);
-    const reuseExisting = targetExists && input.existsOk && !input.force;
+    const reuseExisting = targetExists && input.existsOk && (sourceIsTarget || !input.force);
 
     if (targetExists && !input.force && !input.existsOk) {
       throw new ExtensionAlreadyInstalledError(targetPath);

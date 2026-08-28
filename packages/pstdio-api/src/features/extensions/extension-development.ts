@@ -27,6 +27,7 @@ export type SyncExtensionDevelopmentSourceInput = Omit<
 export const syncExtensionDevelopmentSource = (input: SyncExtensionDevelopmentSourceInput) =>
   installExtensionSource({
     ...input,
+    existsOk: true,
     force: true,
     reuseInstalledDependencies: true,
     saveLockfile: false,

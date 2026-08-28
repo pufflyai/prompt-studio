@@ -82,8 +82,17 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
       cachedSources.flatMap((cached) => cached.diagnostics),
       { repoRoots: repos.map((repo) => repo.path).sort((left, right) => left.localeCompare(right)) },
     );
+    const activeSourcePaths = new Set(
+      runtime.extensions.map((extension) => canonicalSourcePath(extension.packagePath)),
+    );
 
-    return { enabledSources, project, runtime };
+    return {
+      enabledSources: enabledSources.filter(({ installedSource }) =>
+        activeSourcePaths.has(canonicalSourcePath(installedSource.source_path)),
+      ),
+      project,
+      runtime,
+    };
   };
 
   type LoadContext = { projectId: string; reason: string; startedAt: number; startRevision: number };

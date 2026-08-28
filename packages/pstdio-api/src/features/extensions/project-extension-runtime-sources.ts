@@ -20,6 +20,9 @@ export const canonicalSourcePath = (sourcePath: string) => {
   }
 };
 
+const isWebviewBuildError = (value: unknown) =>
+  typeof value === "object" && value !== null && "code" in value && value.code === "extension_webview_build_failed";
+
 // Owns one module import per source version, shared by every project and every
 // concurrent read. Bun retains each import identity for the process lifetime, so this
 // cache is the runtime's memory invariant.
@@ -66,8 +69,14 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
 
       for (const { installedSource } of enabledSources) {
         const retained = lastHealthyByPath.get(canonicalSourcePath(installedSource.source_path));
-        if (installedSource.status !== "loaded" || !existsSync(join(installedSource.source_path, "package.json"))) {
-          if (retained) cachedSources.push(retained);
+        if (installedSource.status !== "loaded") {
+          const keepPublishedRuntime =
+            installedSource.status === "pending" ||
+            (installedSource.status === "error" && isWebviewBuildError(installedSource.last_error_json));
+          if (keepPublishedRuntime && retained) cachedSources.push(retained);
+          continue;
+        }
+        if (!existsSync(join(installedSource.source_path, "package.json"))) {
           continue;
         }
 
