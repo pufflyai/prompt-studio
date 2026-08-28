@@ -92,7 +92,22 @@ The installed executable is available as either `pst` or `pstdio`. Discover the 
 pst --help
 ```
 
-To run the CLI directly from a source checkout:
+### Run `pst` from this checkout
+
+To use the `pst` / `pstdio` commands directly, backed by your working tree:
+
+```bash
+bun install               # install dependencies
+bun run build             # build packages, including the dashboard assets `pst serve` serves
+bun run pstdio:local:add  # put `pst` and `pstdio` on your PATH, pointing at this checkout
+pst                       # start the API and dashboard, then open the browser
+```
+
+`pstdio:local:add` installs a thin `#!/bin/sh` wrapper that runs `bun packages/pstdio/src/index.ts` from this checkout (no `--conditions` flag), so edits to CLI or API source take effect on the next `pst` run with no rebuild. What `pst serve` still loads from disk has to be built first, though: rerun `bun run build` after changing the dashboard (served from `packages/pstdio-dashboard/dist`), and regenerate Drizzle migrations after a schema change (see [Database Development](#database-development) below). The initial `bun run build` above also vendors the PGlite runtime assets and writes `packages/pstdio/src/_embed-manifest.generated.ts`, which the CLI entry imports on startup. Remove the wrapper with `bun run pstdio:local:remove`.
+
+`pst` runs against the real `~/.pstdio` home, unlike `bun run dev:isolated` (Docker, isolated) or `bun run dev` (`~/.pstdio-dev`).
+
+For a one-off invocation without installing the wrapper:
 
 ```bash
 bun run --cwd packages/pstdio pstdio -- --help

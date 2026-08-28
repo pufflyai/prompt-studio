@@ -10,18 +10,20 @@ const collectFiles = (dir: string, base: string, files: Map<string, Blob>) => {
     if (stat.isDirectory()) {
       collectFiles(fullPath, base, files);
     } else {
-      const relPath = relative(base, fullPath);
+      // Keys are matched against request URL paths, which always use "/". On
+      // Windows `relative` returns "\" separators, so normalize.
+      const relPath = relative(base, fullPath).replaceAll("\\", "/");
       const content = readFileSync(fullPath);
       files.set(relPath, new Blob([content]));
     }
   }
 };
 
-export const loadFilesystemAssets = () => {
+export const loadFilesystemAssets = (rootOverride?: string) => {
   const assets = new Map<string, Blob>();
 
   try {
-    const root = resolveDashboardRoot(process.cwd());
+    const root = rootOverride ?? resolveDashboardRoot(process.cwd());
     collectFiles(root, root, assets);
   } catch {
     // Dashboard not available — serve API only

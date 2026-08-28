@@ -1,0 +1,33 @@
+# Line endings
+#
+# Everything Git detects as text is stored in the repository and checked out
+# with LF. Without this, a Windows checkout (core.autocrlf=true) rewrites files
+# to CRLF and every subsequent commit shows up as a whole-file diff, which also
+# breaks `biome check` (it expects LF). Run `git add --renormalize .` once after
+# adding this file to normalize anything already committed with CRLF.
+* text=auto eol=lf
+
+# Keep LF even when content sniffing is unsure.
+*.sh text eol=lf
+*.pen text eol=lf
+
+# Binary assets: never convert line endings, never show a text diff.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.wasm binary
+*.data binary
+*.pdf binary
+*.mp4 binary
+*.webm binary
+*.node binary
+
+# Generated files: collapse in review diffs and exclude from language stats.
+bun.lock linguist-generated=true
