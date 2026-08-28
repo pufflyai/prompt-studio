@@ -39,16 +39,16 @@ Everything below uses only host-owned workbench targets and lab-internal command
 | Local id          | Full id               | CLI? | Behavior                                                                                  |
 | ----------------- | --------------------- | ---- | ----------------------------------------------------------------------------------------- |
 | `say-hello`       | `lab.say-hello`       | yes  | Toasts the active project label. Wired into the Lab route header.                         |
-| `counter.bump`    | `lab.counter.bump`    | yes  | Increments a counter held in extension storage. Wired into the Lab route overflow menu.   |
-| `counter.read`    | `lab.counter.read`    | yes  | Reads the counter from extension storage.                                                  |
-| `counter.reset`   | `lab.counter.reset`   | yes  | Resets the counter. Wired into the Lab route overflow menu.                               |
-| `glass-lab-artifacts.create` | `lab.glass-lab-artifacts.create` | no | Creates a randomized artifact in project-scoped extension storage.                       |
-| `glass-lab-artifacts.delete` | `lab.glass-lab-artifacts.delete` | no | Deletes the selected artifact from extension storage.                                    |
-| `glass-lab-artifacts.query` | `lab.glass-lab-artifacts.query` | no | Returns stored Glass Lab artifact rows for the data table renderer.                        |
+| `counter-bump`    | `lab.counter-bump`    | yes  | Increments a counter held in extension storage. Wired into the Lab route overflow menu.   |
+| `counter-read`    | `lab.counter-read`    | yes  | Reads the counter from extension storage.                                                  |
+| `counter-reset`   | `lab.counter-reset`   | yes  | Resets the counter. Wired into the Lab route overflow menu.                               |
+| `glass-lab-artifacts-create` | `lab.glass-lab-artifacts-create` | no | Creates a randomized artifact in project-scoped extension storage.                       |
+| `glass-lab-artifacts-delete` | `lab.glass-lab-artifacts-delete` | no | Deletes the selected artifact from extension storage.                                    |
+| `glass-lab-artifacts-query` | `lab.glass-lab-artifacts-query` | no | Returns stored Glass Lab artifact rows for the data table renderer.                        |
 | `parameters.query/update/apply` | `lab.parameters.*` | no | Loads and persists Parameter Lab controls; applying them creates an artifact.              |
 | `review-checklist.query/update` | `lab.review-checklist.*` | no | Loads and persists the Review Lab checklist.                                               |
 | `awaken`          | `lab.awaken`          | no   | Internal target. Toasts on success; the middleware rejects sentient titles.               |
-| `demo.try-awaken` | `lab.demo.try-awaken` | yes  | Calls `lab.awaken` with title `"Gain consciousness"` to provoke the middleware.           |
+| `demo-try-awaken` | `lab.demo-try-awaken` | yes  | Calls `lab.awaken` with title `"Gain consciousness"` to provoke the middleware.           |
 | `heartbeat`       | `lab.heartbeat`       | no   | Invoked by the schedule below.                                                           |
 
 ### Middleware

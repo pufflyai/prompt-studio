@@ -56,6 +56,7 @@ interface CreateExtensionsModuleInput {
 }
 
 const extensionSyncTables = new Set<CollectionChange["table"]>(["installed_extension_sources", "extension_instances"]);
+const extensionContributionModuleId = "dashboard.extensions.contributions";
 
 const hasSameSerializedMetadata = (
   current: ResolvedWorkbenchExtensionMetadata | undefined,
@@ -129,10 +130,10 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         metadata = nextResolvedMetadata;
         const previousCompatibility = reconcileStoredExtensionLayouts({
           layoutPersistence,
-          metadata,
+          metadata: nextResolvedMetadata,
           projectId: nextProjectId,
         });
-        setCachedDashboardExtensionMetadata(nextProjectId, metadata);
+        setCachedDashboardExtensionMetadata(nextProjectId, nextResolvedMetadata);
         ctx.settings.refresh();
         if (contributionsAreCurrent) {
           primaryResourceBeforeRefresh = undefined;
@@ -141,22 +142,41 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         }
         const refreshLayout = captureExtensionContributionRefreshLayout(ctx);
         clearContributions();
-        contributionDisposables = registerExtensionContributions({
-          ctx,
-          executeCommand,
-          metadata,
-          projectId: nextProjectId,
-          onRegistrationError: (error, extensionId) => {
-            const message = error instanceof Error ? error.message : String(error);
-            console.error(`[dashboard.extensions:${extensionId}] contribution registration failed: ${message}`);
-          },
-        });
-        contributionDisposables.push(
-          ...registerExtensionLayoutResetCommands({ ctx, layoutPersistence, metadata, projectId: nextProjectId }),
-        );
+        try {
+          contributionDisposables = [
+            ctx.registerChildModule({
+              id: extensionContributionModuleId,
+              ownerId: "dashboard.extensions",
+              source: "extension",
+              activate(contributionCtx) {
+                return [
+                  ...registerExtensionContributions({
+                    ctx: contributionCtx,
+                    executeCommand,
+                    metadata: nextResolvedMetadata,
+                    projectId: nextProjectId,
+                  }),
+                  ...registerExtensionLayoutResetCommands({
+                    ctx: contributionCtx,
+                    layoutPersistence,
+                    metadata: nextResolvedMetadata,
+                    projectId: nextProjectId,
+                  }),
+                ];
+              },
+            }),
+          ];
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error(`[dashboard.extensions] contribution registration failed: ${message}`);
+        }
         restoreExtensionContributionRefreshLayout(ctx, {
           ...refreshLayout,
-          layout: reconcileExtensionLayout({ layout: refreshLayout.layout, metadata, previousCompatibility }),
+          layout: reconcileExtensionLayout({
+            layout: refreshLayout.layout,
+            metadata: nextResolvedMetadata,
+            previousCompatibility,
+          }),
         });
         if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
           ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);

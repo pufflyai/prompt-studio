@@ -24,12 +24,12 @@ describe("font editor extension", () => {
     const publicCommands = [
       "inspect",
       "preview",
-      "glyph.add",
-      "glyph.rename",
-      "glyph.codepoint",
-      "glyph.remove",
-      "config.get",
-      "config.set",
+      "addGlyph",
+      "renameGlyph",
+      "setGlyphCodepoint",
+      "removeGlyph",
+      "getConfig",
+      "setConfig",
       "build",
       "verify",
     ];
@@ -65,7 +65,7 @@ describe("font editor extension", () => {
     expect(result).toEqual({ family: "prompt-studio-icons", glyphs: [] });
     expect(calls).toEqual([
       {
-        command: { kind: "command", id: "internal.inspect" },
+        command: { kind: "command", id: "inspectInternal" },
         invocation: {
           params: {},
           repoId: "repo-1",
@@ -78,7 +78,7 @@ describe("font editor extension", () => {
   test("routes inline SVG content through the default repository", async () => {
     const calls: unknown[] = [];
     const svg = '<svg viewBox="0 0 10 10"><path d="M0 0h10v10H0z"/></svg>';
-    const addCommand = command("glyph.add");
+    const addCommand = command("addGlyph");
 
     expect(addCommand?.params).toHaveProperty("svg");
 
@@ -108,7 +108,7 @@ describe("font editor extension", () => {
 
     expect(calls).toEqual([
       {
-        commandId: { kind: "command", id: "internal.glyph.add" },
+        commandId: { kind: "command", id: "addGlyphInternal" },
         invocation: {
           params: { name: "square", svg },
           repoId: "repo-1",

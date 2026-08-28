@@ -328,10 +328,10 @@ describe("packaged pstdio — core default extensions", () => {
         const reportType = metadata.templateTypes.find((type) => type.localId === "report");
         expect(reportType?.commands).toEqual(
           expect.objectContaining({
-            list: "pstdio.pstdio-reports.command.templates.list",
-            read: "pstdio.pstdio-reports.command.templates.read",
-            save: "pstdio.pstdio-reports.command.templates.save",
-            delete: "pstdio.pstdio-reports.command.templates.delete",
+            list: "pstdio.pstdio-reports.command.templates-list",
+            read: "pstdio.pstdio-reports.command.templates-read",
+            save: "pstdio.pstdio-reports.command.templates-save",
+            delete: "pstdio.pstdio-reports.command.templates-delete",
           }),
         );
 

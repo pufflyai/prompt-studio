@@ -195,7 +195,7 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
             busy={busy}
             onRename={async (glyph: GlyphView, name: string) => {
               await run<FontOperationView>(
-                "font-editor.glyph.rename",
+                "font-editor.renameGlyph",
                 { glyph: glyph.name, name },
                 () => `Renamed ${glyph.name} to ${name} and rebuilt every output.`,
                 name,
@@ -203,7 +203,7 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
             }}
             onCodepoint={async (glyph: GlyphView, codepoint: string) => {
               await run<FontOperationView>(
-                "font-editor.glyph.codepoint",
+                "font-editor.setGlyphCodepoint",
                 { glyph: glyph.name, codepoint },
                 () => `Moved ${glyph.name} to ${codepoint.toUpperCase()} and rebuilt every output.`,
                 glyph.name,
@@ -211,7 +211,7 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
             }}
             onRemove={async (glyph: GlyphView) => {
               await run<FontOperationView>(
-                "font-editor.glyph.remove",
+                "font-editor.removeGlyph",
                 { glyph: glyph.name },
                 (result) => `Removed ${glyph.name}. ${result.glyphCount} glyphs remain.`,
                 null,
@@ -236,7 +236,7 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
         onClose={() => setAddOpen(false)}
         onAdd={async (input) => {
           await run<FontOperationView>(
-            "font-editor.glyph.add",
+            "font-editor.addGlyph",
             input,
             () => `Added ${input.name} and rebuilt every output.`,
             input.name,
@@ -250,7 +250,7 @@ export const FontEditorPage = (props: FontEditorPageProps) => {
         onClose={() => setSettingsOpen(false)}
         onSave={async (next) => {
           await run<FontConfigView>(
-            "font-editor.config.set",
+            "font-editor.setConfig",
             {
               family: next.family,
               fileName: next.fileName,

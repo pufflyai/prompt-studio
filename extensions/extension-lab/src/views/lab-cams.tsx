@@ -13,7 +13,7 @@ const camIdFromValue = (value: unknown) => {
   return undefined;
 };
 
-// The Cameras tree menu drives this panel: selecting a node runs `cams.select`,
+// The Cameras tree menu drives this panel: selecting a node runs `cams-select`,
 // and the resulting command event carries the new camera id back into the player.
 const LabCams = () => {
   const { host } = useLabHost();
@@ -24,7 +24,7 @@ const LabCams = () => {
     let cancelled = false;
     void (async () => {
       const response = await host.call<{ outcome: { status: string; value?: unknown } }>("commands.execute", {
-        commandId: "pstdio.extension-lab.command.cams.current",
+        commandId: "pstdio.extension-lab.command.cams-current",
         params: {},
       });
       const current = camIdFromValue(response.outcome.value);
@@ -37,7 +37,7 @@ const LabCams = () => {
 
   useEffect(() => {
     if (
-      lastCommand?.commandId !== "pstdio.extension-lab.command.cams.select" ||
+      lastCommand?.commandId !== "pstdio.extension-lab.command.cams-select" ||
       lastCommand.outcome.status !== "success"
     )
       return;

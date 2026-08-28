@@ -46,7 +46,7 @@ const resolveAvailableReport = async (
 };
 
 export const writeReportCommand = defineCommand({
-  id: "reports.write",
+  id: "reports-write",
   title: "Write report",
   cli: {
     globalAliases: [["reports", "write"]],

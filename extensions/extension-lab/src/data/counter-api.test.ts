@@ -27,7 +27,7 @@ describe("extension lab command client", () => {
   test("derives counter state from command completion events", () => {
     expect(
       getCounterFromCommandEvent({
-        commandId: "pstdio.extension-lab.command.counter.bump",
+        commandId: "pstdio.extension-lab.command.counter-bump",
         outcome: {
           ok: true,
           status: "success",
@@ -55,11 +55,11 @@ describe("extension lab command client", () => {
   test("executes package-derived counter command ids", async () => {
     const { host, calls } = createHost();
 
-    await executeCounterCommand({ host, commandId: "pstdio.extension-lab.command.counter.bump" });
+    await executeCounterCommand({ host, commandId: "pstdio.extension-lab.command.counter-bump" });
 
     expect(calls).toEqual([
       {
-        commandId: "pstdio.extension-lab.command.counter.bump",
+        commandId: "pstdio.extension-lab.command.counter-bump",
         params: undefined,
       },
     ]);

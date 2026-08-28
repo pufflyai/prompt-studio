@@ -25,7 +25,7 @@ export const loadFontEditor = async (host: GuestHost) => {
   const [inspection, preview, config] = await Promise.all([
     executeFontCommand<FontInspectionView>(host, "font-editor.inspect"),
     executeFontCommand<FontPreviewView>(host, "font-editor.preview"),
-    executeFontCommand<FontConfigView>(host, "font-editor.config.get"),
+    executeFontCommand<FontConfigView>(host, "font-editor.getConfig"),
   ]);
   return { inspection, preview, config };
 };

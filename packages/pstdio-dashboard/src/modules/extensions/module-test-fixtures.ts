@@ -15,7 +15,7 @@ export const metadata = {
   extensions: [{ id: labExtensionId, name: "extension-lab", displayName: "Extension Lab", sourcePath: "" }],
   commands: [
     { id: `${labExtensionId}.command.say-hello`, extensionId: labExtensionId, title: "Say hello" },
-    { id: `${labExtensionId}.command.counter.bump`, extensionId: labExtensionId, title: "Bump lab counter" },
+    { id: `${labExtensionId}.command.counter-bump`, extensionId: labExtensionId, title: "Bump lab counter" },
   ],
   diagnostics: [],
   menuContributions: [],

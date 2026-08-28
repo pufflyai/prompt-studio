@@ -98,10 +98,10 @@ describe("core extension catalog", () => {
     expect(metadata.templateTypes.find((type) => type.localId === "ticket")).toMatchObject({
       label: "Ticket",
       commands: {
-        list: "pstdio.pstdio-planner.command.templates.list",
-        read: "pstdio.pstdio-planner.command.templates.read",
-        save: "pstdio.pstdio-planner.command.templates.save",
-        delete: "pstdio.pstdio-planner.command.templates.delete",
+        list: "pstdio.pstdio-planner.command.templates-list",
+        read: "pstdio.pstdio-planner.command.templates-read",
+        save: "pstdio.pstdio-planner.command.templates-save",
+        delete: "pstdio.pstdio-planner.command.templates-delete",
       },
     });
 

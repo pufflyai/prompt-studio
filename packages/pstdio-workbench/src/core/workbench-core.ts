@@ -171,6 +171,7 @@ export interface WorkbenchCoreContributionContext {
   // (command palette, etc.) read this so they reflect whatever the user is acting on.
   getActiveResource(): ResourceRef | undefined;
   onDidChangeActiveResource(listener: (resource: ResourceRef | undefined) => void): Disposable;
+  registerChildModule(module: WorkbenchModuleContribution): Disposable;
 }
 
 export interface WorkbenchSnapshot {
@@ -267,6 +268,7 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
 
   const context = {
     ...core,
+    registerChildModule: (module) => track(core.registerModule(module)),
     onDidChangePrimaryResource: (listener: (resource: ResourceRef | undefined) => void) =>
       track(core.onDidChangePrimaryResource(listener)),
     onDidChangeActiveResource: (listener: (resource: ResourceRef | undefined) => void) =>
@@ -671,6 +673,10 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
           () => listener(core.getPrimaryResource()),
         ),
       );
+    },
+
+    registerChildModule(module) {
+      return core.registerModule(module);
     },
 
     registerModule(module) {

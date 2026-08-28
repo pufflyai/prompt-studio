@@ -8,7 +8,7 @@ import { inlineThreadIsOutdated } from "../data/thread-mapping";
 
 const reportsCommand = commandRef.forExtension({ publisher: "pstdio", name: "pstdio-reports" });
 const readReportCommand = reportsCommand<{ id: string }, { id?: string; workspaceId?: string | null; draft?: boolean }>(
-  "reports.read",
+  "reports-read",
 );
 
 export const readReport = async (ctx: Pick<CommandContext, "commands">, reportId: string) => {

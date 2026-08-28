@@ -4,14 +4,14 @@ import extension from "./extension";
 describe("pstdio-reports extension", () => {
   test("registers reports commands, template, and skill", () => {
     expect(extension.commands?.map((command) => command.id).sort()).toEqual([
-      "reports.delete",
-      "reports.read",
-      "reports.save",
-      "reports.write",
-      "templates.delete",
-      "templates.list",
-      "templates.read",
-      "templates.save",
+      "reports-delete",
+      "reports-read",
+      "reports-save",
+      "reports-write",
+      "templates-delete",
+      "templates-list",
+      "templates-read",
+      "templates-save",
     ]);
     expect(extension.templateTypes?.find((templateType) => templateType.id === "report")).toMatchObject({
       label: "Report",

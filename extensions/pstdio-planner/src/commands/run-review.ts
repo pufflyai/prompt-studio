@@ -25,7 +25,7 @@ const workspaceIdFrom = (
 };
 
 export const runReviewCommand = defineCommand({
-  id: "runReview",
+  id: "run-review",
   title: l10n("commands.runReview.title", "Run review"),
   cli: true,
   menus: [

@@ -253,7 +253,7 @@ describe("planner automations", () => {
       });
       expect(attached.outcome.ok).toBe(true);
 
-      const tree = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.ticket-files.tree.body", {
+      const tree = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.ticket-files-tree-body", {
         source: "api",
         params: {
           renderer: {

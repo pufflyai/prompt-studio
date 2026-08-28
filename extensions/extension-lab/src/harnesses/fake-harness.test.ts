@@ -5,6 +5,14 @@ import { createFakeHarness } from "./fake-harness";
 const ctx: HarnessContext = {
   extensionId: "pstdio.extension-lab",
   name: "extension-lab",
+  connections: {
+    request: async () => {
+      throw new Error("No connections are configured in this test");
+    },
+    stream: async function* () {
+      yield { type: "end" } as const;
+    },
+  },
   process: {
     run: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
     runOrThrow: async () => ({ exitCode: 0, stdout: "", stderr: "" }),
@@ -12,6 +20,7 @@ const ctx: HarnessContext = {
   },
   net: { findFreePort: async () => 0 },
   logger: { info: () => {}, warn: () => {}, error: () => {} },
+  state: { get: async () => undefined, set: async () => {}, delete: async () => {} },
 };
 
 const recordingSink = () => {

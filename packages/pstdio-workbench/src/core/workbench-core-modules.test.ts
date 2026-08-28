@@ -125,6 +125,30 @@ describe("workbench modules", () => {
     expect(paletteChanges).toBe(1);
   });
 
+  it("disposes child modules with their parent", () => {
+    const workbench = createWorkbenchCore();
+    const parent = workbench.registerModule({
+      id: "dashboard.extensions",
+      activate(ctx) {
+        ctx.registerChildModule({
+          id: "dashboard.extensions.contributions",
+          activate(childCtx) {
+            childCtx.commands.registerCommand(
+              { id: "extension.refresh", label: "Refresh extension" },
+              { execute: () => undefined },
+            );
+          },
+        });
+      },
+    });
+
+    expect(workbench.commands.getCommand("extension.refresh")).toBeDefined();
+
+    parent.dispose();
+
+    expect(workbench.commands.getCommand("extension.refresh")).toBeUndefined();
+  });
+
   it("rejects duplicate module ids and keeps stale disposables from removing newer modules", () => {
     const workbench = createWorkbenchCore();
     const createModule = (label: string): WorkbenchModuleContribution => ({

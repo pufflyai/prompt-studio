@@ -1,14 +1,14 @@
 import type { GuestHost } from "@pstdio/sdk/extensions";
 
 export type CounterCommandId =
-  | "pstdio.extension-lab.command.counter.bump"
-  | "pstdio.extension-lab.command.counter.read"
-  | "pstdio.extension-lab.command.counter.reset";
+  | "pstdio.extension-lab.command.counter-bump"
+  | "pstdio.extension-lab.command.counter-read"
+  | "pstdio.extension-lab.command.counter-reset";
 
 const counterCommandIds = new Set<string>([
-  "pstdio.extension-lab.command.counter.bump",
-  "pstdio.extension-lab.command.counter.read",
-  "pstdio.extension-lab.command.counter.reset",
+  "pstdio.extension-lab.command.counter-bump",
+  "pstdio.extension-lab.command.counter-read",
+  "pstdio.extension-lab.command.counter-reset",
 ]);
 
 interface LabCommandResponse {

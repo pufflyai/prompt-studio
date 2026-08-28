@@ -43,7 +43,6 @@ interface RegisterExtensionContributionsInput {
   executeCommand: ExecuteDashboardExtensionCommand;
   metadata: ResolvedWorkbenchExtensionMetadata;
   projectId: string;
-  onRegistrationError?: (error: unknown, extensionId: string) => void;
 }
 
 export const extensionViewResolveInput =
@@ -173,7 +172,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
     );
   } catch (error) {
     disposeExtensionContributions(disposables);
-    input.onRegistrationError?.(error, input.metadata.extensions[0]?.id ?? "extensions");
+    throw error;
   }
   return disposables;
 };

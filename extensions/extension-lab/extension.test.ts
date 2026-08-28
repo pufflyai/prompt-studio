@@ -7,6 +7,16 @@ const commandPalettes = () => Object.values(extension.commands ?? {}).flatMap((c
 const view = (id: string) => extension.views?.find((candidate) => candidate.id === id);
 
 describe("extension-lab workbench attachments", () => {
+  test("uses unambiguous kebab-case contribution ids", () => {
+    const contributionIds = [
+      ...(extension.commands ?? []),
+      ...(extension.viewMenus ?? []),
+      ...(extension.placements ?? []),
+    ].map((contribution) => contribution.id);
+
+    expect(contributionIds.every((id) => !id.includes(".") && id === id.toLowerCase())).toBe(true);
+  });
+
   test("refreshes artifact renderers from the shared artifact event", () => {
     expect(view("artifacts")?.body.refreshEvents).toEqual([labArtifactsChanged]);
     expect(view("artifact-create")?.body.refreshEvents).toEqual([labArtifactsChanged]);
@@ -99,7 +109,7 @@ describe("extension-lab workbench attachments", () => {
             label: "Delete artifact",
             icon: "trash",
             destructive: true,
-            command: { id: "glass-lab-artifacts.delete", kind: "command" },
+            command: { id: "glass-lab-artifacts-delete", kind: "command" },
           },
         ],
       },
@@ -130,7 +140,7 @@ describe("extension-lab workbench attachments", () => {
     expect(extension.activityItems?.find((item) => item.id === "create-artifact")).toMatchObject({
       icon: "package-plus",
       modes: [{ kind: "mode", id: "lab" }],
-      command: { id: "glass-lab-artifacts.create", kind: "command" },
+      command: { id: "glass-lab-artifacts-create", kind: "command" },
     });
     expect(extension.activityItems?.find((item) => item.id === "project-home")).toMatchObject({
       icon: "house",
@@ -162,8 +172,8 @@ describe("extension-lab workbench attachments", () => {
     expect(
       extension.viewMenus?.map((menu) => ({ id: menu.id, owner: menu.owner.id, view: menu.view.id, side: menu.side })),
     ).toEqual([
-      { id: "artifacts.create", owner: "artifacts", view: "artifact-create", side: "right" },
-      { id: "cams.cameras", owner: "cams", view: "camera-tree", side: "left" },
+      { id: "artifacts-create", owner: "artifacts", view: "artifact-create", side: "right" },
+      { id: "cams-cameras", owner: "cams", view: "camera-tree", side: "left" },
     ]);
     expect(view("camera-tree")?.body).toMatchObject({ kind: "tree", body: expect.any(Function) });
     expect(view("artifact-create")?.body).toMatchObject({
@@ -188,7 +198,7 @@ describe("extension-lab workbench attachments", () => {
       slot: { id: "inspector" },
       view: { id: "artifact-detail" },
     });
-    expect(extension.placements?.find((placement) => placement.id === "artifact-inspector.lab")).toMatchObject({
+    expect(extension.placements?.find((placement) => placement.id === "artifact-inspector-lab")).toMatchObject({
       item: { kind: "resource-slot", slot: { id: "inspector" } },
       region: "side",
     });

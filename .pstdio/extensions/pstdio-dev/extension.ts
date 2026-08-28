@@ -50,7 +50,7 @@ const workspaceIdFrom = (ctx: { resource?: { type: string; id: string } }, comma
 };
 
 const discoverHighImpactIssuesCommand = defineCommand({
-  id: "issues.discoverHighImpact",
+  id: "discoverHighImpactIssues",
   title: "Discover high-impact issues",
   async run(ctx, _commandParams) {
     const session = await ctx.sessions.create({
@@ -63,7 +63,7 @@ const discoverHighImpactIssuesCommand = defineCommand({
 });
 
 const openInVscodeCommand = defineCommand({
-  id: "workspace.openInVscode",
+  id: "openWorkspaceInVscode",
   title: "Open workspace in VS Code",
   cli: true,
   menus: [
@@ -92,7 +92,7 @@ const openInVscodeCommand = defineCommand({
 });
 
 const openInIsolationCommand = defineCommand({
-  id: "workspace.openInIsolation",
+  id: "openWorkspaceInIsolation",
   title: "Open workspace in isolation",
   cli: true,
   menus: [
@@ -128,7 +128,7 @@ const openInIsolationCommand = defineCommand({
 });
 
 const stopIsolationCommand = defineCommand({
-  id: "workspace.stopIsolation",
+  id: "stopWorkspaceIsolation",
   title: "Stop workspace isolation",
   cli: true,
   menus: [

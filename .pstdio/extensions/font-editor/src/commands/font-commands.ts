@@ -43,7 +43,7 @@ const inRepository = async <TResult>(
 };
 
 const inspectInternal = defineCommand({
-  id: "internal.inspect",
+  id: "inspectInternal",
   title: "Inspect font",
   async run(ctx, _commandParams) {
     return inspectRepositoryFont(requireRepoFiles(ctx));
@@ -51,7 +51,7 @@ const inspectInternal = defineCommand({
 });
 
 const previewInternal = defineCommand({
-  id: "internal.preview",
+  id: "previewInternal",
   title: "Load font preview",
   async run(ctx, _commandParams) {
     return previewRepositoryFont(requireRepoFiles(ctx));
@@ -78,7 +78,7 @@ const readSvg = async (ctx: ExtensionContextBase, input: { svg?: string; svgPath
 };
 
 const addInternal = defineCommand({
-  id: "internal.glyph.add",
+  id: "addGlyphInternal",
   title: "Add SVG glyph",
   params: addParams,
   async run(ctx, commandParams) {
@@ -91,7 +91,7 @@ const addInternal = defineCommand({
 });
 
 const renameInternal = defineCommand({
-  id: "internal.glyph.rename",
+  id: "renameGlyphInternal",
   title: "Rename glyph",
   params: {
     ...glyphParams,
@@ -103,7 +103,7 @@ const renameInternal = defineCommand({
 });
 
 const codepointInternal = defineCommand({
-  id: "internal.glyph.codepoint",
+  id: "setGlyphCodepointInternal",
   title: "Set glyph codepoint",
   params: {
     ...glyphParams,
@@ -115,7 +115,7 @@ const codepointInternal = defineCommand({
 });
 
 const removeInternal = defineCommand({
-  id: "internal.glyph.remove",
+  id: "removeGlyphInternal",
   title: "Remove glyph",
   params: glyphParams,
   async run(ctx, commandParams) {
@@ -138,7 +138,7 @@ const definedValues = (value: Record<string, string | undefined>) =>
   Object.fromEntries(Object.entries(value).filter((entry): entry is [string, string] => entry[1] !== undefined));
 
 const configGetInternal = defineCommand({
-  id: "internal.config.get",
+  id: "getConfigInternal",
   title: "Get font editor configuration",
   async run(ctx, _commandParams) {
     return readRepositoryConfig(requireRepoFiles(ctx));
@@ -146,7 +146,7 @@ const configGetInternal = defineCommand({
 });
 
 const configSetInternal = defineCommand({
-  id: "internal.config.set",
+  id: "setConfigInternal",
   title: "Set font editor configuration",
   params: configPatchParams,
   async run(ctx, commandParams) {
@@ -155,7 +155,7 @@ const configSetInternal = defineCommand({
 });
 
 const buildInternal = defineCommand({
-  id: "internal.build",
+  id: "buildInternal",
   title: "Build font",
   async run(ctx, _commandParams) {
     return buildRepositoryFont(requireRepoFiles(ctx));
@@ -163,7 +163,7 @@ const buildInternal = defineCommand({
 });
 
 const verifyInternal = defineCommand({
-  id: "internal.verify",
+  id: "verifyInternal",
   title: "Verify font",
   async run(ctx, _commandParams) {
     return verifyRepositoryFont(requireRepoFiles(ctx));
@@ -190,7 +190,7 @@ export const fontCommands = [
     },
   }),
   defineCommand({
-    id: "glyph.add",
+    id: "addGlyph",
     title: "Add SVG glyph",
     description: "Add one SVG path to the icon font and regenerate every output.",
     cli: true,
@@ -209,7 +209,7 @@ export const fontCommands = [
     },
   }),
   defineCommand({
-    id: "glyph.rename",
+    id: "renameGlyph",
     title: "Rename glyph",
     description: "Rename a glyph without changing its contours.",
     cli: true,
@@ -222,7 +222,7 @@ export const fontCommands = [
     },
   }),
   defineCommand({
-    id: "glyph.codepoint",
+    id: "setGlyphCodepoint",
     title: "Set glyph codepoint",
     description: "Move a glyph to an unused Unicode codepoint.",
     cli: true,
@@ -235,7 +235,7 @@ export const fontCommands = [
     },
   }),
   defineCommand({
-    id: "glyph.remove",
+    id: "removeGlyph",
     title: "Remove glyph",
     description: "Remove a glyph and regenerate every output.",
     cli: true,
@@ -246,7 +246,7 @@ export const fontCommands = [
     },
   }),
   defineCommand({
-    id: "config.get",
+    id: "getConfig",
     title: "Get font editor configuration",
     cli: true,
     async run(ctx, _commandParams) {
@@ -254,7 +254,7 @@ export const fontCommands = [
     },
   }),
   defineCommand({
-    id: "config.set",
+    id: "setConfig",
     title: "Set font editor configuration",
     description: "Update settings and rebuild verified outputs.",
     cli: true,

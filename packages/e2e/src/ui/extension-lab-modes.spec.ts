@@ -95,7 +95,7 @@ test("the Cameras tree menu drives the cams player", async ({ page, request }) =
   const selectResponse = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.extension-lab.command.cams.select/execute",
+        "/extensions/commands/pstdio.extension-lab.command.cams-select/execute",
       ) && response.request().method() === "POST",
   );
   await camsMenu.getByText("Corridor B — night sweep").click();
@@ -148,7 +148,7 @@ test("artifacts are created from the panel menu and inspected in the Side Panel"
   const deleteResponse = page.waitForResponse(
     (response) =>
       new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.extension-lab.command.glass-lab-artifacts.delete/execute",
+        "/extensions/commands/pstdio.extension-lab.command.glass-lab-artifacts-delete/execute",
       ) && response.request().method() === "POST",
   );
   await page.getByRole("menuitem", { name: "Delete artifact" }).click();

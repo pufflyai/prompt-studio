@@ -363,7 +363,7 @@ describe("extension CLI router dispatch", () => {
 
     const requiredCommands = [
       {
-        id: "pstdio-planner.ticketStatus.create",
+        id: "pstdio-planner.ticket-status-create",
         extensionId: "pstdio.pstdio-planner",
         title: "Create ticket status",
         cliPath: "pstdio-planner ticketStatus create",

@@ -106,7 +106,7 @@ describe("createExtensionTestbenchApi", () => {
         await api.handleRequest(
           jsonRequest(`http://bench${apiPrefix}/command`, {
             benchId: bench.benchId,
-            commandId: "pstdio.pstdio-planner.command.ticket-files.tree.body",
+            commandId: "pstdio.pstdio-planner.command.ticket-files-tree-body",
             request: {
               params: {
                 renderer: {

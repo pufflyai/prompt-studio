@@ -55,7 +55,7 @@ describe("executeWebviewCommand", () => {
     const extensionCalls: unknown[] = [];
 
     await executeWebviewCommand({
-      commandId: "extension-lab.counter.bump",
+      commandId: "extension-lab.counter-bump",
       metadata: { sourcePanel: "lab" },
       params: { amount: 1 },
       resource: { type: "counter", id: "main" },
@@ -67,7 +67,7 @@ describe("executeWebviewCommand", () => {
 
     expect(extensionCalls).toEqual([
       {
-        commandId: "extension-lab.counter.bump",
+        commandId: "extension-lab.counter-bump",
         metadata: { sourcePanel: "lab" },
         params: { amount: 1 },
         resource: { type: "counter", id: "main" },

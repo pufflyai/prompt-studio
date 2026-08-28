@@ -14,7 +14,7 @@ const registerCommand = (command: Command) =>
   }) satisfies RegisteredCommand;
 
 const bumpCounterCommand = registerCommand({
-  id: "extension-lab.counter.bump",
+  id: "extension-lab.counter-bump",
   label: "Bump lab counter",
   params: {
     amount: {

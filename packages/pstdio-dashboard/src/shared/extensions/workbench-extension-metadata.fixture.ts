@@ -18,9 +18,9 @@ export const extensionLabMetadata = {
       when: { viewId: pageViewId },
     },
     {
-      id: `${extensionId}.command.counter.bump.header`,
+      id: `${extensionId}.command.counter-bump.header`,
       extensionId,
-      commandId: `${extensionId}.command.counter.bump`,
+      commandId: `${extensionId}.command.counter-bump`,
       slotId: "project.headerOverflow",
       label: "Bump lab counter",
       icon: "plus",
