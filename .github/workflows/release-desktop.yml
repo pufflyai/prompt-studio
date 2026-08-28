@@ -154,6 +154,17 @@ jobs:
           PSTDIO_DESKTOP_RELEASE: "1"
         run: bun run --cwd clients/desktop make -- --arch=${{ matrix.arch }}
 
+      - name: Configure Linux Chromium sandbox
+        if: matrix.platform == 'linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sandbox_path="clients/desktop/out/Prompt Studio-linux-${{ matrix.arch }}/chrome-sandbox"
+          test -f "$sandbox_path"
+          sudo chown root:root "$sandbox_path"
+          sudo chmod 4755 "$sandbox_path"
+          test "$(stat -c '%U:%G %a' "$sandbox_path")" = "root:root 4755"
+
       - name: Verify Electron fuse policy
         run: bun run --cwd clients/desktop verify:fuses
 
