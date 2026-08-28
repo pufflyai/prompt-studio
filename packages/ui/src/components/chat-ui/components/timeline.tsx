@@ -419,7 +419,6 @@ function TimelineItemRow({
   return (
     <Timeline.Item gap="xs" key={itemKey}>
       <Timeline.Connector>
-        <Timeline.Separator />
         <IndicatorView ind={item.indicator} />
       </Timeline.Connector>
       <Timeline.Content h={isOpen ? "auto" : "20px"}>

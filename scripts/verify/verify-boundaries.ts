@@ -76,6 +76,7 @@ const RELATIVE_ESCAPE_ALLOWLIST = ["packages/pstdio/src/_embed-manifest.generate
 const FIXTURE_SOURCE_FILES = [
   "packages/e2e/src/packaged/extension-fixtures.ts",
   "packages/pstdio-api/src/features/extensions/install-extension-source-deps.test.ts",
+  "clients/landing-page/src/components/landing/content/sdk-reference.ts",
 ];
 
 const SKIP_DIRS = new Set(["node_modules", "dist", ".cache", "__test-tmp__", "_reference", "storybook-static"]);
