@@ -10,14 +10,12 @@ const ticketStatuses: WorkflowStatus[] = [
     color: "gray",
     sortOrder: 100,
     isDefault: true,
-    board: { canCreate: true, canDragIn: true, canDragOut: true },
   },
   {
     id: "done",
     label: "Done",
     color: "green",
     sortOrder: 200,
-    board: { canDragIn: true, canDragOut: true },
   },
 ];
 

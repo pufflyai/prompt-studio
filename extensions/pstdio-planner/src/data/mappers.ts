@@ -1,4 +1,5 @@
 import type {
+  CollectionBadgeItem,
   ExtensionWorkspace,
   KanbanRendererAttributeDescriptor,
   KanbanRendererBoardColumnConfig,
@@ -37,11 +38,7 @@ const COLUMN_ACTION_ICONS: Record<string, string> = {
 };
 
 type TagOptionsLookup = Array<{ tag: StoredTag; optionIds: Set<string> }>;
-export type TicketWorkspaceBadgeItem = {
-  id: string;
-  name: string;
-  shorthand?: string;
-  type: "worktree" | "current_branch";
+export type TicketWorkspaceBadgeItem = CollectionBadgeItem & {
   createdAt?: string;
   resourceParent?: TicketResourceReference;
   session?: TicketWorkspaceSession;
@@ -90,9 +87,18 @@ const workspaceToBadgeItem = (
   session: TicketWorkspaceSession | undefined,
 ): TicketWorkspaceBadgeItem => ({
   id: workspace.id,
-  name: workspaceDisplayName(workspace),
-  ...(workspace.workspace_shorthand ? { shorthand: workspace.workspace_shorthand } : {}),
-  type: workspace.worktree_path ? "worktree" : "current_branch",
+  label: workspace.workspace_shorthand?.trim() || workspaceDisplayName(workspace),
+  icon: workspace.worktree_path ? "GitBranch" : "GitCommit",
+  resource: {
+    type: "workspace",
+    id: workspace.id,
+    label: workspaceDisplayName(workspace),
+    metadata: {
+      workspaceId: workspace.id,
+      workspaceType: workspace.worktree_path ? "worktree" : "current_branch",
+      ...(workspace.workspace_shorthand ? { workspaceShorthand: workspace.workspace_shorthand } : {}),
+    },
+  },
   ...(workspace.created_at ? { createdAt: workspace.created_at } : {}),
   // Carried per workspace so switching among a ticket's workspaces never shows another one's status.
   ...(session ? { session } : {}),
@@ -100,7 +106,7 @@ const workspaceToBadgeItem = (
 
 const byNewestWorkspace = (left: TicketWorkspaceBadgeItem, right: TicketWorkspaceBadgeItem) =>
   (right.createdAt ?? "").localeCompare(left.createdAt ?? "") ||
-  (right.shorthand ?? right.id).localeCompare(left.shorthand ?? left.id, undefined, { numeric: true });
+  right.label.localeCompare(left.label, undefined, { numeric: true });
 
 export const createTicketWorkspaceLookup = (
   workspaces: ExtensionWorkspace[] = [],
@@ -126,7 +132,13 @@ const ticketWorkspaceValues = (
   resourceReference: TicketResourceReference,
 ) => {
   const parentMetadata = { resourceParent: resourceReference };
-  const items = (workspaceLookup.get(ticket.shorthand) ?? []).map((item) => ({ ...item, ...parentMetadata }));
+  const items = (workspaceLookup.get(ticket.shorthand) ?? []).map((item) => ({
+    ...item,
+    ...parentMetadata,
+    resource: item.resource
+      ? { ...item.resource, metadata: { ...item.resource.metadata, ...parentMetadata } }
+      : undefined,
+  }));
   return {
     [TICKET_WORKSPACE_ATTRIBUTE_ID]: items[0]?.id ?? "",
     [TICKET_WORKSPACE_ITEMS_ATTRIBUTE_ID]: items,
@@ -267,7 +279,7 @@ export const buildTicketAttributes = (
     label: l10n("displayMenu.propertyOptions.workspace", "Workspace"),
     type: { kind: "string" },
     displayable: true,
-    display: { kind: "workspace-badge", itemsAttributeId: TICKET_WORKSPACE_ITEMS_ATTRIBUTE_ID },
+    display: { kind: "badge-list", itemsAttributeId: TICKET_WORKSPACE_ITEMS_ATTRIBUTE_ID },
   },
   ...[...tags].sort(bySortOrder).map(tagToAttribute),
 ];

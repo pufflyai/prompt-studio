@@ -8,6 +8,7 @@ import {
   setDefaultStatus,
   updateTicketStatus,
 } from "../data/status-operations";
+import { plannerTicketsChanged } from "../events";
 
 export const readTicketStatusesCommand = defineCommand({
   id: "ticketStatus.read",
@@ -37,7 +38,7 @@ export const createTicketStatusCommand = defineCommand({
     ...statusActionParams,
   },
   async run(ctx, commandParams) {
-    return createTicketStatus({
+    const status = await createTicketStatus({
       storage: ctx.storage,
       name: commandParams.label,
       color: commandParams.color,
@@ -47,6 +48,8 @@ export const createTicketStatusCommand = defineCommand({
       canDragOut: commandParams.canDragOut,
       columnActions: commandParams.columnActions,
     });
+    await ctx.events.emit(plannerTicketsChanged, {});
+    return status;
   },
 });
 
@@ -67,7 +70,7 @@ export const updateTicketStatusCommand = defineCommand({
     ...statusActionParams,
   },
   async run(ctx, commandParams) {
-    return updateTicketStatus({
+    const status = await updateTicketStatus({
       storage: ctx.storage,
       statusId: commandParams.statusId,
       name: commandParams.label,
@@ -79,6 +82,8 @@ export const updateTicketStatusCommand = defineCommand({
       canDragOut: commandParams.canDragOut,
       columnActions: commandParams.columnActions,
     });
+    await ctx.events.emit(plannerTicketsChanged, {});
+    return status;
   },
 });
 
@@ -93,7 +98,9 @@ export const deleteTicketStatusCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const statusId = commandParams.statusId ?? (await resolveStatusId(ctx.storage, commandParams.status ?? ""));
-    return deleteTicketStatus({ storage: ctx.storage, statusId });
+    const result = await deleteTicketStatus({ storage: ctx.storage, statusId });
+    await ctx.events.emit(plannerTicketsChanged, {});
+    return result;
   },
 });
 
@@ -107,7 +114,9 @@ export const setDefaultTicketStatusCommand = defineCommand({
   },
   async run(ctx, commandParams) {
     const statusId = await resolveStatusId(ctx.storage, commandParams.status);
-    return setDefaultStatus({ storage: ctx.storage, statusId });
+    const result = await setDefaultStatus({ storage: ctx.storage, statusId });
+    await ctx.events.emit(plannerTicketsChanged, {});
+    return result;
   },
 });
 
@@ -123,6 +132,8 @@ export const reorderTicketStatusesCommand = defineCommand({
     statusIds: params.json<string[]>(),
   },
   async run(ctx, commandParams) {
-    return reorderTicketStatuses({ storage: ctx.storage, statusIds: commandParams.statusIds ?? [] });
+    const result = await reorderTicketStatuses({ storage: ctx.storage, statusIds: commandParams.statusIds ?? [] });
+    await ctx.events.emit(plannerTicketsChanged, {});
+    return result;
   },
 });

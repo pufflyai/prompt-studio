@@ -448,7 +448,6 @@ export type {
   WorkbenchStatusSetContribution,
   WorkflowStatus,
   WorkflowStatusAction,
-  WorkflowStatusBoardRules,
 } from "./registries/statuses/status-registry";
 export { createStatusRegistry } from "./registries/statuses/status-registry";
 export type {

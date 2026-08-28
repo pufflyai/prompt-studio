@@ -11,12 +11,6 @@ export interface WorkflowStatus {
   readonly icon?: string | null;
   readonly sortOrder: number;
   readonly isDefault?: boolean;
-  readonly board?: {
-    readonly canCreate?: boolean;
-    readonly canDragIn?: boolean;
-    readonly canDragOut?: boolean;
-    readonly actions?: readonly string[];
-  };
 }
 
 export interface StatusActionDefinition {

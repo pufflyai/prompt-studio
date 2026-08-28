@@ -3,6 +3,7 @@ import { cleanupLegacyWorkspaceStatus } from "./data/cleanup-legacy-workspace-st
 import { putStatus, putTicket, statusesCollection, ticketsCollection } from "./data/collections";
 import { seedDefaultStatuses } from "./data/seed";
 import type { StoredStatus } from "./data/types";
+import { plannerTicketsChanged } from "./events";
 import { sortedBySortOrder } from "./utils/sort";
 
 const toWorkflowStatus = (status: StoredStatus): WorkflowStatus => ({
@@ -12,25 +13,19 @@ const toWorkflowStatus = (status: StoredStatus): WorkflowStatus => ({
   icon: status.icon,
   sortOrder: status.sortOrder,
   isDefault: status.isDefault,
-  board: {
-    canCreate: status.canCreate,
-    canDragIn: status.canDragIn,
-    canDragOut: status.canDragOut,
-    actions: status.columnActions,
-  },
 });
 
-const toStoredStatus = (status: WorkflowStatus): StoredStatus => ({
+const toStoredStatus = (status: WorkflowStatus, stored: StoredStatus | undefined): StoredStatus => ({
   id: status.id,
   name: status.label,
   color: status.color,
   icon: status.icon ?? null,
   sortOrder: status.sortOrder,
   isDefault: status.isDefault ?? false,
-  canCreate: status.board?.canCreate ?? false,
-  canDragIn: status.board?.canDragIn ?? true,
-  canDragOut: status.board?.canDragOut ?? true,
-  columnActions: [...(status.board?.actions ?? [])],
+  canCreate: stored?.canCreate ?? false,
+  canDragIn: stored?.canDragIn ?? true,
+  canDragOut: stored?.canDragOut ?? true,
+  columnActions: [...(stored?.columnActions ?? [])],
 });
 
 export const ticketStatuses = defineStatuses({
@@ -42,9 +37,11 @@ export const ticketStatuses = defineStatuses({
     return { statuses: sortedBySortOrder(await seedDefaultStatuses(ctx.storage)).map(toWorkflowStatus) };
   },
   async save(ctx, input) {
-    const next = input.statuses.map(toStoredStatus);
+    const stored = await statusesCollection(ctx.storage).list();
+    const storedById = new Map(stored.map((status) => [status.id, status]));
+    const next = input.statuses.map((status) => toStoredStatus(status, storedById.get(status.id)));
     const nextIds = new Set(next.map((status) => status.id));
-    const removed = (await statusesCollection(ctx.storage).list()).filter((status) => !nextIds.has(status.id));
+    const removed = stored.filter((status) => !nextIds.has(status.id));
     const fallbackId = (next.find((status) => status.isDefault) ?? next[0])?.id ?? null;
 
     await Promise.all([
@@ -56,6 +53,7 @@ export const ticketStatuses = defineStatuses({
           : undefined,
       ),
     ]);
+    await ctx.events.emit(plannerTicketsChanged, {});
 
     return { statuses: sortedBySortOrder(next).map(toWorkflowStatus) };
   },

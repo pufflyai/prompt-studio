@@ -46,7 +46,7 @@ describe("extension kanban renderer contracts", () => {
     expect(record.rowActivationHandlerId).toBe("planner.tickets.onRowActivate");
   });
 
-  test("accepts workspace badge display metadata on attributes", () => {
+  test("accepts badge list display metadata on attributes", () => {
     const record = extensionKanbanRendererRecordSchema.parse({
       id: "planner.tickets",
       extensionId: "pstdio.planner",
@@ -58,14 +58,36 @@ describe("extension kanban renderer contracts", () => {
           label: "Workspace",
           type: { kind: "string" },
           displayable: true,
-          display: { kind: "workspace-badge", itemsAttributeId: "workspaceItems" },
+          display: { kind: "badge-list", itemsAttributeId: "contributorItems" },
         },
       ],
     });
 
     expect(record.attributes?.[0]).toMatchObject({
       id: "workspace",
-      display: { kind: "workspace-badge", itemsAttributeId: "workspaceItems" },
+      display: { kind: "badge-list", itemsAttributeId: "contributorItems" },
+    });
+  });
+
+  test("preserves unknown display metadata so the host can report it", () => {
+    const record = extensionKanbanRendererRecordSchema.parse({
+      id: "recipes",
+      extensionId: "example.recipes",
+      title: "Recipes",
+      queryHandlerId: "recipes.query",
+      attributes: [
+        {
+          id: "contributors",
+          label: "Contributors",
+          type: { kind: "string" },
+          display: { kind: "portrait-stack", itemsAttributeId: "contributorItems" },
+        },
+      ],
+    });
+
+    expect(record.attributes?.[0]?.display).toEqual({
+      kind: "portrait-stack",
+      itemsAttributeId: "contributorItems",
     });
   });
 });

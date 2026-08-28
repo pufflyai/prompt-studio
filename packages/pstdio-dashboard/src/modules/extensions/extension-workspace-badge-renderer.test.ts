@@ -26,9 +26,9 @@ describe("extension workspace badge renderer", () => {
       normalizeWorkspaceBadgeItems([
         {
           id: "workspace-2",
-          name: "Latest attempt",
-          shorthand: "T-1_A2",
-          type: "current_branch",
+          label: "T-1_A2",
+          icon: "GitCommit",
+          resource: { type: "workspace", id: "workspace-2", label: "Latest attempt" },
           createdAt: "2026-01-03T00:00:00.000Z",
           resourceParent: {
             type: "ticket",
@@ -37,16 +37,16 @@ describe("extension workspace badge renderer", () => {
             metadata: { shorthand: "T-1" },
           },
         },
-        { id: "workspace-1", shorthand: "T-1_A1", type: "worktree" },
-        { id: "", name: "missing" },
+        { id: "workspace-1", label: "T-1_A1", icon: "GitBranch" },
+        { id: "", label: "missing" },
         "not-a-workspace",
       ]),
     ).toEqual([
       {
         id: "workspace-2",
-        name: "Latest attempt",
-        shorthand: "T-1_A2",
-        type: "current_branch",
+        label: "T-1_A2",
+        icon: "GitCommit",
+        resource: { type: "workspace", id: "workspace-2", label: "Latest attempt" },
         createdAt: "2026-01-03T00:00:00.000Z",
         resourceParent: {
           type: "ticket",
@@ -55,22 +55,22 @@ describe("extension workspace badge renderer", () => {
           metadata: { shorthand: "T-1" },
         },
       },
-      { id: "workspace-1", name: "T-1_A1", shorthand: "T-1_A1", type: "worktree" },
+      { id: "workspace-1", label: "T-1_A1", icon: "GitBranch" },
     ]);
   });
 
   test("keeps a supported session status on the workspace it belongs to", () => {
     expect(
       normalizeWorkspaceBadgeItems([
-        { id: "workspace-2", shorthand: "T-1_A2", type: "worktree", session: { id: "session-2", status: "queued" } },
-        { id: "workspace-1", shorthand: "T-1_A1", type: "worktree" },
+        { id: "workspace-2", label: "T-1_A2", session: { id: "session-2", status: "queued" } },
+        { id: "workspace-1", label: "T-1_A1" },
       ]),
     ).toMatchObject([{ id: "workspace-2", session: { id: "session-2", status: "queued" } }, { id: "workspace-1" }]);
   });
 
   test("drops session payloads that are not a supported session status", () => {
     const [item] = normalizeWorkspaceBadgeItems([
-      { id: "workspace-1", type: "worktree", session: { id: "session-1", status: "archived" } },
+      { id: "workspace-1", label: "T-1_A1", session: { id: "session-1", status: "archived" } },
     ]);
 
     expect(item).not.toHaveProperty("session");
@@ -78,7 +78,7 @@ describe("extension workspace badge renderer", () => {
 
   test("drops session payloads without an id", () => {
     const [item] = normalizeWorkspaceBadgeItems([
-      { id: "workspace-1", type: "worktree", session: { status: "completed" } },
+      { id: "workspace-1", label: "T-1_A1", session: { status: "completed" } },
     ]);
 
     expect(item).not.toHaveProperty("session");
@@ -88,9 +88,7 @@ describe("extension workspace badge renderer", () => {
     const resource = createWorkspaceBadgeSessionResource(
       {
         id: "workspace-2",
-        name: "Latest attempt",
-        shorthand: "T-1_A2",
-        type: "worktree",
+        label: "T-1_A2",
         session: { id: "session-2", status: "in_progress" },
       },
       "project-1",
@@ -108,9 +106,17 @@ describe("extension workspace badge renderer", () => {
     const resource = createWorkspaceBadgeResource(
       {
         id: "workspace-2",
-        name: "Latest attempt",
-        shorthand: "T-1_A2",
-        type: "current_branch",
+        label: "T-1_A2",
+        icon: "GitCommit",
+        resource: {
+          type: "workspace",
+          id: "workspace-2",
+          label: "Latest attempt",
+          metadata: {
+            workspaceShorthand: "T-1_A2",
+            workspaceType: "current_branch",
+          },
+        },
         resourceParent: {
           type: "ticket",
           id: "ticket-child",
@@ -133,7 +139,7 @@ describe("extension workspace badge renderer", () => {
       kind: "workspace",
       id: "workspace-2",
       label: "Latest attempt",
-      icon: "GitBranch",
+      icon: "GitCommit",
       metadata: {
         workspaceId: "workspace-2",
         workspaceShorthand: "T-1_A2",

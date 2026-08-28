@@ -15,6 +15,7 @@
   "displayMenu.propertyOptions.createdAt": "Creado",
   "displayMenu.propertyOptions.status": "Estado",
   "displayMenu.propertyOptions.updatedAt": "Actualizado",
+  "settingsPanels.ticketBoard.title": "Tablero de tareas",
   "settingsPanels.ticketTags.title": "Etiquetas",
   "ticketDetail.none": "Ninguno",
   "ticketDetail.parent": "Padre"

@@ -42,7 +42,31 @@ export const plannerSettingsSection = defineSettingsSection({
 const ticketPrimary = resourceSlotRef(ticketResourceKind.ref, "primary");
 const ticketNavigation = resourceSlotRef(ticketResourceKind.ref, "navigation");
 
+const createPlannerSettingsViews = (baseUrl: string) => ({
+  tagSettings: defineView({
+    id: "ticket-tags-settings",
+    title: l10n("settingsPanels.ticketTags.title", "Ticket tags"),
+    icon: "tag",
+    body: {
+      kind: "webview",
+      entry: packageAsset("./src/views/tags-settings-panel.tsx", baseUrl),
+      capabilities: ["commands.execute"],
+    },
+  }),
+  statusBoardSettings: defineView({
+    id: "ticket-board-settings",
+    title: l10n("settingsPanels.ticketBoard.title", "Ticket board"),
+    icon: "square-kanban",
+    body: {
+      kind: "webview",
+      entry: packageAsset("./src/views/status-board-settings-panel.tsx", baseUrl),
+      capabilities: ["commands.execute"],
+    },
+  }),
+});
+
 export const createPlannerUi = (baseUrl: string) => {
+  const { tagSettings, statusBoardSettings } = createPlannerSettingsViews(baseUrl);
   const tickets = defineView({
     id: "tickets",
     title: l10n("kanbanRenderers.tickets.title", "Tickets"),
@@ -175,19 +199,8 @@ export const createPlannerUi = (baseUrl: string) => {
       emptyTitle: l10n("controls.ticketProperties.emptyTitle", "No ticket selected"),
     },
   });
-  const tagSettings = defineView({
-    id: "ticket-tags-settings",
-    title: l10n("settingsPanels.ticketTags.title", "Ticket tags"),
-    icon: "tag",
-    body: {
-      kind: "webview",
-      entry: packageAsset("./src/views/tags-settings-panel.tsx", baseUrl),
-      capabilities: ["commands.execute"],
-    },
-  });
-
   return {
-    views: [tickets, editor, files, properties, tagSettings],
+    views: [tickets, editor, files, properties, tagSettings, statusBoardSettings],
     resourceViews: [
       defineResourceView({
         id: "ticket-editor",
@@ -247,6 +260,12 @@ export const createPlannerUi = (baseUrl: string) => {
       defineSettingsPanel({
         id: "ticket-tags",
         view: tagSettings.ref,
+        slot: workbenchSlots.projectSettings,
+        section: plannerSettingsSection.ref,
+      }),
+      defineSettingsPanel({
+        id: "ticket-board",
+        view: statusBoardSettings.ref,
         slot: workbenchSlots.projectSettings,
         section: plannerSettingsSection.ref,
       }),

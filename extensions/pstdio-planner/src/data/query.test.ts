@@ -59,7 +59,12 @@ describe("runTicketsQuery", () => {
       kind: "status",
       statuses: { kind: "status", id: "ticket-statuses" },
     });
-    expect(result.boardColumnConfigs).toBeUndefined();
+    expect(result.boardColumnConfigs?.[todo.id]).toMatchObject({
+      color: todo.color,
+      canCreate: todo.canCreate,
+      canDragIn: todo.canDragIn,
+      canDragOut: todo.canDragOut,
+    });
   });
 
   test("leaves status ownership with the provider when storage is empty", async () => {
@@ -73,14 +78,19 @@ describe("runTicketsQuery", () => {
       kind: "status",
       statuses: { kind: "status", id: "ticket-statuses" },
     });
-    expect(result.boardColumnConfigs).toBeUndefined();
+    expect(result.boardColumnConfigs?.backlog?.canCreate).toBe(true);
   });
 
-  test("does not copy workflow behavior into board column configs", async () => {
+  test("returns stored workflow behavior as board column configs", async () => {
     const storage = createMemoryStorage();
 
     const result = await runTicketsQuery({ storage, projectId: "proj-1" });
-    expect(result.boardColumnConfigs).toBeUndefined();
+    expect(result.boardColumnConfigs?.done).toMatchObject({
+      canCreate: false,
+      canDragIn: true,
+      canDragOut: true,
+      actions: [{ id: "archive_all" }],
+    });
   });
 
   test("exposes default display property attributes", async () => {
@@ -174,15 +184,19 @@ describe("runTicketsQuery workspace badges", () => {
       id: "workspace",
       type: { kind: "string" },
       displayable: true,
-      display: { kind: "workspace-badge", itemsAttributeId: "workspaceItems" },
+      display: { kind: "badge-list", itemsAttributeId: "workspaceItems" },
     });
     expect(result.rows[0]?.attributes.workspace).toBe("workspace-2");
-    expect(result.rows[0]?.attributes.workspaceItems).toEqual([
+    expect(result.rows[0]?.attributes.workspaceItems).toMatchObject([
       {
         id: "workspace-2",
-        name: "Latest attempt",
-        shorthand: "T-1_A2",
-        type: "current_branch",
+        label: "T-1_A2",
+        icon: "GitCommit",
+        resource: {
+          type: "workspace",
+          id: "workspace-2",
+          label: "Latest attempt",
+        },
         createdAt: "2026-01-03T00:00:00.000Z",
         resourceParent: {
           type: "ticket",
@@ -196,9 +210,13 @@ describe("runTicketsQuery workspace badges", () => {
       },
       {
         id: "workspace-1",
-        name: "First attempt",
-        shorthand: "T-1_A1",
-        type: "worktree",
+        label: "T-1_A1",
+        icon: "GitBranch",
+        resource: {
+          type: "workspace",
+          id: "workspace-1",
+          label: "First attempt",
+        },
         createdAt: "2026-01-02T00:00:00.000Z",
         resourceParent: {
           type: "ticket",
@@ -284,9 +302,14 @@ describe("runTicketsQuery workspace badges", () => {
       ],
     });
 
-    expect(result.rows[0]?.attributes.workspaceItems).toEqual([
-      expect.objectContaining({ id: "workspace-2", name: "workspace-2" }),
-      expect.objectContaining({ id: "workspace-1", name: "T-1_A1" }),
+    expect(
+      (result.rows[0]?.attributes.workspaceItems as Array<{ id: string; label: string }>).map(({ id, label }) => ({
+        id,
+        label,
+      })),
+    ).toEqual([
+      { id: "workspace-2", label: "workspace-2" },
+      { id: "workspace-1", label: "T-1_A1" },
     ]);
   });
 });

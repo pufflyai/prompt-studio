@@ -96,12 +96,12 @@ describe("queryTicketsCommand", () => {
 
     const result = await queryTicketsCommand.run(ctx, commandParamsFor(ctx));
 
-    expect(result.rows[0]?.attributes.workspaceItems).toEqual([
+    expect(result.rows[0]?.attributes.workspaceItems).toMatchObject([
       {
         id: "workspace-1",
-        name: "T-1_A1",
-        shorthand: "T-1_A1",
-        type: "worktree",
+        label: "T-1_A1",
+        icon: "GitBranch",
+        resource: { type: "workspace", id: "workspace-1", label: "T-1_A1" },
         createdAt: "2026-01-02T00:00:00.000Z",
         resourceParent: {
           type: "ticket",

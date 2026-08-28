@@ -7,16 +7,16 @@ import type {
   ResourceKindRef,
   SettingsSectionRef,
   SettingsSlotRef,
-  StatusRef,
   ViewRef,
 } from "./contribution-identity";
 import type { JsonObject, JsonValue, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
-import type { ParamObjectSchema } from "./params";
-import type { RendererContributionBase, RendererEventReference } from "./renderer-base";
-import type { PackageAssetDescriptor, RendererContext, ResourceRef } from "./resources";
+import type { RendererEventReference } from "./renderer-base";
+import type { PackageAssetDescriptor, ResourceRef } from "./resources";
 import type { SlotRef } from "./slots";
 import type { WebviewCapabilityDeclaration } from "./webview-capabilities";
+
+export type * from "./kanban-renderer";
 
 export interface CliContribution {
   path?: string[];
@@ -89,151 +89,6 @@ export interface SettingsSectionContribution extends ContributionDefinition<"set
   title: Localizable<string>;
   /** Lower sorts first among sibling sections. */
   order?: number;
-}
-
-export type KanbanRendererViewMode = "board" | "list";
-export type KanbanRendererSortDirection = "asc" | "desc";
-
-export interface KanbanRendererEnumOption {
-  value: string;
-  label: Localizable<string>;
-  color?: string;
-  icon?: string | null;
-}
-
-export type KanbanRendererAttributeType =
-  | { kind: "enum"; options: KanbanRendererEnumOption[] }
-  | { kind: "enum-multi"; options: KanbanRendererEnumOption[] }
-  | { kind: "status"; statuses: StatusRef }
-  | { kind: "string" }
-  | { kind: "date" }
-  | { kind: "number" }
-  | { kind: "user" };
-
-export type KanbanRendererAttributeDisplay = { kind: "workspace-badge"; itemsAttributeId: string };
-
-export interface KanbanRendererAttributeDescriptor {
-  id: string;
-  label: Localizable<string>;
-  type: KanbanRendererAttributeType;
-  filterable?: boolean;
-  groupable?: boolean;
-  sortable?: boolean;
-  displayable?: boolean;
-  editable?: boolean;
-  display?: KanbanRendererAttributeDisplay;
-}
-
-export interface KanbanRendererSettings {
-  viewMode: KanbanRendererViewMode;
-  columnGrouping: string;
-  rowGrouping: string;
-  ordering: {
-    attributeId: string;
-    direction: KanbanRendererSortDirection;
-  };
-  displayProperties: string[];
-}
-
-export type KanbanRendererFilterState = Record<string, string[]>;
-
-export interface KanbanRendererSavedView {
-  id: string;
-  title: Localizable<string>;
-  settings: KanbanRendererSettings;
-  filters: KanbanRendererFilterState;
-  isDefault?: boolean;
-}
-
-export interface KanbanRendererQueryParams {
-  renderer: RendererContext;
-  settings: KanbanRendererSettings;
-  filters: KanbanRendererFilterState;
-}
-
-export type KanbanRendererResourceRef = ResourceRef;
-
-export interface KanbanRendererRow {
-  id: string;
-  title: string;
-  resource?: KanbanRendererResourceRef;
-  attributes: Record<string, unknown>;
-}
-
-export interface KanbanRendererColumnAction {
-  id: string;
-  label: Localizable<string>;
-  icon?: string;
-}
-
-export interface KanbanRendererBoardColumnConfig {
-  color?: string;
-  canDragIn?: boolean;
-  canDragOut?: boolean;
-  canCreate?: boolean;
-  actions?: KanbanRendererColumnAction[];
-}
-
-export interface KanbanRendererQueryResult {
-  rows: KanbanRendererRow[];
-  attributes?: KanbanRendererAttributeDescriptor[];
-  boardColumnConfigs?: Record<string, KanbanRendererBoardColumnConfig>;
-}
-
-export interface KanbanRendererCreateRowContribution<TParams extends ParamObjectSchema = ParamObjectSchema> {
-  command: CommandRef<Struct, unknown>;
-  title?: Localizable<string>;
-  submitLabel?: Localizable<string>;
-  columnParam?: string;
-  params?: TParams;
-  /**
-   * Pass the resource's editable attribute values to the create command as one
-   * structured parameter, keyed by attribute id. The command destructures it.
-   */
-  attributesParam?: string;
-  /** Upload selected files after creation, then invoke this command once per uploaded file. */
-  attachments?: {
-    command: CommandRef<Struct, unknown>;
-    resourceParam: string;
-    fileParam: string;
-  };
-  /** Dialog chrome copy. Defaults are English; supply l10n() values to translate. */
-  labels?: {
-    cancel?: Localizable<string>;
-    properties?: Localizable<string>;
-    submitError?: Localizable<string>;
-    removeFile?: Localizable<string>;
-  };
-}
-
-export interface KanbanRendererRowAction<TParams extends Struct = Struct> {
-  id: string;
-  label: Localizable<string>;
-  icon?: string;
-  /** Invoked with `{ rowId }` when the row's context-menu action is chosen. */
-  command: CommandRef<TParams, unknown>;
-  destructive?: boolean;
-}
-
-export type KanbanRendererRowActivationHandler = RendererCallback<
-  { row: KanbanRendererRow },
-  undefined | NavigationTarget
->;
-
-export interface KanbanRendererContribution extends RendererContributionBase {
-  attributes?: KanbanRendererAttributeDescriptor[];
-  query: RendererCallback<KanbanRendererQueryParams, KanbanRendererQueryResult>;
-  onAttributeChange?: RendererCallback<{ rowId: string; attributeId: string; value: unknown }, unknown>;
-  onReorder?: RendererCallback<{ rowId: string; beforeRowId?: string }, unknown>;
-  onColumnAction?: RendererCallback<{ columnId: string; actionId: string }, unknown>;
-  createRow?: KanbanRendererCreateRowContribution;
-  rowActions?: KanbanRendererRowAction[];
-  onRowActivate?: KanbanRendererRowActivationHandler;
-  defaultSettings?: Partial<KanbanRendererSettings>;
-  defaultFilters?: KanbanRendererFilterState;
-  defaultViews?: KanbanRendererSavedView[];
-  defaultActiveViewId?: string;
-  hideToolbar?: boolean;
 }
 
 /**

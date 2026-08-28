@@ -325,6 +325,9 @@ describe("packaged pstdio — core default extensions", () => {
         });
         expect(metadataRes.status).toBe(200);
         const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
+        expect(metadata.settingsPanels).toContainEqual(
+          expect.objectContaining({ id: "pstdio.pstdio-planner.settings-panel.ticket-board" }),
+        );
         const reportType = metadata.templateTypes.find((type) => type.localId === "report");
         expect(reportType?.commands).toEqual(
           expect.objectContaining({

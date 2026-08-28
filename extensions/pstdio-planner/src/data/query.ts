@@ -12,11 +12,12 @@ import {
   createTicketParentLookup,
   createTicketRowMapper,
   createTicketWorkspaceLookup,
+  statusToColumnConfig,
   TICKET_ARCHIVE_STATE_ACTIVE,
   TICKET_ARCHIVE_STATE_ARCHIVED,
   TICKET_ARCHIVE_STATE_ATTRIBUTE_ID,
 } from "./mappers";
-import { seedDefaultTags } from "./seed";
+import { seedDefaultStatuses, seedDefaultTags } from "./seed";
 import type { TicketWorkspaceSessionLookup } from "./workspace-sessions";
 
 interface TicketsQueryInput {
@@ -37,7 +38,11 @@ export const runTicketsQuery = async ({
   workspaces = [],
   workspaceSessions = new Map(),
 }: TicketsQueryInput): Promise<KanbanRendererQueryResult> => {
-  const [tickets, tags] = await Promise.all([ticketsCollection(storage).list(), seedDefaultTags(storage)]);
+  const [tickets, tags, statuses] = await Promise.all([
+    ticketsCollection(storage).list(),
+    seedDefaultTags(storage),
+    seedDefaultStatuses(storage),
+  ]);
 
   const toTicketRow = createTicketRowMapper(
     projectId,
@@ -58,5 +63,6 @@ export const runTicketsQuery = async ({
   return {
     rows,
     attributes: buildTicketAttributes(ticketStatuses.ref, tags),
+    boardColumnConfigs: Object.fromEntries(statuses.map((status) => [status.id, statusToColumnConfig(status)])),
   };
 };

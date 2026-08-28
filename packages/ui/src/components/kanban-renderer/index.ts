@@ -22,6 +22,7 @@ export {
   getAttributeValue,
   getEnumOptions,
   renderAttributeBadge,
+  renderBadgeListDisplay,
   sanitizeFilters,
   sanitizeSettings,
 } from "./kanban-renderer-helpers";

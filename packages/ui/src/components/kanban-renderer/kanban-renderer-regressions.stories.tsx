@@ -229,7 +229,7 @@ export const CustomAttributeRenderer: Story = {
 interface WorkspaceDisplayRow extends StoryRow {
   attributes: StoryRow["attributes"] & {
     workspace: string;
-    workspaceItems: Array<{ id: string; name: string; shorthand?: string; type: "worktree" | "current_branch" }>;
+    workspaceItems: Array<{ id: string; label: string; icon?: string }>;
   };
 }
 
@@ -240,7 +240,7 @@ const workspaceDisplayAttributes: AttributeDescriptor[] = [
     label: "Workspace",
     type: { kind: "string" },
     displayable: true,
-    display: { kind: "workspace-badge", itemsAttributeId: "workspaceItems" },
+    display: { kind: "badge-list", itemsAttributeId: "workspaceItems" },
   },
 ];
 
@@ -252,9 +252,8 @@ const workspaceDisplayRows: WorkspaceDisplayRow[] = initialRows.slice(0, 4).map(
     workspaceItems: [
       {
         id: `workspace-${index + 1}`,
-        name: `${row.id}_A1`,
-        shorthand: `${row.id}_A1`,
-        type: index % 2 === 0 ? "worktree" : "current_branch",
+        label: `${row.id}_A1`,
+        icon: index % 2 === 0 ? "GitBranch" : "GitCommit",
       },
     ],
   },

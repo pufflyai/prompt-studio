@@ -17,27 +17,52 @@ const makeTicket = (statusId: string): StoredTicket => ({
 });
 
 describe("ticketStatuses", () => {
-  test("seeds stored statuses and exposes their board behavior", async () => {
+  const context = (storage: ReturnType<typeof createMemoryStorage>) =>
+    ({
+      storage,
+      events: { emit: async () => undefined },
+    }) as never;
+
+  test("seeds stored statuses without exposing board behavior", async () => {
     const storage = createMemoryStorage();
 
-    const result = await ticketStatuses.query({ storage } as never);
+    const result = await ticketStatuses.query(context(storage));
 
     expect(result.statuses.find((status) => status.id === "backlog")).toMatchObject({
       isDefault: true,
-      board: { canCreate: true, canDragIn: true, canDragOut: true, actions: [] },
+      label: "Backlog",
     });
-    expect(result.statuses.find((status) => status.id === "done")?.board?.actions).toEqual(["archive_all"]);
+    expect(result.statuses.find((status) => status.id === "backlog")).not.toHaveProperty("board");
   });
 
   test("reassigns tickets when the shared editor removes a status", async () => {
     const storage = createMemoryStorage();
-    const current = await ticketStatuses.query({ storage } as never);
+    const current = await ticketStatuses.query(context(storage));
     await putTicket(storage, makeTicket("ready"));
 
-    await ticketStatuses.save?.({ storage } as never, {
+    await ticketStatuses.save?.(context(storage), {
       statuses: current.statuses.filter((status) => status.id !== "ready"),
     });
 
     expect((await ticketsCollection(storage).get("ticket-1"))?.statusId).toBe("backlog");
+  });
+
+  test("preserves board rules when the shared editor saves status fields", async () => {
+    const storage = createMemoryStorage();
+    const current = await ticketStatuses.query(context(storage));
+    const backlog = current.statuses.find((status) => status.id === "backlog")!;
+
+    await ticketStatuses.save?.(context(storage), {
+      statuses: current.statuses.map((status) => (status.id === backlog.id ? { ...status, label: "Ideas" } : status)),
+    });
+
+    const stored = (await import("./data/collections")).statusesCollection(storage);
+    expect(await stored.get("backlog")).toMatchObject({
+      name: "Ideas",
+      canCreate: true,
+      canDragIn: true,
+      canDragOut: true,
+      columnActions: [],
+    });
   });
 });

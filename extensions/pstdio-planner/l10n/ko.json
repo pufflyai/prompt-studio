@@ -15,6 +15,7 @@
   "displayMenu.propertyOptions.createdAt": "생성일",
   "displayMenu.propertyOptions.status": "상태",
   "displayMenu.propertyOptions.updatedAt": "업데이트",
+  "settingsPanels.ticketBoard.title": "티켓 보드",
   "settingsPanels.ticketTags.title": "태그",
   "ticketDetail.none": "없음",
   "ticketDetail.parent": "상위"

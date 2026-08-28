@@ -1,4 +1,5 @@
 import { Box, Icon, Menu } from "@chakra-ui/react";
+import type { KanbanRendererResourceRef } from "@pstdio/sdk/extensions";
 import {
   ListRow,
   type SessionCompletionStatus,
@@ -29,9 +30,9 @@ export interface ExtensionWorkspaceBadgeSession {
 
 export interface ExtensionWorkspaceBadgeItem {
   id: string;
-  name: string;
-  shorthand?: string;
-  type: WorkspaceBadgeProps["workspaceType"];
+  label: string;
+  icon?: string;
+  resource?: KanbanRendererResourceRef;
   createdAt?: string;
   resourceParent?: ExtensionResourceReference;
   session?: ExtensionWorkspaceBadgeSession;
@@ -46,7 +47,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const textValue = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : undefined);
 
-const workspaceTypeFrom = (value: unknown): ExtensionWorkspaceBadgeItem["type"] =>
+const isExtensionResource = (value: unknown): value is KanbanRendererResourceRef =>
+  isRecord(value) && typeof value.type === "string" && typeof value.id === "string";
+
+const workspaceTypeFrom = (value: unknown): WorkspaceBadgeProps["workspaceType"] =>
   value === "current_branch" ? "current_branch" : "worktree";
 
 // A status the shared session contract does not define must not reach the indicator, which
@@ -69,17 +73,18 @@ export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspace
     if (!isRecord(item)) return [];
     const id = textValue(item.id);
     if (!id) return [];
-    const shorthand = textValue(item.shorthand);
-    const name = textValue(item.name) ?? shorthand ?? id;
+    const resource = isExtensionResource(item.resource) ? item.resource : undefined;
+    const label = textValue(item.label) ?? textValue(resource?.label) ?? id;
+    const icon = textValue(item.icon);
     const createdAt = textValue(item.createdAt);
     const resourceParent = normalizeExtensionResourceReference(item.resourceParent);
     const session = badgeSessionFrom(item.session);
     return [
       {
         id,
-        name,
-        ...(shorthand ? { shorthand } : {}),
-        type: workspaceTypeFrom(item.type),
+        label,
+        ...(icon ? { icon } : {}),
+        ...(resource ? { resource } : {}),
         ...(createdAt ? { createdAt } : {}),
         ...(resourceParent ? { resourceParent } : {}),
         ...(session ? { session } : {}),
@@ -89,12 +94,18 @@ export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspace
 };
 
 export const createWorkspaceBadgeResource = (item: ExtensionWorkspaceBadgeItem, projectId: string): ResourceRef =>
-  createDashboardResource("workspace", item.id, item.name, "GitBranch", projectId, {
-    workspaceId: item.id,
-    workspaceType: item.type,
-    ...(item.shorthand ? { workspaceShorthand: item.shorthand } : {}),
-    ...(item.resourceParent ? { resourceParent: item.resourceParent } : {}),
-  });
+  createDashboardResource(
+    item.resource?.type ?? "workspace",
+    item.id,
+    item.resource?.label ?? item.label,
+    item.icon ?? "GitBranch",
+    projectId,
+    {
+      ...item.resource?.metadata,
+      workspaceId: item.id,
+      ...(item.resourceParent ? { resourceParent: item.resourceParent } : {}),
+    },
+  );
 
 // `sessionSurface: "side"` keeps the board in place and opens the session in the Side Panel.
 // The label is only a fallback — the sessions module resolves the live title by session id.
@@ -102,7 +113,7 @@ export const createWorkspaceBadgeSessionResource = (
   item: ExtensionWorkspaceBadgeSessionItem,
   projectId: string,
 ): ResourceRef =>
-  createDashboardResource("session", item.session.id, item.shorthand ?? item.name, "MessageCircle", projectId, {
+  createDashboardResource("session", item.session.id, item.label, "MessageCircle", projectId, {
     sessionSurface: "side",
   });
 
@@ -140,7 +151,7 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
   const selectedItem = items.find((item) => item.id === selectedId) ?? items[0];
   const workspaceIdsKey = items.map((item) => item.id).join("\n");
   const selectedSummary = selectedItem ? getDashboardWorkspaceDiffSummary(selectedItem.id) : undefined;
-  const badgeLabel = selectedItem?.shorthand ?? selectedItem?.name;
+  const badgeLabel = selectedItem?.label;
 
   useEffect(() => {
     let cancelled = false;
@@ -164,7 +175,7 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
 
   const badge = (
     <WorkspaceBadge
-      workspaceType={selectedItem.type}
+      workspaceType={workspaceTypeFrom(selectedItem.resource?.metadata?.workspaceType)}
       shorthand={badgeLabel}
       diffAdditions={selectedSummary?.additions}
       diffDeletions={selectedSummary?.deletions}
@@ -209,7 +220,7 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
               <ListRow
                 asChild
                 variant="compact"
-                label={item.name}
+                label={item.label}
                 icon={<Icon as={GitBranch} boxSize="16px" />}
                 endContent={<WorkspaceDiffTotals workspaceId={item.id} />}
                 onActivate={() => openItem(item)}
@@ -222,7 +233,7 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
   );
 };
 
-export const createWorkspaceBadgeRenderer =
+export const createBadgeListRenderer =
   (input: { itemsAttributeId: string; projectId: string; openResource: (resource: ResourceRef) => void }) =>
   (value: unknown, row: KanbanRendererRow) => {
     const items = normalizeWorkspaceBadgeItems(row.attributes[input.itemsAttributeId]);

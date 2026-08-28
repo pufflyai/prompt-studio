@@ -175,7 +175,7 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
     expect(renderer.attributes.getSnapshot()).toHaveLength(1);
   });
 
-  test("rejects board column configs for a declared status attribute", async () => {
+  test("uses board column configs for a declared status attribute", async () => {
     const workbench = createWorkbenchCore();
     workbench.statuses.registerStatusSet({
       id: "pstdio.planner.status.tickets",
@@ -204,9 +204,76 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
       [record],
     );
 
-    await expect(workbench.renderers.getKanbanRenderer("tickets")?.executeQuery(queryState)).rejects.toThrow(
-      "cannot return boardColumnConfigs",
+    const renderer = workbench.renderers.getKanbanRenderer("tickets");
+    await renderer?.executeQuery(queryState);
+
+    expect(renderer?.getBoardColumnConfig?.("todo").color).toBe("red");
+  });
+
+  test("uses the status color when a board does not configure the column", async () => {
+    const workbench = createWorkbenchCore();
+    workbench.statuses.registerStatusSet({
+      id: "example.recipes.status.workflow",
+      title: "Recipe workflow",
+      query: () => [{ id: "draft", label: "Draft", color: "orange", sortOrder: 0 }],
+    });
+    await workbench.statuses.query("example.recipes.status.workflow");
+    const record = {
+      id: "recipes",
+      extensionId: "example.recipes",
+      title: "Recipes",
+      queryHandlerId: "recipes.query",
+      attributes: [
+        {
+          id: "status",
+          label: "Status",
+          type: { kind: "status", statuses: { kind: "status", id: "workflow" } },
+        },
+      ],
+    } satisfies WorkbenchExtensionKanbanRendererRecord;
+    registerWorkbenchExtensionKanbanRenderers(
+      { projectId: "project-1", workbench, executeCommand: async () => ({ rows: [] }) },
+      [record],
     );
+
+    const renderer = workbench.renderers.getKanbanRenderer("recipes");
+    await renderer?.executeQuery(queryState);
+
+    expect(renderer?.getBoardColumnConfig?.("draft").color).toBe("orange");
+  });
+
+  test("reports an unknown display kind and falls back to the attribute type", () => {
+    const workbench = createWorkbenchCore();
+    const record = {
+      id: "recipes",
+      extensionId: "example.recipes",
+      title: "Recipes",
+      queryHandlerId: "recipes.query",
+      attributes: [
+        {
+          id: "season",
+          label: "Season",
+          type: { kind: "string" },
+          display: { kind: "portrait-stack", itemsAttributeId: "seasonItems" },
+        },
+      ],
+    } satisfies WorkbenchExtensionKanbanRendererRecord;
+
+    registerWorkbenchExtensionKanbanRenderers(
+      { projectId: "project-1", workbench, executeCommand: async () => ({ rows: [] }) },
+      [record],
+    );
+
+    const renderer = workbench.renderers.getKanbanRenderer("recipes")!;
+    if (!("getSnapshot" in renderer.attributes)) throw new Error("Expected live attributes");
+    expect(renderer.attributes.getSnapshot()[0]?.display).toBeUndefined();
+    expect(workbench.notifications.listNotifications()).toMatchObject([
+      {
+        level: "error",
+        title: "Extension display is not available",
+        message: 'Attribute "season" in renderer "recipes" uses unknown display kind "portrait-stack".',
+      },
+    ]);
   });
 });
 

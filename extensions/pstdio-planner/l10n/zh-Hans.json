@@ -15,6 +15,7 @@
   "displayMenu.propertyOptions.createdAt": "创建时间",
   "displayMenu.propertyOptions.status": "状态",
   "displayMenu.propertyOptions.updatedAt": "更新时间",
+  "settingsPanels.ticketBoard.title": "工单看板",
   "settingsPanels.ticketTags.title": "标签",
   "ticketDetail.none": "无",
   "ticketDetail.parent": "父级"

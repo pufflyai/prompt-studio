@@ -241,7 +241,6 @@ export type {
   WorkbenchWidgetPlacement,
   WorkflowStatus,
   WorkflowStatusAction,
-  WorkflowStatusBoardRules,
 } from "./core";
 export {
   createResourceBreadcrumbItems,

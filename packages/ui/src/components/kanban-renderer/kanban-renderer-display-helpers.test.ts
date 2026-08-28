@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { isValidElement } from "react";
 
-import { WorkspaceBadge } from "@/components/primitives/workspace-badge";
+import { CollectionBadge } from "./collection-badge";
 import {
   collectDisplayBadges,
   collectDisplayCustomSlots,
@@ -36,13 +36,13 @@ const attributes: AttributeDescriptor[] = [
   },
 ];
 
-const workspaceAttributes: AttributeDescriptor[] = [
+const badgeListAttributes: AttributeDescriptor[] = [
   {
     id: "workspace",
     label: "Workspace",
     type: { kind: "string" },
     displayable: true,
-    display: { kind: "workspace-badge", itemsAttributeId: "workspaceItems" },
+    display: { kind: "badge-list", itemsAttributeId: "workspaceItems" },
   },
 ];
 
@@ -98,7 +98,7 @@ describe("collectDisplayBadges", () => {
       },
     };
 
-    expect(collectDisplayBadges(row, workspaceAttributes, ["workspace"])).toEqual([]);
+    expect(collectDisplayBadges(row, badgeListAttributes, ["workspace"])).toEqual([]);
   });
 });
 
@@ -151,29 +151,28 @@ describe("collectDisplayCustomSlots", () => {
     expect(collectDisplayCustomSlots(row, renderedAttributes, ["diffOverview"])).toEqual([]);
   });
 
-  it("emits workspace badge display properties as custom slots", () => {
+  it("emits badge list display properties as custom slots", () => {
     const row: KanbanRendererRow = {
       id: "1",
       title: "A",
       attributes: {
         workspace: "workspace-2",
         workspaceItems: [
-          { id: "workspace-1", name: "First attempt", shorthand: "T-1_A1", type: "worktree" },
-          { id: "workspace-2", name: "Latest attempt", shorthand: "T-1_A2", type: "current_branch" },
+          { id: "workspace-1", label: "T-1_A1", icon: "GitBranch" },
+          { id: "workspace-2", label: "T-1_A2", icon: "GitCommit" },
         ],
       },
     };
 
-    const [slot] = collectDisplayCustomSlots(row, workspaceAttributes, ["workspace"]);
+    const [slot] = collectDisplayCustomSlots(row, badgeListAttributes, ["workspace"]);
 
     expect(isValidElement(slot)).toBe(true);
     if (!isValidElement(slot)) throw new Error("Expected a workspace badge element");
-    expect(slot.type).toBe(WorkspaceBadge);
+    expect(slot.type).toBe(CollectionBadge);
     expect(slot.props).toMatchObject({
-      workspaceType: "current_branch",
-      shorthand: "T-1_A2",
-      hasMultipleWorkspaces: true,
-      showLeadingSessionIndicator: false,
+      label: "T-1_A2",
+      icon: "GitCommit",
+      overflowCount: 1,
     });
   });
 });

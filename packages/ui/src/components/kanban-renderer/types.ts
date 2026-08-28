@@ -39,7 +39,35 @@ export const isEnumOptionsSource = (options: EnumOptions): options is EnumOption
 
 export type AttributeKind = AttributeType["kind"];
 
-export type AttributeDisplayDescriptor = { kind: "workspace-badge"; itemsAttributeId: string };
+export type AttributeDisplayDescriptor = { kind: "badge-list"; itemsAttributeId: string };
+
+type CollectionBadgeJsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | CollectionBadgeJsonValue[]
+  | CollectionBadgeJsonObject;
+
+interface CollectionBadgeJsonObject {
+  [key: string]: CollectionBadgeJsonValue;
+}
+
+export interface CollectionBadgeResource {
+  type: string;
+  id: string;
+  projectId?: string;
+  label?: string;
+  extensionId?: string;
+  metadata?: CollectionBadgeJsonObject;
+}
+
+export interface CollectionBadgeItem {
+  id: string;
+  label: string;
+  icon?: string;
+  resource?: CollectionBadgeResource;
+}
 
 export interface AttributeDescriptor {
   id: string;

@@ -1,10 +1,11 @@
 import { createElement, type ReactNode } from "react";
-import { WorkspaceBadge, type WorkspaceBadgeProps } from "@/components/primitives/workspace-badge";
+import { CollectionBadge } from "./collection-badge";
 import type { AttributeBadge } from "./kanban-renderer-badge-helpers";
 import { renderEnumBadge, renderMultiEnumBadge } from "./kanban-renderer-badge-helpers";
 import { getEnumOptions, toTitleCase } from "./kanban-renderer-enum-helpers";
 import type {
   AttributeDescriptor,
+  CollectionBadgeItem,
   KanbanRendererFilterState,
   KanbanRendererRow,
   KanbanRendererSettings,
@@ -60,52 +61,47 @@ const formatUserValue = (value: unknown) => formatStringValue(value);
 
 const isRenderableNode = (value: unknown) => value !== null && value !== undefined && value !== false;
 
-interface WorkspaceBadgeItem {
-  id: string;
-  name: string;
-  shorthand?: string;
-  type: WorkspaceBadgeProps["workspaceType"];
-}
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 const textValue = (value: unknown) => (typeof value === "string" && value.trim() ? value.trim() : undefined);
 
-const workspaceTypeFrom = (value: unknown): WorkspaceBadgeProps["workspaceType"] =>
-  value === "current_branch" ? "current_branch" : "worktree";
+const isCollectionResource = (value: unknown): value is NonNullable<CollectionBadgeItem["resource"]> =>
+  isRecord(value) && typeof value.type === "string" && typeof value.id === "string";
 
-const normalizeWorkspaceBadgeItems = (value: unknown): WorkspaceBadgeItem[] => {
+const normalizeCollectionBadgeItems = (value: unknown): CollectionBadgeItem[] => {
   if (!Array.isArray(value)) return [];
 
   return value.flatMap((item) => {
     if (!isRecord(item)) return [];
     const id = textValue(item.id);
     if (!id) return [];
-    const shorthand = textValue(item.shorthand);
-    const name = textValue(item.name) ?? shorthand ?? id;
-    return [{ id, name, ...(shorthand ? { shorthand } : {}), type: workspaceTypeFrom(item.type) }];
+    const label = textValue(item.label) ?? id;
+    const icon = textValue(item.icon);
+    const resource = isCollectionResource(item.resource) ? item.resource : undefined;
+    return [{ id, label, ...(icon ? { icon } : {}), ...(resource ? { resource } : {}) }];
   });
 };
 
-const renderWorkspaceBadgeDisplay = (
+export const renderBadgeListDisplay = (
   descriptor: AttributeDescriptor,
   value: unknown,
   row: KanbanRendererRow,
+  openResource?: (resource: NonNullable<CollectionBadgeItem["resource"]>) => void,
 ): ReactNode => {
-  if (descriptor.display?.kind !== "workspace-badge") return null;
-  const items = normalizeWorkspaceBadgeItems(row.attributes[descriptor.display.itemsAttributeId]);
+  if (descriptor.display?.kind !== "badge-list") return null;
+  const items = normalizeCollectionBadgeItems(row.attributes[descriptor.display.itemsAttributeId]);
   if (items.length === 0) return null;
 
   const selectedId = typeof value === "string" ? value : undefined;
   const selectedItem = items.find((item) => item.id === selectedId) ?? items[0];
   if (!selectedItem) return null;
 
-  return createElement(WorkspaceBadge, {
-    workspaceType: selectedItem.type,
-    shorthand: selectedItem.shorthand ?? selectedItem.name,
-    hasMultipleWorkspaces: items.length > 1,
-    showLeadingSessionIndicator: false,
+  return createElement(CollectionBadge, {
+    label: selectedItem.label,
+    icon: selectedItem.icon,
+    overflowCount: items.length - 1,
+    onClick: selectedItem.resource && openResource ? () => openResource(selectedItem.resource!) : undefined,
   });
 };
 
@@ -170,9 +166,7 @@ export const collectDisplayCustomSlots = (
     if (!descriptor || descriptor.displayable === false) continue;
 
     const value = getAttributeValue(row, descriptor);
-    const slot = descriptor.render
-      ? descriptor.render(value, row)
-      : renderWorkspaceBadgeDisplay(descriptor, value, row);
+    const slot = descriptor.render ? descriptor.render(value, row) : renderBadgeListDisplay(descriptor, value, row);
     if (isRenderableNode(slot)) slots.push(slot);
   }
   return slots;

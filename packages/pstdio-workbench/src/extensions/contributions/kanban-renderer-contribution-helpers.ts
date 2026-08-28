@@ -30,6 +30,8 @@ export interface MutableAttributeSource {
   set(attributes: WorkbenchExtensionKanbanRendererRecord["attributes"] | undefined): void;
 }
 
+type UnknownDisplayReporter = (attributeId: string, kind: string) => void;
+
 export type ResolveStatusOptions = (
   statuses: Extract<
     NonNullable<WorkbenchExtensionKanbanRendererRecord["attributes"]>[number]["type"],
@@ -46,8 +48,15 @@ const localizeAttributes = (
   localize: Localizer,
   decorate: (record: WorkbenchExtensionKanbanRendererRecord, attribute: AttributeDescriptor) => AttributeDescriptor,
   resolveStatusOptions: ResolveStatusOptions,
+  reportUnknownDisplay?: UnknownDisplayReporter,
 ): AttributeDescriptor[] =>
   (attributes ?? []).map((attribute) => {
+    const display = attribute.display;
+    const knownDisplay =
+      display?.kind === "badge-list" && typeof display.itemsAttributeId === "string"
+        ? { kind: "badge-list" as const, itemsAttributeId: display.itemsAttributeId }
+        : undefined;
+    if (display && !knownDisplay) reportUnknownDisplay?.(attribute.id, display.kind);
     const base: AttributeDescriptor = {
       ...attribute,
       label: localize(attribute.label, attribute.id),
@@ -62,6 +71,7 @@ const localizeAttributes = (
                   : attribute.type.options,
               }
             : attribute.type,
+      display: knownDisplay,
     };
     return decorate(record, base);
   });
@@ -72,8 +82,9 @@ export const createMutableAttributeSource = (
   localize: Localizer,
   decorate: (record: WorkbenchExtensionKanbanRendererRecord, attribute: AttributeDescriptor) => AttributeDescriptor,
   resolveStatusOptions: ResolveStatusOptions = () => [],
+  reportUnknownDisplay?: UnknownDisplayReporter,
 ): MutableAttributeSource => {
-  let snapshot = localizeAttributes(record, initial, localize, decorate, resolveStatusOptions);
+  let snapshot = localizeAttributes(record, initial, localize, decorate, resolveStatusOptions, reportUnknownDisplay);
   const listeners = new Set<() => void>();
   return {
     source: {
@@ -84,7 +95,7 @@ export const createMutableAttributeSource = (
       },
     },
     set(attributes) {
-      snapshot = localizeAttributes(record, attributes, localize, decorate, resolveStatusOptions);
+      snapshot = localizeAttributes(record, attributes, localize, decorate, resolveStatusOptions, reportUnknownDisplay);
       for (const listener of listeners) listener();
     },
   };

@@ -1,3 +1,4 @@
+import type { KanbanRendererAttributeDisplay } from "@pstdio/sdk/extensions";
 import type { ComponentType, ReactNode } from "react";
 
 /**
@@ -43,7 +44,7 @@ export type AttributeType =
 
 export type AttributeKind = AttributeType["kind"];
 
-export type AttributeDisplayDescriptor = { kind: "workspace-badge"; itemsAttributeId: string };
+export type AttributeDisplayDescriptor = KanbanRendererAttributeDisplay;
 
 export interface AttributeDescriptor {
   id: string;

@@ -308,8 +308,8 @@ describe("pstdio planner workspace contributions", () => {
     });
   });
 
-  test("keeps tags separate and contributes statuses through the shared editor", () => {
-    expect(extension.settingsPanels?.map((panel) => panel.id)).toEqual(["ticket-tags"]);
+  test("keeps tag and board rule settings separate from shared status fields", () => {
+    expect(extension.settingsPanels?.map((panel) => panel.id)).toEqual(["ticket-tags", "ticket-board"]);
     expect(extension.settingsSections).toEqual([
       expect.objectContaining({ id: "planner", order: 40, title: expect.objectContaining({ default: "Planner" }) }),
     ]);

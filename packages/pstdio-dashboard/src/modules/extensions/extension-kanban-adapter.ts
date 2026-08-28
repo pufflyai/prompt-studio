@@ -15,7 +15,7 @@ import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/ext
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { buildDashboardExtensionMenuRegistrations } from "@/shared/extensions/workbench-extension-contributions";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
-import { createWorkspaceBadgeRenderer } from "./extension-workspace-badge-renderer";
+import { createBadgeListRenderer } from "./extension-workspace-badge-renderer";
 
 type KanbanRecord = Parameters<NonNullable<WorkbenchExtensionKanbanRendererAdapter["resolveRowResource"]>>[0];
 type MenuRegistration = ReturnType<typeof buildDashboardExtensionMenuRegistrations>["registrations"][number];
@@ -75,10 +75,10 @@ const decorateAttribute = (
   projectId: string,
   attribute: AttributeDescriptor,
 ): AttributeDescriptor => {
-  if (attribute.display?.kind !== "workspace-badge") return attribute;
+  if (attribute.display?.kind !== "badge-list") return attribute;
   return {
     ...attribute,
-    render: createWorkspaceBadgeRenderer({
+    render: createBadgeListRenderer({
       itemsAttributeId: attribute.display.itemsAttributeId,
       projectId,
       openResource: (resource) => void ctx.resources.openResource(resource, { replaceActive: true }),

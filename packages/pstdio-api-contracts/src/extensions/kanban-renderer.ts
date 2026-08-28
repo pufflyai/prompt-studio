@@ -27,8 +27,9 @@ const kanbanRendererAttributeTypeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("user") }),
 ]);
 
-const kanbanRendererAttributeDisplaySchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("workspace-badge"), itemsAttributeId: z.string() }),
+const kanbanRendererAttributeDisplaySchema = z.union([
+  z.object({ kind: z.literal("badge-list"), itemsAttributeId: z.string() }),
+  z.object({ kind: z.string() }).passthrough(),
 ]);
 
 const kanbanRendererAttributeSchema = z.object({

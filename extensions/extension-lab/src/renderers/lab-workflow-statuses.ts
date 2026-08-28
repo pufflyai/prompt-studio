@@ -9,14 +9,12 @@ const defaultStatuses: WorkflowStatus[] = [
     color: "gray",
     sortOrder: 0,
     isDefault: true,
-    board: { canCreate: true, canDragIn: true, canDragOut: true },
   },
   {
     id: "testing",
     label: "Testing",
     color: "blue",
     sortOrder: 1,
-    board: { canDragIn: true, canDragOut: true },
   },
 ];
 
