@@ -1,7 +1,13 @@
-import type { CommandDefinition, ParamObjectSchema, ParamsOf } from "pstdio-api-contracts/extension-kernel";
+import type {
+  CommandDefinition,
+  ParamObjectSchema,
+  ParamsOf,
+  WebviewArtifactFile,
+} from "pstdio-api-contracts/extension-kernel";
 import { type CommandResponse, unwrapCommandOutcome } from "./command-outcome";
 import type { SettingsMap } from "./define-extension";
 import type { GuestHost } from "./define-extension-view";
+import { type ArtifactMountKey, artifactMountId } from "./webview-capabilities";
 
 // Command types derive from a record of `defineCommand` values (the extension's
 // exported commands map), not from `typeof extension`: `defineExtension` cannot keep
@@ -31,7 +37,17 @@ type ClientSettingsMap<TSettings> = TSettings extends { properties: unknown }
   ? SettingsMap<TSettings>
   : Record<never, never>;
 
+// Reads go to mounts the webview declared with `artifactsRead(...)`; the host
+// enforces mount confinement, media types, and size limits.
+export type WebviewArtifactsClient = {
+  list: (mount: ArtifactMountKey, prefix?: string) => Promise<WebviewArtifactFile[]>;
+  readText: (mount: ArtifactMountKey, path: string) => Promise<string>;
+  /** Short-lived URL for an allowlisted raster image, usable in `<img src>`. */
+  imageUrl: (mount: ArtifactMountKey, path: string) => Promise<string>;
+};
+
 export type WebviewClient<TCommands, TSettings = undefined> = {
+  artifacts: WebviewArtifactsClient;
   commands: WebviewCommandsClient<TCommands>;
   settings: WebviewSettingsClient<ClientSettingsMap<TSettings>>;
 };
@@ -93,5 +109,18 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
     },
   };
 
-  return { commands, settings } as WebviewClient<TCommands, TSettings>;
+  const artifacts: WebviewArtifactsClient = {
+    list: (mount, prefix) =>
+      host.call<WebviewArtifactFile[]>("artifacts.read", {
+        op: "list",
+        mount: artifactMountId(mount),
+        ...(prefix === undefined ? {} : { prefix }),
+      }),
+    readText: (mount, path) =>
+      host.call<string>("artifacts.read", { op: "readText", mount: artifactMountId(mount), path }),
+    imageUrl: (mount, path) =>
+      host.call<string>("artifacts.read", { op: "imageUrl", mount: artifactMountId(mount), path }),
+  };
+
+  return { artifacts, commands, settings } as WebviewClient<TCommands, TSettings>;
 };

@@ -28,20 +28,27 @@ export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "files.delete",
 ] as const;
 
+// Capabilities that must be declared with a scope suffix (`name:scope`). Each
+// declaration grants one scope; a bare declaration is invalid.
+export const WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES = ["artifacts.read"] as const;
+
 // Runtime plumbing the guest invokes on its own (e.g. keyboard forwarding). Enabled
 // wherever the host implements them, with no manifest declaration required.
 export const ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES = ["host.dispatchKeyboardEvent"] as const;
 
 export const WEBVIEW_HOST_CAPABILITIES = [
   ...WEBVIEW_DECLARABLE_CAPABILITIES,
+  ...WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
   ...ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
 ] as const;
 
 export type WebviewHostCapability = (typeof WEBVIEW_HOST_CAPABILITIES)[number];
 export type WebviewDeclarableCapability = (typeof WEBVIEW_DECLARABLE_CAPABILITIES)[number];
+export type WebviewScopedDeclarableCapability = (typeof WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES)[number];
 export type WebviewCapabilityDeclaration =
   | WebviewDeclarableCapability
-  | `${WebviewDeclarableCapability}@${typeof WEBVIEW_HOST_CAPABILITY_VERSION}`;
+  | `${WebviewDeclarableCapability}@${typeof WEBVIEW_HOST_CAPABILITY_VERSION}`
+  | `${WebviewScopedDeclarableCapability}:${string}`;
 
 export interface WebviewCommandsExecuteParams {
   commandId: string;
@@ -112,6 +119,19 @@ export interface WebviewFilesDeleteParams {
   id: string;
 }
 
+// One bridge method covers every artifact read; the operation is in the params,
+// mirroring terminal.session. The mount is always the mount's local id.
+export type WebviewArtifactsReadParams =
+  | { op: "list"; mount: string; prefix?: string }
+  | { op: "readText"; mount: string; path: string }
+  | { op: "imageUrl"; mount: string; path: string };
+
+export interface WebviewArtifactFile {
+  path: string;
+  size: number;
+  mediaType: string;
+}
+
 export interface WebviewKeyboardEventParams {
   key?: string;
   code?: string;
@@ -139,5 +159,6 @@ export interface WebviewHostCapabilityParams {
   "files.upload": WebviewFilesUploadParams;
   "files.list": WebviewFilesListParams;
   "files.delete": WebviewFilesDeleteParams;
+  "artifacts.read": WebviewArtifactsReadParams;
   "host.dispatchKeyboardEvent": WebviewKeyboardEventParams;
 }

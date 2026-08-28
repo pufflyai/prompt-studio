@@ -99,8 +99,10 @@ export {
   type TerminalSessionBridge,
   type TerminalSessionExit,
 } from "./terminal-session-bridge";
+export { type ArtifactMountKey, artifactMountId, artifactsRead } from "./webview-capabilities";
 export {
   createWebviewClient,
+  type WebviewArtifactsClient,
   type WebviewClient,
   type WebviewClientOptions,
   type WebviewCommandsClient,

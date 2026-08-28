@@ -1,6 +1,6 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { AppBindings } from "../../types";
-import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps } from "./deps";
+import type { ExtensionsRouteDeps, ExtensionWebviewMetadataDeps, ExtensionWebviewRouteDeps } from "./deps";
 import {
   attemptFixProjectExtensionHandler,
   attemptFixProjectExtensionRoute,
@@ -12,6 +12,14 @@ import {
 import { dispatchExtensionEventHandler, dispatchExtensionEventRoute } from "./endpoints/dispatch-extension-event";
 import { enableInstalledExtensionHandler, enableInstalledExtensionRoute } from "./endpoints/enable-installed-extension";
 import { executeExtensionCommandHandler, executeExtensionCommandRoute } from "./endpoints/execute-extension-command";
+import {
+  getExtensionArtifactImageUrlHandler,
+  getExtensionArtifactImageUrlRoute,
+  listExtensionArtifactsHandler,
+  listExtensionArtifactsRoute,
+  readExtensionArtifactTextHandler,
+  readExtensionArtifactTextRoute,
+} from "./endpoints/extension-artifacts";
 import {
   checkExtensionConnectionHandler,
   checkExtensionConnectionRoute,
@@ -113,6 +121,15 @@ const registerExtensionFileRoutes = (routes: ExtensionRoutes, deps: ExtensionsRo
   routes.openapi(deleteExtensionFileRoute, deleteExtensionFileHandler(deps));
 };
 
+const registerExtensionArtifactRoutes = (
+  routes: ExtensionRoutes,
+  deps: ExtensionsRouteDeps & ExtensionWebviewRouteDeps,
+) => {
+  routes.openapi(listExtensionArtifactsRoute, listExtensionArtifactsHandler(deps));
+  routes.openapi(readExtensionArtifactTextRoute, readExtensionArtifactTextHandler(deps));
+  routes.openapi(getExtensionArtifactImageUrlRoute, getExtensionArtifactImageUrlHandler(deps));
+};
+
 const registerProjectExtensionRoutes = (
   routes: ExtensionRoutes,
   deps: ProjectExtensionLifecycleRouteDeps & ExtensionWebviewMetadataDeps,
@@ -144,12 +161,15 @@ const registerExtensionSettingsRoutes = (routes: ExtensionRoutes, deps: Extensio
   routes.openapi(deleteGlobalExtensionSettingRoute, deleteGlobalExtensionSettingHandler(deps));
 };
 
-export const createExtensionRoutes = (deps: ExtensionsRouteDeps & ExtensionWebviewMetadataDeps) => {
+export const createExtensionRoutes = (
+  deps: ExtensionsRouteDeps & ExtensionWebviewMetadataDeps & ExtensionWebviewRouteDeps,
+) => {
   const routes = new OpenAPIHono<AppBindings>();
 
   registerInstalledExtensionRoutes(routes, deps);
   registerExtensionWorkbenchRoutes(routes, deps);
   registerExtensionFileRoutes(routes, deps);
+  registerExtensionArtifactRoutes(routes, deps);
   registerProjectExtensionRoutes(routes, {
     ...deps,
     projectExtensionLifecycle: createProjectExtensionLifecycle(deps),

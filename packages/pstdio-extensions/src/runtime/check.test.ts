@@ -186,6 +186,37 @@ describe("checkExtensions", () => {
     expect(result.runtime.diagnostics.map((d) => d.code)).toContain("unsafe_artifact_mount_path");
   });
 
+  test("flags webview artifact grants on mounts the extension does not define", async () => {
+    const home = createTempHome();
+    writeExtension(
+      home,
+      "report-view",
+      `export default {
+        artifactMounts: [
+          { id: "runs", ref: { kind: "artifact-mount", id: "runs" }, path: "runs", label: "Runs" },
+        ],
+        views: [
+          {
+            id: "report",
+            ref: { kind: "view", id: "report" },
+            title: "Report",
+            body: {
+              kind: "webview",
+              entry: { kind: "package-asset", path: "./webviews/report.tsx", baseUrl: "file:///tmp/report-view/" },
+              capabilities: ["artifacts.read:runs", "artifacts.read:secrets"],
+            },
+          },
+        ],
+      };`,
+    );
+
+    const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
+    const diagnostics = result.runtime.diagnostics.filter((d) => d.code === "webview_artifact_mount_missing");
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]?.message).toContain("artifacts.read:secrets");
+    expect(diagnostics[0]?.message).toContain('"secrets"');
+  });
+
   test("flags invalid middleware command refs", async () => {
     const home = createTempHome();
     writeExtension(

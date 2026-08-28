@@ -50,6 +50,7 @@ const createExtensionHostCapabilities = (
   const createBase =
     input.createWebviewHostCapabilities ??
     createExtensionWebviewHostCapabilities({
+      artifacts: input.webviewArtifacts,
       executeCommand: input.executeCommand,
       files: input.webviewFiles,
       projectId: input.projectId,

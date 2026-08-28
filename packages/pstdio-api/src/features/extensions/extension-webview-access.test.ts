@@ -57,6 +57,46 @@ describe("extension webview access", () => {
     expect(second.authorize(new Request(`http://127.0.0.1:43123${runtimeUrl}`))).toBeNull();
   });
 
+  test("issues expiring, fully-bound artifact URLs", () => {
+    let clock = 1_000_000_000_000;
+    const access = createExtensionWebviewAccess({
+      signingKey: Buffer.from("test-webview-signing-key"),
+      now: () => clock,
+    });
+    const request = { projectId: "project-1", mountId: "runs", artifactPath: "a/chart.png" };
+    const artifactUrl = access.artifactUrl(scope, request);
+
+    expect(artifactUrl).toMatch(
+      /^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/extension-lab\/lab\.page\/artifacts\/\d+\/project-1\/runs\/a\/chart\.png$/,
+    );
+    expect(access.authorize(new Request(`http://127.0.0.1:43123${artifactUrl}`))).toEqual({
+      artifactPath: "a/chart.png",
+      installName: "extension-lab",
+      kind: "artifact",
+      mountId: "runs",
+      projectId: "project-1",
+      webviewId: "lab.page",
+    });
+
+    // Every signed part is tamper-proof: mount, path, project, and expiry.
+    for (const altered of [
+      artifactUrl.replace("/runs/", "/secrets/"),
+      artifactUrl.replace("chart.png", "other.png"),
+      artifactUrl.replace("project-1", "project-2"),
+      artifactUrl.replace(/artifacts\/\d+\//, "artifacts/9999999999/"),
+    ]) {
+      expect(access.authorize(new Request(`http://127.0.0.1:43123${altered}`))).toBeNull();
+    }
+
+    // A webview asset capability never authorizes artifact reads.
+    const assetCapability = access.assetUrl(scope, "module.js").split("/")[4]!;
+    const forged = artifactUrl.replace(/webviews\/[A-Za-z0-9_-]+\//, `webviews/${assetCapability}/`);
+    expect(access.authorize(new Request(`http://127.0.0.1:43123${forged}`))).toBeNull();
+
+    clock += 11 * 60 * 1000;
+    expect(access.authorize(new Request(`http://127.0.0.1:43123${artifactUrl}`))).toBeNull();
+  });
+
   test("redacts a capability wherever its path appears", () => {
     const access = createAccess();
     const assetUrl = access.assetUrl(scope, "module.js");

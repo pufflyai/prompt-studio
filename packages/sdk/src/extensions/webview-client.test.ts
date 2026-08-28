@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { defineCommand } from "./define-command";
+import { defineArtifactMount } from "./define-contribution";
 import type { GuestHost } from "./define-extension-view";
 import { params } from "./params";
+import { artifactsRead } from "./webview-capabilities";
 import { createWebviewClient } from "./webview-client";
 
 const commands = {
@@ -100,6 +102,40 @@ describe("createWebviewClient commands", () => {
     const { host } = createHost(() => successOutcome(null));
 
     expect(() => createWebviewClient<typeof commands, typeof settings>(host)).toThrow(/extension id/i);
+  });
+});
+
+describe("createWebviewClient artifacts", () => {
+  const runArtifacts = defineArtifactMount({ id: "runs", path: "runs", label: "Runs" });
+
+  test("lists artifact metadata for a declared mount", async () => {
+    const files = [{ path: "a/chart.png", size: 10, mediaType: "image/png" }];
+    const { host, calls } = createHost(() => files, "pstdio-playground");
+    const client = createWebviewClient<typeof commands, typeof settings>(host);
+
+    await expect(client.artifacts.list(runArtifacts, "a/")).resolves.toEqual(files);
+    expect(calls).toEqual([{ method: "artifacts.read", params: { op: "list", mount: "runs", prefix: "a/" } }]);
+  });
+
+  test("reads text and mints image urls by mount id", async () => {
+    const { host, calls } = createHost((call) => {
+      const request = call.params as { op: string };
+      return request.op === "readText" ? '{"ok":true}' : "/v1/extensions/webviews/cap/x/y/artifacts/1/p/runs/a.png";
+    }, "pstdio-playground");
+    const client = createWebviewClient<typeof commands, typeof settings>(host);
+
+    await expect(client.artifacts.readText("runs", "a/summary.json")).resolves.toBe('{"ok":true}');
+    await expect(client.artifacts.imageUrl(runArtifacts.ref, "a/chart.png")).resolves.toContain("/artifacts/");
+    expect(calls).toEqual([
+      { method: "artifacts.read", params: { op: "readText", mount: "runs", path: "a/summary.json" } },
+      { method: "artifacts.read", params: { op: "imageUrl", mount: "runs", path: "a/chart.png" } },
+    ]);
+  });
+
+  test("artifactsRead builds a mount-scoped declaration", () => {
+    expect(artifactsRead(runArtifacts)).toBe("artifacts.read:runs");
+    expect(artifactsRead(runArtifacts.ref)).toBe("artifacts.read:runs");
+    expect(artifactsRead("reports")).toBe("artifacts.read:reports");
   });
 });
 

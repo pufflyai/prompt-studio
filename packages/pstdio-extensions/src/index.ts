@@ -5,6 +5,7 @@ export {
   isPackageAssetDescriptor,
   normalizeArtifactMountPath,
   normalizeCliPath,
+  normalizeMountRelativePath,
   PackageAssetError,
   type PackageAssetKind,
   type ResolvedPackageAsset,

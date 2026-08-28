@@ -377,6 +377,7 @@ describe("packaged pstdio — core default extensions", () => {
         expect(runtimeScript).toContain("notification.resolve");
         expect(runtimeScript).toContain("notification.dismiss");
         expect(runtimeScript).toContain("terminal.session");
+        expect(runtimeScript).toContain("artifacts.read");
       } finally {
         if (child) {
           await stopProcess(child);
