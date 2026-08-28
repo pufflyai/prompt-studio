@@ -46,16 +46,6 @@ const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>
   } satisfies StoredTicket);
 
 describe("pstdio planner extension contributions", () => {
-  test("uses unambiguous kebab-case contribution ids", () => {
-    const contributionIds = [
-      ...(extension.commands ?? []),
-      ...(extension.viewMenus ?? []),
-      ...(extension.placements ?? []),
-    ].map((contribution) => contribution.id);
-
-    expect(contributionIds.every((id) => !id.includes(".") && id === id.toLowerCase())).toBe(true);
-  });
-
   test("contributes the ticket resource without a ticket mode", () => {
     // A ticket is a resource. A ticket mode would reshape the workbench on open and
     // drop the project chrome the user had.
@@ -64,17 +54,17 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.resourcePanels).toBeUndefined();
     expect(extension.resourceViews?.map((binding) => binding.id)).toEqual(["ticket-editor", "ticket-files"]);
     expect(extension.viewMenus?.[0]).toMatchObject({
-      id: "ticket-properties",
+      id: "ticket.properties",
       owner: { id: "ticket-editor" },
       view: { id: "ticket-properties" },
       side: "right",
     });
-    expect(extension.placements?.find((placement) => placement.id === "ticket-primary-project")).toMatchObject({
+    expect(extension.placements?.find((placement) => placement.id === "ticket-primary.project")).toMatchObject({
       region: "main",
       required: true,
       item: { kind: "resource-slot", slot: { id: "primary" } },
     });
-    expect(extension.placements?.find((placement) => placement.id === "ticket-navigation-project")).toMatchObject({
+    expect(extension.placements?.find((placement) => placement.id === "ticket-navigation.project")).toMatchObject({
       region: "sidenav",
       required: true,
       item: { kind: "resource-slot", slot: { id: "navigation" } },
@@ -118,31 +108,31 @@ describe("pstdio planner extension contributions", () => {
   });
 
   test("exposes manual planner settings commands through the CLI", () => {
-    expect(command("ticket-status-update")?.cli).toEqual({
+    expect(command("ticketStatus.update")?.cli).toEqual({
       globalAliases: [["statuses", "update"]],
       examples: ["pstdio statuses update --status-id backlog --label Backlog"],
     });
-    expect(command("ticket-status-reorder")?.cli).toEqual({
+    expect(command("ticketStatus.reorder")?.cli).toEqual({
       globalAliases: [["statuses", "reorder"]],
       examples: ['pstdio statuses reorder --status-ids \'["backlog","ready"]\''],
     });
-    expect(command("ticket-tag-update")).toMatchObject({
+    expect(command("ticketTag.update")).toMatchObject({
       cli: {
         globalAliases: [["tags", "update"]],
         examples: ["pstdio tags update --tag-id default-priority --sort-order 0"],
       },
       params: { sortOrder: { type: "number" } },
     });
-    expect(command("ticket-tag-create-option")?.cli).toMatchObject({
+    expect(command("ticketTag.createOption")?.cli).toMatchObject({
       globalAliases: [["tags", "options", "create"]],
     });
-    expect(command("ticket-tag-update-option")?.cli).toMatchObject({
+    expect(command("ticketTag.updateOption")?.cli).toMatchObject({
       globalAliases: [["tags", "options", "update"]],
     });
-    expect(command("ticket-tag-delete-option")?.cli).toMatchObject({
+    expect(command("ticketTag.deleteOption")?.cli).toMatchObject({
       globalAliases: [["tags", "options", "delete"]],
     });
-    expect(command("ticket-tag-apply-draft")?.cli).toMatchObject({
+    expect(command("ticketTag.applyDraft")?.cli).toMatchObject({
       globalAliases: [["tags", "apply-draft"]],
     });
   });
@@ -273,7 +263,7 @@ describe("pstdio planner workspace contributions", () => {
   });
 
   test("mounts run review in the workspace overflow menu", () => {
-    expect(command("run-review")?.menus).toMatchObject([
+    expect(command("runReview")?.menus).toMatchObject([
       {
         slot: { id: "workspace.headerOverflow", kind: "menu" },
         label: { $l10n: "commands.runReview.menuLabel", default: "Run review" },
@@ -283,8 +273,8 @@ describe("pstdio planner workspace contributions", () => {
     ]);
   });
 
-  test("run review only exposes workspace and harness options", () => {
-    const runReview = command("run-review");
+  test("runReview only exposes workspace and harness options", () => {
+    const runReview = command("runReview");
 
     expect(Object.keys(runReview?.params ?? {}).sort()).toEqual(["harness", "workspaceId"]);
     expect(runReview?.params?.workspaceId).toMatchObject({ required: false });
@@ -302,7 +292,7 @@ describe("pstdio planner workspace contributions", () => {
     });
     expect(tickets.body.onColumnAction).toBeFunction();
     expect(tickets.body.onRowActivate).toBeFunction();
-    expect(extension.placements?.find((placement) => placement.id === "tickets-project")).toMatchObject({
+    expect(extension.placements?.find((placement) => placement.id === "tickets.project")).toMatchObject({
       region: "main",
       item: { kind: "view", view: tickets.ref },
     });

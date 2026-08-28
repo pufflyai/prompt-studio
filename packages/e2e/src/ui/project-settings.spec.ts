@@ -26,7 +26,7 @@ const savePromptTemplate = (
   name: string,
   content = "",
 ) =>
-  executePlannerCommand<{ content: string; name: string }>(request, apiBase, projectId, "templates-save", {
+  executePlannerCommand<{ content: string; name: string }>(request, apiBase, projectId, "templates.save", {
     name,
     title: name,
     type: "prompt",
@@ -96,7 +96,7 @@ test.describe("Project settings", () => {
       request,
       apiBase,
       project.id,
-      "templates-list",
+      "templates.list",
     );
     expect(templates).toContainEqual(expect.objectContaining({ name: "new-template", type: "prompt" }));
   });
@@ -121,7 +121,7 @@ test.describe("Project settings", () => {
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await saveResponse;
 
-    const template = await executePlannerCommand<{ content: string }>(request, apiBase, project.id, "templates-read", {
+    const template = await executePlannerCommand<{ content: string }>(request, apiBase, project.id, "templates.read", {
       name: templateName,
     });
     expect(template.content).toBe("Updated content");
@@ -277,17 +277,11 @@ test.describe("Project settings — skills", () => {
     const label = tags.find((t) => t.name === "label")!;
     const bugOption = label.options.find((o) => o.name === "bug")!;
 
-    const updated = await executePlannerCommand<typeof label>(
-      request,
-      apiBase,
-      project.id,
-      "ticket-tag-update-option",
-      {
-        tagId: label.id,
-        optionId: bugOption.id,
-        icon: "star",
-      },
-    );
+    const updated = await executePlannerCommand<typeof label>(request, apiBase, project.id, "ticketTag.updateOption", {
+      tagId: label.id,
+      optionId: bugOption.id,
+      icon: "star",
+    });
     expect(updated.options.find((option) => option.id === bugOption.id)?.icon).toBe("star");
 
     // Verify icon persists when fetching again
@@ -297,7 +291,7 @@ test.describe("Project settings — skills", () => {
     expect(bugAfter.icon).toBe("star");
 
     // Update color without touching icon — icon should remain
-    await executePlannerCommand(request, apiBase, project.id, "ticket-tag-update-option", {
+    await executePlannerCommand(request, apiBase, project.id, "ticketTag.updateOption", {
       tagId: label.id,
       optionId: bugOption.id,
       color: "green",

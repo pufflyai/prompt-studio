@@ -44,7 +44,7 @@ describe("executeWebviewCommand", () => {
     const extensionCalls: unknown[] = [];
 
     await executeWebviewCommand({
-      commandId: "extension-lab.counter-bump",
+      commandId: "extension-lab.counter.bump",
       metadata: { sourcePanel: "lab" },
       params: { amount: 1 },
       resource: { type: "counter", id: "main" },
@@ -56,7 +56,7 @@ describe("executeWebviewCommand", () => {
 
     expect(extensionCalls).toEqual([
       {
-        commandId: "extension-lab.counter-bump",
+        commandId: "extension-lab.counter.bump",
         metadata: { sourcePanel: "lab" },
         params: { amount: 1 },
         resource: { type: "counter", id: "main" },
@@ -68,7 +68,7 @@ describe("executeWebviewCommand", () => {
     const workbench = createWorkbenchCore();
     const extensionCalls: unknown[] = [];
     const response = {
-      commandId: "pstdio.extension-lab.command.counter-read",
+      commandId: "pstdio.extension-lab.command.counter.read",
       extensionId: "pstdio.extension-lab",
       outcome: { ok: true, status: "success", value: { counter: 1 } },
     };

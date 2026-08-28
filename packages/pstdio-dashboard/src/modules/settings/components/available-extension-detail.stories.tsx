@@ -14,7 +14,7 @@ const metadata = {
   ],
   commands: [
     {
-      id: "pstdio-reports-write",
+      id: "pstdio-reports.write",
       extensionId: "pstdio.pstdio-reports",
       title: "Write report",
       cliPath: "reports write",
@@ -56,10 +56,10 @@ const metadata = {
       label: "Report",
       order: 40,
       commands: {
-        list: "pstdio.pstdio-reports.command.templates-list",
-        read: "pstdio.pstdio-reports.command.templates-read",
-        save: "pstdio.pstdio-reports.command.templates-save",
-        delete: "pstdio.pstdio-reports.command.templates-delete",
+        list: "pstdio.pstdio-reports.command.templates.list",
+        read: "pstdio.pstdio-reports.command.templates.read",
+        save: "pstdio.pstdio-reports.command.templates.save",
+        delete: "pstdio.pstdio-reports.command.templates.delete",
       },
     },
   ],

@@ -11,7 +11,7 @@ const commands: ExtensionCommandRecord[] = [
     cliAliases: ["tickets create", "tickets add"],
   },
   {
-    id: "pstdio-planner.ticket-status-read",
+    id: "pstdio-planner.ticketStatus.read",
     extensionId: "pstdio.pstdio-planner",
     title: "List statuses",
     cliPath: "pstdio-planner ticketStatus read",

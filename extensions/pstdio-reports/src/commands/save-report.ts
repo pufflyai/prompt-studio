@@ -59,7 +59,7 @@ const readReportFiles = async (repoFiles: ArtifactMount, report: StoredReport) =
 };
 
 export const saveReportCommand = defineCommand({
-  id: "reports-save",
+  id: "reports.save",
   title: "Save report",
   cli: {
     globalAliases: [["reports", "save"]],

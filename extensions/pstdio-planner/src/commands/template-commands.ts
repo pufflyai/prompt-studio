@@ -2,7 +2,7 @@ import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { deleteOwnedTemplate, listOwnedTemplates, readOwnedTemplate, saveOwnedTemplate } from "../data/template-store";
 
 export const listTemplatesCommand = defineCommand({
-  id: "templates-list",
+  id: "templates.list",
   title: "List templates",
   params: { type: params.text() },
   async run(ctx, commandParams) {
@@ -11,7 +11,7 @@ export const listTemplatesCommand = defineCommand({
 });
 
 export const readTemplateCommand = defineCommand({
-  id: "templates-read",
+  id: "templates.read",
   title: "Read template",
   params: { name: params.text({ required: true }) },
   async run(ctx, commandParams) {
@@ -20,7 +20,7 @@ export const readTemplateCommand = defineCommand({
 });
 
 export const saveTemplateCommand = defineCommand({
-  id: "templates-save",
+  id: "templates.save",
   title: "Save template",
   mutating: true,
   params: {
@@ -35,7 +35,7 @@ export const saveTemplateCommand = defineCommand({
 });
 
 export const deleteTemplateCommand = defineCommand({
-  id: "templates-delete",
+  id: "templates.delete",
   title: "Delete template",
   mutating: true,
   params: { name: params.text({ required: true }) },

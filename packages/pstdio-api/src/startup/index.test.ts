@@ -52,7 +52,7 @@ const invokePlannerTemplate = (
   command: string,
   params: unknown,
 ) =>
-  app.request(`/v1/projects/project-1/extensions/commands/pstdio.pstdio-planner.command.templates-${command}/execute`, {
+  app.request(`/v1/projects/project-1/extensions/commands/pstdio.pstdio-planner.command.templates.${command}/execute`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ params }),

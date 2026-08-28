@@ -204,7 +204,7 @@ export const createPlannerUi = (baseUrl: string) => {
     ],
     viewMenus: [
       defineViewMenu({
-        id: "ticket-properties",
+        id: "ticket.properties",
         owner: editor.ref,
         view: properties.ref,
         side: "right",
@@ -212,20 +212,20 @@ export const createPlannerUi = (baseUrl: string) => {
     ],
     placements: [
       definePlacement({
-        id: "tickets-project",
+        id: "tickets.project",
         mode: workbenchModes.project,
         item: { kind: "view", view: tickets.ref },
         region: "main",
       }),
       definePlacement({
-        id: "ticket-primary-project",
+        id: "ticket-primary.project",
         mode: workbenchModes.project,
         item: { kind: "resource-slot", slot: ticketPrimary },
         region: "main",
         required: true,
       }),
       definePlacement({
-        id: "ticket-navigation-project",
+        id: "ticket-navigation.project",
         mode: workbenchModes.project,
         item: { kind: "resource-slot", slot: ticketNavigation },
         region: "sidenav",

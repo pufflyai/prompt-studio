@@ -5,7 +5,7 @@ import { findReport, resolveWorkspace } from "../data/resolve";
 import { assertSafeReportName } from "../data/validation";
 
 export const deleteReportCommand = defineCommand({
-  id: "reports-delete",
+  id: "reports.delete",
   title: "Delete report",
   cli: {
     globalAliases: [["reports", "delete"]],

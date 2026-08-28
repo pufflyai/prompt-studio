@@ -358,7 +358,7 @@ export const listTicketFilesTree = async (
 };
 
 export const listTicketFilesTreeCommand = defineCommand({
-  id: "ticket-files-tree-body",
+  id: "ticket-files.tree.body",
   title: "List ticket files tree",
   params: {
     renderer: params.json<RendererContext>(),

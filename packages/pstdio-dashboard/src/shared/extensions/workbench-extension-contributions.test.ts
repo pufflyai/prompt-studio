@@ -39,7 +39,7 @@ describe("dashboard workbench extension menu contributions", () => {
           expect.objectContaining({
             menuPath: workbenchTopHeaderTrailingMenuPath,
             menuItem: expect.objectContaining({
-              commandId: "dashboard.extension.menu.pstdio.extension-lab.command.counter-bump.header",
+              commandId: "dashboard.extension.menu.pstdio.extension-lab.command.counter.bump.header",
               group: "overflow",
               overflowLabel: "Extension actions",
               when: labViewWhenExpression,
@@ -70,9 +70,9 @@ describe("dashboard workbench extension menu contributions", () => {
           },
         },
         {
-          id: "pstdio.extension-lab.command.counter-bump.menu.0",
+          id: "pstdio.extension-lab.command.counter.bump.menu.0",
           extensionId: "pstdio.extension-lab",
-          commandId: "pstdio.extension-lab.command.counter-bump",
+          commandId: "pstdio.extension-lab.command.counter.bump",
           slotId: "project.headerOverflow",
           target: "workbench.nav.overflow",
           label: "Bump lab counter",

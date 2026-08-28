@@ -64,13 +64,13 @@ describe("createWorkbenchCommandPaletteEntries", () => {
   test("includes command ids in palette search text", () => {
     const workbench = createWorkbenchCore();
     workbench.commands.registerCommand(
-      { id: "extension-lab.demo-try-awaken", label: "Demo middleware rejection" },
+      { id: "extension-lab.demo.try-awaken", label: "Demo middleware rejection" },
       { execute: () => undefined },
     );
 
     const entries = createWorkbenchCommandPaletteEntries({ workbench, onClose: () => undefined });
 
-    expect(entries[0]?.searchText).toContain("extension-lab.demo-try-awaken");
+    expect(entries[0]?.searchText).toContain("extension-lab.demo.try-awaken");
   });
 
   test("requests params instead of executing parameterized commands immediately", () => {
@@ -102,7 +102,7 @@ describe("createWorkbenchCommandPaletteEntries", () => {
   test("does not create success notifications for command return values", async () => {
     const workbench = createWorkbenchCore();
     workbench.commands.registerCommand(
-      { id: "extension-lab.counter-read", label: "Read lab counter" },
+      { id: "extension-lab.counter.read", label: "Read lab counter" },
       { execute: () => ({ counter: 1 }) },
     );
 

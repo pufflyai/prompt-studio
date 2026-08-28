@@ -32,7 +32,7 @@ describe("shipped extension composition", () => {
       slot: { id: "primary" },
     });
     expect(
-      runtime.placements.find((placement) => placement.localId === "ticket-primary-project")?.contribution,
+      runtime.placements.find((placement) => placement.localId === "ticket-primary.project")?.contribution,
     ).toMatchObject({
       item: { kind: "resource-slot", slot: { id: "primary" } },
       region: "main",
@@ -51,23 +51,23 @@ describe("shipped extension composition", () => {
     const runtime = await loadRuntime([labPath]);
     const placementFor = (id: string) => runtime.placements.find((placement) => placement.localId === id)?.contribution;
 
-    expect(placementFor("blend-primary-animation")).toMatchObject({
+    expect(placementFor("blend-primary.animation")).toMatchObject({
       item: { kind: "resource-slot", slot: { id: "primary" } },
       region: "main",
       required: true,
     });
-    expect(placementFor("blend-navigation-animation")).toMatchObject({
+    expect(placementFor("blend-navigation.animation")).toMatchObject({
       item: { kind: "resource-slot", slot: { id: "navigation" } },
       region: "sidenav",
       required: true,
     });
-    expect(placementFor("blend-inspector-animation")).toMatchObject({
+    expect(placementFor("blend-inspector.animation")).toMatchObject({
       item: { kind: "resource-slot", slot: { id: "inspector" } },
       region: "side",
       movableTo: ["side", "secondary"],
     });
-    expect(placementFor("blend-navigation-sculpt")?.region).toBe("side");
-    expect(placementFor("blend-inspector-sculpt")?.region).toBe("secondary");
+    expect(placementFor("blend-navigation.sculpt")?.region).toBe("side");
+    expect(placementFor("blend-inspector.sculpt")?.region).toBe("secondary");
   });
 
   test("keeps the Lab status bar out of docked layout", async () => {

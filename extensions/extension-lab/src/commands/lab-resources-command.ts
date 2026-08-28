@@ -50,7 +50,7 @@ export const queryLabResources: CommandPaletteResourceContribution["query"] = as
 };
 
 export const openLabResourceCommand = defineCommand({
-  id: "command-palette-resources-open",
+  id: "command-palette-resources.open",
   title: "Open lab palette resource",
   description: "Invoked when a lab slide is selected from the command palette.",
   async run(ctx, commandParams) {

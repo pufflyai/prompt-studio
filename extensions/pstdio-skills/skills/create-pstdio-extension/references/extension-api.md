@@ -45,7 +45,7 @@ import {
 } from "@pstdio/sdk/extensions";
 
 const createTicket = defineCommand({
-  id: "tickets-create",
+  id: "tickets.create",
   title: "Create ticket",
   cli: true,
   palette: { label: "Create ticket" },
@@ -83,7 +83,7 @@ For package name `planner`:
 
 ```txt
 extension id     pstdio.planner
-command id       planner.tickets-create
+command id       planner.tickets.create
 CLI path         pst planner tickets create
 artifact root    <repo>/.pstdio/planner/
 template id      planner.ticket

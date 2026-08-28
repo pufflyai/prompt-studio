@@ -27,7 +27,7 @@ const extension = defineExtension({
   views: [fontEditor],
   placements: [
     definePlacement({
-      id: "fontEditorProject",
+      id: "font-editor.project",
       mode: workbenchModes.project,
       item: { kind: "view", view: fontEditor.ref },
       region: "main",

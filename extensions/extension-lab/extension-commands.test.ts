@@ -59,9 +59,9 @@ describe("extension-lab commands", () => {
         },
       }),
     };
-    const create = command("glass-lab-artifacts-create");
-    const query = command("glass-lab-artifacts-query");
-    const remove = command("glass-lab-artifacts-delete");
+    const create = command("glass-lab-artifacts.create");
+    const query = command("glass-lab-artifacts.query");
+    const remove = command("glass-lab-artifacts.delete");
 
     const [first, second] = await Promise.all([
       create?.run({ events, storage } as never, {}),
@@ -129,8 +129,8 @@ describe("extension-lab commands", () => {
         };
       },
     };
-    const query = command("artifact-menu-query");
-    const update = command("artifact-menu-update");
+    const query = command("artifact-menu.query");
+    const update = command("artifact-menu.update");
     const events = { emit: async () => ({ delivered: 0 }) };
 
     const menu = await query?.run({} as never, {});
@@ -165,15 +165,15 @@ describe("extension-lab commands", () => {
         };
       },
     };
-    const tree = command("cams-tree");
-    const select = command("cams-select");
-    const current = command("cams-current");
+    const tree = command("cams.tree");
+    const select = command("cams.select");
+    const current = command("cams.current");
 
     const sections = await tree?.run({ storage } as never, {});
     expect(sections?.[0]?.nodes.length).toBeGreaterThan(1);
     expect(sections?.[0]?.nodes[0]).toMatchObject({
       selected: true,
-      target: { kind: "command", target: { command: { kind: "command", id: "cams-select" } } },
+      target: { kind: "command", target: { command: { kind: "command", id: "cams.select" } } },
     });
 
     const secondCamId = sections?.[0]?.nodes[1]?.id as string;
@@ -191,7 +191,7 @@ describe("extension-lab commands", () => {
   test("notifies when the awake middleware rejects", async () => {
     const toasts: unknown[] = [];
 
-    const result = await command("demo-try-awaken")?.run(
+    const result = await command("demo.try-awaken")?.run(
       {
         commands: {
           execute: async () => ({

@@ -15,7 +15,7 @@ import {
 } from "../data/tag-operations";
 
 export const readTicketTagsCommand = defineCommand({
-  id: "ticket-tag-read",
+  id: "ticketTag.read",
   title: "Read ticket tags",
   cli: { globalAliases: [["tags", "list"]], examples: ["pstdio tags list"] },
   async run(ctx, _commandParams) {
@@ -24,7 +24,7 @@ export const readTicketTagsCommand = defineCommand({
 });
 
 export const createTicketTagCommand = defineCommand({
-  id: "ticket-tag-create",
+  id: "ticketTag.create",
   mutating: true,
   title: "Create ticket tag",
   cli: { globalAliases: [["tags", "create"]], examples: ["pstdio tags create --name Priority --type single_select"] },
@@ -39,7 +39,7 @@ export const createTicketTagCommand = defineCommand({
 });
 
 export const updateTicketTagCommand = defineCommand({
-  id: "ticket-tag-update",
+  id: "ticketTag.update",
   mutating: true,
   title: "Update ticket tag",
   cli: {
@@ -66,7 +66,7 @@ export const updateTicketTagCommand = defineCommand({
 });
 
 export const deleteTicketTagCommand = defineCommand({
-  id: "ticket-tag-delete",
+  id: "ticketTag.delete",
   mutating: true,
   title: "Delete ticket tag",
   cli: { globalAliases: [["tags", "delete"]], examples: ["pstdio tags delete --tag Priority"] },
@@ -81,7 +81,7 @@ export const deleteTicketTagCommand = defineCommand({
 });
 
 export const createTagOptionCommand = defineCommand({
-  id: "ticket-tag-create-option",
+  id: "ticketTag.createOption",
   mutating: true,
   title: "Create tag option",
   cli: {
@@ -108,7 +108,7 @@ export const createTagOptionCommand = defineCommand({
 });
 
 export const updateTagOptionCommand = defineCommand({
-  id: "ticket-tag-update-option",
+  id: "ticketTag.updateOption",
   mutating: true,
   title: "Update tag option",
   cli: {
@@ -139,7 +139,7 @@ export const updateTagOptionCommand = defineCommand({
 });
 
 export const deleteTagOptionCommand = defineCommand({
-  id: "ticket-tag-delete-option",
+  id: "ticketTag.deleteOption",
   mutating: true,
   title: "Delete tag option",
   cli: {
@@ -156,7 +156,7 @@ export const deleteTagOptionCommand = defineCommand({
 });
 
 export const applyTicketTagDraftCommand = defineCommand({
-  id: "ticket-tag-apply-draft",
+  id: "ticketTag.applyDraft",
   mutating: true,
   title: "Apply ticket tag draft",
   cli: {

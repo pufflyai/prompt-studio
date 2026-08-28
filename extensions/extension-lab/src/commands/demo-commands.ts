@@ -3,10 +3,10 @@ import { LAB_ROUTE_HEADER_WHEN } from "../utils/lab-constants";
 import { awakenCommand } from "./awaken-command";
 
 export const tryAwakenCommand = defineCommand({
-  id: "demo-try-awaken",
+  id: "demo.try-awaken",
   title: "Demo middleware rejection",
   description: "Invoke lab.awaken with title 'Gain consciousness' and watch the lab middleware refuse.",
-  cli: { path: ["demo", "try-awaken"] },
+  cli: true,
   palette: [{ group: "Lab", label: "Demo middleware rejection" }],
   menus: [
     {
@@ -40,7 +40,7 @@ export const tryAwakenCommand = defineCommand({
 });
 
 export const workspaceOnlyCommand = defineCommand({
-  id: "demo-workspace-only",
+  id: "demo.workspace-only",
   title: "Workspace-only lab action",
   menus: [
     {

@@ -64,7 +64,7 @@ pst pstdio-planner resolve-human-request
 pst pstdio-planner list-attempts
 pst pstdio-planner reconcile-attempt
 pst pstdio-planner run-attempt
-pst pstdio-planner run-review
+pst pstdio-planner runReview
 ```
 
 Use `--help` on any path before calling workflow commands directly. Their parameters are meant for agent and automation flows and can include revision IDs, report IDs, and expected state versions.

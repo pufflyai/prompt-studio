@@ -8,7 +8,7 @@ describe("Prompt Studio Dev extension", () => {
   test("schedules evidence-gated high-impact issue discovery at noon", async () => {
     const sessions: unknown[] = [];
 
-    const result = await command("discoverHighImpactIssues")?.run(
+    const result = await command("issues.discoverHighImpact")?.run(
       {
         sessions: {
           create: async (input: unknown) => {
@@ -23,7 +23,7 @@ describe("Prompt Studio Dev extension", () => {
     expect(schedule("dailyIssueDiscovery")).toMatchObject({
       title: "Daily high-impact issue discovery",
       schedule: "0 12 * * *",
-      command: { id: "discoverHighImpactIssues", kind: "command" },
+      command: { id: "issues.discoverHighImpact", kind: "command" },
     });
     expect(result).toEqual({ sessionId: "session-1" });
     expect(sessions).toHaveLength(1);
@@ -50,7 +50,7 @@ describe("Prompt Studio Dev extension", () => {
   test("opens the selected workspace worktree in VS Code", async () => {
     const spawned: unknown[] = [];
 
-    await command("openWorkspaceInVscode")?.run(
+    await command("workspace.openInVscode")?.run(
       {
         resource: { type: "workspace", id: "workspace-1" },
         workspaces: {
@@ -66,7 +66,7 @@ describe("Prompt Studio Dev extension", () => {
       {},
     );
 
-    expect(command("openWorkspaceInVscode")?.menus).toEqual([
+    expect(command("workspace.openInVscode")?.menus).toEqual([
       {
         slot: { id: "workspace.headerOverflow", kind: "menu" },
         label: "Open in VS Code",
@@ -81,7 +81,7 @@ describe("Prompt Studio Dev extension", () => {
   test("opens the selected workspace through the isolated dev stack", async () => {
     const calls: unknown[] = [];
 
-    const result = await command("openWorkspaceInIsolation")?.run(
+    const result = await command("workspace.openInIsolation")?.run(
       {
         resource: { type: "workspace", id: "workspace-1" },
         workspaces: {
@@ -105,7 +105,7 @@ describe("Prompt Studio Dev extension", () => {
       {},
     );
 
-    expect(command("openWorkspaceInIsolation")?.menus).toEqual([
+    expect(command("workspace.openInIsolation")?.menus).toEqual([
       {
         slot: { id: "workspace.headerOverflow", kind: "menu" },
         label: "Open in isolation",
@@ -138,7 +138,7 @@ describe("Prompt Studio Dev extension", () => {
   test("stops the selected workspace isolated dev stack", async () => {
     const calls: unknown[] = [];
 
-    const result = await command("stopWorkspaceIsolation")?.run(
+    const result = await command("workspace.stopIsolation")?.run(
       {
         resource: { type: "workspace", id: "workspace-1" },
         workspaces: {
@@ -154,7 +154,7 @@ describe("Prompt Studio Dev extension", () => {
       {},
     );
 
-    expect(command("stopWorkspaceIsolation")?.menus).toEqual([
+    expect(command("workspace.stopIsolation")?.menus).toEqual([
       {
         slot: { id: "workspace.headerOverflow", kind: "menu" },
         label: "Stop isolation",
