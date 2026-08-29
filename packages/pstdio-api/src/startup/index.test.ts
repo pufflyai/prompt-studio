@@ -6,6 +6,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { legacyTemplateOwnerSourcePath } from "pstdio-db";
+import { installExtensionSource } from "../features/extensions/install-extension-source";
 import { createTestApp } from "../test-utils/create-test-app";
 import { repairLegacyTemplateOwners, runStartupTasks } from ".";
 
@@ -74,18 +75,22 @@ const assertExistingProjectSourceRefresh = async (tempRoot: string) => {
   const source = resolve(REPO_ROOT, "extensions/extension-lab");
   const installed = join(pstdioHome, "extensions/extension-lab");
 
+  await installExtensionSource({
+    source,
+    installName: "extension-lab",
+    env: { ...process.env, PSTDIO_HOME: pstdioHome },
+  });
+  expect(existsSync(join(installed, "node_modules/@pstdio/sdk/package.json"))).toBe(true);
+
   process.env.PSTDIO_HOME = pstdioHome;
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
   const initial = await createTestApp({ databasePath, storageRoot });
   await initial.deps.projectService.create({ name: "Existing project" });
   await initial.close();
 
-  cpSync(source, installed, { recursive: true });
   writeFileSync(join(installed, "README.md"), "stale extension lab");
   process.env.PSTDIO_DISABLE_EMBED_MANIFEST = "1";
-  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([
-    { source, installName: "extension-lab", skipInstall: true, force: true },
-  ]);
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([{ source, installName: "extension-lab", force: true }]);
 
   const restarted = await createTestApp({ databasePath, storageRoot });
   try {
