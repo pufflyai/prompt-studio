@@ -25,6 +25,9 @@ export const createLabViews = (baseUrl: string) => {
         "preferences.get",
         "preferences.set",
         "resource.open",
+        "files.upload",
+        "files.list",
+        "files.delete",
       ],
     },
   });
@@ -95,6 +98,9 @@ export const createLabViews = (baseUrl: string) => {
         "preferences.get",
         "preferences.set",
         "resource.open",
+        "files.upload",
+        "files.list",
+        "files.delete",
       ],
     },
   });

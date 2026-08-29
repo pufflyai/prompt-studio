@@ -99,6 +99,22 @@ describe("buildWorkbenchExtensionMetadata", () => {
     });
   });
 
+  test("publishes the project extension owner with each extension", () => {
+    const metadata = buildWorkbenchExtensionMetadata({
+      extensionInstanceIdsByExtensionId: new Map([["pstdio.lab", "instance-1"]]),
+      installedExtensionIdsByExtensionId: new Map([["pstdio.lab", "installed-1"]]),
+      installNamesByExtensionId: new Map([["pstdio.lab", "extension-lab"]]),
+      runtime: normalizeExtensionSources([source(defineExtension({}))]),
+      webviewCacheRoot: "/cache",
+    });
+
+    expect(metadata.extensions[0]).toMatchObject({
+      extensionInstanceId: "instance-1",
+      installedExtensionId: "installed-1",
+      installName: "extension-lab",
+    });
+  });
+
   test("adds signed bridge URLs and preserves capabilities on managed webview bodies", () => {
     const metadata = buildWorkbenchExtensionMetadata({
       assetRevisionsByExtensionId: new Map([["pstdio.lab", "build-2"]]),

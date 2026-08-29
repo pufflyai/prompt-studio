@@ -178,6 +178,14 @@ test.describe("Extension webviews", () => {
     // `notification.show`, which the dashboard surfaces as a single toast in the host document.
     await labFrame.getByRole("button", { name: "Say hello" }).click();
     await expect(page.getByText("Hello from Extension Lab")).toBeVisible();
+
+    await labFrame.getByRole("button", { name: "Test file capabilities" }).click();
+    await expect(labFrame.getByText("Upload, read, list, and delete passed.")).toBeVisible();
+
+    await labFrame.getByRole("button", { name: "Open file capability resource" }).click();
+    await expect(
+      page.getByRole("navigation", { name: "breadcrumb" }).getByText("File capability project", { exact: true }),
+    ).toBeVisible();
   });
 
   test("creates an inbox notification from Extension Lab and opens it from the notifications modal", async ({

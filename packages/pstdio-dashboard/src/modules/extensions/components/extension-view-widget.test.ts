@@ -3,6 +3,7 @@ import { createWorkbenchCore } from "@pstdio/workbench";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import {
   clearCachedDashboardExtensionMetadata,
+  type DashboardExtensionMetadata,
   setCachedDashboardExtensionMetadata,
 } from "@/shared/extensions/workbench-extension-contributions";
 import { metadata } from "../module-test-fixtures";
@@ -32,5 +33,33 @@ describe("resolveExtensionView", () => {
     });
 
     expect(resolved).toMatchObject({ projectId, view: { id: view.id } });
+  });
+
+  test("returns the trusted extension owner from project metadata", () => {
+    const workbench = createWorkbenchCore();
+    const view = metadata.views[0]!;
+    const ownedMetadata = {
+      ...metadata,
+      extensions: [
+        {
+          ...metadata.extensions[0]!,
+          extensionInstanceId: "instance-1",
+          installName: "extension-lab",
+        },
+      ],
+    } as DashboardExtensionMetadata;
+    workbench.context.set(dashboardSelectedProjectIdContextKey, projectId);
+    setCachedDashboardExtensionMetadata(projectId, ownedMetadata);
+
+    const resolved = resolveExtensionView({
+      workbench,
+      panel: { id: view.id, title: "Lab", region: "main", rendererId: "webview:bridge" },
+      instance: { instanceId: view.id, panelId: view.id, closable: false },
+    });
+
+    expect(resolved).toMatchObject({
+      extensionInstanceId: "instance-1",
+      installName: "extension-lab",
+    });
   });
 });

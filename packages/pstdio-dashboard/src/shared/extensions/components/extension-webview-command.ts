@@ -1,4 +1,5 @@
 import type { WorkbenchCore } from "@pstdio/workbench";
+import type { WebviewResourceOpenParams } from "pstdio-api-contracts/extension-kernel";
 
 interface ExtensionCommandResource {
   type: string;
@@ -20,7 +21,7 @@ interface ExecuteWebviewCommandInput extends ExtensionCommandInput {
   workbench?: WorkbenchCore;
 }
 
-const toWorkbenchResource = (resource: ExtensionCommandResource | undefined) => {
+export const toWorkbenchResource = (resource: ExtensionCommandResource | undefined) => {
   if (!resource) return undefined;
   return {
     kind: resource.type,
@@ -29,6 +30,14 @@ const toWorkbenchResource = (resource: ExtensionCommandResource | undefined) => 
     label: resource.label,
     metadata: resource.metadata,
   };
+};
+
+export const openWebviewResource = (workbench: WorkbenchCore, params: WebviewResourceOpenParams) => {
+  if (!params.resource) throw new Error("resource.open requires a resource.");
+  const resource = toWorkbenchResource(params.resource);
+  if (!resource) throw new Error("resource.open requires a resource.");
+  const replaceActive = Boolean(params.input?.strategy && params.input.strategy !== "persistent");
+  return workbench.resources.openResource(resource, replaceActive ? { replaceActive: true } : {});
 };
 
 export const executeWebviewCommand = (input: ExecuteWebviewCommandInput) => {

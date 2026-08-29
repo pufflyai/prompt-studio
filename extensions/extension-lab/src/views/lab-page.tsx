@@ -1,5 +1,6 @@
 import { Container, Grid, Heading, Stack, Text } from "@chakra-ui/react";
 import { CounterCard } from "../components/counter-card";
+import { FileCapabilitiesCard } from "../components/file-capabilities-card";
 import { HostNotificationCard } from "../components/host-notification-card";
 import { ThemeCard } from "../components/theme-card";
 import { useLabHost, useLabHostProps } from "../hooks/host-context";
@@ -30,6 +31,7 @@ export const LabPage = () => {
           <CounterCard />
           <ThemeCard />
           <HostNotificationCard />
+          <FileCapabilitiesCard />
         </Grid>
       </Stack>
     </Container>

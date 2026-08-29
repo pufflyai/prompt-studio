@@ -73,5 +73,13 @@ export const buildWorkbenchExtensionMetadata = (
     }),
   });
 
-  return metadata;
+  return {
+    ...metadata,
+    extensions: metadata.extensions.map((extension) => ({
+      ...extension,
+      extensionInstanceId: input.extensionInstanceIdsByExtensionId?.get(extension.id),
+      installedExtensionId: input.installedExtensionIdsByExtensionId?.get(extension.id),
+      installName: input.installNamesByExtensionId.get(extension.id),
+    })),
+  };
 };

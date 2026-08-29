@@ -12,6 +12,7 @@ import {
 import { heartbeatCommand } from "./heartbeat-command";
 import { openLabResourceCommand } from "./lab-resources-command";
 import { sayHelloCommand } from "./say-hello-command";
+import { readWebviewFileCommand } from "./webview-file-command";
 
 export { labSchedules } from "./schedules";
 
@@ -33,4 +34,5 @@ export const labCommands = [
   tryAwakenCommand,
   heartbeatCommand,
   workspaceOnlyCommand,
+  readWebviewFileCommand,
 ];

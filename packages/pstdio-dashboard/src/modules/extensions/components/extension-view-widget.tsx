@@ -21,7 +21,15 @@ export const resolveExtensionView = (input: Pick<WorkbenchPanelRenderInput, "ins
   if (!projectId) return undefined;
   const metadata = getCachedDashboardExtensionMetadata(projectId);
   const view = metadata?.views.find((candidate) => candidate.id === input.instance.panelId);
-  return view?.body.kind === "webview" ? { projectId, view, webview: view.body.webview } : undefined;
+  if (view?.body.kind !== "webview") return undefined;
+  const extension = metadata?.extensions.find((candidate) => candidate.id === view.extensionId);
+  return {
+    extensionInstanceId: extension?.extensionInstanceId,
+    installName: extension?.installName,
+    projectId,
+    view,
+    webview: view.body.webview,
+  };
 };
 
 export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput }) => {
@@ -39,11 +47,13 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
     );
   }
 
-  const { projectId, view, webview } = derived;
+  const { extensionInstanceId, installName, projectId, view, webview } = derived;
 
   return (
     <ExtensionWebviewFrame
       extensionId={view.extensionId}
+      extensionInstanceId={extensionInstanceId}
+      installName={installName}
       projectId={projectId}
       resource={
         placementResource?.id

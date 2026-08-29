@@ -541,6 +541,15 @@ export default defineExtensionView({
   for png, jpeg, webp, or gif, usable in `<img src>`; request a fresh URL when one
   expires. Undeclared mounts are denied by the capability gate with the exact missing
   declaration, such as `artifacts.read:runs`.
+- The `files` render helper has guest-local `pick()` plus host-backed `upload`, `list`,
+  and `delete` methods. Declare each host method the view uses: `files.upload`,
+  `files.list`, and `files.delete`. The host supplies the active project and extension
+  owner. A missing scope uses project scope; `{ type, id }` selects a repo, resource,
+  or extension-defined scope without changing the file owner.
+- Declare `resource.open` before calling `host.call("resource.open", { resource })`.
+  Resources use the SDK shape `{ type, id, label?, metadata? }`. The dashboard converts
+  that value to a workbench resource and can apply the optional `persistent` or
+  `replace-active` placement strategy.
 - Author commands with `defineCommand`. Commands written as inline literals inside
   `defineExtension` keep untyped results (see ADR 0012 in the repository docs).
 - Pass `{ extensionId }` as the second argument only in tests, where no host bridge
