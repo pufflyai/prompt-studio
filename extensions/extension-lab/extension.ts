@@ -69,7 +69,7 @@ const extension = defineExtension({
 
   templates: [
     defineTemplate({
-      id: "labResource",
+      id: "lab-resource",
       title: l10n("templates.labResource.title", "Glass Lab artifact"),
       type: "glass-lab-artifact",
       source: packageAsset("./templates/lab-ticket.md", import.meta.url),
@@ -78,7 +78,7 @@ const extension = defineExtension({
 
   skills: [
     defineSkill({
-      id: "labResource",
+      id: "lab-resource",
       title: l10n("skills.labResource.title", "Glass Lab Curator"),
       source: packageAsset("./skills/lab-resource", import.meta.url),
     }),

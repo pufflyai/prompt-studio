@@ -277,11 +277,17 @@ test.describe("Project settings — skills", () => {
     const label = tags.find((t) => t.name === "label")!;
     const bugOption = label.options.find((o) => o.name === "bug")!;
 
-    const updated = await executePlannerCommand<typeof label>(request, apiBase, project.id, "ticketTag.updateOption", {
-      tagId: label.id,
-      optionId: bugOption.id,
-      icon: "star",
-    });
+    const updated = await executePlannerCommand<typeof label>(
+      request,
+      apiBase,
+      project.id,
+      "ticket-tag.update-option",
+      {
+        tagId: label.id,
+        optionId: bugOption.id,
+        icon: "star",
+      },
+    );
     expect(updated.options.find((option) => option.id === bugOption.id)?.icon).toBe("star");
 
     // Verify icon persists when fetching again
@@ -291,7 +297,7 @@ test.describe("Project settings — skills", () => {
     expect(bugAfter.icon).toBe("star");
 
     // Update color without touching icon — icon should remain
-    await executePlannerCommand(request, apiBase, project.id, "ticketTag.updateOption", {
+    await executePlannerCommand(request, apiBase, project.id, "ticket-tag.update-option", {
       tagId: label.id,
       optionId: bugOption.id,
       color: "green",

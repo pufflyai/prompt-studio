@@ -20,10 +20,10 @@ describe("pstdio-reports extension", () => {
       type: "report",
       title: "Review",
     });
-    expect(extension.templates?.find((template) => template.id === "change_request")).toMatchObject({
+    expect(extension.templates?.find((template) => template.id === "change-request")).toMatchObject({
       type: "report",
       title: "Change request",
     });
-    expect(extension.skills?.find((skill) => skill.id === "use_reports")).toMatchObject({ title: "Use reports" });
+    expect(extension.skills?.find((skill) => skill.id === "use-reports")).toMatchObject({ title: "Use reports" });
   });
 });

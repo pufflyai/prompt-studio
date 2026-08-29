@@ -37,7 +37,7 @@ import type {
 /** Current host extension API version. `engines.pstdio` in package.json is a semver range checked against this. */
 // While the API is unstable the version carries an `-alpha.N` suffix and extensions must
 // declare it exactly. Bump the alpha in the same change that breaks an extension contract.
-export const EXTENSION_API_VERSION = "1.0.0-alpha.5";
+export const EXTENSION_API_VERSION = "1.0.0-alpha.6";
 
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema
   ? ParamsOf<TSchema>

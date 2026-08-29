@@ -276,13 +276,13 @@ the view. Type-only imports keep server code out of the webview bundle.
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 
 export const commands = {
-  "ticketStatus.read": defineCommand({
+  "ticket-status.read": defineCommand({
     title: "Read ticket statuses",
     async run(_ctx, _commandParams) {
       return { statuses: [] as { id: string; name: string }[] };
     },
   }),
-  "ticketStatus.create": defineCommand({
+  "ticket-status.create": defineCommand({
     title: "Create ticket status",
     params: { label: params.text({ required: true }) },
     async run(_ctx, commandParams) {
@@ -305,10 +305,10 @@ export default defineExtensionView({
     const StatusList = () => {
       const statuses = useCommandQuery({
         queryKey: ["ticket-statuses"],
-        command: client.commands["ticketStatus.read"],
+        command: client.commands["ticket-status.read"],
       });
       const createStatus = useCommandMutation({
-        command: client.commands["ticketStatus.create"],
+        command: client.commands["ticket-status.create"],
         invalidate: [["ticket-statuses"]],
       });
 

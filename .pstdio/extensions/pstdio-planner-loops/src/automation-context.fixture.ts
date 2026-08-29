@@ -175,9 +175,9 @@ export const makeAutomationContext = (state: PlannerFixtureState) => {
         return { maxInProgress: state.maxInProgress ?? 2 };
       case "pstdio.pstdio-planner.command.read-tickets":
         return state.tickets;
-      case "pstdio.pstdio-planner.command.ticketStatus.read":
+      case "pstdio.pstdio-planner.command.ticket-status.read":
         return { statuses };
-      case "pstdio.pstdio-planner.command.ticketTag.read":
+      case "pstdio.pstdio-planner.command.ticket-tag.read":
         return { tags };
       case "pstdio.pstdio-planner.command.get-ticket":
         return findTicket(params.id as string);
@@ -187,7 +187,7 @@ export const makeAutomationContext = (state: PlannerFixtureState) => {
         return { id: `refine-session-${++createdSessions}` };
       case "pstdio.pstdio-planner.command.run-attempt":
         return runAttempt(params);
-      case "pstdio.pstdio-planner.command.runReview":
+      case "pstdio.pstdio-planner.command.run-review":
         return runReview(params);
       case "pstdio.pstdio-planner.command.list-attempts":
         return attempts;

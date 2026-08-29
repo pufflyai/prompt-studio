@@ -11,7 +11,7 @@ import {
 import { plannerTicketsChanged } from "../events";
 
 export const readTicketStatusesCommand = defineCommand({
-  id: "ticketStatus.read",
+  id: "ticket-status.read",
   title: "Read ticket statuses",
   cli: { globalAliases: [["statuses", "list"]], examples: ["pstdio statuses list"] },
   async run(ctx, _commandParams) {
@@ -27,7 +27,7 @@ const statusActionParams = {
 };
 
 export const createTicketStatusCommand = defineCommand({
-  id: "ticketStatus.create",
+  id: "ticket-status.create",
   mutating: true,
   title: "Create ticket status",
   cli: { globalAliases: [["statuses", "create"]], examples: ["pstdio statuses create --label Backlog --color gray"] },
@@ -54,7 +54,7 @@ export const createTicketStatusCommand = defineCommand({
 });
 
 export const updateTicketStatusCommand = defineCommand({
-  id: "ticketStatus.update",
+  id: "ticket-status.update",
   mutating: true,
   title: "Update ticket status",
   cli: {
@@ -88,7 +88,7 @@ export const updateTicketStatusCommand = defineCommand({
 });
 
 export const deleteTicketStatusCommand = defineCommand({
-  id: "ticketStatus.delete",
+  id: "ticket-status.delete",
   mutating: true,
   title: "Delete ticket status",
   cli: { globalAliases: [["statuses", "delete"]], examples: ["pstdio statuses delete --status TODO"] },
@@ -105,7 +105,7 @@ export const deleteTicketStatusCommand = defineCommand({
 });
 
 export const setDefaultTicketStatusCommand = defineCommand({
-  id: "ticketStatus.setDefault",
+  id: "ticket-status.set-default",
   mutating: true,
   title: "Set default ticket status",
   cli: { globalAliases: [["statuses", "set-default"]], examples: ["pstdio statuses set-default --status TODO"] },
@@ -121,7 +121,7 @@ export const setDefaultTicketStatusCommand = defineCommand({
 });
 
 export const reorderTicketStatusesCommand = defineCommand({
-  id: "ticketStatus.reorder",
+  id: "ticket-status.reorder",
   mutating: true,
   title: "Reorder ticket statuses",
   cli: {

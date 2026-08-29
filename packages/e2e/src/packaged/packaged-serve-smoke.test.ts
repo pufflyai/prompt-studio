@@ -235,7 +235,7 @@ describe("packaged pstdio — self-hosted serve", () => {
         const workspaceAction = metadata.menuContributions.find(
           (contribution) => contribution.label === "Workspace-only lab action",
         );
-        expect(workspaceAction?.when).toEqual({ resourceType: ["pstdio.resource-kind.workspace"] });
+        expect(workspaceAction?.when).toEqual({ resourceType: ["workspace"] });
       } finally {
         if (child) {
           await stopProcess(child);

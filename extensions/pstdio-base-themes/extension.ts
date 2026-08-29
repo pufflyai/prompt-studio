@@ -11,7 +11,7 @@ const extension = defineExtension({
       source: packageAsset("./themes/monokai-color-theme.json", import.meta.url),
     }),
     defineTheme({
-      id: "solarizedLight",
+      id: "solarized-light",
       title: l10n("themes.solarizedLight.title", "Solarized Light"),
       description: l10n("themes.solarizedLight.description", "Solarized Light color theme for Prompt Studio."),
       format: "vscode-color-theme",
@@ -19,7 +19,7 @@ const extension = defineExtension({
       source: packageAsset("./themes/solarized-light-color-theme.json", import.meta.url),
     }),
     defineTheme({
-      id: "solarizedDark",
+      id: "solarized-dark",
       title: l10n("themes.solarizedDark.title", "Solarized Dark"),
       description: l10n("themes.solarizedDark.description", "Solarized Dark color theme for Prompt Studio."),
       format: "vscode-color-theme",

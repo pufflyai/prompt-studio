@@ -94,9 +94,9 @@ describe("pstdio planner extension contributions", () => {
   test("contributes shared document templates and planner skills", () => {
     expect(templateType("document")).toMatchObject({ label: "Document" });
     expect(template("prd")).toMatchObject({ title: "PRD", type: "document" });
-    expect(template("commit_message")).toMatchObject({ title: "Commit message", type: "prompt" });
-    expect(skill("create_ticket")).toMatchObject({ title: "Create a ticket" });
-    expect(skill("create_pstdio_extension")).toBeUndefined();
+    expect(template("commit-message")).toMatchObject({ title: "Commit message", type: "prompt" });
+    expect(skill("create-ticket")).toMatchObject({ title: "Create a ticket" });
+    expect(skill("create-pstdio-extension")).toBeUndefined();
     expect(skill("pstdio")).toBeUndefined();
   });
 
@@ -108,31 +108,31 @@ describe("pstdio planner extension contributions", () => {
   });
 
   test("exposes manual planner settings commands through the CLI", () => {
-    expect(command("ticketStatus.update")?.cli).toEqual({
+    expect(command("ticket-status.update")?.cli).toEqual({
       globalAliases: [["statuses", "update"]],
       examples: ["pstdio statuses update --status-id backlog --label Backlog"],
     });
-    expect(command("ticketStatus.reorder")?.cli).toEqual({
+    expect(command("ticket-status.reorder")?.cli).toEqual({
       globalAliases: [["statuses", "reorder"]],
       examples: ['pstdio statuses reorder --status-ids \'["backlog","ready"]\''],
     });
-    expect(command("ticketTag.update")).toMatchObject({
+    expect(command("ticket-tag.update")).toMatchObject({
       cli: {
         globalAliases: [["tags", "update"]],
         examples: ["pstdio tags update --tag-id default-priority --sort-order 0"],
       },
       params: { sortOrder: { type: "number" } },
     });
-    expect(command("ticketTag.createOption")?.cli).toMatchObject({
+    expect(command("ticket-tag.create-option")?.cli).toMatchObject({
       globalAliases: [["tags", "options", "create"]],
     });
-    expect(command("ticketTag.updateOption")?.cli).toMatchObject({
+    expect(command("ticket-tag.update-option")?.cli).toMatchObject({
       globalAliases: [["tags", "options", "update"]],
     });
-    expect(command("ticketTag.deleteOption")?.cli).toMatchObject({
+    expect(command("ticket-tag.delete-option")?.cli).toMatchObject({
       globalAliases: [["tags", "options", "delete"]],
     });
-    expect(command("ticketTag.applyDraft")?.cli).toMatchObject({
+    expect(command("ticket-tag.apply-draft")?.cli).toMatchObject({
       globalAliases: [["tags", "apply-draft"]],
     });
   });
@@ -263,7 +263,7 @@ describe("pstdio planner workspace contributions", () => {
   });
 
   test("mounts run review in the workspace overflow menu", () => {
-    expect(command("runReview")?.menus).toMatchObject([
+    expect(command("run-review")?.menus).toMatchObject([
       {
         slot: { id: "workspace.headerOverflow", kind: "menu" },
         label: { $l10n: "commands.runReview.menuLabel", default: "Run review" },
@@ -273,8 +273,8 @@ describe("pstdio planner workspace contributions", () => {
     ]);
   });
 
-  test("runReview only exposes workspace and harness options", () => {
-    const runReview = command("runReview");
+  test("run-review only exposes workspace and harness options", () => {
+    const runReview = command("run-review");
 
     expect(Object.keys(runReview?.params ?? {}).sort()).toEqual(["harness", "workspaceId"]);
     expect(runReview?.params?.workspaceId).toMatchObject({ required: false });

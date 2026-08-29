@@ -50,7 +50,7 @@ const workspaceIdFrom = (ctx: { resource?: { type: string; id: string } }, comma
 };
 
 const discoverHighImpactIssuesCommand = defineCommand({
-  id: "issues.discoverHighImpact",
+  id: "issues.discover-high-impact",
   title: "Discover high-impact issues",
   async run(ctx, _commandParams) {
     const session = await ctx.sessions.create({
@@ -63,7 +63,7 @@ const discoverHighImpactIssuesCommand = defineCommand({
 });
 
 const openInVscodeCommand = defineCommand({
-  id: "workspace.openInVscode",
+  id: "workspace.open-in-vscode",
   title: "Open workspace in VS Code",
   cli: true,
   menus: [
@@ -92,7 +92,7 @@ const openInVscodeCommand = defineCommand({
 });
 
 const openInIsolationCommand = defineCommand({
-  id: "workspace.openInIsolation",
+  id: "workspace.open-in-isolation",
   title: "Open workspace in isolation",
   cli: true,
   menus: [
@@ -128,7 +128,7 @@ const openInIsolationCommand = defineCommand({
 });
 
 const stopIsolationCommand = defineCommand({
-  id: "workspace.stopIsolation",
+  id: "workspace.stop-isolation",
   title: "Stop workspace isolation",
   cli: true,
   menus: [
@@ -161,7 +161,7 @@ export default defineExtension({
   commands: [discoverHighImpactIssuesCommand, openInVscodeCommand, openInIsolationCommand, stopIsolationCommand],
   schedules: [
     defineSchedule({
-      id: "dailyIssueDiscovery",
+      id: "daily-issue-discovery",
       title: "Daily high-impact issue discovery",
       schedule: "0 12 * * *",
       command: discoverHighImpactIssuesCommand.ref,
@@ -170,7 +170,7 @@ export default defineExtension({
   hooks: [
     // Install + build run in the background so session launch isn't blocked on them.
     defineHook({
-      id: "workspaceReady",
+      id: "workspace-ready",
       event: workspaceEvents.ready,
       async run(ctx, payload) {
         await ctx.process.spawnDetached({

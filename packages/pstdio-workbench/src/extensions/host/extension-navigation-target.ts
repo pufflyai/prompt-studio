@@ -111,7 +111,9 @@ const toCommandTarget = (
 
 const viewIdOf = (target: Extract<ExtensionNavigationTarget, { kind: "view" }>, extensionId: string | undefined) => {
   const owner = target.view.extensionId ?? extensionId;
-  return owner ? `${owner}.view.${target.view.id}` : target.view.id;
+  // Host-published refs resolve to the host's registered id without owner prefixing,
+  // the same rule commands follow in toCommandTarget.
+  return owner && owner !== "pstdio" ? `${owner}.view.${target.view.id}` : target.view.id;
 };
 
 // The return type stays explicit: the compound branch recurses, and TypeScript

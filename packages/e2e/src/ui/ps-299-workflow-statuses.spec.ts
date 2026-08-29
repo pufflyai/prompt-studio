@@ -152,7 +152,7 @@ test("saved ticket board rules control the matching column", async ({ page, requ
     (response) =>
       response.request().method() === "POST" &&
       new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.pstdio-planner.command.ticketStatus.update/execute",
+        "/extensions/commands/pstdio.pstdio-planner.command.ticket-status.update/execute",
       ),
   );
   await backlogRules.getByText("Create in column", { exact: true }).click();

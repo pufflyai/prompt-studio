@@ -13,7 +13,7 @@ describe("pstdio planner ticket actions", () => {
     const menuActions = (extension.commands ?? [])
       .flatMap((command) => command.menus ?? [])
       .map((menu, index) => ({ menu, index }))
-      .filter(({ menu }) => menu.slot.id === "ticket.headerOverflow")
+      .filter(({ menu }) => menu.slot.id === "ticket.header-overflow")
       .sort((left, right) => orderOf(left.menu, left.index) - orderOf(right.menu, right.index))
       .map(({ menu }) => ({ label: menu.label, icon: menu.icon }));
 

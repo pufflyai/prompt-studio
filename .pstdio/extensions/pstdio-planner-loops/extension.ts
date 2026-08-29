@@ -11,26 +11,26 @@ export default defineExtension({
 
   schedules: [
     defineSchedule({
-      id: "refineTickets",
+      id: "refine-tickets",
       title: "Refine backlog tickets",
       schedule: "0 * * * *",
       command: refineTicketsCommand.ref,
     }),
     defineSchedule({
-      id: "implementTickets",
+      id: "implement-tickets",
       title: "Implement Todo tickets",
       schedule: "*/5 * * * *",
       command: implementTicketsCommand.ref,
     }),
     defineSchedule({
-      id: "stuckWorkSweep",
+      id: "stuck-work-sweep",
       title: "Sweep stuck in-progress tickets",
       schedule: "0 * * * *",
       command: stuckWorkSweepCommand.ref,
     }),
     // Offset from the implementation schedule to reduce same-minute contention.
     defineSchedule({
-      id: "reviewTickets",
+      id: "review-tickets",
       title: "Review in-review tickets",
       schedule: "2-59/5 * * * *",
       command: reviewTicketsCommand.ref,

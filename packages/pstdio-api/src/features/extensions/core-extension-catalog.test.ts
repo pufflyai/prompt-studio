@@ -86,7 +86,7 @@ describe("core extension catalog", () => {
     };
     expect(
       metadata.templates.some(
-        (template) => template.localId === "implement_ticket" && template.extensionId === "pstdio.pstdio-planner",
+        (template) => template.localId === "implement-ticket" && template.extensionId === "pstdio.pstdio-planner",
       ),
     ).toBe(true);
 

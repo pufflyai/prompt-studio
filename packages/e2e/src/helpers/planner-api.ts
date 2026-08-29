@@ -108,7 +108,7 @@ export const getPlannerTicketStatuses = async (request: APIRequestContext, apiBa
     request,
     apiBase,
     projectId,
-    "ticketStatus.read",
+    "ticket-status.read",
   );
   return Array.isArray(result) ? result : result.statuses;
 };
@@ -118,7 +118,7 @@ export const getPlannerTicketTags = async (request: APIRequestContext, apiBase: 
     request,
     apiBase,
     projectId,
-    "ticketTag.read",
+    "ticket-tag.read",
   );
   return Array.isArray(result) ? result : result.tags;
 };
@@ -159,13 +159,13 @@ export const createPlannerTag = async (
   projectId: string,
   input: { name: string; type: "single_select" | "multi_select"; options: Array<{ name: string; color: string }> },
 ) => {
-  const tag = await executePlannerCommand<PlannerTag>(request, apiBase, projectId, "ticketTag.create", {
+  const tag = await executePlannerCommand<PlannerTag>(request, apiBase, projectId, "ticket-tag.create", {
     name: input.name,
     type: input.type,
   });
 
   for (const option of input.options) {
-    await executePlannerCommand<PlannerTagOption>(request, apiBase, projectId, "ticketTag.createOption", {
+    await executePlannerCommand<PlannerTagOption>(request, apiBase, projectId, "ticket-tag.create-option", {
       tagId: tag.id,
       name: option.name,
       color: option.color,

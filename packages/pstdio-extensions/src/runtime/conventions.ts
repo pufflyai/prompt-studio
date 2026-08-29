@@ -1,9 +1,10 @@
+import { isValidLocalContributionId, localContributionIdGrammar } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionDiagnostic, ExtensionRuntime } from "../types/runtime";
 import { createDiagnostic } from "./diagnostics";
 import { workbenchIconNames } from "./workbench-icon-names";
 
-// Convention diagnostics for `extensions check`: invalid icon names, inconsistent
-// contribution id casing, and dangling command references. They run over the
+// Convention diagnostics for `extensions check`: invalid icon names, contribution ids
+// outside the shared grammar, and dangling command references. They run over the
 // normalized runtime so every check sees resolved contribution ids.
 
 const toKebabIconName = (name: string) =>
@@ -13,11 +14,15 @@ const toKebabIconName = (name: string) =>
     .replace(/([a-zA-Z])([0-9])/g, "$1-$2")
     .toLowerCase();
 
+// Host-owned contributions (extensionId "pstdio") are registered at runtime by the
+// application, not by extensions, so references to them cannot be resolved here and
+// are skipped by returning undefined.
 const contributionRefId = (value: unknown) => {
   if (!value || typeof value !== "object") return undefined;
   const ref = value as { extensionId?: unknown; kind?: unknown; id?: unknown };
   if (typeof ref.extensionId !== "string" || typeof ref.kind !== "string" || typeof ref.id !== "string")
     return undefined;
+  if (ref.extensionId === "pstdio") return undefined;
   return `${ref.extensionId}.${ref.kind}.${ref.id}`;
 };
 
@@ -65,68 +70,62 @@ const collectIconDiagnostics = (runtime: ExtensionRuntime) => {
 };
 
 // Only author-declared ids are checked. Private handler ids are synthesized by the
-// runtime as `<renderer>.<operation>`, so their dots and casing are not the
-// author's choice.
+// runtime as `<renderer>.<operation>`, so their shape is not the author's choice.
 const localIdRecordsByKind = (runtime: ExtensionRuntime): [string, ContributionSite[]][] => [
-  ["command", runtime.commands],
-  ["mode", runtime.modes],
-  ["view", runtime.views],
-  ["viewMenu", runtime.viewMenus],
-  ["placement", runtime.placements],
-  ["navigationItem", runtime.navigationItems],
-  ["statusBarItem", runtime.statusBarItems],
-  ["status", runtime.statuses],
   ["activityItem", runtime.activityItems],
+  ["artifactMount", runtime.artifactMounts],
+  ["command", runtime.commands],
+  ["commandPaletteResource", runtime.commandPaletteResources],
+  ["connection", runtime.connections],
+  ["fileIconTheme", runtime.fileIconThemes],
+  ["harness", runtime.harnesses],
+  ["hook", runtime.hooks],
+  ["keybinding", runtime.keybindings],
+  ["middleware", runtime.middlewares],
+  ["mode", runtime.modes],
+  ["navigationItem", runtime.navigationItems],
+  ["placement", runtime.placements],
+  ["resourceHierarchyProvider", runtime.resourceHierarchyProviders],
   ["resourceKind", runtime.resourceKinds],
   ["resourceView", runtime.resourceViews],
+  ["schedule", runtime.schedules],
+  ["settingsPanel", runtime.settingsPanels],
+  ["settingsSection", runtime.settingsSections],
+  ["skill", runtime.skills],
+  ["status", runtime.statuses],
+  ["statusBarItem", runtime.statusBarItems],
+  ["template", runtime.templates],
+  ["templateType", runtime.templateTypes],
+  ["theme", runtime.themes],
+  ["view", runtime.views],
+  ["viewMenu", runtime.viewMenus],
 ];
 
-const isKebab = (localId: string) => localId.includes("-") && localId === localId.toLowerCase();
-const isCamel = (localId: string) => /[A-Z]/.test(localId);
+const invalidIdDiagnostic = (kind: string, record: ContributionSite, localId: string) =>
+  createDiagnostic({
+    code: "extension_contribution_id_invalid",
+    message: `${kind} id "${localId}" is invalid; local contribution ids use ${localContributionIdGrammar}`,
+    extensionId: record.extensionId,
+    sourcePath: record.sourcePath,
+    metadata: { contributionId: record.id, invalidId: localId },
+  });
 
-const collectIdCasingDiagnostics = (runtime: ExtensionRuntime) => {
+const collectIdGrammarDiagnostics = (runtime: ExtensionRuntime) => {
   const diagnostics: ExtensionDiagnostic[] = [];
-  // Casing is compared inside one contribution kind: this repo deliberately uses
-  // kebab-case commands beside camelCase renderer and panel ids.
-  const byExtensionKind = new Map<string, ContributionSite[]>();
   for (const [kind, records] of localIdRecordsByKind(runtime)) {
     for (const record of records) {
-      const key = `${record.extensionId}\0${kind}`;
-      byExtensionKind.set(key, [...(byExtensionKind.get(key) ?? []), record]);
+      if (isValidLocalContributionId(record.localId)) continue;
+      diagnostics.push(invalidIdDiagnostic(kind, record, record.localId));
     }
   }
-
-  for (const record of localIdRecordsByKind(runtime).flatMap(([, records]) => records)) {
-    // A dotted local id collides with the namespaced `<extension>.<id>` reference
-    // form, so references to it resolve to the wrong extension.
-    if (!record.localId.includes(".")) continue;
-    diagnostics.push(
-      createDiagnostic({
-        code: "extension_contribution_id_casing",
-        severity: "warning",
-        message: `Contribution id "${record.localId}" contains "."; dots are reserved for cross-extension references`,
-        extensionId: record.extensionId,
-        sourcePath: record.sourcePath,
-        metadata: { contributionId: record.id, reason: "dotted-local-id" },
-      }),
-    );
-  }
-
-  for (const [key, records] of byExtensionKind) {
-    const [extensionId, kind] = key.split("\0");
-    const kebab = records.find((record) => isKebab(record.localId));
-    const camel = records.find((record) => isCamel(record.localId));
-    if (!kebab || !camel) continue;
-    diagnostics.push(
-      createDiagnostic({
-        code: "extension_contribution_id_casing",
-        severity: "warning",
-        message: `Extension mixes ${kind} id styles: "${kebab.localId}" (kebab-case) and "${camel.localId}" (camelCase); pick one`,
-        extensionId: extensionId!,
-        sourcePath: kebab.sourcePath,
-        metadata: { reason: "mixed-casing", kind, examples: [kebab.localId, camel.localId] },
-      }),
-    );
+  // Resource-kind slot and menu-slot ids are author-declared identifiers too: other
+  // extensions reference them, so they follow the same grammar.
+  for (const record of runtime.resourceKinds) {
+    const { slots, menuSlots } = record.contribution;
+    for (const slotId of [...Object.keys(slots), ...Object.keys(menuSlots)]) {
+      if (isValidLocalContributionId(slotId)) continue;
+      diagnostics.push(invalidIdDiagnostic("resourceKind slot", record, slotId));
+    }
   }
   return diagnostics;
 };
@@ -201,7 +200,7 @@ const collectViewReferenceDiagnostics = (runtime: ExtensionRuntime) => {
 
 export const collectConventionDiagnostics = (runtime: ExtensionRuntime) => [
   ...collectIconDiagnostics(runtime),
-  ...collectIdCasingDiagnostics(runtime),
+  ...collectIdGrammarDiagnostics(runtime),
   ...collectCommandReferenceDiagnostics(runtime),
   ...collectViewReferenceDiagnostics(runtime),
 ];

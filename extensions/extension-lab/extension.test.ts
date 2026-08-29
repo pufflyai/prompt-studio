@@ -223,11 +223,11 @@ describe("extension-lab workbench attachments", () => {
       ]),
     );
     expect(extension.hooks).toEqual([]);
-    expect(extension.templates?.find((template) => template.id === "labResource")).toMatchObject({
+    expect(extension.templates?.find((template) => template.id === "lab-resource")).toMatchObject({
       title: expect.objectContaining({ default: "Glass Lab artifact" }),
       type: "glass-lab-artifact",
     });
-    expect(extension.skills?.find((skill) => skill.id === "labResource")).toMatchObject({
+    expect(extension.skills?.find((skill) => skill.id === "lab-resource")).toMatchObject({
       title: expect.objectContaining({ default: "Glass Lab Curator" }),
     });
     expect(extension.harnesses?.find((harness) => harness.id === "fake")).toMatchObject({

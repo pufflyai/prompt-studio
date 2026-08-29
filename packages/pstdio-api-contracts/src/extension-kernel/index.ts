@@ -15,6 +15,11 @@ export {
   workbenchResourceKinds,
   workbenchSlots,
 } from "./builtin-refs";
+export {
+  isValidLocalContributionId,
+  localContributionIdGrammar,
+  localContributionIdPattern,
+} from "./contribution-id";
 export type {
   CommitPayload,
   ConflictPayload,

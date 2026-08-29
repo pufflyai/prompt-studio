@@ -45,7 +45,7 @@ export const writeExtensionWithDependency = (root: string) => {
 
       export const templates = [
         defineTemplate({
-          id: "packagedAsset",
+          id: "packaged-asset",
           title: "Packaged Asset",
           type: "ticket",
           source: packageAsset("./template.md", import.meta.url),

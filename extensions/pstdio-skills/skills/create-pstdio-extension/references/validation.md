@@ -63,7 +63,7 @@ Composition diagnostics to expect:
 Convention diagnostics to expect:
 
 - `extension_icon_unknown`: an icon name is not in the host icon set.
-- `extension_contribution_id_casing`: a contribution key does not use the expected casing.
+- `extension_contribution_id_invalid` (error): a local contribution id is outside the grammar — lowercase kebab-case segments separated by dots, such as `ticket-status.create`.
 - `extension_command_reference_missing`: a contribution references a command that does not exist.
 
 Do not pass `--skip-install` for a user/global install smoke test. The install must create package-local

@@ -46,7 +46,7 @@ const extension = defineExtension({
   ],
   artifactMounts: [
     defineArtifactMount({
-      id: "fontEditor",
+      id: "font-editor",
       path: "data",
       label: l10n("artifactMounts.fontEditor.label", "Font editor files"),
       repoRole: "default",
@@ -54,7 +54,7 @@ const extension = defineExtension({
   ],
   skills: [
     defineSkill({
-      id: "fontEditor",
+      id: "font-editor",
       title: l10n("skills.fontEditor.title", "Font editor"),
       source: packageAsset("./skills/font-editor", import.meta.url),
     }),

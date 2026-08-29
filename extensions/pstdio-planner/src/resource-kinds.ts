@@ -11,7 +11,7 @@ export const ticketResourceKind = defineResourceKind({
   ],
   menuSlots: [
     {
-      id: "headerOverflow",
+      id: "header-overflow",
       placement: "header-overflow",
       label: l10n("resourceKinds.ticket.actions", "Ticket actions"),
       access: "owner",
@@ -20,5 +20,5 @@ export const ticketResourceKind = defineResourceKind({
 });
 
 export const ticketMenuSlots = {
-  headerOverflow: resourceMenuSlotRef(ticketResourceKind.ref, "headerOverflow"),
+  headerOverflow: resourceMenuSlotRef(ticketResourceKind.ref, "header-overflow"),
 };

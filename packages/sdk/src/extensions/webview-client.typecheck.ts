@@ -6,7 +6,7 @@ import { params } from "./params";
 import { createWebviewClient } from "./webview-client";
 
 const readTicketStatuses = defineCommand({
-  id: "ticketStatus.read",
+  id: "ticket-status.read",
   title: "Read ticket statuses",
   async run(_ctx, _commandParams) {
     return { statuses: [{ id: "todo", name: "Todo" }] };
@@ -14,7 +14,7 @@ const readTicketStatuses = defineCommand({
 });
 
 const createTicketStatus = defineCommand({
-  id: "ticketStatus.create",
+  id: "ticket-status.create",
   title: "Create ticket status",
   params: {
     label: params.text({ required: true }),
@@ -26,8 +26,8 @@ const createTicketStatus = defineCommand({
 });
 
 const commands = {
-  "ticketStatus.read": readTicketStatuses,
-  "ticketStatus.create": createTicketStatus,
+  "ticket-status.read": readTicketStatuses,
+  "ticket-status.create": createTicketStatus,
 };
 
 const settings = {
@@ -49,24 +49,24 @@ declare const host: GuestHost;
 const client = createWebviewClient<typeof commands, typeof settings>(host);
 
 // Command results keep the type of the command's run handler.
-const statuses: Promise<{ statuses: { id: string; name: string }[] }> = client.commands["ticketStatus.read"]();
+const statuses: Promise<{ statuses: { id: string; name: string }[] }> = client.commands["ticket-status.read"]();
 void statuses;
 
 // Command params come from the command's params schema.
-const created: Promise<{ id: string }> = client.commands["ticketStatus.create"]({ label: "Todo" });
+const created: Promise<{ id: string }> = client.commands["ticket-status.create"]({ label: "Todo" });
 void created;
 
 // @ts-expect-error unknown command keys are rejected
 client.commands["missing.command"]();
 
 // @ts-expect-error params must match the command schema
-client.commands["ticketStatus.create"]({ label: 42 });
+client.commands["ticket-status.create"]({ label: 42 });
 
 // @ts-expect-error required params cannot be omitted
-client.commands["ticketStatus.create"]({ color: "red" });
+client.commands["ticket-status.create"]({ color: "red" });
 
 // @ts-expect-error commands with required params need a params argument
-client.commands["ticketStatus.create"]();
+client.commands["ticket-status.create"]();
 
 // Settings are typed by the settings contribution.
 const enabled: Promise<boolean | undefined> = client.settings.get("counter.enabled");

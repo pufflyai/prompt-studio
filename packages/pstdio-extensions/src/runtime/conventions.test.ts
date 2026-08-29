@@ -24,7 +24,7 @@ const wrap = (name: string, definition: LoadedExtensionSource["definition"]): Lo
     version: "1.0.0",
     publisher: "pstdio",
     main: "./extension.ts",
-    enginesPstdio: "1.0.0-alpha.4",
+    enginesPstdio: "1.0.0-alpha.6",
   },
   definition,
 });
@@ -49,24 +49,44 @@ describe("extension convention diagnostics", () => {
     expect(diagnostics[0]?.metadata).toMatchObject({ icon: "definitely-not-an-icon" });
   });
 
-  test("flags mixed contribution id casing and dotted local ids", () => {
+  test("accepts dotted kebab-case local ids", () => {
     const runtime = normalizeExtensionSources([
       wrap(
         "planner",
         defineExtension({
           commands: [
             defineCommand({ id: "create-ticket", title: "Create", async run() {} }),
-            defineCommand({ id: "ticketStatus.create", title: "Create status", async run() {} }),
+            defineCommand({ id: "ticket-status.create", title: "Create status", async run() {} }),
           ],
         }),
       ),
     ]);
 
-    const reasons = collectConventionDiagnostics(runtime)
-      .filter((item) => item.code === "extension_contribution_id_casing")
-      .map((item) => item.metadata?.reason)
-      .sort();
-    expect(reasons).toEqual(["dotted-local-id", "mixed-casing"]);
+    const diagnostics = collectConventionDiagnostics(runtime).filter(
+      (item) => item.code === "extension_contribution_id_invalid",
+    );
+    expect(diagnostics).toEqual([]);
+  });
+
+  test("rejects camelCase and snake_case local ids with the grammar", () => {
+    const runtime = normalizeExtensionSources([
+      wrap(
+        "planner",
+        defineExtension({
+          commands: [
+            defineCommand({ id: "ticketStatus.create", title: "Create status", async run() {} }),
+            defineCommand({ id: "use_reports", title: "Use reports", async run() {} }),
+          ],
+        }),
+      ),
+    ]);
+
+    const diagnostics = collectConventionDiagnostics(runtime).filter(
+      (item) => item.code === "extension_contribution_id_invalid",
+    );
+    expect(diagnostics.map((item) => item.severity)).toEqual(["error", "error"]);
+    expect(diagnostics.map((item) => item.metadata?.invalidId).sort()).toEqual(["ticketStatus.create", "use_reports"]);
+    expect(diagnostics[0]?.message).toContain("kebab-case");
   });
 
   test("flags dangling typed command and view references", () => {

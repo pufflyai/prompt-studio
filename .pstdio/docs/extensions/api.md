@@ -269,6 +269,14 @@ The old `namespace` concept is removed. Use the package `name` anywhere extensio
 Publisher-qualified runtime ids are host routing details. Extension code declares local ids and uses typed refs.
 For same-extension composition, use the `ref` returned by `defineCommand()`.
 
+Every local contribution id follows one grammar: lowercase kebab-case segments separated by single dots, matching
+`[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*`. Dots express local grouping (and derive default CLI paths
+for commands): `ticket-status.create` becomes `pst <extension> ticket-status create`. Ownership never lives in the id:
+a ref's `extensionId` carries it. `pst extensions check` rejects ids outside the grammar with the code
+`extension_contribution_id_invalid`. Host-published refs (for example `workbenchCommands.switchMode`) resolve to the
+host's registered id without owner prefixing, for every contribution kind; runtime ids such as
+`pstdio.planner.command.tickets.create` are opaque routing values that no code may split back into parts.
+
 When another extension needs a public command, the provider owns and exports that contract from one module:
 
 ```ts
@@ -726,11 +734,11 @@ import { useCommandMutation, useCommandQuery } from "@pstdio/sdk/extensions/reac
 
 const statuses = useCommandQuery({
   queryKey: ["ticket-statuses"],
-  command: client.commands["ticketStatus.read"],
+  command: client.commands["ticket-status.read"],
 });
 
 const saveStatus = useCommandMutation({
-  command: client.commands["ticketStatus.update"],
+  command: client.commands["ticket-status.update"],
   invalidate: [["ticket-statuses"]],
 });
 ```

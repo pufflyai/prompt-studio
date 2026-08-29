@@ -70,7 +70,7 @@ export interface WebviewClientOptions {
  *   import type { settings } from "../settings";
  *
  *   const client = createWebviewClient<typeof commands, typeof settings>(host);
- *   const { statuses } = await client.commands["ticketStatus.read"]();
+ *   const { statuses } = await client.commands["ticket-status.read"]();
  *   const enabled = await client.settings.get("counter.enabled");
  */
 export const createWebviewClient = <TCommands extends object, TSettings = undefined>(

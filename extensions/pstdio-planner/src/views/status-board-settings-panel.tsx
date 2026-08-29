@@ -10,8 +10,8 @@ import { renderTicketRoot } from "./view-root";
 const STATUSES_KEY = ["ticket-statuses"];
 
 const commandIds = {
-  read: "pstdio.pstdio-planner.command.ticketStatus.read",
-  update: "pstdio.pstdio-planner.command.ticketStatus.update",
+  read: "pstdio.pstdio-planner.command.ticket-status.read",
+  update: "pstdio.pstdio-planner.command.ticket-status.update",
 };
 
 const readStatuses = async (host: GuestHost) =>

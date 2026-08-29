@@ -18,6 +18,18 @@ describe("toWorkbenchNavigationTarget", () => {
     });
   });
 
+  test("resolves host view references to the host's registered id", () => {
+    expect(
+      toWorkbenchNavigationTarget(
+        {
+          kind: "view",
+          view: { extensionId: "pstdio", kind: "view", id: "workspaces" },
+        },
+        { extensionId: "pstdio.pstdio-planner" },
+      ),
+    ).toEqual({ kind: "view", viewId: "workspaces", input: {} });
+  });
+
   test("maps view replace-invoking to a host-owned panel replacement strategy", () => {
     expect(
       toWorkbenchNavigationTarget(

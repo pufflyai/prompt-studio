@@ -33,7 +33,7 @@ export default defineExtension({
   templates: reportTemplates,
   skills: [
     defineSkill({
-      id: "use_reports",
+      id: "use-reports",
       title: "Use reports",
       source: packageAsset("./skills/use-reports", import.meta.url),
     }),

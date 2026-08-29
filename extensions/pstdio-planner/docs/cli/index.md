@@ -32,20 +32,20 @@ Every CLI-enabled Planner command is available under `pst pstdio-planner`. Globa
 | `pst pstdio-planner ticket-workspaces` | `pst tickets workspaces` |
 | `pst pstdio-planner ticket-worktrees-list` | `pst tickets worktrees list` |
 | `pst pstdio-planner ticket-worktrees-remove-all` | `pst tickets worktrees remove-all` |
-| `pst pstdio-planner ticketStatus read` | `pst statuses list` |
-| `pst pstdio-planner ticketStatus create` | `pst statuses create` |
-| `pst pstdio-planner ticketStatus update` | `pst statuses update` |
-| `pst pstdio-planner ticketStatus reorder` | `pst statuses reorder` |
-| `pst pstdio-planner ticketStatus delete` | `pst statuses delete` |
-| `pst pstdio-planner ticketStatus setDefault` | `pst statuses set-default` |
-| `pst pstdio-planner ticketTag read` | `pst tags list` |
-| `pst pstdio-planner ticketTag create` | `pst tags create` |
-| `pst pstdio-planner ticketTag update` | `pst tags update` |
-| `pst pstdio-planner ticketTag createOption` | `pst tags options create` |
-| `pst pstdio-planner ticketTag updateOption` | `pst tags options update` |
-| `pst pstdio-planner ticketTag deleteOption` | `pst tags options delete` |
-| `pst pstdio-planner ticketTag applyDraft` | `pst tags apply-draft` |
-| `pst pstdio-planner ticketTag delete` | `pst tags delete` |
+| `pst pstdio-planner ticket-status read` | `pst statuses list` |
+| `pst pstdio-planner ticket-status create` | `pst statuses create` |
+| `pst pstdio-planner ticket-status update` | `pst statuses update` |
+| `pst pstdio-planner ticket-status reorder` | `pst statuses reorder` |
+| `pst pstdio-planner ticket-status delete` | `pst statuses delete` |
+| `pst pstdio-planner ticket-status set-default` | `pst statuses set-default` |
+| `pst pstdio-planner ticket-tag read` | `pst tags list` |
+| `pst pstdio-planner ticket-tag create` | `pst tags create` |
+| `pst pstdio-planner ticket-tag update` | `pst tags update` |
+| `pst pstdio-planner ticket-tag create-option` | `pst tags options create` |
+| `pst pstdio-planner ticket-tag update-option` | `pst tags options update` |
+| `pst pstdio-planner ticket-tag delete-option` | `pst tags options delete` |
+| `pst pstdio-planner ticket-tag apply-draft` | `pst tags apply-draft` |
+| `pst pstdio-planner ticket-tag delete` | `pst tags delete` |
 
 The following workflow commands only use the Planner namespace:
 
@@ -64,7 +64,7 @@ pst pstdio-planner resolve-human-request
 pst pstdio-planner list-attempts
 pst pstdio-planner reconcile-attempt
 pst pstdio-planner run-attempt
-pst pstdio-planner runReview
+pst pstdio-planner run-review
 ```
 
 Use `--help` on any path before calling workflow commands directly. Their parameters are meant for agent and automation flows and can include revision IDs, report IDs, and expected state versions.

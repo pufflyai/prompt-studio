@@ -51,19 +51,19 @@ Default tags:
 The dashboard Project Settings panels for ticket statuses and ticket tags call
 planner extension commands:
 
-- `pstdio-planner.ticketStatus.read`
-- `pstdio-planner.ticketStatus.create`
-- `pstdio-planner.ticketStatus.update`
-- `pstdio-planner.ticketStatus.delete`
-- `pstdio-planner.ticketStatus.setDefault`
-- `pstdio-planner.ticketStatus.reorder`
-- `pstdio-planner.ticketTag.read`
-- `pstdio-planner.ticketTag.create`
-- `pstdio-planner.ticketTag.update`
-- `pstdio-planner.ticketTag.delete`
-- `pstdio-planner.ticketTag.createOption`
-- `pstdio-planner.ticketTag.updateOption`
-- `pstdio-planner.ticketTag.deleteOption`
+- `pstdio-planner.ticket-status.read`
+- `pstdio-planner.ticket-status.create`
+- `pstdio-planner.ticket-status.update`
+- `pstdio-planner.ticket-status.delete`
+- `pstdio-planner.ticket-status.set-default`
+- `pstdio-planner.ticket-status.reorder`
+- `pstdio-planner.ticket-tag.read`
+- `pstdio-planner.ticket-tag.create`
+- `pstdio-planner.ticket-tag.update`
+- `pstdio-planner.ticket-tag.delete`
+- `pstdio-planner.ticket-tag.create-option`
+- `pstdio-planner.ticket-tag.update-option`
+- `pstdio-planner.ticket-tag.delete-option`
 
 The CLI aliases for tickets route through the same planner command runtime.
 

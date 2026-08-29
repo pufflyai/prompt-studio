@@ -3,7 +3,7 @@ import { defineExtension, defineSkill, packageAsset } from "@pstdio/sdk/extensio
 export default defineExtension({
   skills: [
     defineSkill({
-      id: "create_pstdio_extension",
+      id: "create-pstdio-extension",
       title: "Create a pstdio extension",
       source: packageAsset("./skills/create-pstdio-extension", import.meta.url),
     }),

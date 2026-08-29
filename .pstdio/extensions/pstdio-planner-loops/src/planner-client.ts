@@ -77,8 +77,8 @@ const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "pst
 export const planner = {
   automationPolicy: plannerCommand<Record<string, never>, { maxInProgress: number }>("automation-policy"),
   readTickets: plannerCommand<Record<string, never>, PlannerTicket[]>("read-tickets"),
-  readStatuses: plannerCommand<Record<string, never>, { statuses: PlannerStatus[] }>("ticketStatus.read"),
-  readTags: plannerCommand<Record<string, never>, { tags: PlannerTag[] }>("ticketTag.read"),
+  readStatuses: plannerCommand<Record<string, never>, { statuses: PlannerStatus[] }>("ticket-status.read"),
+  readTags: plannerCommand<Record<string, never>, { tags: PlannerTag[] }>("ticket-tag.read"),
   getTicket: plannerCommand<{ id: string }, PlannerTicket | null>("get-ticket"),
   setTicketAttribute: plannerCommand<{ rowId: string; attributeId: string; value: string }, PlannerTicket | null>(
     "set-ticket-attribute",
@@ -89,7 +89,7 @@ export const planner = {
     | { decision: "started"; attempt: PlannerAttempt; session: { id: string } }
     | { decision: "wait"; reason: string; dependencyIds: string[] }
   >("run-attempt"),
-  runReview: plannerCommand<{ workspaceId: string }, { review: { id: string }; session: { id: string } }>("runReview"),
+  runReview: plannerCommand<{ workspaceId: string }, { review: { id: string }; session: { id: string } }>("run-review"),
   listAttempts: plannerCommand<Record<string, never>, PlannerAttempt[]>("list-attempts"),
   reconcileAttempt: plannerCommand<{ workspaceId: string }, { decision: string; attempt: PlannerAttempt }>(
     "reconcile-attempt",

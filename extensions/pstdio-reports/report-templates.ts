@@ -8,10 +8,10 @@ export const reportTemplateAssets = [
     path: "templates/review.md",
   },
   {
-    id: "change_request",
+    id: "change-request",
     title: "Change request",
     type: "report",
-    path: "templates/change_request.md",
+    path: "templates/change-request.md",
   },
 ];
 
@@ -24,4 +24,4 @@ export const reportTemplates = reportTemplateAssets.map((template) =>
   }),
 );
 
-export const reportTemplateNames = reportTemplateAssets.map((template) => template.id.replaceAll("_", "-")).sort();
+export const reportTemplateNames = reportTemplateAssets.map((template) => template.id).sort();

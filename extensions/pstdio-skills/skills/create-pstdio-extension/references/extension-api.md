@@ -13,7 +13,7 @@ Every extension package needs a `package.json` next to its entry file:
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.5"
+    "pstdio": "1.0.0-alpha.6"
   },
   "private": true,
   "type": "module",
@@ -87,12 +87,15 @@ command id       planner.tickets.create
 CLI path         pst planner tickets create
 artifact root    <repo>/.pstdio/extension-storage/planner/
 template id      planner.ticket
-skill id         planner.createGuide
+skill id         planner.create-guide
 theme id         planner.monokai
 ```
 
-Catalog display names are derived from contribution keys by converting camelCase, underscores, spaces, and dots to
-kebab-case. For example `create_pstdio_extension` and `createPstdioExtension` become `create-pstdio-extension`.
+Local ids must use lowercase kebab-case segments separated by dots (e.g. `ticket-status.create`). `pst extensions check` reports any other form as an error.
+
+Catalog display names are derived from contribution keys by converting spaces and dots to kebab-case. Historical
+camelCase and snake_case keys such as `createPstdioExtension` were normalized the same way; those forms are now
+rejected by `pst extensions check`.
 
 ## Contribution types
 

@@ -89,7 +89,7 @@ Everything below uses only host-owned workbench targets and lab-internal command
 - The Artifacts data-table view contributes a `glass-lab-artifact` table with row deletion and a Side Panel inspector.
 - The artifact-create controls view backs the `Create artifacts` menu on the Artifacts view.
 - The camera tree view lists the surveillance cameras in the Cams menu. Selecting one drives the procedural canvas video player.
-- `templates.labResource` (type `glass-lab-artifact`) and `skills.labResource` exercise `packageAsset` resolution with Glass Lab assets.
+- `templates.lab-resource` (type `glass-lab-artifact`) and `skills.lab-resource` exercise `packageAsset` resolution with Glass Lab assets.
 
 > Color themes and file icon themes now ship in the `pstdio-base-themes` extension; the lab no longer contributes appearance assets.
 

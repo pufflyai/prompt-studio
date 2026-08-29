@@ -61,7 +61,7 @@ describe("refineTicketCommand", () => {
         params: {
           ticket: ticket.id,
           agent: { harnessId: "codex", model: "gpt-5" },
-          template: "bug_fix",
+          template: "bug-fix",
           context: "Tighten the acceptance criteria.",
         },
         overrides: {
@@ -93,7 +93,7 @@ describe("refineTicketCommand", () => {
           },
         ],
         harness: { harnessId: "codex", model: "gpt-5" },
-        prompt: expect.stringContaining("bug_fix"),
+        prompt: expect.stringContaining("bug-fix"),
       },
     ]);
   });

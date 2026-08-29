@@ -5,7 +5,7 @@
 Use middleware on the planner command that starts a review:
 
 ```ts
-ctx.commands.middleware("pstdio-planner.runReview", async (commandCtx, next) => {
+ctx.commands.middleware("pstdio-planner.run-review", async (commandCtx, next) => {
   const result = await commandCtx.shell.run({
     command: ["bun", "run", "validate"],
     cwd: commandCtx.workspace.worktree_path,

@@ -13,12 +13,14 @@ import type { BuildEnvironmentInput, CommandRunnerHostDeps } from "./types";
 export const refId = (ref: CommandRef | EventRef | string, ownerExtensionId?: string): string => {
   if (typeof ref === "string") return ref;
   const extensionId = ref.extensionId ?? ownerExtensionId;
-  if (ref.kind === "command") return extensionId ? `${extensionId}.command.${ref.id}` : ref.id;
+  // Host-owned refs (extensionId "pstdio") resolve to the host's registered id without
+  // owner prefixing — the same rule normalize/references.ts applies.
+  if (!extensionId || extensionId === "pstdio") return ref.id;
+  if (ref.kind === "command") return `${extensionId}.command.${ref.id}`;
   const lifecycleMatch = /^(command\.(?:requested|started|completed|rejected|failed):)(.+)$/.exec(ref.id);
-  if (lifecycleMatch && extensionId) {
+  if (lifecycleMatch) {
     return `${lifecycleMatch[1]}${extensionId}.command.${lifecycleMatch[2]}`;
   }
-  if (!extensionId || extensionId === "pstdio") return ref.id;
   return `${extensionId}.event.${ref.id}`;
 };
 

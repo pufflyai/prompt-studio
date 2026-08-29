@@ -49,7 +49,7 @@ export interface TagDraftPayload {
 export const DEFAULT_TAG_OPTION_ICON = "circle";
 
 export const tagSettingsCommandIds = {
-  applyDraft: "pstdio.pstdio-planner.command.ticketTag.applyDraft",
+  applyDraft: "pstdio.pstdio-planner.command.ticket-tag.apply-draft",
 } as const;
 
 export type TagSettingsCommandId = (typeof tagSettingsCommandIds)[keyof typeof tagSettingsCommandIds];

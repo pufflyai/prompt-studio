@@ -7,15 +7,15 @@ import { artifactsRead } from "./webview-capabilities";
 import { createWebviewClient } from "./webview-client";
 
 const commands = {
-  "ticketStatus.read": defineCommand({
-    id: "ticketStatus.read",
+  "ticket-status.read": defineCommand({
+    id: "ticket-status.read",
     title: "Read ticket statuses",
     async run(_ctx, _commandParams) {
       return { statuses: ["todo"] };
     },
   }),
-  "ticketStatus.create": defineCommand({
-    id: "ticketStatus.create",
+  "ticket-status.create": defineCommand({
+    id: "ticket-status.create",
     title: "Create ticket status",
     params: { label: params.text({ required: true }) },
     async run(_ctx, commandParams) {
@@ -56,12 +56,12 @@ describe("createWebviewClient commands", () => {
     const { host, calls } = createHost(() => successOutcome({ statuses: [] }), "pstdio-planner");
     const client = createWebviewClient<typeof commands, typeof settings>(host);
 
-    await client.commands["ticketStatus.read"]();
+    await client.commands["ticket-status.read"]();
 
     expect(calls).toEqual([
       {
         method: "commands.execute",
-        params: { commandId: "pstdio-planner.command.ticketStatus.read", params: undefined },
+        params: { commandId: "pstdio-planner.command.ticket-status.read", params: undefined },
       },
     ]);
   });
@@ -70,11 +70,11 @@ describe("createWebviewClient commands", () => {
     const { host, calls } = createHost(() => successOutcome({ id: "todo" }), "pstdio-planner");
     const client = createWebviewClient<typeof commands, typeof settings>(host);
 
-    const created = await client.commands["ticketStatus.create"]({ label: "Todo" });
+    const created = await client.commands["ticket-status.create"]({ label: "Todo" });
 
     expect(created).toEqual({ id: "todo" });
     expect(calls[0]?.params).toEqual({
-      commandId: "pstdio-planner.command.ticketStatus.create",
+      commandId: "pstdio-planner.command.ticket-status.create",
       params: { label: "Todo" },
     });
   });
@@ -86,16 +86,16 @@ describe("createWebviewClient commands", () => {
     );
     const client = createWebviewClient<typeof commands, typeof settings>(host);
 
-    await expect(client.commands["ticketStatus.create"]({ label: "Todo" })).rejects.toThrow("Ticket status exists.");
+    await expect(client.commands["ticket-status.create"]({ label: "Todo" })).rejects.toThrow("Ticket status exists.");
   });
 
   test("prefers an explicit extensionId option over the host id", async () => {
     const { host, calls } = createHost(() => successOutcome({ statuses: [] }), "pstdio-planner");
     const client = createWebviewClient<typeof commands, typeof settings>(host, { extensionId: "test-extension" });
 
-    await client.commands["ticketStatus.read"]();
+    await client.commands["ticket-status.read"]();
 
-    expect(calls[0]?.params).toEqual({ commandId: "test-extension.command.ticketStatus.read", params: undefined });
+    expect(calls[0]?.params).toEqual({ commandId: "test-extension.command.ticket-status.read", params: undefined });
   });
 
   test("throws when no extension id is available", () => {

@@ -113,27 +113,27 @@ export default defineExtension({
 
   skills: [
     defineSkill({
-      id: "create_proposal",
+      id: "create-proposal",
       title: "Create a proposal",
       source: packageAsset("./skills/create-proposal", import.meta.url),
     }),
     defineSkill({
-      id: "create_sub_tickets",
+      id: "create-sub-tickets",
       title: "Create sub-tickets",
       source: packageAsset("./skills/create-sub-tickets", import.meta.url),
     }),
     defineSkill({
-      id: "create_ticket",
+      id: "create-ticket",
       title: "Create a ticket",
       source: packageAsset("./skills/create-ticket", import.meta.url),
     }),
     defineSkill({
-      id: "implement_ticket",
+      id: "implement-ticket",
       title: "Implement a ticket",
       source: packageAsset("./skills/implement-ticket", import.meta.url),
     }),
     defineSkill({
-      id: "refine_ticket",
+      id: "refine-ticket",
       title: "Refine a ticket",
       source: packageAsset("./skills/refine-ticket", import.meta.url),
     }),
