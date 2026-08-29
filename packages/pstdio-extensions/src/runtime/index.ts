@@ -13,6 +13,7 @@ export {
   pstdioExtensionsRoot,
   pstdioHomeRoot,
 } from "./discovery";
+export { getExtensionApiVersionError } from "./extension-api-version";
 export {
   checkExtensionHostCompatibility,
   dashboardExtensionHostCapabilities,
@@ -37,7 +38,6 @@ export {
 } from "./normalize/reserved-keybindings";
 export {
   type ExtensionLoadScope,
-  getExtensionApiVersionError,
   type PackageManifest,
   type ReadPackageManifestResult,
   readPackageManifest,

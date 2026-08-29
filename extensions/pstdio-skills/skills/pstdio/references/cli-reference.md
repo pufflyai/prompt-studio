@@ -63,11 +63,16 @@ Core workspace creation is standalone. Planner creates ticket-linked workspaces 
 
 ```sh
 pst extensions add <source> [--name <name>] [--force] [--skip-install] [--branch <branch>]
-pst extensions check [--json]
+pst extensions check [source] [--scope repo|user] [--json]
 pst extensions dev <source> [--name <name>]
+pst extensions update [name]
 ```
 
 `add` installs an extension by catalog name or local folder. Use `--branch` only when developing against a branch. `dev` watches a local source, validates it, installs dependencies when needed, and refreshes the enabled project instance.
+
+`check` validates the user extensions root and, inside a git repository, the repo-local `.pstdio/extensions` root. Pass `--scope repo` or `--scope user` to check only one root, or a folder path to check a single extension. The output starts with the version matrix: CLI, extension API, SDK, and dashboard host versions with the compatibility status.
+
+`update` reinstalls managed extensions at the release matching this CLI. Use it after a Prompt Studio upgrade when installed extensions target an older extension API. It repairs extensions that fail validation because the folder is replaced from the catalog origin. Extensions without a catalog entry are skipped; update those from their sources with `pst extensions add <source> --force`.
 
 ## Notifications
 
@@ -141,5 +146,6 @@ pst reports delete [--workspace <id>] [--name <name>]
 | Project is not linked | Run `pst projects list`, then `pst projects link --project-id <id>`. |
 | Skills are missing | Run `pst agents install-skills <agent-id>`. |
 | Extensions fail validation | Run `pst extensions check`, then inspect the diagnostics. |
+| Extensions are stale after a Prompt Studio upgrade | Run `pst extensions update` to bring managed extensions to the release matching the CLI. |
 | Runtime is unreachable | Run `pst serve`, then `pst logs`. |
 | Workspace cleanup failed | Run `pst workspaces list`, then remove the exact workspace when its work is safe. |

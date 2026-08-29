@@ -174,6 +174,8 @@ Command params are the handler's second argument. `ctx` in a command includes:
 
 Harness handlers also receive host-wide, extension-scoped `state`. See `host-storage-and-workspaces.md` for storage and workspace recipes.
 
+`ctx.process` runs external programs. `run` and `runOrThrow` run one executable to completion (argv array, no shell operators). `spawnDetached` starts a process in its own session that survives Prompt Studio shutdown; output is discarded and the returned `pid` is the only handle, so manage the lifecycle yourself.
+
 Return transport-safe JSON values from commands. To reject before a command runs, use middleware and
 `ctx.commands.reject({ code, reason })`.
 

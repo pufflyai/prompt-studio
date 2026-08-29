@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionDiagnostic } from "../types/runtime";
 import { createDiagnostic } from "./diagnostics";
+import { getExtensionApiVersionError } from "./extension-api-version";
 
 const ID_SEGMENT_PATTERN = /^[a-z][a-z0-9-]*$/;
 const SEMVER_PATTERN = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
@@ -186,21 +186,6 @@ const resolveEntry = (diagnostics: ExtensionDiagnostic[], packagePath: string, p
   }
 
   return resolved;
-};
-
-// An extension declares the exact API version it was built against. Ranges are refused:
-// `^1.0.0-alpha.1` also matches `1.0.0-alpha.3` under semver, so a range would wave through
-// every alpha bump while looking like a gate.
-const isVersionRange = (declared: string) => /^[\^~><=*]/.test(declared);
-
-export const getExtensionApiVersionError = (name: string, declared: string) => {
-  if (declared === EXTENSION_API_VERSION) return null;
-
-  if (isVersionRange(declared)) {
-    return `Extension "${name}" declares engines.pstdio "${declared}". While the extension API is in alpha it must be the exact version "${EXTENSION_API_VERSION}", not a range.`;
-  }
-
-  return `Extension "${name}" targets extension API ${declared} but this host provides ${EXTENSION_API_VERSION}. Update Prompt Studio, or install a build of the extension for this version.`;
 };
 
 export const readPackageManifestMetadata = (packageDir: string): ReadPackageManifestResult => {

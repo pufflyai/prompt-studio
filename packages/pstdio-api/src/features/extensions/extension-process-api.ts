@@ -27,12 +27,16 @@ export const createProcessApi = (): CommandRunnerEnvironment["process"] => {
       throw new Error(processOutput(result) || `Command failed: ${input.command.join(" ")}`);
     },
     async spawnDetached(input) {
+      // The process must survive Prompt Studio shutdown: it runs in its own session
+      // (detached) and does not keep the host's event loop alive (unref).
       const proc = Bun.spawn(input.command, {
         cwd: input.cwd,
+        detached: true,
         env: createExtensionProcessEnvironment(process.env, input.env),
         stderr: "ignore",
         stdout: "ignore",
       });
+      proc.unref();
       return { pid: proc.pid };
     },
   };

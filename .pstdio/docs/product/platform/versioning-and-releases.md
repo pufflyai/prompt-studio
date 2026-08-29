@@ -79,6 +79,22 @@ The release path is:
 | `.changeset/config.json`                 | Changesets repo configuration.             |
 | `.github/workflows/release-desktop.yml`  | Builds and verifies native desktop assets. |
 
+## Version Matrix
+
+Four version numbers travel together in one install. `pst extensions check` prints them as one block
+so a support report always names all four:
+
+| Component     | Source of truth                                       | Meaning                                                  |
+| ------------- | ----------------------------------------------------- | -------------------------------------------------------- |
+| CLI           | `packages/pstdio/package.json`                        | The installed Prompt Studio release.                     |
+| Extension API | `EXTENSION_API_VERSION` in `pstdio-api-contracts`     | The contract extensions build against; exact match only. |
+| SDK           | `@pstdio/sdk` package version                         | The published authoring library.                         |
+| Dashboard host| `dashboardExtensionHostCapabilities.hostVersion`      | The dashboard capability set extensions are checked against. |
+
+Compatibility status comes from the extension check: an extension whose `engines.pstdio` does not
+equal the host's extension API version is an error naming the side to update, and
+`pst extensions update` repairs managed extensions after a host upgrade.
+
 ## Rules & Constraints
 
 - Do not edit package versions manually.

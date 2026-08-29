@@ -83,8 +83,13 @@ Installs and updates are explicit. Source that appears in the extensions root is
   make an extension a default. The packaged catalog defaults to the harnesses, base themes, and
   Prompt Studio skills.
 - An adopted extension whose `engines.pstdio` does not match the host is shown as an error in the
-  extension list and detail view. The error names both API versions and offers Upgrade when the
-  extension has a catalog origin.
+  extension list and detail view. The error names both API versions, says which side to update, and
+  offers Upgrade when the extension has a catalog origin.
+- `pst extensions update [name]` reinstalls managed extensions at the release matching the CLI. Run
+  it after a Prompt Studio upgrade left installed extensions on an older extension API. It works even
+  when the installed source fails validation, because the folder is replaced from the catalog origin.
+  Extensions without a catalog entry are reported and left alone; reinstall those from their sources
+  with `pst extensions add <source> --force`.
 
 The host reads its packaged catalog unless `PSTDIO_EXTENSION_CATALOG` points to a local JSON file or
 an HTTPS URL. Remote catalogs are cached under `$PSTDIO_HOME/cache/extension-catalog`. The catalog is
@@ -561,6 +566,15 @@ Terminals are layered: the workbench-native terminal surface is the product UI, 
 - **Lifecycle ownership**: workbench-surface sessions live in `workbench.terminal`; closing the terminal panel kills its session, and disposing the controller kills every live session. Production runtime sessions belong to the app-scoped PTY supervisor, which force-kills live sessions on app shutdown.
 - **Dashboard transport**: the dashboard backs `workbench.terminal` with the API terminal transport — `POST /v1/terminal/sessions` opens a PTY on the app supervisor, the SSE `events` endpoint streams base64 output chunks and the exit event, and stdin/resize/kill address the session id. Dashboard extension webviews that declare `terminal.session` get live sessions through this path.
 - **Diagnostics** log lifecycle metadata only (session id, pid, exit code, signal) — PTY content is never logged.
+
+## Processes
+
+Runtime contexts get `ctx.process` for running external programs.
+
+- `ctx.process.run(input)` and `ctx.process.runOrThrow(input)` run one executable to completion and return `stdout`, `stderr`, and the exit code. There is no shell: `command` is an argv array, so shell operators like `&&` or `|` do not work. Wrap a pipeline in `["sh", "-c", "..."]` when you need one.
+- `ctx.process.spawnDetached(input)` starts a process that **outlives Prompt Studio**. The child runs in its own session, so it survives API and desktop shutdown, including shutdowns that kill the host's process group. Nothing tracks the child afterwards: output is discarded, no exit event is delivered, and the returned `pid` is the only handle. The caller owns the full lifecycle — write your own pid file or health check if you need to find or stop the process later.
+
+Use `spawnDetached` for long-lived side processes such as local servers or watchers that must keep running between Prompt Studio sessions. Use `run` for everything else.
 
 ## Package Assets
 
