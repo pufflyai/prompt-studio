@@ -1,4 +1,5 @@
 export {
+  ARTIFACT_MOUNT_ROOT,
   createArtifactMount,
   createFileMount,
   createWorkspaceFilesMount,

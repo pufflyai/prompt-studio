@@ -1,4 +1,4 @@
-export { createArtifactMount, createFileMount, createWorkspaceFilesMount } from "./artifact-mount";
+export { ARTIFACT_MOUNT_ROOT, createArtifactMount, createFileMount, createWorkspaceFilesMount } from "./artifact-mount";
 export { isPackageAssetDescriptor } from "./asset-validation";
 export {
   PackageAssetError,

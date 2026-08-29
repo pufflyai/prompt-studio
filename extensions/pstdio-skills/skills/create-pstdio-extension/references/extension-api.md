@@ -85,7 +85,7 @@ For package name `planner`:
 extension id     pstdio.planner
 command id       planner.tickets.create
 CLI path         pst planner tickets create
-artifact root    <repo>/.pstdio/planner/
+artifact root    <repo>/.pstdio/extension-storage/planner/
 template id      planner.ticket
 skill id         planner.createGuide
 theme id         planner.monokai
@@ -113,7 +113,7 @@ kebab-case. For example `create_pstdio_extension` and `createPstdioExtension` be
 | `resourceHierarchyProviders`                      | Parent lookup for resources, used for breadcrumbs and hierarchy.                  |
 | `settingsPanels`                                  | References from host settings slots to views.                                     |
 | `activityItems`                                   | Activity-rail entries that select a Workbench mode.                               |
-| `artifactMounts`                                  | Safe file access under `.pstdio/<package-name>/`.                                 |
+| `artifactMounts`                                  | Safe file access under `.pstdio/extension-storage/<package-name>/`.                                 |
 | `workspaceTypes`, `harnesses`                     | Advanced provider integrations.                                                   |
 
 Editable template types must declare `list`, `read`, `save`, and `delete` command refs. The dashboard invokes those commands and never reads template storage directly. Store user overrides in `ctx.storage`; read packaged defaults with `ctx.packageFiles`.
@@ -217,7 +217,7 @@ Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/exten
 
 A webview can read files from an artifact mount its extension defines. Declare one grant per mount with
 `artifactsRead(mount)`; there is no wildcard grant. A mount's `path` is relative to the extension's
-package-name root in the project repo (`<repo>/.pstdio/<package-name>/<path>/`); its `id` only names the
+package-name root in the repo's extension storage directory (`<repo>/.pstdio/extension-storage/<package-name>/<path>/`); its `id` only names the
 mount in refs and grants and never changes the disk path.
 
 ```ts

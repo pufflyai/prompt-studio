@@ -180,7 +180,7 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 | `modes`                                           | Typed Workbench mode contributions.                                                                |
 | `activityItems`                                   | Activity-rail entries that select a Workbench mode.                                                |
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                                          |
-| `artifactMounts`                                  | Safe repo-local file access under `.pstdio/<package-name>/`.                                      |
+| `artifactMounts`                                  | Safe repo-local file access under `.pstdio/extension-storage/<package-name>/`.                                      |
 | `workspaceTypes`, `harnesses`                     | Provider integrations owned by the extension runtime.                                             |
 | `connections`                                     | Host-managed HTTP access to a declared remote control plane.                                       |
 
@@ -221,7 +221,7 @@ extension id     pstdio.planner
 local command id tickets.create
 runtime id       pstdio.planner.command.tickets.create
 CLI path         pst planner tickets create
-artifact root    <repo>/.pstdio/planner/
+artifact root    <repo>/.pstdio/extension-storage/planner/
 theme id         planner.<theme-key>
 template id      planner.<template-key>
 skill id         planner.<skill-key>
@@ -614,16 +614,16 @@ Set `pstdio.repoFiles.tracked` in the package manifest to control the allocated 
 
 ## Artifact Mounts And Storage
 
-Artifact mounts are constrained to the package-name root under each repo:
+Artifact mounts are constrained to a package-name root under each repo's extension storage directory:
 
 ```txt
-<repo>/.pstdio/<package-name>/...
+<repo>/.pstdio/extension-storage/<package-name>/...
 ```
 
 For package `planner`, the default scoped root is:
 
 ```txt
-<repo>/.pstdio/planner/
+<repo>/.pstdio/extension-storage/planner/
 ```
 
 Extension storage is API-owned and scoped by extension instance. Project-owned storage also carries the project id.
@@ -633,8 +633,8 @@ Artifact mounts create their directories on the first write. Before that, `exist
 The mount's `path` is relative to that package-name root, and its `id` is only the mount's local name — it
 appears in refs and capability grants, never in the disk path. For package `planner`,
 `defineArtifactMount({ id: "runs", path: "runs", label: "Runs" })` resolves to
-`<repo>/.pstdio/planner/runs/`, and a read of `a/summary.json` targets
-`<repo>/.pstdio/planner/runs/a/summary.json`.
+`<repo>/.pstdio/extension-storage/planner/runs/`, and a read of `a/summary.json` targets
+`<repo>/.pstdio/extension-storage/planner/runs/a/summary.json`.
 
 ### Webview reads
 

@@ -99,7 +99,7 @@ beforeEach(async () => {
   });
   expect(repoResponse.status).toBe(201);
 
-  mountRoot = join(repoDir, ".pstdio", "lab", "runs");
+  mountRoot = join(repoDir, ".pstdio", "extension-storage", "lab", "runs");
   mkdirSync(join(mountRoot, "a"), { recursive: true });
   writeFileSync(join(mountRoot, "a", "chart.png"), pngBytes);
   writeFileSync(join(mountRoot, "a", "summary.json"), '{"score":1}');

@@ -1,4 +1,5 @@
 import type { ArtifactMountContribution } from "@pstdio/sdk/extensions";
+import { ARTIFACT_MOUNT_ROOT } from "../../artifacts/artifact-mount";
 import { normalizeArtifactMountPath } from "../../artifacts/path-normalization";
 import type { NormalizedExtension, RuntimeArtifactMount } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
@@ -29,7 +30,7 @@ export const registerArtifactMounts = (
       runtime.diagnostics.push(
         createDiagnostic({
           code: "unsafe_artifact_mount_path",
-          message: `Artifact mount "${ext.name}.${localId}" must stay under .pstdio/${ext.name}/`,
+          message: `Artifact mount "${ext.name}.${localId}" must stay under ${ARTIFACT_MOUNT_ROOT}/${ext.name}/`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
         }),
@@ -37,7 +38,7 @@ export const registerArtifactMounts = (
       continue;
     }
 
-    const fullPath = `.pstdio/${ext.name}/${relativePath}`;
+    const fullPath = `${ARTIFACT_MOUNT_ROOT}/${ext.name}/${relativePath}`;
     const collisionKey = `${ext.name}:${relativePath}`;
     const existing = index.mountKeys.get(collisionKey);
     if (existing) {

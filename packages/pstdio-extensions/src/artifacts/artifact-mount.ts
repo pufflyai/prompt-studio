@@ -181,12 +181,17 @@ export const createWorkspaceFilesMount = (
   return { ...mount, ...createWorkspaceFileAccess(safeRoot), syncDir };
 };
 
+// Mounts live under a dedicated extension-storage root so extension package
+// names can never collide with host-owned `.pstdio/` entries such as docs,
+// reports, extensions, or config.json.
+export const ARTIFACT_MOUNT_ROOT = ".pstdio/extension-storage";
+
 export const createArtifactMount = (input: CreateArtifactMountInput): ArtifactMount => {
   const normalized = normalizeArtifactMountPath(input.mountPath);
   if (!normalized) {
-    throw new Error(`Artifact mount path "${input.mountPath}" must stay under .pstdio/${input.name}/`);
+    throw new Error(`Artifact mount path "${input.mountPath}" must stay under ${ARTIFACT_MOUNT_ROOT}/${input.name}/`);
   }
 
-  const mountRoot = resolve(input.repoRoot, ".pstdio", input.name, ...normalized.split("/"));
+  const mountRoot = resolve(input.repoRoot, ...ARTIFACT_MOUNT_ROOT.split("/"), input.name, ...normalized.split("/"));
   return createFileMount(mountRoot);
 };

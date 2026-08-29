@@ -28,7 +28,7 @@ describe("createArtifactMount", () => {
     const mount = createArtifactMount({ repoRoot: repo, name: "planner", mountPath: "tickets" });
 
     await mount.writeText("PS-1/ticket.md", "# hello");
-    const contents = await Bun.file(join(repo, ".pstdio/planner/tickets/PS-1/ticket.md")).text();
+    const contents = await Bun.file(join(repo, ".pstdio/extension-storage/planner/tickets/PS-1/ticket.md")).text();
     expect(contents).toBe("# hello");
     expect(await mount.readText("PS-1/ticket.md")).toBe("# hello");
     expect(await mount.exists("PS-1/ticket.md")).toBe(true);

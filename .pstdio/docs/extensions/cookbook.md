@@ -327,8 +327,9 @@ the settings contribution type as the second type argument for typed `client.set
 ## Read Artifacts From A Webview
 
 Declare an artifact mount and grant the webview read access to it. Each `artifactsRead` declaration grants
-one mount; there is no wildcard. The mount's `path` is relative to the extension's package-name root in the
-project repo: for package `fds-playground`, the mount below resolves to `<repo>/.pstdio/fds-playground/runs/`.
+one mount; there is no wildcard. The mount's `path` is relative to the extension's package-name root in the repo's
+extension storage directory: for package `fds-playground`, the mount below resolves to
+`<repo>/.pstdio/extension-storage/fds-playground/runs/`.
 The `id` only names the mount in refs and grants; it never changes the disk path.
 
 ```ts
