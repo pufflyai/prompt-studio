@@ -4,13 +4,15 @@ import { BRIDGE_WEBVIEW_RENDERER_ID } from "@pstdio/workbench/extensions";
 import { modeOwnsNavigation } from "@/shared/workbench/mode-navigation-ownership";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
 import {
+  disposeExtensionContributions,
   extensionViewResolveInput,
   localizeDashboardExtensionCommandResponse,
   registerDashboardExtensionWebviewRenderer,
   registerExtensionActivityNavigationOwnership,
+  registerExtensionContributions,
   withDashboardWebviewUrls,
 } from "./extension-contribution-registration";
-import { metadataWithLabMode } from "./module-test-fixtures";
+import { metadata, metadataWithLabMode, response } from "./module-test-fixtures";
 
 describe("extensionViewResolveInput", () => {
   test("enters Project navigation before opening an extension view", () => {
@@ -116,6 +118,66 @@ describe("registerDashboardExtensionWebviewRenderer", () => {
 
     expect(element.type).toBe(ExtensionViewWidget);
     registration?.dispose();
+  });
+});
+
+describe("registerExtensionContributions", () => {
+  test("adds owner-scoped file capabilities to project settings webviews", () => {
+    const workbench = createWorkbenchCore();
+    const extension = metadata.extensions[0]!;
+    const settingsViewId = `${extension.id}.view.settings`;
+    const settingsPanelId = `${extension.id}.settings-panel.settings`;
+    const settingsMetadata = {
+      ...metadata,
+      extensions: [{ ...extension, extensionInstanceId: "instance-1", installName: "extension-lab" }],
+      views: [
+        ...metadata.views,
+        {
+          id: settingsViewId,
+          localId: "settings",
+          extensionId: extension.id,
+          title: "Lab settings",
+          body: {
+            kind: "webview" as const,
+            webview: {
+              entry: { kind: "package-asset" as const, path: "./src/settings.tsx", baseUrl: "file:///extension/" },
+              runtimeUrl: "/v1/extensions/runtime",
+              moduleUrl: "/v1/extensions/installed/extension-lab/webviews/settings/module.js",
+              capabilities: ["files.upload", "files.list", "files.delete"],
+            },
+          },
+        },
+      ],
+      settingsPanels: [
+        {
+          id: settingsPanelId,
+          extensionId: extension.id,
+          view: { extensionId: extension.id, kind: "view" as const, id: "settings" },
+          slot: { id: "project.settingsPanels" },
+        },
+      ],
+    };
+
+    const registration = registerExtensionContributions({
+      ctx: workbench,
+      executeCommand: async () => response,
+      metadata: settingsMetadata,
+      projectId: "project-1",
+    });
+    const panel = workbench.settings.getPanel(settingsPanelId);
+    if (!panel || panel.kind !== "custom") throw new Error("Settings webview was not registered.");
+
+    const element = panel.render({
+      workbench,
+      panel: { id: settingsPanelId, title: "Lab settings", region: "main", rendererId: "settings" },
+      instance: { instanceId: settingsPanelId, panelId: settingsPanelId, closable: false },
+      refresh: () => undefined,
+    }) as { props: { capabilities: Record<string, unknown> } };
+
+    expect(element.props.capabilities["files.upload"]).toBeFunction();
+    expect(element.props.capabilities["files.list"]).toBeFunction();
+    expect(element.props.capabilities["files.delete"]).toBeFunction();
+    disposeExtensionContributions(registration);
   });
 });
 

@@ -19,6 +19,7 @@ import {
   publishExtensionCommandEvent,
   subscribeToExtensionEventFeed,
 } from "@/shared/extensions/extension-webview-broadcast";
+import { createDashboardSettingsWebviewFileCapabilities } from "@/shared/extensions/extension-webview-capabilities";
 import {
   buildDashboardExtensionMenuRegistrations,
   buildDashboardWorkbenchWhenExpression,
@@ -116,6 +117,12 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
       registerWorkbenchExtensionContributions({
         createKeybindingWhenExpression: buildDashboardWorkbenchWhenExpression,
         createMenuWhenExpression: (contribution) => buildDashboardWorkbenchWhenExpression(contribution.when),
+        createWebviewHostCapabilityOverrides: ({ webviewId }) =>
+          createDashboardSettingsWebviewFileCapabilities({
+            metadata: input.metadata,
+            projectId: input.projectId,
+            webviewId,
+          }),
         executeCommand: async (commandId, body) => {
           const rawResponse = await input.executeCommand(input.projectId, commandId, body);
           const treeId = body.slot?.context?.treeId;
