@@ -70,6 +70,9 @@ const resolveLinkedProject = (deps: Pick<Deps, "cwd" | "findGitRoot" | "readConf
 const notManagedMessage = (name: string) =>
   `"${name}" is not a managed extension (no catalog entry). Update it from its source with \`pst extensions add <source> --force\`.`;
 
+const notInstalledMessage = (name: string) =>
+  `"${name}" is not installed. Install it with \`pst extensions add ${name}\` before updating it.`;
+
 type UpdateRun = {
   updated: InstalledExtensionSource[];
   skipped: string[];
@@ -102,6 +105,17 @@ const updateAllManaged = async (deps: Deps, names: string[], managed: Set<string
   return run;
 };
 
+const enableAllUpdated = async (deps: Deps, projectId: string, installedSources: InstalledExtensionSource[]) => {
+  for (const installed of installedSources) {
+    try {
+      await deps.enableInstalledExtension(projectId, installed);
+    } catch (error) {
+      deps.log(`ERROR: ${installed.installName}: ${error instanceof Error ? error.message : String(error)}`);
+      process.exitCode = 1;
+    }
+  }
+};
+
 const reportUpdateRun = (deps: Deps, run: UpdateRun, extensionsRoot: string) => {
   for (const installed of run.updated) {
     const version = installed.metadata.version ? ` to ${installed.metadata.version}` : "";
@@ -124,20 +138,20 @@ export const createHandler =
     const managed = new Set(catalog.extensions.map((entry) => entry.installName));
     const project = resolveLinkedProject(deps);
     const extensionsRoot = join(deps.resolvePstdioHome({ env: process.env }), "extensions");
+    const installedNames = deps.listInstalledExtensions(extensionsRoot);
 
     let run: UpdateRun;
     if (argv.name) {
       if (!managed.has(argv.name)) throw new Error(notManagedMessage(argv.name));
+      if (!installedNames.includes(argv.name)) throw new Error(notInstalledMessage(argv.name));
       run = { updated: [await updateExtension(deps, argv.name, project?.root)], skipped: [] };
     } else {
-      run = await updateAllManaged(deps, deps.listInstalledExtensions(extensionsRoot), managed, project?.root);
+      run = await updateAllManaged(deps, installedNames, managed, project?.root);
     }
 
     if (project && run.updated.length > 0) {
       await deps.ensureApi(process.env.PSTDIO_API_URL);
-      for (const installed of run.updated) {
-        await deps.enableInstalledExtension(project.projectId, installed);
-      }
+      await enableAllUpdated(deps, project.projectId, run.updated);
     }
 
     reportUpdateRun(deps, run, extensionsRoot);

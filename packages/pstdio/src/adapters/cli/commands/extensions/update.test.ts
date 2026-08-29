@@ -90,6 +90,15 @@ describe("extensions update", () => {
     await expect(createHandler(deps)({ name: "my-local-extension" } as never)).rejects.toThrow("pst extensions add");
   });
 
+  test("fails a named update when the catalog extension is not installed", async () => {
+    const { deps, installs, enabled } = makeDeps();
+
+    await expect(createHandler(deps)({ name: "pstdio-planner" } as never)).rejects.toThrow("not installed");
+
+    expect(installs).toEqual([]);
+    expect(enabled).toEqual([]);
+  });
+
   test("updates without enabling when no project is linked", async () => {
     const { deps, enabled, logs } = makeDeps({ findGitRoot: () => null });
 
@@ -114,5 +123,24 @@ describe("extensions update", () => {
     process.exitCode = 0;
     expect(logs.join("\n")).toContain("clone failed");
     expect(logs.join("\n")).toContain("pstdio-planner");
+  });
+
+  test("continues enabling repaired extensions after one enablement fails", async () => {
+    const attempts: string[] = [];
+    const { deps, logs } = makeDeps({
+      listInstalledExtensions: () => ["harness-claude-code", "pstdio-planner"],
+      enableInstalledExtension: mock(async (_projectId: string, installed: { installName: string }) => {
+        attempts.push(installed.installName);
+        if (installed.installName === "harness-claude-code") throw new Error("enable failed");
+      }),
+    });
+
+    await createHandler(deps)({} as never);
+
+    expect(attempts).toEqual(["harness-claude-code", "pstdio-planner"]);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    expect(logs.join("\n")).toContain("enable failed");
+    expect(logs.join("\n")).toContain("Updated pstdio-planner");
   });
 });
