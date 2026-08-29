@@ -399,3 +399,50 @@ export default defineExtension({
 ```
 
 The view ref is the navigation target. Its `path` remains the deep link.
+
+## Webview files and resource navigation
+
+Declare each host call on the view body:
+
+```ts
+const imports = defineView({
+  id: "imports",
+  title: "Imports",
+  body: {
+    kind: "webview",
+    entry: packageAsset("./src/imports.ts", import.meta.url),
+    capabilities: ["files.upload", "files.list", "files.delete", "resource.open"],
+  },
+});
+```
+
+The webview receives the file client from `defineExtensionView`:
+
+```ts
+export default defineExtensionView({
+  async render({ files, host }) {
+    const [selected] = await files.pick({ accept: ".csv,text/csv" });
+    if (!selected) return;
+
+    const uploaded = await files.upload({
+      name: selected.name,
+      data: await selected.arrayBuffer(),
+      mimeType: selected.type || "text/csv",
+    });
+    const projectFiles = await files.list();
+
+    await host.call("resource.open", {
+      resource: { type: "import", id: uploaded.id, label: uploaded.name },
+      input: { strategy: "replace-active" },
+    });
+
+    await files.delete(uploaded.id);
+  },
+});
+```
+
+`files.pick()` stays in the browser. The other methods cross the host bridge. The host
+sets the active project and extension instance, so guest code cannot select another
+owner. Omit scope for project files, or pass the same `{ type, id }` scope to upload and
+list. Global settings webviews have no project file owner and cannot use host-backed
+file methods.

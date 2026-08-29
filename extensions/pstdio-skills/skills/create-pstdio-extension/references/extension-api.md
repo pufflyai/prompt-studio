@@ -241,6 +241,53 @@ symlink escapes are rejected, text reads over 5 MB and images over 20 MB return 
 media types are refused. `pst extensions check` fails a webview that declares `artifacts.read` on a mount
 its extension does not define.
 
+Webviews store extension-owned files through the `files` object passed to
+`defineExtensionView({ render })`. Declare `files.upload`, `files.list`, and
+`files.delete` separately. `files.pick()` is browser-local and needs no declaration.
+
+```ts
+const imports = defineView({
+  id: "imports",
+  title: "Imports",
+  body: {
+    kind: "webview",
+    entry: packageAsset("./webviews/imports.ts", import.meta.url),
+    capabilities: ["files.upload", "files.list", "files.delete"],
+  },
+});
+```
+
+```ts
+const [selected] = await files.pick({ accept: ".csv,text/csv" });
+if (selected) {
+  const uploaded = await files.upload({
+    name: selected.name,
+    data: await selected.arrayBuffer(),
+    mimeType: selected.type || "text/csv",
+  });
+  const projectFiles = await files.list();
+  await files.delete(uploaded.id);
+}
+```
+
+Omitting `scope` uses project scope. Pass `{ type: "repo", id }`,
+`{ type: "resource", id }`, or an extension-defined `{ type, id }` to upload and list
+for another group. The host fixes the project and extension instance owner. Global
+settings webviews do not get host-backed file methods because they have no project
+owner. The upload limit is 25 MiB.
+
+Declare `resource.open` to open an SDK resource in the workbench:
+
+```ts
+await host.call("resource.open", {
+  resource: { type: "ticket", id: "PS-260", label: "Dashboard webview capabilities" },
+  input: { strategy: "replace-active" },
+});
+```
+
+The default strategy is `persistent`. Guests pass `{ type, id, label?, metadata? }` and
+leave URI creation to the host.
+
 ## Native resource views
 
 Use native view bodies when the host should own the editor or tree chrome instead of loading a custom webview. A native
