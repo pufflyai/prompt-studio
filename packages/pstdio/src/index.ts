@@ -7,6 +7,11 @@ import { CLI_VERSION } from "./features/cli-version";
 import { findGitRoot, readConfig } from "./features/config/config";
 import { ensureApi } from "./features/ensure-api";
 import { dispatchExtensionCliCommand } from "./features/extensions/extension-cli-router";
+import {
+  firstCommandToken,
+  rawValueFor,
+  shouldDispatchExtensionCommand,
+} from "./features/extensions/extension-command-routing";
 import { loadExtensionNamespaces } from "./features/extensions/root-help-namespaces";
 import { resolveRootHelpRuntime } from "./features/extensions/root-help-runtime";
 import { createCliCommandTracker } from "./features/logging/cli-command-log";
@@ -25,55 +30,20 @@ const rawArgs = hideBin(process.argv);
 // extension-contributed commands.
 const staticTopLevelCommands = new Set(["dashboard", ...topLevelCommandNames]);
 
-const rawValueFor = (name: string) => {
-  const prefix = `--${name}=`;
-  const inline = rawArgs.find((arg) => arg.startsWith(prefix));
-  if (inline) return inline.slice(prefix.length);
-  const index = rawArgs.indexOf(`--${name}`);
-  return index === -1 ? undefined : rawArgs[index + 1];
-};
-
-const commandPathTokens = () => {
-  const skipValueFor = new Set(["--api-port", "--dashboard-port", "--project-id"]);
-  const tokens: string[] = [];
-
-  for (let index = 0; index < rawArgs.length; index += 1) {
-    const arg = rawArgs[index];
-    if (!arg || arg.startsWith("-")) {
-      if (skipValueFor.has(arg)) {
-        index += 1;
-        continue;
-      }
-      if (tokens.length > 0) break;
-      continue;
-    }
-    tokens.push(arg);
-  }
-
-  return tokens;
-};
-
-const firstCommandToken = () => commandPathTokens()[0];
-
-const shouldDispatchExtensionCommand = () => {
-  const token = firstCommandToken();
-  if (!token) return false;
-  if (staticTopLevelCommands.has(token)) return false;
-  if (rawValueFor("project-id")) return true;
-
+const hasProjectConfig = () => {
   const root = findGitRoot(process.cwd());
   return Boolean(root && readConfig(root));
 };
 
 const resolveRequestedApiUrl = () => {
   if (process.env.PSTDIO_API_URL) return process.env.PSTDIO_API_URL;
-  const apiPort = rawValueFor("api-port");
+  const apiPort = rawValueFor(rawArgs, "api-port");
   return apiPort ? `http://127.0.0.1:${apiPort}` : undefined;
 };
 
 const applyApiPortFromArgs = () => {
   if (process.env.PSTDIO_API_URL || process.env.PSTDIO_API_PORT) return;
-  const apiPort = rawValueFor("api-port");
+  const apiPort = rawValueFor(rawArgs, "api-port");
   if (apiPort) process.env.PSTDIO_API_PORT = apiPort;
 };
 
@@ -82,7 +52,7 @@ const commandTracker = createCliCommandTracker({
   sessionId: resolveCliSessionId({ env: process.env }),
 });
 
-if (shouldDispatchExtensionCommand()) {
+if (shouldDispatchExtensionCommand({ rawArgs, staticTopLevelCommands, hasProjectConfig })) {
   try {
     applyApiPortFromArgs();
     const requestedApiUrl = resolveRequestedApiUrl();
@@ -151,7 +121,7 @@ for (const mod of topLevelCommandModules) {
 // Surface extension namespaces (e.g. `tickets`) alongside core commands in the
 // root help. API-gated and best-effort: when the server is reachable we list the
 // installed namespaces, otherwise root help degrades to core commands only.
-if (!firstCommandToken() && (rawArgs.includes("--help") || rawArgs.includes("-h"))) {
+if (!firstCommandToken(rawArgs) && (rawArgs.includes("--help") || rawArgs.includes("-h"))) {
   const { apiUrl, token } = await resolveRootHelpRuntime(resolveRequestedApiUrl());
   process.env.PSTDIO_API_URL = apiUrl;
   if (token) process.env.PSTDIO_API_TOKEN = token;
