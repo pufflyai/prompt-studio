@@ -43,6 +43,9 @@ interface DatasetPaginationProps {
   pageSizeOptions: number[];
 }
 
+const buildColumnMenuColumns = (columnKeys: string[], compactHeaders?: Partial<Record<string, string>>) =>
+  columnKeys.map((columnId) => ({ id: columnId, label: compactHeaders?.[columnId] ?? columnId }));
+
 const DatasetPagination = (props: DatasetPaginationProps) => {
   const { table, pagination, pageSizeOptions } = props;
 
@@ -89,6 +92,7 @@ const DatasetDataTable = (props: DataTableProps) => {
   }));
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [showStats, setShowStats] = useState(true);
+  const [wrapRows, setWrapRows] = useState(false);
   const [columnOrder, setColumnOrder] = useState<string[]>(() => {
     const propHiddenColumnsSet = new Set(hiddenColumns ?? []);
     return Object.keys(data[0] || {}).filter((key) => !propHiddenColumnsSet.has(key));
@@ -123,6 +127,7 @@ const DatasetDataTable = (props: DataTableProps) => {
     getRowActions,
     selectedRowIds: rowSelection,
     columnRenderers,
+    wrapRows,
   });
 
   const table = useReactTable({
@@ -170,11 +175,9 @@ const DatasetDataTable = (props: DataTableProps) => {
   const selectedOriginalRows = getSelectedOriginalRows(selectedRows);
   const columnControl = (
     <DataTableColumnMenu
-      columns={orderedBaseColumnKeys.map((columnId) => ({
-        id: columnId,
-        label: compactHeaders?.[columnId] ?? columnId,
-      }))}
+      columns={buildColumnMenuColumns(orderedBaseColumnKeys, compactHeaders)}
       visibleColumnIds={visibleColumnIds}
+      wrapRows={wrapRows}
       showStats={showStats}
       statsAvailable={Boolean(columnStats)}
       onColumnVisibilityChange={(columnId, visible) =>
@@ -193,6 +196,7 @@ const DatasetDataTable = (props: DataTableProps) => {
           reorderDataTableColumns(resolveDataTableColumnOrder(baseColumnKeys, current), activeColumnId, overColumnId),
         )
       }
+      onWrapRowsChange={setWrapRows}
       onStatsVisibilityChange={setShowStats}
     />
   );
@@ -258,6 +262,7 @@ const DatasetDataTable = (props: DataTableProps) => {
                     rowIsInteractive={rowIsInteractive}
                     rowIsActive={rowIsActive}
                     rowIsSelected={rowIsSelected}
+                    wrapRows={wrapRows}
                     onRowClick={onRowClick}
                     getCellContextMenuActions={getCellContextMenuActions}
                   />

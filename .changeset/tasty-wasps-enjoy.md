@@ -4,4 +4,4 @@
 "@pstdio/ui": patch
 ---
 
-Preserve untouched Markdown source when editing rich text.
+Preserve untouched Markdown source and let users wrap table rows.

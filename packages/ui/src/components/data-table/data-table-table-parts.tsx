@@ -137,6 +137,7 @@ export const DataTableColumnHeader = (props: DataTableColumnHeaderProps) => {
 interface DataTableCellViewProps {
   cell: Cell<RowData, unknown>;
   row: Row<RowData>;
+  wrapRows: boolean;
   getCellContextMenuActions?: DataTableProps["getCellContextMenuActions"];
 }
 
@@ -145,7 +146,7 @@ interface DataTableColumnMeta {
 }
 
 const DataTableCellView = (props: DataTableCellViewProps) => {
-  const { cell, row, getCellContextMenuActions } = props;
+  const { cell, row, wrapRows, getCellContextMenuActions } = props;
   const columnMeta = cell.column.columnDef.meta as DataTableColumnMeta | undefined;
   const cellStyle = columnMeta?.getCellStyle?.(cell.getValue());
   const cellContext: DataTableCellContext = {
@@ -167,15 +168,19 @@ const DataTableCellView = (props: DataTableCellViewProps) => {
       width="fit-content"
       maxWidth="12rem"
       overflow="hidden"
+      overflowWrap={wrapRows ? "anywhere" : undefined}
       padding="xs"
+      height={wrapRows ? undefined : "10"}
+      maxHeight={wrapRows ? undefined : "10"}
       borderRight="1px solid"
       borderColor="border.subtle"
       _last={{ borderRight: "none" }}
       borderBottom="none"
       key={cell.id}
       textStyle="paragraph/S/regular"
-      textOverflow="ellipsis"
-      whiteSpace="nowrap"
+      textOverflow={wrapRows ? undefined : "ellipsis"}
+      verticalAlign={wrapRows ? "top" : "middle"}
+      whiteSpace={wrapRows ? "normal" : "nowrap"}
       style={cellStyle}
     >
       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -197,12 +202,22 @@ interface DataTableBodyRowProps {
   rowIsInteractive: boolean;
   rowIsActive: boolean;
   rowIsSelected: boolean;
+  wrapRows: boolean;
   onRowClick?: DataTableProps["onRowClick"];
   getCellContextMenuActions?: DataTableProps["getCellContextMenuActions"];
 }
 
 export const DataTableBodyRow = (props: DataTableBodyRowProps) => {
-  const { row, noBorder, rowIsInteractive, rowIsActive, rowIsSelected, onRowClick, getCellContextMenuActions } = props;
+  const {
+    row,
+    noBorder,
+    rowIsInteractive,
+    rowIsActive,
+    rowIsSelected,
+    wrapRows,
+    onRowClick,
+    getCellContextMenuActions,
+  } = props;
 
   return (
     <Table.Row
@@ -210,6 +225,7 @@ export const DataTableBodyRow = (props: DataTableBodyRowProps) => {
       data-active={rowIsActive ? "true" : undefined}
       data-selected={rowIsSelected ? "true" : undefined}
       aria-selected={rowIsSelected ? "true" : undefined}
+      height={wrapRows ? undefined : "10"}
       cursor={rowIsInteractive ? "pointer" : undefined}
       onClick={rowIsInteractive ? () => onRowClick?.(row.original) : undefined}
       borderTop={noBorder ? "none" : "1px solid"}
@@ -220,7 +236,13 @@ export const DataTableBodyRow = (props: DataTableBodyRowProps) => {
       background={rowIsActive ? "bg.active" : "bg"}
     >
       {row.getVisibleCells().map((cell) => (
-        <DataTableCellView key={cell.id} cell={cell} row={row} getCellContextMenuActions={getCellContextMenuActions} />
+        <DataTableCellView
+          key={cell.id}
+          cell={cell}
+          row={row}
+          wrapRows={wrapRows}
+          getCellContextMenuActions={getCellContextMenuActions}
+        />
       ))}
     </Table.Row>
   );

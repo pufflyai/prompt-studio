@@ -51,6 +51,7 @@ interface BuildColumnsOptions {
   getRowActions?: (row: RowData) => DataTableRowAction[];
   selectedRowIds?: RowSelectionState;
   columnRenderers?: Partial<Record<string, DataTableColumnRenderer>>;
+  wrapRows?: boolean;
 }
 
 const stopControlPropagation = (event: { stopPropagation: () => void }) => {
@@ -135,22 +136,37 @@ const RowActionsCell = (
 
 interface FormattedCellProps {
   value: unknown;
+  wrapRows: boolean;
 }
 
 const FormattedCell = (props: FormattedCellProps) => {
-  const { value } = props;
+  const { value, wrapRows } = props;
   const displayValue = formatDisplayValue(value);
 
   if (isValidElement(displayValue)) {
     return (
-      <chakra.span display="inline-flex" maxWidth="full" minW="0" overflow="hidden" whiteSpace="nowrap">
-        {toSingleLineElement(displayValue)}
+      <chakra.span
+        display="inline-flex"
+        maxWidth="full"
+        minW="0"
+        overflow={wrapRows ? "visible" : "hidden"}
+        overflowWrap={wrapRows ? "anywhere" : undefined}
+        whiteSpace={wrapRows ? "normal" : "nowrap"}
+      >
+        {wrapRows ? displayValue : toSingleLineElement(displayValue)}
       </chakra.span>
     );
   }
 
   return (
-    <Text maxWidth="full" overflow="hidden" textOverflow="ellipsis" textStyle="paragraph/S/regular" whiteSpace="nowrap">
+    <Text
+      maxWidth="full"
+      overflow={wrapRows ? "visible" : "hidden"}
+      overflowWrap={wrapRows ? "anywhere" : undefined}
+      textOverflow={wrapRows ? undefined : "ellipsis"}
+      textStyle="paragraph/S/regular"
+      whiteSpace={wrapRows ? "normal" : "nowrap"}
+    >
       {displayValue}
     </Text>
   );
@@ -160,10 +176,11 @@ interface DataCellProps {
   columnLabel: string;
   renderer?: DataTableColumnRenderer;
   value: unknown;
+  wrapRows: boolean;
 }
 
 const DataCell = (props: DataCellProps) => {
-  const { columnLabel, renderer, value } = props;
+  const { columnLabel, renderer, value, wrapRows } = props;
 
   if (renderer?.type === "json") return <JsonCell columnLabel={columnLabel} value={value} />;
 
@@ -177,13 +194,13 @@ const DataCell = (props: DataCellProps) => {
     if (color) {
       return (
         <CategoricalColorCell>
-          <FormattedCell value={value} />
+          <FormattedCell value={value} wrapRows={wrapRows} />
         </CategoricalColorCell>
       );
     }
   }
 
-  return <FormattedCell value={value} />;
+  return <FormattedCell value={value} wrapRows={wrapRows} />;
 };
 
 const resolveDataCellStyle = (value: unknown, renderer?: DataTableColumnRenderer) => {
@@ -208,6 +225,7 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
     getRowActions,
     selectedRowIds,
     columnRenderers,
+    wrapRows = false,
   } = options;
   const rowIndexColumn = columnHelper.accessor((_row, rowIndex) => rowIndex + 1, {
     header: "",
@@ -265,7 +283,9 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
           </chakra.span>
         );
       },
-      cell: (info) => <DataCell columnLabel={fallBackKey} renderer={renderer} value={info.getValue()} />,
+      cell: (info) => (
+        <DataCell columnLabel={fallBackKey} renderer={renderer} value={info.getValue()} wrapRows={wrapRows} />
+      ),
       meta: {
         getCellStyle: (value: unknown) => resolveDataCellStyle(value, renderer),
       },

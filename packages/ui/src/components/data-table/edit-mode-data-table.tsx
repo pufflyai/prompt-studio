@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { useKanbanRendererStore } from "../kanban-renderer/use-kanban-renderer-store";
 import { DataTableHeader } from "./data-table-header";
+import { DataTableRowDisplayMenu } from "./data-table-row-display";
 import {
   buildDataTableRendererAttributes,
   buildDataTableRendererRows,
@@ -34,6 +35,12 @@ interface ActiveHeader {
   draft: string;
 }
 
+const buildRendererInitialState = (props: Pick<DataTableProps, "defaultViews" | "defaultActiveViewId">) => ({
+  settings: { viewMode: "list" as const },
+  views: props.defaultViews,
+  activeViewId: props.defaultActiveViewId,
+});
+
 export const EditModeDataTable = (props: DataTableProps) => {
   const {
     data,
@@ -53,17 +60,14 @@ export const EditModeDataTable = (props: DataTableProps) => {
   const [activeCell, setActiveCell] = useState<ActiveCell | null>(null);
   const [activeHeader, setActiveHeader] = useState<ActiveHeader | null>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string>>(() => new Set());
+  const [wrapRows, setWrapRows] = useState(false);
   const columns = editMode?.columns ?? [];
   const columnKeys = columns.map((column) => column.id);
   const columnLabels = Object.fromEntries(columns.map((column) => [column.id, column.label]));
   const rendererAttributes = buildDataTableRendererAttributes(data, columnKeys, columnLabels);
   const rendererRows = buildDataTableRendererRows(data, columnKeys, getRowId);
   const resolvedToolbarStorageKey = resolveDataTableToolbarStorageKey({ toolbarStorageKey, columnKeys });
-  const rendererInitialState = {
-    settings: { viewMode: "list" as const },
-    views: defaultViews,
-    activeViewId: defaultActiveViewId,
-  };
+  const rendererInitialState = buildRendererInitialState(props);
   const filters = useKanbanRendererStore(resolvedToolbarStorageKey, (state) => state.filters, rendererInitialState);
   const filteredRendererRows = filterDataTableRows(rendererRows, filters, rendererAttributes);
   const filteredData = filteredRendererRows.map((row) => row.sourceRow);
@@ -153,6 +157,9 @@ export const EditModeDataTable = (props: DataTableProps) => {
 
   const allRowsSelected = filteredRendererRows.length > 0 && selectedRowIds.size === filteredRendererRows.length;
   const selectedRows = filteredRendererRows.filter((row) => selectedRowIds.has(row.id)).map((row) => row.sourceRow);
+  const rowDisplayControl = (
+    <DataTableRowDisplayMenu compact={!toolbarStorageKey} wrapRows={wrapRows} onWrapRowsChange={setWrapRows} />
+  );
 
   return (
     <Flex direction="column" width="100%" gap="2xs">
@@ -161,7 +168,7 @@ export const EditModeDataTable = (props: DataTableProps) => {
           rows={rendererRows}
           storageKey={resolvedToolbarStorageKey}
           attributes={rendererAttributes}
-          columnControl={null}
+          columnControl={rowDisplayControl}
           defaultViews={defaultViews}
           defaultActiveViewId={defaultActiveViewId}
         />
@@ -197,6 +204,7 @@ export const EditModeDataTable = (props: DataTableProps) => {
               data={data}
               editMode={editMode}
               isReadOnly={isReadOnly}
+              rowDisplayControl={toolbarStorageKey ? undefined : rowDisplayControl}
               onAddColumn={addColumn}
               onCancelHeaderEdit={() => setActiveHeader(null)}
               onDeleteColumn={removeColumn}
@@ -227,6 +235,7 @@ export const EditModeDataTable = (props: DataTableProps) => {
               pageSize={pageSize}
               selectedRowIds={selectedRowIds}
               showNewRow={pageIndex === pageCount - 1}
+              wrapRows={wrapRows}
               onActivateCell={setActiveCell}
               onAddRow={addRow}
               onCancelCell={() => setActiveCell(null)}

@@ -10,11 +10,34 @@ interface EditModeDataTableCellProps {
   editMode: DataTableEditModeConfig;
   isActive: boolean;
   isReadOnly: boolean;
+  wrapRows: boolean;
   onActivate: () => void;
   onCancel: () => void;
   onDraftChange: (draft: string) => void;
   onSave: () => void;
 }
+
+const getRowDisplayProps = (wrapRows: boolean) => {
+  if (wrapRows) {
+    return {
+      height: undefined,
+      maxHeight: undefined,
+      overflowWrap: "anywhere" as const,
+      textOverflow: undefined,
+      verticalAlign: "top" as const,
+      whiteSpace: "normal" as const,
+    };
+  }
+
+  return {
+    height: "10",
+    maxHeight: "10",
+    overflowWrap: undefined,
+    textOverflow: "ellipsis" as const,
+    verticalAlign: "middle" as const,
+    whiteSpace: "nowrap" as const,
+  };
+};
 
 export const EditModeDataTableCell = (props: EditModeDataTableCellProps) => {
   const {
@@ -24,6 +47,7 @@ export const EditModeDataTableCell = (props: EditModeDataTableCellProps) => {
     editMode,
     isActive,
     isReadOnly,
+    wrapRows,
     onActivate,
     onCancel,
     onDraftChange,
@@ -31,6 +55,7 @@ export const EditModeDataTableCell = (props: EditModeDataTableCellProps) => {
   } = props;
   const cellRef = useRef<HTMLTableCellElement>(null);
   const isEditable = !isReadOnly && (editMode.isCellEditable?.(context) ?? true);
+  const rowDisplayProps = getRowDisplayProps(wrapRows);
   let content: ReactNode;
 
   if (isActive) {
@@ -47,7 +72,13 @@ export const EditModeDataTableCell = (props: EditModeDataTableCellProps) => {
     );
   } else {
     content = (
-      <Box width="100%" minHeight="5" textAlign="inherit">
+      <Box
+        width="100%"
+        minHeight="5"
+        textAlign="inherit"
+        overflowWrap={rowDisplayProps.overflowWrap}
+        whiteSpace={rowDisplayProps.whiteSpace}
+      >
         {editMode.renderCell?.(context) ?? String(context.value ?? "")}
       </Box>
     );
@@ -66,16 +97,16 @@ export const EditModeDataTableCell = (props: EditModeDataTableCellProps) => {
       data-editable={String(isEditable)}
       data-editing={isActive ? "true" : undefined}
       padding={isActive ? "0" : "xs"}
-      height="10"
-      maxHeight="10"
+      height={rowDisplayProps.height}
+      maxHeight={rowDisplayProps.maxHeight}
       position="relative"
       overflow={isActive ? "visible" : "hidden"}
       background="bg"
       textAlign={column.alignment ?? "left"}
       textStyle="paragraph/S/regular"
-      textOverflow="ellipsis"
-      verticalAlign="middle"
-      whiteSpace="nowrap"
+      textOverflow={rowDisplayProps.textOverflow}
+      verticalAlign={rowDisplayProps.verticalAlign}
+      whiteSpace={rowDisplayProps.whiteSpace}
       borderRightWidth="1px"
       borderBottomWidth="1px"
       borderColor="border.subtle"

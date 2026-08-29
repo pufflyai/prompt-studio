@@ -23,6 +23,7 @@ interface EditModeDataTableBodyProps {
   pageSize: number;
   selectedRowIds: Set<string>;
   showNewRow: boolean;
+  wrapRows: boolean;
   onActivateCell: (cell: ActiveCell) => void;
   onAddRow: () => void;
   onCancelCell: () => void;
@@ -46,6 +47,7 @@ export const EditModeDataTableBody = (props: EditModeDataTableBodyProps) => {
     pageSize,
     selectedRowIds,
     showNewRow,
+    wrapRows,
     onActivateCell,
     onAddRow,
     onCancelCell,
@@ -68,12 +70,12 @@ export const EditModeDataTableBody = (props: EditModeDataTableBodyProps) => {
             data-document-row="true"
             data-selected={selectedRowIds.has(rowId) ? "true" : undefined}
             aria-selected={selectedRowIds.has(rowId)}
-            height="10"
+            height={wrapRows ? undefined : "10"}
             background="bg"
           >
             <Table.Cell
               data-column-id="rowIndex"
-              height="10"
+              height={wrapRows ? undefined : "10"}
               padding="xs"
               textAlign="center"
               textStyle="paragraph/S/regular"
@@ -81,6 +83,7 @@ export const EditModeDataTableBody = (props: EditModeDataTableBodyProps) => {
               borderRightWidth="1px"
               borderBottomWidth="1px"
               borderColor="border.subtle"
+              verticalAlign={wrapRows ? "top" : "middle"}
             >
               {rowIndex + 1}
             </Table.Cell>
@@ -107,6 +110,7 @@ export const EditModeDataTableBody = (props: EditModeDataTableBodyProps) => {
                   editMode={editMode}
                   isActive={isActive}
                   isReadOnly={isReadOnly}
+                  wrapRows={wrapRows}
                   onActivate={() => onActivateCell({ rowId, columnId: column.id, draft: String(context.value ?? "") })}
                   onDraftChange={(draft) => onDraftChange({ rowId, columnId: column.id, draft })}
                   onSave={onCommitCell}
@@ -118,7 +122,7 @@ export const EditModeDataTableBody = (props: EditModeDataTableBodyProps) => {
               <Table.Cell
                 data-column-id="editControl"
                 width="min-content"
-                height="10"
+                height={wrapRows ? undefined : "10"}
                 position="sticky"
                 right="0"
                 zIndex="1"
@@ -126,6 +130,7 @@ export const EditModeDataTableBody = (props: EditModeDataTableBodyProps) => {
                 borderLeftWidth="1px"
                 borderBottomWidth="1px"
                 borderColor="border.subtle"
+                verticalAlign={wrapRows ? "top" : "middle"}
               />
             ) : null}
           </Table.Row>
