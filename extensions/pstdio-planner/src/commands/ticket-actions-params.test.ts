@@ -14,4 +14,15 @@ describe("ticket action command params", () => {
     expect(breakIntoSubTicketsCommand.params?.agent?.label).toBe("Model");
     expect(implementTicketCommand.params?.agent?.label).toBe("Model");
   });
+
+  test("declares ticket templates as template selectors", () => {
+    expect(refineTicketCommand.params?.template).toMatchObject({
+      type: "template",
+      templateType: "ticket",
+    });
+    expect(breakIntoSubTicketsCommand.params?.template).toMatchObject({
+      type: "template",
+      templateType: "ticket",
+    });
+  });
 });

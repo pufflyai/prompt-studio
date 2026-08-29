@@ -6,6 +6,7 @@ import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { contributionArray, uniqueContributions } from "./contribution-collection";
 import { asLocalizableString, isLocalizableString } from "./localizable";
+import { normalizedContributionId } from "./references";
 import { hasCompatibleSlotKind } from "./slot-kind";
 
 const splitCommandKey = (key: string) => key.split(".");
@@ -13,6 +14,22 @@ const splitCommandKey = (key: string) => key.split(".");
 const normalizeCommandPalette = (palette: unknown): RuntimeCommandRecord["palette"] => {
   if (Array.isArray(palette)) return palette.filter(isRecord) as RuntimeCommandRecord["palette"];
   return [];
+};
+
+const normalizeCommandParams = (ext: NormalizedExtension, value: unknown): RuntimeCommandRecord["params"] => {
+  if (!isRecord(value)) return {};
+
+  return Object.fromEntries(
+    Object.entries(value).map(([key, descriptor]) => {
+      if (!isRecord(descriptor) || descriptor.type !== "template" || typeof descriptor.templateType !== "string") {
+        return [key, descriptor];
+      }
+      const templateType = descriptor.templateType.includes(".template-type.")
+        ? descriptor.templateType
+        : normalizedContributionId(ext.id, "template-type", descriptor.templateType);
+      return [key, { ...descriptor, templateType }];
+    }),
+  ) as RuntimeCommandRecord["params"];
 };
 
 const exampleUsesCommandPath = (example: string, routes: string[][]) => {
@@ -179,7 +196,7 @@ export const registerCommands = (
       sourcePath: source.sourcePath,
       title: command.title,
       description: asLocalizableString(command.description),
-      params: isRecord(command.params) ? (command.params as RuntimeCommandRecord["params"]) : {},
+      params: normalizeCommandParams(ext, command.params),
       menus: menus as RuntimeCommandRecord["menus"],
       palette: normalizeCommandPalette(command.palette),
       cli,

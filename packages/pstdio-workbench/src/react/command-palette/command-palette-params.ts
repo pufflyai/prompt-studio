@@ -81,7 +81,14 @@ const resourceContextValue = (entry: CommandParamEntry, context: WorkbenchComman
   if (metadataValue !== undefined) return metadataValue;
 
   if (entry.key === `${toIdentifierPrefix(resource.kind)}Id`) return resource.id ?? resource.uri;
-  if (entry.type === "resource" && (!entry.resourceType || entry.resourceType === resource.kind)) return resource;
+  if (entry.type === "resource" && (!entry.resourceType || entry.resourceType === resource.kind)) {
+    return {
+      type: resource.kind,
+      id: resource.id ?? resource.uri,
+      ...(resource.label ? { label: resource.label } : {}),
+      ...(resource.metadata ? { metadata: resource.metadata } : {}),
+    };
+  }
   return undefined;
 };
 

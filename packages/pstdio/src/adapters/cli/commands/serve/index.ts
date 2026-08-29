@@ -15,14 +15,14 @@ export const builder = (yargs: Argv) =>
       describe: "Interface to bind to",
     })
     .option("foreground", { type: "boolean", default: false, hidden: true })
-    .option("owner", { choices: ["desktop", "persistent"] as const, default: "persistent", hidden: true })
+    .option("owner", { choices: ["desktop", "persistent"] as const, hidden: true })
     .option("instance-id", { type: "string", hidden: true });
 
 type ServeArgs = {
   port: number;
   host: string;
   foreground: boolean;
-  owner: "desktop" | "persistent";
+  owner?: "desktop" | "persistent";
   instanceId?: string;
 };
 
@@ -47,8 +47,8 @@ export const createHandler =
       await deps.serveApp({
         port: args.port,
         host: args.host,
-        ownerType: args.owner,
-        instanceId: args.instanceId,
+        ...(args.owner ? { ownerType: args.owner } : {}),
+        ...(args.owner && args.instanceId ? { instanceId: args.instanceId } : {}),
       });
       return;
     }

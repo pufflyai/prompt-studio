@@ -24,7 +24,7 @@
   },
   "scripts": {
     "pstdio": "bun ./src/index.ts",
-    "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=1 bun ./src/index.ts -- serve --foreground --owner persistent --host 127.0.0.1 --port 19840 & PSTDIO_API_URL=http://127.0.0.1:19840 bun run --cwd ../pstdio-dashboard dev & wait",
+    "dev": "PSTDIO_DISABLE_EMBED_MANIFEST=1 PSTDIO_HOME=${PSTDIO_HOME:-$HOME/.pstdio-dev} PSTDIO_TERMINAL_ORIGINS=http://localhost:5173 bun ./src/index.ts -- serve --foreground --host 127.0.0.1 --port 19840 & PSTDIO_API_URL=http://127.0.0.1:19840 bun run --cwd ../pstdio-dashboard dev & wait",
     "build": "bun run --cwd ../../scripts build:host",
     "prepack": "bun run --cwd ../../scripts release:readme -- --package pstdio",
     "postpack": "bun run --cwd ../../scripts release:readme -- --package pstdio --cleanup",

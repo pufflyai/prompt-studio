@@ -27,3 +27,5 @@ export const topLevelCommandModules = [
   sessionsCommand,
   workspaceCommand,
 ];
+
+export const topLevelCommandNames = topLevelCommandModules.map(({ command }) => command.split(" ")[0]);

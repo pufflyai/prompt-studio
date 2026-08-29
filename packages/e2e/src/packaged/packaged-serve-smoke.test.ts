@@ -328,6 +328,13 @@ describe("packaged pstdio — core default extensions", () => {
         expect(metadata.settingsPanels).toContainEqual(
           expect.objectContaining({ id: "pstdio.pstdio-planner.settings-panel.ticket-board" }),
         );
+        const refineTicket = metadata.commands.find((command) => command.id.endsWith(".command.refine-ticket"));
+        expect(refineTicket?.params?.template).toEqual({
+          type: "template",
+          label: "Ticket template",
+          required: false,
+          templateType: "pstdio.pstdio-planner.template-type.ticket",
+        });
         const reportType = metadata.templateTypes.find((type) => type.localId === "report");
         expect(reportType?.commands).toEqual(
           expect.objectContaining({

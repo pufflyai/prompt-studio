@@ -1,6 +1,6 @@
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import { topLevelCommandModules } from "./adapters/cli/commands";
+import { topLevelCommandModules, topLevelCommandNames } from "./adapters/cli/commands";
 import * as dashboardCommand from "./adapters/cli/commands/dashboard";
 import { shouldEnsureApiForCommand } from "./features/cli-api-startup";
 import { CLI_VERSION } from "./features/cli-version";
@@ -23,17 +23,7 @@ const rawArgs = hideBin(process.argv);
 // True-core commands only. Domain namespaces (the ticket board's
 // tickets/statuses/tags) are not listed here — they resolve entirely through
 // extension-contributed commands.
-const staticTopLevelCommands = new Set([
-  "agents",
-  "close",
-  "dashboard",
-  "extensions",
-  "logs",
-  "projects",
-  "serve",
-  "sessions",
-  "workspaces",
-]);
+const staticTopLevelCommands = new Set(["dashboard", ...topLevelCommandNames]);
 
 const rawValueFor = (name: string) => {
   const prefix = `--${name}=`;

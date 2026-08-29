@@ -63,6 +63,13 @@ const resolveShellCommand = () => {
 const resolveCommand = (command: TerminalSessionRequest["command"]) =>
   command && command.length > 0 ? command : resolveShellCommand();
 
+const resolveWorkingDirectory = (cwd: TerminalSessionRequest["cwd"]) => {
+  if (cwd && !existsSync(cwd)) {
+    throw new Error(`Terminal working directory does not exist: ${cwd}`);
+  }
+  return cwd;
+};
+
 const TITLE_POLL_INTERVAL_MS = 1000;
 
 // The PTY tab title tracks the foreground process like VSCode. On Linux the
@@ -115,12 +122,13 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
   const api: ExtensionTerminalApi = {
     openSession(request) {
       const command = resolveCommand(request.command);
+      const cwd = resolveWorkingDirectory(request.cwd);
       const env = createTerminalEnv(request.env);
       const id = crypto.randomUUID();
       const queue = createEventQueue();
 
       const child = Bun.spawn(command, {
-        cwd: request.cwd,
+        cwd,
         env,
         terminal: {
           cols: request.cols,

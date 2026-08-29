@@ -1,13 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import {
+  defineCommand,
   defineExtension,
   defineMode,
   defineNavigationItem,
   definePlacement,
   defineResourceKind,
   defineResourceView,
+  defineTemplateType,
   defineView,
   packageAsset,
+  params,
   resourceSlotRef,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
@@ -137,5 +140,23 @@ describe("alpha.4 UI normalization", () => {
         expect.objectContaining({ code: "invalid_placement" }),
       ]),
     );
+  });
+
+  test("qualifies template parameter types with their owning extension", () => {
+    const templateType = defineTemplateType({ id: "ticket", label: "Ticket" });
+    const command = defineCommand({
+      id: "refine",
+      title: "Refine",
+      params: { template: params.template({ type: "ticket" }) },
+      run: async () => undefined,
+    });
+    const runtime = normalizeExtensionSources([
+      source(defineExtension({ commands: [command], templateTypes: [templateType] })),
+    ]);
+
+    expect(runtime.commands[0]?.params.template).toMatchObject({
+      type: "template",
+      templateType: "pstdio.lab.template-type.ticket",
+    });
   });
 });

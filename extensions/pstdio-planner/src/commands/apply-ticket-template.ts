@@ -1,4 +1,4 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, params, type TemplateParam } from "@pstdio/sdk/extensions";
 import { renderPrompt } from "@pstdio/sdk/prompts";
 import { readTicketMarkdown, requireRepoFiles, ticketMarkdownPath, writeTicketText } from "../data/draft-storage";
 import { extractTicketTitle } from "../data/frontmatter";
@@ -24,7 +24,7 @@ export const applyTicketTemplateCommand = defineCommand({
   },
   params: {
     id: params.text({ required: true }),
-    template: params.text({ required: true }),
+    template: { type: "template", templateType: "ticket", required: true } as TemplateParam<true>,
     var: params.list(),
   },
   async run(ctx, commandParams) {

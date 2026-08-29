@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import yargs from "yargs";
 import type { RuntimeDescriptor } from "@/features/runtime/runtime-descriptor";
-import { createHandler } from ".";
+import { builder, createHandler } from ".";
 
 const runtime: RuntimeDescriptor = {
   schemaVersion: 1,
@@ -15,6 +16,29 @@ const runtime: RuntimeDescriptor = {
 };
 
 describe("serve command", () => {
+  test("keeps a foreground server standalone unless a runtime owner is explicit", async () => {
+    const args = builder(yargs(["--foreground"]).exitProcess(false)).parseSync();
+    let options: unknown;
+    const handler = createHandler({
+      ensureApi: async () => {
+        throw new Error("ensureApi should not run");
+      },
+      promoteRuntime: async () => {},
+      serveApp: async (input) => {
+        options = input;
+      },
+      log: () => {},
+    });
+
+    await handler(args as never);
+
+    expect(args.owner).toBeUndefined();
+    expect(options).toEqual({
+      host: "127.0.0.1",
+      port: 0,
+    });
+  });
+
   test("starts or attaches, promotes persistence, and returns after readiness", async () => {
     const calls: string[] = [];
     const handler = createHandler({

@@ -1,4 +1,11 @@
-import { type CommandContext, defineCommand, l10n, params, type ResourceAnchor } from "@pstdio/sdk/extensions";
+import {
+  type CommandContext,
+  defineCommand,
+  l10n,
+  params,
+  type ResourceAnchor,
+  type TemplateParam,
+} from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 import { renderOwnedTemplate } from "../data/template-store";
@@ -173,7 +180,12 @@ export const refineTicketCommand = defineCommand({
   ],
   params: {
     ...selectedTicketParams,
-    template: params.text({ label: "Ticket template", required: false }),
+    template: {
+      type: "template",
+      templateType: "ticket",
+      label: "Ticket template",
+      required: false,
+    } as TemplateParam<false>,
     context: params.longText({ label: "Additional context", required: false }),
   },
   async run(ctx, commandParams) {
@@ -240,7 +252,12 @@ export const breakIntoSubTicketsCommand = defineCommand({
   ],
   params: {
     ...ticketActionParams,
-    template: params.text({ label: "Ticket template", required: false }),
+    template: {
+      type: "template",
+      templateType: "ticket",
+      label: "Ticket template",
+      required: false,
+    } as TemplateParam<false>,
   },
   async run(ctx, commandParams) {
     const { agent, template } = commandParams;

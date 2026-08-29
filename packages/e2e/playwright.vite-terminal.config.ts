@@ -42,13 +42,14 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "bun run ../../packages/pstdio-api/src/server.ts",
+      command: `bun run ../../packages/pstdio/src/index.ts serve --foreground --host 127.0.0.1 --port ${apiPort}`,
       port: apiPort,
       reuseExistingServer: false,
       timeout: 15_000,
       env: {
         PORT: String(apiPort),
         PSTDIO_DB_PATH: ":memory:",
+        PSTDIO_DISABLE_EMBED_MANIFEST: "1",
         PSTDIO_EVENT_BUS_BUFFER_SIZE: "5",
         PSTDIO_HOME: resolvedHomePath,
         PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,

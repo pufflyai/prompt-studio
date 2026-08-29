@@ -66,6 +66,36 @@ const waitFor = async (predicate: () => boolean) => {
   }
 };
 
+const assertExistingProjectSourceRefresh = async (tempRoot: string) => {
+  const root = join(tempRoot, "existing-project-source-refresh");
+  const pstdioHome = join(root, "home");
+  const databasePath = join(root, "database");
+  const storageRoot = join(root, "storage");
+  const source = resolve(REPO_ROOT, "extensions/extension-lab");
+  const installed = join(pstdioHome, "extensions/extension-lab");
+
+  process.env.PSTDIO_HOME = pstdioHome;
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
+  const initial = await createTestApp({ databasePath, storageRoot });
+  await initial.deps.projectService.create({ name: "Existing project" });
+  await initial.close();
+
+  cpSync(source, installed, { recursive: true });
+  writeFileSync(join(installed, "README.md"), "stale extension lab");
+  process.env.PSTDIO_DISABLE_EMBED_MANIFEST = "1";
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([
+    { source, installName: "extension-lab", skipInstall: true, force: true },
+  ]);
+
+  const restarted = await createTestApp({ databasePath, storageRoot });
+  try {
+    await waitFor(() => readFileSync(join(installed, "README.md"), "utf8") !== "stale extension lab");
+    expect(readFileSync(join(installed, "README.md"), "utf8")).toBe(readFileSync(join(source, "README.md"), "utf8"));
+  } finally {
+    await restarted.close();
+  }
+};
+
 describe("startup default extensions", () => {
   const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-startup-default-extensions-"));
   const previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
@@ -146,6 +176,10 @@ describe("startup default extensions", () => {
     await close();
 
     expect(readFileSync(join(installed, "README.md"), "utf8")).toBe(readFileSync(join(source, "README.md"), "utf8"));
+  }, 40_000);
+
+  test("refreshes local default extensions when an existing project starts in source mode", async () => {
+    await assertExistingProjectSourceRefresh(tempRoot);
   }, 40_000);
 
   test("tracks default extension preparation without blocking runtime readiness", async () => {

@@ -91,7 +91,7 @@ describe("command palette params", () => {
       ),
     ).toEqual({
       workspaceId: "workspace-1",
-      workspace: '{"kind":"workspace","uri":"pstdio://workspace/workspace-1","id":"workspace-1","label":"T-1_A1"}',
+      workspace: '{"type":"workspace","id":"workspace-1","label":"T-1_A1"}',
       status: "review-ready",
     });
   });

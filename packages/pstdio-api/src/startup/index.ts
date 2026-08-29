@@ -58,11 +58,12 @@ const provisionRecoveredWorkspaces = (deps: RouteDeps, projectIds: string[], sig
   ).then(() => undefined);
 
 const ensureDefaultExtensionsInstalled = async (deps: RouteDeps, signal?: AbortSignal) => {
-  if ((await deps.projectService.list()).length > 0) return;
+  const sourceMode = process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1";
+  if (!sourceMode && (await deps.projectService.list()).length > 0) return;
 
   try {
     const installed = await installDefaultExtensions({
-      forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
+      forceSourceDefaults: sourceMode,
       onInstallFailure: ({ error, installName, source }) => {
         if (signal?.aborted) return;
         apiLogger.warn(

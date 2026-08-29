@@ -285,6 +285,11 @@ export default defineExtension({
 });
 ```
 
+Use `params.template({ type: "ticket" })` when a command selects a template. The dashboard lists templates from the
+matching extension-owned template type and renders a dropdown. Use `params.resource({ resourceType: "workspace" })`
+for project resources. The dashboard lists registered resources of that type and passes the selected `{ type, id }`
+reference to the command.
+
 ## Named connections
 
 Extensions declare remote HTTP access by name. The host stores the base URL and credential. Extension code receives request and stream methods, never the secret value.

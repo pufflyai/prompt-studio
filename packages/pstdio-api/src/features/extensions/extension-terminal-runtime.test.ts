@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { ExtensionLoggerApi, TerminalEvent } from "pstdio-api-contracts/extension-kernel";
 import { createTerminalSupervisor } from "./extension-terminal-runtime";
 
@@ -21,6 +23,16 @@ const decode = (events: TerminalEvent[]) =>
     .join("");
 
 describe("terminal supervisor", () => {
+  test("reports a missing working directory before spawning the shell", () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    const missingDirectory = join(tmpdir(), `pstdio-missing-terminal-cwd-${crypto.randomUUID()}`);
+
+    expect(() =>
+      supervisor.api.openSession({ command: ["/bin/sh"], cwd: missingDirectory, cols: 80, rows: 24 }),
+    ).toThrow(`Terminal working directory does not exist: ${missingDirectory}`);
+  });
+
   test("provides terminal metadata when the host environment omits it", async () => {
     const { logger } = createRecordingLogger();
     const supervisor = createTerminalSupervisor({ logger });

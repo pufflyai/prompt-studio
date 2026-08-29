@@ -23,6 +23,8 @@ const sendMessage = (socket: WSContext, message: TerminalWebSocketServerMessage)
   socket.send(JSON.stringify(message));
 };
 
+const errorMessage = (cause: unknown) => (cause instanceof Error ? cause.message : String(cause));
+
 export const createTerminalWebSocketEvents = (deps: TerminalRouteDeps): WSEvents => {
   let session: TerminalSessionHandle | undefined;
 
@@ -51,8 +53,7 @@ export const createTerminalWebSocketEvents = (deps: TerminalRouteDeps): WSEvents
       }
     } catch (cause) {
       if (session !== activeSession) return;
-      const message = cause instanceof Error ? cause.message : String(cause);
-      sendMessage(socket, { type: "error", message });
+      sendMessage(socket, { type: "error", message: errorMessage(cause) });
       await closeSession();
       socket.close(1011, "Terminal session failed");
     }
@@ -69,7 +70,13 @@ export const createTerminalWebSocketEvents = (deps: TerminalRouteDeps): WSEvents
           return;
         }
 
-        session = deps.terminal.openSession(message.request);
+        try {
+          session = deps.terminal.openSession(message.request);
+        } catch (cause) {
+          sendMessage(socket, { type: "error", message: errorMessage(cause) });
+          socket.close(1011, "Terminal session failed");
+          return;
+        }
         sendMessage(socket, { type: "open", sessionId: session.id });
         void pumpSessionEvents(session, socket);
       } else if (message.type === "write") {

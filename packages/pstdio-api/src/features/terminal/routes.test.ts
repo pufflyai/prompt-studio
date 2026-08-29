@@ -141,4 +141,22 @@ describe("terminal WebSocket", () => {
     expect(messages).toEqual([{ type: "error", message: "Terminal sessions are not available on this host." }]);
     expect(closes).toEqual([{ code: 1011, reason: "Terminal unavailable" }]);
   });
+
+  test("reports terminal open failures without throwing from the WebSocket handler", () => {
+    const events = createTerminalWebSocketEvents({
+      terminal: {
+        openSession: () => {
+          throw new Error("Terminal working directory does not exist: /missing-workspace");
+        },
+      },
+    });
+    const { socket, messages, closes } = createSocket();
+
+    expect(() => send(events, socket, { type: "open", request: { cols: 80, rows: 24 } })).not.toThrow();
+
+    expect(messages).toEqual([
+      { type: "error", message: "Terminal working directory does not exist: /missing-workspace" },
+    ]);
+    expect(closes).toEqual([{ code: 1011, reason: "Terminal session failed" }]);
+  });
 });
