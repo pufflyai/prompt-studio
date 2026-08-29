@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { createWorkbenchCore } from "../core";
+import { createStorybookArtifactsBridgeDocument } from "./artifacts-webview/bridge-document.storybook";
+import { createArtifactsWebviewExampleModule } from "./artifacts-webview/module";
 import { createDashboardWorkbench } from "./dashboard/module";
 import { createDynamicModulesWorkbench } from "./dynamic-modules/module";
 import { createExtensionThemesWorkbench } from "./extension-themes/module";
@@ -67,6 +69,11 @@ const dynamicModulesWorkbench = createDynamicModulesWorkbench();
 const rendererTypesWorkbench = createWorkbenchCore();
 rendererTypesWorkbench.registerModule(
   createRendererTypesExampleModule({ createBridgeDocument: createStorybookBridgeDocument }),
+);
+
+const artifactsWebviewWorkbench = createWorkbenchCore();
+artifactsWebviewWorkbench.registerModule(
+  createArtifactsWebviewExampleModule({ createBridgeDocument: createStorybookArtifactsBridgeDocument }),
 );
 
 const dashboardWorkbench = createDashboardWorkbench({ canonicalGeometry: true });
@@ -180,6 +187,14 @@ export const DynamicModules: Story = {
 
 export const RendererTypes: Story = {
   render: () => <WorkbenchStory workbench={rendererTypesWorkbench} />,
+};
+
+// A report-style webview reading artifact metadata, text, and an image through
+// the mount-scoped artifacts.read capability. The capability gate is the real
+// one: the "Read undeclared mount" button shows the denial naming the missing
+// artifacts.read:secrets declaration.
+export const ArtifactsWebview: Story = {
+  render: () => <WorkbenchStory workbench={artifactsWebviewWorkbench} />,
 };
 
 export const DashboardWorkbench: Story = {

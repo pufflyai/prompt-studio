@@ -216,7 +216,9 @@ webview needs, such as `commands.execute`, `resource.open`, `notification.show`,
 Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/extensions`.
 
 A webview can read files from an artifact mount its extension defines. Declare one grant per mount with
-`artifactsRead(mount)`; there is no wildcard grant.
+`artifactsRead(mount)`; there is no wildcard grant. A mount's `path` is relative to the extension's
+package-name root in the project repo (`<repo>/.pstdio/<package-name>/<path>/`); its `id` only names the
+mount in refs and grants and never changes the disk path.
 
 ```ts
 const runArtifacts = defineArtifactMount({ id: "runs", path: "runs", label: "Runs" });

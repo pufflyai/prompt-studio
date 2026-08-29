@@ -530,6 +530,12 @@ export default defineExtensionView({
   throw with the outcome reason.
 - `client.settings` has typed `all`, `get`, and `set` from the settings contribution.
   Declare the settings contribution `as const` and export it so the types stay precise.
+- `client.artifacts` has `list(mount, prefix?)`, `readText(mount, path)`, and
+  `imageUrl(mount, path)` for artifact mounts the webview declared with
+  `artifactsRead(mount)` (see "Artifact Mounts And Storage"). `imageUrl` returns a short-lived URL
+  for png, jpeg, webp, or gif, usable in `<img src>`; request a fresh URL when one
+  expires. Undeclared mounts are denied by the capability gate with the exact missing
+  declaration, such as `artifacts.read:runs`.
 - Author commands with `defineCommand`. Commands written as inline literals inside
   `defineExtension` keep untyped results (see ADR 0012 in the repository docs).
 - Pass `{ extensionId }` as the second argument only in tests, where no host bridge
@@ -623,6 +629,41 @@ For package `planner`, the default scoped root is:
 Extension storage is API-owned and scoped by extension instance. Project-owned storage also carries the project id.
 
 Artifact mounts create their directories on the first write. Before that, `exists()` returns false and `list()` returns an empty array.
+
+The mount's `path` is relative to that package-name root, and its `id` is only the mount's local name — it
+appears in refs and capability grants, never in the disk path. For package `planner`,
+`defineArtifactMount({ id: "runs", path: "runs", label: "Runs" })` resolves to
+`<repo>/.pstdio/planner/runs/`, and a read of `a/summary.json` targets
+`<repo>/.pstdio/planner/runs/a/summary.json`.
+
+### Webview reads
+
+A webview can read a mount its own extension defines by declaring the `artifacts.read` capability, scoped to
+that mount:
+
+```ts
+import { artifactsRead, defineArtifactMount, defineView, packageAsset } from "@pstdio/sdk/extensions";
+
+const runArtifacts = defineArtifactMount({ id: "runs", path: "runs", label: "Runs" });
+
+const report = defineView({
+  id: "report",
+  title: "Run report",
+  body: {
+    kind: "webview",
+    entry: packageAsset("./webviews/report.tsx", import.meta.url),
+    capabilities: [artifactsRead(runArtifacts)],
+  },
+});
+```
+
+Each declaration grants exactly one mount; there is no wildcard, and `pst extensions check` fails a grant on a
+mount the extension does not define (`webview_artifact_mount_missing`). All enforcement runs on the host:
+reads stay inside the declared mount (traversal and symlink escapes are rejected before filesystem access),
+text reads over 5 MB and images over 20 MB return limit errors instead of truncated content, and image URLs
+are minted only for png, jpeg, webp, and gif. Image bytes are served through the capability-secured webview
+asset channel with short-lived, fully-bound signed URLs (ADR 0008). Webviews never write to mounts; mutation
+goes through commands.
 
 ## Workspace Cleanup
 
