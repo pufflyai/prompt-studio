@@ -607,7 +607,7 @@ scope only groups files inside that owner boundary:
 | Project | Omit `scope` or use `{ type: "project" }` | Files shared by this extension across the active project. |
 | Repository | `{ type: "repo", id: repoId }` | Files grouped under one repository id. |
 | Resource | `{ type: "resource", id: resourceId }` | Files grouped under one resource id. |
-| Extension-defined | `{ type: "import", id: importId }` | Files grouped by a type and optional id chosen by the extension. |
+| Extension-defined | `{ type: "import", id: importId }` | Files grouped by a type and id chosen by the extension. Include the id when a command must access the scope. |
 
 Upload and list must use the same scope to find the same files. The default project
 scope matches `ctx.storage.files` in commands. A command can read the bytes without a
@@ -617,9 +617,20 @@ second upload:
 const contents = await ctx.storage.files.getBytes(params.fileId);
 ```
 
-For an explicit scope, use the matching `ctx.storage.scope(...)` before accessing
-`files`. The upload limit is 25 MiB. The returned `ExtensionBlobRef` contains `id`,
-`name`, `mimeType`, `size`, `hash`, `url`, `createdAt`, and `updatedAt`.
+The command storage API names the same scopes with runtime objects, not the webview
+`{ type, id }` shape:
+
+| Webview scope | Matching command storage |
+| --- | --- |
+| Omitted or `{ type: "project" }` | `ctx.storage.files` |
+| `{ type: "repo", id: repoId }` | `ctx.storage.scope({ type: "repo", repoId }).files` |
+| `{ type: "resource", id: resource.id }` | `ctx.storage.scope({ type: "resource", resource }).files`, where `resource` is the full `{ type, id, ... }` resource reference. |
+| `{ type: "import", id: importId }` | `ctx.storage.scope({ type: "import", id: importId }).files` |
+
+Repository scopes use `repoId`, resource scopes use a full resource reference, and
+extension-defined command scopes require an id. The upload limit is 25 MiB. The
+returned `ExtensionBlobRef` contains `id`, `name`, `mimeType`, `size`, `hash`, `url`,
+`createdAt`, and `updatedAt`.
 
 Host-backed file methods need a project extension instance. They are available to
 declared project routes, panels, resource views, and project settings views. A global
@@ -659,7 +670,9 @@ await host.call("resource.open", {
 
 `type` identifies the resource kind and `id` identifies the resource. `label` and
 `metadata` are optional. The dashboard creates the stable workbench URI from `type` and
-`id`; guests do not need to build that URI.
+`id`; guests do not need to build that URI. The extension must already have registered
+the resource kind and a presenter that can open it. The `ticket` value above is an
+example of such a registered kind.
 
 The default `persistent` strategy opens a normal workbench resource. Use
 `replace-active` to replace the active resource instead. The capability works in a

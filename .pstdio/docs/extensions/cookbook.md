@@ -391,8 +391,17 @@ const bytes = await ctx.storage.files.getBytes(params.fileId);
 const text = new TextDecoder().decode(bytes);
 ```
 
-Use the matching `ctx.storage.scope(...)` in the command when the webview supplied an
-explicit scope.
+Command scopes use runtime objects instead of the webview `{ type, id }` shape:
+
+```ts
+const repoFiles = ctx.storage.scope({ type: "repo", repoId }).files;
+const resourceFiles = ctx.storage.scope({ type: "resource", resource }).files;
+const importFiles = ctx.storage.scope({ type: "import", id: importId }).files;
+```
+
+`resource` must be the full resource reference with at least `type` and `id`, not only
+the resource id. Extension-defined command scopes require an id. Read from the same
+scope that the webview used for upload and list.
 
 ## Open a resource from a webview
 
@@ -425,7 +434,8 @@ await host.call("resource.open", {
 
 Omit `input` for a persistent resource. Use `replace-active` when the new resource
 should take the current resource's place. The host converts the SDK fields into the
-workbench resource and creates its URI. Do not build a workbench URI in guest code.
+workbench resource and creates its URI. Do not build a workbench URI in guest code. The
+kind and one of its presenters must already be registered before the call.
 
 ## Read Artifacts From A Webview
 

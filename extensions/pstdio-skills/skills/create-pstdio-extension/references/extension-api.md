@@ -270,11 +270,21 @@ if (selected) {
 }
 ```
 
-Omitting `scope` uses project scope. Pass `{ type: "repo", id }`,
-`{ type: "resource", id }`, or an extension-defined `{ type, id }` to upload and list
-for another group. The host fixes the project and extension instance owner. Global
-settings webviews do not get host-backed file methods because they have no project
-owner. The upload limit is 25 MiB.
+Omitting `scope` uses project scope. Pass `{ type: "repo", id: repoId }`,
+`{ type: "resource", id: resource.id }`, or an extension-defined `{ type, id }` to
+upload and list another group. Commands address those scopes with different runtime
+shapes:
+
+```ts
+ctx.storage.scope({ type: "repo", repoId }).files;
+ctx.storage.scope({ type: "resource", resource }).files;
+ctx.storage.scope({ type: "import", id: importId }).files;
+```
+
+`resource` is the full resource reference with at least `type` and `id`.
+Extension-defined command scopes require an id. The host fixes the project and extension
+instance owner. Global settings webviews do not get host-backed file methods because
+they have no project owner. The upload limit is 25 MiB.
 
 Declare `resource.open` to open an SDK resource in the workbench:
 
@@ -286,7 +296,8 @@ await host.call("resource.open", {
 ```
 
 The default strategy is `persistent`. Guests pass `{ type, id, label?, metadata? }` and
-leave URI creation to the host.
+leave URI creation to the host. The resource kind and a presenter for it must already
+be registered.
 
 ## Native resource views
 

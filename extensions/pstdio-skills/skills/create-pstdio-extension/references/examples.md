@@ -432,7 +432,7 @@ export default defineExtensionView({
     const projectFiles = await files.list();
 
     await host.call("resource.open", {
-      resource: { type: "import", id: uploaded.id, label: uploaded.name },
+      resource: { type: "ticket", id: uploaded.id, label: uploaded.name },
       input: { strategy: "replace-active" },
     });
 
@@ -446,3 +446,6 @@ sets the active project and extension instance, so guest code cannot select anot
 owner. Omit scope for project files, or pass the same `{ type, id }` scope to upload and
 list. Global settings webviews have no project file owner and cannot use host-backed
 file methods.
+
+This example uses the `ticket` resource kind and presenter registered in the resource
+views example above. Use a kind with a registered presenter from your own extension.
