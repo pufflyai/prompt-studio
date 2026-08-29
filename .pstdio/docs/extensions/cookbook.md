@@ -531,16 +531,13 @@ export default defineExtension({
 Another extension can bind its view to the public `navigation` slot by importing the typed
 resource-kind and slot refs. Geometry remains in `placements`; the binding never decides a region.
 
-## Keep File Bytes Intact In File Views
+## Keep file source intact in file views
 
-File view bodies (`body.kind: "file"`) open Markdown in the rich Markdown editor by default. That editor
-does not preserve source bytes: saving re-serializes the whole document even when the user made no edit.
-Characters gain escapes, tables are realigned, and whitespace changes. One observed no-edit load and save
-grew a 62 KB Markdown file to 92 KB and added escape characters to `{{token_with_underscores}}`
-placeholders.
+File view bodies with `body.kind: "file"` open Markdown in the rich Markdown editor by default. The editor
+keeps the loaded source and changes only the Markdown syntax the user edits. Untouched escapes, table spacing,
+reference definitions, line endings, and tokens such as `{{token_with_underscores}}` keep their original source.
 
-Return `textRenderer: "monaco"` from `load` for any file that another tool reads back, such as prompts,
-templates, and configuration files:
+Markdown files therefore need no safety setting, even when another tool reads them:
 
 ```ts
 const spec = defineView({
@@ -551,12 +548,14 @@ const spec = defineView({
     load: async (ctx, input) => ({
       fileName: "spec.md",
       content: await readSpec(ctx, input.renderer.resource),
-      textRenderer: "monaco",
     }),
     save: (ctx, input) => writeSpec(ctx, input.content),
   },
 });
 ```
+
+Return `textRenderer: "monaco"` only when the user should edit raw Markdown in the code editor instead of the
+rendered rich editor.
 
 ## Add Packaged Assets
 

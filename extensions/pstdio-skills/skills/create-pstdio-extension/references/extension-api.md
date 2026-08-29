@@ -322,11 +322,9 @@ The host picks the editor from `fileName` and `mimeType`: Markdown opens in the 
 text opens in the Monaco code editor, and a result without a `fileName` falls back to the Markdown editor.
 Return `textRenderer: "monaco"` to force the code editor for a file the host would open as Markdown.
 
-**Warning:** the rich Markdown editor does not preserve source bytes. Saving re-serializes the whole document,
-even when the user made no edit: characters gain escapes, tables are realigned, and whitespace changes. One
-observed no-edit load and save grew a 62 KB Markdown file to 92 KB and added escape characters to
-`{{token_with_underscores}}` placeholders. Return `textRenderer: "monaco"` for any Markdown file that another
-tool reads back, such as prompts, templates, and configuration files.
+The rich Markdown editor preserves source outside the syntax the user edits. Prompts, templates, configuration
+files, and other machine-read Markdown need no renderer override. Use `textRenderer: "monaco"` only when the user
+should edit raw Markdown in the code editor.
 
 Tree view bodies need a `body` callback; `children` and `footer` callbacks are optional. Body callbacks
 return `TreeViewSection[]`. Children and footer callbacks return `TreeNode[]`.

@@ -15,7 +15,7 @@ import { $addUpdateTag, $getRoot } from "lexical";
 import { useEffect, useRef, useState } from "react";
 import { ContentEditable } from "../shared/components/content-editable";
 import { editorNodes, editorTheme, editorTransformers } from "../shared/editor-config";
-import { exportLexicalToMarkdown, importMarkdownToLexical } from "../shared/markdown-codec";
+import { createMarkdownSourceDocument } from "../shared/markdown-source-document";
 import type { MarkdownUrlResolver } from "../shared/markdown-url";
 import { MarkdownUrlProvider } from "../shared/markdown-url-context";
 import { CodeBlockActionsPlugin } from "../shared/plugins/CodePlugin/CodeBlockActionsPlugin";
@@ -67,6 +67,9 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
   const { frontmatter, body } = splitFrontmatter(defaultState);
   const shouldTrackChanges = isEditable && Boolean(onChange);
   const editorContainerRef = useRef<HTMLDivElement>(null);
+  const sourceDocumentRef = useRef<ReturnType<typeof createMarkdownSourceDocument> | null>(null);
+  sourceDocumentRef.current ??= createMarkdownSourceDocument(body, resolveMarkdownUrl);
+  const sourceDocument = sourceDocumentRef.current;
   const [floatingToolbarAnchorElem, setFloatingToolbarAnchorElem] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -81,7 +84,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
       // real edit. Lexical also tags it history-merge, but slash commands reuse
       // that tag for their inserts, so ignoring history-merge would swallow them.
       $addUpdateTag(INITIAL_IMPORT_TAG);
-      importMarkdownToLexical(body, resolveMarkdownUrl);
+      sourceDocument.importToLexical();
     },
     onError: (error: Error) => console.error(error),
     editable: isEditable,
@@ -161,7 +164,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
                 if (tags.has(INITIAL_IMPORT_TAG)) return;
                 editorState.read(() => {
                   const root = $getRoot();
-                  const markdownBody = exportLexicalToMarkdown(root);
+                  const markdownBody = sourceDocument.exportFromLexical(root);
                   onChange?.(frontmatter + markdownBody);
                 });
               }}

@@ -17,7 +17,7 @@ import type React from "react";
 import { type FocusEvent, type KeyboardEvent, type MouseEvent, useRef, useState } from "react";
 import { EditModeDataTable } from "@/components/data-table/edit-mode-data-table";
 import type { DataTableEditModeColumn, RowData } from "@/components/data-table/types";
-import { MarkdownEditor } from "../../markdown-editor/markdown-editor";
+import { LazyMarkdownEditor } from "../../lazy-markdown-editor";
 import { MarkdownInline } from "../markdown-inline";
 import type { MarkdownTableValue } from "../markdown-table";
 
@@ -145,7 +145,7 @@ const MarkdownDataTable = (props: MarkdownDataTableProps) => {
           renderHeader: (column) => <MarkdownInline value={column.label} />,
           renderCell: (context) => <MarkdownInline value={String(context.value ?? "")} />,
           renderCellEditor: ({ value, onChange }) => (
-            <MarkdownEditor
+            <LazyMarkdownEditor
               autoFocus
               defaultState={value}
               fullWidth

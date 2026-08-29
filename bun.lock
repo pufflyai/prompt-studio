@@ -570,6 +570,7 @@
         "@types/mdast": "^4.0.4",
         "@xterm/addon-fit": "^0.10.0",
         "@xterm/xterm": "^5.5.0",
+        "diff": "^8.0.3",
         "dompurify": "^3.4.13",
         "katex": "^0.16.33",
         "lexical": "^0.40.0",
