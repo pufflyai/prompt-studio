@@ -5,6 +5,7 @@ import {
   type InstallExtensionSourceInput,
   type InstalledExtensionSource,
   installExtensionSource,
+  readExtensionSourceMetadata,
   resolvePstdioHome,
 } from "pstdio-api/extensions/install-extension-source";
 import type { Arguments, Argv } from "yargs";
@@ -39,11 +40,18 @@ type Deps = {
   resolvePstdioHome: typeof resolvePstdioHome;
 };
 
-const listInstalledExtensions = (extensionsRoot: string) => {
+export const listInstalledExtensions = (extensionsRoot: string) => {
   if (!existsSync(extensionsRoot)) return [];
   return readdirSync(extensionsRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
+    .flatMap((entry) => {
+      try {
+        const installed = readExtensionSourceMetadata(join(extensionsRoot, entry.name));
+        return installed.metadata.name === entry.name ? [entry.name] : [];
+      } catch {
+        return [];
+      }
+    })
     .sort();
 };
 
@@ -116,6 +124,17 @@ const enableAllUpdated = async (deps: Deps, projectId: string, installedSources:
   }
 };
 
+const registerUpdated = async (deps: Deps, projectId: string, installedSources: InstalledExtensionSource[]) => {
+  try {
+    await deps.ensureApi(process.env.PSTDIO_API_URL);
+  } catch (error) {
+    deps.log(`ERROR: ${error instanceof Error ? error.message : String(error)}`);
+    process.exitCode = 1;
+    return;
+  }
+  await enableAllUpdated(deps, projectId, installedSources);
+};
+
 const reportUpdateRun = (deps: Deps, run: UpdateRun, extensionsRoot: string) => {
   for (const installed of run.updated) {
     const version = installed.metadata.version ? ` to ${installed.metadata.version}` : "";
@@ -150,8 +169,7 @@ export const createHandler =
     }
 
     if (project && run.updated.length > 0) {
-      await deps.ensureApi(process.env.PSTDIO_API_URL);
-      await enableAllUpdated(deps, project.projectId, run.updated);
+      await registerUpdated(deps, project.projectId, run.updated);
     }
 
     reportUpdateRun(deps, run, extensionsRoot);

@@ -1,6 +1,9 @@
 import { describe, expect, mock, test } from "bun:test";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { CLI_VERSION } from "@/features/cli-version";
-import { createHandler } from "./update";
+import { createHandler, listInstalledExtensions } from "./update";
 
 const catalogEntry = (installName: string, path: string) => ({
   installName,
@@ -56,6 +59,37 @@ const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) 
 };
 
 describe("extensions update", () => {
+  test("lists only extension folders whose manifest matches the install name", () => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-extension-update-"));
+    const extensionsRoot = join(root, "extensions");
+
+    const writeExtension = (installName: string, packageName: string) => {
+      const extensionRoot = join(extensionsRoot, installName);
+      mkdirSync(extensionRoot, { recursive: true });
+      writeFileSync(join(extensionRoot, "index.ts"), "export default {};\n");
+      writeFileSync(
+        join(extensionRoot, "package.json"),
+        JSON.stringify({
+          name: packageName,
+          version: "1.0.0",
+          publisher: "pstdio",
+          main: "./index.ts",
+          engines: { pstdio: "^1.0.0" },
+        }),
+      );
+    };
+
+    try {
+      writeExtension("harness-claude-code", "harness-claude-code");
+      writeExtension("pstdio-planner", "unrelated-extension");
+      mkdirSync(join(extensionsRoot, "invalid-extension"), { recursive: true });
+
+      expect(listInstalledExtensions(extensionsRoot)).toEqual(["harness-claude-code"]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   test("reinstalls a named catalog extension at the release matching this CLI", async () => {
     const { deps, installs, enabled } = makeDeps();
 
@@ -142,5 +176,21 @@ describe("extensions update", () => {
     process.exitCode = 0;
     expect(logs.join("\n")).toContain("enable failed");
     expect(logs.join("\n")).toContain("Updated pstdio-planner");
+  });
+
+  test("reports repaired extensions when API startup fails", async () => {
+    const { deps, logs, enabled } = makeDeps({
+      ensureApi: mock(async () => {
+        throw new Error("API startup failed");
+      }),
+    });
+
+    await createHandler(deps)({} as never);
+
+    expect(enabled).toEqual([]);
+    expect(process.exitCode).toBe(1);
+    process.exitCode = 0;
+    expect(logs.join("\n")).toContain("API startup failed");
+    expect(logs.join("\n")).toContain("Updated harness-claude-code");
   });
 });

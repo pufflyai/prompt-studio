@@ -41,7 +41,7 @@ export type {
   InstallExtensionSourceInput,
   InstalledExtensionSource,
 } from "./install-extension-source-types";
-export { checkExtensionSource, checkExtensionsRoot, formatExtensionsCheck };
+export { checkExtensionSource, checkExtensionsRoot, formatExtensionsCheck, readExtensionSourceMetadata };
 
 export const EXTENSION_INSTALLING_MARKER = ".pstdio-installing";
 
