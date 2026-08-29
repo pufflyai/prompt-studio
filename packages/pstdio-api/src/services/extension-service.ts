@@ -9,7 +9,6 @@ import type {
   LoadedExtension,
 } from "../features/extensions/extension-runtime";
 import type { EventBus } from "../features/sync/event-bus";
-import { takeExtensionIdOwnership } from "./extension-provider-ownership";
 import {
   type PruneProjectExtensionInstancesInput,
   pruneProjectExtensionInstances as pruneProjectExtensionInstancesImpl,
@@ -190,41 +189,27 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
   const createProjectInstance = async (
     input: EnableInstalledSourceInput,
     installedSource: Awaited<ReturnType<typeof registerInstalledSource>>,
-    enabled: boolean,
   ) => {
     try {
-      const instance = await deps.extensionInstancesService.create({
+      return await deps.extensionInstancesService.create({
         installed_extension_id: installedSource.id,
         scope_id: input.projectId,
         scope_type: "project",
-        enabled,
+        enabled: false,
       });
-      emitExtensionInstance(instance);
-      return instance;
     } catch (error) {
       const raced = await findProjectInstanceForSource(input, installedSource);
       if (!raced) throw error;
-      if (!enabled || raced.enabled) return raced;
-
-      const updated = await deps.extensionInstancesService.update(raced.id, { enabled: true });
-      if (!updated) throw error;
-      emitExtensionInstance(updated);
-      return updated;
+      return raced;
     }
   };
 
   const enableInstalledSourceForProject = async (input: EnableInstalledSourceInput) => {
     const { existing, installedSource } = await resolveProjectInstalledSource(input, registerInstalledSource);
 
-    const instance = existing
-      ? await deps.extensionInstancesService.update(existing.id, { enabled: true })
-      : await createProjectInstance(input, installedSource, true);
-
+    const candidate = existing ?? (await createProjectInstance(input, installedSource));
+    const instance = await claimExtensionId(candidate, installedSource);
     if (!instance) throw new Error(`Failed to enable extension: ${input.name}`);
-
-    if (existing) emitExtensionInstance(instance);
-
-    await claimExtensionId(instance);
 
     return { installedSource, instance };
   };
@@ -233,41 +218,47 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     const { existing, installedSource } = await resolveProjectInstalledSource(input, attachInstalledSource);
     if (existing) return { installedSource, instance: existing };
 
-    const instance = await createProjectInstance(input, installedSource, false);
+    const instance = await createProjectInstance(input, installedSource);
 
     if (!instance) throw new Error(`Failed to sync extension: ${input.name}`);
 
+    emitExtensionInstance(instance);
     return { installedSource, instance };
   };
 
   // Every path that turns a project instance on runs the same ownership rule, so the extension
   // panel, project creation, and the CLI cannot leave two sources claiming one extension id.
-  const claimExtensionId = async (instance: {
-    installed_extension_id: string;
-    scope_id: string;
-    scope_type: string;
-  }) => {
-    if (instance.scope_type !== "project") return;
-    const installedSource = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
-    if (!installedSource) return;
-
-    await takeExtensionIdOwnership(
-      { extensionInstancesService: deps.extensionInstancesService, emitExtensionInstance },
-      {
-        extensionId: installedSource.extension_id,
-        installedSourceId: installedSource.id,
-        projectInstances: await listProjectInstances(instance.scope_id),
-      },
-    );
+  const claimExtensionId = async (
+    instance: { id: string; scope_id: string },
+    installedSource: { extension_id: string },
+  ) => {
+    const changed = await deps.extensionInstancesService.claimProjectExtensionProvider({
+      extensionId: installedSource.extension_id,
+      instanceId: instance.id,
+      projectId: instance.scope_id,
+    });
+    for (const changedInstance of changed) emitExtensionInstance(changedInstance);
+    return changed.find((changedInstance) => changedInstance.id === instance.id) ?? null;
   };
 
   const setProjectExtensionEnabled = async (instanceId: string, enabled: boolean) => {
-    const updated = await deps.extensionInstancesService.update(instanceId, { enabled });
-    if (!updated) return updated;
+    if (!enabled) {
+      const updated = await deps.extensionInstancesService.update(instanceId, { enabled: false });
+      if (updated) emitExtensionInstance(updated);
+      return updated;
+    }
 
-    emitExtensionInstance(updated);
-    if (enabled) await claimExtensionId(updated);
-    return updated;
+    const instance = await deps.extensionInstancesService.get(instanceId);
+    if (!instance) return null;
+    if (instance.scope_type !== "project") {
+      const updated = await deps.extensionInstancesService.update(instanceId, { enabled: true });
+      if (updated) emitExtensionInstance(updated);
+      return updated;
+    }
+
+    const installedSource = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
+    if (!installedSource) return null;
+    return claimExtensionId(instance, installedSource);
   };
 
   const listEnabledSourcesForProject = async (projectId: string) => {
