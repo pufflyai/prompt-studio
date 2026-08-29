@@ -18,6 +18,7 @@ import {
   updateGlobalExtensionSetting,
   updateProjectExtensionSetting,
 } from "../api";
+import { createArtifactsReadCapability } from "../artifact-read-capability";
 import { type ExtensionCommandEvent, subscribeToExtensionCommandFeed } from "../extension-webview-broadcast";
 import { useExecuteExtensionCommand } from "../use-project-extensions";
 import { executeWebviewCommand } from "./extension-webview-command";
@@ -311,6 +312,9 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       document.dispatchEvent(event);
     },
     ...(terminal ? { "terminal.session": createTerminalSessionCapability({ terminal, hostEvents }) } : {}),
+    ...(projectId && extensionInstanceId
+      ? { "artifacts.read": createArtifactsReadCapability({ projectId, extensionInstanceId, webviewId }) }
+      : {}),
   };
 
   if (!webview.runtimeUrl || !webview.moduleUrl) {

@@ -13,7 +13,10 @@ import type {
   CreateBridgeWebviewProps,
   CreateBridgeWebviewTheme,
 } from "../bridge/bridge-webview-renderer";
-import type { ExtensionWebviewFileCapabilities } from "../bridge/webview-command-capabilities";
+import type {
+  ExtensionWebviewArtifactCapabilities,
+  ExtensionWebviewFileCapabilities,
+} from "../bridge/webview-command-capabilities";
 import type {
   WorkbenchExtensionMenuRegistration,
   WorkbenchExtensionMenuSlotConfig,
@@ -57,6 +60,7 @@ export interface RegisterWorkbenchExtensionContributionsInput {
   settingsSectionId?: string;
   settingsSectionTitle?: string;
   subscribeRefreshEvents?: (listener: (event: WorkbenchExtensionRefreshEvent) => void) => Disposable;
+  webviewArtifacts?: ExtensionWebviewArtifactCapabilities;
   webviewFiles?: ExtensionWebviewFileCapabilities;
   workbench: WorkbenchModuleContext;
 }

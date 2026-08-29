@@ -243,6 +243,29 @@ The view has the normalized id `publisher.name.view.planner`. Its `path` adds a 
 link without creating another UI contribution. Use the returned `planner.ref` anywhere
 the extension needs to target this view.
 
+To make a navigation item switch Workbench modes instead of opening a view, use a `kind: "command"`
+action with the typed `workbenchCommands.switchMode` ref:
+
+```ts
+import { defineNavigationItem, workbenchCommands, workbenchSlots } from "@pstdio/sdk/extensions";
+
+defineNavigationItem({
+  id: "lab",
+  slot: workbenchSlots.projectNavigation,
+  label: "Lab",
+  icon: "flask-conical",
+  action: {
+    kind: "command",
+    target: { command: workbenchCommands.switchMode, params: { modeId: "project" } },
+  },
+});
+```
+
+`modeId` takes a host mode id (`"project"`, `"settings"`) or an extension mode's normalized id. Copy the
+normalized id from `pst extensions check` output or from the extension's contributions tab in project
+settings. Do not hand-build `pstdio.<extension>.mode.<id>` strings, and do not hand-type the raw
+`workbench.action.switchMode` command id.
+
 ## Call Commands From A Webview
 
 Export the commands record and the settings contribution, then build a typed client in
@@ -301,6 +324,46 @@ export default defineExtensionView({
 Wrong param shapes, wrong result uses, and unknown command keys fail to compile. Pass
 the settings contribution type as the second type argument for typed `client.settings`.
 
+## Read Artifacts From A Webview
+
+Declare an artifact mount and grant the webview read access to it. Each `artifactsRead` declaration grants
+one mount; there is no wildcard. The mount's `path` is relative to the extension's package-name root in the repo's
+extension storage directory: for package `fds-playground`, the mount below resolves to
+`<repo>/.pstdio/extension-storage/fds-playground/runs/`.
+The `id` only names the mount in refs and grants; it never changes the disk path.
+
+```ts
+import { artifactsRead, defineArtifactMount, defineExtension, defineView, packageAsset } from "@pstdio/sdk/extensions";
+
+const runArtifacts = defineArtifactMount({ id: "runs", path: "runs", label: "Runs" });
+
+const report = defineView({
+  id: "report",
+  title: "Run report",
+  body: {
+    kind: "webview",
+    entry: packageAsset("./webviews/report.tsx", import.meta.url),
+    capabilities: [artifactsRead(runArtifacts)],
+  },
+});
+
+export default defineExtension({ artifactMounts: [runArtifacts], views: [report] });
+```
+
+In the webview, the typed client reads metadata, text, and images without any custom command:
+
+```ts
+const files = await client.artifacts.list("runs", "2026-08-28-a/");
+const summary = JSON.parse(await client.artifacts.readText("runs", "2026-08-28-a/summary.json"));
+const chartUrl = await client.artifacts.imageUrl("runs", "2026-08-28-a/chart.png");
+// <img src={chartUrl} /> — the URL is short-lived; request a fresh one when it expires.
+```
+
+The host enforces every limit: reads stay inside the declared mount (traversal and symlink escapes are
+rejected), text reads over 5 MB and images over 20 MB return limit errors, and image URLs are minted only
+for png, jpeg, webp, and gif. `pst extensions check` fails a webview that declares `artifacts.read` on a
+mount its extension does not define.
+
 ## Compose A Resource Screen
 
 Declare the resource kind and its slots. Bind views to slots with `resourceViews`, then place the slots in a mode.
@@ -354,6 +417,33 @@ export default defineExtension({
 
 Another extension can bind its view to the public `navigation` slot by importing the typed
 resource-kind and slot refs. Geometry remains in `placements`; the binding never decides a region.
+
+## Keep File Bytes Intact In File Views
+
+File view bodies (`body.kind: "file"`) open Markdown in the rich Markdown editor by default. That editor
+does not preserve source bytes: saving re-serializes the whole document even when the user made no edit.
+Characters gain escapes, tables are realigned, and whitespace changes. One observed no-edit load and save
+grew a 62 KB Markdown file to 92 KB and added escape characters to `{{token_with_underscores}}`
+placeholders.
+
+Return `textRenderer: "monaco"` from `load` for any file that another tool reads back, such as prompts,
+templates, and configuration files:
+
+```ts
+const spec = defineView({
+  id: "spec",
+  title: "Spec",
+  body: {
+    kind: "file",
+    load: async (ctx, input) => ({
+      fileName: "spec.md",
+      content: await readSpec(ctx, input.renderer.resource),
+      textRenderer: "monaco",
+    }),
+    save: (ctx, input) => writeSpec(ctx, input.content),
+  },
+});
+```
 
 ## Add Packaged Assets
 
@@ -436,6 +526,16 @@ return { removed: result.removed };
 pst extensions check
 bun run --cwd extensions/<name> typecheck
 ```
+
+Inspect what the host actually loaded before clicking through the UI. The extension's contributions tab in
+project settings lists every declared contribution and its diagnostics, even while the extension is
+disabled. For scripted checks, the same data is served by
+`GET /v1/projects/{projectId}/extensions/{instanceId}/contributions`.
+
+If the dashboard layout looks stale after contribution changes, run the extension's layout reset command
+from the command palette. It appears in the `Extensions` group as `Reset <extension> layout`
+(command id `dashboard.extensions.resetLayout.<extension-id>`) and clears the persisted layout for that
+extension only.
 
 For repo validation after non-documentation changes, run:
 

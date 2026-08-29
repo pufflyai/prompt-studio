@@ -1,10 +1,12 @@
 export {
+  ARTIFACT_MOUNT_ROOT,
   createArtifactMount,
   createFileMount,
   createWorkspaceFilesMount,
   isPackageAssetDescriptor,
   normalizeArtifactMountPath,
   normalizeCliPath,
+  normalizeMountRelativePath,
   PackageAssetError,
   type PackageAssetKind,
   type ResolvedPackageAsset,

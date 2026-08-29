@@ -2,18 +2,67 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import { getExtensionRuntimeScript, renderInlineExtensionRuntimeHtml } from "pstdio-extensions/bridge/webview-runtime";
 import { apiLogger } from "../../lib/logger";
+import { ProjectNotFoundError } from "../../services/extension-service";
 import type { AppBindings } from "../../types";
 import type { ExtensionsRouteDeps, ExtensionWebviewRouteDeps } from "./deps";
+import {
+  ARTIFACT_IMAGE_LIMIT_BYTES,
+  artifactImageMediaType,
+  findArtifactFile,
+  resolveExtensionArtifactMount,
+  safeArtifactPath,
+} from "./extension-artifact-assets";
+import type { AuthorizedExtensionWebviewRequest } from "./extension-webview-access";
 import {
   findWebviewBuildError,
   renderWebviewBuildErrorModule,
   resolveWebviewAssetFile,
 } from "./extension-webview-assets";
 
-type WebviewAssetRouteDeps = Pick<ExtensionsRouteDeps, "extensionService" | "webviewCacheRoot"> &
+type WebviewAssetRouteDeps = Pick<
+  ExtensionsRouteDeps,
+  "extensionRuntimeCatalog" | "extensionService" | "repoService" | "webviewCacheRoot"
+> &
   ExtensionWebviewRouteDeps;
 
 const notFound = (c: Context<AppBindings>) => c.json({ error: "Webview asset not found" }, 404);
+
+const serveArtifact = async (
+  c: Context<AppBindings>,
+  deps: WebviewAssetRouteDeps,
+  authorized: Extract<AuthorizedExtensionWebviewRequest, { kind: "artifact" }>,
+) => {
+  // The signed URL only proves the bridge minted this grant; the mount lookup and
+  // the safe-file-root containment checks still run before any bytes are read.
+  const artifactPath = safeArtifactPath(authorized.artifactPath);
+  if (!artifactPath) return notFound(c);
+
+  const mediaType = artifactImageMediaType(artifactPath);
+  if (!mediaType) return notFound(c);
+
+  let resolved: Awaited<ReturnType<typeof resolveExtensionArtifactMount>>;
+  try {
+    resolved = await resolveExtensionArtifactMount(deps, {
+      installName: authorized.installName,
+      mountId: authorized.mountId,
+      projectId: authorized.projectId,
+    });
+  } catch (error) {
+    if (error instanceof ProjectNotFoundError) return notFound(c);
+    throw error;
+  }
+  if (!resolved) return notFound(c);
+
+  const file = await findArtifactFile(resolved.mount, artifactPath);
+  if (!file) return notFound(c);
+  if (file.size !== undefined && file.size > ARTIFACT_IMAGE_LIMIT_BYTES) {
+    return c.json({ error: `Artifact image exceeds the ${ARTIFACT_IMAGE_LIMIT_BYTES.toString()} byte limit` }, 413);
+  }
+
+  // Copy into a fresh buffer so the body is typed over a plain ArrayBuffer.
+  const bytes = new Uint8Array(await resolved.mount.readBytes(artifactPath));
+  return c.body(bytes, 200, { "cache-control": "private, max-age=300", "content-type": mediaType });
+};
 
 const serveAuthorizedRequest = async (c: Context<AppBindings>, deps: WebviewAssetRouteDeps) => {
   const authorized = deps.extensionWebviewAccess.authorize(c.req.raw);
@@ -24,6 +73,8 @@ const serveAuthorizedRequest = async (c: Context<AppBindings>, deps: WebviewAsse
       headers: { "content-type": "text/html; charset=utf-8" },
     });
   }
+
+  if (authorized.kind === "artifact") return serveArtifact(c, deps, authorized);
 
   const { assetPath, installName, webviewId } = authorized;
   // Build failures must win over any previous bundle left on disk.

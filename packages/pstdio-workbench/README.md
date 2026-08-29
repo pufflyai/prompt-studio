@@ -290,6 +290,10 @@ Extension webviews never receive PTY handles. A webview with the `terminal.sessi
 - [`workbench-modes`](src/examples/workbench-modes/module.tsx) opens the host-owned terminal Panel with a scripted backend.
 - [`workbench.stories`](src/examples/workbench.stories.tsx) drives the `HostTerminal` story with `createScriptedTerminalBridge`.
 
+### Artifact reads
+
+Extension webviews never receive filesystem paths. A webview that declared a mount-scoped `artifacts.read:<mount>` capability lists artifact metadata, reads text, and requests short-lived image URLs over the bridge; the capability gate denies calls for undeclared mounts and names the missing declaration. Hosts supply the implementation through the `webviewArtifacts` input of `registerWorkbenchExtensionContributions` (or a `createWebviewHostCapabilities` override), mirroring how `files.*` is injected. The [`artifacts-webview`](src/examples/artifacts-webview/module.tsx) example and the `ArtifactsWebview` story exercise the gate with an in-memory mount.
+
 Register related contributions inside one **workbench module** so they share ownership and disposal. For example, a ticket collection module usually contributes a resource kind, resource presenter, Panel, renderer, tree renderer, commands, and menu items together.
 
 ## Nomenclature

@@ -1,5 +1,6 @@
 import type { GuestHost, PropsStore } from "@pstdio/sdk/extensions";
 import type { HostCapabilityRequest } from "../contract";
+import { normalizeRuntimeError } from "../normalize-error";
 
 export {
   defineExtensionView,
@@ -15,7 +16,16 @@ export const createGuestHost = (
   onEvent: GuestHost["onEvent"],
   extensionId?: string,
 ): GuestHost => ({
-  call: async <TResult>(method: string, params?: unknown) => (await call({ method, params })) as TResult,
+  call: async <TResult>(method: string, params?: unknown) => {
+    try {
+      return (await call({ method, params })) as TResult;
+    } catch (error) {
+      // RPC rejections cross the frame boundary as plain objects; hand guests a
+      // real Error carrying the host's message (e.g. a capability denial).
+      if (error instanceof Error) throw error;
+      throw new Error(normalizeRuntimeError(error).message);
+    }
+  },
   onEvent,
   extensionId,
 });

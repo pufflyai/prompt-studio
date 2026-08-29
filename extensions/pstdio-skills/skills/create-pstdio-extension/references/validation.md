@@ -85,6 +85,18 @@ PSTDIO_HOME="$HOME/.pstdio-smoke" pst
 
 Then exercise the route, menu item, settings panel, renderer, or command palette entry in the dashboard.
 
+Inspect what the host actually loaded before clicking through the UI:
+
+- Open the extension in project settings and check its contributions tab. It lists every declared
+  contribution and its diagnostics, even while the extension is disabled.
+- For scripted checks, the same data is served by
+  `GET /v1/projects/{projectId}/extensions/{instanceId}/contributions`.
+
+If the dashboard layout looks stale after contribution changes, run the extension's layout reset command
+from the command palette. It appears in the `Extensions` group as `Reset <extension> layout`
+(command id `dashboard.extensions.resetLayout.<extension-id>`) and clears the persisted layout for that
+extension only.
+
 ## Packaged artifacts
 
 When bundled runtime artifacts change, such as extension skills, templates, prompts, themes, or packaged defaults,

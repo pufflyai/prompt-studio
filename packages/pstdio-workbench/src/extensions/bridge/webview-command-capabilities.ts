@@ -17,7 +17,12 @@ export interface ExtensionWebviewFileCapabilities {
   upload(params: unknown): Promise<unknown> | unknown;
 }
 
+export interface ExtensionWebviewArtifactCapabilities {
+  read(params: unknown, context: { webviewId: string }): Promise<unknown> | unknown;
+}
+
 interface CreateExtensionWebviewHostCapabilitiesInput {
+  artifacts?: ExtensionWebviewArtifactCapabilities;
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
   files?: ExtensionWebviewFileCapabilities;
   projectId: string;
@@ -78,6 +83,13 @@ export const createExtensionWebviewHostCapabilities =
             "files.upload": input.files.upload,
             "files.list": input.files.list,
             "files.delete": input.files.delete,
+          }
+        : {}),
+      ...(input.artifacts
+        ? {
+            // The image-url grant is bound to the requesting webview, so the host
+            // resolves the webview id instead of trusting the guest to name one.
+            "artifacts.read": (params: unknown) => input.artifacts!.read(params, { webviewId: context.webviewId }),
           }
         : {}),
     } satisfies HostCapabilityRegistry;

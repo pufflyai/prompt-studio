@@ -45,6 +45,36 @@ export const uploadExtensionCommandFile = async (projectId: string, commandId: s
     },
   });
 
+export interface ExtensionArtifactFile {
+  path: string;
+  size: number;
+  mediaType: string;
+}
+
+const artifactBasePath = (projectId: string, instanceId: string, mountId: string) =>
+  `/v1/projects/${projectId}/extensions/${instanceId}/artifacts/${encodeURIComponent(mountId)}`;
+
+export const listExtensionArtifacts = (projectId: string, instanceId: string, mountId: string, prefix?: string) =>
+  apiRequest<{ files: ExtensionArtifactFile[] }>(
+    `${artifactBasePath(projectId, instanceId, mountId)}/files${prefix ? `?prefix=${encodeURIComponent(prefix)}` : ""}`,
+  );
+
+export const readExtensionArtifactText = (projectId: string, instanceId: string, mountId: string, path: string) =>
+  apiRequest<{ content: string }>(
+    `${artifactBasePath(projectId, instanceId, mountId)}/text?path=${encodeURIComponent(path)}`,
+  );
+
+export const getExtensionArtifactImageUrl = (
+  projectId: string,
+  instanceId: string,
+  mountId: string,
+  path: string,
+  webviewId: string,
+) =>
+  apiRequest<{ url: string }>(
+    `${artifactBasePath(projectId, instanceId, mountId)}/image-url?path=${encodeURIComponent(path)}&webviewId=${encodeURIComponent(webviewId)}`,
+  );
+
 export const listProjectExtensions = (projectId: string) =>
   apiRequest<ListProjectExtensionsResponse>(`/v1/projects/${projectId}/extensions`);
 

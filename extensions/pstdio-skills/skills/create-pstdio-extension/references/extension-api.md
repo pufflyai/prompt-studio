@@ -85,7 +85,7 @@ For package name `planner`:
 extension id     pstdio.planner
 command id       planner.tickets.create
 CLI path         pst planner tickets create
-artifact root    <repo>/.pstdio/planner/
+artifact root    <repo>/.pstdio/extension-storage/planner/
 template id      planner.ticket
 skill id         planner.createGuide
 theme id         planner.monokai
@@ -113,7 +113,7 @@ kebab-case. For example `create_pstdio_extension` and `createPstdioExtension` be
 | `resourceHierarchyProviders`                      | Parent lookup for resources, used for breadcrumbs and hierarchy.                  |
 | `settingsPanels`                                  | References from host settings slots to views.                                     |
 | `activityItems`                                   | Activity-rail entries that select a Workbench mode.                               |
-| `artifactMounts`                                  | Safe file access under `.pstdio/<package-name>/`.                                 |
+| `artifactMounts`                                  | Safe file access under `.pstdio/extension-storage/<package-name>/`.                                 |
 | `workspaceTypes`, `harnesses`                     | Advanced provider integrations.                                                   |
 
 Editable template types must declare `list`, `read`, `save`, and `delete` command refs. The dashboard invokes those commands and never reads template storage directly. Store user overrides in `ctx.storage`; read packaged defaults with `ctx.packageFiles`.
@@ -215,6 +215,32 @@ webview needs, such as `commands.execute`, `resource.open`, `notification.show`,
 
 Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/extensions`.
 
+A webview can read files from an artifact mount its extension defines. Declare one grant per mount with
+`artifactsRead(mount)`; there is no wildcard grant. A mount's `path` is relative to the extension's
+package-name root in the repo's extension storage directory (`<repo>/.pstdio/extension-storage/<package-name>/<path>/`); its `id` only names the
+mount in refs and grants and never changes the disk path.
+
+```ts
+const runArtifacts = defineArtifactMount({ id: "runs", path: "runs", label: "Runs" });
+
+const report = defineView({
+  id: "report",
+  title: "Report",
+  body: {
+    kind: "webview",
+    entry: packageAsset("./webviews/report.tsx", import.meta.url),
+    capabilities: ["commands.execute", artifactsRead(runArtifacts)],
+  },
+});
+```
+
+The typed client then exposes `client.artifacts.list(mount, prefix?)`, `client.artifacts.readText(mount, path)`,
+and `client.artifacts.imageUrl(mount, path)`, which returns a short-lived URL for png, jpeg, webp, or gif
+images. The host enforces the boundary: undeclared mounts are denied by the bridge, path traversal and
+symlink escapes are rejected, text reads over 5 MB and images over 20 MB return limit errors, and other
+media types are refused. `pst extensions check` fails a webview that declares `artifacts.read` on a mount
+its extension does not define.
+
 ## Native resource views
 
 Use native view bodies when the host should own the editor or tree chrome instead of loading a custom webview. A native
@@ -233,6 +259,16 @@ Use `defineResourceKind`, `resourceSlotRef`, `defineView`, `defineResourceView`,
 File view bodies need a `load` callback; an optional `save` callback makes text content editable.
 Load callbacks return `{ content }` for markdown/code text, `{ dataUrl }` for images, plus optional `fileName`,
 `mimeType`, and `placeholder`. Images are always read-only.
+
+The host picks the editor from `fileName` and `mimeType`: Markdown opens in the rich Markdown editor, other
+text opens in the Monaco code editor, and a result without a `fileName` falls back to the Markdown editor.
+Return `textRenderer: "monaco"` to force the code editor for a file the host would open as Markdown.
+
+**Warning:** the rich Markdown editor does not preserve source bytes. Saving re-serializes the whole document,
+even when the user made no edit: characters gain escapes, tables are realigned, and whitespace changes. One
+observed no-edit load and save grew a 62 KB Markdown file to 92 KB and added escape characters to
+`{{token_with_underscores}}` placeholders. Return `textRenderer: "monaco"` for any Markdown file that another
+tool reads back, such as prompts, templates, and configuration files.
 
 Tree view bodies need a `body` callback; `children` and `footer` callbacks are optional. Body callbacks
 return `TreeViewSection[]`. Children and footer callbacks return `TreeNode[]`.
@@ -278,6 +314,30 @@ For a Planner-style list or board, define a view with `body.kind: "kanban"` and 
 `query` callback. Add a `navigationItems` contribution whose typed action targets the
 view ref. A webview page uses the same model with `body.kind: "webview"`. An optional
 view `path` is only its deep-link path.
+
+To navigate to a Workbench mode instead of a view, use a `kind: "command"` action with the typed
+`workbenchCommands.switchMode` ref from `@pstdio/sdk/extensions`:
+
+```ts
+import { defineNavigationItem, workbenchCommands, workbenchSlots } from "@pstdio/sdk/extensions";
+
+defineNavigationItem({
+  id: "lab",
+  slot: workbenchSlots.projectNavigation,
+  label: "Lab",
+  icon: "flask-conical",
+  action: {
+    kind: "command",
+    target: { command: workbenchCommands.switchMode, params: { modeId: "project" } },
+  },
+});
+```
+
+`modeId` is the full Workbench mode id: `"project"` or `"settings"` for host modes, or the normalized id of
+an extension mode. Copy an extension mode's normalized id from `pst extensions check` output or from the
+extension's contributions tab in project settings. Never hand-build `pstdio.<extension>.mode.<id>` strings,
+and never hand-type the raw `workbench.action.switchMode` command id; always use the typed ref. Activity
+items use the same command with `command` and `params` as sibling fields instead of a nested `target`.
 
 For an editable inspector, define a `controls` view with a `query` callback plus optional
 `onValueChange`, `onApply`, and `onReset` callbacks. Attach it to an owner with

@@ -140,9 +140,9 @@ export interface RuntimeArtifactMount {
   extensionId: string;
   name: string;
   sourcePath: string;
-  /** Normalized path relative to <repo>/.pstdio/<name>/. */
+  /** Normalized path relative to <repo>/.pstdio/extension-storage/<name>/. */
   relativePath: string;
-  /** Full repo-relative path (.pstdio/<name>/<relativePath>). */
+  /** Full repo-relative path (.pstdio/extension-storage/<name>/<relativePath>). */
   fullPath: string;
   label: Localizable<string>;
   repoRole?: "default" | "selected" | "workspace";

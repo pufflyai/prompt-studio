@@ -1,4 +1,4 @@
-export { createArtifactMount, createFileMount, createWorkspaceFilesMount } from "./artifact-mount";
+export { ARTIFACT_MOUNT_ROOT, createArtifactMount, createFileMount, createWorkspaceFilesMount } from "./artifact-mount";
 export { isPackageAssetDescriptor } from "./asset-validation";
 export {
   PackageAssetError,
@@ -10,6 +10,7 @@ export {
   resolvePackageAssetPath,
 } from "./package-assets";
 export { normalizeArtifactMountPath, normalizeCliPath } from "./path-normalization";
+export { normalizeMountRelativePath } from "./safe-file-root";
 export {
   WorkspaceFileAccessError,
   type WorkspaceMountEntry,

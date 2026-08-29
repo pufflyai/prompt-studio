@@ -24,7 +24,7 @@ Extension identity is package metadata, not code metadata. `package.json` provid
 - Cron schedules that invoke extension or host commands.
 - Dashboard views, placements, navigation items, settings panels, and workflow statuses.
 - Templates, skills, themes, file icon themes, and custom template types.
-- Artifact mounts for safe repo-local files under `.pstdio/<package-name>/`.
+- Artifact mounts for safe repo-local files under `.pstdio/extension-storage/<package-name>/`.
 - Workspace type and Harness providers for deeper runtime integrations.
 - Named host-managed connections for remote provider control planes.
 

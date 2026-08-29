@@ -482,7 +482,7 @@ describe("createCommandEnvironment", () => {
             name: "extension-lab",
             sourcePath: "/tmp/extension-lab/extension.ts",
             relativePath: "reports",
-            fullPath: ".pstdio/extension-lab/reports",
+            fullPath: ".pstdio/extension-storage/extension-lab/reports",
             label: "Reports",
           },
         ],
@@ -496,7 +496,9 @@ describe("createCommandEnvironment", () => {
     const reports = env.artifacts.mount("reports");
     await reports.writeText("latest.md", "hello");
 
-    expect(readFileSync(join(repoPath, ".pstdio", "extension-lab", "reports", "latest.md"), "utf8")).toBe("hello");
+    expect(
+      readFileSync(join(repoPath, ".pstdio", "extension-storage", "extension-lab", "reports", "latest.md"), "utf8"),
+    ).toBe("hello");
     expect(() => env.artifacts.mount("missing")).toThrow("Artifact mount not found: missing");
   });
 });

@@ -1,6 +1,6 @@
 import { extname } from "node:path";
 import { isPackageAssetDescriptor } from "../../artifacts/asset-validation";
-import { validateWebviewCapabilityNames } from "../../bridge/contract/capabilities";
+import { parseWebviewCapabilityDeclaration, validateWebviewCapabilityNames } from "../../bridge/contract/capabilities";
 import type { NormalizedExtension } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
@@ -32,6 +32,7 @@ const validateCapabilities = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
   runtime: Accumulator,
+  key: string,
   capabilities: unknown,
 ) => {
   if (!Array.isArray(capabilities)) return;
@@ -45,6 +46,32 @@ const validateCapabilities = (
       }),
     );
   }
+
+  // An artifact grant may only name a mount the same extension defines.
+  const mountIds = definedArtifactMountIds(source);
+  for (const declaration of capabilities) {
+    if (typeof declaration !== "string") continue;
+    const parsed = parseWebviewCapabilityDeclaration(declaration);
+    if (parsed.name !== "artifacts.read" || !parsed.scope) continue;
+    if (mountIds.has(parsed.scope)) continue;
+    runtime.diagnostics.push(
+      createDiagnostic({
+        code: "webview_artifact_mount_missing",
+        message: `View ${key} declares artifacts.read:${parsed.scope} but the extension defines no artifact mount "${parsed.scope}"`,
+        extensionId: ext.id,
+        sourcePath: source.sourcePath,
+      }),
+    );
+  }
+};
+
+const definedArtifactMountIds = (source: LoadedExtensionSource) => {
+  const ids = new Set<string>();
+  if (!Array.isArray(source.definition.artifactMounts)) return ids;
+  for (const mount of source.definition.artifactMounts) {
+    if (isRecord(mount) && typeof mount.id === "string") ids.add(mount.id);
+  }
+  return ids;
 };
 
 const validateViews = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
@@ -52,7 +79,7 @@ const validateViews = (ext: NormalizedExtension, source: LoadedExtensionSource, 
   for (const view of source.definition.views) {
     if (!isRecord(view) || !isRecord(view.body) || view.body.kind !== "webview") continue;
     validateEntry(ext, source, runtime, String(view.id), view.body.entry);
-    validateCapabilities(ext, source, runtime, view.body.capabilities);
+    validateCapabilities(ext, source, runtime, String(view.id), view.body.capabilities);
   }
 };
 
