@@ -224,14 +224,7 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
 
     if (existing) emitExtensionInstance(instance);
 
-    await takeExtensionIdOwnership(
-      { extensionInstancesService: deps.extensionInstancesService, emitExtensionInstance },
-      {
-        extensionId: installedSource.extension_id,
-        installedSourceId: installedSource.id,
-        projectInstances: await listProjectInstances(input.projectId),
-      },
-    );
+    await claimExtensionId(instance);
 
     return { installedSource, instance };
   };
@@ -247,9 +240,33 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     return { installedSource, instance };
   };
 
+  // Every path that turns a project instance on runs the same ownership rule, so the extension
+  // panel, project creation, and the CLI cannot leave two sources claiming one extension id.
+  const claimExtensionId = async (instance: {
+    installed_extension_id: string;
+    scope_id: string;
+    scope_type: string;
+  }) => {
+    if (instance.scope_type !== "project") return;
+    const installedSource = await deps.installedExtensionSourcesService.get(instance.installed_extension_id);
+    if (!installedSource) return;
+
+    await takeExtensionIdOwnership(
+      { extensionInstancesService: deps.extensionInstancesService, emitExtensionInstance },
+      {
+        extensionId: installedSource.extension_id,
+        installedSourceId: installedSource.id,
+        projectInstances: await listProjectInstances(instance.scope_id),
+      },
+    );
+  };
+
   const setProjectExtensionEnabled = async (instanceId: string, enabled: boolean) => {
     const updated = await deps.extensionInstancesService.update(instanceId, { enabled });
-    if (updated) emitExtensionInstance(updated);
+    if (!updated) return updated;
+
+    emitExtensionInstance(updated);
+    if (enabled) await claimExtensionId(updated);
     return updated;
   };
 

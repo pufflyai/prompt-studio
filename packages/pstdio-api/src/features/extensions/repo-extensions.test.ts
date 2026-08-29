@@ -74,7 +74,7 @@ describe("syncRepoExtensionsForProject", () => {
     const installed = await installedExtensionSourcesService.getBySourcePath(extensionPath);
     const instances = await extensionInstancesService.list({ scope_id: project.id, scope_type: "project" });
 
-    expect(result).toEqual({ enabled: ["worktree-bootstrap"], missing: [], skipped: [] });
+    expect(result).toEqual({ conflicting: [], enabled: ["worktree-bootstrap"], missing: [], skipped: [] });
     expect(installed).toMatchObject({
       install_name: "worktree-bootstrap",
       source_kind: "local_path",
@@ -138,7 +138,7 @@ describe("syncRepoExtensionsForProject", () => {
     const missing = installed ? await installedExtensionSourcesService.get(installed.id) : null;
     const disabled = instance ? await extensionInstancesService.get(instance.id) : null;
 
-    expect(result).toEqual({ enabled: [], missing: ["worktree-bootstrap"], skipped: [] });
+    expect(result).toEqual({ conflicting: [], enabled: [], missing: ["worktree-bootstrap"], skipped: [] });
     expect(missing?.status).toBe("missing");
     expect(disabled?.enabled).toBe(false);
   });
@@ -169,7 +169,12 @@ describe("syncRepoExtensionsForProject", () => {
     const missing = installed ? await installedExtensionSourcesService.get(installed.id) : null;
     const disabled = instance ? await extensionInstancesService.get(instance.id) : null;
 
-    expect(result).toEqual({ enabled: [], missing: ["worktree-bootstrap"], skipped: ["worktree-bootstrap"] });
+    expect(result).toEqual({
+      conflicting: [],
+      enabled: [],
+      missing: ["worktree-bootstrap"],
+      skipped: ["worktree-bootstrap"],
+    });
     expect(missing?.status).toBe("missing");
     expect(disabled?.enabled).toBe(false);
   });
@@ -200,7 +205,7 @@ describe("syncRepoExtensionsForProject", () => {
     const missing = installed ? await installedExtensionSourcesService.get(installed.id) : null;
     const disabled = instance ? await extensionInstancesService.get(instance.id) : null;
 
-    expect(result).toEqual({ enabled: [], missing: ["worktree-bootstrap"], skipped: [] });
+    expect(result).toEqual({ conflicting: [], enabled: [], missing: ["worktree-bootstrap"], skipped: [] });
     expect(missing?.status).toBe("missing");
     expect(disabled?.enabled).toBe(false);
   });
@@ -225,5 +230,45 @@ describe("syncRepoExtensionsForProject", () => {
     });
 
     expect(result.flatMap((entry) => entry.enabled)).toEqual(["repo-a", "repo-b"]);
+  });
+
+  test("a second repo claiming a running extension id is registered disabled", async () => {
+    const project = await projectService.create({ name: "Repo Extensions" });
+    const repoA = join(tempRoot, "a");
+    const repoB = join(tempRoot, "b");
+    writeExtension(join(repoA, ".pstdio", "extensions", "shared-tool"), "shared-tool");
+    writeExtension(join(repoB, ".pstdio", "extensions", "shared-tool"), "shared-tool");
+    const repoService = {
+      listByProject: async () => [
+        { id: "repo-b", path: repoB },
+        { id: "repo-a", path: repoA },
+      ],
+    };
+
+    const first = await syncRepoExtensionsForLinkedRepos({
+      extensionService,
+      installedExtensionSourcesService,
+      projectId: project.id,
+      repoService,
+    });
+
+    expect(first.flatMap((entry) => entry.enabled)).toEqual(["shared-tool"]);
+    expect(first.flatMap((entry) => entry.conflicting)).toEqual(["shared-tool"]);
+
+    // Discovery repeats on every repo link change, so the winner must not move.
+    await syncRepoExtensionsForLinkedRepos({
+      extensionService,
+      installedExtensionSourcesService,
+      projectId: project.id,
+      repoService,
+    });
+
+    const enabledSources = await extensionService.listEnabledSourcesForProject(project.id);
+    expect(enabledSources.map(({ installedSource }) => installedSource.source_path)).toEqual([
+      join(repoA, ".pstdio", "extensions", "shared-tool"),
+    ]);
+
+    const all = await extensionService.listProjectExtensionInstances(project.id);
+    expect(all).toHaveLength(2);
   });
 });

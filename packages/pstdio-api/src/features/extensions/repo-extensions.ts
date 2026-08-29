@@ -34,6 +34,8 @@ type SyncRepoExtensionsForLinkedReposInput = Omit<SyncRepoExtensionsForProjectIn
 };
 
 export type SyncRepoExtensionsResult = {
+  /** Folders another enabled source already provides. They are registered, but left disabled. */
+  conflicting: string[];
   enabled: string[];
   missing: string[];
   skipped: string[];
@@ -53,11 +55,15 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
   const root = repoExtensionsRoot(input.repoPath);
   const load = input.loadExtension ?? loadExtensionSource;
   const hash = input.hashExtension ?? hashExtensionSource;
+  const conflicting: string[] = [];
   const enabled: string[] = [];
   const skipped: string[] = [];
   const presentSourcePaths = new Set<string>();
   const instances = await input.extensionService.listProjectExtensionInstances(input.projectId);
   const instancesBySourcePath = new Map(instances.map((record) => [record.installedSource.source_path, record]));
+  const providedExtensionIds = new Set(
+    instances.filter((record) => record.instance.enabled).map((record) => record.installedSource.extension_id),
+  );
 
   for (const name of input.discover === false ? [] : listExtensionDirs(root)) {
     const sourcePath = join(root, name);
@@ -86,10 +92,22 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
     const existing = instancesBySourcePath.get(sourcePath);
     if (existing) {
       await input.extensionService.syncInstalledSourceForProject(sourceInput);
-    } else {
-      await input.extensionService.enableInstalledSourceForProject(sourceInput);
+      if (existing.instance.enabled) enabled.push(name);
+      continue;
     }
-    if (!existing || existing.instance.enabled) enabled.push(name);
+
+    // Discovery never takes an extension id away from a source the project already runs. A new
+    // folder that claims one is registered disabled, and the extension panel is where a user
+    // decides which copy provides it.
+    if (providedExtensionIds.has(loaded.metadata.id)) {
+      await input.extensionService.syncInstalledSourceForProject(sourceInput);
+      conflicting.push(name);
+      continue;
+    }
+
+    await input.extensionService.enableInstalledSourceForProject(sourceInput);
+    providedExtensionIds.add(loaded.metadata.id);
+    enabled.push(name);
   }
 
   const missing: string[] = [];
@@ -105,7 +123,7 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
     missing.push(updated?.install_name ?? source.install_name);
   }
 
-  return { enabled, missing, skipped };
+  return { conflicting, enabled, missing, skipped };
 };
 
 export const syncRepoExtensionsForLinkedRepos = async (input: SyncRepoExtensionsForLinkedReposInput) => {

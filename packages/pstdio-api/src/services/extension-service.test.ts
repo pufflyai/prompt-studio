@@ -166,6 +166,28 @@ describe("extensionService extension id ownership", () => {
     expect((await service.getProjectExtensionInstance(project.id, previous.instance.id))?.instance.enabled).toBe(false);
   });
 
+  test("enabling a conflicting instance from the panel disables the running provider", async () => {
+    const project = await projectService.create({ name: "Extension Project" });
+    const running = await service.enableInstalledSourceForProject({
+      projectId: project.id,
+      ...fontEditorSource("/repo-one/.pstdio/extensions/font-editor"),
+    });
+    // Discovery registers a second checkout disabled, so the panel toggle is how a user switches.
+    const discovered = await service.syncInstalledSourceForProject({
+      projectId: project.id,
+      ...fontEditorSource("/repo-two/.pstdio/extensions/font-editor"),
+    });
+    expect(discovered.instance.enabled).toBe(false);
+
+    await service.setProjectExtensionEnabled(discovered.instance.id, true);
+
+    const enabled = await service.listEnabledSourcesForProject(project.id);
+    expect(enabled.map(({ installedSource }) => installedSource.source_path)).toEqual([
+      "/repo-two/.pstdio/extensions/font-editor",
+    ]);
+    expect((await service.getProjectExtensionInstance(project.id, running.instance.id))?.instance.enabled).toBe(false);
+  });
+
   test("re-enabling the same source keeps it enabled and leaves other extensions alone", async () => {
     const project = await projectService.create({ name: "Extension Project" });
     const planner = await service.enableInstalledSourceForProject({

@@ -160,6 +160,21 @@ export const ExtensionDetail = (props: ExtensionDetailProps) => {
           </Text>
         )}
 
+        <Stack gap="3xs">
+          <Text textStyle="label/XS" color="fg.subtle">
+            {t("projectSettings.extensionsPanel.detail.sourcePath")}
+          </Text>
+          <Text
+            textStyle="label/XS"
+            fontFamily="mono"
+            color="fg.muted"
+            wordBreak="break-all"
+            data-testid="extension-detail-source-path"
+          >
+            {extension.sourcePath}
+          </Text>
+        </Stack>
+
         {failed && (
           <AlertMessage
             status="error"

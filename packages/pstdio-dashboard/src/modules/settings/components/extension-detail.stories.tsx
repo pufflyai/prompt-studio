@@ -161,6 +161,19 @@ export const Disabled: Story = {
   },
 };
 
+// A second copy of an extension a project already runs stays off until someone picks it, so the
+// source folder is the only thing that tells the two apart.
+export const ConflictingSourceFolder: Story = {
+  args: {
+    extension: {
+      ...extension,
+      enabled: false,
+      status: "disabled",
+      sourcePath: "/Users/dev/work/second-checkout/.pstdio/extensions/pstdio-planner",
+    },
+  },
+};
+
 export const UpdateAvailable: Story = {
   args: {
     extension: { ...extension, updateAvailable: true },

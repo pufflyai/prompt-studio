@@ -304,6 +304,7 @@
       },
       "detail": {
         "back": "擴充功能",
+        "sourcePath": "來源資料夾",
         "tabs": {
           "settings": "設定",
           "contributions": "貢獻"

@@ -304,6 +304,7 @@
       },
       "detail": {
         "back": "扩展",
+        "sourcePath": "源文件夹",
         "tabs": {
           "settings": "设置",
           "contributions": "贡献"

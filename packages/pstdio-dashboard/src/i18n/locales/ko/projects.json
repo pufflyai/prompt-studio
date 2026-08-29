@@ -304,6 +304,7 @@
       },
       "detail": {
         "back": "확장",
+        "sourcePath": "소스 폴더",
         "tabs": {
           "settings": "설정",
           "contributions": "기여"

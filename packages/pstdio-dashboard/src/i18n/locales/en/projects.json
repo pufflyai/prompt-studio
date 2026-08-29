@@ -320,6 +320,7 @@
       },
       "detail": {
         "back": "Extensions",
+        "sourcePath": "Source folder",
         "tabs": {
           "settings": "Settings",
           "contributions": "Contributions"

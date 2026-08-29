@@ -309,6 +309,7 @@
       },
       "detail": {
         "back": "Extensions",
+        "sourcePath": "Dossier source",
         "tabs": {
           "settings": "Paramètres",
           "contributions": "Contributions"

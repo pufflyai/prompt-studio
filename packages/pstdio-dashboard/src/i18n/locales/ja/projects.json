@@ -304,6 +304,7 @@
       },
       "detail": {
         "back": "拡張機能",
+        "sourcePath": "ソースフォルダー",
         "tabs": {
           "settings": "設定",
           "contributions": "コントリビューション"

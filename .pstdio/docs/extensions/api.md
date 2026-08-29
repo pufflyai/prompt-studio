@@ -95,6 +95,41 @@ trusted configuration because every entry names code the host may run.
 - `pst extensions dev <path>` still reinstalls on every edit. That is an explicit development loop,
   not automatic adoption.
 
+## Developing A Repo-Scoped Extension
+
+A repo-scoped extension installs into `<repo>/.pstdio/extensions/<install-name>`, which is often the
+folder you are already editing. Point `pst extensions dev` at that folder and it is validated where
+it is. Nothing is copied, replaced, or deleted, so untracked and ignored files in the folder survive
+a refresh.
+
+Every refresh republishes what the folder declares now. A command you removed stops being served,
+and a command you added is available at once. A source whose last refresh failed does not keep
+serving the commands of an earlier version. Extension status, the listed commands, and command
+execution always describe the same folder.
+
+When a refresh fails, the development loop prints the failure and then `no new runtime published for
+<name>`. The previous runtime keeps running, the watcher stays attached, and the next edit retries.
+
+## One Provider Per Extension Id
+
+A project runs one source per extension id. Command execution, webview metadata, and the extension
+panel all resolve an extension by that id, so a second enabled source claiming the same id would let
+them disagree.
+
+- Enabling a source takes the id from whatever held it before. That covers the extension panel,
+  `pst extensions add`, and `pst extensions dev`, where you say which copy you want. The source that
+  held the id becomes disabled and stays listed, so you can switch back.
+- Discovery never takes an id away. When a linked repository contributes a folder whose id another
+  enabled source already provides, that folder is registered **disabled**. Nothing that was running
+  stops running, and you pick the copy you want in the extension panel.
+
+This matters when two linked repositories carry the same extension, and when a repository carries a
+copy of an extension you already installed for your user. In both cases the copy you were already
+running keeps the id until you say otherwise.
+
+The extension detail view shows the source folder of each installed extension, which is what tells
+two copies of the same extension apart.
+
 ## Releasing A Breaking Contract Change
 
 The extension API version, the host, and the bundled extensions move together.

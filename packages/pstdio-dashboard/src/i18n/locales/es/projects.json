@@ -309,6 +309,7 @@
       },
       "detail": {
         "back": "Extensiones",
+        "sourcePath": "Carpeta de origen",
         "tabs": {
           "settings": "Configuración",
           "contributions": "Contribuciones"
