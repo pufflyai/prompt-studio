@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  realpathSync,
   renameSync,
   rmSync,
   statSync,
@@ -84,6 +85,10 @@ const validateInstallName = (installName: string) => {
     throw new Error(`Invalid extension install name: ${installName}`);
   }
 };
+
+// A repo-scoped source can already occupy its canonical install directory. Nothing has to move,
+// so that directory is validated where the developer keeps it instead of being staged and swapped.
+const isSameDirectory = (left: string, right: string) => realpathSync(left) === realpathSync(right);
 
 const assertCanCopy = (sourcePath: string, targetPath: string) => {
   const source = resolve(sourcePath);
@@ -292,13 +297,13 @@ export const installExtensionSource = async (input: InstallExtensionSourceInput)
     validateInstallName(installName);
 
     const targetPath = join(extensionsRoot, installName);
-    const sourceIsTarget = resolve(resolvedSource.path) === resolve(targetPath);
-    if (!sourceIsTarget || !input.existsOk) assertCanCopy(resolvedSource.path, targetPath);
-
     const targetExists = existsSync(targetPath);
-    const reuseExisting = targetExists && input.existsOk && (sourceIsTarget || !input.force);
+    const inPlace = targetExists && isSameDirectory(resolvedSource.path, targetPath);
+    if (!inPlace) assertCanCopy(resolvedSource.path, targetPath);
 
-    if (targetExists && !input.force && !input.existsOk) {
+    const reuseExisting = inPlace || (targetExists && input.existsOk === true && !input.force);
+
+    if (!inPlace && targetExists && !input.force && !input.existsOk) {
       throw new ExtensionAlreadyInstalledError(targetPath);
     }
 

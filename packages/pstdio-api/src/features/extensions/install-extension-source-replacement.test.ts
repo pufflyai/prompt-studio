@@ -90,7 +90,9 @@ describe("installExtensionSource replacement", () => {
     });
 
     expect(result.targetPath).toBe(source);
+    expect(result.check.errorCount).toBe(0);
     expect(readFileSync(join(source, "user-edit.txt"), "utf8")).toBe("preserve");
+    expect(existsSync(join(source, "node_modules", "example"))).toBe(true);
   });
 
   test("keeps the live install available while preparing its replacement", async () => {

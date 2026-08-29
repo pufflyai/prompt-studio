@@ -20,18 +20,15 @@ export const canonicalSourcePath = (sourcePath: string) => {
   }
 };
 
-const isWebviewBuildError = (value: unknown) =>
-  typeof value === "object" && value !== null && "code" in value && value.code === "extension_webview_build_failed";
-
 // Owns one module import per source version, shared by every project and every
 // concurrent read. Bun retains each import identity for the process lifetime, so this
 // cache is the runtime's memory invariant.
 export const createExtensionSourceCache = (input: { loadSources?: typeof loadExtensionSources }) => {
   const sourcesByPath = new Map<string, Promise<CachedSource | null>>();
-  // The last source that loaded cleanly, kept per source path. A source being rewritten
-  // is briefly not `loaded`, and publishing a snapshot without it would tell every
-  // consumer the extension is gone — tearing down the views it owns instead of
-  // refreshing them. An uninstalled source stops being enabled, so it is never retained.
+  // The last source that loaded cleanly, kept per source path. Replacing an install renames
+  // the directory away for an instant, and publishing a snapshot without it would tell every
+  // consumer the extension is gone — tearing down the views it owns instead of refreshing
+  // them. An uninstalled source stops being enabled, so it is never retained.
   const lastHealthyByPath = new Map<string, CachedSource>();
 
   const load = (installedSource: EnabledExtensionSource["installedSource"]) => {
@@ -67,16 +64,14 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
     collect: async (enabledSources: readonly EnabledExtensionSource[]) => {
       const cachedSources: CachedSource[] = [];
 
+      // What a source contributes is whatever it says on disk. A recorded error describes the
+      // last refresh, not a second version of the source, so it must never decide the contents
+      // of a snapshot: a source that no longer defines a command has to stop offering it, and a
+      // source whose webview build failed still owns the commands its code declares.
       for (const { installedSource } of enabledSources) {
-        const retained = lastHealthyByPath.get(canonicalSourcePath(installedSource.source_path));
-        if (installedSource.status !== "loaded") {
-          const keepPublishedRuntime =
-            installedSource.status === "pending" ||
-            (installedSource.status === "error" && isWebviewBuildError(installedSource.last_error_json));
-          if (keepPublishedRuntime && retained) cachedSources.push(retained);
-          continue;
-        }
         if (!existsSync(join(installedSource.source_path, "package.json"))) {
+          const retained = lastHealthyByPath.get(canonicalSourcePath(installedSource.source_path));
+          if (retained) cachedSources.push(retained);
           continue;
         }
 

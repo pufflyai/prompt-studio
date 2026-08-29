@@ -56,7 +56,6 @@ const sourceRow = (input: {
   id: string;
   extensionId: string;
   kind?: "local_path" | "git";
-  lastError?: Record<string, unknown> | null;
   path: string;
   status?: string;
 }) => ({
@@ -64,7 +63,6 @@ const sourceRow = (input: {
   installedSource: {
     id: input.id,
     extension_id: input.extensionId,
-    last_error_json: input.lastError ?? null,
     source_kind: input.kind ?? ("local_path" as const),
     source_path: input.path,
     status: input.status ?? "loaded",
@@ -162,7 +160,6 @@ describe("project extension runtime catalog with real sources", () => {
     expect(snapshot.runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain(
       "extension_overridden_by_local",
     );
-    expect(snapshot.enabledSources.map(({ installedSource }) => installedSource.id)).toEqual(["local-source"]);
   });
 
   test("skips enabled sources whose package manifest was removed", async () => {
@@ -187,24 +184,23 @@ describe("project extension runtime catalog with real sources", () => {
     );
   });
 
-  // Reloading a source leaves it briefly "pending". Dropping it from the
+  // Replacing an install renames the directory away for an instant. Dropping it from the
   // snapshot tells every consumer the extension is gone, and the views it owns are torn
   // down instead of refreshed.
-  test("keeps the last healthy contributions of a source that is reloading", async () => {
+  test("keeps the last healthy contributions while a source is being replaced", async () => {
     const root = createTempDir();
     const path = join(root, "reloading");
     writeRuntimeExtension(path, "healthy");
-    let status = "loaded";
 
     const catalog = createCatalog({
-      sources: () => [sourceRow({ id: "reloading-source", extensionId: "pstdio.hello", path, status })],
+      sources: () => [sourceRow({ id: "reloading-source", extensionId: "pstdio.hello", path })],
     });
 
     expect((await catalog.get("p1")).runtime.commands.map((command) => command.id)).toEqual([
       "pstdio.hello.command.healthy",
     ]);
 
-    status = "pending";
+    rmSync(join(path, "package.json"));
     catalog.invalidate({ sourcePath: path, reason: "source_changed" });
 
     expect((await catalog.get("p1")).runtime.commands.map((command) => command.id)).toEqual([
@@ -212,47 +208,28 @@ describe("project extension runtime catalog with real sources", () => {
     ]);
   });
 
-  test("removes last healthy contributions after a persistent source error", async () => {
+  // A source whose last refresh failed still has exactly one version on disk. Serving the
+  // commands it used to declare made the runtime and the repository disagree.
+  test("serves the commands a source declares now, not the ones a failed refresh recorded", async () => {
     const root = createTempDir();
-    const path = join(root, "failed");
-    writeRuntimeExtension(path, "healthy");
+    const path = join(root, "renamed-command");
+    writeRuntimeExtension(path, "getConfig");
     let status = "loaded";
 
     const catalog = createCatalog({
-      sources: () => [sourceRow({ id: "failed-source", extensionId: "pstdio.hello", path, status })],
+      sources: () => [sourceRow({ id: "renamed-source", extensionId: "pstdio.hello", path, status })],
     });
 
     expect((await catalog.get("p1")).runtime.commands.map((command) => command.id)).toEqual([
-      "pstdio.hello.command.healthy",
+      "pstdio.hello.command.getConfig",
     ]);
 
+    writeRuntimeExtension(path, "config.get");
     status = "error";
     catalog.invalidate({ sourcePath: path, reason: "source_changed" });
 
-    expect((await catalog.get("p1")).runtime.commands).toEqual([]);
-  });
-
-  test("keeps the published runtime when only its webview build failed", async () => {
-    const root = createTempDir();
-    const path = join(root, "failed-webview");
-    writeRuntimeExtension(path, "healthy");
-    let status = "loaded";
-    let lastError: Record<string, unknown> | null = null;
-
-    const catalog = createCatalog({
-      sources: () => [sourceRow({ id: "failed-webview-source", extensionId: "pstdio.hello", path, status, lastError })],
-    });
-
     expect((await catalog.get("p1")).runtime.commands.map((command) => command.id)).toEqual([
-      "pstdio.hello.command.healthy",
-    ]);
-
-    status = "error";
-    lastError = { code: "extension_webview_build_failed" };
-    catalog.invalidate({ sourcePath: path, reason: "webviews_built" });
-
-    expect((await catalog.get("p1")).runtime.commands.map((command) => command.id)).toEqual([
-      "pstdio.hello.command.healthy",
+      "pstdio.hello.command.config.get",
     ]);
   });
 

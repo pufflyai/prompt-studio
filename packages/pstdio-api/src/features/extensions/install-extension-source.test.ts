@@ -283,13 +283,34 @@ describe("installExtensionSource", () => {
     ).rejects.toThrow("No catalog entry for extension: missing-extension");
   });
 
-  test("refuses to copy an extension into itself", async () => {
-    const source = join(pstdioHome, "extensions", "self-copy");
+  test("validates a source that already occupies its install directory without touching it", async () => {
+    const source = join(pstdioHome, "extensions", "in-place");
+    makeExtension(source);
+    writeFileSync(join(source, "work-in-progress.txt"), "keep");
+
+    const result = await installExtensionSource({
+      source,
+      force: true,
+      skipInstall: true,
+      env: { PSTDIO_HOME: pstdioHome },
+      homedir: () => "/unused",
+    });
+
+    expect(result.targetPath).toBe(source);
+    expect(result.metadata.id).toBe("test.test");
+    expect(result.check.errorCount).toBe(0);
+    expect(readFileSync(join(source, "work-in-progress.txt"), "utf8")).toBe("keep");
+    expect(readFileSync(join(source, "package.json"), "utf8")).toContain("test");
+  });
+
+  test("refuses to copy an extension into a directory nested in itself", async () => {
+    const source = join(pstdioHome, "extensions", "self-copy", "inner");
     makeExtension(source);
 
     await expect(
       installExtensionSource({
         source,
+        installName: "self-copy",
         force: true,
         skipInstall: true,
         env: { PSTDIO_HOME: pstdioHome },

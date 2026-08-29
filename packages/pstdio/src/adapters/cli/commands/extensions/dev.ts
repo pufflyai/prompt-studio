@@ -179,6 +179,13 @@ const syncDevelopmentCycle = async (input: DevelopmentCycleInput) => {
   return { installed, instance };
 };
 
+// A refresh either publishes a new runtime or leaves the last one running. Saying which one
+// happened keeps a failed cycle from reading like a successful one that produced no output.
+const reportFailedRefresh = (deps: Pick<Deps, "error">, installName: string, detail: string) => {
+  deps.error(detail);
+  deps.error(`no new runtime published for ${installName}`);
+};
+
 const runDevelopmentCycle = async (input: DevelopmentCycleInput) => {
   if (input.stopped()) return;
 
@@ -187,13 +194,13 @@ const runDevelopmentCycle = async (input: DevelopmentCycleInput) => {
     if (!result) return;
     input.state.extensionId = result.installed.metadata.id;
     if (result.instance.status === "error" || result.instance.status === "missing") {
-      input.deps.error(formatHostFailure(input.state.extensionId, result.instance));
+      reportFailedRefresh(input.deps, input.installName, formatHostFailure(input.state.extensionId, result.instance));
       return;
     }
     reportSuccessfulRefresh(input.deps, input.state.extensionId, result.installed.check);
   } catch (error) {
     if (input.stopped() && input.signal.aborted) return;
-    input.deps.error(error instanceof Error ? error.message : String(error));
+    reportFailedRefresh(input.deps, input.installName, error instanceof Error ? error.message : String(error));
   }
 };
 

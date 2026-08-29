@@ -1,8 +1,7 @@
-import {
-  type createExtensionInstancesDBService,
-  type createExtensionUserDataDBService,
-  type createInstalledExtensionSourcesDBService,
-  legacyTemplateOwnerSourcePath,
+import type {
+  createExtensionInstancesDBService,
+  createExtensionUserDataDBService,
+  createInstalledExtensionSourcesDBService,
 } from "pstdio-db";
 import type {
   checkExtensionSource,
@@ -10,6 +9,7 @@ import type {
   LoadedExtension,
 } from "../features/extensions/extension-runtime";
 import type { EventBus } from "../features/sync/event-bus";
+import { takeExtensionIdOwnership } from "./extension-provider-ownership";
 import {
   type PruneProjectExtensionInstancesInput,
   pruneProjectExtensionInstances as pruneProjectExtensionInstancesImpl,
@@ -21,6 +21,11 @@ import {
   reportWebviewBuildFailure as reportWebviewBuildFailureImpl,
   reportWebviewBuildSuccess as reportWebviewBuildSuccessImpl,
 } from "./extension-reload";
+import {
+  findInstalledSourceForRegistration,
+  hasUnchangedInstalledSourceRegistration,
+  refreshPathForRegistration,
+} from "./extension-source-registration";
 import { uninstallProjectExtension as uninstallProjectExtensionImpl } from "./extension-uninstall";
 import type { createProjectService } from "./project-service";
 
@@ -79,79 +84,6 @@ type ExtensionServiceDeps = {
   checkExtension?: typeof checkExtensionSource;
   projectService: ReturnType<typeof createProjectService>;
 };
-
-type InstalledSourceRegistrationSnapshot = {
-  display_name: string;
-  extension_id: string;
-  last_error_json: unknown;
-  manifest_json: unknown;
-  source_hash: string | null;
-  source_kind: string;
-  source_path: string;
-  source_ref: string | null;
-  status: string;
-  version: string | null;
-};
-
-const isJsonObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const jsonObjectKeys = (value: Record<string, unknown>) =>
-  Object.keys(value)
-    .filter((key) => value[key] !== undefined)
-    .sort();
-
-const jsonEquals = (left: unknown, right: unknown): boolean => {
-  const normalizedLeft = left ?? null;
-  const normalizedRight = right ?? null;
-
-  if (normalizedLeft === normalizedRight) return true;
-
-  if (Array.isArray(normalizedLeft) || Array.isArray(normalizedRight)) {
-    if (!Array.isArray(normalizedLeft) || !Array.isArray(normalizedRight)) return false;
-    if (normalizedLeft.length !== normalizedRight.length) return false;
-    return normalizedLeft.every((item, index) => jsonEquals(item, normalizedRight[index]));
-  }
-
-  if (isJsonObject(normalizedLeft) || isJsonObject(normalizedRight)) {
-    if (!isJsonObject(normalizedLeft) || !isJsonObject(normalizedRight)) return false;
-    const leftKeys = jsonObjectKeys(normalizedLeft);
-    const rightKeys = jsonObjectKeys(normalizedRight);
-    if (leftKeys.length !== rightKeys.length) return false;
-    return leftKeys.every(
-      (key, index) => key === rightKeys[index] && jsonEquals(normalizedLeft[key], normalizedRight[key]),
-    );
-  }
-
-  return false;
-};
-
-const hasUnchangedInstalledSourceRegistration = (
-  existing: InstalledSourceRegistrationSnapshot,
-  values: InstalledSourceRegistrationSnapshot,
-) =>
-  existing.display_name === values.display_name &&
-  existing.extension_id === values.extension_id &&
-  jsonEquals(existing.manifest_json, values.manifest_json) &&
-  existing.source_hash === values.source_hash &&
-  existing.source_kind === values.source_kind &&
-  existing.source_path === values.source_path &&
-  existing.source_ref === values.source_ref &&
-  existing.status === values.status &&
-  existing.version === values.version &&
-  jsonEquals(existing.last_error_json, values.last_error_json);
-
-const findInstalledSourceForRegistration = async (
-  service: ExtensionServiceDeps["installedExtensionSourcesService"],
-  input: RegisterInstalledSourceInput,
-) => {
-  const existing = await service.getBySourcePath(input.sourcePath);
-  if (existing) return existing;
-  return service.getBySourcePath(legacyTemplateOwnerSourcePath(input.extensionId));
-};
-
-const refreshPathForRegistration = (existingPath: string, input: RegisterInstalledSourceInput) =>
-  existingPath === legacyTemplateOwnerSourcePath(input.extensionId) ? undefined : input.sourcePath;
 
 export const createExtensionService = (deps: ExtensionServiceDeps) => {
   const emitInstalledSource = (source: unknown) => {
@@ -291,6 +223,15 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     if (!instance) throw new Error(`Failed to enable extension: ${input.name}`);
 
     if (existing) emitExtensionInstance(instance);
+
+    await takeExtensionIdOwnership(
+      { extensionInstancesService: deps.extensionInstancesService, emitExtensionInstance },
+      {
+        extensionId: installedSource.extension_id,
+        installedSourceId: installedSource.id,
+        projectInstances: await listProjectInstances(input.projectId),
+      },
+    );
 
     return { installedSource, instance };
   };

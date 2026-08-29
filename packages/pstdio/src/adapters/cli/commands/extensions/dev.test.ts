@@ -289,6 +289,27 @@ describe("extensions dev", () => {
     await running;
   });
 
+  test("keeps watching after a failed first refresh and reports that no runtime was published", async () => {
+    const target = makeDeps();
+    target.deps.syncExtensionDevelopmentSource = mock()
+      .mockRejectedValueOnce(new Error("Extension validation failed"))
+      .mockResolvedValueOnce(installed);
+    const handler = createHandler(target.deps as never);
+    const running = handler(argv);
+    await waitFor(() => target.logs.includes("watching /repo/dev-test"), "Watcher did not start.");
+
+    expect(target.errors).toContain("Extension validation failed");
+    expect(target.errors).toContain("no new runtime published for dev-test");
+    expect(target.refreshDevelopmentExtension).toHaveBeenCalledTimes(0);
+
+    target.setSourceHash("source-b");
+    await target.reload();
+    expect(target.logs).toContain("validated pstdio.dev-test");
+
+    target.signals.emit("SIGINT");
+    await running;
+  });
+
   test("retries unchanged inputs after a transient sync failure", async () => {
     const target = makeDeps();
     target.deps.syncExtensionDevelopmentSource = mock()

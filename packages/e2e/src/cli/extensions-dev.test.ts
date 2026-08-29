@@ -114,6 +114,11 @@ describe("extensions dev", () => {
       mkdirSync(extensionRoot, { recursive: true });
       writeFileSync(join(repo, ".pstdio", "config.json"), JSON.stringify({ project_id: project.id }));
       writeExtension(extensionRoot, { command: true, scope: "repo" });
+      // Only a copy-and-replace refresh drops an ignored working file, so this proves the
+      // developer's own directory was validated where it is.
+      writeFileSync(join(extensionRoot, ".gitignore"), "scratch/\n");
+      mkdirSync(join(extensionRoot, "scratch"), { recursive: true });
+      writeFileSync(join(extensionRoot, "scratch", "keep.txt"), "keep");
       const dev = startDev(repo, extensionRoot);
 
       try {
@@ -127,6 +132,7 @@ describe("extensions dev", () => {
           status: "loaded",
         });
         expect(dev.stderr()).not.toContain("Refusing to copy an extension into itself");
+        expect(readFileSync(join(extensionRoot, "scratch", "keep.txt"), "utf8")).toBe("keep");
         expect(await stop(dev.child)).toBe(0);
       } finally {
         await stop(dev.child);
