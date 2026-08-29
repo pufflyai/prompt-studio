@@ -184,6 +184,17 @@ describe("createClient", () => {
     expect(calls[0]!.method).toBe("GET");
   });
 
+  it("client.extensions.upgradeProject calls the host upgrade endpoint", async () => {
+    const { fetchFn, calls } = trackingFetch();
+    const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });
+
+    await client.extensions.upgradeProject("project-1", "instance/one");
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]!.url).toBe("http://test:1234/v1/projects/project-1/extensions/instance%2Fone/upgrade");
+    expect(calls[0]!.method).toBe("POST");
+  });
+
   it("client.skills.updatePreferences calls PUT /v1/projects/:id/skills/:name", async () => {
     const { fetchFn, calls } = trackingFetch();
     const client = createClient({ baseUrl: "http://test:1234", fetch: fetchFn });

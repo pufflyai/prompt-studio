@@ -21,7 +21,7 @@ Run `pst --help`, `pst <group> --help`, or `pst <group> <command> --help` for th
 | `pst agents` | Configure agents and install skills. |
 | `pst sessions` | Run and inspect agent sessions. |
 | `pst workspaces` | Manage standalone worktree-backed workspaces. |
-| `pst extensions` | Install, develop, and validate extensions. |
+| `pst extensions` | Install, update, develop, and validate extensions. |
 | `pst notifications` | Create and manage project notifications. |
 | `pst inbox` | List pending project notifications. |
 | `pst auth tokens` | Issue, list, and revoke scoped machine tokens. |

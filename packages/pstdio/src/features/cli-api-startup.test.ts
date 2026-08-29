@@ -13,5 +13,6 @@ describe("shouldEnsureApiForCommand", () => {
 
   test("keeps API startup for regular API-backed commands", () => {
     expect(shouldEnsureApiForCommand({ _: ["projects", "list"] })).toBe(true);
+    expect(shouldEnsureApiForCommand({ _: ["extensions", "update"] })).toBe(true);
   });
 });

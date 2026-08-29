@@ -79,6 +79,9 @@ Installs and updates are explicit. Source that appears in the extensions root is
 - A catalog extension shows **Upgrade** when its recorded commit differs from the catalog release.
   Upgrade fetches that origin, validates it in staging, replaces the installed source, and adopts it.
   Healthy local-path extensions stay under local control.
+- `pst extensions update [name]` runs that same host-owned upgrade path for the linked project. When
+  `name` is omitted, it upgrades every instance the host marks as eligible. The command does not
+  replace healthy local sources or change whether an extension is enabled.
 - Catalog entries marked `default` are installed for new projects. Catalog membership alone does not
   make an extension a default. The packaged catalog defaults to the harnesses, base themes, and
   Prompt Studio skills.

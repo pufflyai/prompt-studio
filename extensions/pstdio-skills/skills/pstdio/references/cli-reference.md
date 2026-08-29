@@ -65,9 +65,10 @@ Core workspace creation is standalone. Planner creates ticket-linked workspaces 
 pst extensions add <source> [--name <name>] [--force] [--skip-install] [--branch <branch>]
 pst extensions check [--json]
 pst extensions dev <source> [--name <name>]
+pst extensions update [name] [--project-id <id>]
 ```
 
-`add` installs an extension by catalog name or local folder. Use `--branch` only when developing against a branch. `dev` watches a local source, validates it, installs dependencies when needed, and refreshes the enabled project instance.
+`add` installs an extension by catalog name or local folder. Use `--branch` only when developing against a branch. `dev` watches a local source, validates it, installs dependencies when needed, and refreshes the enabled project instance. `update` asks the host to upgrade eligible project instances to the release paired with that host. It leaves local sources and enablement state alone.
 
 ## Notifications
 

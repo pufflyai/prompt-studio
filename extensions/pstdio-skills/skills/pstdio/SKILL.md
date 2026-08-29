@@ -119,7 +119,7 @@ pst agents install-skills <id>  # Install missing project skills
 
 Extensions add commands, hooks, schedules, templates, skills, agent harnesses, workspace types, and dashboard UI.
 
-Use `pst extensions dev <path>` while editing a local extension. Run `pst extensions check` to validate installed user and repository extensions. Run `pst <extension-name> --help` to inspect an enabled extension's commands.
+Use `pst extensions dev <path>` while editing a local extension. Run `pst extensions check` to validate installed user and repository extensions. Run `pst extensions update [name]` to apply host-managed updates to the linked project. Run `pst <extension-name> --help` to inspect an enabled extension's commands.
 
 ## References
 

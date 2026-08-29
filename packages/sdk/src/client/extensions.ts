@@ -10,6 +10,7 @@ import type {
   ListExtensionCommandsResponse,
   ListExtensionConnectionsResponse,
   ListProjectExtensionsResponse,
+  UpgradeProjectExtensionResponse,
 } from "pstdio-api-contracts";
 import type { RequestFn } from "./request";
 
@@ -22,6 +23,7 @@ export type ExtensionClient = {
   listAppearance(projectId: string): Promise<ListExtensionAppearanceResponse>;
   listCommands(projectId: string): Promise<ListExtensionCommandsResponse>;
   listProject(projectId: string): Promise<ListProjectExtensionsResponse>;
+  upgradeProject(projectId: string, instanceId: string): Promise<UpgradeProjectExtensionResponse>;
   listConnections(projectId: string): Promise<ListExtensionConnectionsResponse>;
   configureConnection(
     projectId: string,
@@ -44,6 +46,8 @@ export const createExtensionClient = (request: RequestFn): ExtensionClient => ({
   listAppearance: (projectId) => request(`/v1/projects/${projectId}/extensions/appearance`),
   listCommands: (projectId) => request(`/v1/projects/${projectId}/extensions/commands`),
   listProject: (projectId) => request(`/v1/projects/${projectId}/extensions`),
+  upgradeProject: (projectId, instanceId) =>
+    request(`/v1/projects/${projectId}/extensions/${encodeURIComponent(instanceId)}/upgrade`, { method: "POST" }),
   listConnections: (projectId) => request(`/v1/projects/${projectId}/extension-connections`),
   configureConnection: (projectId, extensionId, connectionId, body) =>
     request(

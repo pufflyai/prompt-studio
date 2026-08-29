@@ -32,11 +32,14 @@ beforeAll(() => {
 }, BUILD_TIMEOUT);
 
 describe("packaged pstdio — self-hosted serve", () => {
-  test("includes the extension development command", () => {
-    const result = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "dev", "--help"], { encoding: "utf8" });
+  test("includes the extension development and update commands", () => {
+    const devResult = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "dev", "--help"], { encoding: "utf8" });
+    const updateResult = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "update", "--help"], { encoding: "utf8" });
 
-    expect(result.status).toBe(0);
-    expect(result.stdout).toContain("extensions dev <source>");
+    expect(devResult.status).toBe(0);
+    expect(devResult.stdout).toContain("extensions dev <source>");
+    expect(updateResult.status).toBe(0);
+    expect(updateResult.stdout).toContain("extensions update [name]");
   });
 
   test(
