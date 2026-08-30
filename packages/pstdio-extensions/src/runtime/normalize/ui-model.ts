@@ -183,6 +183,23 @@ const registerNavigationItems = (ext: NormalizedExtension, source: LoadedExtensi
       action: Exclude<NavigationItemContribution["action"], { kind: "compound" }>,
     ): Exclude<NavigationItemContribution["action"], { kind: "compound" }> => {
       if (action.kind === "view") return { ...action, view: normalizeRef(ext, action.view) };
+      if (action.kind === "page") {
+        const normalizePageTarget = (target: typeof action): typeof action => ({
+          ...target,
+          page: normalizeRef(ext, target.page),
+          ...(target.parent ? { parent: normalizePageTarget(target.parent) } : {}),
+        });
+        return normalizePageTarget(action);
+      }
+      if (action.kind === "panel") {
+        return {
+          ...action,
+          panel:
+            action.panel.kind === "page-slot"
+              ? { ...action.panel, page: normalizeRef(ext, action.panel.page) }
+              : normalizeRef(ext, action.panel),
+        };
+      }
       if (action.kind === "command" && isRecord(action.target.command) && action.target.command.kind === "command") {
         return {
           ...action,

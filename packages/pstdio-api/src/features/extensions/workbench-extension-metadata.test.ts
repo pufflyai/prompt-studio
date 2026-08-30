@@ -25,7 +25,7 @@ const defineCommand = <Definition extends { id: string }>(definition: Definition
   defineContribution("command", definition);
 const defineKeybinding = <Definition extends { id: string }>(definition: Definition) =>
   defineContribution("keybinding", definition);
-const defineMode = <Definition extends { id: string }>(definition: Definition) =>
+const defineMode = <const Definition extends { id: string }>(definition: Definition) =>
   defineContribution("mode", definition);
 const definePlacement = <Definition extends { id: string }>(definition: Definition) =>
   defineContribution("placement", definition);
@@ -82,7 +82,7 @@ const webviewRuntime = (entryPath: string, capabilities?: WebviewCapabilityDecla
 
 describe("buildWorkbenchExtensionMetadata", () => {
   test("publishes extension identity and typed mode identity", () => {
-    const mode = defineMode({ id: "review", label: "Review", icon: "message-circle" });
+    const mode = defineMode({ id: "review", label: "Review", icon: "message-circle", regions: ["main"] });
     const metadata = buildWorkbenchExtensionMetadata({
       installNamesByExtensionId: new Map(),
       runtime: normalizeExtensionSources([source(defineExtension({ modes: [mode] }))]),
@@ -96,6 +96,7 @@ describe("buildWorkbenchExtensionMetadata", () => {
       extensionId: "pstdio.lab",
       label: "Review",
       icon: "message-circle",
+      regions: ["main"],
     });
   });
 

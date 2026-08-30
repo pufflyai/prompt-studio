@@ -23,8 +23,10 @@ const placementMetadata = {
       localId: "placement",
       extensionId,
       label: "Panel placement",
+      regions: [...placementRegions],
     },
   ],
+  pages: [],
   views: [
     {
       id: placementPanelId,

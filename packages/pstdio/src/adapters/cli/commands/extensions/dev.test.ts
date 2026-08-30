@@ -37,6 +37,7 @@ const makeCheck = (errorCount = 0): ExtensionsCheckResponse => ({
   menuContributions: [],
   commandPaletteContributions: [],
   modes: [],
+  pages: [],
   views: [
     {
       id: "pstdio.dev-test.view.overview",

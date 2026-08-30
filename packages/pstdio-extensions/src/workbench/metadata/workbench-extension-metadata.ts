@@ -85,6 +85,22 @@ const normalizeWhen = (when: WhenExpression | undefined, extensionId: string): M
 
 const normalizeTarget = (target: NavigationTarget, extensionId: string): MetadataNavigationTarget => {
   if (target.kind === "view") return { ...target, view: normalizedRef(target.view, extensionId) };
+  if (target.kind === "page") {
+    return {
+      ...target,
+      page: normalizedRef(target.page, extensionId),
+      parent: target.parent ? (normalizeTarget(target.parent, extensionId) as typeof target.parent) : undefined,
+    } as MetadataNavigationTarget;
+  }
+  if (target.kind === "panel") {
+    return {
+      ...target,
+      panel:
+        target.panel.kind === "page-slot"
+          ? { ...target.panel, page: normalizedRef(target.panel.page, extensionId) }
+          : normalizedRef(target.panel, extensionId),
+    } as MetadataNavigationTarget;
+  }
   if (target.kind === "command") {
     return { ...target, target: { ...target.target, command: commandRef(target.target.command, extensionId) } };
   }
@@ -163,6 +179,27 @@ export const createWorkbenchExtensionMetadata = (
     extensionId: mode.extensionId,
     label: mode.contribution.label,
     icon: mode.contribution.icon,
+    regions: [...mode.contribution.regions],
+  })),
+  pages: input.runtime.pages.map((page) => ({
+    id: page.id,
+    localId: page.localId,
+    extensionId: page.extensionId,
+    title: page.contribution.title,
+    icon: page.contribution.icon,
+    path: page.contribution.path,
+    mode: normalizedRef(page.contribution.mode, page.extensionId),
+    parent: page.contribution.parent ? normalizedRef(page.contribution.parent, page.extensionId) : undefined,
+    slots: page.contribution.slots.map((slot) => ({
+      ...slot,
+      view: slot.view ? normalizedRef(slot.view, page.extensionId) : undefined,
+      binding: slot.binding
+        ? {
+            kind: normalizedRef(slot.binding.kind, page.extensionId),
+            view: normalizedRef(slot.binding.view, page.extensionId),
+          }
+        : undefined,
+    })),
   })),
   views: compact(input.runtime.views.map((view) => toViewRecord(input, view))),
   viewMenus: input.runtime.viewMenus.map((menu) => ({

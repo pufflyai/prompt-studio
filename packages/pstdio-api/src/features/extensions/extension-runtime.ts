@@ -61,6 +61,7 @@ const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckRes
   menuContributions: [],
   commandPaletteContributions: [],
   modes: [],
+  pages: [],
   views: [],
   viewMenus: [],
   placements: [],

@@ -39,8 +39,10 @@ const metadata = {
       localId: "review",
       extensionId: "pstdio.lab",
       label: "Review",
+      regions: ["main"],
     },
   ],
+  pages: [],
   views: [
     {
       id: "pstdio.lab.view.tree",

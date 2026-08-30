@@ -13,6 +13,7 @@ import {
   defineExtension,
   defineMode,
   defineNavigationItem,
+  definePage,
   definePlacement,
   defineResourceHierarchyProvider,
   defineResourceKind,
@@ -205,7 +206,25 @@ const ticketInsights = defineView({
     query: async () => ({ values: {} }),
   },
 });
-const reviewMode = defineMode({ id: "review", label: "Review" });
+const reviewMode = defineMode({ id: "review", label: "Review", regions: ["main", "side"] });
+// @ts-expect-error modes must declare the regions available to their pages
+defineMode({ id: "missing-regions", label: "Missing regions" });
+const ticketsPage = definePage({
+  id: "tickets",
+  title: "Tickets",
+  path: "tickets",
+  mode: reviewMode.ref,
+  slots: [
+    { id: "ticket", role: "primary", region: "main", binding: { kind: ticketKind.ref, view: ticketEditor.ref } },
+    { id: "insights", role: "auxiliary", region: "side", view: ticketInsights.ref },
+  ],
+});
+
+const insightsPanelTarget: NavigationTarget = { kind: "panel", panel: ticketsPage.panels.insights };
+void insightsPanelTarget;
+
+// @ts-expect-error primary page slots are not addressable panel targets
+void ticketsPage.panels.ticket;
 
 const compositionExtension = defineExtension({
   resourceKinds: [ticketKind],
@@ -219,6 +238,7 @@ const compositionExtension = defineExtension({
     }),
   ],
   modes: [reviewMode],
+  pages: [ticketsPage],
   placements: [
     definePlacement({
       id: "editor",
@@ -248,7 +268,8 @@ const compositionExtension = defineExtension({
 void compositionExtension;
 
 const navigationTarget: NavigationTarget = {
-  kind: "resource",
+  kind: "page",
+  page: ticketsPage.ref,
   resource: { type: "ticket", id: "PS-1" },
 };
 void navigationTarget;
@@ -257,7 +278,7 @@ definePlacement({
   id: "invalid",
   mode: reviewMode.ref,
   item: { kind: "view", view: ticketEditor.ref },
-  // @ts-expect-error mode recipes accept only the four docked regions
+  // @ts-expect-error mode recipes accept only declared docked regions
   region: "overlay",
 });
 

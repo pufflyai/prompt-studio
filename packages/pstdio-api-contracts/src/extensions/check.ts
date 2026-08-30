@@ -19,6 +19,7 @@ const checkWorkbenchMetadataSchema = workbenchExtensionMetadataSchema.pick({
   menuContributions: true,
   commandPaletteContributions: true,
   modes: true,
+  pages: true,
   views: true,
   viewMenus: true,
   placements: true,

@@ -34,7 +34,7 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
 });
 
 const alpha4Definition = () => {
-  const mode = defineMode({ id: "review", label: "Review" });
+  const mode = defineMode({ id: "review", label: "Review", regions: ["main"] });
   const view = defineView({
     id: "tickets",
     title: "Tickets",

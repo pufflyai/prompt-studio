@@ -17,7 +17,7 @@ const view = {
 
 const createMetadata = (region: "main" | "side", includeView = true): DashboardExtensionMetadata => ({
   ...metadata,
-  modes: [{ id: `${extensionId}.mode.lab`, localId: "lab", extensionId, label: "Lab" }],
+  modes: [{ id: `${extensionId}.mode.lab`, localId: "lab", extensionId, label: "Lab", regions: [region] }],
   views: includeView ? [view] : [],
   placements: includeView
     ? [

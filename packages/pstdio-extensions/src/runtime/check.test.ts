@@ -4,11 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   defineExtension,
+  definePage,
   defineResourceKind,
   defineResourceView,
   defineSettingsSection,
   defineView,
   resourceSlotRef,
+  workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { checkExtensions, formatCheckReport } from "./check";
@@ -288,6 +290,15 @@ describe("checkExtensionHostCompatibility", () => {
         },
         definition: defineExtension({
           views: [rows],
+          pages: [
+            definePage({
+              id: "tickets",
+              title: "Tickets",
+              path: "tickets",
+              mode: workbenchModes.project,
+              slots: [{ id: "content", role: "primary", region: "main", view: rows.ref }],
+            }),
+          ],
           resourceKinds: [ticket],
           resourceViews: [
             defineResourceView({
@@ -315,6 +326,7 @@ describe("checkExtensionHostCompatibility", () => {
 
     expect(result.status).toBe("verified");
     expect(result.diagnostics.map((diagnostic) => diagnostic.metadata?.missingCapability)).toEqual([
+      "page.v1",
       "view.data-table.v1",
       "settings.section.v1",
       "resource-view.v1",

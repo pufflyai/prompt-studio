@@ -18,6 +18,7 @@ const check = (overrides: Partial<ExtensionsCheckResponse> = {}): ExtensionsChec
   menuContributions: [],
   commandPaletteContributions: [],
   modes: [],
+  pages: [],
   views: [],
   viewMenus: [],
   placements: [],

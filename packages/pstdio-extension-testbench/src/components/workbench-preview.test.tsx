@@ -17,6 +17,7 @@ const baseBench = {
     extensions: [{ id: "lab", name: "lab", displayName: "Lab", sourcePath: "" }],
     menuContributions: [],
     modes: [],
+    pages: [],
     views: [],
     viewMenus: [],
     placements: [],

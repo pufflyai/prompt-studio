@@ -24,6 +24,7 @@ import type {
 import type { EventRef } from "./events";
 import type { HarnessProvider } from "./harness";
 import type { JsonObject, MaybePromise, Struct } from "./json";
+import type { PageContribution } from "./pages";
 import type { ParamObjectSchema, ParamsOf } from "./params";
 import type { PackageAssetDescriptor } from "./resources";
 import type { StatusBarItemContribution, StatusContribution } from "./statuses";
@@ -37,7 +38,7 @@ import type {
 /** Current host extension API version. `engines.pstdio` in package.json is a semver range checked against this. */
 // While the API is unstable the version carries an `-alpha.N` suffix and extensions must
 // declare it exactly. Bump the alpha in the same change that breaks an extension contract.
-export const EXTENSION_API_VERSION = "1.0.0-alpha.6";
+export const EXTENSION_API_VERSION = "1.0.0-alpha.7";
 
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema
   ? ParamsOf<TSchema>
@@ -236,6 +237,7 @@ export interface UiContributions {
   statusBarItems?: readonly StatusBarItemContribution[];
   statuses?: readonly StatusContribution[];
   modes?: readonly ModeContribution[];
+  pages?: readonly PageContribution[];
   resourceKinds?: readonly ResourceKindDefinition[];
   resourceViews?: readonly ResourceViewContribution[];
   activityItems?: readonly ActivityItemContribution[];

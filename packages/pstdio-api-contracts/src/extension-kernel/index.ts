@@ -10,7 +10,12 @@
 
 export {
   workbenchCommands,
+  workbenchModeDefinitions,
   workbenchModes,
+  workbenchPageDefinitions,
+  workbenchPages,
+  workbenchPanelDefinitions,
+  workbenchPanels,
   workbenchResourceKindDefinitions,
   workbenchResourceKinds,
   workbenchSlots,

@@ -109,6 +109,7 @@ export const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCh
   target.menuContributions.push(...source.menuContributions);
   target.commandPaletteContributions?.push(...(source.commandPaletteContributions ?? []));
   mergeModes(target, source);
+  target.pages.push(...source.pages);
   target.views.push(...source.views);
   target.viewMenus.push(...source.viewMenus);
   target.placements.push(...source.placements);

@@ -1,4 +1,4 @@
-export const dockedCompositionRegions = ["sidenav", "main", "secondary", "side"] as const;
+export const dockedCompositionRegions = ["sidenav-header", "sidenav", "main", "secondary", "side"] as const;
 export type DockedCompositionRegion = (typeof dockedCompositionRegions)[number];
 
 export interface CompositionSlotDefinition {

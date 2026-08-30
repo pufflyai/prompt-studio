@@ -24,7 +24,7 @@ const wrap = (name: string, definition: LoadedExtensionSource["definition"]): Lo
     version: "1.0.0",
     publisher: "pstdio",
     main: "./extension.ts",
-    enginesPstdio: "1.0.0-alpha.6",
+    enginesPstdio: "1.0.0-alpha.7",
   },
   definition,
 });
@@ -36,9 +36,9 @@ describe("extension convention diagnostics", () => {
         "lab",
         defineExtension({
           modes: [
-            defineMode({ id: "good", label: "Good", icon: "flask-conical" }),
-            defineMode({ id: "also-good", label: "Also good", icon: "FileText" }),
-            defineMode({ id: "bad", label: "Bad", icon: "definitely-not-an-icon" }),
+            defineMode({ id: "good", label: "Good", icon: "flask-conical", regions: ["main"] }),
+            defineMode({ id: "also-good", label: "Also good", icon: "FileText", regions: ["main"] }),
+            defineMode({ id: "bad", label: "Bad", icon: "definitely-not-an-icon", regions: ["main"] }),
           ],
         }),
       ),

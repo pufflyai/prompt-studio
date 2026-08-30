@@ -7,7 +7,16 @@ const metadata = () => ({
   extensions: [{ id: "pstdio.lab", name: "lab", displayName: "Lab", sourcePath: "/extensions/lab" }],
   commands: [{ id: "pstdio.lab.command.review", extensionId: "pstdio.lab", title: "Review" }],
   menuContributions: [],
-  modes: [{ id: "pstdio.lab.mode.project", localId: "project", extensionId: "pstdio.lab", label: "Lab" }],
+  modes: [
+    {
+      id: "pstdio.lab.mode.project",
+      localId: "project",
+      extensionId: "pstdio.lab",
+      label: "Lab",
+      regions: ["main"],
+    },
+  ],
+  pages: [],
   views: [
     {
       id: "pstdio.lab.view.files",
@@ -72,6 +81,48 @@ describe("workbench extension metadata", () => {
     const parsed = workbenchExtensionMetadataSchema.strict().safeParse(legacy);
 
     expect(parsed.success).toBe(false);
+  });
+
+  test("keeps routed pages and owner-scoped panels as different targets", () => {
+    const page = ref("page", "tickets");
+    const parsed = workbenchExtensionMetadataSchema.parse({
+      ...metadata(),
+      pages: [
+        {
+          id: "pstdio.lab.page.tickets",
+          localId: "tickets",
+          extensionId: "pstdio.lab",
+          title: "Tickets",
+          path: "tickets",
+          mode: ref("mode", "project"),
+          slots: [
+            { id: "list", role: "primary", region: "main", view: ref("view", "files") },
+            { id: "tools", role: "auxiliary", region: "side", view: ref("view", "files") },
+          ],
+        },
+      ],
+      navigationItems: [
+        {
+          id: "pstdio.lab.navigation-item.tickets",
+          extensionId: "pstdio.lab",
+          slot: ref("navigation-item", "project"),
+          label: "Tickets",
+          action: {
+            kind: "compound",
+            targets: [
+              { kind: "page", page },
+              { kind: "panel", panel: { kind: "page-slot", page, id: "tools" } },
+            ],
+          },
+        },
+      ],
+    });
+
+    expect(parsed.pages[0]?.slots).toHaveLength(2);
+    expect(parsed.navigationItems[0]?.action).toMatchObject({
+      kind: "compound",
+      targets: [{ kind: "page" }, { kind: "panel" }],
+    });
   });
 
   test("carries ordered template types and their provider commands", () => {

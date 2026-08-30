@@ -4,6 +4,7 @@ import {
   defineExtension,
   defineMode,
   defineNavigationItem,
+  definePage,
   definePlacement,
   defineResourceKind,
   defineResourceView,
@@ -13,6 +14,7 @@ import {
   resourceSlotRef,
   workbenchCommands,
   workbenchModes,
+  workbenchPages,
   workbenchSlots,
 } from "./index";
 
@@ -29,13 +31,23 @@ describe("extension contribution definitions", () => {
       item: { kind: "view", view: view.ref },
       region: "main",
     });
+    const page = definePage({
+      id: "tickets",
+      title: "Tickets",
+      path: "tickets",
+      mode: workbenchModes.project,
+      slots: [
+        { id: "list", role: "primary", region: "main", view: view.ref },
+        { id: "details", role: "auxiliary", region: "side", view: view.ref },
+      ],
+    });
     const navigationItem = defineNavigationItem({
       id: "tickets",
       slot: workbenchSlots.projectNavigation,
       label: "Tickets",
       action: { kind: "view", view: view.ref },
     });
-    const mode = defineMode({ id: "review", label: "Review" });
+    const mode = defineMode({ id: "review", label: "Review", regions: ["main"] });
     const command = defineCommand({ id: "tickets.open", title: "Open ticket", run: async () => undefined });
     const resourceKind = defineResourceKind({
       id: "ticket",
@@ -52,6 +64,12 @@ describe("extension contribution definitions", () => {
 
     expect(view.ref).toEqual({ kind: "view", id: "tickets" });
     expect(placement.ref).toEqual({ kind: "placement", id: "tickets.main" });
+    expect(page.ref).toEqual({ kind: "page", id: "tickets" });
+    expect(page.panels.details).toEqual({
+      kind: "page-slot",
+      page: { kind: "page", id: "tickets" },
+      id: "details",
+    });
     expect(navigationItem.ref).toEqual({ kind: "navigation-item", id: "tickets" });
     expect(mode.ref).toEqual({ kind: "mode", id: "review" });
     expect(command.ref).toEqual({ kind: "command", id: "tickets.open" });
@@ -66,6 +84,7 @@ describe("extension contribution definitions", () => {
       kind: "command",
       id: "workbench.action.switchMode",
     });
+    expect(workbenchPages.start).toEqual({ extensionId: "pstdio", kind: "page", id: "start" });
   });
 
   test("keeps contribution registries as arrays and dictionaries as records", () => {

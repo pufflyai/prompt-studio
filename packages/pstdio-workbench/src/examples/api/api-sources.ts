@@ -85,8 +85,10 @@ const metadata = {
       localId: "outline",
       extensionId,
       label: "Outline",
+      regions: ["main"],
     },
   ],
+  pages: [],
   views: [
     {
       id: extensionId + ".view.outline",

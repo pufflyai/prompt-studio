@@ -1,7 +1,8 @@
 import type { CommandTarget } from "./commands";
-import type { ViewRef } from "./contribution-identity";
+import type { PageRef, ViewRef } from "./contribution-identity";
 import type { FileRendererSectionTarget } from "./file-renderer";
 import type { JsonObject } from "./json";
+import type { PageOpenIntent, PanelRef } from "./pages";
 import type { ResourceRef } from "./resources";
 
 export type ExtensionPlacementStrategy = "persistent" | "preview" | "replace-active" | "replace-invoking";
@@ -28,6 +29,22 @@ export interface NavigationTargetView {
   input?: ViewOpenIntent;
 }
 
+export interface NavigationTargetPage {
+  kind: "page";
+  page: PageRef;
+  resource?: ResourceRef;
+  section?: FileRendererSectionTarget;
+  open?: PageOpenIntent;
+  parent?: NavigationTargetPage;
+}
+
+export interface NavigationTargetPanel {
+  kind: "panel";
+  panel: PanelRef;
+  resource?: ResourceRef;
+  open?: PageOpenIntent;
+}
+
 export interface NavigationTargetCommand {
   kind: "command";
   target: CommandTarget<JsonObject>;
@@ -39,6 +56,8 @@ export interface NavigationTargetHref {
 }
 
 export type NavigationTargetItem =
+  | NavigationTargetPage
+  | NavigationTargetPanel
   | NavigationTargetResource
   | NavigationTargetView
   | NavigationTargetCommand

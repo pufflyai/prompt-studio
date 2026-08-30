@@ -16,9 +16,10 @@ import {
 import { workbenchExtensionConnectionRecordSchema } from "./connections";
 import { extensionControlsRendererRecordSchema } from "./controls-renderer";
 import { extensionDataTableRendererRecordSchema } from "./data-table-renderer";
-import { extensionResourceRefSchema } from "./execute";
 import { extensionCommandPaletteResourceRecordSchema, extensionKanbanRendererRecordSchema } from "./kanban-renderer";
 import { extensionKeybindingRecordSchema } from "./keybindings";
+import { navigationTargetSchema } from "./navigation-target-metadata";
+import { workbenchExtensionPageRecordSchema } from "./page-metadata";
 import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } from "./renderers";
 import { extensionSettingDefinitionRecordSchema, extensionSettingsSectionRecordSchema } from "./settings";
 
@@ -40,41 +41,6 @@ const normalizedWhenSchema = z.object({
   resourceType: z.array(resourceKindRefSchema).optional(),
   metadata: jsonObjectSchema.optional(),
 });
-
-const commandTargetSchema = z.object({ command: commandRefSchema, params: jsonObjectSchema.optional() });
-
-const navigationTargetItemSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("view"),
-    view: viewRefSchema,
-    input: z
-      .object({ strategy: z.enum(["persistent", "preview", "replace-active", "replace-invoking"]).optional() })
-      .optional(),
-  }),
-  z.object({
-    kind: z.literal("resource"),
-    resource: extensionResourceRefSchema,
-    input: z.object({ strategy: z.enum(["persistent", "replace-active"]).optional() }).optional(),
-    section: z
-      .object({
-        anchors: z.array(
-          z.object({
-            id: z.string(),
-            heading: z.string(),
-            occurrence: z.number().int().nonnegative().optional(),
-          }),
-        ),
-      })
-      .optional(),
-  }),
-  z.object({ kind: z.literal("command"), target: commandTargetSchema }),
-  z.object({ kind: z.literal("href"), href: z.string() }),
-]);
-
-const navigationTargetSchema = z.union([
-  navigationTargetItemSchema,
-  z.object({ kind: z.literal("compound"), targets: z.array(navigationTargetItemSchema).min(1) }),
-]);
 
 const rendererBaseOmissions = {
   id: true,
@@ -160,6 +126,7 @@ const workbenchExtensionModeRecordSchema = z.object({
   extensionId: z.string(),
   label: localizableStringSchema,
   icon: z.string().optional(),
+  regions: z.array(z.enum(dockedWorkbenchRegions)),
 });
 
 const workbenchExtensionPlacementRecordSchema = z.object({
@@ -272,6 +239,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   menuContributions: z.array(extensionMenuContributionSchema),
   commandPaletteContributions: z.array(extensionCommandPaletteContributionSchema).optional(),
   modes: z.array(workbenchExtensionModeRecordSchema),
+  pages: z.array(workbenchExtensionPageRecordSchema),
   views: z.array(workbenchExtensionViewRecordSchema),
   viewMenus: z.array(workbenchExtensionViewMenuRecordSchema),
   placements: z.array(workbenchExtensionPlacementRecordSchema),

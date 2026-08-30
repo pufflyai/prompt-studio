@@ -38,6 +38,7 @@ const installed = {
     fileIconThemes: [],
     menuContributions: [],
     modes: [],
+    pages: [],
     views: [],
     viewMenus: [],
     placements: [],

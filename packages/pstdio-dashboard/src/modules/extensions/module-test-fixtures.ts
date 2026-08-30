@@ -21,6 +21,7 @@ export const metadata = {
   menuContributions: [],
   commandPaletteContributions: [],
   modes: [],
+  pages: [],
   views: [
     {
       id: `${labExtensionId}.view.labPage`,
@@ -72,6 +73,7 @@ export const metadataWithLabMode = {
       extensionId: labExtensionId,
       label: "Lab",
       icon: "flask-conical",
+      regions: ["sidenav", "main", "side"],
     },
   ],
   views: [

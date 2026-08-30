@@ -4,10 +4,12 @@ import {
   defineExtension,
   defineMode,
   defineNavigationItem,
+  definePage,
   definePlacement,
   defineResourceKind,
   defineView,
   packageAsset,
+  workbenchModes,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
 import type { LoadedExtensionSource } from "../../runtime/loader";
@@ -76,7 +78,7 @@ describe("createWorkbenchExtensionMetadata", () => {
   });
 
   test("publishes alpha.4 view, placement, and navigation arrays without renderer records", () => {
-    const mode = defineMode({ id: "review", label: "Review" });
+    const mode = defineMode({ id: "review", label: "Review", regions: ["main"] });
     const view = defineView({
       id: "tickets",
       title: "Tickets",
@@ -135,5 +137,70 @@ describe("createWorkbenchExtensionMetadata", () => {
     });
     expect(metadata).not.toHaveProperty("panels");
     expect(metadata).not.toHaveProperty("kanbanRenderers");
+  });
+
+  test("publishes pages and keeps page and panel targets explicit", () => {
+    const view = defineView({
+      id: "tickets",
+      title: "Tickets",
+      body: { kind: "webview", entry: packageAsset("./views/tickets.tsx", "file:///fake/lab/") },
+    });
+    const page = definePage({
+      id: "tickets",
+      title: "Tickets",
+      path: "tickets",
+      mode: workbenchModes.project,
+      slots: [
+        { id: "list", role: "primary", region: "main", view: view.ref },
+        { id: "tools", role: "auxiliary", region: "side", view: view.ref },
+      ],
+    });
+    const runtime = normalizeExtensionSources([
+      source(
+        defineExtension({
+          views: [view],
+          pages: [page],
+          navigationItems: [
+            defineNavigationItem({
+              id: "tickets",
+              slot: workbenchSlots.projectNavigation,
+              label: "Tickets",
+              action: {
+                kind: "compound",
+                targets: [
+                  { kind: "page", page: page.ref },
+                  { kind: "panel", panel: page.panels.tools },
+                ],
+              },
+            }),
+          ],
+        }),
+      ),
+    ]);
+
+    const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
+
+    expect(metadata.pages[0]).toMatchObject({
+      id: "pstdio.lab.page.tickets",
+      mode: { extensionId: "pstdio", kind: "mode", id: "project" },
+      slots: [
+        { id: "list", role: "primary", view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" } },
+        { id: "tools", role: "auxiliary", view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" } },
+      ],
+    });
+    expect(metadata.navigationItems[0]?.action).toEqual({
+      kind: "compound",
+      targets: [
+        { kind: "page", page: { extensionId: "pstdio.lab", kind: "page", id: "tickets" } },
+        {
+          kind: "panel",
+          panel: {
+            kind: "page-slot",
+            page: { extensionId: "pstdio.lab", kind: "page", id: "tickets" },
+            id: "tools",
+          },
+        },
+      ],
+    });
   });
 });

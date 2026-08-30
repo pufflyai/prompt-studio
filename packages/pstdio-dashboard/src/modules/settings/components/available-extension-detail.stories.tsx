@@ -23,6 +23,7 @@ const metadata = {
   menuContributions: [],
   commandPaletteContributions: [],
   modes: [],
+  pages: [],
   views: [],
   viewMenus: [],
   placements: [],

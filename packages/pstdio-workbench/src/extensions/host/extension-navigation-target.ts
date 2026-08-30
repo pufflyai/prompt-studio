@@ -144,6 +144,9 @@ export const toWorkbenchNavigationTarget = (
   }
   if (target.kind === "command") return toCommandTarget(target, input);
   if (target.kind === "href") return target;
+  if (target.kind === "page" || target.kind === "panel") {
+    throw new Error("Page and panel navigation targets require dashboard capability page.v1.");
+  }
   return {
     kind: "compound",
     targets: target.targets.map(

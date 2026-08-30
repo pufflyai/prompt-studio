@@ -61,6 +61,7 @@ const runtimeRequirements = (runtime: ExtensionRuntime) => [
     record.palette.map(() => requirement(record, record.id, "commandPalette", "command-palette.v1")),
   ),
   ...runtime.modes.map((record) => requirement(record, record.id, "mode", "mode.v1")),
+  ...runtime.pages.map((record) => requirement(record, record.id, "page", "page.v1")),
   ...runtime.views.map((record) =>
     requirement(
       record,

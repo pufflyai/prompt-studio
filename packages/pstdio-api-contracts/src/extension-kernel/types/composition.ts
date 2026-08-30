@@ -4,7 +4,7 @@ import type { ContributionDefinition, ResourceKindRef, ResourceSlotRef, ViewRef 
 import type { MaybePromise } from "./json";
 import type { ResourceRef, ViewHierarchyParent } from "./resources";
 
-export const dockedWorkbenchRegions = ["sidenav", "main", "secondary", "side"] as const;
+export const dockedWorkbenchRegions = ["sidenav-header", "sidenav", "main", "secondary", "side"] as const;
 export type DockedWorkbenchRegion = (typeof dockedWorkbenchRegions)[number];
 
 export type ResourceSurface = "primary" | "secondary" | "attached";

@@ -21,18 +21,21 @@ export const labMode = defineMode({
   id: "lab",
   label: l10n("modes.lab.label", "Lab"),
   icon: "flask-conical",
+  regions: ["main", "side"],
 });
 
 export const animationMode = defineMode({
   id: "animation",
   label: l10n("modes.animation.label", "Animation"),
   icon: "clapperboard",
+  regions: ["sidenav", "main", "side"],
 });
 
 export const sculptMode = defineMode({
   id: "sculpt",
   label: l10n("modes.sculpt.label", "Sculpt"),
   icon: "hammer",
+  regions: ["main", "secondary", "side"],
 });
 
 export const labModes = [labMode, animationMode, sculptMode];

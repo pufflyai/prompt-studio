@@ -50,6 +50,7 @@ export const emptyWorkbenchExtensionMetadata = {
   extensions: [],
   menuContributions: [],
   modes: [],
+  pages: [],
   views: [],
   viewMenus: [],
   placements: [],

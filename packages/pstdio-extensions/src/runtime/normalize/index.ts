@@ -13,6 +13,9 @@ import { registerExtension } from "./identity";
 import { registerKeybindings } from "./keybindings";
 import { registerMiddlewares } from "./middlewares";
 import { registerModes } from "./modes";
+import { validatePageNavigationTargets } from "./page-target-validation";
+import { validatePageDefinitions } from "./page-validation";
+import { registerPages } from "./pages";
 import { registerProviders } from "./providers";
 import { registerSchedules } from "./schedules";
 import { registerSettings } from "./settings";
@@ -94,6 +97,7 @@ export const normalizeExtensionSources = (
     registerArtifactMounts(ext, source, runtime, index);
     registerModes(ext, source, runtime);
     registerUiModel(ext, source, runtime, index);
+    registerPages(ext, source, runtime);
     registerCommandPaletteResources(ext, source, runtime, index);
     registerContent(ext, source, runtime);
     registerAppearance(ext, source, runtime, index);
@@ -103,6 +107,8 @@ export const normalizeExtensionSources = (
   }
 
   validateCompositionRelationships(runtime);
+  validatePageDefinitions(runtime);
+  validatePageNavigationTargets(runtime);
 
   return runtime;
 };

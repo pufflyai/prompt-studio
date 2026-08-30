@@ -35,6 +35,7 @@ const emptyRuntime = {
   keybindings: [],
   middlewares: [],
   modes: [],
+  pages: [],
   navigationItems: [],
   placements: [],
   privateHandlers: [],

@@ -17,7 +17,8 @@ const metadata = {
   commands: [],
   menuContributions: [],
   commandPaletteContributions: [],
-  modes: [{ id: modeId, localId: "review", extensionId, label: "Review" }],
+  modes: [{ id: modeId, localId: "review", extensionId, label: "Review", regions: ["main"] }],
+  pages: [],
   views: [
     {
       id: treeViewId,

@@ -11,6 +11,7 @@ export type ContributionKind =
   | "middleware"
   | "mode"
   | "navigation-item"
+  | "page"
   | "placement"
   | "resource-hierarchy-provider"
   | "resource-kind"
@@ -45,6 +46,7 @@ export type ConnectionRef = ContributionRef<"connection">;
 
 export type ModeRef = ContributionRef<"mode">;
 export type NavigationSlotRef = ContributionRef<"navigation-item">;
+export type PageRef = ContributionRef<"page">;
 export type PlacementRef = ContributionRef<"placement">;
 export type ResourceKindRef = ContributionRef<"resource-kind">;
 export interface ResourceSlotRef {

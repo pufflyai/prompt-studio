@@ -9,6 +9,7 @@ const baseMetadata = {
   extensions: [],
   menuContributions: [],
   modes: [],
+  pages: [],
   views: [],
   viewMenus: [],
   placements: [],

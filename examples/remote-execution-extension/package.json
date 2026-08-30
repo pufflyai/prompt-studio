@@ -8,7 +8,7 @@
   "publisher": "example",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.6"
+    "pstdio": "1.0.0-alpha.7"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

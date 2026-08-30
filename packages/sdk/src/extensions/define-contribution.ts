@@ -10,6 +10,9 @@ import type {
   KeybindingContribution,
   ModeContribution,
   NavigationItemContribution,
+  PageContribution,
+  PageSlot,
+  PageSlotRef,
   PlacementContribution,
   ResourceHierarchyProvider,
   ResourceKindDefinition,
@@ -78,9 +81,27 @@ export const defineNavigationItem = defineContribution("navigation-item") as <
   definition: Definition,
 ) => Definition & ContributionDefinition<"navigation-item">;
 
-export const defineMode = defineContribution("mode") as <Definition extends Omit<ModeContribution, "ref">>(
+export const defineMode = defineContribution("mode") as <const Definition extends Omit<ModeContribution, "ref">>(
   definition: Definition,
 ) => Definition & ContributionDefinition<"mode">;
+
+type AuxiliarySlotIds<Slots extends readonly PageSlot[]> = Extract<Slots[number], { role: "auxiliary" }>["id"];
+
+type PagePanelRefs<Slots extends readonly PageSlot[]> = {
+  readonly [Id in AuxiliarySlotIds<Slots>]: PageSlotRef;
+};
+
+export const definePage = <const Definition extends Omit<PageContribution, "ref" | "panels">>(
+  definition: Definition,
+): Definition & ContributionDefinition<"page"> & { readonly panels: PagePanelRefs<Definition["slots"]> } => {
+  const ref = { kind: "page" as const, id: definition.id };
+  const panels = Object.fromEntries(
+    definition.slots
+      .filter((slot) => slot.role === "auxiliary")
+      .map((slot) => [slot.id, { kind: "page-slot" as const, page: ref, id: slot.id }]),
+  ) as PagePanelRefs<Definition["slots"]>;
+  return { ...definition, ref, panels };
+};
 
 export const defineStatusBarItem = defineContribution("status-bar-item") as <
   Definition extends Omit<StatusBarItemContribution, "ref">,

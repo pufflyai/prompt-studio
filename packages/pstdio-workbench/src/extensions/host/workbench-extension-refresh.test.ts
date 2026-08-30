@@ -12,6 +12,7 @@ const metadata = {
   menuContributions: [],
   commandPaletteContributions: [],
   modes: [],
+  pages: [],
   views: [
     {
       id: "pstdio.lab.view.outline",

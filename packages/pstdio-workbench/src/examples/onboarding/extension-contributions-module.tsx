@@ -69,8 +69,10 @@ const metadata = {
       localId: "review",
       extensionId: EXTENSION_ID,
       label: "Lab review",
+      regions: ["main"],
     },
   ],
+  pages: [],
   views: [
     {
       id: TREE_VIEW_ID,
