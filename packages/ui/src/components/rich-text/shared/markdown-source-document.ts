@@ -27,6 +27,7 @@ const buildSourceMap = (canonical: string, source: string) => {
   const end = Array.from<number>({ length: canonical.length + 1 }).fill(-1);
   let canonicalOffset = 0;
   let sourceOffset = 0;
+  let removedAtBoundary = false;
 
   start[0] = 0;
   end[0] = 0;
@@ -38,6 +39,8 @@ const buildSourceMap = (canonical: string, source: string) => {
       end[canonicalOffset] = sourceOffset;
       sourceOffset += length;
       start[canonicalOffset] = sourceOffset;
+      if (removedAtBoundary) end[canonicalOffset] = sourceOffset;
+      removedAtBoundary = false;
       continue;
     }
 
@@ -47,15 +50,21 @@ const buildSourceMap = (canonical: string, source: string) => {
         end[canonicalOffset + index] = sourceOffset;
       }
       canonicalOffset += length;
+      removedAtBoundary = true;
       continue;
     }
 
     for (let index = 0; index <= length; index += 1) {
-      start[canonicalOffset + index] = sourceOffset + index;
-      end[canonicalOffset + index] = sourceOffset + index;
+      const offset = canonicalOffset + index;
+      start[offset] = sourceOffset + index;
+      // A source-only insertion at this boundary belongs between the
+      // canonical characters. Keep its left edge as the end of the preceding
+      // range so an edit before it does not consume untouched source.
+      if (end[offset] === undefined || end[offset] < 0) end[offset] = sourceOffset + index;
     }
     canonicalOffset += length;
     sourceOffset += length;
+    removedAtBoundary = false;
   }
 
   return { end, start } satisfies SourceMap;

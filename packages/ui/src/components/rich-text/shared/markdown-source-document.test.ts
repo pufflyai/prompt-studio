@@ -211,6 +211,24 @@ describe("Markdown source document", () => {
     expect(result).toBe("First block.\r\n\r\nSecond block.\r\n");
   });
 
+  test("keeps the CRLF after an edited line", () => {
+    const markdown = "Before.\r\n\r\nEdit target: ORIGINAL\r\n\r\nAfter.\r\n";
+
+    const result = sourceRoundTrip(markdown, (editor) => {
+      editor.update(
+        () => {
+          const target = $getRoot()
+            .getAllTextNodes()
+            .find((node) => node.getTextContent().includes("ORIGINAL"));
+          target?.setTextContent(target.getTextContent().replace("ORIGINAL", "REVISED"));
+        },
+        { discrete: true },
+      );
+    });
+
+    expect(result).toBe(markdown.replace("ORIGINAL", "REVISED"));
+  });
+
   test("keeps moved blocks in their original spelling", () => {
     const markdown = "First *italic*.\n\nSecond with __bold__.";
 
