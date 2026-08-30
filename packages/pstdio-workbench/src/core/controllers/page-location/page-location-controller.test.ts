@@ -193,6 +193,7 @@ describe("page location controller", () => {
     const disposable = harness.registry.registerPage({
       id: "temporary",
       ref: ref("acme.temp", "temporary"),
+      title: "Temporary",
       path: "temporary",
       modeId: "project",
       slots: [{ id: "content", role: "primary", region: "main", viewId: "temporary" }],
@@ -215,6 +216,7 @@ describe("page location controller", () => {
     const parent = harness.registry.registerPage({
       id: "temporary-parent",
       ref: ref("acme.temp", "parent"),
+      title: "Temporary parent",
       path: "parent",
       modeId: "project",
       slots: [{ id: "content", role: "primary", region: "main", viewId: "parent" }],

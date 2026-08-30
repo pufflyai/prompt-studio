@@ -59,6 +59,7 @@ const createRegistry = () => {
   registry.registerPage({
     id: "start",
     ref: startRef,
+    title: "Start",
     path: "",
     modeId: "project",
     slots: [{ id: "content", role: "primary", region: "main", viewId: "start" }],
@@ -66,6 +67,7 @@ const createRegistry = () => {
   registry.registerPage({
     id: "tickets",
     ref: ticketsRef,
+    title: "Tickets",
     path: "tickets",
     modeId: "project",
     parentId: "start",
@@ -74,6 +76,7 @@ const createRegistry = () => {
   registry.registerPage({
     id: "ticket",
     ref: ticketRef,
+    title: "Ticket",
     path: "ticket",
     modeId: "project",
     parentId: "tickets",
@@ -91,6 +94,7 @@ const createRegistry = () => {
   registry.registerPage({
     id: "workspaces",
     ref: workspaceRef,
+    title: "Workspaces",
     path: "workspaces",
     modeId: "project",
     parentId: "start",
