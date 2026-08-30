@@ -15,6 +15,12 @@ export const pagePlacementIdentity = (pageId: string, slotId: string, instanceKe
 });
 
 export const validateWorkbenchPage = (page: WorkbenchPageContribution) => {
+  if (page.ref.kind !== "page" || !page.ref.extensionId || !page.ref.id) {
+    throw new Error(`Page "${page.id}" must declare a normalized page ref`);
+  }
+  if (page.path.startsWith("/") || page.path.endsWith("/")) {
+    throw new Error(`Page "${page.id}" must declare a normalized path`);
+  }
   const primary = page.slots.filter((slot) => slot.role === "primary");
   if (primary.length !== 1 || primary[0]?.region !== "main") {
     throw new Error(`Page "${page.id}" must declare exactly one primary slot in main`);

@@ -1,22 +1,23 @@
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
-import { createDisposable } from "../../shared/disposable";
 import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import {
   composeOwnedPlacements,
   type OwnedPlacementReconciliation,
-  placementIdentityKey,
   reconcileOwnedPlacements,
 } from "../layout/placement-reconciliation";
-import { pagePlacementIdentity, resolvePagePlacements, validateWorkbenchPage } from "./page-placement-resolver";
+import { resolvePagePlacementClose } from "./page-placement-close";
+import { pagePlacementIdentity, resolvePagePlacements } from "./page-placement-resolver";
+import { registerWorkbenchPage } from "./page-registration";
+import { setWorkbenchPageRegistryInternals } from "./page-registry-internals";
 import type {
   CreateWorkbenchPageRegistryInput,
   WorkbenchPageOpenInput,
   WorkbenchPageRegistry,
   WorkbenchPageRegistryStoreState,
+  WorkbenchPageResourceCodec,
   WorkbenchPageRuntimeState,
 } from "./page-registry-types";
 import {
-  closePageSlot,
   emptyPageState,
   openResourceSlot,
   primarySlot,
@@ -32,6 +33,7 @@ export type {
   WorkbenchPagePlacementInput,
   WorkbenchPageRegistry,
   WorkbenchPageRegistryStoreState,
+  WorkbenchPageResourceCodec,
   WorkbenchPageRuntimeState,
   WorkbenchPageSlot,
   WorkbenchPageSlotBinding,
@@ -50,6 +52,10 @@ const emptyReconciliation = <Value>(): OwnedPlacementReconciliation<Value> => ({
 export const createWorkbenchPageRegistry = <Value>(
   input: CreateWorkbenchPageRegistryInput<Value>,
 ): WorkbenchPageRegistry<Value> => {
+  const normalizeResource = (resource: Parameters<WorkbenchPageResourceCodec["normalize"]>[0]) =>
+    input.resources.normalize(resource);
+  const resourceKey = (resource: Parameters<WorkbenchPageResourceCodec["toUri"]>[0]) =>
+    input.resources.toUri(normalizeResource(resource));
   const initialPlacements = composeOwnedPlacements({ shell: input.resolveShellPlacements() }).placements;
   const store = createWorkbenchStore<WorkbenchPageRegistryStoreState<Value>>({
     name: "workbench.pages",
@@ -69,6 +75,8 @@ export const createWorkbenchPageRegistry = <Value>(
 
   const commit = (next: {
     pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>;
+    projectId?: string;
+    location?: WorkbenchPageRegistryStoreState<Value>["location"];
     activePageId?: string;
     activeModeId?: string;
     activate?: readonly PlacementIdentity[];
@@ -103,6 +111,8 @@ export const createWorkbenchPageRegistry = <Value>(
       {
         ...current,
         pageStates: next.pageStates,
+        projectId: next.projectId,
+        location: next.location,
         activePageId: next.activePageId,
         activeModeId: next.activeModeId,
         placements: composed.placements,
@@ -117,20 +127,27 @@ export const createWorkbenchPageRegistry = <Value>(
     target: WorkbenchPageOpenInput,
     pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>,
     action: string,
+    locationState: Pick<WorkbenchPageRegistryStoreState<Value>, "projectId" | "location"> = store.getState(),
   ) => {
     const page = requirePage(target.pageId);
-    const currentPageState = pageStates[page.id] ?? emptyPageState(page, input.resourceKey);
+    const normalizedTarget = {
+      ...target,
+      ...(target.resource ? { resource: normalizeResource(target.resource) } : {}),
+    };
+    const currentPageState = pageStates[page.id] ?? emptyPageState(page, resourceKey);
     const pageState = selectPrimaryTarget({
       page,
       state: currentPageState,
-      target,
-      resourceKey: input.resourceKey,
+      target: normalizedTarget,
+      resourceKey,
     });
     const primary = primarySlot(page);
     const instanceKey = pageState.activePrimaryInstanceKey;
     if (!instanceKey) throw new Error(`Page "${page.id}" did not resolve a primary instance`);
     commit({
       pageStates: { ...pageStates, [page.id]: pageState },
+      projectId: locationState.projectId,
+      location: locationState.location,
       activePageId: page.id,
       activeModeId: page.modeId,
       activate: [pagePlacementIdentity(page.id, primary.id, instanceKey)],
@@ -138,55 +155,16 @@ export const createWorkbenchPageRegistry = <Value>(
     });
   };
 
-  return {
+  const registry: WorkbenchPageRegistry<Value> = {
     store,
 
     registerPage(page) {
-      validateWorkbenchPage(page);
-      const current = store.getState();
-      if (current.pages[page.id]) throw new Error(`Page already registered: ${page.id}`);
-      const registered = { ...page, slots: [...page.slots] };
-      store.setState(
-        {
-          ...current,
-          pages: { ...current.pages, [page.id]: registered },
-          pageStates: { ...current.pageStates, [page.id]: emptyPageState(registered, input.resourceKey) },
-          reconciliation: emptyReconciliation(),
-        },
-        false,
-        "registerPage",
-      );
-      return createDisposable(() => {
-        const snapshot = store.getState();
-        if (snapshot.pages[page.id] !== registered) return;
-        const { [page.id]: _page, ...pages } = snapshot.pages;
-        const { [page.id]: _pageState, ...pageStates } = snapshot.pageStates;
-        if (snapshot.activePageId === page.id) {
-          const placements = composeOwnedPlacements({ shell: input.resolveShellPlacements() }).placements;
-          store.setState(
-            {
-              ...snapshot,
-              pages,
-              pageStates,
-              activePageId: undefined,
-              activeModeId: undefined,
-              placements,
-              reconciliation: reconcileOwnedPlacements({
-                current: snapshot.placements,
-                desired: placements,
-                valuesEqual: input.valuesEqual,
-              }),
-            },
-            false,
-            "unregisterActivePage",
-          );
-          return;
-        }
-        store.setState(
-          { ...snapshot, pages, pageStates, reconciliation: emptyReconciliation() },
-          false,
-          "unregisterPage",
-        );
+      return registerWorkbenchPage({
+        page,
+        registryInput: input,
+        store,
+        normalizeResource,
+        resourceKey,
       });
     },
 
@@ -198,21 +176,17 @@ export const createWorkbenchPageRegistry = <Value>(
       return Object.values(store.getState().pages).sort((left, right) => left.id.localeCompare(right.id));
     },
 
-    activatePage(target) {
-      activatePageWithStates(target, store.getState().pageStates, "activatePage");
-    },
-
     openSlot(target) {
       const current = store.getState();
       if (current.activePageId !== target.pageId) throw new Error(`Page is not active: ${target.pageId}`);
       const page = requirePage(target.pageId);
       const slot = requirePageSlot(page, target.slotId);
       if (slot.role !== "auxiliary") throw new Error(`Page slot is not an auxiliary panel: ${page.id}.${slot.id}`);
-      let pageState = current.pageStates[page.id] ?? emptyPageState(page, input.resourceKey);
+      let pageState = current.pageStates[page.id] ?? emptyPageState(page, resourceKey);
       let instanceKey = "default";
-      const resource = target.resource ?? slot.defaultResource;
+      const resource = target.resource ? normalizeResource(target.resource) : slot.defaultResource;
       if (resource) {
-        instanceKey = input.resourceKey(resource);
+        instanceKey = resourceKey(resource);
         pageState = openResourceSlot({
           slot,
           state: pageState,
@@ -226,44 +200,60 @@ export const createWorkbenchPageRegistry = <Value>(
       }
       commit({
         pageStates: { ...current.pageStates, [page.id]: pageState },
+        projectId: current.projectId,
+        location: current.location,
         activePageId: page.id,
         activeModeId: page.modeId,
         activate: [pagePlacementIdentity(page.id, slot.id, instanceKey)],
         action: "openPageSlot",
       });
     },
+  };
 
-    closePlacement(identity) {
-      if (identity.kind !== "page") throw new Error("Page registry can close only page-owned placements");
-      const current = store.getState();
-      if (current.activePageId !== identity.pageId) throw new Error(`Page is not active: ${identity.pageId}`);
-      const page = requirePage(identity.pageId);
-      const slot = requirePageSlot(page, identity.slotId);
-      const exists = current.placements.some(
-        (candidate) => placementIdentityKey(candidate.identity) === placementIdentityKey(identity),
-      );
-      if (!exists) throw new Error(`Page placement is not open: ${placementIdentityKey(identity)}`);
-      if (slot.role === "primary" && identity.instanceKey === "default") {
-        throw new Error(`Static primary placement is not closable: ${page.id}.${slot.id}`);
-      }
-      if (!slot.closable) throw new Error(`Page placement is not closable: ${page.id}.${slot.id}`);
-
-      const pageState = current.pageStates[page.id] ?? emptyPageState(page, input.resourceKey);
-      const result = closePageSlot({ page, slot, state: pageState, instanceKey: identity.instanceKey });
-      const pageStates = { ...current.pageStates, [page.id]: result.state };
-      if (result.kind === "parent") {
-        activatePageWithStates({ pageId: result.parentId }, pageStates, "closePagePlacementToParent");
-        return;
-      }
-      commit({
-        pageStates,
-        activePageId: page.id,
-        activeModeId: page.modeId,
-        activate: result.activateInstanceKey
-          ? [pagePlacementIdentity(page.id, slot.id, result.activateInstanceKey)]
-          : undefined,
-        action: result.activateInstanceKey === "default" ? "closePagePlacementToDefault" : "closePagePlacement",
+  setWorkbenchPageRegistryInternals(registry, {
+    resources: input.resources,
+    activateLocation(target) {
+      activatePageWithStates(target, target.pageStates ?? store.getState().pageStates, target.action, {
+        projectId: target.projectId,
+        location: target.location,
       });
     },
-  };
+    clearProject(projectId) {
+      const current = store.getState();
+      const placements = composeOwnedPlacements({ shell: input.resolveShellPlacements() }).placements;
+      const pageStates = Object.fromEntries(
+        Object.values(current.pages).map((page) => [page.id, emptyPageState(page, resourceKey)]),
+      );
+      store.setState(
+        {
+          ...current,
+          pageStates,
+          projectId,
+          location: undefined,
+          activePageId: undefined,
+          activeModeId: undefined,
+          placements,
+          reconciliation: reconcileOwnedPlacements({
+            current: current.placements,
+            desired: placements,
+            valuesEqual: input.valuesEqual,
+          }),
+        },
+        false,
+        "clearPageProject",
+      );
+    },
+    resolveClosePlacement(identity) {
+      const current = store.getState();
+      if (identity.kind !== "page") throw new Error("Page registry can close only page-owned placements");
+      return resolvePagePlacementClose({
+        identity,
+        page: requirePage(identity.pageId),
+        state: current,
+        resourceKey,
+      });
+    },
+  });
+
+  return registry;
 };

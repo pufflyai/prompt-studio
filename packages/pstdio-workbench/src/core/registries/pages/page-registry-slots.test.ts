@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
-import { createWorkbenchPageRegistry, type WorkbenchPagePlacementInput } from "./page-registry";
+import {
+  createWorkbenchPageRegistry,
+  type WorkbenchPageContribution,
+  type WorkbenchPageOpenInput,
+  type WorkbenchPagePlacementInput,
+} from "./page-registry";
+import { getWorkbenchPageRegistryInternals } from "./page-registry-internals";
 
 const pageIdentity = (pageId: string, slotId: string, instanceKey: string): PlacementIdentity => ({
   kind: "page",
@@ -14,9 +20,52 @@ const createRegistry = () =>
     resolveShellPlacements: () => [],
     resolveModePlacements: () => [],
     resolvePagePlacement: (input) => input,
-    resourceKey: (resource) => `${resource.type}:${resource.id}`,
+    resources: {
+      normalize: (resource) => ({ ...resource }),
+      toUri: (resource) => `${resource.type}:${resource.id}`,
+      fromUri: () => undefined,
+    },
     valuesEqual: (left, right) => JSON.stringify(left) === JSON.stringify(right),
   });
+
+type PageInput = Omit<WorkbenchPageContribution, "ref" | "path">;
+
+const registerPage = (registry: ReturnType<typeof createRegistry>, page: PageInput) =>
+  registry.registerPage({
+    ...page,
+    ref: { extensionId: "pstdio.test", kind: "page", id: page.id },
+    path: page.id,
+  });
+
+const activatePage = (
+  registry: ReturnType<typeof createRegistry>,
+  target: WorkbenchPageOpenInput,
+  pageStates = registry.store.getState().pageStates,
+) => {
+  const page = registry.getPage(target.pageId);
+  if (!page) throw new Error(`Unknown test page: ${target.pageId}`);
+  getWorkbenchPageRegistryInternals(registry).activateLocation({
+    ...target,
+    projectId: "test-project",
+    location: {
+      page: page.ref,
+      ...(target.resource ? { resource: target.resource } : {}),
+      ...(target.section ? { section: target.section } : {}),
+    },
+    pageStates,
+    action: "testActivatePage",
+  });
+};
+
+const closePlacement = (registry: ReturnType<typeof createRegistry>, identity: PlacementIdentity) => {
+  const internals = getWorkbenchPageRegistryInternals(registry);
+  const result = internals.resolveClosePlacement(identity);
+  if (result.kind === "parent") {
+    activatePage(registry, { pageId: result.parentId }, result.pageStates);
+    return;
+  }
+  activatePage(registry, result.target, result.pageStates);
+};
 
 const activePagePlacements = (registry: ReturnType<typeof createRegistry>, slotId: string) =>
   registry.store
@@ -26,12 +75,12 @@ const activePagePlacements = (registry: ReturnType<typeof createRegistry>, slotI
 describe("page primary slot lifecycle", () => {
   test("resolves static-only, bound-only, and hybrid primary targets explicitly", () => {
     const registry = createRegistry();
-    registry.registerPage({
+    registerPage(registry, {
       id: "static",
       modeId: "project",
       slots: [{ id: "content", role: "primary", region: "main", viewId: "list" }],
     });
-    registry.registerPage({
+    registerPage(registry, {
       id: "bound",
       modeId: "project",
       parentId: "static",
@@ -44,7 +93,7 @@ describe("page primary slot lifecycle", () => {
         },
       ],
     });
-    registry.registerPage({
+    registerPage(registry, {
       id: "hybrid",
       modeId: "project",
       slots: [
@@ -58,14 +107,14 @@ describe("page primary slot lifecycle", () => {
       ],
     });
 
-    expect(() => registry.activatePage({ pageId: "static", resource: { type: "ticket", id: "one" } })).toThrow(
+    expect(() => activatePage(registry, { pageId: "static", resource: { type: "ticket", id: "one" } })).toThrow(
       /does not accept a resource/,
     );
-    expect(() => registry.activatePage({ pageId: "bound" })).toThrow(/requires a resource/);
+    expect(() => activatePage(registry, { pageId: "bound" })).toThrow(/requires a resource/);
 
-    registry.activatePage({ pageId: "hybrid" });
+    activatePage(registry, { pageId: "hybrid" });
     expect(activePagePlacements(registry, "content")[0]?.identity.instanceKey).toBe("default");
-    registry.activatePage({ pageId: "hybrid", resource: { type: "ticket", id: "one" } });
+    activatePage(registry, { pageId: "hybrid", resource: { type: "ticket", id: "one" } });
     expect(activePagePlacements(registry, "content").map((candidate) => candidate.identity.instanceKey)).toEqual([
       "default",
       "ticket:one",
@@ -73,7 +122,7 @@ describe("page primary slot lifecycle", () => {
     expect(registry.store.getState().reconciliation.activate[0]?.identity).toEqual(
       pageIdentity("hybrid", "content", "ticket:one"),
     );
-    registry.activatePage({ pageId: "hybrid" });
+    activatePage(registry, { pageId: "hybrid" });
     expect(registry.store.getState().reconciliation.activate[0]?.identity).toEqual(
       pageIdentity("hybrid", "content", "default"),
     );
@@ -81,7 +130,7 @@ describe("page primary slot lifecycle", () => {
 
   test("owns preview replacement and pinning inside one many slot", () => {
     const registry = createRegistry();
-    registry.registerPage({
+    registerPage(registry, {
       id: "files",
       modeId: "project",
       slots: [
@@ -96,10 +145,10 @@ describe("page primary slot lifecycle", () => {
       ],
     });
 
-    registry.activatePage({ pageId: "files", resource: { type: "file", id: "A" } });
-    registry.activatePage({ pageId: "files", resource: { type: "file", id: "B" } });
-    registry.activatePage({ pageId: "files", resource: { type: "file", id: "B" }, open: "pin" });
-    registry.activatePage({ pageId: "files", resource: { type: "file", id: "C" } });
+    activatePage(registry, { pageId: "files", resource: { type: "file", id: "A" } });
+    activatePage(registry, { pageId: "files", resource: { type: "file", id: "B" } });
+    activatePage(registry, { pageId: "files", resource: { type: "file", id: "B" }, open: "pin" });
+    activatePage(registry, { pageId: "files", resource: { type: "file", id: "C" } });
 
     const placements = activePagePlacements(registry, "content");
     expect(placements.map((candidate) => candidate.identity.instanceKey)).toEqual(["file:B", "file:C"]);
@@ -108,7 +157,7 @@ describe("page primary slot lifecycle", () => {
 
   test("updates one existing resource instance when metadata or section changes", () => {
     const registry = createRegistry();
-    registry.registerPage({
+    registerPage(registry, {
       id: "ticket",
       modeId: "project",
       slots: [
@@ -121,12 +170,12 @@ describe("page primary slot lifecycle", () => {
         },
       ],
     });
-    registry.activatePage({
+    activatePage(registry, {
       pageId: "ticket",
       resource: { type: "ticket", id: "PS-326", metadata: { revision: 1 } },
     });
 
-    registry.activatePage({
+    activatePage(registry, {
       pageId: "ticket",
       resource: { type: "ticket", id: "PS-326", metadata: { revision: 2 } },
       section: { anchors: [{ id: "acceptance", heading: "Acceptance" }] },
@@ -143,7 +192,7 @@ describe("page primary slot lifecycle", () => {
 
   test("keeps the same resource independent in two explicitly named slots", () => {
     const registry = createRegistry();
-    registry.registerPage({
+    registerPage(registry, {
       id: "compare",
       modeId: "project",
       slots: [
@@ -162,7 +211,7 @@ describe("page primary slot lifecycle", () => {
       ],
     });
     const file = { type: "file", id: "same" };
-    registry.activatePage({ pageId: "compare", resource: file });
+    activatePage(registry, { pageId: "compare", resource: file });
     registry.openSlot({ pageId: "compare", slotId: "right", resource: file });
 
     expect(registry.store.getState().placements.map((candidate) => candidate.identity)).toEqual([
@@ -175,7 +224,7 @@ describe("page primary slot lifecycle", () => {
 describe("page placement close lifecycle", () => {
   test("closes only the exact auxiliary placement and does not activate default-open auxiliaries", () => {
     const registry = createRegistry();
-    registry.registerPage({
+    registerPage(registry, {
       id: "tools",
       modeId: "project",
       slots: [
@@ -184,12 +233,12 @@ describe("page placement close lifecycle", () => {
         { id: "notes", role: "auxiliary", region: "side", viewId: "notes", defaultOpen: true, closable: true },
       ],
     });
-    registry.activatePage({ pageId: "tools" });
+    activatePage(registry, { pageId: "tools" });
     expect(registry.store.getState().reconciliation.activate.map((candidate) => candidate.identity)).toEqual([
       pageIdentity("tools", "content", "default"),
     ]);
 
-    registry.closePlacement(pageIdentity("tools", "emoji", "default"));
+    closePlacement(registry, pageIdentity("tools", "emoji", "default"));
 
     expect(activePagePlacements(registry, "emoji")).toEqual([]);
     expect(activePagePlacements(registry, "notes")).toHaveLength(1);
@@ -200,12 +249,12 @@ describe("page placement close lifecycle", () => {
 
   test("falls back to the hybrid default and moves a bound-only last close to its parent", () => {
     const registry = createRegistry();
-    registry.registerPage({
+    registerPage(registry, {
       id: "list",
       modeId: "project",
       slots: [{ id: "content", role: "primary", region: "main", viewId: "list" }],
     });
-    registry.registerPage({
+    registerPage(registry, {
       id: "hybrid",
       modeId: "project",
       slots: [
@@ -220,7 +269,7 @@ describe("page placement close lifecycle", () => {
         },
       ],
     });
-    registry.registerPage({
+    registerPage(registry, {
       id: "detail",
       modeId: "project",
       parentId: "list",
@@ -235,15 +284,15 @@ describe("page placement close lifecycle", () => {
       ],
     });
 
-    registry.activatePage({ pageId: "hybrid", resource: { type: "ticket", id: "one" } });
-    registry.closePlacement(pageIdentity("hybrid", "content", "ticket:one"));
+    activatePage(registry, { pageId: "hybrid", resource: { type: "ticket", id: "one" } });
+    closePlacement(registry, pageIdentity("hybrid", "content", "ticket:one"));
     expect(registry.store.getState().activePageId).toBe("hybrid");
     expect(activePagePlacements(registry, "content")[0]?.identity.instanceKey).toBe("default");
 
-    registry.activatePage({ pageId: "detail", resource: { type: "ticket", id: "two" } });
+    activatePage(registry, { pageId: "detail", resource: { type: "ticket", id: "two" } });
     const observed: string[] = [];
     const unsubscribe = registry.store.subscribe((state) => observed.push(state.activePageId ?? "none"));
-    registry.closePlacement(pageIdentity("detail", "content", "ticket:two"));
+    closePlacement(registry, pageIdentity("detail", "content", "ticket:two"));
     unsubscribe();
 
     expect(observed).toEqual(["list"]);
