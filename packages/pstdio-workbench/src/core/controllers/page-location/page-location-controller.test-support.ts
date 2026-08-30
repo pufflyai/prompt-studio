@@ -48,6 +48,9 @@ const createRegistry = () => {
     resolveModePlacements: (modeId) => [
       placement({ kind: "mode", modeId, placementId: "shared", instanceKey: "default" }, `mode:${modeId}`),
     ],
+    resolveModePanelTarget: () => {
+      throw new Error("No mode panels are registered in this test");
+    },
     resolvePagePlacement: (input: WorkbenchPagePlacementInput) =>
       `${input.pageId}:${input.viewId}:${input.resource?.id ?? "default"}`,
     resources,

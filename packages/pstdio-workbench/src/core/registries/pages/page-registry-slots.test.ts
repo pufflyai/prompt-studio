@@ -19,6 +19,9 @@ const createRegistry = () =>
   createWorkbenchPageRegistry<WorkbenchPagePlacementInput>({
     resolveShellPlacements: () => [],
     resolveModePlacements: () => [],
+    resolveModePanelTarget: () => {
+      throw new Error("No mode panels are registered in this test");
+    },
     resolvePagePlacement: (input) => input,
     resources: {
       normalize: (resource) => ({ ...resource }),
@@ -212,7 +215,15 @@ describe("page primary slot lifecycle", () => {
     });
     const file = { type: "file", id: "same" };
     activatePage(registry, { pageId: "compare", resource: file });
-    registry.openSlot({ pageId: "compare", slotId: "right", resource: file });
+    getWorkbenchPageRegistryInternals(registry).openPanel({
+      kind: "panel",
+      panel: {
+        kind: "page-slot",
+        page: { extensionId: "pstdio.test", kind: "page", id: "compare" },
+        id: "right",
+      },
+      resource: file,
+    });
 
     expect(registry.store.getState().placements.map((candidate) => candidate.identity)).toEqual([
       pageIdentity("compare", "left", "file:same"),

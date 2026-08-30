@@ -5,6 +5,8 @@ import type {
   PageRef,
   PageSlotCardinality,
   PageSlotRole,
+  PlacementIdentity,
+  PlacementRef,
   ResourceRef,
 } from "@pstdio/sdk/extensions";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
@@ -62,13 +64,6 @@ export interface WorkbenchPageOpenInput {
   open?: PageOpenIntent;
 }
 
-export interface WorkbenchPageSlotOpenInput {
-  pageId: string;
-  slotId: string;
-  resource?: ResourceRef;
-  open?: PageOpenIntent;
-}
-
 export interface WorkbenchPageSlotInstance {
   instanceKey: string;
   resource: ResourceRef;
@@ -93,9 +88,23 @@ export interface WorkbenchPageRegistryStoreState<Value> {
   reconciliation: OwnedPlacementReconciliation<Value>;
 }
 
+export interface WorkbenchModePanelTargetInput<Value> {
+  modeId: string;
+  panel: PlacementRef;
+  resource?: ResourceRef;
+  open?: PageOpenIntent;
+  current: readonly ResolvedOwnedPlacement<Value>[];
+}
+
+export interface WorkbenchModePanelTargetResolution<Value> {
+  identity: PlacementIdentity;
+  placements: readonly ResolvedOwnedPlacement<Value>[];
+}
+
 export interface CreateWorkbenchPageRegistryInput<Value> {
   resolveShellPlacements(): readonly ResolvedOwnedPlacement<Value>[];
   resolveModePlacements(modeId: string): readonly ResolvedOwnedPlacement<Value>[];
+  resolveModePanelTarget(input: WorkbenchModePanelTargetInput<Value>): WorkbenchModePanelTargetResolution<Value>;
   resolvePagePlacement(input: WorkbenchPagePlacementInput): Value;
   resources: WorkbenchPageResourceCodec;
   valuesEqual(current: Value, desired: Value): boolean;
@@ -106,5 +115,4 @@ export interface WorkbenchPageRegistry<Value> {
   registerPage(page: WorkbenchPageContribution): { dispose(): void };
   getPage(pageId: string): WorkbenchPageContribution | undefined;
   listPages(): WorkbenchPageContribution[];
-  openSlot(input: WorkbenchPageSlotOpenInput): void;
 }
