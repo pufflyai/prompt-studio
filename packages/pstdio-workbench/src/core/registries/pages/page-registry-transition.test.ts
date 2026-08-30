@@ -24,6 +24,9 @@ const createRegistry = () =>
     resolveModePlacements: (modeId) => [
       placement({ kind: "mode", modeId, placementId: "shared", instanceKey: "default" }, "side", "shared"),
     ],
+    resolveModePanelTarget: () => {
+      throw new Error("No mode panels are registered in this test");
+    },
     resolvePagePlacement: (input: WorkbenchPagePlacementInput) =>
       `${input.viewId}:${input.resource?.id ?? "default"}:${input.section?.anchors[0]?.id ?? ""}`,
     resources: {
@@ -174,6 +177,9 @@ describe("createWorkbenchPageRegistry transitions", () => {
       resolveModePlacements: () => [
         placement({ kind: "mode", modeId: "wrong", placementId: "tools", instanceKey: "default" }, "side", "tools"),
       ],
+      resolveModePanelTarget: () => {
+        throw new Error("No mode panels are registered in this test");
+      },
       resolvePagePlacement: (input: WorkbenchPagePlacementInput) => input.viewId,
       resources: {
         normalize: (resource) => ({ ...resource }),

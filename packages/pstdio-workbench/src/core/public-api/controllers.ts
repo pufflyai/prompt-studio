@@ -79,6 +79,13 @@ export {
   workbenchPageLocationsEqual,
 } from "../controllers/page-location/page-location-normalization";
 export type {
+  CreateWorkbenchPanelTargetControllerInput,
+  WorkbenchPanelTargetController,
+  WorkbenchPanelTargetDiagnostic,
+  WorkbenchPanelTargetResult,
+} from "../controllers/panel-target/panel-target-controller";
+export { createWorkbenchPanelTargetController } from "../controllers/panel-target/panel-target-controller";
+export type {
   CreateWorkbenchPanelsControllerInput,
   PersistedWorkbenchPanels,
   WorkbenchPanelsChangeListener,

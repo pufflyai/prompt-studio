@@ -1,4 +1,4 @@
-import type { PageLocation, PlacementIdentity } from "@pstdio/sdk/extensions";
+import type { NavigationTargetPanel, PageLocation, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type {
   WorkbenchPageOpenInput,
   WorkbenchPageRegistry,
@@ -29,6 +29,7 @@ export type WorkbenchPageCloseResolution =
 export interface WorkbenchPageRegistryInternals {
   resources: WorkbenchPageResourceCodec;
   activateLocation(input: WorkbenchPageLocationCommitInput): void;
+  openPanel(target: NavigationTargetPanel): PlacementIdentity;
   clearProject(projectId: string): void;
   resolveClosePlacement(identity: PlacementIdentity): WorkbenchPageCloseResolution;
 }

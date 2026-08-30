@@ -3,6 +3,7 @@ import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import {
   composeOwnedPlacements,
   type OwnedPlacementReconciliation,
+  type ResolvedOwnedPlacement,
   reconcileOwnedPlacements,
 } from "../layout/placement-reconciliation";
 import { resolvePagePlacementClose } from "./page-placement-close";
@@ -17,17 +18,13 @@ import type {
   WorkbenchPageResourceCodec,
   WorkbenchPageRuntimeState,
 } from "./page-registry-types";
-import {
-  emptyPageState,
-  openResourceSlot,
-  primarySlot,
-  requirePageSlot,
-  selectPrimaryTarget,
-  setStaticSlotOpen,
-} from "./page-slot-lifecycle";
+import { emptyPageState, primarySlot, selectPrimaryTarget } from "./page-slot-lifecycle";
+import { openWorkbenchPanelTarget } from "./panel-target-opening";
 
 export type {
   CreateWorkbenchPageRegistryInput,
+  WorkbenchModePanelTargetInput,
+  WorkbenchModePanelTargetResolution,
   WorkbenchPageContribution,
   WorkbenchPageOpenInput,
   WorkbenchPagePlacementInput,
@@ -38,7 +35,6 @@ export type {
   WorkbenchPageSlot,
   WorkbenchPageSlotBinding,
   WorkbenchPageSlotInstance,
-  WorkbenchPageSlotOpenInput,
 } from "./page-registry-types";
 
 const emptyReconciliation = <Value>(): OwnedPlacementReconciliation<Value> => ({
@@ -73,19 +69,33 @@ export const createWorkbenchPageRegistry = <Value>(
     return page;
   };
 
+  const resolveModePlacementSet = (
+    current: WorkbenchPageRegistryStoreState<Value>,
+    modeId: string | undefined,
+    desired: readonly ResolvedOwnedPlacement<Value>[] | undefined,
+  ) => {
+    if (!modeId) return undefined;
+    if (desired) return desired;
+    if (modeId !== current.activeModeId) return input.resolveModePlacements(modeId);
+    return current.placements.filter(
+      (placement) => placement.identity.kind === "mode" && placement.identity.modeId === modeId,
+    );
+  };
+
   const commit = (next: {
     pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>;
     projectId?: string;
     location?: WorkbenchPageRegistryStoreState<Value>["location"];
     activePageId?: string;
     activeModeId?: string;
+    modePlacements?: readonly ResolvedOwnedPlacement<Value>[];
     activate?: readonly PlacementIdentity[];
     action: string;
   }) => {
     const current = store.getState();
     const page = next.activePageId ? current.pages[next.activePageId] : undefined;
     const pageState = page ? next.pageStates[page.id] : undefined;
-    const modePlacements = next.activeModeId ? input.resolveModePlacements(next.activeModeId) : undefined;
+    const modePlacements = resolveModePlacementSet(current, next.activeModeId, next.modePlacements);
     if (
       next.activeModeId &&
       modePlacements?.some(
@@ -175,43 +185,31 @@ export const createWorkbenchPageRegistry = <Value>(
     listPages() {
       return Object.values(store.getState().pages).sort((left, right) => left.id.localeCompare(right.id));
     },
-
-    openSlot(target) {
-      const current = store.getState();
-      if (current.activePageId !== target.pageId) throw new Error(`Page is not active: ${target.pageId}`);
-      const page = requirePage(target.pageId);
-      const slot = requirePageSlot(page, target.slotId);
-      if (slot.role !== "auxiliary") throw new Error(`Page slot is not an auxiliary panel: ${page.id}.${slot.id}`);
-      let pageState = current.pageStates[page.id] ?? emptyPageState(page, resourceKey);
-      let instanceKey = "default";
-      const resource = target.resource ? normalizeResource(target.resource) : slot.defaultResource;
-      if (resource) {
-        instanceKey = resourceKey(resource);
-        pageState = openResourceSlot({
-          slot,
-          state: pageState,
-          target: { ...target, resource },
-          resourceKey: () => instanceKey,
-        });
-      } else {
-        if (slot.binding) throw new Error(`Page slot "${slot.id}" requires a resource`);
-        if (target.open) throw new Error(`Page slot "${slot.id}" accepts open intent only with a resource`);
-        pageState = setStaticSlotOpen(pageState, slot.id, true);
-      }
-      commit({
-        pageStates: { ...current.pageStates, [page.id]: pageState },
-        projectId: current.projectId,
-        location: current.location,
-        activePageId: page.id,
-        activeModeId: page.modeId,
-        activate: [pagePlacementIdentity(page.id, slot.id, instanceKey)],
-        action: "openPageSlot",
-      });
-    },
   };
 
   setWorkbenchPageRegistryInternals(registry, {
     resources: input.resources,
+    openPanel(target) {
+      const current = store.getState();
+      return openWorkbenchPanelTarget({
+        target,
+        registryInput: input,
+        state: current,
+        normalizeResource,
+        resourceKey,
+        commit: (change) =>
+          commit({
+            pageStates: change.pageStates,
+            projectId: current.projectId,
+            location: current.location,
+            activePageId: current.activePageId,
+            activeModeId: current.activeModeId,
+            ...(change.modePlacements ? { modePlacements: change.modePlacements } : {}),
+            activate: [change.identity],
+            action: change.action,
+          }),
+      });
+    },
     activateLocation(target) {
       activatePageWithStates(target, target.pageStates ?? store.getState().pageStates, target.action, {
         projectId: target.projectId,

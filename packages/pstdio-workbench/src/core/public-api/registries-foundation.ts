@@ -179,6 +179,8 @@ export type {
 export { createNotificationRegistry } from "../registries/notifications/notification-registry";
 export type {
   CreateWorkbenchPageRegistryInput,
+  WorkbenchModePanelTargetInput,
+  WorkbenchModePanelTargetResolution,
   WorkbenchPageContribution,
   WorkbenchPagePlacementInput,
   WorkbenchPageRegistry,
@@ -188,7 +190,6 @@ export type {
   WorkbenchPageSlot,
   WorkbenchPageSlotBinding,
   WorkbenchPageSlotInstance,
-  WorkbenchPageSlotOpenInput,
 } from "../registries/pages/page-registry";
 export { createWorkbenchPageRegistry } from "../registries/pages/page-registry";
 export type {
