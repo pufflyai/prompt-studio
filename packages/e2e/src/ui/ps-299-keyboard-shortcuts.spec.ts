@@ -15,7 +15,7 @@ test("PS-299 lists every registered keyboard shortcut", async ({ page, request }
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
   }, project.id);
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
   await expect(page.getByRole("option", { name: "Tickets", exact: true }).first()).toBeVisible({ timeout: 30_000 });
 
   await page.getByRole("button", { name: "Help", exact: true }).click();

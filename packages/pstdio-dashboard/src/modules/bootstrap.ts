@@ -1,4 +1,4 @@
-import { isWorkbenchViewHierarchyNode, type ResourceRef, type WorkbenchModuleContribution } from "@pstdio/workbench";
+import type { ResourceRef, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getExtensionLandingPageId } from "@/shared/app/extension-landing-page";
@@ -6,7 +6,6 @@ import type { DashboardLastResourcePersistence } from "@/shared/app/last-resourc
 import { registerDashboardPageNavigation } from "@/shared/app/page-navigation";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
-import { dashboardViews } from "@/shared/app/resources";
 import type { DashboardSessionSelectionPersistence } from "@/shared/app/session-selection-persistence";
 import {
   getDashboardExtensionsReadyProjectId,
@@ -123,8 +122,8 @@ const restoreSelectedProjectHistory = (ctx: Parameters<WorkbenchModuleContributi
 // fallback is itself a page, so the location model has no special case.
 const openLandingPage = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
   const landingPageId = getExtensionLandingPageId(ctx);
-  if (landingPageId && ctx.pages.registry.getPage(landingPageId)) return ctx.pages.activatePage(landingPageId);
-  return ctx.views.openView(dashboardViews.start.id);
+  const pageId = landingPageId && ctx.pages.registry.getPage(landingPageId) ? landingPageId : "start";
+  return ctx.pages.activatePage(pageId);
 };
 
 // A URL deep link beats the persisted history and last location on boot. The location
@@ -141,21 +140,6 @@ const restoreRequestedView = (ctx: Parameters<WorkbenchModuleContribution["activ
     const legacyView = ctx.views.resolvePath(guard.requestedViewPath);
     if (!legacyView || !ctx.views.canResolveView(legacyView.viewId)) {
       return isExtensionsReadyForSelectedProject(ctx) ? ("missing" as const) : ("pending" as const);
-    }
-    const history = ctx.history.store.getState();
-    const currentEntry = history.entries[history.cursor];
-    const resourceBelongsToLegacyView = currentEntry?.resource
-      ? ctx.resources
-          .walkHierarchy(currentEntry.resource)
-          .some(
-            (node) => isWorkbenchViewHierarchyNode(node) && ctx.views.resolveViewId(node.viewId) === legacyView.viewId,
-          )
-      : false;
-    if (
-      (currentEntry?.viewId && ctx.views.resolveViewId(currentEntry.viewId) === legacyView.viewId) ||
-      resourceBelongsToLegacyView
-    ) {
-      return "empty" as const;
     }
     return ctx.views
       .openView(legacyView.viewId, { strategy: { kind: "replace-active" } })

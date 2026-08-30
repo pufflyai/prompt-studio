@@ -88,7 +88,7 @@ describe("extension webview setup", () => {
       await enableExtensionLab(projectId);
 
       const metadata = await fetchMetadata(projectId);
-      const labView = metadata.views.find((view) => view.path === "lab");
+      const labView = metadata.views.find((view) => view.id === "pstdio.extension-lab.view.lab-page");
       expect(labView?.body.kind).toBe("webview");
       if (labView?.body.kind !== "webview") throw new Error("Extension Lab view is not a webview.");
 

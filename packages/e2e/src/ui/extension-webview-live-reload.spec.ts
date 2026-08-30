@@ -131,8 +131,15 @@ const getExtensionLoadState = async (
   return { lastError: extension?.lastError ?? null, status: extension?.status };
 };
 
-const expectWebviewAtPath = (metadata: WorkbenchExtensionMetadata, path: string) => {
-  const view = metadata.views.find((candidate) => candidate.path === path);
+// Views no longer carry URL paths; the page at the path hosts the webview in its first slot.
+const expectWebviewPageAtPath = (metadata: WorkbenchExtensionMetadata, pagePath: string) => {
+  const pageRecord = metadata.pages.find((candidate) => candidate.path === pagePath);
+  const slotViewRef = pageRecord?.slots[0]?.view;
+  const view = slotViewRef
+    ? metadata.views.find(
+        (candidate) => candidate.extensionId === slotViewRef.extensionId && candidate.localId === slotViewRef.id,
+      )
+    : undefined;
   expect(view?.body.kind).toBe("webview");
 };
 
@@ -152,10 +159,10 @@ test.describe("Extension webview live reload", () => {
       const metadataResponse = await request.get(`${apiBase}/v1/projects/${project.id}/extensions/ui`);
       expect(metadataResponse.ok()).toBe(true);
       const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
-      expectWebviewAtPath(metadata, "lab");
+      expectWebviewPageAtPath(metadata, "lab-webview");
       await bypassOnboarding(page, project.id);
 
-      await page.goto(`/projects/${project.id}/lab`);
+      await page.goto(`/projects/${project.id}/pstdio.extension-lab/lab-webview`);
       const frame = page.frameLocator('iframe[title="Lab"]');
       await expect(frame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
 
@@ -192,9 +199,9 @@ test.describe("Extension webview live reload", () => {
       const metadataResponse = await request.get(`${apiBase}/v1/projects/${project.id}/extensions/ui`);
       expect(metadataResponse.ok()).toBe(true);
       const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
-      expectWebviewAtPath(metadata, "lab");
+      expectWebviewPageAtPath(metadata, "lab-webview");
       await bypassOnboarding(page, project.id);
-      await page.goto(`/projects/${project.id}/lab`);
+      await page.goto(`/projects/${project.id}/pstdio.extension-lab/lab-webview`);
 
       const frame = page.frameLocator('iframe[title="Lab"]');
       await expect(frame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();

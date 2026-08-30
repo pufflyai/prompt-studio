@@ -115,7 +115,7 @@ test("PS-174 keeps project-owned collections ordered and stable across aggregate
   await waitForTicketsExtension(request, project.id);
   await createSession(request, project.id, "Existing sidenav session");
   await prepareDashboard(page, project.id);
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
 
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   await row(sidenav, "Tickets").click();
@@ -165,7 +165,7 @@ test("PS-174 customizes the Sidenav from any point and persists header ordering"
   const project = await createProject(request);
   await waitForTicketsExtension(request, project.id);
   await prepareDashboard(page, project.id);
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
 
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   const projectButton = page.locator('[data-workbench-region="nav"]').getByRole("button", { name: /PS-174 Sidenav$/ });
@@ -239,17 +239,23 @@ test("PS-174 renders the ticket tree inside the Sidenav resource section", async
     content: "# Research",
   });
   await prepareDashboard(page, project.id);
-  await page.goto("/");
-  await page.getByRole("option", { name: "Tickets", exact: true }).click();
+  await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
+
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  await expectGlobalHeader(sidenav);
 
   const card = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
   await expect(card).toBeVisible({ timeout: 30_000 });
   await card.getByText(ticket.title, { exact: true }).click();
 
-  const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  await expectGlobalHeader(sidenav);
+  // The tickets page declares a `files` slot in the sidenav, so an open ticket hands the
+  // region to the planner's resource tree.
   await expect(sidenav.getByRole("option", { name: new RegExp(ticket.shorthand) })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: /research/ })).toBeVisible();
+
+  // Going back to the board releases the slot and the navigation tree returns unchanged.
+  await page.getByRole("tab", { name: "Tickets", exact: true }).click();
+  await expectGlobalHeader(sidenav);
 });
 
 test.describe("PS-174 Dashboard Sidenav stories", () => {

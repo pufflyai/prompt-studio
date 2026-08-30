@@ -46,6 +46,15 @@ const expectMenuItems = async (page: Page, labels: string[]) => {
   }
 };
 
+// The tickets page binds a `files` slot in the sidenav, so an open ticket hands that
+// region to the planner's resource tree. Activating the board tab in Main releases the
+// slot and the dashboard navigation tree comes back.
+const returnToBoard = async (page: Page) => {
+  await page.getByRole("tab", { name: "Tickets", exact: true }).click();
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  await expect(sidenav.getByRole("option", { name: "Tickets", exact: true }).first()).toBeVisible();
+};
+
 test("PS-179 exposes the same ticket and workspace actions on rows and breadcrumbs", async ({ page, request }) => {
   test.slow();
   const project = await createProject(request);
@@ -66,7 +75,7 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
     });
 
     await prepareDashboard(page, project.id, repo.id);
-    await page.goto(`/projects/${project.id}/tickets`);
+    await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
 
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
@@ -79,6 +88,7 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
         exact: true,
       }),
     ).toBeVisible();
+    await returnToBoard(page);
     const workspacesNavigation = await showHiddenSidenavEntry(page, "Workspaces");
     await workspacesNavigation.click();
     await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
@@ -95,6 +105,7 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
         exact: true,
       }),
     ).toBeVisible();
+    await returnToBoard(page);
     await workspacesNavigation.click();
     await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
     await expect(ticketCard).toBeVisible();
@@ -133,6 +144,7 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
     await breadcrumbAction.click();
     await expect(page.getByRole("menuitem", { name: "Run attempt", exact: true })).toBeHidden();
 
+    await returnToBoard(page);
     await workspacesNavigation.click();
     const workspaceRow = page.getByRole("row").filter({ hasText: attempt.workspace.workspace_shorthand }).first();
     await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
@@ -155,7 +167,7 @@ test("PS-179 keeps ticket creation and ticket status settings available", async 
   test.slow();
   const project = await createProject(request);
   await prepareDashboard(page, project.id, "");
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
 
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
@@ -176,7 +188,7 @@ test("PS-179 keeps ticket creation and ticket status settings available", async 
   expect((await createResponse).ok()).toBe(true);
   await expect(createDialog).toBeHidden();
   await expect(sidenav.getByRole("option").filter({ hasText: "Create flow remains available" })).toBeVisible();
-  await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
+  await returnToBoard(page);
   await expect(page.getByTestId("renderer-card").filter({ hasText: "Create flow remains available" })).toBeVisible();
 
   await sidenav.getByRole("option", { name: "Settings", exact: true }).click();

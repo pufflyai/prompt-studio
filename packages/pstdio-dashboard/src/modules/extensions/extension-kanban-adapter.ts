@@ -187,7 +187,7 @@ export const createDashboardKanbanAdapter = (input: {
         });
       }
       const resource = createdResource(record, created, projectId);
-      if (resource) void ctx.resources.openResource(resource, { replaceActive: true }).catch(() => undefined);
+      if (resource) void ctx.pages.emitResource(resource).catch(() => undefined);
     },
   };
 

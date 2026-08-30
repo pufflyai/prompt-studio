@@ -26,6 +26,7 @@
   "panels.labStatusBar.title": "État du labo",
   "routes.faulty.label": "Labo (défaillant)",
   "routes.lab.label": "Laboratoire",
+  "routes.labMode.label": "Mode laboratoire",
   "settingsPanels.global.title": "Labo (global)",
   "settingsPanels.project.title": "Labo (projet)",
   "settingsSections.lab.title": "Labo",

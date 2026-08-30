@@ -113,7 +113,7 @@ test.describe("frontend route performance", () => {
     await page.goto("/");
     await navigateForRouteMeasure(
       page,
-      `/projects/${project.id}/tickets/${ticket.shorthand}/workspaces/${attempt.workspace.workspace_shorthand}`,
+      `/projects/${project.id}/workspaces/${attempt.workspace.id}`,
       "route:workspace:start",
     );
     const ready = await waitForMark(page, "app:workspace-page-ready", "route:workspace:start");

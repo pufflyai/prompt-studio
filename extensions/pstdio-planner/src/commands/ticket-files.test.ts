@@ -30,8 +30,9 @@ const ticketRendererParams = (ticket: { id: string; shorthand: string }, documen
   },
 });
 
+// A resource emission: the active page's bindings re-activate the open ticket
+// instance at the selected document.
 const ticketDocumentTarget = (ticket: { id: string; shorthand: string; title?: string }, documentId: string) => ({
-  kind: "resource" as const,
   resource: {
     type: "ticket",
     id: ticket.id,
@@ -42,7 +43,6 @@ const ticketDocumentTarget = (ticket: { id: string; shorthand: string; title?: s
       resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
     },
   },
-  input: { strategy: "replace-active" as const },
 });
 
 describe("ticket files tree commands", () => {
@@ -249,7 +249,8 @@ describe("ticket files tree workspace commands", () => {
           label: "WS-1",
           icon: "GitBranch",
           target: {
-            kind: "resource",
+            kind: "page",
+            page: { extensionId: "pstdio", kind: "page", id: "workspaces" },
             // The canonical parent edge nests this workspace beneath the ticket.
             resource: {
               type: "workspace",

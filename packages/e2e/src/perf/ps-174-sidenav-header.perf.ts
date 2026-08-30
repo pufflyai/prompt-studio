@@ -112,7 +112,7 @@ test("PS-174 navigates global collections within the interaction budget", async 
   }, project.id);
   await installLongTaskObserver(page);
   await throttleChromiumCpu(page);
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
 
   for (const collection of collections) {
     const target = collectionRow(page, collection);

@@ -41,11 +41,17 @@ test("PS-119 answers a hydrated question tool call from the session composer", a
     localStorage.setItem("dashboard-wb:selected-project:global", projectId);
   }, project.id);
 
-  await page.goto(`/projects/${project.id}/`);
-  await page.getByRole("button", { name: new RegExp(questionPrompt) }).click();
+  await page.goto(`/projects/${project.id}/sessions`);
+  await page
+    .getByRole("option", { name: new RegExp(questionPrompt) })
+    .first()
+    .click();
   await expect(page.getByRole("radio", { name: "TypeScript" })).toBeVisible();
 
-  await page.reload();
+  // A cold load of the session's page URL: the stored question tool call has to
+  // hydrate back into an answerable composer, not only stream in live.
+  await page.goto(`/projects/${project.id}/sessions/${session.id}`);
+  await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(questionPrompt);
 
   const answerOption = page.getByRole("radio", { name: "TypeScript" });
   const sendButton = page.getByTestId("send-message-button");

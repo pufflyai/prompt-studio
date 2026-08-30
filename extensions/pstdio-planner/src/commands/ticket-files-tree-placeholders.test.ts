@@ -91,7 +91,8 @@ describe("ticket files tree workspace metadata", () => {
 
     expect(sections.find((section) => section.id === "workspaces")?.nodes[0]).toMatchObject({
       target: {
-        kind: "resource",
+        kind: "page",
+        page: { extensionId: "pstdio", kind: "page", id: "workspaces" },
         resource: {
           metadata: {
             workspaceId: "ws-1",

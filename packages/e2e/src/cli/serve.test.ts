@@ -127,7 +127,7 @@ describe("pstdio serve", () => {
         pid: number;
       };
       expect(promoted).toEqual({ ...original, ownerType: "persistent" });
-      expect(promoted.pid).toBe(child.pid);
+      expect(promoted.pid).toBe(child.pid!);
 
       const health = await fetch(`http://localhost:${firstPort}/healthz`);
       expect(health.ok).toBe(true);

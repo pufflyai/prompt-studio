@@ -188,15 +188,13 @@ test.describe("Session chat and workspace behavior", () => {
       },
       { id: projectId, sessionId: attempt.session.id },
     );
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await expect(page.locator("[data-testid='session-attached-panel']")).toBeVisible();
     await expect(page.locator("[data-testid='session-attached-panel']").getByText(prompt).first()).toBeVisible();
     await expect(page.locator("[data-testid='session-attached-panel']").getByText("Review changes")).toBeVisible();
 
-    await page.goto(
-      `/projects/${projectId}/tickets/${ticket.shorthand}/workspaces/${attempt.workspace.workspace_shorthand}`,
-    );
+    await page.goto(`/projects/${projectId}/workspaces/${attempt.workspace.id}`);
 
     await expect(page.locator("[data-testid='session-attached-panel']")).toBeVisible();
     await expect(page.locator("[data-testid='session-attached-panel']").getByText(prompt).first()).toBeVisible();
@@ -227,15 +225,13 @@ test.describe("Session chat and workspace behavior", () => {
       },
       { id: projectId, sessionId: attempt.session.id },
     );
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await expect(page.locator("[data-testid='session-bubble']")).toBeVisible();
     await expect(page.locator("[data-testid='session-bubble']").getByText(prompt).first()).toBeVisible();
     await expect(page.locator("[data-testid='session-bubble']").getByText("Review changes")).toBeVisible();
 
-    await page.goto(
-      `/projects/${projectId}/tickets/${ticket.shorthand}/workspaces/${attempt.workspace.workspace_shorthand}`,
-    );
+    await page.goto(`/projects/${projectId}/workspaces/${attempt.workspace.id}`);
 
     await expect(page.locator("[data-testid='session-bubble']")).toBeVisible();
     await expect(page.locator("[data-testid='session-bubble']").getByText(prompt).first()).toBeVisible();
@@ -256,7 +252,7 @@ test.describe("Session chat and workspace behavior", () => {
     await createSessionViaApi(request, projectId, "Session 6");
     await createSessionViaApi(request, projectId, "Session 7");
 
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await page.locator("button", { hasText: "New session" }).first().click();
 

@@ -100,7 +100,7 @@ const getExtensionInstanceId = async (projectId: string, installName: string) =>
 const uploadPlannerFile = async (
   projectId: string,
   extensionInstanceId: string,
-  input: { name: string; mimeType: string; data: Uint8Array },
+  input: { name: string; mimeType: string; data: Uint8Array<ArrayBuffer> },
 ) => {
   const res = await fetch(
     `${api.url}/v1/projects/${encodeURIComponent(projectId)}/extensions/${encodeURIComponent(extensionInstanceId)}/files?scope_type=resource&scope_id=ticket-attachment`,

@@ -181,7 +181,7 @@ test.describe("Ticket list", () => {
 
   test("shows board view with default status columns", async ({ page, request }) => {
     await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     const statuses = await getTicketStatuses(request, projectId);
     for (const status of statuses) {
@@ -198,7 +198,7 @@ test.describe("Ticket list", () => {
     await createTicketViaApi(request, projectId, "Ready task", readyStatus!.id);
 
     await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await expect(page.getByText("Backlog task")).toBeVisible();
     await expect(page.getByText("Ready task")).toBeVisible();
@@ -209,7 +209,7 @@ test.describe("Ticket list", () => {
     const initialTickets = await listTickets();
 
     await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await expect(page.getByText("backlog", { exact: true }).first()).toBeVisible();
 
@@ -243,7 +243,7 @@ test.describe("Ticket list", () => {
     const optionId = createdTag.options[0].id;
 
     await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await openCreateTicketModal(page);
 
@@ -274,12 +274,12 @@ test.describe("Ticket list", () => {
     const ticket = await createTicketViaApi(request, projectId, "Detail test", backlog.id);
 
     await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await page.getByText("Detail test").click();
 
-    await page.waitForURL(`**/projects/${projectId}/tickets/${ticket.shorthand}`);
-    expect(page.url()).toContain(`/tickets/${ticket.shorthand}`);
+    await page.waitForURL(`**/projects/${projectId}/pstdio.pstdio-planner/tickets/ticket/${ticket.id}`);
+    expect(page.url()).toContain(`/pstdio.pstdio-planner/tickets/ticket/${ticket.id}`);
   });
 });
 
@@ -294,7 +294,7 @@ test.describe("Ticket list editing and filtering", () => {
 
   test("updates ticket display title after editing content and returning to list", async ({ page, request }) => {
     await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await expect(page.getByText("backlog", { exact: true }).first()).toBeVisible();
 
@@ -316,7 +316,7 @@ test.describe("Ticket list editing and filtering", () => {
     expect(createdTicket.title).toBe("Original display title");
 
     await page.getByText("Original display title").first().click();
-    await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket!.shorthand}`);
+    await page.waitForURL(`**/projects/${projectId}/pstdio.pstdio-planner/tickets/ticket/${createdTicket!.id}`);
 
     const saveResponse = page.waitForResponse(
       (response) =>
@@ -334,7 +334,7 @@ test.describe("Ticket list editing and filtering", () => {
     await saveResponse;
 
     await openTicketsListFromDetail(page);
-    await page.waitForURL(`**/projects/${projectId}/tickets`);
+    await page.waitForURL(`**/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await expect(page.getByText("Updated display title")).toBeVisible();
     await expect(page.getByText("Original display title")).not.toBeVisible();
@@ -342,7 +342,7 @@ test.describe("Ticket list editing and filtering", () => {
 
   test("preserves edited ticket content after leaving and reopening ticket details", async ({ page, request }) => {
     await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await expect(page.getByText("backlog", { exact: true }).first()).toBeVisible();
 
@@ -361,7 +361,7 @@ test.describe("Ticket list editing and filtering", () => {
     expect(createdTicket).toBeTruthy();
 
     await page.getByText("Original content title").first().click();
-    await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket!.shorthand}`);
+    await page.waitForURL(`**/projects/${projectId}/pstdio.pstdio-planner/tickets/ticket/${createdTicket!.id}`);
 
     const updatedContent = "Persisted content title\n\npersisted-body-marker";
     const saveResponse = page.waitForResponse(
@@ -380,11 +380,11 @@ test.describe("Ticket list editing and filtering", () => {
     await expect(editor).toContainText("persisted-body-marker");
 
     await openTicketsListFromDetail(page);
-    await page.waitForURL(`**/projects/${projectId}/tickets`);
+    await page.waitForURL(`**/projects/${projectId}/pstdio.pstdio-planner/tickets`);
     const persistedTicketCard = page.getByText("Persisted content title");
     await expect(persistedTicketCard).toBeVisible();
     await persistedTicketCard.click();
-    await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket!.shorthand}`);
+    await page.waitForURL(`**/projects/${projectId}/pstdio.pstdio-planner/tickets/ticket/${createdTicket!.id}`);
 
     const reopenedEditor = page.locator("[data-testid='content-editable']").first();
     await expect(reopenedEditor).toContainText("persisted-body-marker", { timeout: 12_000 });
@@ -399,7 +399,7 @@ test.describe("Ticket list editing and filtering", () => {
     await updateTicketViaApi(request, projectId, archivedTicket.id, { archived: true });
 
     await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await expect(page.getByText("Visible ticket")).toBeVisible();
     await expect(page.getByText("Archived ticket")).not.toBeVisible();
@@ -429,7 +429,7 @@ test.describe("Ticket list additional coverage", () => {
     const ticket = await createTicketViaApi(request, projectId, "Shorthand test", backlog.id);
 
     await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await expect(page.getByText(ticket.shorthand)).toBeVisible();
   });
@@ -443,7 +443,7 @@ test.describe("Ticket list additional coverage", () => {
     await createTicketViaApi(request, projectId, "Third task", backlog.id);
 
     await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await expect(page.getByText("First task")).toBeVisible();
     await expect(page.getByText("Second task")).toBeVisible();
@@ -452,7 +452,7 @@ test.describe("Ticket list additional coverage", () => {
 
   test("shows loading state before tickets are ready", async ({ page }) => {
     await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     // Either loading text or the board should be visible (loading may be fast)
     const loadingOrBoard = page.getByText("Loading tickets...").or(page.getByText("backlog", { exact: true }).first());
@@ -500,7 +500,7 @@ test.describe("Ticket list additional coverage", () => {
     });
 
     await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await openCreateTicketModal(page);
 
@@ -522,7 +522,7 @@ test.describe("Ticket list additional coverage", () => {
     const [createdTicket] = await listTickets();
 
     await page.getByText("Ticket with tag").first().click();
-    await page.waitForURL(`**/projects/${projectId}/tickets/${createdTicket.shorthand}`);
+    await page.waitForURL(`**/projects/${projectId}/pstdio.pstdio-planner/tickets/ticket/${createdTicket.id}`);
 
     // The tag selector should show the option name, not "No tags selected"
     await expect(page.getByText(optionName)).toBeVisible();
@@ -545,7 +545,7 @@ test.describe("Ticket list additional coverage", () => {
     const ticket = await createTicketViaApi(request, projectId, "Tag test ticket", backlog.id);
 
     await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets/${ticket.shorthand}`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets/ticket/${ticket.id}`);
 
     // The tag selector should show the tag name as the default label
     const tagTrigger = page.getByRole("button", { name: "severity", exact: true });
@@ -583,7 +583,7 @@ test.describe("Ticket list additional coverage", () => {
     writeFileSync(join(attempt.workspace.worktree_path, "feature.ts"), 'export const badge = "ready";\n');
 
     await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await expect(page.getByText("Workspace badge regression")).toBeVisible({ timeout: 15_000 });
 

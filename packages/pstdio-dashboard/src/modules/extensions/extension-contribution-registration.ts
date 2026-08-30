@@ -6,8 +6,7 @@ import {
 } from "@pstdio/workbench/extensions";
 import { createElement } from "react";
 import { buildAbsoluteApiUrl } from "@/lib/api";
-import { prepareDashboardNavigationResource, selectDashboardNavigationView } from "@/shared/app/navigation-state";
-import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
+import { selectDashboardNavigationView } from "@/shared/app/navigation-state";
 import { uploadExtensionCommandFile } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import { toWorkbenchContributionId } from "@/shared/extensions/contribution-ref";
@@ -33,7 +32,6 @@ import { type ExecuteDashboardExtensionCommand, prepareExtensionCommandArgs } fr
 import { createDashboardKanbanAdapter, toDashboardExtensionResource } from "./extension-kanban-adapter";
 import { registerExtensionNavigation, withoutDashboardNavigationItems } from "./extension-navigation";
 import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
-import { registerExtensionResourceSidenav, withoutIntegratedResourceSidenavViews } from "./extension-resource-sidenav";
 import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
 
 export const disposeExtensionContributions = (disposables: Disposable[]) => {
@@ -48,21 +46,12 @@ interface RegisterExtensionContributionsInput {
 }
 
 export const extensionViewResolveInput =
-  (
-    ctx: WorkbenchModuleContext,
-    view: { id: string; title: string; icon?: string; path?: string },
-    navigationItemId = view.id,
-  ) =>
+  (ctx: WorkbenchModuleContext, view: { id: string; title: string; icon?: string }, navigationItemId = view.id) =>
   (openInput: OpenWorkbenchViewInput) => {
     if (openInput.resource) return openInput;
     selectDashboardNavigationView(ctx, view.id, { modeId: "project" });
     ctx.breadcrumbs.setItems([{ title: view.title, icon: view.icon }]);
     setDashboardSidenavSelection(ctx, navigationItemId);
-    const projectId = getDashboardSelectedProjectId(ctx);
-    if (typeof window !== "undefined" && projectId && view.path) {
-      const path = `/projects/${encodeURIComponent(projectId)}/${view.path.replace(/^\/+/, "")}`;
-      if (window.location.pathname !== path) window.history.replaceState(null, "", path);
-    }
     return openInput;
   };
 
@@ -154,9 +143,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         menuSlotsById: menuResult.menuSlotsById,
         menuTargetsById: dashboardMenuTargetsById,
         menuRegistrations: menuResult.registrations,
-        metadata: withoutIntegratedResourceSidenavViews(
-          withoutDashboardNavigationItems(withDashboardWebviewUrls(input.metadata)),
-        ),
+        metadata: withoutDashboardNavigationItems(withDashboardWebviewUrls(input.metadata)),
         prepareCommandArgs: (commandId, args, _context, onArgsChange) =>
           prepareExtensionCommandArgs({
             args,
@@ -166,21 +153,8 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
             uploadFile: uploadExtensionCommandFile,
           }),
         projectId: input.projectId,
-        prepareResource: (resource) => prepareDashboardNavigationResource(input.ctx, resource),
         resolveTreeNodeResource: (resource) => toDashboardExtensionResource(resource, input.projectId)!,
-        resolveViewInput: (view) => {
-          const navigationItem = input.metadata.navigationItems.find(
-            (item) => item.action.kind === "view" && toWorkbenchContributionId(item.action.view) === view.id,
-          );
-          const path = input.metadata.views.find((candidate) => candidate.id === view.id)?.path;
-          const resolveInput = extensionViewResolveInput(input.ctx, { ...view, path }, navigationItem?.id);
-          return (openInput) => {
-            // Legacy extension views are not pages. Release any host page that was
-            // active before the view opens so history records the view and its resource.
-            input.ctx.pages.deactivate();
-            return resolveInput(openInput);
-          };
-        },
+        resolveViewInput: (view) => extensionViewResolveInput(input.ctx, view, undefined),
         settingsSectionId: "project",
         settingsSectionTitle: "Project",
         subscribeRefreshEvents: (listener) => {
@@ -191,7 +165,6 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
       }),
       registerExtensionActivityNavigationOwnership(input.metadata),
       registerExtensionNavigation(input.ctx, input.metadata),
-      registerExtensionResourceSidenav(input.ctx, input.metadata),
       registerExtensionResourceHierarchy(input.ctx, { metadata: input.metadata, projectId: input.projectId }),
     );
   } catch (error) {

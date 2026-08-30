@@ -36,8 +36,17 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
 const labFrame = (page: import("@playwright/test").Page, title: string) =>
   page.frameLocator(`iframe[title="${title}"]`);
 
+// The mode nav item is labeled "Lab mode" to stay distinct from the Lab page item.
+// The mode places one unclosable main panel, so no main tab renders; the activity
+// rail is the mode's arrival signal.
 const openLabMode = async (page: import("@playwright/test").Page) => {
-  await page.getByRole("option", { name: "Lab", exact: true }).click({ timeout: 30_000 });
+  await page.getByRole("option", { name: "Lab mode" }).click({ timeout: 30_000 });
+  await expect(page.locator('[data-workbench-region="activity"]')).toBeVisible({ timeout: 30_000 });
+};
+
+// The Lab page owns a namespaced URL, so the deep link is the direct entry point.
+const openLabPage = async (page: import("@playwright/test").Page, projectId: string) => {
+  await page.goto(`/projects/${projectId}/pstdio.extension-lab/lab`);
   await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible({ timeout: 30_000 });
 };
 
@@ -50,10 +59,7 @@ test("the Lab mode swaps the sidenav for activity and status chrome without a te
 
   await openLabMode(page);
 
-  // One mode, three main tabs.
-  await expect(page.getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
-  await expect(page.getByRole("tab", { name: "Cams", exact: true })).toBeVisible();
-  await page.getByRole("tab", { name: "Overview", exact: true }).click();
+  // The mode composition places the overview webview in main and the workflow board aside.
   const overviewFrame = labFrame(page, "Overview");
   await expect(overviewFrame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible({ timeout: 30_000 });
   await expect(overviewFrame.getByText("0", { exact: true })).toBeVisible();
@@ -77,14 +83,20 @@ test("the Lab mode swaps the sidenav for activity and status chrome without a te
   await expect(page.locator('[data-workbench-region="activity"]')).toHaveCount(0);
 });
 
-test("the Cameras tree menu drives the cams player", async ({ page, request }) => {
+test("the Lab page composes its main tabs and the Cameras tree menu drives the cams player", async ({
+  page,
+  request,
+}) => {
   test.slow();
   const project = await createProject(request);
   await prepareDashboard(page, project.id);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`/projects/${project.id}`);
 
-  await openLabMode(page);
+  await openLabPage(page, project.id);
+
+  // One page, three main tabs.
+  await expect(page.getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Cams", exact: true })).toBeVisible();
   await page.getByRole("tab", { name: "Cams", exact: true }).click();
 
   const camsFrame = labFrame(page, "Cams");
@@ -103,14 +115,13 @@ test("the Cameras tree menu drives the cams player", async ({ page, request }) =
   await expect(camsFrame.getByText(/Corridor B/)).toBeVisible({ timeout: 15_000 });
 });
 
-test("artifacts are created from the panel menu and inspected in the Side Panel", async ({ page, request }) => {
+test("artifacts are created from the panel menu and inspected in the Lab page inspector", async ({ page, request }) => {
   test.slow();
   const project = await createProject(request);
   await prepareDashboard(page, project.id);
   await page.setViewportSize({ width: 1440, height: 900 });
-  await page.goto(`/projects/${project.id}`);
 
-  await openLabMode(page);
+  await openLabPage(page, project.id);
   await page.getByRole("tab", { name: "Artifacts", exact: true }).click();
 
   // The Create artifacts menu lives on the Artifacts panel itself.
@@ -134,14 +145,17 @@ test("artifacts are created from the panel menu and inspected in the Side Panel"
   await expect(rows).toHaveCount(initialArtifactCount + 1, { timeout: 15_000 });
   const createdArtifact = rows.filter({ hasText: created.outcome.value.title });
 
-  // Selecting a row opens the Side Panel inspector without leaving the Lab.
+  // Selecting a row emits the artifact resource into the page's side inspector slot,
+  // and the active bound resource serializes after the page path in the URL.
   await createdArtifact.locator("td[data-column-id='artifact']").click();
   const detailFrame = labFrame(page, "Artifact");
   await expect(detailFrame.getByRole("heading", { name: created.outcome.value.title })).toBeVisible({
     timeout: 15_000,
   });
+  await expect(page).toHaveURL(
+    new RegExp(`/projects/${project.id}/pstdio\\.extension-lab/lab/glass-lab-artifact/[^/]+$`),
+  );
   await expect(page.getByRole("tab", { name: "Artifacts", exact: true })).toBeVisible();
-  await expect(page.locator('[data-workbench-region="activity"]')).toBeVisible();
 
   // Row actions still delete artifacts.
   await createdArtifact.locator('button[aria-label="Row actions"]').click();

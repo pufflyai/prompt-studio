@@ -36,7 +36,7 @@ test.describe("Tickets shell", () => {
 
   test("keeps project navigation, footer commands, and a single main surface", async ({ page }) => {
     await bypassOnboarding(page);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await expect(page.getByRole("button", { name: /Tickets Shell Project/ })).toBeVisible();
     await expect(page.getByText("Search", { exact: true })).toBeVisible();

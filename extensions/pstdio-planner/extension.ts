@@ -17,7 +17,7 @@ import { ticketRefFromLifecyclePayload } from "./src/data/workspace-ticket-link"
 import { worktreeCreatedHook } from "./src/hooks/worktree-created";
 import { notifyBlocked } from "./src/planner-notifications";
 import { ticketStatuses } from "./src/ticket-status-provider";
-import { createPlannerUi, plannerSettingsSection, ticketResourceKind } from "./src/ui-contributions";
+import { createPlannerUi, plannerSettingsSection, ticketResourceKind, ticketsPage } from "./src/ui-contributions";
 
 const plannerUi = createPlannerUi(import.meta.url);
 
@@ -54,9 +54,8 @@ export default defineExtension({
   commands: plannerCommands,
   views: plannerUi.views,
   viewMenus: plannerUi.viewMenus,
-  placements: plannerUi.placements,
+  pages: plannerUi.pages,
   resourceKinds: [ticketResourceKind],
-  resourceViews: plannerUi.resourceViews,
   navigationItems: plannerUi.navigationItems,
   settingsPanels: plannerUi.settingsPanels,
   statuses: [ticketStatuses],
@@ -81,6 +80,7 @@ export default defineExtension({
       id: "tickets",
       title: l10n("commandPaletteResources.tickets.title", "Tickets"),
       resourceKind: ticketResourceKind.ref,
+      page: ticketsPage.ref,
       query: queryTicketResources,
     }),
   ],

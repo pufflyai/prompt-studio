@@ -72,7 +72,7 @@ test.describe("Session bubble workspace selection", () => {
       content: "Choose a session workspace",
     });
 
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
     await page.getByRole("option", { name: "Tickets", exact: true }).click();
     await page.getByText(ticket.content, { exact: true }).click();
 
@@ -85,7 +85,9 @@ test.describe("Session bubble workspace selection", () => {
     await sidePanel.getByRole("button", { name: "Select workspace" }).click();
     await page.locator("[data-testid='session-workspace-options']").getByText(workspace.workspace_shorthand).click();
 
-    await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/tickets$`));
+    await expect(page).toHaveURL(
+      new RegExp(`/projects/${projectId}/pstdio\\.pstdio-planner/tickets/ticket/${ticket.id}$`),
+    );
     await expect(page.getByRole("navigation", { name: "breadcrumb" })).not.toContainText(workspace.workspace_shorthand);
     await expect(sidePanel.getByRole("button", { name: "Select workspace" })).toContainText(
       workspace.workspace_shorthand,

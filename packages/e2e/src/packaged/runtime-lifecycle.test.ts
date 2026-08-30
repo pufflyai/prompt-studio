@@ -26,7 +26,7 @@ const createRuntimeHome = () => {
 };
 
 const createRuntimeEnv = (home: string) => {
-  const env = {
+  const env: Record<string, string | undefined> = {
     ...process.env,
     HOME: home,
     PSTDIO_DB_PATH: join(home, "pstdio.db"),

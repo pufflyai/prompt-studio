@@ -37,22 +37,20 @@ describe("ticket files tree sub-ticket section", () => {
           icon: "Component",
           iconColor: "gray.fg",
           iconTooltip: "Backlog",
-          target: {
-            kind: "resource",
-            resource: {
-              type: "ticket",
-              id: child.id,
-              label: `${child.shorthand} ${child.title}`,
-              metadata: {
-                shorthand: child.shorthand,
-                resourceParent: {
-                  type: "ticket",
-                  id: parent.id,
-                  label: `${parent.shorthand} ${parent.title}`,
-                  metadata: {
-                    shorthand: parent.shorthand,
-                    resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
-                  },
+          // A resource with no target: the tree emits it on activation.
+          resource: {
+            type: "ticket",
+            id: child.id,
+            label: `${child.shorthand} ${child.title}`,
+            metadata: {
+              shorthand: child.shorthand,
+              resourceParent: {
+                type: "ticket",
+                id: parent.id,
+                label: `${parent.shorthand} ${parent.title}`,
+                metadata: {
+                  shorthand: parent.shorthand,
+                  resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
                 },
               },
             },

@@ -205,7 +205,7 @@ test("PS-183 switches projects once and within budget", async ({ page, request }
     }, projectA.id);
     await installLongTaskObserver(page);
     await throttleChromiumCpu(page);
-    await page.goto(`/projects/${projectA.id}/tickets`);
+    await page.goto(`/projects/${projectA.id}/pstdio.pstdio-planner/tickets`);
     await expect(page.locator('[data-workbench-region="nav"]')).toContainText(projectA.name, {
       timeout: 30_000,
     });

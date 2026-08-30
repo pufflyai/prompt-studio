@@ -126,7 +126,7 @@ test("PS-168 closes and reopens the live Side Panel within budget", async ({ pag
   await deleteAllProjects(request);
   const project = await createProject(request);
   await preparePage(page, project.id);
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
 
   const nav = page.locator('[data-workbench-region="nav"]');
   await nav.getByRole("button", { name: "Show Side Panel" }).click();

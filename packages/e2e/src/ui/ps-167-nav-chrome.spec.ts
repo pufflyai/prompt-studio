@@ -59,7 +59,7 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
     statusId: backlog!.id,
   });
   await prepareDashboard(page, project.id);
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
 
   const nav = page
     .locator('[data-workbench-region="nav"]')
@@ -162,7 +162,7 @@ test("PS-167 keeps the Secondary Panel closed from Workspaces until requested", 
   await deleteAllProjects(request);
   const project = await createProject(request);
   await prepareDashboard(page, project.id);
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
 
   const nav = page.locator('[data-workbench-region="nav"]');
   const showSecondary = nav.getByRole("button", { name: "Show Secondary Panel" });

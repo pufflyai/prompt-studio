@@ -1,4 +1,4 @@
-import type { ResourceAnchor, TreeNode, TreeViewSection } from "@pstdio/sdk/extensions";
+import { type ResourceAnchor, type TreeNode, type TreeViewSection, workbenchPages } from "@pstdio/sdk/extensions";
 
 // The shape the host's `ctx.sessions.list()` returns; only the fields the sidenav needs.
 export interface TicketSession {
@@ -44,7 +44,8 @@ const sessionNode = (session: TicketSession): TreeNode => ({
   // The `sessionSurface: "side"` hint tells the dashboard to open the session in its
   // Side Panel (keeping the ticket in panel) instead of switching to sessions mode.
   target: {
-    kind: "resource",
+    kind: "page",
+    page: workbenchPages.sessions,
     resource: { type: "session", id: session.id, label: session.title, metadata: { sessionSurface: "side" } },
   },
 });

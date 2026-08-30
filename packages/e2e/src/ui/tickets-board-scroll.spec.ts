@@ -73,7 +73,7 @@ test.describe("Ticket board horizontal scrolling", () => {
     await page.setViewportSize({ width: 1000, height: 900 });
     await bypassOnboarding(page, projectId);
 
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
     await expect(page.locator('[data-testid^="board-column-"]').first()).toBeVisible();
 
     const metrics = await page

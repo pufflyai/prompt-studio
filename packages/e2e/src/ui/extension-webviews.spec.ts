@@ -101,14 +101,21 @@ const fetchMetadata = async (request: import("@playwright/test").APIRequestConte
   return (await response.json()) as WorkbenchExtensionMetadata;
 };
 
-const webviewAtPath = (metadata: WorkbenchExtensionMetadata, path: string) => {
-  const view = metadata.views.find((candidate) => candidate.path === path);
-  if (!view || view.body.kind !== "webview") throw new Error(`Missing webview at path: ${path}`);
+// Views no longer carry URL paths; a page owns the URL and hosts the view in a slot.
+const webviewForPage = (metadata: WorkbenchExtensionMetadata, pagePath: string) => {
+  const pageRecord = metadata.pages.find((candidate) => candidate.path === pagePath);
+  const slotViewRef = pageRecord?.slots[0]?.view;
+  const view = slotViewRef
+    ? metadata.views.find(
+        (candidate) => candidate.extensionId === slotViewRef.extensionId && candidate.localId === slotViewRef.id,
+      )
+    : undefined;
+  if (!view || view.body.kind !== "webview") throw new Error(`Missing webview page at path: ${pagePath}`);
   return view.body.webview;
 };
 
 const openExtensionLab = async (page: import("@playwright/test").Page, projectId: string) => {
-  await page.goto(`/projects/${projectId}/lab`);
+  await page.goto(`/projects/${projectId}/pstdio.extension-lab/lab-webview`);
 };
 
 test.describe("Extension webviews", () => {
@@ -129,7 +136,7 @@ test.describe("Extension webviews", () => {
     });
 
     const metadata = await fetchMetadata(request, project.id);
-    const labWebview = webviewAtPath(metadata, "lab");
+    const labWebview = webviewForPage(metadata, "lab-webview");
     expect(labWebview.moduleUrl).toBeTruthy();
 
     await expect
@@ -170,7 +177,7 @@ test.describe("Extension webviews", () => {
       page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Navigate back" }).click();
-    await expect(page.getByRole("link", { name: "Lab", exact: true })).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "breadcrumb" }).getByText("Lab", { exact: true })).toBeVisible();
     await expect(labFrame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
 
     // The route renders through `ShellWorkbench`: the lab guest reaches the dashboard host
@@ -205,7 +212,7 @@ test.describe("Extension webviews", () => {
     });
 
     const metadata = await fetchMetadata(request, project.id);
-    webviewAtPath(metadata, "lab");
+    webviewForPage(metadata, "lab-webview");
     await bypassOnboarding(page, project.id);
 
     await openExtensionLab(page, project.id);
@@ -253,7 +260,7 @@ test.describe("Extension webviews", () => {
     });
 
     const metadata = await fetchMetadata(request, project.id);
-    expect(metadata.views.find((view) => view.path === "lab-terminal")).toBeUndefined();
+    expect(metadata.views.find((view) => view.localId === "lab-terminal")).toBeUndefined();
 
     await bypassOnboarding(page, project.id);
     await page.goto(`/projects/${project.id}`);

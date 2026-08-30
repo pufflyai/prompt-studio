@@ -12,10 +12,14 @@ describe("font editor extension", () => {
         capabilities: ["commands.execute", "notification.show"],
       },
     });
+    expect(extension.pages?.find((page) => page.id === "font-editor")).toMatchObject({
+      path: "font-editor",
+      slots: [{ id: "editor", region: "main", view: { kind: "view", id: "font-editor" }, closable: false }],
+    });
     expect(extension.navigationItems?.find((item) => item.id === "font-editor")).toMatchObject({
       slot: { id: "project.navigation" },
       when: { mode: { extensionId: "pstdio", kind: "mode", id: "project" } },
-      action: { kind: "view", view: { kind: "view", id: "font-editor" } },
+      action: { kind: "page", page: { kind: "page", id: "font-editor" } },
     });
     expect(extension.skills?.find((skill) => skill.id === "font-editor")).toMatchObject({
       source: { path: "./skills/font-editor" },

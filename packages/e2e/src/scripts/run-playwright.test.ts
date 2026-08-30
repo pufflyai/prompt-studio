@@ -9,7 +9,11 @@ describe("buildPlaywrightEnv", () => {
       PSTDIO_API_URL: "http://localhost:19841",
     };
 
-    const result = buildPlaywrightEnv(env, { apiPort: 3201, dashboardPort: 5175 }, "run-1");
+    const result: Record<string, string | undefined> = buildPlaywrightEnv(
+      env,
+      { apiPort: 3201, dashboardPort: 5175 },
+      "run-1",
+    );
 
     expect(result).toMatchObject({
       E2E_API_PORT: "3201",

@@ -35,8 +35,8 @@ const editorScrollTop = async (page: import("@playwright/test").Page) => {
   const editor = page.locator('[role="textbox"]:visible').first();
   await expect(editor).toBeVisible();
   return editor.evaluate((element) => {
-    const ancestors: HTMLElement[] = [];
-    let current: HTMLElement | null = element;
+    const ancestors: Element[] = [];
+    let current: Element | null = element;
     while (current) {
       ancestors.push(current);
       current = current.parentElement;
@@ -54,8 +54,8 @@ const scrollEditorToBottom = async (page: import("@playwright/test").Page) => {
   const editor = page.locator('[role="textbox"]:visible').first();
   await expect(editor).toBeVisible();
   await editor.evaluate((element) => {
-    const ancestors: HTMLElement[] = [];
-    let current: HTMLElement | null = element;
+    const ancestors: Element[] = [];
+    let current: Element | null = element;
     while (current) {
       ancestors.push(current);
       current = current.parentElement;

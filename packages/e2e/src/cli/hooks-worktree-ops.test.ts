@@ -72,7 +72,7 @@ describe("commit hooks", () => {
       const result = await commitChanges({ worktreePath: repo, message: "test commit", dispatch });
       expect(result.sha).toBeTruthy();
 
-      expect(commitSha).toBe(result.sha);
+      expect<string | null>(commitSha).toBe(result.sha);
     },
     TEST_TIMEOUT,
   );
@@ -124,7 +124,7 @@ describe("merge hooks", () => {
 
       await mergeWorktree({ repoRoot: repo, branch: "feat-merge-post", dispatch });
 
-      expect(target).toBe(targetBranch);
+      expect<string | null>(target).toBe(targetBranch);
     },
     TEST_TIMEOUT,
   );
@@ -146,7 +146,7 @@ describe("merge hooks", () => {
 
       await mergeWorktree({ repoRoot: repo, branch: "feat-merge-master", dispatch });
 
-      expect(target).toBe("master");
+      expect<string | null>(target).toBe("master");
     },
     TEST_TIMEOUT,
   );

@@ -53,7 +53,7 @@ test("PS-169 opens one Panel tab within the interaction budget", async ({ page, 
   }, project.id);
   await installLongTaskObserver(page);
   await throttleChromiumCpu(page);
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
 
   const addSecondary = page
     .locator('[data-workbench-panel-header="secondary"]')

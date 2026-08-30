@@ -47,7 +47,12 @@ describe("extension-lab commands", () => {
         return { delivered: 0 };
       },
     };
+    const values = new Map<string, unknown>();
     const storage = {
+      get: async (key: string) => values.get(key),
+      set: async (key: string, value: unknown) => {
+        values.set(key, value);
+      },
       collection: () => ({
         get: async (id: string) => artifacts.get(id),
         list: async () => [...artifacts.values()],
@@ -82,7 +87,8 @@ describe("extension-lab commands", () => {
       nextStep: expect.any(String),
     });
     expect(secondId).not.toBe(firstId);
-    expect(result?.rows).toHaveLength(2);
+    // The catalog seeds its two demo artifacts on first read, alongside the created ones.
+    expect(result?.rows).toHaveLength(4);
     expect(result?.rows[0]).toMatchObject({
       id: firstId,
       values: {
@@ -111,7 +117,11 @@ describe("extension-lab commands", () => {
 
     await remove?.run({ events, storage } as never, { rowId: firstId });
 
-    expect((await query?.run({ storage } as never, {}))?.rows.map((row) => row.id)).toEqual([secondId]);
+    expect((await query?.run({ storage } as never, {}))?.rows.map((row) => row.id)).toEqual([
+      secondId,
+      "concept",
+      "prototype",
+    ]);
     expect(emitted).toEqual(["artifacts.changed", "artifacts.changed", "artifacts.changed"]);
   });
 

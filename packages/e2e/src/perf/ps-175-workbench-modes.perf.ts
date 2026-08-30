@@ -58,7 +58,7 @@ test("PS-175 switches and restores mode frames within the interaction budget", a
     await expect(page.getByText(target.marker, { exact: false }).last()).toBeVisible();
   }
   await page.evaluate(
-    () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
   );
 
   const samples: number[] = [];

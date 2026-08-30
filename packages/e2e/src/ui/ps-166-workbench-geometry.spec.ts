@@ -33,7 +33,7 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
     localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
   }, projectId);
   await page.setViewportSize({ width: 1280, height: 720 });
-  await page.goto(`/projects/${projectId}/tickets`);
+  await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 };
 
 const expectNear = (actual: number, expected: number) => {

@@ -122,7 +122,8 @@ test("PS-43 restores the first terminal when the hidden launcher was persisted a
     await page.getByRole("button", { name: "Hide Secondary Panel" }).click();
     await persistHiddenLauncherAsActive(page);
     await page.reload();
-    await expect(page.getByText("Recent sessions", { exact: true })).toBeVisible();
+    // The project lands on the planner tickets page, the first project-navigation page target.
+    await expect(page.getByTestId("board-column-backlog")).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "Show Secondary Panel" }).click();
 
     const secondaryHeader = page.locator('[data-workbench-panel-header="secondary"]');

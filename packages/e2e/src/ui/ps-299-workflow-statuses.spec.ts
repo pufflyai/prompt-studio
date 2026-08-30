@@ -53,7 +53,7 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
     }
   });
 
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
   await expect(page.getByTestId("board-column-backlog")).toContainText("Keep the Planner board visible", {
     timeout: 30_000,
   });
@@ -93,7 +93,9 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
 
   await page.keyboard.press("Escape");
   await expect(settings).not.toBeVisible();
-  await page.getByRole("option", { name: "Lab", exact: true }).click();
+  // The Lab workflow board belongs to the Lab mode, not to the Lab page: the mode places
+  // it in the Side Panel while the page composes Overview/Artifacts/Cams in main.
+  await page.getByRole("option", { name: "Lab mode", exact: true }).click();
   await page.getByRole("tab", { name: "Workflow status demo", exact: true }).click();
   await expect(page.getByTestId("board-column-idea")).toContainText("Concept", { timeout: 30_000 });
 
@@ -107,14 +109,31 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
         "/extensions/commands/pstdio.extension-lab.view.workflow.kanban.onAttributeChange/execute",
       ),
   );
-  await concept.dragTo(testing);
+  // The board is narrow inside the Side Panel, so the card has to be dragged with
+  // explicit pointer steps: a single jump does not clear the board's drag threshold.
+  const conceptBox = await concept.boundingBox();
+  const testingBox = await testing.boundingBox();
+  expect(conceptBox).not.toBeNull();
+  expect(testingBox).not.toBeNull();
+  await page.mouse.move(conceptBox!.x + conceptBox!.width / 2, conceptBox!.y + conceptBox!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(conceptBox!.x + conceptBox!.width / 2, conceptBox!.y + conceptBox!.height / 2 + 10, {
+    steps: 5,
+  });
+  await page.mouse.move(testingBox!.x + testingBox!.width / 2, testingBox!.y + testingBox!.height / 2, { steps: 12 });
+  await page.mouse.up();
   expect((await moveResponse).ok()).toBe(true);
   await expect(testing).toContainText("Shape the concept");
-  await concept.getByText("Shape the concept", { exact: true }).click();
+
+  // The Lab page owns how an artifact is presented: it binds the kind to its inspector
+  // slot. The Lab mode only hosts the workflow board, so open the moved artifact there.
+  await page.goto(`/projects/${project.id}/pstdio.extension-lab/lab`);
+  await page.getByRole("tab", { name: "Artifacts", exact: true }).click();
+  await page.getByRole("cell", { name: "Shape the concept", exact: true }).click();
   const artifact = page.frameLocator('iframe[title="Artifact"]');
   await expect(artifact.getByRole("heading", { name: "Shape the concept" })).toBeVisible({ timeout: 15_000 });
 
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
   await expect(page.getByTestId("board-column-backlog")).toContainText("Keep the Planner board visible", {
     timeout: 30_000,
   });
@@ -134,7 +153,7 @@ test("saved ticket board rules control the matching column", async ({ page, requ
   await prepareDashboard(page, project.id);
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
   const backlogColumn = page.getByTestId(`board-column-${backlog!.id}`);
   await expect(backlogColumn).toContainText("Keep the backlog column visible", { timeout: 30_000 });
   await expect(backlogColumn.getByRole("button", { name: "Create row" })).toBeVisible();

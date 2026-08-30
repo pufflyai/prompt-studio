@@ -107,7 +107,7 @@ test("ticket detail previews image attachments and creates manual workspaces", a
     await attachGifImage(request, project.id, ticket.id);
     await bypassOnboarding(page, project.id, repo.id);
 
-    await page.goto(`/projects/${project.id}/tickets/${ticket.shorthand}`);
+    await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets/ticket/${ticket.id}`);
 
     const imageFile = page.getByRole("option", { name: "diagram" });
     await expect(imageFile).toBeVisible({ timeout: 15_000 });
@@ -147,13 +147,13 @@ test("ticket detail previews image attachments and creates manual workspaces", a
     });
 
     await page.getByText("Workspaces", { exact: true }).hover();
-    await page.getByRole("button", { name: "New workspace" }).click();
+    await page.getByRole("button", { name: "Create workspace" }).click();
 
     const workspaceResponsePromise = page.waitForResponse(
       (response) =>
         response.request().method() === "POST" &&
         new URL(response.url()).pathname.endsWith(
-          "/extensions/commands/pstdio.pstdio-planner.command.run-attempt/execute",
+          "/extensions/commands/pstdio.pstdio-planner.command.create-workspace/execute",
         ),
     );
     await page.getByRole("dialog").getByRole("button", { name: "Create workspace", exact: true }).click();
@@ -161,13 +161,17 @@ test("ticket detail previews image attachments and creates manual workspaces", a
     const workspaceResponse = await workspaceResponsePromise;
     expect(workspaceResponse.ok()).toBe(true);
     const body = (await workspaceResponse.json()) as {
-      outcome: { ok: boolean; value: { workspace: { workspace_shorthand: string } } };
+      outcome: { ok: boolean; value: { workspace: { id: string; workspace_shorthand: string } } };
     };
     expect(body.outcome.ok).toBe(true);
     expect(body.outcome.value.workspace).toMatchObject({
       workspace_shorthand: `${ticket.shorthand}_A2`,
     });
-    await page.waitForURL(`**/projects/${project.id}/tickets/${ticket.shorthand}/workspaces/${ticket.shorthand}_A2`);
+
+    // Creating a workspace no longer navigates; the sidenav tree lists it and clicking
+    // the node opens the native workspaces host page for the new workspace.
+    await page.getByText(`${ticket.shorthand}_A2`, { exact: true }).click();
+    await page.waitForURL(`**/projects/${project.id}/workspaces/${body.outcome.value.workspace.id}`);
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

@@ -25,14 +25,12 @@ const subTicketNode = (
     icon: "Component",
     iconColor: status?.color ? `${status.color}.fg` : "fg.muted",
     iconTooltip: status?.name,
-    target: {
-      kind: "resource",
-      resource: {
-        type: "ticket",
-        id: ticket.id,
-        label,
-        metadata: ticketResourceHierarchyMetadata(ticket, ticketsById),
-      },
+    // Emitted on activation: the active page's bindings open the sub-ticket.
+    resource: {
+      type: "ticket",
+      id: ticket.id,
+      label,
+      metadata: ticketResourceHierarchyMetadata(ticket, ticketsById),
     },
   };
 };

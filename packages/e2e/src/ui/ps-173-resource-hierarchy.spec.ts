@@ -69,8 +69,7 @@ test("PS-173 navigates ticket ancestry to a linked workspace and back", async ({
     });
 
     await prepareDashboard(page, project.id, repo.id);
-    await page.goto(`/projects/${project.id}/`);
-    await page.getByRole("option", { name: "Tickets", exact: true }).click();
+    await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
     const rootCard = page.getByTestId("renderer-card").filter({ hasText: root.title }).first();
     await expect(rootCard).toBeVisible({ timeout: 30_000 });
     await rootCard.getByText(root.title, { exact: true }).click();

@@ -40,8 +40,7 @@ export const createLabViews = (baseUrl: string) => {
       kind: "dataTable",
       query: queryGlassLabArtifacts,
       refreshEvents: [labArtifactsChanged],
-      onRowActivate: (_ctx, { row }) =>
-        row.resource ? { kind: "resource", resource: row.resource, input: { strategy: "replace-active" } } : undefined,
+      onRowActivate: (_ctx, { row }) => (row.resource ? { resource: row.resource } : undefined),
       rowActions: [
         {
           id: "delete",
@@ -87,7 +86,6 @@ export const createLabViews = (baseUrl: string) => {
   const labPage = defineView({
     id: "lab-page",
     title: l10n("routes.lab.label", "Lab"),
-    path: "lab",
     body: {
       kind: "webview",
       entry: packageAsset("./src/views/main.tsx", baseUrl),
@@ -108,7 +106,6 @@ export const createLabViews = (baseUrl: string) => {
   const faultyPage = defineView({
     id: "faulty-page",
     title: l10n("routes.faulty.label", "Lab (faulty)"),
-    path: "lab-faulty",
     icon: "flask-conical-off",
     body: { kind: "webview", entry: packageAsset("./src/views/faulty-main.tsx", baseUrl) },
   });
@@ -172,8 +169,7 @@ export const createLabViews = (baseUrl: string) => {
       query: queryLabWorkflowArtifacts,
       refreshEvents: [labArtifactsChanged],
       onAttributeChange: updateLabWorkflowArtifact,
-      onRowActivate: (_ctx, { row }) =>
-        row.resource ? { kind: "resource", resource: row.resource, input: { strategy: "replace-active" } } : undefined,
+      onRowActivate: (_ctx, { row }) => (row.resource ? { resource: row.resource } : undefined),
       defaultSettings: {
         viewMode: "board",
         columnGrouping: "status",

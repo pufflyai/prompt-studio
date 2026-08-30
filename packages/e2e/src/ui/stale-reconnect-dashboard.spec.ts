@@ -63,6 +63,7 @@ const createTicketViaApi = async (
 
 const uploadTicketFileViaApi = async (
   request: import("@playwright/test").APIRequestContext,
+  projectId: string,
   ticketId: string,
   fileName: string,
   content: string,
@@ -79,7 +80,6 @@ const createOverflowProjectsViaApi = async (request: import("@playwright/test").
 test.describe("stale sync reconnect on dashboard", () => {
   let projectId: string;
   let ticketId: string;
-  let ticketShorthand: string;
 
   test.beforeEach(async ({ request }) => {
     await deleteAllProjects(request);
@@ -94,7 +94,6 @@ test.describe("stale sync reconnect on dashboard", () => {
     const ticket = await createTicketViaApi(request, projectId, "stale reconnect ticket body", backlogStatus!.id);
 
     ticketId = ticket.id;
-    ticketShorthand = ticket.shorthand;
   });
 
   test("reconnects with stale seq and keeps ticket files in sync without refresh", async ({
@@ -106,14 +105,20 @@ test.describe("stale sync reconnect on dashboard", () => {
     const uploadedFileLabel = "reconnect-proof";
 
     await bypassOnboarding(page, projectId);
-    await page.goto(`/projects/${projectId}/tickets/${ticketShorthand}`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets/ticket/${ticketId}`);
 
     await expect(page.getByText("Ticket", { exact: true })).toBeVisible();
     await expect(page.getByText(uploadedFileLabel, { exact: true })).not.toBeVisible();
 
     await context.setOffline(true);
 
-    await uploadTicketFileViaApi(request, ticketId, uploadedFileName, "file created while client is offline");
+    await uploadTicketFileViaApi(
+      request,
+      projectId,
+      ticketId,
+      uploadedFileName,
+      "file created while client is offline",
+    );
 
     await createOverflowProjectsViaApi(request, 65);
 

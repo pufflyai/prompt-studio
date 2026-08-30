@@ -2,7 +2,7 @@ import {
   defineArtifactMount,
   defineExtension,
   defineNavigationItem,
-  definePlacement,
+  definePage,
   defineSkill,
   defineView,
   l10n,
@@ -15,6 +15,7 @@ import { fontCommands } from "./src/commands/font-commands";
 const fontEditor = defineView({
   id: "font-editor",
   title: l10n("panels.fontEditor.title", "Font editor"),
+  icon: "case-upper",
   body: {
     kind: "webview",
     entry: packageAsset("./src/views/main.tsx", import.meta.url),
@@ -22,17 +23,18 @@ const fontEditor = defineView({
   },
 });
 
+const fontEditorPage = definePage({
+  id: "font-editor",
+  title: l10n("pages.fontEditor.title", "Font editor"),
+  icon: "case-upper",
+  path: "font-editor",
+  slots: [{ id: "editor", region: "main", view: fontEditor.ref, closable: false }],
+});
+
 const extension = defineExtension({
   commands: fontCommands,
   views: [fontEditor],
-  placements: [
-    definePlacement({
-      id: "font-editor.project",
-      mode: workbenchModes.project,
-      item: { kind: "view", view: fontEditor.ref },
-      region: "main",
-    }),
-  ],
+  pages: [fontEditorPage],
   navigationItems: [
     defineNavigationItem({
       id: "font-editor",
@@ -41,7 +43,7 @@ const extension = defineExtension({
       label: l10n("treeItems.fontEditor.label", "Font editor"),
       icon: "case-upper",
       when: { mode: workbenchModes.project },
-      action: { kind: "view", view: fontEditor.ref },
+      action: { kind: "page", page: fontEditorPage.ref },
     }),
   ],
   artifactMounts: [

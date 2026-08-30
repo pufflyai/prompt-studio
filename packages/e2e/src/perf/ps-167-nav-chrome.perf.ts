@@ -79,7 +79,7 @@ test.describe("PS-167 Nav Chrome navigation", () => {
     await forward.click();
     await expect(page.getByRole("link", { name: `${ticket.shorthand} Measure Nav Chrome` })).toBeVisible();
     await page.evaluate(
-      () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+      () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
     );
 
     await back.evaluate((element) => {

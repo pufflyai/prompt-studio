@@ -18,7 +18,7 @@ import { labWorkflowStatuses } from "./src/renderers/lab-workflow-statuses";
 import {
   createLabUi,
   labActivityItems,
-  labModes,
+  labMode,
   labResourceKinds,
   labSettingsSection,
 } from "./src/renderers/ui-contributions";
@@ -39,10 +39,10 @@ const extension = defineExtension({
   schedules: labSchedules,
   harnesses: labHarnesses,
 
-  modes: labModes,
+  modes: [labMode],
   resourceKinds: labResourceKinds,
   views: labUi.views,
-  resourceViews: labUi.resourceViews,
+  pages: labUi.pages,
   viewMenus: labUi.viewMenus,
   placements: labUi.placements,
   navigationItems: labUi.navigationItems,

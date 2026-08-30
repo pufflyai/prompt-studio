@@ -8,7 +8,9 @@ const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 const pickerLoadTimeoutMs = 15_000;
 const projectCreationTimeoutMs = 25_000;
-const resolveProjectDefaultPath = (projectId: string) => `/projects/${projectId}/tickets`;
+// First-run landing: the planner's tickets page is the first project-navigation item
+// with a page target, so a fresh project lands on its namespaced page URL.
+const resolveProjectDefaultPath = (projectId: string) => `/projects/${projectId}/pstdio.pstdio-planner/tickets`;
 
 const bypassOnboarding = async (page: import("@playwright/test").Page) => {
   await page.addInitScript(() => {

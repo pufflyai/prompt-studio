@@ -7,6 +7,7 @@ import {
   type TreeAction,
   type TreeNode,
   type TreeViewSection,
+  workbenchPages,
 } from "@pstdio/sdk/extensions";
 
 import { statusesCollection, ticketsCollection } from "../data/collections";
@@ -90,10 +91,14 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMet
     id: `workspace-${workspace.id}`,
     label,
     icon: "GitBranch",
-    // Native resource target so the host opens a normal workspace tab instead of
-    // running extension-owned navigation. Its canonical parent edge keeps the workspace
-    // nested beneath the owning ticket in Nav Chrome.
-    target: { kind: "resource", resource: { type: "workspace", id: workspace.id, label, metadata: workspaceMetadata } },
+    // Host page target so the native workspaces screen presents the workspace. Its
+    // canonical parent edge keeps the workspace nested beneath the owning ticket in
+    // Nav Chrome.
+    target: {
+      kind: "page",
+      page: workbenchPages.workspaces,
+      resource: { type: "workspace", id: workspace.id, label, metadata: workspaceMetadata },
+    },
   };
 };
 
@@ -266,15 +271,15 @@ export const listTicketFilesTree = async (
 
   // The selected document travels with the ticket resource. This keeps the UI state
   // in the workbench and lets every renderer callback receive the same selection.
+  // Emitting the resource re-activates the open ticket instance at that document
+  // instead of opening a duplicate.
   const ticketResource = ticketResourceReference(ticket, parentLookup);
   const selectTarget = (documentId: string) =>
     ({
-      kind: "resource" as const,
       resource: {
         ...ticketResource,
         metadata: { ...ticketResource.metadata, documentId },
       },
-      input: { strategy: "replace-active" as const },
     }) satisfies TreeNode["target"];
 
   const ticketSection: TreeViewSection = {

@@ -60,7 +60,7 @@ test("PS-178 collapses and restores responsive menus within the interaction budg
   await resizeMainPanelTo(page, 481);
   await expect(page.getByRole("button", { name: "Open Main left menu" })).toHaveCount(0);
   await page.evaluate(
-    () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))),
+    () => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))),
   );
 
   const samples: number[] = [];

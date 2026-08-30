@@ -121,7 +121,7 @@ test.describe("Sessions page", () => {
         JSON.stringify({ state: { sessionModalState: "bubble" }, version: 0 }),
       );
     }, projectId);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await expect(getSessionBubble(page)).toBeVisible();
 
@@ -214,7 +214,7 @@ test.describe("Sessions page", () => {
     await createSessionViaApi(request, projectId, "Session 6");
     await createSessionViaApi(request, projectId, "Session 7");
 
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await page.locator("button", { hasText: "New session" }).first().click();
 

@@ -47,7 +47,7 @@ test("PS-169 opens the active Session tab's custom menu", async ({ page, request
   }, project.id);
   await page.setViewportSize({ width: 1280, height: 720 });
   const ticket = await createPlannerTicket(request, apiBase, project.id, { content: "Inspect Session tab menu" });
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/pstdio.pstdio-planner/tickets`);
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await page.getByText(ticket.content, { exact: true }).click();
 

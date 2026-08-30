@@ -9,4 +9,9 @@ await import("pstdio-extensions");
 
 process.chdir(cwd);
 
-await import("pstdio");
+// An opaque specifier keeps the CLI package's path-aliased sources out of this
+// package's type program; the module is only executed, never typed.
+const pstdioEntrypoint = "pstdio";
+await import(pstdioEntrypoint);
+
+export {};

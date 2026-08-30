@@ -191,7 +191,8 @@ test("uninstalling an extension removes it from settings and deletes installed f
   await expect
     .poll(() => heldExtensionRefetch !== null, { message: "post-uninstall extensions refetch was not requested" })
     .toBe(true);
-  await heldExtensionRefetch?.continue();
+  // TS narrows the closure-assigned route back to null here; the poll above proves it is set.
+  await (heldExtensionRefetch as import("@playwright/test").Route | null)?.continue();
   await page.unroute(`**/v1/projects/${project.id}/extensions`);
 
   expect(existsSync(sourcePath)).toBe(false);

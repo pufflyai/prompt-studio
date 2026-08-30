@@ -54,7 +54,6 @@ export const FileCapabilitiesCard = () => {
   const openResource = () =>
     host.call("resource.open", {
       resource: { type: "blend-project", id: "file-capability", label: "File capability project" },
-      input: { strategy: "replace-active" },
     });
 
   return (

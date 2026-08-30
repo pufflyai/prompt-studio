@@ -46,6 +46,42 @@ export const createRandomArtifact = (overrides: Partial<GlassLabArtifact> = {}):
 export const artifactsCollection = (storage: ExtensionStorageApi) =>
   storage.collection<GlassLabArtifact>(artifactsCollectionName);
 
+const seededKey = "glass-lab-artifacts.workflow-seeded";
+
+const initialArtifacts: GlassLabArtifact[] = [
+  {
+    id: "concept",
+    title: "Shape the concept",
+    role: "evaluation",
+    trustSignal: 35,
+    status: "idea",
+    summary: "A draft artifact used to test the Lab workflow board.",
+    custody: "Review bench",
+    nextStep: "Move the artifact into testing",
+  },
+  {
+    id: "prototype",
+    title: "Test the prototype",
+    role: "observation",
+    trustSignal: 72,
+    status: "testing",
+    summary: "A prototype artifact already under evaluation.",
+    custody: "Quarantine shelf",
+    nextStep: "Record the testing result",
+  },
+];
+
+// Every surface that reads the catalog starts from the same seeded artifacts,
+// whichever queries first (the workflow board in Lab mode or the table on the pages).
+export const ensureInitialArtifacts = async (storage: ExtensionStorageApi) => {
+  if (await storage.get<boolean>(seededKey)) return;
+  const collection = artifactsCollection(storage);
+  for (const artifact of initialArtifacts) {
+    if (!(await collection.get(artifact.id))) await collection.put(artifact.id, artifact);
+  }
+  await storage.set(seededKey, true);
+};
+
 export const artifactResource = (artifact: GlassLabArtifact) => ({
   type: resourceKind,
   id: artifact.id,
@@ -68,6 +104,7 @@ const columns = [
 ];
 
 export const queryGlassLabArtifacts = async (ctx: Pick<ExtensionContextBase, "storage">, _input: object) => {
+  await ensureInitialArtifacts(ctx.storage);
   const artifacts = await artifactsCollection(ctx.storage).list();
   return {
     rows: artifacts.map((artifact) => ({

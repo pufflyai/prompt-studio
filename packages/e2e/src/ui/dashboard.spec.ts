@@ -17,23 +17,6 @@ const createProjectViaApi = async (request: import("@playwright/test").APIReques
   return (await res.json()) as { id: string; name: string };
 };
 
-const createSessionViaApi = async (
-  request: import("@playwright/test").APIRequestContext,
-  projectId: string,
-  title: string,
-) => {
-  const res = await request.post(`${apiBase}/v1/sessions`, {
-    data: {
-      project_id: projectId,
-      title,
-      prompt: title,
-      agent: "pstdio.extension-lab.harness.fake",
-    },
-  });
-  expect(res.ok()).toBe(true);
-  return (await res.json()) as { id: string; title: string };
-};
-
 test("API health check responds ok", async ({ request }) => {
   test.setTimeout(5_000);
   const response = await request.get(`${apiBase}/healthz`);
@@ -194,7 +177,7 @@ test("dashboard selects the only project on first load", async ({ page, request 
 
   await page.goto("/");
 
-  await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Main").getByText("Backlog", { exact: true })).toBeVisible({ timeout: 15_000 });
   await expect
     .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb:selected-project:global")))
     .toBeTruthy();
@@ -247,7 +230,8 @@ test("switching projects never reopens the picker while restoring the landing vi
   }, firstProject.id);
 
   await page.goto("/");
-  await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
+  // The landing rule opens the first extension page target: the planner tickets board.
+  await expect(page.getByLabel("Main").getByText("Backlog", { exact: true })).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: "Switch project", exact: true }).click();
 
   const picker = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search projects...") });
@@ -279,7 +263,7 @@ test("switching projects never reopens the picker while restoring the landing vi
   await expect
     .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb:selected-project:global")))
     .toBe(secondProject.id);
-  await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Main").getByText("Backlog", { exact: true })).toBeVisible({ timeout: 15_000 });
   expect(
     await page.evaluate(
       () =>
@@ -288,11 +272,13 @@ test("switching projects never reopens the picker while restoring the landing vi
   ).toBe(false);
 });
 
-test("dashboard opens the start page for a selected project without a saved location", async ({ page, request }) => {
+test("dashboard lands on the planner tickets page for a selected project without a saved location", async ({
+  page,
+  request,
+}) => {
   test.setTimeout(20_000);
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "Dashboard Start Test");
-  const session = await createSessionViaApi(request, project.id, "Recent start session");
 
   await page.addInitScript((selectedProjectId) => {
     window.localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
@@ -320,8 +306,11 @@ test("dashboard opens the start page for a selected project without a saved loca
 
   await page.goto("/");
 
+  // The landing rule opens the first extension page target and rewrites the URL to
+  // the page's deep link; the picker never flashes on the way there.
   await expect(page.getByRole("option", { name: "Start" })).toHaveCount(0);
-  await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Main").getByText("Backlog", { exact: true })).toBeVisible({ timeout: 15_000 });
+  await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/pstdio\\.pstdio-planner/tickets$`));
   expect(
     await page.evaluate(
       () =>
@@ -329,11 +318,4 @@ test("dashboard opens the start page for a selected project without a saved loca
           .__projectPickerAppearedDuringStartup,
     ),
   ).toBe(false);
-  await page
-    .getByLabel("Main")
-    .getByRole("button", { name: /Recent start session/ })
-    .click();
-
-  await expect(page.getByLabel("Main").getByText(session.title, { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Breadcrumb").getByText(session.title, { exact: true })).toBeVisible();
 });

@@ -113,16 +113,27 @@ describe("extension-lab workbench attachments", () => {
             kind: "command",
             id: "workbench.action.switchMode",
           },
-          params: { modeId: "pstdio.extension-lab.mode.lab" },
+          params: { modeId: "lab" },
         },
       },
     });
+    expect(extension.navigationItems?.find((item) => item.id === "lab-page")).toMatchObject({
+      action: { kind: "page", page: { kind: "page", id: "lab" } },
+    });
+    expect(extension.navigationItems?.find((item) => item.id === "blend")).toMatchObject({
+      action: { kind: "page", page: { kind: "page", id: "blend" } },
+    });
+    expect(extension.navigationItems?.find((item) => item.id === "faulty")).toMatchObject({
+      action: { kind: "page", page: { kind: "page", id: "lab-faulty" } },
+    });
   });
+});
 
+describe("extension-lab modes and pages", () => {
   test("stages a single Lab mode with native activity items and status chrome", () => {
-    // Lab is the mode-wide workspace; Animation and Sculpt are the conformance
-    // fixture that arranges one shared blend-project resource two ways.
-    expect(extension.modes?.map((mode) => mode.id)).toEqual(["lab", "animation", "sculpt"]);
+    // Lab is the one real mode: it exercises the mode contribution itself while
+    // the lab and blend pages carry the screen compositions.
+    expect(extension.modes?.map((mode) => mode.id)).toEqual(["lab"]);
     expect(extension.modes?.[0]).toMatchObject({
       id: "lab",
       ref: { kind: "mode", id: "lab" },
@@ -173,24 +184,59 @@ describe("extension-lab workbench attachments", () => {
     });
   });
 
-  test("opens artifacts as a side inspector bound to the resource kind", () => {
+  test("opens artifacts as a side inspector bound on the lab and blend pages", () => {
     expect(view("artifact-detail")?.body).toMatchObject({
       kind: "webview",
       entry: { path: "./src/views/lab-artifact.tsx" },
     });
-    // An attached resource adds an inspector; it never replaces the primary
-    // location, so the kind declares no primary slot.
+    // The kind declares data only; the pages that bind it own the presentation.
     expect(extension.resourceKinds?.find((kind) => kind.id === "glass-lab-artifact")).toMatchObject({
-      surface: "attached",
-      slots: [{ id: "inspector", cardinality: "many", access: "public" }],
+      icon: "package-search",
     });
-    expect(extension.resourceViews?.find((binding) => binding.id === "artifact-detail")).toMatchObject({
-      slot: { id: "inspector" },
-      view: { id: "artifact-detail" },
+    const labPage = extension.pages?.find((page) => page.id === "lab");
+    expect(labPage).toMatchObject({
+      path: "lab",
+      slots: [
+        { id: "overview", region: "main", view: { kind: "view", id: "overview" }, closable: false },
+        { id: "artifacts", region: "main", view: { kind: "view", id: "artifacts" } },
+        { id: "cams", region: "main", view: { kind: "view", id: "cams" } },
+        { id: "inspector", region: "side", cardinality: "many" },
+      ],
+      bindings: [
+        {
+          resourceKind: { kind: "resource-kind", id: "glass-lab-artifact" },
+          view: { kind: "view", id: "artifact-detail" },
+          slot: "inspector",
+        },
+      ],
     });
-    expect(extension.placements?.find((placement) => placement.id === "artifact-inspector.lab")).toMatchObject({
-      item: { kind: "resource-slot", slot: { id: "inspector" } },
+    expect(extension.pages?.find((page) => page.id === "blend")).toMatchObject({
+      slots: [
+        { id: "scene", region: "main", cardinality: "one", closable: false },
+        { id: "cams", region: "sidenav" },
+        { id: "artifacts", region: "side", cardinality: "many" },
+      ],
+      bindings: [
+        { resourceKind: { id: "blend-project" }, view: { kind: "view", id: "overview" }, slot: "scene" },
+        { resourceKind: { id: "blend-project" }, view: { kind: "view", id: "cams" }, slot: "cams" },
+        {
+          resourceKind: { id: "glass-lab-artifact" },
+          view: { kind: "view", id: "artifact-detail" },
+          slot: "artifacts",
+        },
+      ],
+    });
+    // The mode keeps its own default composition as placements.
+    expect(extension.placements?.map((placement) => placement.id)).toEqual(["workflow.lab", "status.lab"]);
+    expect(extension.placements?.find((placement) => placement.id === "workflow.lab")).toMatchObject({
+      item: { kind: "view", view: { kind: "view", id: "workflow" } },
       region: "side",
+      movableTo: ["side"],
+    });
+    expect(extension.placements?.find((placement) => placement.id === "status.lab")).toMatchObject({
+      item: { kind: "view", view: { kind: "view", id: "overview" } },
+      region: "main",
+      required: true,
     });
   });
 

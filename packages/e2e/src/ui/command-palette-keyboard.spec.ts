@@ -36,7 +36,7 @@ test.describe("Command palette keyboard navigation", () => {
 
   test("arrow keys move the selection after the pointer enters the list", async ({ page }) => {
     await bypassOnboarding(page);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     // Wait for the workbench shell to boot so the command-palette shortcut is registered.
     await expect(page.getByRole("button", { name: /Command Palette Keyboard Project/ })).toBeVisible();

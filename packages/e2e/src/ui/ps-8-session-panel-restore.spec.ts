@@ -39,13 +39,21 @@ const bypassOnboarding = async (page: Page, projectId: string) => {
   }, projectId);
 };
 
-const openTicketBoard = async (page: Page) => {
-  const ticketsNav = page.getByRole("option", { name: "Tickets", exact: true });
+const ticketsBoard = (page: Page) => page.getByTestId("board-column-backlog");
+
+// The planner contributes a page, so the board is a URL. Retry the visit until the
+// extension has finished registering its page.
+const openTicketBoard = async (page: Page, projectId: string) => {
   await expect(async () => {
-    await page.goto("/");
-    await expect(ticketsNav).toBeVisible({ timeout: 5_000 });
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
+    await expect(ticketsBoard(page)).toBeVisible({ timeout: 5_000 });
   }).toPass({ timeout: 30_000 });
-  await ticketsNav.click();
+};
+
+// The page crumb is the way back to the board from anywhere the ticket led to.
+const returnToTicketBoard = async (page: Page) => {
+  await page.getByRole("navigation", { name: "breadcrumb" }).getByRole("button", { name: "Tickets" }).first().click();
+  await expect(ticketsBoard(page)).toBeVisible();
 };
 
 const openTicketCard = async (page: Page, ticketContent: string) => {
@@ -80,7 +88,7 @@ test("PS-8 reuses a dashboard session tab selected again from a planner ticket",
   );
 
   await bypassOnboarding(page, project.id);
-  await openTicketBoard(page);
+  await openTicketBoard(page, project.id);
   await openTicketCard(page, "Reuse session A across resource surfaces");
   const sessionRow = page.getByRole("complementary").getByText(`Refine ticket: ${ticket.shorthand}`);
   await expect(sessionRow).toBeVisible();
@@ -92,7 +100,7 @@ test("PS-8 reuses a dashboard session tab selected again from a planner ticket",
   await expect(sessionTabs).toHaveCount(1);
   await expect(sessionTab).toHaveAttribute("aria-selected", "true");
 
-  await page.getByRole("option", { name: "Tickets", exact: true }).click();
+  await returnToTicketBoard(page);
   await openTicketCard(page, "Reuse session A across resource surfaces");
   await sessionRow.click();
 
@@ -128,7 +136,7 @@ test("PS-8 restores an attached session Side Panel and its session across refres
   expect(session.id).toBeTruthy();
 
   await bypassOnboarding(page, project.id);
-  await openTicketBoard(page);
+  await openTicketBoard(page, project.id);
   await openTicketCard(page, "Session panel survives refresh");
 
   const sidenav = page.getByRole("complementary");
@@ -151,6 +159,12 @@ test("PS-8 restores an attached session Side Panel and its session across refres
   await expect(attachedPanel).toBeVisible();
   await expect(page.getByRole("dialog", { name: "Side Panel" })).toHaveCount(0);
 
+  // Opening the session moves the location to the sessions page, so come back to the
+  // ticket: the refresh must restore the ticket page and the Side Panel session together.
+  await returnToTicketBoard(page);
+  await openTicketCard(page, "Session panel survives refresh");
+  await expect(page).toHaveURL(new RegExp(`/pstdio\\.pstdio-planner/tickets/ticket/${ticket.id}$`));
+
   await page.reload();
   await expect(async () => {
     await expect(attachedPanel).toBeVisible({ timeout: 5_000 });
@@ -170,7 +184,8 @@ test("PS-8 restores an attached session Side Panel and its session across refres
   }).toPass({ timeout: 30_000 });
   await expect(attachedPanel.locator("[data-testid='content-editable'][contenteditable='true']")).toHaveText(draft);
 
-  // The persisted primary resource (the ticket) survives alongside the Side Panel session.
+  // The persisted page location (the ticket) survives alongside the Side Panel session.
+  await expect(page).toHaveURL(new RegExp(`/pstdio\\.pstdio-planner/tickets/ticket/${ticket.id}$`));
   await expect(
     sidenav.getByRole("option", { name: `${ticket.shorthand} Session panel survives refresh` }),
   ).toBeVisible();
@@ -180,21 +195,24 @@ test("PS-8 keeps a closed Side Panel closed and does not reopen a session after 
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "PS-8 Session Panel Restore Closed");
   const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
-  await createPlannerTicket(request, apiBase, project.id, {
+  const ticket = await createPlannerTicket(request, apiBase, project.id, {
     content: "Closed panel stays closed",
     statusId: statuses[0]?.id,
   });
 
   await bypassOnboarding(page, project.id);
-  await openTicketBoard(page);
+  await openTicketBoard(page, project.id);
   await openTicketCard(page, "Closed panel stays closed");
 
+  const sidenav = page.getByRole("complementary");
+  const ticketNode = sidenav.getByRole("option", { name: `${ticket.shorthand} Closed panel stays closed` });
+  await expect(ticketNode).toBeVisible({ timeout: 15_000 });
   await expect(page.getByTestId("workbench-side-panel-attached")).not.toBeVisible();
   await expect(page.getByRole("dialog", { name: "Side Panel" })).toHaveCount(0);
 
   await page.reload();
   await expect(async () => {
-    await expect(page.getByRole("option", { name: "Tickets", exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(ticketNode).toBeVisible({ timeout: 5_000 });
   }).toPass({ timeout: 30_000 });
   await expect(page.getByTestId("workbench-side-panel-attached")).not.toBeVisible();
   await expect(page.getByRole("dialog", { name: "Side Panel" })).toHaveCount(0);

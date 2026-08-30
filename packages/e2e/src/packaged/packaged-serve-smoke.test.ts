@@ -235,6 +235,7 @@ describe("packaged pstdio — self-hosted serve", () => {
         const workspaceAction = metadata.menuContributions.find(
           (contribution) => contribution.label === "Workspace-only lab action",
         );
+        // Host-published resource kinds serialize to the host's bare registered id.
         expect(workspaceAction?.when).toEqual({ resourceType: ["workspace"] });
       } finally {
         if (child) {
@@ -338,7 +339,7 @@ describe("packaged pstdio — core default extensions", () => {
           required: false,
           templateType: "pstdio.pstdio-planner.template-type.ticket",
         });
-        const reportType = metadata.templateTypes.find((type) => type.localId === "report");
+        const reportType = metadata.templateTypes?.find((type) => type.localId === "report");
         expect(reportType?.commands).toEqual(
           expect.objectContaining({
             list: "pstdio.pstdio-reports.command.templates.list",

@@ -36,7 +36,7 @@ test.describe("Command palette follow-up modals", () => {
 
   test("opening keyboard shortcuts from the palette keeps the help dialog open", async ({ page }) => {
     await bypassOnboarding(page);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await page.keyboard.press("ControlOrMeta+KeyP");
 
@@ -54,7 +54,7 @@ test.describe("Command palette follow-up modals", () => {
 
   test("opening create ticket from the palette keeps the create modal open", async ({ page }) => {
     await bypassOnboarding(page);
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}/pstdio.pstdio-planner/tickets`);
 
     await page.keyboard.press("ControlOrMeta+KeyP");
 

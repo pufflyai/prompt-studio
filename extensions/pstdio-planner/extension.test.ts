@@ -50,24 +50,27 @@ describe("pstdio planner extension contributions", () => {
     // A ticket is a resource. A ticket mode would reshape the workbench on open and
     // drop the project chrome the user had.
     expect(extension.modes).toBeUndefined();
-    expect(extension.resourceKinds?.[0]).toMatchObject({ id: "ticket", surface: "primary" });
-    expect(extension.resourcePanels).toBeUndefined();
-    expect(extension.resourceViews?.map((binding) => binding.id)).toEqual(["ticket-editor", "ticket-files"]);
+    expect(extension.resourceKinds?.[0]).toMatchObject({ id: "ticket" });
     expect(extension.viewMenus?.[0]).toMatchObject({
       id: "ticket.properties",
       owner: { id: "ticket-editor" },
       view: { id: "ticket-properties" },
       side: "right",
     });
-    expect(extension.placements?.find((placement) => placement.id === "ticket-primary.project")).toMatchObject({
-      region: "main",
-      required: true,
-      item: { kind: "resource-slot", slot: { id: "primary" } },
+    expect(extension.pages?.find((page) => page.id === "tickets")).toMatchObject({
+      path: "tickets",
+      slots: [
+        { id: "board", region: "main", view: { kind: "view", id: "tickets" }, closable: false },
+        { id: "ticket", region: "main", cardinality: "many" },
+        { id: "files", region: "sidenav", follows: "ticket" },
+      ],
+      bindings: [
+        { resourceKind: { id: "ticket" }, view: { kind: "view", id: "ticket-editor" }, slot: "ticket" },
+        { resourceKind: { id: "ticket" }, view: { kind: "view", id: "ticket-files" }, slot: "files" },
+      ],
     });
-    expect(extension.placements?.find((placement) => placement.id === "ticket-navigation.project")).toMatchObject({
-      region: "sidenav",
-      required: true,
-      item: { kind: "resource-slot", slot: { id: "navigation" } },
+    expect(extension.navigationItems?.find((item) => item.id === "tickets")).toMatchObject({
+      action: { kind: "page", page: { kind: "page", id: "tickets" } },
     });
   });
 
@@ -292,10 +295,8 @@ describe("pstdio planner workspace contributions", () => {
     });
     expect(tickets.body.onColumnAction).toBeFunction();
     expect(tickets.body.onRowActivate).toBeFunction();
-    expect(extension.placements?.find((placement) => placement.id === "tickets.project")).toMatchObject({
-      region: "main",
-      item: { kind: "view", view: tickets.ref },
-    });
+    const boardSlot = extension.pages?.find((page) => page.id === "tickets")?.slots.find((slot) => slot.id === "board");
+    expect(boardSlot).toMatchObject({ region: "main", view: tickets.ref });
   });
 
   test("exposes ticket workspace creation as an extension-owned row action", () => {

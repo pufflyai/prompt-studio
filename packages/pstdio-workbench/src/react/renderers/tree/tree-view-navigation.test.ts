@@ -22,12 +22,6 @@ describe("shouldSelectTreeNodeForNavigationTarget", () => {
   test("selects navigation targets that present content", () => {
     expect(
       shouldSelectTreeNodeForNavigationTarget({
-        kind: "resource",
-        resource: { kind: "ticket", uri: "pstdio://ticket/1" },
-      }),
-    ).toBe(true);
-    expect(
-      shouldSelectTreeNodeForNavigationTarget({
         kind: "page",
         pageId: "workspaces",
         resource: { kind: "workspace", uri: "pstdio://workspace/1" },

@@ -57,7 +57,7 @@ describe("pstdio workspaces create", () => {
       expect(createdRes.status).toBe(200);
       const created = (await createdRes.json()) as { branch: string | null; worktree_path: string | null };
       expect(created.branch).toBe("workspace/WS-1");
-      expect(created.worktree_path).toBe(worktreePath);
+      expect(created.worktree_path).toBe(worktreePath!);
 
       const deleteOutput = run("workspaces delete --id WS-1", repo);
       expect(deleteOutput).toContain("Deleted workspace WS-1");

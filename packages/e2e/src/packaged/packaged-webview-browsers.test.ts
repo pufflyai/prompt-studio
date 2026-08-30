@@ -28,6 +28,17 @@ beforeAll(() => {
   if (!process.env.PSTDIO_PACKAGED_BINARY_PATH) buildBinary();
 }, BUILD_TIMEOUT);
 
+// Views no longer carry URL paths; the lab-webview page hosts the sandbox webview
+// in its single main slot.
+const findLabWebview = (metadata: WorkbenchExtensionMetadata) => {
+  const labPage = metadata.pages.find((candidate) => candidate.path === "lab-webview");
+  const slotViewRef = labPage?.slots[0]?.view;
+  const labView = slotViewRef
+    ? metadata.views.find((view) => view.extensionId === slotViewRef.extensionId && view.localId === slotViewRef.id)
+    : undefined;
+  return labView?.body.kind === "webview" ? labView.body : undefined;
+};
+
 describe("packaged extension webviews", () => {
   for (const browserCase of webviewBrowsers) {
     const browserAvailable = existsSync(browserCase.type.executablePath());
@@ -64,8 +75,7 @@ describe("packaged extension webviews", () => {
             });
             expect(metadataRes.status).toBe(200);
             const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
-            const labView = metadata.views.find((view) => view.path === "lab");
-            labWebview = labView?.body.kind === "webview" ? labView.body : undefined;
+            labWebview = findLabWebview(metadata);
             if (labWebview?.webview.moduleUrl) {
               const moduleRes = await fetch(`${started.baseUrl}${labWebview.webview.moduleUrl}`, {
                 headers: runtimeAuthorization(started.descriptor),
@@ -92,7 +102,9 @@ describe("packaged extension webviews", () => {
             { projectId: project.id },
           );
 
-          await page.goto(`${started.baseUrl}/projects/${project.id}/lab`, { waitUntil: "domcontentloaded" });
+          await page.goto(`${started.baseUrl}/projects/${project.id}/pstdio.extension-lab/lab-webview`, {
+            waitUntil: "domcontentloaded",
+          });
           const iframe = page.locator('iframe[title="Lab"]');
           await iframe.waitFor({ state: "visible", timeout: 30_000 });
           expect(await iframe.getAttribute("sandbox")).not.toContain("allow-same-origin");
