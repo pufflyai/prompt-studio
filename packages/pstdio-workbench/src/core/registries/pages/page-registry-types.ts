@@ -1,9 +1,10 @@
 import type {
   FileRendererSectionTarget,
+  PageLocation,
   PageOpenIntent,
+  PageRef,
   PageSlotCardinality,
   PageSlotRole,
-  PlacementIdentity,
   ResourceRef,
 } from "@pstdio/sdk/extensions";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
@@ -30,9 +31,17 @@ export interface WorkbenchPageSlot {
 
 export interface WorkbenchPageContribution {
   id: string;
+  ref: PageRef;
+  path: string;
   modeId: string;
   parentId?: string;
   slots: readonly WorkbenchPageSlot[];
+}
+
+export interface WorkbenchPageResourceCodec {
+  normalize(resource: ResourceRef): ResourceRef;
+  toUri(resource: ResourceRef): string;
+  fromUri(uri: string): ResourceRef | undefined;
 }
 
 export interface WorkbenchPagePlacementInput {
@@ -76,6 +85,8 @@ export interface WorkbenchPageRuntimeState {
 export interface WorkbenchPageRegistryStoreState<Value> {
   pages: Readonly<Record<string, WorkbenchPageContribution>>;
   pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>;
+  projectId?: string;
+  location?: PageLocation;
   activeModeId?: string;
   activePageId?: string;
   placements: readonly ResolvedOwnedPlacement<Value>[];
@@ -86,7 +97,7 @@ export interface CreateWorkbenchPageRegistryInput<Value> {
   resolveShellPlacements(): readonly ResolvedOwnedPlacement<Value>[];
   resolveModePlacements(modeId: string): readonly ResolvedOwnedPlacement<Value>[];
   resolvePagePlacement(input: WorkbenchPagePlacementInput): Value;
-  resourceKey(resource: ResourceRef): string;
+  resources: WorkbenchPageResourceCodec;
   valuesEqual(current: Value, desired: Value): boolean;
 }
 
@@ -95,7 +106,5 @@ export interface WorkbenchPageRegistry<Value> {
   registerPage(page: WorkbenchPageContribution): { dispose(): void };
   getPage(pageId: string): WorkbenchPageContribution | undefined;
   listPages(): WorkbenchPageContribution[];
-  activatePage(input: WorkbenchPageOpenInput): void;
   openSlot(input: WorkbenchPageSlotOpenInput): void;
-  closePlacement(identity: PlacementIdentity): void;
 }
