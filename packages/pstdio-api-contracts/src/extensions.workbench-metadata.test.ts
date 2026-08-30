@@ -40,7 +40,6 @@ const metadata = () => ({
     },
   ],
   resourceKinds: [],
-  resourceViews: [],
   navigationItems: [
     {
       id: "pstdio.lab.navigation-item.files",
@@ -64,7 +63,7 @@ describe("workbench extension metadata", () => {
       id: "pstdio.lab.view.files",
       body: { kind: "tree", bodyHandlerId: "pstdio.lab.private.tree.files.body" },
     });
-    expect(parsed.pages?.[0]).toMatchObject({
+    expect(parsed.pages[0]).toMatchObject({
       id: "pstdio.lab.page.files",
       path: "files",
       slots: [{ id: "tree", region: "main", closable: false }],
@@ -85,12 +84,6 @@ describe("workbench extension metadata", () => {
     const parsed = workbenchExtensionMetadataSchema.strict().safeParse(legacy);
 
     expect(parsed.success).toBe(false);
-  });
-
-  test("accepts metadata produced before pages were introduced", () => {
-    const { pages: _pages, ...legacy } = metadata();
-
-    expect(workbenchExtensionMetadataSchema.safeParse(legacy).success).toBe(true);
   });
 
   test("carries ordered template types and their provider commands", () => {

@@ -444,7 +444,6 @@ export const registerWorkbenchExtensionKanbanRenderers = (
     disposables.push(
       registerWorkbenchExtensionPanel({
         workbench: context.workbench,
-        path: panel.path,
         resolveInput: resolveWorkbenchExtensionViewInput(adapter.resolveViewInput, panel),
         contribution: toWorkbenchCompositionPanelContribution({
           panel,

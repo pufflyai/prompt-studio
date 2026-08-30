@@ -102,16 +102,7 @@ const normalizePlacement = (ext: NormalizedExtension, contribution: PlacementCon
   ...contribution,
   ref: normalizeRef(ext, contribution.ref),
   mode: normalizeRef(ext, contribution.mode),
-  item:
-    contribution.item.kind === "view"
-      ? { ...contribution.item, view: normalizeRef(ext, contribution.item.view) }
-      : {
-          ...contribution.item,
-          slot: {
-            ...contribution.item.slot,
-            resourceKind: normalizeRef(ext, contribution.item.slot.resourceKind),
-          },
-        },
+  item: { ...contribution.item, view: normalizeRef(ext, contribution.item.view) },
 });
 
 const registerPlacements = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
@@ -148,10 +139,7 @@ const registerPlacements = (ext: NormalizedExtension, source: LoadedExtensionSou
       continue;
     }
     const normalized = normalizePlacement(ext, contribution);
-    const itemId =
-      normalized.item.kind === "view"
-        ? `${normalized.item.view.extensionId}.${normalized.item.view.id}`
-        : `${normalized.item.slot.resourceKind.extensionId}.${normalized.item.slot.resourceKind.id}.${normalized.item.slot.id}`;
+    const itemId = `${normalized.item.view.extensionId}.${normalized.item.view.id}`;
     const key = `${normalized.mode.extensionId}.${normalized.mode.id}:${itemId}`;
     if (directPlacements.has(key)) {
       runtime.diagnostics.push(
@@ -183,7 +171,6 @@ const registerNavigationItems = (ext: NormalizedExtension, source: LoadedExtensi
       action: Exclude<NavigationItemContribution["action"], { kind: "compound" }>,
     ): Exclude<NavigationItemContribution["action"], { kind: "compound" }> => {
       if (action.kind === "page") return { ...action, page: normalizeRef(ext, action.page) };
-      if (action.kind === "view") return { ...action, view: normalizeRef(ext, action.view) };
       if (action.kind === "command" && isRecord(action.target.command) && action.target.command.kind === "command") {
         return {
           ...action,

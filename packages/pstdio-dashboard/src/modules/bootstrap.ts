@@ -137,15 +137,7 @@ const restoreRequestedView = (ctx: Parameters<WorkbenchModuleContribution["activ
     target = undefined;
   }
   if (!target || target.kind !== "page") {
-    const legacyView = ctx.views.resolvePath(guard.requestedViewPath);
-    if (!legacyView || !ctx.views.canResolveView(legacyView.viewId)) {
-      return isExtensionsReadyForSelectedProject(ctx) ? ("missing" as const) : ("pending" as const);
-    }
-    return ctx.views
-      .openView(legacyView.viewId, { strategy: { kind: "replace-active" } })
-      .then(() =>
-        guard.isCurrent() ? ({ status: "opened" } as const) : ({ resource: undefined, status: "stale" } as const),
-      );
+    return isExtensionsReadyForSelectedProject(ctx) ? ("missing" as const) : ("pending" as const);
   }
   const location = ctx.pages.getActiveLocation();
   if (location && location.pageId === target.pageId && location.resource?.uri === target.resource?.uri) {

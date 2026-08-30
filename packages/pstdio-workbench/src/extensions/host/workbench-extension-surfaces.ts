@@ -80,7 +80,6 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
     return [
       registerWorkbenchExtensionPanel({
         workbench: input.workbench,
-        path: panel.path,
         resolveInput: resolveWorkbenchExtensionViewInput(input.resolveViewInput, panel),
         contribution: toWorkbenchCompositionPanelContribution({
           panel,

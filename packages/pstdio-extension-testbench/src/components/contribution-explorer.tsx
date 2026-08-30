@@ -139,7 +139,7 @@ const routeItems = (props: ContributionExplorerProps) => {
   const { bench, workbench } = props;
 
   // Pages own paths now. Activating a route opens the page's first static view.
-  return (bench.metadata.pages ?? [])
+  return bench.metadata.pages
     .filter((page) => page.path)
     .map((page) => ({
       id: page.id,

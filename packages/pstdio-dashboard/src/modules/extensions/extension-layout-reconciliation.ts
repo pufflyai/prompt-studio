@@ -46,7 +46,7 @@ export const createExtensionLayoutCompatibility = (metadata: DashboardExtensionM
       // record takes the static slots that place it, plus the bound slots that a
       // binding presents it in — never every bound slot on every page, which would
       // make any page edit invalidate every view.
-      const pageSlots = (metadata.pages ?? []).flatMap((page) =>
+      const pageSlots = metadata.pages.flatMap((page) =>
         page.slots
           .filter((slot) => {
             if (slot.view) return toWorkbenchContributionId(slot.view) === view.id;

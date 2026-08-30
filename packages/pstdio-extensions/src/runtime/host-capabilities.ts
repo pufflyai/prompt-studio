@@ -27,7 +27,6 @@ export const dashboardExtensionHostCapabilities = {
     "renderer.command-palette-resource.v1": { version: 1, since: "0.25.0" },
     "keybinding.v1": { version: 1, since: "0.24.0" },
     "resource-hierarchy.v1": { version: 1, since: "0.23.0" },
-    "resource-view.v1": { version: 1, since: "0.23.0" },
     "page.v1": { version: 1, since: "0.31.0" },
   },
 } satisfies ExtensionHostCapabilities;
@@ -81,7 +80,6 @@ const runtimeRequirements = (runtime: ExtensionRuntime) => [
     requirement(record, record.id, "commandPaletteResource", "renderer.command-palette-resource.v1"),
   ),
   ...runtime.keybindings.map((record) => requirement(record, record.id, "keybinding", "keybinding.v1")),
-  ...runtime.resourceViews.map((record) => requirement(record, record.id, "resourceView", "resource-view.v1")),
   ...runtime.pages.map((record) => requirement(record, record.id, "page", "page.v1")),
 ];
 

@@ -1,82 +1,79 @@
 # Contextual Workbench Composition
 
-Extension API alpha.4 composes the Workbench from references. It replaces the previous
-model where panel records mixed body, resource eligibility, and geometry.
+The Workbench is composed from references between small contributions. This
+replaced the earlier model where panel records mixed body, resource eligibility,
+and geometry.
 
 ## Ownership
 
 | Fact | Owner |
 | --- | --- |
 | Body and display identity | `ViewContribution` |
-| Resource semantics | `ResourceKindDefinition` and `ResourceViewContribution` |
-| Mode and docked region | `PlacementContribution` |
+| Domain data (collections, palette entries, menu slots) | `ResourceKindDefinition` |
+| Tool screens: slots, bindings, open policy, URL path | `PageContribution` |
+| Mode furniture and docked region | `PlacementContribution` |
 | Menu lifetime | `ViewMenuContribution.owner` |
 | Navigation behavior | `NavigationItemContribution.action` |
 | Workflow states | `StatusContribution` |
 
-No contribution duplicates another contribution's fact. In particular, a view has no
-resource kind or region. A resource-view binding has no region. A placement has no UI
-body.
+No contribution duplicates another contribution's fact. In particular, a view has
+no resource kind, region, or URL. A resource kind has no presentation. A page
+binding has no region of its own; the slot it names carries the geometry.
 
 ## Identity
 
-Every array contribution has a local `id` and a typed `ref`. The runtime derives the
-canonical id:
+Every array contribution has a local `id` and a typed `ref`. The runtime derives
+the canonical id:
 
 ```txt
 ${extensionId}.${contributionKind}.${localId}
 ```
 
-Refs may target the declaring extension, another extension, or a built-in host ref. The
-host normalizes refs before validation and reports missing targets without changing
-unrelated contributions.
+Refs may target the declaring extension, another extension, or a built-in host ref
+(`workbenchModes`, `workbenchSlots`, `workbenchCommands`, `workbenchPages`,
+`workbenchResourceKinds`). The host normalizes refs before validation and reports
+missing targets without changing unrelated contributions.
 
-## Resource Composition
+## Page Composition
 
-A resource kind declares semantic slots with cardinality and access. Its owner binds
-views with `resourceViews`. Another extension can bind to a public slot. The active
-mode's placements choose where those slots appear.
+A page declares slots (a region plus open policy) and bindings (which view
+presents which resource kind in which slot):
 
 ```ts
-const ticket = defineResourceKind({
-  id: "ticket",
-  surface: "primary",
+const ticketsPage = definePage({
+  id: "tickets",
+  title: "Tickets",
+  path: "tickets",
   slots: [
-    { id: "primary", cardinality: "one", access: "owner" },
-    { id: "inspector", cardinality: "many", access: "public" },
+    { id: "board", region: "main", view: board.ref, closable: false },
+    { id: "ticket", region: "main", cardinality: "many" },
   ],
-});
-
-const primary = resourceSlotRef(ticket.ref, "primary");
-
-defineResourceView({
-  id: "editor",
-  resourceKind: ticket.ref,
-  slot: primary,
-  view: editor.ref,
-});
-
-definePlacement({
-  id: "ticket-primary",
-  mode: workbenchModes.project,
-  item: { kind: "resource-slot", slot: primary },
-  region: "main",
-  required: true,
+  bindings: [{ resourceKind: ticket.ref, view: editor.ref, slot: "ticket" }],
 });
 ```
 
-The primary slot is owner-only. External bindings to owner-only or missing slots are
-rejected. A cardinality-one slot may have one required placement. Cardinality-many
-slots remain optional collections.
+The active page is one resolver input next to the active mode, open resources, and
+saved layout. A page outranks mode placements for exactly the regions its slots
+declare; every other region keeps the mode's composition. Binding another
+extension's kind into your own page is allowed; check shape-validates the foreign
+kind ref. Contributing slots or bindings into another extension's page is not.
+
+See [Extension modes and layout](./modes-and-layout.md) for slot policy and
+[Choosing a UI surface](./choosing-a-ui-surface.md) for when to reach for each
+contribution.
 
 ## Host Adapters
 
-The runtime keeps alpha.4 ownership intact. A host adapter may translate normalized
-views and placements into private renderer and dock metadata, but those records are not
-extension authoring APIs. Renderer callbacks also stay private to the host transport.
+The runtime keeps this ownership intact. A host adapter may translate normalized
+views, pages, and placements into private renderer and dock metadata, but those
+records are not extension authoring APIs. Renderer callbacks also stay private to
+the host transport.
 
 ## Persistence
 
-Saved state contains canonical view ids and dock choices only. It never stores view
-bodies, resource definitions, navigation items, settings panels, or status-bar items.
-Required placements are reconciled from current contributions whenever a layout opens.
+Saved state contains canonical view ids and dock choices only: the active slot per
+region and per-slot open/closed overrides, scoped per page. It never stores view
+bodies, titles, resource definitions, navigation items, settings panels, or
+status-bar items. Required placements are reconciled from current contributions
+whenever a layout opens. See
+[Navigation and layout state](./navigation-and-layout-state.md).

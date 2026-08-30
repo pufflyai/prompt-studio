@@ -5,18 +5,6 @@ import { createNavigationRegistry, type NavigationDispatcherContext } from "./na
 const createDispatcherCollector = () => {
   const calls: Array<{ kind: string; payload: unknown }> = [];
   const dispatcher: NavigationDispatcherContext = {
-    openView: async (viewId, input) => {
-      calls.push({ kind: "openView", payload: { viewId, input } });
-      return viewId;
-    },
-    openResource: async (resource, input) => {
-      calls.push({ kind: "openResource", payload: { resource, input } });
-      return resource;
-    },
-    openPanel: (panelId, input) => {
-      calls.push({ kind: "openPanel", payload: { panelId, input } });
-      return panelId;
-    },
     openPage: async (pageId, input) => {
       calls.push({ kind: "openPage", payload: { pageId, input } });
       return pageId;
@@ -79,22 +67,6 @@ describe("createNavigationRegistry", () => {
         },
       },
     ]);
-  });
-
-  test("keeps existing resource, view, and panel targets while page targets roll out", async () => {
-    const { dispatcher, calls } = createDispatcherCollector();
-    const navigation = createNavigationRegistry({ resolveDispatcher: () => dispatcher });
-
-    await navigation.openTarget({
-      kind: "compound",
-      targets: [
-        { kind: "resource", resource: { kind: "ticket", uri: "ticket://PS-326" } },
-        { kind: "view", viewId: "tickets" },
-        { kind: "panel", panelId: "ticket-details" },
-      ],
-    });
-
-    expect(calls.map((entry) => entry.kind)).toEqual(["openResource", "openView", "openPanel"]);
   });
 
   test("dispatches compound targets sequentially in order", async () => {

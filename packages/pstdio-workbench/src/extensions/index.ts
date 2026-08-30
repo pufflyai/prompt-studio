@@ -62,7 +62,6 @@ export {
   type ToWorkbenchNavigationTargetInput,
   toWorkbenchActivationResult,
   toWorkbenchNavigationTarget,
-  toWorkbenchNavigationTargetResult,
 } from "./host/extension-navigation-target";
 export type { WorkbenchExtensionCommandContext } from "./host/workbench-extension-command";
 export {

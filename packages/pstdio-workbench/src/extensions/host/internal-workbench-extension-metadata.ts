@@ -5,7 +5,6 @@ import type {
   ExtensionMenuContribution,
   ExtensionModeRecord,
   ExtensionResourceKindRecord,
-  ExtensionResourcePanelRecord,
   ExtensionSettingDefinitionRecord,
   ExtensionSettingsSectionRecord,
   ExtensionTreeItemContribution,
@@ -28,7 +27,6 @@ export interface InternalWorkbenchExtensionMetadata {
   pages: WorkbenchExtensionMetadata["pages"];
   panels: WorkbenchExtensionPanelRecord[];
   resourceKinds: ExtensionResourceKindRecord[];
-  resourcePanels: ExtensionResourcePanelRecord[];
   resourceHierarchyProviders: Array<{ id: string; extensionId: string; resourceKind: string }>;
   routes: [];
   treeItems: ExtensionTreeItemContribution[];

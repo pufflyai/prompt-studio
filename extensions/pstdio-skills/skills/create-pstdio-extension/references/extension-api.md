@@ -108,8 +108,9 @@ rejected by `pst extensions check`.
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                          |
 | `templateTypes`                                   | Add a custom template category.                                                   |
 | `views`, `viewMenus`                              | Reusable UI bodies and menus owned by a view.                                      |
-| `placements`, `navigationItems`                   | Mode geometry and typed navigation actions.                                       |
-| `resourceKinds`, `resourceViews`                  | Domain resource slots and typed view-to-slot bindings.                            |
+| `pages`                                           | Tool screens: slots per region with open policy, plus resource-kind bindings.      |
+| `placements`, `navigationItems`                   | Static mode furniture and typed navigation actions.                               |
+| `resourceKinds`                                   | Domain data (collections, palette entries, menu slots); no presentation.          |
 | `modes`                                           | Typed Workbench modes referenced by placements.                                   |
 | `statusBarItems`                                  | View references rendered outside docked layout.                                   |
 | `statuses`                                        | Workflow status providers shared by boards and settings.                          |
@@ -143,7 +144,8 @@ Current dashboard capability names:
 | `view.controls.v1` | Controls bodies and menus. |
 | `view.kanban.v1` | Kanban bodies. |
 | `view.data-table.v1` | Data table bodies. |
-| `placement.v1` | Docked view and resource-slot placements. |
+| `page.v1` | Page contributions: slots, bindings, and page navigation targets. |
+| `placement.v1` | Docked static view placements. |
 | `navigation-item.v1` | Fixed host navigation items. |
 | `status-bar-item.v1` | Views placed in the status bar. |
 | `status.v1` | Workflow status providers. |
@@ -153,7 +155,6 @@ Current dashboard capability names:
 | `renderer.command-palette-resource.v1` | Command palette resource providers. |
 | `keybinding.v1` | Dashboard keybindings. |
 | `resource-hierarchy.v1` | Resource hierarchy from native renderers. |
-| `resource-view.v1` | Resource detail views. |
 
 ## Commands and params
 
@@ -212,9 +213,7 @@ inside the extension package. Skill assets may point at a directory containing `
 
 ## Webviews
 
-A view with `body.kind: "webview"` points at an entry with `packageAsset()`. Declare only the capabilities the
-webview needs, such as `commands.execute`, `resource.open`, `notification.show`, `preferences.get`, and
-`preferences.set`. Settings panels and status-bar items reference that view instead of declaring another body.
+A view with `body.kind: "webview"` points at an entry with `packageAsset()`. Declare only the capabilities the webview needs, such as `commands.execute`, `resource.open`, `notification.show`, `preferences.get`, and `preferences.set`. The `resource.open` capability is an emission: it takes `{ resource, open? }` and the active page's bindings place the resource (`href` on the same capability opens an external link). Settings panels and status-bar items reference that view instead of declaring another body.
 
 Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/extensions`.
 
@@ -294,28 +293,61 @@ Declare `resource.open` to open an SDK resource in the workbench:
 ```ts
 await host.call("resource.open", {
   resource: { type: "ticket", id: "PS-260", label: "Dashboard webview capabilities" },
-  input: { strategy: "replace-active" },
+  open: "preview",
 });
 ```
 
-The default strategy is `persistent`. Guests pass `{ type, id, label?, metadata? }` and
-leave URI creation to the host. The resource kind and a presenter for it must already
-be registered.
+Guests pass `{ type, id, label?, metadata? }` and leave URI creation to the host. A kind
+the host presents itself (a workspace, a session) opens through its presenter; any other
+kind is placed by the active page's bindings, so that page must bind it.
 
-## Native resource views
+## Pages
 
-Use native view bodies when the host should own the editor or tree chrome instead of loading a custom webview. A native
-resource detail screen usually has:
+A page is a tool screen declared in one contribution. It places content into the bench regions (`sidenav`, `main`, `secondary`, `side`) and receives opened resources. Tabs are derived from slot content; nothing about presentation is persisted.
 
-- a `resourceKinds` contribution that declares the resource's surface and semantic slots
-- `views` with `file`, `tree`, `controls`, `dataTable`, or `kanban` bodies
-- `resourceViews` that bind each view to one semantic slot
-- `placements` that assign those slots to docked regions for a typed mode ref
+```ts
+const ticketsPage = definePage({
+  id: "tickets",
+  title: l10n("pages.tickets.title", "Tickets"),
+  path: "tickets", // URL segment: /projects/{project}/{extension-id}/tickets
+  slots: [
+    { id: "board", region: "main", view: board.ref, closable: false },
+    { id: "ticket", region: "main", cardinality: "many" },
+    { id: "files", region: "sidenav", follows: "ticket" },
+  ],
+  bindings: [
+    { resourceKind: ticket.ref, view: editor.ref, slot: "ticket" },
+    { resourceKind: ticket.ref, view: files.ref, slot: "files" },
+  ],
+});
+```
 
-View bodies never own geometry or a resource kind. `resourceViews` owns the semantic
-binding. `placements` owns `region`, `movableTo`, `required`, and `defaultOpen`.
-Use `defineResourceKind`, `resourceSlotRef`, `defineView`, `defineResourceView`, and
-`definePlacement`, then pass the returned contributions as arrays to `defineExtension`.
+Slot rules:
+
+- A slot is static (it names a `view`) or bound (no `view`; a binding fills it), never both.
+- Bound slots only: `cardinality: "one"` (default) swaps each open in place; `"many"` stacks tabs. `many` needs a panel region (`main`, `side`, `secondary`).
+- Static slots only: `defaultOpen: false` starts the slot closed until revealed; `scope: "page" | "location"` sets how long its view state lives (default `"page"`; `"location"` keys it to the page's active bound instance).
+- `closable: false` protects a slot's tab while it has content.
+- `follows: "<slot-id>"` on a one-cardinality bound slot tracks the active instance of the named `many` slot; the two slots must share a bound kind.
+- At most one binding per (kind, slot); several kinds may share one `many` slot.
+
+A page owns every region its slots declare while it is active; every other region keeps the mode's furniture. Static tabs are titled by the view, bound tabs by the open resource. Navigation targets pages, never resources:
+
+```ts
+action: { kind: "page", page: ticketsPage.ref }
+return { navigate: { kind: "page", page: ticketsPage.ref, resource: ticketRef, open: "pin" } };
+return { navigate: { kind: "page", page: ticketsPage.ref, slot: "files" } }; // reveal a closed slot
+```
+
+`open` is `"preview" | "pin"` (default preview) and only `many` slots care. A view inside the active page emits instead: a tree node or row with a `resource` and no target emits it on activation, and `onRowActivate` may return `{ resource, open?, section? }` (a `ResourceEmission`). The page's bindings place the emission; an emission for an already-open resource re-activates that instance. Renderers have no pin gesture; pinning is tab behavior (double-click a preview tab or its pin affordance) or `open: "pin"` on an explicit target.
+
+Native screens are host pages published as `workbenchPages.*`: `workspaces` (binds `workspace`), `sessions` (binds `session`, `session-draft`), and `start`. Link them like any page: `{ kind: "page", page: workbenchPages.workspaces, resource: workspaceRef }`. Settings is not a page; open it by command. Mode switching is also a plain command: `{ kind: "command", target: { command: workbenchCommands.switchMode, params: { modeId: myMode.id } } }` with the mode's local id.
+
+`pst extensions check` validates pages with the `extension_page_*` diagnostic codes listed in [validation.md](validation.md). The removed `resourceViews` contribution is rejected with `removed_extension_contribution`; declare a page with `bindings` instead.
+
+## Native view bodies
+
+Use native view bodies when the host should own the editor or tree chrome instead of loading a custom webview.
 
 File view bodies need a `load` callback; an optional `save` callback makes text content editable.
 Load callbacks return `{ content }` for markdown/code text, `{ dataUrl }` for images, plus optional `fileName`,
@@ -372,9 +404,10 @@ export default defineExtension({
 ## Project navigation UI
 
 For a Planner-style list or board, define a view with `body.kind: "kanban"` and a
-`query` callback. Add a `navigationItems` contribution whose typed action targets the
-view ref. A webview page uses the same model with `body.kind: "webview"`. An optional
-view `path` is only its deep-link path.
+`query` callback, put it in a page slot (usually static and unclosable in `main`),
+and add a `navigationItems` contribution whose typed action targets the page ref.
+A webview screen uses the same model with `body.kind: "webview"`. The page's
+`path` is the screen's URL under the extension's namespace.
 
 To navigate to a Workbench mode instead of a view, use a `kind: "command"` action with the typed
 `workbenchCommands.switchMode` ref from `@pstdio/sdk/extensions`:
@@ -402,8 +435,8 @@ items use the same command with `command` and `params` as sibling fields instead
 
 For an editable inspector, define a `controls` view with a `query` callback plus optional
 `onValueChange`, `onApply`, and `onReset` callbacks. Attach it to an owner with
-`defineViewMenu({ owner: owner.ref, view: inspector.ref, side: "right" })`. Bind resource
-views through semantic slots, and keep all region choices in `placements`. Omitting both
+`defineViewMenu({ owner: owner.ref, view: inspector.ref, side: "right" })`; it
+follows the owner into every tab. Omitting both
 `onValueChange` and `onApply` makes controls read-only. Callback payloads must be JSON.
 Commit file metadata or data URLs, never live `File` objects.
 

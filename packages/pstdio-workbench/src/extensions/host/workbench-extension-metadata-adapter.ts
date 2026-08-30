@@ -8,16 +8,16 @@ type MetadataView = WorkbenchExtensionMetadata["views"][number];
 // A view presents a resource kind when a page binds it to one; renderers read the kind
 // to shape row resources.
 const resourceKindForView = (metadata: WorkbenchExtensionMetadata, viewId: string) => {
-  for (const page of metadata.pages ?? []) {
+  for (const page of metadata.pages) {
     const binding = (page.bindings ?? []).find((candidate) => metadataRefId(candidate.view) === viewId);
     if (binding) return binding.resourceKind.id;
   }
-  return (metadata.resourceViews ?? []).find((edge) => metadataRefId(edge.view) === viewId)?.resourceKind.id;
+  return undefined;
 };
 
-const panelPlacements = (metadata: WorkbenchExtensionMetadata, viewId: string) => {
-  const direct = metadata.placements.flatMap((placement) =>
-    placement.item.kind === "view" && metadataRefId(placement.item.view) === viewId
+const panelPlacements = (metadata: WorkbenchExtensionMetadata, viewId: string) =>
+  metadata.placements.flatMap((placement) =>
+    metadataRefId(placement.item.view) === viewId
       ? [
           {
             region: placement.region,
@@ -27,25 +27,6 @@ const panelPlacements = (metadata: WorkbenchExtensionMetadata, viewId: string) =
         ]
       : [],
   );
-  const edges = (metadata.resourceViews ?? []).filter((edge) => metadataRefId(edge.view) === viewId);
-  const resource = edges.flatMap((edge) =>
-    metadata.placements.flatMap((placement) =>
-      placement.item.kind === "resource-slot" &&
-      placement.item.slot.id === edge.slot.id &&
-      placement.item.slot.resourceKind.id === edge.resourceKind.id
-        ? [
-            {
-              for: edge.resourceKind.id,
-              region: placement.region,
-              allowedRegions: placement.movableTo,
-              required: placement.required,
-            },
-          ]
-        : [],
-    ),
-  );
-  return [...direct, ...resource];
-};
 
 const viewBody = (view: MetadataView) =>
   view.body.kind === "webview" ? { webview: view.body.webview } : { renderer: { kind: view.body.kind, id: view.id } };
@@ -80,7 +61,6 @@ const panels = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensio
       extensionId: view.extensionId,
       title: view.title,
       icon: view.icon,
-      path: view.path,
       show: placements.length === 0 ? undefined : placements.length === 1 ? placements[0] : placements,
       panelMenus: menus.length > 0 ? menus : undefined,
       ...viewBody(view),
@@ -202,43 +182,15 @@ const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtension
       ...new Set(placements.flatMap((placement) => [placement.region, ...(placement.movableTo ?? [])])),
     ].filter((region) => region !== "sidenav");
     const modePanels = Object.fromEntries(
-      placements.flatMap((placement) =>
-        placement.item.kind === "view"
-          ? [
-              [
-                metadataRefId(placement.item.view),
-                {
-                  region: placement.region,
-                  allowedRegions: placement.movableTo,
-                  required: placement.required,
-                  defaultOpen: placement.required ? true : placement.defaultOpen,
-                },
-              ],
-            ]
-          : [],
-      ),
-    );
-    const resources = Object.fromEntries(
-      metadata.resourceKinds.flatMap((kind) => {
-        const slots = Object.fromEntries(
-          placements.flatMap((placement) =>
-            placement.item.kind === "resource-slot" && placement.item.slot.resourceKind.id === kind.id
-              ? [
-                  [
-                    placement.item.slot.id,
-                    {
-                      region: placement.region,
-                      allowedRegions: placement.movableTo,
-                      required: placement.required,
-                      defaultOpen: placement.required ? true : placement.defaultOpen,
-                    },
-                  ],
-                ]
-              : [],
-          ),
-        );
-        return Object.keys(slots).length > 0 ? [[kind.id, { slots }]] : [];
-      }),
+      placements.map((placement) => [
+        metadataRefId(placement.item.view),
+        {
+          region: placement.region,
+          allowedRegions: placement.movableTo,
+          required: placement.required,
+          defaultOpen: placement.required ? true : placement.defaultOpen,
+        },
+      ]),
     );
     return {
       id: mode.id,
@@ -247,7 +199,6 @@ const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtension
       label: mode.label,
       icon: mode.icon,
       panelRegions: panelRegions.length > 0 ? panelRegions : undefined,
-      resources,
       modePanels,
     } as InternalWorkbenchExtensionMetadata["modes"][number];
   });
@@ -263,19 +214,12 @@ export const toInternalWorkbenchExtensionMetadata = (
     commandPaletteContributions: metadata.commandPaletteContributions,
     modes: modes(metadata),
     panels: adaptedPanels,
-    pages: metadata.pages ?? [],
+    pages: metadata.pages,
     resourceKinds: metadata.resourceKinds.map((kind) => ({
       id: kind.id,
       extensionId: kind.extensionId,
-      surface: kind.surface,
       label: kind.label,
       icon: kind.icon,
-      slots: Object.fromEntries(
-        (kind.slots ?? []).map((slot) => [
-          slot.id,
-          { cardinality: slot.cardinality, external: slot.access === "public" },
-        ]),
-      ),
       menuSlots: Object.fromEntries(
         (kind.menuSlots ?? []).map((slot) => [
           slot.id,
@@ -287,13 +231,6 @@ export const toInternalWorkbenchExtensionMetadata = (
           },
         ]),
       ),
-    })),
-    resourcePanels: (metadata.resourceViews ?? []).map((edge) => ({
-      id: edge.id,
-      extensionId: edge.extensionId,
-      resourceKind: edge.resourceKind.id,
-      panel: metadataRefId(edge.view),
-      slot: edge.slot.id,
     })),
     resourceHierarchyProviders: (metadata.resourceHierarchyProviders ?? []).map((record) => ({
       id: record.id,

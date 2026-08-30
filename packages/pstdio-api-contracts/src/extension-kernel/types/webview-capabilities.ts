@@ -1,7 +1,6 @@
 import type { TerminalSessionOperation } from "../../extensions.terminal";
 import type { CreateNotificationInput, NotificationStatus } from "../../notifications/types";
 import type { JsonObject } from "./json";
-import type { ExtensionResourceOpenIntent } from "./navigation-target";
 import type { RepoContext, ResourceRef } from "./resources";
 
 export type { ExtensionBlobRef } from "./context";
@@ -63,7 +62,6 @@ export interface WebviewCommandsExecuteParams {
 export interface WebviewResourceOpenParams {
   href?: string;
   resource?: ResourceRef;
-  input?: ExtensionResourceOpenIntent;
   open?: "preview" | "pin";
 }
 

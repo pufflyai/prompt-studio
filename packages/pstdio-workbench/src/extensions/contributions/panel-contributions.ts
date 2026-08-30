@@ -37,7 +37,6 @@ export const resolveWorkbenchExtensionViewInput = (
 
 export interface RegisterWorkbenchExtensionPanelInput {
   contribution: WorkbenchPanelContribution;
-  path?: string;
   resolveInput?: WorkbenchViewContribution["resolveInput"];
   workbench: WorkbenchModuleContext;
 }
@@ -140,7 +139,6 @@ export const registerWorkbenchExtensionPanel = (input: RegisterWorkbenchExtensio
       panelId: input.contribution.id,
       title: input.contribution.title,
       icon: input.contribution.icon,
-      path: input.path,
       resolveInput: input.resolveInput,
     });
   } catch (error) {

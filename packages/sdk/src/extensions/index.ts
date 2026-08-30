@@ -71,7 +71,6 @@ export {
   definePlacement,
   defineResourceHierarchyProvider,
   defineResourceKind,
-  defineResourceView,
   defineSchedule,
   defineSettingsPanel,
   defineSettingsSection,
@@ -85,7 +84,6 @@ export {
   defineViewMenu,
   defineWorkspaceType,
   resourceMenuSlotRef,
-  resourceSlotRef,
 } from "./define-contribution";
 export { defineExtension } from "./define-extension";
 export {

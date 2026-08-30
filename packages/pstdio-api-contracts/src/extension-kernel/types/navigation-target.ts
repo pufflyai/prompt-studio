@@ -1,32 +1,8 @@
 import type { CommandTarget } from "./commands";
-import type { PageRef, ViewRef } from "./contribution-identity";
+import type { PageRef } from "./contribution-identity";
 import type { FileRendererSectionTarget } from "./file-renderer";
 import type { JsonObject } from "./json";
 import type { ResourceRef } from "./resources";
-
-export type ExtensionPlacementStrategy = "persistent" | "preview" | "replace-active" | "replace-invoking";
-export type ExtensionResourcePlacementStrategy = Extract<ExtensionPlacementStrategy, "persistent" | "replace-active">;
-
-export interface ExtensionResourceOpenIntent {
-  strategy?: ExtensionResourcePlacementStrategy;
-}
-
-export interface ViewOpenIntent {
-  strategy?: ExtensionPlacementStrategy;
-}
-
-export interface NavigationTargetResource {
-  kind: "resource";
-  resource: ResourceRef;
-  input?: ExtensionResourceOpenIntent;
-  section?: FileRendererSectionTarget;
-}
-
-export interface NavigationTargetView {
-  kind: "view";
-  view: ViewRef;
-  input?: ViewOpenIntent;
-}
 
 // Navigation only targets pages, commands, and hrefs. A resource is never a
 // destination: it travels as an argument on a page target and the page's bindings
@@ -54,12 +30,7 @@ export interface NavigationTargetHref {
   href: string;
 }
 
-export type NavigationTargetItem =
-  | NavigationTargetPage
-  | NavigationTargetResource
-  | NavigationTargetView
-  | NavigationTargetCommand
-  | NavigationTargetHref;
+export type NavigationTargetItem = NavigationTargetPage | NavigationTargetCommand | NavigationTargetHref;
 
 export interface NavigationTargetCompound {
   kind: "compound";

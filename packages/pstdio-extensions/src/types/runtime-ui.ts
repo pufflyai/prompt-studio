@@ -11,7 +11,6 @@ import type {
   PlacementContribution,
   ResourceHierarchyProvider,
   ResourceKindDefinition,
-  ResourceViewContribution,
   SettingsPanelContribution,
   SettingsSectionContribution,
   SkillContribution,
@@ -101,8 +100,7 @@ export interface RuntimeResourceKindRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
-  contribution: Omit<ResourceKindDefinition, "slots" | "menuSlots"> & {
-    slots: Record<string, { cardinality: "one" | "many"; external: boolean }>;
+  contribution: Omit<ResourceKindDefinition, "menuSlots"> & {
     menuSlots: Record<
       string,
       {
@@ -122,18 +120,6 @@ export interface RuntimePageRecord {
   name: string;
   sourcePath: string;
   contribution: PageContribution;
-}
-
-export interface RuntimeResourceViewRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  resourceKindId: string;
-  viewId: string;
-  slotId: string;
-  contribution: ResourceViewContribution;
 }
 
 export interface RuntimeResourceHierarchyProviderRecord {

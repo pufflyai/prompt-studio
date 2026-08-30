@@ -46,8 +46,8 @@ Extension Lab must include:
 | ------- | ------- |
 | Lab root resource | Default resource and mode-wide layout. |
 | Glass Lab artifact | Detail resource inside Lab mode. |
-| Animation mode | First layout over a shared project resource. |
-| Sculpt mode | Different regions over the same resource. |
+| Lab page | Static slots plus a many-cardinality bound slot in one page. |
+| Blend page | A resource-first page presenting two kinds; the same artifact kind rendered differently than the Lab page. |
 | External ticket insights panel | Cross-extension resource-panel contribution. |
 | Required panel | Close prevention and reconciliation. |
 | Default optional panel | User close and persistence. |
@@ -104,7 +104,7 @@ that fails if the regression returns.
 2. Ticket breadcrumbs show Tickets and all nested parents.
 3. Ticket editing retains focus and a held selection beyond the save debounce.
 4. Switching Project to Lab never renders Lab under a ticket breadcrumb.
-5. Switching Animation and Sculpt retains the shared resource and changes panel regions.
+5. Switching the Lab and Blend pages swaps only the regions each page declares; mode furniture stays put.
 6. Closing optional panels persists; required panels cannot be closed and recover from stale fixture state.
 7. Root tree items render without an Extensions heading.
 8. Extension Lab exercises webview, tree, file, controls, data table, and Kanban renderers across the matrix.

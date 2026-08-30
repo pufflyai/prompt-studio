@@ -50,7 +50,6 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   statuses: [],
   resourceKinds: [],
   pages: [],
-  resourceViews: [],
   resourceHierarchyProviders: [],
   activityItems: [],
   settingsSections: [],

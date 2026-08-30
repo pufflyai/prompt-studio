@@ -1,12 +1,6 @@
 import type { Localizable } from "../l10n";
 import type { DockedWorkbenchRegion } from "./composition";
-import type {
-  ContributionDefinition,
-  ModeRef,
-  NavigationSlotRef,
-  ResourceSlotRef,
-  ViewRef,
-} from "./contribution-identity";
+import type { ContributionDefinition, ModeRef, NavigationSlotRef, ViewRef } from "./contribution-identity";
 import type { KanbanRendererContribution, WebviewContribution, WhenExpression } from "./contributions";
 import type { ControlsRendererContribution } from "./controls";
 import type { DataTableRendererContribution } from "./data-table-renderer";
@@ -39,7 +33,6 @@ export type ViewBody =
 export interface ViewContribution extends ContributionDefinition<"view"> {
   readonly title: Localizable<string>;
   readonly icon?: string;
-  readonly path?: string;
   readonly body: ViewBody;
 }
 
@@ -55,9 +48,7 @@ export interface NavigationItemContribution extends ContributionDefinition<"navi
 
 // Placements are mode-scoped static views only: workbench furniture that survives
 // page switches. Anything resource-driven is a page.
-export type PlacementItem =
-  | { readonly kind: "view"; readonly view: ViewRef }
-  | { readonly kind: "resource-slot"; readonly slot: ResourceSlotRef };
+export type PlacementItem = { readonly kind: "view"; readonly view: ViewRef };
 
 export interface PlacementContribution extends ContributionDefinition<"placement"> {
   readonly mode: ModeRef;

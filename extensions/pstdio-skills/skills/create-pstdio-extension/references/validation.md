@@ -37,6 +37,8 @@ The first cycle checks the extension contract and dashboard host capabilities, p
 
 Stop with Ctrl+C. The command removes watchers and temporary staging folders but leaves the last valid extension enabled.
 
+If page or panel arrangement looks broken while iterating, run the extension's dashboard command "Reset <extension> layout" from the command palette. It reseeds the extension's pages and placements from the current declarations. There is no CLI reset; layout state is per-browser, and titles and tab identity are never persisted, so a reload plus the reset command covers every stale-layout case.
+
 ## Install and runtime smoke test
 
 Install the extension source into a throwaway Prompt Studio home and validate loaded contributions:
@@ -48,23 +50,32 @@ PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions check
 
 Treat warnings as actionable. They do not block loading, but they describe behavior an author should confirm.
 
+Page diagnostics to expect:
+
+- `extension_page_slot_duplicate`: a slot id is declared twice on one page.
+- `extension_page_slot_invalid`: a static slot sets bound-only fields (`cardinality`, `follows`), a bound slot sets static-only fields (`defaultOpen`, `scope`), or a `many` slot is outside the panel regions (`main`, `side`, `secondary`).
+- `extension_page_binding_invalid`: a binding targets a slot that is not a bound slot on the page, or binds the same resource kind to the same slot twice.
+- `extension_page_follows_invalid`: `follows` names a slot that is not a `many` slot on the same page, or the follower binds none of that slot's resource kinds.
+- `extension_page_path_invalid`: a page path is not lowercase kebab-case segments separated by `/`, collides with a reserved host segment (`workspaces`, `sessions`), or repeats another page path in the extension.
+- `extension_page_missing`: a page target names an unknown page. Own pages and host pages (`workbenchPages.*`) must resolve; refs into other extensions are shape-checked only.
+- `extension_page_target_invalid`: a page target names a slot the page does not have, or a resource whose kind the target page does not bind (host pages are validated against their published kinds).
+- `extension_page_scope_inert` (warning): a slot declares `scope: "location"` on a page with no bindings, so its location never changes.
+
 Composition diagnostics to expect:
 
-- `extension_panel_contract_invalid`: a panel's `show` value must be one valid placement or a non-empty list of valid placements.
-- `extension_resource_kind_missing`: a resource panel, mode, or hierarchy provider references an unknown resource kind.
-- `extension_resource_slot_missing`: a resource panel or mode references an unknown slot.
-- `extension_resource_slot_closed`: an external extension contributes to a closed slot.
-- `extension_panel_missing`: a resource panel or mode references an unknown panel.
-- `extension_panel_placement_unresolvable`: a mode moves a panel outside the regions allowed by its declaration.
-- `extension_mode_resource_unsupported`: a recipe references a resource kind the mode does not accept, or a panel not registered for it.
-- `extension_placement_required_invalid`: `required` is set on a cardinality-many slot placement without naming a panel.
-- `extension_resource_primary_invalid`: a primary resource has zero or several primary location placements.
+- `extension_view_missing`: a page slot or binding references an unknown view.
+- `extension_resource_kind_missing`: a binding, palette provider, or hierarchy provider references an unknown resource kind.
+- `invalid_placement`: a required placement sets `defaultOpen: false`, or `movableTo` omits the initial region.
+- `duplicate_view_placement`: a mode places the same view more than once.
+- `removed_extension_contribution` (error): the manifest declares a removed contribution such as `resourceViews`; the message names the replacement (a page with `bindings`).
 
 Convention diagnostics to expect:
 
 - `extension_icon_unknown`: an icon name is not in the host icon set.
-- `extension_contribution_id_invalid` (error): a local contribution id is outside the grammar — lowercase kebab-case segments separated by dots, such as `ticket-status.create`.
+- `extension_contribution_id_invalid` (error): a local contribution id is outside the grammar of lowercase kebab-case segments separated by dots, such as `ticket-status.create`.
 - `extension_command_reference_missing`: a contribution references a command that does not exist.
+- `conflicting_translation_default` (warning): one `l10n()` key declares two different defaults. Only the first
+  reaches the bundle, so the other copy never appears. Give each piece of copy its own key.
 
 Do not pass `--skip-install` for a user/global install smoke test. The install must create package-local
 dependencies under the installed extension root so the packaged runtime does not depend on workspace

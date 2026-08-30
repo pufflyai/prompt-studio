@@ -26,7 +26,6 @@ import type {
   RuntimePlacementRecord,
   RuntimeResourceHierarchyProviderRecord,
   RuntimeResourceKindRecord,
-  RuntimeResourceViewRecord,
   RuntimeSettingsPanelRecord,
   RuntimeSettingsSectionRecord,
   RuntimeSkillRecord,
@@ -220,7 +219,6 @@ export interface ExtensionRuntime {
   statuses: RuntimeStatusRecord[];
   resourceKinds: RuntimeResourceKindRecord[];
   pages: RuntimePageRecord[];
-  resourceViews: RuntimeResourceViewRecord[];
   resourceHierarchyProviders: RuntimeResourceHierarchyProviderRecord[];
   activityItems: RuntimeActivityItemRecord[];
   settingsSections: RuntimeSettingsSectionRecord[];

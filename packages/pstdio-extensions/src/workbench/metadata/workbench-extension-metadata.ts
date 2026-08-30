@@ -85,7 +85,6 @@ const normalizeWhen = (when: WhenExpression | undefined, extensionId: string): M
 
 const normalizeTarget = (target: NavigationTarget, extensionId: string): MetadataNavigationTarget => {
   if (target.kind === "page") return { ...target, page: normalizedRef(target.page, extensionId) };
-  if (target.kind === "view") return { ...target, view: normalizedRef(target.view, extensionId) };
   if (target.kind === "command") {
     return { ...target, target: { ...target.target, command: commandRef(target.target.command, extensionId) } };
   }
@@ -177,42 +176,24 @@ export const createWorkbenchExtensionMetadata = (
     hostTreeHeader: menu.contribution.hostTreeHeader,
     hostTreeFooter: menu.contribution.hostTreeFooter,
   })),
-  placements: input.runtime.placements.map((placement) => {
-    const item = placement.contribution.item;
-    return {
-      id: placement.id,
-      localId: placement.localId,
-      extensionId: placement.extensionId,
-      mode: normalizedRef(placement.contribution.mode, placement.extensionId),
-      item:
-        item.kind === "view"
-          ? { kind: "view" as const, view: normalizedRef(item.view, placement.extensionId) }
-          : {
-              kind: "resource-slot" as const,
-              slot: {
-                ...item.slot,
-                resourceKind: normalizedRef(item.slot.resourceKind, placement.extensionId),
-              },
-            },
-      region: placement.contribution.region,
-      order: placement.contribution.order,
-      defaultOpen: placement.contribution.defaultOpen,
-      required: placement.contribution.required,
-      movableTo: placement.contribution.movableTo ? [...placement.contribution.movableTo] : undefined,
-    };
-  }),
+  placements: input.runtime.placements.map((placement) => ({
+    id: placement.id,
+    localId: placement.localId,
+    extensionId: placement.extensionId,
+    mode: normalizedRef(placement.contribution.mode, placement.extensionId),
+    item: { kind: "view", view: normalizedRef(placement.contribution.item.view, placement.extensionId) },
+    region: placement.contribution.region,
+    order: placement.contribution.order,
+    defaultOpen: placement.contribution.defaultOpen,
+    required: placement.contribution.required,
+    movableTo: placement.contribution.movableTo ? [...placement.contribution.movableTo] : undefined,
+  })),
   resourceKinds: input.runtime.resourceKinds.map((record) => ({
     id: record.id,
     localId: record.localId,
     extensionId: record.extensionId,
-    surface: record.contribution.surface ?? "primary",
     label: record.contribution.label,
     icon: record.contribution.icon,
-    slots: Object.entries(record.contribution.slots).map(([id, slot]) => ({
-      id,
-      cardinality: slot.cardinality,
-      access: slot.external ? ("public" as const) : ("owner" as const),
-    })),
     menuSlots: Object.entries(record.contribution.menuSlots ?? {}).map(([id, slot]) => ({
       id,
       placement: slot.placement,
@@ -220,17 +201,6 @@ export const createWorkbenchExtensionMetadata = (
       access: slot.external ? ("public" as const) : ("owner" as const),
       order: slot.order,
     })),
-  })),
-  resourceViews: input.runtime.resourceViews.map((record) => ({
-    id: record.id,
-    extensionId: record.extensionId,
-    resourceKind: normalizedRef(record.contribution.resourceKind, record.extensionId),
-    slot: {
-      ...record.contribution.slot,
-      resourceKind: normalizedRef(record.contribution.slot.resourceKind, record.extensionId),
-    },
-    view: normalizedRef(record.contribution.view, record.extensionId),
-    order: record.contribution.order,
   })),
   pages: input.runtime.pages.map((record) => ({
     id: record.id,

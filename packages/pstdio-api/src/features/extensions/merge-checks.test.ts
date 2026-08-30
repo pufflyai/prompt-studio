@@ -67,8 +67,8 @@ describe("mergeCheck", () => {
     expect(target.views).toEqual(source.views);
   });
 
-  test("merges page records when either check omits the additive field", () => {
-    const target = check({ pages: undefined });
+  test("merges page records", () => {
+    const target = check();
     const source = check({
       pages: [
         {

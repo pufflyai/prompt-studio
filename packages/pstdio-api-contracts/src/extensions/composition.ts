@@ -5,11 +5,6 @@ import { extensionResourceRefSchema } from "./execute";
 
 export const dockedWorkbenchRegionSchema = z.enum(dockedWorkbenchRegions);
 
-export const extensionResourceSlotSchema = z.object({
-  cardinality: z.enum(["one", "many"]),
-  external: z.boolean(),
-});
-
 export const extensionResourceMenuSlotSchema = z.object({
   placement: z.enum(["header-primary", "header-overflow", "context-menu"]),
   label: localizableStringSchema.optional(),
@@ -20,19 +15,9 @@ export const extensionResourceMenuSlotSchema = z.object({
 export const extensionResourceKindRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
-  surface: z.enum(["primary", "secondary", "attached"]).optional(),
   label: localizableStringSchema.optional(),
   icon: z.string().optional(),
-  slots: z.record(z.string(), extensionResourceSlotSchema).default({}),
   menuSlots: z.record(z.string(), extensionResourceMenuSlotSchema).default({}),
-});
-
-export const extensionResourcePanelRecordSchema = z.object({
-  id: z.string(),
-  extensionId: z.string(),
-  resourceKind: z.string(),
-  panel: z.string(),
-  slot: z.string(),
 });
 
 const panelBodySchema = {
@@ -70,13 +55,7 @@ export const extensionCompositionPanelRecordSchema = z
     message: "Composition panels must declare exactly one body",
   });
 
-export const extensionModeResourceRecipeSchema = z.object({
-  slots: z.record(z.string(), extensionModePlacementSchema).optional(),
-  panels: z.record(z.string(), extensionModePlacementSchema).optional(),
-});
-
 export const extensionModeCompositionRecordSchema = z.object({
-  resources: z.record(z.string(), extensionModeResourceRecipeSchema).default({}),
   modePanels: z.record(z.string(), extensionModePlacementSchema).optional(),
   defaultResource: z.union([extensionResourceRefSchema, z.object({ commandId: z.string() })]).optional(),
 });
@@ -95,6 +74,5 @@ export const extensionResourceHierarchyProviderRecordSchema = z.object({
 });
 
 export type ExtensionResourceKindRecord = z.infer<typeof extensionResourceKindRecordSchema>;
-export type ExtensionResourcePanelRecord = z.infer<typeof extensionResourcePanelRecordSchema>;
 export type ExtensionCompositionPanelRecord = z.infer<typeof extensionCompositionPanelRecordSchema>;
 export type ExtensionModeCompositionRecord = z.infer<typeof extensionModeCompositionRecordSchema>;

@@ -1,7 +1,6 @@
 import type { KeybindingSequence } from "./registries/keybindings/keybinding-registry";
 import type { WorkbenchRegion } from "./registries/layout/layout-model";
 import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
-import type { NavigationTarget } from "./registries/navigation/navigation-registry";
 import type { ResourceRef } from "./registries/resources/resource-registry";
 import type { WorkbenchCore } from "./workbench-core";
 
@@ -81,14 +80,6 @@ interface WorkbenchSwitchModeCommandArgs {
 }
 
 export const workbenchSwitchModeCommandId = "workbench.action.switchMode";
-
-export const getSwitchModeNavigationTargetModeId = (target: NavigationTarget) => {
-  if (target.kind !== "command" || target.commandId !== workbenchSwitchModeCommandId) return;
-  if (!target.args || typeof target.args !== "object") return;
-
-  const modeId = "modeId" in target.args ? target.args.modeId : undefined;
-  return typeof modeId === "string" && modeId.trim().length > 0 ? modeId : undefined;
-};
 
 // The command form of an in-page emission: renderers whose activation surface only
 // speaks command targets (tree nodes) compile emissions to this built-in.

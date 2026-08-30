@@ -53,7 +53,7 @@ The dashboard UI model uses host-owned typed slots. Extensions attach menus, nav
 
 Targets describe the dashboard surface. Optional `when` expressions restrict visibility by active mode, command source, active resource type, or active resource metadata.
 
-Views own content. Placements own mode, region, default-open state, required state, order, and allowed movement. Use `resourceViews` to bind a view to a semantic resource slot. A placement can then place that slot without either contribution copying geometry.
+Views own content and never claim a place. Pages own tool screens: they declare slots (a region plus open policy) and bindings (which view presents which resource kind in which slot). Modes own the bench itself, and their placements hold static furniture that survives page switches. Start with [Choosing a UI surface](./choosing-a-ui-surface.md).
 
 ## Lifecycle
 
@@ -67,17 +67,18 @@ Views own content. Placements own mode, region, default-open state, required sta
 ## Docs
 
 - [Extension API](./api.md)
+- [Choosing a UI surface](./choosing-a-ui-surface.md)
 - [Remote execution migration](./remote-execution-migration.md)
 - [Extension notifications](./notifications.md)
 - [Extension runtime loader](../architecture/extensions-runtime.md)
 - [Dashboard UI attachments](./workbench-attachments.md)
-- [Extension modes](./modes-and-layout.md)
+- [Extension modes and layout](./modes-and-layout.md)
+- [Navigation and layout state](./navigation-and-layout-state.md)
 - [Cookbook](./cookbook.md)
 
 ## Product Requirements
 
 - [Contextual Workbench Composition](./contextual-workbench-composition.md)
-- [Extension Navigation and Layout State](./navigation-and-layout-state.md)
 - [Project Extension Runtime Snapshots](./runtime-snapshots.md)
 - [Renderer Edit and Refresh Lifecycle](./renderer-edit-refresh-lifecycle.md)
 - [Extension Conformance and Regression Coverage](./conformance.md)

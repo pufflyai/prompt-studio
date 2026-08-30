@@ -13,34 +13,29 @@ import { workbenchExtensionMetadataSchema } from "./workbench-metadata";
 export type { WorkbenchExtensionMetadata, WorkbenchExtensionViewRecord } from "./workbench-metadata";
 export { workbenchExtensionMetadataSchema } from "./workbench-metadata";
 
-const checkWorkbenchMetadataSchema = workbenchExtensionMetadataSchema
-  .pick({
-    extensions: true,
-    commands: true,
-    menuContributions: true,
-    commandPaletteContributions: true,
-    modes: true,
-    pages: true,
-    views: true,
-    viewMenus: true,
-    placements: true,
-    resourceKinds: true,
-    resourceViews: true,
-    resourceHierarchyProviders: true,
-    navigationItems: true,
-    statusBarItems: true,
-    statuses: true,
-    activityItems: true,
-    settingsSections: true,
-    settingsPanels: true,
-    commandPaletteResources: true,
-    keybindings: true,
-    settingsDefinitions: true,
-    diagnostics: true,
-  })
-  .extend({
-    resourceViews: workbenchExtensionMetadataSchema.shape.resourceViews.optional(),
-  });
+const checkWorkbenchMetadataSchema = workbenchExtensionMetadataSchema.pick({
+  extensions: true,
+  commands: true,
+  menuContributions: true,
+  commandPaletteContributions: true,
+  modes: true,
+  pages: true,
+  views: true,
+  viewMenus: true,
+  placements: true,
+  resourceKinds: true,
+  resourceHierarchyProviders: true,
+  navigationItems: true,
+  statusBarItems: true,
+  statuses: true,
+  activityItems: true,
+  settingsSections: true,
+  settingsPanels: true,
+  commandPaletteResources: true,
+  keybindings: true,
+  settingsDefinitions: true,
+  diagnostics: true,
+});
 
 export const extensionsCheckResponseSchema = checkWorkbenchMetadataSchema.extend({
   extensionsRoot: z.string(),

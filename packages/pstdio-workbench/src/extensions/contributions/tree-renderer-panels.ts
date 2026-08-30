@@ -25,7 +25,6 @@ export const registerTreeViewWidget = (
   if (!rendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: input.workbench,
-    path: panel.path,
     resolveInput: resolveWorkbenchExtensionViewInput(input.resolveViewInput, panel),
     contribution: toWorkbenchCompositionPanelContribution({
       panel,

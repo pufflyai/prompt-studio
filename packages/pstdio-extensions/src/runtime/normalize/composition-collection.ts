@@ -1,9 +1,4 @@
-import type {
-  PageContribution,
-  ResourceHierarchyProvider,
-  ResourceKindDefinition,
-  ResourceViewContribution,
-} from "@pstdio/sdk/extensions";
+import type { PageContribution, ResourceHierarchyProvider, ResourceKindDefinition } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
@@ -23,17 +18,6 @@ const recordBase = (ext: NormalizedExtension, source: LoadedExtensionSource, loc
   name: ext.name,
   sourcePath: source.sourcePath,
 });
-
-const normalizeResourceSlots = (value: unknown) =>
-  Array.isArray(value)
-    ? Object.fromEntries(
-        value.flatMap((slot) =>
-          isRecord(slot) && typeof slot.id === "string" && typeof slot.cardinality === "string"
-            ? [[slot.id, { cardinality: slot.cardinality, external: slot.access === "public" }]]
-            : [],
-        ),
-      )
-    : (value ?? {});
 
 const normalizeResourceMenuSlots = (value: unknown) =>
   Array.isArray(value)
@@ -76,8 +60,6 @@ export const collectCompositionContributions = (
   for (const contribution of resourceKinds) {
     const localId = contribution.id;
     if (!isResourceKindContribution(contribution)) continue;
-    const slots = normalizeResourceSlots(contribution.slots);
-    if (!isRecord(slots)) continue;
     const menuSlots = normalizeResourceMenuSlots(contribution.menuSlots);
     if (!isRecord(menuSlots)) continue;
     runtime.resourceKinds.push({
@@ -87,45 +69,9 @@ export const collectCompositionContributions = (
       id: localId,
       contribution: {
         ...contribution,
-        slots,
         menuSlots,
         ref: normalizeContributionRef(ext, contribution.ref),
       } as (typeof runtime.resourceKinds)[number]["contribution"],
-    });
-  }
-
-  const resourceViews = uniqueContributions({
-    ext,
-    source,
-    runtime,
-    kind: "resource-view",
-    contributions: contributionArray<ResourceViewContribution>(source.definition.resourceViews),
-  });
-  for (const contribution of resourceViews) {
-    if (
-      !isRecord(contribution) ||
-      typeof contribution.id !== "string" ||
-      !isRecord(contribution.resourceKind) ||
-      !isRecord(contribution.slot) ||
-      !isRecord(contribution.view)
-    ) {
-      continue;
-    }
-    const resourceKind = normalizeContributionRef(ext, contribution.resourceKind as never);
-    const view = normalizeContributionRef(ext, contribution.view as never);
-    runtime.resourceViews.push({
-      ...recordBase(ext, source, contribution.id),
-      id: normalizedContributionId(ext.id, "resource-view", contribution.id),
-      resourceKindId: `${resourceKind.extensionId}.${resourceKind.id}`,
-      viewId: normalizedContributionId(view.extensionId, "view", view.id),
-      slotId: String(contribution.slot.id),
-      contribution: {
-        ...(contribution as unknown as ResourceViewContribution),
-        ref: normalizeContributionRef(ext, contribution.ref as never),
-        resourceKind,
-        slot: { ...contribution.slot, resourceKind },
-        view,
-      } as ResourceViewContribution,
     });
   }
 
@@ -182,10 +128,6 @@ export const collectCompositionContributions = (
 // cross-extension reference is independent of source order.
 export const resolveCompositionResourceKindReferences = (runtime: Accumulator) => {
   const references = resourceKindReferences(runtime.resourceKinds);
-  runtime.resourceViews = runtime.resourceViews.map((edge) => ({
-    ...edge,
-    resourceKindId: resolveResourceKindReference(edge.resourceKindId, references),
-  }));
   runtime.resourceHierarchyProviders = runtime.resourceHierarchyProviders.map((provider) => ({
     ...provider,
     resourceKindId: resolveResourceKindReference(provider.resourceKindId, references),

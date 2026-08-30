@@ -15,8 +15,6 @@ import type {
   ResourceHierarchyProvider,
   ResourceKindDefinition,
   ResourceKindRef,
-  ResourceSlotRef,
-  ResourceViewContribution,
   ScheduleContribution,
   SettingsPanelContribution,
   SettingsSectionContribution,
@@ -59,23 +57,12 @@ export const defineResourceKind = defineContribution("resource-kind") as <
   definition: Definition,
 ) => Definition & ContributionDefinition<"resource-kind">;
 
-export const resourceSlotRef = (resourceKind: ResourceKindRef, id: string): ResourceSlotRef => ({
-  resourceKind,
-  id,
-});
-
 export const resourceMenuSlotRef = (resourceKind: ResourceKindRef, id: string) =>
   defineSlot(`${resourceKind.id}.${id}`, { kind: "menu" });
 
 export const definePage = defineContribution("page") as <Definition extends Omit<PageContribution, "ref">>(
   definition: Definition,
 ) => Definition & ContributionDefinition<"page">;
-
-export const defineResourceView = defineContribution("resource-view") as <
-  Definition extends Omit<ResourceViewContribution, "ref">,
->(
-  definition: Definition,
-) => Definition & ContributionDefinition<"resource-view">;
 
 export const defineNavigationItem = defineContribution("navigation-item") as <
   Definition extends Omit<NavigationItemContribution, "ref">,

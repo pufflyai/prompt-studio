@@ -10,8 +10,9 @@ Identity is not declared in code. The runtime reads package identity before impo
 ## Documentation Set
 
 - [Extensions overview](./index.md): product model, ownership boundaries, lifecycle, and authoring scope.
+- [Choosing a UI surface](./choosing-a-ui-surface.md): which UI contribution to use, decided before writing one.
 - [Dashboard UI attachments](./workbench-attachments.md): implemented target-based UI attachment model.
-- [Extension modes](./modes-and-layout.md): current mode metadata support.
+- [Extension modes and layout](./modes-and-layout.md): the page and mode contract.
 - [Extension cookbook](./cookbook.md): small authoring recipes for common extension tasks.
 - [Remote execution migration](./remote-execution-migration.md): named connections, remote workspaces, harnesses, and automation.
 
@@ -184,11 +185,11 @@ export default defineExtension({
   commands: [createTicket],
   views: [],
   viewMenus: [],
+  pages: [],
   placements: [],
   navigationItems: [],
   modes: [],
   resourceKinds: [],
-  resourceViews: [],
   statusBarItems: [],
   statuses: [],
   settingsPanels: [],
@@ -208,9 +209,10 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 | `schedules`                                       | Cron-driven command invocation.                                                                   |
 | `views`                                           | Reusable webview, tree, file, controls, table, and Kanban bodies.                                  |
 | `viewMenus`                                       | View bodies attached as menus owned by another view.                                               |
-| `placements`                                      | Geometry for direct views or semantic resource slots in a mode.                                   |
-| `navigationItems`                                 | Typed view, resource, command, link, or compound navigation actions.                               |
-| `resourceKinds`, `resourceViews`                  | Domain resource slots and typed bindings from those slots to views.                               |
+| `pages`                                           | Tool screens: slots per region with open policy, plus resource-kind bindings.                      |
+| `placements`                                      | Static views docked into a mode; furniture that survives page switches.                            |
+| `navigationItems`                                 | Typed page, command, href, or compound navigation actions.                                         |
+| `resourceKinds`                                   | Domain data: collections, palette entries, and menu slots. No presentation.                        |
 | `resourceHierarchyProviders`                      | Parent lookup for resources, used for breadcrumbs and hierarchy.                                   |
 | `statusBarItems`                                  | Views in the host status bar; all visible items render without layout persistence.                 |
 | `statuses`                                        | Workflow status providers shared by Kanban views and the host settings editor.                     |
@@ -470,73 +472,81 @@ when a hook should react to a command outcome.
 
 Dashboard UI contributions have one ownership model:
 
-- a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, or `kanban`
-- a placement owns geometry and places either a view or a semantic resource slot in a mode
-- a resource view binds one view to one slot declared by a resource kind
-- a navigation item uses a typed action instead of encoded route or command fields
+- a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, or `kanban`; it never claims a place
+- a page owns a tool screen: slots (region plus open policy) and bindings (which view presents which resource kind in which slot)
+- a placement docks a static view into a mode; that furniture survives page switches
+- a resource kind owns domain data only; pages that bind it own its presentation
+- a navigation item uses a typed action (`page`, `command`, `href`, or `compound`)
 - a view menu references its owner view and menu view
 - status-bar and settings contributions reference views; they do not duplicate view bodies
 
 Local ids are explicit. The runtime normalizes them as
 `${extensionId}.${contributionKind}.${localId}`. Use the `ref` returned by each `define*`
-helper instead of rebuilding that id. Resources still identify domain objects such as
-tickets, workspaces, and sessions. A view `path` is only a deep link to that view.
+helper instead of rebuilding that id. Not sure which surface a feature needs? Read
+[Choosing a UI surface](./choosing-a-ui-surface.md).
 
 ```ts
 import {
   defineExtension,
-  definePlacement,
+  defineNavigationItem,
+  definePage,
   defineResourceKind,
-  defineResourceView,
   defineView,
-  resourceSlotRef,
-  workbenchModes,
-  workbenchResourceKinds,
+  l10n,
+  workbenchSlots,
 } from "@pstdio/sdk/extensions";
 
 const ticket = defineResourceKind({
   id: "ticket",
-  surface: "primary",
-  slots: [{ id: "navigation", cardinality: "one", access: "owner" }],
+  label: l10n("resourceKinds.ticket.label", "Ticket"),
+  icon: "ticket",
 });
-const navigation = resourceSlotRef(ticket.ref, "navigation");
-const files = defineView({
-  id: "files",
-  title: "Files",
-  body: {
-    kind: "tree",
-    body: async () => [{ id: "files", label: "Files", nodes: [] }],
-  },
+const board = defineView({
+  id: "tickets",
+  title: l10n("views.tickets.title", "Tickets"),
+  body: { kind: "kanban", attributes: [], query: async () => ({ rows: [] }) },
+});
+const editor = defineView({
+  id: "ticket-editor",
+  title: l10n("views.ticketEditor.title", "Ticket"),
+  body: { kind: "file", load: async () => ({ content: "" }) },
+});
+
+const ticketsPage = definePage({
+  id: "tickets",
+  title: l10n("pages.tickets.title", "Tickets"),
+  path: "tickets",
+  slots: [
+    { id: "board", region: "main", view: board.ref, closable: false },
+    { id: "ticket", region: "main", cardinality: "many" },
+  ],
+  bindings: [{ resourceKind: ticket.ref, view: editor.ref, slot: "ticket" }],
 });
 
 export default defineExtension({
   resourceKinds: [ticket],
-  views: [files],
-  resourceViews: [
-    defineResourceView({ id: "ticket-files", resourceKind: ticket.ref, slot: navigation, view: files.ref }),
-  ],
-  placements: [
-    definePlacement({
-      id: "ticket-navigation",
-      mode: workbenchModes.project,
-      item: { kind: "resource-slot", slot: navigation },
-      region: "sidenav",
-      required: true,
+  views: [board, editor],
+  pages: [ticketsPage],
+  navigationItems: [
+    defineNavigationItem({
+      id: "tickets",
+      slot: workbenchSlots.projectNavigation,
+      label: l10n("pages.tickets.title", "Tickets"),
+      action: { kind: "page", page: ticketsPage.ref },
     }),
   ],
 });
 ```
 
-`body` returns tree sections. Optional `children` and `footer` callbacks return nodes for lazy children and footer
-content. Renderer callbacks receive the active project, resource, renderer id, tree state, filter text, and selected
-node context.
+Opening the page shows the unclosable board tab. Clicking a board row emits the
+ticket, and the page's binding opens it as a preview tab next to the board. Any
+caller elsewhere names the page: `{ kind: "page", page: ticketsPage.ref, resource:
+ticketRef }`. The page's `path` gives it a real URL under the extension's
+namespace: `/projects/{project}/{extension-id}/tickets`.
 
-Panel role comes from the resolved placement:
-
-- the `primary` slot of a primary resource kind holds the main content panel; it is closed to external extensions
-- other slots hold supporting views; a slot with `access: "public"` accepts views from other extensions
-- an owned view binds through `resourceViews`; a standalone view can be opened by a `navigationItems` view action
-- a recipe for a primary resource kind needs exactly one `main` placement, and `required` on a slot placement works only when the slot's cardinality is `one`
+See [Extension modes and layout](./modes-and-layout.md) for slot policy and the
+page-versus-mode contract, and
+[Navigation](../references/workbench/navigation.md) for targets and emissions.
 
 Visibility can be limited with `when`:
 
@@ -780,7 +790,6 @@ export default defineExtension({
   views: [
     defineView({
       id: "planner",
-      path: "planner",
       title: "Planner",
       body: {
         kind: "webview",
@@ -877,4 +886,4 @@ The theme id is `planner.monokai` for package `planner`.
 
 Diagnostics should include the extension id when known, the source path, and project/repo context where relevant. If the entry module fails to import, the package still loads with empty contributions and an `extension_import_failed` diagnostic so the dashboard can show the package identity and error.
 
-Warnings are actionable even when the extension still loads. For example, `extension_icon_unknown` means a contribution named an icon the host does not ship; the contribution loads, but the dashboard shows a fallback icon. Composition errors such as `extension_panel_contract_invalid` (a panel placement has an invalid shape) and `extension_resource_slot_closed` (an external contribution targets a closed slot) drop the invalid contribution and keep the rest of the extension loading.
+Warnings are actionable even when the extension still loads. For example, `extension_icon_unknown` means a contribution named an icon the host does not ship; the contribution loads, but the dashboard shows a fallback icon. Composition errors such as `extension_page_slot_invalid` (a page slot mixes static and bound fields) and `extension_page_binding_invalid` (a binding targets a slot that is not a bound slot) report the invalid contribution and keep the rest of the extension loading. Manifests that still declare the removed `resourceViews` contribution are rejected with `removed_extension_contribution`, which names the replacement (a page with `bindings`).

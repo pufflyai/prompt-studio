@@ -20,46 +20,7 @@ const activeViewId = (workbench: ReturnType<typeof createWorkbenchCore>) => {
   return region.widgets.find((placement) => placement.widgetId === region.activeWidgetId)?.viewId;
 };
 
-const legacyMetadataWithLabView = {
-  ...metadataWithLabMode,
-  pages: [],
-  navigationItems: [],
-  views: metadataWithLabMode.views.map((view) => (view.localId === "lab-page" ? { ...view, path: "lab" } : view)),
-};
-
 describe("createBootstrapModule extension restores", () => {
-  test("keeps legacy extension view URLs working until extensions migrate to pages", async () => {
-    let resolveMetadata: (value: typeof legacyMetadataWithLabView) => void = () => undefined;
-    const metadataPromise = new Promise<typeof legacyMetadataWithLabView>((resolve) => {
-      resolveMetadata = resolve;
-    });
-    const workbench = createWorkbenchCore();
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    const extensions = workbench.registerModule(
-      createExtensionsModule({
-        loadAppearance: mock(async () => emptyAppearance),
-        loadMetadata: mock(() => metadataPromise),
-      }),
-    );
-    const bootstrap = workbench.registerModule(createBootstrapModule({ initialViewPath: "lab" }));
-
-    try {
-      await flushMicrotasks();
-      expect(activeViewId(workbench)).toBeUndefined();
-
-      resolveMetadata(legacyMetadataWithLabView);
-      await flushMicrotasks();
-      await flushMicrotasks();
-
-      expect(activeViewId(workbench)).toBe("pstdio.extension-lab.view.lab-page");
-    } finally {
-      bootstrap.dispose();
-      extensions.dispose();
-      clearCachedDashboardExtensionMetadata("project-1");
-    }
-  });
-
   test("waits for an extension page requested by its initial URL path", async () => {
     let resolveMetadata: (value: typeof metadataWithLabMode) => void = () => undefined;
     const metadataPromise = new Promise<typeof metadataWithLabMode>((resolve) => {

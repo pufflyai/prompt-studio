@@ -558,10 +558,7 @@ const createCorePagesController = (core: WorkbenchCore, openPanel: WorkbenchCore
   return pages;
 };
 
-const createCoreNavigationRegistry = (
-  resolveCore: () => WorkbenchCore,
-  openPanel: WorkbenchCore["layout"]["openPanel"],
-) =>
+const createCoreNavigationRegistry = (resolveCore: () => WorkbenchCore) =>
   createNavigationRegistry({
     resolveDispatcher: () => {
       const core = resolveCore();
@@ -581,20 +578,8 @@ const createCoreNavigationRegistry = (
           };
         },
         canOpenPage: (pageId) => Boolean(core.pages.registry.getPage(pageId)),
-        canOpenResource: (resource) => {
-          const state = core.resources.store.getState();
-          return Boolean(
-            state.kinds[resource.kind] &&
-              Object.values(state.presenters).some((presenter) => presenter.canOpen(resource)),
-          );
-        },
-        canOpenPanel: (panelId) => Boolean(core.layout.getPanel(panelId)),
-        canOpenView: (viewId) => core.views.canResolveView(viewId),
         canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
         openPage: (pageId, openInput) => core.pages.activatePage(pageId, openInput),
-        openResource: (resource, openInput) => core.resources.openResource(resource, openInput),
-        openPanel,
-        openView: (viewId, openInput) => core.views.openView(viewId, openInput),
         executeCommand: (commandId, args) => core.commands.executeCommand(commandId, args),
         openHref: (href) => globalThis.open(href, "_blank", "noopener,noreferrer"),
       };
@@ -678,7 +663,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     navigator: undefined as unknown as WorkbenchNavigator,
     notifications: createNotificationRegistry(),
     pages: undefined as unknown as WorkbenchPagesController,
-    navigation: createCoreNavigationRegistry(() => core, openPanel),
+    navigation: createCoreNavigationRegistry(() => core),
     panels: createWorkbenchPanelsController({
       defaultOpenByRegionId: input.defaultPanelOpenByRegionId,
       persistence: input.panelsPersistence,

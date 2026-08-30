@@ -23,7 +23,6 @@ const contributionKeys = new Set(
     pages: true,
     placements: true,
     resourceKinds: true,
-    resourceViews: true,
     resourceHierarchyProviders: true,
     schedules: true,
     settings: true,
@@ -41,6 +40,9 @@ const contributionKeys = new Set(
     workspaceTypes: true,
   }),
 );
+
+// Removed by the alpha.6 page contribution: pages own presentation now.
+const removedContributionReplacements = new Map([["resourceViews", 'declare a page with "bindings" instead']]);
 
 const removedAlpha4ContributionKeys = new Set([
   "controlsRenderers",
@@ -74,7 +76,6 @@ const collectionKinds = new Map<string, ContributionKind>([
   ["resourceHierarchyProviders", "resource-hierarchy-provider"],
   ["pages", "page"],
   ["resourceKinds", "resource-kind"],
-  ["resourceViews", "resource-view"],
   ["schedules", "schedule"],
   ["settingsPanels", "settings-panel"],
   ["settingsSections", "settings-section"],
@@ -207,6 +208,20 @@ export const validateExtensionDefinition = (
         createDiagnostic({
           code: "removed_extension_contribution",
           message: `Extension "${ext.id}" uses removed alpha.3 contribution "${key}"`,
+          extensionId: ext.id,
+          sourcePath: source.sourcePath,
+          metadata: { key },
+        }),
+      );
+      continue;
+    }
+    const replacement = removedContributionReplacements.get(key);
+    if (replacement) {
+      valid = false;
+      runtime.diagnostics.push(
+        createDiagnostic({
+          code: "removed_extension_contribution",
+          message: `Extension "${ext.id}" uses removed contribution "${key}"; ${replacement}`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
           metadata: { key },

@@ -15,7 +15,6 @@ export type ContributionKind =
   | "placement"
   | "resource-hierarchy-provider"
   | "resource-kind"
-  | "resource-view"
   | "schedule"
   | "settings-panel"
   | "settings-section"
@@ -49,11 +48,6 @@ export type NavigationSlotRef = ContributionRef<"navigation-item">;
 export type PageRef = ContributionRef<"page">;
 export type PlacementRef = ContributionRef<"placement">;
 export type ResourceKindRef = ContributionRef<"resource-kind">;
-export interface ResourceSlotRef {
-  readonly resourceKind: ResourceKindRef;
-  readonly id: string;
-}
-export type ResourceViewRef = ContributionRef<"resource-view">;
 export type SettingsSectionRef = ContributionRef<"settings-section">;
 export interface SettingsSlotRef {
   readonly id: string;

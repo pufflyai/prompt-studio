@@ -151,7 +151,6 @@ const registerView = (
   if (!rendererId) return undefined;
   return registerWorkbenchExtensionPanel({
     workbench: context.workbench,
-    path: panel.path,
     resolveInput: resolveWorkbenchExtensionViewInput(resolveViewInput, panel),
     contribution: toWorkbenchCompositionPanelContribution({
       panel,

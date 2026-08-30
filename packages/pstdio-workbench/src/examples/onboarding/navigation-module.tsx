@@ -43,9 +43,6 @@ const guideResource = (id: string): ResourceRef => {
 
 const describeTarget = (target: NavigationTarget): string => {
   if (target.kind === "compound") return target.targets.map(describeTarget).join(" + ");
-  if (target.kind === "resource") return `resource ${target.resource.uri}`;
-  if (target.kind === "view") return `view ${target.viewId}`;
-  if (target.kind === "panel") return `panel ${target.panelId}`;
   if (target.kind === "page") {
     const parts = [`page ${target.pageId}`];
     if (target.resource) parts.push(`resource ${target.resource.uri}`);

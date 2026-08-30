@@ -19,7 +19,6 @@ const hostResourceKind = (
 ): ResourceKindDefinition => ({
   id,
   ref: hostRef("resource-kind", id),
-  surface: "primary",
   label,
   menuSlots,
 });

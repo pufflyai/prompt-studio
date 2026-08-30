@@ -56,19 +56,6 @@ const sectionTargetSchema = z.object({
 
 const navigationTargetItemSchema = z.discriminatedUnion("kind", [
   z.object({
-    kind: z.literal("view"),
-    view: viewRefSchema,
-    input: z
-      .object({ strategy: z.enum(["persistent", "preview", "replace-active", "replace-invoking"]).optional() })
-      .optional(),
-  }),
-  z.object({
-    kind: z.literal("resource"),
-    resource: extensionResourceRefSchema,
-    input: z.object({ strategy: z.enum(["persistent", "replace-active"]).optional() }).optional(),
-    section: sectionTargetSchema.optional(),
-  }),
-  z.object({
     kind: z.literal("page"),
     page: pageRefSchema,
     resource: extensionResourceRefSchema.optional(),
@@ -159,7 +146,6 @@ export const workbenchExtensionViewRecordSchema = z.object({
   extensionId: z.string(),
   title: localizableStringSchema,
   icon: z.string().optional(),
-  path: z.string().optional(),
   body: workbenchExtensionViewBodySchema,
 });
 
@@ -201,13 +187,7 @@ const workbenchExtensionPlacementRecordSchema = z.object({
   localId: z.string(),
   extensionId: z.string(),
   mode: modeRefSchema,
-  item: z.discriminatedUnion("kind", [
-    z.object({ kind: z.literal("view"), view: viewRefSchema }),
-    z.object({
-      kind: z.literal("resource-slot"),
-      slot: z.object({ resourceKind: resourceKindRefSchema, id: z.string() }),
-    }),
-  ]),
+  item: z.object({ kind: z.literal("view"), view: viewRefSchema }),
   region: z.enum(dockedWorkbenchRegions),
   order: z.number().optional(),
   defaultOpen: z.boolean().optional(),
@@ -243,12 +223,8 @@ const workbenchExtensionResourceKindRecordSchema = z.object({
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),
-  surface: z.enum(["primary", "secondary", "attached"]).optional(),
   label: localizableStringSchema.optional(),
   icon: z.string().optional(),
-  slots: z
-    .array(z.object({ id: z.string(), cardinality: z.enum(["one", "many"]), access: z.enum(["owner", "public"]) }))
-    .optional(),
   menuSlots: z
     .array(
       z.object({
@@ -260,15 +236,6 @@ const workbenchExtensionResourceKindRecordSchema = z.object({
       }),
     )
     .optional(),
-});
-
-const workbenchExtensionResourceViewRecordSchema = z.object({
-  id: z.string(),
-  extensionId: z.string(),
-  resourceKind: resourceKindRefSchema,
-  slot: z.object({ resourceKind: resourceKindRefSchema, id: z.string() }),
-  view: viewRefSchema,
-  order: z.number().optional(),
 });
 
 const workbenchExtensionSettingsPanelRecordSchema = z.object({
@@ -306,12 +273,11 @@ export const workbenchExtensionMetadataSchema = z.object({
   menuContributions: z.array(extensionMenuContributionSchema),
   commandPaletteContributions: z.array(extensionCommandPaletteContributionSchema).optional(),
   modes: z.array(workbenchExtensionModeRecordSchema),
-  pages: z.array(workbenchExtensionPageRecordSchema).optional(),
+  pages: z.array(workbenchExtensionPageRecordSchema),
   views: z.array(workbenchExtensionViewRecordSchema),
   viewMenus: z.array(workbenchExtensionViewMenuRecordSchema),
   placements: z.array(workbenchExtensionPlacementRecordSchema),
   resourceKinds: z.array(workbenchExtensionResourceKindRecordSchema),
-  resourceViews: z.array(workbenchExtensionResourceViewRecordSchema).optional(),
   resourceHierarchyProviders: z
     .array(z.object({ id: z.string(), extensionId: z.string(), resourceKind: resourceKindRefSchema }))
     .optional(),

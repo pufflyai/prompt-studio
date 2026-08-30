@@ -1,167 +1,195 @@
 # pstdio-workbench Navigation
 
-Navigation is workbench's ingress layer. URLs (deep links, command URIs, URI handlers) come in; typed `NavigationTarget`s come out; existing presenters do the work. The workbench never tries to be a router — it converts a location into a sequence of actions a host (TanStack Router, the command palette, a tree node click) can dispatch.
+Navigation only targets pages, commands, and hrefs. A resource is never a
+destination: it travels as an argument on a page target, and the page's bindings
+place it. The caller's choice of page is the choice of presentation.
 
-## Mental Model
+The navigable location is `(page, resource?)`. The URL, the history stack, the
+boot-time restore, and every host list of recent items store and replay that pair.
+No host machinery ever holds a bare resource it must find a screen for.
 
-1. **Parsers** turn a location string into a `NavigationTarget`.
-2. **The dispatcher** runs the target's items through existing workbench presenters (`resources.openResource`, `layout.openPanel`, `commands.executeCommand`).
-3. **Navigators** are the inverse: they turn a `ResourceRef` back into an `href` or perform a side-effecting navigation outside the workbench (typically routing).
+## Navigation targets
 
-Parsers and the dispatcher solve "given a URL, do the right thing." Navigators solve "given a resource, where does it live in the URL grammar of the host."
-
-## NavigationTarget
+The extension-facing union (`pstdio-api-contracts`, re-exported by
+`@pstdio/sdk/extensions`):
 
 ```ts
 type NavigationTarget =
-  | { kind: "resource"; resource: ResourceRef; input?: OpenResourceInput }
-  | { kind: "panel"; panelId: string; input?: OpenWorkbenchPanelInput }
-  | { kind: "command"; commandId: string; args?: unknown }
+  | {
+      kind: "page";
+      page: PageRef;
+      resource?: ResourceRef; // fills the page's bound slots for the resource's kind
+      slot?: string; // reveal: reopen this slot if closed and make its tab active
+      open?: "preview" | "pin"; // `many` slots only; default "preview"
+      section?: FileRendererSectionTarget; // deep-link into a file view
+    }
+  | { kind: "command"; target: CommandTarget }
+  | { kind: "href"; href: string }
   | { kind: "compound"; targets: readonly NavigationTargetItem[] };
 ```
 
-| Kind       | Dispatches to                                                |
-| ---------- | ------------------------------------------------------------ |
-| `resource` | `resources.openResource(resource, input)`                    |
-| `panel`     | `layout.openPanel(panelId, input)` + reveal the host area  |
-| `command`  | `commands.executeCommand(commandId, args)`                   |
-| `compound` | Each item in order via the rules above                       |
+Targets appear in three declarative places: `NavigationItemContribution.action`,
+`TreeNode.target`, and `CommandPaletteResourceItem.target`. The `onRowActivate`
+callbacks on kanban and dataTable views may also return one (for example a page
+target at another extension's page).
 
-`compound` exists because some URLs express more than one action — opening a ticket _and_ revealing the tree Panel it lives under, for example. Avoid using it for unrelated work; the host can call `navigate()` more than once.
+`preview` reuses the tab-retention machinery: the next preview replaces the
+region's preview tab. `pin` inserts a persistent tab. In a one-cardinality slot the
+intent is ignored; the slot swaps.
 
-A `panel` target also reveals its collapsed region through `shell` — navigation is ingress driven by a user action, so opening into a hidden Panel would be a dead click. Direct `layout.openPanel` calls outside the navigation dispatcher keep silent placement semantics so module bootstrap can populate a region that should stay hidden by default.
-
-## Parsers
-
-A parser declares whether it can handle a location and, if so, returns the target.
+Examples:
 
 ```ts
-ctx.navigation.registerParser({
-  id: "project-open",
-  priority: 20,
-  canParse: (location) => location.startsWith("pstdio://open"),
-  parse: (location) => {
-    const url = new URL(location);
-    const ticketId = url.searchParams.get("resource")?.split(":")[1];
-    const panelId = url.searchParams.get("view") ?? "workspace-tree";
-    if (!ticketId) return { kind: "panel", panelId };
-    return {
-      kind: "compound",
-      targets: [
-        {
-          kind: "resource",
-          resource: { kind: "ticket", uri: `ticket:${ticketId}`, id: ticketId },
-        },
-        { kind: "panel", panelId },
-      ],
-    };
-  },
-});
+// Open a page.
+action: { kind: "page", page: ticketsPage.ref }
+
+// Open a page with a resource argument, pinned.
+return { navigate: { kind: "page", page: ticketsPage.ref, resource: ticketRef, open: "pin" } };
+
+// Reveal a closed static slot.
+return { navigate: { kind: "page", page: playground.ref, slot: "logs" } };
 ```
 
-Parsers are evaluated in priority order, highest first; ties break by parser id. The first parser whose `canParse()` returns true wins. `resolveLocation()` throws when no parser matches.
+## In-page emissions
 
-Keep `canParse()` cheap — it's called for every parser on every location until one matches. Heavier validation belongs in `parse()`, which may throw to reject an otherwise-claimed location.
-
-Modules typically register one parser per URL family they own. The dashboard registers one parser for `pstdio://` URIs and dispatches based on the URI path; extensions may register additional parsers for their own URL shapes.
-
-## Dispatching
-
-Three entry points, increasing in convenience:
+A view inside the active page emits a resource instead of naming a destination.
+The active page's bindings place it; the bench holds still. If the page binds
+nothing for that kind, the emission is a no-op with a host warning.
 
 ```ts
-// Pre-parsed target.
-await workbench.navigation.openTarget(target);
-
-// Parse + dispatch in one call.
-await workbench.navigation.navigate(
-  "pstdio://open?resource=ticket:PS-200&view=workspace-tree",
-);
-
-// Resolve only — useful when you want to inspect or rewrite the target before dispatch.
-const target = workbench.navigation.resolveLocation(location);
+type ResourceEmission = {
+  resource: ResourceRef;
+  open?: "preview" | "pin"; // default "preview"
+  section?: FileRendererSectionTarget; // re-target the matching open instance
+};
 ```
 
-`navigate()` is the shorthand most callers should use. Route loaders, command palette URL inputs, and URI handlers all go through it. Reach for `resolveLocation()` only when you need to inspect or rewrite the target before dispatch.
+An emission whose resource already has an open instance in the bound slot
+re-activates that instance (applying `section` if given) instead of opening a
+duplicate. Planner's document switching works this way: the file tree emits the
+open ticket with a `section` target.
 
-Both `openTarget()` and `navigate()` return `Promise<readonly unknown[]>`. The array preserves dispatch order; entries are whatever the underlying presenter returned (typically the placement or the resource).
+Emission sources:
 
-## Compound Atomicity
+- `onRowActivate` on kanban and dataTable views returning a `ResourceEmission`.
+- A tree node or table row with a `resource` and no target: activation emits it.
+- The webview `resource.open` capability: `{ resource, open? }` is an emission
+  (`href` on the same capability opens an external link instead).
 
-A compound target validates every item against the dispatcher's optional `can*` predicates _before_ any item runs. If any item is rejected, none of the items execute.
+No renderer has a pin gesture. A single activation always emits a preview.
+Pinning is host tab-strip behavior (double-click a preview tab or its pin
+affordance), or `open: "pin"` on an explicit target.
+
+## The page URL scheme
+
+Extension pages are namespaced by extension id:
+
+```txt
+/projects/{project}/{extension-id}/{path}
+```
+
+`path` on the page contribution is the segment under that namespace, so
+cross-extension collisions are unrepresentable. Host pages own the reserved
+un-prefixed segments: `/projects/{project}/workspaces`,
+`/projects/{project}/sessions`, and the bare `/projects/{project}` for start.
+The active resource serializes after the page path.
+
+The URL carries the page and the active bound instance only. Refresh restores that
+pair; other pinned tabs are session state and are not restored. Page activations
+and pinned opens push a browser history entry; preview swaps replace the current
+one. Back and forward replay `(page, resource?)` locations.
+
+Landing: when a project opens with nothing to restore, the host activates the
+first project-navigation item whose action is a page target (or a compound target
+containing one). When no such item exists, it lands on `workbenchPages.start`.
+
+## Host pages for native screens
+
+The host publishes page refs for its native screens as `workbenchPages.*`, next to
+the `workbenchCommands.*` built-ins:
+
+| Ref | Reserved segment | Binds |
+| --- | --- | --- |
+| `workbenchPages.workspaces` | `workspaces` | `workspace` |
+| `workbenchPages.sessions` | `sessions` | `session`, `session-draft` |
+| `workbenchPages.start` | the bare project URL | nothing |
+
+An extension links a native screen the same way it links any page:
 
 ```ts
-await workbench.navigation.openTarget({
-  kind: "compound",
-  targets: [
-    { kind: "resource", resource: { kind: "ticket", uri: "ticket:PS-1" } },
-    { kind: "panel", panelId: "missing-view" }, // canOpenPanel?(...) === false
-  ],
-});
-// Rejects with "Cannot open navigation panel target: missing-view".
-// The resource open above never runs.
+return { navigate: { kind: "page", page: workbenchPages.workspaces, resource: workspaceRef } };
 ```
 
-After pre-flight passes, items dispatch sequentially in order; later items see the side effects of earlier ones (`compound` is the right shape for "open the resource, then reveal the view that hosts it"). A dispatcher implementation may still throw mid-sequence — the spec only guarantees pre-flight validation, not that subsequent failures are rolled back.
+Settings is not a host page. It stays an overlay opened by command.
 
-When the dispatcher omits a `can*` predicate, the corresponding target kind is assumed dispatchable; pre-flight only rejects when the predicate explicitly returns `false`.
+## Mode switching
 
-## Dispatcher Wiring
-
-`createWorkbenchCore()` wires `resolveDispatcher` to its own `resources`, `layout`, and `commands`. Hosts almost never override this. Tests and headless usage can configure their own dispatcher:
+Switching modes is a plain command, not a navigation target kind:
 
 ```ts
-import { createWorkbenchCore } from "@pstdio/workbench";
-
-const navigation = createWorkbenchCore().navigation;
+action: {
+  kind: "command",
+  target: { command: workbenchCommands.switchMode, params: { modeId: labMode.id } },
+}
 ```
 
-`resolveDispatcher` is lazy so the navigation registry can be created before `resources` / `layout` / `commands` are ready. If `openTarget()` runs without a dispatcher configured, it throws `navigation.openTarget: no dispatcher available (configure resolveDispatcher)`.
+`modeId` is the mode's local id. Use `when: { mode: labMode.ref }` for nav-item
+active state.
 
-## Navigators (the inverse direction)
+## The workbench registry
 
-A navigator turns a `ResourceRef` into an `href` and/or performs a navigation. The dashboard uses them to project workbench resources into TanStack Router URLs.
+Inside `@pstdio/workbench`, the same union appears with resolved string ids
+(`navigation-registry.ts`):
 
 ```ts
-ctx.navigation.registerNavigator({
-  id: "dashboard-router",
-  priority: 10,
-  canNavigate: (resource) => resource.kind === "project",
-  createHref: (resource) => `/projects/${resource.id}/settings`,
-  navigate: (resource) =>
-    router.navigate({ to: `/projects/${resource.id}/settings` }),
-});
+type NavigationTarget =
+  | ({ kind: "page"; pageId: string } & OpenWorkbenchPageInput)
+  | { kind: "command"; commandId: string; args?: unknown }
+  | { kind: "href"; href: string }
+  | { kind: "compound"; targets: readonly NavigationTargetItem[] };
 ```
 
-`navigation.createHref(resource)` returns the href from the highest-priority navigator that both matches and exposes `createHref()`; `navigation.navigateResource(resource)` performs the navigation. These are independent of the parser/dispatcher path — they exist so workbench-internal links (a tree node, a breadcrumb) can become a real URL the host's router understands.
+The registry converts locations into targets and dispatches them:
 
-## Choosing Between APIs
+1. **Parsers** turn a location string into a `NavigationTarget`. Parsers are
+   evaluated in priority order, highest first; the first whose `canParse()`
+   returns true wins. `resolveLocation()` throws when no parser matches.
+2. **The dispatcher** runs the target's items through the page controller
+   (`openPage`), the command service (`executeCommand`), and `openHref`.
+3. **Navigators** are the inverse: they turn a `ResourceRef` into an `href` or
+   perform a host-router navigation.
 
-| You have…                               | Use                                     |
-| --------------------------------------- | --------------------------------------- |
-| A URL the user clicked or pasted        | `navigation.navigate(location)`         |
-| A pre-built `NavigationTarget`          | `navigation.openTarget(target)`         |
-| A `ResourceRef` and want to act on it   | `resources.openResource(resource)`      |
-| A `ResourceRef` and want an `href`      | `navigation.createHref(resource)`       |
-| A `ResourceRef` and want to route to it | `navigation.navigateResource(resource)` |
+Entry points:
 
-A common rule of thumb: ingress (URL → action) goes through the parser+dispatcher; egress (resource → URL) goes through navigators.
+```ts
+await workbench.navigation.openTarget(target); // pre-parsed target
+await workbench.navigation.navigate(location); // parse + dispatch
+const target = workbench.navigation.resolveLocation(location); // resolve only
+```
+
+A compound target validates every item against the dispatcher's `can*` predicates
+before any item runs; if one is rejected, none execute. Items then dispatch
+sequentially, so later items see the effects of earlier ones. A dispatcher may
+supply `createCheckpoint()`; a mid-sequence failure then rolls the layout back.
 
 ## Errors
 
-| Source              | Message                                                                        |
-| ------------------- | ------------------------------------------------------------------------------ |
-| `registerParser`    | `Navigation parser already registered: <id>`                                   |
-| `registerNavigator` | `Resource navigator already registered: <id>`                                  |
-| `resolveLocation`   | `No navigation parser registered for location: <location>`                     |
-| `openTarget`        | `navigation.openTarget: no dispatcher available (configure resolveDispatcher)` |
-| `openTarget`        | `Cannot open navigation resource target: <uri>`                                |
-| `openTarget`        | `Cannot open navigation panel target: <panelId>`                               |
-| `openTarget`        | `Cannot open navigation command target: <commandId>`                           |
-| `createHref`        | `No navigator href registered for resource kind: <kind>`                       |
-| `navigateResource`  | `No navigator registered for resource kind: <kind>`                            |
+| Source | Message |
+| --- | --- |
+| `registerParser` | `Navigation parser already registered: <id>` |
+| `registerNavigator` | `Resource navigator already registered: <id>` |
+| `resolveLocation` | `No navigation parser registered for location: <location>` |
+| `openTarget` | `navigation.openTarget: no dispatcher available (configure resolveDispatcher)` |
+| `openTarget` | `Cannot open navigation page target: <pageId>` |
+| `openTarget` | `Cannot open navigation command target: <commandId>` |
+| `openTarget` | `Cannot open navigation href target: <href>` |
+| `createHref` | `No navigator href registered for resource kind: <kind>` |
+| `navigateResource` | `No navigator registered for resource kind: <kind>` |
 
-## See Also
+## See also
 
-- [API](./api.md) — full workbench surface.
-- The Navigation example in `packages/pstdio-workbench/src/examples/navigation/` — exercises all four `NavigationTarget` variants from a Storybook story.
+- [API](./api.md): the full workbench surface.
+- [Choosing a UI surface](../../extensions/choosing-a-ui-surface.md): when a page,
+  a mode, or a view-menu is the right destination to declare.
+- [Navigation and layout state](../../extensions/navigation-and-layout-state.md):
+  what persists across reloads and how to reset it.

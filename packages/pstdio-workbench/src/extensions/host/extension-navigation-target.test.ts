@@ -1,10 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { FILE_SECTION_NAVIGATION_METADATA_KEY } from "../../core/registries/renderers/file-section-navigation";
-import {
-  toWorkbenchActivationResult,
-  toWorkbenchNavigationTarget,
-  toWorkbenchNavigationTargetResult,
-} from "./extension-navigation-target";
+import { toWorkbenchActivationResult, toWorkbenchNavigationTarget } from "./extension-navigation-target";
 
 describe("toWorkbenchNavigationTarget", () => {
   test("keeps host command references in the host command namespace", () => {
@@ -87,35 +83,6 @@ describe("toWorkbenchNavigationTarget", () => {
         },
       },
     });
-  });
-
-  test("keeps resource and view targets available during the page migration", () => {
-    expect(
-      toWorkbenchNavigationTarget({
-        kind: "resource",
-        resource: { type: "ticket", id: "PS-326" },
-        input: { strategy: "replace-active" },
-      }),
-    ).toMatchObject({
-      kind: "resource",
-      resource: { kind: "ticket", id: "PS-326" },
-      input: { replaceActive: true },
-    });
-    expect(
-      toWorkbenchNavigationTarget(
-        { kind: "view", view: { kind: "view", id: "tickets" } },
-        { extensionId: "pstdio.planner" },
-      ),
-    ).toEqual({ kind: "view", viewId: "pstdio.planner.view.tickets", input: {} });
-  });
-
-  test("keeps the legacy result helper available during the page migration", () => {
-    expect(
-      toWorkbenchNavigationTargetResult(
-        { kind: "page", page: { kind: "page", id: "tickets" } },
-        { extensionId: "pstdio.planner" },
-      ),
-    ).toEqual({ kind: "page", pageId: "pstdio.planner.page.tickets" });
   });
 });
 

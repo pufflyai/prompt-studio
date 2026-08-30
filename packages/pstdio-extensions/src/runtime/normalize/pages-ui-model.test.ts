@@ -121,6 +121,20 @@ describe("page UI normalization", () => {
     );
   });
 
+  test("rejects removed resource-view contributions and names the replacement", () => {
+    const definition = {
+      ...pageDefinition(),
+      resourceViews: [],
+    } as unknown as LoadedExtensionSource["definition"];
+    const runtime = normalizeExtensionSources([source(definition)]);
+
+    expect(runtime.views).toEqual([]);
+    const diagnostic = runtime.diagnostics.find(
+      (candidate) => candidate.code === "removed_extension_contribution" && candidate.metadata?.key === "resourceViews",
+    );
+    expect(diagnostic?.message).toContain("bindings");
+  });
+
   test("rejects duplicate local ids and invalid placement rules", () => {
     const base = pageDefinition();
     const duplicate = defineView({

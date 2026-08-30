@@ -6,8 +6,7 @@ export const localContributionId = (id: string) => (id.includes(".") ? id.slice(
 
 const matchesResourceKind = (kindId: string, kind: string) => kindId === kind || localContributionId(kindId) === kind;
 
-const pageBindings = (metadata: WorkbenchExtensionMetadata) =>
-  (metadata.pages ?? []).flatMap((page) => page.bindings ?? []);
+const pageBindings = (metadata: WorkbenchExtensionMetadata) => metadata.pages.flatMap((page) => page.bindings ?? []);
 
 /** View ids bound to a resource kind through page bindings. */
 export const viewIdsForResourceKind = (metadata: WorkbenchExtensionMetadata, kind: string) =>

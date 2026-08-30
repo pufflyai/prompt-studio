@@ -171,7 +171,7 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
   registerPreviewResourceProvider(workbench, bench);
 
   // Pages own paths now: land on the first page's first static view when one exists.
-  const initialSlotView = (bench.metadata.pages ?? []).flatMap((page) => page.slots).find((slot) => slot.view)?.view;
+  const initialSlotView = bench.metadata.pages.flatMap((page) => page.slots).find((slot) => slot.view)?.view;
   const initialView = initialSlotView
     ? bench.metadata.views.find(
         (view) => view.localId === initialSlotView.id && view.extensionId === initialSlotView.extensionId,

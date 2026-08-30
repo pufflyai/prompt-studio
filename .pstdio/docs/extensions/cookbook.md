@@ -68,7 +68,6 @@ import {
 
 const ticket = defineResourceKind({
   id: "ticket",
-  surface: "primary",
   menuSlots: [
     { id: "headerActions", placement: "header-primary", access: "owner" },
   ],
@@ -203,12 +202,16 @@ export default defineExtension({
 });
 ```
 
-## Add A View And Navigation Item
+## Add A Tool Screen (Page) And Navigation Item
+
+A view is content only; a page puts it on the bench. The smallest tool screen is a
+page with one static unclosable slot.
 
 ```ts
 import {
   defineExtension,
   defineNavigationItem,
+  definePage,
   defineView,
   packageAsset,
   workbenchSlots,
@@ -216,7 +219,6 @@ import {
 
 const planner = defineView({
   id: "planner",
-  path: "planner",
   title: "Planner",
   body: {
     kind: "webview",
@@ -225,23 +227,31 @@ const planner = defineView({
   },
 });
 
+const plannerPage = definePage({
+  id: "planner",
+  title: "Planner",
+  path: "planner",
+  slots: [{ id: "main", region: "main", view: planner.ref, closable: false }],
+});
+
 export default defineExtension({
   views: [planner],
+  pages: [plannerPage],
   navigationItems: [
     defineNavigationItem({
       id: "planner",
       slot: workbenchSlots.projectNavigation,
       label: "Planner",
       icon: "calendar-check",
-      action: { kind: "view", view: planner.ref },
+      action: { kind: "page", page: plannerPage.ref },
     }),
   ],
 });
 ```
 
-The view has the normalized id `publisher.name.view.planner`. Its `path` adds a deep
-link without creating another UI contribution. Use the returned `planner.ref` anywhere
-the extension needs to target this view.
+The page's `path` gives the screen a real URL under the extension's namespace:
+`/projects/{project}/{extension-id}/planner`. A command can open the same page by
+returning `{ navigate: { kind: "page", page: plannerPage.ref } }`.
 
 To make a navigation item switch Workbench modes instead of opening a view, use a `kind: "command"`
 action with the typed `workbenchCommands.switchMode` ref:
@@ -479,30 +489,28 @@ mount its extension does not define.
 
 ## Compose A Resource Screen
 
-Declare the resource kind and its slots. Bind views to slots with `resourceViews`, then place the slots in a mode.
+Declare the resource kind (data only), the views (content only), and one page that
+binds them. The page owns the whole screen: slots, tabs, and open policy.
 
 ```ts
 import {
   defineExtension,
-  definePlacement,
+  definePage,
   defineResourceKind,
-  defineResourceView,
   defineView,
   packageAsset,
-  resourceSlotRef,
-  workbenchModes,
 } from "@pstdio/sdk/extensions";
 
 const ticket = defineResourceKind({
   id: "ticket",
-  surface: "primary",
-  slots: [
-    { id: "primary", cardinality: "one", access: "owner" },
-    { id: "navigation", cardinality: "one", access: "public" },
-  ],
+  label: "Ticket",
+  icon: "ticket",
 });
-const primary = resourceSlotRef(ticket.ref, "primary");
-const navigation = resourceSlotRef(ticket.ref, "navigation");
+const board = defineView({
+  id: "tickets",
+  title: "Tickets",
+  body: { kind: "kanban", attributes: [], query: async () => ({ rows: [] }) },
+});
 const editor = defineView({
   id: "ticket-editor",
   title: "Ticket",
@@ -514,22 +522,33 @@ const files = defineView({
   body: { kind: "tree", body: async () => [] },
 });
 
+const ticketsPage = definePage({
+  id: "tickets",
+  title: "Tickets",
+  path: "tickets",
+  slots: [
+    { id: "board", region: "main", view: board.ref, closable: false },
+    { id: "ticket", region: "main", cardinality: "many" },
+    { id: "files", region: "sidenav", follows: "ticket" },
+  ],
+  bindings: [
+    { resourceKind: ticket.ref, view: editor.ref, slot: "ticket" },
+    { resourceKind: ticket.ref, view: files.ref, slot: "files" },
+  ],
+});
+
 export default defineExtension({
   resourceKinds: [ticket],
-  views: [editor, files],
-  resourceViews: [
-    defineResourceView({ id: "editor", resourceKind: ticket.ref, slot: primary, view: editor.ref }),
-    defineResourceView({ id: "files", resourceKind: ticket.ref, slot: navigation, view: files.ref }),
-  ],
-  placements: [
-    definePlacement({ id: "editor", mode: workbenchModes.project, item: { kind: "resource-slot", slot: primary }, region: "main", required: true }),
-    definePlacement({ id: "files", mode: workbenchModes.project, item: { kind: "resource-slot", slot: navigation }, region: "sidenav", required: true }),
-  ],
+  views: [board, editor, files],
+  pages: [ticketsPage],
 });
 ```
 
-Another extension can bind its view to the public `navigation` slot by importing the typed
-resource-kind and slot refs. Geometry remains in `placements`; the binding never decides a region.
+Clicking a board row emits the ticket; the page's bindings open it as a preview
+tab next to the board and fill the files tree, which follows the active ticket
+tab. Another extension can present the same kind its own way by declaring its own
+page that binds `ticket.ref`; the caller's choice of page is the choice of
+presentation.
 
 ## Keep File Bytes Intact In File Views
 

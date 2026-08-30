@@ -135,7 +135,7 @@ describe("createWorkbenchExtensionMetadata", () => {
       mode: { extensionId: "pstdio.lab", kind: "mode", id: "review" },
       item: { kind: "view", view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" } },
     });
-    expect(metadata.pages?.[0]).toMatchObject({
+    expect(metadata.pages[0]).toMatchObject({
       id: "pstdio.lab.page.tickets",
       path: "tickets",
       slots: [{ id: "board", region: "main", closable: false }],

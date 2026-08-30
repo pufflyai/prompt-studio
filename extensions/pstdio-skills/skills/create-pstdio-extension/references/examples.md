@@ -202,16 +202,14 @@ export default defineExtension({
 import {
   defineExtension,
   defineNavigationItem,
-  definePlacement,
+  definePage,
   defineView,
-  workbenchModes,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
 
 const tasks = defineView({
   id: "tasks",
   title: "Tasks",
-  path: "tasks",
   body: {
     kind: "kanban",
     attributes: [{ id: "status", label: "Status", type: { kind: "string" } }],
@@ -225,149 +223,110 @@ const tasks = defineView({
   },
 });
 
+const tasksPage = definePage({
+  id: "tasks",
+  title: "Tasks",
+  path: "tasks",
+  slots: [{ id: "board", region: "main", view: tasks.ref, closable: false }],
+});
+
 export default defineExtension({
   views: [tasks],
-  placements: [
-    definePlacement({ id: "tasks", mode: workbenchModes.project, item: { kind: "view", view: tasks.ref }, region: "main" }),
-  ],
+  pages: [tasksPage],
   navigationItems: [
-    defineNavigationItem({ id: "tasks", slot: workbenchSlots.projectNavigation, label: "Tasks", action: { kind: "view", view: tasks.ref } }),
+    defineNavigationItem({ id: "tasks", slot: workbenchSlots.projectNavigation, label: "Tasks", action: { kind: "page", page: tasksPage.ref } }),
   ],
 });
 ```
 
-The view owns the board. The placement owns its region, and the navigation item opens the same typed view ref.
+The view owns the board and never claims a place. The page puts it on the bench and owns the URL (`/projects/{project}/{extension-id}/tasks`); the navigation item targets the page ref.
 
-## Resource views and slots
+## Resource screen (a page with bindings)
 
-A resource kind owns semantic slots. A resource view binds a view to one slot. A placement decides where the slot
-appears for a mode.
+A resource kind owns data only. A page binds it to views and owns the whole screen: slots, tabs, and open policy. This is the planner tickets shape (`extensions/pstdio-planner/src/ui-contributions.ts`).
 
 ```ts
-import {
-  defineExtension,
-  definePlacement,
-  defineResourceKind,
-  defineResourceView,
-  defineView,
-  packageAsset,
-  resourceSlotRef,
-  workbenchModes,
-} from "@pstdio/sdk/extensions";
+import { defineExtension, definePage, defineResourceKind, defineView } from "@pstdio/sdk/extensions";
 
 export const ticket = defineResourceKind({
   id: "ticket",
-  surface: "primary",
-  slots: [
-    { id: "primary", cardinality: "one", access: "owner" },
-    { id: "inspector", cardinality: "many", access: "public" },
-  ],
+  label: "Ticket",
+  icon: "ticket",
 });
-export const primary = resourceSlotRef(ticket.ref, "primary");
-export const inspector = resourceSlotRef(ticket.ref, "inspector");
+const board = defineView({
+  id: "tickets",
+  title: "Tickets",
+  body: { kind: "kanban", attributes: [], query: async () => ({ rows: [] }) },
+});
 const editor = defineView({
   id: "ticket-editor",
   title: "Ticket",
-  body: { kind: "webview", entry: packageAsset("./src/ticket-editor.tsx", import.meta.url) },
-});
-
-export default defineExtension({
-  resourceKinds: [ticket],
-  views: [editor],
-  resourceViews: [
-    defineResourceView({ id: "editor", resourceKind: ticket.ref, slot: primary, view: editor.ref }),
-  ],
-  placements: [
-    definePlacement({ id: "primary", mode: workbenchModes.project, item: { kind: "resource-slot", slot: primary }, region: "main", required: true }),
-  ],
-});
-```
-
-Another extension can bind a view to the exported public inspector slot:
-
-```ts
-import { defineExtension, defineResourceView, defineView } from "@pstdio/sdk/extensions";
-import { inspector, ticket } from "pstdio-planner/ui";
-
-const insights = defineView({
-  id: "ticket-insights",
-  title: "Insights",
-  body: { kind: "controls", query: async () => ({ values: {} }) },
-});
-
-export default defineExtension({
-  views: [insights],
-  resourceViews: [
-    defineResourceView({ id: "ticket-insights", resourceKind: ticket.ref, slot: inspector, view: insights.ref }),
-  ],
-});
-```
-
-A slot with `access: "owner"` rejects another extension's binding during `pst extensions check`. The primary slot is always owner-only.
-
-## Native resource detail mode
-
-Use this pattern for host-rendered resource screens: native views own content, the resource kind exposes semantic
-slots, resource-view bindings connect them, and placements own geometry.
-
-```ts
-import {
-  defineExtension,
-  definePlacement,
-  defineResourceKind,
-  defineResourceView,
-  defineView,
-  resourceSlotRef,
-  workbenchModes,
-} from "@pstdio/sdk/extensions";
-
-const note = defineResourceKind({
-  id: "note",
-  surface: "primary",
-  slots: [
-    { id: "primary", cardinality: "one", access: "owner" },
-    { id: "navigation", cardinality: "one", access: "public" },
-  ],
-});
-const primary = resourceSlotRef(note.ref, "primary");
-const navigation = resourceSlotRef(note.ref, "navigation");
-const content = defineView({
-  id: "note-content",
-  title: "Note",
-  body: {
-    kind: "file",
-    load: async (_ctx, input) => ({ fileName: "note.md", content: `# ${input.renderer.resource.label}` }),
-  },
+  body: { kind: "file", load: async () => ({ content: "" }) },
 });
 const files = defineView({
-  id: "note-files",
+  id: "ticket-files",
   title: "Files",
   body: { kind: "tree", body: async () => [{ id: "files", label: "Files", nodes: [] }] },
 });
 
+export const ticketsPage = definePage({
+  id: "tickets",
+  title: "Tickets",
+  path: "tickets",
+  slots: [
+    { id: "board", region: "main", view: board.ref, closable: false },
+    { id: "ticket", region: "main", cardinality: "many" },
+    { id: "files", region: "sidenav", follows: "ticket" },
+  ],
+  bindings: [
+    { resourceKind: ticket.ref, view: editor.ref, slot: "ticket" },
+    { resourceKind: ticket.ref, view: files.ref, slot: "files" },
+  ],
+});
+
 export default defineExtension({
-  resourceKinds: [note],
-  views: [content, files],
-  resourceViews: [
-    defineResourceView({ id: "content", resourceKind: note.ref, slot: primary, view: content.ref }),
-    defineResourceView({ id: "files", resourceKind: note.ref, slot: navigation, view: files.ref }),
-  ],
-  placements: [
-    definePlacement({ id: "content", mode: workbenchModes.project, item: { kind: "resource-slot", slot: primary }, region: "main", required: true }),
-    definePlacement({ id: "files", mode: workbenchModes.project, item: { kind: "resource-slot", slot: navigation }, region: "sidenav", required: true }),
-  ],
+  resourceKinds: [ticket],
+  views: [board, editor, files],
+  pages: [ticketsPage],
 });
 ```
 
-`required: true` makes a cardinality-one placement structural. The host restores it when
-the mode-resource context activates, and the user cannot close it.
+Clicking a board row emits the ticket. The page's bindings open it as a preview tab next to the board and fill the files tree, which follows the active ticket tab. The board tab cannot be closed while the page is open (`closable: false`). Pinning a preview tab (double-click, or `open: "pin"` on a page target) stacks tickets as tabs.
 
-## Dashboard navigation item
+Another extension presents the same kind its own way by declaring its own page that binds the exported kind ref. The caller's choice of page is the choice of presentation:
+
+```ts
+import { defineExtension, definePage, defineView } from "@pstdio/sdk/extensions";
+import { ticket } from "pstdio-planner/ui";
+
+const review = defineView({
+  id: "ticket-review",
+  title: "Review",
+  body: { kind: "controls", query: async () => ({ values: {} }) },
+});
+
+const reviewPage = definePage({
+  id: "review",
+  title: "Review",
+  path: "review",
+  slots: [{ id: "ticket", region: "main", cardinality: "many" }],
+  bindings: [{ resourceKind: ticket.ref, view: review.ref, slot: "ticket" }],
+});
+
+export default defineExtension({ views: [review], pages: [reviewPage] });
+```
+
+A command opens a ticket in either presentation by naming the page: `{ navigate: { kind: "page", page: reviewPage.ref, resource: ticketRef } }`. Native screens work the same way through host page refs: `{ kind: "page", page: workbenchPages.workspaces, resource: workspaceRef }`.
+
+## Smallest tool screen
+
+One view, one page with one static unclosable slot, one navigation item. This is the font-editor shape (`.pstdio/extensions/font-editor/extension.ts`).
 
 ```ts
 import {
   defineExtension,
   defineNavigationItem,
+  definePage,
   defineView,
   packageAsset,
   workbenchSlots,
@@ -375,7 +334,6 @@ import {
 
 const planner = defineView({
   id: "planner",
-  path: "planner",
   title: "Planner",
   body: {
     kind: "webview",
@@ -384,21 +342,29 @@ const planner = defineView({
   },
 });
 
+const plannerPage = definePage({
+  id: "planner",
+  title: "Planner",
+  path: "planner",
+  slots: [{ id: "main", region: "main", view: planner.ref, closable: false }],
+});
+
 export default defineExtension({
   views: [planner],
+  pages: [plannerPage],
   navigationItems: [
     defineNavigationItem({
       id: "planner",
       slot: workbenchSlots.projectNavigation,
       label: "Planner",
       icon: "calendar-check",
-      action: { kind: "view", view: planner.ref },
+      action: { kind: "page", page: plannerPage.ref },
     }),
   ],
 });
 ```
 
-The view ref is the navigation target. Its `path` remains the deep link.
+The page ref is the navigation target, and the page's `path` is the deep link. There is no mode, placement, or anchor resource in this manifest.
 
 ## Webview files and resource navigation
 
@@ -433,7 +399,7 @@ export default defineExtensionView({
 
     await host.call("resource.open", {
       resource: { type: "ticket", id: uploaded.id, label: uploaded.name },
-      input: { strategy: "replace-active" },
+      open: "preview",
     });
 
     await files.delete(uploaded.id);
@@ -447,5 +413,5 @@ owner. Omit scope for project files, or pass the same `{ type, id }` scope to up
 list. Global settings webviews have no project file owner and cannot use host-backed
 file methods.
 
-This example uses the `ticket` resource kind and presenter registered in the resource
-views example above. Use a kind with a registered presenter from your own extension.
+This example opens the `ticket` kind the page above binds, so the active page places it.
+A kind the host presents itself opens through its presenter instead.

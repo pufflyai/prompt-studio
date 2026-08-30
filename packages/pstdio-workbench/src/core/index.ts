@@ -255,9 +255,6 @@ export type {
   NavigationTargetCompound,
   NavigationTargetItem,
   NavigationTargetPage,
-  NavigationTargetPanel,
-  NavigationTargetResource,
-  NavigationTargetView,
   RegisteredNavigationParser,
   RegisteredResourceNavigator,
   ResourceNavigator,
@@ -509,7 +506,6 @@ export type {
 } from "./shared/store/workbench-store";
 export { createWorkbenchStore } from "./shared/store/workbench-store";
 export {
-  getSwitchModeNavigationTargetModeId,
   workbenchEmitResourceCommandId,
   workbenchSwitchModeCommandId,
 } from "./workbench-built-ins";
