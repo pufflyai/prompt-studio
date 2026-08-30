@@ -203,6 +203,19 @@ export {
   matchesWorkbenchModeEligibility,
   matchesWorkbenchPanelMenuOwner,
 } from "./registries/layout/panel-widget-eligibility";
+export type {
+  ComposedOwnedPlacements,
+  ComposeOwnedPlacementsInput,
+  OwnedPlacementReconciliation,
+  OwnedPlacementUpdate,
+  ReconcileOwnedPlacementsInput,
+  ResolvedOwnedPlacement,
+} from "./registries/layout/placement-reconciliation";
+export {
+  composeOwnedPlacements,
+  placementIdentityKey,
+  reconcileOwnedPlacements,
+} from "./registries/layout/placement-reconciliation";
 export type { AnchorId, AnchorReadId, SurfaceDescriptor } from "./registries/layout/surface-map";
 export {
   getSurface,
