@@ -279,6 +279,20 @@ export type {
 } from "./registries/notifications/notification-registry";
 export { createNotificationRegistry } from "./registries/notifications/notification-registry";
 export type {
+  CreateWorkbenchPageRegistryInput,
+  WorkbenchPageContribution,
+  WorkbenchPageOpenInput,
+  WorkbenchPagePlacementInput,
+  WorkbenchPageRegistry,
+  WorkbenchPageRegistryStoreState,
+  WorkbenchPageRuntimeState,
+  WorkbenchPageSlot,
+  WorkbenchPageSlotBinding,
+  WorkbenchPageSlotInstance,
+  WorkbenchPageSlotOpenInput,
+} from "./registries/pages/page-registry";
+export { createWorkbenchPageRegistry } from "./registries/pages/page-registry";
+export type {
   CreatePreferenceRegistryInput,
   PreferencePersistenceAdapter,
   PreferencePropertySchema,
