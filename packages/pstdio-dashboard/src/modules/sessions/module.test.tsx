@@ -54,7 +54,7 @@ describe("createSessionsModule", () => {
     );
 
     expect(sessionsNode).toMatchObject({
-      target: { kind: "view", viewId: dashboardViews.sessions.id },
+      target: { kind: "page", pageId: dashboardViews.sessions.id },
     });
     expect(
       (await getSidenavContributionSections(workbench, "project"))

@@ -124,10 +124,12 @@ const registerResourceKindPresenter = (
   return disposables;
 };
 
-export const registerResourcePresenters = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
+export const registerResourceKinds = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   [...collectResourceKindPresenterRecords(input.metadata)].flatMap(([kind, record]) =>
     registerResourceKindPresenter(input, kind, record),
   );
+
+export const registerResourcePresenters = registerResourceKinds;
 
 export const registerComposition = (input: InternalRegisterWorkbenchExtensionContributionsInput) => {
   const registry = createWorkbenchCompositionRegistry();

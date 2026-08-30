@@ -11,6 +11,7 @@ import {
 import type { WorkbenchExtensionKanbanRendererAdapter } from "@pstdio/workbench/extensions";
 import { apiRequest } from "@/lib/api";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
+import { openDashboardResourceLocation } from "@/shared/app/page-navigation";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { buildDashboardExtensionMenuRegistrations } from "@/shared/extensions/workbench-extension-contributions";
@@ -90,7 +91,8 @@ const decorateAttribute = (
   const workspaceRender = createBadgeListRenderer({
     itemsAttributeId,
     projectId,
-    openResource: (resource) => void ctx.resources.openResource(resource, { replaceActive: true }),
+    openResource: (resource) =>
+      void Promise.resolve(openDashboardResourceLocation(ctx, resource)).catch(() => undefined),
   });
   return {
     ...attribute,

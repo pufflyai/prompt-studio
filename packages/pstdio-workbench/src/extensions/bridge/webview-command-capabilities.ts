@@ -1,5 +1,4 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import type { ExtensionResourceOpenIntent } from "@pstdio/sdk/extensions";
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import {
   createExtensionSlot,
@@ -7,7 +6,7 @@ import {
   toWorkbenchResource,
 } from "../host/workbench-extension-command";
 import type { CreateBridgeWebviewHostCapabilities } from "./bridge-webview-renderer";
-import { createWorkbenchWebviewHostCapabilities, toOpenResourceInput } from "./webview-host-capabilities";
+import { createWorkbenchWebviewHostCapabilities, openWorkbenchWebviewResource } from "./webview-host-capabilities";
 
 type ExtensionWebviewSlotKind = NonNullable<CommandExecuteRequest["slot"]>["kind"];
 
@@ -37,7 +36,7 @@ type WebviewCommandExecuteParams = {
 
 type WebviewResourceOpenParams = {
   resource?: CommandExecuteRequest["resource"];
-  input?: ExtensionResourceOpenIntent;
+  open?: "preview" | "pin";
 };
 
 export const createExtensionWebviewHostCapabilities =
@@ -51,15 +50,11 @@ export const createExtensionWebviewHostCapabilities =
     return {
       ...base,
       // Extension guests speak the SDK resource shape (`type`); normalize to the
-      // workbench shape (`kind` + synthesized uri) the resource registry expects,
-      // mirroring how commands.execute and tree targets normalize their resources.
+      // workbench shape (`kind` + synthesized uri) before the shared activation rule.
       "resource.open": (params) => {
         const request = params as WebviewResourceOpenParams;
         if (!request.resource) throw new Error("resource.open requires a resource.");
-        return context.workbench.resources.openResource(
-          toWorkbenchResource(request.resource),
-          toOpenResourceInput(request.input),
-        );
+        return openWorkbenchWebviewResource(context.workbench, toWorkbenchResource(request.resource), request.open);
       },
       "commands.execute": async (params) => {
         const request = params as WebviewCommandExecuteParams;

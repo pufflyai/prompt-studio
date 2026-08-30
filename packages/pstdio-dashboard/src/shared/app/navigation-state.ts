@@ -1,10 +1,11 @@
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
+import { applyDashboardPageLayoutScope } from "./page-navigation";
 import { getDashboardSelectedProjectId } from "./project-context";
 
 export const dashboardSelectedResourceContextKey = "dashboard.navigation.selectedResource";
 
-type DashboardNavigationContext = Pick<WorkbenchModuleContext, "context" | "layout" | "modes" | "panels">;
+type DashboardNavigationContext = Pick<WorkbenchModuleContext, "context" | "layout" | "modes" | "pages" | "panels">;
 
 const activeViewByWorkbench = new WeakMap<WorkbenchModuleContext["context"]["store"], string>();
 const selectedResourceByWorkbench = new WeakMap<WorkbenchModuleContext["context"]["store"], ResourceRef>();
@@ -43,6 +44,13 @@ export const syncDashboardLayoutPersistenceScope = (
   ctx: DashboardNavigationContext,
   modeId = ctx.modes.getActiveModeId(),
 ) => {
+  // An active slot-composed page owns the layout scope; the mode-view scopes cover
+  // the host flows (host pages commit through their native routes).
+  const activePage = ctx.pages.getActivePage();
+  if (activePage && !activePage.activate) {
+    applyDashboardPageLayoutScope(ctx, activePage);
+    return;
+  }
   const scope = resolveDashboardLayoutPersistenceScope({
     modeId,
     projectId: getDashboardSelectedProjectId(ctx),

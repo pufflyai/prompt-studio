@@ -72,33 +72,18 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
     expect(activateCall?.body).toMatchObject({ params: { slideId: "intro" } });
   });
 
-  test("opens resource targets with the requested placement strategy", async () => {
+  test("opens page targets with the resource argument and the section deep link", async () => {
     const workbench = createWorkbenchCore();
-    const opens: Array<{ input: { replaceActive?: boolean }; metadata?: Record<string, unknown> }> = [];
     const executeCommand = () => ({
       items: [
         {
           id: "PS-1",
           label: "PS-1",
           target: {
-            kind: "resource",
+            kind: "page",
+            page: { kind: "page", id: "tickets" },
             resource: { type: "ticket", id: "PS-1", label: "PS-1" },
-            input: { strategy: "persistent" },
             section: { anchors: [{ id: "acceptance-criteria", heading: "Acceptance Criteria" }] },
-          },
-        },
-        {
-          id: "PS-2",
-          label: "PS-2",
-          target: {
-            kind: "compound",
-            targets: [
-              {
-                kind: "resource",
-                resource: { type: "ticket", id: "PS-2", label: "PS-2" },
-                section: { anchors: [{ id: "notes", heading: "Notes" }] },
-              },
-            ],
           },
         },
       ],
@@ -106,47 +91,39 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
 
     workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
     workbench.layout.registerPanel({
-      id: "ticket",
+      id: "pstdio.lab.view.ticket",
       title: "Ticket",
       region: "main",
       rendererId: "test",
     });
-    workbench.resources.registerPresenter({
-      id: "ticket",
-      canOpen: (resource) => resource.kind === "ticket",
-      open: (resource, input) => {
-        opens.push({ input, metadata: resource.metadata });
-        return workbench.layout.openPanel("ticket");
-      },
+    workbench.pages.registry.registerPage({
+      id: "pstdio.lab.page.tickets",
+      title: "Tickets",
+      extensionId: "pstdio.lab",
+      slots: [{ id: "ticket", region: "main", cardinality: "many" }],
+      bindings: [{ kind: "ticket", panelId: "pstdio.lab.view.ticket", slot: "ticket" }],
     });
     registerWorkbenchExtensionCommandPaletteResources({ executeCommand, projectId: "p1", workbench }, [record]);
 
     const results = await workbench.commandPaletteResources.queryProviders({ query: "PS", limit: 10 });
     await results[0]?.results[0]?.activate();
-    await results[0]?.results[1]?.activate();
 
-    expect(opens).toEqual([
-      {
-        input: {},
-        metadata: {
-          [FILE_SECTION_NAVIGATION_METADATA_KEY]: {
-            treeId: "lab.slides",
-            targetNodeId: "PS-1",
-            anchors: [{ id: "acceptance-criteria", heading: "Acceptance Criteria" }],
+    const instances = workbench.layout.listPanelInstances("main");
+    expect(instances).toContainEqual(
+      expect.objectContaining({
+        panelId: "pstdio.lab.view.ticket",
+        resource: expect.objectContaining({
+          id: "PS-1",
+          metadata: {
+            [FILE_SECTION_NAVIGATION_METADATA_KEY]: {
+              treeId: "lab.slides",
+              targetNodeId: "PS-1",
+              anchors: [{ id: "acceptance-criteria", heading: "Acceptance Criteria" }],
+            },
           },
-        },
-      },
-      {
-        input: {},
-        metadata: {
-          [FILE_SECTION_NAVIGATION_METADATA_KEY]: {
-            treeId: "lab.slides",
-            targetNodeId: "PS-2",
-            anchors: [{ id: "notes", heading: "Notes" }],
-          },
-        },
-      },
-    ]);
+        }),
+      }),
+    );
   });
 
   test("opens compound targets only after every item validates", async () => {
@@ -160,8 +137,8 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
           target: {
             kind: "compound",
             targets: [
-              { kind: "view", view: { kind: "view", id: "ticket" } },
-              { kind: "view", view: { kind: "view", id: "missing" } },
+              { kind: "page", page: { kind: "page", id: "tickets" } },
+              { kind: "page", page: { kind: "page", id: "missing" } },
             ],
           },
         },
@@ -174,13 +151,18 @@ describe("registerWorkbenchExtensionCommandPaletteResources", () => {
       region: "main",
       rendererId: "test",
     });
-    workbench.views.registerView({ id: "pstdio.lab.view.ticket", panelId: "pstdio.lab.view.ticket", title: "Ticket" });
-    workbench.views.onDidOpenView(({ viewId }) => opened.push(viewId));
+    workbench.pages.registry.registerPage({
+      id: "pstdio.lab.page.tickets",
+      title: "Tickets",
+      extensionId: "pstdio.lab",
+      slots: [{ id: "board", region: "main", panelId: "pstdio.lab.view.ticket", closable: false }],
+    });
+    workbench.pages.onDidChangeLocation((location) => opened.push(location.pageId));
     registerWorkbenchExtensionCommandPaletteResources({ executeCommand, projectId: "p1", workbench }, [record]);
 
     const results = await workbench.commandPaletteResources.queryProviders({ query: "compound", limit: 10 });
     await expect(results[0]?.results[0]?.activate()).rejects.toThrow(
-      "Cannot open navigation view target: pstdio.lab.view.missing",
+      "Cannot open navigation page target: pstdio.lab.page.missing",
     );
 
     expect(opened).toEqual([]);

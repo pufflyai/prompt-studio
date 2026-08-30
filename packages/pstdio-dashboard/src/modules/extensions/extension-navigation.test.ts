@@ -34,7 +34,7 @@ describe("registerExtensionNavigation", () => {
         collapsible: false,
         nodes: [
           expect.objectContaining({
-            id: "pstdio.extension-lab.navigation-item.labPage",
+            id: "pstdio.extension-lab.navigation-item.lab",
             label: "Lab",
             canHide: true,
             target: {

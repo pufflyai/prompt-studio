@@ -7,6 +7,7 @@ import type { Notification, NotificationAction } from "pstdio-api-contracts";
 import { useSyncExternalStore } from "react";
 import { apiRequest } from "@/lib/api";
 import { getCollectionsVersion, subscribeCollections } from "@/lib/sync/collections";
+import { openDashboardResourceLocation } from "@/shared/app/page-navigation";
 import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { executeExtensionCommand } from "@/shared/extensions/api";
@@ -114,18 +115,14 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
       await markRead(notification);
       if (!action) {
         if (notification.target) {
-          await input.workbench.resources.openResource(toWorkbenchResource(notification.target, projectId), {
-            replaceActive: true,
-          });
+          await openDashboardResourceLocation(input.workbench, toWorkbenchResource(notification.target, projectId));
         }
         close();
         return;
       }
 
       if (action.kind === "open-resource") {
-        await input.workbench.resources.openResource(toWorkbenchResource(action.resource, projectId), {
-          replaceActive: true,
-        });
+        await openDashboardResourceLocation(input.workbench, toWorkbenchResource(action.resource, projectId));
       } else if (action.kind === "url") {
         globalThis.open(action.href, "_blank", "noopener,noreferrer");
       } else if (input.workbench.commands.getCommand(action.command)) {

@@ -170,7 +170,13 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
   registerContentContributionWidgets(workbench, bench);
   registerPreviewResourceProvider(workbench, bench);
 
-  const initialView = bench.metadata.views.find((view) => view.path);
+  // Pages own paths now: land on the first page's first static view when one exists.
+  const initialSlotView = (bench.metadata.pages ?? []).flatMap((page) => page.slots).find((slot) => slot.view)?.view;
+  const initialView = initialSlotView
+    ? bench.metadata.views.find(
+        (view) => view.localId === initialSlotView.id && view.extensionId === initialSlotView.extensionId,
+      )
+    : undefined;
   if (initialView) {
     void workbench.views.openView(initialView.id);
   } else {

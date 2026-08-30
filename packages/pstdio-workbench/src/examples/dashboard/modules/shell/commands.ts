@@ -48,6 +48,14 @@ export const registerCommands = (ctx: WorkbenchModuleContext) => {
     { execute: () => ctx.views.openView(dashboardViews.repoHealth.id, { strategy: { kind: "replace-active" } }) },
   );
   ctx.commands.registerCommand(
+    { id: "dashboard.openLab", label: "Open lab", category: "Extension Lab", icon: "FlaskConical" },
+    { execute: () => ctx.views.openView(dashboardViews.lab.id, { strategy: { kind: "replace-active" } }) },
+  );
+  ctx.commands.registerCommand(
+    { id: "dashboard.openChangelog", label: "Open changelog", category: "Dashboard", icon: "Workflow" },
+    { execute: () => ctx.views.openView(dashboardViews.changelog.id, { strategy: { kind: "replace-active" } }) },
+  );
+  ctx.commands.registerCommand(
     { id: "dashboard.sayHello", label: "Say hello", category: "Extension Lab", icon: "Sparkles" },
     { execute: () => ctx.notifications.show({ level: "success", title: "Hello from Extension Lab" }) },
   );

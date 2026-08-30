@@ -32,12 +32,15 @@ export const toWorkbenchResource = (resource: ExtensionCommandResource | undefin
   };
 };
 
+// Opening a resource is an activation: a kind the host presents itself keeps its
+// presenter, and any other kind is placed by the active page's bindings.
 export const openWebviewResource = (workbench: WorkbenchCore, params: WebviewResourceOpenParams) => {
   if (!params.resource) throw new Error("resource.open requires a resource.");
   const resource = toWorkbenchResource(params.resource);
   if (!resource) throw new Error("resource.open requires a resource.");
-  const replaceActive = Boolean(params.input?.strategy && params.input.strategy !== "persistent");
-  return workbench.resources.openResource(resource, replaceActive ? { replaceActive: true } : {});
+  const hasPresenter = workbench.resources.listPresenters().some((presenter) => presenter.canOpen(resource));
+  if (hasPresenter) return workbench.resources.openResource(resource, { replaceActive: params.open !== "pin" });
+  return workbench.pages.emitResource(resource, { open: params.open });
 };
 
 export const executeWebviewCommand = (input: ExecuteWebviewCommandInput) => {

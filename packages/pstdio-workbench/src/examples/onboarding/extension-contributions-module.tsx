@@ -99,7 +99,7 @@ const metadata = {
     },
   ],
   resourceKinds: [],
-  resourceViews: [],
+  pages: [],
   navigationItems: [],
   statusBarItems: [],
   statuses: [],

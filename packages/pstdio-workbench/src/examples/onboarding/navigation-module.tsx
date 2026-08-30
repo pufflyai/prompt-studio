@@ -11,18 +11,20 @@ import type {
 } from "../../core";
 import { WorkbenchIcon } from "../../react";
 
+const NAVIGATION_PAGE_ID = "onboarding.navigation.page";
 const NAVIGATION_HOME_WIDGET_ID = "onboarding.navigation.home";
 const NAVIGATION_HOME_RENDERER_ID = "onboarding.navigation.home.renderer";
 const NAVIGATION_TREE_ID = "onboarding.navigation.tree";
+const NAVIGATION_TREE_SLOT_ID = "tree";
 const NAVIGATION_GUIDE_WIDGET_ID = "onboarding.navigation.guide";
 const NAVIGATION_GUIDE_RENDERER_ID = "onboarding.navigation.guide.renderer";
 const GUIDE_KIND = "onboarding.navigation.guide";
 const FOCUS_MAIN_COMMAND_ID = "onboarding.navigation.focus-main";
 
 const navigationGuides = [
-  { id: "start", label: "Start here", body: "Opened from a parsed resource target." },
+  { id: "start", label: "Start here", body: "Opened from a parsed page target carrying a resource." },
   { id: "commands", label: "Command routing", body: "Opened through a registered resource navigator." },
-  { id: "review", label: "Review flow", body: "Opened as the resource part of a compound target." },
+  { id: "review", label: "Review flow", body: "Opened as the resource argument of a compound target." },
 ] as const;
 
 const guideById = (id: string) => navigationGuides.find((guide) => guide.id === id) ?? navigationGuides[0];
@@ -44,7 +46,12 @@ const describeTarget = (target: NavigationTarget): string => {
   if (target.kind === "resource") return `resource ${target.resource.uri}`;
   if (target.kind === "view") return `view ${target.viewId}`;
   if (target.kind === "panel") return `panel ${target.panelId}`;
-  if (target.kind === "page") return `page ${target.pageId}`;
+  if (target.kind === "page") {
+    const parts = [`page ${target.pageId}`];
+    if (target.resource) parts.push(`resource ${target.resource.uri}`);
+    if (target.slot) parts.push(`slot ${target.slot}`);
+    return parts.join(" ");
+  }
   if (target.kind === "href") return `href ${target.href}`;
   return `command ${target.commandId}`;
 };
@@ -69,9 +76,9 @@ const NavigationTree = (): TreeNode[] =>
     return {
       id: resource.uri,
       label: guide.label,
-      description: "Tree row with a direct navigation target.",
+      description: "Tree row with a direct page target.",
       icon: "FileText",
-      target: { kind: "resource", resource },
+      target: { kind: "page", pageId: NAVIGATION_PAGE_ID, resource },
     };
   });
 
@@ -117,8 +124,9 @@ const NavigationHome = (props: { workbench: WorkbenchCore }) => {
 
       <Stack gap="sm" maxW="760px">
         <Text textStyle="paragraph/M/regular">
-          Navigation accepts incoming locations, resolves them to typed targets, then dispatches those targets through
-          resource presenters, widget presenters, or commands.
+          Navigation accepts incoming locations, resolves them to typed targets, then dispatches them. A target is a
+          page, a command, or an href; a resource travels as an argument on a page target and the page&apos;s bindings
+          decide which panel presents it.
         </Text>
         <Text textStyle="paragraph/S/regular" color="fg.muted">
           The tree on the left uses direct targets; these buttons use a parser or a resource navigator.
@@ -130,11 +138,11 @@ const NavigationHome = (props: { workbench: WorkbenchCore }) => {
           Parsed locations
         </Text>
         <HStack gap="sm" wrap="wrap">
-          <Button size="sm" onClick={() => runLocation("resource target", "onboarding://guide/start")}>
+          <Button size="sm" onClick={() => runLocation("page + resource", "onboarding://guide/start")}>
             <WorkbenchIcon name="FileText" />
             Open guide
           </Button>
-          <Button size="sm" onClick={() => runLocation("view target", "onboarding://view/navigation")}>
+          <Button size="sm" onClick={() => runLocation("page + slot", "onboarding://view/navigation")}>
             <WorkbenchIcon name="PanelLeft" />
             Reveal tree
           </Button>
@@ -178,17 +186,12 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
     );
 
     ctx.resources.registerKind({ kind: GUIDE_KIND, label: "Navigation guide", icon: "FileText" });
-    ctx.resources.registerPresenter({
-      id: "onboarding.navigation.guide-presenter",
-      canOpen: (resource) => resource.kind === GUIDE_KIND,
-      open: (resource) => ctx.layout.openPanel(NAVIGATION_GUIDE_WIDGET_ID, { resource, title: resource.label }),
-    });
 
     ctx.navigation.registerNavigator({
       id: "onboarding.navigation.guide-navigator",
       canNavigate: (resource) => resource.kind === GUIDE_KIND,
       createHref: (resource) => `onboarding://guide/${resource.id ?? "start"}`,
-      navigate: (resource) => ctx.layout.openPanel(NAVIGATION_GUIDE_WIDGET_ID, { resource, title: resource.label }),
+      navigate: (resource) => ctx.pages.activatePage(NAVIGATION_PAGE_ID, { resource }),
     });
 
     ctx.navigation.registerParser({
@@ -200,13 +203,17 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
         // The path carries the guide id when the target opens a guide resource.
         const pathId = url.pathname.replace(/^\//, "");
 
-        // onboarding://guide/start becomes a resource target. The dispatcher
-        // sends resource targets through the registered resource presenter above.
-        if (url.host === "guide") return { kind: "resource", resource: guideResource(pathId || "start") };
+        // onboarding://guide/start becomes a page target with the guide as its
+        // resource argument. The page's binding places it in the bound slot.
+        if (url.host === "guide") {
+          return { kind: "page", pageId: NAVIGATION_PAGE_ID, resource: guideResource(pathId || "start") };
+        }
 
-        // onboarding://view/navigation becomes a view target. The dispatcher
-        // reveals or opens the registered navigation tree widget.
-        if (url.host === "view") return { kind: "panel", panelId: NAVIGATION_TREE_ID };
+        // onboarding://view/navigation becomes a page target with a slot id. The
+        // dispatcher reveals the page's static tree slot.
+        if (url.host === "view") {
+          return { kind: "page", pageId: NAVIGATION_PAGE_ID, slot: NAVIGATION_TREE_SLOT_ID };
+        }
 
         // onboarding://command/focus-main becomes a command target. The path is
         // illustrative here; this example routes to a module-owned command.
@@ -215,8 +222,12 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
         // onboarding://open/review?tree=true becomes a compound target. Compound
         // targets run in order, so this opens the guide and optionally reveals the tree.
         if (url.host === "open") {
-          const targets: NavigationTargetItem[] = [{ kind: "resource", resource: guideResource(pathId || "review") }];
-          if (url.searchParams.get("tree") === "true") targets.push({ kind: "panel", panelId: NAVIGATION_TREE_ID });
+          const targets: NavigationTargetItem[] = [
+            { kind: "page", pageId: NAVIGATION_PAGE_ID, resource: guideResource(pathId || "review") },
+          ];
+          if (url.searchParams.get("tree") === "true") {
+            targets.push({ kind: "page", pageId: NAVIGATION_PAGE_ID, slot: NAVIGATION_TREE_SLOT_ID });
+          }
           return { kind: "compound", targets };
         }
         throw new Error(`Unknown onboarding navigation host: ${url.host}`);
@@ -263,7 +274,20 @@ export const createNavigationModule = (): WorkbenchModuleContribution => ({
       rendererId: NAVIGATION_TREE_ID,
     });
 
-    ctx.layout.openPanel(NAVIGATION_TREE_ID);
-    ctx.layout.openPanel(NAVIGATION_HOME_WIDGET_ID);
+    // The page composes the demo: two static slots plus a bound slot that
+    // presents guide resources. `cardinality: "one"` swaps the open guide in place.
+    ctx.pages.registry.registerPage({
+      id: NAVIGATION_PAGE_ID,
+      title: "Navigation",
+      icon: "Route",
+      slots: [
+        { id: "home", region: "main", panelId: NAVIGATION_HOME_WIDGET_ID, closable: false, order: 0 },
+        { id: "guides", region: "main", cardinality: "one", order: 1 },
+        { id: NAVIGATION_TREE_SLOT_ID, region: "sidenav", panelId: NAVIGATION_TREE_ID, order: 0 },
+      ],
+      bindings: [{ kind: GUIDE_KIND, panelId: NAVIGATION_GUIDE_WIDGET_ID, slot: "guides" }],
+    });
+
+    void ctx.pages.activatePage(NAVIGATION_PAGE_ID);
   },
 });

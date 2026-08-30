@@ -1,17 +1,6 @@
-import {
-  defineExtension,
-  defineResourceKind,
-  defineResourceView,
-  defineView,
-  resourceSlotRef,
-} from "@pstdio/sdk/extensions";
+import { defineExtension, definePage, defineResourceKind, defineView } from "@pstdio/sdk/extensions";
 
-const fixtureItem = defineResourceKind({
-  id: "fixture-item",
-  surface: "primary",
-  slots: [{ id: "primary", cardinality: "one", access: "owner" }],
-});
-const primary = resourceSlotRef(fixtureItem.ref, "primary");
+const fixtureItem = defineResourceKind({ id: "fixture-item" });
 const items = defineView({
   id: "items",
   title: "Items",
@@ -35,8 +24,15 @@ const items = defineView({
   },
 });
 
+const itemsPage = definePage({
+  id: "items-page",
+  title: "Items",
+  slots: [{ id: "item", region: "main", cardinality: "one" }],
+  bindings: [{ resourceKind: fixtureItem.ref, view: items.ref, slot: "item" }],
+});
+
 export default defineExtension({
   resourceKinds: [fixtureItem],
   views: [items],
-  resourceViews: [defineResourceView({ id: "items", resourceKind: fixtureItem.ref, slot: primary, view: items.ref })],
+  pages: [itemsPage],
 });

@@ -157,14 +157,13 @@ const registerFileViewWidget = (
   return registerWorkbenchExtensionPanel({
     workbench: input.workbench,
     path: panel.path,
-    aliases: panel.aliases,
     resolveInput: resolveWorkbenchExtensionViewInput(input.resolveViewInput, panel),
     contribution: toWorkbenchCompositionPanelContribution({
       panel,
       rendererId,
       declarationIndex: index,
       menuDeclarationOffset: menuDeclarationOffset,
-      resourcePanels: input.metadata.resourcePanels,
+      pages: input.metadata.pages,
     }),
   });
 };

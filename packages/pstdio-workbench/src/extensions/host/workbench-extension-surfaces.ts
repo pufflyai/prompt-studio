@@ -81,14 +81,13 @@ export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionC
       registerWorkbenchExtensionPanel({
         workbench: input.workbench,
         path: panel.path,
-        aliases: panel.aliases,
         resolveInput: resolveWorkbenchExtensionViewInput(input.resolveViewInput, panel),
         contribution: toWorkbenchCompositionPanelContribution({
           panel,
           rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
           declarationIndex: index,
           menuDeclarationOffset: menuOffsets[index]!,
-          resourcePanels: input.metadata.resourcePanels,
+          pages: input.metadata.pages,
           config: toBridgeWebviewConfig(panel.webview),
         }),
       }),

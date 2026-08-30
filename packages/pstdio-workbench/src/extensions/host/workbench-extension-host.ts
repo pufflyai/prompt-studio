@@ -19,12 +19,13 @@ import {
   executeWorkbenchExtensionCommand,
   type WorkbenchExtensionCommandContext,
 } from "./workbench-extension-command";
-import { registerComposition, registerModes, registerResourcePresenters } from "./workbench-extension-composition";
+import { registerComposition, registerModes, registerResourceKinds } from "./workbench-extension-composition";
 import type {
   InternalRegisterWorkbenchExtensionContributionsInput,
   RegisterWorkbenchExtensionContributionsInput,
 } from "./workbench-extension-host-types";
 import { registerWorkbenchExtensionKeybindings } from "./workbench-extension-keybindings";
+import { registerPages } from "./workbench-extension-pages";
 
 export type { RegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
 
@@ -197,7 +198,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
       input.metadata.controlsRenderers ?? [],
       input.metadata.panels,
       { resolveViewInput: input.resolveViewInput },
-      input.metadata.resourcePanels,
+      input.metadata.pages,
     ),
   );
   disposables.push(...registerWebviewPanels(input));
@@ -211,7 +212,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
       input.metadata.kanbanRenderers ?? [],
       { ...input.kanbanAdapter, resolveViewInput: input.resolveViewInput },
       input.metadata.panels,
-      input.metadata.resourcePanels,
+      input.metadata.pages,
     ),
   );
   disposables.push(
@@ -219,7 +220,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
       context,
       input.metadata.dataTableRenderers ?? [],
       input.metadata.panels,
-      input.metadata.resourcePanels,
+      input.metadata.pages,
       input.resolveViewInput,
     ),
   );
@@ -242,7 +243,8 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     );
   }
   disposables.push(...registerStatusBarItems(input));
-  disposables.push(...registerResourcePresenters(input));
+  disposables.push(...registerResourceKinds(input));
+  disposables.push(...registerPages(input));
   const composition = registerComposition(input);
   disposables.push(...composition.disposables);
   disposables.push(...registerModes(input, composition.registry));

@@ -56,7 +56,6 @@ const webviewRuntime = (entryPath: string, capabilities?: WebviewCapabilityDecla
   const view = defineView({
     id: "page",
     title: "Lab",
-    path: "lab",
     body: {
       kind: "webview" as const,
       entry: packageAsset(entryPath, "file:///extension/extension.ts"),
@@ -124,7 +123,7 @@ describe("buildWorkbenchExtensionMetadata", () => {
     });
 
     const view = metadata.views[0];
-    expect(view).toMatchObject({ id: "pstdio.lab.view.page", localId: "page", path: "lab" });
+    expect(view).toMatchObject({ id: "pstdio.lab.view.page", localId: "page" });
     expect(view?.body.kind).toBe("webview");
     if (view?.body.kind !== "webview") throw new Error("Expected a webview body");
     const basePath = webviewUrlIssuer

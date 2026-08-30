@@ -37,27 +37,13 @@ describe("createBootstrapModule", () => {
     }
   });
 
-  test("restores a domain resource after extension metadata registers its presenter", async () => {
-    const issue = {
-      kind: "issue",
-      uri: "acme://issue/ISSUE-10",
-      id: "ISSUE-10",
-      label: "Issue 10",
-      metadata: { projectId: "project-1" },
-    } satisfies ResourceRef;
-    let savedResource: ResourceRef | undefined = issue;
+  test("restores an extension page resource from the boot URL after metadata registers the page", async () => {
+    const pageId = "acme.issue-tracker.page.issues";
     let resolveMetadata: (value: typeof metadataWithResourceExtension) => void = () => undefined;
     const metadataPromise = new Promise<typeof metadataWithResourceExtension>((resolve) => {
       resolveMetadata = resolve;
     });
-    const workbench = createWorkbenchCore({
-      lastResourcePersistence: {
-        getLastResource: () => savedResource,
-        setLastResource: (resource) => {
-          savedResource = resource;
-        },
-      },
-    });
+    const workbench = createWorkbenchCore();
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -68,7 +54,9 @@ describe("createBootstrapModule", () => {
         loadMetadata: mock(() => metadataPromise),
       }),
     );
-    const bootstrap = workbench.registerModule(createBootstrapModule());
+    const bootstrap = workbench.registerModule(
+      createBootstrapModule({ initialViewPath: "acme.issue-tracker/issues/issue/ISSUE-10" }),
+    );
 
     try {
       await flushMicrotasks();
@@ -76,8 +64,10 @@ describe("createBootstrapModule", () => {
 
       resolveMetadata(metadataWithResourceExtension);
       await flushMicrotasks();
+      await flushMicrotasks();
 
-      expect(workbench.getPrimaryResource()?.uri).toBe(issue.uri);
+      expect(workbench.pages.getActiveLocation()?.pageId).toBe(pageId);
+      expect(workbench.getPrimaryResource()?.uri).toBe("pstdio://extension-resource/issue/ISSUE-10");
     } finally {
       bootstrap.dispose();
       extensions.dispose();

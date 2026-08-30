@@ -16,6 +16,7 @@ import { createKeepAliveExampleModule } from "./keep-alive/module";
 import { createLayoutScopeExampleWorkbench } from "./layout-scope/module";
 import { createModeChromeExampleModule } from "./mode-chrome/module";
 import { createNavigationExampleModule } from "./navigation/module";
+import { createPagesExampleModule } from "./pages/module";
 import { createPreferenceSchemasExampleModule } from "./preferences/module";
 import { createPreviewTabsExampleModule } from "./preview-tabs/module";
 import { createRandomExampleModule } from "./random/module";
@@ -97,6 +98,9 @@ keepAliveWorkbench.registerModule(createKeepAliveExampleModule());
 
 const navigationWorkbench = createWorkbenchCore();
 navigationWorkbench.registerModule(createNavigationExampleModule());
+
+const pagesWorkbench = createWorkbenchCore();
+pagesWorkbench.registerModule(createPagesExampleModule());
 
 const historyWorkbench = createWorkbenchCore();
 historyWorkbench.registerModule(createHistoryExampleModule());
@@ -229,6 +233,13 @@ export const KeepAlive: Story = {
 
 export const Navigation: Story = {
   render: () => <WorkbenchStory workbench={navigationWorkbench} />,
+};
+
+// A page composed from slots: a static unclosable board, a bound editor slot
+// (`cardinality: "many"`), and a static sidenav tree. Emitting a ticket opens a
+// preview tab that the next emission swaps; pinning stacks persistent tabs.
+export const Pages: Story = {
+  render: () => <WorkbenchStory workbench={pagesWorkbench} />,
 };
 
 export const History: Story = {

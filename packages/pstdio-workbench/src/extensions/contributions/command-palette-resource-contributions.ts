@@ -2,14 +2,9 @@ import type { WorkbenchExtensionCommandPaletteResourceRecord } from "@pstdio/sdk
 import type { NavigationTarget } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { CommandPaletteResourceResult, Disposable } from "../../core";
-import { FILE_SECTION_NAVIGATION_METADATA_KEY } from "../../core/registries/renderers/file-section-navigation";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
-import {
-  executeWorkbenchExtensionCommand,
-  toExtensionCommandResource,
-  toWorkbenchResource,
-} from "../host/workbench-extension-command";
+import { executeWorkbenchExtensionCommand, toExtensionCommandResource } from "../host/workbench-extension-command";
 
 interface ResourceItem {
   id: string;
@@ -51,21 +46,7 @@ const activateTarget = async (
   await context.workbench.navigation.openTarget(
     toWorkbenchNavigationTarget(target, {
       extensionId: record.extensionId,
-      resourceOf: (resource, resourceTarget) => {
-        const resolved = toWorkbenchResource(resource);
-        if (!resourceTarget.section) return resolved;
-        return {
-          ...resolved,
-          metadata: {
-            ...resolved.metadata,
-            [FILE_SECTION_NAVIGATION_METADATA_KEY]: {
-              treeId: record.id,
-              targetNodeId: item.id,
-              anchors: resourceTarget.section.anchors,
-            },
-          },
-        };
-      },
+      sectionSource: { treeId: record.id, targetNodeId: item.id },
     }),
   );
 };

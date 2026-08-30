@@ -87,6 +87,12 @@ describe("workbench extension metadata", () => {
     expect(parsed.success).toBe(false);
   });
 
+  test("accepts metadata produced before pages were introduced", () => {
+    const { pages: _pages, ...legacy } = metadata();
+
+    expect(workbenchExtensionMetadataSchema.safeParse(legacy).success).toBe(true);
+  });
+
   test("carries ordered template types and their provider commands", () => {
     const parsed = workbenchExtensionMetadataSchema.parse({
       ...metadata(),

@@ -7,6 +7,7 @@ interface ExtensionLayoutCompatibilityRecord {
   bodyKind: "native" | "route" | "webview";
   extensionId: string;
   modeIds: string[];
+  pageSlots?: string[];
   panelId: string;
   region: WorkbenchRegion;
   widgetId: string;
@@ -40,18 +41,33 @@ export const createExtensionLayoutCompatibility = (metadata: DashboardExtensionM
       const placements = metadata.placements.filter(
         (placement) => placement.item.kind === "view" && toWorkbenchContributionId(placement.item.view) === view.id,
       );
+      // Page slot declarations join the marker so a changed page composition
+      // reconciles stored layouts without churning unrelated arrangement. A view's
+      // record takes the static slots that place it, plus the bound slots that a
+      // binding presents it in — never every bound slot on every page, which would
+      // make any page edit invalidate every view.
+      const pageSlots = (metadata.pages ?? []).flatMap((page) =>
+        page.slots
+          .filter((slot) => {
+            if (slot.view) return toWorkbenchContributionId(slot.view) === view.id;
+            return (page.bindings ?? []).some(
+              (binding) => binding.slot === slot.id && toWorkbenchContributionId(binding.view) === view.id,
+            );
+          })
+          .map((slot) => ({ pageId: page.id, slotId: slot.id, region: slot.region })),
+      );
       return {
         bodyKind: view.body.kind === "webview" ? "webview" : "native",
         extensionId: view.extensionId,
         modeIds: placements.map((placement) => toWorkbenchContributionId(placement.mode)).sort(),
+        pageSlots: pageSlots.map((slot) => `${slot.pageId}:${slot.slotId}:${slot.region}`).sort(),
         panelId: view.id,
-        path: view.path,
         region: placements[0]?.region ?? "main",
         widgetId: view.id,
       };
     })
     .sort(compareRecord);
-  return JSON.stringify({ version: 4, records });
+  return JSON.stringify({ version: 5, records });
 };
 
 const parseCompatibility = (value: string | undefined) => {

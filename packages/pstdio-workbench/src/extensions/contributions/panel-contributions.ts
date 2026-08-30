@@ -9,10 +9,11 @@ import type {
 import { BRIDGE_WEBVIEW_RENDERER_ID } from "../bridge/bridge-webview-renderer";
 import { toBridgeWebviewConfig } from "../bridge/webview-contribution-config";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
+import { metadataRefId } from "../host/workbench-extension-metadata-ref";
 
 type ExtensionPanelRecord = WorkbenchExtensionMetadata["panels"][number];
 type ExtensionPanelMenu = NonNullable<ExtensionPanelRecord["panelMenus"]>[number];
-type ExtensionResourcePanels = WorkbenchExtensionMetadata["resourcePanels"];
+type ExtensionPageRecords = WorkbenchExtensionMetadata["pages"];
 
 export interface WorkbenchExtensionViewDescriptor {
   id: string;
@@ -37,7 +38,6 @@ export const resolveWorkbenchExtensionViewInput = (
 export interface RegisterWorkbenchExtensionPanelInput {
   contribution: WorkbenchPanelContribution;
   path?: string;
-  aliases?: readonly string[];
   resolveInput?: WorkbenchViewContribution["resolveInput"];
   workbench: WorkbenchModuleContext;
 }
@@ -45,17 +45,24 @@ export interface RegisterWorkbenchExtensionPanelInput {
 // Panels keep manifest declaration order until the user reorders them.
 export const declarationPriority = (declarationIndex = 0) => ({ priority: -declarationIndex });
 
-// A panel with an unscoped placement is available without a resource. Otherwise,
-// its own scoped placements and cross-extension edges define the kinds it serves.
-export const panelResourceKinds = (
-  panel: ExtensionPanelRecord,
-  resourcePanels: ExtensionResourcePanels | undefined,
-) => {
+// A panel with an unscoped placement is available without a resource, and so is a
+// panel some page places as a static slot — the page composes it with no resource in
+// hand. Otherwise, the page bindings that present through it define the kinds it
+// serves, so a bound widget only shows for a resource it can render.
+export const panelResourceKinds = (panel: ExtensionPanelRecord, pages: ExtensionPageRecords | undefined) => {
   const show = panel.show ? (Array.isArray(panel.show) ? panel.show : [panel.show]) : [];
   if (show.some((placement) => placement.for === undefined)) return undefined;
+  const isStaticSlotView = (pages ?? []).some((page) =>
+    page.slots.some((slot) => slot.view && metadataRefId(slot.view) === panel.id),
+  );
+  if (isStaticSlotView) return undefined;
   const kinds = [
     ...show.flatMap((placement) => (placement.for ? [placement.for] : [])),
-    ...(resourcePanels ?? []).filter((edge) => edge.panel === panel.id).map((edge) => edge.resourceKind),
+    ...(pages ?? []).flatMap((page) =>
+      (page.bindings ?? [])
+        .filter((binding) => metadataRefId(binding.view) === panel.id)
+        .map((binding) => binding.resourceKind.id),
+    ),
   ].filter((kind, index, all) => all.indexOf(kind) === index);
   return kinds.length > 0 ? kinds : undefined;
 };
@@ -73,7 +80,7 @@ export const toWorkbenchCompositionPanelContribution = (input: {
   rendererId: string;
   declarationIndex: number;
   menuDeclarationOffset: number;
-  resourcePanels?: ExtensionResourcePanels;
+  pages?: ExtensionPageRecords;
   config?: WorkbenchPanelContribution["config"];
 }): WorkbenchPanelContribution => ({
   id: input.panel.id,
@@ -82,7 +89,7 @@ export const toWorkbenchCompositionPanelContribution = (input: {
   region: panelDefaultRegion(input.panel),
   rendererId: input.rendererId,
   singleton: true,
-  resourceKinds: panelResourceKinds(input.panel, input.resourcePanels),
+  resourceKinds: panelResourceKinds(input.panel, input.pages),
   panelMenus: toWorkbenchPanelMenus(input.panel.panelMenus, input.menuDeclarationOffset),
   config: input.config,
   ...declarationPriority(input.declarationIndex),
@@ -134,7 +141,6 @@ export const registerWorkbenchExtensionPanel = (input: RegisterWorkbenchExtensio
       title: input.contribution.title,
       icon: input.contribution.icon,
       path: input.path,
-      aliases: input.aliases,
       resolveInput: input.resolveInput,
     });
   } catch (error) {

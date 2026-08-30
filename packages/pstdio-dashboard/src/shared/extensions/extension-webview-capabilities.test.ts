@@ -35,7 +35,9 @@ describe("createDashboardExtensionWebviewCapabilities", () => {
   test("adds resource.open only when a workbench is available", async () => {
     const calls: unknown[] = [];
     const workbench = {
+      pages: { emitResource: async () => undefined },
       resources: {
+        listPresenters: () => [{ canOpen: () => true }],
         openResource: async (resource: unknown) => {
           calls.push(resource);
         },

@@ -69,7 +69,7 @@ describe("resolveTreeListSelection", () => {
               {
                 id: "tickets",
                 label: "Tickets",
-                target: { kind: "resource", resource: ticketsResource },
+                target: { kind: "page", pageId: "tickets", resource: ticketsResource },
               },
             ],
           },

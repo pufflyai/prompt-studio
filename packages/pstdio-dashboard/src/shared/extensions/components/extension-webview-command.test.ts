@@ -90,10 +90,12 @@ describe("executeWebviewCommand", () => {
     expect(extensionCalls).toEqual([{ commandId: response.commandId }]);
   });
 
-  test("opens SDK resources with the same normalization used by commands", async () => {
+  test("opens SDK resources through their presenter with the same normalization used by commands", async () => {
     const calls: unknown[] = [];
     const workbench = {
+      pages: { emitResource: async () => undefined },
       resources: {
+        listPresenters: () => [{ canOpen: () => true }],
         openResource: async (resource: unknown, input: unknown) => {
           calls.push({ input, resource });
         },
@@ -102,7 +104,6 @@ describe("executeWebviewCommand", () => {
 
     await openWebviewResource(workbench, {
       resource: { type: "ticket", id: "PS-1", label: "Ticket", metadata: { status: "open" } },
-      input: { strategy: "replace-active" },
     });
 
     expect(calls).toEqual([
@@ -114,6 +115,36 @@ describe("executeWebviewCommand", () => {
           label: "Ticket",
           metadata: { status: "open" },
           uri: "pstdio://extension-resource/ticket/PS-1",
+        },
+      },
+    ]);
+  });
+
+  test("emits a resource the host does not present into the active page", async () => {
+    const emitted: unknown[] = [];
+    const workbench = {
+      pages: {
+        emitResource: async (resource: unknown, input: unknown) => {
+          emitted.push({ input, resource });
+        },
+      },
+      resources: { listPresenters: () => [], openResource: async () => undefined },
+    } as unknown as ReturnType<typeof createWorkbenchCore>;
+
+    await openWebviewResource(workbench, {
+      resource: { type: "glass-lab-artifact", id: "a", label: "Artifact" },
+      open: "pin",
+    });
+
+    expect(emitted).toEqual([
+      {
+        input: { open: "pin" },
+        resource: {
+          id: "a",
+          kind: "glass-lab-artifact",
+          label: "Artifact",
+          metadata: undefined,
+          uri: "pstdio://extension-resource/glass-lab-artifact/a",
         },
       },
     ]);

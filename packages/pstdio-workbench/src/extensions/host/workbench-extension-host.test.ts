@@ -81,41 +81,33 @@ const metadata = {
       defaultOpen: true,
       required: true,
     },
-    {
-      id: `${extensionId}.placement.detail`,
-      localId: "detail",
-      extensionId,
-      mode: { extensionId, kind: "mode", id: "review" },
-      item: {
-        kind: "resource-slot",
-        slot: {
-          resourceKind: { extensionId, kind: "resource-kind", id: "artifact" },
-          id: "inspector",
-        },
-      },
-      region: "side",
-    },
   ],
   resourceKinds: [
     {
       id: "artifact",
       localId: "artifact",
       extensionId,
-      surface: "attached",
       label: "Artifact",
-      slots: [{ id: "inspector", cardinality: "many", access: "public" }],
     },
   ],
-  resourceViews: [
+  pages: [
     {
-      id: `${extensionId}.resource-view.detail`,
+      id: `${extensionId}.page.inspector`,
+      localId: "inspector",
       extensionId,
-      resourceKind: { extensionId, kind: "resource-kind", id: "artifact" },
-      slot: {
-        resourceKind: { extensionId, kind: "resource-kind", id: "artifact" },
-        id: "inspector",
-      },
-      view: { extensionId, kind: "view", id: "detail" },
+      title: "Inspector",
+      path: "inspector",
+      slots: [
+        { id: "outline", region: "main", view: { extensionId, kind: "view", id: "outline" }, closable: false },
+        { id: "detail", region: "side", cardinality: "many" },
+      ],
+      bindings: [
+        {
+          resourceKind: { extensionId, kind: "resource-kind", id: "artifact" },
+          view: { extensionId, kind: "view", id: "detail" },
+          slot: "detail",
+        },
+      ],
     },
   ],
   navigationItems: [],
@@ -351,13 +343,17 @@ describe("registerWorkbenchExtensionContributions", () => {
     expect(openedViews).toEqual([detailViewId]);
 
     workbench.sidePanel.setMode("closed");
-    await workbench.resources.openResource({
-      kind: "artifact",
-      uri: "pstdio://artifact/artifact-1",
-      id: "artifact-1",
-      label: "Artifact 1",
+    await workbench.pages.activatePage(`${extensionId}.page.inspector`, {
+      resource: {
+        kind: "artifact",
+        uri: "pstdio://artifact/artifact-1",
+        id: "artifact-1",
+        label: "Artifact 1",
+      },
     });
-    expect(preparedResources).toEqual(["pstdio://artifact/artifact-1"]);
+    expect(workbench.layout.listPanelInstances("side")).toContainEqual(
+      expect.objectContaining({ panelId: detailViewId, resource: expect.objectContaining({ id: "artifact-1" }) }),
+    );
     expect(workbench.sidePanel.getMode()).toBe("attached");
 
     await expect(workbench.statuses.query(statusesId)).resolves.toEqual([

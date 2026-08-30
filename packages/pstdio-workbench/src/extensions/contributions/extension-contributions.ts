@@ -54,7 +54,7 @@ export const emptyWorkbenchExtensionMetadata = {
   viewMenus: [],
   placements: [],
   resourceKinds: [],
-  resourceViews: [],
+  pages: [],
   navigationItems: [],
   statusBarItems: [],
   statuses: [],

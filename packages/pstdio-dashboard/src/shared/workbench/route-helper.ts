@@ -81,3 +81,36 @@ export const registerDashboardViewRoute = (ctx: WorkbenchModuleContext, input: R
       return openInput;
     },
   });
+
+export interface RegisterDashboardHostPageInput {
+  id: string;
+  title: string;
+  icon?: string;
+  // The reserved un-prefixed URL segment this host page owns; start is the bare
+  // project URL ("").
+  urlPath: string;
+  // The resource kinds this page presents, published for extension page targets.
+  binds?: string[];
+  viewId: string;
+  toResource?: (segments: string[]) => ResourceRef | undefined;
+  resourceSegment?: (resource: ResourceRef) => string | undefined;
+}
+
+// Publishes a native dashboard screen as a host page. Extensions link it like any
+// page ({ kind: "page", page: workbenchPages.<id>, resource }); activation runs the
+// screen's own view route and resource presenters.
+export const registerDashboardHostPage = (ctx: WorkbenchModuleContext, input: RegisterDashboardHostPageInput) =>
+  ctx.pages.registry.registerPage({
+    id: input.id,
+    title: input.title,
+    icon: input.icon,
+    urlPath: input.urlPath,
+    binds: input.binds ?? [],
+    activate: ({ resource }) => {
+      if (resource) return ctx.resources.openResource(resource, { replaceActive: true });
+      return ctx.views.openView(input.viewId, { strategy: { kind: "replace-active" } });
+    },
+    emit: (resource, emission) => ctx.resources.openResource(resource, { replaceActive: emission.open !== "pin" }),
+    parseResourceSegments: input.toResource,
+    resourceUrlSegment: input.resourceSegment,
+  });

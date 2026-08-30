@@ -2,7 +2,7 @@ import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdi
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { setDashboardSidenavSelection } from "@/shared/workbench/dashboard-sidenav";
-import { registerDashboardViewRoute } from "@/shared/workbench/route-helper";
+import { registerDashboardHostPage, registerDashboardViewRoute } from "@/shared/workbench/route-helper";
 import { StartWidget } from "./components/start-widget";
 
 const registerStartWidget = (ctx: WorkbenchModuleContext) => {
@@ -27,6 +27,13 @@ export const createStartModule = () =>
     id: "dashboard.start",
     activate(ctx) {
       registerStartWidget(ctx);
+      registerDashboardHostPage(ctx, {
+        id: "start",
+        title: dashboardViews.start.label,
+        icon: dashboardViews.start.icon,
+        urlPath: "",
+        viewId: dashboardViews.start.id,
+      });
       registerDashboardViewRoute(ctx, {
         id: dashboardViews.start.id,
         mode: "project",

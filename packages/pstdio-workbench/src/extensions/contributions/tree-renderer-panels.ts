@@ -10,7 +10,7 @@ import {
 import type { ExtensionTreePanelRecord } from "./tree-renderer-contribution-types";
 
 interface RegisterTreeViewWidgetInput {
-  resourcePanels?: WorkbenchExtensionMetadata["resourcePanels"];
+  pages?: WorkbenchExtensionMetadata["pages"];
   resolveViewInput?: WorkbenchExtensionViewInputResolver;
   workbench: WorkbenchModuleContext;
 }
@@ -26,14 +26,13 @@ export const registerTreeViewWidget = (
   return registerWorkbenchExtensionPanel({
     workbench: input.workbench,
     path: panel.path,
-    aliases: panel.aliases,
     resolveInput: resolveWorkbenchExtensionViewInput(input.resolveViewInput, panel),
     contribution: toWorkbenchCompositionPanelContribution({
       panel,
       rendererId,
       declarationIndex: index,
       menuDeclarationOffset: menuDeclarationOffset,
-      resourcePanels: input.resourcePanels,
+      pages: input.pages,
     }),
   });
 };

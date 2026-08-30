@@ -16,15 +16,17 @@ turns the string into a target the workbench knows how to dispatch.
 
 A parser returns one of:
 
-- `{ kind: "resource", resource }` — open a resource (uses your presenters from
-  story 5).
-- `{ kind: "panel", widgetId, region?, resource? }` — reveal a specific widget.
+- `{ kind: "page", pageId, resource?, slot?, open? }` — activate a page. A
+  resource is never a destination on its own: it rides along as an argument
+  and the page's bindings decide which panel presents it. A `slot` id reveals
+  one of the page's static slots.
 - `{ kind: "command", commandId, args? }` — run a command.
+- `{ kind: "href", href }` — open an external link.
 - `{ kind: "compound", targets }` — apply multiple targets together. If any
   one fails, the layout is rolled back, so a deep link either applies fully
   or not at all.
 
-Then `navigation.openTarget(target)` (or `navigation.openLocation(uri)` for
+Then `navigation.openTarget(target)` (or `navigation.navigate(location)` for
 strings) is the one entry point — same path regardless of who triggered it.
 
 The story exposes each shape as buttons so you can compare the URL form

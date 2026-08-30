@@ -5,8 +5,15 @@ import { metadataCommandId, metadataRefId, toInternalWhen } from "./workbench-ex
 
 type MetadataView = WorkbenchExtensionMetadata["views"][number];
 
-const resourceKindForView = (metadata: WorkbenchExtensionMetadata, viewId: string) =>
-  metadata.resourceViews.find((edge) => metadataRefId(edge.view) === viewId)?.resourceKind.id;
+// A view presents a resource kind when a page binds it to one; renderers read the kind
+// to shape row resources.
+const resourceKindForView = (metadata: WorkbenchExtensionMetadata, viewId: string) => {
+  for (const page of metadata.pages ?? []) {
+    const binding = (page.bindings ?? []).find((candidate) => metadataRefId(candidate.view) === viewId);
+    if (binding) return binding.resourceKind.id;
+  }
+  return (metadata.resourceViews ?? []).find((edge) => metadataRefId(edge.view) === viewId)?.resourceKind.id;
+};
 
 const panelPlacements = (metadata: WorkbenchExtensionMetadata, viewId: string) => {
   const direct = metadata.placements.flatMap((placement) =>
@@ -20,7 +27,7 @@ const panelPlacements = (metadata: WorkbenchExtensionMetadata, viewId: string) =
         ]
       : [],
   );
-  const edges = metadata.resourceViews.filter((edge) => metadataRefId(edge.view) === viewId);
+  const edges = (metadata.resourceViews ?? []).filter((edge) => metadataRefId(edge.view) === viewId);
   const resource = edges.flatMap((edge) =>
     metadata.placements.flatMap((placement) =>
       placement.item.kind === "resource-slot" &&
@@ -72,8 +79,8 @@ const panels = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensio
       id: view.id,
       extensionId: view.extensionId,
       title: view.title,
-      path: view.path,
       icon: view.icon,
+      path: view.path,
       show: placements.length === 0 ? undefined : placements.length === 1 ? placements[0] : placements,
       panelMenus: menus.length > 0 ? menus : undefined,
       ...viewBody(view),
@@ -256,6 +263,7 @@ export const toInternalWorkbenchExtensionMetadata = (
     commandPaletteContributions: metadata.commandPaletteContributions,
     modes: modes(metadata),
     panels: adaptedPanels,
+    pages: metadata.pages ?? [],
     resourceKinds: metadata.resourceKinds.map((kind) => ({
       id: kind.id,
       extensionId: kind.extensionId,
@@ -280,7 +288,7 @@ export const toInternalWorkbenchExtensionMetadata = (
         ]),
       ),
     })),
-    resourcePanels: metadata.resourceViews.map((edge) => ({
+    resourcePanels: (metadata.resourceViews ?? []).map((edge) => ({
       id: edge.id,
       extensionId: edge.extensionId,
       resourceKind: edge.resourceKind.id,

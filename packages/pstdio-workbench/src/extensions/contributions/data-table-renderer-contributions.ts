@@ -9,7 +9,7 @@ import type {
   ResourceRef,
 } from "../../core";
 import { WorkbenchIcon } from "../../react";
-import { toWorkbenchNavigationTargetResult } from "../host/extension-navigation-target";
+import { toWorkbenchActivationResult } from "../host/extension-navigation-target";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import {
@@ -128,8 +128,12 @@ const registerRenderer = (
     onRowActivate: record.rowActivationHandlerId
       ? async (row) => {
           const result = await run(record.rowActivationHandlerId!, { row: originalRows.get(row) ?? row }, row.resource);
-          const target = toWorkbenchNavigationTargetResult(result, { extensionId: record.extensionId });
-          if (target) await context.workbench.navigation.openTarget(target);
+          const activation = toWorkbenchActivationResult(result, { extensionId: record.extensionId });
+          if (activation?.kind === "emission") {
+            await context.workbench.pages.emitResource(activation.resource, { open: activation.open });
+          } else if (activation) {
+            await context.workbench.navigation.openTarget(activation.target);
+          }
         }
       : undefined,
   });
@@ -140,7 +144,7 @@ const registerView = (
   panel: DataTableViewRecord,
   index: number,
   menuDeclarationOffset: number,
-  resourcePanels: WorkbenchExtensionMetadata["resourcePanels"],
+  pages: WorkbenchExtensionMetadata["pages"],
   resolveViewInput?: WorkbenchExtensionViewInputResolver,
 ) => {
   const rendererId = panelRendererId(panel, "dataTable");
@@ -148,14 +152,13 @@ const registerView = (
   return registerWorkbenchExtensionPanel({
     workbench: context.workbench,
     path: panel.path,
-    aliases: panel.aliases,
     resolveInput: resolveWorkbenchExtensionViewInput(resolveViewInput, panel),
     contribution: toWorkbenchCompositionPanelContribution({
       panel,
       rendererId,
       declarationIndex: index,
       menuDeclarationOffset: menuDeclarationOffset,
-      resourcePanels,
+      pages,
     }),
   });
 };
@@ -164,13 +167,13 @@ export const registerWorkbenchExtensionDataTableRenderers = (
   context: WorkbenchExtensionCommandContext,
   records: WorkbenchExtensionDataTableRendererRecord[],
   panels: DataTableViewRecord[],
-  resourcePanels: WorkbenchExtensionMetadata["resourcePanels"] = [],
+  pages: WorkbenchExtensionMetadata["pages"] = [],
   resolveViewInput?: WorkbenchExtensionViewInputResolver,
 ): Disposable => {
   const disposables: Disposable[] = records.map((record) => registerRenderer(context, record));
   const menuOffsets = panelMenuDeclarationOffsets(panels);
   panels.forEach((panel, index) => {
-    const disposable = registerView(context, panel, index, menuOffsets[index]!, resourcePanels, resolveViewInput);
+    const disposable = registerView(context, panel, index, menuOffsets[index]!, pages, resolveViewInput);
     if (disposable) disposables.push(disposable);
   });
   return {

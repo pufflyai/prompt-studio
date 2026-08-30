@@ -23,6 +23,11 @@ export interface ResourceRouteContract {
   // Route id / assertion label so a contract failure names the offending route.
   name: string;
   setup: () => RouteContractHarness | Promise<RouteContractHarness>;
+  // The page whose location carries these resources. When set, opens run through
+  // `pages.activatePage(page, { resource })` — the only way a resource reaches a
+  // screen. Contracts for host-page internals may omit it and drive the presenters
+  // the page activation wraps.
+  page?: string;
   root: ResourceRef;
   detail: ResourceRef;
   detailB?: ResourceRef;
@@ -53,7 +58,8 @@ export const describeResourceRouteContract = (contract: ResourceRouteContract) =
     });
 
     const open = async (resource: ResourceRef) => {
-      await workbench.resources.openResource(resource);
+      if (contract.page) await workbench.pages.activatePage(contract.page, { resource });
+      else await workbench.resources.openResource(resource);
       await flush();
     };
 

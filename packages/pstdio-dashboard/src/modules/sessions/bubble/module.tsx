@@ -76,9 +76,14 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext, drafts?: Dash
       rendererId: dashboardWidgetIds.sessionBubble,
       openCommandId: dashboardCommandIds.createSession,
       eligibleLocations: {
-        canOpenLocation: ({ resource, viewId }) =>
+        // A Location is a view, a page slot, or a resource. Every one of them can
+        // start a session except the sessions list itself, which already is one.
+        canOpenLocation: ({ resource, viewId, pageId }) =>
           viewId !== dashboardViews.sessions.id &&
-          (Boolean(viewId) || Boolean(resource && resource.kind !== "session" && ctx.resources.getKind(resource.kind))),
+          pageId !== "sessions" &&
+          (Boolean(viewId) ||
+            Boolean(pageId) ||
+            Boolean(resource && resource.kind !== "session" && ctx.resources.getKind(resource.kind))),
       },
       icon: "MessageCircle",
       tab: {

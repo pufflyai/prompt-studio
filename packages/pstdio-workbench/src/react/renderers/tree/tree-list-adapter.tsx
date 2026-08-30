@@ -41,7 +41,7 @@ const activeNodeIds = (ids: string[]) => {
 
 const resolveTreeNodeResourceUri = (node: TreeNode) => {
   if (node.resource) return node.resource.uri;
-  if (node.target?.kind === "resource") return node.target.resource.uri;
+  if (node.target?.kind === "page") return node.target.resource?.uri;
   return undefined;
 };
 
@@ -153,7 +153,7 @@ const resolveTreeNodeNavigationIntent = (node: TreeNode) => {
 
 const resolveTreeNodeResource = (node: TreeNode): ResourceRef | undefined => {
   if (node.resource) return node.resource;
-  if (node.target?.kind === "resource") return node.target.resource;
+  if (node.target?.kind === "page") return node.target.resource;
   return undefined;
 };
 

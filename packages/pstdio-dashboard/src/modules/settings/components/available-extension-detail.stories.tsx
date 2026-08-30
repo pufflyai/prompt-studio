@@ -27,7 +27,7 @@ const metadata = {
   viewMenus: [],
   placements: [],
   resourceKinds: [],
-  resourceViews: [],
+  pages: [],
   navigationItems: [],
   statusBarItems: [],
   statuses: [],

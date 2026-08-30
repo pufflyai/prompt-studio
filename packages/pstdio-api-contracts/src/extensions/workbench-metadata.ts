@@ -311,7 +311,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   viewMenus: z.array(workbenchExtensionViewMenuRecordSchema),
   placements: z.array(workbenchExtensionPlacementRecordSchema),
   resourceKinds: z.array(workbenchExtensionResourceKindRecordSchema),
-  resourceViews: z.array(workbenchExtensionResourceViewRecordSchema),
+  resourceViews: z.array(workbenchExtensionResourceViewRecordSchema).optional(),
   resourceHierarchyProviders: z
     .array(z.object({ id: z.string(), extensionId: z.string(), resourceKind: resourceKindRefSchema }))
     .optional(),

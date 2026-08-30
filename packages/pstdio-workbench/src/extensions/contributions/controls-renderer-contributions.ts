@@ -90,7 +90,7 @@ const registerControlsViewWidget = (
   panel: ControlsViewRecord,
   index: number,
   menuDeclarationOffset: number,
-  resourcePanels: WorkbenchExtensionMetadata["resourcePanels"],
+  pages: WorkbenchExtensionMetadata["pages"],
   adapter: WorkbenchExtensionControlsAdapter,
 ) => {
   const rendererId = panelRendererId(panel, "controls");
@@ -98,14 +98,13 @@ const registerControlsViewWidget = (
   return registerWorkbenchExtensionPanel({
     workbench: context.workbench,
     path: panel.path,
-    aliases: panel.aliases,
     resolveInput: resolveWorkbenchExtensionViewInput(adapter.resolveViewInput, panel),
     contribution: toWorkbenchCompositionPanelContribution({
       panel,
       rendererId,
       declarationIndex: index,
       menuDeclarationOffset: menuDeclarationOffset,
-      resourcePanels,
+      pages,
     }),
   });
 };
@@ -118,14 +117,14 @@ export const registerWorkbenchExtensionControlsRenderers = (
   records: WorkbenchExtensionControlsRendererRecord[],
   panels: ControlsViewRecord[],
   adapter: WorkbenchExtensionControlsAdapter = {},
-  resourcePanels: WorkbenchExtensionMetadata["resourcePanels"] = [],
+  pages: WorkbenchExtensionMetadata["pages"] = [],
 ): Disposable => {
   const disposables: Disposable[] = [];
 
   for (const record of records) disposables.push(registerControlsRenderer(context, record, adapter));
   const menuOffsets = panelMenuDeclarationOffsets(panels);
   panels.forEach((panel, index) => {
-    const disposable = registerControlsViewWidget(context, panel, index, menuOffsets[index]!, resourcePanels, adapter);
+    const disposable = registerControlsViewWidget(context, panel, index, menuOffsets[index]!, pages, adapter);
     if (disposable) disposables.push(disposable);
   });
 

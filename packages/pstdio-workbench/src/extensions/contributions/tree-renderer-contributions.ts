@@ -11,8 +11,9 @@ import type {
   WorkbenchModuleContext,
 } from "../../core";
 import { FILE_SECTION_NAVIGATION_METADATA_KEY } from "../../core/registries/renderers/file-section-navigation";
+import { workbenchEmitResourceCommandId } from "../../core/workbench-built-ins";
 import { unwrapCommandValue } from "../host/command-response";
-import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
+import { isResourceEmission, toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 import { panelMenuDeclarationOffsets, type WorkbenchExtensionViewInputResolver } from "./panel-contributions";
 import { localizeParamSchema } from "./param-schema-localization";
@@ -198,12 +199,28 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     };
   };
 
-  const mapTarget = (
-    target: ExtensionTreeTarget | undefined,
-    node: ExtensionTreeNode,
-    ctx: TreeContext,
-  ): NavigationTarget | undefined => {
-    if (!target) return undefined;
+  // A node target maps to a host target; an emission (or a bare `resource` with no
+  // target) maps to the emit-resource built-in, so the active page's bindings place it.
+  const emissionTarget = (resource: ReturnType<typeof resolveResource>, open?: "preview" | "pin") => ({
+    kind: "command" as const,
+    commandId: workbenchEmitResourceCommandId,
+    args: { resource, open },
+  });
+
+  const mapTarget = (node: ExtensionTreeNode, ctx: TreeContext): NavigationTarget | undefined => {
+    const target = node.target;
+    if (!target) {
+      return node.resource ? emissionTarget(resolveResource(node.resource)) : undefined;
+    }
+    if (isResourceEmission(target)) {
+      return emissionTarget(
+        resolveResource(
+          target.resource,
+          target.section ? { treeId: record.id, targetNodeId: node.id, anchors: target.section.anchors } : undefined,
+        ),
+        target.open,
+      );
+    }
     const commandTargetOf = (commandTarget: Extract<ExtensionTreeTarget, { kind: "command" }>) => ({
       kind: "command" as const,
       commandId: runnerCommandId,
@@ -218,13 +235,8 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     return toWorkbenchNavigationTarget(target, {
       commandTargetOf,
       extensionId: record.extensionId,
-      resourceOf: (resource, resourceTarget) =>
-        resolveResource(
-          resource,
-          resourceTarget.section
-            ? { treeId: record.id, targetNodeId: node.id, anchors: resourceTarget.section.anchors }
-            : undefined,
-        ),
+      sectionSource: { treeId: record.id, targetNodeId: node.id },
+      resolveResource: (resource) => resolveResource(resource),
     });
   };
 
@@ -270,7 +282,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       iconColor: node.iconColor,
       iconTooltip: node.iconTooltip,
       resource: node.resource ? resolveResource(node.resource) : undefined,
-      target: mapTarget(node.target, node, ctx),
+      target: mapTarget(node, ctx),
       rowVariant: node.rowVariant,
       actions: node.actions?.map((action) => mapAction(action, node, ctx)),
       contextMenuActions: node.contextMenuActions?.map((action) => mapAction(action, node, ctx)),
@@ -414,7 +426,7 @@ export const registerWorkbenchExtensionTreeRenderers = (input: RegisterWorkbench
     const disposable = registerTreeViewWidget(
       {
         workbench: input.workbench,
-        resourcePanels: input.metadata.resourcePanels,
+        pages: input.metadata.pages,
         resolveViewInput: input.resolveViewInput,
       },
       panel,

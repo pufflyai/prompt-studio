@@ -1,6 +1,7 @@
 import type { NavigationTarget as ExtensionNavigationTarget } from "@pstdio/sdk/extensions";
 import type { Disposable, TreeNode, TreeViewSection, WorkbenchModuleContext } from "@pstdio/workbench";
 import { toWorkbenchNavigationTarget, toWorkbenchWhenExpression } from "@pstdio/workbench/extensions";
+import { clearExtensionLandingPageId, setExtensionLandingPageId } from "@/shared/app/extension-landing-page";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { buildDashboardWorkbenchWhenExpression } from "@/shared/extensions/workbench-extension-contributions";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
@@ -43,6 +44,18 @@ const toSections = (ctx: WorkbenchModuleContext, items: NavigationItem[]) => {
   );
 };
 
+const firstPageTargetId = (items: NavigationItem[]) => {
+  for (const item of [...items].sort(byOrderAndId)) {
+    const target = toWorkbenchNavigationTarget(item.action as ExtensionNavigationTarget, {
+      extensionId: item.extensionId,
+    });
+    const candidates = target.kind === "compound" ? target.targets : [target];
+    const pageTarget = candidates.find((candidate) => candidate.kind === "page");
+    if (pageTarget?.kind === "page") return pageTarget.pageId;
+  }
+  return undefined;
+};
+
 export const registerExtensionNavigation = (
   ctx: WorkbenchModuleContext,
   metadata: ResolvedWorkbenchExtensionMetadata,
@@ -50,6 +63,7 @@ export const registerExtensionNavigation = (
   const items = metadata.navigationItems.filter(isProjectNavigationItem);
   const headerItems = items.filter((item) => item.group === "");
   const bodyItems = items.filter((item) => item.group !== "");
+  setExtensionLandingPageId(ctx, firstPageTargetId([...headerItems, ...bodyItems]));
   const registrations = [
     registerSidenavContribution(ctx, {
       id: "dashboard.extensions.project-navigation.header",
@@ -72,6 +86,7 @@ export const registerExtensionNavigation = (
 
   return {
     dispose() {
+      clearExtensionLandingPageId(ctx);
       for (const registration of registrations) registration.dispose();
     },
   };

@@ -7,7 +7,7 @@ import {
 import { buildDashboardExtensionMenuRegistrations } from "./workbench-extension-contributions";
 import { extensionLabMetadata as metadata } from "./workbench-extension-metadata.fixture";
 
-const labViewWhenExpression = 'workbench.view.id == "pstdio.extension-lab.view.labPage"';
+const labViewWhenExpression = 'workbench.view.id == "pstdio.extension-lab.view.lab-page"';
 const ticketResourceContextMenuPath = resourceContextMenuPath("ticket");
 
 describe("dashboard workbench extension menu contributions", () => {
@@ -66,7 +66,7 @@ describe("dashboard workbench extension menu contributions", () => {
           label: "Lab: Say hello",
           icon: "flask-conical",
           when: {
-            viewId: "pstdio.extension-lab.view.labPage",
+            viewId: "pstdio.extension-lab.view.lab-page",
           },
         },
         {
@@ -77,7 +77,7 @@ describe("dashboard workbench extension menu contributions", () => {
           target: "workbench.nav.overflow",
           label: "Bump lab counter",
           when: {
-            viewId: "pstdio.extension-lab.view.labPage",
+            viewId: "pstdio.extension-lab.view.lab-page",
           },
         },
       ],
@@ -115,7 +115,7 @@ describe("dashboard workbench extension menu contributions", () => {
   test("maps workspace actions to the declared resource header", () => {
     const { registrations } = buildDashboardExtensionMenuRegistrations(metadata);
     const workspaceRegistration = registrations.find(
-      (registration) => registration.contribution.id === "pstdio.extension-lab.command.run-review.header",
+      (registration) => registration.contribution.id === "pstdio.extension-lab.command.demo.workspace-only.header",
     );
 
     expect(workspaceRegistration).toEqual(
@@ -124,9 +124,9 @@ describe("dashboard workbench extension menu contributions", () => {
           expect.objectContaining({
             menuPath: resourceContextMenuPath("workspace"),
             menuItem: expect.objectContaining({
-              commandId: "dashboard.extension.menu.pstdio.extension-lab.command.run-review.header",
+              commandId: "dashboard.extension.menu.pstdio.extension-lab.command.demo.workspace-only.header",
               group: "primary",
-              label: "Run review",
+              label: "Workspace-only lab action",
               when: 'workbench.resource.kind == "workspace"',
             }),
           }),
@@ -145,8 +145,6 @@ describe("dashboard workbench extension ticket menu contributions", () => {
           id: "ticket",
           localId: "ticket",
           extensionId: "pstdio.pstdio-planner",
-          surface: "primary",
-          slots: [],
           menuSlots: [{ id: "headerPrimary", placement: "header-primary", access: "owner" }],
         },
       ],
@@ -191,8 +189,6 @@ describe("dashboard workbench extension ticket menu contributions", () => {
           id: "ticket",
           localId: "ticket",
           extensionId: "pstdio.pstdio-planner",
-          surface: "primary",
-          slots: [],
           menuSlots: [{ id: "headerOverflow", placement: "context-menu", access: "owner", label: "Ticket actions" }],
         },
       ],

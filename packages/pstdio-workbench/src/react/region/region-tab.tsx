@@ -64,6 +64,12 @@ const useRegionTabBehavior = (input: WorkbenchRegionTabProps) => {
   const setMenuOpen = (menu: "custom" | "context", open: boolean) => {
     setOpenMenu((current) => (open ? menu : current === menu ? undefined : current));
   };
+  // Pinning is host tab-strip behavior: double-clicking a preview tab keeps it open,
+  // so the next preview stacks instead of swapping. Renderers never grow a pin gesture.
+  const pinPreviewTab = () => {
+    if (!isPreview || disabled) return;
+    workbench.layout.updatePanel(placement.widgetId, { strategy: { kind: "persistent" } });
+  };
   const reorderWithKeyboard = (event: KeyboardEvent<HTMLElement>) => {
     if (!sortable || disabled || !event.altKey) return;
     if (event.key === "ArrowLeft" && previousWidgetId) {
@@ -84,6 +90,7 @@ const useRegionTabBehavior = (input: WorkbenchRegionTabProps) => {
     openContextMenu,
     openCustomMenu,
     openMenu,
+    pinPreviewTab,
     reorderWithKeyboard,
     setMenuOpen,
     sortableState,
@@ -295,6 +302,7 @@ export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
         {...listeners}
         onKeyDown={behavior.reorderWithKeyboard}
         onContextMenu={behavior.hasContextMenu ? behavior.openContextMenu : undefined}
+        onDoubleClick={behavior.isPreview ? behavior.pinPreviewTab : undefined}
         onClick={behavior.hasCustomMenu && isActive && !disabled ? behavior.openCustomMenu : undefined}
       >
         <WorkbenchRegionTabLabel

@@ -1,13 +1,16 @@
-import type { ResourceRef, WorkbenchModuleContribution } from "@pstdio/workbench";
+import { isWorkbenchViewHierarchyNode, type ResourceRef, type WorkbenchModuleContribution } from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { getExtensionLandingPageId } from "@/shared/app/extension-landing-page";
 import type { DashboardLastResourcePersistence } from "@/shared/app/last-resource-persistence";
+import { registerDashboardPageNavigation } from "@/shared/app/page-navigation";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { dashboardViews } from "@/shared/app/resources";
 import type { DashboardSessionSelectionPersistence } from "@/shared/app/session-selection-persistence";
 import {
   getDashboardExtensionsReadyProjectId,
+  hasDashboardExtensionsModule,
   subscribeDashboardExtensionsReadyProject,
 } from "@/shared/extensions/extension-readiness";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
@@ -75,6 +78,14 @@ const isExtensionsReadyForSelectedProject = (ctx: Parameters<WorkbenchModuleCont
   return Boolean(projectId && getDashboardExtensionsReadyProjectId(ctx) === projectId);
 };
 
+// True while this project's extension contributions are still coming. A workbench
+// with no extensions module never waits.
+const isExtensionsPendingForSelectedProject = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
+  const projectId = getDashboardSelectedProjectId(ctx);
+  if (!projectId || isExtensionsReadyForSelectedProject(ctx)) return false;
+  return hasDashboardExtensionsModule(ctx);
+};
+
 const hasHistoryForSelectedProject = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
   const projectId = getDashboardSelectedProjectId(ctx);
   return Boolean(
@@ -93,6 +104,7 @@ const shouldWaitForHistoryExtensions = (ctx: Parameters<WorkbenchModuleContribut
   const history = ctx.history.store.getState();
   const entry = history.entries[history.cursor];
   if (!entry) return false;
+  if (entry.kind === "page" && entry.pageId) return !ctx.pages.registry.getPage(entry.pageId);
   if (entry.viewId) return !isExtensionsReadyForSelectedProject(ctx) && !ctx.views.canResolveView(entry.viewId);
   if (entry.resource) return shouldWaitForExtensions(ctx, entry.resource);
   if (entry.modeId && !ctx.modes.getMode(entry.modeId)) return true;
@@ -106,20 +118,69 @@ const restoreSelectedProjectHistory = (ctx: Parameters<WorkbenchModuleContributi
   return ctx.history.restore() ? ("restored" as const) : ("empty" as const);
 };
 
-const openStartView = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) =>
-  ctx.views.openView(dashboardViews.start.id);
+// When nothing restores, the host activates the first project-navigation item with a
+// page target; a project with no UI extensions lands on the start host page. The
+// fallback is itself a page, so the location model has no special case.
+const openLandingPage = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
+  const landingPageId = getExtensionLandingPageId(ctx);
+  if (landingPageId && ctx.pages.registry.getPage(landingPageId)) return ctx.pages.activatePage(landingPageId);
+  return ctx.views.openView(dashboardViews.start.id);
+};
 
+// A URL deep link beats the persisted history and last location on boot. The location
+// resolves through the page URL scheme (host segments plus extension namespaces).
 const restoreRequestedView = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0], guard: LandingRunGuard) => {
   if (!guard.requestedViewPath) return "empty" as const;
-  const target = ctx.views.resolvePath(guard.requestedViewPath);
-  if (!target || !ctx.views.canResolveView(target.viewId)) {
-    return isExtensionsReadyForSelectedProject(ctx) ? ("missing" as const) : ("pending" as const);
+  let target: ReturnType<typeof ctx.navigation.resolveLocation> | undefined;
+  try {
+    target = ctx.navigation.resolveLocation(guard.requestedViewPath);
+  } catch {
+    target = undefined;
   }
+  if (!target || target.kind !== "page") {
+    const legacyView = ctx.views.resolvePath(guard.requestedViewPath);
+    if (!legacyView || !ctx.views.canResolveView(legacyView.viewId)) {
+      return isExtensionsReadyForSelectedProject(ctx) ? ("missing" as const) : ("pending" as const);
+    }
+    const history = ctx.history.store.getState();
+    const currentEntry = history.entries[history.cursor];
+    const resourceBelongsToLegacyView = currentEntry?.resource
+      ? ctx.resources
+          .walkHierarchy(currentEntry.resource)
+          .some(
+            (node) => isWorkbenchViewHierarchyNode(node) && ctx.views.resolveViewId(node.viewId) === legacyView.viewId,
+          )
+      : false;
+    if (
+      (currentEntry?.viewId && ctx.views.resolveViewId(currentEntry.viewId) === legacyView.viewId) ||
+      resourceBelongsToLegacyView
+    ) {
+      return "empty" as const;
+    }
+    return ctx.views
+      .openView(legacyView.viewId, { strategy: { kind: "replace-active" } })
+      .then(() =>
+        guard.isCurrent() ? ({ status: "opened" } as const) : ({ resource: undefined, status: "stale" } as const),
+      );
+  }
+  const location = ctx.pages.getActiveLocation();
+  if (location && location.pageId === target.pageId && location.resource?.uri === target.resource?.uri) {
+    return "empty" as const;
+  }
+  // A reload lands at the URL of the location the user was already on. When the
+  // persisted history top matches the URL, the history restore owns the boot so tab
+  // arrangement and selections come back with it.
   const history = ctx.history.store.getState();
-  const currentHistoryViewId = history.entries[history.cursor]?.viewId;
-  if (currentHistoryViewId && ctx.views.resolveViewId(currentHistoryViewId) === target.viewId) return "empty" as const;
-  return ctx.views
-    .openView(target.viewId, { strategy: { kind: "replace-active" } })
+  const currentEntry = history.entries[history.cursor];
+  if (
+    currentEntry?.kind === "page" &&
+    currentEntry.pageId === target.pageId &&
+    currentEntry.resource?.uri === target.resource?.uri
+  ) {
+    return "empty" as const;
+  }
+  return ctx.navigation
+    .openTarget(target)
     .then(() =>
       guard.isCurrent() ? ({ status: "opened" } as const) : ({ resource: undefined, status: "stale" } as const),
     );
@@ -151,11 +212,9 @@ const restoreLastResource = (ctx: Parameters<WorkbenchModuleContribution["activa
 
   if (isMissingSyncedResource(ctx, lastResource)) {
     ctx.lastResource.set(undefined);
-    return ctx.views
-      .openView(dashboardViews.start.id)
-      .then(() =>
-        guard.isCurrent() ? ({ status: "opened" } as const) : ({ resource: undefined, status: "stale" } as const),
-      );
+    return openLandingPage(ctx).then(() =>
+      guard.isCurrent() ? ({ status: "opened" } as const) : ({ resource: undefined, status: "stale" } as const),
+    );
   }
 
   if (shouldWaitForExtensions(ctx, lastResource)) return "pending" as const;
@@ -172,7 +231,7 @@ const openSelectedProjectLanding = async (
   const requestedViewRestore = restoreRequestedView(ctx, guard);
   if (requestedViewRestore === "pending") return "pending";
   if (requestedViewRestore === "missing") {
-    await openStartView(ctx);
+    await openLandingPage(ctx);
     return guard.isCurrent() ? ({ status: "opened" } as const) : { resource: undefined, status: "stale" as const };
   }
   if (requestedViewRestore !== "empty") return await requestedViewRestore;
@@ -192,7 +251,11 @@ const openSelectedProjectLanding = async (
     if (restored !== "empty") return restored;
   }
 
-  await openStartView(ctx);
+  // The landing rule reads the extension navigation items, so the choice between an
+  // extension page and the start page is only deterministic once extensions are ready.
+  if (isExtensionsPendingForSelectedProject(ctx)) return "pending";
+
+  await openLandingPage(ctx);
   return guard.isCurrent() ? ({ status: "opened" } as const) : { resource: undefined, status: "stale" as const };
 };
 
@@ -251,7 +314,17 @@ const openSelectedProjectLandingWhenReady = (
       (!requestedView || !ctx.views.canResolveView(requestedView.viewId)) &&
       !isExtensionsReadyForSelectedProject(ctx),
   );
-  if (!lastResource && !legacyView && !shouldWaitForHistory && !shouldWaitForRequestedView) return undefined;
+  // The landing choice itself waits for extensions (see openSelectedProjectLanding).
+  const shouldWaitForLandingChoice = isExtensionsPendingForSelectedProject(ctx);
+  if (
+    !lastResource &&
+    !legacyView &&
+    !shouldWaitForHistory &&
+    !shouldWaitForRequestedView &&
+    !shouldWaitForLandingChoice
+  ) {
+    return undefined;
+  }
 
   const shouldWaitForSyncedResource = lastResource ? isWaitingForSyncedResource(lastResource) : false;
   const shouldWaitForExtensionResource = lastResource ? shouldWaitForExtensions(ctx, lastResource) : false;
@@ -262,13 +335,20 @@ const openSelectedProjectLandingWhenReady = (
     !shouldWaitForExtensionResource &&
     !shouldWaitForLegacyView &&
     !shouldWaitForHistory &&
-    !shouldWaitForRequestedView
+    !shouldWaitForRequestedView &&
+    !shouldWaitForLandingChoice
   ) {
     return undefined;
   }
 
   if (shouldWaitForSyncedResource) unsubscribeDashboardData = subscribeDashboardData(open);
-  if (shouldWaitForExtensionResource || shouldWaitForLegacyView || shouldWaitForHistory || shouldWaitForRequestedView) {
+  if (
+    shouldWaitForExtensionResource ||
+    shouldWaitForLegacyView ||
+    shouldWaitForHistory ||
+    shouldWaitForRequestedView ||
+    shouldWaitForLandingChoice
+  ) {
     unsubscribeExtensionsReady = subscribeDashboardExtensionsReadyProject(ctx, open);
   }
 
@@ -284,6 +364,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
     id: "dashboard.bootstrap",
     activate(ctx) {
       ctx.context.set("project.open", true);
+      registerDashboardPageNavigation(ctx);
 
       let landingDisposable: { dispose(): void } | undefined;
       let initialSyncWaitUnsubscribe: (() => void) | undefined;
@@ -321,6 +402,10 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
           },
           onSettled: () => {
             requestedViewPath = undefined;
+            // The boot landed somewhere other than the persisted history top (URL
+            // deep link, landing page): finish hydration by adopting the current
+            // location, or every navigation control stays disabled.
+            ctx.history.adoptCurrentLocation();
             void restoreSelectedSession(ctx, selectedSessionId);
           },
         });

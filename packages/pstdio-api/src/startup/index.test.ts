@@ -75,9 +75,13 @@ const assertExistingProjectSourceRefresh = async (tempRoot: string) => {
   const source = resolve(REPO_ROOT, "extensions/extension-lab");
   const installed = join(pstdioHome, "extensions/extension-lab");
 
+  // A first-party extension is installed with the workspace SDK linked, the way the
+  // e2e and packaged runs install repo extensions: it uses SDK APIs from this checkout,
+  // which the published package does not carry until the next release.
   await installExtensionSource({
     source,
     installName: "extension-lab",
+    skipInstall: true,
     env: { ...process.env, PSTDIO_HOME: pstdioHome },
   });
   expect(existsSync(join(installed, "node_modules/@pstdio/sdk/package.json"))).toBe(true);
@@ -90,7 +94,9 @@ const assertExistingProjectSourceRefresh = async (tempRoot: string) => {
 
   writeFileSync(join(installed, "README.md"), "stale extension lab");
   process.env.PSTDIO_DISABLE_EMBED_MANIFEST = "1";
-  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([{ source, installName: "extension-lab", force: true }]);
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([
+    { source, installName: "extension-lab", force: true, skipInstall: true },
+  ]);
 
   const restarted = await createTestApp({ databasePath, storageRoot });
   try {

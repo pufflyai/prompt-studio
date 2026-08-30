@@ -22,7 +22,7 @@ const check = (overrides: Partial<ExtensionsCheckResponse> = {}): ExtensionsChec
   viewMenus: [],
   placements: [],
   resourceKinds: [],
-  resourceViews: [],
+  pages: [],
   resourceHierarchyProviders: [],
   navigationItems: [],
   statusBarItems: [],

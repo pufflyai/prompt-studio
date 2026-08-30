@@ -40,7 +40,7 @@ const emptyRuntime = {
   privateHandlers: [],
   resourceHierarchyProviders: [],
   resourceKinds: [],
-  resourceViews: [],
+  pages: [],
   schedules: [],
   settings: [],
   settingsPanels: [],

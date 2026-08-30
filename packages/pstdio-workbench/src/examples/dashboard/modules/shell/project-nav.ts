@@ -5,7 +5,9 @@ import { dashboardHelpMenuPath } from "./commands";
 export const dashboardNavigationTreeViewId = "dashboard-workbench.navigation";
 
 // Builds the project navigation tree shown in the Sidenav while the
-// "project" mode is active.
+// "project" mode is active. Navigation only targets pages, commands, and
+// hrefs, so each row routes through the dashboard command that opens the
+// destination view (the command keeps the mode + breadcrumb side effects).
 export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) => {
   ctx.renderers.registerTreeRenderer({
     id: dashboardNavigationTreeViewId,
@@ -25,13 +27,13 @@ export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) =
             id: dashboardViews.tickets.id,
             label: "Tickets",
             icon: dashboardViews.tickets.icon,
-            target: { kind: "view", viewId: dashboardViews.tickets.id },
+            target: { kind: "command", commandId: "dashboard.openTickets" },
           },
           {
             id: dashboardViews.workspaces.id,
             label: "Workspaces",
             icon: dashboardViews.workspaces.icon,
-            target: { kind: "view", viewId: dashboardViews.workspaces.id },
+            target: { kind: "command", commandId: "dashboard.openWorkspaces" },
           },
         ],
       },
@@ -44,19 +46,19 @@ export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) =
             id: dashboardViews.lab.id,
             label: "Lab",
             icon: "FlaskConical",
-            target: { kind: "view", viewId: dashboardViews.lab.id },
+            target: { kind: "command", commandId: "dashboard.openLab" },
           },
           {
             id: dashboardViews.repoHealth.id,
             label: "Repo health",
             icon: "GitBranch",
-            target: { kind: "view", viewId: dashboardViews.repoHealth.id },
+            target: { kind: "command", commandId: "dashboard.openRepoHealth" },
           },
           {
             id: dashboardViews.changelog.id,
             label: "Changelog",
             icon: "Workflow",
-            target: { kind: "view", viewId: dashboardViews.changelog.id },
+            target: { kind: "command", commandId: "dashboard.openChangelog" },
           },
         ],
       },
@@ -66,7 +68,7 @@ export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) =
         id: dashboardViews.sessions.id,
         label: "Sessions",
         icon: "MessageCircle",
-        target: { kind: "view", viewId: dashboardViews.sessions.id },
+        target: { kind: "command", commandId: "dashboard.openSessions" },
       },
       {
         id: "help",

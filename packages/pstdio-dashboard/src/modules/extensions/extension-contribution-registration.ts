@@ -7,6 +7,7 @@ import {
 import { createElement } from "react";
 import { buildAbsoluteApiUrl } from "@/lib/api";
 import { prepareDashboardNavigationResource, selectDashboardNavigationView } from "@/shared/app/navigation-state";
+import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { uploadExtensionCommandFile } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import { toWorkbenchContributionId } from "@/shared/extensions/contribution-ref";
@@ -47,12 +48,21 @@ interface RegisterExtensionContributionsInput {
 }
 
 export const extensionViewResolveInput =
-  (ctx: WorkbenchModuleContext, view: { id: string; title: string; icon?: string }, navigationItemId = view.id) =>
+  (
+    ctx: WorkbenchModuleContext,
+    view: { id: string; title: string; icon?: string; path?: string },
+    navigationItemId = view.id,
+  ) =>
   (openInput: OpenWorkbenchViewInput) => {
     if (openInput.resource) return openInput;
     selectDashboardNavigationView(ctx, view.id, { modeId: "project" });
     ctx.breadcrumbs.setItems([{ title: view.title, icon: view.icon }]);
     setDashboardSidenavSelection(ctx, navigationItemId);
+    const projectId = getDashboardSelectedProjectId(ctx);
+    if (typeof window !== "undefined" && projectId && view.path) {
+      const path = `/projects/${encodeURIComponent(projectId)}/${view.path.replace(/^\/+/, "")}`;
+      if (window.location.pathname !== path) window.history.replaceState(null, "", path);
+    }
     return openInput;
   };
 
@@ -155,14 +165,21 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
             projectId: input.projectId,
             uploadFile: uploadExtensionCommandFile,
           }),
-        prepareResource: (resource) => prepareDashboardNavigationResource(input.ctx, resource),
         projectId: input.projectId,
+        prepareResource: (resource) => prepareDashboardNavigationResource(input.ctx, resource),
         resolveTreeNodeResource: (resource) => toDashboardExtensionResource(resource, input.projectId)!,
         resolveViewInput: (view) => {
           const navigationItem = input.metadata.navigationItems.find(
             (item) => item.action.kind === "view" && toWorkbenchContributionId(item.action.view) === view.id,
           );
-          return extensionViewResolveInput(input.ctx, view, navigationItem?.id);
+          const path = input.metadata.views.find((candidate) => candidate.id === view.id)?.path;
+          const resolveInput = extensionViewResolveInput(input.ctx, { ...view, path }, navigationItem?.id);
+          return (openInput) => {
+            // Legacy extension views are not pages. Release any host page that was
+            // active before the view opens so history records the view and its resource.
+            input.ctx.pages.deactivate();
+            return resolveInput(openInput);
+          };
         },
         settingsSectionId: "project",
         settingsSectionTitle: "Project",

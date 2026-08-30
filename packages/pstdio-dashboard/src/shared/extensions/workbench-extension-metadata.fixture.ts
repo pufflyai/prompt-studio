@@ -2,11 +2,14 @@ import type { WorkbenchExtensionMetadata as DashboardExtensionMetadata } from "@
 import { metadata } from "@/modules/extensions/module-test-fixtures";
 
 const extensionId = "pstdio.extension-lab";
-const pageViewId = `${extensionId}.view.labPage`;
+const pageViewId = `${extensionId}.view.lab-page`;
 
 export const extensionLabMetadata = {
   ...metadata,
-  commands: [...metadata.commands, { id: `${extensionId}.command.run-review`, extensionId, title: "Run review" }],
+  commands: [
+    ...metadata.commands,
+    { id: `${extensionId}.command.demo.workspace-only`, extensionId, title: "Workspace-only lab action" },
+  ],
   menuContributions: [
     {
       id: `${extensionId}.command.say-hello.header`,
@@ -35,11 +38,11 @@ export const extensionLabMetadata = {
       group: "Lab",
     },
     {
-      id: `${extensionId}.command.run-review.header`,
+      id: `${extensionId}.command.demo.workspace-only.header`,
       extensionId,
-      commandId: `${extensionId}.command.run-review`,
+      commandId: `${extensionId}.command.demo.workspace-only`,
       slotId: "workspace.headerPrimary",
-      label: "Run review",
+      label: "Workspace-only lab action",
     },
   ],
 } satisfies DashboardExtensionMetadata;

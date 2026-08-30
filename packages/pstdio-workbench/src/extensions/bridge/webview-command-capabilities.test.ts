@@ -3,9 +3,8 @@ import { createWorkbenchCore } from "../../core";
 import { createExtensionWebviewHostCapabilities } from "./webview-command-capabilities";
 
 describe("createExtensionWebviewHostCapabilities", () => {
-  test("resource.open normalizes the SDK resource shape (type) into a workbench resource (kind + uri)", async () => {
+  test("resource.open emits the SDK resource into the active page's bindings", async () => {
     const workbench = createWorkbenchCore();
-    const opened: { kind: string; uri: string; id?: string; label?: string }[] = [];
 
     workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
     workbench.layout.registerPanel({
@@ -14,14 +13,14 @@ describe("createExtensionWebviewHostCapabilities", () => {
       region: "main",
       rendererId: "test",
     });
-    workbench.resources.registerPresenter({
-      id: "ticket-presenter",
-      canOpen: (resource) => resource.kind === "ticket",
-      open: (resource) => {
-        opened.push(resource);
-        return workbench.layout.openPanel("ticket", { resource });
-      },
+    workbench.pages.registry.registerPage({
+      id: "pstdio.lab.page.tickets",
+      title: "Tickets",
+      extensionId: "pstdio.lab",
+      slots: [{ id: "ticket", region: "main", cardinality: "many" }],
+      bindings: [{ kind: "ticket", panelId: "ticket", slot: "ticket" }],
     });
+    await workbench.pages.activatePage("pstdio.lab.page.tickets");
 
     const capabilities = createExtensionWebviewHostCapabilities({
       executeCommand: async () => ({}),
@@ -35,12 +34,16 @@ describe("createExtensionWebviewHostCapabilities", () => {
 
     await capabilities["resource.open"]?.({ resource: { type: "ticket", id: "PS-15", label: "PS-15" } });
 
-    expect(opened).toHaveLength(1);
-    expect(opened[0]).toMatchObject({
-      kind: "ticket",
-      uri: "pstdio://extension-resource/ticket/PS-15",
-      id: "PS-15",
-      label: "PS-15",
-    });
+    expect(workbench.layout.listPanelInstances("main")).toContainEqual(
+      expect.objectContaining({
+        panelId: "ticket",
+        resource: expect.objectContaining({
+          kind: "ticket",
+          uri: "pstdio://extension-resource/ticket/PS-15",
+          id: "PS-15",
+          label: "PS-15",
+        }),
+      }),
+    );
   });
 });

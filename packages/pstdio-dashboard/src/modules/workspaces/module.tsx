@@ -9,7 +9,11 @@ import { registerSidenavContribution } from "@/shared/workbench/contributions/si
 import { setDashboardSidenavSelection, showDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
-import { registerDashboardViewRoute, registerResourceRoute } from "@/shared/workbench/route-helper";
+import {
+  registerDashboardHostPage,
+  registerDashboardViewRoute,
+  registerResourceRoute,
+} from "@/shared/workbench/route-helper";
 import { registerWorkspaceDataTableRenderer } from "./collections/workspace-data-table-renderer";
 import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
 import { DeleteWorkspaceEntryWidget } from "./components/delete-workspace-entry-widget";
@@ -37,7 +41,7 @@ const workspaceNavigationNode = (): TreeNode => ({
   canHide: true,
   hiddenByDefault: true,
   commandId: dashboardCommandIds.openWorkspaces,
-  target: { kind: "view", viewId: dashboardViews.workspaces.id },
+  target: { kind: "page", pageId: "workspaces" },
   actions: [
     {
       id: "new-workspace",
@@ -309,6 +313,19 @@ export const createWorkspacesModule = () =>
           ctx.breadcrumbs.setItems([{ title: dashboardViews.workspaces.label, icon: dashboardViews.workspaces.icon }]);
           setDashboardSidenavSelection(ctx, dashboardViews.workspaces.id);
         },
+      });
+      registerDashboardHostPage(ctx, {
+        id: "workspaces",
+        title: dashboardViews.workspaces.label,
+        icon: dashboardViews.workspaces.icon,
+        urlPath: "workspaces",
+        binds: ["workspace"],
+        viewId: dashboardViews.workspaces.id,
+        toResource: (segments) =>
+          segments[0]
+            ? { kind: "workspace", uri: `dashboard-workbench://workspace/${segments[0]}`, id: segments[0] }
+            : undefined,
+        resourceSegment: (resource) => (resource.kind === "workspace" ? resource.id : undefined),
       });
       registerResourceRoute(ctx, {
         id: "dashboard.workspace.presenter",

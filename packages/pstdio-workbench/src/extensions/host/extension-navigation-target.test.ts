@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
+import { FILE_SECTION_NAVIGATION_METADATA_KEY } from "../../core/registries/renderers/file-section-navigation";
+import {
+  toWorkbenchActivationResult,
+  toWorkbenchNavigationTarget,
+  toWorkbenchNavigationTargetResult,
+} from "./extension-navigation-target";
 
 describe("toWorkbenchNavigationTarget", () => {
   test("keeps host command references in the host command namespace", () => {
@@ -8,93 +13,138 @@ describe("toWorkbenchNavigationTarget", () => {
         kind: "command",
         target: {
           command: { extensionId: "pstdio", kind: "command", id: "workbench.action.switchMode" },
-          params: { modeId: "pstdio.extension-lab.mode.lab" },
+          params: { modeId: "lab" },
         },
       }),
     ).toEqual({
       kind: "command",
       commandId: "workbench.action.switchMode",
-      args: { modeId: "pstdio.extension-lab.mode.lab" },
+      args: { modeId: "lab" },
     });
   });
 
-  test("resolves host view references to the host's registered id", () => {
+  test("resolves extension page refs to normalized page ids with the resource argument", () => {
     expect(
       toWorkbenchNavigationTarget(
         {
-          kind: "view",
-          view: { extensionId: "pstdio", kind: "view", id: "workspaces" },
+          kind: "page",
+          page: { kind: "page", id: "tickets" },
+          resource: { type: "ticket", id: "PS-1", label: "PS-1" },
+          open: "pin",
         },
         { extensionId: "pstdio.pstdio-planner" },
       ),
-    ).toEqual({ kind: "view", viewId: "workspaces", input: {} });
+    ).toEqual({
+      kind: "page",
+      pageId: "pstdio.pstdio-planner.page.tickets",
+      resource: {
+        kind: "ticket",
+        uri: "pstdio://extension-resource/ticket/PS-1",
+        id: "PS-1",
+        label: "PS-1",
+        icon: undefined,
+        metadata: undefined,
+      },
+      open: "pin",
+    });
   });
 
-  test("maps view replace-invoking to a host-owned panel replacement strategy", () => {
+  test("resolves host page refs to the host's registered page id", () => {
     expect(
       toWorkbenchNavigationTarget(
         {
-          kind: "view",
-          view: { kind: "view", id: "ticketInspector" },
-          input: { strategy: "replace-invoking" },
+          kind: "page",
+          page: { extensionId: "pstdio", kind: "page", id: "workspaces" },
+          resource: { type: "workspace", id: "ws-1" },
         },
-        { sourcePlacement: { instanceId: "panel-1" } },
+        { extensionId: "pstdio.pstdio-planner" },
       ),
-    ).toEqual({
-      kind: "view",
-      viewId: "ticketInspector",
-      input: { strategy: { kind: "replace-panel", instanceId: "panel-1" } },
-    });
+    ).toMatchObject({ kind: "page", pageId: "workspaces" });
   });
 
-  test("rejects a sectioned resource target without a resourceOf translator", () => {
-    expect(() =>
-      toWorkbenchNavigationTarget({
-        kind: "resource",
-        resource: { type: "guide", id: "readme", label: "Readme" },
-        section: { anchors: [{ id: "intro", heading: "Intro" }] },
-      }),
-    ).toThrow("Resource targets with a section need a resourceOf translator");
-  });
-
-  test("passes the sectioned target through the resourceOf translator", () => {
+  test("encodes a section deep link on the resource metadata", () => {
     const converted = toWorkbenchNavigationTarget(
       {
-        kind: "resource",
+        kind: "page",
+        page: { kind: "page", id: "docs" },
         resource: { type: "guide", id: "readme", label: "Readme" },
         section: { anchors: [{ id: "intro", heading: "Intro" }] },
       },
-      {
-        resourceOf: (resource, target) => ({
-          kind: resource.type,
-          uri: `test://${resource.id}`,
-          id: resource.id,
-          label: resource.label,
-          metadata: { anchors: target.section?.anchors.length },
-        }),
-      },
+      { extensionId: "pstdio.lab", sectionSource: { treeId: "pstdio.lab.view.tree", targetNodeId: "node-1" } },
     );
 
-    expect(converted).toEqual({
-      kind: "resource",
+    expect(converted).toMatchObject({
+      kind: "page",
+      pageId: "pstdio.lab.page.docs",
       resource: {
         kind: "guide",
-        uri: "test://readme",
-        id: "readme",
-        label: "Readme",
-        metadata: { anchors: 1 },
+        metadata: {
+          [FILE_SECTION_NAVIGATION_METADATA_KEY]: {
+            treeId: "pstdio.lab.view.tree",
+            targetNodeId: "node-1",
+            anchors: [{ id: "intro", heading: "Intro" }],
+          },
+        },
       },
-      input: {},
     });
   });
 
-  test("rejects replace-invoking without source placement", () => {
-    expect(() =>
+  test("keeps resource and view targets available during the page migration", () => {
+    expect(
       toWorkbenchNavigationTarget({
-        kind: "view",
-        view: { kind: "view", id: "ticketInspector" },
-        input: { strategy: "replace-invoking" },
+        kind: "resource",
+        resource: { type: "ticket", id: "PS-326" },
+        input: { strategy: "replace-active" },
       }),
-    ).toThrow("replace-invoking requires a live source placement.");
+    ).toMatchObject({
+      kind: "resource",
+      resource: { kind: "ticket", id: "PS-326" },
+      input: { replaceActive: true },
+    });
+    expect(
+      toWorkbenchNavigationTarget(
+        { kind: "view", view: { kind: "view", id: "tickets" } },
+        { extensionId: "pstdio.planner" },
+      ),
+    ).toEqual({ kind: "view", viewId: "pstdio.planner.view.tickets", input: {} });
+  });
+
+  test("keeps the legacy result helper available during the page migration", () => {
+    expect(
+      toWorkbenchNavigationTargetResult(
+        { kind: "page", page: { kind: "page", id: "tickets" } },
+        { extensionId: "pstdio.planner" },
+      ),
+    ).toEqual({ kind: "page", pageId: "pstdio.planner.page.tickets" });
+  });
+});
+
+describe("toWorkbenchActivationResult", () => {
+  test("maps an emission to a workbench resource with the open intent", () => {
+    expect(toWorkbenchActivationResult({ resource: { type: "ticket", id: "PS-2" }, open: "pin" })).toMatchObject({
+      kind: "emission",
+      resource: { kind: "ticket", id: "PS-2", uri: "pstdio://extension-resource/ticket/PS-2" },
+      open: "pin",
+    });
+  });
+
+  test("maps a navigation target to a host target", () => {
+    expect(
+      toWorkbenchActivationResult(
+        { kind: "page", page: { kind: "page", id: "tickets" } },
+        { extensionId: "pstdio.pstdio-planner" },
+      ),
+    ).toEqual({
+      kind: "target",
+      target: { kind: "page", pageId: "pstdio.pstdio-planner.page.tickets" },
+    });
+  });
+
+  test("returns undefined for empty results and rejects invalid shapes", () => {
+    expect(toWorkbenchActivationResult(undefined)).toBeUndefined();
+    expect(toWorkbenchActivationResult(null)).toBeUndefined();
+    expect(() => toWorkbenchActivationResult({ kind: "view", view: { id: "x" } })).toThrow(
+      "Renderer callback returned an invalid navigation target.",
+    );
   });
 });

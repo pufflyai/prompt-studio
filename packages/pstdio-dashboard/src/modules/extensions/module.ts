@@ -11,6 +11,7 @@ import type {
 } from "@pstdio/workbench";
 import i18n from "@/i18n";
 import { type CollectionChange, subscribeCollections } from "@/lib/sync/collections";
+import { openDashboardResourceLocation } from "@/shared/app/page-navigation";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
@@ -23,7 +24,9 @@ import {
   type ResolvedWorkbenchExtensionMetadata,
 } from "@/shared/extensions/extension-localization";
 import {
+  clearDashboardExtensionsModuleActive,
   clearDashboardExtensionsReadyProject,
+  markDashboardExtensionsModuleActive,
   setDashboardExtensionsReadyProject,
 } from "@/shared/extensions/extension-readiness";
 import {
@@ -74,6 +77,8 @@ const resourceProjectId = (resource: ResourceRef | undefined) => {
   return scope.scope === "project" && typeof scope.projectId === "string" ? scope.projectId : undefined;
 };
 
+// A contribution refresh can clear the primary resource. Re-open it as a page
+// location: the active page's bindings (or a page that binds the kind) place it.
 const restorePrimaryResourceIfRefreshClearedIt = (
   ctx: WorkbenchModuleContext,
   input: { projectId: string; resource: ResourceRef | undefined },
@@ -82,7 +87,7 @@ const restorePrimaryResourceIfRefreshClearedIt = (
   if (ctx.getPrimaryResource()) return;
   if (resourceProjectId(input.resource) !== input.projectId) return;
 
-  void ctx.resources.openResource(input.resource, { replaceActive: true }).catch(() => undefined);
+  void Promise.resolve(openDashboardResourceLocation(ctx, input.resource)).catch(() => undefined);
 };
 
 export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) =>
@@ -178,6 +183,9 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
             previousCompatibility,
           }),
         });
+        // Re-registering contributions replaces the panels an active page composed
+        // with; the page recomposes so its slots come back with the new registrations.
+        ctx.pages.reconcile();
         if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
           ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
         }
@@ -245,6 +253,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
         applyMetadata(projectId, rawMetadata);
       };
 
+      markDashboardExtensionsModuleActive(ctx);
       const activityRail = registerDashboardActivityRail(ctx, () => metadata);
       const activeResourceContext = syncActiveResourceContext(ctx);
 
@@ -268,6 +277,7 @@ export const createExtensionsModule = (input: CreateExtensionsModuleInput = {}) 
           activeResourceContext.dispose();
           clearCachedDashboardExtensionMetadata(projectId);
           clearDashboardExtensionsReadyProject(ctx);
+          clearDashboardExtensionsModuleActive(ctx);
           clearContributions();
           clearAppearance();
           i18n.off("languageChanged", reapplyLocale);

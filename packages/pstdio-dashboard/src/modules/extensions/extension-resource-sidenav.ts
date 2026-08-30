@@ -5,7 +5,7 @@ import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/ext
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 
 type Metadata = ResolvedWorkbenchExtensionMetadata;
-type ResourceView = Metadata["resourceViews"][number];
+type ResourceView = NonNullable<Metadata["resourceViews"]>[number];
 
 const sameResourceSlot = (
   left: { id: string; resourceKind: { extensionId: string; id: string } },
@@ -34,7 +34,7 @@ const isIntegratedResourceTree = (metadata: Metadata, edge: ResourceView) => {
 };
 
 export const integratedResourceSidenavViews = (metadata: Metadata) =>
-  metadata.resourceViews.filter((edge) => isIntegratedResourceTree(metadata, edge));
+  (metadata.resourceViews ?? []).filter((edge) => isIntegratedResourceTree(metadata, edge));
 
 export const withoutIntegratedResourceSidenavViews = (metadata: Metadata): Metadata => {
   const integrated = integratedResourceSidenavViews(metadata);
@@ -43,7 +43,7 @@ export const withoutIntegratedResourceSidenavViews = (metadata: Metadata): Metad
 
   return {
     ...metadata,
-    resourceViews: metadata.resourceViews.filter((edge) => !integratedIds.has(edge.id)),
+    resourceViews: (metadata.resourceViews ?? []).filter((edge) => !integratedIds.has(edge.id)),
     placements: metadata.placements.filter((placement) => {
       if (placement.item.kind !== "resource-slot") return true;
       const slot = placement.item.slot;

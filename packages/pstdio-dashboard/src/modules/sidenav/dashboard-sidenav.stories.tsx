@@ -125,6 +125,12 @@ const createTicketsNavigationModule = () => ({
         return input;
       },
     });
+    ctx.pages.registry.registerPage({
+      id: ticketsView.id,
+      title: ticketsView.label,
+      icon: ticketsView.icon,
+      activate: () => ctx.views.openView(ticketsView.id, { strategy: { kind: "replace-active" } }),
+    });
     registerSidenavContribution(ctx, {
       id: "story.tickets-navigation",
       modes: ["*"],
@@ -135,7 +141,7 @@ const createTicketsNavigationModule = () => ({
           id: ticketsView.id,
           label: ticketsView.label,
           icon: ticketsView.icon,
-          target: { kind: "view", viewId: ticketsView.id },
+          target: { kind: "page", pageId: ticketsView.id },
         },
       ],
     });

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { getSwitchModeNavigationTargetModeId } from "../../../core";
+import { workbenchEmitResourceCommandId } from "../../../core";
 import { shouldSelectTreeNodeForNavigationTarget } from "./tree-view-navigation";
 
 describe("shouldSelectTreeNodeForNavigationTarget", () => {
@@ -19,55 +19,35 @@ describe("shouldSelectTreeNodeForNavigationTarget", () => {
     ).toBe(false);
   });
 
-  test("selects navigation targets that open durable workbench content", () => {
+  test("selects navigation targets that present content", () => {
     expect(
       shouldSelectTreeNodeForNavigationTarget({
         kind: "resource",
         resource: { kind: "ticket", uri: "pstdio://ticket/1" },
       }),
     ).toBe(true);
-    expect(shouldSelectTreeNodeForNavigationTarget({ kind: "panel", panelId: "tickets" })).toBe(true);
-  });
-});
-
-describe("getSwitchModeNavigationTargetModeId", () => {
-  test("returns the concrete mode targeted by the built-in switch-mode command", () => {
     expect(
-      getSwitchModeNavigationTargetModeId({
-        kind: "command",
-        commandId: "workbench.action.switchMode",
-        args: { modeId: "lab" },
+      shouldSelectTreeNodeForNavigationTarget({
+        kind: "page",
+        pageId: "workspaces",
+        resource: { kind: "workspace", uri: "pstdio://workspace/1" },
       }),
-    ).toBe("lab");
-  });
-
-  test("rejects other commands and missing or empty mode ids", () => {
+    ).toBe(true);
     expect(
-      getSwitchModeNavigationTargetModeId({
+      shouldSelectTreeNodeForNavigationTarget({
         kind: "command",
-        commandId: "extension-lab.open",
-        args: { modeId: "lab" },
+        commandId: workbenchEmitResourceCommandId,
+        args: { resource: { kind: "ticket", uri: "pstdio://ticket/1" } },
       }),
-    ).toBeUndefined();
+    ).toBe(true);
     expect(
-      getSwitchModeNavigationTargetModeId({
-        kind: "command",
-        commandId: "workbench.action.switchMode",
+      shouldSelectTreeNodeForNavigationTarget({
+        kind: "compound",
+        targets: [
+          { kind: "command", commandId: "workbench.action.switchMode", args: { modeId: "ops" } },
+          { kind: "page", pageId: "services" },
+        ],
       }),
-    ).toBeUndefined();
-    expect(
-      getSwitchModeNavigationTargetModeId({
-        kind: "command",
-        commandId: "workbench.action.switchMode",
-        args: { modeId: "" },
-      }),
-    ).toBeUndefined();
-    expect(
-      getSwitchModeNavigationTargetModeId({
-        kind: "command",
-        commandId: "workbench.action.switchMode",
-        args: { modeId: "   " },
-      }),
-    ).toBeUndefined();
+    ).toBe(true);
   });
 });

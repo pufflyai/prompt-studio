@@ -85,7 +85,7 @@ describe("withDashboardWebviewUrls", () => {
 
     try {
       const resolved = withDashboardWebviewUrls(metadataWithLabMode);
-      const view = resolved.views.find((candidate) => candidate.localId === "labPage");
+      const view = resolved.views.find((candidate) => candidate.localId === "lab-page");
 
       expect(view?.body.kind === "webview" ? view.body.webview.runtimeUrl : undefined).toBe(
         "http://localhost:19840/v1/extensions/runtime",

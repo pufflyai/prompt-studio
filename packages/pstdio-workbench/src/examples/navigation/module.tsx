@@ -1,28 +1,33 @@
 import { Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
-import { headerTrailingMenuPath, type WorkbenchCore, type WorkbenchModuleContribution } from "../../core";
+import {
+  headerTrailingMenuPath,
+  type ResourceRef,
+  type WorkbenchCore,
+  type WorkbenchModuleContribution,
+} from "../../core";
 
+const PAGE_ID = "navigation.example.page";
 const HOME_RENDERER_ID = "navigation.example.home-renderer";
 const HOME_WIDGET_ID = "navigation.example.home";
 const TICKET_RENDERER_ID = "navigation.example.ticket-renderer";
 const TICKET_WIDGET_ID = "navigation.example.ticket";
 const TREE_RENDERER_ID = "navigation.example.tree-renderer";
 const TREE_WIDGET_ID = "navigation.example.workspace-tree";
+const TREE_SLOT_ID = "tree";
 const FOCUS_MAIN_COMMAND_ID = "navigation.example.focus-main";
 
 const TICKET_KIND = "navigation.example.ticket";
-const AGGREGATE_SCOPE = "project/demo/mode/tickets/aggregate/tickets";
 
-const resourceScope = (uri: string) => `project/demo/mode/tickets/resource/${uri}`;
+const ticketResource = (id: string): ResourceRef => ({
+  kind: TICKET_KIND,
+  uri: `${TICKET_KIND}:${id}`,
+  id,
+  label: `Ticket ${id}`,
+  icon: "component",
+});
 
-const switchLayoutScope = (workbench: WorkbenchCore, scope: string) => {
-  workbench.panels.setPersistenceScope(scope);
-  workbench.layout.setPersistenceScope(scope, {
-    carryRegionState: ["sidenav"],
-  });
-};
-
-const navigateToTicket = (workbench: WorkbenchCore, id: string) =>
-  workbench.navigation.navigate(`nav://resource?id=${id}`).catch((error) => {
+const navigate = (workbench: WorkbenchCore, location: string) =>
+  workbench.navigation.navigate(location).catch((error) => {
     workbench.notifications.show({
       level: "error",
       title: "Navigation failed",
@@ -36,19 +41,15 @@ const TicketWidget = (props: { uri: string; workbench: WorkbenchCore }) => {
     <Stack p="lg" gap="sm">
       <Text textStyle="title/S/semibold">Ticket viewer</Text>
       <Text textStyle="paragraph/M/regular">
-        Navigation selects the resource-owned layout and Panel scope before calling{" "}
-        <Code colorPalette="gray">openResource</Code>.
+        The page binds the ticket kind to this panel, so page targets carrying a ticket resource land here.
       </Text>
       <Code colorPalette="gray">{uri}</Code>
       <HStack gap="sm" wrap="wrap">
-        <Button size="sm" onClick={() => navigateToTicket(workbench, "PS-100")}>
+        <Button size="sm" onClick={() => navigate(workbench, "nav://resource?id=PS-100")}>
           Open PS-100
         </Button>
-        <Button size="sm" onClick={() => navigateToTicket(workbench, "PS-200")}>
+        <Button size="sm" onClick={() => navigate(workbench, "nav://resource?id=PS-200")}>
           Open PS-200
-        </Button>
-        <Button size="sm" variant="outline" onClick={() => switchLayoutScope(workbench, AGGREGATE_SCOPE)}>
-          Return to tickets
         </Button>
       </HStack>
     </Stack>
@@ -58,32 +59,25 @@ const TicketWidget = (props: { uri: string; workbench: WorkbenchCore }) => {
 const TreeWidget = () => (
   <Stack p="md" gap="xs">
     <Text textStyle="label/S/semibold">Workspace tree</Text>
-    <Text textStyle="paragraph/S/regular">Revealed via openPanel.</Text>
+    <Text textStyle="paragraph/S/regular">A static page slot, revealed via a page target with a slot id.</Text>
   </Stack>
 );
 
 const HomeWidget = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
-  const fire = (location: string) =>
-    workbench.navigation.navigate(location).catch((error) => {
-      workbench.notifications.show({
-        level: "error",
-        title: "Navigation failed",
-        message: error instanceof Error ? error.message : String(error),
-      });
-    });
+  const fire = (location: string) => navigate(workbench, location);
 
   return (
     <Stack p="lg" gap="md">
       <Text textStyle="title/S/semibold">Navigation dispatcher demo</Text>
       <Text textStyle="paragraph/M/regular">
         Each button below feeds <Code colorPalette="gray">workbench.navigation.navigate(...)</Code> a deep link and the
-        widened parser resolves it into a <Code colorPalette="gray">NavigationTarget</Code>. The dispatcher then routes
-        to the appropriate presenter.
+        registered parser resolves it into a <Code colorPalette="gray">NavigationTarget</Code>. Targets are pages,
+        commands, or hrefs; a resource is never a destination — it rides along as an argument on a page target.
       </Text>
       <Box>
         <Text textStyle="label/S/semibold" mb="2xs">
-          resource
+          page + resource
         </Text>
         <HStack gap="sm" wrap="wrap">
           <Button size="sm" onClick={() => fire("nav://resource?id=PS-100")}>
@@ -96,7 +90,7 @@ const HomeWidget = (props: { workbench: WorkbenchCore }) => {
       </Box>
       <Box>
         <Text textStyle="label/S/semibold" mb="2xs">
-          view
+          page + slot
         </Text>
         <Button size="sm" onClick={() => fire("nav://view?id=workspace-tree")}>
           Reveal workspace tree
@@ -112,7 +106,7 @@ const HomeWidget = (props: { workbench: WorkbenchCore }) => {
       </Box>
       <Box>
         <Text textStyle="label/S/semibold" mb="2xs">
-          compound (resource + view)
+          compound (page + resource, then page + slot)
         </Text>
         <Button size="sm" onClick={() => fire("nav://open?resource=ticket:PS-300&view=workspace-tree")}>
           Open PS-300 and reveal tree
@@ -139,21 +133,6 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
       kind: TICKET_KIND,
       label: "Ticket",
       icon: "component",
-    });
-
-    ctx.resources.registerPresenter({
-      id: "navigation.example.ticket-presenter",
-      canOpen: (resource) => resource.kind === TICKET_KIND,
-      open: (resource) => {
-        ctx.panels.setPersistenceScope(resourceScope(resource.uri));
-        ctx.layout.setPersistenceScope(resourceScope(resource.uri), {
-          carryRegionState: ["sidenav"],
-        });
-        return ctx.layout.openPanel(TICKET_WIDGET_ID, {
-          resource,
-          title: resource.label ?? resource.uri,
-        });
-      },
     });
 
     ctx.renderers.registerRenderer({
@@ -185,7 +164,7 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
       id: TICKET_WIDGET_ID,
       title: "Ticket",
       region: "main",
-      singleton: true,
+      singleton: false,
       rendererId: TICKET_RENDERER_ID,
       resourceKinds: [TICKET_KIND],
     });
@@ -199,60 +178,48 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
       rendererId: TREE_RENDERER_ID,
     });
 
-    // Short view ids that callers use in URLs, mapped to the real widget id
-    // registered above. Keeps demo URLs readable.
-    const viewIdByAlias: Record<string, string> = {
-      "workspace-tree": TREE_WIDGET_ID,
-    };
-    const resolveViewId = (alias: string) => viewIdByAlias[alias] ?? alias;
+    // The page is the navigable destination: static slots place the home demo and
+    // the tree, the binding routes ticket resources into the bound main slot.
+    ctx.pages.registry.registerPage({
+      id: PAGE_ID,
+      title: "Navigation demo",
+      icon: "Route",
+      slots: [
+        { id: "home", region: "main", panelId: HOME_WIDGET_ID, closable: false, order: 0 },
+        { id: "tickets", region: "main", cardinality: "many", order: 1 },
+        { id: TREE_SLOT_ID, region: "sidenav", panelId: TREE_WIDGET_ID, order: 0 },
+      ],
+      bindings: [{ kind: TICKET_KIND, panelId: TICKET_WIDGET_ID, slot: "tickets" }],
+    });
 
     ctx.navigation.registerParser({
       id: "navigation.example.parser",
       canParse: (location) => location.startsWith("nav://"),
       parse: (location) => {
         const url = new URL(location);
+        // nav://resource?id=PS-100 opens the page with the ticket as its argument.
         if (url.host === "resource") {
           const id = url.searchParams.get("id") ?? "PS-000";
-          return {
-            kind: "resource",
-            resource: {
-              kind: TICKET_KIND,
-              uri: `${TICKET_KIND}:${id}`,
-              id,
-              label: `Ticket ${id}`,
-              icon: "component",
-            },
-          };
+          return { kind: "page", pageId: PAGE_ID, resource: ticketResource(id) };
         }
+        // nav://view?id=workspace-tree reveals the page's static tree slot.
         if (url.host === "view") {
-          const alias = url.searchParams.get("id") ?? "";
-          return { kind: "panel", panelId: resolveViewId(alias) };
+          return { kind: "page", pageId: PAGE_ID, slot: TREE_SLOT_ID };
         }
         if (url.host === "command") {
           const id = url.searchParams.get("id") ?? "";
           return { kind: "command", commandId: id };
         }
+        // nav://open?resource=ticket:PS-300&view=... applies both page targets in
+        // order; a failure rolls the whole compound back.
         if (url.host === "open") {
           const ticketParam = url.searchParams.get("resource");
-          const viewParam = url.searchParams.get("view");
           const ticketId = ticketParam?.split(":")[1] ?? "PS-000";
           return {
             kind: "compound",
             targets: [
-              {
-                kind: "resource",
-                resource: {
-                  kind: TICKET_KIND,
-                  uri: `${TICKET_KIND}:${ticketId}`,
-                  id: ticketId,
-                  label: `Ticket ${ticketId}`,
-                  icon: "component",
-                },
-              },
-              {
-                kind: "panel",
-                panelId: resolveViewId(viewParam ?? "workspace-tree"),
-              },
+              { kind: "page", pageId: PAGE_ID, resource: ticketResource(ticketId) },
+              { kind: "page", pageId: PAGE_ID, slot: TREE_SLOT_ID },
             ],
           };
         }
@@ -265,8 +232,6 @@ export const createNavigationExampleModule = (): WorkbenchModuleContribution => 
       group: "Navigation",
     });
 
-    ctx.panels.setPersistenceScope(AGGREGATE_SCOPE);
-    ctx.layout.setPersistenceScope(AGGREGATE_SCOPE);
-    ctx.layout.openPanel(HOME_WIDGET_ID);
+    void ctx.pages.activatePage(PAGE_ID);
   },
 });

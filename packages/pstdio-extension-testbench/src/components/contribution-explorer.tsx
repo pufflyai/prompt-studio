@@ -138,13 +138,23 @@ const settingsItems = (props: ContributionExplorerProps) => {
 const routeItems = (props: ContributionExplorerProps) => {
   const { bench, workbench } = props;
 
-  return bench.metadata.views
-    .filter((view) => view.path)
-    .map((view) => ({
-      id: view.id,
-      label: text(view.title, view.id),
-      description: view.path,
-      onActivate: () => void workbench.views.openView(view.id, { pinned: true }),
+  // Pages own paths now. Activating a route opens the page's first static view.
+  return (bench.metadata.pages ?? [])
+    .filter((page) => page.path)
+    .map((page) => ({
+      id: page.id,
+      label: text(page.title, page.id),
+      description: page.path,
+      onActivate: () => {
+        const staticSlotView = page.slots.find((slot) => slot.view)?.view;
+        const view = staticSlotView
+          ? bench.metadata.views.find(
+              (candidate) =>
+                candidate.localId === staticSlotView.id && candidate.extensionId === staticSlotView.extensionId,
+            )
+          : undefined;
+        if (view) void workbench.views.openView(view.id, { pinned: true });
+      },
     }));
 };
 

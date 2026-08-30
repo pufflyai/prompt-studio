@@ -60,6 +60,7 @@ export {
 export {
   isExtensionNavigationTarget,
   type ToWorkbenchNavigationTargetInput,
+  toWorkbenchActivationResult,
   toWorkbenchNavigationTarget,
   toWorkbenchNavigationTargetResult,
 } from "./host/extension-navigation-target";

@@ -53,7 +53,7 @@ const placementMetadata = {
     },
   ],
   resourceKinds: [],
-  resourceViews: [],
+  pages: [],
   navigationItems: [],
   statusBarItems: [],
   statuses: [],

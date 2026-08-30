@@ -89,6 +89,10 @@ describe("createDashboardWorkbench restoration", () => {
     drafts.setDraft("session-1", "unsent reply");
 
     const second = createDashboardWorkbench({ storage });
+    // The landing flow settles only after extension metadata resolves (its fetch
+    // rejects in tests and falls back), so give the rejection chain a few rounds.
+    await flushMicrotasks();
+    await flushMicrotasks();
     await flushMicrotasks();
 
     expect(second.sidePanel.getMode()).toBe("attached");
@@ -114,21 +118,25 @@ describe("createDashboardWorkbench restoration", () => {
     expect(sidePanelSessionUris(second)).toEqual([]);
   });
 
-  test("restores a persisted primary view before its Side Panel session", async () => {
+  test("restores the workspaces page from its URL before its Side Panel session", async () => {
     const storage = createStorage();
     seedSyncedRows();
 
     const first = createDashboardWorkbench({ storage });
     await selectProject(first);
     await flushMicrotasks();
-    await first.views.openView("workspaces", { strategy: { kind: "replace-active" } });
+    await first.navigation.navigate("workspaces");
     await flushMicrotasks();
     await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
     first.history.flush();
     expect(first.lastResource.get()).toBeUndefined();
 
-    const second = createDashboardWorkbench({ storage });
+    // A page location survives a reload through its URL; the boot path receives it
+    // as the initial view path, the way `createDashboardWorkbench` reads the browser URL.
+    const second = createDashboardWorkbench({ storage, initialViewPath: "workspaces" });
     await flushMicrotasks();
+    // The landing settles across a timer turn before it restores the selected session.
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(second.layout.getLayout().regions.main.widgets[0]?.viewId).toBe("workspaces");
     expect(second.lastResource.get()).toBeUndefined();

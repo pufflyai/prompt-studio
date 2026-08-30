@@ -1,7 +1,7 @@
-import type { ExtensionResourceOpenIntent } from "@pstdio/sdk/extensions";
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
 import type { PreferenceScopeRef, PreferenceValue, ResourceRef, WorkbenchCore } from "../../core";
+import { toWorkbenchResource } from "../host/workbench-extension-command";
 import { createTerminalSessionCapability } from "./terminal-session-capability";
 
 interface CreateWorkbenchWebviewHostCapabilitiesInput {
@@ -17,9 +17,23 @@ const dispatchDocumentKeyboardEvent = (params: KeyboardEventInit) => {
   document.dispatchEvent(event);
 };
 
-export const toOpenResourceInput = (input: ExtensionResourceOpenIntent | undefined) => {
-  if (!input?.strategy || input.strategy === "persistent") return {};
-  return { replaceActive: true };
+// The guest sends contract-shaped resources ({ type, id }); the host may also hand
+// this capability its own refs ({ kind, uri }). Both land as workbench refs.
+const toEmittedResource = (resource: ResourceRef | { type: string; id: string }) =>
+  "type" in resource ? toWorkbenchResource(resource as never) : resource;
+
+// Opening a resource is an activation, not a page emission: native kinds keep their
+// presenters (a workspace or session opens where the host puts it) and extension kinds
+// are placed by the active page's bindings. The same rule every other activation path
+// follows, so a webview on an extension page can still open a native kind.
+export const openWorkbenchWebviewResource = (
+  workbench: WorkbenchCore,
+  resource: ResourceRef,
+  open?: "preview" | "pin",
+) => {
+  const hasPresenter = workbench.resources.listPresenters().some((presenter) => presenter.canOpen(resource));
+  if (hasPresenter) return workbench.resources.openResource(resource, { replaceActive: open !== "pin" });
+  return workbench.pages.emitResource(resource, { open });
 };
 
 export const createWorkbenchWebviewHostCapabilities = (input: CreateWorkbenchWebviewHostCapabilitiesInput) =>
@@ -29,9 +43,9 @@ export const createWorkbenchWebviewHostCapabilities = (input: CreateWorkbenchWeb
       return input.workbench.commands.executeCommand(request.commandId, request.params);
     },
     "resource.open": (params: unknown) => {
-      const request = params as { input?: ExtensionResourceOpenIntent; resource?: ResourceRef };
+      const request = params as { resource?: ResourceRef | { type: string; id: string }; open?: "preview" | "pin" };
       if (!request.resource) throw new Error("resource.open requires a resource.");
-      return input.workbench.resources.openResource(request.resource, toOpenResourceInput(request.input));
+      return openWorkbenchWebviewResource(input.workbench, toEmittedResource(request.resource), request.open);
     },
     "notification.show": (params: unknown) => {
       const notification = params as Parameters<WorkbenchCore["notifications"]["show"]>[0];

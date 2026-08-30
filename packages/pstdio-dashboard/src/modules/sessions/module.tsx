@@ -20,7 +20,11 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { setDashboardSidenavSelection, showDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
-import { registerDashboardViewRoute, registerResourceRoute } from "@/shared/workbench/route-helper";
+import {
+  registerDashboardHostPage,
+  registerDashboardViewRoute,
+  registerResourceRoute,
+} from "@/shared/workbench/route-helper";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
 import { openResourceSessionPreview } from "./session-auto-open";
 import { createSessionsSidenavSections } from "./sessions-sidenav-tree";
@@ -108,7 +112,7 @@ const createSessionsNavigationNode = () => ({
   label: dashboardViews.sessions.label,
   icon: dashboardViews.sessions.icon,
   canHide: true,
-  target: { kind: "view" as const, viewId: dashboardViews.sessions.id },
+  target: { kind: "page" as const, pageId: "sessions" },
 });
 
 const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
@@ -167,6 +171,19 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
       ctx.resources.registerKind({ kind: "session", label: "Session", icon: "MessageCircle" });
       ctx.resources.registerKind({ kind: "session-draft", label: "Session draft", icon: "PenBox" });
       registerSessionWidgets(ctx, input.sessionDraftPersistence);
+      registerDashboardHostPage(ctx, {
+        id: "sessions",
+        title: dashboardViews.sessions.label,
+        icon: dashboardViews.sessions.icon,
+        urlPath: "sessions",
+        binds: ["session", "session-draft"],
+        viewId: dashboardViews.sessions.id,
+        toResource: (segments) =>
+          segments[0]
+            ? { kind: "session", uri: `dashboard-workbench://session/${segments[0]}`, id: segments[0] }
+            : undefined,
+        resourceSegment: (resource) => (resource.kind === "session" ? resource.id : undefined),
+      });
       registerDashboardViewRoute(ctx, {
         id: dashboardViews.sessions.id,
         mode: "sessions",

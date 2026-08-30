@@ -215,10 +215,10 @@ export const StartWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   );
   const data = createStartData(projectId, dashboardDataVersion);
   const openSession = (session: StartSession) => {
-    void input.workbench.resources.openResource(session.resource, { replaceActive: true });
+    void input.workbench.pages.activatePage("sessions", { resource: session.resource });
   };
   const openWorkspace = (resource: ResourceRef) => {
-    void input.workbench.resources.openResource(resource, { replaceActive: true });
+    void input.workbench.pages.activatePage("workspaces", { resource });
   };
 
   return (

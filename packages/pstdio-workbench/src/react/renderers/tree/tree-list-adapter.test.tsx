@@ -17,8 +17,8 @@ describe("resolveTreeListSelection", () => {
             label: "guide.md",
             resource,
             children: [
-              { id: "intro", label: "Intro", target: { kind: "resource" as const, resource } },
-              { id: "details", label: "Details", target: { kind: "resource" as const, resource } },
+              { id: "intro", label: "Intro", target: { kind: "page" as const, pageId: "docs", resource } },
+              { id: "details", label: "Details", target: { kind: "page" as const, pageId: "docs", resource } },
             ],
           },
         ],
@@ -123,7 +123,7 @@ describe("toTreeListSection", () => {
           {
             id: "workspace-ws-1",
             label: "WS-1",
-            target: { kind: "resource", resource: workspace },
+            target: { kind: "page", pageId: "workspaces", resource: workspace },
           },
         ],
       },
@@ -177,7 +177,7 @@ describe("toTreeListSection", () => {
             label: "WS-1",
             menuPath: resourceContextMenuPath("workspace"),
             contextMenuActions: [{ id: "review", label: "Run review", icon: "Search" }],
-            target: { kind: "resource", resource: workspace },
+            target: { kind: "page", pageId: "workspaces", resource: workspace },
           },
         ],
       },
@@ -206,7 +206,9 @@ describe("toTreeListSection", () => {
     const section = toTreeListSection(
       {
         id: "primary",
-        nodes: [{ id: "workspace-ws-1", label: "WS-1", target: { kind: "resource", resource: workspace } }],
+        nodes: [
+          { id: "workspace-ws-1", label: "WS-1", target: { kind: "page", pageId: "workspaces", resource: workspace } },
+        ],
       },
       {},
       { workbench },
@@ -312,7 +314,7 @@ describe("toTreeListSection end content", () => {
             id: "workspace-ws-1",
             label: "WS-1",
             menuPath: resourceContextMenuPath("workspace"),
-            target: { kind: "resource", resource: workspace },
+            target: { kind: "page", pageId: "workspaces", resource: workspace },
           },
         ],
       },

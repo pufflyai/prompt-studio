@@ -9,11 +9,11 @@ const baseMetadata = {
   extensions: [],
   menuContributions: [],
   modes: [],
+  pages: [],
   views: [],
   viewMenus: [],
   placements: [],
   resourceKinds: [],
-  resourceViews: [],
   resourceHierarchyProviders: [],
   navigationItems: [],
   statusBarItems: [],
@@ -27,7 +27,7 @@ const baseMetadata = {
 } satisfies WorkbenchExtensionMetadata;
 
 describe("createPreviewResource", () => {
-  test("keeps preview data separate from a path-only extension view", () => {
+  test("keeps preview data separate from an unbound extension view", () => {
     const resource = createPreviewResource({
       ...baseMetadata,
       views: [
@@ -36,7 +36,6 @@ describe("createPreviewResource", () => {
           localId: "lab-page",
           extensionId: "pstdio.extension-lab",
           title: "Lab",
-          path: "lab",
           body: {
             kind: "webview",
             webview: {
@@ -66,8 +65,6 @@ describe("createPreviewResource", () => {
           id: "tickets.ticket",
           localId: "ticket",
           extensionId: "pstdio.tickets",
-          surface: "primary",
-          slots: [{ id: "primary", cardinality: "one", access: "owner" }],
         },
       ],
     });
@@ -81,17 +78,24 @@ describe("createPreviewResource", () => {
     });
   });
 
-  test("derives the kind from a resource-view edge when no resource kind is declared", () => {
+  test("derives the kind from a page binding when no resource kind is declared", () => {
     const noteKind = { extensionId: "pstdio.planner", kind: "resource-kind" as const, id: "note" };
     const resource = createPreviewResource({
       ...baseMetadata,
-      resourceViews: [
+      pages: [
         {
-          id: "acme.insights.resource-view.note",
+          id: "acme.insights.page.notes",
+          localId: "notes",
           extensionId: "acme.insights",
-          resourceKind: noteKind,
-          slot: { resourceKind: noteKind, id: "inspector" },
-          view: { extensionId: "acme.insights", kind: "view", id: "insights" },
+          title: "Notes",
+          slots: [{ id: "note", region: "main", cardinality: "one" }],
+          bindings: [
+            {
+              resourceKind: noteKind,
+              view: { extensionId: "acme.insights", kind: "view", id: "insights" },
+              slot: "note",
+            },
+          ],
         },
       ],
     });

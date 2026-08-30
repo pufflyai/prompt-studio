@@ -25,6 +25,7 @@ export interface InternalWorkbenchExtensionMetadata {
   menuContributions: ExtensionMenuContribution[];
   commandPaletteContributions: WorkbenchExtensionMetadata["commandPaletteContributions"];
   modes: ExtensionModeRecord[];
+  pages: WorkbenchExtensionMetadata["pages"];
   panels: WorkbenchExtensionPanelRecord[];
   resourceKinds: ExtensionResourceKindRecord[];
   resourcePanels: ExtensionResourcePanelRecord[];

@@ -13,7 +13,7 @@ import type {
   ResourceRef,
 } from "../../core";
 import { WorkbenchIcon } from "../../react";
-import { toWorkbenchNavigationTargetResult } from "../host/extension-navigation-target";
+import { toWorkbenchActivationResult } from "../host/extension-navigation-target";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import { toWorkbenchResource } from "../host/workbench-extension-command";
@@ -222,13 +222,17 @@ const toRowClick = (
         { row: toActivatedRow(row) },
         resource,
       );
-      const target = toWorkbenchNavigationTargetResult(result, {
+      const activation = toWorkbenchActivationResult(result, {
         extensionId: record.extensionId,
-        resourceOf: adapter.resolveNavigationResource
+        resolveResource: adapter.resolveNavigationResource
           ? (resource) => adapter.resolveNavigationResource!(record, resource)
           : undefined,
       });
-      if (target) await context.workbench.navigation.openTarget(target);
+      if (activation?.kind === "emission") {
+        await context.workbench.pages.emitResource(activation.resource, { open: activation.open });
+      } else if (activation) {
+        await context.workbench.navigation.openTarget(activation.target);
+      }
     };
   }
   if (!adapter.onRowClick) return undefined;
@@ -291,7 +295,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
   records: readonly WorkbenchExtensionKanbanRendererRecord[],
   adapter: WorkbenchExtensionKanbanRendererAdapter = {},
   panels: WorkbenchExtensionMetadata["panels"] = [],
-  resourcePanels: WorkbenchExtensionMetadata["resourcePanels"] = [],
+  pages: WorkbenchExtensionMetadata["pages"] = [],
 ) => {
   const disposables: Disposable[] = [];
   const localize: Localizer =
@@ -302,13 +306,19 @@ export const registerWorkbenchExtensionKanbanRenderers = (
         ? {
             ...attribute,
             render: (value: unknown, row: KanbanRendererRow) =>
-              renderBadgeListDisplay(
-                attribute,
-                value,
-                row,
-                (resource) =>
-                  void context.workbench.resources.openResource(toWorkbenchResource(resource), { replaceActive: true }),
-              ),
+              renderBadgeListDisplay(attribute, value, row, (resource) => {
+                // Badge clicks are activations: native kinds keep their presenters,
+                // extension kinds are in-page emissions placed by the active page.
+                const workbenchResource = toWorkbenchResource(resource);
+                const hasPresenter = context.workbench.resources
+                  .listPresenters()
+                  .some((presenter) => presenter.canOpen(workbenchResource));
+                if (hasPresenter) {
+                  void context.workbench.resources.openResource(workbenchResource, { replaceActive: true });
+                } else {
+                  void context.workbench.pages.emitResource(workbenchResource);
+                }
+              }),
           }
         : attribute;
     return adapter.decorateAttribute?.(record, withBuiltInDisplay) ?? withBuiltInDisplay;
@@ -435,14 +445,13 @@ export const registerWorkbenchExtensionKanbanRenderers = (
       registerWorkbenchExtensionPanel({
         workbench: context.workbench,
         path: panel.path,
-        aliases: panel.aliases,
         resolveInput: resolveWorkbenchExtensionViewInput(adapter.resolveViewInput, panel),
         contribution: toWorkbenchCompositionPanelContribution({
           panel,
           rendererId,
           declarationIndex: index,
           menuDeclarationOffset: menuOffsets[index]!,
-          resourcePanels,
+          pages,
         }),
       }),
     );

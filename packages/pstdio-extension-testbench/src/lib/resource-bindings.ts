@@ -6,17 +6,22 @@ export const localContributionId = (id: string) => (id.includes(".") ? id.slice(
 
 const matchesResourceKind = (kindId: string, kind: string) => kindId === kind || localContributionId(kindId) === kind;
 
-/** View ids bound to a resource kind through `resourceViews` edges. */
+const pageBindings = (metadata: WorkbenchExtensionMetadata) =>
+  (metadata.pages ?? []).flatMap((page) => page.bindings ?? []);
+
+/** View ids bound to a resource kind through page bindings. */
 export const viewIdsForResourceKind = (metadata: WorkbenchExtensionMetadata, kind: string) =>
-  metadata.resourceViews.filter((edge) => matchesResourceKind(edge.resourceKind.id, kind)).map((edge) => edge.view.id);
+  pageBindings(metadata)
+    .filter((binding) => matchesResourceKind(binding.resourceKind.id, kind))
+    .map((binding) => binding.view.id);
 
 export const isViewForResourceKind = (metadata: WorkbenchExtensionMetadata, viewId: string, kind: string) =>
   viewIdsForResourceKind(metadata, kind).includes(viewId);
 
-/** Local kind names from declared resource kinds, then from `resourceViews` edges. */
+/** Local kind names from declared resource kinds, then from page bindings. */
 export const resourceKindsFromMetadata = (metadata: WorkbenchExtensionMetadata) => {
   const kinds = new Set<string>();
   for (const kind of metadata.resourceKinds) kinds.add(kind.localId);
-  for (const edge of metadata.resourceViews) kinds.add(edge.resourceKind.id);
+  for (const binding of pageBindings(metadata)) kinds.add(binding.resourceKind.id);
   return [...kinds];
 };
