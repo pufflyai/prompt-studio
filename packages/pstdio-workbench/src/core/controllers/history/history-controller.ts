@@ -60,6 +60,14 @@ export interface HistoryController {
   setPersistenceScope(scope: string | undefined): void;
   getPersistenceScope(): string | undefined;
   restore(): HistoryEntry | undefined;
+  /**
+   * Finishes a pending hydration without replaying: the boot flow landed somewhere
+   * else (a URL deep link, the landing page), so the persisted entries stay as the
+   * back-stack and the current location records as the newest entry. Without this,
+   * a skipped restore leaves the controller hydrating forever and every navigation
+   * control disabled.
+   */
+  adoptCurrentLocation(): void;
   flush(): void;
   clear(): void;
   migrateState(transform: (state: HistoryStoreState) => HistoryStoreState): void;
@@ -71,6 +79,14 @@ export interface CreateHistoryControllerInput {
     WorkbenchModeRegistry,
     "getActiveModeId" | "getMode" | "isTransitioning" | "onDidChangeActive" | "setActiveMode"
   >;
+  pages?: {
+    getActiveLocation():
+      | { pageId: string; resource?: WorkbenchNavigationEntry["resource"]; reason?: string }
+      | undefined;
+    getLastReason(): "activate" | "preview" | "pin" | undefined;
+    getPage(id: string): unknown;
+    activatePage(pageId: string, input?: { resource?: WorkbenchNavigationEntry["resource"] }): Promise<unknown>;
+  };
   resources: ResourceRegistry;
   views?: WorkbenchViewRegistry;
   persistence?: WorkbenchHistoryPersistence;
@@ -182,6 +198,7 @@ interface CreateHistoryControllerApiInput {
   flush(): void;
   getPersistenceScope(): string | undefined;
   moveCursor(delta: number): WorkbenchNavigationEntry | undefined;
+  recordCurrent(): void;
   runSilent(action: () => unknown): void;
   setPersistenceScope(scope: string | undefined): void;
   setState(state: HistoryStoreState, action: string, persist?: boolean): void;
@@ -196,6 +213,7 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
     flush,
     getPersistenceScope,
     moveCursor,
+    recordCurrent,
     runSilent,
     setPersistenceScope,
     setState,
@@ -250,6 +268,7 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
         state: store.getState(),
         layout: controllerInput.layout,
         modes: controllerInput.modes,
+        pages: controllerInput.pages ? { getPage: (id) => controllerInput.pages?.getPage(id) } : undefined,
         resources: controllerInput.resources,
         views: controllerInput.views,
       });
@@ -275,6 +294,11 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
         );
       else finishRestore(scope, entry?.entryId);
       return entry;
+    },
+    adoptCurrentLocation() {
+      if (!store.getState().hydrating) return;
+      finishRestore(getPersistenceScope());
+      recordCurrent();
     },
     flush,
     clear() {
@@ -387,7 +411,10 @@ const trackLayoutScopeRotation = (layout: CreateHistoryControllerInput["layout"]
 // navigator and no observer sees an intermediate pair. Presentation of the resource
 // still happens through the replay path.
 const restoreEntryContext = (input: CreateHistoryControllerInput, entry: WorkbenchNavigationEntry) => {
-  if (entry.kind === "view") {
+  // A page entry replays through the page itself, which commits the whole location
+  // (composition, resource, breadcrumb, URL). Committing a bare context first would
+  // clear the trail the page is about to publish.
+  if (entry.kind === "view" || entry.kind === "page") {
     if (entry.modeId && input.modes?.getMode(entry.modeId) && input.modes.getActiveModeId() !== entry.modeId) {
       input.modes.setActiveMode(entry.modeId);
     }
@@ -435,6 +462,50 @@ const registerHistoryRecording = (input: {
   input.controller.views?.onDidOpenView(() => input.recordSnapshot(false, true));
 };
 
+// Replays a persisted view entry: an already-live placement re-activates in place, an
+// absent one reopens through the view registry. Returns undefined when the entry is
+// not a view entry, null when the live placement was activated synchronously.
+const replayViewEntry = (
+  deps: {
+    entry: WorkbenchNavigationEntry;
+    placement: WorkbenchWidgetPlacement | undefined;
+    views: CreateHistoryControllerInput["views"];
+    layout: LayoutModel;
+    restoreSelections: (entry: WorkbenchNavigationEntry) => void;
+    onSettled: () => void;
+  },
+  replayCurrentLocation: boolean | undefined,
+) => {
+  const { entry, placement, views, layout } = deps;
+  if (entry.kind !== "view" || !entry.viewId || !views) return undefined;
+  const placementMatchesView = placement?.viewId === entry.viewId && placement.resourceUri === entry.resource?.uri;
+  if (placementMatchesView && !replayCurrentLocation) {
+    layout.activateWidget(placement.widgetId);
+    deps.restoreSelections(entry);
+    return null;
+  }
+  return views
+    .openView(entry.viewId, {
+      resource: entry.resource,
+      title: entry.title,
+      strategy: { kind: "replace-active" },
+    })
+    .finally(deps.onSettled);
+};
+
+// A mode entry is replaced by the content that lands in it; a preview swap replaces
+// the current page location while activations and pins push.
+const shouldReplaceTopEntry = (
+  current: WorkbenchNavigationEntry | undefined,
+  candidate: WorkbenchNavigationEntry,
+  lastPageReason: "activate" | "preview" | "pin" | undefined,
+) =>
+  (current?.kind === "mode" && candidate.kind !== "mode" && current.modeId === candidate.modeId) ||
+  (current?.kind === "page" &&
+    candidate.kind === "page" &&
+    current.pageId === candidate.pageId &&
+    lastPageReason === "preview");
+
 export const createHistoryController = (input: CreateHistoryControllerInput): HistoryController => {
   const store = createWorkbenchStore<HistoryStoreState>({
     name: "workbench.history",
@@ -463,10 +534,9 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     const current = snapshot.entries[snapshot.cursor];
     if (isSameNavigationEntry(current, candidate)) return;
     const trimmed = snapshot.entries.slice(0, snapshot.cursor + 1);
-    const replacesCurrentMode =
-      current?.kind === "mode" && candidate.kind !== "mode" && current.modeId === candidate.modeId;
+    const replaces = shouldReplaceTopEntry(current, candidate, input.pages?.getLastReason());
     const appended = compactNavigationEntries(
-      replacesCurrentMode ? [...trimmed.slice(0, -1), candidate] : [...trimmed, candidate],
+      replaces ? [...trimmed.slice(0, -1), candidate] : [...trimmed, candidate],
     );
     const entries = appended.slice(Math.max(0, appended.length - (input.maxEntries ?? DEFAULT_MAX_ENTRIES)));
     setState({ ...snapshot, entries, cursor: entries.length - 1 }, "history.record");
@@ -478,7 +548,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
       return;
     }
     counter += 1;
-    const entry = entryFromCurrentSnapshot({ counter, layout: input.layout, modes: input.modes });
+    const entry = entryFromCurrentSnapshot({ counter, layout: input.layout, modes: input.modes, pages: input.pages });
     const current = currentNavigationEntry(store.getState());
     if (suppressTransitionSnapshot(current, entry, fromLayoutChange, input.modes?.isTransitioning() ?? false)) return;
     if (entry?.location.resource && replayingResourceUris.has(entry.location.resource.uri)) return;
@@ -583,6 +653,13 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
       restoreSelections(entry);
       return undefined;
     }
+    const pageReplay =
+      entry.kind === "page" && entry.pageId && input.pages
+        ? input.pages.activatePage(entry.pageId, { resource: entry.resource }).finally(() => {
+            if (replayScope === currentScope) restoreSelections(entry);
+          })
+        : undefined;
+    if (pageReplay) return pageReplay;
     const placement = entry.widgetId
       ? findPlacementByWidgetId(input.layout.getLayout(), entry.widgetId)?.placement
       : undefined;
@@ -598,23 +675,12 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
         restoreSelections,
       });
     }
-    if (entry.kind === "view" && entry.viewId && input.views) {
-      const placementMatchesView = placement?.viewId === entry.viewId && placement.resourceUri === entry.resource?.uri;
-      if (placementMatchesView && !options.replayCurrentLocation) {
-        input.layout.activateWidget(placement.widgetId);
-        restoreSelections(entry);
-        return undefined;
-      }
-      return input.views
-        .openView(entry.viewId, {
-          resource: entry.resource,
-          title: entry.title,
-          strategy: { kind: "replace-active" },
-        })
-        .finally(() => {
-          if (replayScope === currentScope) restoreSelections(entry);
-        });
-    }
+    const onSettled = () => replayScope === currentScope && restoreSelections(entry);
+    const viewReplay = replayViewEntry(
+      { entry, placement, views: input.views, layout: input.layout, restoreSelections, onSettled },
+      options.replayCurrentLocation,
+    );
+    if (viewReplay !== undefined) return viewReplay ?? undefined;
     if (placement) input.layout.activateWidget(placement.widgetId);
     else if (entry.contributionId && input.layout.getWidget(entry.contributionId)) {
       input.layout.openWidget(entry.contributionId, { title: entry.title });
@@ -665,6 +731,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     getPersistenceScope: () => currentScope,
     activateEntry,
     moveCursor,
+    recordCurrent: () => recordSnapshot(),
     runSilent,
     setState,
     flush,

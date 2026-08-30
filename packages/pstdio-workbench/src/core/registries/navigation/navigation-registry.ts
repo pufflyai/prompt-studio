@@ -1,3 +1,4 @@
+import type { OpenWorkbenchPageInput } from "../../controllers/pages/page-controller";
 import {
   type ContributionMetadata,
   normalizeContributionMetadata,
@@ -8,6 +9,11 @@ import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/wo
 import type { OpenWorkbenchPanelInput } from "../layout/layout-types";
 import type { OpenResourceInput, ResourceRef } from "../resources/resource-registry";
 import type { OpenWorkbenchViewInput } from "../views/view-registry";
+
+export interface NavigationTargetPage extends OpenWorkbenchPageInput {
+  kind: "page";
+  pageId: string;
+}
 
 export interface NavigationTargetResource {
   kind: "resource";
@@ -39,6 +45,7 @@ export interface NavigationTargetHref {
 }
 
 export type NavigationTargetItem =
+  | NavigationTargetPage
   | NavigationTargetResource
   | NavigationTargetView
   | NavigationTargetPanel
@@ -74,14 +81,16 @@ export type RegisteredResourceNavigator = Omit<ResourceNavigator, "priority"> & 
 // Minimal presenter surface the navigation dispatcher needs; resolved through a
 // closure to break the otherwise-circular core ↔ navigation dep.
 export interface NavigationDispatcherContext {
+  canOpenPage?(pageId: string): boolean;
   canOpenResource?(resource: ResourceRef): boolean;
   canOpenPanel?(panelId: string): boolean;
   canOpenView?(viewId: string): boolean;
   canExecuteCommand?(commandId: string): boolean;
   createCheckpoint?(): undefined | (() => void);
-  openResource(resource: ResourceRef, input?: OpenResourceInput): Promise<unknown>;
-  openPanel(panelId: string, input?: OpenWorkbenchPanelInput): unknown;
-  openView(viewId: string, input?: OpenWorkbenchViewInput): Promise<unknown> | unknown;
+  openPage?(pageId: string, input?: OpenWorkbenchPageInput): Promise<unknown>;
+  openResource?(resource: ResourceRef, input?: OpenResourceInput): Promise<unknown>;
+  openPanel?(panelId: string, input?: OpenWorkbenchPanelInput): unknown;
+  openView?(viewId: string, input?: OpenWorkbenchViewInput): Promise<unknown> | unknown;
   executeCommand(commandId: string, args?: unknown): Promise<unknown> | unknown;
   openHref?(href: string): Promise<unknown> | unknown;
 }
@@ -118,9 +127,23 @@ const noDispatcher = (): NavigationDispatcherContext => {
 };
 
 const dispatchItem = async (target: NavigationTargetItem, dispatcher: NavigationDispatcherContext) => {
-  if (target.kind === "resource") return dispatcher.openResource(target.resource, target.input);
-  if (target.kind === "view") return dispatcher.openView(target.viewId, target.input);
-  if (target.kind === "panel") return dispatcher.openPanel(target.panelId, target.input);
+  if (target.kind === "page") {
+    if (!dispatcher.openPage) throw new Error(`Cannot open navigation page target: ${target.pageId}`);
+    const { kind: _kind, pageId, ...openInput } = target;
+    return dispatcher.openPage(pageId, openInput);
+  }
+  if (target.kind === "resource") {
+    if (!dispatcher.openResource) throw new Error(`Cannot open navigation resource target: ${target.resource.uri}`);
+    return dispatcher.openResource(target.resource, target.input);
+  }
+  if (target.kind === "view") {
+    if (!dispatcher.openView) throw new Error(`Cannot open navigation view target: ${target.viewId}`);
+    return dispatcher.openView(target.viewId, target.input);
+  }
+  if (target.kind === "panel") {
+    if (!dispatcher.openPanel) throw new Error(`Cannot open navigation panel target: ${target.panelId}`);
+    return dispatcher.openPanel(target.panelId, target.input);
+  }
   if (target.kind === "href") {
     if (!dispatcher.openHref) throw new Error(`Cannot open navigation href target: ${target.href}`);
     return dispatcher.openHref(target.href);
@@ -129,6 +152,9 @@ const dispatchItem = async (target: NavigationTargetItem, dispatcher: Navigation
 };
 
 const validateItem = (target: NavigationTargetItem, dispatcher: NavigationDispatcherContext) => {
+  if (target.kind === "page" && dispatcher.canOpenPage?.(target.pageId) === false) {
+    throw new Error(`Cannot open navigation page target: ${target.pageId}`);
+  }
   if (target.kind === "resource" && dispatcher.canOpenResource?.(target.resource) === false) {
     throw new Error(`Cannot open navigation resource target: ${target.resource.uri}`);
   }

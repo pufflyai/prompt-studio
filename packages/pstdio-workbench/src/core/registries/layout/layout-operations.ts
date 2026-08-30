@@ -115,6 +115,7 @@ export const buildUpdatedPlacement = (
   if (update.ownerId !== undefined) next.ownerId = update.ownerId;
   if (update.source !== undefined) next.source = update.source;
   if (update.role !== undefined) next.role = update.role;
+  if (update.pageId !== undefined) next.pageId = update.pageId;
   return next;
 };
 
@@ -140,6 +141,7 @@ export const createPlacement = (
   tabRetention: spec.tabRetention,
   tab: spec.tab ?? widget.tab,
   role: spec.role ?? "content",
+  pageId: spec.pageId,
 });
 
 interface ReplaceRegionWidgetsOptions {

@@ -974,6 +974,44 @@ describe("createHistoryController history hydration", () => {
     expect(second.history.store.getState().hydrating).toBe(true);
     expect(second.layout.getLayout().regions.main.activeWidgetId).toBe("snapshot.main.b");
   });
+
+  test("adopting the current location finishes hydration with the persisted entries as the back-stack", () => {
+    const histories = new Map<string, import("./history-controller").PersistedWorkbenchHistory>();
+    const historyPersistence: import("./history-controller").WorkbenchHistoryPersistence = {
+      getHistory: (scope) => histories.get(scope ?? "global"),
+      setHistory: (state, scope) => histories.set(scope ?? "global", state),
+    };
+    const first = createWorkbenchCore({ historyPersistence });
+    registerSnapshotFixtures(first);
+    first.history.setPersistenceScope("project-one");
+    first.layout.openWidget("snapshot.location", {
+      role: "location",
+      resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
+    });
+    first.history.flush();
+
+    // A URL deep link wins the boot: the workbench opens a different location and
+    // never replays the persisted entry.
+    const second = createWorkbenchCore({ historyPersistence });
+    registerSnapshotFixtures(second);
+    second.history.setPersistenceScope("project-one");
+    expect(second.history.store.getState().hydrating).toBe(true);
+    second.layout.openWidget("snapshot.location", {
+      role: "location",
+      resource: { kind: "snapshot.location", uri: "snapshot.location:two", label: "Two" },
+    });
+
+    second.history.adoptCurrentLocation();
+
+    const state = second.history.store.getState();
+    expect(state.hydrating).toBe(false);
+    expect(state.entries.map((entry) => entry.resource?.uri)).toEqual([
+      "snapshot.location:one",
+      "snapshot.location:two",
+    ]);
+    expect(state.cursor).toBe(1);
+    expect(second.history.goBack()?.resource?.uri).toBe("snapshot.location:one");
+  });
 });
 
 describe("createHistoryController persisted Sub Panel snapshots", () => {

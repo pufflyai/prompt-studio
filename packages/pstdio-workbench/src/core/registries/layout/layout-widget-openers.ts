@@ -249,7 +249,18 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
 
     let placement: WorkbenchWidgetPlacement;
     if (previewContent) {
-      placement = applyAndActivate(layout, previewContent.regionId, previewContent.placement);
+      // Re-opening the same resource reuses its tab, but the open still carries new
+      // content (a file selection rides the resource's metadata), so the placement
+      // takes the update. Retention is the tab's own state, not content: a pinned tab
+      // stays pinned.
+      const updated = buildUpdatedPlacement(previewContent.placement, widget, {
+        ...placementInput,
+        tabRetention: previewContent.placement.tabRetention,
+      });
+      const withUpdate = replaceRegionWidgets(layout, previewContent.regionId, (widgets) =>
+        widgets.map((current) => (current.widgetId === updated.widgetId ? updated : current)),
+      );
+      placement = applyAndActivate(withUpdate, previewContent.regionId, updated);
     } else if (existing) {
       placement = reuseExistingPlacement(widget, existing, regionId, replacementIndex, placementInput);
     } else if (replacement?.contributionId === widget.id) {

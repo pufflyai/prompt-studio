@@ -63,6 +63,12 @@ export {
   type WorkbenchNavigatorHostHooks,
 } from "./controllers/navigator/workbench-navigator";
 export type {
+  OpenWorkbenchPageInput,
+  WorkbenchPageLocation,
+  WorkbenchPagesController,
+} from "./controllers/pages/page-controller";
+export { createPageController } from "./controllers/pages/page-controller";
+export type {
   CreateWorkbenchPanelsControllerInput,
   PersistedWorkbenchPanels,
   WorkbenchPanelsChangeListener,
@@ -248,6 +254,7 @@ export type {
   NavigationTargetCommand,
   NavigationTargetCompound,
   NavigationTargetItem,
+  NavigationTargetPage,
   NavigationTargetPanel,
   NavigationTargetResource,
   NavigationTargetView,
@@ -265,6 +272,14 @@ export type {
   WorkbenchNotificationLevel,
 } from "./registries/notifications/notification-registry";
 export { createNotificationRegistry } from "./registries/notifications/notification-registry";
+export type {
+  RegisterWorkbenchPageInput,
+  WorkbenchPageBinding,
+  WorkbenchPageContribution,
+  WorkbenchPageRegistry,
+  WorkbenchPageSlot,
+} from "./registries/pages/page-registry";
+export { createWorkbenchPageRegistry } from "./registries/pages/page-registry";
 export type {
   CreatePreferenceRegistryInput,
   PreferencePersistenceAdapter,
@@ -495,6 +510,7 @@ export type {
 export { createWorkbenchStore } from "./shared/store/workbench-store";
 export {
   getSwitchModeNavigationTargetModeId,
+  workbenchEmitResourceCommandId,
   workbenchSwitchModeCommandId,
 } from "./workbench-built-ins";
 export type {

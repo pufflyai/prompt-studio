@@ -83,6 +83,7 @@ export const entryFromCurrentSnapshot = (input: {
   counter: number;
   layout: LayoutModel;
   modes?: Pick<WorkbenchModeRegistry, "getActiveModeId" | "getMode">;
+  pages?: { getActiveLocation(): { pageId: string; resource?: WorkbenchWidgetPlacement["resource"] } | undefined };
 }): WorkbenchNavigationEntry | undefined => {
   const modeId = input.modes?.getActiveModeId();
   const placement = locationPlacementFromLayout(input.layout);
@@ -92,6 +93,21 @@ export const entryFromCurrentSnapshot = (input: {
     recordedAt,
     selectedSubPanels: selectedSubPanelsFromLayout(input.layout, modeId),
   };
+
+  // The navigable location is `(page, resource?)`: while a page is active it is the
+  // history entry, whatever widgets compose it.
+  const pageLocation = input.pages?.getActiveLocation();
+  if (pageLocation) {
+    const key = `page:${pageLocation.pageId}${pageLocation.resource ? `:resource:${pageLocation.resource.uri}` : ""}`;
+    return {
+      ...base,
+      location: { key, modeId, resource: pageLocation.resource },
+      kind: "page",
+      pageId: pageLocation.pageId,
+      modeId,
+      resource: pageLocation.resource,
+    };
+  }
 
   if (placement) {
     return {

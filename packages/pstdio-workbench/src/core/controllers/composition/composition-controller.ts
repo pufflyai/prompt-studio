@@ -11,6 +11,7 @@ import {
   type WorkbenchModeAddablePanel,
   type WorkbenchModeContribution,
 } from "../../registries/modes/mode-registry";
+import type { WorkbenchPageSlot } from "../../registries/pages/page-registry";
 import type { ResourceRef } from "../../registries/resources/resource-registry";
 
 export interface WorkbenchCompositionAddablePanel extends WorkbenchModeAddablePanel {
@@ -32,6 +33,10 @@ interface CreateWorkbenchCompositionControllerInput {
   getLayout(): WorkbenchLayout;
   getResource(): ResourceRef | undefined;
   listWidgets(): RegisteredWidgetContribution[];
+  // The active page's declared regions supersede mode furniture: its closed closable
+  // slots are the region's addable set, and mode panels never show through.
+  getActivePageRegions?(): readonly string[];
+  getClosedPageSlots?(region: WorkbenchPanelRegion): readonly WorkbenchPageSlot[];
 }
 
 const isOpenSingleton = (
@@ -96,6 +101,22 @@ export const createWorkbenchCompositionController = (
     const resource = input.getResource();
     const location = getActiveLocationPlacement(layout);
     const mode = input.getActiveMode();
+
+    if (input.getActivePageRegions?.().includes(region)) {
+      const widgets = input.listWidgets();
+      const addable = new Map<string, WorkbenchCompositionAddablePanel>();
+      for (const slot of input.getClosedPageSlots?.(region) ?? []) {
+        if (!slot.panelId) continue;
+        const contribution = widgets.find((widget) => widget.id === slot.panelId);
+        if (contribution) addable.set(slot.panelId, { panelId: slot.panelId, region, contribution });
+      }
+      return {
+        open,
+        addable: [...addable.values()],
+        closable: open.filter((placement) => placement.closable === true).map((placement) => placement.contributionId),
+      };
+    }
+
     if (!isWorkbenchModePanelAvailable(mode, region)) return { open, addable: [], closable: [] };
 
     const placements = Object.values(layout.regions).flatMap((candidate) => candidate.widgets);

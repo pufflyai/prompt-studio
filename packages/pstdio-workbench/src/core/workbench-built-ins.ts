@@ -2,6 +2,7 @@ import type { KeybindingSequence } from "./registries/keybindings/keybinding-reg
 import type { WorkbenchRegion } from "./registries/layout/layout-model";
 import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
 import type { NavigationTarget } from "./registries/navigation/navigation-registry";
+import type { ResourceRef } from "./registries/resources/resource-registry";
 import type { WorkbenchCore } from "./workbench-core";
 
 const SIDENAV_PANEL_ID = "sidenav";
@@ -89,6 +90,15 @@ export const getSwitchModeNavigationTargetModeId = (target: NavigationTarget) =>
   return typeof modeId === "string" && modeId.trim().length > 0 ? modeId : undefined;
 };
 
+// The command form of an in-page emission: renderers whose activation surface only
+// speaks command targets (tree nodes) compile emissions to this built-in.
+export const workbenchEmitResourceCommandId = "workbench.action.emitResource";
+
+interface WorkbenchEmitResourceCommandArgs {
+  resource: ResourceRef;
+  open?: "preview" | "pin";
+}
+
 export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
   for (const command of builtinCommands) {
     workbench.commands.registerCommand(
@@ -126,9 +136,22 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
           workbench.commandPalette.open({ view: "mode" });
           return;
         }
+        // Extensions pass their mode's local id (they never hand-build runtime ids).
+        // Resolve it against the registered modes: exact id first, then a unique
+        // `<owner>.mode.<localId>` suffix match.
+        const requested = args.modeId;
+        const modeId = workbench.modes.getMode(requested)
+          ? requested
+          : (() => {
+              const matches = workbench.modes
+                .listModes()
+                .filter((mode) => mode.id.endsWith(`.mode.${requested}`))
+                .map((mode) => mode.id);
+              return matches.length === 1 ? matches[0]! : requested;
+            })();
         // Mode switches run through the atomic navigator so the resource, layout
         // scope, and breadcrumb commit together with the mode.
-        const result = await workbench.navigator.open({ modeId: args.modeId });
+        const result = await workbench.navigator.open({ modeId });
         if (!result.ok && result.code === "navigation_mode_missing") {
           workbench.notifications.show({
             level: "error",
@@ -143,4 +166,14 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
     commandId: workbenchSwitchModeCommandId,
     group: "Workbench",
   });
+
+  workbench.commands.registerCommand(
+    { id: workbenchEmitResourceCommandId, label: "Open Resource In Page", category: "Workbench" },
+    {
+      execute: (args?: WorkbenchEmitResourceCommandArgs) => {
+        if (!args?.resource) return undefined;
+        return workbench.pages.emitResource(args.resource, { open: args.open });
+      },
+    },
+  );
 };

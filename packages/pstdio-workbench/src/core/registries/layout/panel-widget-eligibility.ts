@@ -54,7 +54,7 @@ const matchesLocationEligibility = (
   if (eligibleLocations?.canOpen && (!resource || !eligibleLocations.canOpen(resource))) return false;
   if (
     eligibleLocations?.canOpenLocation &&
-    !eligibleLocations.canOpenLocation({ resource, viewId: location?.viewId })
+    !eligibleLocations.canOpenLocation({ resource, viewId: location?.viewId, pageId: location?.pageId })
   ) {
     return false;
   }

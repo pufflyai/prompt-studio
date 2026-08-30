@@ -57,7 +57,8 @@ export interface WorkbenchNavigationEntry {
   recordedAt: number;
   location: WorkbenchLocationRef;
   selectedSubPanels: Partial<Record<WorkbenchPanelRegion, WorkbenchSubPanelRef>>;
-  kind: "resource" | "view" | "widget" | "mode";
+  kind: "page" | "resource" | "view" | "widget" | "mode";
+  pageId?: string;
   modeId?: string;
   resource?: ResourceRef;
   viewId?: string;

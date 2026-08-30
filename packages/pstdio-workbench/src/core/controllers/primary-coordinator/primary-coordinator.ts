@@ -26,6 +26,9 @@ export interface CreatePrimaryCoordinatorInput {
   // scope. Injected (no baked default) so apps decide the disconnect policy; the core
   // default keeps detached anchors (() => true) until scoped providers land.
   isInScope: (resource: ResourceRef, primary: ResourceRef | undefined) => boolean;
+  // Regions the active page declares. A page owns its regions unconditionally, so
+  // anchor reconciliation never clears them.
+  getExemptRegions?: () => readonly string[];
 }
 
 // Keeps the secondary resource anchors consistent with the primary (main) resource.
@@ -33,14 +36,19 @@ export interface CreatePrimaryCoordinatorInput {
 // detached anchors disconnect once they fall outside the new primary's scope. The
 // primary anchor is never mutated, so the selector keyed on the main region's active
 // resource cannot re-fire — the reconciliation is feedback-loop safe by construction.
-export const createPrimaryCoordinator = ({ layout, isInScope }: CreatePrimaryCoordinatorInput): Disposable => {
+export const createPrimaryCoordinator = ({
+  layout,
+  isInScope,
+  getExemptRegions,
+}: CreatePrimaryCoordinatorInput): Disposable => {
   const unsubscribe = layout.store.subscribeSelector(
     (state) => getActivePlacement(state.layout.regions[resolveAnchorRegion("primary")])?.resourceUri,
     () => {
       const current = layout.getLayout();
       const primary = getAnchorResource(current, "primary");
+      const exempt = new Set(getExemptRegions?.() ?? []);
       for (const action of reconcileAnchors({ layout: current, primary, isInScope })) {
-        if (action.action === "clear") layout.clearRegion(action.region);
+        if (action.action === "clear" && !exempt.has(action.region)) layout.clearRegion(action.region);
       }
     },
   );

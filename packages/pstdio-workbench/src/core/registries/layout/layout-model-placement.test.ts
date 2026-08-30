@@ -383,6 +383,33 @@ describe("createLayoutModel placement lifecycle", () => {
     expect(layout.getLayout().regions.side.activeWidgetId).toBe(persistent.widgetId);
   });
 
+  test("re-opening the same resource in a preview tab takes the new content", () => {
+    const layout = createLayoutModel();
+    layout.registerPanel({
+      id: "project.editor",
+      title: "Editor",
+      region: "main",
+      singleton: false,
+      rendererId: "test.renderer",
+    });
+
+    const ticket = { kind: "ticket", uri: "pstdio://ticket/a", label: "Ticket A" };
+    const first = layout.openWidget("project.editor", {
+      resource: { ...ticket, metadata: { documentId: "ticket" } },
+      tabRetention: "preview",
+    });
+    // A file selection rides the same resource URI with different metadata; the tab is
+    // reused, so the placement must carry the new metadata or the renderer never reloads.
+    const second = layout.openWidget("project.editor", {
+      resource: { ...ticket, metadata: { documentId: "notes.md" } },
+      tabRetention: "preview",
+    });
+
+    expect(second.widgetId).toBe(first.widgetId);
+    expect(second.resource?.metadata).toEqual({ documentId: "notes.md" });
+    expect(layout.getLayout().regions.main.widgets).toHaveLength(1);
+  });
+
   test("opens and reorders persistent tabs by stable positions", () => {
     const layout = createLayoutModel();
 

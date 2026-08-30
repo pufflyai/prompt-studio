@@ -198,6 +198,11 @@ describe("compound navigation rollback", () => {
         },
       },
     );
+    workbench.pages.registry.registerPage({
+      id: "tickets-page",
+      title: "Tickets",
+      slots: [{ id: "board", region: "main", panelId: "ticket", closable: false }],
+    });
     workbench.breadcrumbs.setItems([{ title: "Start" }]);
 
     // Prove the harness records history for successful opens, so the rollback
@@ -210,7 +215,7 @@ describe("compound navigation rollback", () => {
       workbench.navigation.openTarget({
         kind: "compound",
         targets: [
-          { kind: "resource", resource: { kind: "ticket", uri: "ticket://PS-1", id: "PS-1", label: "PS-1" } },
+          { kind: "page", pageId: "tickets-page" },
           { kind: "command", commandId: "boom" },
         ],
       }),

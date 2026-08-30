@@ -22,6 +22,7 @@ import {
   type WorkbenchLastResourceController,
 } from "./controllers/last-resource/last-resource-controller";
 import { createWorkbenchNavigator, type WorkbenchNavigator } from "./controllers/navigator/workbench-navigator";
+import { createPageController, type WorkbenchPagesController } from "./controllers/pages/page-controller";
 import {
   createWorkbenchPanelsController,
   type WorkbenchPanelsController,
@@ -65,6 +66,7 @@ import {
   createNotificationRegistry,
   type NotificationRegistry,
 } from "./registries/notifications/notification-registry";
+import { createWorkbenchPageRegistry } from "./registries/pages/page-registry";
 import {
   createPreferenceRegistry,
   type PreferencePersistenceAdapter,
@@ -149,6 +151,7 @@ export interface WorkbenchCoreContributionContext {
   navigation: NavigationRegistry;
   navigator: WorkbenchNavigator;
   notifications: NotificationRegistry;
+  pages: WorkbenchPagesController;
   panels: WorkbenchPanelsController;
   preferences: PreferenceRegistry;
   renderers: WorkbenchRenderers;
@@ -451,6 +454,8 @@ const createCoreCompositionController = (core: WorkbenchCore) =>
     getLayout: core.layout.getLayout,
     getResource: core.getPrimaryResource,
     listWidgets: core.layout.listWidgets,
+    getActivePageRegions: () => core.pages.activeDeclaredRegions(),
+    getClosedPageSlots: (region) => core.pages.closedSlots(region),
   });
 
 const connectWorkbenchCoreState = (core: WorkbenchCore, input: CreateWorkbenchCoreInput) => {
@@ -490,8 +495,67 @@ const connectWorkbenchCoreState = (core: WorkbenchCore, input: CreateWorkbenchCo
   createPrimaryCoordinator({
     layout: core.layout,
     isInScope: input.isInScope ?? createScopedIsInScope(core.resources),
+    getExemptRegions: () => core.pages.activeDeclaredRegions(),
   });
   registerWorkbenchBuiltIns(core);
+};
+
+// Resolves `/projects/{project}/...` trailing path segments to a page target. The
+// segments after the page path are the resource argument: host pages parse their own,
+// extension pages use the canonical `{type}/{id}` form.
+const resolvePageLocation = (core: WorkbenchCore, location: string) => {
+  const segments = location.split("/").filter((segment) => segment.length > 0);
+  const match = core.pages.registry.resolveUrl(segments.map((segment) => decodeURIComponent(segment)));
+  if (!match) return undefined;
+  const { page, resourceSegments } = match;
+  let resource: ResourceRef | undefined;
+  if (resourceSegments.length > 0) {
+    if (page.parseResourceSegments) {
+      resource = page.parseResourceSegments(resourceSegments);
+    } else if (resourceSegments.length === 2 && resourceSegments[0] && resourceSegments[1]) {
+      const [type, id] = resourceSegments;
+      resource = {
+        kind: type,
+        id,
+        uri: `pstdio://extension-resource/${encodeURIComponent(type)}/${encodeURIComponent(id)}`,
+      };
+    }
+  }
+  return { kind: "page", pageId: page.id, ...(resource ? { resource } : {}) } as const;
+};
+
+const createCorePagesController = (core: WorkbenchCore, openPanel: WorkbenchCore["layout"]["openPanel"]) => {
+  const pages = createPageController({
+    pages: createWorkbenchPageRegistry(),
+    layout: {
+      getLayout: () => core.layout.getLayout() as never,
+      getPanel: (id) => core.layout.getPanel(id),
+      closePanel: (instanceId) => {
+        try {
+          return core.layout.closePanel(instanceId);
+        } catch {
+          // Stale unclosable placements survive; the page composition replaces them.
+          return undefined;
+        }
+      },
+    },
+    openPanel,
+    restoreModeRegions: (regions) => {
+      for (const region of regions) core.layout.clearRegion(region);
+      core.modes.seedActiveMode();
+    },
+    warn: (message) => console.warn(`[workbench.pages] ${message}`),
+  });
+  // Both, because they move independently: a tab switch changes the active widget,
+  // while establishing a Location stamps the location id on a panel that is already
+  // active. A page location that watched only the first would keep the bare page URL
+  // when a host page opens a resource with nothing else to activate after it.
+  core.layout.store.subscribeSelector(
+    (state) => `${state.layout.activeWidgetId ?? ""}\0${state.layout.activeLocationWidgetId ?? ""}`,
+    () => pages.handleActiveWidgetChange(),
+  );
+  core.modes.onDidChangeActive(() => pages.deactivate());
+  return pages;
 };
 
 const createCoreNavigationRegistry = (
@@ -516,6 +580,7 @@ const createCoreNavigationRegistry = (
             else core.breadcrumbs.clearItems();
           };
         },
+        canOpenPage: (pageId) => Boolean(core.pages.registry.getPage(pageId)),
         canOpenResource: (resource) => {
           const state = core.resources.store.getState();
           return Boolean(
@@ -526,6 +591,7 @@ const createCoreNavigationRegistry = (
         canOpenPanel: (panelId) => Boolean(core.layout.getPanel(panelId)),
         canOpenView: (viewId) => core.views.canResolveView(viewId),
         canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
+        openPage: (pageId, openInput) => core.pages.activatePage(pageId, openInput),
         openResource: (resource, openInput) => core.resources.openResource(resource, openInput),
         openPanel,
         openView: (viewId, openInput) => core.views.openView(viewId, openInput),
@@ -611,6 +677,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     modes: undefined as unknown as WorkbenchModeRegistry,
     navigator: undefined as unknown as WorkbenchNavigator,
     notifications: createNotificationRegistry(),
+    pages: undefined as unknown as WorkbenchPagesController,
     navigation: createCoreNavigationRegistry(() => core, openPanel),
     panels: createWorkbenchPanelsController({
       defaultOpenByRegionId: input.defaultPanelOpenByRegionId,
@@ -725,20 +792,26 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     getSelectedResource: () => core.getPrimaryResource(),
     presentResource: (resource, present) => core.resources.openResource(resource, present),
   });
+  core.pages = createCorePagesController(core, openPanel);
   core.composition = createCoreCompositionController(core);
   core.history = createHistoryController({
     layout: core.layout,
     modes: core.modes,
+    pages: { ...core.pages, getPage: (id) => core.pages.registry.getPage(id) },
     resources: core.resources,
     views: core.views,
     persistence: input.historyPersistence,
     commitNavigation: (commit) => core.navigator.commitContext(commit),
   });
   core.navigation.registerParser({
-    id: "workbench.views.paths",
+    id: "workbench.pages.paths",
     priority: 1_000,
-    canParse: (location) => Boolean(core.views.resolvePath(location)),
-    parse: (location) => core.views.resolvePath(location)!,
+    canParse: (location) => Boolean(resolvePageLocation(core, location)),
+    parse: (location) => {
+      const parsed = resolvePageLocation(core, location);
+      if (!parsed) throw new Error(`No page registered for location: ${location}`);
+      return parsed;
+    },
   });
 
   connectWorkbenchCoreState(core, input);

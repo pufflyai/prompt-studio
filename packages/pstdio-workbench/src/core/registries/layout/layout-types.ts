@@ -77,7 +77,10 @@ export interface WorkbenchLocationEligibility {
   resourceKinds?: string[];
   resourceIds?: string[];
   canOpen?(resource: ResourceRef): boolean;
-  canOpenLocation?(location: { resource?: ResourceRef; viewId?: string }): boolean;
+  // A Location is a view, a resource, or a page slot; `pageId` names the page whose
+  // slot composed this Location, so eligibility can answer for page-composed benches
+  // too.
+  canOpenLocation?(location: { resource?: ResourceRef; viewId?: string; pageId?: string }): boolean;
 }
 
 export type WorkbenchPanelMenuOwner =
@@ -221,6 +224,8 @@ export interface WorkbenchWidgetPlacement {
   tabRetention?: WorkbenchTabRetention;
   tab?: WorkbenchWidgetTab;
   role?: WorkbenchWidgetRole;
+  // The page whose slot composed this placement, when a page did.
+  pageId?: string;
 }
 
 export interface WorkbenchPanelInstance {
@@ -283,6 +288,8 @@ export interface OpenWidgetInput {
   tab?: WorkbenchWidgetTab;
   replaceActive?: boolean;
   replaceWidgetId?: string;
+  /** Set by the page controller when a page slot composes this placement. */
+  pageId?: string;
 }
 
 export type WorkbenchPanelOpenStrategy =
@@ -305,6 +312,8 @@ export interface OpenWorkbenchPanelInput {
   hiddenByDefault?: boolean;
   tab?: WorkbenchPanelTab;
   strategy?: WorkbenchPanelOpenStrategy;
+  /** Set by the page controller when a page slot composes this placement. */
+  pageId?: string;
 }
 
 const createRegionState = (id: WorkbenchRegion, visible: boolean): WorkbenchRegionState => ({
