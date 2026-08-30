@@ -45,26 +45,9 @@ const storeThemePreference = (preference: ThemePreference) => {
   createBrowserStorage().setItem(STORAGE_KEY, preference);
 };
 
-// Contributed (extension) themes are namespaced (`extension.theme`) and register
-// asynchronously. A bare id like a legacy `light`/`dark` value names no
-// contribution, so it will never register — we must fall back rather than wait.
+// Contributed themes register asynchronously. Keep their stored preference until
+// it registers or the user chooses another theme.
 const looksLikeContributedThemePreference = (value: string | null) => typeof value === "string" && value.includes(".");
-
-const isPendingStoredThemePreference = (input: {
-  canRestoreStoredPreference: boolean;
-  storedPreference: string | null;
-  themePreference: ThemePreference;
-  themePreferences: readonly ThemePreferenceOption[];
-}) => {
-  const { canRestoreStoredPreference, storedPreference, themePreference, themePreferences } = input;
-
-  return (
-    canRestoreStoredPreference &&
-    storedPreference === themePreference &&
-    looksLikeContributedThemePreference(storedPreference) &&
-    !isThemePreference(themePreference, themePreferences)
-  );
-};
 
 export const getInitialThemePreference = (
   themePreferences: readonly ThemePreferenceOption[] = defaultThemePreferences,
@@ -86,12 +69,9 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
   const canRestoreStoredPreference = props.initialPreference === undefined;
   const [themePreference, setThemePreferenceState] = useState<ThemePreference>(initialPreference);
   const storedPreference = canRestoreStoredPreference ? getStoredThemePreference() : null;
-  const pendingStoredPreference = isPendingStoredThemePreference({
-    canRestoreStoredPreference,
-    storedPreference,
-    themePreference,
-    themePreferences,
-  });
+  const resolvedThemePreference = isThemePreference(themePreference, themePreferences)
+    ? themePreference
+    : getDefaultThemePreference(themePreferences, getThemePreferenceMode(themePreference, themePreferences));
 
   useEffect(() => {
     if (
@@ -103,14 +83,8 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
       return;
     }
 
-    if (pendingStoredPreference) {
-      return;
-    }
-
     if (!isThemePreference(themePreference, themePreferences)) {
-      setThemePreferenceState(
-        getDefaultThemePreference(themePreferences, getThemePreferenceMode(themePreference, themePreferences)),
-      );
+      setThemePreferenceState(resolvedThemePreference);
       return;
     }
 
@@ -121,7 +95,7 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
       looksLikeContributedThemePreference(storedPreference) &&
       !isThemePreference(storedPreference, themePreferences);
     if (!hasPendingStoredTheme) storeThemePreference(themePreference);
-  }, [pendingStoredPreference, storedPreference, themePreference, themePreferences]);
+  }, [resolvedThemePreference, storedPreference, themePreference, themePreferences]);
 
   const setThemePreference = (preference: ThemePreference) => {
     storeThemePreference(preference);
@@ -129,15 +103,15 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
   };
 
   const toggleThemePreference = () => {
-    const nextMode = getThemePreferenceMode(themePreference, themePreferences) === "dark" ? "light" : "dark";
+    const nextMode = getThemePreferenceMode(resolvedThemePreference, themePreferences) === "dark" ? "light" : "dark";
 
     setThemePreference(getDefaultThemePreference(themePreferences, nextMode));
   };
 
-  if (pendingStoredPreference) return null;
-
   return (
-    <ThemePreferenceContext value={{ themePreference, themePreferences, setThemePreference, toggleThemePreference }}>
+    <ThemePreferenceContext
+      value={{ themePreference: resolvedThemePreference, themePreferences, setThemePreference, toggleThemePreference }}
+    >
       {children}
     </ThemePreferenceContext>
   );

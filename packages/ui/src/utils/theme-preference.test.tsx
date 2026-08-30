@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { installMockLocalStorage } from "../test-utils/local-storage";
-import { getInitialThemePreference, ThemePreferenceProvider } from "./theme-preference";
+import { getInitialThemePreference, ThemePreferenceProvider, useThemePreference } from "./theme-preference";
 
 const previousWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
 
@@ -13,6 +13,11 @@ const installWindow = () => {
       matchMedia: () => ({ matches: false }),
     },
   });
+};
+
+const ActiveTheme = () => {
+  const { themePreference } = useThemePreference();
+  return <span>{themePreference}</span>;
 };
 
 afterEach(() => {
@@ -34,17 +39,17 @@ describe("getInitialThemePreference", () => {
 });
 
 describe("ThemePreferenceProvider", () => {
-  test("does not render while waiting for a stored extension theme to register", () => {
+  test("renders the default theme while waiting for a stored extension theme to register", () => {
     installWindow();
     installMockLocalStorage().setItem("theme-preference", "lab.monokai");
 
     const markup = renderToStaticMarkup(
       <ThemePreferenceProvider>
-        <span>Workbench</span>
+        <ActiveTheme />
       </ThemePreferenceProvider>,
     );
 
-    expect(markup).toBe("");
+    expect(markup).toBe("<span>pstdio-light</span>");
   });
 
   test("renders after the stored extension theme registers", () => {
