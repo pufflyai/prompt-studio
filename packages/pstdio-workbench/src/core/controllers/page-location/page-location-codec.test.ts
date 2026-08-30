@@ -17,6 +17,7 @@ const resources: WorkbenchPageResourceCodec = {
 const page = (id: string, extensionId: string, path: string): WorkbenchPageContribution => ({
   id,
   ref: { extensionId, kind: "page", id },
+  title: id,
   path,
   modeId: "project",
   slots: [{ id: "content", role: "primary", region: "main", viewId: id }],

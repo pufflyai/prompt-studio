@@ -58,6 +58,7 @@ export interface WorkbenchPageLocationController {
   boot(projectId: string): WorkbenchPageNavigationResult;
   switchProject(projectId: string): WorkbenchPageNavigationResult;
   navigate(target: NavigationTargetPage): WorkbenchPageNavigationResult;
+  navigateLocation(location: PageLocation): WorkbenchPageNavigationResult;
   closePlacement(identity: PlacementIdentity): WorkbenchPageNavigationResult;
   dispose(): void;
 }
@@ -302,6 +303,16 @@ export const createWorkbenchPageLocationController = <Value>(
       try {
         const resolved = normalizeWorkbenchPageTarget({ target, pages: pages(), resources: internals.resources });
         return commit(projectId, resolved, "push", "navigatePageLocation");
+      } catch (error) {
+        return fail("navigation", error);
+      }
+    },
+
+    navigateLocation(location) {
+      const projectId = input.registry.store.getState().projectId;
+      if (!projectId) return fail("navigation", new Error("Cannot navigate before a project is active"));
+      try {
+        return commit(projectId, normalizeStored(location), "push", "navigateExactPageLocation");
       } catch (error) {
         return fail("navigation", error);
       }

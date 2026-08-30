@@ -8,6 +8,11 @@ export {
   createWorkbenchBreadcrumbController,
 } from "../controllers/breadcrumbs/breadcrumb-registry";
 export type {
+  CreateWorkbenchPageBreadcrumbItemsInput,
+  WorkbenchPageBreadcrumbItem,
+} from "../controllers/breadcrumbs/page-breadcrumb-projection";
+export { createWorkbenchPageBreadcrumbItems } from "../controllers/breadcrumbs/page-breadcrumb-projection";
+export type {
   CreateWorkbenchCommandPaletteControllerInput,
   WorkbenchCommandPaletteChangeListener,
   WorkbenchCommandPaletteController,

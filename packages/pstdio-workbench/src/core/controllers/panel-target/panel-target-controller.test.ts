@@ -84,6 +84,7 @@ const createHarness = (modePanelResolver: typeof resolveModePanelTarget = resolv
   registry.registerPage({
     id: "start",
     ref: startRef,
+    title: "Start",
     path: "",
     modeId: "project",
     slots: [{ id: "content", role: "primary", region: "main", viewId: "start" }],
@@ -91,6 +92,7 @@ const createHarness = (modePanelResolver: typeof resolveModePanelTarget = resolv
   registry.registerPage({
     id: "ticket",
     ref: ticketRef,
+    title: "Ticket",
     path: "ticket",
     modeId: "project",
     parentId: "start",
@@ -120,6 +122,7 @@ const createHarness = (modePanelResolver: typeof resolveModePanelTarget = resolv
   registry.registerPage({
     id: "sessions",
     ref: sessionsRef,
+    title: "Sessions",
     path: "sessions",
     modeId: "sessions",
     slots: [

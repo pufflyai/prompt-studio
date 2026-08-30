@@ -1,5 +1,6 @@
 import type {
   FileRendererSectionTarget,
+  Localizable,
   PageLocation,
   PageOpenIntent,
   PageRef,
@@ -34,6 +35,8 @@ export interface WorkbenchPageSlot {
 export interface WorkbenchPageContribution {
   id: string;
   ref: PageRef;
+  title: Localizable<string>;
+  icon?: string;
   path: string;
   modeId: string;
   parentId?: string;

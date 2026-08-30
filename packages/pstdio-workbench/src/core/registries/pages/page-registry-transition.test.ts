@@ -37,12 +37,13 @@ const createRegistry = () =>
     valuesEqual: (left, right) => left === right,
   });
 
-type PageInput = Omit<WorkbenchPageContribution, "ref" | "path">;
+type PageInput = Omit<WorkbenchPageContribution, "ref" | "title" | "path">;
 
 const registerPage = (registry: WorkbenchPageRegistry<string>, page: PageInput) =>
   registry.registerPage({
     ...page,
     ref: { extensionId: "pstdio.test", kind: "page", id: page.id },
+    title: page.id,
     path: page.id,
   });
 
