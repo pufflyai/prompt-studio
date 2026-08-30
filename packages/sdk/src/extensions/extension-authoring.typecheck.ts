@@ -13,16 +13,16 @@ import {
   defineExtension,
   defineMode,
   defineNavigationItem,
+  definePage,
   definePlacement,
   defineResourceHierarchyProvider,
   defineResourceKind,
-  defineResourceView,
   defineView,
   eventRef,
   packageAsset,
   params,
   projectSlots,
-  resourceSlotRef,
+  workbenchPages,
   workbenchSlots,
   workspaceSlots,
 } from "./index";
@@ -184,13 +184,7 @@ void controlsQueryParams;
 
 const ticketKind = defineResourceKind({
   id: "ticket",
-  surface: "primary",
-  slots: [
-    { id: "primary", cardinality: "one", access: "owner" },
-    { id: "inspector", cardinality: "many", access: "public" },
-  ],
 });
-const ticketPrimary = resourceSlotRef(ticketKind.ref, "primary");
 const ticketEditor = defineView({
   id: "editor",
   title: "Ticket editor",
@@ -207,23 +201,28 @@ const ticketInsights = defineView({
 });
 const reviewMode = defineMode({ id: "review", label: "Review" });
 
+const ticketsPage = definePage({
+  id: "tickets",
+  title: "Tickets",
+  path: "tickets",
+  slots: [
+    { id: "board", region: "main", view: ticketInsights.ref, closable: false },
+    { id: "ticket", region: "main", cardinality: "many" },
+    { id: "files", region: "sidenav", follows: "ticket" },
+  ],
+  bindings: [{ resourceKind: ticketKind.ref, view: ticketEditor.ref, slot: "ticket" }],
+});
+
 const compositionExtension = defineExtension({
   resourceKinds: [ticketKind],
   views: [ticketEditor, ticketInsights],
-  resourceViews: [
-    defineResourceView({
-      id: "editor",
-      resourceKind: ticketKind.ref,
-      slot: ticketPrimary,
-      view: ticketEditor.ref,
-    }),
-  ],
+  pages: [ticketsPage],
   modes: [reviewMode],
   placements: [
     definePlacement({
       id: "editor",
       mode: reviewMode.ref,
-      item: { kind: "resource-slot", slot: ticketPrimary },
+      item: { kind: "view", view: ticketEditor.ref },
       region: "main",
       required: true,
     }),
@@ -233,7 +232,7 @@ const compositionExtension = defineExtension({
       id: "tickets-root",
       slot: workbenchSlots.projectNavigation,
       label: "Tickets",
-      action: { kind: "resource", resource: { type: "ticket", id: "root" } },
+      action: { kind: "page", page: ticketsPage.ref },
     }),
   ],
   resourceHierarchyProviders: [
@@ -248,10 +247,19 @@ const compositionExtension = defineExtension({
 void compositionExtension;
 
 const navigationTarget: NavigationTarget = {
-  kind: "resource",
+  kind: "page",
+  page: ticketsPage.ref,
   resource: { type: "ticket", id: "PS-1" },
+  open: "pin",
 };
 void navigationTarget;
+
+const hostPageTarget: NavigationTarget = {
+  kind: "page",
+  page: workbenchPages.workspaces,
+  resource: { type: "workspace", id: "ws-1" },
+};
+void hostPageTarget;
 
 definePlacement({
   id: "invalid",

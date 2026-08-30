@@ -24,6 +24,7 @@ import type {
 import type { EventRef } from "./events";
 import type { HarnessProvider } from "./harness";
 import type { JsonObject, MaybePromise, Struct } from "./json";
+import type { PageContribution } from "./pages";
 import type { ParamObjectSchema, ParamsOf } from "./params";
 import type { PackageAssetDescriptor } from "./resources";
 import type { StatusBarItemContribution, StatusContribution } from "./statuses";
@@ -236,6 +237,7 @@ export interface UiContributions {
   statusBarItems?: readonly StatusBarItemContribution[];
   statuses?: readonly StatusContribution[];
   modes?: readonly ModeContribution[];
+  pages?: readonly PageContribution[];
   resourceKinds?: readonly ResourceKindDefinition[];
   resourceViews?: readonly ResourceViewContribution[];
   activityItems?: readonly ActivityItemContribution[];

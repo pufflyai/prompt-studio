@@ -4,14 +4,13 @@ import {
   defineExtension,
   defineMode,
   defineNavigationItem,
+  definePage,
   definePlacement,
   defineResourceKind,
-  defineResourceView,
   defineTemplateType,
   defineView,
   packageAsset,
   params,
-  resourceSlotRef,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -33,27 +32,34 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
   definition,
 });
 
-const alpha4Definition = () => {
+const pageDefinition = () => {
   const mode = defineMode({ id: "review", label: "Review" });
   const view = defineView({
     id: "tickets",
     title: "Tickets",
-    path: "tickets",
     body: { kind: "webview", entry: packageAsset("./views/tickets.tsx", "file:///fake/lab/") },
   });
-  const resourceKind = defineResourceKind({
-    id: "ticket",
-    surface: "primary",
-    slots: [{ id: "primary", cardinality: "one", access: "owner" }],
+  const editor = defineView({
+    id: "ticket-editor",
+    title: "Ticket",
+    body: { kind: "webview", entry: packageAsset("./views/editor.tsx", "file:///fake/lab/") },
   });
-  const primary = resourceSlotRef(resourceKind.ref, "primary");
+  const resourceKind = defineResourceKind({ id: "ticket" });
+  const page = definePage({
+    id: "tickets",
+    title: "Tickets",
+    path: "tickets",
+    slots: [
+      { id: "board", region: "main", view: view.ref, closable: false },
+      { id: "ticket", region: "main", cardinality: "many" },
+    ],
+    bindings: [{ resourceKind: resourceKind.ref, view: editor.ref, slot: "ticket" }],
+  });
   return defineExtension({
     modes: [mode],
-    views: [view],
+    views: [view, editor],
     resourceKinds: [resourceKind],
-    resourceViews: [
-      defineResourceView({ id: "ticket-editor", resourceKind: resourceKind.ref, slot: primary, view: view.ref }),
-    ],
+    pages: [page],
     placements: [
       definePlacement({
         id: "tickets.review",
@@ -62,27 +68,21 @@ const alpha4Definition = () => {
         region: "main",
         required: true,
       }),
-      definePlacement({
-        id: "ticket-primary.review",
-        mode: mode.ref,
-        item: { kind: "resource-slot", slot: primary },
-        region: "main",
-      }),
     ],
     navigationItems: [
       defineNavigationItem({
         id: "tickets",
         slot: workbenchSlots.projectNavigation,
         label: "Tickets",
-        action: { kind: "view", view: view.ref },
+        action: { kind: "page", page: page.ref },
       }),
     ],
   });
 };
 
-describe("alpha.4 UI normalization", () => {
-  test("normalizes views, placements, resource bindings, and navigation with typed ownership", () => {
-    const runtime = normalizeExtensionSources([source(alpha4Definition())]);
+describe("page UI normalization", () => {
+  test("normalizes views, pages, placements, and navigation with typed ownership", () => {
+    const runtime = normalizeExtensionSources([source(pageDefinition())]);
 
     expect(runtime.diagnostics).toEqual([]);
     expect(runtime.views[0]).toMatchObject({
@@ -90,18 +90,29 @@ describe("alpha.4 UI normalization", () => {
       localId: "tickets",
       contribution: { ref: { extensionId: "pstdio.lab", kind: "view", id: "tickets" } },
     });
-    expect(runtime.placements).toHaveLength(2);
-    expect(runtime.resourceViews[0]?.contribution).toMatchObject({
-      view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" },
+    expect(runtime.placements).toHaveLength(1);
+    expect(runtime.pages[0]).toMatchObject({
+      id: "pstdio.lab.page.tickets",
+      localId: "tickets",
+      contribution: {
+        path: "tickets",
+        bindings: [
+          {
+            resourceKind: { extensionId: "pstdio.lab", kind: "resource-kind", id: "ticket" },
+            view: { extensionId: "pstdio.lab", kind: "view", id: "ticket-editor" },
+            slot: "ticket",
+          },
+        ],
+      },
     });
     expect(runtime.navigationItems[0]?.contribution.action).toEqual({
-      kind: "view",
-      view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" },
+      kind: "page",
+      page: { extensionId: "pstdio.lab", kind: "page", id: "tickets" },
     });
   });
 
   test("rejects removed source collections instead of adapting them", () => {
-    const definition = { ...alpha4Definition(), panels: [] } as unknown as LoadedExtensionSource["definition"];
+    const definition = { ...pageDefinition(), panels: [] } as unknown as LoadedExtensionSource["definition"];
     const runtime = normalizeExtensionSources([source(definition)]);
 
     expect(runtime.views).toEqual([]);
@@ -111,7 +122,7 @@ describe("alpha.4 UI normalization", () => {
   });
 
   test("rejects duplicate local ids and invalid placement rules", () => {
-    const base = alpha4Definition();
+    const base = pageDefinition();
     const duplicate = defineView({
       id: "tickets",
       title: "Duplicate",

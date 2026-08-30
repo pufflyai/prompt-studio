@@ -4,6 +4,7 @@ import {
   defineExtension,
   defineMode,
   defineNavigationItem,
+  definePage,
   definePlacement,
   defineResourceKind,
   defineView,
@@ -33,7 +34,6 @@ describe("createWorkbenchExtensionMetadata", () => {
   test("publishes resource menu slot declarations", () => {
     const resourceKind = defineResourceKind({
       id: "note",
-      surface: "primary",
       menuSlots: [
         { id: "headerPrimary", placement: "header-primary", access: "owner", order: 20 },
         { id: "context", placement: "context-menu", access: "public" },
@@ -75,19 +75,25 @@ describe("createWorkbenchExtensionMetadata", () => {
     ]);
   });
 
-  test("publishes alpha.4 view, placement, and navigation arrays without renderer records", () => {
+  test("publishes view, page, placement, and navigation arrays without renderer records", () => {
     const mode = defineMode({ id: "review", label: "Review" });
     const view = defineView({
       id: "tickets",
       title: "Tickets",
-      path: "tickets",
       body: { kind: "webview", entry: packageAsset("./views/tickets.tsx", "file:///fake/lab/") },
+    });
+    const page = definePage({
+      id: "tickets",
+      title: "Tickets",
+      path: "tickets",
+      slots: [{ id: "board", region: "main", view: view.ref, closable: false }],
     });
     const runtime = normalizeExtensionSources([
       source(
         defineExtension({
           modes: [mode],
           views: [view],
+          pages: [page],
           placements: [
             definePlacement({
               id: "tickets.review",
@@ -102,7 +108,7 @@ describe("createWorkbenchExtensionMetadata", () => {
               id: "tickets",
               slot: workbenchSlots.projectNavigation,
               label: "Tickets",
-              action: { kind: "view", view: view.ref },
+              action: { kind: "page", page: page.ref },
             }),
           ],
         }),
@@ -129,9 +135,14 @@ describe("createWorkbenchExtensionMetadata", () => {
       mode: { extensionId: "pstdio.lab", kind: "mode", id: "review" },
       item: { kind: "view", view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" } },
     });
+    expect(metadata.pages?.[0]).toMatchObject({
+      id: "pstdio.lab.page.tickets",
+      path: "tickets",
+      slots: [{ id: "board", region: "main", closable: false }],
+    });
     expect(metadata.navigationItems[0]?.action).toEqual({
-      kind: "view",
-      view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" },
+      kind: "page",
+      page: { extensionId: "pstdio.lab", kind: "page", id: "tickets" },
     });
     expect(metadata).not.toHaveProperty("panels");
     expect(metadata).not.toHaveProperty("kanbanRenderers");

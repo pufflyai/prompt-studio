@@ -12,7 +12,14 @@ const DEFAULT_LOCALE = "en";
 
 const addTranslationDiagnostic = (
   runtime: Accumulator,
-  input: { code: string; message: string; extensionId: string; sourcePath: string; metadata?: JsonObject },
+  input: {
+    code: string;
+    message: string;
+    extensionId: string;
+    severity?: "error" | "warning";
+    sourcePath: string;
+    metadata?: JsonObject;
+  },
 ) => runtime.diagnostics.push(createDiagnostic(input));
 
 const readJson = (path: string) => JSON.parse(readFileSync(path, "utf8")) as unknown;
@@ -61,15 +68,22 @@ const readTranslationBundle = (
 const collectInlineDefaults = (definition: unknown) => {
   const defaults: Record<string, string> = {};
   const keys = new Set<string>();
+  // One key, one meaning: only the first default reaches the bundle, so a second
+  // default for the same key silently replaces the copy the author wrote.
+  const conflicts = new Map<string, string>();
 
   for (const token of findLocalizedStrings(definition)) {
     keys.add(token.$l10n);
-    if (token.default !== undefined && defaults[token.$l10n] === undefined) {
+    if (token.default === undefined) continue;
+    const existing = defaults[token.$l10n];
+    if (existing === undefined) {
       defaults[token.$l10n] = token.default;
+      continue;
     }
+    if (existing !== token.default) conflicts.set(token.$l10n, token.default);
   }
 
-  return { defaults, keys };
+  return { conflicts, defaults, keys };
 };
 
 export const registerTranslations = (
@@ -94,6 +108,17 @@ export const registerTranslations = (
     const bundle = readTranslationBundle(ext, source, runtime, locale, asset);
     if (!bundle) continue;
     bundles[locale] = { ...(locale === defaultLocale ? inline.defaults : {}), ...bundle };
+  }
+
+  for (const [key, ignored] of inline.conflicts) {
+    addTranslationDiagnostic(runtime, {
+      code: "conflicting_translation_default",
+      message: `Translation key "${key}" declares two defaults ("${inline.defaults[key]}" and "${ignored}"); the first one is used everywhere`,
+      extensionId: ext.id,
+      severity: "warning",
+      sourcePath: source.sourcePath,
+      metadata: { key },
+    });
   }
 
   for (const key of inline.keys) {

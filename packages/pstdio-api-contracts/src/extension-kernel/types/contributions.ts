@@ -4,6 +4,7 @@ import type { RendererCallback } from "./context";
 import type {
   ContributionDefinition,
   ModeRef,
+  PageRef,
   ResourceKindRef,
   SettingsSectionRef,
   SettingsSlotRef,
@@ -123,6 +124,9 @@ export interface CommandPaletteResourceQueryResult {
 export interface CommandPaletteResourceContribution extends ContributionDefinition<"command-palette-resource"> {
   title: Localizable<string>;
   resourceKind?: ResourceKindRef;
+  // The page that presents this provider's resources: the destination for palette
+  // entries of `resourceKind` that carry no explicit target.
+  page?: PageRef;
   query: RendererCallback<CommandPaletteResourceQueryParams, CommandPaletteResourceQueryResult>;
   refreshEvents?: readonly RendererEventReference[];
 }

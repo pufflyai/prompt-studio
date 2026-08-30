@@ -13,6 +13,7 @@ export type * from "./harness";
 export type * from "./json";
 export type * from "./kanban-renderer";
 export type * from "./navigation-target";
+export type * from "./pages";
 export type * from "./params";
 export type * from "./renderer-base";
 export type * from "./resources";

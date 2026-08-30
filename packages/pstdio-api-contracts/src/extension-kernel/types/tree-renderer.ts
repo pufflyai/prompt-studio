@@ -3,6 +3,7 @@ import type { CommandRef } from "./commands";
 import type { RendererCallback } from "./context";
 import type { JsonObject, JsonValue, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
+import type { ResourceEmission } from "./pages";
 import type { ParamObjectSchema } from "./params";
 import type { RendererContributionBase } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
@@ -30,7 +31,9 @@ export interface TreeRendererActionParams extends TreeRendererQueryParams {
   node?: TreeNode;
 }
 
-export type TreeNodeTarget = NavigationTarget;
+// A node target is a navigation target or a resource emission. A node with a
+// `resource` and no target emits that resource on activation.
+export type TreeNodeTarget = NavigationTarget | ResourceEmission;
 
 export interface TreeAction {
   id: string;

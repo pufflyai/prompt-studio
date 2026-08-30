@@ -2,6 +2,7 @@ import { workbenchResourceKindDefinitions } from "@pstdio/sdk/extensions";
 import { createDiagnostic } from "../diagnostics";
 import type { Accumulator } from "./accumulator";
 import { resolveCompositionResourceKindReferences } from "./composition-collection";
+import { validatePages } from "./pages";
 import { resolveResourceKindReference } from "./references";
 
 export { collectCompositionContributions } from "./composition-collection";
@@ -162,6 +163,7 @@ export const validateCompositionRelationships = (runtime: Accumulator) => {
   validateResourceKindOwnership(runtime);
   const references = resolveCompositionResourceKindReferences(runtime);
   validateResourceMenuOwnership(runtime);
+  validatePages(runtime, references);
 
   for (const kind of runtime.resourceKinds) {
     if (

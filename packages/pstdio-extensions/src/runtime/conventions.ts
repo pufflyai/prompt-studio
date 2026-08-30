@@ -84,6 +84,7 @@ const localIdRecordsByKind = (runtime: ExtensionRuntime): [string, ContributionS
   ["middleware", runtime.middlewares],
   ["mode", runtime.modes],
   ["navigationItem", runtime.navigationItems],
+  ["page", runtime.pages],
   ["placement", runtime.placements],
   ["resourceHierarchyProvider", runtime.resourceHierarchyProviders],
   ["resourceKind", runtime.resourceKinds],
@@ -118,13 +119,18 @@ const collectIdGrammarDiagnostics = (runtime: ExtensionRuntime) => {
       diagnostics.push(invalidIdDiagnostic(kind, record, record.localId));
     }
   }
-  // Resource-kind slot and menu-slot ids are author-declared identifiers too: other
-  // extensions reference them, so they follow the same grammar.
+  // Resource-kind menu-slot ids and page slot ids are author-declared identifiers too:
+  // other extensions reference them, so they follow the same grammar.
   for (const record of runtime.resourceKinds) {
-    const { slots, menuSlots } = record.contribution;
-    for (const slotId of [...Object.keys(slots), ...Object.keys(menuSlots)]) {
+    for (const slotId of [...Object.keys(record.contribution.slots), ...Object.keys(record.contribution.menuSlots)]) {
       if (isValidLocalContributionId(slotId)) continue;
       diagnostics.push(invalidIdDiagnostic("resourceKind slot", record, slotId));
+    }
+  }
+  for (const record of runtime.pages) {
+    for (const slot of record.contribution.slots) {
+      if (isValidLocalContributionId(slot.id)) continue;
+      diagnostics.push(invalidIdDiagnostic("page slot", record, slot.id));
     }
   }
   return diagnostics;

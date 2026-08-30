@@ -120,6 +120,7 @@ export const extensionCommandPaletteResourceRecordSchema = z.object({
   extensionId: z.string(),
   title: localizableStringSchema,
   resourceKind: z.string().optional(),
+  page: z.object({ extensionId: z.string(), kind: z.literal("page"), id: z.string() }).optional(),
   queryHandlerId: z.string(),
   refreshEventIds: z.array(z.string().min(1)).optional(),
 });

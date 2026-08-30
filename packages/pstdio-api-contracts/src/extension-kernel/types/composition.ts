@@ -24,8 +24,10 @@ export interface ResourceMenuSlotDefinition {
   readonly order?: number;
 }
 
+// A resource kind declares data: collections, commands, palette entries, menu slots.
+// It says nothing about presentation; pages present resources through their bindings.
 export interface ResourceKindDefinition extends ContributionDefinition<"resource-kind"> {
-  readonly surface: ResourceSurface;
+  readonly surface?: ResourceSurface;
   readonly label?: Localizable<string>;
   readonly icon?: string;
   readonly slots?: readonly ResourceSlotDefinition[];

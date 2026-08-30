@@ -113,7 +113,10 @@ export const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCh
   target.viewMenus.push(...source.viewMenus);
   target.placements.push(...source.placements);
   target.resourceKinds.push(...source.resourceKinds);
-  target.resourceViews.push(...source.resourceViews);
+  target.resourceViews ??= [];
+  target.resourceViews.push(...(source.resourceViews ?? []));
+  target.pages ??= [];
+  target.pages.push(...(source.pages ?? []));
   target.resourceHierarchyProviders?.push(...(source.resourceHierarchyProviders ?? []));
   target.navigationItems.push(...source.navigationItems);
   target.statusBarItems.push(...source.statusBarItems);

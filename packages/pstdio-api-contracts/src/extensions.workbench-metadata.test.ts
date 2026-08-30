@@ -14,8 +14,17 @@ const metadata = () => ({
       localId: "files",
       extensionId: "pstdio.lab",
       title: "Files",
-      path: "/files",
       body: { kind: "tree", bodyHandlerId: "pstdio.lab.private.tree.files.body" },
+    },
+  ],
+  pages: [
+    {
+      id: "pstdio.lab.page.files",
+      localId: "files",
+      extensionId: "pstdio.lab",
+      title: "Files",
+      path: "files",
+      slots: [{ id: "tree", region: "main", view: ref("view", "files"), closable: false }],
     },
   ],
   viewMenus: [],
@@ -38,7 +47,7 @@ const metadata = () => ({
       extensionId: "pstdio.lab",
       slot: ref("navigation-item", "project"),
       label: "Files",
-      action: { kind: "view", view: ref("view", "files") },
+      action: { kind: "page", page: ref("page", "files") },
     },
   ],
   statusBarItems: [],
@@ -48,20 +57,24 @@ const metadata = () => ({
 });
 
 describe("workbench extension metadata", () => {
-  test("keeps views, placement, and navigation as separate typed records", () => {
+  test("keeps views, pages, placement, and navigation as separate typed records", () => {
     const parsed = workbenchExtensionMetadataSchema.parse(metadata());
 
     expect(parsed.views[0]).toMatchObject({
       id: "pstdio.lab.view.files",
-      path: "/files",
       body: { kind: "tree", bodyHandlerId: "pstdio.lab.private.tree.files.body" },
+    });
+    expect(parsed.pages?.[0]).toMatchObject({
+      id: "pstdio.lab.page.files",
+      path: "files",
+      slots: [{ id: "tree", region: "main", closable: false }],
     });
     expect(parsed.placements[0]).toMatchObject({
       mode: ref("mode", "project"),
       item: { kind: "view", view: ref("view", "files") },
       region: "main",
     });
-    expect(parsed.navigationItems[0]?.action).toEqual({ kind: "view", view: ref("view", "files") });
+    expect(parsed.navigationItems[0]?.action).toEqual({ kind: "page", page: ref("page", "files") });
     expect(parsed).not.toHaveProperty("panels");
     expect(parsed).not.toHaveProperty("treeRenderers");
     expect(parsed).not.toHaveProperty("routes");

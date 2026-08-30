@@ -67,6 +67,25 @@ describe("mergeCheck", () => {
     expect(target.views).toEqual(source.views);
   });
 
+  test("merges page records when either check omits the additive field", () => {
+    const target = check({ pages: undefined });
+    const source = check({
+      pages: [
+        {
+          id: "pstdio.planner.page.tickets",
+          localId: "tickets",
+          extensionId: "pstdio.planner",
+          title: "Tickets",
+          slots: [],
+        },
+      ],
+    });
+
+    mergeCheck(target, source);
+
+    expect(target.pages).toEqual(source.pages);
+  });
+
   test("preserves an unverified host compatibility result", () => {
     const target = check();
     const source = check({

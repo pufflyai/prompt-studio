@@ -34,6 +34,8 @@ export type ViewBody =
   | KanbanViewBody
   | DataTableViewBody;
 
+// A view is pure content. It owns its title and icon, shown wherever the view renders
+// (including tabs), and never claims where it is placed. Pages own placement and URLs.
 export interface ViewContribution extends ContributionDefinition<"view"> {
   readonly title: Localizable<string>;
   readonly icon?: string;
@@ -51,6 +53,8 @@ export interface NavigationItemContribution extends ContributionDefinition<"navi
   readonly action: NavigationTarget;
 }
 
+// Placements are mode-scoped static views only: workbench furniture that survives
+// page switches. Anything resource-driven is a page.
 export type PlacementItem =
   | { readonly kind: "view"; readonly view: ViewRef }
   | { readonly kind: "resource-slot"; readonly slot: ResourceSlotRef };

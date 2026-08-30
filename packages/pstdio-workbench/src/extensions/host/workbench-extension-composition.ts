@@ -28,7 +28,7 @@ const collectResourceKindPresenterRecords = (metadata: InternalWorkbenchExtensio
   const records = new Map<string, ResourceKindPresenterRecord>();
   for (const kind of metadata.resourceKinds ?? []) {
     records.set(kind.id, {
-      surface: kind.surface,
+      surface: kind.surface ?? "primary",
       extensionId: kind.extensionId,
       label: kind.label ? text(kind.label, kind.id) : undefined,
       icon: kind.icon,
@@ -137,7 +137,7 @@ export const registerComposition = (input: InternalRegisterWorkbenchExtensionCon
       registry.registerResourceKind({
         id: kind.id,
         extensionId: kind.extensionId,
-        surface: kind.surface,
+        surface: kind.surface ?? "primary",
         slots: kind.slots,
       }),
     );

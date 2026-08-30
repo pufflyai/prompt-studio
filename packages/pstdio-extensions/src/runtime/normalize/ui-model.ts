@@ -182,6 +182,7 @@ const registerNavigationItems = (ext: NormalizedExtension, source: LoadedExtensi
     const normalizeItem = (
       action: Exclude<NavigationItemContribution["action"], { kind: "compound" }>,
     ): Exclude<NavigationItemContribution["action"], { kind: "compound" }> => {
+      if (action.kind === "page") return { ...action, page: normalizeRef(ext, action.page) };
       if (action.kind === "view") return { ...action, view: normalizeRef(ext, action.view) };
       if (action.kind === "command" && isRecord(action.target.command) && action.target.command.kind === "command") {
         return {

@@ -1,4 +1,5 @@
 import type {
+  PageContribution,
   ResourceHierarchyProvider,
   ResourceKindDefinition,
   ResourceViewContribution,
@@ -55,6 +56,11 @@ const normalizeResourceMenuSlots = (value: unknown) =>
       )
     : (value ?? {});
 
+const isResourceKindContribution = (contribution: unknown): contribution is ResourceKindDefinition =>
+  isRecord(contribution) &&
+  isRecord(contribution.ref) &&
+  (contribution.ref as { kind?: unknown }).kind === "resource-kind";
+
 export const collectCompositionContributions = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
@@ -69,7 +75,7 @@ export const collectCompositionContributions = (
   });
   for (const contribution of resourceKinds) {
     const localId = contribution.id;
-    if (!isRecord(contribution) || typeof contribution.surface !== "string") continue;
+    if (!isResourceKindContribution(contribution)) continue;
     const slots = normalizeResourceSlots(contribution.slots);
     if (!isRecord(slots)) continue;
     const menuSlots = normalizeResourceMenuSlots(contribution.menuSlots);
@@ -83,9 +89,7 @@ export const collectCompositionContributions = (
         ...contribution,
         slots,
         menuSlots,
-        ...(isRecord(contribution.ref)
-          ? { ref: normalizeContributionRef(ext, contribution.ref as unknown as ResourceKindDefinition["ref"]) }
-          : {}),
+        ref: normalizeContributionRef(ext, contribution.ref),
       } as (typeof runtime.resourceKinds)[number]["contribution"],
     });
   }
@@ -122,6 +126,37 @@ export const collectCompositionContributions = (
         slot: { ...contribution.slot, resourceKind },
         view,
       } as ResourceViewContribution,
+    });
+  }
+
+  const pages = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "page",
+    contributions: contributionArray<PageContribution>(source.definition.pages),
+  });
+  for (const contribution of pages) {
+    if (!isRecord(contribution) || typeof contribution.id !== "string" || !Array.isArray(contribution.slots)) {
+      continue;
+    }
+    runtime.pages.push({
+      ...recordBase(ext, source, contribution.id),
+      id: normalizedContributionId(ext.id, "page", contribution.id),
+      contribution: {
+        ...contribution,
+        ref: normalizeContributionRef(ext, contribution.ref),
+        slots: contribution.slots.map((slot) =>
+          isRecord(slot) && isRecord(slot.view)
+            ? { ...slot, view: normalizeContributionRef(ext, slot.view as never) }
+            : slot,
+        ),
+        bindings: (contribution.bindings ?? []).map((binding) => ({
+          ...binding,
+          resourceKind: normalizeContributionRef(ext, binding.resourceKind),
+          view: normalizeContributionRef(ext, binding.view),
+        })),
+      } as PageContribution,
     });
   }
 

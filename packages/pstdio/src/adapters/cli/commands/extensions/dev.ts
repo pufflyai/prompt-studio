@@ -110,7 +110,7 @@ const contributionIds = (check: InstalledExtensionSource["check"]) => {
     ...check.viewMenus,
     ...check.placements,
     ...check.resourceKinds,
-    ...check.resourceViews,
+    ...(check.pages ?? []),
     ...(check.resourceHierarchyProviders ?? []),
     ...check.navigationItems,
     ...check.statusBarItems,

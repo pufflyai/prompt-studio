@@ -10,6 +10,7 @@ import type {
   KeybindingContribution,
   ModeContribution,
   NavigationItemContribution,
+  PageContribution,
   PlacementContribution,
   ResourceHierarchyProvider,
   ResourceKindDefinition,
@@ -65,6 +66,10 @@ export const resourceSlotRef = (resourceKind: ResourceKindRef, id: string): Reso
 
 export const resourceMenuSlotRef = (resourceKind: ResourceKindRef, id: string) =>
   defineSlot(`${resourceKind.id}.${id}`, { kind: "menu" });
+
+export const definePage = defineContribution("page") as <Definition extends Omit<PageContribution, "ref">>(
+  definition: Definition,
+) => Definition & ContributionDefinition<"page">;
 
 export const defineResourceView = defineContribution("resource-view") as <
   Definition extends Omit<ResourceViewContribution, "ref">,

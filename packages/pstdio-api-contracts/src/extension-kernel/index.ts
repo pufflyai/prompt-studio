@@ -11,6 +11,8 @@
 export {
   workbenchCommands,
   workbenchModes,
+  workbenchPageDefinitions,
+  workbenchPages,
   workbenchResourceKindDefinitions,
   workbenchResourceKinds,
   workbenchSlots,

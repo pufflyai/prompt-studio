@@ -28,6 +28,7 @@ const contributionRefSchema = <Kind extends string>(kind: Kind) =>
 const commandRefSchema = contributionRefSchema("command");
 const modeRefSchema = contributionRefSchema("mode");
 const navigationSlotRefSchema = contributionRefSchema("navigation-item");
+const pageRefSchema = contributionRefSchema("page");
 const resourceKindRefSchema = contributionRefSchema("resource-kind");
 const settingsSectionRefSchema = contributionRefSchema("settings-section");
 const statusRefSchema = contributionRefSchema("status");
@@ -43,6 +44,16 @@ const normalizedWhenSchema = z.object({
 
 const commandTargetSchema = z.object({ command: commandRefSchema, params: jsonObjectSchema.optional() });
 
+const sectionTargetSchema = z.object({
+  anchors: z.array(
+    z.object({
+      id: z.string(),
+      heading: z.string(),
+      occurrence: z.number().int().nonnegative().optional(),
+    }),
+  ),
+});
+
 const navigationTargetItemSchema = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("view"),
@@ -55,17 +66,15 @@ const navigationTargetItemSchema = z.discriminatedUnion("kind", [
     kind: z.literal("resource"),
     resource: extensionResourceRefSchema,
     input: z.object({ strategy: z.enum(["persistent", "replace-active"]).optional() }).optional(),
-    section: z
-      .object({
-        anchors: z.array(
-          z.object({
-            id: z.string(),
-            heading: z.string(),
-            occurrence: z.number().int().nonnegative().optional(),
-          }),
-        ),
-      })
-      .optional(),
+    section: sectionTargetSchema.optional(),
+  }),
+  z.object({
+    kind: z.literal("page"),
+    page: pageRefSchema,
+    resource: extensionResourceRefSchema.optional(),
+    slot: z.string().optional(),
+    open: z.enum(["preview", "pin"]).optional(),
+    section: sectionTargetSchema.optional(),
   }),
   z.object({ kind: z.literal("command"), target: commandTargetSchema }),
   z.object({ kind: z.literal("href"), href: z.string() }),
@@ -154,6 +163,31 @@ export const workbenchExtensionViewRecordSchema = z.object({
   body: workbenchExtensionViewBodySchema,
 });
 
+export const workbenchExtensionPageRecordSchema = z.object({
+  id: z.string(),
+  localId: z.string(),
+  extensionId: z.string(),
+  title: localizableStringSchema,
+  icon: z.string().optional(),
+  path: z.string().optional(),
+  slots: z.array(
+    z.object({
+      id: z.string(),
+      region: z.enum(dockedWorkbenchRegions),
+      view: viewRefSchema.optional(),
+      cardinality: z.enum(["one", "many"]).optional(),
+      closable: z.boolean().optional(),
+      defaultOpen: z.boolean().optional(),
+      scope: z.enum(["page", "location"]).optional(),
+      follows: z.string().optional(),
+      order: z.number().optional(),
+    }),
+  ),
+  bindings: z
+    .array(z.object({ resourceKind: resourceKindRefSchema, view: viewRefSchema, slot: z.string() }))
+    .optional(),
+});
+
 const workbenchExtensionModeRecordSchema = z.object({
   id: z.string(),
   localId: z.string(),
@@ -209,7 +243,7 @@ const workbenchExtensionResourceKindRecordSchema = z.object({
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),
-  surface: z.enum(["primary", "secondary", "attached"]),
+  surface: z.enum(["primary", "secondary", "attached"]).optional(),
   label: localizableStringSchema.optional(),
   icon: z.string().optional(),
   slots: z
@@ -272,6 +306,7 @@ export const workbenchExtensionMetadataSchema = z.object({
   menuContributions: z.array(extensionMenuContributionSchema),
   commandPaletteContributions: z.array(extensionCommandPaletteContributionSchema).optional(),
   modes: z.array(workbenchExtensionModeRecordSchema),
+  pages: z.array(workbenchExtensionPageRecordSchema).optional(),
   views: z.array(workbenchExtensionViewRecordSchema),
   viewMenus: z.array(workbenchExtensionViewMenuRecordSchema),
   placements: z.array(workbenchExtensionPlacementRecordSchema),

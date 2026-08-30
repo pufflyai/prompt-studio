@@ -3,20 +3,14 @@ import {
   extensionCompositionPanelRecordSchema,
   extensionModeCompositionRecordSchema,
   extensionResourceKindRecordSchema,
-  extensionResourcePanelRecordSchema,
   workbenchNavigationTargetSchema,
 } from "./extensions";
 
 describe("extension composition contracts", () => {
-  test("round-trips resource and menu slots, panel capabilities, and mode recipes in declaration order", () => {
+  test("round-trips menu slots, panel capabilities, and mode panel recipes in declaration order", () => {
     const resource = extensionResourceKindRecordSchema.parse({
       id: "planner.ticket",
       extensionId: "pstdio.planner",
-      surface: "primary",
-      slots: {
-        primary: { cardinality: "one", external: false },
-        inspector: { cardinality: "many", external: true },
-      },
       menuSlots: {
         header: { placement: "header-primary", external: false, order: 10 },
         more: { placement: "header-overflow", label: "Ticket actions", external: true },
@@ -29,23 +23,10 @@ describe("extension composition contracts", () => {
       show: { region: "side", allowedRegions: ["side", "secondary"] },
       renderer: { kind: "controls", id: "insights.details" },
     });
-    const edge = extensionResourcePanelRecordSchema.parse({
-      id: "insights.ticket-details",
-      extensionId: "pstdio.insights",
-      resourceKind: "planner.ticket",
-      panel: "insights.details",
-      slot: "inspector",
-    });
     const mode = extensionModeCompositionRecordSchema.parse({
-      resources: {
-        "planner.ticket": {
-          slots: { primary: { region: "main", required: true } },
-          panels: { "insights.details": { region: "secondary", allowedRegions: ["secondary", "side"] } },
-        },
-      },
+      modePanels: { "insights.details": { region: "secondary", allowedRegions: ["secondary", "side"] } },
     });
 
-    expect(Object.keys(resource.slots)).toEqual(["primary", "inspector"]);
     expect(Object.keys(resource.menuSlots)).toEqual(["header", "more"]);
     expect(resource.menuSlots.more).toEqual({
       placement: "header-overflow",
@@ -53,8 +34,7 @@ describe("extension composition contracts", () => {
       external: true,
     });
     expect(panel.show).toEqual({ region: "side", allowedRegions: ["side", "secondary"] });
-    expect(edge.slot).toBe("inspector");
-    expect(Object.keys(mode.resources)).toEqual(["planner.ticket"]);
+    expect(Object.keys(mode.modePanels ?? {})).toEqual(["insights.details"]);
   });
 
   test("serializes navigation targets and rejects chrome regions", () => {
@@ -64,7 +44,7 @@ describe("extension composition contracts", () => {
 
     expect(
       extensionModeCompositionRecordSchema.safeParse({
-        resources: { ticket: { slots: { primary: { region: "workbench.overlay" } } } },
+        modePanels: { "insights.details": { region: "workbench.overlay" } },
       }).success,
     ).toBe(false);
   });

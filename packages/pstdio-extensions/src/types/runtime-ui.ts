@@ -7,6 +7,7 @@ import type {
   Localizable,
   ModeContribution,
   NavigationItemContribution,
+  PageContribution,
   PlacementContribution,
   ResourceHierarchyProvider,
   ResourceKindDefinition,
@@ -112,6 +113,15 @@ export interface RuntimeResourceKindRecord {
       }
     >;
   };
+}
+
+export interface RuntimePageRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: PageContribution;
 }
 
 export interface RuntimeResourceViewRecord {

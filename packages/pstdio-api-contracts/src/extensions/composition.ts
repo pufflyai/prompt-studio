@@ -20,10 +20,10 @@ export const extensionResourceMenuSlotSchema = z.object({
 export const extensionResourceKindRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
-  surface: z.enum(["primary", "secondary", "attached"]),
+  surface: z.enum(["primary", "secondary", "attached"]).optional(),
   label: localizableStringSchema.optional(),
   icon: z.string().optional(),
-  slots: z.record(z.string(), extensionResourceSlotSchema),
+  slots: z.record(z.string(), extensionResourceSlotSchema).default({}),
   menuSlots: z.record(z.string(), extensionResourceMenuSlotSchema).default({}),
 });
 
@@ -76,7 +76,7 @@ export const extensionModeResourceRecipeSchema = z.object({
 });
 
 export const extensionModeCompositionRecordSchema = z.object({
-  resources: z.record(z.string(), extensionModeResourceRecipeSchema),
+  resources: z.record(z.string(), extensionModeResourceRecipeSchema).default({}),
   modePanels: z.record(z.string(), extensionModePlacementSchema).optional(),
   defaultResource: z.union([extensionResourceRefSchema, z.object({ commandId: z.string() })]).optional(),
 });

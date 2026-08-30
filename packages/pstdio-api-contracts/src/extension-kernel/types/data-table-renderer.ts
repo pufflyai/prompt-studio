@@ -3,6 +3,7 @@ import type { CommandRef } from "./commands";
 import type { RendererCallback } from "./context";
 import type { JsonValue, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
+import type { ResourceEmission } from "./pages";
 import type { RendererContributionBase } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
 
@@ -71,9 +72,11 @@ export interface DataTableRendererSelectionAction<TParams extends Struct = Struc
   command: CommandRef<TParams, unknown>;
 }
 
+// An activation returns a ResourceEmission (the active page's bindings place it) or a
+// full navigation target (for example a page target at another extension's page).
 export type DataTableRendererRowActivationHandler = RendererCallback<
   { row: DataTableRendererRow },
-  undefined | NavigationTarget
+  undefined | ResourceEmission | NavigationTarget
 >;
 
 export interface DataTableRendererContribution extends RendererContributionBase {

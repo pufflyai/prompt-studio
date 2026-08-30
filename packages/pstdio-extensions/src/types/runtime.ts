@@ -22,6 +22,7 @@ import type {
   RuntimeKeybindingRecord,
   RuntimeModeRecord,
   RuntimeNavigationItemRecord,
+  RuntimePageRecord,
   RuntimePlacementRecord,
   RuntimeResourceHierarchyProviderRecord,
   RuntimeResourceKindRecord,
@@ -218,6 +219,7 @@ export interface ExtensionRuntime {
   statusBarItems: RuntimeStatusBarItemRecord[];
   statuses: RuntimeStatusRecord[];
   resourceKinds: RuntimeResourceKindRecord[];
+  pages: RuntimePageRecord[];
   resourceViews: RuntimeResourceViewRecord[];
   resourceHierarchyProviders: RuntimeResourceHierarchyProviderRecord[];
   activityItems: RuntimeActivityItemRecord[];

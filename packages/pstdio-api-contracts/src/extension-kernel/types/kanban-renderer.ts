@@ -4,6 +4,7 @@ import type { RendererCallback } from "./context";
 import type { StatusRef } from "./contribution-identity";
 import type { Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
+import type { ResourceEmission } from "./pages";
 import type { ParamObjectSchema } from "./params";
 import type { RendererContributionBase } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
@@ -132,9 +133,11 @@ export interface KanbanRendererRowAction<TParams extends Struct = Struct> {
   destructive?: boolean;
 }
 
+// An activation returns a ResourceEmission (the active page's bindings place it) or a
+// full navigation target (for example a page target at another extension's page).
 export type KanbanRendererRowActivationHandler = RendererCallback<
   { row: KanbanRendererRow },
-  undefined | NavigationTarget
+  undefined | ResourceEmission | NavigationTarget
 >;
 
 export interface KanbanRendererContribution extends RendererContributionBase {

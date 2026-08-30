@@ -58,10 +58,13 @@ export interface WebviewCommandsExecuteParams {
   metadata?: JsonObject;
 }
 
+// The webview `resource.open` capability is an emission: the active page's bindings
+// place the resource. `href` opens an external link instead.
 export interface WebviewResourceOpenParams {
   href?: string;
   resource?: ResourceRef;
   input?: ExtensionResourceOpenIntent;
+  open?: "preview" | "pin";
 }
 
 export interface WebviewNotificationShowParams {

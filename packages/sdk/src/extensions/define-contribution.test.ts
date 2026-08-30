@@ -4,15 +4,15 @@ import {
   defineExtension,
   defineMode,
   defineNavigationItem,
+  definePage,
   definePlacement,
   defineResourceKind,
-  defineResourceView,
   defineView,
   packageAsset,
   resourceMenuSlotRef,
-  resourceSlotRef,
   workbenchCommands,
   workbenchModes,
+  workbenchPages,
   workbenchSlots,
 } from "./index";
 
@@ -29,25 +29,27 @@ describe("extension contribution definitions", () => {
       item: { kind: "view", view: view.ref },
       region: "main",
     });
+    const page = definePage({
+      id: "tickets",
+      title: "Tickets",
+      path: "tickets",
+      slots: [
+        { id: "board", region: "main", view: view.ref, closable: false },
+        { id: "ticket", region: "main", cardinality: "many" },
+      ],
+      bindings: [{ resourceKind: { kind: "resource-kind", id: "ticket" }, view: view.ref, slot: "ticket" }],
+    });
     const navigationItem = defineNavigationItem({
       id: "tickets",
       slot: workbenchSlots.projectNavigation,
       label: "Tickets",
-      action: { kind: "view", view: view.ref },
+      action: { kind: "page", page: page.ref },
     });
     const mode = defineMode({ id: "review", label: "Review" });
     const command = defineCommand({ id: "tickets.open", title: "Open ticket", run: async () => undefined });
     const resourceKind = defineResourceKind({
       id: "ticket",
-      surface: "primary",
-      slots: [{ id: "primary", cardinality: "one", access: "owner" }],
       menuSlots: [{ id: "headerOverflow", placement: "header-overflow", access: "public" }],
-    });
-    const resourceView = defineResourceView({
-      id: "ticket.editor",
-      resourceKind: resourceKind.ref,
-      slot: resourceSlotRef(resourceKind.ref, "primary"),
-      view: view.ref,
     });
 
     expect(view.ref).toEqual({ kind: "view", id: "tickets" });
@@ -60,7 +62,8 @@ describe("extension contribution definitions", () => {
       id: "ticket.headerOverflow",
       kind: "menu",
     });
-    expect(resourceView.ref).toEqual({ kind: "resource-view", id: "ticket.editor" });
+    expect(page.ref).toEqual({ kind: "page", id: "tickets" });
+    expect(workbenchPages.workspaces).toEqual({ extensionId: "pstdio", kind: "page", id: "workspaces" });
     expect(workbenchCommands.switchMode).toEqual({
       extensionId: "pstdio",
       kind: "command",

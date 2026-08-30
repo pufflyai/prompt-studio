@@ -41,6 +41,24 @@ export const workbenchResourceKinds = {
   workspace: workbenchResourceKindDefinitions.workspace.ref,
 };
 
+// Native dashboard screens published as host pages. An extension links a native screen
+// the same way it links any page: { kind: "page", page: workbenchPages.workspaces,
+// resource: workspaceRef }. Settings is not a page; open it by command.
+export const workbenchPages = {
+  workspaces: hostRef("page", "workspaces"),
+  sessions: hostRef("page", "sessions"),
+  start: hostRef("page", "start"),
+};
+
+// The kinds each host page binds (what `pst extensions check` validates page-target
+// resource arguments against) and the reserved un-prefixed URL segment each owns.
+// Start serializes as the bare project URL.
+export const workbenchPageDefinitions = {
+  workspaces: { ref: workbenchPages.workspaces, path: "workspaces", binds: ["workspace"] },
+  sessions: { ref: workbenchPages.sessions, path: "sessions", binds: ["session", "session-draft"] },
+  start: { ref: workbenchPages.start, path: "", binds: [] },
+} as const;
+
 export const workbenchSlots = {
   projectNavigation: hostRef("navigation-item", "project.navigation"),
   projectSettings: hostRef("settings-panel", "project.settings"),

@@ -144,6 +144,9 @@ export const toWorkbenchNavigationTarget = (
   }
   if (target.kind === "command") return toCommandTarget(target, input);
   if (target.kind === "href") return target;
+  if (target.kind === "page") {
+    throw new Error("Page targets require the workbench page navigation layer.");
+  }
   return {
     kind: "compound",
     targets: target.targets.map(
