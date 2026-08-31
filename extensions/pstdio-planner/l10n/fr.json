@@ -15,15 +15,7 @@
   "displayMenu.propertyOptions.createdAt": "Créé",
   "displayMenu.propertyOptions.status": "Statut",
   "displayMenu.propertyOptions.updatedAt": "Mis à jour",
-  "settingsPanels.ticketBoard.title": "Tableau des tâches",
   "settingsPanels.ticketTags.title": "Étiquettes",
-  "settings.ticketBoard.title": "Tableau des tâches",
-  "settings.ticketBoard.description": "Configurez les règles de création et de déplacement pour chaque colonne de tâches.",
-  "settings.ticketBoard.errorTitle": "Impossible de mettre à jour le tableau des tâches",
-  "settings.ticketBoard.loading": "Chargement...",
-  "settings.ticketBoard.canCreate": "Créer dans la colonne",
-  "settings.ticketBoard.canDragIn": "Déplacer vers la colonne",
-  "settings.ticketBoard.canDragOut": "Déplacer hors de la colonne",
   "ticketDetail.none": "Aucun",
   "ticketDetail.parent": "Parent"
 }

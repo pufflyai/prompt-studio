@@ -15,15 +15,7 @@
   "displayMenu.propertyOptions.createdAt": "Creado",
   "displayMenu.propertyOptions.status": "Estado",
   "displayMenu.propertyOptions.updatedAt": "Actualizado",
-  "settingsPanels.ticketBoard.title": "Tablero de tareas",
   "settingsPanels.ticketTags.title": "Etiquetas",
-  "settings.ticketBoard.title": "Tablero de tareas",
-  "settings.ticketBoard.description": "Configura las reglas de creación y arrastre para cada columna de tareas.",
-  "settings.ticketBoard.errorTitle": "No se pudo actualizar el tablero de tareas",
-  "settings.ticketBoard.loading": "Cargando...",
-  "settings.ticketBoard.canCreate": "Crear en la columna",
-  "settings.ticketBoard.canDragIn": "Arrastrar dentro",
-  "settings.ticketBoard.canDragOut": "Arrastrar fuera",
   "ticketDetail.none": "Ninguno",
   "ticketDetail.parent": "Padre"
 }

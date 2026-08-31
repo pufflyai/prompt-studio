@@ -15,15 +15,7 @@
   "displayMenu.propertyOptions.createdAt": "建立時間",
   "displayMenu.propertyOptions.status": "狀態",
   "displayMenu.propertyOptions.updatedAt": "更新時間",
-  "settingsPanels.ticketBoard.title": "工單看板",
   "settingsPanels.ticketTags.title": "標籤",
-  "settings.ticketBoard.title": "工單看板",
-  "settings.ticketBoard.description": "設定每個工單欄的建立和拖放規則。",
-  "settings.ticketBoard.errorTitle": "無法更新工單看板",
-  "settings.ticketBoard.loading": "正在載入...",
-  "settings.ticketBoard.canCreate": "在欄中建立",
-  "settings.ticketBoard.canDragIn": "拖入欄",
-  "settings.ticketBoard.canDragOut": "拖出欄",
   "ticketDetail.none": "無",
   "ticketDetail.parent": "父級"
 }

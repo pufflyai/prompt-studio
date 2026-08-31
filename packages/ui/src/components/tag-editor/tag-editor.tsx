@@ -1,10 +1,11 @@
-import { chakra, Editable, Flex, Icon, Stack, Text } from "@chakra-ui/react";
+import { Button, chakra, Editable, Flex, Icon, Menu, Stack, Text } from "@chakra-ui/react";
 import { closestCenter, DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Plus } from "lucide-react";
+import { Check, ChevronDown, Plus } from "lucide-react";
 import { useState } from "react";
 
 import { DeleteConfirmationModal } from "@/components/overlays/delete-confirmation-modal";
+import { ListRow } from "../list-row/list-row";
 import type { TagEditorProps, TagEditorValue } from "./tag-editor.types";
 import { TagEditorHeading } from "./tag-editor-heading";
 import { TagEditorRow } from "./tag-editor-row";
@@ -57,6 +58,96 @@ const AddOptionRow = chakra("button", {
   },
 });
 
+interface ColumnHeadersProps {
+  valueLabel: string;
+  actionsLabel?: string;
+}
+
+/** Names each column once, so a row reads as data instead of repeating its own labels. */
+const ColumnHeaders = (props: ColumnHeadersProps) => {
+  const { valueLabel, actionsLabel } = props;
+
+  return (
+    <Flex
+      alignItems="center"
+      gap="compact"
+      paddingInline="xs"
+      height="tag-editor-add-row"
+      bg="bg.subtle"
+      borderBottomWidth="1px"
+      borderColor="border.subtle"
+    >
+      <Flex width="tag-editor-lead" flexShrink="0" />
+      <Text flex="1" minWidth="0" textStyle="label/XS/caps" color="fg.subtle">
+        {valueLabel}
+      </Text>
+      {actionsLabel ? (
+        <Text width="tag-editor-commands" textAlign="right" textStyle="label/XS/caps" color="fg.subtle">
+          {actionsLabel}
+        </Text>
+      ) : null}
+      <Flex width="tag-editor-trailing" flexShrink="0" />
+    </Flex>
+  );
+};
+
+interface DefaultValueSelectProps {
+  label: string;
+  values: TagEditorValue[];
+  disabled?: boolean;
+  onSelect: (value: TagEditorValue) => void;
+}
+
+/**
+ * Exactly one option is the default, so it reads as one select rather than a
+ * per-row toggle. A select cannot hold two values, which is the rule itself.
+ */
+const DefaultValueSelect = (props: DefaultValueSelectProps) => {
+  const { label, values, disabled, onSelect } = props;
+  const current = values.find((value) => value.isDefault);
+
+  return (
+    <Flex
+      alignItems="center"
+      gap="sm"
+      paddingInline="xs"
+      paddingBlock="xs"
+      bg="bg.subtle"
+      borderTopWidth="1px"
+      borderColor="border.subtle"
+    >
+      <Text textStyle="paragraph/S/regular" color="fg.muted">
+        {label}
+      </Text>
+      <Menu.Root>
+        <Menu.Trigger asChild>
+          <Button size="2xs" variant="ghost" gap="xs" disabled={disabled} aria-label={label}>
+            {current?.name ?? "None"}
+            <Icon as={ChevronDown} boxSize="icon-2xs" />
+          </Button>
+        </Menu.Trigger>
+        <Menu.Positioner>
+          <Menu.Content minW="tag-action-menu" bg="bg">
+            {values.map((value) => (
+              <Menu.Item key={value.id} value={value.id} asChild>
+                <ListRow
+                  asChild
+                  variant="full-width"
+                  id={value.id}
+                  label={value.name}
+                  isSelected={value.isDefault}
+                  endContent={value.isDefault ? <Icon as={Check} boxSize="icon-xs" /> : undefined}
+                  onActivate={() => onSelect(value)}
+                />
+              </Menu.Item>
+            ))}
+          </Menu.Content>
+        </Menu.Positioner>
+      </Menu.Root>
+    </Flex>
+  );
+};
+
 export const TagEditor = (props: TagEditorProps) => {
   const {
     title,
@@ -73,6 +164,8 @@ export const TagEditor = (props: TagEditorProps) => {
     addLabel = "Add option",
     addName = "New option",
     actionOptions,
+    actionsLabel,
+    defaultValueLabel = "Default value",
     colorOptions,
     defaultAddColor = "blue",
     defaultAddIcon = null,
@@ -82,6 +175,9 @@ export const TagEditor = (props: TagEditorProps) => {
     iconOptions,
     showDefault,
     showIcons = true,
+    framed,
+    showColumnHeaders,
+    valueColumnLabel = "Name",
   } = props;
   const [valueToDelete, setValueToDelete] = useState<TagEditorValue | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -151,7 +247,16 @@ export const TagEditor = (props: TagEditorProps) => {
           </Flex>
         ) : null}
 
-        <Stack gap="none">
+        <Stack
+          gap="none"
+          borderWidth={framed ? "1px" : undefined}
+          borderColor={framed ? "border.subtle" : undefined}
+          borderRadius={framed ? "md" : undefined}
+          overflow={framed ? "hidden" : undefined}
+        >
+          {showColumnHeaders ? (
+            <ColumnHeaders valueLabel={valueColumnLabel} actionsLabel={actionOptions ? actionsLabel : undefined} />
+          ) : null}
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -167,13 +272,13 @@ export const TagEditor = (props: TagEditorProps) => {
                   showDefault={showDefault}
                   showIcons={showIcons}
                   actionOptions={actionOptions}
+                  actionsLabel={actionsLabel}
                   colorOptions={colorOptions}
                   iconOptions={iconOptions}
                   onNameChange={(name) => updateValue(index, { name })}
                   onColorChange={(color) => updateValue(index, { color })}
                   onIconChange={(icon) => updateValue(index, { icon })}
                   onActionsChange={(actions) => updateValue(index, { actions })}
-                  onSetDefault={() => onSetDefault?.(value)}
                   onDelete={() => setValueToDelete(value)}
                 />
               ))}
@@ -186,6 +291,15 @@ export const TagEditor = (props: TagEditorProps) => {
               <Text textStyle="paragraph/S/regular">{addLabel}</Text>
             </AddOptionRow>
           )}
+
+          {showDefault && values.length > 0 ? (
+            <DefaultValueSelect
+              label={defaultValueLabel}
+              values={values}
+              disabled={isSaving || readOnly}
+              onSelect={(value) => onSetDefault?.(value)}
+            />
+          ) : null}
         </Stack>
       </Stack>
 

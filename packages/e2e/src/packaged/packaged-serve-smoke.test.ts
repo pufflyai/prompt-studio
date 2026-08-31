@@ -329,7 +329,7 @@ describe("packaged pstdio — core default extensions", () => {
         expect(metadataRes.status).toBe(200);
         const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
         expect(metadata.settingsPanels).toContainEqual(
-          expect.objectContaining({ id: "pstdio.pstdio-planner.settings-panel.ticket-board" }),
+          expect.objectContaining({ id: "pstdio.pstdio-planner.settings-panel.ticket-tags" }),
         );
         const refineTicket = metadata.commands.find((command) => command.id.endsWith(".command.refine-ticket"));
         expect(refineTicket?.params?.template).toEqual({

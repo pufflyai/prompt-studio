@@ -196,24 +196,23 @@ export const WithActions = {
         color: "gray",
         sortOrder: 10,
         isDefault: true,
-        actions: ["create_ticket", "drag_in", "drag_out"],
+        actions: ["create"],
       },
-      { id: "ready", name: "ready", color: "green", sortOrder: 20, actions: ["drag_in", "drag_out"] },
-      { id: "done", name: "done", color: "green", sortOrder: 30, actions: ["drag_out", "archive_all"] },
+      { id: "ready", name: "ready", color: "green", sortOrder: 20, actions: [] },
+      { id: "done", name: "done", color: "green", sortOrder: 30, actions: ["archive_all"] },
     ]);
 
     return (
       <TagEditor
         title="Ticket statuses"
-        description="Manage status columns and board actions."
+        description="Manage status values and the commands each one offers."
         values={values}
         onValuesChange={setValues}
         actionOptions={[
-          { value: "create_ticket", label: "Create ticket" },
-          { value: "drag_in", label: "Drag in" },
-          { value: "drag_out", label: "Drag out" },
+          { value: "create", label: "Create" },
           { value: "archive_all", label: "Archive all" },
         ]}
+        actionsLabel="Commands"
         showDefault
         showIcons={false}
         onSetDefault={(value) => setValues(values.map((status) => ({ ...status, isDefault: status.id === value.id })))}
