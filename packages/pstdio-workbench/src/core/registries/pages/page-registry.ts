@@ -17,7 +17,7 @@ import { resolvePagePlacements } from "./page-placement-resolver";
 import { loadWorkbenchPlacementState, restoreWorkbenchPageStates } from "./page-placement-state";
 import { registerWorkbenchPage } from "./page-registration";
 import { setWorkbenchPageRegistryInternals } from "./page-registry-internals";
-import { activateWorkbenchPageState, snapshotOwnerPlacementStates } from "./page-registry-state";
+import { snapshotOwnerPlacementStates } from "./page-registry-state";
 import type {
   CreateWorkbenchPageRegistryInput,
   WorkbenchPageRegistry,
@@ -25,7 +25,7 @@ import type {
   WorkbenchPageRegistryStoreState,
   WorkbenchPageResourceCodec,
 } from "./page-registry-types";
-import { openWorkbenchPanelTarget } from "./panel-target-opening";
+import { openWorkbenchPanelTargetBatch, resolveWorkbenchPageLocationTarget } from "./page-target-batch";
 
 export type {
   CreateWorkbenchPageRegistryInput,
@@ -232,23 +232,25 @@ export const createWorkbenchPageRegistry = <Value>(
     },
     openPanel(target) {
       const current = store.getState();
-      return openWorkbenchPanelTarget({
-        target,
+      return openWorkbenchPanelTargetBatch({
+        targets: [target],
         registryInput: input,
         state: current,
         normalizeResource,
         resourceKey,
-        commit: (change) =>
-          commit({
-            pageStates: change.pageStates,
-            projectId: current.projectId,
-            location: current.location,
-            activePageId: current.activePageId,
-            activeModeId: current.activeModeId,
-            ...(change.modePlacements ? { modePlacements: change.modePlacements } : {}),
-            activate: [change.identity],
-            action: change.action,
-          }),
+        commit,
+      })[0]!;
+    },
+    openPanels(targets) {
+      if (targets.length === 0) return [];
+      const current = store.getState();
+      return openWorkbenchPanelTargetBatch({
+        targets,
+        registryInput: input,
+        state: current,
+        normalizeResource,
+        resourceKey,
+        commit,
       });
     },
     closePanel(identity) {
@@ -266,18 +268,19 @@ export const createWorkbenchPageRegistry = <Value>(
     },
     activateLocation(target) {
       const current = store.getState();
-      activateWorkbenchPageState({
+      const page = requireWorkbenchPage(current.pages, target.pageId);
+      const next = resolveWorkbenchPageLocationTarget({
         target,
-        page: requireWorkbenchPage(current.pages, target.pageId),
+        page,
         current,
-        pageStates: target.pageStates ?? current.pageStates,
-        locationState: { projectId: target.projectId, location: target.location },
-        persistence: input.placementStatePersistence,
+        registryInput: input,
+        resolveModePlacements: (placementState) =>
+          resolveModePlacementSet(current, page.modeId, undefined, placementState, target.projectId),
         normalizeResource,
         resourceKey,
-        commit,
-        action: target.action,
       });
+      commit(next);
+      return next.activate ?? [];
     },
     clearProject(projectId) {
       const current = store.getState();

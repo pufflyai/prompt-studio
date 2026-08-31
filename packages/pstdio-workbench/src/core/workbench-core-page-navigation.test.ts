@@ -124,4 +124,56 @@ describe("workbench core page navigation", () => {
     expect(harness.workbench.pages.store.getState().location).toBe(location);
     expect(harness.browser.pushes.length + harness.browser.replacements.length).toBe(writes);
   });
+
+  test("commits a destination page and its panel in one page state change", () => {
+    const harness = createHarness();
+    harness.workbench.pageLocations.boot("p1");
+    const states: string[][] = [];
+    const unsubscribe = harness.workbench.pages.store.subscribe((state) => {
+      states.push(state.placements.map((placement) => placement.value.contributionId));
+    });
+    const writes = harness.browser.pushes.length + harness.browser.replacements.length;
+
+    const result = harness.workbench.pageLocations.navigateWithPanels({ kind: "page", page: ticketsRef }, [
+      { kind: "panel", panel: { kind: "page-slot", page: ticketsRef, id: "tools" } },
+    ]);
+
+    unsubscribe();
+    expect(result.ok).toBe(true);
+    expect(states).toEqual([["tickets-panel", "tools-panel"]]);
+    expect(harness.browser.pushes.length + harness.browser.replacements.length).toBe(writes + 1);
+    expect(harness.persistence.values.get("p1")?.page).toEqual(ticketsRef);
+  });
+
+  test("does not expose a destination page when one of its panels cannot resolve", () => {
+    const harness = createHarness();
+    harness.workbench.pageLocations.boot("p1");
+    const location = harness.workbench.pages.store.getState().location;
+    const writes = harness.browser.pushes.length + harness.browser.replacements.length;
+    let stateChanges = 0;
+    const unsubscribe = harness.workbench.pages.store.subscribe(() => {
+      stateChanges += 1;
+    });
+
+    const result = harness.workbench.pageLocations.navigateWithPanels({ kind: "page", page: ticketsRef }, [
+      { kind: "panel", panel: { kind: "page-slot", page: ticketsRef, id: "missing" } },
+    ]);
+
+    unsubscribe();
+    expect(result).toEqual({
+      ok: false,
+      diagnostic: {
+        code: "page-location-unresolved",
+        source: "navigation",
+        message: "Unknown page slot: tickets.missing",
+      },
+    });
+    expect(stateChanges).toBe(0);
+    expect(harness.workbench.pages.store.getState().location).toBe(location);
+    expect(harness.workbench.layout.getLayout().regions.main.widgets).toEqual([
+      expect.objectContaining({ contributionId: "start-panel" }),
+    ]);
+    expect(harness.browser.pushes.length + harness.browser.replacements.length).toBe(writes);
+    expect(harness.persistence.values.get("p1")).toBe(location);
+  });
 });

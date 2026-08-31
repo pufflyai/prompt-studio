@@ -1,4 +1,10 @@
-import type { NavigationTargetPage, PageLocation, PageRef, PlacementIdentity } from "@pstdio/sdk/extensions";
+import type {
+  NavigationTargetPage,
+  NavigationTargetPanel,
+  PageLocation,
+  PageRef,
+  PlacementIdentity,
+} from "@pstdio/sdk/extensions";
 import type { WorkbenchPageRegistry, WorkbenchPageRuntimeState } from "../../registries/pages/page-registry";
 import {
   getWorkbenchPageRegistryInternals,
@@ -6,6 +12,7 @@ import {
   type WorkbenchPageRegistryInternals,
 } from "../../registries/pages/page-registry-internals";
 import { isWorkbenchProjectUrl, parseWorkbenchPageUrl, serializeWorkbenchPageUrl } from "./page-location-codec";
+import { reportPageLocationFailure } from "./page-location-diagnostics";
 import {
   normalizeDirectWorkbenchPageLocation,
   normalizeWorkbenchPageLocation,
@@ -59,6 +66,10 @@ export interface WorkbenchPageLocationController {
   boot(projectId: string): WorkbenchPageNavigationResult;
   switchProject(projectId: string): WorkbenchPageNavigationResult;
   navigate(target: NavigationTargetPage): WorkbenchPageNavigationResult;
+  navigateWithPanels(
+    target: NavigationTargetPage,
+    panels: readonly NavigationTargetPanel[],
+  ): WorkbenchPageNavigationResult;
   navigateLocation(location: PageLocation): WorkbenchPageNavigationResult;
   closePlacement(identity: PlacementIdentity): WorkbenchPageNavigationResult;
   dispose(): void;
@@ -96,16 +107,8 @@ export const createWorkbenchPageLocationController = <Value>(
 ): WorkbenchPageLocationController => {
   const internals = getWorkbenchPageRegistryInternals(input.registry);
   const pages = () => input.registry.listPages();
-
-  const fail = (source: WorkbenchPageLocationDiagnostic["source"], error: unknown): WorkbenchPageNavigationResult => {
-    const diagnostic: WorkbenchPageLocationDiagnostic = {
-      code: "page-location-unresolved",
-      source,
-      message: error instanceof Error ? error.message : String(error),
-    };
-    input.reportDiagnostic?.(diagnostic);
-    return { ok: false, diagnostic };
-  };
+  const fail = (source: WorkbenchPageLocationDiagnostic["source"], error: unknown) =>
+    reportPageLocationFailure(input, source, error);
 
   const historyEntry = (projectId: string, location: PageLocation): WorkbenchPageBrowserEntry => ({
     url: serializeWorkbenchPageUrl({ projectId, location, pages: pages(), resources: internals.resources }),
@@ -122,6 +125,7 @@ export const createWorkbenchPageLocationController = <Value>(
     resolved: ResolvedLocation,
     history: "push" | "replace" | "none",
     action: string,
+    panels: readonly NavigationTargetPanel[] = [],
   ) => {
     internals.activateLocation({
       pageId: resolved.pageId,
@@ -132,6 +136,7 @@ export const createWorkbenchPageLocationController = <Value>(
       ...(resolved.location.resource ? { resource: resolved.location.resource } : {}),
       ...(resolved.location.section ? { section: resolved.location.section } : {}),
       ...(resolved.pageStates ? { pageStates: resolved.pageStates } : {}),
+      ...(panels.length > 0 ? { panels } : {}),
     });
     input.persistence.save(projectId, resolved.location);
     if (history !== "none") input.browser[history](historyEntry(projectId, resolved.location));
@@ -298,6 +303,17 @@ export const createWorkbenchPageLocationController = <Value>(
     }
   };
 
+  const navigate = (target: NavigationTargetPage, panels: readonly NavigationTargetPanel[] = []) => {
+    const projectId = input.registry.store.getState().projectId;
+    if (!projectId) return fail("navigation", new Error("Cannot navigate before a project is active"));
+    try {
+      const resolved = normalizeWorkbenchPageTarget({ target, pages: pages(), resources: internals.resources });
+      return commit(projectId, resolved, "push", "navigatePageLocation", panels);
+    } catch (error) {
+      return fail("navigation", error);
+    }
+  };
+
   return {
     boot(projectId) {
       return restore(projectId, "boot", true);
@@ -308,16 +324,8 @@ export const createWorkbenchPageLocationController = <Value>(
       return restore(projectId, "project-switch", false);
     },
 
-    navigate(target) {
-      const projectId = input.registry.store.getState().projectId;
-      if (!projectId) return fail("navigation", new Error("Cannot navigate before a project is active"));
-      try {
-        const resolved = normalizeWorkbenchPageTarget({ target, pages: pages(), resources: internals.resources });
-        return commit(projectId, resolved, "push", "navigatePageLocation");
-      } catch (error) {
-        return fail("navigation", error);
-      }
-    },
+    navigate,
+    navigateWithPanels: navigate,
 
     navigateLocation(location) {
       const projectId = input.registry.store.getState().projectId;

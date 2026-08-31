@@ -12,6 +12,7 @@ export interface WorkbenchPageLocationCommitInput extends WorkbenchPageOpenInput
   projectId: string;
   location: PageLocation;
   action: string;
+  panels?: readonly NavigationTargetPanel[];
   pageStates?: Readonly<Record<string, WorkbenchPageRuntimeState>>;
 }
 
@@ -31,8 +32,9 @@ export type WorkbenchPageCloseResolution =
 export interface WorkbenchPageRegistryInternals<Value> {
   resources: WorkbenchPageResourceCodec;
   connectRuntime(apply: (state: WorkbenchPageRegistryStoreState<Value>) => void): Disposable;
-  activateLocation(input: WorkbenchPageLocationCommitInput): void;
+  activateLocation(input: WorkbenchPageLocationCommitInput): readonly PlacementIdentity[];
   openPanel(target: NavigationTargetPanel): PlacementIdentity;
+  openPanels(targets: readonly NavigationTargetPanel[]): readonly PlacementIdentity[];
   closePanel(identity: PlacementIdentity): void;
   refreshModePlacements(): void;
   clearProject(projectId: string): void;

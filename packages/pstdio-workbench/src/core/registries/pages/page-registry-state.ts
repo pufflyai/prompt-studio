@@ -38,7 +38,7 @@ export const snapshotOwnerPlacementStates = <Value>(input: {
   return state;
 };
 
-export const activateWorkbenchPageState = <Value>(input: {
+interface ResolveWorkbenchPageStateInput<Value> {
   target: WorkbenchPageOpenInput;
   page: WorkbenchPageContribution;
   current: WorkbenchPageRegistryStoreState<Value>;
@@ -47,9 +47,10 @@ export const activateWorkbenchPageState = <Value>(input: {
   persistence: CreateWorkbenchPageRegistryInput<Value>["placementStatePersistence"];
   normalizeResource: WorkbenchPageResourceCodec["normalize"];
   resourceKey(resource: Parameters<WorkbenchPageResourceCodec["toUri"]>[0]): string;
-  commit(next: WorkbenchPageRegistryCommitInput<Value>): void;
   action: string;
-}) => {
+}
+
+export const resolveWorkbenchPageState = <Value>(input: ResolveWorkbenchPageStateInput<Value>) => {
   const projectId = input.locationState.projectId;
   const projectChanged = projectId !== undefined && projectId !== input.current.projectId;
   const placementState = projectChanged
@@ -71,7 +72,7 @@ export const activateWorkbenchPageState = <Value>(input: {
   });
   const instanceKey = pageState.activePrimaryInstanceKey;
   if (!instanceKey) throw new Error(`Page "${input.page.id}" did not resolve a primary instance`);
-  input.commit({
+  return {
     pageStates: { ...availablePageStates, [input.page.id]: pageState },
     projectId,
     location: input.locationState.location,
@@ -80,5 +81,5 @@ export const activateWorkbenchPageState = <Value>(input: {
     placementState,
     activate: [pagePlacementIdentity(input.page.id, primarySlot(input.page).id, instanceKey)],
     action: input.action,
-  });
+  } satisfies WorkbenchPageRegistryCommitInput<Value>;
 };
