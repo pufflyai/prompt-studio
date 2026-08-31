@@ -10,23 +10,22 @@ import type {
 } from "./page-registry-types";
 import { emptyPageState, openResourceSlot, requirePageSlot, setStaticSlotOpen } from "./page-slot-lifecycle";
 
-interface PanelTargetCommitInput<Value> {
+export interface WorkbenchPanelTargetResolution<Value> {
   pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>;
   modePlacements?: readonly ResolvedOwnedPlacement<Value>[];
   identity: PlacementIdentity;
   action: string;
 }
 
-interface OpenWorkbenchPanelTargetInput<Value> {
+interface ResolveWorkbenchPanelTargetInput<Value> {
   target: NavigationTargetPanel;
   registryInput: CreateWorkbenchPageRegistryInput<Value>;
   state: WorkbenchPageRegistryStoreState<Value>;
   normalizeResource(resource: ResourceRef): ResourceRef;
   resourceKey(resource: ResourceRef): string;
-  commit(input: PanelTargetCommitInput<Value>): void;
 }
 
-const requireActivePagePanel = <Value>(input: OpenWorkbenchPanelTargetInput<Value>) => {
+const requireActivePagePanel = <Value>(input: ResolveWorkbenchPanelTargetInput<Value>) => {
   const panel = input.target.panel;
   if (panel.kind !== "page-slot") throw new Error("Panel target does not reference a page slot");
   const page = Object.values(input.state.pages).find(
@@ -40,7 +39,7 @@ const requireActivePagePanel = <Value>(input: OpenWorkbenchPanelTargetInput<Valu
 };
 
 const openPagePanelState = <Value>(
-  input: OpenWorkbenchPanelTargetInput<Value>,
+  input: ResolveWorkbenchPanelTargetInput<Value>,
   page: WorkbenchPageContribution,
   slot: WorkbenchPageSlot,
 ) => {
@@ -65,16 +64,15 @@ const openPagePanelState = <Value>(
   return { state: setStaticSlotOpen(current, slot.id, true), instanceKey: "default" };
 };
 
-const openPagePanel = <Value>(input: OpenWorkbenchPanelTargetInput<Value>) => {
+const resolvePagePanel = <Value>(input: ResolveWorkbenchPanelTargetInput<Value>) => {
   const { page, slot } = requireActivePagePanel(input);
   const { state, instanceKey } = openPagePanelState(input, page, slot);
   const identity = pagePlacementIdentity(page.id, slot.id, instanceKey);
-  input.commit({
+  return {
     pageStates: { ...input.state.pageStates, [page.id]: state },
     identity,
     action: "openPagePanelTarget",
-  });
-  return identity;
+  } satisfies WorkbenchPanelTargetResolution<Value>;
 };
 
 const assertModePanelResolution = <Value>(
@@ -94,7 +92,7 @@ const assertModePanelResolution = <Value>(
   }
 };
 
-const openModePanel = <Value>(input: OpenWorkbenchPanelTargetInput<Value>) => {
+const resolveModePanel = <Value>(input: ResolveWorkbenchPanelTargetInput<Value>) => {
   const panel = input.target.panel;
   if (panel.kind !== "placement") throw new Error("Panel target does not reference a mode placement");
   const modeId = input.state.activeModeId;
@@ -110,14 +108,13 @@ const openModePanel = <Value>(input: OpenWorkbenchPanelTargetInput<Value>) => {
     ...(input.target.open ? { open: input.target.open } : {}),
   });
   assertModePanelResolution(modeId, resolution.identity, resolution.placements);
-  input.commit({
+  return {
     pageStates: input.state.pageStates,
     modePlacements: resolution.placements,
     identity: resolution.identity,
     action: "openModePanelTarget",
-  });
-  return resolution.identity;
+  } satisfies WorkbenchPanelTargetResolution<Value>;
 };
 
-export const openWorkbenchPanelTarget = <Value>(input: OpenWorkbenchPanelTargetInput<Value>) =>
-  input.target.panel.kind === "page-slot" ? openPagePanel(input) : openModePanel(input);
+export const resolveWorkbenchPanelTarget = <Value>(input: ResolveWorkbenchPanelTargetInput<Value>) =>
+  input.target.panel.kind === "page-slot" ? resolvePagePanel(input) : resolveModePanel(input);

@@ -85,6 +85,7 @@ export {
 } from "../controllers/page-location/page-location-normalization";
 export type {
   CreateWorkbenchPanelTargetControllerInput,
+  WorkbenchPanelTargetBatchResult,
   WorkbenchPanelTargetController,
   WorkbenchPanelTargetDiagnostic,
   WorkbenchPanelTargetResult,
