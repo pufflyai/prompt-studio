@@ -101,6 +101,70 @@ describe("createNavigationRegistry", () => {
     expect(calls.map((entry) => entry.kind)).toEqual(["openResource", "openView"]);
   });
 
+  test("dispatches a page and its owned panels as one workbench operation", async () => {
+    const { dispatcher, calls } = createDispatcherCollector();
+    dispatcher.openPageTarget = (page, panels) => {
+      calls.push({ kind: "openPageTarget", payload: { page, panels } });
+    };
+    const navigation = createNavigationRegistry({ resolveDispatcher: () => dispatcher });
+    const page = { extensionId: "acme.planner", kind: "page" as const, id: "ticket" };
+
+    await navigation.openTarget({
+      kind: "compound",
+      targets: [
+        { kind: "page", page },
+        { kind: "panel", panel: { kind: "page-slot", page, id: "files" } },
+      ],
+    });
+
+    expect(calls).toEqual([
+      {
+        kind: "openPageTarget",
+        payload: {
+          page: { kind: "page", page },
+          panels: [{ kind: "panel", panel: { kind: "page-slot", page, id: "files" } }],
+        },
+      },
+    ]);
+  });
+
+  test("rejects a mixed page compound before dispatching any item", async () => {
+    const { dispatcher, calls } = createDispatcherCollector();
+    dispatcher.openPageTarget = () => calls.push({ kind: "openPageTarget", payload: undefined });
+    const navigation = createNavigationRegistry({ resolveDispatcher: () => dispatcher });
+
+    await expect(
+      navigation.openTarget({
+        kind: "compound",
+        targets: [
+          { kind: "page", page: { extensionId: "acme.planner", kind: "page", id: "ticket" } },
+          { kind: "command", commandId: "unrelated" },
+        ],
+      }),
+    ).rejects.toThrow("A page target compound may contain one page followed by panel targets");
+    expect(calls).toEqual([]);
+  });
+
+  test("keeps page-free panel and command compounds on the general dispatcher", async () => {
+    const { dispatcher, calls } = createDispatcherCollector();
+    dispatcher.openPanelTargets = (panels) => {
+      calls.push({ kind: "openPanelTargets", payload: panels });
+    };
+    const navigation = createNavigationRegistry({ resolveDispatcher: () => dispatcher });
+
+    await navigation.openTarget({
+      kind: "compound",
+      targets: [
+        { kind: "panel", panel: { extensionId: "pstdio", kind: "placement", id: "sessions" } },
+        { kind: "command", commandId: "workbench.focusSide" },
+      ],
+    });
+
+    expect(calls.map((entry) => entry.kind)).toEqual(["openPanelTargets", "executeCommand"]);
+  });
+});
+
+describe("createNavigationRegistry general dispatch", () => {
   test("compound dispatch validates every item before committing any item", async () => {
     const calls: string[] = [];
     const dispatcher: NavigationDispatcherContext = {

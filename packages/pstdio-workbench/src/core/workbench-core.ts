@@ -569,6 +569,19 @@ const createCoreNavigationRegistry = (
         canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
         openResource: (resource, openInput) => core.resources.openResource(resource, openInput),
         openPanel,
+        openPageTarget: (target, panels) => {
+          const result =
+            panels.length > 0
+              ? core.pageLocations.navigateWithPanels(target, panels)
+              : core.pageLocations.navigate(target);
+          if (!result.ok) throw new Error(result.diagnostic.message);
+          return result;
+        },
+        openPanelTargets: (targets) => {
+          const result = core.panelTargets.openMany(targets);
+          if (!result.ok) throw new Error(result.diagnostic.message);
+          return result.identities;
+        },
         openView: (viewId, openInput) => core.views.openView(viewId, openInput),
         executeCommand: (commandId, args) => core.commands.executeCommand(commandId, args),
         openHref: (href) => globalThis.open(href, "_blank", "noopener,noreferrer"),

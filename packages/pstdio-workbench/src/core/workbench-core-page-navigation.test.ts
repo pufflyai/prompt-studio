@@ -176,4 +176,54 @@ describe("workbench core page navigation", () => {
     expect(harness.browser.pushes.length + harness.browser.replacements.length).toBe(writes);
     expect(harness.persistence.values.get("p1")).toBe(location);
   });
+
+  test("dispatches an SDK page and its panels through one navigation transaction", async () => {
+    const harness = createHarness();
+    harness.workbench.pageLocations.boot("p1");
+    const states: string[][] = [];
+    const unsubscribe = harness.workbench.pages.store.subscribe((state) => {
+      states.push(state.placements.map((placement) => placement.value.contributionId));
+    });
+    const writes = harness.browser.pushes.length + harness.browser.replacements.length;
+
+    await harness.workbench.navigation.openTarget({
+      kind: "compound",
+      targets: [
+        { kind: "page", page: ticketsRef },
+        { kind: "panel", panel: { kind: "page-slot", page: ticketsRef, id: "tools" } },
+      ],
+    });
+
+    unsubscribe();
+    expect(states).toEqual([["tickets-panel", "tools-panel"]]);
+    expect(harness.browser.pushes.length + harness.browser.replacements.length).toBe(writes + 1);
+    expect(harness.persistence.values.get("p1")?.page).toEqual(ticketsRef);
+  });
+
+  test("rejects an invalid SDK compound before changing page, history, or persistence", async () => {
+    const harness = createHarness();
+    harness.workbench.pageLocations.boot("p1");
+    const state = harness.workbench.pages.store.getState();
+    const writes = harness.browser.pushes.length + harness.browser.replacements.length;
+    let stateChanges = 0;
+    const unsubscribe = harness.workbench.pages.store.subscribe(() => {
+      stateChanges += 1;
+    });
+
+    await expect(
+      harness.workbench.navigation.openTarget({
+        kind: "compound",
+        targets: [
+          { kind: "page", page: ticketsRef },
+          { kind: "panel", panel: { kind: "page-slot", page: ticketsRef, id: "missing" } },
+        ],
+      }),
+    ).rejects.toThrow("Unknown page slot: tickets.missing");
+
+    unsubscribe();
+    expect(stateChanges).toBe(0);
+    expect(harness.workbench.pages.store.getState()).toBe(state);
+    expect(harness.browser.pushes.length + harness.browser.replacements.length).toBe(writes);
+    expect(harness.persistence.values.get("p1")).toBe(state.location);
+  });
 });

@@ -23,7 +23,10 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object" && !Array.isArray(value));
 
 const isContributionRef = (value: unknown, kind: string) =>
-  isRecord(value) && value.kind === kind && typeof value.id === "string";
+  isRecord(value) &&
+  value.kind === kind &&
+  typeof value.id === "string" &&
+  (value.extensionId === undefined || typeof value.extensionId === "string");
 
 const isResource = (value: unknown) =>
   isRecord(value) && typeof value.type === "string" && typeof value.id === "string";
@@ -50,8 +53,37 @@ const isViewTarget = (target: Record<string, unknown>) => {
   );
 };
 
+const isOpenIntent = (value: unknown) => value === undefined || value === "preview" || value === "pin";
+
+const isPageTarget = (value: unknown, ancestors = new Set<unknown>()): boolean => {
+  if (!isRecord(value) || value.kind !== "page" || !isContributionRef(value.page, "page")) return false;
+  if (ancestors.has(value)) return false;
+  if (value.resource !== undefined && !isResource(value.resource)) return false;
+  if (value.section !== undefined && !isRecord(value.section)) return false;
+  if (!isOpenIntent(value.open)) return false;
+  if (value.parent === undefined) return true;
+  const next = new Set(ancestors);
+  next.add(value);
+  return isPageTarget(value.parent, next);
+};
+
+const isPanelRef = (value: unknown) => {
+  if (!isRecord(value)) return false;
+  if (isContributionRef(value, "placement")) return true;
+  return value.kind === "page-slot" && typeof value.id === "string" && isContributionRef(value.page, "page");
+};
+
+const isPanelTarget = (value: unknown) =>
+  isRecord(value) &&
+  value.kind === "panel" &&
+  isPanelRef(value.panel) &&
+  (value.resource === undefined || isResource(value.resource)) &&
+  isOpenIntent(value.open);
+
 const isItemTarget = (value: unknown): value is Exclude<ExtensionNavigationTarget, { kind: "compound" }> => {
   if (!isRecord(value)) return false;
+  if (value.kind === "page") return isPageTarget(value);
+  if (value.kind === "panel") return isPanelTarget(value);
   if (value.kind === "resource") return isResourceTarget(value);
   if (value.kind === "view") return isViewTarget(value);
   if (value.kind === "href") return typeof value.href === "string";
@@ -65,12 +97,16 @@ const isItemTarget = (value: unknown): value is Exclude<ExtensionNavigationTarge
 
 export const isExtensionNavigationTarget = (value: unknown): value is ExtensionNavigationTarget => {
   if (isItemTarget(value)) return true;
+  if (!isRecord(value) || value.kind !== "compound" || !Array.isArray(value.targets) || value.targets.length === 0) {
+    return false;
+  }
+  if (!value.targets.every(isItemTarget)) return false;
+  const pageIndexes = value.targets.flatMap((target, index) => (target.kind === "page" ? [index] : []));
   return (
-    isRecord(value) &&
-    value.kind === "compound" &&
-    Array.isArray(value.targets) &&
-    value.targets.length > 0 &&
-    value.targets.every(isItemTarget)
+    pageIndexes.length === 0 ||
+    (pageIndexes.length === 1 &&
+      pageIndexes[0] === 0 &&
+      value.targets.slice(1).every((target) => target.kind === "panel"))
   );
 };
 
@@ -116,6 +152,29 @@ const viewIdOf = (target: Extract<ExtensionNavigationTarget, { kind: "view" }>, 
   return owner && owner !== "pstdio" ? `${owner}.view.${target.view.id}` : target.view.id;
 };
 
+const withExtensionOwner = <Ref extends { extensionId?: string }>(ref: Ref, extensionId: string | undefined): Ref =>
+  ref.extensionId !== undefined || extensionId === undefined ? ref : ({ ...ref, extensionId } as Ref);
+
+const toPageTarget = (
+  target: Extract<ExtensionNavigationTarget, { kind: "page" }>,
+  extensionId: string | undefined,
+): Extract<ExtensionNavigationTarget, { kind: "page" }> => ({
+  ...target,
+  page: withExtensionOwner(target.page, extensionId),
+  ...(target.parent ? { parent: toPageTarget(target.parent, extensionId) } : {}),
+});
+
+const toPanelTarget = (
+  target: Extract<ExtensionNavigationTarget, { kind: "panel" }>,
+  extensionId: string | undefined,
+): Extract<ExtensionNavigationTarget, { kind: "panel" }> => ({
+  ...target,
+  panel:
+    target.panel.kind === "page-slot"
+      ? { ...target.panel, page: withExtensionOwner(target.panel.page, extensionId) }
+      : withExtensionOwner(target.panel, extensionId),
+});
+
 // The return type stays explicit: the compound branch recurses, and TypeScript
 // cannot infer the return type of a self-referencing function.
 export const toWorkbenchNavigationTarget = (
@@ -144,9 +203,8 @@ export const toWorkbenchNavigationTarget = (
   }
   if (target.kind === "command") return toCommandTarget(target, input);
   if (target.kind === "href") return target;
-  if (target.kind === "page" || target.kind === "panel") {
-    throw new Error("Page and panel navigation targets require dashboard capability page.v1.");
-  }
+  if (target.kind === "page") return toPageTarget(target, input.extensionId);
+  if (target.kind === "panel") return toPanelTarget(target, input.extensionId);
   return {
     kind: "compound",
     targets: target.targets.map(

@@ -1,3 +1,7 @@
+import type {
+  NavigationTargetPage as SdkNavigationTargetPage,
+  NavigationTargetPanel as SdkNavigationTargetPanel,
+} from "@pstdio/sdk/extensions";
 import {
   type ContributionMetadata,
   normalizeContributionMetadata,
@@ -15,11 +19,15 @@ export interface NavigationTargetResource {
   input?: OpenResourceInput;
 }
 
-export interface NavigationTargetPanel {
+export interface NavigationTargetLayoutPanel {
   kind: "panel";
   panelId: string;
   input?: OpenWorkbenchPanelInput;
 }
+
+export type NavigationTargetPage = SdkNavigationTargetPage;
+export type NavigationTargetOwnedPanel = SdkNavigationTargetPanel;
+export type NavigationTargetPanel = NavigationTargetLayoutPanel | NavigationTargetOwnedPanel;
 
 export interface NavigationTargetView {
   kind: "view";
@@ -39,6 +47,7 @@ export interface NavigationTargetHref {
 }
 
 export type NavigationTargetItem =
+  | NavigationTargetPage
   | NavigationTargetResource
   | NavigationTargetView
   | NavigationTargetPanel
@@ -81,6 +90,8 @@ export interface NavigationDispatcherContext {
   createCheckpoint?(): undefined | (() => void);
   openResource(resource: ResourceRef, input?: OpenResourceInput): Promise<unknown>;
   openPanel(panelId: string, input?: OpenWorkbenchPanelInput): unknown;
+  openPageTarget?(target: NavigationTargetPage, panels: readonly NavigationTargetOwnedPanel[]): unknown;
+  openPanelTargets?(targets: readonly NavigationTargetOwnedPanel[]): unknown;
   openView(viewId: string, input?: OpenWorkbenchViewInput): Promise<unknown> | unknown;
   executeCommand(commandId: string, args?: unknown): Promise<unknown> | unknown;
   openHref?(href: string): Promise<unknown> | unknown;
@@ -117,10 +128,27 @@ const noDispatcher = (): NavigationDispatcherContext => {
   throw new Error("navigation.openTarget: no dispatcher available (configure resolveDispatcher)");
 };
 
+const isOwnedPanelTarget = (target: NavigationTargetItem): target is NavigationTargetOwnedPanel =>
+  target.kind === "panel" && "panel" in target;
+
+const requirePageTargetDispatcher = (dispatcher: NavigationDispatcherContext) => {
+  if (!dispatcher.openPageTarget) throw new Error("navigation.openTarget: page target dispatcher is not configured");
+  return dispatcher.openPageTarget;
+};
+
+const requirePanelTargetDispatcher = (dispatcher: NavigationDispatcherContext) => {
+  if (!dispatcher.openPanelTargets) throw new Error("navigation.openTarget: panel target dispatcher is not configured");
+  return dispatcher.openPanelTargets;
+};
+
 const dispatchItem = async (target: NavigationTargetItem, dispatcher: NavigationDispatcherContext) => {
+  if (target.kind === "page") return requirePageTargetDispatcher(dispatcher)(target, []);
   if (target.kind === "resource") return dispatcher.openResource(target.resource, target.input);
   if (target.kind === "view") return dispatcher.openView(target.viewId, target.input);
-  if (target.kind === "panel") return dispatcher.openPanel(target.panelId, target.input);
+  if (target.kind === "panel") {
+    if (isOwnedPanelTarget(target)) return requirePanelTargetDispatcher(dispatcher)([target]);
+    return dispatcher.openPanel(target.panelId, target.input);
+  }
   if (target.kind === "href") {
     if (!dispatcher.openHref) throw new Error(`Cannot open navigation href target: ${target.href}`);
     return dispatcher.openHref(target.href);
@@ -132,7 +160,7 @@ const validateItem = (target: NavigationTargetItem, dispatcher: NavigationDispat
   if (target.kind === "resource" && dispatcher.canOpenResource?.(target.resource) === false) {
     throw new Error(`Cannot open navigation resource target: ${target.resource.uri}`);
   }
-  if (target.kind === "panel" && dispatcher.canOpenPanel?.(target.panelId) === false) {
+  if (target.kind === "panel" && !isOwnedPanelTarget(target) && dispatcher.canOpenPanel?.(target.panelId) === false) {
     throw new Error(`Cannot open navigation Panel target: ${target.panelId}`);
   }
   if (target.kind === "view" && dispatcher.canOpenView?.(target.viewId) === false) {
@@ -145,6 +173,18 @@ const validateItem = (target: NavigationTargetItem, dispatcher: NavigationDispat
 
 const toItems = (target: NavigationTarget): readonly NavigationTargetItem[] =>
   target.kind === "compound" ? target.targets : [target];
+
+const resolveOwnedTargetCompound = (items: readonly NavigationTargetItem[]) => {
+  const pages = items.filter((item): item is NavigationTargetPage => item.kind === "page");
+  if (pages.length === 0) {
+    const panels = items.filter(isOwnedPanelTarget);
+    return panels.length === items.length && panels.length > 0 ? { page: undefined, panels } : undefined;
+  }
+  if (pages.length > 1 || items[0]?.kind !== "page" || items.slice(1).some((item) => !isOwnedPanelTarget(item))) {
+    throw new Error("A page target compound may contain one page followed by panel targets");
+  }
+  return { page: pages[0], panels: items.slice(1).filter(isOwnedPanelTarget) };
+};
 
 export const createNavigationRegistry = (input: CreateNavigationRegistryInput = {}): NavigationRegistry => {
   const resolveDispatcher = input.resolveDispatcher ?? noDispatcher;
@@ -195,6 +235,12 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
       const dispatcher = resolveDispatcher();
       const items = toItems(target);
       const results: unknown[] = [];
+
+      if (target.kind === "compound") {
+        const owned = resolveOwnedTargetCompound(items);
+        if (owned?.page) return [await requirePageTargetDispatcher(dispatcher)(owned.page, owned.panels)];
+        if (owned) return [await requirePanelTargetDispatcher(dispatcher)(owned.panels)];
+      }
 
       for (const item of items) validateItem(item, dispatcher);
 
