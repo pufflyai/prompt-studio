@@ -1,5 +1,34 @@
 # pstdio
 
+## 0.31.0
+
+_2026-08-31_
+
+### Minor Changes
+
+- 1d30451: Move artifact mount roots from `.pstdio/<package-name>/` to `.pstdio/extension-storage/<package-name>/` so extension package names can never collide with host-owned `.pstdio/` entries such as docs, reports, extensions, and config.json
+- c84459e: Define one contribution-ID grammar (lowercase kebab-case segments separated by dots), enforce it as an error in `pst extensions check`, resolve host-published refs without owner prefixing for every contribution kind, rename first-party ids to the grammar (extension API 1.0.0-alpha.6), and migrate stored automation scopes, runs, schedule and skill preferences to the renamed ids.
+- 19ee208: Make grouped collection displays and board rules extension-owned instead of workspace and status special cases.
+- 01911e8: Add typed workbench pages, panels, locations, regions, and navigation validation.
+- 6c42fb6: Expose host-managed extension upgrades through the CLI.
+- 1d30451: Add a mount-scoped `artifacts.read` webview capability with typed client reads (list, readText, imageUrl), host-enforced mount confinement, size limits, a raster-image allowlist, and short-lived signed image URLs
+
+### Patch Changes
+
+- 272f9a4: Roll back failed dashboard extension contribution refreshes.
+- 2ac2e6a: Fix local development startup, source extension refresh, coverage reporting, and built-in CLI command routing.
+- 2ac2e6a: Render extension-owned template and resource parameters as modal dropdowns.
+- 327d8dc: Refresh a repo-local extension in its own directory, serve only the commands its source defines now, keep one enabled provider per extension id, and show each extension's source folder.
+- 8838c64: Add project-owned file and resource capabilities to dashboard extension webviews.
+- 2ac2e6a: Report missing terminal working directories without stopping Prompt Studio.
+- 8e003d4: Replace the Ticket board settings panel with state commands on each ticket status
+- 92c0967: Preserve untouched Markdown source and let users wrap table rows.
+- ec192eb: Serve the dashboard correctly from a source checkout on Windows. Filesystem
+  asset keys were `\`-separated while requests look them up with `/`, so every
+  nested asset fell through to `index.html` and `pst serve` rendered a blank
+  page.
+- 3bd3d7e: Support running pstdio from a source checkout on Windows: `.cmd` command wrappers, safe resolution and cmd.exe argument escaping for npm `.cmd`/`.bat`/`.ps1` shims, copied (not symlinked) extension files in the runtime cache, and hidden console windows.
+
 ## 0.30.0
 
 _2026-08-27_

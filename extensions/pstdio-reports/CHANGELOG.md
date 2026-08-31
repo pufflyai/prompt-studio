@@ -1,5 +1,18 @@
 # pstdio-reports
 
+## 0.5.0
+
+_2026-08-31_
+
+### Minor Changes
+
+- c84459e: Define one contribution-ID grammar (lowercase kebab-case segments separated by dots), enforce it as an error in `pst extensions check`, resolve host-published refs without owner prefixing for every contribution kind, rename first-party ids to the grammar (extension API 1.0.0-alpha.6), and migrate stored automation scopes, runs, schedule and skill preferences to the renamed ids.
+
+### Patch Changes
+
+- 01911e8: Add typed workbench pages, panels, locations, regions, and navigation validation.
+- Updated internal dependencies: `@pstdio/sdk@0.22.0`
+
 ## 0.4.0
 
 _2026-08-27_

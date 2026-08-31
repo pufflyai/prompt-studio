@@ -1,5 +1,23 @@
 # Prompt Studio Skills
 
+## 0.4.0
+
+_2026-08-31_
+
+### Minor Changes
+
+- c84459e: Define one contribution-ID grammar (lowercase kebab-case segments separated by dots), enforce it as an error in `pst extensions check`, resolve host-published refs without owner prefixing for every contribution kind, rename first-party ids to the grammar (extension API 1.0.0-alpha.6), and migrate stored automation scopes, runs, schedule and skill preferences to the renamed ids.
+
+### Patch Changes
+
+- 1d30451: Document four existing host surfaces in the create-pstdio-extension skill: the `textRenderer` byte-preservation escape, mode navigation via `workbenchCommands.switchMode`, runtime contribution inspection, and the per-extension layout reset command
+- 8838c64: Add project-owned file and resource capabilities to dashboard extension webviews.
+- 01911e8: Add typed workbench pages, panels, locations, regions, and navigation validation.
+- 6c42fb6: Expose host-managed extension upgrades through the CLI.
+- 92c0967: Preserve untouched Markdown source and let users wrap table rows.
+- 1d30451: Add a mount-scoped `artifacts.read` webview capability with typed client reads (list, readText, imageUrl), host-enforced mount confinement, size limits, a raster-image allowlist, and short-lived signed image URLs
+- Updated internal dependencies: `@pstdio/sdk@0.22.0`
+
 ## 0.3.5
 
 _2026-08-27_

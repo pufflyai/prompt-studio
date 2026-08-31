@@ -1,6 +1,6 @@
 {
   "name": "extension-lab",
-  "version": "0.8.3",
+  "version": "0.9.0",
   "displayName": "Extension Lab",
   "description": "Sandbox for trying out the extension API, dashboard surfaces, and deterministic fake harness.",
   "publisher": "pstdio",
@@ -17,8 +17,8 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "^0.21.0",
-    "@pstdio/ui": "0.21.0",
+    "@pstdio/sdk": "^0.22.0",
+    "@pstdio/ui": "0.22.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "zustand": "^5.0.0"
