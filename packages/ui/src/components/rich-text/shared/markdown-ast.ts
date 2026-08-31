@@ -106,6 +106,8 @@ const normalizeLegacyMath = (markdown: string) => {
 
 export const parseMarkdown = (markdown: string) => fromMarkdown(normalizeLegacyMath(markdown), parserOptions);
 
+export const parseMarkdownSource = (markdown: string) => fromMarkdown(markdown, parserOptions);
+
 export const serializeMarkdownAst = (tree: Root) => toMarkdown(tree, serializerOptions).trimEnd();
 
 export const serializeMarkdownBlock = (node: RootContent) => serializeMarkdownAst({ type: "root", children: [node] });

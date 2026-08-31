@@ -9,6 +9,7 @@ import { SearchableMenuInput } from "@/components/overlays/searchable-menu-input
 import { Checkbox } from "@/components/primitives/checkbox";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Switch } from "@/components/primitives/switch";
+import { DataTableRowDisplaySwitch } from "./data-table-row-display";
 
 interface DataTableColumnMenuColumn {
   id: string;
@@ -18,10 +19,12 @@ interface DataTableColumnMenuColumn {
 interface DataTableColumnMenuProps {
   columns: DataTableColumnMenuColumn[];
   visibleColumnIds: Set<string>;
+  wrapRows: boolean;
   showStats: boolean;
   statsAvailable: boolean;
   onColumnVisibilityChange: (columnId: string, visible: boolean) => void;
   onColumnReorder: (activeColumnId: string, overColumnId: string) => void;
+  onWrapRowsChange: (wrapRows: boolean) => void;
   onStatsVisibilityChange: (showStats: boolean) => void;
 }
 
@@ -79,10 +82,12 @@ export const DataTableColumnMenu = (props: DataTableColumnMenuProps) => {
   const {
     columns,
     visibleColumnIds,
+    wrapRows,
     showStats,
     statsAvailable,
     onColumnVisibilityChange,
     onColumnReorder,
+    onWrapRowsChange,
     onStatsVisibilityChange,
   } = props;
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -151,6 +156,7 @@ export const DataTableColumnMenu = (props: DataTableColumnMenuProps) => {
         <Popover.Positioner>
           <Popover.Content ref={contentRef} width="min(320px, calc(100vw - 32px))" p="0" bg="bg" overflow="hidden">
             <Stack gap="0">
+              <DataTableRowDisplaySwitch showDivider wrapRows={wrapRows} onWrapRowsChange={onWrapRowsChange} />
               {statsAvailable ? (
                 <Box borderBottomWidth="1px" borderColor="border.subtle" padding="xs">
                   <Switch

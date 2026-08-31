@@ -83,8 +83,17 @@ const richTextColumns: DataTableEditModeColumn[] = [
 ];
 
 const richTextRows: RowData[] = [
-  { id: "note-1", topic: "Formatting", summary: "**Bold content** with *emphasis* and `inline code`." },
-  { id: "note-2", topic: "Links", summary: "Open the [Prompt Studio site](https://prompt.studio)." },
+  {
+    id: "note-1",
+    topic: "Formatting",
+    summary: "**Bold content** with *emphasis* and `inline code`.",
+  },
+  {
+    id: "note-2",
+    topic: "Links",
+    summary:
+      "Open the [Prompt Studio site](https://prompt.studio). This longer description shows how the user can expand a compact table row when they need to read all of its content.",
+  },
 ];
 
 export const RichTextEditModeStory = () => {

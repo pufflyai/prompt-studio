@@ -25,6 +25,15 @@ describe("splitFrontmatter", () => {
       body: "Body",
     });
   });
+
+  test("preserves CRLF frontmatter delimiters", () => {
+    const content = "---\r\ntitle: Test\r\n---\r\nBody";
+
+    expect(splitFrontmatter(content)).toEqual({
+      frontmatter: "---\r\ntitle: Test\r\n---\r\n",
+      body: "Body",
+    });
+  });
 });
 
 describe("normalizeMarkdownListIndentation", () => {

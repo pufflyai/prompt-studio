@@ -10,10 +10,11 @@ import { ListPlugin } from "@lexical/react/LexicalListPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
-import { $getRoot } from "lexical";
+import { $addUpdateTag, $getRoot } from "lexical";
+import { useRef } from "react";
 import { ContentEditable } from "../shared/components/content-editable";
 import { editorNodes, editorTheme } from "../shared/editor-config";
-import { exportLexicalToMarkdown, importMarkdownToLexical } from "../shared/markdown-codec";
+import { createMarkdownSourceDocument } from "../shared/markdown-source-document";
 import type { MarkdownUrlResolver } from "../shared/markdown-url";
 import { MarkdownUrlProvider } from "../shared/markdown-url-context";
 import { ImportCodeBlocksPlugin } from "../shared/plugins/CodePlugin/CodeBlockPlugin";
@@ -33,6 +34,8 @@ export interface RichMessageProps {
   onChange?: (value: string) => void;
 }
 
+const SOURCE_IMPORT_TAG = "markdown-source-import";
+
 export function RichMessage(props: RichMessageProps) {
   const {
     debug = false,
@@ -44,12 +47,15 @@ export function RichMessage(props: RichMessageProps) {
   } = props;
   const { frontmatter, body } = splitFrontmatter(defaultState);
   const shouldTrackChanges = isEditable && Boolean(onChange);
+  const sourceDocumentRef = useRef<ReturnType<typeof createMarkdownSourceDocument> | null>(null);
+  sourceDocumentRef.current ??= createMarkdownSourceDocument(body, resolveMarkdownUrl);
 
   const initialConfig = {
     namespace: "RICH_MESSAGE",
     nodes: editorNodes,
     editorState: () => {
-      importMarkdownToLexical(body, resolveMarkdownUrl);
+      $addUpdateTag(SOURCE_IMPORT_TAG);
+      sourceDocumentRef.current?.importToLexical();
     },
     onError: (error: Error) => console.error(error),
     editable: isEditable,
@@ -73,7 +79,10 @@ export function RichMessage(props: RichMessageProps) {
           <StateUpdatePlugin
             value={body}
             onUpdate={(value: string) => {
-              importMarkdownToLexical(value, resolveMarkdownUrl);
+              const sourceDocument = createMarkdownSourceDocument(value, resolveMarkdownUrl);
+              sourceDocumentRef.current = sourceDocument;
+              $addUpdateTag(SOURCE_IMPORT_TAG);
+              sourceDocument.importToLexical();
             }}
           />
           <LinkPlugin />
@@ -92,10 +101,11 @@ export function RichMessage(props: RichMessageProps) {
             <OnChangePlugin
               ignoreSelectionChange
               ignoreHistoryMergeTagChange={false}
-              onChange={(editorState) => {
+              onChange={(editorState, _editor, tags) => {
+                if (tags.has(SOURCE_IMPORT_TAG)) return;
                 editorState.read(() => {
                   const root = $getRoot();
-                  const markdownBody = exportLexicalToMarkdown(root);
+                  const markdownBody = sourceDocumentRef.current?.exportFromLexical(root) ?? "";
                   onChange?.(frontmatter + markdownBody);
                 });
               }}

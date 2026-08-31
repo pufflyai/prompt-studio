@@ -18,6 +18,7 @@ interface EditModeDataTableHeaderProps {
   data: RowData[];
   editMode: DataTableEditModeConfig;
   isReadOnly: boolean;
+  rowDisplayControl?: ReactNode;
   selectionHeader?: ReactNode;
   onAddColumn: () => void;
   onCancelHeaderEdit: () => void;
@@ -35,6 +36,7 @@ export const EditModeDataTableHeader = (props: EditModeDataTableHeaderProps) => 
     data,
     editMode,
     isReadOnly,
+    rowDisplayControl,
     selectionHeader,
     onAddColumn,
     onCancelHeaderEdit,
@@ -50,12 +52,14 @@ export const EditModeDataTableHeader = (props: EditModeDataTableHeaderProps) => 
         <Table.ColumnHeader
           data-column-id="rowIndex"
           width="fit-content"
-          padding="xs"
+          padding={rowDisplayControl ? "2xs" : "xs"}
           background="bg.subtle"
           borderRightWidth="1px"
           borderBottomWidth="1px"
           borderColor="border.subtle"
-        />
+        >
+          {rowDisplayControl}
+        </Table.ColumnHeader>
         {selectionHeader ? (
           <Table.ColumnHeader
             data-column-id="rowSelection"

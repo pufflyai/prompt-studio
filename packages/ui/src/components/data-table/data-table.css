@@ -49,25 +49,6 @@
   overflow: visible;
 }
 
-.data-table tbody tr {
-  height: 40px;
-}
-
-.data-table tbody td {
-  height: 40px;
-  max-height: 40px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.data-table tbody td > * {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .data-table tbody td[data-column-id="rowIndex"] {
   background-color: var(--chakra-colors-bg-subtle, rgba(13, 17, 23, 0.02));
 }
