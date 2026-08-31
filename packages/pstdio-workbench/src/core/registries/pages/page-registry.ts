@@ -46,6 +46,38 @@ const emptyReconciliation = <Value>(): OwnedPlacementReconciliation<Value> => ({
   remove: [],
 });
 
+interface PageRegistryCommitInput<Value> {
+  pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>;
+  projectId?: string;
+  location?: WorkbenchPageRegistryStoreState<Value>["location"];
+  activePageId?: string;
+  activeModeId?: string;
+  modePlacements?: readonly ResolvedOwnedPlacement<Value>[];
+  activate?: readonly PlacementIdentity[];
+  action: string;
+}
+
+const refreshActiveModePlacements = <Value>(input: {
+  state: WorkbenchPageRegistryStoreState<Value>;
+  registryInput: CreateWorkbenchPageRegistryInput<Value>;
+  commit(next: PageRegistryCommitInput<Value>): void;
+}) => {
+  const modeId = input.state.activeModeId;
+  if (!modeId) return;
+  const current = input.state.placements.filter(
+    (placement) => placement.identity.kind === "mode" && placement.identity.modeId === modeId,
+  );
+  input.commit({
+    pageStates: input.state.pageStates,
+    projectId: input.state.projectId,
+    location: input.state.location,
+    activePageId: input.state.activePageId,
+    activeModeId: modeId,
+    modePlacements: input.registryInput.resolveModePlacements(modeId, current),
+    action: "refreshModePlacements",
+  });
+};
+
 export const createWorkbenchPageRegistry = <Value>(
   input: CreateWorkbenchPageRegistryInput<Value>,
 ): WorkbenchPageRegistry<Value> => {
@@ -89,16 +121,7 @@ export const createWorkbenchPageRegistry = <Value>(
     );
   };
 
-  const commit = (next: {
-    pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>;
-    projectId?: string;
-    location?: WorkbenchPageRegistryStoreState<Value>["location"];
-    activePageId?: string;
-    activeModeId?: string;
-    modePlacements?: readonly ResolvedOwnedPlacement<Value>[];
-    activate?: readonly PlacementIdentity[];
-    action: string;
-  }) => {
+  const commit = (next: PageRegistryCommitInput<Value>) => {
     const current = store.getState();
     const page = next.activePageId ? current.pages[next.activePageId] : undefined;
     const pageState = page ? next.pageStates[page.id] : undefined;
@@ -229,6 +252,9 @@ export const createWorkbenchPageRegistry = <Value>(
             action: change.action,
           }),
       });
+    },
+    refreshModePlacements() {
+      refreshActiveModePlacements({ state: store.getState(), registryInput: input, commit });
     },
     activateLocation(target) {
       activatePageWithStates(target, target.pageStates ?? store.getState().pageStates, target.action, {

@@ -3,6 +3,7 @@ import type { LayoutModel } from "../../registries/layout/layout-model";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { reconcileOwnedWidgetLayout } from "../../registries/layout/owned-placement-layout";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
+import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import { activateWorkbenchPageMode } from "../../registries/modes/mode-registry-internals";
 import {
@@ -50,7 +51,7 @@ const parsePageResourceUri = (uri: string) => {
   }
 };
 
-const defaultPageResourceCodec: WorkbenchPageResourceCodec = {
+export const defaultPageResourceCodec: WorkbenchPageResourceCodec = {
   normalize: (resource) => ({ ...resource }),
   toUri: (resource) =>
     `pstdio://extension-resource/${encodeURIComponent(resource.type)}/${encodeURIComponent(resource.id)}`,
@@ -93,6 +94,7 @@ const toWidgetPlacement = (
 
 export interface CreateLiveWorkbenchPageRegistryInput {
   layout: LayoutModel;
+  modePlacements: WorkbenchModePlacementRegistry;
   modes: WorkbenchModeRegistry;
   resources?: WorkbenchPageResourceCodec;
   views: WorkbenchViewRegistry;
@@ -102,14 +104,13 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
   const resources = input.resources ?? defaultPageResourceCodec;
   const registry = createWorkbenchPageRegistry<WorkbenchWidgetPlacement>({
     resolveShellPlacements: () => [],
-    resolveModePlacements: () => [],
-    resolveModePanelTarget: ({ panel }) => {
-      throw new Error(`Workbench mode placement not registered: ${panel.extensionId}.${panel.id}`);
-    },
+    resolveModePlacements: (modeId, current) => input.modePlacements.resolvePlacements(modeId, current),
+    resolveModePanelTarget: (target) => input.modePlacements.resolvePanelTarget(target),
     resolvePagePlacement: (placement) => toWidgetPlacement(placement, resources, input.views),
     resources,
     valuesEqual: (left, right) => JSON.stringify(left) === JSON.stringify(right),
   });
   connectWorkbenchPageRuntime({ layout: input.layout, modes: input.modes, registry });
+  input.modePlacements.onDidChange(() => getWorkbenchPageRegistryInternals(registry).refreshModePlacements());
   return registry;
 };
