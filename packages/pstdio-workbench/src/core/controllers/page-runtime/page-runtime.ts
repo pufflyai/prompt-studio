@@ -2,6 +2,7 @@ import type { ResourceRef as PageResourceRef } from "@pstdio/sdk/extensions";
 import type { LayoutModel } from "../../registries/layout/layout-model";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import { reconcileOwnedWidgetLayout } from "../../registries/layout/owned-placement-layout";
+import type { WorkbenchPlacementStatePersistence } from "../../registries/layout/owned-placement-state";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
@@ -62,6 +63,8 @@ const toWorkbenchResource = (resource: PageResourceRef, codec: WorkbenchPageReso
   kind: resource.type,
   uri: codec.toUri(resource),
   id: resource.id,
+  projectId: resource.projectId,
+  extensionId: resource.extensionId,
   label: resource.label,
   metadata: resource.metadata,
 });
@@ -97,6 +100,7 @@ export interface CreateLiveWorkbenchPageRegistryInput {
   modePlacements: WorkbenchModePlacementRegistry;
   modes: WorkbenchModeRegistry;
   resources?: WorkbenchPageResourceCodec;
+  placementStatePersistence?: WorkbenchPlacementStatePersistence;
   views: WorkbenchViewRegistry;
 }
 
@@ -104,9 +108,13 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
   const resources = input.resources ?? defaultPageResourceCodec;
   const registry = createWorkbenchPageRegistry<WorkbenchWidgetPlacement>({
     resolveShellPlacements: () => [],
-    resolveModePlacements: (modeId, current) => input.modePlacements.resolvePlacements(modeId, current),
+    resolveModePlacements: (modeId, current, ownerState) =>
+      input.modePlacements.resolvePlacements(modeId, current, ownerState),
     resolveModePanelTarget: (target) => input.modePlacements.resolvePanelTarget(target),
+    resolveModePlacementState: (modeId, placements) => input.modePlacements.resolvePlacementState(modeId, placements),
+    closeModePlacement: (closeInput) => input.modePlacements.closePlacement(closeInput),
     resolvePagePlacement: (placement) => toWidgetPlacement(placement, resources, input.views),
+    placementStatePersistence: input.placementStatePersistence,
     resources,
     valuesEqual: (left, right) => JSON.stringify(left) === JSON.stringify(right),
   });

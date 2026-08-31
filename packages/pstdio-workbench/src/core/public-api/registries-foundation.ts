@@ -94,6 +94,14 @@ export {
   workbenchPanelRegions,
   workbenchRegions,
 } from "../registries/layout/layout-model";
+export type {
+  WorkbenchPinnedPlacementState,
+  WorkbenchPlacementOwner,
+  WorkbenchPlacementOwnerState,
+  WorkbenchPlacementState,
+  WorkbenchPlacementStatePersistence,
+  WorkbenchStaticPlacementState,
+} from "../registries/layout/owned-placement-state";
 export {
   allowsWorkbenchFloatingPanels,
   getActiveWorkbenchLocationPanel,

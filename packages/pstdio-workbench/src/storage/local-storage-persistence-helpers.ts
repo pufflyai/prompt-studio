@@ -14,6 +14,7 @@ export type WorkbenchStoragePersistenceKind =
   | "layout-resource-index"
   | "layout-scope-index"
   | "panels"
+  | "placement-state"
   | "side-panel"
   | "tree"
   | "last-resource";

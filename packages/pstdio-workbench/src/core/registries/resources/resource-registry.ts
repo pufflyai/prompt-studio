@@ -31,6 +31,8 @@ export interface ResourceRef {
   kind: string;
   uri: string;
   id?: string;
+  projectId?: string;
+  extensionId?: string;
   label?: string;
   icon?: string;
   metadata?: Record<string, unknown>;
