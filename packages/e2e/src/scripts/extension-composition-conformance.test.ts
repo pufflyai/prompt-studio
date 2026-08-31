@@ -31,12 +31,29 @@ describe("shipped extension composition", () => {
       view: { kind: "view", id: "ticket-editor" },
       slot: { id: "primary" },
     });
-    expect(
-      runtime.placements.find((placement) => placement.localId === "ticket-primary.project")?.contribution,
-    ).toMatchObject({
-      item: { kind: "resource-slot", slot: { id: "primary" } },
-      region: "main",
-      required: true,
+    expect(runtime.placements.filter((placement) => placement.extensionId === "pstdio.pstdio-planner")).toEqual([]);
+    expect(runtime.pages.find((page) => page.localId === "tickets")?.contribution).toMatchObject({
+      path: "tickets",
+      slots: [{ id: "content", role: "primary", region: "main", view: { id: "tickets" } }],
+    });
+    expect(runtime.pages.find((page) => page.localId === "ticket")?.contribution).toMatchObject({
+      path: "ticket",
+      parent: { id: "tickets" },
+      slots: [
+        {
+          id: "content",
+          role: "primary",
+          region: "main",
+          binding: { kind: { id: "ticket" }, view: { id: "ticket-editor" } },
+        },
+        {
+          id: "files",
+          role: "auxiliary",
+          region: "sidenav",
+          binding: { kind: { id: "ticket" }, view: { id: "ticket-files" } },
+          defaultOpen: true,
+        },
+      ],
     });
   });
 

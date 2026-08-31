@@ -2,6 +2,21 @@ import { describe, expect, it } from "bun:test";
 import { createWorkbenchCore, type WorkbenchModuleContribution } from "./workbench-core";
 
 describe("workbench modules", () => {
+  it("uses layout visibility as the source of truth for panel chrome", () => {
+    const workbench = createWorkbenchCore();
+    const layout = workbench.layout.getLayout();
+
+    workbench.layout.restoreLayout({
+      ...layout,
+      regions: {
+        ...layout.regions,
+        sidenav: { ...layout.regions.sidenav, visible: false },
+      },
+    });
+
+    expect(workbench.panels.isOpen("sidenav")).toBe(false);
+  });
+
   it("does not retain or assign focus to a closed region", () => {
     const workbench = createWorkbenchCore();
 

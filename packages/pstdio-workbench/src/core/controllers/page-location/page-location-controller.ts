@@ -42,6 +42,12 @@ export interface WorkbenchPageHistoryState {
   location: PageLocation;
 }
 
+interface WorkbenchModeLocationState {
+  kind: "pstdio.mode-location";
+  modeId: string;
+  projectId: string;
+}
+
 export type WorkbenchPageNavigationResult =
   | { ok: true; location: PageLocation }
   | { ok: false; diagnostic: WorkbenchPageLocationDiagnostic };
@@ -57,9 +63,14 @@ export interface CreateWorkbenchPageLocationControllerInput<Value> {
 export interface WorkbenchPageLocationController {
   setProject(projectId: string): void;
   leavePage(modeId: string): void;
+  isCurrentProjectUrl(projectId: string): boolean;
+  hasCurrentPageUrl(projectId: string): boolean;
+  hasCurrentModeUrl(projectId: string): boolean;
   boot(projectId: string): WorkbenchPageNavigationResult;
   switchProject(projectId: string): WorkbenchPageNavigationResult;
   navigate(target: NavigationTargetPage): WorkbenchPageNavigationResult;
+  replay(location: PageLocation): WorkbenchPageNavigationResult;
+  navigateToParent(): WorkbenchPageNavigationResult;
   closePlacement(identity: PlacementIdentity): WorkbenchPageNavigationResult;
   dispose(): void;
 }
@@ -80,6 +91,101 @@ const isHistoryState = (value: unknown): value is WorkbenchPageHistoryState => {
     typeof state.routeKey === "string" &&
     Boolean(state.location && typeof state.location === "object")
   );
+};
+
+const isModeLocationState = (value: unknown): value is WorkbenchModeLocationState => {
+  if (!value || typeof value !== "object") return false;
+  const state = value as Partial<WorkbenchModeLocationState>;
+  return (
+    state.kind === "pstdio.mode-location" && typeof state.modeId === "string" && typeof state.projectId === "string"
+  );
+};
+
+const hasResolvableCurrentPageUrl = (
+  browser: WorkbenchPageLocationBrowser,
+  projectId: string,
+  resolveUrl: (projectId: string, entry: WorkbenchPageBrowserEntry) => ResolvedLocation | undefined,
+) => {
+  try {
+    return Boolean(resolveUrl(projectId, browser.current()));
+  } catch {
+    return false;
+  }
+};
+
+interface PagePlacementCloserInput {
+  commit(
+    projectId: string,
+    resolved: ResolvedLocation,
+    history: "push" | "replace" | "none",
+    action: string,
+  ): WorkbenchPageNavigationResult;
+  fail(source: "navigation", error: unknown): WorkbenchPageNavigationResult;
+  getCurrent(): { projectId?: string; location?: PageLocation };
+  getPageRef(pageId: string): PageRef | undefined;
+  normalizePage(page: PageRef): ResolvedLocation;
+  normalizeStored(location: PageLocation): ResolvedLocation;
+  resolveClosePlacement(identity: PlacementIdentity): WorkbenchPageCloseResolution;
+}
+
+const createPagePlacementCloser = (input: PagePlacementCloserInput) => {
+  const closeToParent = (
+    projectId: string,
+    location: PageLocation,
+    resolution: Extract<WorkbenchPageCloseResolution, { kind: "parent" }>,
+  ) => {
+    const contextualParent = location.parent ? input.normalizeStored(location.parent) : undefined;
+    const parent = input.getPageRef(resolution.parentId);
+    if (!parent) throw new Error(`Unknown parent page: ${resolution.parentId}`);
+    const resolved = contextualParent?.pageId === resolution.parentId ? contextualParent : input.normalizePage(parent);
+    return input.commit(
+      projectId,
+      { ...resolved, pageStates: resolution.pageStates },
+      "replace",
+      "closePagePlacementToParent",
+    );
+  };
+
+  const closeWithinPage = (
+    projectId: string,
+    location: PageLocation,
+    resolution: Extract<WorkbenchPageCloseResolution, { kind: "stay" }>,
+  ) => {
+    const page = input.getPageRef(resolution.target.pageId);
+    if (!page) throw new Error(`Unknown page: ${resolution.target.pageId}`);
+    const resolved = input.normalizeStored({
+      page,
+      ...(resolution.target.resource ? { resource: resolution.target.resource } : {}),
+      ...(resolution.target.section ? { section: resolution.target.section } : {}),
+      ...(location.parent ? { parent: location.parent } : {}),
+    });
+    return input.commit(
+      projectId,
+      {
+        ...resolved,
+        pageStates: resolution.pageStates,
+        ...(resolution.target.open ? { open: resolution.target.open } : {}),
+      },
+      resolution.locationChanged ? "replace" : "none",
+      "closePagePlacement",
+    );
+  };
+
+  return (identity: PlacementIdentity) => {
+    const current = input.getCurrent();
+    if (!current.projectId || !current.location) {
+      return input.fail("navigation", new Error("Cannot close a page placement without an active location"));
+    }
+    try {
+      if (identity.kind !== "page") throw new Error("Only page-owned placements can close through page navigation");
+      const resolution = input.resolveClosePlacement(identity);
+      return resolution.kind === "parent"
+        ? closeToParent(current.projectId, current.location, resolution)
+        : closeWithinPage(current.projectId, current.location, resolution);
+    } catch (error) {
+      return input.fail("navigation", error);
+    }
+  };
 };
 
 export const createWorkbenchPageLocationController = <Value>(
@@ -140,6 +246,7 @@ export const createWorkbenchPageLocationController = <Value>(
     });
 
   const resolveUrl = (projectId: string, entry: WorkbenchPageBrowserEntry) => {
+    if (isModeLocationState(entry.state) && entry.state.projectId === projectId) return undefined;
     const parsed = parseWorkbenchPageUrl({
       url: entry.url,
       projectId,
@@ -224,79 +331,44 @@ export const createWorkbenchPageLocationController = <Value>(
     }
   });
 
-  const closeToParent = (
-    projectId: string,
-    location: PageLocation,
-    resolution: Extract<WorkbenchPageCloseResolution, { kind: "parent" }>,
-  ) => {
-    const contextualParent = location.parent ? normalizeStored(location.parent) : undefined;
-    const parent = input.registry.getPage(resolution.parentId);
-    if (!parent) throw new Error(`Unknown parent page: ${resolution.parentId}`);
-    const resolved =
-      contextualParent?.pageId === resolution.parentId
-        ? contextualParent
-        : normalizeWorkbenchPageTarget({
-            target: { kind: "page", page: parent.ref },
-            pages: pages(),
-            resources: internals.resources,
-          });
-    return commit(
-      projectId,
-      { ...resolved, pageStates: resolution.pageStates },
-      "replace",
-      "closePagePlacementToParent",
-    );
-  };
-
-  const closeWithinPage = (
-    projectId: string,
-    location: PageLocation,
-    resolution: Extract<WorkbenchPageCloseResolution, { kind: "stay" }>,
-  ) => {
-    const page = input.registry.getPage(resolution.target.pageId);
-    if (!page) throw new Error(`Unknown page: ${resolution.target.pageId}`);
-    const resolved = normalizeStored({
-      page: page.ref,
-      ...(resolution.target.resource ? { resource: resolution.target.resource } : {}),
-      ...(resolution.target.section ? { section: resolution.target.section } : {}),
-      ...(location.parent ? { parent: location.parent } : {}),
-    });
-    return commit(
-      projectId,
-      {
-        ...resolved,
-        pageStates: resolution.pageStates,
-        ...(resolution.target.open ? { open: resolution.target.open } : {}),
-      },
-      resolution.locationChanged ? "replace" : "none",
-      "closePagePlacement",
-    );
-  };
-
-  const closeActivePlacement = (identity: PlacementIdentity) => {
-    const current = input.registry.store.getState();
-    if (!current.projectId || !current.location) {
-      return fail("navigation", new Error("Cannot close a page placement without an active location"));
-    }
-    try {
-      if (identity.kind !== "page") throw new Error("Only page-owned placements can close through page navigation");
-      const resolution = internals.resolveClosePlacement(identity);
-      return resolution.kind === "parent"
-        ? closeToParent(current.projectId, current.location, resolution)
-        : closeWithinPage(current.projectId, current.location, resolution);
-    } catch (error) {
-      return fail("navigation", error);
-    }
-  };
+  const closeActivePlacement = createPagePlacementCloser({
+    commit,
+    fail,
+    getCurrent: () => input.registry.store.getState(),
+    getPageRef: (pageId) => input.registry.getPage(pageId)?.ref,
+    normalizePage: (page) =>
+      normalizeWorkbenchPageTarget({
+        target: { kind: "page", page },
+        pages: pages(),
+        resources: internals.resources,
+      }),
+    normalizeStored,
+    resolveClosePlacement: internals.resolveClosePlacement,
+  });
 
   return {
     setProject(projectId) {
+      if (input.registry.store.getState().projectId === projectId) return;
       internals.clearProject(projectId);
     },
 
     leavePage(modeId) {
       const projectId = input.registry.store.getState().projectId;
-      if (projectId) internals.activateMode(projectId, modeId);
+      if (!projectId) return;
+      internals.activateMode(projectId, modeId);
+      input.browser.replace({
+        url: `/projects/${encodeURIComponent(projectId)}`,
+        state: { kind: "pstdio.mode-location", modeId, projectId } satisfies WorkbenchModeLocationState,
+      });
+    },
+
+    isCurrentProjectUrl: (projectId) => isWorkbenchProjectUrl(input.browser.current().url, projectId),
+
+    hasCurrentPageUrl: (projectId) => hasResolvableCurrentPageUrl(input.browser, projectId, resolveUrl),
+
+    hasCurrentModeUrl: (projectId) => {
+      const state = input.browser.current().state;
+      return isModeLocationState(state) && state.projectId === projectId;
     },
 
     boot(projectId) {
@@ -314,6 +386,33 @@ export const createWorkbenchPageLocationController = <Value>(
       try {
         const resolved = normalizeWorkbenchPageTarget({ target, pages: pages(), resources: internals.resources });
         return commit(projectId, resolved, "push", "navigatePageLocation");
+      } catch (error) {
+        return fail("navigation", error);
+      }
+    },
+
+    replay(location) {
+      const projectId = input.registry.store.getState().projectId;
+      if (!projectId) return fail("history", new Error("Cannot replay a page before a project is active"));
+      try {
+        return commit(projectId, normalizeStored(location), "replace", "replayWorkbenchPageHistory");
+      } catch (error) {
+        return fail("history", error);
+      }
+    },
+
+    navigateToParent() {
+      const current = input.registry.store.getState();
+      if (!current.projectId || !current.location?.parent) {
+        return fail("navigation", new Error("The active page does not have a parent location"));
+      }
+      try {
+        return commit(
+          current.projectId,
+          normalizeStored(current.location.parent),
+          "replace",
+          "navigateToParentPageLocation",
+        );
       } catch (error) {
         return fail("navigation", error);
       }

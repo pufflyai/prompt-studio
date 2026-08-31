@@ -19,7 +19,7 @@ const placement = (
 const createRegistry = () =>
   createWorkbenchPageRegistry<string>({
     resolveShellPlacements: () => [
-      placement({ kind: "shell", placementId: "project-header", instanceKey: "default" }, "sidenav-header", "header"),
+      placement({ kind: "shell", placementId: "project-navigation", instanceKey: "default" }, "sidenav", "navigation"),
     ],
     resolveModePlacements: (modeId) => [
       placement({ kind: "mode", modeId, placementId: "shared", instanceKey: "default" }, "side", "shared"),
@@ -98,7 +98,7 @@ describe("createWorkbenchPageRegistry transitions", () => {
     const registry = createRegistry();
 
     expect(registry.store.getState().placements.map((candidate) => identityKey(candidate.identity))).toEqual([
-      "shell:project-header:default",
+      "shell:project-navigation:default",
     ]);
   });
 
@@ -112,7 +112,7 @@ describe("createWorkbenchPageRegistry transitions", () => {
     expect(state.activeModeId).toBe("project");
     expect(state.activePageId).toBe("ticket");
     expect(state.placements.map((candidate) => identityKey(candidate.identity))).toEqual([
-      "shell:project-header:default",
+      "shell:project-navigation:default",
       "page:ticket:content:ticket:PS-326",
       "mode:project:shared:default",
       "page:ticket:emoji:default",

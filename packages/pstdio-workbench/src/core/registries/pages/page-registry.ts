@@ -21,6 +21,7 @@ import type {
 } from "./page-registry-types";
 import {
   emptyPageState,
+  openDefaultAuxiliaryBindings,
   openResourceSlot,
   primarySlot,
   requirePageSlot,
@@ -108,6 +109,20 @@ const createPageRegistryStore = <Value>(input: CreateWorkbenchPageRegistryInput<
     },
   });
 
+const resolveModePlacementSet = <Value>(input: {
+  current: WorkbenchPageRegistryStoreState<Value>;
+  modeId: string | undefined;
+  desired: readonly ResolvedOwnedPlacement<Value>[] | undefined;
+  resolveModePlacements: CreateWorkbenchPageRegistryInput<Value>["resolveModePlacements"];
+}) => {
+  if (!input.modeId) return undefined;
+  if (input.desired) return input.desired;
+  if (input.modeId !== input.current.activeModeId) return input.resolveModePlacements(input.modeId);
+  return input.current.placements.filter(
+    (placement) => placement.identity.kind === "mode" && placement.identity.modeId === input.modeId,
+  );
+};
+
 export const createWorkbenchPageRegistry = <Value>(
   input: CreateWorkbenchPageRegistryInput<Value>,
 ): WorkbenchPageRegistry<Value> => {
@@ -117,9 +132,15 @@ export const createWorkbenchPageRegistry = <Value>(
     input.resources.toUri(normalizeResource(resource));
   const store = createPageRegistryStore(input);
   let runtime: ((state: WorkbenchPageRegistryStoreState<Value>) => void) | undefined;
+  let publishingState: WorkbenchPageRegistryStoreState<Value> | undefined;
 
   const publishState = (state: WorkbenchPageRegistryStoreState<Value>, action: string) => {
-    runtime?.(state);
+    publishingState = state;
+    try {
+      runtime?.(state);
+    } finally {
+      publishingState = undefined;
+    }
     store.setState(state, false, action);
   };
 
@@ -129,24 +150,16 @@ export const createWorkbenchPageRegistry = <Value>(
     return page;
   };
 
-  const resolveModePlacementSet = (
-    current: WorkbenchPageRegistryStoreState<Value>,
-    modeId: string | undefined,
-    desired: readonly ResolvedOwnedPlacement<Value>[] | undefined,
-  ) => {
-    if (!modeId) return undefined;
-    if (desired) return desired;
-    if (modeId !== current.activeModeId) return input.resolveModePlacements(modeId);
-    return current.placements.filter(
-      (placement) => placement.identity.kind === "mode" && placement.identity.modeId === modeId,
-    );
-  };
-
   const commit = (next: PageRegistryCommitInput<Value>) => {
     const current = store.getState();
     const page = next.activePageId ? current.pages[next.activePageId] : undefined;
     const pageState = page ? next.pageStates[page.id] : undefined;
-    const modePlacements = resolveModePlacementSet(current, next.activeModeId, next.modePlacements);
+    const modePlacements = resolveModePlacementSet({
+      current,
+      modeId: next.activeModeId,
+      desired: next.modePlacements,
+      resolveModePlacements: input.resolveModePlacements,
+    });
     if (
       next.activeModeId &&
       modePlacements?.some(
@@ -195,9 +208,15 @@ export const createWorkbenchPageRegistry = <Value>(
       ...(target.resource ? { resource: normalizeResource(target.resource) } : {}),
     };
     const currentPageState = pageStates[page.id] ?? emptyPageState(page, resourceKey);
-    const pageState = selectPrimaryTarget({
+    const primaryState = selectPrimaryTarget({
       page,
       state: currentPageState,
+      target: normalizedTarget,
+      resourceKey,
+    });
+    const pageState = openDefaultAuxiliaryBindings({
+      page,
+      state: primaryState,
       target: normalizedTarget,
       resourceKey,
     });
@@ -273,6 +292,7 @@ export const createWorkbenchPageRegistry = <Value>(
 
   setWorkbenchPageRegistryInternals(registry, {
     resources: input.resources,
+    getPublishingState: () => publishingState ?? store.getState(),
     connectRuntime(apply) {
       if (runtime) throw new Error("Workbench page registry already has a runtime");
       runtime = apply;

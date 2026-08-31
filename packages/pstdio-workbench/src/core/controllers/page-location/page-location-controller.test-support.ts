@@ -35,7 +35,7 @@ const resources: WorkbenchPageResourceCodec = {
 
 const placement = (identity: PlacementIdentity, value: string): ResolvedOwnedPlacement<string> => ({
   identity,
-  region: identity.kind === "shell" ? "sidenav-header" : "side",
+  region: identity.kind === "shell" ? "sidenav" : "side",
   order: 0,
   value,
 });

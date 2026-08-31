@@ -106,7 +106,6 @@ const collectPlacements = <Value>(input: ComposeOwnedPlacementsInput<Value>) => 
 };
 
 const emptyRegions = <Value>(): Record<DockedCompositionRegion, ResolvedOwnedPlacement<Value>[]> => ({
-  "sidenav-header": [],
   sidenav: [],
   main: [],
   secondary: [],

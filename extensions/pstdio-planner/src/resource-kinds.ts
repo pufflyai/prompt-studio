@@ -19,6 +19,8 @@ export const ticketResourceKind = defineResourceKind({
   ],
 });
 
+export const ticketPageRef = { kind: "page" as const, id: "ticket" };
+
 export const ticketMenuSlots = {
   headerOverflow: resourceMenuSlotRef(ticketResourceKind.ref, "header-overflow"),
 };

@@ -1,3 +1,4 @@
+import type { ViewRef } from "@pstdio/sdk/extensions";
 import {
   defineActivityItem,
   defineMode,
@@ -75,6 +76,31 @@ const blendPrimary = resourceSlotRef(blendProjectKind.ref, "primary");
 const blendNavigation = resourceSlotRef(blendProjectKind.ref, "navigation");
 const blendInspector = resourceSlotRef(blendProjectKind.ref, "inspector");
 
+const createLabPage = (labPage: ViewRef, cameraTree: ViewRef) =>
+  definePage({
+    id: "lab",
+    title: l10n("routes.lab.label", "Lab"),
+    icon: "flask-conical",
+    path: "lab",
+    mode: workbenchModes.project,
+    slots: [
+      {
+        id: "content",
+        role: "primary",
+        region: "main",
+        view: labPage,
+      },
+      {
+        id: "cameras",
+        role: "auxiliary",
+        region: "sidenav",
+        view: cameraTree,
+        defaultOpen: true,
+        order: 10,
+      },
+    ],
+  });
+
 export const createLabUi = (baseUrl: string) => {
   const {
     artifactCreate,
@@ -91,21 +117,7 @@ export const createLabUi = (baseUrl: string) => {
     workflow,
   } = createLabViews(baseUrl);
 
-  const labPageContribution = definePage({
-    id: "lab",
-    title: l10n("routes.lab.label", "Lab"),
-    icon: "flask-conical",
-    path: "lab",
-    mode: workbenchModes.project,
-    slots: [
-      {
-        id: "content",
-        role: "primary",
-        region: "main",
-        view: labPage.ref,
-      },
-    ],
-  });
+  const labPageContribution = createLabPage(labPage.ref, cameraTree.ref);
 
   const placements = [
     definePlacement({

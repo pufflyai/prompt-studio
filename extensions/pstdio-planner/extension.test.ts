@@ -46,9 +46,7 @@ const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>
   } satisfies StoredTicket);
 
 describe("pstdio planner extension contributions", () => {
-  test("contributes the ticket resource without a ticket mode", () => {
-    // A ticket is a resource. A ticket mode would reshape the workbench on open and
-    // drop the project chrome the user had.
+  test("contributes ticket UI through pages instead of Project-mode placements", () => {
     expect(extension.modes).toBeUndefined();
     expect(extension.resourceKinds?.[0]).toMatchObject({ id: "ticket", surface: "primary" });
     expect(extension.resourcePanels).toBeUndefined();
@@ -59,16 +57,7 @@ describe("pstdio planner extension contributions", () => {
       view: { id: "ticket-properties" },
       side: "right",
     });
-    expect(extension.placements?.find((placement) => placement.id === "ticket-primary.project")).toMatchObject({
-      region: "main",
-      required: true,
-      item: { kind: "resource-slot", slot: { id: "primary" } },
-    });
-    expect(extension.placements?.find((placement) => placement.id === "ticket-navigation.project")).toMatchObject({
-      region: "sidenav",
-      required: true,
-      item: { kind: "resource-slot", slot: { id: "navigation" } },
-    });
+    expect(extension.placements).toBeUndefined();
   });
 
   test("uses a native tree body for ticket files", () => {
@@ -280,7 +269,7 @@ describe("pstdio planner workspace contributions", () => {
     expect(runReview?.params?.workspaceId).toMatchObject({ required: false });
   });
 
-  test("places the tickets Kanban view with core properties displayed", () => {
+  test("opens the Tickets list and ticket detail as separate pages", async () => {
     const tickets = extension.views?.find((view) => view.id === "tickets");
     if (tickets?.body.kind !== "kanban") throw new Error("Tickets view must use a Kanban body");
     expect(tickets.body.defaultFilters).toEqual({ archived: ["active"] });
@@ -292,10 +281,62 @@ describe("pstdio planner workspace contributions", () => {
     });
     expect(tickets.body.onColumnAction).toBeFunction();
     expect(tickets.body.onRowActivate).toBeFunction();
-    expect(extension.placements?.find((placement) => placement.id === "tickets.project")).toMatchObject({
-      region: "main",
-      item: { kind: "view", view: tickets.ref },
+    expect(extension.pages?.find((page) => page.id === "tickets")).toMatchObject({
+      path: "tickets",
+      mode: { extensionId: "pstdio", kind: "mode", id: "project" },
+      slots: [
+        {
+          id: "content",
+          role: "primary",
+          region: "main",
+          view: tickets.ref,
+        },
+      ],
     });
+    expect(extension.pages?.find((page) => page.id === "ticket")).toMatchObject({
+      path: "ticket",
+      mode: { extensionId: "pstdio", kind: "mode", id: "project" },
+      parent: { kind: "page", id: "tickets" },
+      slots: [
+        {
+          id: "content",
+          role: "primary",
+          region: "main",
+          binding: {
+            kind: { kind: "resource-kind", id: "ticket" },
+            view: { kind: "view", id: "ticket-editor" },
+          },
+        },
+        {
+          id: "files",
+          role: "auxiliary",
+          region: "sidenav",
+          binding: {
+            kind: { kind: "resource-kind", id: "ticket" },
+            view: { kind: "view", id: "ticket-files" },
+          },
+          defaultOpen: true,
+          order: 10,
+        },
+      ],
+    });
+    const detailTarget = await tickets.body.onRowActivate?.({} as never, {
+      row: {
+        id: "ticket-1",
+        title: "Ticket one",
+        attributes: {},
+        resource: { type: "ticket", id: "ticket-1", label: "PS-1 Ticket one" },
+      },
+    });
+    expect(detailTarget).toEqual({
+      kind: "page",
+      page: { kind: "page", id: "ticket" },
+      resource: { type: "ticket", id: "ticket-1", label: "PS-1 Ticket one" },
+    });
+    expect(extension.navigationItems?.find((item) => item.id === "tickets")).toMatchObject({
+      action: { kind: "page", page: { kind: "page", id: "tickets" } },
+    });
+    expect(extension.placements?.find((placement) => placement.id === "tickets.project")).toBeUndefined();
   });
 
   test("exposes ticket workspace creation as an extension-owned row action", () => {

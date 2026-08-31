@@ -11,7 +11,6 @@ const selectedResourceByWorkbench = new WeakMap<WorkbenchModuleContext["context"
 const projectOwnedRegions = [
   "nav",
   "activity",
-  "sidenav-header",
   "sidenav",
   "side-header",
   "side-left-menu",

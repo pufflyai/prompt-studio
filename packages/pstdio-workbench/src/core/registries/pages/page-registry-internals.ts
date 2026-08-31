@@ -30,6 +30,7 @@ export type WorkbenchPageCloseResolution =
 
 export interface WorkbenchPageRegistryInternals<Value> {
   resources: WorkbenchPageResourceCodec;
+  getPublishingState(): WorkbenchPageRegistryStoreState<Value>;
   connectRuntime(apply: (state: WorkbenchPageRegistryStoreState<Value>) => void): Disposable;
   activateLocation(input: WorkbenchPageLocationCommitInput): void;
   activateMode(projectId: string, modeId: string): void;

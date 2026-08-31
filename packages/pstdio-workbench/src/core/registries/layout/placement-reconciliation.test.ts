@@ -118,7 +118,7 @@ describe("owned placement composition", () => {
     const projectMode = placement(modeIdentity("sessions"), "side", "project");
     const sessionsMode = placement(
       { kind: "mode", modeId: "pstdio.host.mode.sessions", placementId: "header", instanceKey: "default" },
-      "sidenav-header",
+      "sidenav",
       "sessions",
     );
     const ticketPage = placement(pageIdentity("pstdio.planner.page.ticket", "primary"), "main", "ticket");
@@ -175,7 +175,7 @@ describe("owned placement reconciliation", () => {
     const ticketPage = placement(pageIdentity("pstdio.planner.page.ticket", "editor"), "main", "ticket-page");
     const sessionsMode = placement(
       { kind: "mode", modeId: "pstdio.host.mode.sessions", placementId: "project", instanceKey: "default" },
-      "sidenav-header",
+      "sidenav",
       "sessions-mode",
     );
     const sessionsPage = placement(pageIdentity("pstdio.host.page.sessions", "primary"), "main", "sessions-page");

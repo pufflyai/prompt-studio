@@ -38,7 +38,8 @@ describe("ticket files tree sub-ticket section", () => {
           iconColor: "gray.fg",
           iconTooltip: "Backlog",
           target: {
-            kind: "resource",
+            kind: "page",
+            page: { kind: "page", id: "ticket" },
             resource: {
               type: "ticket",
               id: child.id,

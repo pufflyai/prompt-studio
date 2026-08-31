@@ -6,7 +6,6 @@ import { resolveUniqueWidgetId } from "./widget-id";
 export const workbenchRegions = [
   "nav",
   "activity",
-  "sidenav-header",
   "sidenav",
   "main-header",
   "main-left-menu",
@@ -328,7 +327,6 @@ export const createDefaultWorkbenchLayout = (
     regions: {
       nav: createRegion("nav"),
       activity: createRegion("activity"),
-      "sidenav-header": createRegion("sidenav-header"),
       sidenav: createRegion("sidenav"),
       "main-header": createRegion("main-header"),
       "main-left-menu": createRegion("main-left-menu"),
@@ -386,8 +384,11 @@ export const mergeWithDefaultRegions = (
   regionVisibility: Partial<Record<WorkbenchRegion, boolean>> = {},
 ): WorkbenchLayout => {
   const defaults = createDefaultWorkbenchLayout(regionVisibility);
+  const persistedRegions = Object.fromEntries(
+    workbenchRegions.flatMap((region) => (persisted.regions[region] ? [[region, persisted.regions[region]]] : [])),
+  ) as Partial<WorkbenchLayout["regions"]>;
   return normalizeWidgetIds({
     ...persisted,
-    regions: { ...defaults.regions, ...persisted.regions },
+    regions: { ...defaults.regions, ...persistedRegions },
   });
 };

@@ -20,21 +20,14 @@ describe("toTabKey", () => {
 });
 
 describe("suppressesSidenavTabStrip", () => {
-  test("suppresses the strip for a lone pinned, non-closable sidenav panel", () => {
-    expect(suppressesSidenavTabStrip("sidenav", [placement({ pinned: true, closable: false })])).toBe(true);
-  });
-
-  test("keeps the strip when the sidenav panel is closable", () => {
-    expect(suppressesSidenavTabStrip("sidenav", [placement({ pinned: true, closable: true })])).toBe(false);
-  });
-
-  test("keeps the strip when the sidenav shows multiple panels", () => {
+  test("suppresses the strip for every sidenav composition", () => {
+    expect(suppressesSidenavTabStrip("sidenav", [placement({ closable: true })])).toBe(true);
     expect(
       suppressesSidenavTabStrip("sidenav", [
         placement({ widgetId: "w1", pinned: true }),
         placement({ widgetId: "w2", pinned: true }),
       ]),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   test("never suppresses outside the sidenav region", () => {

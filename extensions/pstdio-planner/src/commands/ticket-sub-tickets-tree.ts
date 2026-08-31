@@ -2,6 +2,7 @@ import type { TreeNode, TreeViewSection } from "@pstdio/sdk/extensions";
 import { ticketDisplayTitle } from "../data/mappers";
 import { ticketResourceHierarchyMetadata } from "../data/ticket-resource-hierarchy";
 import type { StoredStatus, StoredTicket } from "../data/types";
+import { ticketPageRef } from "../resource-kinds";
 
 const ticketShorthandSort = (left: StoredTicket, right: StoredTicket) =>
   left.shorthand.localeCompare(right.shorthand, undefined, { numeric: true });
@@ -26,7 +27,8 @@ const subTicketNode = (
     iconColor: status?.color ? `${status.color}.fg` : "fg.muted",
     iconTooltip: status?.name,
     target: {
-      kind: "resource",
+      kind: "page",
+      page: ticketPageRef,
       resource: {
         type: "ticket",
         id: ticket.id,

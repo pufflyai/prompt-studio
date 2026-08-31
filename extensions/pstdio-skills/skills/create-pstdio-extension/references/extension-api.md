@@ -108,7 +108,7 @@ rejected by `pst extensions check`.
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                          |
 | `templateTypes`                                   | Add a custom template category.                                                   |
 | `views`, `viewMenus`                              | Reusable UI bodies and menus owned by a view.                                      |
-| `placements`, `navigationItems`                   | Mode geometry and typed navigation actions.                                       |
+| `pages`, `placements`, `navigationItems`          | Routed screens, mode geometry, and typed navigation actions.                       |
 | `resourceKinds`, `resourceViews`                  | Domain resource slots and typed view-to-slot bindings.                            |
 | `modes`                                           | Typed Workbench modes referenced by placements.                                   |
 | `statusBarItems`                                  | View references rendered outside docked layout.                                   |
@@ -301,6 +301,65 @@ await host.call("resource.open", {
 The default strategy is `persistent`. Guests pass `{ type, id, label?, metadata? }` and
 leave URI creation to the host. The resource kind and a presenter for it must already
 be registered.
+
+## Pages and additive Sidenav sections
+
+Use a page for a routed screen. A page owns one primary slot in `main` and may add auxiliary slots to other docked regions. Page placements are added to the active mode; they do not replace the mode's placements.
+
+```ts
+const ticketsPage = definePage({
+  id: "tickets",
+  title: "Tickets",
+  path: "tickets",
+  mode: workbenchModes.project,
+  slots: [{ id: "content", role: "primary", region: "main", view: ticketsView.ref }],
+});
+
+const ticketPage = definePage({
+  id: "ticket",
+  title: "Ticket",
+  path: "ticket",
+  mode: workbenchModes.project,
+  parent: ticketsPage.ref,
+  slots: [
+    {
+      id: "content",
+      role: "primary",
+      region: "main",
+      binding: { kind: ticketKind.ref, view: ticketEditor.ref },
+    },
+    {
+      id: "files",
+      role: "auxiliary",
+      region: "sidenav",
+      binding: { kind: ticketKind.ref, view: ticketFiles.ref },
+      defaultOpen: true,
+      order: 10,
+    },
+  ],
+});
+
+const ticketsNavigation = defineNavigationItem({
+  id: "tickets",
+  slot: workbenchSlots.projectNavigation,
+  label: "Tickets",
+  action: { kind: "page", page: ticketsPage.ref },
+});
+```
+
+A bound, default-open auxiliary follows the page resource when its resource kind matches the primary binding. Use an explicit panel target for an auxiliary that opens a different resource.
+
+The Sidenav has no header and no tabs. Every active `sidenav` placement renders as an ordered vertical section. Mode and page sections can be visible together. Leaving the page removes only its sections; leaving the mode removes only that mode's sections. `sidenav-header` is not a valid region.
+
+Page navigation uses canonical browser URLs and history. Target the page explicitly when opening a resource:
+
+```ts
+{
+  kind: "page",
+  page: ticketPage.ref,
+  resource: { type: "ticket", id: "PS-326", label: "PS-326" },
+}
+```
 
 ## Native resource views
 

@@ -4,7 +4,7 @@ import type { ResourceRef, TreeNode, TreeViewSection, WorkbenchModuleContext } f
 // Keying by mode lets extension contexts compose without a host-owned union.
 type SidenavModeId = string;
 
-type SidenavContributionRegion = "header" | "body" | "footer";
+type SidenavContributionRegion = "body" | "footer";
 
 // A contribution targeting this mode applies to every mode.
 const allModes = "*";
@@ -26,7 +26,6 @@ interface SidenavContribution {
     ctx: WorkbenchModuleContext,
     input: SidenavContributionInput,
   ) => Promise<TreeViewSection[]> | TreeViewSection[];
-  getHeaderNodes?: (ctx: WorkbenchModuleContext) => TreeNode[];
   getFooterNodes?: (ctx: WorkbenchModuleContext) => TreeNode[];
 }
 
@@ -99,15 +98,6 @@ export const getSidenavContributionSections = async (
     sections.push(...((await contribution.getSections?.(ctx, { ...input, modeId: mode })) ?? []));
   }
   return sections;
-};
-
-export const getSidenavContributionHeaderNodes = (
-  ctx: WorkbenchModuleContext,
-  mode: SidenavModeId,
-  revision = getSidenavContributionsRevision(ctx),
-) => {
-  void revision;
-  return matchingContributions(ctx, mode, "header").flatMap((contribution) => contribution.getHeaderNodes?.(ctx) ?? []);
 };
 
 export const getSidenavContributionFooterNodes = (ctx: WorkbenchModuleContext, mode: SidenavModeId) =>

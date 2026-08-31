@@ -82,7 +82,6 @@ const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
   return {
     hasNavWidgets: useWorkbenchRegionContent(workbench, "nav"),
     hasActivityBarWidgets: useWorkbenchRegionContent(workbench, "activity"),
-    hasSidenavHeaderWidgets: useWorkbenchRegionContent(workbench, "sidenav-header"),
     hasSidenavWidgets: useWorkbenchRegionContent(workbench, "sidenav"),
     hasSecondaryHeaderWidgets: useWorkbenchRegionContent(workbench, "secondary-header"),
     hasSecondaryWidgets: useWorkbenchRegionContent(workbench, "secondary", { locationScoped: true }),
@@ -186,15 +185,14 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     hasNavWidgets,
     hasSideHeaderWidgets,
     hasSideWidgets,
-    hasSidenavHeaderWidgets,
     hasSidenavWidgets,
     hasSecondaryHeaderWidgets,
     hasSecondaryWidgets,
     hasStatusWidgets,
   } = useWorkbenchLayoutFlags(workbench);
   const hasSidePanel = hasSideHeaderWidgets || hasSideWidgets || hasSidePanelHeader;
-  const showSidenav = hasSidenavWidgets || hasSidenavHeaderWidgets;
-  const sidenavCollapsible = resolvePanelCollapsible(workbench, "sidenav-header", "sidenav");
+  const showSidenav = hasSidenavWidgets;
+  const sidenavCollapsible = resolvePanelCollapsible(workbench, "sidenav");
   const showSecondaryPanel = hasSecondaryHeaderWidgets || hasSecondaryWidgets || hasSecondaryPanelHeader;
   const persistedSidenavSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.size);
   const sidenavSize = resolveSidenavSize(workbench, persistedSidenavSize);
@@ -250,13 +248,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
       flex="1"
       minH="0"
       minW="0"
-      resizablePanel={
-        <WorkbenchSidenav
-          workbench={workbench}
-          hasHeader={hasSidenavHeaderWidgets}
-          contextActions={sidenavContextActions}
-        />
-      }
+      resizablePanel={<WorkbenchSidenav workbench={workbench} contextActions={sidenavContextActions} />}
       contentPanel={contentWithHeader}
       collapsed={!sidenavOpen && sidenavCollapsible}
       collapsible={sidenavCollapsible}

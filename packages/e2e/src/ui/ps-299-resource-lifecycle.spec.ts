@@ -63,7 +63,7 @@ test("PS-299 returns to a resource's parent after deleting the open resource", a
 
   await expect(page.getByRole("button", { name: "Create row", exact: true })).toBeVisible();
   await expect(page.locator("[data-workbench-breadcrumb-resource-actions]")).toHaveCount(0);
-  expect(new URL(page.url()).pathname).toBe(`/projects/${project.id}/tickets`);
+  expect(new URL(page.url()).pathname).toBe(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
   await expect(page.getByText("Delete open resource", { exact: true })).toHaveCount(0);
   await expect
     .poll(async () => (await listPlannerTickets(request, apiBase, project.id)).map((item) => item.id))

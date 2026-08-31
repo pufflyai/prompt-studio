@@ -23,6 +23,27 @@ export interface ConnectWorkbenchPageRuntimeInput {
   registry: WorkbenchPageRegistry<WorkbenchWidgetPlacement>;
 }
 
+const syncPagePanelMenus = (layout: LayoutModel) => {
+  const pagePlacements = Object.values(layout.getLayout().regions)
+    .flatMap((region) => region.widgets)
+    .filter((placement) => placement.placementIdentity?.kind === "page");
+
+  for (const placement of pagePlacements) {
+    const owner = layout.getWidget(placement.contributionId);
+    for (const menuId of owner?.ownedPanelMenuIds ?? []) {
+      const menu = layout.getWidget(menuId);
+      if (!menu) continue;
+      layout.openWidget(menuId, {
+        pinned: true,
+        role: "panel-menu",
+        resource: placement.resource,
+        title: menu.region.endsWith("-left-menu") ? placement.resource?.label : menu.title,
+      });
+    }
+  }
+  layout.reconcilePanelMenus();
+};
+
 const applyPageState = (
   input: ConnectWorkbenchPageRuntimeInput,
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
@@ -33,7 +54,10 @@ const applyPageState = (
     placements: state.placements,
     activate: state.reconciliation.activate.map((placement) => placement.identity),
   });
-  activateWorkbenchPageMode(input.modes, state.activeModeId, () => input.layout.restoreLayout(layout));
+  activateWorkbenchPageMode(input.modes, state.activeModeId, () => {
+    input.layout.restoreLayout(layout);
+    syncPagePanelMenus(input.layout);
+  });
 };
 
 export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeInput) => {
@@ -66,7 +90,7 @@ export const defaultPageResourceCodec: WorkbenchPageResourceCodec = {
   fromUri: parsePageResourceUri,
 };
 
-const toWorkbenchResource = (resource: PageResourceRef, codec: WorkbenchPageResourceCodec) => ({
+export const toWorkbenchPageResource = (resource: PageResourceRef, codec: WorkbenchPageResourceCodec) => ({
   kind: resource.type,
   uri: codec.toUri(resource),
   id: resource.id,
@@ -85,7 +109,7 @@ const toWidgetPlacement = (
   resources: WorkbenchPageResourceCodec,
   views: WorkbenchViewRegistry,
 ): WorkbenchWidgetPlacement => {
-  const resource = input.resource ? toWorkbenchResource(input.resource, resources) : undefined;
+  const resource = input.resource ? toWorkbenchPageResource(input.resource, resources) : undefined;
   const view = views.getView(input.viewId);
   if (!view) throw new Error(`Workbench page view is not registered: ${input.viewId}`);
   return {

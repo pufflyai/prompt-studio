@@ -854,6 +854,38 @@ describe("createHistoryController Sub Panel snapshots", () => {
 });
 
 describe("createHistoryController history hydration", () => {
+  test("adopts an already-open location instead of replaying persisted navigation", () => {
+    const histories = new Map<string, import("./history-controller").PersistedWorkbenchHistory>();
+    const persistence: import("./history-controller").WorkbenchHistoryPersistence = {
+      getHistory: (scope) => histories.get(scope ?? "global"),
+      setHistory: (state, scope) => histories.set(scope ?? "global", state),
+    };
+    const first = createWorkbenchCore({ historyPersistence: persistence });
+    registerSnapshotFixtures(first);
+    first.history.setPersistenceScope("project-one");
+    first.layout.openWidget("snapshot.location", {
+      role: "location",
+      resource: { kind: "snapshot.location", uri: "snapshot.location:one", label: "One" },
+    });
+    first.history.flush();
+
+    const second = createWorkbenchCore({ historyPersistence: persistence });
+    registerSnapshotFixtures(second);
+    second.history.setPersistenceScope("project-one");
+    second.layout.openWidget("snapshot.location", {
+      role: "location",
+      resource: { kind: "snapshot.location", uri: "snapshot.location:two", label: "Two" },
+    });
+
+    expect(second.history.store.getState().hydrating).toBe(true);
+    second.history.adoptCurrentLocation();
+
+    const state = second.history.store.getState();
+    expect(state.hydrating).toBe(false);
+    expect(state.entries).toHaveLength(2);
+    expect(state.entries[state.cursor]?.resource?.uri).toBe("snapshot.location:two");
+  });
+
   test("queues cursor movement during async hydration and replays the requested entry after it settles", async () => {
     const histories = new Map<string, import("./history-controller").PersistedWorkbenchHistory>();
     const layouts = new Map<string, import("../../registries/layout/layout-model").WorkbenchLayout>();

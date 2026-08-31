@@ -115,14 +115,13 @@ const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
   registerSidenavContribution(ctx, {
     id: "dashboard.sessions.project-nav",
     modes: ["*"],
-    region: "header",
     order: 20,
-    getHeaderNodes: () => [createSessionsNavigationNode()],
+    getSections: () => [{ id: "dashboard.sessions", nodes: [createSessionsNavigationNode()] }],
   });
   registerSidenavContribution(ctx, {
     id: "dashboard.sessions.list",
     modes: ["sessions", "project"],
-    order: 20,
+    order: 100,
     getSections: (_workbench, input) => {
       const workspace = input.modeId === "project" && input.resource?.kind === "workspace" ? input.resource : undefined;
       if (input.modeId === "project" && !workspace) return [];

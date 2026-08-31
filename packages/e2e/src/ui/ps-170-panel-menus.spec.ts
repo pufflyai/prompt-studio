@@ -1,5 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { createPlannerTicket } from "../helpers/planner-api";
 import { STORY_RENDER_TIMEOUT_MS, startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
@@ -62,30 +63,31 @@ const dragMenuClosed = async (page: Page, menu: Locator, separator: Locator, sid
   await page.mouse.up();
 };
 
-test("PS-170 preserves Forward history when refreshing after Back", async ({ page, request }) => {
+test("PS-170 preserves browser Forward history between extension pages after refresh", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 History" } });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
     localStorage.setItem("dashboard-wb:selected-project:global", projectId);
   }, project.id);
-  await page.goto(`/projects/${project.id}/tickets`);
+  const ticket = await createPlannerTicket(request, apiBase, project.id, {
+    content: "Forward history ticket",
+  });
+  await page.goto(`/projects/${project.id}`);
 
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
-  await page.getByRole("option", { name: "Sessions", exact: true }).click();
-  await page.getByRole("button", { name: "Navigate back" }).click();
-  await expect(
-    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Tickets", { exact: true }),
-  ).toBeVisible();
+  await page.getByText(ticket.content, { exact: true }).click();
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-planner\/ticket\?resource=/);
+
+  await page.goBack();
+  await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
 
   await page.reload();
-  const forward = page.getByRole("button", { name: "Navigate forward" });
-  await expect(forward).toBeEnabled();
-  await forward.click();
-  await expect(
-    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
-  ).toBeVisible();
+  await page.goForward();
+  await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-planner\/ticket\?resource=/);
+  await expect(page.getByText(ticket.content, { exact: true })).toBeVisible();
 });
 
 test("PS-170 keeps the project selector and Session Panel available on project home", async ({ page, request }) => {

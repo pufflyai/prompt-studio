@@ -6,7 +6,6 @@ const apiBase = `http://localhost:${apiPort}`;
 const regions = [
   "nav",
   "activity",
-  "sidenav-header",
   "sidenav",
   "main-header",
   "main-left-menu",

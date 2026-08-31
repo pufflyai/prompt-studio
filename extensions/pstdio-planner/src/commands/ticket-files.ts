@@ -20,6 +20,7 @@ import {
 } from "../data/ticket-resource-hierarchy";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { plannerTicketsChanged } from "../events";
+import { ticketPageRef } from "../resource-kinds";
 import { isImageAttachment } from "../utils/is-image-attachment";
 import { createWorkspaceCommand } from "./ticket-actions";
 import { buildSessionsSection } from "./ticket-sessions-tree";
@@ -269,12 +270,12 @@ export const listTicketFilesTree = async (
   const ticketResource = ticketResourceReference(ticket, parentLookup);
   const selectTarget = (documentId: string) =>
     ({
-      kind: "resource" as const,
+      kind: "page" as const,
+      page: ticketPageRef,
       resource: {
         ...ticketResource,
         metadata: { ...ticketResource.metadata, documentId },
       },
-      input: { strategy: "replace-active" as const },
     }) satisfies TreeNode["target"];
 
   const ticketSection: TreeViewSection = {

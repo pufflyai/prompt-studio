@@ -156,6 +156,29 @@ describe("page slot validation", () => {
       diagnosticsFor(defineExtension({ views: [resourceView], resourceKinds: [ticketKind], pages: [page] })),
     ).toEqual([]);
   });
+
+  test("allows a default-open auxiliary to follow the matching primary resource", () => {
+    const page = definePage({
+      id: "ticket",
+      title: "Ticket",
+      path: "ticket",
+      mode: workbenchModes.project,
+      slots: [
+        { id: "content", role: "primary", region: "main", binding: { kind: ticketKind.ref, view: resourceView.ref } },
+        {
+          id: "files",
+          role: "auxiliary",
+          region: "sidenav",
+          binding: { kind: ticketKind.ref, view: resourceView.ref },
+          defaultOpen: true,
+        },
+      ],
+    });
+
+    expect(
+      diagnosticsFor(defineExtension({ views: [resourceView], resourceKinds: [ticketKind], pages: [page] })),
+    ).toEqual([]);
+  });
 });
 
 describe("page identity and hierarchy validation", () => {

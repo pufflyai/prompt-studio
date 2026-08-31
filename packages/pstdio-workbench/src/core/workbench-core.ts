@@ -23,6 +23,7 @@ import {
   type WorkbenchLastResourceController,
 } from "./controllers/last-resource/last-resource-controller";
 import { createWorkbenchNavigator, type WorkbenchNavigator } from "./controllers/navigator/workbench-navigator";
+import { connectWorkbenchPageBreadcrumbs } from "./controllers/page-location/page-breadcrumbs";
 import {
   createWorkbenchPageLocationController,
   type WorkbenchPageLocationBrowser,
@@ -83,6 +84,7 @@ import {
   type NotificationRegistry,
 } from "./registries/notifications/notification-registry";
 import type { WorkbenchPageRegistry, WorkbenchPageResourceCodec } from "./registries/pages/page-registry";
+import { getWorkbenchPageRegistryInternals } from "./registries/pages/page-registry-internals";
 import {
   createPreferenceRegistry,
   type PreferencePersistenceAdapter,
@@ -488,10 +490,21 @@ const createCoreCompositionController = (core: WorkbenchCore) =>
   });
 
 const connectWorkbenchCoreState = (core: WorkbenchCore, input: CreateWorkbenchCoreInput) => {
+  const syncPanelChrome = () => {
+    for (const region of Object.values(core.layout.getLayout().regions)) {
+      if (isWorkbenchShellOpenRegion(region.id)) core.panels.setOpen(region.id, region.visible);
+    }
+  };
+
   core.layout.store.subscribe((state) => {
     const activeRegion = core.focus.getActiveRegion();
     if (activeRegion && !state.layout.regions[activeRegion].visible) core.focus.clearFocus();
+    // Region visibility belongs to the layout. The panels controller is only the
+    // chrome-facing projection and must follow every layout transaction, including
+    // page reconciliation and persistence restoration.
+    syncPanelChrome();
   });
+  syncPanelChrome();
   core.layout.store.subscribeSelector(
     (state) => {
       const activeId = state.layout.activeWidgetId;
@@ -506,15 +519,6 @@ const connectWorkbenchCoreState = (core: WorkbenchCore, input: CreateWorkbenchCo
     },
     { fireImmediately: true },
   );
-
-  // The panels controller is workbench-global, but layout region visibility is
-  // per-scope. Mirror scope changes into the panel chrome.
-  core.layout.onDidChangePersistenceScope(() => {
-    const layout = core.layout.getLayout();
-    for (const region of Object.values(layout.regions)) {
-      core.panels.setOpen(region.id, region.visible);
-    }
-  });
 
   // Supporting selections such as Side Panel sessions do not replace the main subject.
   core.onDidChangePrimaryResource((resource) => {
@@ -574,6 +578,24 @@ const createCoreNavigationRegistry = (
     },
   });
 
+const createCorePanelOpener =
+  (input: {
+    layout: Pick<LayoutModel, "getPanel" | "openPanel">;
+    establishLocation(instanceId: string): ReturnType<LayoutModel["openPanel"]>;
+    shell: WorkbenchShellController;
+  }) =>
+  (panelId: string, openInput: OpenWorkbenchPanelInput = {}) => {
+    const opened = input.layout.openPanel(panelId, openInput);
+    const instance = openInput.viewId ? input.establishLocation(opened.instanceId) : opened;
+    const panel = input.layout.getPanel(panelId);
+    const region = openInput.region ?? panel?.region;
+    if (region) {
+      if (region === "side") input.shell.setSidePanelPresentation("attached");
+      else if (isWorkbenchShellOpenRegion(region)) input.shell.setRegionOpen(region, true);
+    }
+    return instance;
+  };
+
 export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   const context = createContextKeyService();
   const commands = createCommandRegistry({ context });
@@ -612,17 +634,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     persistence: input.sidePanelPersistence,
   });
   const shell = createWorkbenchShellController({ layout, sidePanel });
-  const openPanel = (panelId: string, openInput: OpenWorkbenchPanelInput = {}) => {
-    const opened = layout.openPanel(panelId, openInput);
-    const instance = openInput.viewId ? establishLocation(opened.instanceId) : opened;
-    const panel = layout.getPanel(panelId);
-    const region = openInput.region ?? panel?.region;
-    if (region) {
-      if (region === "side") shell.setSidePanelPresentation("attached");
-      else if (isWorkbenchShellOpenRegion(region)) shell.setRegionOpen(region, true);
-    }
-    return instance;
-  };
+  const openPanel = createCorePanelOpener({ layout, establishLocation, shell });
   const views = createViewRegistry({ getPanel: layout.getPanel, openPanel });
   const pageResources = input.pageResources ?? defaultPageResourceCodec;
   const modePlacements = createWorkbenchModePlacementRegistry({ views });
@@ -777,6 +789,14 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
     startPage: input.startPage ?? workbenchPages.start,
   });
+  connectWorkbenchPageBreadcrumbs({
+    breadcrumbs: core.breadcrumbs,
+    locations: core.pageLocations,
+    pages: core.pages,
+    pageResources,
+    resources: core.resources,
+    views: core.views,
+  });
   core.navigator = createWorkbenchNavigator({
     modes: core.modes,
     getSelectedResource: () => core.getPrimaryResource(),
@@ -788,6 +808,12 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     modes: core.modes,
     resources: core.resources,
     views: core.views,
+    getPageLocation: () => getWorkbenchPageRegistryInternals(core.pages).getPublishingState().location,
+    canResolvePage: (page) =>
+      core.pages
+        .listPages()
+        .some((candidate) => candidate.ref.id === page.id && candidate.ref.extensionId === page.extensionId),
+    replayPageLocation: (location) => core.pageLocations.replay(location),
     persistence: input.historyPersistence,
     commitNavigation: (commit) => core.navigator.commitContext(commit),
   });

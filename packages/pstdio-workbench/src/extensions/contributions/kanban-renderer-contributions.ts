@@ -243,6 +243,7 @@ const toCreateRowHandler = (
     commandId: string,
     params: Record<string, unknown>,
   ) => Promise<unknown>,
+  activateCreatedRow: ((row: KanbanRendererRow) => Promise<void> | void) | undefined,
 ) => {
   const contribution = record.createRow;
   if (!contribution) return undefined;
@@ -254,6 +255,10 @@ const toCreateRowHandler = (
     );
     const created = await runMutation(record, contribution.commandId, params);
     await adapter.onAfterCreate?.({ record, created, submission });
+    if (!activateCreatedRow || typeof created !== "object" || created === null) return;
+    const row = created as Partial<KanbanRendererRow>;
+    if (typeof row.id !== "string" || typeof row.title !== "string") return;
+    await activateCreatedRow({ ...row, id: row.id, title: row.title, attributes: row.attributes ?? {} });
   };
 };
 
@@ -351,6 +356,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
     let latestQueryId = 0;
     const rowResource = (row: KanbanRendererRow) => resolveRowResource(record, row);
     const toActivatedRow = (row: KanbanRendererRow) => originalRows.get(row) ?? row;
+    const onRowActivate = toRowClick(context, record, adapter, resolveRowResource, toActivatedRow);
 
     disposables.push(...registerRowActionCommands(context, record, localize));
     disposables.push(
@@ -376,7 +382,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
             columnConfigs?.[groupKey] ?? statusColorConfig(context, record, wireAttributes, columnGrouping, groupKey),
             localize,
           ),
-        onRowActivate: toRowClick(context, record, adapter, resolveRowResource, toActivatedRow),
+        onRowActivate,
         executeQuery: async (state: KanbanRendererQueryState) => {
           latestQueryId += 1;
           const queryId = latestQueryId;
@@ -416,7 +422,12 @@ export const registerWorkbenchExtensionKanbanRenderers = (
           ? (rowId, beforeRowId) =>
               runMutation(record, record.reorderHandlerId!, { rowId, beforeRowId }).then(() => undefined)
           : undefined,
-        onCreateRow: toCreateRowHandler(record, adapter, runMutation),
+        onCreateRow: toCreateRowHandler(
+          record,
+          adapter,
+          runMutation,
+          record.rowActivationHandlerId ? onRowActivate : undefined,
+        ),
         onColumnAction: record.columnActionHandlerId
           ? async (columnId, actionId) => {
               await runMutation(record, record.columnActionHandlerId!, { columnId, actionId });

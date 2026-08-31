@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchCore } from "@pstdio/workbench";
-import { getSidenavContributionSections } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import {
+  getSidenavContributionSections,
+  registerSidenavContribution,
+} from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { registerExtensionNavigation } from "./extension-navigation";
 import { metadataWithLabMode } from "./module-test-fixtures";
 
@@ -49,5 +52,32 @@ describe("registerExtensionNavigation", () => {
 
     disposable.dispose();
     expect(await getSidenavContributionSections(workbench, "project")).toEqual([]);
+  });
+
+  test("places extension navigation before contextual workspace sections", async () => {
+    const workbench = createWorkbenchCore();
+    registerSidenavContribution(workbench, {
+      id: "dashboard.workspace.sessions",
+      modes: ["project"],
+      order: 20,
+      getSections: () => [{ id: "workspace-sessions", nodes: [{ id: "session", label: "Session" }] }],
+    });
+
+    const disposable = registerExtensionNavigation(workbench, {
+      ...metadataWithLabMode,
+      navigationItems: [
+        {
+          ...metadataWithLabMode.navigationItems[0],
+          slot: { extensionId: "pstdio", kind: "navigation-item" as const, id: "project.navigation" },
+        },
+      ],
+    });
+
+    expect((await getSidenavContributionSections(workbench, "project")).map((section) => section.id)).toEqual([
+      "Lab",
+      "workspace-sessions",
+    ]);
+
+    disposable.dispose();
   });
 });

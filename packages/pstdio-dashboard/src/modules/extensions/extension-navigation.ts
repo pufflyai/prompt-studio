@@ -48,31 +48,16 @@ export const registerExtensionNavigation = (
   metadata: ResolvedWorkbenchExtensionMetadata,
 ): Disposable => {
   const items = metadata.navigationItems.filter(isProjectNavigationItem);
-  const headerItems = items.filter((item) => item.group === "");
-  const bodyItems = items.filter((item) => item.group !== "");
-  const registrations = [
-    registerSidenavContribution(ctx, {
-      id: "dashboard.extensions.project-navigation.header",
-      modes: ["*"],
-      region: "header",
-      order: 40,
-      getHeaderNodes: (workbench) =>
-        headerItems
-          .filter((item) => isVisible(workbench, item))
-          .sort(byOrderAndId)
-          .map(toNode),
-    }),
-    registerSidenavContribution(ctx, {
-      id: "dashboard.extensions.project-navigation.body",
-      modes: ["project"],
-      order: 100,
-      getSections: (workbench) => toSections(workbench, bodyItems),
-    }),
-  ];
+  const registration = registerSidenavContribution(ctx, {
+    id: "dashboard.extensions.project-navigation",
+    modes: ["*"],
+    order: 5,
+    getSections: (workbench) => toSections(workbench, items),
+  });
 
   return {
     dispose() {
-      for (const registration of registrations) registration.dispose();
+      registration.dispose();
     },
   };
 };

@@ -119,6 +119,29 @@ export const selectPrimaryTarget = (input: {
   return { ...input.state, activePrimaryInstanceKey: "default" };
 };
 
+export const openDefaultAuxiliaryBindings = (input: {
+  page: WorkbenchPageContribution;
+  state: WorkbenchPageRuntimeState;
+  target: WorkbenchPageOpenInput;
+  resourceKey(resource: ResourceRef): string;
+}) => {
+  if (!input.target.resource) return input.state;
+  return input.page.slots.reduce((state, slot) => {
+    const followsPrimaryResource =
+      slot.role === "auxiliary" &&
+      slot.defaultOpen &&
+      slot.binding?.resourceKind === input.target.resource?.type &&
+      !slot.defaultResource;
+    if (!followsPrimaryResource) return state;
+    return openResourceSlot({
+      slot,
+      state,
+      target: { pageId: input.page.id, resource: input.target.resource },
+      resourceKey: input.resourceKey,
+    });
+  }, input.state);
+};
+
 export const setStaticSlotOpen = (state: WorkbenchPageRuntimeState, slotId: string, open: boolean) => {
   const ids = new Set(state.openStaticSlotIds);
   if (open) ids.add(slotId);

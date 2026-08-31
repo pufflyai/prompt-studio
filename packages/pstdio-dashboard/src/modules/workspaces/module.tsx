@@ -52,9 +52,8 @@ const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContext) => {
   registerSidenavContribution(ctx, {
     id: "dashboard.workspaces.project-nav",
     modes: ["*"],
-    region: "header",
     order: 30,
-    getHeaderNodes: () => [workspaceNavigationNode()],
+    getSections: () => [{ id: "dashboard.workspaces", nodes: [workspaceNavigationNode()] }],
   });
 };
 

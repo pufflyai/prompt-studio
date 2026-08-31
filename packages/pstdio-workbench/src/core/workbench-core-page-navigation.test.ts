@@ -52,7 +52,13 @@ const createHarness = () => {
   });
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
   workbench.layout.registerPanel({ id: "start-panel", title: "Start", region: "main", rendererId: "test" });
-  workbench.layout.registerPanel({ id: "tickets-panel", title: "Tickets", region: "main", rendererId: "test" });
+  workbench.layout.registerPanel({
+    id: "tickets-panel",
+    title: "Tickets",
+    region: "main",
+    rendererId: "test",
+    panelMenus: [{ id: "tickets-properties", title: "Properties", side: "right", rendererId: "test" }],
+  });
   workbench.views.registerView({ id: "start-view", panelId: "start-panel" });
   workbench.views.registerView({ id: "tickets-view", panelId: "tickets-panel" });
   workbench.pages.registerPage({
@@ -86,8 +92,22 @@ describe("workbench core page navigation", () => {
     expect(harness.workbench.layout.getLayout().regions.main.widgets).toEqual([
       expect.objectContaining({ contributionId: "tickets-panel" }),
     ]);
+    expect(harness.workbench.layout.getLayout().regions["main-right-menu"].widgets).toEqual([
+      expect.objectContaining({ contributionId: "tickets-properties" }),
+    ]);
     expect(harness.browser.pushes.at(-1)?.url).toBe("/projects/p1/extensions/acme.planner/tickets");
     expect(harness.persistence.values.get("p1")?.page).toEqual(ticketsRef);
-    expect(harness.workbench.history.store.getState().entries).toEqual([]);
+    expect(harness.workbench.history.store.getState().entries.map((entry) => entry.pageLocation?.page.id)).toEqual([
+      "start",
+      "tickets",
+    ]);
+
+    harness.workbench.history.goBack();
+    expect(harness.workbench.pages.store.getState().activePageId).toBe("start");
+    expect(harness.browser.replacements.at(-1)?.url).toBe("/projects/p1");
+
+    harness.workbench.history.goForward();
+    expect(harness.workbench.pages.store.getState().activePageId).toBe("tickets");
+    expect(harness.browser.replacements.at(-1)?.url).toBe("/projects/p1/extensions/acme.planner/tickets");
   });
 });

@@ -399,6 +399,7 @@ describe("createLayoutModel persistence", () => {
     const partialLayout = {
       regions: {
         main: { id: "main", visible: true, widgets: [] },
+        "sidenav-header": { id: "sidenav-header", visible: true, widgets: [] },
       },
     } as unknown as WorkbenchLayout;
     const persistence = {
@@ -408,11 +409,12 @@ describe("createLayoutModel persistence", () => {
 
     const layout = createLayoutModel({ persistence });
 
-    expect(layout.getLayout().regions["sidenav-header"]).toBeDefined();
+    expect(layout.getLayout().regions.sidenav).toBeDefined();
     expect(layout.getLayout().regions["secondary-header"]).toBeDefined();
     expect(layout.getLayout().regions["side-header"]).toBeDefined();
-    expect(layout.getLayout().regions["sidenav-header"].widgets).toEqual([]);
+    expect(layout.getLayout().regions.sidenav.widgets).toEqual([]);
     expect(layout.getLayout().regions["side-header"].widgets).toEqual([]);
+    expect("sidenav-header" in layout.getLayout().regions).toBe(false);
   });
 
   test("exposes a store that notifies subscribers when the layout changes", () => {
@@ -526,9 +528,9 @@ describe("createLayoutModel persistence", () => {
     };
     const layout = createLayoutModel({ persistence });
     registerTestWidget(layout, {
-      id: "dashboard.sidenav-header",
+      id: "dashboard.project-navigation",
       title: "Project selector",
-      region: "sidenav-header",
+      region: "nav",
     });
     registerTestWidget(layout, {
       id: "dashboard.project-content",
@@ -536,17 +538,17 @@ describe("createLayoutModel persistence", () => {
       region: "sidenav",
     });
 
-    layout.openWidget("dashboard.sidenav-header", { pinned: true });
+    layout.openWidget("dashboard.project-navigation", { pinned: true });
     layout.openWidget("dashboard.project-content");
     layout.setPersistenceScope("project:a");
 
-    expect(layout.getLayout().regions["sidenav-header"].widgets).toEqual([
-      expect.objectContaining({ contributionId: "dashboard.sidenav-header", pinned: true }),
+    expect(layout.getLayout().regions.nav.widgets).toEqual([
+      expect.objectContaining({ contributionId: "dashboard.project-navigation", pinned: true }),
     ]);
     expect(layout.getLayout().regions.sidenav.widgets).toEqual([]);
 
     layout.setPersistenceScope("project:b");
-    expect(layout.getLayout().regions["sidenav-header"].widgets).toHaveLength(1);
+    expect(layout.getLayout().regions.nav.widgets).toHaveLength(1);
   });
 
   test("scope === undefined falls back to global behavior", () => {

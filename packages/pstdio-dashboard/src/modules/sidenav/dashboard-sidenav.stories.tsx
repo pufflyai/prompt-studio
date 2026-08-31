@@ -137,14 +137,18 @@ const createTicketsNavigationModule = () => ({
     registerSidenavContribution(ctx, {
       id: "story.tickets-navigation",
       modes: ["*"],
-      region: "header",
-      order: 40,
-      getHeaderNodes: () => [
+      order: 5,
+      getSections: () => [
         {
-          id: ticketsView.id,
-          label: ticketsView.label,
-          icon: ticketsView.icon,
-          target: { kind: "view", viewId: ticketsView.id },
+          id: "story.tickets-navigation",
+          nodes: [
+            {
+              id: ticketsView.id,
+              label: ticketsView.label,
+              icon: ticketsView.icon,
+              target: { kind: "view", viewId: ticketsView.id },
+            },
+          ],
         },
       ],
     });
@@ -334,6 +338,9 @@ const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
 // F15: the project selector and global collections stay fixed while the resource region is empty.
 export const ProjectMode: Story = {
   render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.start.id)} />,
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('[data-workbench-panel-header="sidenav"]')).toBeNull();
+  },
 };
 
 // Aggregate collection: the same header stays mounted and Workspaces is not duplicated in the resource region.

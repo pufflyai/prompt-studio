@@ -1,25 +1,20 @@
 import { Box } from "@chakra-ui/react";
-import { Header, type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
+import { type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchRegion } from "../region/region";
-import { useWorkbenchRegionTabsVisible, WorkbenchRegionTabs } from "../region/region-tabs";
 import { WorkbenchWidgetHost } from "../region/widget-host";
 import { useWorkbenchActiveModeId } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
-import { WorkbenchHeaderBorder } from "./header-bottom-border";
 
 interface WorkbenchSidenavProps {
   workbench: WorkbenchCore;
-  hasHeader: boolean;
   contextActions: ResourceContextAction[];
 }
 
 export const WorkbenchSidenav = (props: WorkbenchSidenavProps) => {
-  const { workbench, hasHeader, contextActions } = props;
-  const hasContentTabs = useWorkbenchRegionTabsVisible(workbench, "sidenav");
-  const showHeaderBar = hasHeader || hasContentTabs;
+  const { workbench, contextActions } = props;
 
   return (
     <ResourceContextMenu actions={contextActions} closeOnSelect={false} keepMountedWhenEmpty>
@@ -38,33 +33,6 @@ export const WorkbenchSidenav = (props: WorkbenchSidenavProps) => {
           overflow="hidden"
           w="full"
         >
-          {showHeaderBar ? (
-            <Header
-              data-workbench-panel-header="sidenav"
-              variant="main"
-              bg={workbenchBackgrounds.sidenav}
-              position="relative"
-              flexShrink={0}
-              gap="xs"
-              overflowX="hidden"
-              // Full-bleed: sidenav-header content owns its own padding and fills the header height,
-              // so the container adds none of its own horizontally.
-              px="0"
-              // Size to content so a multi-row sidenav-header (e.g. a stacked action cluster) is not
-              // clipped to the single-row height; single-row headers stay at the variant height.
-              h="auto"
-              minH="2.5rem"
-              alignItems="stretch"
-            >
-              <WorkbenchRegionTabs workbench={workbench} region="sidenav" />
-              {hasHeader ? (
-                <Box flex="1" minW="0" overflowX="hidden">
-                  <WorkbenchRegion workbench={workbench} region="sidenav-header" title="Sidenav header" />
-                </Box>
-              ) : null}
-              <WorkbenchHeaderBorder workbench={workbench} region="sidenav-header" />
-            </Header>
-          ) : null}
           <Box flex="1" minH="0" minW="0" overflow="hidden">
             <WorkbenchRegion workbench={workbench} region="sidenav" title="Sidenav" />
           </Box>

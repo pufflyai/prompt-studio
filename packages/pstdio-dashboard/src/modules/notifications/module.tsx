@@ -31,9 +31,8 @@ const registerNotificationSidenav = (ctx: WorkbenchModuleContext) => {
   registerSidenavContribution(ctx, {
     id: "dashboard.notifications.sidenav-nav",
     modes: ["*"],
-    region: "header",
     order: 10,
-    getHeaderNodes: () => [createNotificationNode(ctx)],
+    getSections: () => [{ id: "dashboard.notifications", nodes: [createNotificationNode(ctx)] }],
   });
 };
 

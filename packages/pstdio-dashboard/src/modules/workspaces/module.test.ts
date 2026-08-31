@@ -7,10 +7,7 @@ import { syncDashboardLayoutPersistenceScope } from "@/shared/app/navigation-sta
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import {
-  getSidenavContributionHeaderNodes,
-  getSidenavContributionSections,
-} from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { getSidenavContributionSections } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "./module";
@@ -211,12 +208,14 @@ describe("createWorkspacesModule navigation", () => {
     workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
 
-    const headerNodeIds = getSidenavContributionHeaderNodes(workbench, "project").map((node) => node.id);
-    const workspacesNode = getSidenavContributionHeaderNodes(workbench, "project").find(
-      (node) => node.id === dashboardViews.workspaces.id,
-    );
+    const nodeIds = (await getSidenavContributionSections(workbench, "project"))
+      .flatMap((section) => section.nodes)
+      .map((node) => node.id);
+    const workspacesNode = (await getSidenavContributionSections(workbench, "project"))
+      .flatMap((section) => section.nodes)
+      .find((node) => node.id === dashboardViews.workspaces.id);
 
-    expect(headerNodeIds).not.toContain("new-workspace");
+    expect(nodeIds).not.toContain("new-workspace");
     expect(workspacesNode).toMatchObject({
       commandId: dashboardCommandIds.openWorkspaces,
       hiddenByDefault: true,
@@ -228,11 +227,7 @@ describe("createWorkspacesModule navigation", () => {
         }),
       ],
     });
-    expect(
-      (await getSidenavContributionSections(workbench, "project"))
-        .flatMap((section) => section.nodes)
-        .map((node) => node.id),
-    ).not.toContain(dashboardViews.workspaces.id);
+    expect(nodeIds).toContain(dashboardViews.workspaces.id);
   });
 });
 

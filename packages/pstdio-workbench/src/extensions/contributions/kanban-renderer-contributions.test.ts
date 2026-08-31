@@ -529,6 +529,53 @@ describe("registerWorkbenchExtensionKanbanRenderers row activation", () => {
 });
 
 describe("registerWorkbenchExtensionKanbanRenderers create forms", () => {
+  test("activates the created row through the declared row target", async () => {
+    const workbench = createWorkbenchCore();
+    const calls: Array<{ commandId: string; rowId?: unknown }> = [];
+    const record = {
+      id: "tickets",
+      extensionId: "pstdio.pstdio-planner",
+      title: "Tickets",
+      queryHandlerId: "pstdio-planner.tickets.query",
+      rowActivationHandlerId: "pstdio-planner.tickets.onRowActivate",
+      createRow: {
+        commandId: "pstdio-planner.create-ticket",
+      },
+    } satisfies WorkbenchExtensionKanbanRendererRecord;
+
+    registerWorkbenchExtensionKanbanRenderers(
+      {
+        projectId: "project-1",
+        workbench,
+        executeCommand: async (commandId, request) => {
+          const row = request.params?.row as { id?: unknown } | undefined;
+          calls.push({ commandId, rowId: row?.id });
+          if (commandId === "pstdio-planner.create-ticket") {
+            return {
+              id: "ticket-1",
+              title: "Created ticket",
+              resource: { type: "ticket", id: "ticket-1" },
+            };
+          }
+          return undefined;
+        },
+      },
+      [record],
+    );
+
+    await workbench.renderers.getKanbanRenderer("tickets")?.onCreateRow?.({
+      columnId: "ready",
+      values: {},
+      attributeValues: {},
+      files: [],
+    });
+
+    expect(calls).toEqual([
+      { commandId: "pstdio-planner.create-ticket", rowId: undefined },
+      { commandId: "pstdio-planner.tickets.onRowActivate", rowId: "ticket-1" },
+    ]);
+  });
+
   test("runs renderer-owned create forms with declarative fields, editable attributes, and attachments", async () => {
     const workbench = createWorkbenchCore();
     const calls: Array<{ commandId: string; params: Record<string, unknown> }> = [];

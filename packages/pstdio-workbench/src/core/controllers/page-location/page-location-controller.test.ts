@@ -29,7 +29,26 @@ describe("page location handoff", () => {
       "shell",
       "mode",
     ]);
-    expect(harness.browser.pushes.length + harness.browser.replacements.length).toBe(writes + 1);
+    expect(harness.browser.pushes.length + harness.browser.replacements.length).toBe(writes + 2);
+    expect(harness.browser.current()).toEqual({
+      url: "/projects/p1",
+      state: { kind: "pstdio.mode-location", modeId: "project", projectId: "p1" },
+    });
+    expect(harness.controller.hasCurrentPageUrl("p1")).toBe(false);
+    expect(harness.controller.hasCurrentModeUrl("p1")).toBe(true);
+  });
+
+  test("keeps the active mode when the same project is selected again", () => {
+    const harness = createHarness();
+    harness.controller.setProject("p1");
+    harness.controller.leavePage("project");
+
+    harness.controller.setProject("p1");
+
+    expect(harness.registry.store.getState()).toMatchObject({
+      projectId: "p1",
+      activeModeId: "project",
+    });
   });
 });
 
@@ -75,6 +94,22 @@ describe("page location controller", () => {
     });
     expect(harness.browser.pushes).toEqual([]);
     expect(harness.browser.replacements).toHaveLength(1);
+  });
+
+  test("reports only URLs that resolve to a registered page for the project", () => {
+    const start = createHarness("/projects/p1");
+    expect(start.controller.isCurrentProjectUrl("p1")).toBe(true);
+    expect(start.controller.hasCurrentPageUrl("p1")).toBe(true);
+    expect(
+      createHarness(
+        "/projects/p1/extensions/acme.planner/ticket?resource=pstdio%3A%2F%2Fticket%2FPS-326",
+      ).controller.hasCurrentPageUrl("p1"),
+    ).toBe(true);
+    const missing = createHarness("/projects/p1/extensions/missing.extension/not-installed");
+    expect(missing.controller.isCurrentProjectUrl("p1")).toBe(true);
+    expect(missing.controller.hasCurrentPageUrl("p1")).toBe(false);
+    expect(createHarness("/unrelated").controller.isCurrentProjectUrl("p1")).toBe(false);
+    expect(createHarness("/projects/p2").controller.hasCurrentPageUrl("p1")).toBe(false);
   });
 
   test("restores saved state only without a URL target and otherwise opens fixed Start", () => {

@@ -1,3 +1,4 @@
+import type { PageLocation, PageRef } from "@pstdio/sdk/extensions";
 import type { LayoutModel } from "../../registries/layout/layout-model";
 import { findPlacementByWidgetId, getActiveLocationPlacement } from "../../registries/layout/layout-operations";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
@@ -60,6 +61,8 @@ export interface HistoryController {
   setPersistenceScope(scope: string | undefined): void;
   getPersistenceScope(): string | undefined;
   restore(): HistoryEntry | undefined;
+  /** Accepts a location opened by a stronger source, such as the current browser URL. */
+  adoptCurrentLocation(): void;
   flush(): void;
   clear(): void;
   migrateState(transform: (state: HistoryStoreState) => HistoryStoreState): void;
@@ -75,6 +78,9 @@ export interface CreateHistoryControllerInput {
   views?: WorkbenchViewRegistry;
   persistence?: WorkbenchHistoryPersistence;
   maxEntries?: number;
+  getPageLocation?(): PageLocation | undefined;
+  canResolvePage?(page: PageRef): boolean;
+  replayPageLocation?(location: PageLocation): unknown;
   // Replays mode and resource through the atomic navigator so no observer sees an
   // intermediate pair. Entries replay through the legacy mode restore without it.
   commitNavigation?(commit: {
@@ -173,6 +179,7 @@ const activateHistoryResource = (input: ActivateHistoryResourceInput) => {
 interface CreateHistoryControllerApiInput {
   controllerInput: CreateHistoryControllerInput;
   store: WorkbenchStore<HistoryStoreState>;
+  adoptCurrentLocation(): void;
   activateEntry(
     entry: WorkbenchNavigationEntry,
     options?: { replayCurrentLocation?: boolean },
@@ -190,6 +197,7 @@ interface CreateHistoryControllerApiInput {
 const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): HistoryController => {
   const {
     activateEntry,
+    adoptCurrentLocation,
     controllerInput,
     failRestore,
     finishRestore,
@@ -245,6 +253,7 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
     },
     setPersistenceScope,
     getPersistenceScope,
+    adoptCurrentLocation,
     restore() {
       const snapshot = reconcileHistoryState({
         state: store.getState(),
@@ -252,6 +261,7 @@ const createHistoryControllerApi = (input: CreateHistoryControllerApiInput): His
         modes: controllerInput.modes,
         resources: controllerInput.resources,
         views: controllerInput.views,
+        canResolvePage: controllerInput.canResolvePage,
       });
       setState(snapshot, "history.reconcile");
       const entry = snapshot.entries[snapshot.cursor];
@@ -387,6 +397,7 @@ const trackLayoutScopeRotation = (layout: CreateHistoryControllerInput["layout"]
 // navigator and no observer sees an intermediate pair. Presentation of the resource
 // still happens through the replay path.
 const restoreEntryContext = (input: CreateHistoryControllerInput, entry: WorkbenchNavigationEntry) => {
+  if (entry.kind === "page" && entry.pageLocation) return input.replayPageLocation?.(entry.pageLocation);
   if (entry.kind === "view") {
     if (entry.modeId && input.modes?.getMode(entry.modeId) && input.modes.getActiveModeId() !== entry.modeId) {
       input.modes.setActiveMode(entry.modeId);
@@ -435,6 +446,90 @@ const registerHistoryRecording = (input: {
   input.controller.views?.onDidOpenView(() => input.recordSnapshot(false, true));
 };
 
+interface HistoryEntryActivatorInput {
+  controller: CreateHistoryControllerInput;
+  getScope(): string | undefined;
+  replayResource(entry: WorkbenchNavigationEntry, scope: string | undefined, replaceActive: boolean): Promise<unknown>;
+  restoreMode(entry: WorkbenchNavigationEntry): unknown;
+  restoreSelections(entry: WorkbenchNavigationEntry): void;
+}
+
+const activateHistoryView = (input: {
+  controller: CreateHistoryControllerInput;
+  entry: WorkbenchNavigationEntry;
+  placement: WorkbenchWidgetPlacement | undefined;
+  replayCurrentLocation: boolean | undefined;
+  replayScope: string | undefined;
+  getScope(): string | undefined;
+  restoreSelections(entry: WorkbenchNavigationEntry): void;
+}) => {
+  const { entry, placement } = input;
+  if (entry.kind !== "view" || !entry.viewId || !input.controller.views) return undefined;
+  const placementMatchesView = placement?.viewId === entry.viewId && placement.resourceUri === entry.resource?.uri;
+  if (placementMatchesView && !input.replayCurrentLocation) {
+    input.controller.layout.activateWidget(placement.widgetId);
+    input.restoreSelections(entry);
+    return undefined;
+  }
+  return input.controller.views
+    .openView(entry.viewId, {
+      resource: entry.resource,
+      title: entry.title,
+      strategy: { kind: "replace-active" },
+    })
+    .finally(() => {
+      if (input.replayScope === input.getScope()) input.restoreSelections(entry);
+    });
+};
+
+const createHistoryEntryActivator =
+  (input: HistoryEntryActivatorInput) =>
+  (entry: WorkbenchNavigationEntry, options: { replayCurrentLocation?: boolean } = {}) => {
+    const replayScope = input.getScope();
+    const restoredContext = input.restoreMode(entry);
+    if (entry.kind === "page") {
+      input.restoreSelections(entry);
+      return restoredContext instanceof Promise ? restoredContext : undefined;
+    }
+    if (entry.kind === "mode") {
+      input.restoreSelections(entry);
+      return undefined;
+    }
+
+    const placement = entry.widgetId
+      ? findPlacementByWidgetId(input.controller.layout.getLayout(), entry.widgetId)?.placement
+      : undefined;
+    if (entry.kind === "resource" && entry.resource) {
+      return activateHistoryResource({
+        entry,
+        resource: entry.resource,
+        placement,
+        layout: input.controller.layout,
+        resources: input.controller.resources,
+        replayCurrentLocation: options.replayCurrentLocation,
+        replayResource: (candidate, replaceActive) => input.replayResource(candidate, replayScope, replaceActive),
+        restoreSelections: input.restoreSelections,
+      });
+    }
+    if (entry.kind === "view") {
+      return activateHistoryView({
+        controller: input.controller,
+        entry,
+        placement,
+        replayCurrentLocation: options.replayCurrentLocation,
+        replayScope,
+        getScope: input.getScope,
+        restoreSelections: input.restoreSelections,
+      });
+    }
+    if (placement) input.controller.layout.activateWidget(placement.widgetId);
+    else if (entry.contributionId && input.controller.layout.getWidget(entry.contributionId)) {
+      input.controller.layout.openWidget(entry.contributionId, { title: entry.title });
+    }
+    input.restoreSelections(entry);
+    return undefined;
+  };
+
 export const createHistoryController = (input: CreateHistoryControllerInput): HistoryController => {
   const store = createWorkbenchStore<HistoryStoreState>({
     name: "workbench.history",
@@ -478,14 +573,24 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
       return;
     }
     counter += 1;
-    const entry = entryFromCurrentSnapshot({ counter, layout: input.layout, modes: input.modes });
+    const entry = entryFromCurrentSnapshot({
+      counter,
+      layout: input.layout,
+      modes: input.modes,
+      pageLocation: input.getPageLocation?.(),
+    });
     const current = currentNavigationEntry(store.getState());
+    if (entry?.kind === "page" && !isSameNavigationEntry(current, entry)) {
+      appendEntry(entry);
+      return;
+    }
     if (suppressTransitionSnapshot(current, entry, fromLayoutChange, input.modes?.isTransitioning() ?? false)) return;
     if (entry?.location.resource && replayingResourceUris.has(entry.location.resource.uri)) return;
     appendEntry(entry);
   };
 
   const normalizeRemovedPlacement = (placement: WorkbenchWidgetPlacement) => {
+    if (placement.placementIdentity?.kind === "page") return;
     const snapshot = store.getState();
     const role = workbenchPlacementRole(input.layout, placement);
     if (role === "location" && (input.resources.isOpeningResource() || input.views?.isOpeningView())) return;
@@ -576,52 +681,13 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     });
   };
 
-  const activateEntry = (entry: WorkbenchNavigationEntry, options: { replayCurrentLocation?: boolean } = {}) => {
-    const replayScope = currentScope;
-    restoreMode(entry);
-    if (entry.kind === "mode") {
-      restoreSelections(entry);
-      return undefined;
-    }
-    const placement = entry.widgetId
-      ? findPlacementByWidgetId(input.layout.getLayout(), entry.widgetId)?.placement
-      : undefined;
-    if (entry.kind === "resource" && entry.resource) {
-      return activateHistoryResource({
-        entry,
-        resource: entry.resource,
-        placement,
-        layout: input.layout,
-        resources: input.resources,
-        replayCurrentLocation: options.replayCurrentLocation,
-        replayResource: (candidate, replaceActive) => replayResource(candidate, replayScope, replaceActive),
-        restoreSelections,
-      });
-    }
-    if (entry.kind === "view" && entry.viewId && input.views) {
-      const placementMatchesView = placement?.viewId === entry.viewId && placement.resourceUri === entry.resource?.uri;
-      if (placementMatchesView && !options.replayCurrentLocation) {
-        input.layout.activateWidget(placement.widgetId);
-        restoreSelections(entry);
-        return undefined;
-      }
-      return input.views
-        .openView(entry.viewId, {
-          resource: entry.resource,
-          title: entry.title,
-          strategy: { kind: "replace-active" },
-        })
-        .finally(() => {
-          if (replayScope === currentScope) restoreSelections(entry);
-        });
-    }
-    if (placement) input.layout.activateWidget(placement.widgetId);
-    else if (entry.contributionId && input.layout.getWidget(entry.contributionId)) {
-      input.layout.openWidget(entry.contributionId, { title: entry.title });
-    }
-    restoreSelections(entry);
-    return undefined;
-  };
+  const activateEntry = createHistoryEntryActivator({
+    controller: input,
+    getScope: () => currentScope,
+    replayResource,
+    restoreMode,
+    restoreSelections,
+  });
 
   const runSilent = (action: () => unknown) => {
     navigating = true;
@@ -655,10 +721,15 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
     runSilent,
     setState,
   });
+  const adoptCurrentLocation = () => {
+    restoreFinisher.finish(currentScope);
+    recordSnapshot();
+  };
 
   return createHistoryControllerApi({
     controllerInput: input,
     store,
+    adoptCurrentLocation,
     failRestore: restoreFinisher.fail,
     finishRestore: restoreFinisher.finish,
     setPersistenceScope,

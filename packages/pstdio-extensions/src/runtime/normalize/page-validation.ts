@@ -97,14 +97,6 @@ const validateSlotContent = (runtime: Accumulator, record: RuntimePageRecord, sl
       record,
     });
   }
-  if (slot.role === "auxiliary" && slot.defaultOpen && slot.binding && !slot.defaultResource) {
-    addPageDiagnostic(runtime, {
-      code: "extension_page_slot_invalid",
-      fieldPath: `${fieldPath}.defaultOpen`,
-      message: `Bound auxiliary slot "${slot.id}" needs a default resource before it can open by default`,
-      record,
-    });
-  }
 };
 
 const hostModeRegions = new Map(
@@ -167,6 +159,18 @@ const validatePageStructure = (runtime: Accumulator, record: RuntimePageRecord) 
       code: "extension_page_primary_invalid",
       fieldPath: `pages.${record.localId}.parent`,
       message: `Closable bound-only page "${record.localId}" must declare a parent`,
+      record,
+    });
+  }
+
+  for (const [index, slot] of record.contribution.slots.entries()) {
+    const followsPrimaryResource =
+      slot.role === "auxiliary" && slot.defaultOpen && slot.binding && !slot.defaultResource;
+    if (!followsPrimaryResource || slot.binding?.kind.id === primary[0]?.binding?.kind.id) continue;
+    addPageDiagnostic(runtime, {
+      code: "extension_page_slot_invalid",
+      fieldPath: `pages.${record.localId}.slots.${index}.defaultOpen`,
+      message: `Bound auxiliary slot "${slot.id}" can open by default only when it matches the primary resource kind`,
       record,
     });
   }

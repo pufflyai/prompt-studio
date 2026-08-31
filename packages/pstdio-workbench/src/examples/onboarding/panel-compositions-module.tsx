@@ -48,7 +48,6 @@ export const resources = [
 const RESOURCE_SCOPE_PREFIX = "project/demo/mode/locations/resource/";
 const projectOwnedRegions: WorkbenchRegion[] = [
   "nav",
-  "sidenav-header",
   "sidenav",
   "side-header",
   "side-left-menu",

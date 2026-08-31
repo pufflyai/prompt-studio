@@ -32,22 +32,25 @@ const reconcileEntry = (input: {
   modes?: Pick<WorkbenchModeRegistry, "getMode">;
   resources: ResourceRegistry;
   views?: WorkbenchViewRegistry;
+  canResolvePage?(page: NonNullable<WorkbenchNavigationEntry["pageLocation"]>["page"]): boolean;
 }) => {
-  const { entry, layout, modes, resources, views } = input;
+  const { canResolvePage, entry, layout, modes, resources, views } = input;
   if (entry.modeId && modes && !modes.getMode(entry.modeId)) return undefined;
   if (entry.closedSubPanel && !layout.getWidget(entry.closedSubPanel.reference.contributionId)) {
     return undefined;
   }
   const contribution = entry.contributionId ? layout.getWidget(entry.contributionId) : undefined;
   const hasLocation =
-    entry.kind === "mode"
-      ? Boolean(entry.modeId && modes?.getMode(entry.modeId))
-      : entry.kind === "view"
-        ? Boolean(entry.viewId && views?.canResolveView(entry.viewId))
-        : Boolean(
-            (contribution && !contribution.panelMenuOwner && !contribution.eligibleLocations) ||
-              (entry.resource && resources.listPresenters().some((presenter) => presenter.canOpen(entry.resource!))),
-          );
+    entry.kind === "page"
+      ? Boolean(entry.pageLocation && canResolvePage?.(entry.pageLocation.page))
+      : entry.kind === "mode"
+        ? Boolean(entry.modeId && modes?.getMode(entry.modeId))
+        : entry.kind === "view"
+          ? Boolean(entry.viewId && views?.canResolveView(entry.viewId))
+          : Boolean(
+              (contribution && !contribution.panelMenuOwner && !contribution.eligibleLocations) ||
+                (entry.resource && resources.listPresenters().some((presenter) => presenter.canOpen(entry.resource!))),
+            );
   if (!hasLocation) return undefined;
 
   const selectedSubPanels = Object.fromEntries(
@@ -65,6 +68,7 @@ export const reconcileHistoryState = (input: {
   modes?: Pick<WorkbenchModeRegistry, "getMode">;
   resources: ResourceRegistry;
   views?: WorkbenchViewRegistry;
+  canResolvePage?(page: NonNullable<WorkbenchNavigationEntry["pageLocation"]>["page"]): boolean;
 }) => {
   const { state } = input;
   const currentEntryId = state.entries[state.cursor]?.entryId;

@@ -6,7 +6,6 @@ import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import {
   getSidenavContributionDefaultExpandedSectionIds,
   getSidenavContributionFooterNodes,
-  getSidenavContributionHeaderNodes,
   getSidenavContributionSections,
   subscribeSidenavContributions,
 } from "@/shared/workbench/contributions/sidenav-tree-contributions";
@@ -17,15 +16,9 @@ import { modeOwnsNavigation } from "@/shared/workbench/mode-navigation-ownership
 // modes (e.g. ticket) reshape the same widget without opening a different one.
 const composeSidenavBody = async (ctx: WorkbenchModuleContext) => {
   const mode = ctx.modes.getActiveModeId();
-  const resource = getDashboardSelectedResource(ctx);
+  const resource = ctx.getPrimaryResource() ?? getDashboardSelectedResource(ctx);
   if (!mode) return [];
   return await getSidenavContributionSections(ctx, mode, resource ? { resource } : {});
-};
-
-const composeSidenavHeader = (ctx: WorkbenchModuleContext) => {
-  const mode = ctx.modes.getActiveModeId();
-  if (!mode) return [];
-  return getSidenavContributionHeaderNodes(ctx, mode);
 };
 
 const composeSidenavFooter = (ctx: WorkbenchModuleContext) => {
@@ -72,7 +65,6 @@ const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
     title: "Sidenav",
     defaultExpandedNodeIds: ["workspace-sessions"],
     defaultExpandedSectionIds: ["sessions-wrap"],
-    getHeader: () => composeSidenavHeader(ctx),
     getBody: () => composeSidenavBody(ctx),
     getFooter: () => composeSidenavFooter(ctx),
     getChildren: () => [],

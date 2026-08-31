@@ -40,6 +40,52 @@ const setup = async () => {
   return workbench;
 };
 
+const setupPage = () => {
+  const workbench = createWorkbenchCore();
+  const ticketsRef = { extensionId: "acme.planner", kind: "page" as const, id: "tickets" };
+  const ticketRef = { extensionId: "acme.planner", kind: "page" as const, id: "ticket" };
+  workbench.modes.registerMode({ id: "project", activate: () => undefined });
+  workbench.layout.registerPanel({ id: "tickets-panel", title: "Tickets", region: "main", rendererId: "tickets" });
+  workbench.layout.registerPanel({
+    id: "ticket-detail",
+    title: "Ticket detail",
+    region: "main",
+    rendererId: "ticket-detail",
+    resourceKinds: ["ticket"],
+  });
+  workbench.views.registerView({ id: "tickets", panelId: "tickets-panel", title: "Tickets" });
+  workbench.views.registerView({ id: "ticket-detail", panelId: "ticket-detail", title: "Ticket" });
+  workbench.pages.registerPage({
+    id: "tickets",
+    ref: ticketsRef,
+    path: "tickets",
+    modeId: "project",
+    slots: [{ id: "content", role: "primary", region: "main", viewId: "tickets" }],
+  });
+  workbench.pages.registerPage({
+    id: "ticket",
+    ref: ticketRef,
+    path: "ticket",
+    modeId: "project",
+    parentId: "tickets",
+    slots: [
+      {
+        id: "content",
+        role: "primary",
+        region: "main",
+        binding: { resourceKind: "ticket", viewId: "ticket-detail" },
+      },
+    ],
+  });
+  workbench.pageLocations.setProject("project-1");
+  workbench.pageLocations.navigate({
+    kind: "page",
+    page: ticketRef,
+    resource: { type: "ticket", id: "ticket-1", label: "PS-1 Ticket" },
+  });
+  return workbench;
+};
+
 describe("executeWorkbenchExtensionCommand", () => {
   test("opens the declared parent when a command deletes the active resource", async () => {
     const workbench = await setup();
@@ -86,5 +132,29 @@ describe("executeWorkbenchExtensionCommand", () => {
 
     expect(openedViews).toEqual([]);
     expect(workbench.getPrimaryResource()).toEqual(ticket);
+  });
+
+  test("closes an active page resource through its declared page parent", async () => {
+    const workbench = setupPage();
+    const activeTicket = workbench.getPrimaryResource()!;
+
+    await executeWorkbenchExtensionCommand(
+      {
+        executeCommand: () => ({
+          commandId: "pstdio.planner.command.delete-ticket",
+          extensionId: "pstdio.planner",
+          outcome: { ok: true, status: "success", value: { id: activeTicket.id, deleted: true } },
+        }),
+        projectId: "project-1",
+        workbench,
+      },
+      "pstdio.planner.command.delete-ticket",
+      { resource: activeTicket },
+    );
+
+    expect(workbench.pages.store.getState().activePageId).toBe("tickets");
+    expect(workbench.layout.getLayout().regions.main.widgets).toEqual([
+      expect.objectContaining({ contributionId: "tickets-panel" }),
+    ]);
   });
 });

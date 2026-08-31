@@ -1,3 +1,4 @@
+import type { PageLocation } from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelMenuRegion, WorkbenchPanelRegion } from "../../registries/layout/layout-types";
 import type { ResourceRef } from "../../registries/resources/resource-registry";
 
@@ -57,7 +58,8 @@ export interface WorkbenchNavigationEntry {
   recordedAt: number;
   location: WorkbenchLocationRef;
   selectedSubPanels: Partial<Record<WorkbenchPanelRegion, WorkbenchSubPanelRef>>;
-  kind: "resource" | "view" | "widget" | "mode";
+  kind: "resource" | "view" | "widget" | "mode" | "page";
+  pageLocation?: PageLocation;
   modeId?: string;
   resource?: ResourceRef;
   viewId?: string;

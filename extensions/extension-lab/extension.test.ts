@@ -114,6 +114,14 @@ describe("extension-lab workbench attachments", () => {
           region: "main",
           view: { kind: "view", id: "lab-page" },
         },
+        {
+          id: "cameras",
+          role: "auxiliary",
+          region: "sidenav",
+          view: { kind: "view", id: "camera-tree" },
+          defaultOpen: true,
+          order: 10,
+        },
       ],
     });
     expect(extension.navigationItems?.find((item) => item.id === "lab")).toMatchObject({

@@ -241,6 +241,9 @@ describe("packaged pstdio — self-hosted serve", () => {
             extensionId: "pstdio.extension-lab",
             localId: "lab",
             path: "lab",
+            slots: expect.arrayContaining([
+              expect.objectContaining({ id: "cameras", region: "sidenav", defaultOpen: true }),
+            ]),
           }),
         );
       } finally {
@@ -335,6 +338,23 @@ describe("packaged pstdio — core default extensions", () => {
         });
         expect(metadataRes.status).toBe(200);
         const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
+        expect(metadata.pages).toContainEqual(
+          expect.objectContaining({
+            extensionId: "pstdio.pstdio-planner",
+            localId: "tickets",
+            path: "tickets",
+          }),
+        );
+        expect(metadata.pages).toContainEqual(
+          expect.objectContaining({
+            extensionId: "pstdio.pstdio-planner",
+            localId: "ticket",
+            path: "ticket",
+            slots: expect.arrayContaining([
+              expect.objectContaining({ id: "files", region: "sidenav", defaultOpen: true }),
+            ]),
+          }),
+        );
         expect(metadata.settingsPanels).toContainEqual(
           expect.objectContaining({ id: "pstdio.pstdio-planner.settings-panel.ticket-tags" }),
         );

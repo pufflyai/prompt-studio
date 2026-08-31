@@ -83,16 +83,35 @@ export const entryFromCurrentSnapshot = (input: {
   counter: number;
   layout: LayoutModel;
   modes?: Pick<WorkbenchModeRegistry, "getActiveModeId" | "getMode">;
+  pageLocation?: PageLocation;
 }): WorkbenchNavigationEntry | undefined => {
   const modeId = input.modes?.getActiveModeId();
   const placement = locationPlacementFromLayout(input.layout);
-  if (placement?.placementIdentity?.kind === "page") return undefined;
   const recordedAt = Date.now();
   const base = {
     entryId: `history-${recordedAt}-${input.counter}`,
     recordedAt,
     selectedSubPanels: selectedSubPanelsFromLayout(input.layout, modeId),
   };
+
+  if (placement?.placementIdentity?.kind === "page") {
+    if (!input.pageLocation) return undefined;
+    return {
+      ...base,
+      location: {
+        ...locationFromPlacement(placement, modeId),
+        key: `page:${JSON.stringify(input.pageLocation)}`,
+      },
+      kind: "page",
+      pageLocation: input.pageLocation,
+      modeId,
+      resource: placement.resource,
+      viewId: placement.viewId,
+      widgetId: placement.widgetId,
+      contributionId: placement.contributionId,
+      title: placement.title,
+    };
+  }
 
   if (placement) {
     return {
@@ -195,3 +214,5 @@ export const closedNavigationEntry = (input: {
     closedSubPanel,
   } satisfies WorkbenchNavigationEntry;
 };
+
+import type { PageLocation } from "@pstdio/sdk/extensions";

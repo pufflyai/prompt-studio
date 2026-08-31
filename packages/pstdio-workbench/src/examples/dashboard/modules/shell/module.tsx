@@ -2,12 +2,12 @@ import { standardResourceIcons, type WorkbenchModuleContext, type WorkbenchModul
 import { dashboardViews } from "../../shared/mock-data/resources";
 import { dashboardWidgetIds } from "../../shared/widget-ids";
 import { registerCommands, registerMenus } from "./commands";
-import { DashboardSidenavHeader } from "./components/dashboard-sidenav-header";
+import { DashboardProjectSection } from "./components/dashboard-project-section";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { StatusWidget } from "./components/status-widget";
 import { registerProjectNavigation } from "./project-nav";
 
-const SIDENAV_HEADER_WIDGET_ID = "dashboard.sidenavHeader";
+const PROJECT_SECTION_WIDGET_ID = "dashboard.projectSection";
 
 const dashboardResourceKinds = [
   { kind: "project", label: "Project", icon: standardResourceIcons.project },
@@ -17,15 +17,15 @@ const dashboardResourceKinds = [
 
 const registerChrome = (ctx: WorkbenchModuleContext) => {
   ctx.layout.registerPanel({
-    id: SIDENAV_HEADER_WIDGET_ID,
+    id: PROJECT_SECTION_WIDGET_ID,
     title: "Project brand",
-    region: "sidenav-header",
+    region: "sidenav",
     singleton: true,
-    rendererId: SIDENAV_HEADER_WIDGET_ID,
+    rendererId: PROJECT_SECTION_WIDGET_ID,
   });
   ctx.renderers.registerRenderer({
-    id: SIDENAV_HEADER_WIDGET_ID,
-    render: (input) => <DashboardSidenavHeader workbench={input.workbench} />,
+    id: PROJECT_SECTION_WIDGET_ID,
+    render: (input) => <DashboardProjectSection workbench={input.workbench} />,
   });
 
   ctx.layout.registerPanel({
@@ -66,7 +66,7 @@ const registerChrome = (ctx: WorkbenchModuleContext) => {
     render: (input) => <ExtensionViewWidget input={input} />,
   });
 
-  ctx.layout.openPanel(SIDENAV_HEADER_WIDGET_ID, { pinned: true });
+  ctx.layout.openPanel(PROJECT_SECTION_WIDGET_ID, { pinned: true });
 };
 
 // The shell slice: the project brand and status bar, the global

@@ -6,10 +6,7 @@ import { getDashboardSelectedResource } from "@/shared/app/navigation-state";
 import { dashboardSelectedProjectIdContextKey, selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import {
-  getSidenavContributionHeaderNodes,
-  getSidenavContributionSections,
-} from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { getSidenavContributionSections } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { createSessionBubbleModule } from "./bubble/module";
 import { createSessionsModule } from "./module";
 
@@ -44,23 +41,18 @@ describe("createSessionsModule", () => {
     expect(await nodeIdsForContext("project")).not.toContain("workspace-sessions");
   });
 
-  test("adds sessions navigation to the persistent sidenav header", async () => {
+  test("adds sessions navigation as a sidenav section", async () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSessionsModule());
 
-    const sessionsNode = getSidenavContributionHeaderNodes(workbench, "project").find(
-      (node) => node.id === dashboardViews.sessions.id,
-    );
+    const sessionsNode = (await getSidenavContributionSections(workbench, "project"))
+      .flatMap((section) => section.nodes)
+      .find((node) => node.id === dashboardViews.sessions.id);
 
     expect(sessionsNode).toMatchObject({
       target: { kind: "view", viewId: dashboardViews.sessions.id },
     });
-    expect(
-      (await getSidenavContributionSections(workbench, "project"))
-        .flatMap((section) => section.nodes)
-        .map((node) => node.id),
-    ).not.toContain(dashboardViews.sessions.id);
   });
 
   test("keeps the sessions root in the breadcrumb when a session opens", async () => {

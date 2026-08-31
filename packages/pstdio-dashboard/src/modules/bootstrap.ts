@@ -112,6 +112,19 @@ const openStartPage = async (ctx: Parameters<WorkbenchModuleContribution["activa
   if (!result.ok) throw new Error(result.diagnostic.message);
 };
 
+const restoreCurrentPageUrl = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
+  const projectId = getDashboardSelectedProjectId(ctx);
+  if (!projectId || !ctx.pageLocations.isCurrentProjectUrl(projectId)) return "empty" as const;
+  if (ctx.pageLocations.hasCurrentModeUrl(projectId)) return "empty" as const;
+  if (!ctx.pageLocations.hasCurrentPageUrl(projectId)) {
+    return isExtensionsReadyForSelectedProject(ctx) ? ("empty" as const) : ("pending" as const);
+  }
+  const result = ctx.pageLocations.boot(projectId);
+  if (!result.ok) throw new Error(result.diagnostic.message);
+  ctx.history.adoptCurrentLocation();
+  return { status: "opened" } as const;
+};
+
 const restoreRequestedView = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0], guard: LandingRunGuard) => {
   if (!guard.requestedViewPath) return "empty" as const;
   const target = ctx.views.resolvePath(guard.requestedViewPath);
@@ -177,6 +190,10 @@ const openSelectedProjectLanding = async (
     return guard.isCurrent() ? ({ status: "opened" } as const) : { resource: undefined, status: "stale" as const };
   }
   if (requestedViewRestore !== "empty") return await requestedViewRestore;
+
+  const pageRestore = restoreCurrentPageUrl(ctx);
+  if (pageRestore === "pending") return "pending";
+  if (pageRestore !== "empty") return pageRestore;
 
   const historyRestore = restoreSelectedProjectHistory(ctx);
   if (historyRestore === "pending") return "pending";

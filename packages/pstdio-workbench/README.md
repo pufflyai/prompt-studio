@@ -325,14 +325,13 @@ Workbench regions are named layout targets used by Panel contributions. They des
 
 Use `layout.registerPlaceholder()` for a region empty state that should render only after all Panels in that region close. Placeholders are not Panel placements, so they do not affect tab lists.
 
-Panels with tabs are paired with a `<panel>-header` region that the workbench renders directly above the panel. Panels placed in a header region use a bottom border by default. Set `headerBorderBottom: false` on a Panel contribution to let that Panel own the header separation.
+Tabbed content panels are paired with a `<panel>-header` region that the workbench renders directly above the panel. The Sidenav is different: it has no header or tabs, and every active placement renders as an ordered vertical section. Panels placed in a header region use a bottom border by default. Set `headerBorderBottom: false` on a Panel contribution to let that Panel own the header separation.
 
 | Region             | Workbench location                           | Typical use                                                   |
 | ------------------ | -------------------------------------------- | ------------------------------------------------------------- |
 | `nav`              | Nav Chrome across the resource-owned column  | Project selector, breadcrumbs, history, resource actions, region controls |
 | `activity`         | Optional rail on the leading edge            | Top-level mode or workspace switching                         |
-| `sidenav-header`   | Optional header above `sidenav`              | Sidenav-local controls that must sit above its scrolling content |
-| `sidenav`          | Leading Sidenav                              | Navigation trees, registries, outlines, resource lists        |
+| `sidenav`          | Leading Sidenav                              | Ordered vertical sections for navigation, tools, and resource lists |
 | `main-header`      | Header above the Main Panel                  | Main Panel tabs and controls                                  |
 | `main-left-menu`   | Menu inside the Main Panel's leading edge    | Contextual navigation and document outlines                   |
 | `main`             | Central Main Panel                           | Editors, detail pages, dashboards, primary resource views     |

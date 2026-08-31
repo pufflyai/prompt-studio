@@ -3,22 +3,24 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { registerDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 
-// Search is a header row in every project-scoped mode (mirrors how the footer contributes its
-// help/settings rows). Mode "*" keeps it visible even in extension-declared modes such as ticket.
-const registerSearchHeader = (ctx: WorkbenchModuleContext) => {
+const registerSearchSection = (ctx: WorkbenchModuleContext) => {
   registerSidenavContribution(ctx, {
     id: "dashboard.sidenav.search",
     modes: ["*"],
-    region: "header",
     order: 0,
-    getHeaderNodes: () => [
+    getSections: () => [
       {
-        id: "search",
-        label: "Search",
-        icon: "Search",
-        canHide: true,
-        commandId: dashboardCommandIds.openCommandPalette,
-        target: { kind: "command", commandId: dashboardCommandIds.openCommandPalette },
+        id: "dashboard.search",
+        nodes: [
+          {
+            id: "search",
+            label: "Search",
+            icon: "Search",
+            canHide: true,
+            commandId: dashboardCommandIds.openCommandPalette,
+            target: { kind: "command", commandId: dashboardCommandIds.openCommandPalette },
+          },
+        ],
       },
     ],
   });
@@ -31,7 +33,7 @@ export const createSidenavModule = () =>
   ({
     id: "dashboard.sidenav",
     activate(ctx) {
-      registerSearchHeader(ctx);
+      registerSearchSection(ctx);
       return registerDashboardSidenav(ctx);
     },
   }) satisfies WorkbenchModuleContribution;

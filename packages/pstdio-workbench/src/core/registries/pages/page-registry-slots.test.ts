@@ -222,6 +222,39 @@ describe("page primary slot lifecycle", () => {
       pageIdentity("compare", "right", "file:same"),
     ]);
   });
+
+  test("opens default auxiliary bindings with the page resource", () => {
+    const registry = createRegistry();
+    registerPage(registry, {
+      id: "ticket",
+      modeId: "project",
+      slots: [
+        {
+          id: "content",
+          role: "primary",
+          region: "main",
+          binding: { resourceKind: "ticket", viewId: "editor" },
+        },
+        {
+          id: "files",
+          role: "auxiliary",
+          region: "sidenav",
+          binding: { resourceKind: "ticket", viewId: "files" },
+          defaultOpen: true,
+        },
+      ],
+    });
+
+    activatePage(registry, { pageId: "ticket", resource: { type: "ticket", id: "PS-326" } });
+
+    expect(registry.store.getState().placements.map((candidate) => candidate.identity)).toEqual([
+      pageIdentity("ticket", "files", "ticket:PS-326"),
+      pageIdentity("ticket", "content", "ticket:PS-326"),
+    ]);
+    expect(registry.store.getState().reconciliation.activate.map((candidate) => candidate.identity)).toEqual([
+      pageIdentity("ticket", "content", "ticket:PS-326"),
+    ]);
+  });
 });
 
 describe("page placement close lifecycle", () => {

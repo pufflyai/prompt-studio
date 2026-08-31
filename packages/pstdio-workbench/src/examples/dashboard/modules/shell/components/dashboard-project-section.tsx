@@ -4,7 +4,7 @@ import { ChevronDown } from "lucide-react";
 import { standardResourceIcons, type WorkbenchCore } from "../../../../../core";
 import { WorkbenchIcon } from "../../../../../react";
 
-export const DashboardSidenavHeader = (props: { workbench: WorkbenchCore }) => {
+export const DashboardProjectSection = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
 
   return (

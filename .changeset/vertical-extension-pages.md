@@ -1,7 +1,10 @@
 ---
 "@pstdio/workbench": minor
+"@pstdio/sdk": minor
 "pstdio": minor
 "extension-lab": patch
+"pstdio-planner": patch
+"pstdio-skills": patch
 ---
 
-Ship public extension pages through the dashboard with canonical browser navigation.
+Compose Sidenav placements as vertical sections and move Lab and Tickets onto canonical page navigation.

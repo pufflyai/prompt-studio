@@ -5,6 +5,7 @@ import {
   type WorkbenchCommandExecutionContext,
   type WorkbenchModuleContext,
 } from "../../core";
+import { getActiveLocationPlacement } from "../../core/registries/layout/layout-operations";
 import { unwrapCommandValue } from "./command-response";
 
 export interface WorkbenchExtensionCommandContext {
@@ -77,6 +78,13 @@ const handleDeletedResource = async (
 
   context.workbench.navigator.forgetResource(resource.uri);
   if (context.workbench.getPrimaryResource()?.uri !== resource.uri) return;
+
+  const activePlacement = getActiveLocationPlacement(context.workbench.layout.getLayout());
+  if (activePlacement?.placementIdentity?.kind === "page") {
+    const result = context.workbench.pageLocations.navigateToParent();
+    if (!result.ok) throw new Error(result.diagnostic.message);
+    return;
+  }
 
   const parent = context.workbench.resources.walkHierarchy(resource).at(-2);
   if (!parent) return;

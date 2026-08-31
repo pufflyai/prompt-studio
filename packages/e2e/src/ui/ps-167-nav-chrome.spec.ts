@@ -169,6 +169,7 @@ test("PS-167 keeps the Secondary Panel closed from Workspaces until requested", 
   await expect(showSecondary).toHaveAttribute("aria-pressed", "false");
 
   await page.goto(`/projects/${project.id}/workspaces`);
+  await expect(page.getByRole("heading", { name: "No workspaces yet" })).toBeVisible();
   await expect(showSecondary).toHaveAttribute("aria-pressed", "false");
   await showSecondary.click();
 

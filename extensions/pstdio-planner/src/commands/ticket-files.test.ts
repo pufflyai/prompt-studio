@@ -31,7 +31,8 @@ const ticketRendererParams = (ticket: { id: string; shorthand: string }, documen
 });
 
 const ticketDocumentTarget = (ticket: { id: string; shorthand: string; title?: string }, documentId: string) => ({
-  kind: "resource" as const,
+  kind: "page" as const,
+  page: { kind: "page" as const, id: "ticket" },
   resource: {
     type: "ticket",
     id: ticket.id,
@@ -42,7 +43,6 @@ const ticketDocumentTarget = (ticket: { id: string; shorthand: string; title?: s
       resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
     },
   },
-  input: { strategy: "replace-active" as const },
 });
 
 describe("ticket files tree commands", () => {
