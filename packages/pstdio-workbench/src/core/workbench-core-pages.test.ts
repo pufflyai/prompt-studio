@@ -131,4 +131,65 @@ describe("workbench core pages", () => {
     registration.dispose();
     expect(workbench.pages.getPage("pstdio.planner.page.start")).toBeUndefined();
   });
+
+  test("reconciles live mode placement registration and disposal through its backing view", () => {
+    const workbench = createWorkbenchCore();
+    workbench.modes.registerMode({ id: "project", activate: () => undefined });
+    workbench.layout.registerPanel({ id: "sessions-panel", title: "Sessions", region: "side", rendererId: "test" });
+    workbench.layout.registerPanel({ id: "tickets-panel", title: "Tickets", region: "main", rendererId: "test" });
+    workbench.views.registerView({ id: "sessions-view", panelId: "sessions-panel" });
+    workbench.views.registerView({ id: "tickets-view", panelId: "tickets-panel" });
+    workbench.pages.registerPage({
+      id: "pstdio.planner.page.tickets",
+      ref: { extensionId: "pstdio.planner", kind: "page", id: "tickets" },
+      title: "Tickets",
+      path: "tickets",
+      modeId: "project",
+      slots: [{ id: "content", role: "primary", region: "main", viewId: "tickets-view" }],
+    });
+    getWorkbenchPageRegistryInternals(workbench.pages).activateLocation({
+      pageId: "pstdio.planner.page.tickets",
+      projectId: "project-1",
+      location: { page: { extensionId: "pstdio.planner", kind: "page", id: "tickets" } },
+      action: "testOpenPage",
+    });
+
+    const registration = workbench.modePlacements.registerPlacement({
+      id: "pstdio.placement.sessions",
+      ref: { extensionId: "pstdio", kind: "placement", id: "sessions" },
+      modeId: "project",
+      item: { kind: "view", viewId: "sessions-view" },
+      region: "side",
+    });
+    expect(workbench.layout.getLayout().regions.side.widgets).toEqual([
+      expect.objectContaining({
+        contributionId: "sessions-panel",
+        viewId: "sessions-view",
+        placementIdentity: {
+          kind: "mode",
+          modeId: "project",
+          placementId: "pstdio.placement.sessions",
+          instanceKey: "default",
+        },
+      }),
+    ]);
+
+    registration.dispose();
+    expect(workbench.layout.getLayout().regions.side.widgets).toEqual([]);
+  });
+
+  test("rejects an unresolved mode placement before publishing it", () => {
+    const workbench = createWorkbenchCore();
+
+    expect(() =>
+      workbench.modePlacements.registerPlacement({
+        id: "pstdio.placement.missing",
+        ref: { extensionId: "pstdio", kind: "placement", id: "missing" },
+        modeId: "project",
+        item: { kind: "view", viewId: "missing-view" },
+        region: "side",
+      }),
+    ).toThrow("Workbench mode placement view is not registered: missing-view");
+    expect(workbench.modePlacements.listPlacements()).toEqual([]);
+  });
 });

@@ -33,6 +33,7 @@ export interface WorkbenchPageRegistryInternals<Value> {
   connectRuntime(apply: (state: WorkbenchPageRegistryStoreState<Value>) => void): Disposable;
   activateLocation(input: WorkbenchPageLocationCommitInput): void;
   openPanel(target: NavigationTargetPanel): PlacementIdentity;
+  refreshModePlacements(): void;
   clearProject(projectId: string): void;
   resolveClosePlacement(identity: PlacementIdentity): WorkbenchPageCloseResolution;
 }

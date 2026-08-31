@@ -139,6 +139,13 @@ export {
   workbenchTopHeaderTrailingMenuPath,
 } from "../registries/menus/workbench-menu-paths";
 export type {
+  WorkbenchModePanelResolution,
+  WorkbenchModePlacementContribution,
+  WorkbenchModePlacementItem,
+  WorkbenchModePlacementRegistry,
+} from "../registries/modes/mode-placement-registry";
+export { createWorkbenchModePlacementRegistry } from "../registries/modes/mode-placement-registry";
+export type {
   WorkbenchModeActivationContext,
   WorkbenchModeActivationResult,
   WorkbenchModeAddablePanel,

@@ -171,6 +171,9 @@ const registerStatusBarItems = (input: InternalRegisterWorkbenchExtensionContrib
 const registerPages = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.pages.map((page) => input.workbench.pages.registerPage(page));
 
+const registerModePlacements = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
+  input.metadata.modePlacements.map((placement) => input.workbench.modePlacements.registerPlacement(placement));
+
 export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWorkbenchExtensionContributionsInput) => {
   const input: InternalRegisterWorkbenchExtensionContributionsInput = {
     ...sourceInput,
@@ -226,6 +229,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
       input.resolveViewInput,
     ),
   );
+  disposables.push(...registerModePlacements(input));
   disposables.push(
     registerWorkbenchExtensionCommandPaletteResources(context, input.metadata.commandPaletteResources ?? []),
   );

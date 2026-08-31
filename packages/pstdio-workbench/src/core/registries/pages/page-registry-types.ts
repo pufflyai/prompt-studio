@@ -107,7 +107,10 @@ export interface WorkbenchModePanelTargetResolution<Value> {
 
 export interface CreateWorkbenchPageRegistryInput<Value> {
   resolveShellPlacements(): readonly ResolvedOwnedPlacement<Value>[];
-  resolveModePlacements(modeId: string): readonly ResolvedOwnedPlacement<Value>[];
+  resolveModePlacements(
+    modeId: string,
+    current?: readonly ResolvedOwnedPlacement<Value>[],
+  ): readonly ResolvedOwnedPlacement<Value>[];
   resolveModePanelTarget(input: WorkbenchModePanelTargetInput<Value>): WorkbenchModePanelTargetResolution<Value>;
   resolvePagePlacement(input: WorkbenchPagePlacementInput): Value;
   resources: WorkbenchPageResourceCodec;

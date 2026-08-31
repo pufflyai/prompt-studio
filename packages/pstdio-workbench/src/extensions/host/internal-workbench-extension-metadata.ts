@@ -18,7 +18,7 @@ import type {
   WorkbenchExtensionSettingsPanelRecord,
   WorkbenchExtensionTreeRendererRecord,
 } from "pstdio-api-contracts";
-import type { WorkbenchPageContribution } from "../../core";
+import type { WorkbenchModePlacementContribution, WorkbenchPageContribution } from "../../core";
 
 export interface InternalWorkbenchExtensionMetadata {
   extensions: WorkbenchExtensionMetadata["extensions"];
@@ -26,6 +26,7 @@ export interface InternalWorkbenchExtensionMetadata {
   menuContributions: ExtensionMenuContribution[];
   commandPaletteContributions: WorkbenchExtensionMetadata["commandPaletteContributions"];
   modes: ExtensionModeRecord[];
+  modePlacements: WorkbenchModePlacementContribution[];
   pages: WorkbenchPageContribution[];
   panels: WorkbenchExtensionPanelRecord[];
   resourceKinds: ExtensionResourceKindRecord[];

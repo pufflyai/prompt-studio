@@ -2,6 +2,7 @@ import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
 import type { ParamObjectSchema } from "pstdio-api-contracts";
 import type { InternalWorkbenchExtensionMetadata } from "./internal-workbench-extension-metadata";
 import { metadataCommandId, metadataRefId, toInternalWhen } from "./workbench-extension-metadata-ref";
+import { toInternalWorkbenchModePlacements } from "./workbench-extension-mode-placement-metadata";
 import { toInternalWorkbenchPages } from "./workbench-extension-page-metadata";
 
 type MetadataView = WorkbenchExtensionMetadata["views"][number];
@@ -256,6 +257,7 @@ export const toInternalWorkbenchExtensionMetadata = (
     menuContributions: metadata.menuContributions,
     commandPaletteContributions: metadata.commandPaletteContributions,
     modes: modes(metadata),
+    modePlacements: toInternalWorkbenchModePlacements(metadata),
     pages: toInternalWorkbenchPages(metadata),
     panels: adaptedPanels,
     resourceKinds: metadata.resourceKinds.map((kind) => ({
