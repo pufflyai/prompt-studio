@@ -651,7 +651,7 @@ export const createHistoryController = (input: CreateHistoryControllerInput): Hi
 
   registerHistoryRecording({
     controller: input,
-    isPaused: () => awaitingRestore || isRotatingLayoutScope(),
+    isPaused: () => navigating || awaitingRestore || isRotatingLayoutScope(),
     normalizeRemovedPlacement,
     pushRecentlyClosed,
     recordSnapshot,

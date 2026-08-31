@@ -53,6 +53,12 @@ const createHarness = () => {
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
   workbench.layout.registerPanel({ id: "start-panel", title: "Start", region: "main", rendererId: "test" });
   workbench.layout.registerPanel({
+    id: "workspace-panel",
+    title: "Workspace",
+    region: "main",
+    rendererId: "test",
+  });
+  workbench.layout.registerPanel({
     id: "tickets-panel",
     title: "Tickets",
     region: "main",
@@ -61,6 +67,16 @@ const createHarness = () => {
   });
   workbench.views.registerView({ id: "start-view", panelId: "start-panel" });
   workbench.views.registerView({ id: "tickets-view", panelId: "tickets-panel" });
+  workbench.resources.registerKind({ kind: "workspace", label: "Workspace" });
+  workbench.resources.registerPresenter({
+    id: "workspace-presenter",
+    canOpen: (resource) => resource.kind === "workspace",
+    open: (resource, input) =>
+      workbench.layout.openPanel("workspace-panel", {
+        resource,
+        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
+      }),
+  });
   workbench.pages.registerPage({
     id: "start",
     ref: startRef,
@@ -109,5 +125,20 @@ describe("workbench core page navigation", () => {
     harness.workbench.history.goForward();
     expect(harness.workbench.pages.store.getState().activePageId).toBe("tickets");
     expect(harness.browser.replacements.at(-1)?.url).toBe("/projects/p1/extensions/acme.planner/tickets");
+  });
+
+  test("keeps a replaced legacy location available to Forward navigation", async () => {
+    const harness = createHarness();
+    const workspace = { kind: "workspace", uri: "pstdio://workspace/one", label: "Workspace one" };
+
+    harness.workbench.pageLocations.boot("p1");
+    harness.workbench.pageLocations.leavePage("project");
+    await harness.workbench.resources.openResource(workspace, { replaceActive: true });
+
+    harness.workbench.history.goBack();
+
+    expect(harness.workbench.pages.store.getState().activePageId).toBe("start");
+    expect(harness.workbench.history.goForward()).toMatchObject({ resource: workspace });
+    expect(harness.workbench.layout.getLayout().activeResourceUri).toBe(workspace.uri);
   });
 });

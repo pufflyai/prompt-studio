@@ -161,6 +161,30 @@ describe("owned placement layout reconciliation", () => {
     expect(layout.getLayout().activeWidgetId).toBe("tickets-content");
   });
 
+  test("replaces an unowned legacy location when a page primary becomes active", () => {
+    const layout = createDefaultWorkbenchLayout();
+    layout.regions.main = {
+      ...layout.regions.main,
+      widgets: [
+        {
+          widgetId: "legacy-session",
+          contributionId: "dashboard.session",
+          role: "location",
+        },
+      ],
+      activeWidgetId: "legacy-session",
+    };
+    layout.activeWidgetId = "legacy-session";
+    layout.activeLocationWidgetId = "legacy-session";
+    const lab = owned(pageIdentity("lab", "content"), "main", 0, "lab-content", "lab-view");
+
+    const next = reconcileOwnedWidgetLayout({ layout, placements: [lab], activate: [lab.identity] });
+
+    expect(next.regions.main.widgets.map((placement) => placement.widgetId)).toEqual(["lab-content"]);
+    expect(next.activeLocationWidgetId).toBe("lab-content");
+    expect(next.activeWidgetId).toBe("lab-content");
+  });
+
   test("collapses a docked region only after its final placement disappears", () => {
     const mode = owned(modeIdentity("sessions"), "side", 20, "project-sessions");
     const page = owned(pageIdentity("ticket", "emoji"), "side", 10, "ticket-emoji");

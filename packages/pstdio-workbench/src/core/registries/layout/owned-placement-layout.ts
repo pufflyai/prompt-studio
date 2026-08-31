@@ -117,7 +117,17 @@ const reconcileRegions = (layout: WorkbenchLayout, desired: readonly RenderedOwn
   const regions = { ...layout.regions };
   for (const regionId of workbenchRegions) {
     const region = layout.regions[regionId];
-    const foreign = region.widgets.filter((placement) => !placement.placementIdentity);
+    const pageOwnsPrimaryLocation = desired.some(
+      (entry) => entry.region === regionId && entry.identity.kind === "page" && entry.placement.role === "location",
+    );
+    // A routed page owns the primary Location. Legacy navigation does not carry a
+    // placement identity, so retaining its Location here would turn page replacement
+    // into tab accumulation. Other unowned panels remain additive.
+    const foreign = region.widgets.filter(
+      (placement) =>
+        !placement.placementIdentity &&
+        !(regionId === "main" && pageOwnsPrimaryLocation && placement.role === "location"),
+    );
     const owned = desired.filter((placement) => placement.region === regionId).map((entry) => entry.placement);
     const widgets = docked.has(regionId) ? [...foreign, ...owned] : foreign;
     const activeWidgetId = widgets.some((placement) => placement.widgetId === region.activeWidgetId)

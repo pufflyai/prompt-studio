@@ -11,6 +11,23 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
   return (await response.json()) as { id: string; name: string };
 };
 
+const createSession = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  title: string,
+) => {
+  const response = await request.post(`${apiBase}/v1/sessions`, {
+    data: {
+      project_id: projectId,
+      title,
+      prompt: title,
+      agent: "pstdio.extension-lab.harness.fake",
+    },
+  });
+  expect(response.ok()).toBe(true);
+  return (await response.json()) as { id: string };
+};
+
 const prepareDashboard = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
@@ -103,4 +120,28 @@ test("Sessions mode reuses project navigation without duplicate chrome", async (
   await expect(sidenav.getByRole("option", { name: "Tickets", exact: true })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: "Lab", exact: true })).toBeVisible();
   await expect(sidenav.locator('[data-tree-list-node-id="workspaces"]')).toHaveCount(0);
+});
+
+test("Lab replaces an active session page in main", async ({ page, request }) => {
+  test.slow();
+  const project = await createProject(request);
+  const sessionTitle = "Session replaced by Lab";
+  await createSession(request, project.id, sessionTitle);
+  await prepareDashboard(page, project.id);
+  await page.goto(`/projects/${project.id}`);
+
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  await expect(page.getByText("Recent sessions", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await sidenav.getByRole("option", { name: "Sessions", exact: true }).click();
+  await expect(sidenav.getByRole("option", { name: sessionTitle, exact: true })).toBeVisible();
+  await sidenav.getByRole("option", { name: sessionTitle, exact: true }).click();
+  await expect(page.getByText(`Fake Agent: completed "${sessionTitle}"`).first()).toBeVisible({ timeout: 30_000 });
+  await sidenav.getByRole("option", { name: "Lab", exact: true }).click({ timeout: 30_000 });
+
+  await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.extension-lab/lab`);
+  await expect(page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" })).toBeVisible({
+    timeout: 30_000,
+  });
+  await expect(page.locator('[data-workbench-panel="main"]').getByRole("tab")).toHaveCount(0);
+  await expect(page.locator('[data-workbench-region="main"]')).not.toContainText(sessionTitle);
 });
