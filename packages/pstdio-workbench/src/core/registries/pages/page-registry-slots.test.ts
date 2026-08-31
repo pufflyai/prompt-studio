@@ -118,6 +118,9 @@ describe("page primary slot lifecycle", () => {
 
     activatePage(registry, { pageId: "hybrid" });
     expect(activePagePlacements(registry, "content")[0]?.identity.instanceKey).toBe("default");
+    expect(activePagePlacements(registry, "content")[0]?.value.identity).toEqual(
+      pageIdentity("hybrid", "content", "default"),
+    );
     activatePage(registry, { pageId: "hybrid", resource: { type: "ticket", id: "one" } });
     expect(activePagePlacements(registry, "content").map((candidate) => candidate.identity.instanceKey)).toEqual([
       "default",
