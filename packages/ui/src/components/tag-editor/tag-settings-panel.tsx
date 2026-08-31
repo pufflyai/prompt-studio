@@ -14,19 +14,24 @@ export interface SaveTagSettingsInput<TValue> {
 type EditorLabels = Pick<
   TagEditorProps,
   | "actionOptions"
+  | "actionsLabel"
   | "addLabel"
   | "addName"
   | "colorOptions"
   | "deleteButtonText"
   | "deleteHeadline"
+  | "defaultValueLabel"
   | "deleteNotificationText"
   | "description"
+  | "framed"
   | "iconOptions"
   | "readOnly"
   | "showDefault"
   | "onSetDefault"
+  | "showColumnHeaders"
   | "showIcons"
   | "title"
+  | "valueColumnLabel"
 >;
 
 type SortableValue = { id: string; sortOrder: number };

@@ -6,6 +6,15 @@ import type { StoredStatus } from "./data/types";
 import { plannerTicketsChanged } from "./events";
 import { sortedBySortOrder } from "./utils/sort";
 
+// Creating a ticket in a column is a command on the status, so it travels in the
+// same list as the column commands instead of a separate flag on the record.
+const CREATE_COMMAND = "create";
+
+const toCommands = (status: Pick<StoredStatus, "canCreate" | "columnActions">) => [
+  ...(status.canCreate ? [CREATE_COMMAND] : []),
+  ...status.columnActions,
+];
+
 const toWorkflowStatus = (status: StoredStatus): WorkflowStatus => ({
   id: status.id,
   label: status.name,
@@ -13,26 +22,35 @@ const toWorkflowStatus = (status: StoredStatus): WorkflowStatus => ({
   icon: status.icon,
   sortOrder: status.sortOrder,
   isDefault: status.isDefault,
-  actions: status.columnActions,
+  actions: toCommands(status),
 });
 
-const toStoredStatus = (status: WorkflowStatus, stored: StoredStatus | undefined): StoredStatus => ({
-  id: status.id,
-  name: status.label,
-  color: status.color,
-  icon: status.icon ?? null,
-  sortOrder: status.sortOrder,
-  isDefault: status.isDefault ?? false,
-  canCreate: stored?.canCreate ?? false,
-  canDragIn: stored?.canDragIn ?? true,
-  canDragOut: stored?.canDragOut ?? true,
-  columnActions: [...(status.actions ?? [])],
-});
+const toStoredStatus = (status: WorkflowStatus, stored: StoredStatus | undefined): StoredStatus => {
+  const commands =
+    status.actions ?? toCommands({ canCreate: stored?.canCreate ?? false, columnActions: stored?.columnActions ?? [] });
+
+  return {
+    id: status.id,
+    name: status.label,
+    color: status.color,
+    icon: status.icon ?? null,
+    sortOrder: status.sortOrder,
+    isDefault: status.isDefault ?? false,
+    canCreate: commands.includes(CREATE_COMMAND),
+    // Drag rules have no editor yet; transitions replace them, so keep what is stored.
+    canDragIn: stored?.canDragIn ?? true,
+    canDragOut: stored?.canDragOut ?? true,
+    columnActions: commands.filter((command) => command !== CREATE_COMMAND),
+  };
+};
 
 export const ticketStatuses = defineStatuses({
   id: "ticket-statuses",
   title: "Ticket status",
-  actions: [{ id: "archive_all", label: "Archive all", icon: "archive" }],
+  actions: [
+    { id: CREATE_COMMAND, label: "Create", icon: "plus" },
+    { id: "archive_all", label: "Archive all", icon: "archive" },
+  ],
   async query(ctx) {
     await cleanupLegacyWorkspaceStatus(ctx.storage);
     return { statuses: sortedBySortOrder(await seedDefaultStatuses(ctx.storage)).map(toWorkflowStatus) };

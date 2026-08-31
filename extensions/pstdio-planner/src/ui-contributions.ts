@@ -53,20 +53,10 @@ const createPlannerSettingsViews = (baseUrl: string) => ({
       capabilities: ["commands.execute"],
     },
   }),
-  statusBoardSettings: defineView({
-    id: "ticket-board-settings",
-    title: l10n("settingsPanels.ticketBoard.title", "Ticket board"),
-    icon: "square-kanban",
-    body: {
-      kind: "webview",
-      entry: packageAsset("./src/views/status-board-settings-panel.tsx", baseUrl),
-      capabilities: ["commands.execute"],
-    },
-  }),
 });
 
 export const createPlannerUi = (baseUrl: string) => {
-  const { tagSettings, statusBoardSettings } = createPlannerSettingsViews(baseUrl);
+  const { tagSettings } = createPlannerSettingsViews(baseUrl);
   const tickets = defineView({
     id: "tickets",
     title: l10n("kanbanRenderers.tickets.title", "Tickets"),
@@ -200,7 +190,7 @@ export const createPlannerUi = (baseUrl: string) => {
     },
   });
   return {
-    views: [tickets, editor, files, properties, tagSettings, statusBoardSettings],
+    views: [tickets, editor, files, properties, tagSettings],
     resourceViews: [
       defineResourceView({
         id: "ticket-editor",
@@ -260,12 +250,6 @@ export const createPlannerUi = (baseUrl: string) => {
       defineSettingsPanel({
         id: "ticket-tags",
         view: tagSettings.ref,
-        slot: workbenchSlots.projectSettings,
-        section: plannerSettingsSection.ref,
-      }),
-      defineSettingsPanel({
-        id: "ticket-board",
-        view: statusBoardSettings.ref,
         slot: workbenchSlots.projectSettings,
         section: plannerSettingsSection.ref,
       }),

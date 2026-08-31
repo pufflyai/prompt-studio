@@ -177,6 +177,17 @@ export const textStyles = defineTextStyles({
       letterSpacing: "0.1px",
     },
   },
+  "label/XS/caps": {
+    value: {
+      fontFamily: "label",
+      fontSize: "xs",
+      fontWeight: "600",
+      lineHeight: "150%",
+      letterSpacing: "0.9px",
+      textTransform: "uppercase",
+    },
+  },
+
   "label/XS/medium": {
     value: {
       fontFamily: "label",

@@ -80,7 +80,8 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
   const labStatuses = settings.getByTestId("workflow-status-set-pstdio.extension-lab.status.workflow");
   await expect(labStatuses.getByText("Lab workflow", { exact: true })).toBeVisible({ timeout: 30_000 });
 
-  await labStatuses.getByText("Idea", { exact: true }).click();
+  // The default-value control under the list also reads "Idea", so target the row.
+  await labStatuses.getByText("Idea", { exact: true }).first().click();
   const ideaInput = labStatuses.locator("input").first();
   await expect(ideaInput).toHaveValue("Idea");
   await ideaInput.fill("Concept");
@@ -121,12 +122,14 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
   await expect(page.getByTestId("board-column-backlog")).not.toContainText("Concept");
 });
 
-test("saved ticket board rules control the matching column", async ({ page, request }) => {
+test("state commands in the status editor control the matching column", async ({ page, request }) => {
   test.slow();
   const project = await createProject(request);
   const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
   const backlog = statuses.find((status) => status.name === "Backlog");
+  const done = statuses.find((status) => status.name === "Done");
   expect(backlog).toBeDefined();
+  expect(done).toBeDefined();
   await createPlannerTicket(request, apiBase, project.id, {
     content: "Keep the backlog column visible",
     statusId: backlog!.id,
@@ -136,39 +139,47 @@ test("saved ticket board rules control the matching column", async ({ page, requ
 
   await page.goto(`/projects/${project.id}/tickets`);
   const backlogColumn = page.getByTestId(`board-column-${backlog!.id}`);
+  const doneColumn = page.getByTestId(`board-column-${done!.id}`);
   await expect(backlogColumn).toContainText("Keep the backlog column visible", { timeout: 30_000 });
   await expect(backlogColumn.getByRole("button", { name: "Create row" })).toBeVisible();
+  await expect(doneColumn.getByRole("button", { name: "Column actions for Done" })).toBeVisible();
+  await doneColumn.getByRole("button", { name: "Column actions for Done" }).click();
+  await expect(page.getByRole("menuitem", { name: "Archive all", exact: true })).toBeVisible();
+  await page.keyboard.press("Escape");
 
   await page.getByRole("option", { name: "Settings", exact: true }).click();
   const settings = page.getByRole("dialog");
   await expect(settings).toBeVisible({ timeout: 30_000 });
-  await settings.getByRole("option", { name: "Ticket board", exact: true }).click();
+  await settings.getByText("Statuses", { exact: true }).click();
 
-  const boardSettings = settings.frameLocator("iframe");
-  const backlogRules = boardSettings.getByTestId(`status-board-rule-${backlog!.id}`);
-  const canCreate = backlogRules.getByRole("checkbox", { name: "Create in column" });
-  await expect(canCreate).toBeChecked({ timeout: 30_000 });
-  const updateResponse = page.waitForResponse(
-    (response) =>
-      response.request().method() === "POST" &&
-      new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.pstdio-planner.command.ticket-status.update/execute",
-      ),
-  );
-  await backlogRules.getByText("Create in column", { exact: true }).click();
-  expect((await updateResponse).ok()).toBe(true);
-  await expect(canCreate).not.toBeChecked();
+  const ticketStatuses = settings.getByTestId("workflow-status-set-pstdio.pstdio-planner.status.ticket-statuses");
+  const backlogCommands = ticketStatuses.getByRole("button", { name: "Commands for Backlog" });
+  await expect(backlogCommands).toHaveText(/Create/, { timeout: 30_000 });
+  await expect(ticketStatuses.getByRole("button", { name: "Commands for Done" })).toHaveText(/Archive all/);
+  await expect(ticketStatuses.getByRole("button", { name: "Default value" })).toHaveText(/Backlog/);
 
-  await settings.getByRole("button", { name: "Close Ticket board" }).click();
+  await backlogCommands.click();
+  await page.getByRole("menuitem", { name: "Create", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(backlogCommands).toHaveText(/None/);
+
+  const save = ticketStatuses.getByRole("button", { name: "Save", exact: true });
+  await expect(save).toBeEnabled();
+  await save.click();
+  await expect(save).toBeDisabled({ timeout: 15_000 });
+
+  await page.keyboard.press("Escape");
   await expect(settings).not.toBeVisible();
   await page.reload();
   await expect(backlogColumn).toContainText("Keep the backlog column visible", { timeout: 30_000 });
   await expect(backlogColumn.getByRole("button", { name: "Create row" })).toHaveCount(0);
+  await expect(doneColumn.getByRole("button", { name: "Column actions for Done" })).toBeVisible();
 
   await page.getByRole("option", { name: "Settings", exact: true }).click();
-  await settings.getByRole("option", { name: "Ticket board", exact: true }).click();
-  const savedCanCreate = boardSettings
-    .getByTestId(`status-board-rule-${backlog!.id}`)
-    .getByRole("checkbox", { name: "Create in column" });
-  await expect(savedCanCreate).not.toBeChecked({ timeout: 30_000 });
+  await settings.getByText("Statuses", { exact: true }).click();
+  await expect(
+    settings
+      .getByTestId("workflow-status-set-pstdio.pstdio-planner.status.ticket-statuses")
+      .getByRole("button", { name: "Commands for Backlog" }),
+  ).toHaveText(/None/, { timeout: 30_000 });
 });

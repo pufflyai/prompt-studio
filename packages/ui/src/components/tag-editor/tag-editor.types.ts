@@ -15,6 +15,8 @@ export interface TagEditorValue {
 export interface TagEditorAction {
   value: string;
   label: string;
+  /** Rendered before the label in the trigger and the menu row. */
+  icon?: ReactNode;
 }
 
 export interface TagEditorProps {
@@ -36,6 +38,10 @@ export interface TagEditorProps {
   /** Name given to a freshly added option before it is renamed inline. */
   addName?: string;
   actionOptions?: TagEditorAction[];
+  /** Names the per-row action control, e.g. "Commands". Used in its label and aria-label. */
+  actionsLabel?: string;
+  /** Names the default-value control shown under the list when showDefault is set. */
+  defaultValueLabel?: string;
   defaultAddColor?: string;
   defaultAddIcon?: string | null;
   deleteButtonText?: string;
@@ -45,4 +51,10 @@ export interface TagEditorProps {
   iconOptions?: readonly IconColorPickerIconOption[];
   showDefault?: boolean;
   showIcons?: boolean;
+  /** Draws the list as a bordered card, so the header and footer bands read as one panel. */
+  framed?: boolean;
+  /** Renders a column header band above the rows. Needs `framed` to look right. */
+  showColumnHeaders?: boolean;
+  /** Header label above the option names, e.g. "State". */
+  valueColumnLabel?: string;
 }

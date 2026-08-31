@@ -2,6 +2,7 @@ import { Stack } from "@chakra-ui/react";
 import { type SaveTagSettingsInput, TagSettingsPanel } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { RegisteredWorkbenchStatusSet, WorkbenchStatusRegistry, WorkflowStatus } from "../../core";
+import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { statusNeedsUpdate, toStatusEditorValue, toWorkflowStatus } from "./workflow-status-settings-model";
 
@@ -50,11 +51,19 @@ const WorkflowStatusSection = (props: WorkflowStatusSectionProps) => {
       valueNeedsUpdate={statusNeedsUpdate}
       readOnly={!statusSet.save}
       title={statusSet.title}
-      description={statusSet.save ? "Configure this workflow's columns." : "This status set is read-only."}
-      actionOptions={statusSet.actions?.map((action) => ({ value: action.id, label: action.label }))}
+      description={statusSet.save ? "Configure this workflow's states." : "This status set is read-only."}
+      actionOptions={statusSet.actions?.map((action) => ({
+        value: action.id,
+        label: action.label,
+        icon: action.icon ? <WorkbenchIcon name={action.icon} size={13} /> : undefined,
+      }))}
+      actionsLabel="Commands"
+      framed
+      showColumnHeaders
+      valueColumnLabel="State"
       showDefault
       errorTitle={`Unable to update ${statusSet.title}`}
-      addLabel="Add status"
+      addLabel="Add state"
       addName="New status"
       resetLabel="Reset"
       saveLabel="Save"
