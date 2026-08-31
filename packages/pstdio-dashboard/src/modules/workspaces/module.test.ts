@@ -229,7 +229,7 @@ describe("createWorkspacesModule navigation", () => {
         }),
       ],
     });
-    expect(workspacesNode?.hiddenByDefault).toBeUndefined();
+    expect(workspacesNode?.hiddenByDefault).toBe(true);
     expect(nodeIds).toContain(dashboardViews.workspaces.id);
   });
 });

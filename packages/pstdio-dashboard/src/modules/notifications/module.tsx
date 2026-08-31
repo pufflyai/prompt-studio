@@ -30,7 +30,7 @@ const createNotificationNode = (ctx: WorkbenchModuleContext): TreeNode => {
 const registerNotificationSidenav = (ctx: WorkbenchModuleContext) => {
   registerDashboardNavigationContribution(ctx, {
     id: "dashboard.notifications.sidenav-nav",
-    modes: ["*"],
+    modes: ["project"],
     getSections: () => [{ id: "navigation.root", nodes: [createNotificationNode(ctx)] }],
   });
 };

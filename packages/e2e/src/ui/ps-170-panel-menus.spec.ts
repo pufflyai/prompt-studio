@@ -102,7 +102,7 @@ test("PS-170 keeps the project selector and Session Panel available on project h
   await page.goto(`/projects/${project.id}/`);
 
   await expect(
-    page.locator('[data-workbench-region="sidenav"]').getByRole("button", { name: "Switch project", exact: true }),
+    page.getByRole("region", { name: "Nav Chrome" }).getByRole("button", { name: "Switch project", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
 });
@@ -224,7 +224,6 @@ test("PS-170 hides unavailable Side Panel chrome in the Sessions Location", asyn
   }, project.id);
 
   await page.goto(`/projects/${project.id}/sessions`);
-  await page.getByRole("option", { name: "Sessions", exact: true }).click();
 
   await expect(
     page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),

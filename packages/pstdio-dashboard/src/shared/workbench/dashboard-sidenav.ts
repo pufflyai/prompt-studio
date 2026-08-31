@@ -1,6 +1,7 @@
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { getDashboardSelectedResource } from "@/shared/app/navigation-state";
 import { subscribeDashboardSelectedProject } from "@/shared/app/project-context";
+import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { modeOwnsNavigation } from "@/shared/workbench/mode-navigation-ownership";
@@ -15,6 +16,19 @@ const activePageOwner = (ctx: WorkbenchModuleContext) => {
   return { kind: "page" as const, id: page.id, extensionId: page.ref.extensionId ?? "pstdio" };
 };
 
+const sidenavModeOwners = (ctx: WorkbenchModuleContext, modeId: string) => {
+  if (modeId !== "sessions") return [activeModeOwner(ctx, modeId)];
+  return [activeModeOwner(ctx, "project"), activeModeOwner(ctx, modeId)];
+};
+
+const withoutSessionsLink = (sections: Awaited<ReturnType<WorkbenchModuleContext["navigationTrees"]["getSections"]>>) =>
+  sections
+    .map((section) => ({
+      ...section,
+      nodes: section.nodes.filter((node) => node.id !== dashboardViews.sessions.id),
+    }))
+    .filter((section) => section.nodes.length > 0);
+
 // The unified sidenav composes its body/footer from mode-gated contributions. The active
 // mode is the gate, so dashboard-owned modes (project/sessions) and extension-declared
 // modes (e.g. ticket) reshape the same widget without opening a different one.
@@ -23,7 +37,14 @@ const composeSidenavSlot = async (ctx: WorkbenchModuleContext, slot: "header" | 
   const resource = ctx.getPrimaryResource() ?? getDashboardSelectedResource(ctx);
   if (!mode) return [];
   const context = resource ? { resource } : {};
-  const modeSections = await ctx.navigationTrees.getSections(activeModeOwner(ctx, mode), slot, context);
+  const modeSections = (
+    await Promise.all(
+      sidenavModeOwners(ctx, mode).map(async (owner) => {
+        const sections = await ctx.navigationTrees.getSections(owner, slot, context);
+        return mode === "sessions" && owner.id === "project" ? withoutSessionsLink(sections) : sections;
+      }),
+    )
+  ).flat();
   const pageOwner = activePageOwner(ctx);
   if (!pageOwner) return modeSections;
   const pageSections = await ctx.navigationTrees.getSections(pageOwner, slot, context);
@@ -40,8 +61,10 @@ export const updateDashboardSidenav = (ctx: WorkbenchModuleContext, options: { s
   }
   const mode = ctx.modes.getActiveModeId();
   if (mode) {
-    for (const sectionId of ctx.navigationTrees.getDefaultExpandedSectionIds(activeModeOwner(ctx, mode))) {
-      ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
+    for (const owner of sidenavModeOwners(ctx, mode)) {
+      for (const sectionId of ctx.navigationTrees.getDefaultExpandedSectionIds(owner)) {
+        ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
+      }
     }
   }
   const pageOwner = activePageOwner(ctx);

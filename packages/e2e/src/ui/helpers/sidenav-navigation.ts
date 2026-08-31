@@ -11,7 +11,7 @@ export const showHiddenSidenavEntry = async (page: Page, label: string) => {
   const search = option(sidenav, "Search");
   await expect(search).toBeVisible({ timeout: 30_000 });
   await search.click({ button: "right" });
-  await page.getByRole("menuitem", { name: new RegExp(label) }).click();
+  await page.locator('[role="menuitem"][data-value^="node:"]', { hasText: label }).click();
   await expect(entry).toBeVisible();
   await page.keyboard.press("Escape");
   return entry;

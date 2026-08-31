@@ -40,7 +40,7 @@ const helpFooterNode = (): TreeNode => ({
 const registerHelpSidenav = (ctx: WorkbenchModuleContext) =>
   registerDashboardNavigationContribution(ctx, {
     id: "dashboard.help.footer",
-    modes: ["*"],
+    modes: ["project"],
     slot: "footer",
     getSections: () => [{ id: "navigation.footer", nodes: [helpFooterNode()] }],
   });

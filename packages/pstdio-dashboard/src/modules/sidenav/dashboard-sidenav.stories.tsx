@@ -331,7 +331,7 @@ const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
   );
 };
 
-// F15: the project selector and global collections stay fixed while the resource region is empty.
+// F15: global collections stay fixed while the resource region is empty.
 export const ProjectMode: Story = {
   render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.start.id)} />,
   play: async ({ canvasElement }) => {
@@ -344,6 +344,19 @@ export const OverflowWithPinnedChrome: Story = {
   render: () => (
     <SidenavStory
       open={(workbench) => {
+        workbench.navigationTrees.registerContribution({
+          id: "story.overflow.header",
+          owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+          sourceExtensionId: "story.overflow",
+          declarationIndex: 0,
+          slot: "header",
+          getSections: () => [
+            {
+              id: "overflow-header",
+              nodes: [{ id: "overflow-header-item", label: "Pinned header" }],
+            },
+          ],
+        });
         workbench.navigationTrees.registerContribution({
           id: "story.overflow.project",
           owner: { kind: "mode", id: "project", extensionId: "pstdio" },
@@ -362,21 +375,21 @@ export const OverflowWithPinnedChrome: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const project = await canvas.findByRole("option", { name: /^Prompt Studio Switch project$/ });
+    const header = await canvas.findByRole("option", { name: "Pinned header" });
     const settings = await canvas.findByRole("option", { name: /^Settings$/ });
     const viewport = canvasElement.querySelector<HTMLElement>(
       '[data-workbench-region="sidenav"] [data-scope="scroll-area"][data-part="viewport"]',
     );
     await expect(viewport).not.toBeNull();
-    const projectTop = project.getBoundingClientRect().top;
+    const headerTop = header.getBoundingClientRect().top;
     const settingsBottom = settings.getBoundingClientRect().bottom;
     viewport!.scrollTop = viewport!.scrollHeight;
-    await expect(project.getBoundingClientRect().top).toBe(projectTop);
+    await expect(header.getBoundingClientRect().top).toBe(headerTop);
     await expect(settings.getBoundingClientRect().bottom).toBe(settingsBottom);
   },
 };
 
-// Aggregate collection: the same header stays mounted and Workspaces is not duplicated in the resource region.
+// Aggregate collection: Workspaces is not duplicated in the resource region.
 export const WorkspacesView: Story = {
   render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.workspaces.id)} />,
 };

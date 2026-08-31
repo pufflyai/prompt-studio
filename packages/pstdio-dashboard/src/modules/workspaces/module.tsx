@@ -35,6 +35,7 @@ const workspaceNavigationNode = (): TreeNode => ({
   label: "Workspaces",
   icon: dashboardViews.workspaces.icon,
   canHide: true,
+  hiddenByDefault: true,
   commandId: dashboardCommandIds.openWorkspaces,
   target: { kind: "view", viewId: dashboardViews.workspaces.id },
   actions: [
@@ -50,7 +51,7 @@ const workspaceNavigationNode = (): TreeNode => ({
 const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContext) => {
   registerDashboardNavigationContribution(ctx, {
     id: "dashboard.workspaces.project-nav",
-    modes: ["*"],
+    modes: ["project"],
     getSections: () => [{ id: "navigation.root", nodes: [workspaceNavigationNode()] }],
   });
 };

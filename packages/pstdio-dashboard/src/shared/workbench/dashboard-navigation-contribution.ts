@@ -1,7 +1,7 @@
 import type { NavigationTreeSlot, ResourceRef, TreeViewSection, WorkbenchModuleContext } from "@pstdio/workbench";
 
 const declarations: Record<NavigationTreeSlot, readonly string[]> = {
-  header: ["dashboard.project-context"],
+  header: [],
   content: [
     "dashboard.sidenav.search",
     "dashboard.notifications.sidenav-nav",
@@ -16,7 +16,7 @@ const dashboardModes = ["project", "sessions"] as const;
 
 interface DashboardNavigationContribution {
   id: string;
-  modes: readonly ("*" | (typeof dashboardModes)[number])[];
+  modes: readonly (typeof dashboardModes)[number][];
   slot?: NavigationTreeSlot;
   defaultExpandedSectionIds?: string[];
   getSections(
@@ -29,11 +29,10 @@ export const registerDashboardNavigationContribution = (
   ctx: WorkbenchModuleContext,
   contribution: DashboardNavigationContribution,
 ) => {
-  const modes = contribution.modes.includes("*") ? dashboardModes : contribution.modes;
   const slot = contribution.slot ?? "content";
   const declarationIndex = declarations[slot].indexOf(contribution.id);
 
-  return modes.map((modeId) =>
+  return contribution.modes.map((modeId) =>
     ctx.navigationTrees.registerContribution({
       id: `${contribution.id}.${modeId}`,
       owner: { kind: "mode", id: modeId, extensionId: "pstdio" },

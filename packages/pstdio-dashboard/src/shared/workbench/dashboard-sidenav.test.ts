@@ -206,4 +206,47 @@ describe("registerDashboardSidenav", () => {
     ]);
     expect(resourceReads).toEqual([undefined, workspace.uri, undefined]);
   });
+
+  test("uses project navigation in Sessions mode without the project Sessions link", async () => {
+    const workbench = createWorkbenchCore();
+
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({ id: "sessions", label: "Sessions", activate: () => undefined });
+    workbench.navigationTrees.registerContribution({
+      id: "test.project-navigation",
+      owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+      sourceExtensionId: "pstdio",
+      declarationIndex: 0,
+      getSections: () => [
+        {
+          id: "navigation.root",
+          nodes: [
+            { id: "search", label: "Search" },
+            { id: dashboardViews.sessions.id, label: dashboardViews.sessions.label },
+            { id: "tickets", label: "Tickets" },
+          ],
+        },
+      ],
+    });
+    workbench.navigationTrees.registerContribution({
+      id: "test.session-list",
+      owner: { kind: "mode", id: "sessions", extensionId: "pstdio" },
+      sourceExtensionId: "pstdio",
+      declarationIndex: 0,
+      getSections: () => [
+        {
+          id: "sessions-wrap",
+          nodes: [{ id: "workspace-sessions", label: "Sessions" }],
+        },
+      ],
+    });
+    registerDashboardSidenav(workbench);
+    workbench.modes.setActiveMode("sessions");
+
+    const ids = (await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav))
+      .flatMap((section) => section.nodes)
+      .map((node) => node.id);
+
+    expect(ids).toEqual(["search", "tickets", "workspace-sessions"]);
+  });
 });

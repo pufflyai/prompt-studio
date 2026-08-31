@@ -30,9 +30,10 @@ test("an extension page navigates through the public API and browser history", a
   await expect(page.locator('[data-workbench-panel-header="sidenav"]')).toHaveCount(0);
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   await expect(sidenav).toHaveCount(1);
-  await expect(sidenav.getByRole("option", { name: `${project.name} Switch project`, exact: true })).toBeVisible();
+  await expect(sidenav.getByRole("option", { name: `${project.name} Switch project`, exact: true })).toHaveCount(0);
+  await expect(sidenav.locator('[data-tree-list-node-id="workspaces"]')).toHaveCount(0);
   const sidenavEntries = await sidenav.getByRole("option").allTextContents();
-  const orderedLabels = ["Search", "Notifications", "Sessions", "Workspaces", "Tickets", "Lab"];
+  const orderedLabels = ["Search", "Notifications", "Sessions", "Tickets", "Lab"];
   const orderedIndexes = orderedLabels.map((label) => sidenavEntries.indexOf(label));
   expect(orderedIndexes.every((index) => index >= 0)).toBe(true);
   expect(orderedIndexes).toEqual([...orderedIndexes].sort((left, right) => left - right));
@@ -77,4 +78,29 @@ test("Tickets and Start remain exclusive page locations", async ({ page, request
   await expect(page).toHaveURL(`/projects/${project.id}`);
   await expect(page.getByText("Recent sessions", { exact: true })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Tickets", exact: true })).toHaveCount(0);
+});
+
+test("Sessions mode reuses project navigation without duplicate chrome", async ({ page, request }) => {
+  test.slow();
+  const project = await createProject(request);
+  await prepareDashboard(page, project.id);
+  await page.goto(`/projects/${project.id}`);
+
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  await expect(page.getByText("Recent sessions", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(sidenav.getByRole("option", { name: `${project.name} Switch project`, exact: true })).toHaveCount(0);
+  await expect(sidenav.locator('[data-tree-list-node-id="workspaces"]')).toHaveCount(0);
+
+  await sidenav.locator('[data-tree-list-node-id="sessions"]').click();
+
+  await expect(
+    page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
+  ).toBeVisible();
+  await expect(sidenav.locator('[data-tree-list-node-id="sessions"]')).toHaveCount(0);
+  await expect(sidenav.locator('[data-tree-list-node-id="workspace-sessions"]')).toBeVisible();
+  await expect(sidenav.getByRole("option", { name: "Search", exact: true })).toBeVisible();
+  await expect(sidenav.getByRole("option", { name: /^Notifications(?:\s|$)/ })).toBeVisible();
+  await expect(sidenav.getByRole("option", { name: "Tickets", exact: true })).toBeVisible();
+  await expect(sidenav.getByRole("option", { name: "Lab", exact: true })).toBeVisible();
+  await expect(sidenav.locator('[data-tree-list-node-id="workspaces"]')).toHaveCount(0);
 });

@@ -114,7 +114,7 @@ const createSessionsNavigationNode = () => ({
 const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
   registerDashboardNavigationContribution(ctx, {
     id: "dashboard.sessions.project-nav",
-    modes: ["*"],
+    modes: ["project"],
     getSections: () => [{ id: "navigation.root", nodes: [createSessionsNavigationNode()] }],
   });
   registerDashboardNavigationContribution(ctx, {

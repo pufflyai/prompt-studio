@@ -4,7 +4,7 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createHeadersModule } from "./module";
 
 describe("createHeadersModule", () => {
-  test("pins the project selector in the global navigation header", () => {
+  test("pins the project selector in Nav Chrome without adding it to the Sidenav", async () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createHeadersModule());
@@ -15,5 +15,8 @@ describe("createHeadersModule", () => {
         pinned: true,
       }),
     );
+    expect(
+      await workbench.navigationTrees.getSections({ kind: "mode", id: "project", extensionId: "pstdio" }, "header"),
+    ).toEqual([]);
   });
 });

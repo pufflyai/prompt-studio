@@ -6,7 +6,7 @@ import { registerDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 const registerSearchSection = (ctx: WorkbenchModuleContext) => {
   registerDashboardNavigationContribution(ctx, {
     id: "dashboard.sidenav.search",
-    modes: ["*"],
+    modes: ["project"],
     getSections: () => [
       {
         id: "navigation.root",

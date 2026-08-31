@@ -39,15 +39,20 @@ describe("createSettingsModule", () => {
     expect(sectionIds).toContain("project");
   });
 
-  test("keeps Settings in the sessions sidenav footer", async () => {
+  test("registers Settings once on the shared project sidenav footer", async () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSettingsModule());
 
-    const nodes = (
+    const projectNodes = (
+      await workbench.navigationTrees.getSections({ kind: "mode", id: "project", extensionId: "pstdio" }, "footer")
+    ).flatMap((section) => section.nodes);
+    const sessionNodes = (
       await workbench.navigationTrees.getSections({ kind: "mode", id: "sessions", extensionId: "pstdio" }, "footer")
     ).flatMap((section) => section.nodes);
-    expect(nodes.map((node) => node.label)).toContain("Settings");
+
+    expect(projectNodes.map((node) => node.label)).toContain("Settings");
+    expect(sessionNodes).toEqual([]);
   });
 
   test("registers the runtime and templates panels with their scope and kind", () => {
