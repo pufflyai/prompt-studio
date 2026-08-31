@@ -1,7 +1,9 @@
 import type { NavigationTargetPanel, PageLocation, PlacementIdentity } from "@pstdio/sdk/extensions";
+import type { Disposable } from "../../shared/disposable";
 import type {
   WorkbenchPageOpenInput,
   WorkbenchPageRegistry,
+  WorkbenchPageRegistryStoreState,
   WorkbenchPageResourceCodec,
   WorkbenchPageRuntimeState,
 } from "./page-registry-types";
@@ -26,25 +28,26 @@ export type WorkbenchPageCloseResolution =
       parentId: string;
     };
 
-export interface WorkbenchPageRegistryInternals {
+export interface WorkbenchPageRegistryInternals<Value> {
   resources: WorkbenchPageResourceCodec;
+  connectRuntime(apply: (state: WorkbenchPageRegistryStoreState<Value>) => void): Disposable;
   activateLocation(input: WorkbenchPageLocationCommitInput): void;
   openPanel(target: NavigationTargetPanel): PlacementIdentity;
   clearProject(projectId: string): void;
   resolveClosePlacement(identity: PlacementIdentity): WorkbenchPageCloseResolution;
 }
 
-const registryInternals = new WeakMap<object, WorkbenchPageRegistryInternals>();
+const registryInternals = new WeakMap<object, WorkbenchPageRegistryInternals<unknown>>();
 
 export const setWorkbenchPageRegistryInternals = <Value>(
   registry: WorkbenchPageRegistry<Value>,
-  internals: WorkbenchPageRegistryInternals,
+  internals: WorkbenchPageRegistryInternals<Value>,
 ) => {
-  registryInternals.set(registry, internals);
+  registryInternals.set(registry, internals as WorkbenchPageRegistryInternals<unknown>);
 };
 
 export const getWorkbenchPageRegistryInternals = <Value>(registry: WorkbenchPageRegistry<Value>) => {
-  const internals = registryInternals.get(registry);
+  const internals = registryInternals.get(registry) as WorkbenchPageRegistryInternals<Value> | undefined;
   if (!internals) throw new Error("Workbench page registry internals are unavailable");
   return internals;
 };

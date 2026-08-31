@@ -50,6 +50,7 @@ export interface WorkbenchPageResourceCodec {
 }
 
 export interface WorkbenchPagePlacementInput {
+  identity: PlacementIdentity;
   pageId: string;
   slotId: string;
   role: PageSlotRole;

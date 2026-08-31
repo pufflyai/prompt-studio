@@ -44,11 +44,13 @@ const placementFor = <Value>(input: {
   const viewId = input.resource ? input.slot.binding?.viewId : input.slot.viewId;
   if (!viewId) throw new Error(`Page slot "${input.page.id}.${input.slot.id}" has no view for its active instance`);
   const staticPrimary = input.slot.role === "primary" && input.slot.viewId && !input.resource;
+  const identity = pagePlacementIdentity(input.page.id, input.slot.id, input.instanceKey);
   return {
-    identity: pagePlacementIdentity(input.page.id, input.slot.id, input.instanceKey),
+    identity,
     region: input.slot.region,
     order: input.slot.order ?? 0,
     value: input.resolvePagePlacement({
+      identity,
       pageId: input.page.id,
       slotId: input.slot.id,
       role: input.slot.role,

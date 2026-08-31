@@ -26,6 +26,7 @@ export const registerWorkbenchPage = <Value>(input: {
   page: WorkbenchPageContribution;
   registryInput: CreateWorkbenchPageRegistryInput<Value>;
   store: InternalWorkbenchStore<WorkbenchPageRegistryStoreState<Value>>;
+  publishState(state: WorkbenchPageRegistryStoreState<Value>, action: string): void;
   normalizeResource(resource: ResourceRef): ResourceRef;
   resourceKey(resource: ResourceRef): string;
 }) => {
@@ -72,7 +73,7 @@ export const registerWorkbenchPage = <Value>(input: {
     const { [page.id]: _pageState, ...pageStates } = snapshot.pageStates;
     if (snapshot.activePageId === page.id) {
       const placements = composeOwnedPlacements({ shell: input.registryInput.resolveShellPlacements() }).placements;
-      store.setState(
+      input.publishState(
         {
           ...snapshot,
           pages,
@@ -87,7 +88,6 @@ export const registerWorkbenchPage = <Value>(input: {
             valuesEqual: input.registryInput.valuesEqual,
           }),
         },
-        false,
         "unregisterActivePage",
       );
       return;

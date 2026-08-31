@@ -1,4 +1,5 @@
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
+import { createDisposable } from "../../shared/disposable";
 import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import {
   composeOwnedPlacements,
@@ -62,6 +63,12 @@ export const createWorkbenchPageRegistry = <Value>(
       reconciliation: emptyReconciliation(),
     },
   });
+  let runtime: ((state: WorkbenchPageRegistryStoreState<Value>) => void) | undefined;
+
+  const publishState = (state: WorkbenchPageRegistryStoreState<Value>, action: string) => {
+    runtime?.(state);
+    store.setState(state, false, action);
+  };
 
   const requirePage = (pageId: string) => {
     const page = store.getState().pages[pageId];
@@ -117,7 +124,7 @@ export const createWorkbenchPageRegistry = <Value>(
       activate: next.activate,
       valuesEqual: input.valuesEqual,
     });
-    store.setState(
+    publishState(
       {
         ...current,
         pageStates: next.pageStates,
@@ -128,7 +135,6 @@ export const createWorkbenchPageRegistry = <Value>(
         placements: composed.placements,
         reconciliation,
       },
-      false,
       next.action,
     );
   };
@@ -173,6 +179,7 @@ export const createWorkbenchPageRegistry = <Value>(
         page,
         registryInput: input,
         store,
+        publishState,
         normalizeResource,
         resourceKey,
       });
@@ -189,6 +196,19 @@ export const createWorkbenchPageRegistry = <Value>(
 
   setWorkbenchPageRegistryInternals(registry, {
     resources: input.resources,
+    connectRuntime(apply) {
+      if (runtime) throw new Error("Workbench page registry already has a runtime");
+      runtime = apply;
+      try {
+        apply(store.getState());
+      } catch (error) {
+        runtime = undefined;
+        throw error;
+      }
+      return createDisposable(() => {
+        if (runtime === apply) runtime = undefined;
+      });
+    },
     openPanel(target) {
       const current = store.getState();
       return openWorkbenchPanelTarget({
@@ -222,7 +242,7 @@ export const createWorkbenchPageRegistry = <Value>(
       const pageStates = Object.fromEntries(
         Object.values(current.pages).map((page) => [page.id, emptyPageState(page, resourceKey)]),
       );
-      store.setState(
+      publishState(
         {
           ...current,
           pageStates,
@@ -237,7 +257,6 @@ export const createWorkbenchPageRegistry = <Value>(
             valuesEqual: input.valuesEqual,
           }),
         },
-        false,
         "clearPageProject",
       );
     },
