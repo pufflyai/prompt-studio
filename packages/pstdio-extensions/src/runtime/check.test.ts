@@ -326,7 +326,6 @@ describe("checkExtensionHostCompatibility", () => {
 
     expect(result.status).toBe("verified");
     expect(result.diagnostics.map((diagnostic) => diagnostic.metadata?.missingCapability)).toEqual([
-      "page.v1",
       "view.data-table.v1",
       "settings.section.v1",
       "resource-view.v1",

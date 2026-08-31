@@ -236,6 +236,13 @@ describe("packaged pstdio — self-hosted serve", () => {
           (contribution) => contribution.label === "Workspace-only lab action",
         );
         expect(workspaceAction?.when).toEqual({ resourceType: ["workspace"] });
+        expect(metadata.pages).toContainEqual(
+          expect.objectContaining({
+            extensionId: "pstdio.extension-lab",
+            localId: "lab",
+            path: "lab",
+          }),
+        );
       } finally {
         if (child) {
           await stopProcess(child);

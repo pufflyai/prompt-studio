@@ -10,6 +10,7 @@ export {
   createLocalStorageHistoryPersistence,
   createLocalStorageLastResourcePersistence,
   createLocalStorageLayoutPersistence,
+  createLocalStoragePageLocationPersistence,
   createLocalStoragePanelsPersistence,
   createLocalStorageTreePersistence,
   createLocalStorageWorkbenchPersistence,

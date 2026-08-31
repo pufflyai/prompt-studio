@@ -4,7 +4,6 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import type { DashboardLastResourcePersistence } from "@/shared/app/last-resource-persistence";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
-import { dashboardViews } from "@/shared/app/resources";
 import type { DashboardSessionSelectionPersistence } from "@/shared/app/session-selection-persistence";
 import {
   getDashboardExtensionsReadyProjectId,
@@ -106,8 +105,12 @@ const restoreSelectedProjectHistory = (ctx: Parameters<WorkbenchModuleContributi
   return ctx.history.restore() ? ("restored" as const) : ("empty" as const);
 };
 
-const openStartView = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) =>
-  ctx.views.openView(dashboardViews.start.id);
+const openStartPage = async (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0]) => {
+  const projectId = getDashboardSelectedProjectId(ctx);
+  if (!projectId) throw new Error("Cannot open Start without a selected project");
+  const result = ctx.pageLocations.boot(projectId);
+  if (!result.ok) throw new Error(result.diagnostic.message);
+};
 
 const restoreRequestedView = (ctx: Parameters<WorkbenchModuleContribution["activate"]>[0], guard: LandingRunGuard) => {
   if (!guard.requestedViewPath) return "empty" as const;
@@ -151,11 +154,9 @@ const restoreLastResource = (ctx: Parameters<WorkbenchModuleContribution["activa
 
   if (isMissingSyncedResource(ctx, lastResource)) {
     ctx.lastResource.set(undefined);
-    return ctx.views
-      .openView(dashboardViews.start.id)
-      .then(() =>
-        guard.isCurrent() ? ({ status: "opened" } as const) : ({ resource: undefined, status: "stale" } as const),
-      );
+    return openStartPage(ctx).then(() =>
+      guard.isCurrent() ? ({ status: "opened" } as const) : ({ resource: undefined, status: "stale" } as const),
+    );
   }
 
   if (shouldWaitForExtensions(ctx, lastResource)) return "pending" as const;
@@ -172,7 +173,7 @@ const openSelectedProjectLanding = async (
   const requestedViewRestore = restoreRequestedView(ctx, guard);
   if (requestedViewRestore === "pending") return "pending";
   if (requestedViewRestore === "missing") {
-    await openStartView(ctx);
+    await openStartPage(ctx);
     return guard.isCurrent() ? ({ status: "opened" } as const) : { resource: undefined, status: "stale" as const };
   }
   if (requestedViewRestore !== "empty") return await requestedViewRestore;
@@ -192,7 +193,7 @@ const openSelectedProjectLanding = async (
     if (restored !== "empty") return restored;
   }
 
-  await openStartView(ctx);
+  await openStartPage(ctx);
   return guard.isCurrent() ? ({ status: "opened" } as const) : { resource: undefined, status: "stale" as const };
 };
 
@@ -304,6 +305,7 @@ export const createBootstrapModule = (input: CreateBootstrapModuleInput = {}) =>
       const runLanding = () => {
         const runId = ++landingRunId;
         const projectId = getDashboardSelectedProjectId(ctx);
+        if (projectId) ctx.pageLocations.setProject(projectId);
         // Read before landing: opening the landing resource auto-opens its own session, which
         // overwrites the stored selection this run is meant to restore.
         const selectedSessionId = input.sessionSelectionPersistence?.getSelectedSessionId();

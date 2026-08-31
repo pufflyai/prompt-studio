@@ -50,8 +50,23 @@ const isViewTarget = (target: Record<string, unknown>) => {
   );
 };
 
+const isOpenIntent = (value: unknown) => value === undefined || value === "preview" || value === "pin";
+
+const isPageTarget = (value: unknown, ancestors = new Set<unknown>()): boolean => {
+  if (!isRecord(value) || value.kind !== "page" || !isContributionRef(value.page, "page")) return false;
+  if (ancestors.has(value)) return false;
+  if (value.resource !== undefined && !isResource(value.resource)) return false;
+  if (value.section !== undefined && !isRecord(value.section)) return false;
+  if (!isOpenIntent(value.open)) return false;
+  if (value.parent === undefined) return true;
+  const next = new Set(ancestors);
+  next.add(value);
+  return isPageTarget(value.parent, next);
+};
+
 const isItemTarget = (value: unknown): value is Exclude<ExtensionNavigationTarget, { kind: "compound" }> => {
   if (!isRecord(value)) return false;
+  if (value.kind === "page") return isPageTarget(value);
   if (value.kind === "resource") return isResourceTarget(value);
   if (value.kind === "view") return isViewTarget(value);
   if (value.kind === "href") return typeof value.href === "string";
@@ -70,7 +85,8 @@ export const isExtensionNavigationTarget = (value: unknown): value is ExtensionN
     value.kind === "compound" &&
     Array.isArray(value.targets) &&
     value.targets.length > 0 &&
-    value.targets.every(isItemTarget)
+    value.targets.every(isItemTarget) &&
+    value.targets.every((target) => target.kind !== "page")
   );
 };
 
@@ -116,6 +132,18 @@ const viewIdOf = (target: Extract<ExtensionNavigationTarget, { kind: "view" }>, 
   return owner && owner !== "pstdio" ? `${owner}.view.${target.view.id}` : target.view.id;
 };
 
+const withExtensionOwner = <Ref extends { extensionId?: string }>(ref: Ref, extensionId: string | undefined): Ref =>
+  ref.extensionId !== undefined || extensionId === undefined ? ref : ({ ...ref, extensionId } as Ref);
+
+const toPageTarget = (
+  target: Extract<ExtensionNavigationTarget, { kind: "page" }>,
+  extensionId: string | undefined,
+): Extract<ExtensionNavigationTarget, { kind: "page" }> => ({
+  ...target,
+  page: withExtensionOwner(target.page, extensionId),
+  ...(target.parent ? { parent: toPageTarget(target.parent, extensionId) } : {}),
+});
+
 // The return type stays explicit: the compound branch recurses, and TypeScript
 // cannot infer the return type of a self-referencing function.
 export const toWorkbenchNavigationTarget = (
@@ -144,9 +172,8 @@ export const toWorkbenchNavigationTarget = (
   }
   if (target.kind === "command") return toCommandTarget(target, input);
   if (target.kind === "href") return target;
-  if (target.kind === "page" || target.kind === "panel") {
-    throw new Error("Page and panel navigation targets require dashboard capability page.v1.");
-  }
+  if (target.kind === "page") return toPageTarget(target, input.extensionId);
+  if (target.kind === "panel") throw new Error("Panel navigation targets require dashboard capability panel.v1.");
   return {
     kind: "compound",
     targets: target.targets.map(

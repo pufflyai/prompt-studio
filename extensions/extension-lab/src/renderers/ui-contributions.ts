@@ -2,6 +2,7 @@ import {
   defineActivityItem,
   defineMode,
   defineNavigationItem,
+  definePage,
   definePlacement,
   defineResourceKind,
   defineResourceView,
@@ -12,6 +13,7 @@ import {
   l10n,
   resourceSlotRef,
   workbenchCommands,
+  workbenchModes,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
 import { createGlassLabArtifactCommand } from "../commands/glass-lab-artifacts-command";
@@ -88,6 +90,22 @@ export const createLabUi = (baseUrl: string) => {
     status,
     workflow,
   } = createLabViews(baseUrl);
+
+  const labPageContribution = definePage({
+    id: "lab",
+    title: l10n("routes.lab.label", "Lab"),
+    icon: "flask-conical",
+    path: "lab",
+    mode: workbenchModes.project,
+    slots: [
+      {
+        id: "content",
+        role: "primary",
+        region: "main",
+        view: labPage.ref,
+      },
+    ],
+  });
 
   const placements = [
     definePlacement({
@@ -214,6 +232,7 @@ export const createLabUi = (baseUrl: string) => {
       }),
     ],
     placements,
+    pages: [labPageContribution],
     navigationItems: [
       defineNavigationItem({
         id: "lab",
@@ -221,6 +240,14 @@ export const createLabUi = (baseUrl: string) => {
         group: "Lab",
         label: l10n("routes.lab.label", "Lab"),
         icon: "flask-conical",
+        action: { kind: "page", page: labPageContribution.ref },
+      }),
+      defineNavigationItem({
+        id: "lab-mode",
+        slot: workbenchSlots.projectNavigation,
+        group: "Lab",
+        label: l10n("routes.labMode.label", "Lab mode"),
+        icon: "panels-top-left",
         action: {
           kind: "command",
           target: { command: workbenchCommands.switchMode, params: { modeId: "pstdio.extension-lab.mode.lab" } },

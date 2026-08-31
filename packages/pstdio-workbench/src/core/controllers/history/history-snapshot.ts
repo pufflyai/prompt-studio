@@ -86,6 +86,7 @@ export const entryFromCurrentSnapshot = (input: {
 }): WorkbenchNavigationEntry | undefined => {
   const modeId = input.modes?.getActiveModeId();
   const placement = locationPlacementFromLayout(input.layout);
+  if (placement?.placementIdentity?.kind === "page") return undefined;
   const recordedAt = Date.now();
   const base = {
     entryId: `history-${recordedAt}-${input.counter}`,

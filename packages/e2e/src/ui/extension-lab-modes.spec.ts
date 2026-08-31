@@ -37,7 +37,7 @@ const labFrame = (page: import("@playwright/test").Page, title: string) =>
   page.frameLocator(`iframe[title="${title}"]`);
 
 const openLabMode = async (page: import("@playwright/test").Page) => {
-  await page.getByRole("option", { name: "Lab", exact: true }).click({ timeout: 30_000 });
+  await page.getByRole("option", { name: "Lab mode", exact: true }).click({ timeout: 30_000 });
   await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible({ timeout: 30_000 });
 };
 

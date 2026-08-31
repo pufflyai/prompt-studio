@@ -66,13 +66,23 @@ describe("createWorkspacesModule", () => {
     workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.pageLocations.setProject("project-1");
+    workbench.pageLocations.leavePage("project");
 
     await workbench.resources.openResource(workspace, { replaceActive: true });
 
     expect(workbench.modes.getActiveModeId()).toBe("project");
     expect(workbench.modes.getMode("workspace")).toBeUndefined();
-    expect(workbench.layout.getLayout().regions.sidenav.widgets.map((widget) => widget.contributionId)).toEqual([
-      dashboardWidgetIds.dashboardSidenav,
+    expect(workbench.layout.getLayout().regions.sidenav.widgets).toEqual([
+      expect.objectContaining({
+        contributionId: dashboardWidgetIds.dashboardSidenav,
+        placementIdentity: {
+          kind: "mode",
+          modeId: "project",
+          placementId: "dashboard.sidenav.project",
+          instanceKey: "default",
+        },
+      }),
     ]);
     expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe(dashboardWidgetIds.workspaceDiffs);
     expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.contributionId)).toEqual([
@@ -237,6 +247,8 @@ describe("createWorkspacesModule sidenav state", () => {
     workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.pageLocations.setProject("project-1");
+    workbench.pageLocations.leavePage("project");
     syncDashboardLayoutPersistenceScope(workbench);
     workbench.layout.registerPanel({
       id: "test.files",
@@ -263,6 +275,8 @@ describe("createWorkspacesModule sidenav state", () => {
     workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.pageLocations.setProject("project-1");
+    workbench.pageLocations.leavePage("project");
     syncDashboardLayoutPersistenceScope(workbench);
     workbench.panels.setOpen("sidenav", false);
     workbench.layout.setRegionVisible("sidenav", false);

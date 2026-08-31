@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import type { PageLocation } from "@pstdio/sdk/extensions";
 import {
   createDefaultWorkbenchLayout,
   type PersistedTreeRendererStates,
@@ -136,12 +137,18 @@ describe("local storage workbench persistence", () => {
       ],
       recentlyClosed: [],
     };
+    const pageLocation: PageLocation = {
+      page: { extensionId: "acme.planner", kind: "page", id: "ticket" },
+      resource: { type: "ticket", id: "PS-326" },
+      parent: { page: { extensionId: "acme.planner", kind: "page", id: "tickets" } },
+    };
 
     persistence.snapshotPersistence.setSnapshot({ layout }, "project:one");
     persistence.snapshotPersistence.flush?.();
     persistence.treePersistence.setTreeStates(trees);
     persistence.lastResourcePersistence.setLastResource(resource);
     persistence.historyPersistence.setHistory(history, "project:one");
+    persistence.pageLocationPersistence.save("project:one", pageLocation);
 
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"))).toBe(
       JSON.stringify({ version: 3, layout }),
@@ -155,7 +162,9 @@ describe("local storage workbench persistence", () => {
     expect(persistence.treePersistence.getTreeStates()).toEqual(trees);
     expect(persistence.lastResourcePersistence.getLastResource()).toEqual(resource);
     expect(persistence.historyPersistence.getHistory("project:one")).toEqual(history);
+    expect(persistence.pageLocationPersistence.load("project:one")).toEqual(pageLocation);
     expect(persistence.historyPersistence.getHistory("project:two")).toBeUndefined();
+    expect(persistence.pageLocationPersistence.load("project:two")).toBeUndefined();
   });
 });
 

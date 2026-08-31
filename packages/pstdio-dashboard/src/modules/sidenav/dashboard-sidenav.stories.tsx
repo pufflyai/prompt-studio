@@ -115,6 +115,15 @@ const createTicketsNavigationModule = () => ({
       },
     });
     ctx.modes.registerMode({ id: "pstdio-planner.ticket", label: "Ticket", activate: () => undefined });
+    ctx.modePlacements.registerPlacement({
+      id: "story.sidenav.ticket",
+      ref: { extensionId: "story", kind: "placement", id: "sidenav.ticket" },
+      modeId: "pstdio-planner.ticket",
+      item: { kind: "view", viewId: dashboardWidgetIds.dashboardSidenav },
+      region: "sidenav",
+      required: true,
+      movableTo: ["sidenav"],
+    });
     ctx.views.registerView({
       id: ticketsView.id,
       panelId: STORY_TICKET_WIDGET_ID,
@@ -280,6 +289,7 @@ const bootstrapWorkbench = () => {
   });
 
   selectDashboardProject(workbench, { id: PROJECT_ID, name: "Prompt Studio" });
+  workbench.pageLocations.setProject(PROJECT_ID);
   return workbench;
 };
 

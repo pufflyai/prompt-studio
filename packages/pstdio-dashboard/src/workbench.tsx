@@ -1,10 +1,15 @@
-import { createWorkbenchCore, type LayoutPersistenceAdapter } from "@pstdio/workbench";
+import {
+  createWorkbenchCore,
+  type LayoutPersistenceAdapter,
+  type WorkbenchPageLocationBrowser,
+} from "@pstdio/workbench";
 import { createWorkbenchTerminalModule } from "@pstdio/workbench/react";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { resolveDashboardViewPath } from "@/shared/app/browser-location";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
 import { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
 import { createDashboardLastResourcePersistence } from "@/shared/app/last-resource-persistence";
+import { createDashboardPageLocationBrowser } from "@/shared/app/page-location-browser";
 import {
   createDashboardProjectSelectionPersistence,
   type DashboardProjectSelectionPersistence,
@@ -37,6 +42,7 @@ export { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workb
 
 interface CreateDashboardWorkbenchInput {
   initialViewPath?: string;
+  pageLocationBrowser?: WorkbenchPageLocationBrowser;
   storage?: WorkbenchStorageLike;
 }
 
@@ -100,11 +106,15 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   });
 
   const lastResourcePersistence = createDashboardLastResourcePersistence(scopedByProject);
+  const pageLocationBrowser =
+    input.pageLocationBrowser ??
+    (typeof window === "undefined" ? undefined : createDashboardPageLocationBrowser(window));
   const workbench = createWorkbenchCore({
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },
     ...persistence,
     lastResourcePersistence,
+    ...(pageLocationBrowser ? { pageLocationBrowser } : {}),
   });
 
   const modules = createDashboardModules({

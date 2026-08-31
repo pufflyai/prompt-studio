@@ -97,4 +97,19 @@ describe("toWorkbenchNavigationTarget", () => {
       }),
     ).toThrow("replace-invoking requires a live source placement.");
   });
+
+  test("normalizes a page target to the calling extension", () => {
+    expect(
+      toWorkbenchNavigationTarget(
+        {
+          kind: "page",
+          page: { kind: "page", id: "lab" },
+        },
+        { extensionId: "pstdio.extension-lab" },
+      ),
+    ).toEqual({
+      kind: "page",
+      page: { extensionId: "pstdio.extension-lab", kind: "page", id: "lab" },
+    });
+  });
 });

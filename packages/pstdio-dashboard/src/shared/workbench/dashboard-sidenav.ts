@@ -34,12 +34,11 @@ const composeSidenavFooter = (ctx: WorkbenchModuleContext) => {
   return getSidenavContributionFooterNodes(ctx, mode);
 };
 
-// Opens the single sidenav widget and recomposes it. Project selection owns the Sidenav
-// itself, so the sidenav stays hidden there.
-export const showDashboardSidenav = (ctx: WorkbenchModuleContext, options: { selectedNode?: string | null } = {}) => {
+// Recompose the registered Sidenav and update its selection. Mode placements own
+// whether the panel exists; callers must not create a second imperative placement.
+export const updateDashboardSidenav = (ctx: WorkbenchModuleContext, options: { selectedNode?: string | null } = {}) => {
   if (!ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) return;
 
-  ctx.layout.openPanel(dashboardWidgetIds.dashboardSidenav, { pinned: true });
   if ("selectedNode" in options) {
     ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, options.selectedNode ?? undefined);
   }
@@ -50,9 +49,6 @@ export const showDashboardSidenav = (ctx: WorkbenchModuleContext, options: { sel
     }
   }
   ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
-  // Route and mode changes own sidenav content, not the user's open/collapsed
-  // preference. Keep layout visibility aligned with the persisted panel state.
-  if (ctx.panels.isOpen("sidenav")) ctx.layout.setRegionVisible("sidenav", true);
 };
 
 // Selecting a node is best-effort: routes call this before the sidenav widget is guaranteed to
@@ -65,7 +61,7 @@ export const setDashboardSidenavSelection = (ctx: WorkbenchModuleContext, nodeId
 const syncSidenavForActiveMode = (ctx: WorkbenchModuleContext) => {
   const mode = ctx.modes.getActiveModeId();
   if (!mode || mode === "project-selection" || modeOwnsNavigation(mode)) return;
-  showDashboardSidenav(ctx);
+  updateDashboardSidenav(ctx);
 };
 
 const DASHBOARD_SIDENAV_REGION_SIZE = { defaultPx: 250, minPx: 200, maxPx: 360 };
@@ -92,11 +88,27 @@ const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
     },
     { priority: 80 },
   );
+  ctx.views.registerView({
+    id: dashboardWidgetIds.dashboardSidenav,
+    panelId: dashboardWidgetIds.dashboardSidenav,
+    title: "Sidenav",
+  });
+
+  for (const modeId of ["project", "sessions"] as const) {
+    ctx.modePlacements.registerPlacement({
+      id: `dashboard.sidenav.${modeId}`,
+      ref: { extensionId: "pstdio", kind: "placement", id: `sidenav.${modeId}` },
+      modeId,
+      item: { kind: "view", viewId: dashboardWidgetIds.dashboardSidenav },
+      region: "sidenav",
+      required: true,
+      movableTo: ["sidenav"],
+    });
+  }
 };
 
-// Registers the dashboard sidenav as a singleton chrome widget: created once, opened on mode
-// entry, and refreshed when the active mode or its data changes. It is never opened per-mode,
-// so the "Sessions" group collapse state carries across modes.
+// Registers one Sidenav view and lets each dashboard mode contribute it to the
+// shared region. Mode changes refresh content without creating another placement.
 export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   registerSidenavWidget(ctx);
 

@@ -104,18 +104,20 @@ describe("extension-lab workbench attachments", () => {
         ],
       },
     });
-    expect(extension.navigationItems?.find((item) => item.id === "lab")).toMatchObject({
-      action: {
-        kind: "command",
-        target: {
-          command: {
-            extensionId: "pstdio",
-            kind: "command",
-            id: "workbench.action.switchMode",
-          },
-          params: { modeId: "pstdio.extension-lab.mode.lab" },
+    expect(extension.pages?.find((page) => page.id === "lab")).toMatchObject({
+      path: "lab",
+      mode: { extensionId: "pstdio", kind: "mode", id: "project" },
+      slots: [
+        {
+          id: "content",
+          role: "primary",
+          region: "main",
+          view: { kind: "view", id: "lab-page" },
         },
-      },
+      ],
+    });
+    expect(extension.navigationItems?.find((item) => item.id === "lab")).toMatchObject({
+      action: { kind: "page", page: { kind: "page", id: "lab" } },
     });
   });
 

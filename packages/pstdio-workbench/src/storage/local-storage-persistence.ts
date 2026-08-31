@@ -1,3 +1,4 @@
+import type { PageLocation } from "@pstdio/sdk/extensions";
 import type {
   LastResourcePersistenceAdapter,
   PersistedTreeRendererStates,
@@ -6,6 +7,7 @@ import type {
   ResourceRef,
   TreeRendererPersistenceAdapter,
   WorkbenchHistoryPersistence,
+  WorkbenchPageLocationPersistence,
   WorkbenchPanelsPersistenceAdapter,
   WorkbenchPersistenceAdapter,
   WorkbenchSidePanelMode,
@@ -50,6 +52,37 @@ export const createLocalStorageHistoryPersistence = (
   };
 };
 
+interface PersistedWorkbenchPageLocation {
+  version: 1;
+  location: PageLocation;
+}
+
+const WORKBENCH_PAGE_LOCATION_VERSION = 1 as const;
+
+export const createLocalStoragePageLocationPersistence = (
+  input: CreateWorkbenchStoragePersistenceInput,
+): WorkbenchPageLocationPersistence => {
+  const storage = resolveStorage(input.storage);
+  return {
+    load: (projectId) => {
+      const persisted = readJson<PersistedWorkbenchPageLocation>(
+        storage,
+        workbenchStoragePersistenceKey(input.namespace, "page-location", projectId),
+      );
+      return persisted?.version === WORKBENCH_PAGE_LOCATION_VERSION ? persisted.location : undefined;
+    },
+    save: (projectId, location) => {
+      const persisted: PersistedWorkbenchPageLocation = {
+        version: WORKBENCH_PAGE_LOCATION_VERSION,
+        location,
+      };
+      storage.setItem(
+        workbenchStoragePersistenceKey(input.namespace, "page-location", projectId),
+        JSON.stringify(persisted),
+      );
+    },
+  };
+};
 export const createLocalStoragePanelsPersistence = (
   input: CreateLocalStoragePanelsPersistenceInput,
 ): WorkbenchPanelsPersistenceAdapter => {
@@ -164,6 +197,7 @@ export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorage
       scope: input.scope ?? "global",
       storage,
     }),
+    pageLocationPersistence: createLocalStoragePageLocationPersistence({ namespace: input.namespace, storage }),
     treePersistence: createLocalStorageTreePersistence({ namespace: input.namespace, scope: input.scope, storage }),
     lastResourcePersistence: createLocalStorageLastResourcePersistence({
       namespace: input.namespace,

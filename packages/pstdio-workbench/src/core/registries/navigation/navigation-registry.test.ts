@@ -101,6 +101,20 @@ describe("createNavigationRegistry", () => {
     expect(calls.map((entry) => entry.kind)).toEqual(["openResource", "openView"]);
   });
 
+  test("dispatches a public page target through the page location controller", async () => {
+    const { dispatcher, calls } = createDispatcherCollector();
+    dispatcher.openPageTarget = (page) => {
+      calls.push({ kind: "openPageTarget", payload: page });
+      return page;
+    };
+    const navigation = createNavigationRegistry({ resolveDispatcher: () => dispatcher });
+    const page = { extensionId: "pstdio.extension-lab", kind: "page" as const, id: "lab" };
+
+    await navigation.openTarget({ kind: "page", page });
+
+    expect(calls).toEqual([{ kind: "openPageTarget", payload: { kind: "page", page } }]);
+  });
+
   test("compound dispatch validates every item before committing any item", async () => {
     const calls: string[] = [];
     const dispatcher: NavigationDispatcherContext = {

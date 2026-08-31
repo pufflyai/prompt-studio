@@ -19,7 +19,7 @@ import type { DashboardSessionSelectionPersistence } from "@/shared/app/session-
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
-import { setDashboardSidenavSelection, showDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
+import { setDashboardSidenavSelection, updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { registerDashboardViewRoute, registerResourceRoute } from "@/shared/workbench/route-helper";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
 import { openResourceSessionPreview } from "./session-auto-open";
@@ -240,7 +240,7 @@ export const createSessionsModule = (input: CreateSessionsModuleInput = {}) =>
             removeMatchingSidePanelPreview(ctx, resource);
             const session = findDashboardSession(resource.id);
             if (session) rememberDashboardSession(ctx, session);
-            showDashboardSidenav(ctx, { selectedNode: (session?.resource ?? resource).uri });
+            updateDashboardSidenav(ctx, { selectedNode: (session?.resource ?? resource).uri });
           } else {
             forgetDashboardSession(ctx);
             setDashboardSidenavSelection(ctx, undefined);

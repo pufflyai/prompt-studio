@@ -1,3 +1,4 @@
+import type { FileRendererSectionTarget, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { ContributionSource, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import type { ResourceRef } from "../resources/resource-registry";
 import { resolveUniqueWidgetId } from "./widget-id";
@@ -207,10 +208,14 @@ export type RegisteredPlaceholderContribution = Omit<PlaceholderContribution, "p
 export interface WorkbenchWidgetPlacement {
   widgetId: string;
   contributionId: string;
+  // Owner-scoped composition uses this canonical identity. Widget IDs remain renderer keys
+  // and must never be parsed to recover placement ownership.
+  placementIdentity?: PlacementIdentity;
   viewId?: string;
   ownerId?: string;
   source?: ContributionSource;
   resource?: ResourceRef;
+  section?: FileRendererSectionTarget;
   resourceUri?: string;
   ownerResourceUri?: string;
   title?: string;
@@ -230,6 +235,7 @@ export interface WorkbenchPanelInstance {
   ownerId?: string;
   source?: ContributionSource;
   resource?: ResourceRef;
+  section?: FileRendererSectionTarget;
   resourceUri?: string;
   ownerResourceUri?: string;
   title?: string;

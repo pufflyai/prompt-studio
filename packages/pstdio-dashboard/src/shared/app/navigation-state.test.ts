@@ -37,6 +37,57 @@ describe("resolveDashboardLayoutPersistenceScope", () => {
 });
 
 describe("selectDashboardNavigationResource", () => {
+  test("leaves a public page when legacy resource navigation is committed", () => {
+    const workbench = createWorkbenchCore();
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.layout.registerPanel({ id: "start", title: "Start", region: "main", rendererId: "test" });
+    workbench.layout.registerPanel({ id: "sidenav", title: "Sidenav", region: "sidenav", rendererId: "test" });
+    workbench.views.registerView({ id: "start", panelId: "start" });
+    workbench.views.registerView({ id: "sidenav", panelId: "sidenav" });
+    workbench.modePlacements.registerPlacement({
+      id: "dashboard.sidenav.project",
+      ref: { extensionId: "pstdio", kind: "placement", id: "sidenav-project" },
+      modeId: "project",
+      item: { kind: "view", viewId: "sidenav" },
+      region: "sidenav",
+      required: true,
+    });
+    workbench.pages.registerPage({
+      id: "start",
+      ref: { extensionId: "pstdio", kind: "page", id: "start" },
+      title: "Start",
+      path: "",
+      modeId: "project",
+      slots: [{ id: "content", role: "primary", region: "main", viewId: "start" }],
+    });
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    workbench.pageLocations.boot("project-1");
+
+    selectDashboardNavigationResource(
+      workbench,
+      {
+        kind: "ticket",
+        uri: "dashboard-workbench://ticket/ticket-1",
+        id: "ticket-1",
+        label: "PS-1 Navigation",
+      },
+      { modeId: "project" },
+    );
+
+    expect(workbench.pages.store.getState().activePageId).toBeUndefined();
+    expect(workbench.layout.getLayout().regions.sidenav.widgets).toEqual([
+      expect.objectContaining({
+        contributionId: "sidenav",
+        placementIdentity: {
+          kind: "mode",
+          modeId: "project",
+          placementId: "dashboard.sidenav.project",
+          instanceKey: "default",
+        },
+      }),
+    ]);
+  });
+
   test("prepares resources opened by extension presenters", async () => {
     const workbench = createWorkbenchCore();
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });

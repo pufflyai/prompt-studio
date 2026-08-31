@@ -1,3 +1,4 @@
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -37,6 +38,22 @@ export const createStartModule = () =>
           ctx.breadcrumbs.clearItems();
           setDashboardSidenavSelection(ctx, undefined);
         },
+      });
+      return ctx.pages.registerPage({
+        id: dashboardViews.start.id,
+        ref: workbenchPages.start,
+        title: dashboardViews.start.label,
+        icon: dashboardViews.start.icon,
+        path: "",
+        modeId: "project",
+        slots: [
+          {
+            id: "content",
+            role: "primary",
+            region: "main",
+            viewId: dashboardViews.start.id,
+          },
+        ],
       });
     },
   }) satisfies WorkbenchModuleContribution;

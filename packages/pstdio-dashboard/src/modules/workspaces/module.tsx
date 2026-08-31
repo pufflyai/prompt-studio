@@ -6,7 +6,7 @@ import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
-import { setDashboardSidenavSelection, showDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
+import { setDashboardSidenavSelection, updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerDashboardViewRoute, registerResourceRoute } from "@/shared/workbench/route-helper";
@@ -318,7 +318,7 @@ export const createWorkspacesModule = () =>
         title: (resource) => resource.label ?? "Workspace",
         beforeOpen: ({ resource }) => {
           setResourceBreadcrumb(ctx, resource);
-          showDashboardSidenav(ctx, { selectedNode: null });
+          updateDashboardSidenav(ctx, { selectedNode: null });
         },
         afterOpen: ({ resource }) => {
           ensureWorkspaceTerminalResource(ctx, resource);

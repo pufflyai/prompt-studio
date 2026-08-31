@@ -209,6 +209,11 @@ const WorkbenchRegionTabCloseButton = (props: {
       onClick={(event) => {
         event.stopPropagation();
         if (disabled) return;
+        const identity = placement.placementIdentity;
+        if (identity && identity.kind !== "shell") {
+          workbench.pageLocations.closePlacement(identity);
+          return;
+        }
         workbench.layout.closePanel(placement.widgetId);
       }}
     />

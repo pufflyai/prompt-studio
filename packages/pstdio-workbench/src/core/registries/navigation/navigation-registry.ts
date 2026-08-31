@@ -1,3 +1,4 @@
+import type { NavigationTargetPage as SdkNavigationTargetPage } from "@pstdio/sdk/extensions";
 import {
   type ContributionMetadata,
   normalizeContributionMetadata,
@@ -21,6 +22,8 @@ export interface NavigationTargetPanel {
   input?: OpenWorkbenchPanelInput;
 }
 
+export type NavigationTargetPage = SdkNavigationTargetPage;
+
 export interface NavigationTargetView {
   kind: "view";
   viewId: string;
@@ -39,6 +42,7 @@ export interface NavigationTargetHref {
 }
 
 export type NavigationTargetItem =
+  | NavigationTargetPage
   | NavigationTargetResource
   | NavigationTargetView
   | NavigationTargetPanel
@@ -81,6 +85,7 @@ export interface NavigationDispatcherContext {
   createCheckpoint?(): undefined | (() => void);
   openResource(resource: ResourceRef, input?: OpenResourceInput): Promise<unknown>;
   openPanel(panelId: string, input?: OpenWorkbenchPanelInput): unknown;
+  openPageTarget?(target: NavigationTargetPage): unknown;
   openView(viewId: string, input?: OpenWorkbenchViewInput): Promise<unknown> | unknown;
   executeCommand(commandId: string, args?: unknown): Promise<unknown> | unknown;
   openHref?(href: string): Promise<unknown> | unknown;
@@ -118,6 +123,10 @@ const noDispatcher = (): NavigationDispatcherContext => {
 };
 
 const dispatchItem = async (target: NavigationTargetItem, dispatcher: NavigationDispatcherContext) => {
+  if (target.kind === "page") {
+    if (!dispatcher.openPageTarget) throw new Error("navigation.openTarget: page target dispatcher is not configured");
+    return dispatcher.openPageTarget(target);
+  }
   if (target.kind === "resource") return dispatcher.openResource(target.resource, target.input);
   if (target.kind === "view") return dispatcher.openView(target.viewId, target.input);
   if (target.kind === "panel") return dispatcher.openPanel(target.panelId, target.input);

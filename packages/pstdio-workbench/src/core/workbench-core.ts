@@ -1,3 +1,4 @@
+import { type PageRef, workbenchPages } from "@pstdio/sdk/extensions";
 import {
   createWorkbenchBreadcrumbController,
   type WorkbenchBreadcrumbController,
@@ -22,6 +23,17 @@ import {
   type WorkbenchLastResourceController,
 } from "./controllers/last-resource/last-resource-controller";
 import { createWorkbenchNavigator, type WorkbenchNavigator } from "./controllers/navigator/workbench-navigator";
+import {
+  createWorkbenchPageLocationController,
+  type WorkbenchPageLocationBrowser,
+  type WorkbenchPageLocationController,
+  type WorkbenchPageLocationPersistence,
+} from "./controllers/page-location/page-location-controller";
+import {
+  createMemoryWorkbenchPageLocationBrowser,
+  createMemoryWorkbenchPageLocationPersistence,
+} from "./controllers/page-location/page-location-memory";
+import { createLiveWorkbenchPageRegistry, defaultPageResourceCodec } from "./controllers/page-runtime/page-runtime";
 import {
   createWorkbenchPanelsController,
   type WorkbenchPanelsController,
@@ -56,15 +68,21 @@ import {
   type OpenWorkbenchPanelInput,
   type WorkbenchLayout,
   type WorkbenchRegion,
+  type WorkbenchWidgetPlacement,
 } from "./registries/layout/layout-model";
 import { getActiveLocationPlacement } from "./registries/layout/layout-operations";
 import { createMenuRegistry, type MenuRegistry } from "./registries/menus/menu-registry";
+import {
+  createWorkbenchModePlacementRegistry,
+  type WorkbenchModePlacementRegistry,
+} from "./registries/modes/mode-placement-registry";
 import { createWorkbenchModeRegistry, type WorkbenchModeRegistry } from "./registries/modes/mode-registry";
 import { createNavigationRegistry, type NavigationRegistry } from "./registries/navigation/navigation-registry";
 import {
   createNotificationRegistry,
   type NotificationRegistry,
 } from "./registries/notifications/notification-registry";
+import type { WorkbenchPageRegistry, WorkbenchPageResourceCodec } from "./registries/pages/page-registry";
 import {
   createPreferenceRegistry,
   type PreferencePersistenceAdapter,
@@ -146,9 +164,12 @@ export interface WorkbenchCoreContributionContext {
   lastResource: WorkbenchLastResourceController;
   layout: WorkbenchModuleLayoutModel;
   modes: WorkbenchModeRegistry;
+  modePlacements: WorkbenchModePlacementRegistry;
   navigation: NavigationRegistry;
   navigator: WorkbenchNavigator;
   notifications: NotificationRegistry;
+  pageLocations: WorkbenchPageLocationController;
+  pages: WorkbenchPageRegistry<WorkbenchWidgetPlacement>;
   panels: WorkbenchPanelsController;
   preferences: PreferenceRegistry;
   renderers: WorkbenchRenderers;
@@ -208,6 +229,9 @@ export interface CreateWorkbenchCoreInput {
   // Defaults to keeping detached anchors; apps wire this once scoped providers exist.
   isInScope?: (resource: ResourceRef, primary: ResourceRef | undefined) => boolean;
   layoutPersistence?: LayoutPersistenceAdapter;
+  pageLocationBrowser?: WorkbenchPageLocationBrowser;
+  pageLocationPersistence?: WorkbenchPageLocationPersistence;
+  pageResources?: WorkbenchPageResourceCodec;
   persistence?: WorkbenchPersistenceAdapter;
   historyPersistence?: WorkbenchHistoryPersistence;
   preferencePersistence?: PreferencePersistenceAdapter;
@@ -218,6 +242,7 @@ export interface CreateWorkbenchCoreInput {
   sidePanelPersistence?: WorkbenchSidePanelPersistenceAdapter;
   initialSidePanelMode?: WorkbenchSidePanelMode;
   renderers?: CreateWorkbenchRendererRegistryInput;
+  startPage?: PageRef;
 }
 
 type WorkbenchModuleActivationResult = Disposable | readonly Disposable[] | undefined;
@@ -356,6 +381,11 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
         ),
       onDidChangeActive: (listener) => track(core.modes.onDidChangeActive(listener)),
     },
+    modePlacements: {
+      ...core.modePlacements,
+      registerPlacement: (placement) => track(core.modePlacements.registerPlacement(placement)),
+      onDidChange: (listener) => track(core.modePlacements.onDidChange(listener)),
+    },
     navigation: {
       ...core.navigation,
       registerNavigator: (navigator, metadata) =>
@@ -366,6 +396,10 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
     notifications: {
       ...core.notifications,
       show: (notification, metadata) => core.notifications.show(notification, withModuleMetadata(input, metadata)),
+    },
+    pages: {
+      ...core.pages,
+      registerPage: (page) => track(core.pages.registerPage(page)),
     },
     panels: {
       ...core.panels,
@@ -528,6 +562,11 @@ const createCoreNavigationRegistry = (
         canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
         openResource: (resource, openInput) => core.resources.openResource(resource, openInput),
         openPanel,
+        openPageTarget: (target) => {
+          const result = core.pageLocations.navigate(target);
+          if (!result.ok) throw new Error(result.diagnostic.message);
+          return result;
+        },
         openView: (viewId, openInput) => core.views.openView(viewId, openInput),
         executeCommand: (commandId, args) => core.commands.executeCommand(commandId, args),
         openHref: (href) => globalThis.open(href, "_blank", "noopener,noreferrer"),
@@ -585,6 +624,8 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     return instance;
   };
   const views = createViewRegistry({ getPanel: layout.getPanel, openPanel });
+  const pageResources = input.pageResources ?? defaultPageResourceCodec;
+  const modePlacements = createWorkbenchModePlacementRegistry({ views });
   const statusBar = createStatusBarRegistry({ hasView: (viewId) => Boolean(views.getView(viewId)) });
 
   const core: WorkbenchCore = {
@@ -609,8 +650,11 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     }),
     layout,
     modes: undefined as unknown as WorkbenchModeRegistry,
+    modePlacements,
     navigator: undefined as unknown as WorkbenchNavigator,
     notifications: createNotificationRegistry(),
+    pageLocations: undefined as unknown as WorkbenchPageLocationController,
+    pages: undefined as unknown as WorkbenchPageRegistry<WorkbenchWidgetPlacement>,
     navigation: createCoreNavigationRegistry(() => core, openPanel),
     panels: createWorkbenchPanelsController({
       defaultOpenByRegionId: input.defaultPanelOpenByRegionId,
@@ -719,6 +763,19 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   core.modes = createWorkbenchModeRegistry({
     establishLocation: (instanceId) => establishLocation(instanceId),
     resolveContext: () => core,
+  });
+  core.pages = createLiveWorkbenchPageRegistry({
+    layout: core.layout,
+    modePlacements: core.modePlacements,
+    modes: core.modes,
+    views: core.views,
+    resources: pageResources,
+  });
+  core.pageLocations = createWorkbenchPageLocationController({
+    registry: core.pages,
+    browser: input.pageLocationBrowser ?? createMemoryWorkbenchPageLocationBrowser(),
+    persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
+    startPage: input.startPage ?? workbenchPages.start,
   });
   core.navigator = createWorkbenchNavigator({
     modes: core.modes,

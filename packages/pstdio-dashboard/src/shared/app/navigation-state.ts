@@ -100,7 +100,10 @@ export const registerDashboardNavigator = (ctx: WorkbenchModuleContext) => {
     getProjectId: () => getDashboardSelectedProjectId(ctx),
     getSelectedResource: () => getDashboardSelectedResource(ctx),
     applySelection: (resource) => applyDashboardNavigationSelection(ctx, resource),
-    applyScope: () => syncDashboardLayoutPersistenceScope(ctx),
+    applyScope: (commit) => {
+      if (commit.modeId) ctx.pageLocations.leavePage(commit.modeId);
+      syncDashboardLayoutPersistenceScope(ctx);
+    },
     // The trail is a function of the committed resource, so it is rebuilt on every
     // commit. Presenters must not be the only writers: replaying a context whose
     // location placement already exists presents nothing and would keep a stale trail.

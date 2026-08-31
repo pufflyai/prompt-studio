@@ -94,7 +94,7 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
 
   await page.keyboard.press("Escape");
   await expect(settings).not.toBeVisible();
-  await page.getByRole("option", { name: "Lab", exact: true }).click();
+  await page.getByRole("option", { name: "Lab mode", exact: true }).click();
   await page.getByRole("tab", { name: "Workflow status demo", exact: true }).click();
   await expect(page.getByTestId("board-column-idea")).toContainText("Concept", { timeout: 30_000 });
 

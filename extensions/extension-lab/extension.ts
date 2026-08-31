@@ -45,6 +45,7 @@ const extension = defineExtension({
   resourceViews: labUi.resourceViews,
   viewMenus: labUi.viewMenus,
   placements: labUi.placements,
+  pages: labUi.pages,
   navigationItems: labUi.navigationItems,
   statusBarItems: labUi.statusBarItems,
   statuses: [labWorkflowStatuses],
