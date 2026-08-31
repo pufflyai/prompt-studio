@@ -1,5 +1,16 @@
 # harness-claude-code
 
+## 0.3.10
+
+_2026-08-31_
+
+### Patch Changes
+
+- c84459e: Define one contribution-ID grammar (lowercase kebab-case segments separated by dots), enforce it as an error in `pst extensions check`, resolve host-published refs without owner prefixing for every contribution kind, rename first-party ids to the grammar (extension API 1.0.0-alpha.6), and migrate stored automation scopes, runs, schedule and skill preferences to the renamed ids.
+- 01911e8: Add typed workbench pages, panels, locations, regions, and navigation validation.
+- 3bd3d7e: Support running pstdio from a source checkout on Windows: `.cmd` command wrappers, safe resolution and cmd.exe argument escaping for npm `.cmd`/`.bat`/`.ps1` shims, copied (not symlinked) extension files in the runtime cache, and hidden console windows.
+- Updated internal dependencies: `@pstdio/sdk@0.22.0`
+
 ## 0.3.9
 
 _2026-08-27_

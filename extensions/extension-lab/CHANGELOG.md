@@ -1,5 +1,20 @@
 # extension-lab
 
+## 0.9.0
+
+_2026-08-31_
+
+### Minor Changes
+
+- c84459e: Define one contribution-ID grammar (lowercase kebab-case segments separated by dots), enforce it as an error in `pst extensions check`, resolve host-published refs without owner prefixing for every contribution kind, rename first-party ids to the grammar (extension API 1.0.0-alpha.6), and migrate stored automation scopes, runs, schedule and skill preferences to the renamed ids.
+
+### Patch Changes
+
+- 19ee208: Make grouped collection displays and board rules extension-owned instead of workspace and status special cases.
+- 8838c64: Add project-owned file and resource capabilities to dashboard extension webviews.
+- 01911e8: Add typed workbench pages, panels, locations, regions, and navigation validation.
+- Updated internal dependencies: `@pstdio/sdk@0.22.0`, `@pstdio/ui@0.22.0`
+
 ## 0.8.3
 
 _2026-08-27_
