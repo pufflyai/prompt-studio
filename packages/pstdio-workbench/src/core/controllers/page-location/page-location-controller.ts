@@ -3,6 +3,7 @@ import type { WorkbenchPageRegistry, WorkbenchPageRuntimeState } from "../../reg
 import {
   getWorkbenchPageRegistryInternals,
   type WorkbenchPageCloseResolution,
+  type WorkbenchPageRegistryInternals,
 } from "../../registries/pages/page-registry-internals";
 import { isWorkbenchProjectUrl, parseWorkbenchPageUrl, serializeWorkbenchPageUrl } from "./page-location-codec";
 import {
@@ -69,6 +70,15 @@ interface ResolvedLocation {
   open?: NavigationTargetPage["open"];
   pageStates?: Readonly<Record<string, WorkbenchPageRuntimeState>>;
 }
+
+const closeModePlacement = <Value>(
+  internals: WorkbenchPageRegistryInternals<Value>,
+  location: PageLocation,
+  identity: Extract<PlacementIdentity, { kind: "mode" }>,
+) => {
+  internals.closePanel(identity);
+  return { ok: true, location } as const;
+};
 
 const isHistoryState = (value: unknown): value is WorkbenchPageHistoryState => {
   if (!value || typeof value !== "object") return false;
@@ -278,6 +288,7 @@ export const createWorkbenchPageLocationController = <Value>(
       return fail("navigation", new Error("Cannot close a page placement without an active location"));
     }
     try {
+      if (identity.kind === "mode") return closeModePlacement(internals, current.location, identity);
       const resolution = internals.resolveClosePlacement(identity);
       return resolution.kind === "parent"
         ? closeToParent(current.projectId, current.location, resolution)

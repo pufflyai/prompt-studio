@@ -1,3 +1,4 @@
+import { type PageRef, workbenchPages } from "@pstdio/sdk/extensions";
 import {
   createWorkbenchBreadcrumbController,
   type WorkbenchBreadcrumbController,
@@ -22,7 +23,21 @@ import {
   type WorkbenchLastResourceController,
 } from "./controllers/last-resource/last-resource-controller";
 import { createWorkbenchNavigator, type WorkbenchNavigator } from "./controllers/navigator/workbench-navigator";
+import {
+  createWorkbenchPageLocationController,
+  type WorkbenchPageLocationBrowser,
+  type WorkbenchPageLocationController,
+  type WorkbenchPageLocationPersistence,
+} from "./controllers/page-location/page-location-controller";
+import {
+  createMemoryWorkbenchPageLocationBrowser,
+  createMemoryWorkbenchPageLocationPersistence,
+} from "./controllers/page-location/page-location-memory";
 import { createLiveWorkbenchPageRegistry, defaultPageResourceCodec } from "./controllers/page-runtime/page-runtime";
+import {
+  createWorkbenchPanelTargetController,
+  type WorkbenchPanelTargetController,
+} from "./controllers/panel-target/panel-target-controller";
 import {
   createWorkbenchPanelsController,
   type WorkbenchPanelsController,
@@ -158,7 +173,9 @@ export interface WorkbenchCoreContributionContext {
   navigation: NavigationRegistry;
   navigator: WorkbenchNavigator;
   notifications: NotificationRegistry;
+  pageLocations: WorkbenchPageLocationController;
   pages: WorkbenchPageRegistry<WorkbenchWidgetPlacement>;
+  panelTargets: WorkbenchPanelTargetController;
   panels: WorkbenchPanelsController;
   preferences: PreferenceRegistry;
   renderers: WorkbenchRenderers;
@@ -218,6 +235,8 @@ export interface CreateWorkbenchCoreInput {
   // Defaults to keeping detached anchors; apps wire this once scoped providers exist.
   isInScope?: (resource: ResourceRef, primary: ResourceRef | undefined) => boolean;
   layoutPersistence?: LayoutPersistenceAdapter;
+  pageLocationBrowser?: WorkbenchPageLocationBrowser;
+  pageLocationPersistence?: WorkbenchPageLocationPersistence;
   pageResources?: WorkbenchPageResourceCodec;
   placementStatePersistence?: WorkbenchPlacementStatePersistence;
   persistence?: WorkbenchPersistenceAdapter;
@@ -230,6 +249,7 @@ export interface CreateWorkbenchCoreInput {
   sidePanelPersistence?: WorkbenchSidePanelPersistenceAdapter;
   initialSidePanelMode?: WorkbenchSidePanelMode;
   renderers?: CreateWorkbenchRendererRegistryInput;
+  startPage?: PageRef;
 }
 
 type WorkbenchModuleActivationResult = Disposable | readonly Disposable[] | undefined;
@@ -635,7 +655,9 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     modePlacements,
     navigator: undefined as unknown as WorkbenchNavigator,
     notifications: createNotificationRegistry(),
+    pageLocations: undefined as unknown as WorkbenchPageLocationController,
     pages: undefined as unknown as WorkbenchPageRegistry<WorkbenchWidgetPlacement>,
+    panelTargets: undefined as unknown as WorkbenchPanelTargetController,
     navigation: createCoreNavigationRegistry(() => core, openPanel),
     panels: createWorkbenchPanelsController({
       defaultOpenByRegionId: input.defaultPanelOpenByRegionId,
@@ -753,6 +775,13 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     resources: pageResources,
     placementStatePersistence: input.placementStatePersistence,
   });
+  core.pageLocations = createWorkbenchPageLocationController({
+    registry: core.pages,
+    browser: input.pageLocationBrowser ?? createMemoryWorkbenchPageLocationBrowser(),
+    persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
+    startPage: input.startPage ?? workbenchPages.start,
+  });
+  core.panelTargets = createWorkbenchPanelTargetController({ registry: core.pages });
   core.navigator = createWorkbenchNavigator({
     modes: core.modes,
     getSelectedResource: () => core.getPrimaryResource(),

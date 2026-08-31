@@ -48,6 +48,16 @@ const createRegistry = () => {
     resolveModePlacements: (modeId) => [
       placement({ kind: "mode", modeId, placementId: "shared", instanceKey: "default" }, `mode:${modeId}`),
     ],
+    closeModePlacement: ({ identity, current }) => {
+      if (identity.kind !== "mode") return current;
+      return current.filter(
+        (candidate) =>
+          candidate.identity.kind !== "mode" ||
+          candidate.identity.modeId !== identity.modeId ||
+          candidate.identity.placementId !== identity.placementId ||
+          candidate.identity.instanceKey !== identity.instanceKey,
+      );
+    },
     resolveModePanelTarget: () => {
       throw new Error("No mode panels are registered in this test");
     },
