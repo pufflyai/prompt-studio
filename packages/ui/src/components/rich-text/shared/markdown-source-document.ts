@@ -4,6 +4,7 @@ import type { Table, TableCell } from "mdast";
 import { parseMarkdownSource } from "./markdown-ast";
 import { exportLexicalToMarkdown } from "./markdown-export";
 import { importMarkdownToLexical } from "./markdown-import";
+import { collectMarkdownLinkChanges } from "./markdown-source-links";
 import type { MarkdownUrlResolver } from "./markdown-url";
 
 interface SourceMap {
@@ -274,7 +275,8 @@ const collectTableChanges = (source: string, baseline: string, current: string):
 const applyChanges = (source: string, sourceMap: SourceMap, baseline: string, current: string) => {
   if (baseline === current) return source;
 
-  const tableChanges = collectTableChanges(source, baseline, current);
+  const linkChanges = collectMarkdownLinkChanges(source, baseline, current);
+  const tableChanges = collectTableChanges(source, baseline, linkChanges.normalizedCurrent);
 
   // Lexical reports semantic Markdown but normalizes its spelling. Map those
   // semantic edits back onto the loaded source so unrelated syntax never moves.
@@ -284,6 +286,12 @@ const applyChanges = (source: string, sourceMap: SourceMap, baseline: string, cu
       end: mappedEnd(sourceMap, edit.end),
       replacement: withSourceLineEndings(edit.replacement, source),
     }))
+    .concat(
+      linkChanges.edits.map((edit) => ({
+        ...edit,
+        replacement: withSourceLineEndings(edit.replacement, source),
+      })),
+    )
     .concat(
       tableChanges.edits.map((edit) => ({
         ...edit,

@@ -115,6 +115,34 @@ describe("Markdown source document", () => {
     expect(result).toBe("**Format** this next to {{fds:text:EXAMPLE.REGULAR_INSEAM_SENTENCE}}.");
   });
 
+  test("replaces a whole reference link without leaving source delimiters", () => {
+    const markdown = [
+      "Use [the reference link][studio] without changing its definition.",
+      "",
+      '[studio]: <https://prompt.studio>  "Prompt Studio"',
+    ].join("\n");
+
+    const result = sourceRoundTrip(markdown, (editor) => {
+      editor.update(
+        () => {
+          const paragraph = $getRoot().getFirstChild();
+          if (!$isElementNode(paragraph)) return;
+          const link = paragraph.getChildren().find((node) => node.getType() === "markdown-link");
+          link?.replace($createTextNode("the renamed link"));
+        },
+        { discrete: true },
+      );
+    });
+
+    expect(result).toBe(
+      [
+        "Use the renamed link without changing its definition.",
+        "",
+        '[studio]: <https://prompt.studio>  "Prompt Studio"',
+      ].join("\n"),
+    );
+  });
+
   test("removes alternate emphasis markers without touching the next block", () => {
     const markdown = "__Format__ this.\n\n*Keep this marker*.";
 
