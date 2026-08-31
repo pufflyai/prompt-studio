@@ -6,11 +6,15 @@ import { createBrowserStorage } from "../../utils/browser-storage";
 interface TreeListOrderSnapshot {
   sectionOrder: string[];
   nodeOrderBySection: Record<string, string[]>;
+  sectionSlotById: Record<string, TreeListOrderSlot>;
 }
+
+type TreeListOrderSlot = "header" | "content" | "footer";
 
 interface TreeListOrderState extends TreeListOrderSnapshot {
   setSectionOrder: (nextSectionIds: string[]) => void;
   setNodeOrder: (sectionId: string, nextNodeIds: string[]) => void;
+  setSectionSlot: (sectionId: string, slot: TreeListOrderSlot) => void;
   resetSectionOrder: () => void;
   resetNodeOrder: (sectionId: string) => void;
   reset: () => void;
@@ -23,6 +27,7 @@ interface CreateTreeListOrderStoreOptions {
 const DEFAULT_SNAPSHOT: TreeListOrderSnapshot = {
   sectionOrder: [],
   nodeOrderBySection: {},
+  sectionSlotById: {},
 };
 
 const STORE_NAMESPACE = "pstdio/ui/tree-list-order";
@@ -43,6 +48,7 @@ const dedupe = (ids: string[]) => {
 const getPersistedSnapshot = (state: TreeListOrderState) => ({
   sectionOrder: state.sectionOrder,
   nodeOrderBySection: state.nodeOrderBySection,
+  sectionSlotById: state.sectionSlotById,
 });
 
 export const createTreeListOrderStore = (options: CreateTreeListOrderStoreOptions) =>
@@ -56,6 +62,8 @@ export const createTreeListOrderStore = (options: CreateTreeListOrderStoreOption
             ...state,
             nodeOrderBySection: { ...state.nodeOrderBySection, [sectionId]: dedupe(nextNodeIds) },
           })),
+        setSectionSlot: (sectionId, slot) =>
+          set((state) => ({ ...state, sectionSlotById: { ...state.sectionSlotById, [sectionId]: slot } })),
         resetSectionOrder: () => set((state) => ({ ...state, sectionOrder: [] })),
         resetNodeOrder: (sectionId) =>
           set((state) => {
@@ -89,4 +97,4 @@ export const useTreeListOrderStore = <T>(storageKey: string, selector: (state: T
   return useStore(store, selector);
 };
 
-export type { TreeListOrderSnapshot, TreeListOrderState };
+export type { TreeListOrderSlot, TreeListOrderSnapshot, TreeListOrderState };

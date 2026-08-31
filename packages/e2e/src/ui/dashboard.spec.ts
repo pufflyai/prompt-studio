@@ -3,6 +3,9 @@ import { expect, test } from "@playwright/test";
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 
+const navSwitchProjectButton = (page: import("@playwright/test").Page) =>
+  page.getByRole("region", { name: "Nav Chrome" }).getByRole("button", { name: "Switch project", exact: true });
+
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const res = await request.get(`${apiBase}/v1/projects`);
   const projects = (await res.json()) as { id: string }[];
@@ -103,7 +106,7 @@ test("dashboard keeps the project mode and blocks controls behind the project sw
   }, project.id);
   await page.goto("/");
 
-  const switchProject = page.getByRole("button", { name: "Switch project" });
+  const switchProject = navSwitchProjectButton(page);
   const search = page.getByRole("option", { name: "Search", exact: true });
   const notifications = page.getByRole("option", { name: "Notifications", exact: true });
   await expect(switchProject).toBeVisible();
@@ -229,7 +232,7 @@ test("project picker stays open when the background is clicked", async ({ page, 
   }, firstProject.id);
 
   await page.goto("/");
-  await page.getByRole("button", { name: "Switch project", exact: true }).click();
+  await navSwitchProjectButton(page).click();
 
   const picker = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search projects...") });
   await expect(picker).toBeVisible();
@@ -248,7 +251,7 @@ test("switching projects never reopens the picker while restoring the landing vi
 
   await page.goto("/");
   await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Switch project", exact: true }).click();
+  await navSwitchProjectButton(page).click();
 
   const picker = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search projects...") });
   await expect(picker).toBeVisible();
@@ -320,7 +323,7 @@ test("dashboard opens the start page for a selected project without a saved loca
 
   await page.goto("/");
 
-  await expect(page.getByRole("option", { name: "Start" })).toHaveCount(0);
+  await expect(page.getByRole("option", { name: "Start", exact: true })).toHaveCount(0);
   await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
   expect(
     await page.evaluate(

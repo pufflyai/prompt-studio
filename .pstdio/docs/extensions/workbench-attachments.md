@@ -41,14 +41,15 @@ href, or combine several targets.
 ```ts
 const ticketsNavigation = defineNavigationItem({
   id: "tickets",
-  slot: workbenchSlots.projectNavigation,
+  owner: workbenchModes.project,
+  slot: "content",
   label: "Tickets",
   action: { kind: "view", view: tickets.ref },
 });
 ```
 
-The built-in slots are exported from `workbenchSlots`. An optional `when` expression
-controls visibility.
+The owner is a typed mode or page ref. `header` and `footer` stay pinned, while `content` scrolls.
+An optional `when` expression controls visibility.
 
 ## Resource Slots
 

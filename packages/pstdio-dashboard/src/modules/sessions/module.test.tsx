@@ -6,7 +6,6 @@ import { getDashboardSelectedResource } from "@/shared/app/navigation-state";
 import { dashboardSelectedProjectIdContextKey, selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { getSidenavContributionSections } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { createSessionBubbleModule } from "./bubble/module";
 import { createSessionsModule } from "./module";
 
@@ -31,7 +30,13 @@ describe("createSessionsModule", () => {
     workbench.registerModule(createSessionsModule());
 
     const nodeIdsForContext = async (mode: string, resource?: typeof workspace) =>
-      (await getSidenavContributionSections(workbench, mode, resource ? { resource } : {}))
+      (
+        await workbench.navigationTrees.getSections(
+          { kind: "mode", id: mode, extensionId: "pstdio" },
+          "content",
+          resource ? { resource } : {},
+        )
+      )
         .flatMap((section) => section.nodes)
         .map((node) => node.id);
 
@@ -46,7 +51,9 @@ describe("createSessionsModule", () => {
 
     workbench.registerModule(createSessionsModule());
 
-    const sessionsNode = (await getSidenavContributionSections(workbench, "project"))
+    const sessionsNode = (
+      await workbench.navigationTrees.getSections({ kind: "mode", id: "project", extensionId: "pstdio" })
+    )
       .flatMap((section) => section.nodes)
       .find((node) => node.id === dashboardViews.sessions.id);
 

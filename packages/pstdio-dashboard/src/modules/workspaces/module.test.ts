@@ -7,7 +7,6 @@ import { syncDashboardLayoutPersistenceScope } from "@/shared/app/navigation-sta
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { getSidenavContributionSections } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "./module";
@@ -208,17 +207,20 @@ describe("createWorkspacesModule navigation", () => {
     workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
 
-    const nodeIds = (await getSidenavContributionSections(workbench, "project"))
+    const nodeIds = (
+      await workbench.navigationTrees.getSections({ kind: "mode", id: "project", extensionId: "pstdio" })
+    )
       .flatMap((section) => section.nodes)
       .map((node) => node.id);
-    const workspacesNode = (await getSidenavContributionSections(workbench, "project"))
+    const workspacesNode = (
+      await workbench.navigationTrees.getSections({ kind: "mode", id: "project", extensionId: "pstdio" })
+    )
       .flatMap((section) => section.nodes)
       .find((node) => node.id === dashboardViews.workspaces.id);
 
     expect(nodeIds).not.toContain("new-workspace");
     expect(workspacesNode).toMatchObject({
       commandId: dashboardCommandIds.openWorkspaces,
-      hiddenByDefault: true,
       actions: [
         expect.objectContaining({
           id: "new-workspace",
@@ -227,6 +229,7 @@ describe("createWorkspacesModule navigation", () => {
         }),
       ],
     });
+    expect(workspacesNode?.hiddenByDefault).toBeUndefined();
     expect(nodeIds).toContain(dashboardViews.workspaces.id);
   });
 });

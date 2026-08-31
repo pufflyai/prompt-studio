@@ -6,6 +6,8 @@ import type { ResourceRef, ViewHierarchyParent } from "./resources";
 
 export const dockedWorkbenchRegions = ["sidenav", "main", "secondary", "side"] as const;
 export type DockedWorkbenchRegion = (typeof dockedWorkbenchRegions)[number];
+export const extensionPanelRegions = ["main", "secondary", "side"] as const;
+export type ExtensionPanelRegion = (typeof extensionPanelRegions)[number];
 
 export type ResourceSurface = "primary" | "secondary" | "attached";
 export type ResourceSlotCardinality = "one" | "many";

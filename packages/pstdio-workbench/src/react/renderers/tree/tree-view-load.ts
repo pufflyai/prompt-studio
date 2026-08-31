@@ -6,15 +6,15 @@ const isUnregisteredTreeError = (trees: TreeRendererRegistry, treeId: string, er
   !trees.getTreeRenderer(treeId);
 
 export interface LoadedTreeData {
-  header: TreeNode[];
+  header: TreeViewSection[];
   body: TreeViewSection[];
-  footer: TreeNode[];
+  footer: TreeViewSection[];
 }
 
 const listTreeNodes = (data: LoadedTreeData) => [
-  ...data.header,
+  ...data.header.flatMap((section) => section.nodes),
   ...data.body.flatMap((section) => section.nodes),
-  ...data.footer,
+  ...data.footer.flatMap((section) => section.nodes),
 ];
 
 export const loadExpandedTreeChildren = async (

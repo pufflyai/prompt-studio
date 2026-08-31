@@ -36,6 +36,9 @@ export interface WorkbenchExtensionHostMenuRegistration
 export interface RegisterWorkbenchExtensionContributionsInput {
   createKeybindingWhenExpression?: (when: ExtensionKeybindingRecord["when"]) => string | undefined;
   createMenuWhenExpression?: WorkbenchExtensionMenuWhenBuilder;
+  createNavigationWhenExpression?: (
+    when: WorkbenchExtensionMetadata["navigationItems"][number]["when"],
+  ) => string | undefined;
   createWebviewHostCapabilities?: CreateBridgeWebviewHostCapabilities;
   createWebviewHostCapabilityOverrides?: CreateBridgeWebviewHostCapabilities;
   createWebviewProps?: CreateBridgeWebviewProps;

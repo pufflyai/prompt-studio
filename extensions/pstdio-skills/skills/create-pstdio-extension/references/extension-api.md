@@ -13,7 +13,7 @@ Every extension package needs a `package.json` next to its entry file:
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.7"
+    "pstdio": "1.0.0-alpha.8"
   },
   "private": true,
   "type": "module",
@@ -328,28 +328,28 @@ const ticketPage = definePage({
       region: "main",
       binding: { kind: ticketKind.ref, view: ticketEditor.ref },
     },
-    {
-      id: "files",
-      role: "auxiliary",
-      region: "sidenav",
-      binding: { kind: ticketKind.ref, view: ticketFiles.ref },
-      defaultOpen: true,
-      order: 10,
-    },
   ],
 });
 
 const ticketsNavigation = defineNavigationItem({
   id: "tickets",
-  slot: workbenchSlots.projectNavigation,
+  owner: workbenchModes.project,
+  slot: "content",
   label: "Tickets",
   action: { kind: "page", page: ticketsPage.ref },
 });
+
+const ticketFilesNavigation = defineNavigationTree({
+  id: "ticket-files",
+  owner: ticketPage.ref,
+  slot: "content",
+  view: ticketFiles.ref,
+});
 ```
 
-A bound, default-open auxiliary follows the page resource when its resource kind matches the primary binding. Use an explicit panel target for an auxiliary that opens a different resource.
+The ticket files tree is page-owned navigation. It appears below mode-owned navigation while Ticket is active and disappears when the user leaves that page.
 
-The Sidenav has no header and no tabs. Every active `sidenav` placement renders as an ordered vertical section. Mode and page sections can be visible together. Leaving the page removes only its sections; leaving the mode removes only that mode's sections. `sidenav-header` is not a valid region.
+The Sidenav has no panel header or tabs. It contains one composed tree with pinned `header` and `footer` slots and one scrolling `content` slot. Mode and page sections can be visible together. Leaving the page removes only its sections; leaving the mode removes its sections and the active page sections. Page slots cannot target `sidenav`.
 
 Page navigation uses canonical browser URLs and history. Target the page explicitly when opening a resource:
 
@@ -437,11 +437,12 @@ To navigate to a Workbench mode instead of a view, use a `kind: "command"` actio
 `workbenchCommands.switchMode` ref from `@pstdio/sdk/extensions`:
 
 ```ts
-import { defineNavigationItem, workbenchCommands, workbenchSlots } from "@pstdio/sdk/extensions";
+import { defineNavigationItem, workbenchCommands, workbenchModes } from "@pstdio/sdk/extensions";
 
 defineNavigationItem({
   id: "lab",
-  slot: workbenchSlots.projectNavigation,
+  owner: workbenchModes.project,
+  slot: "content",
   label: "Lab",
   icon: "flask-conical",
   action: {

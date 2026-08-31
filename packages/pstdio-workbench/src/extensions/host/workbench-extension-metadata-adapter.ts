@@ -194,7 +194,7 @@ const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtension
     const placements = metadata.placements.filter((placement) => metadataRefId(placement.mode) === mode.id);
     const panelRegions = [
       ...new Set(placements.flatMap((placement) => [placement.region, ...(placement.movableTo ?? [])])),
-    ].filter((region) => region !== "sidenav");
+    ];
     const modePanels = Object.fromEntries(
       placements.flatMap((placement) =>
         placement.item.kind === "view"

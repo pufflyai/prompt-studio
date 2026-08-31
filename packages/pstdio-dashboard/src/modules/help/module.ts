@@ -2,7 +2,7 @@ import type { TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } fr
 import { readRuntimeConfig } from "@/lib/api";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { dashboardHelpMenuPath } from "@/shared/app/menu-paths";
-import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
 
 const GITHUB_DOCS_URL = "https://github.com/pufflyai/prompt-studio";
 const DISCORD_URL = "https://discord.gg/3RxwUEk8fW";
@@ -38,12 +38,11 @@ const helpFooterNode = (): TreeNode => ({
 });
 
 const registerHelpSidenav = (ctx: WorkbenchModuleContext) =>
-  registerSidenavContribution(ctx, {
+  registerDashboardNavigationContribution(ctx, {
     id: "dashboard.help.footer",
     modes: ["*"],
-    order: 10,
-    region: "footer",
-    getFooterNodes: () => [helpFooterNode()],
+    slot: "footer",
+    getSections: () => [{ id: "navigation.footer", nodes: [helpFooterNode()] }],
   });
 
 export const createHelpModule = () =>

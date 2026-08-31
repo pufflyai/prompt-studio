@@ -281,13 +281,20 @@ export const createWorkbenchExtensionMetadata = (
   navigationItems: input.runtime.navigationItems.map((item) => ({
     id: item.id,
     extensionId: item.extensionId,
-    slot: normalizedRef(item.contribution.slot, item.extensionId),
+    owner: normalizedRef(item.contribution.owner, item.extensionId),
+    slot: item.contribution.slot ?? "content",
     label: item.contribution.label,
     icon: item.contribution.icon,
     group: item.contribution.group,
-    order: item.contribution.order,
     when: normalizeWhen(item.contribution.when, item.extensionId),
     action: normalizeTarget(item.contribution.action, item.extensionId),
+  })),
+  navigationTrees: input.runtime.navigationTrees.map((tree) => ({
+    id: tree.id,
+    extensionId: tree.extensionId,
+    owner: normalizedRef(tree.contribution.owner, tree.extensionId),
+    slot: tree.contribution.slot ?? "content",
+    view: normalizedRef(tree.contribution.view, tree.extensionId),
   })),
   statusBarItems: input.runtime.statusBarItems.map((item) => ({
     id: item.id,

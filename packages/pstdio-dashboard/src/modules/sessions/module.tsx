@@ -18,7 +18,7 @@ import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draf
 import type { DashboardSessionSelectionPersistence } from "@/shared/app/session-selection-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
 import { setDashboardSidenavSelection, updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { registerDashboardViewRoute, registerResourceRoute } from "@/shared/workbench/route-helper";
 import { createDashboardSessions, findDashboardSession } from "./data/dashboard-sessions";
@@ -112,16 +112,14 @@ const createSessionsNavigationNode = () => ({
 });
 
 const registerSidenavSessions = (ctx: WorkbenchModuleContext) => {
-  registerSidenavContribution(ctx, {
+  registerDashboardNavigationContribution(ctx, {
     id: "dashboard.sessions.project-nav",
     modes: ["*"],
-    order: 20,
-    getSections: () => [{ id: "dashboard.sessions", nodes: [createSessionsNavigationNode()] }],
+    getSections: () => [{ id: "navigation.root", nodes: [createSessionsNavigationNode()] }],
   });
-  registerSidenavContribution(ctx, {
+  registerDashboardNavigationContribution(ctx, {
     id: "dashboard.sessions.list",
     modes: ["sessions", "project"],
-    order: 100,
     getSections: (_workbench, input) => {
       const workspace = input.modeId === "project" && input.resource?.kind === "workspace" ? input.resource : undefined;
       if (input.modeId === "project" && !workspace) return [];

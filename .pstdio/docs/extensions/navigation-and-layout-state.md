@@ -127,7 +127,8 @@ Root tree placement is explicit:
 ~~~ts
 defineNavigationItem({
   id: "tickets",
-  slot: workbenchSlots.projectNavigation,
+  owner: workbenchModes.project,
+  slot: "content",
   label: "Tickets",
   action: { kind: "resource", resource: ticketsRoot },
 });
@@ -142,14 +143,6 @@ defineNavigationItem({
 3. Lab rejects resource kind ticket.
 4. The navigator resolves Lab's last resource or lab-root.
 5. One state transition activates Lab, the chosen resource, its breadcrumb, and its layout scope.
-
-### Animation to Sculpt
-
-1. Animation mode has blend-project A active.
-2. Sculpt mode also accepts blend-project.
-3. The resource remains A.
-4. The navigator rotates directly to A's Sculpt layout.
-5. Sculpt tools replace Animation defaults while valid user state is restored.
 
 ### Ticket Hierarchy
 

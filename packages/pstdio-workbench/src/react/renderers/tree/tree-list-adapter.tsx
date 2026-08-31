@@ -229,6 +229,7 @@ const toTreeListNode = (
 
   const treeNode: TreeListNode = {
     id: node.id,
+    moveScope: node.moveScope,
     label: node.label,
     description: node.description,
     icon: resolveTreeNodeIcon(node),
@@ -273,6 +274,7 @@ export const toTreeListSection = (
 
   return {
     id: section.id,
+    moveScope: section.moveScope,
     label: section.label,
     actions: createTreeActionItems({
       actions: section.actions,

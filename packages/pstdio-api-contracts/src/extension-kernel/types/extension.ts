@@ -30,6 +30,7 @@ import type { PackageAssetDescriptor } from "./resources";
 import type { StatusBarItemContribution, StatusContribution } from "./statuses";
 import type {
   NavigationItemContribution,
+  NavigationTreeContribution,
   PlacementContribution,
   ViewContribution,
   ViewMenuContribution,
@@ -38,7 +39,7 @@ import type {
 /** Current host extension API version. `engines.pstdio` in package.json is a semver range checked against this. */
 // While the API is unstable the version carries an `-alpha.N` suffix and extensions must
 // declare it exactly. Bump the alpha in the same change that breaks an extension contract.
-export const EXTENSION_API_VERSION = "1.0.0-alpha.7";
+export const EXTENSION_API_VERSION = "1.0.0-alpha.8";
 
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema
   ? ParamsOf<TSchema>
@@ -234,6 +235,7 @@ export interface UiContributions {
   viewMenus?: readonly ViewMenuContribution[];
   placements?: readonly PlacementContribution[];
   navigationItems?: readonly NavigationItemContribution[];
+  navigationTrees?: readonly NavigationTreeContribution[];
   statusBarItems?: readonly StatusBarItemContribution[];
   statuses?: readonly StatusContribution[];
   modes?: readonly ModeContribution[];

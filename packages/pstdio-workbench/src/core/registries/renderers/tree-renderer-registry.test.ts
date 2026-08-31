@@ -15,7 +15,7 @@ const createRegistry = (input: { persistence?: PersistedTreeRendererStates } = {
 };
 
 describe("createTreeRendererRegistry", () => {
-  test("registers tree renderers and delegates body/footer/children loading to the contribution", async () => {
+  test("registers tree renderers and delegates header/body/footer/children loading to the contribution", async () => {
     const { trees } = createRegistry();
 
     trees.registerTreeRenderer({
@@ -34,20 +34,26 @@ describe("createTreeRendererRegistry", () => {
           ],
         },
       ],
-      getFooter: async () => [{ id: "help", label: "Help" }],
+      getHeader: async () => [{ id: "project", nodes: [{ id: "project-picker", label: "Project" }] }],
+      getFooter: async () => [{ id: "help", nodes: [{ id: "help-link", label: "Help" }] }],
       getChildren: async (node) => [{ id: `${node.id}:log`, label: "Log" }],
     });
 
     await expect(trees.getBody("sessions.tree")).resolves.toMatchObject([
       { id: "active", nodes: [{ id: "s1", label: "Session 1" }] },
     ]);
-    await expect(trees.getFooter("sessions.tree")).resolves.toEqual([{ id: "help", label: "Help" }]);
+    await expect(trees.getHeader("sessions.tree")).resolves.toEqual([
+      { id: "project", nodes: [{ id: "project-picker", label: "Project" }] },
+    ]);
+    await expect(trees.getFooter("sessions.tree")).resolves.toEqual([
+      { id: "help", nodes: [{ id: "help-link", label: "Help" }] },
+    ]);
     await expect(trees.getChildren("sessions.tree", { id: "s1", label: "Session 1" })).resolves.toMatchObject([
       { id: "s1:log", label: "Log" },
     ]);
   });
 
-  test("returns an empty footer when getFooter is not provided", async () => {
+  test("returns empty pinned slots when their loaders are not provided", async () => {
     const { trees } = createRegistry();
 
     trees.registerTreeRenderer({
@@ -57,6 +63,7 @@ describe("createTreeRendererRegistry", () => {
       getChildren: () => [],
     });
 
+    await expect(trees.getHeader("settings.tree")).resolves.toEqual([]);
     await expect(trees.getFooter("settings.tree")).resolves.toEqual([]);
   });
 

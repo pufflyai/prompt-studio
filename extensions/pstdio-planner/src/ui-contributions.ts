@@ -1,6 +1,7 @@
 import type { ViewRef } from "@pstdio/sdk/extensions";
 import {
   defineNavigationItem,
+  defineNavigationTree,
   definePage,
   defineResourceView,
   defineSettingsPanel,
@@ -41,7 +42,6 @@ export const plannerSettingsSection = defineSettingsSection({
 });
 
 const ticketPrimary = resourceSlotRef(ticketResourceKind.ref, "primary");
-const ticketNavigation = resourceSlotRef(ticketResourceKind.ref, "navigation");
 
 const createPlannerSettingsViews = (baseUrl: string) => ({
   tagSettings: defineView({
@@ -56,7 +56,7 @@ const createPlannerSettingsViews = (baseUrl: string) => ({
   }),
 });
 
-const createTicketPages = (tickets: ViewRef, editor: ViewRef, files: ViewRef) => {
+const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
   const ticketsPage = definePage({
     id: "tickets",
     title: l10n("kanbanRenderers.tickets.title", "Tickets"),
@@ -85,14 +85,6 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef, files: ViewRef) =>
         role: "primary",
         region: "main",
         binding: { kind: ticketResourceKind.ref, view: editor },
-      },
-      {
-        id: "files",
-        role: "auxiliary",
-        region: "sidenav",
-        binding: { kind: ticketResourceKind.ref, view: files },
-        defaultOpen: true,
-        order: 10,
       },
     ],
   });
@@ -239,7 +231,7 @@ export const createPlannerUi = (baseUrl: string) => {
       emptyTitle: l10n("controls.ticketProperties.emptyTitle", "No ticket selected"),
     },
   });
-  const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref, files.ref);
+  const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref);
   return {
     views: [tickets, editor, files, properties, tagSettings],
     pages: [ticketsPage, ticketDetailPage],
@@ -249,12 +241,6 @@ export const createPlannerUi = (baseUrl: string) => {
         resourceKind: ticketResourceKind.ref,
         slot: ticketPrimary,
         view: editor.ref,
-      }),
-      defineResourceView({
-        id: "ticket-files",
-        resourceKind: ticketResourceKind.ref,
-        slot: ticketNavigation,
-        view: files.ref,
       }),
     ],
     viewMenus: [
@@ -268,12 +254,20 @@ export const createPlannerUi = (baseUrl: string) => {
     navigationItems: [
       defineNavigationItem({
         id: "tickets",
-        slot: workbenchSlots.projectNavigation,
+        owner: workbenchModes.project,
+        slot: "content",
         label: l10n("kanbanRenderers.tickets.title", "Tickets"),
         icon: "square-kanban",
         group: "",
-        order: -100,
         action: { kind: "page", page: ticketsPage.ref },
+      }),
+    ],
+    navigationTrees: [
+      defineNavigationTree({
+        id: "ticket-files",
+        owner: ticketDetailPage.ref,
+        slot: "content",
+        view: files.ref,
       }),
     ],
     settingsPanels: [

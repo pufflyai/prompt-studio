@@ -81,6 +81,16 @@ describe("filterVisibleSections", () => {
     const result = filterVisibleSections(nested, {}, { "child-b": "hidden" });
     expect(result[0].nodes[0].children?.map((child) => child.id)).toEqual(["child-a"]);
   });
+
+  test("drops a section when every row is hidden", () => {
+    expect(
+      filterVisibleSections(
+        [{ id: "lab", label: "Lab", nodes: [{ id: "lab.page", label: "Lab" }] }],
+        {},
+        { "lab.page": "hidden" },
+      ),
+    ).toEqual([]);
+  });
 });
 
 describe("filterVisibleNodes", () => {
@@ -109,9 +119,9 @@ describe("buildTreeVisibilityMenuActions", () => {
   test("lists header rows, body categories, and footer rows that opt in via canHide", () => {
     const actions = buildTreeVisibilityMenuActions(
       {
-        headerNodes: [{ id: "search", label: "Search", canHide: true }],
+        headerSections: [{ id: "header", nodes: [{ id: "search", label: "Search", canHide: true }] }],
         sections,
-        footerNodes: [{ id: "help", label: "Help", canHide: true }],
+        footerSections: [{ id: "footer", nodes: [{ id: "help", label: "Help", canHide: true }] }],
       },
       {},
       {},
@@ -135,7 +145,7 @@ describe("buildTreeVisibilityMenuActions", () => {
   test("omits items that do not opt in — leaf sub-items are never hideable", () => {
     const actions = buildTreeVisibilityMenuActions(
       {
-        headerNodes: [{ id: "fixed", label: "Fixed" }],
+        headerSections: [{ id: "header", nodes: [{ id: "fixed", label: "Fixed" }] }],
         sections: [
           {
             id: "files",
@@ -161,7 +171,7 @@ describe("buildTreeVisibilityMenuActions", () => {
   test("returns no menu actions when no items can be hidden", () => {
     const actions = buildTreeVisibilityMenuActions(
       {
-        headerNodes: [{ id: "fixed", label: "Fixed" }],
+        headerSections: [{ id: "header", nodes: [{ id: "fixed", label: "Fixed" }] }],
         sections: [
           {
             id: "files",
@@ -172,7 +182,7 @@ describe("buildTreeVisibilityMenuActions", () => {
             ],
           },
         ],
-        footerNodes: [{ id: "status", label: "Status" }],
+        footerSections: [{ id: "footer", nodes: [{ id: "status", label: "Status" }] }],
       },
       {},
       {},
@@ -219,9 +229,9 @@ describe("buildTreeVisibilityMenuActions", () => {
     const toggled: string[] = [];
     const actions = buildTreeVisibilityMenuActions(
       {
-        headerNodes: [{ id: "search", label: "Search", canHide: true }],
+        headerSections: [{ id: "header", nodes: [{ id: "search", label: "Search", canHide: true }] }],
         sections: [],
-        footerNodes: [{ id: "help", label: "Help", canHide: true }],
+        footerSections: [{ id: "footer", nodes: [{ id: "help", label: "Help", canHide: true }] }],
       },
       {},
       {},

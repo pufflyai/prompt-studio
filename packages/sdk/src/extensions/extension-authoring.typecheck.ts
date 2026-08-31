@@ -24,7 +24,7 @@ import {
   params,
   projectSlots,
   resourceSlotRef,
-  workbenchSlots,
+  workbenchModes,
   workspaceSlots,
 } from "./index";
 
@@ -112,6 +112,17 @@ const extension = defineExtension({
 });
 
 void extension;
+
+// @ts-expect-error extension modes do not own the composed Sidenav panel
+defineMode({ id: "invalid-sidenav", label: "Invalid", regions: ["sidenav"] });
+
+definePlacement({
+  id: "invalid-sidenav",
+  mode: workbenchModes.project,
+  item: { kind: "view", view: { kind: "view", id: "invalid" } },
+  // @ts-expect-error extension placements cannot create another Sidenav panel
+  region: "sidenav",
+});
 
 // @ts-expect-error alpha.4 contributions use arrays with explicit local ids
 defineExtension({ commands: { legacy: { title: "Legacy", run: async () => undefined } } });
@@ -251,7 +262,8 @@ const compositionExtension = defineExtension({
   navigationItems: [
     defineNavigationItem({
       id: "tickets-root",
-      slot: workbenchSlots.projectNavigation,
+      owner: workbenchModes.project,
+      slot: "content",
       label: "Tickets",
       action: { kind: "resource", resource: { type: "ticket", id: "root" } },
     }),

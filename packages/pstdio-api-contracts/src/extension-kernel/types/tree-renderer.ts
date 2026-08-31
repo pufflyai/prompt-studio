@@ -94,9 +94,10 @@ export interface TreeViewSection {
 export interface TreeRendererContribution extends RendererContributionBase {
   searchable?: boolean;
   searchPlaceholder?: Localizable<string>;
+  header?: RendererCallback<TreeRendererQueryParams, TreeViewSection[]>;
   body: RendererCallback<TreeRendererQueryParams, TreeViewSection[]>;
   children?: RendererCallback<TreeRendererChildrenParams, TreeNode[]>;
-  footer?: RendererCallback<TreeRendererQueryParams, TreeNode[]>;
+  footer?: RendererCallback<TreeRendererQueryParams, TreeViewSection[]>;
   defaultExpandedSectionIds?: string[];
   defaultExpandedNodeIds?: string[];
 }

@@ -5,7 +5,6 @@ import {
   SETTINGS_RESOURCE_KIND,
   WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
 } from "@pstdio/workbench/react";
-import { getSidenavContributionFooterNodes } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { createSettingsModule } from "./module";
 
 const collectNodeLabels = (sections: Awaited<ReturnType<typeof buildSettingsTreeBody>>) => {
@@ -40,12 +39,15 @@ describe("createSettingsModule", () => {
     expect(sectionIds).toContain("project");
   });
 
-  test("keeps Settings in the sessions sidenav footer", () => {
+  test("keeps Settings in the sessions sidenav footer", async () => {
     const workbench = createWorkbenchCore();
 
     workbench.registerModule(createSettingsModule());
 
-    expect(getSidenavContributionFooterNodes(workbench, "sessions").map((node) => node.label)).toContain("Settings");
+    const nodes = (
+      await workbench.navigationTrees.getSections({ kind: "mode", id: "sessions", extensionId: "pstdio" }, "footer")
+    ).flatMap((section) => section.nodes);
+    expect(nodes.map((node) => node.label)).toContain("Settings");
   });
 
   test("registers the runtime and templates panels with their scope and kind", () => {

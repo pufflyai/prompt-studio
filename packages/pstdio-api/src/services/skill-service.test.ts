@@ -37,6 +37,7 @@ const emptyRuntime = {
   modes: [],
   pages: [],
   navigationItems: [],
+  navigationTrees: [],
   placements: [],
   privateHandlers: [],
   resourceHierarchyProviders: [],

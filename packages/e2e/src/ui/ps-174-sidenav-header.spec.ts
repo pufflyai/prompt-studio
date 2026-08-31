@@ -1,7 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
-import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 import {
   STORY_RENDER_TIMEOUT_MS,
   startStorybook,
@@ -17,8 +16,8 @@ const workspacesViewStoryId = "dashboard-sidenav--workspaces-view";
 const ticketModeStoryId = "dashboard-sidenav--ticket-mode";
 const ticketWorkspaceBackStoryId = "dashboard-sidenav--ticket-workspace-back-journey";
 const sessionModeStoryId = "dashboard-sidenav--session-mode";
-const sectionRowNames = ["Search", "Tickets", "Notifications", "Sessions", "Workspaces"] as const;
-const defaultSectionRowNames = sectionRowNames.filter((name) => name !== "Workspaces");
+const sectionRowNames = ["Search", "Notifications", "Sessions", "Workspaces", "Tickets"] as const;
+const sessionSectionRowNames = sectionRowNames.filter((name) => name !== "Tickets");
 
 const createProject = async (request: import("@playwright/test").APIRequestContext) => {
   const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-174 Sidenav" } });
@@ -78,11 +77,12 @@ const row = (sidenav: Locator, name: (typeof sectionRowNames)[number]) =>
         .first()
     : sidenav.getByRole("option", { name, exact: true }).first();
 
-const expectSidenavSections = async (sidenav: Locator, workspacesVisible = false) => {
-  const visibleNames = workspacesVisible ? sectionRowNames : defaultSectionRowNames;
+const expectSidenavSections = async (
+  sidenav: Locator,
+  visibleNames: readonly (typeof sectionRowNames)[number][] = sectionRowNames,
+) => {
   const rows = visibleNames.map((name) => row(sidenav, name));
   for (const sectionRow of rows) await expect(sectionRow).toBeVisible({ timeout: 30_000 });
-  if (!workspacesVisible) await expect(row(sidenav, "Workspaces")).toHaveCount(0);
 
   const topEdges: number[] = [];
   for (const sectionRow of rows) {
@@ -93,7 +93,10 @@ const expectSidenavSections = async (sidenav: Locator, workspacesVisible = false
   await expect(sidenav.getByRole("tablist")).toHaveCount(0);
 };
 
-test("PS-174 keeps project-owned collections ordered and stable across aggregate pages", async ({ page, request }) => {
+test("PS-174 removes and restores owner-scoped collections across project and session pages", async ({
+  page,
+  request,
+}) => {
   test.setTimeout(45_000);
   const project = await createProject(request);
   await waitForTicketsExtension(request, project.id);
@@ -113,9 +116,6 @@ test("PS-174 keeps project-owned collections ordered and stable across aggregate
   expect(projectBox!.x).toBeLessThan(breadcrumbBox!.x);
   await expectSidenavSections(sidenav);
 
-  await showHiddenSidenavEntry(page, "Workspaces");
-  await expectSidenavSections(sidenav, true);
-
   const stableElements = [await projectButton.elementHandle()];
   for (const name of sectionRowNames) stableElements.push(await row(sidenav, name).elementHandle());
   expect(stableElements.every(Boolean)).toBe(true);
@@ -124,24 +124,26 @@ test("PS-174 keeps project-owned collections ordered and stable across aggregate
   await expect(
     page.getByRole("navigation", { name: "breadcrumb" }).getByText("Workspaces", { exact: true }),
   ).toBeVisible();
-  await expectSidenavSections(sidenav, true);
+  await expectSidenavSections(sidenav);
+  for (const element of stableElements) expect(await element!.evaluate((node) => node.isConnected)).toBe(true);
 
   await row(sidenav, "Sessions").click();
   await expect(
     page.getByRole("navigation", { name: "breadcrumb" }).getByText("Sessions", { exact: true }),
   ).toBeVisible();
-  await expectSidenavSections(sidenav, true);
+  await expectSidenavSections(sidenav, sessionSectionRowNames);
+  await expect(row(sidenav, "Tickets")).toHaveCount(0);
   await sidenav.getByRole("option", { name: "Sessions", exact: true }).last().click();
   await expect(sidenav.getByRole("option", { name: "Existing sidenav session", exact: true })).toBeVisible();
   await expect(sidenav.getByRole("button", { name: "Help", exact: true })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: "Settings", exact: true })).toBeVisible();
 
+  await page.getByRole("button", { name: "Navigate back" }).click();
+  await expectSidenavSections(sidenav);
   await row(sidenav, "Tickets").click();
   await expect(row(sidenav, "Tickets")).toHaveAttribute("aria-selected", "true");
   await expect(page.getByRole("button", { name: "Create row", exact: true })).toBeVisible();
-  await expectSidenavSections(sidenav, true);
-
-  for (const element of stableElements) expect(await element!.evaluate((node) => node.isConnected)).toBe(true);
+  await expectSidenavSections(sidenav);
 });
 
 test("PS-174 customizes the Sidenav from any point and persists section visibility", async ({ page, request }) => {
@@ -162,7 +164,7 @@ test("PS-174 customizes the Sidenav from any point and persists section visibili
   await expect(searchToggle).toBeVisible();
   await expect(workspacesToggle).toBeVisible();
   await workspacesToggle.click();
-  await expect(row(sidenav, "Workspaces")).toBeVisible();
+  await expect(row(sidenav, "Workspaces")).toHaveCount(0);
   await searchToggle.click();
   await expect(row(sidenav, "Search")).toHaveCount(0);
   await expect(searchToggle).toBeVisible();
@@ -182,15 +184,18 @@ test("PS-174 customizes the Sidenav from any point and persists section visibili
   await page.keyboard.press("Escape");
 
   await page.reload();
-  await expect(row(sidenav, "Workspaces")).toBeVisible();
-  await expectSidenavSections(sidenav, true);
+  await expect(row(sidenav, "Workspaces")).toHaveCount(0);
+  await expectSidenavSections(
+    sidenav,
+    sectionRowNames.filter((name) => name !== "Workspaces"),
+  );
 
   await row(sidenav, "Search").click({ button: "right" });
   await searchToggle.click();
   await expect(row(sidenav, "Search")).toHaveCount(0);
   await page.getByRole("menuitem", { name: "Reset to default", exact: true }).click();
   await expect(row(sidenav, "Search")).toBeVisible();
-  await expect(row(sidenav, "Workspaces")).toHaveCount(0);
+  await expectSidenavSections(sidenav);
 
   const resetTopEdges = await Promise.all(
     [row(sidenav, "Search"), row(sidenav, "Notifications")].map(async (item) => (await item.boundingBox())!.y),
@@ -223,7 +228,7 @@ test("PS-174 renders the ticket tree inside the Sidenav resource section", async
 
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   await expectSidenavSections(sidenav);
-  await expect(sidenav.getByRole("option", { name: new RegExp(ticket.shorthand) })).toBeVisible();
+  await expect(sidenav.getByRole("option", { name: new RegExp(`^${ticket.shorthand}(?:\\s|$)`) })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: /research/ })).toBeVisible();
 });
 
@@ -260,7 +265,7 @@ test.describe("PS-174 Dashboard Sidenav stories", () => {
       await expect(
         page.locator('[data-workbench-region="nav"]').getByRole("button", { name: /Prompt Studio$/ }),
       ).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
-      await expectSidenavSections(sidenav);
+      await expectSidenavSections(sidenav, storyId === sessionModeStoryId ? sessionSectionRowNames : sectionRowNames);
       if (storyId === ticketModeStoryId) {
         await expect(sidenav.getByRole("option", { name: "research.md", exact: true })).toBeVisible();
       }

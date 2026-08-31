@@ -1,4 +1,4 @@
-import { dockedWorkbenchRegions, type ModeContribution } from "@pstdio/sdk/extensions";
+import { extensionPanelRegions, type ModeContribution } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
@@ -22,7 +22,7 @@ export const registerModes = (ext: NormalizedExtension, source: LoadedExtensionS
       mode.regions.every(
         (region) =>
           typeof region === "string" &&
-          dockedWorkbenchRegions.includes(region as (typeof dockedWorkbenchRegions)[number]),
+          extensionPanelRegions.includes(region as (typeof extensionPanelRegions)[number]),
       );
     if (!isRecord(mode) || !isLocalizableString(mode.label) || !hasValidRegions) {
       runtime.diagnostics.push(

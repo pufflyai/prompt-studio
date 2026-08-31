@@ -474,6 +474,7 @@ Dashboard UI contributions have one ownership model:
 - a placement owns geometry and places either a view or a semantic resource slot in a mode
 - a resource view binds one view to one slot declared by a resource kind
 - a navigation item uses a typed action instead of encoded route or command fields
+- a navigation tree adds a tree view to a mode or page in the shared Sidenav
 - a view menu references its owner view and menu view
 - status-bar and settings contributions reference views; they do not duplicate view bodies
 
@@ -485,21 +486,11 @@ tickets, workspaces, and sessions. A view `path` is only a deep link to that vie
 ```ts
 import {
   defineExtension,
-  definePlacement,
-  defineResourceKind,
-  defineResourceView,
+  defineNavigationTree,
   defineView,
-  resourceSlotRef,
   workbenchModes,
-  workbenchResourceKinds,
 } from "@pstdio/sdk/extensions";
 
-const ticket = defineResourceKind({
-  id: "ticket",
-  surface: "primary",
-  slots: [{ id: "navigation", cardinality: "one", access: "owner" }],
-});
-const navigation = resourceSlotRef(ticket.ref, "navigation");
 const files = defineView({
   id: "files",
   title: "Files",
@@ -510,18 +501,13 @@ const files = defineView({
 });
 
 export default defineExtension({
-  resourceKinds: [ticket],
   views: [files],
-  resourceViews: [
-    defineResourceView({ id: "ticket-files", resourceKind: ticket.ref, slot: navigation, view: files.ref }),
-  ],
-  placements: [
-    definePlacement({
-      id: "ticket-navigation",
-      mode: workbenchModes.project,
-      item: { kind: "resource-slot", slot: navigation },
-      region: "sidenav",
-      required: true,
+  navigationTrees: [
+    defineNavigationTree({
+      id: "project-files",
+      owner: workbenchModes.project,
+      slot: "content",
+      view: files.ref,
     }),
   ],
 });
@@ -531,12 +517,8 @@ export default defineExtension({
 content. Renderer callbacks receive the active project, resource, renderer id, tree state, filter text, and selected
 node context.
 
-Panel role comes from the resolved placement:
-
-- the `primary` slot of a primary resource kind holds the main content panel; it is closed to external extensions
-- other slots hold supporting views; a slot with `access: "public"` accepts views from other extensions
-- an owned view binds through `resourceViews`; a standalone view can be opened by a `navigationItems` view action
-- a recipe for a primary resource kind needs exactly one `main` placement, and `required` on a slot placement works only when the slot's cardinality is `one`
+The owner can be a mode or page ref. Mode sections appear before page sections. The Sidenav renders one tree with
+pinned `header` and `footer` slots and one scrolling `content` slot.
 
 Visibility can be limited with `when`:
 

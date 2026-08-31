@@ -120,6 +120,7 @@ const metadata = {
   resourceKinds: [],
   resourceViews: [],
   navigationItems: [],
+  navigationTrees: [],
   statusBarItems: [],
   statuses: [],
   settingsPanels: [],

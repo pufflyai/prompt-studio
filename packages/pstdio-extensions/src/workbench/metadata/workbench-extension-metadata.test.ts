@@ -4,13 +4,13 @@ import {
   defineExtension,
   defineMode,
   defineNavigationItem,
+  defineNavigationTree,
   definePage,
   definePlacement,
   defineResourceKind,
   defineView,
   packageAsset,
   workbenchModes,
-  workbenchSlots,
 } from "@pstdio/sdk/extensions";
 import type { LoadedExtensionSource } from "../../runtime/loader";
 import { normalizeExtensionSources } from "../../runtime/normalize";
@@ -102,7 +102,8 @@ describe("createWorkbenchExtensionMetadata", () => {
           navigationItems: [
             defineNavigationItem({
               id: "tickets",
-              slot: workbenchSlots.projectNavigation,
+              owner: workbenchModes.project,
+              slot: "content",
               label: "Tickets",
               action: { kind: "view", view: view.ref },
             }),
@@ -163,7 +164,8 @@ describe("createWorkbenchExtensionMetadata", () => {
           navigationItems: [
             defineNavigationItem({
               id: "tickets",
-              slot: workbenchSlots.projectNavigation,
+              owner: workbenchModes.project,
+              slot: "content",
               label: "Tickets",
               action: {
                 kind: "compound",
@@ -202,5 +204,41 @@ describe("createWorkbenchExtensionMetadata", () => {
         },
       ],
     });
+  });
+
+  test("publishes page-owned navigation trees with normalized refs", () => {
+    const tree = defineView({
+      id: "files",
+      title: "Files",
+      body: { kind: "tree", body: async () => [] },
+    });
+    const page = definePage({
+      id: "ticket",
+      title: "Ticket",
+      path: "ticket",
+      mode: workbenchModes.project,
+      slots: [{ id: "content", role: "primary", region: "main", view: tree.ref }],
+    });
+    const runtime = normalizeExtensionSources([
+      source(
+        defineExtension({
+          views: [tree],
+          pages: [page],
+          navigationTrees: [defineNavigationTree({ id: "files", owner: page.ref, slot: "footer", view: tree.ref })],
+        }),
+      ),
+    ]);
+
+    const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
+
+    expect(metadata.navigationTrees).toEqual([
+      {
+        id: "pstdio.lab.navigation-tree.files",
+        extensionId: "pstdio.lab",
+        owner: { extensionId: "pstdio.lab", kind: "page", id: "ticket" },
+        slot: "footer",
+        view: { extensionId: "pstdio.lab", kind: "view", id: "files" },
+      },
+    ]);
   });
 });

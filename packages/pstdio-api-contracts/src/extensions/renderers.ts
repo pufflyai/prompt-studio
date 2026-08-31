@@ -15,6 +15,7 @@ export const extensionRendererRecordBaseSchema = z.object({
 export const extensionTreeRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
   searchable: z.boolean().optional(),
   searchPlaceholder: localizableStringSchema.optional(),
+  headerHandlerId: z.string().optional(),
   bodyHandlerId: z.string(),
   childrenHandlerId: z.string().optional(),
   footerHandlerId: z.string().optional(),

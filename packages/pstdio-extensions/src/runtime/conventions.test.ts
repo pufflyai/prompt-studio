@@ -4,11 +4,12 @@ import {
   defineExtension,
   defineMode,
   defineNavigationItem,
+  defineNavigationTree,
+  definePage,
   definePlacement,
   defineView,
   packageAsset,
   workbenchModes,
-  workbenchSlots,
 } from "@pstdio/sdk/extensions";
 import { collectConventionDiagnostics } from "./conventions";
 import type { LoadedExtensionSource } from "./loader";
@@ -24,7 +25,7 @@ const wrap = (name: string, definition: LoadedExtensionSource["definition"]): Lo
     version: "1.0.0",
     publisher: "pstdio",
     main: "./extension.ts",
-    enginesPstdio: "1.0.0-alpha.7",
+    enginesPstdio: "1.0.0-alpha.8",
   },
   definition,
 });
@@ -103,7 +104,8 @@ describe("extension convention diagnostics", () => {
           navigationItems: [
             defineNavigationItem({
               id: "dangling-command",
-              slot: workbenchSlots.projectNavigation,
+              owner: workbenchModes.project,
+              slot: "content",
               label: "Dangling command",
               action: { kind: "command", target: { command: { kind: "command", id: "missing" } } },
             }),
@@ -129,6 +131,58 @@ describe("extension convention diagnostics", () => {
         expect.objectContaining({
           code: "extension_view_reference_missing",
           metadata: expect.objectContaining({ failedReference: "pstdio.lab.view.missing" }),
+        }),
+      ]),
+    );
+  });
+
+  test("flags missing navigation owners and non-tree navigation views", () => {
+    const pageView = defineView({
+      id: "page",
+      title: "Page",
+      body: { kind: "webview", entry: packageAsset("./page.tsx", "file:///fake/lab/") },
+    });
+    const page = definePage({
+      id: "existing",
+      title: "Existing",
+      path: "existing",
+      mode: workbenchModes.project,
+      slots: [{ id: "content", role: "primary", region: "main", view: pageView.ref }],
+    });
+    const runtime = normalizeExtensionSources([
+      wrap(
+        "lab",
+        defineExtension({
+          views: [pageView],
+          pages: [page],
+          navigationItems: [
+            defineNavigationItem({
+              id: "missing-owner",
+              owner: { kind: "page", id: "missing" },
+              label: "Missing owner",
+              action: { kind: "page", page: page.ref },
+            }),
+          ],
+          navigationTrees: [
+            defineNavigationTree({
+              id: "wrong-view-kind",
+              owner: page.ref,
+              view: pageView.ref,
+            }),
+          ],
+        }),
+      ),
+    ]);
+
+    expect(collectConventionDiagnostics(runtime)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "extension_navigation_owner_missing",
+          metadata: expect.objectContaining({ failedReference: "pstdio.lab.page.missing" }),
+        }),
+        expect.objectContaining({
+          code: "extension_navigation_tree_view_invalid",
+          metadata: expect.objectContaining({ failedReference: "pstdio.lab.view.page" }),
         }),
       ]),
     );

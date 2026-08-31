@@ -6,13 +6,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { expect, userEvent, within } from "storybook/test";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
-import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { createCommandPaletteModule } from "../command-palette/module";
 import { createHeadersModule } from "../headers/module";
 import { createHelpModule } from "../help/module";
@@ -28,6 +25,8 @@ import { createSidenavModule } from "./module";
 const PROJECT_ID = "demo-project";
 const WORKSPACES_KEYBINDING = "mod+shift+w";
 const STORY_TICKET_WIDGET_ID = "story.ticket-location";
+const STORY_TICKET_PAGE_ID = "story.page.ticket";
+const STORY_TICKET_PAGE_REF = { extensionId: "story", kind: "page" as const, id: "ticket" };
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
@@ -45,6 +44,7 @@ const parentTicketResource = {
   metadata: { projectId: PROJECT_ID },
 };
 const ticketResource = {
+  type: "ticket",
   kind: "ticket",
   uri: "dashboard-workbench://ticket/PS-164",
   id: "PS-164",
@@ -101,61 +101,53 @@ const createTicketsNavigationModule = () => ({
       getParent: (resource) =>
         dashboardResourceParent(ctx, resource, PROJECT_ID) ?? { type: "view", viewId: ticketsView.id },
     });
-    ctx.resources.registerPresenter({
-      id: "story.ticket-presenter",
-      canOpen: (resource) => resource.kind === "ticket",
-      open: (resource, openInput) => {
-        selectDashboardNavigationResource(ctx, resource, { modeId: "pstdio-planner.ticket" });
-        setResourceBreadcrumb(ctx, resource);
-        return ctx.layout.openPanel(STORY_TICKET_WIDGET_ID, {
-          strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
-          resource,
-          title: resource.label,
-        });
-      },
-    });
-    ctx.modes.registerMode({ id: "pstdio-planner.ticket", label: "Ticket", activate: () => undefined });
-    ctx.modePlacements.registerPlacement({
-      id: "story.sidenav.ticket",
-      ref: { extensionId: "story", kind: "placement", id: "sidenav.ticket" },
-      modeId: "pstdio-planner.ticket",
-      item: { kind: "view", viewId: dashboardWidgetIds.dashboardSidenav },
-      region: "sidenav",
-      required: true,
-      movableTo: ["sidenav"],
-    });
     ctx.views.registerView({
       id: ticketsView.id,
       panelId: STORY_TICKET_WIDGET_ID,
       title: ticketsView.label,
       icon: ticketsView.icon,
-      resolveInput: (input) => {
-        ctx.navigator.commitContext({ modeId: "pstdio-planner.ticket", resource: null });
-        return input;
-      },
     });
-    registerSidenavContribution(ctx, {
-      id: "story.tickets-navigation",
-      modes: ["*"],
-      order: 5,
+    ctx.pages.registerPage({
+      id: STORY_TICKET_PAGE_ID,
+      ref: STORY_TICKET_PAGE_REF,
+      title: ticketsView.label,
+      icon: ticketsView.icon,
+      path: "ticket",
+      modeId: "project",
+      slots: [
+        {
+          id: "content",
+          role: "primary",
+          region: "main",
+          binding: { resourceKind: "ticket", viewId: ticketsView.id },
+        },
+      ],
+    });
+    ctx.navigationTrees.registerContribution({
+      id: "story.tickets-navigation.project",
+      owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+      sourceExtensionId: "story",
+      declarationIndex: 0,
       getSections: () => [
         {
-          id: "story.tickets-navigation",
+          id: "navigation.root",
           nodes: [
             {
               id: ticketsView.id,
               label: ticketsView.label,
               icon: ticketsView.icon,
-              target: { kind: "view", viewId: ticketsView.id },
+              target: { kind: "page", page: STORY_TICKET_PAGE_REF, resource: ticketResource },
             },
           ],
         },
       ],
     });
-    registerSidenavContribution(ctx, {
+    ctx.navigationTrees.registerContribution({
       id: "story.ticket-resource",
-      modes: ["pstdio-planner.ticket"],
-      getSections: (_workbench, input) =>
+      owner: { kind: "page", id: STORY_TICKET_PAGE_ID, extensionId: "story" },
+      sourceExtensionId: "story",
+      declarationIndex: 1,
+      getSections: (input) =>
         input.resource?.kind === "ticket"
           ? [
               {
@@ -304,6 +296,10 @@ const openResource = (
   void workbench.resources.openResource(resource, { replaceActive: true });
 };
 
+const openTicketPage = (workbench: WorkbenchCore) => {
+  void workbench.navigation.openTarget({ kind: "page", page: STORY_TICKET_PAGE_REF, resource: ticketResource });
+};
+
 const openView = (workbench: WorkbenchCore, viewId: string) => {
   void workbench.views.openView(viewId, { strategy: { kind: "replace-active" } });
 };
@@ -343,6 +339,43 @@ export const ProjectMode: Story = {
   },
 };
 
+export const OverflowWithPinnedChrome: Story = {
+  name: "Overflow with pinned header and footer",
+  render: () => (
+    <SidenavStory
+      open={(workbench) => {
+        workbench.navigationTrees.registerContribution({
+          id: "story.overflow.project",
+          owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+          sourceExtensionId: "story.overflow",
+          declarationIndex: 0,
+          getSections: () =>
+            Array.from({ length: 24 }, (_, index) => ({
+              id: `overflow-${index}`,
+              label: `Overflow group ${index + 1}`,
+              nodes: [{ id: `overflow-item-${index}`, label: `Overflow item ${index + 1}` }],
+            })),
+        });
+        openView(workbench, dashboardViews.start.id);
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const project = await canvas.findByRole("option", { name: /^Prompt Studio Switch project$/ });
+    const settings = await canvas.findByRole("option", { name: /^Settings$/ });
+    const viewport = canvasElement.querySelector<HTMLElement>(
+      '[data-workbench-region="sidenav"] [data-scope="scroll-area"][data-part="viewport"]',
+    );
+    await expect(viewport).not.toBeNull();
+    const projectTop = project.getBoundingClientRect().top;
+    const settingsBottom = settings.getBoundingClientRect().bottom;
+    viewport!.scrollTop = viewport!.scrollHeight;
+    await expect(project.getBoundingClientRect().top).toBe(projectTop);
+    await expect(settings.getBoundingClientRect().bottom).toBe(settingsBottom);
+  },
+};
+
 // Aggregate collection: the same header stays mounted and Workspaces is not duplicated in the resource region.
 export const WorkspacesView: Story = {
   render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.workspaces.id)} />,
@@ -357,14 +390,14 @@ export const WorkspacesViewHover: Story = {
 
 // F17: a separator marks the boundary before the ticket's resource tree.
 export const TicketMode: Story = {
-  name: "Ticket resource separator",
-  render: () => <SidenavStory open={(workbench) => openResource(workbench, ticketResource)} />,
+  name: "Ticket page navigation",
+  render: () => <SidenavStory open={openTicketPage} />,
 };
 
 // F22: the linked resource keeps the ticket ancestry and Back restores the selected ticket.
 export const TicketWorkspaceBackJourney: Story = {
   name: "Ticket linked workspace and back",
-  render: () => <SidenavStory open={(workbench) => openResource(workbench, ticketResource)} />,
+  render: () => <SidenavStory open={openTicketPage} />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("option", { name: "PS-164_A1" }));

@@ -205,7 +205,6 @@ import {
   definePlacement,
   defineView,
   workbenchModes,
-  workbenchSlots,
 } from "@pstdio/sdk/extensions";
 
 const tasks = defineView({
@@ -231,7 +230,13 @@ export default defineExtension({
     definePlacement({ id: "tasks", mode: workbenchModes.project, item: { kind: "view", view: tasks.ref }, region: "main" }),
   ],
   navigationItems: [
-    defineNavigationItem({ id: "tasks", slot: workbenchSlots.projectNavigation, label: "Tasks", action: { kind: "view", view: tasks.ref } }),
+    defineNavigationItem({
+      id: "tasks",
+      owner: workbenchModes.project,
+      slot: "content",
+      label: "Tasks",
+      action: { kind: "view", view: tasks.ref },
+    }),
   ],
 });
 ```
@@ -305,15 +310,16 @@ export default defineExtension({
 
 A slot with `access: "owner"` rejects another extension's binding during `pst extensions check`. The primary slot is always owner-only.
 
-## Native resource detail mode
+## Native resource detail page with navigation
 
-Use this pattern for host-rendered resource screens: native views own content, the resource kind exposes semantic
-slots, resource-view bindings connect them, and placements own geometry.
+Use this pattern for host-rendered resource screens: a page owns the routed primary view, while a page-owned
+navigation tree adds contextual rows to the shared Sidenav.
 
 ```ts
 import {
   defineExtension,
-  definePlacement,
+  defineNavigationTree,
+  definePage,
   defineResourceKind,
   defineResourceView,
   defineView,
@@ -324,13 +330,9 @@ import {
 const note = defineResourceKind({
   id: "note",
   surface: "primary",
-  slots: [
-    { id: "primary", cardinality: "one", access: "owner" },
-    { id: "navigation", cardinality: "one", access: "public" },
-  ],
+  slots: [{ id: "primary", cardinality: "one", access: "owner" }],
 });
 const primary = resourceSlotRef(note.ref, "primary");
-const navigation = resourceSlotRef(note.ref, "navigation");
 const content = defineView({
   id: "note-content",
   title: "Note",
@@ -344,23 +346,35 @@ const files = defineView({
   title: "Files",
   body: { kind: "tree", body: async () => [{ id: "files", label: "Files", nodes: [] }] },
 });
+const notePage = definePage({
+  id: "note",
+  title: "Note",
+  path: "note",
+  mode: workbenchModes.project,
+  slots: [
+    {
+      id: "content",
+      role: "primary",
+      region: "main",
+      binding: { kind: note.ref, view: content.ref },
+    },
+  ],
+});
 
 export default defineExtension({
   resourceKinds: [note],
   views: [content, files],
   resourceViews: [
     defineResourceView({ id: "content", resourceKind: note.ref, slot: primary, view: content.ref }),
-    defineResourceView({ id: "files", resourceKind: note.ref, slot: navigation, view: files.ref }),
   ],
-  placements: [
-    definePlacement({ id: "content", mode: workbenchModes.project, item: { kind: "resource-slot", slot: primary }, region: "main", required: true }),
-    definePlacement({ id: "files", mode: workbenchModes.project, item: { kind: "resource-slot", slot: navigation }, region: "sidenav", required: true }),
+  pages: [notePage],
+  navigationTrees: [
+    defineNavigationTree({ id: "files", owner: notePage.ref, slot: "content", view: files.ref }),
   ],
 });
 ```
 
-`required: true` makes a cardinality-one placement structural. The host restores it when
-the mode-resource context activates, and the user cannot close it.
+The files tree appears together with mode navigation and disappears when the page is no longer active.
 
 ## Dashboard navigation item
 
@@ -370,7 +384,7 @@ import {
   defineNavigationItem,
   defineView,
   packageAsset,
-  workbenchSlots,
+  workbenchModes,
 } from "@pstdio/sdk/extensions";
 
 const planner = defineView({
@@ -389,7 +403,8 @@ export default defineExtension({
   navigationItems: [
     defineNavigationItem({
       id: "planner",
-      slot: workbenchSlots.projectNavigation,
+      owner: workbenchModes.project,
+      slot: "content",
       label: "Planner",
       icon: "calendar-check",
       action: { kind: "view", view: planner.ref },

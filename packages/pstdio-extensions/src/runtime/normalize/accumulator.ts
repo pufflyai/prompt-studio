@@ -46,6 +46,7 @@ export const createAccumulator = (initialDiagnostics: ExtensionDiagnostic[]): Ac
   viewMenus: [],
   placements: [],
   navigationItems: [],
+  navigationTrees: [],
   pages: [],
   statusBarItems: [],
   statuses: [],

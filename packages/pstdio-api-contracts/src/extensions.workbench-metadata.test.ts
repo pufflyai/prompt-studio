@@ -45,11 +45,13 @@ const metadata = () => ({
     {
       id: "pstdio.lab.navigation-item.files",
       extensionId: "pstdio.lab",
-      slot: ref("navigation-item", "project"),
+      owner: ref("mode", "project"),
+      slot: "content",
       label: "Files",
       action: { kind: "view", view: ref("view", "files") },
     },
   ],
+  navigationTrees: [],
   statusBarItems: [],
   statuses: [],
   settingsPanels: [],
@@ -105,7 +107,8 @@ describe("workbench extension metadata", () => {
         {
           id: "pstdio.lab.navigation-item.tickets",
           extensionId: "pstdio.lab",
-          slot: ref("navigation-item", "project"),
+          owner: ref("mode", "project"),
+          slot: "content",
           label: "Tickets",
           action: {
             kind: "compound",

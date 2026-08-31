@@ -41,13 +41,15 @@ export const metadata = {
     {
       id: `${labExtensionId}.navigation-item.labPage`,
       extensionId: labExtensionId,
-      slot: ref("pstdio", "navigation-item", "project.navigation"),
+      owner: ref("pstdio", "mode", "project"),
+      slot: "content",
       group: "Lab",
       label: "Lab",
       icon: "flask-conical",
       action: { kind: "view", view: ref(labExtensionId, "view", "labPage") },
     },
   ],
+  navigationTrees: [],
   statusBarItems: [],
   statuses: [],
   activityItems: [],
@@ -73,18 +75,11 @@ export const metadataWithLabMode = {
       extensionId: labExtensionId,
       label: "Lab",
       icon: "flask-conical",
-      regions: ["sidenav", "main", "side"],
+      regions: ["main", "side"],
     },
   ],
   views: [
     ...metadata.views,
-    {
-      id: `${labExtensionId}.view.labSidenav`,
-      localId: "labSidenav",
-      extensionId: labExtensionId,
-      title: "Lab",
-      body: { kind: "webview" as const, webview: webview("./src/lab-sidenav.tsx", "labSidenav") },
-    },
     {
       id: `${labExtensionId}.view.labOverview`,
       localId: "labOverview",
@@ -94,15 +89,6 @@ export const metadataWithLabMode = {
     },
   ],
   placements: [
-    {
-      id: `${labExtensionId}.placement.lab-sidenav`,
-      localId: "lab-sidenav",
-      extensionId: labExtensionId,
-      mode: ref(labExtensionId, "mode", "lab"),
-      item: { kind: "view" as const, view: ref(labExtensionId, "view", "labSidenav") },
-      region: "sidenav" as const,
-      required: true,
-    },
     {
       id: `${labExtensionId}.placement.lab-overview`,
       localId: "lab-overview",

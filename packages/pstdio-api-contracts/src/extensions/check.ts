@@ -27,6 +27,7 @@ const checkWorkbenchMetadataSchema = workbenchExtensionMetadataSchema.pick({
   resourceViews: true,
   resourceHierarchyProviders: true,
   navigationItems: true,
+  navigationTrees: true,
   statusBarItems: true,
   statuses: true,
   activityItems: true,

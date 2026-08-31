@@ -310,6 +310,9 @@ const isTreeSectionArray = (value: unknown): value is ExtensionTreeSection[] =>
 const isTreeNodeArray = (value: unknown): value is ExtensionTreeNode[] =>
   Array.isArray(value) && value.every((node) => node && typeof node === "object" && "id" in node);
 
+const hostNodeSection = (id: string, nodes: TreeNode[]): TreeViewSection[] =>
+  nodes.length > 0 ? [{ id, nodes, canReorder: false }] : [];
+
 // The node a command marks with `selected: true` (e.g. the open document in a
 // files tree) becomes the tree's highlighted selection.
 const selectedNodeIdFromNodes = (nodes: ExtensionTreeNode[]): string | undefined => {
@@ -355,8 +358,23 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
     searchPlaceholder: text(record.searchPlaceholder, "Search files"),
     defaultExpandedNodeIds: record.defaultExpandedNodeIds,
     defaultExpandedSectionIds: record.defaultExpandedSectionIds,
-    getHeader: (ctx) =>
-      resolveHostTreeHeaderNodes({ ctx, getHostTreeHeaderNodes: input.getHostTreeHeaderNodes, record, treeViews }),
+    getHeader: async (ctx) => {
+      const hostHeader = await resolveHostTreeHeaderNodes({
+        ctx,
+        getHostTreeHeaderNodes: input.getHostTreeHeaderNodes,
+        record,
+        treeViews,
+      });
+      if (!record.headerHandlerId) return hostNodeSection(`${record.id}:host-header`, hostHeader);
+      const result = await executeCallback(
+        input,
+        record,
+        record.headerHandlerId,
+        createQueryParams(input, record, ctx),
+      );
+      const extensionHeader = isTreeSectionArray(result) ? mapper.mapSections(result, ctx) : [];
+      return [...hostNodeSection(`${record.id}:host-header`, hostHeader), ...extensionHeader];
+    },
     getBody: async (ctx) => {
       const result = await executeCallback(input, record, record.bodyHandlerId, createQueryParams(input, record, ctx));
       if (!isTreeSectionArray(result)) return [];
@@ -371,15 +389,15 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
         record,
         treeViews,
       });
-      if (!record.footerHandlerId) return hostFooter;
+      if (!record.footerHandlerId) return hostNodeSection(`${record.id}:host-footer`, hostFooter);
       const result = await executeCallback(
         input,
         record,
         record.footerHandlerId,
         createQueryParams(input, record, ctx),
       );
-      const extensionFooter = isTreeNodeArray(result) ? mapper.mapNodes(result, ctx) : [];
-      return [...extensionFooter, ...hostFooter];
+      const extensionFooter = isTreeSectionArray(result) ? mapper.mapSections(result, ctx) : [];
+      return [...extensionFooter, ...hostNodeSection(`${record.id}:host-footer`, hostFooter)];
     },
     getChildren: async (node, ctx) => {
       if (!record.childrenHandlerId) return node.children ?? [];

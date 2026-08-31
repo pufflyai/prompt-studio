@@ -7,6 +7,7 @@ import type {
   Localizable,
   ModeContribution,
   NavigationItemContribution,
+  NavigationTreeContribution,
   PageContribution,
   PlacementContribution,
   ResourceHierarchyProvider,
@@ -75,6 +76,15 @@ export interface RuntimeNavigationItemRecord {
   name: string;
   sourcePath: string;
   contribution: NavigationItemContribution;
+}
+
+export interface RuntimeNavigationTreeRecord {
+  id: string;
+  localId: string;
+  extensionId: string;
+  name: string;
+  sourcePath: string;
+  contribution: NavigationTreeContribution;
 }
 
 export interface RuntimePageRecord {

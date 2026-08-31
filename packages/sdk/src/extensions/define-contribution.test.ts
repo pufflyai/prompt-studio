@@ -4,6 +4,7 @@ import {
   defineExtension,
   defineMode,
   defineNavigationItem,
+  defineNavigationTree,
   definePage,
   definePlacement,
   defineResourceKind,
@@ -15,7 +16,6 @@ import {
   workbenchCommands,
   workbenchModes,
   workbenchPages,
-  workbenchSlots,
 } from "./index";
 
 describe("extension contribution definitions", () => {
@@ -43,9 +43,16 @@ describe("extension contribution definitions", () => {
     });
     const navigationItem = defineNavigationItem({
       id: "tickets",
-      slot: workbenchSlots.projectNavigation,
+      owner: workbenchModes.project,
+      slot: "content",
       label: "Tickets",
       action: { kind: "view", view: view.ref },
+    });
+    const navigationTree = defineNavigationTree({
+      id: "ticket-files",
+      owner: page.ref,
+      slot: "content",
+      view: view.ref,
     });
     const mode = defineMode({ id: "review", label: "Review", regions: ["main"] });
     const command = defineCommand({ id: "tickets.open", title: "Open ticket", run: async () => undefined });
@@ -71,6 +78,7 @@ describe("extension contribution definitions", () => {
       id: "details",
     });
     expect(navigationItem.ref).toEqual({ kind: "navigation-item", id: "tickets" });
+    expect(navigationTree.ref).toEqual({ kind: "navigation-tree", id: "ticket-files" });
     expect(mode.ref).toEqual({ kind: "mode", id: "review" });
     expect(command.ref).toEqual({ kind: "command", id: "tickets.open" });
     expect(resourceKind.ref).toEqual({ kind: "resource-kind", id: "ticket" });

@@ -1,12 +1,6 @@
 import type { Localizable } from "../l10n";
-import type { DockedWorkbenchRegion } from "./composition";
-import type {
-  ContributionDefinition,
-  ModeRef,
-  NavigationSlotRef,
-  ResourceSlotRef,
-  ViewRef,
-} from "./contribution-identity";
+import type { ExtensionPanelRegion } from "./composition";
+import type { ContributionDefinition, ModeRef, PageRef, ResourceSlotRef, ViewRef } from "./contribution-identity";
 import type { KanbanRendererContribution, WebviewContribution, WhenExpression } from "./contributions";
 import type { ControlsRendererContribution } from "./controls";
 import type { DataTableRendererContribution } from "./data-table-renderer";
@@ -41,14 +35,23 @@ export interface ViewContribution extends ContributionDefinition<"view"> {
   readonly body: ViewBody;
 }
 
+export type NavigationOwnerRef = ModeRef | PageRef;
+export type NavigationTreeSlot = "header" | "content" | "footer";
+
 export interface NavigationItemContribution extends ContributionDefinition<"navigation-item"> {
-  readonly slot: NavigationSlotRef;
+  readonly owner: NavigationOwnerRef;
+  readonly slot?: NavigationTreeSlot;
   readonly label: Localizable<string>;
   readonly icon?: string;
   readonly group?: string;
-  readonly order?: number;
   readonly when?: WhenExpression;
   readonly action: NavigationTarget;
+}
+
+export interface NavigationTreeContribution extends ContributionDefinition<"navigation-tree"> {
+  readonly owner: NavigationOwnerRef;
+  readonly slot?: NavigationTreeSlot;
+  readonly view: ViewRef;
 }
 
 export type PlacementItem =
@@ -58,11 +61,11 @@ export type PlacementItem =
 export interface PlacementContribution extends ContributionDefinition<"placement"> {
   readonly mode: ModeRef;
   readonly item: PlacementItem;
-  readonly region: DockedWorkbenchRegion;
+  readonly region: ExtensionPanelRegion;
   readonly order?: number;
   readonly defaultOpen?: boolean;
   readonly required?: boolean;
-  readonly movableTo?: readonly DockedWorkbenchRegion[];
+  readonly movableTo?: readonly ExtensionPanelRegion[];
 }
 
 export interface ViewMenuContribution extends ContributionDefinition<"view-menu"> {

@@ -5,7 +5,7 @@ import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
 import { setDashboardSidenavSelection, updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
@@ -35,7 +35,6 @@ const workspaceNavigationNode = (): TreeNode => ({
   label: "Workspaces",
   icon: dashboardViews.workspaces.icon,
   canHide: true,
-  hiddenByDefault: true,
   commandId: dashboardCommandIds.openWorkspaces,
   target: { kind: "view", viewId: dashboardViews.workspaces.id },
   actions: [
@@ -49,11 +48,10 @@ const workspaceNavigationNode = (): TreeNode => ({
 });
 
 const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContext) => {
-  registerSidenavContribution(ctx, {
+  registerDashboardNavigationContribution(ctx, {
     id: "dashboard.workspaces.project-nav",
     modes: ["*"],
-    order: 30,
-    getSections: () => [{ id: "dashboard.workspaces", nodes: [workspaceNavigationNode()] }],
+    getSections: () => [{ id: "navigation.root", nodes: [workspaceNavigationNode()] }],
   });
 };
 

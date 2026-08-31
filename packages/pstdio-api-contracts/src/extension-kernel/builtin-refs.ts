@@ -89,7 +89,6 @@ export const workbenchPanelDefinitions = {
 } as const;
 
 export const workbenchSlots = {
-  projectNavigation: hostRef("navigation-item", "project.navigation"),
   projectSettings: hostRef("settings-panel", "project.settings"),
   statusBarLeading: hostRef("status-bar-item", "status-bar.leading"),
   statusBarTrailing: hostRef("status-bar-item", "status-bar.trailing"),

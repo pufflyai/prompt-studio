@@ -1,6 +1,6 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef, CommandSource } from "./commands";
-import type { DockedWorkbenchRegion } from "./composition";
+import type { ExtensionPanelRegion } from "./composition";
 import type { RendererCallback } from "./context";
 import type {
   ContributionDefinition,
@@ -71,7 +71,7 @@ export interface ActivityItemContribution<TParams extends Struct = Struct>
 export interface ModeContribution extends ContributionDefinition<"mode"> {
   label: Localizable<string>;
   icon?: string;
-  regions: readonly DockedWorkbenchRegion[];
+  regions: readonly ExtensionPanelRegion[];
 }
 
 export interface WebviewContribution {

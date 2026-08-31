@@ -25,6 +25,7 @@ const baseBench = {
     resourceViews: [],
     resourceHierarchyProviders: [],
     navigationItems: [],
+    navigationTrees: [],
     statusBarItems: [],
     statuses: [],
     activityItems: [],

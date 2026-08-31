@@ -7,6 +7,7 @@ import { TreeListBackground } from "./tree-list-background";
 import { buildVirtualRows, type VirtualRow } from "./tree-list-model";
 import { TreeListMoveSurface } from "./tree-list-move-surface";
 import { TreeListNodeRow } from "./tree-list-node-row";
+import type { TreeListMovePolicy } from "./tree-list-reorder";
 import { TreeListSectionHeader } from "./tree-list-section-header";
 import { TreeListSortable } from "./tree-list-sortable";
 import { useTreeListKeyboardNavigation } from "./use-tree-list-keyboard-navigation";
@@ -45,6 +46,8 @@ interface TreeListProps {
   draggable?: boolean;
   onReorderSections?: (nextSectionIds: string[]) => void;
   onReorderNodes?: (sectionId: string, nextNodeIds: string[]) => void;
+  /** Decide whether a proposed customization move is valid. */
+  canMove?: TreeListMovePolicy;
   /** Move a node onto another node, or onto the tree root when the target is omitted. */
   onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
   // When set, right-clicking the empty back area of the tree (everything not
@@ -309,6 +312,7 @@ export const TreeList = (props: TreeListProps) => {
       onSectionContextMenu={props.onSectionContextMenu}
       onReorderSections={props.onReorderSections}
       onReorderNodes={props.onReorderNodes}
+      canMove={props.canMove}
     />
   ) : (
     <StackTreeList {...props} />

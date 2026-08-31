@@ -114,25 +114,21 @@ describe("extension-lab workbench attachments", () => {
           region: "main",
           view: { kind: "view", id: "lab-page" },
         },
-        {
-          id: "cameras",
-          role: "auxiliary",
-          region: "sidenav",
-          view: { kind: "view", id: "camera-tree" },
-          defaultOpen: true,
-          order: 10,
-        },
       ],
     });
     expect(extension.navigationItems?.find((item) => item.id === "lab")).toMatchObject({
       action: { kind: "page", page: { kind: "page", id: "lab" } },
     });
+    expect(extension.navigationTrees?.[0]).toMatchObject({
+      id: "lab-cameras",
+      owner: { kind: "page", id: "lab" },
+      slot: "content",
+      view: { kind: "view", id: "camera-tree" },
+    });
   });
 
   test("stages a single Lab mode with native activity items and status chrome", () => {
-    // Lab is the mode-wide workspace; Animation and Sculpt are the conformance
-    // fixture that arranges one shared blend-project resource two ways.
-    expect(extension.modes?.map((mode) => mode.id)).toEqual(["lab", "animation", "sculpt"]);
+    expect(extension.modes?.map((mode) => mode.id)).toEqual(["lab"]);
     expect(extension.modes?.[0]).toMatchObject({
       id: "lab",
       ref: { kind: "mode", id: "lab" },

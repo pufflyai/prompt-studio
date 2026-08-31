@@ -50,7 +50,13 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.modes).toBeUndefined();
     expect(extension.resourceKinds?.[0]).toMatchObject({ id: "ticket", surface: "primary" });
     expect(extension.resourcePanels).toBeUndefined();
-    expect(extension.resourceViews?.map((binding) => binding.id)).toEqual(["ticket-editor", "ticket-files"]);
+    expect(extension.resourceViews?.map((binding) => binding.id)).toEqual(["ticket-editor"]);
+    expect(extension.navigationTrees?.[0]).toMatchObject({
+      id: "ticket-files",
+      owner: { kind: "page", id: "ticket" },
+      slot: "content",
+      view: { kind: "view", id: "ticket-files" },
+    });
     expect(extension.viewMenus?.[0]).toMatchObject({
       id: "ticket.properties",
       owner: { id: "ticket-editor" },
@@ -306,17 +312,6 @@ describe("pstdio planner workspace contributions", () => {
             kind: { kind: "resource-kind", id: "ticket" },
             view: { kind: "view", id: "ticket-editor" },
           },
-        },
-        {
-          id: "files",
-          role: "auxiliary",
-          region: "sidenav",
-          binding: {
-            kind: { kind: "resource-kind", id: "ticket" },
-            view: { kind: "view", id: "ticket-files" },
-          },
-          defaultOpen: true,
-          order: 10,
         },
       ],
     });

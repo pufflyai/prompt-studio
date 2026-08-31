@@ -58,6 +58,7 @@ export default defineExtension({
   resourceKinds: [ticketResourceKind],
   resourceViews: plannerUi.resourceViews,
   navigationItems: plannerUi.navigationItems,
+  navigationTrees: plannerUi.navigationTrees,
   settingsPanels: plannerUi.settingsPanels,
   statuses: [ticketStatuses],
 

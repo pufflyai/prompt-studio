@@ -47,6 +47,7 @@ const extension = defineExtension({
   placements: labUi.placements,
   pages: labUi.pages,
   navigationItems: labUi.navigationItems,
+  navigationTrees: labUi.navigationTrees,
   statusBarItems: labUi.statusBarItems,
   statuses: [labWorkflowStatuses],
   activityItems: labActivityItems,

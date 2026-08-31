@@ -63,23 +63,28 @@ export const registerProjectNavigation = (ctx: WorkbenchModeActivationContext) =
     ],
     getFooter: () => [
       {
-        id: dashboardViews.sessions.id,
-        label: "Sessions",
-        icon: "MessageCircle",
-        target: { kind: "view", viewId: dashboardViews.sessions.id },
-      },
-      {
-        id: "help",
-        label: "Help",
-        icon: "CircleHelp",
-        menuPath: dashboardHelpMenuPath,
-        menuPlacement: "top-start",
-      },
-      {
-        id: dashboardResources.settings.uri,
-        label: "Project settings",
-        icon: dashboardResources.settings.icon,
-        resource: dashboardResources.settings,
+        id: "project-footer",
+        nodes: [
+          {
+            id: dashboardViews.sessions.id,
+            label: "Sessions",
+            icon: "MessageCircle",
+            target: { kind: "view", viewId: dashboardViews.sessions.id },
+          },
+          {
+            id: "help",
+            label: "Help",
+            icon: "CircleHelp",
+            menuPath: dashboardHelpMenuPath,
+            menuPlacement: "top-start",
+          },
+          {
+            id: dashboardResources.settings.uri,
+            label: "Project settings",
+            icon: dashboardResources.settings.icon,
+            resource: dashboardResources.settings,
+          },
+        ],
       },
     ],
     getChildren: () => [],

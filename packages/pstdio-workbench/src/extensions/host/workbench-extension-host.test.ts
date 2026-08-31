@@ -120,6 +120,7 @@ const metadata = {
     },
   ],
   navigationItems: [],
+  navigationTrees: [],
   statusBarItems: [
     {
       id: `${extensionId}.status-bar-item.sync-status`,

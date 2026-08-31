@@ -8,7 +8,6 @@ import {
   l10n,
   packageAsset,
   workbenchModes,
-  workbenchSlots,
 } from "@pstdio/sdk/extensions";
 import { fontCommands } from "./src/commands/font-commands";
 
@@ -36,7 +35,8 @@ const extension = defineExtension({
   navigationItems: [
     defineNavigationItem({
       id: "font-editor",
-      slot: workbenchSlots.projectNavigation,
+      owner: workbenchModes.project,
+      slot: "content",
       group: "Tools",
       label: l10n("treeItems.fontEditor.label", "Font editor"),
       icon: "case-upper",

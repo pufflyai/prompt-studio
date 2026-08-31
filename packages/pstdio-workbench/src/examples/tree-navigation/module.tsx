@@ -126,7 +126,12 @@ export const createTreeNavigationWorkbench = () => {
           },
         ],
         getFooter: () => [
-          { id: settingsResource.uri, label: "Settings", icon: settingsResource.icon, resource: settingsResource },
+          {
+            id: "footer",
+            nodes: [
+              { id: settingsResource.uri, label: "Settings", icon: settingsResource.icon, resource: settingsResource },
+            ],
+          },
         ],
         getChildren: () => [],
       });

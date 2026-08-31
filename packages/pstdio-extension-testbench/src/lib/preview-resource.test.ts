@@ -17,6 +17,7 @@ const baseMetadata = {
   resourceViews: [],
   resourceHierarchyProviders: [],
   navigationItems: [],
+  navigationTrees: [],
   statusBarItems: [],
   statuses: [],
   activityItems: [],

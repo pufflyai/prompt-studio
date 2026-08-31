@@ -3,6 +3,7 @@ import {
   BRIDGE_WEBVIEW_RENDERER_ID,
   fileRendererRefreshEnvelopeFromCommand,
   registerWorkbenchExtensionContributions,
+  toWorkbenchWhenExpression,
 } from "@pstdio/workbench/extensions";
 import { createElement } from "react";
 import { buildAbsoluteApiUrl } from "@/lib/api";
@@ -30,9 +31,7 @@ import { registerNavigationOwningMode } from "@/shared/workbench/mode-navigation
 import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { type ExecuteDashboardExtensionCommand, prepareExtensionCommandArgs } from "./extension-command-handler";
 import { createDashboardKanbanAdapter, toDashboardExtensionResource } from "./extension-kanban-adapter";
-import { registerExtensionNavigation, withoutDashboardNavigationItems } from "./extension-navigation";
 import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
-import { registerExtensionResourceSidenav, withoutIntegratedResourceSidenavViews } from "./extension-resource-sidenav";
 import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
 
 export const disposeExtensionContributions = (disposables: Disposable[]) => {
@@ -117,6 +116,8 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
       registerWorkbenchExtensionContributions({
         createKeybindingWhenExpression: buildDashboardWorkbenchWhenExpression,
         createMenuWhenExpression: (contribution) => buildDashboardWorkbenchWhenExpression(contribution.when),
+        createNavigationWhenExpression: (when) =>
+          buildDashboardWorkbenchWhenExpression(toWorkbenchWhenExpression(when)),
         createWebviewHostCapabilityOverrides: ({ webviewId }) =>
           createDashboardSettingsWebviewFileCapabilities({
             metadata: input.metadata,
@@ -144,9 +145,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         menuSlotsById: menuResult.menuSlotsById,
         menuTargetsById: dashboardMenuTargetsById,
         menuRegistrations: menuResult.registrations,
-        metadata: withoutIntegratedResourceSidenavViews(
-          withoutDashboardNavigationItems(withDashboardWebviewUrls(input.metadata)),
-        ),
+        metadata: withDashboardWebviewUrls(input.metadata),
         prepareCommandArgs: (commandId, args, _context, onArgsChange) =>
           prepareExtensionCommandArgs({
             args,
@@ -173,8 +172,6 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         workbench: input.ctx,
       }),
       registerExtensionActivityNavigationOwnership(input.metadata),
-      registerExtensionNavigation(input.ctx, input.metadata),
-      registerExtensionResourceSidenav(input.ctx, input.metadata),
       registerExtensionResourceHierarchy(input.ctx, { metadata: input.metadata, projectId: input.projectId }),
     );
   } catch (error) {

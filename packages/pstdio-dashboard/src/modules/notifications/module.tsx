@@ -5,7 +5,7 @@ import { getCollectionsVersion, subscribeCollections } from "@/lib/sync/collecti
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
 import { NotificationCenterWidget } from "./components/notification-center-widget";
 import { countPendingNotifications } from "./data/dashboard-notifications";
 
@@ -28,11 +28,10 @@ const createNotificationNode = (ctx: WorkbenchModuleContext): TreeNode => {
 };
 
 const registerNotificationSidenav = (ctx: WorkbenchModuleContext) => {
-  registerSidenavContribution(ctx, {
+  registerDashboardNavigationContribution(ctx, {
     id: "dashboard.notifications.sidenav-nav",
     modes: ["*"],
-    order: 10,
-    getSections: () => [{ id: "dashboard.notifications", nodes: [createNotificationNode(ctx)] }],
+    getSections: () => [{ id: "navigation.root", nodes: [createNotificationNode(ctx)] }],
   });
 };
 

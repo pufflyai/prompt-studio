@@ -61,6 +61,10 @@ export const filterVisibleSections = (
       continue;
     }
     const filteredNodes = filterNodes(section.nodes, nodeOverrides);
+    if (filteredNodes.length === 0 && !section.emptyState) {
+      changed = true;
+      continue;
+    }
     if (filteredNodes !== section.nodes) {
       changed = true;
       next.push({ ...section, nodes: filteredNodes });
@@ -122,15 +126,13 @@ const buildNodeAction = (
 };
 
 export interface TreeVisibilityMenuItems {
-  headerNodes?: TreeListNode[];
+  headerSections?: TreeListSection[];
   sections: TreeListSection[];
-  footerNodes?: TreeListNode[];
+  footerSections?: TreeListSection[];
 }
 
-// Builds the back-of-tree hide/show menu. Only items that opt in via canHide (or start hidden by
-// default) are listed: header rows, body categories (sections), category-level body rows, and
-// footer rows. Hideability is explicit per item, so leaf sub-items — which never opt in — stay
-// out of the menu; you customize categories and top-level entries, not individual files/sessions.
+// Builds the back-of-tree hide/show menu. Every slot uses sections, so the same rules apply to
+// pinned and scrolling content. Hideability is explicit per item.
 export const buildTreeVisibilityMenuActions = (
   items: TreeVisibilityMenuItems,
   sectionOverrides: Record<string, VisibilityOverride>,
@@ -145,26 +147,24 @@ export const buildTreeVisibilityMenuActions = (
     result.push(...group);
   };
 
-  appendGroup(
-    (items.headerNodes ?? [])
-      .filter(isCustomizable)
-      .map((node) => buildNodeAction(node, nodeOverrides, actions, options)),
-  );
-  const mainActions: ResourceContextAction[] = [];
-  for (const section of items.sections) {
-    if (isCustomizable(section)) mainActions.push(buildSectionAction(section, sectionOverrides, actions, options));
-    // Top-level rows that opt in (e.g. a "Tickets" nav entry) are hideable too; their leaf
-    // children are not visited, so files/sessions inside a category stay non-hideable.
-    for (const node of section.nodes) {
-      if (isCustomizable(node)) mainActions.push(buildNodeAction(node, nodeOverrides, actions, options));
+  const actionsForSections = (sections: TreeListSection[]) => {
+    const sectionActions: ResourceContextAction[] = [];
+    for (const section of sections) {
+      if (isCustomizable(section)) {
+        sectionActions.push(buildSectionAction(section, sectionOverrides, actions, options));
+      }
+      // Top-level rows that opt in (e.g. a "Tickets" nav entry) are hideable too; their leaf
+      // children are not visited, so files/sessions inside a category stay non-hideable.
+      for (const node of section.nodes) {
+        if (isCustomizable(node)) sectionActions.push(buildNodeAction(node, nodeOverrides, actions, options));
+      }
     }
-  }
-  appendGroup(mainActions);
-  appendGroup(
-    (items.footerNodes ?? [])
-      .filter(isCustomizable)
-      .map((node) => buildNodeAction(node, nodeOverrides, actions, options)),
-  );
+    return sectionActions;
+  };
+
+  appendGroup(actionsForSections(items.headerSections ?? []));
+  appendGroup(actionsForSections(items.sections));
+  appendGroup(actionsForSections(items.footerSections ?? []));
 
   if (result.length === 0) return result;
 

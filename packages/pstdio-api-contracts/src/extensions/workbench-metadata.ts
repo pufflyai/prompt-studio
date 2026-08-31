@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { dockedWorkbenchRegions } from "../extension-kernel/types/composition";
+import { extensionPanelRegions } from "../extension-kernel/types/composition";
 import {
   extensionCommandPaletteContributionSchema,
   extensionCommandRecordSchema,
@@ -28,7 +28,7 @@ const contributionRefSchema = <Kind extends string>(kind: Kind) =>
 
 const commandRefSchema = contributionRefSchema("command");
 const modeRefSchema = contributionRefSchema("mode");
-const navigationSlotRefSchema = contributionRefSchema("navigation-item");
+const pageRefSchema = contributionRefSchema("page");
 const resourceKindRefSchema = contributionRefSchema("resource-kind");
 const settingsSectionRefSchema = contributionRefSchema("settings-section");
 const statusRefSchema = contributionRefSchema("status");
@@ -126,7 +126,7 @@ const workbenchExtensionModeRecordSchema = z.object({
   extensionId: z.string(),
   label: localizableStringSchema,
   icon: z.string().optional(),
-  regions: z.array(z.enum(dockedWorkbenchRegions)),
+  regions: z.array(z.enum(extensionPanelRegions)),
 });
 
 const workbenchExtensionPlacementRecordSchema = z.object({
@@ -141,11 +141,11 @@ const workbenchExtensionPlacementRecordSchema = z.object({
       slot: z.object({ resourceKind: resourceKindRefSchema, id: z.string() }),
     }),
   ]),
-  region: z.enum(dockedWorkbenchRegions),
+  region: z.enum(extensionPanelRegions),
   order: z.number().optional(),
   defaultOpen: z.boolean().optional(),
   required: z.boolean().optional(),
-  movableTo: z.array(z.enum(dockedWorkbenchRegions)).optional(),
+  movableTo: z.array(z.enum(extensionPanelRegions)).optional(),
 });
 
 const workbenchExtensionViewMenuRecordSchema = z.object({
@@ -163,13 +163,21 @@ const workbenchExtensionViewMenuRecordSchema = z.object({
 const workbenchExtensionNavigationItemRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
-  slot: navigationSlotRefSchema,
+  owner: z.union([modeRefSchema, pageRefSchema]),
+  slot: z.enum(["header", "content", "footer"]),
   label: localizableStringSchema,
   icon: z.string().optional(),
   group: z.string().optional(),
-  order: z.number().optional(),
   when: normalizedWhenSchema.optional(),
   action: navigationTargetSchema,
+});
+
+const workbenchExtensionNavigationTreeRecordSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  owner: z.union([modeRefSchema, pageRefSchema]),
+  slot: z.enum(["header", "content", "footer"]),
+  view: viewRefSchema,
 });
 
 const workbenchExtensionResourceKindRecordSchema = z.object({
@@ -249,6 +257,7 @@ export const workbenchExtensionMetadataSchema = z.object({
     .array(z.object({ id: z.string(), extensionId: z.string(), resourceKind: resourceKindRefSchema }))
     .optional(),
   navigationItems: z.array(workbenchExtensionNavigationItemRecordSchema),
+  navigationTrees: z.array(workbenchExtensionNavigationTreeRecordSchema),
   statusBarItems: z.array(workbenchExtensionStatusBarItemRecordSchema),
   statuses: z.array(workbenchExtensionStatusRecordSchema),
   activityItems: z

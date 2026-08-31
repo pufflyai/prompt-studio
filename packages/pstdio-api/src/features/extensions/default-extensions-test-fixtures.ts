@@ -40,6 +40,7 @@ export const installed = {
     resourceViews: [],
     resourceHierarchyProviders: [],
     navigationItems: [],
+    navigationTrees: [],
     statusBarItems: [],
     statuses: [],
     activityItems: [],

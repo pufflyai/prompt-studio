@@ -1,4 +1,4 @@
-import { dockedWorkbenchRegions, type PageContribution, type PageSlot } from "@pstdio/sdk/extensions";
+import type { PageContribution, PageSlot } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension, RuntimePageRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
@@ -33,8 +33,7 @@ const isPageSlot = (value: unknown): value is PageSlot => {
     !isRecord(value) ||
     typeof value.id !== "string" ||
     (value.role !== "primary" && value.role !== "auxiliary") ||
-    typeof value.region !== "string" ||
-    !dockedWorkbenchRegions.includes(value.region as (typeof dockedWorkbenchRegions)[number])
+    (value.region !== "main" && value.region !== "secondary" && value.region !== "side")
   ) {
     return false;
   }

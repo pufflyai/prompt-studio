@@ -3,28 +3,31 @@ import { getDashboardSelectedResource } from "@/shared/app/navigation-state";
 import { subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import {
-  getSidenavContributionDefaultExpandedSectionIds,
-  getSidenavContributionFooterNodes,
-  getSidenavContributionSections,
-  subscribeSidenavContributions,
-} from "@/shared/workbench/contributions/sidenav-tree-contributions";
 import { modeOwnsNavigation } from "@/shared/workbench/mode-navigation-ownership";
+
+const activeModeOwner = (ctx: WorkbenchModuleContext, modeId: string) =>
+  ctx.navigationTrees.resolveOwner("mode", modeId) ?? { kind: "mode" as const, id: modeId, extensionId: "pstdio" };
+
+const activePageOwner = (ctx: WorkbenchModuleContext) => {
+  const state = ctx.pages.store.getState();
+  const page = state.activePageId ? state.pages[state.activePageId] : undefined;
+  if (!page) return undefined;
+  return { kind: "page" as const, id: page.id, extensionId: page.ref.extensionId ?? "pstdio" };
+};
 
 // The unified sidenav composes its body/footer from mode-gated contributions. The active
 // mode is the gate, so dashboard-owned modes (project/sessions) and extension-declared
 // modes (e.g. ticket) reshape the same widget without opening a different one.
-const composeSidenavBody = async (ctx: WorkbenchModuleContext) => {
+const composeSidenavSlot = async (ctx: WorkbenchModuleContext, slot: "header" | "content" | "footer") => {
   const mode = ctx.modes.getActiveModeId();
   const resource = ctx.getPrimaryResource() ?? getDashboardSelectedResource(ctx);
   if (!mode) return [];
-  return await getSidenavContributionSections(ctx, mode, resource ? { resource } : {});
-};
-
-const composeSidenavFooter = (ctx: WorkbenchModuleContext) => {
-  const mode = ctx.modes.getActiveModeId();
-  if (!mode) return [];
-  return getSidenavContributionFooterNodes(ctx, mode);
+  const context = resource ? { resource } : {};
+  const modeSections = await ctx.navigationTrees.getSections(activeModeOwner(ctx, mode), slot, context);
+  const pageOwner = activePageOwner(ctx);
+  if (!pageOwner) return modeSections;
+  const pageSections = await ctx.navigationTrees.getSections(pageOwner, slot, context);
+  return [...modeSections, ...pageSections];
 };
 
 // Recompose the registered Sidenav and update its selection. Mode placements own
@@ -37,7 +40,13 @@ export const updateDashboardSidenav = (ctx: WorkbenchModuleContext, options: { s
   }
   const mode = ctx.modes.getActiveModeId();
   if (mode) {
-    for (const sectionId of getSidenavContributionDefaultExpandedSectionIds(ctx, mode)) {
+    for (const sectionId of ctx.navigationTrees.getDefaultExpandedSectionIds(activeModeOwner(ctx, mode))) {
+      ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
+    }
+  }
+  const pageOwner = activePageOwner(ctx);
+  if (pageOwner) {
+    for (const sectionId of ctx.navigationTrees.getDefaultExpandedSectionIds(pageOwner)) {
       ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
     }
   }
@@ -65,9 +74,11 @@ const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
     title: "Sidenav",
     defaultExpandedNodeIds: ["workspace-sessions"],
     defaultExpandedSectionIds: ["sessions-wrap"],
-    getBody: () => composeSidenavBody(ctx),
-    getFooter: () => composeSidenavFooter(ctx),
-    getChildren: () => [],
+    canMove: ({ source, destination }) => source.moveScope === destination.moveScope,
+    getHeader: () => composeSidenavSlot(ctx, "header"),
+    getBody: () => composeSidenavSlot(ctx, "content"),
+    getFooter: () => composeSidenavSlot(ctx, "footer"),
+    getChildren: (node, context) => ctx.navigationTrees.getChildren(node, context),
   });
   ctx.layout.registerPanel(
     {
@@ -117,17 +128,22 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   // primary's scope (or none, showing every session). The primary change fires after placement,
   // unlike the beforeOpen refresh that runs before it.
   const primaryResourceSubscription = ctx.onDidChangePrimaryResource(refresh);
+  const pageSubscription = ctx.pages.store.subscribeSelector(
+    (state) => state.activePageId,
+    () => updateDashboardSidenav(ctx),
+  );
   const unsubscribeDashboardData = subscribeDashboardData(refresh);
   const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refresh);
-  const unsubscribeSidenavContributions = subscribeSidenavContributions(ctx, () => syncSidenavForActiveMode(ctx));
+  const navigationContributionSubscription = ctx.navigationTrees.onDidChange(() => syncSidenavForActiveMode(ctx));
 
   return {
     dispose: () => {
       modeSubscription.dispose();
       primaryResourceSubscription.dispose();
+      pageSubscription();
       unsubscribeDashboardData();
       unsubscribeProject();
-      unsubscribeSidenavContributions();
+      navigationContributionSubscription.dispose();
     },
   };
 };

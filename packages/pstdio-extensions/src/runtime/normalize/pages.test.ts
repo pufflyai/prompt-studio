@@ -61,7 +61,7 @@ describe("page slot validation", () => {
           view: pageView.ref,
           binding: { kind: ticketKind.ref, view: resourceView.ref },
         },
-        { id: "files", role: "auxiliary", region: "sidenav", view: pageView.ref, defaultOpen: true },
+        { id: "files", role: "auxiliary", region: "side", view: pageView.ref, defaultOpen: true },
         {
           id: "inspector",
           role: "auxiliary",
@@ -168,7 +168,7 @@ describe("page slot validation", () => {
         {
           id: "files",
           role: "auxiliary",
-          region: "sidenav",
+          region: "side",
           binding: { kind: ticketKind.ref, view: resourceView.ref },
           defaultOpen: true,
         },

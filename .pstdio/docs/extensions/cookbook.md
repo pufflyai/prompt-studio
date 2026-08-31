@@ -211,7 +211,7 @@ import {
   defineNavigationItem,
   defineView,
   packageAsset,
-  workbenchSlots,
+  workbenchModes,
 } from "@pstdio/sdk/extensions";
 
 const planner = defineView({
@@ -230,7 +230,8 @@ export default defineExtension({
   navigationItems: [
     defineNavigationItem({
       id: "planner",
-      slot: workbenchSlots.projectNavigation,
+      owner: workbenchModes.project,
+      slot: "content",
       label: "Planner",
       icon: "calendar-check",
       action: { kind: "view", view: planner.ref },
@@ -247,11 +248,12 @@ To make a navigation item switch Workbench modes instead of opening a view, use 
 action with the typed `workbenchCommands.switchMode` ref:
 
 ```ts
-import { defineNavigationItem, workbenchCommands, workbenchSlots } from "@pstdio/sdk/extensions";
+import { defineNavigationItem, workbenchCommands, workbenchModes } from "@pstdio/sdk/extensions";
 
 defineNavigationItem({
   id: "lab",
-  slot: workbenchSlots.projectNavigation,
+  owner: workbenchModes.project,
+  slot: "content",
   label: "Lab",
   icon: "flask-conical",
   action: {
@@ -477,14 +479,15 @@ rejected), text reads over 5 MB and images over 20 MB return limit errors, and i
 for png, jpeg, webp, and gif. `pst extensions check` fails a webview that declares `artifacts.read` on a
 mount its extension does not define.
 
-## Compose A Resource Screen
+## Compose A Resource Page With Navigation
 
-Declare the resource kind and its slots. Bind views to slots with `resourceViews`, then place the slots in a mode.
+Declare a page for the routed editor. Add a page-owned tree to the shared Sidenav with `navigationTrees`.
 
 ```ts
 import {
   defineExtension,
-  definePlacement,
+  defineNavigationTree,
+  definePage,
   defineResourceKind,
   defineResourceView,
   defineView,
@@ -496,13 +499,9 @@ import {
 const ticket = defineResourceKind({
   id: "ticket",
   surface: "primary",
-  slots: [
-    { id: "primary", cardinality: "one", access: "owner" },
-    { id: "navigation", cardinality: "one", access: "public" },
-  ],
+  slots: [{ id: "primary", cardinality: "one", access: "owner" }],
 });
 const primary = resourceSlotRef(ticket.ref, "primary");
-const navigation = resourceSlotRef(ticket.ref, "navigation");
 const editor = defineView({
   id: "ticket-editor",
   title: "Ticket",
@@ -513,23 +512,36 @@ const files = defineView({
   title: "Files",
   body: { kind: "tree", body: async () => [] },
 });
+const ticketPage = definePage({
+  id: "ticket",
+  title: "Ticket",
+  path: "ticket",
+  mode: workbenchModes.project,
+  slots: [
+    {
+      id: "content",
+      role: "primary",
+      region: "main",
+      binding: { kind: ticket.ref, view: editor.ref },
+    },
+  ],
+});
 
 export default defineExtension({
   resourceKinds: [ticket],
   views: [editor, files],
   resourceViews: [
     defineResourceView({ id: "editor", resourceKind: ticket.ref, slot: primary, view: editor.ref }),
-    defineResourceView({ id: "files", resourceKind: ticket.ref, slot: navigation, view: files.ref }),
   ],
-  placements: [
-    definePlacement({ id: "editor", mode: workbenchModes.project, item: { kind: "resource-slot", slot: primary }, region: "main", required: true }),
-    definePlacement({ id: "files", mode: workbenchModes.project, item: { kind: "resource-slot", slot: navigation }, region: "sidenav", required: true }),
+  pages: [ticketPage],
+  navigationTrees: [
+    defineNavigationTree({ id: "files", owner: ticketPage.ref, slot: "content", view: files.ref }),
   ],
 });
 ```
 
-Another extension can bind its view to the public `navigation` slot by importing the typed
-resource-kind and slot refs. Geometry remains in `placements`; the binding never decides a region.
+The tree appears after the active mode's content while Ticket is active. Leaving the page removes only the
+page-owned tree; mode navigation remains.
 
 ## Keep file source intact in file views
 

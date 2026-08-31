@@ -14,9 +14,9 @@ export const useTreeData = (
   viewId?: string,
   filter?: string,
 ) => {
-  const [header, setHeader] = useState<TreeNode[]>([]);
+  const [header, setHeader] = useState<TreeViewSection[]>([]);
   const [body, setBody] = useState<TreeViewSection[]>([]);
-  const [footer, setFooter] = useState<TreeNode[]>([]);
+  const [footer, setFooter] = useState<TreeViewSection[]>([]);
   const [childrenByNodeId, setChildrenByNodeId] = useState<Record<string, TreeNode[]>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

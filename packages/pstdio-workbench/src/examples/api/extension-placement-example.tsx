@@ -10,7 +10,7 @@ const extensionId = "pstdio.api-placement";
 export const placementPanelId = `${extensionId}.view.outline`;
 const treeBodyCommandId = `${placementPanelId}.tree.body`;
 const placementModeId = `${extensionId}.mode.placement`;
-const placementRegions = ["sidenav", "main", "secondary", "side"] as const;
+const placementRegions = ["main", "secondary", "side"] as const;
 
 const placementMetadata = {
   extensions: [{ id: extensionId, name: "api-placement", displayName: "API placement", sourcePath: "" }],
@@ -51,12 +51,13 @@ const placementMetadata = {
       region: "main",
       defaultOpen: true,
       required: true,
-      movableTo: ["main", "sidenav"],
+      movableTo: ["main", "side"],
     },
   ],
   resourceKinds: [],
   resourceViews: [],
   navigationItems: [],
+  navigationTrees: [],
   statusBarItems: [],
   statuses: [],
   settingsPanels: [],
@@ -108,7 +109,7 @@ export const ExtensionPlacementExample = () => {
   const [workbench] = useState(createExtensionPlacementWorkbench);
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
   const region = placementRegion(layout);
-  const movePanel = (nextRegion: "main" | "sidenav") => {
+  const movePanel = (nextRegion: "main" | "side") => {
     workbench.layout.openPanel(placementPanelId, {
       region: nextRegion,
       role: nextRegion === "main" ? "location" : "sub-panel",
@@ -125,8 +126,8 @@ export const ExtensionPlacementExample = () => {
           <Button size="sm" variant="outline" onClick={() => movePanel("main")}>
             Move to main
           </Button>
-          <Button size="sm" variant="outline" onClick={() => movePanel("sidenav")}>
-            Move to sidenav
+          <Button size="sm" variant="outline" onClick={() => movePanel("side")}>
+            Move to side
           </Button>
         </HStack>
         <Text>

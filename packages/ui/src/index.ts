@@ -74,8 +74,10 @@ export type {
   TreeListNode,
   TreeListSection,
 } from "@/components/tree-list/tree-list.types";
+export { TreeListDragProvider } from "@/components/tree-list/tree-list-drag-provider";
 export { getTreeListOrderStore, useTreeListOrderStore } from "@/components/tree-list/tree-list-order.store";
 export { applyTreeListOrder } from "@/components/tree-list/tree-list-order-filter";
+export type { TreeListMove, TreeListMoveEndpoint, TreeListMovePolicy } from "@/components/tree-list/tree-list-reorder";
 export type { VisibilityOverride } from "@/components/tree-list/tree-list-visibility.store";
 export {
   getTreeListVisibilityStore,

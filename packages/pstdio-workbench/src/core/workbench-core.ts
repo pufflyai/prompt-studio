@@ -80,6 +80,10 @@ import {
 import { createWorkbenchModeRegistry, type WorkbenchModeRegistry } from "./registries/modes/mode-registry";
 import { createNavigationRegistry, type NavigationRegistry } from "./registries/navigation/navigation-registry";
 import {
+  createNavigationTreeRegistry,
+  type NavigationTreeRegistry,
+} from "./registries/navigation/navigation-tree-registry";
+import {
   createNotificationRegistry,
   type NotificationRegistry,
 } from "./registries/notifications/notification-registry";
@@ -168,6 +172,7 @@ export interface WorkbenchCoreContributionContext {
   modes: WorkbenchModeRegistry;
   modePlacements: WorkbenchModePlacementRegistry;
   navigation: NavigationRegistry;
+  navigationTrees: NavigationTreeRegistry;
   navigator: WorkbenchNavigator;
   notifications: NotificationRegistry;
   pageLocations: WorkbenchPageLocationController;
@@ -395,6 +400,11 @@ const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInpu
       registerParser: (parser, metadata) =>
         track(core.navigation.registerParser(parser, withModuleMetadata(input, metadata))),
     },
+    navigationTrees: {
+      ...core.navigationTrees,
+      registerContribution: (contribution) => track(core.navigationTrees.registerContribution(contribution)),
+      onDidChange: (listener) => track(core.navigationTrees.onDidChange(listener)),
+    },
     notifications: {
       ...core.notifications,
       show: (notification, metadata) => core.notifications.show(notification, withModuleMetadata(input, metadata)),
@@ -596,6 +606,67 @@ const createCorePanelOpener =
     return instance;
   };
 
+const connectCoreServices = (input: {
+  core: WorkbenchCore;
+  createInput: CreateWorkbenchCoreInput;
+  establishLocation: ReturnType<typeof createLayoutModel>["establishLocation"];
+  pageResources: WorkbenchPageResourceCodec;
+}) => {
+  const { core, createInput, establishLocation, pageResources } = input;
+  core.modes = createWorkbenchModeRegistry({
+    establishLocation: (instanceId) => establishLocation(instanceId),
+    resolveContext: () => core,
+  });
+  core.pages = createLiveWorkbenchPageRegistry({
+    layout: core.layout,
+    modePlacements: core.modePlacements,
+    modes: core.modes,
+    views: core.views,
+    resources: pageResources,
+  });
+  core.pageLocations = createWorkbenchPageLocationController({
+    registry: core.pages,
+    browser: createInput.pageLocationBrowser ?? createMemoryWorkbenchPageLocationBrowser(),
+    persistence: createInput.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
+    startPage: createInput.startPage ?? workbenchPages.start,
+  });
+  connectWorkbenchPageBreadcrumbs({
+    breadcrumbs: core.breadcrumbs,
+    locations: core.pageLocations,
+    pages: core.pages,
+    pageResources,
+    resources: core.resources,
+    views: core.views,
+  });
+  core.navigator = createWorkbenchNavigator({
+    modes: core.modes,
+    getSelectedResource: () => core.getPrimaryResource(),
+    presentResource: (resource, present) => core.resources.openResource(resource, present),
+  });
+  core.composition = createCoreCompositionController(core);
+  core.history = createHistoryController({
+    layout: core.layout,
+    modes: core.modes,
+    resources: core.resources,
+    views: core.views,
+    getPageLocation: () => getWorkbenchPageRegistryInternals(core.pages).getPublishingState().location,
+    canResolvePage: (page) =>
+      core.pages
+        .listPages()
+        .some((candidate) => candidate.ref.id === page.id && candidate.ref.extensionId === page.extensionId),
+    replayPageLocation: (location) => core.pageLocations.replay(location),
+    persistence: createInput.historyPersistence,
+    commitNavigation: (commit) => core.navigator.commitContext(commit),
+  });
+  core.navigation.registerParser({
+    id: "workbench.views.paths",
+    priority: 1_000,
+    canParse: (location) => Boolean(core.views.resolvePath(location)),
+    parse: (location) => core.views.resolvePath(location)!,
+  });
+  connectWorkbenchCoreState(core, createInput);
+};
+
 export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   const context = createContextKeyService();
   const commands = createCommandRegistry({ context });
@@ -639,6 +710,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
   const pageResources = input.pageResources ?? defaultPageResourceCodec;
   const modePlacements = createWorkbenchModePlacementRegistry({ views });
   const statusBar = createStatusBarRegistry({ hasView: (viewId) => Boolean(views.getView(viewId)) });
+  const navigationTrees = createNavigationTreeRegistry();
 
   const core: WorkbenchCore = {
     breadcrumbs: createWorkbenchBreadcrumbController(),
@@ -668,6 +740,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     pageLocations: undefined as unknown as WorkbenchPageLocationController,
     pages: undefined as unknown as WorkbenchPageRegistry<WorkbenchWidgetPlacement>,
     navigation: createCoreNavigationRegistry(() => core, openPanel),
+    navigationTrees,
     panels: createWorkbenchPanelsController({
       defaultOpenByRegionId: input.defaultPanelOpenByRegionId,
       persistence: input.panelsPersistence,
@@ -772,59 +845,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     },
   };
 
-  core.modes = createWorkbenchModeRegistry({
-    establishLocation: (instanceId) => establishLocation(instanceId),
-    resolveContext: () => core,
-  });
-  core.pages = createLiveWorkbenchPageRegistry({
-    layout: core.layout,
-    modePlacements: core.modePlacements,
-    modes: core.modes,
-    views: core.views,
-    resources: pageResources,
-  });
-  core.pageLocations = createWorkbenchPageLocationController({
-    registry: core.pages,
-    browser: input.pageLocationBrowser ?? createMemoryWorkbenchPageLocationBrowser(),
-    persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
-    startPage: input.startPage ?? workbenchPages.start,
-  });
-  connectWorkbenchPageBreadcrumbs({
-    breadcrumbs: core.breadcrumbs,
-    locations: core.pageLocations,
-    pages: core.pages,
-    pageResources,
-    resources: core.resources,
-    views: core.views,
-  });
-  core.navigator = createWorkbenchNavigator({
-    modes: core.modes,
-    getSelectedResource: () => core.getPrimaryResource(),
-    presentResource: (resource, present) => core.resources.openResource(resource, present),
-  });
-  core.composition = createCoreCompositionController(core);
-  core.history = createHistoryController({
-    layout: core.layout,
-    modes: core.modes,
-    resources: core.resources,
-    views: core.views,
-    getPageLocation: () => getWorkbenchPageRegistryInternals(core.pages).getPublishingState().location,
-    canResolvePage: (page) =>
-      core.pages
-        .listPages()
-        .some((candidate) => candidate.ref.id === page.id && candidate.ref.extensionId === page.extensionId),
-    replayPageLocation: (location) => core.pageLocations.replay(location),
-    persistence: input.historyPersistence,
-    commitNavigation: (commit) => core.navigator.commitContext(commit),
-  });
-  core.navigation.registerParser({
-    id: "workbench.views.paths",
-    priority: 1_000,
-    canParse: (location) => Boolean(core.views.resolvePath(location)),
-    parse: (location) => core.views.resolvePath(location)!,
-  });
-
-  connectWorkbenchCoreState(core, input);
+  connectCoreServices({ core, createInput: input, establishLocation, pageResources });
 
   return core;
 };

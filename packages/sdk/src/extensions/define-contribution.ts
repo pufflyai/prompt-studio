@@ -10,6 +10,7 @@ import type {
   KeybindingContribution,
   ModeContribution,
   NavigationItemContribution,
+  NavigationTreeContribution,
   PageContribution,
   PageSlot,
   PageSlotRef,
@@ -80,6 +81,12 @@ export const defineNavigationItem = defineContribution("navigation-item") as <
 >(
   definition: Definition,
 ) => Definition & ContributionDefinition<"navigation-item">;
+
+export const defineNavigationTree = defineContribution("navigation-tree") as <
+  Definition extends Omit<NavigationTreeContribution, "ref">,
+>(
+  definition: Definition,
+) => Definition & ContributionDefinition<"navigation-tree">;
 
 export const defineMode = defineContribution("mode") as <const Definition extends Omit<ModeContribution, "ref">>(
   definition: Definition,

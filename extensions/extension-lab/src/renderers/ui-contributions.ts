@@ -3,6 +3,7 @@ import {
   defineActivityItem,
   defineMode,
   defineNavigationItem,
+  defineNavigationTree,
   definePage,
   definePlacement,
   defineResourceKind,
@@ -27,21 +28,7 @@ export const labMode = defineMode({
   regions: ["main", "side"],
 });
 
-export const animationMode = defineMode({
-  id: "animation",
-  label: l10n("modes.animation.label", "Animation"),
-  icon: "clapperboard",
-  regions: ["sidenav", "main", "side"],
-});
-
-export const sculptMode = defineMode({
-  id: "sculpt",
-  label: l10n("modes.sculpt.label", "Sculpt"),
-  icon: "hammer",
-  regions: ["main", "secondary", "side"],
-});
-
-export const labModes = [labMode, animationMode, sculptMode];
+export const labModes = [labMode];
 
 export const glassLabArtifactKind = defineResourceKind({
   id: "glass-lab-artifact",
@@ -51,19 +38,7 @@ export const glassLabArtifactKind = defineResourceKind({
   slots: [{ id: "inspector", cardinality: "many", access: "public" }],
 });
 
-export const blendProjectKind = defineResourceKind({
-  id: "blend-project",
-  surface: "primary",
-  label: l10n("resourceKinds.blendProject.label", "Blend project"),
-  icon: "box",
-  slots: [
-    { id: "primary", cardinality: "one", access: "owner" },
-    { id: "navigation", cardinality: "one", access: "public" },
-    { id: "inspector", cardinality: "many", access: "public" },
-  ],
-});
-
-export const labResourceKinds = [glassLabArtifactKind, blendProjectKind];
+export const labResourceKinds = [glassLabArtifactKind];
 
 export const labSettingsSection = defineSettingsSection({
   id: "lab",
@@ -72,11 +47,8 @@ export const labSettingsSection = defineSettingsSection({
 });
 
 const artifactInspector = resourceSlotRef(glassLabArtifactKind.ref, "inspector");
-const blendPrimary = resourceSlotRef(blendProjectKind.ref, "primary");
-const blendNavigation = resourceSlotRef(blendProjectKind.ref, "navigation");
-const blendInspector = resourceSlotRef(blendProjectKind.ref, "inspector");
 
-const createLabPage = (labPage: ViewRef, cameraTree: ViewRef) =>
+const createLabPage = (labPage: ViewRef) =>
   definePage({
     id: "lab",
     title: l10n("routes.lab.label", "Lab"),
@@ -89,14 +61,6 @@ const createLabPage = (labPage: ViewRef, cameraTree: ViewRef) =>
         role: "primary",
         region: "main",
         view: labPage,
-      },
-      {
-        id: "cameras",
-        role: "auxiliary",
-        region: "sidenav",
-        view: cameraTree,
-        defaultOpen: true,
-        order: 10,
       },
     ],
   });
@@ -117,7 +81,7 @@ export const createLabUi = (baseUrl: string) => {
     workflow,
   } = createLabViews(baseUrl);
 
-  const labPageContribution = createLabPage(labPage.ref, cameraTree.ref);
+  const labPageContribution = createLabPage(labPage.ref);
 
   const placements = [
     definePlacement({
@@ -146,46 +110,6 @@ export const createLabUi = (baseUrl: string) => {
       item: { kind: "resource-slot", slot: artifactInspector },
       region: "side",
     }),
-    definePlacement({
-      id: "blend-primary.animation",
-      mode: animationMode.ref,
-      item: { kind: "resource-slot", slot: blendPrimary },
-      region: "main",
-      required: true,
-    }),
-    definePlacement({
-      id: "blend-navigation.animation",
-      mode: animationMode.ref,
-      item: { kind: "resource-slot", slot: blendNavigation },
-      region: "sidenav",
-      required: true,
-    }),
-    definePlacement({
-      id: "blend-inspector.animation",
-      mode: animationMode.ref,
-      item: { kind: "resource-slot", slot: blendInspector },
-      region: "side",
-      movableTo: ["side", "secondary"],
-    }),
-    definePlacement({
-      id: "blend-primary.sculpt",
-      mode: sculptMode.ref,
-      item: { kind: "resource-slot", slot: blendPrimary },
-      region: "main",
-      required: true,
-    }),
-    definePlacement({
-      id: "blend-navigation.sculpt",
-      mode: sculptMode.ref,
-      item: { kind: "resource-slot", slot: blendNavigation },
-      region: "side",
-    }),
-    definePlacement({
-      id: "blend-inspector.sculpt",
-      mode: sculptMode.ref,
-      item: { kind: "resource-slot", slot: blendInspector },
-      region: "secondary",
-    }),
   ];
 
   return {
@@ -210,24 +134,6 @@ export const createLabUi = (baseUrl: string) => {
         slot: artifactInspector,
         view: artifactDetail.ref,
       }),
-      defineResourceView({
-        id: "blend-overview",
-        resourceKind: blendProjectKind.ref,
-        slot: blendPrimary,
-        view: overview.ref,
-      }),
-      defineResourceView({
-        id: "blend-cams",
-        resourceKind: blendProjectKind.ref,
-        slot: blendNavigation,
-        view: cams.ref,
-      }),
-      defineResourceView({
-        id: "blend-artifacts",
-        resourceKind: blendProjectKind.ref,
-        slot: blendInspector,
-        view: artifacts.ref,
-      }),
     ],
     viewMenus: [
       defineViewMenu({
@@ -248,7 +154,8 @@ export const createLabUi = (baseUrl: string) => {
     navigationItems: [
       defineNavigationItem({
         id: "lab",
-        slot: workbenchSlots.projectNavigation,
+        owner: workbenchModes.project,
+        slot: "content",
         group: "Lab",
         label: l10n("routes.lab.label", "Lab"),
         icon: "flask-conical",
@@ -256,7 +163,8 @@ export const createLabUi = (baseUrl: string) => {
       }),
       defineNavigationItem({
         id: "lab-mode",
-        slot: workbenchSlots.projectNavigation,
+        owner: workbenchModes.project,
+        slot: "content",
         group: "Lab",
         label: l10n("routes.labMode.label", "Lab mode"),
         icon: "panels-top-left",
@@ -267,11 +175,20 @@ export const createLabUi = (baseUrl: string) => {
       }),
       defineNavigationItem({
         id: "faulty",
-        slot: workbenchSlots.projectNavigation,
+        owner: workbenchModes.project,
+        slot: "content",
         group: "Lab",
         label: l10n("routes.faulty.label", "Lab (faulty)"),
         icon: "flask-conical-off",
         action: { kind: "view", view: faultyPage.ref },
+      }),
+    ],
+    navigationTrees: [
+      defineNavigationTree({
+        id: "lab-cameras",
+        owner: labPageContribution.ref,
+        slot: "content",
+        view: cameraTree.ref,
       }),
     ],
     statusBarItems: [

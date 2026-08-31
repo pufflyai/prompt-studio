@@ -231,6 +231,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
   );
   disposables.push(
     ...registerWorkbenchExtensionNavigationItems({
+      createWhenExpression: sourceInput.createNavigationWhenExpression,
       metadata: sourceInput.metadata,
       workbench: sourceInput.workbench,
     }),

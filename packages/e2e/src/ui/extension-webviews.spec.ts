@@ -184,8 +184,9 @@ test.describe("Extension webviews", () => {
 
     await labFrame.getByRole("button", { name: "Open file capability resource" }).click();
     await expect(
-      page.getByRole("navigation", { name: "breadcrumb" }).getByText("File capability project", { exact: true }),
+      page.frameLocator('iframe[title="Artifact"]').getByRole("heading", { name: "File capability artifact" }),
     ).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "breadcrumb" }).getByText("Lab", { exact: true })).toBeVisible();
   });
 
   test("creates an inbox notification from Extension Lab and opens it from the notifications modal", async ({

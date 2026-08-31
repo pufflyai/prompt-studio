@@ -84,6 +84,7 @@ const localIdRecordsByKind = (runtime: ExtensionRuntime): [string, ContributionS
   ["middleware", runtime.middlewares],
   ["mode", runtime.modes],
   ["navigationItem", runtime.navigationItems],
+  ["navigationTree", runtime.navigationTrees],
   ["placement", runtime.placements],
   ["resourceHierarchyProvider", runtime.resourceHierarchyProviders],
   ["resourceKind", runtime.resourceKinds],
@@ -182,6 +183,8 @@ const collectViewReferenceDiagnostics = (runtime: ExtensionRuntime) => {
     sites.push({ record, reference: contributionRefId(record.contribution.view), kind: "settingsPanel" });
   for (const record of runtime.statusBarItems)
     sites.push({ record, reference: contributionRefId(record.contribution.view), kind: "statusBarItem" });
+  for (const record of runtime.navigationTrees)
+    sites.push({ record, reference: contributionRefId(record.contribution.view), kind: "navigationTree" });
   for (const site of sites) {
     if (!site.reference || known.has(site.reference)) continue;
     diagnostics.push(
@@ -198,9 +201,55 @@ const collectViewReferenceDiagnostics = (runtime: ExtensionRuntime) => {
   return diagnostics;
 };
 
+const collectNavigationOwnerDiagnostics = (runtime: ExtensionRuntime) => {
+  const diagnostics: ExtensionDiagnostic[] = [];
+  const knownOwners = new Set([
+    ...runtime.modes.map((record) => record.id),
+    ...runtime.pages.map((record) => record.id),
+  ]);
+  const sites = [...runtime.navigationItems, ...runtime.navigationTrees];
+  for (const record of sites) {
+    const reference = contributionRefId(record.contribution.owner);
+    if (!reference || knownOwners.has(reference)) continue;
+    diagnostics.push(
+      createDiagnostic({
+        code: "extension_navigation_owner_missing",
+        message: `Navigation contribution "${record.id}" references unknown owner "${reference}"`,
+        extensionId: record.extensionId,
+        sourcePath: record.sourcePath,
+        metadata: { contributionId: record.id, failedReference: reference },
+      }),
+    );
+  }
+  return diagnostics;
+};
+
+const collectNavigationTreeViewDiagnostics = (runtime: ExtensionRuntime) => {
+  const diagnostics: ExtensionDiagnostic[] = [];
+  const views = new Map(runtime.views.map((record) => [record.id, record]));
+  for (const record of runtime.navigationTrees) {
+    const reference = contributionRefId(record.contribution.view);
+    if (!reference) continue;
+    const view = views.get(reference);
+    if (!view || view.contribution.body.kind === "tree") continue;
+    diagnostics.push(
+      createDiagnostic({
+        code: "extension_navigation_tree_view_invalid",
+        message: `Navigation tree "${record.id}" references view "${reference}", which is not a tree view`,
+        extensionId: record.extensionId,
+        sourcePath: record.sourcePath,
+        metadata: { contributionId: record.id, failedReference: reference },
+      }),
+    );
+  }
+  return diagnostics;
+};
+
 export const collectConventionDiagnostics = (runtime: ExtensionRuntime) => [
   ...collectIconDiagnostics(runtime),
   ...collectIdGrammarDiagnostics(runtime),
   ...collectCommandReferenceDiagnostics(runtime),
   ...collectViewReferenceDiagnostics(runtime),
+  ...collectNavigationOwnerDiagnostics(runtime),
+  ...collectNavigationTreeViewDiagnostics(runtime),
 ];

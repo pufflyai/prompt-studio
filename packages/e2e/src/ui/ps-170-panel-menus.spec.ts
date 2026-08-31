@@ -101,7 +101,9 @@ test("PS-170 keeps the project selector and Session Panel available on project h
 
   await page.goto(`/projects/${project.id}/`);
 
-  await expect(page.getByRole("button", { name: "Switch project" })).toBeVisible();
+  await expect(
+    page.locator('[data-workbench-region="sidenav"]').getByRole("button", { name: "Switch project", exact: true }),
+  ).toBeVisible();
   await expect(page.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
 });
 

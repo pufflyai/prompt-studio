@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { dockedWorkbenchRegions } from "../extension-kernel/types/composition";
 import { localizableStringSchema } from "./common";
 import { extensionResourceRefSchema } from "./execute";
 
@@ -24,7 +23,7 @@ const bindingSchema = z.object({ kind: resourceKindRefSchema, view: viewRefSchem
 const slotSchema = z.object({
   id: z.string(),
   role: z.enum(["primary", "auxiliary"]),
-  region: z.enum(dockedWorkbenchRegions),
+  region: z.enum(["main", "secondary", "side"]),
   view: viewRefSchema.optional(),
   binding: bindingSchema.optional(),
   cardinality: z.enum(["one", "many"]).optional(),

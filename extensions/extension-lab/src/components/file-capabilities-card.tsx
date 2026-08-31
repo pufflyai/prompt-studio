@@ -53,7 +53,7 @@ export const FileCapabilitiesCard = () => {
 
   const openResource = () =>
     host.call("resource.open", {
-      resource: { type: "blend-project", id: "file-capability", label: "File capability project" },
+      resource: { type: "glass-lab-artifact", id: "file-capability", label: "File capability artifact" },
       input: { strategy: "replace-active" },
     });
 

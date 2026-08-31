@@ -25,6 +25,8 @@ export interface TreeListInlineInput {
 /** Tree node data rendered by `TreeList`; extends the row API used by `ListRow`. */
 export type TreeListNode = ListRowItem & {
   id: string;
+  /** Opaque host scope passed to a configurable move policy. */
+  moveScope?: string;
   children?: TreeListNode[];
   /** Per-node visual row variant. Used for non-interactive placeholder rows. */
   rowVariant?: TreeListNodeRowVariant;
@@ -44,6 +46,8 @@ export type TreeListNode = ListRowItem & {
 /** Top-level tree section with optional header, actions, empty state, and child nodes. */
 export interface TreeListSection {
   id: string;
+  /** Opaque host scope passed to a configurable move policy. */
+  moveScope?: string;
   label?: string;
   collapsible?: boolean;
   actions?: TreeListAction[];

@@ -27,6 +27,7 @@ const makeCheck = (extensionsRoot: string, errorCount = 0) => ({
   resourceViews: [],
   resourceHierarchyProviders: [],
   navigationItems: [],
+  navigationTrees: [],
   statusBarItems: [],
   statuses: [],
   activityItems: [],

@@ -41,6 +41,8 @@ export interface TreeNodeInlineInput {
 
 export interface TreeNode {
   id: string;
+  /** Host-owned customization boundary. Extension callbacks cannot set it. */
+  moveScope?: string;
   label: string;
   icon?: string;
   iconElement?: unknown;
@@ -83,6 +85,8 @@ export interface TreeSectionEmptyState {
 
 export interface TreeViewSection {
   id: string;
+  /** Host-owned customization boundary. Extension callbacks cannot set it. */
+  moveScope?: string;
   label?: string;
   actions?: TreeAction[];
   collapsible?: boolean;
@@ -95,6 +99,15 @@ export interface TreeViewSection {
   canReorder?: boolean;
 }
 
+export interface TreeMoveEndpoint {
+  kind: "section" | "node";
+  sectionId: string;
+  id: string;
+  moveScope?: string;
+}
+
+export type TreeMovePolicy = (move: { source: TreeMoveEndpoint; destination: TreeMoveEndpoint }) => boolean;
+
 export interface TreeRendererContribution {
   id: string;
   title: string;
@@ -105,9 +118,10 @@ export interface TreeRendererContribution {
   defaultExpandedSectionIds?: string[];
   defaultExpandedNodeIds?: string[];
   getBody(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
-  getHeader?(ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
-  getFooter?(ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
+  getHeader?(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
+  getFooter?(ctx: TreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getChildren(node: TreeNode, ctx: TreeContext): Promise<TreeNode[]> | TreeNode[];
+  canMove?: TreeMovePolicy;
   moveNode?(source: TreeNode, target: TreeNode | undefined, ctx: TreeContext): Promise<void> | void;
 }
 
@@ -177,8 +191,8 @@ export interface TreeRendererRegistry {
   getTreeRenderer(id: string): RegisteredTreeRendererContribution | undefined;
   listTreeRenderers(): RegisteredTreeRendererContribution[];
   getBody(id: string, ctx?: TreeContext): Promise<TreeViewSection[]>;
-  getHeader(id: string, ctx?: TreeContext): Promise<TreeNode[]>;
-  getFooter(id: string, ctx?: TreeContext): Promise<TreeNode[]>;
+  getHeader(id: string, ctx?: TreeContext): Promise<TreeViewSection[]>;
+  getFooter(id: string, ctx?: TreeContext): Promise<TreeViewSection[]>;
   getChildren(id: string, node: TreeNode, ctx?: TreeContext): Promise<TreeNode[]>;
   getTreeState(id: string): TreeRendererState;
   setNodeExpanded(id: string, nodeId: string, expanded: boolean): void;

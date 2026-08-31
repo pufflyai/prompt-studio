@@ -1,16 +1,15 @@
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
 import { registerDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 
 const registerSearchSection = (ctx: WorkbenchModuleContext) => {
-  registerSidenavContribution(ctx, {
+  registerDashboardNavigationContribution(ctx, {
     id: "dashboard.sidenav.search",
     modes: ["*"],
-    order: 0,
     getSections: () => [
       {
-        id: "dashboard.search",
+        id: "navigation.root",
         nodes: [
           {
             id: "search",

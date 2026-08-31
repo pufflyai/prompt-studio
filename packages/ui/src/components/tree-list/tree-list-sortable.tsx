@@ -1,12 +1,26 @@
 import { Box, Stack, type StackProps } from "@chakra-ui/react";
-import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import {
+  type CollisionDetection,
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { MouseEvent as ReactMouseEvent } from "react";
+import { type MouseEvent as ReactMouseEvent, useContext } from "react";
 import type { TreeListLinkComponent, TreeListNavigateEvent, TreeListNode, TreeListSection } from "./tree-list.types";
+import { SharedTreeListDragContext } from "./tree-list-drag-provider";
 import { buildVirtualRows, type VirtualRow } from "./tree-list-model";
 import { TreeListNodeRow } from "./tree-list-node-row";
-import { computeReorderResult, toSectionDragId } from "./tree-list-reorder";
+import {
+  canDropOnTreeListTarget,
+  computeReorderResult,
+  type TreeListMovePolicy,
+  toSectionDragId,
+} from "./tree-list-reorder";
 import { TreeListSectionHeader } from "./tree-list-section-header";
 
 type TreeListRowVariant = "compact" | "tree";
@@ -161,9 +175,8 @@ const renderNodeRow = (input: {
   />
 );
 
-// Top-level nodes participate in their section's SortableContext; nested rows
-// inherit position from their parent and render plain (cross-section moves are
-// out of scope per the ADR).
+// Top-level nodes participate in their section's SortableContext and can move
+// between sections. Nested rows inherit position from their parent and render plain.
 const SortableOrPlainNodeRow = (props: SortableOrPlainNodeRowProps) => {
   const { row, ...rest } = props;
   if (row.level > 0) {
@@ -201,6 +214,7 @@ interface TreeListSortableProps {
   onSectionContextMenu?: (event: ReactMouseEvent<HTMLElement>, sectionId: string) => void;
   onReorderSections?: (nextSectionIds: string[]) => void;
   onReorderNodes?: (sectionId: string, nextNodeIds: string[]) => void;
+  canMove?: TreeListMovePolicy;
 }
 
 export const TreeListSortable = (props: TreeListSortableProps) => {
@@ -219,48 +233,60 @@ export const TreeListSortable = (props: TreeListSortableProps) => {
     onSectionContextMenu,
     onReorderSections,
     onReorderNodes,
+    canMove,
   } = props;
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
+  const usesSharedDragContext = useContext(SharedTreeListDragContext);
+  const collisionDetection: CollisionDetection = (input) =>
+    closestCenter(input).filter((collision) =>
+      canDropOnTreeListTarget(sections, String(input.active.id), String(collision.id), canMove),
+    );
 
   const handleDragEnd = (event: DragEndEvent) => {
     if (!event.over) return;
-    const result = computeReorderResult(sections, String(event.active.id), String(event.over.id));
+    const result = computeReorderResult(sections, String(event.active.id), String(event.over.id), canMove);
     if (!result) return;
     if (result.kind === "section") {
       onReorderSections?.(result.nextSectionIds);
     } else {
-      onReorderNodes?.(result.sectionId, result.nextNodeIds);
+      for (const [sectionId, nextNodeIds] of Object.entries(result.orders)) {
+        onReorderNodes?.(sectionId, nextNodeIds);
+      }
     }
   };
 
   const rows = buildVirtualRows(sections, expandedSectionIds, expandedNodeIds);
 
+  const content = (
+    <SortableContext
+      items={sections.map((section) => toSectionDragId(section.id))}
+      strategy={verticalListSortingStrategy}
+    >
+      <Stack gap={sectionGap} w="full" minW="0" maxW="full">
+        {sections.map((section) => (
+          <SortableSectionGroup
+            key={section.id}
+            section={section}
+            sectionRows={rows.filter((row) => row.sectionId === section.id)}
+            expandedNodeIds={expandedNodeIds}
+            activeNodeId={activeNodeId}
+            rowVariant={rowVariant}
+            nodeGap={nodeGap}
+            linkComponent={linkComponent}
+            onNavigate={onNavigate}
+            onToggleSection={onToggleSection}
+            onToggleNode={onToggleNode}
+            onSectionContextMenu={onSectionContextMenu}
+          />
+        ))}
+      </Stack>
+    </SortableContext>
+  );
+  if (usesSharedDragContext) return content;
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-      <SortableContext
-        items={sections.map((section) => toSectionDragId(section.id))}
-        strategy={verticalListSortingStrategy}
-      >
-        <Stack gap={sectionGap} w="full" minW="0" maxW="full">
-          {sections.map((section) => (
-            <SortableSectionGroup
-              key={section.id}
-              section={section}
-              sectionRows={rows.filter((row) => row.sectionId === section.id)}
-              expandedNodeIds={expandedNodeIds}
-              activeNodeId={activeNodeId}
-              rowVariant={rowVariant}
-              nodeGap={nodeGap}
-              linkComponent={linkComponent}
-              onNavigate={onNavigate}
-              onToggleSection={onToggleSection}
-              onToggleNode={onToggleNode}
-              onSectionContextMenu={onSectionContextMenu}
-            />
-          ))}
-        </Stack>
-      </SortableContext>
+    <DndContext sensors={sensors} collisionDetection={collisionDetection} onDragEnd={handleDragEnd}>
+      {content}
     </DndContext>
   );
 };

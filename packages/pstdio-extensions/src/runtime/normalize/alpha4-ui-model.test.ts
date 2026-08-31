@@ -12,7 +12,7 @@ import {
   packageAsset,
   params,
   resourceSlotRef,
-  workbenchSlots,
+  workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { LoadedExtensionSource } from "../loader";
@@ -72,7 +72,8 @@ const alpha4Definition = () => {
     navigationItems: [
       defineNavigationItem({
         id: "tickets",
-        slot: workbenchSlots.projectNavigation,
+        owner: workbenchModes.project,
+        slot: "content",
         label: "Tickets",
         action: { kind: "view", view: view.ref },
       }),
@@ -137,6 +138,32 @@ describe("alpha.4 UI normalization", () => {
     expect(runtime.diagnostics).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "duplicate_contribution_id" }),
+        expect.objectContaining({ code: "invalid_placement" }),
+      ]),
+    );
+  });
+
+  test("rejects extension panels and mode regions that claim the composed Sidenav", () => {
+    const base = alpha4Definition();
+    const definition = {
+      ...base,
+      modes: [{ id: "invalid", ref: { kind: "mode", id: "invalid" }, label: "Invalid", regions: ["sidenav"] }],
+      placements: [
+        {
+          id: "invalid",
+          ref: { kind: "placement", id: "invalid" },
+          mode: { kind: "mode", id: "invalid" },
+          item: { kind: "view", view: base.views![0]!.ref },
+          region: "sidenav",
+        },
+      ],
+    } as unknown as LoadedExtensionSource["definition"];
+
+    const runtime = normalizeExtensionSources([source(definition)]);
+
+    expect(runtime.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "invalid_mode" }),
         expect.objectContaining({ code: "invalid_placement" }),
       ]),
     );

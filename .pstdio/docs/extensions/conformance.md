@@ -104,10 +104,9 @@ that fails if the regression returns.
 2. Ticket breadcrumbs show Tickets and all nested parents.
 3. Ticket editing retains focus and a held selection beyond the save debounce.
 4. Switching Project to Lab never renders Lab under a ticket breadcrumb.
-5. Switching Animation and Sculpt retains the shared resource and changes panel regions.
-6. Closing optional panels persists; required panels cannot be closed and recover from stale fixture state.
-7. Root tree items render without an Extensions heading.
-8. Extension Lab exercises webview, tree, file, controls, data table, and Kanban renderers across the matrix.
+5. Closing optional panels persists; required panels cannot be closed and recover from stale fixture state.
+6. Root tree items render without an Extensions heading.
+7. Extension Lab exercises webview, tree, file, controls, data table, and Kanban renderers across the matrix.
 
 ### Runtime and Packaged Tests
 

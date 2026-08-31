@@ -270,8 +270,8 @@ panels: {
     title: "Outline",
     show: {
       for: "ticket",
-      region: "sidenav",
-      allowedRegions: ["sidenav", "main"],
+      region: "side",
+      allowedRegions: ["side", "secondary"],
       required: false,
     },
     renderer: { kind: "tree", id: "outlineTree" },
@@ -282,12 +282,12 @@ panels: {
 `show` may be one placement or an array of placements for different owned
 resource kinds. `required: true` makes the resolved placement structural and
 non-closable. An optional placement can be closed and restored through Add Panel
-when it resolves to `main`, `secondary`, or `side`.
+when it resolves to `main`, `secondary`, or `side`. The Sidenav is not a panel destination; mode and page
+navigation use the composed navigation tree contract.
 
 A mode can move an owned panel through `resources.<kind>.panels`, or a mode-wide
 panel through `modePanels`. The destination must stay within the panel's declared
-`allowedRegions`. This includes moving a panel between `main` and `sidenav` when
-both regions are declared.
+`allowedRegions`.
 
 Use `resourcePanels` only to bind a panel to a resource kind owned by another
 extension. The extension host normalizes all of these declarations and lets the

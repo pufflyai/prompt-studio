@@ -8,7 +8,6 @@ import {
   packageAsset,
   workbenchModes,
   workbenchPages,
-  workbenchSlots,
 } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { LoadedExtensionSource } from "../loader";
@@ -63,13 +62,15 @@ describe("page target validation", () => {
     const navigationItems = [
       defineNavigationItem({
         id: "bad-page-kind",
-        slot: workbenchSlots.projectNavigation,
+        owner: workbenchModes.project,
+        slot: "content",
         label: "Bad page",
         action: { kind: "page", page: page.ref, resource: { type: "run", id: "run-1" } },
       }),
       defineNavigationItem({
         id: "bad-panel-resource",
-        slot: workbenchSlots.projectNavigation,
+        owner: workbenchModes.project,
+        slot: "content",
         label: "Bad panel",
         action: { kind: "panel", panel: page.panels.files, resource: { type: "ticket", id: "PS-1" } },
       }),
@@ -87,13 +88,15 @@ describe("page target validation", () => {
     const navigationItems = [
       defineNavigationItem({
         id: "workspace",
-        slot: workbenchSlots.projectNavigation,
+        owner: workbenchModes.project,
+        slot: "content",
         label: "Workspace",
         action: { kind: "page", page: workbenchPages.workspaces, resource: { type: "workspace", id: "ws-1" } },
       }),
       defineNavigationItem({
         id: "bad-workspace",
-        slot: workbenchSlots.projectNavigation,
+        owner: workbenchModes.project,
+        slot: "content",
         label: "Bad workspace",
         action: { kind: "page", page: workbenchPages.workspaces, resource: { type: "ticket", id: "PS-1" } },
       }),
@@ -117,7 +120,8 @@ describe("page target validation", () => {
     });
     const navigationItem = defineNavigationItem({
       id: "bad-order",
-      slot: workbenchSlots.projectNavigation,
+      owner: workbenchModes.project,
+      slot: "content",
       label: "Bad order",
       action: {
         kind: "compound",

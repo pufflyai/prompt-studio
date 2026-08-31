@@ -3,6 +3,7 @@ import type {
   ContributionKind,
   ContributionRef,
   NavigationItemContribution,
+  NavigationTreeContribution,
   PlacementContribution,
   SettingsPanelContribution,
   SettingsSectionContribution,
@@ -11,10 +12,12 @@ import type {
   ViewContribution,
   ViewMenuContribution,
 } from "@pstdio/sdk/extensions";
+import { extensionPanelRegions } from "@pstdio/sdk/extensions";
 import type {
   NormalizedExtension,
   RuntimeActivityItemRecord,
   RuntimeNavigationItemRecord,
+  RuntimeNavigationTreeRecord,
   RuntimePlacementRecord,
   RuntimeSettingsPanelRecord,
   RuntimeSettingsSectionRecord,
@@ -125,6 +128,21 @@ const registerPlacements = (ext: NormalizedExtension, source: LoadedExtensionSou
   const directPlacements = new Set<string>();
   for (const contribution of contributions) {
     const base = recordBase(ext, source, "placement", contribution.id);
+    const hasValidRegions =
+      extensionPanelRegions.includes(contribution.region) &&
+      (contribution.movableTo ?? []).every((region) => extensionPanelRegions.includes(region));
+    if (!hasValidRegions) {
+      runtime.diagnostics.push(
+        createDiagnostic({
+          code: "invalid_placement",
+          message: `Placement "${base.id}" must use an extension panel region`,
+          extensionId: ext.id,
+          sourcePath: source.sourcePath,
+          metadata: { contributionId: base.id },
+        }),
+      );
+      continue;
+    }
     if (contribution.required && contribution.defaultOpen === false) {
       runtime.diagnostics.push(
         createDiagnostic({
@@ -216,10 +234,34 @@ const registerNavigationItems = (ext: NormalizedExtension, source: LoadedExtensi
       contribution: {
         ...contribution,
         ref: normalizeRef(ext, contribution.ref),
-        slot: normalizeRef(ext, contribution.slot),
+        owner: normalizeRef(ext, contribution.owner),
+        slot: contribution.slot ?? "content",
         action,
       },
     } as RuntimeNavigationItemRecord);
+  }
+};
+
+const registerNavigationTrees = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
+  const contributions = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "navigation-tree",
+    contributions: contributionArray<NavigationTreeContribution>(source.definition.navigationTrees),
+  });
+  for (const contribution of contributions) {
+    const base = recordBase(ext, source, "navigation-tree", contribution.id);
+    runtime.navigationTrees.push({
+      ...base,
+      contribution: {
+        ...contribution,
+        ref: normalizeRef(ext, contribution.ref),
+        owner: normalizeRef(ext, contribution.owner),
+        slot: contribution.slot ?? "content",
+        view: normalizeRef(ext, contribution.view),
+      },
+    } as RuntimeNavigationTreeRecord);
   }
 };
 
@@ -368,6 +410,7 @@ export const registerUiModel = (
   registerViewMenus(ext, source, runtime);
   registerPlacements(ext, source, runtime);
   registerNavigationItems(ext, source, runtime);
+  registerNavigationTrees(ext, source, runtime);
   registerStatusBarItems(ext, source, runtime);
   registerStatuses(ext, source, runtime, index);
   registerActivityItems(ext, source, runtime);

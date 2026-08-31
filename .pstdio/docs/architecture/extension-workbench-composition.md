@@ -70,13 +70,13 @@ A mode is a task and layout context. It declares:
 
 Required and default are resolved placement policies, not registration properties. A panel may declare the default `required` value and a mode may override it. A required placement cannot be closed and is reconciled whenever its context activates. An optional placement is seeded for a new layout but remains user-managed.
 
-Two modes may accept the same resource kind and arrange it differently. Animation and Sculpt can therefore retain one project resource while restoring distinct tools, timelines, inspectors, sizes, and tab state.
+Two modes may accept the same resource kind and arrange it differently. They retain one resource while restoring distinct tools, inspectors, sizes, and tab state.
 
 ## Chrome and Docked Placement
 
 Docked regions and chrome surfaces are different contracts.
 
-Docked regions hold panels: `sidenav`, `main`, `secondary`, and `side`. Mode recipes place panels into docked regions. Users move panels between allowed docked regions. Layout persistence stores docked placements.
+Extension panels use `main`, `secondary`, and `side`. Mode recipes place panels into those regions, and layout persistence stores their placements. The Sidenav is host-owned chrome with one composed navigation tree; extensions add mode- or page-owned navigation sections instead of panels.
 
 Chrome surfaces are host-owned fixed slots: nav actions, the activity bar, the status bar, and overlays. Extensions contribute typed items to chrome targets, as menus and activity items do today. A chrome item may show or hide by active mode through a `when` expression, but no mode recipe positions it, and no chrome state lives in persisted panel layout.
 

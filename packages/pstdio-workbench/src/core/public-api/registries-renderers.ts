@@ -79,6 +79,8 @@ export type {
   RegisteredTreeRendererContribution,
   TreeAction,
   TreeContext,
+  TreeMoveEndpoint,
+  TreeMovePolicy,
   TreeNode,
   TreeNodeInlineInput,
   TreeRendererContribution,

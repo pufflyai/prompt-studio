@@ -1,5 +1,5 @@
 import type { Localizable } from "../l10n";
-import type { DockedWorkbenchRegion } from "./composition";
+import type { ExtensionPanelRegion } from "./composition";
 import type {
   ContributionDefinition,
   ModeRef,
@@ -14,6 +14,7 @@ import type { ResourceRef } from "./resources";
 export type PageSlotRole = "primary" | "auxiliary";
 export type PageSlotCardinality = "one" | "many";
 export type PageOpenIntent = "preview" | "pin";
+export type PageSlotRegion = ExtensionPanelRegion;
 
 export interface PageSlotBinding {
   readonly kind: ResourceKindRef;
@@ -23,7 +24,7 @@ export interface PageSlotBinding {
 export interface PageSlot {
   readonly id: string;
   readonly role: PageSlotRole;
-  readonly region: DockedWorkbenchRegion;
+  readonly region: PageSlotRegion;
   readonly view?: ViewRef;
   readonly binding?: PageSlotBinding;
   readonly cardinality?: PageSlotCardinality;
