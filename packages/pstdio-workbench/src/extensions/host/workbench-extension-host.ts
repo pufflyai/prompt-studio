@@ -168,6 +168,9 @@ const registerStatusBarItems = (input: InternalRegisterWorkbenchExtensionContrib
     }),
   );
 
+const registerPages = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
+  input.metadata.pages.map((page) => input.workbench.pages.registerPage(page));
+
 export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWorkbenchExtensionContributionsInput) => {
   const input: InternalRegisterWorkbenchExtensionContributionsInput = {
     ...sourceInput,
@@ -243,6 +246,7 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
   }
   disposables.push(...registerStatusBarItems(input));
   disposables.push(...registerResourcePresenters(input));
+  disposables.push(...registerPages(input));
   const composition = registerComposition(input);
   disposables.push(...composition.disposables);
   disposables.push(...registerModes(input, composition.registry));

@@ -1,4 +1,4 @@
-import type { PlacementIdentity } from "@pstdio/sdk/extensions";
+import type { FileRendererSectionTarget, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { ContributionSource, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import type { ResourceRef } from "../resources/resource-registry";
 import { resolveUniqueWidgetId } from "./widget-id";
@@ -215,6 +215,7 @@ export interface WorkbenchWidgetPlacement {
   ownerId?: string;
   source?: ContributionSource;
   resource?: ResourceRef;
+  section?: FileRendererSectionTarget;
   resourceUri?: string;
   ownerResourceUri?: string;
   title?: string;
@@ -234,6 +235,7 @@ export interface WorkbenchPanelInstance {
   ownerId?: string;
   source?: ContributionSource;
   resource?: ResourceRef;
+  section?: FileRendererSectionTarget;
   resourceUri?: string;
   ownerResourceUri?: string;
   title?: string;
