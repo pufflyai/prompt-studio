@@ -11,6 +11,7 @@ export {
   createLocalStorageLastResourcePersistence,
   createLocalStorageLayoutPersistence,
   createLocalStoragePanelsPersistence,
+  createLocalStoragePlacementStatePersistence,
   createLocalStorageTreePersistence,
   createLocalStorageWorkbenchPersistence,
   workbenchStoragePersistenceKey,

@@ -136,12 +136,27 @@ describe("local storage workbench persistence", () => {
       ],
       recentlyClosed: [],
     };
+    const placementState = {
+      owners: [
+        {
+          owner: { kind: "mode" as const, modeId: "project" },
+          staticPlacements: [
+            {
+              identity: { kind: "mode" as const, modeId: "project", placementId: "sessions", instanceKey: "default" },
+              open: false,
+            },
+          ],
+          pinnedPlacements: [],
+        },
+      ],
+    };
 
     persistence.snapshotPersistence.setSnapshot({ layout }, "project:one");
     persistence.snapshotPersistence.flush?.();
     persistence.treePersistence.setTreeStates(trees);
     persistence.lastResourcePersistence.setLastResource(resource);
     persistence.historyPersistence.setHistory(history, "project:one");
+    persistence.placementStatePersistence.save("project:one", placementState);
 
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"))).toBe(
       JSON.stringify({ version: 3, layout }),
@@ -155,7 +170,9 @@ describe("local storage workbench persistence", () => {
     expect(persistence.treePersistence.getTreeStates()).toEqual(trees);
     expect(persistence.lastResourcePersistence.getLastResource()).toEqual(resource);
     expect(persistence.historyPersistence.getHistory("project:one")).toEqual(history);
+    expect(persistence.placementStatePersistence.load("project:one")).toEqual(placementState);
     expect(persistence.historyPersistence.getHistory("project:two")).toBeUndefined();
+    expect(persistence.placementStatePersistence.load("project:two")).toBeUndefined();
   });
 });
 

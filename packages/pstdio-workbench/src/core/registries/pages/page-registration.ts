@@ -1,18 +1,19 @@
 import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { createDisposable } from "../../shared/disposable";
 import type { InternalWorkbenchStore } from "../../shared/store/workbench-store";
+import { getWorkbenchPlacementOwnerState } from "../layout/owned-placement-state";
 import {
   composeOwnedPlacements,
   type OwnedPlacementReconciliation,
   reconcileOwnedPlacements,
 } from "../layout/placement-reconciliation";
 import { validateWorkbenchPage } from "./page-placement-resolver";
+import { restoreWorkbenchPageState } from "./page-placement-state";
 import type {
   CreateWorkbenchPageRegistryInput,
   WorkbenchPageContribution,
   WorkbenchPageRegistryStoreState,
 } from "./page-registry-types";
-import { emptyPageState } from "./page-slot-lifecycle";
 
 const emptyReconciliation = <Value>(): OwnedPlacementReconciliation<Value> => ({
   add: [],
@@ -60,7 +61,17 @@ export const registerWorkbenchPage = <Value>(input: {
     {
       ...current,
       pages: { ...current.pages, [page.id]: registered },
-      pageStates: { ...current.pageStates, [page.id]: emptyPageState(registered, input.resourceKey) },
+      pageStates: {
+        ...current.pageStates,
+        [page.id]: restoreWorkbenchPageState({
+          page: registered,
+          ownerState: getWorkbenchPlacementOwnerState(current.placementState, {
+            kind: "page",
+            pageId: registered.id,
+          }),
+          resourceKey: input.resourceKey,
+        }),
+      },
       reconciliation: emptyReconciliation(),
     },
     false,

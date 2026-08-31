@@ -1,80 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import type { PlacementIdentity } from "@pstdio/sdk/extensions";
-import {
-  createWorkbenchPageRegistry,
-  type WorkbenchPageContribution,
-  type WorkbenchPageOpenInput,
-  type WorkbenchPagePlacementInput,
-} from "./page-registry";
 import { getWorkbenchPageRegistryInternals } from "./page-registry-internals";
-
-const pageIdentity = (pageId: string, slotId: string, instanceKey: string): PlacementIdentity => ({
-  kind: "page",
-  pageId,
-  slotId,
-  instanceKey,
-});
-
-const createRegistry = () =>
-  createWorkbenchPageRegistry<WorkbenchPagePlacementInput>({
-    resolveShellPlacements: () => [],
-    resolveModePlacements: () => [],
-    resolveModePanelTarget: () => {
-      throw new Error("No mode panels are registered in this test");
-    },
-    resolvePagePlacement: (input) => input,
-    resources: {
-      normalize: (resource) => ({ ...resource }),
-      toUri: (resource) => `${resource.type}:${resource.id}`,
-      fromUri: () => undefined,
-    },
-    valuesEqual: (left, right) => JSON.stringify(left) === JSON.stringify(right),
-  });
-
-type PageInput = Omit<WorkbenchPageContribution, "ref" | "title" | "path">;
-
-const registerPage = (registry: ReturnType<typeof createRegistry>, page: PageInput) =>
-  registry.registerPage({
-    ...page,
-    ref: { extensionId: "pstdio.test", kind: "page", id: page.id },
-    title: page.id,
-    path: page.id,
-  });
-
-const activatePage = (
-  registry: ReturnType<typeof createRegistry>,
-  target: WorkbenchPageOpenInput,
-  pageStates = registry.store.getState().pageStates,
-) => {
-  const page = registry.getPage(target.pageId);
-  if (!page) throw new Error(`Unknown test page: ${target.pageId}`);
-  getWorkbenchPageRegistryInternals(registry).activateLocation({
-    ...target,
-    projectId: "test-project",
-    location: {
-      page: page.ref,
-      ...(target.resource ? { resource: target.resource } : {}),
-      ...(target.section ? { section: target.section } : {}),
-    },
-    pageStates,
-    action: "testActivatePage",
-  });
-};
-
-const closePlacement = (registry: ReturnType<typeof createRegistry>, identity: PlacementIdentity) => {
-  const internals = getWorkbenchPageRegistryInternals(registry);
-  const result = internals.resolveClosePlacement(identity);
-  if (result.kind === "parent") {
-    activatePage(registry, { pageId: result.parentId }, result.pageStates);
-    return;
-  }
-  activatePage(registry, result.target, result.pageStates);
-};
-
-const activePagePlacements = (registry: ReturnType<typeof createRegistry>, slotId: string) =>
-  registry.store
-    .getState()
-    .placements.filter((candidate) => candidate.identity.kind === "page" && candidate.identity.slotId === slotId);
+import {
+  activatePage,
+  activePagePlacements,
+  closePlacement,
+  createRegistry,
+  pageIdentity,
+  registerPage,
+} from "./page-registry-test-support";
 
 describe("page primary slot lifecycle", () => {
   test("resolves static-only, bound-only, and hybrid primary targets explicitly", () => {
@@ -235,7 +168,6 @@ describe("page primary slot lifecycle", () => {
     ]);
   });
 });
-
 describe("page placement close lifecycle", () => {
   test("closes only the exact auxiliary placement and does not activate default-open auxiliaries", () => {
     const registry = createRegistry();

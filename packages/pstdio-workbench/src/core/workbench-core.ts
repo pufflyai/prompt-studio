@@ -60,6 +60,7 @@ import {
   type WorkbenchWidgetPlacement,
 } from "./registries/layout/layout-model";
 import { getActiveLocationPlacement } from "./registries/layout/layout-operations";
+import type { WorkbenchPlacementStatePersistence } from "./registries/layout/owned-placement-state";
 import { createMenuRegistry, type MenuRegistry } from "./registries/menus/menu-registry";
 import {
   createWorkbenchModePlacementRegistry,
@@ -218,6 +219,7 @@ export interface CreateWorkbenchCoreInput {
   isInScope?: (resource: ResourceRef, primary: ResourceRef | undefined) => boolean;
   layoutPersistence?: LayoutPersistenceAdapter;
   pageResources?: WorkbenchPageResourceCodec;
+  placementStatePersistence?: WorkbenchPlacementStatePersistence;
   persistence?: WorkbenchPersistenceAdapter;
   historyPersistence?: WorkbenchHistoryPersistence;
   preferencePersistence?: PreferencePersistenceAdapter;
@@ -749,6 +751,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     modes: core.modes,
     views: core.views,
     resources: pageResources,
+    placementStatePersistence: input.placementStatePersistence,
   });
   core.navigator = createWorkbenchNavigator({
     modes: core.modes,

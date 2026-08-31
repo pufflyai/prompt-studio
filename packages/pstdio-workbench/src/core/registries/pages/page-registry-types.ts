@@ -12,6 +12,11 @@ import type {
 } from "@pstdio/sdk/extensions";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 import type { DockedCompositionRegion } from "../layout/composition-resolver-types";
+import type {
+  WorkbenchPlacementOwnerState,
+  WorkbenchPlacementState,
+  WorkbenchPlacementStatePersistence,
+} from "../layout/owned-placement-state";
 import type { OwnedPlacementReconciliation, ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 
 export interface WorkbenchPageSlotBinding {
@@ -88,8 +93,21 @@ export interface WorkbenchPageRegistryStoreState<Value> {
   location?: PageLocation;
   activeModeId?: string;
   activePageId?: string;
+  placementState: WorkbenchPlacementState;
   placements: readonly ResolvedOwnedPlacement<Value>[];
   reconciliation: OwnedPlacementReconciliation<Value>;
+}
+
+export interface WorkbenchPageRegistryCommitInput<Value> {
+  pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>;
+  projectId?: string;
+  location?: WorkbenchPageRegistryStoreState<Value>["location"];
+  activePageId?: string;
+  activeModeId?: string;
+  modePlacements?: readonly ResolvedOwnedPlacement<Value>[];
+  placementState?: WorkbenchPlacementState;
+  activate?: readonly PlacementIdentity[];
+  action: string;
 }
 
 export interface WorkbenchModePanelTargetInput<Value> {
@@ -110,9 +128,20 @@ export interface CreateWorkbenchPageRegistryInput<Value> {
   resolveModePlacements(
     modeId: string,
     current?: readonly ResolvedOwnedPlacement<Value>[],
+    ownerState?: WorkbenchPlacementOwnerState,
   ): readonly ResolvedOwnedPlacement<Value>[];
   resolveModePanelTarget(input: WorkbenchModePanelTargetInput<Value>): WorkbenchModePanelTargetResolution<Value>;
+  resolveModePlacementState?(
+    modeId: string,
+    placements: readonly ResolvedOwnedPlacement<Value>[],
+  ): WorkbenchPlacementOwnerState;
+  closeModePlacement?(input: {
+    modeId: string;
+    identity: PlacementIdentity;
+    current: readonly ResolvedOwnedPlacement<Value>[];
+  }): readonly ResolvedOwnedPlacement<Value>[];
   resolvePagePlacement(input: WorkbenchPagePlacementInput): Value;
+  placementStatePersistence?: WorkbenchPlacementStatePersistence;
   resources: WorkbenchPageResourceCodec;
   valuesEqual(current: Value, desired: Value): boolean;
 }

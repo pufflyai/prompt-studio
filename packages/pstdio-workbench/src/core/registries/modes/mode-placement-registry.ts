@@ -1,60 +1,35 @@
 import type { PageOpenIntent, PlacementIdentity, PlacementRef, ResourceRef } from "@pstdio/sdk/extensions";
-import { createDisposable, type Disposable } from "../../shared/disposable";
-import type { DockedCompositionRegion } from "../layout/composition-resolver-types";
+import { createDisposable } from "../../shared/disposable";
 import type { WorkbenchWidgetPlacement } from "../layout/layout-types";
 import { placementIdentityKey, type ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import type { WorkbenchPageResourceCodec } from "../pages/page-registry";
 import type { WorkbenchViewRegistry } from "../views/view-registry";
+import type {
+  WorkbenchModePanelTarget,
+  WorkbenchModePlacementContribution,
+  WorkbenchModePlacementItem,
+  WorkbenchModePlacementRegistry,
+} from "./mode-placement-registry-types";
+import {
+  getModePlacementOwnerState,
+  isStaticModePlacementOpen,
+  restorePinnedModePlacements,
+  toPersistedModeResource,
+} from "./mode-placement-state";
 
-export type WorkbenchModePlacementItem =
-  | { readonly kind: "view"; readonly viewId: string }
-  | {
-      readonly kind: "resource";
-      readonly viewId: string;
-      readonly resourceKind: string;
-      readonly cardinality: "one" | "many";
-    };
-
-export interface WorkbenchModePlacementContribution {
-  readonly id: string;
-  readonly ref: PlacementRef;
-  readonly modeId: string;
-  readonly item: WorkbenchModePlacementItem;
-  readonly region: DockedCompositionRegion;
-  readonly order?: number;
-  readonly defaultOpen?: boolean;
-  readonly required?: boolean;
-  readonly movableTo?: readonly DockedCompositionRegion[];
-}
-
-export interface WorkbenchModePanelResolution {
-  identity: PlacementIdentity;
-  placements: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[];
-}
-
-interface WorkbenchModePanelTarget {
-  modeId: string;
-  panel: PlacementRef;
-  resource?: ResourceRef;
-  open?: PageOpenIntent;
-  current: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[];
-}
-
-export interface WorkbenchModePlacementRegistry {
-  registerPlacement(placement: WorkbenchModePlacementContribution): Disposable;
-  listPlacements(modeId?: string): WorkbenchModePlacementContribution[];
-  resolvePlacements(
-    modeId: string,
-    current?: readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[],
-  ): readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[];
-  resolvePanelTarget(input: WorkbenchModePanelTarget): WorkbenchModePanelResolution;
-  onDidChange(listener: () => void): Disposable;
-}
+export type {
+  WorkbenchModePanelResolution,
+  WorkbenchModePlacementContribution,
+  WorkbenchModePlacementItem,
+  WorkbenchModePlacementRegistry,
+} from "./mode-placement-registry-types";
 
 const toWorkbenchResource = (resource: ResourceRef, codec: WorkbenchPageResourceCodec) => ({
   kind: resource.type,
   uri: codec.toUri(resource),
   id: resource.id,
+  projectId: resource.projectId,
+  extensionId: resource.extensionId,
   label: resource.label,
   metadata: resource.metadata,
 });
@@ -74,6 +49,18 @@ const identityFor = (placement: WorkbenchModePlacementContribution, instanceKey:
 
 const placementRefKey = (ref: PlacementRef) => JSON.stringify([ref.extensionId, ref.id]);
 
+const emitChange = (listeners: ReadonlySet<() => void>) => {
+  for (const listener of listeners) listener();
+};
+
+const listRegisteredPlacements = (
+  placements: ReadonlyMap<string, WorkbenchModePlacementContribution>,
+  modeId?: string,
+) =>
+  [...placements.values()]
+    .filter((placement) => !modeId || placement.modeId === modeId)
+    .sort((left, right) => left.id.localeCompare(right.id));
+
 export const createWorkbenchModePlacementRegistry = (input: {
   resources: WorkbenchPageResourceCodec;
   views: WorkbenchViewRegistry;
@@ -82,14 +69,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
   const refs = new Map<string, WorkbenchModePlacementContribution>();
   const listeners = new Set<() => void>();
 
-  const listPlacements = (modeId?: string) =>
-    [...placements.values()]
-      .filter((placement) => !modeId || placement.modeId === modeId)
-      .sort((left, right) => left.id.localeCompare(right.id));
-
-  const emitChange = () => {
-    for (const listener of listeners) listener();
-  };
+  const listPlacements = (modeId?: string) => listRegisteredPlacements(placements, modeId);
 
   const resolve = (
     placement: WorkbenchModePlacementContribution,
@@ -214,26 +194,41 @@ export const createWorkbenchModePlacementRegistry = (input: {
       };
       placements.set(registered.id, registered);
       refs.set(refKey, registered);
-      emitChange();
+      emitChange(listeners);
       return createDisposable(() => {
         if (placements.get(registered.id) !== registered) return;
         placements.delete(registered.id);
         refs.delete(refKey);
-        emitChange();
+        emitChange(listeners);
       });
     },
 
     listPlacements,
 
-    resolvePlacements(modeId, current = []) {
-      const retained = currentForMode(modeId, current);
-      const retainedKeys = new Set(retained.map((placement) => placementIdentityKey(placement.identity)));
-      const defaults = listPlacements(modeId).flatMap((placement) => {
-        if (placement.item.kind !== "view" || placement.defaultOpen === false) return [];
-        const resolved = resolve(placement);
-        return retainedKeys.has(placementIdentityKey(resolved.identity)) ? [] : [resolved];
-      });
-      return [...retained, ...defaults];
+    resolvePlacements(modeId, current = [], ownerState) {
+      const state = getModePlacementOwnerState(modeId, ownerState);
+      const staticPlacements = listPlacements(modeId).flatMap((placement) =>
+        placement.item.kind === "view" &&
+        isStaticModePlacementOpen({ placement, ownerState: state, identity: identityFor(placement, "default") })
+          ? [resolve(placement)]
+          : [],
+      );
+      const resources = new Map(
+        restorePinnedModePlacements({
+          modeId,
+          ownerState: state,
+          getPlacement: (placementId) => placements.get(placementId),
+          resolve,
+        }).map((placement) => [placementIdentityKey(placement.identity), placement]),
+      );
+      for (const placement of currentForMode(modeId, current)) {
+        const identity = placement.identity;
+        if (identity.kind !== "mode") continue;
+        const declaration = placements.get(identity.placementId);
+        if (declaration?.item.kind !== "resource") continue;
+        resources.set(placementIdentityKey(identity), placement);
+      }
+      return [...staticPlacements, ...resources.values()];
     },
 
     resolvePanelTarget(target) {
@@ -249,6 +244,48 @@ export const createWorkbenchModePlacementRegistry = (input: {
         return resolveStaticPanelTarget(placement, target, current);
       }
       return resolveResourcePanelTarget(placement, placement.item, target, current);
+    },
+
+    resolvePlacementState(modeId, current) {
+      const resolved = currentForMode(modeId, current);
+      const openKeys = new Set(resolved.map((placement) => placementIdentityKey(placement.identity)));
+      const staticPlacements = listPlacements(modeId).flatMap((placement) =>
+        placement.item.kind === "view"
+          ? [
+              {
+                identity: identityFor(placement, "default"),
+                open: openKeys.has(placementIdentityKey(identityFor(placement, "default"))),
+              },
+            ]
+          : [],
+      );
+      const pinnedPlacements = resolved.flatMap((placement) => {
+        const identity = placement.identity;
+        if (identity.kind !== "mode" || placement.value.tabRetention !== "persistent") return [];
+        const declaration = placements.get(identity.placementId);
+        const resource = declaration?.item.kind === "resource" ? toPersistedModeResource(placement.value) : undefined;
+        return resource ? [{ identity, resource }] : [];
+      });
+      return {
+        owner: { kind: "mode", modeId },
+        staticPlacements,
+        pinnedPlacements,
+      };
+    },
+
+    closePlacement(closeInput) {
+      const identityKey = placementIdentityKey(closeInput.identity);
+      const current = currentForMode(closeInput.modeId, closeInput.current);
+      const candidate = current.find((placement) => placementIdentityKey(placement.identity) === identityKey);
+      if (!candidate || candidate.identity.kind !== "mode") {
+        throw new Error(`Mode placement is not open: ${identityKey}`);
+      }
+      const declaration = placements.get(candidate.identity.placementId);
+      if (!declaration || declaration.modeId !== closeInput.modeId) {
+        throw new Error(`Mode placement owner is not active: ${closeInput.modeId}`);
+      }
+      if (declaration.required) throw new Error(`Mode placement is required: ${declaration.id}`);
+      return current.filter((placement) => placementIdentityKey(placement.identity) !== identityKey);
     },
 
     onDidChange(listener) {
