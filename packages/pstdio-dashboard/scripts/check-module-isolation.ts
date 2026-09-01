@@ -23,7 +23,7 @@ const collectFiles = (dir: string): string[] => {
 };
 
 const moduleOf = (file: string) => {
-  const rel = relative(MODULES_DIR, file);
+  const rel = relative(MODULES_DIR, file).replaceAll("\\", "/");
   return rel.split("/")[0];
 };
 
