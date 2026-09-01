@@ -72,11 +72,11 @@ Workspaces always derive from `PSTDIO_HOME` as `$PSTDIO_HOME/workspaces`.
 ### Usage
 
 ```sh
-pst [--api-port <port>] [--dashboard-port <port>] [--open-browser <boolean>]
+pst [--api-port <port>] [--open-browser <boolean>]
 ```
 
-The command discovers or starts the shared runtime. Compiled mode opens the dashboard at the descriptor origin;
-workspace mode serves the development dashboard separately.
+The command discovers or starts the shared runtime. The runtime serves the API and the dashboard on one origin,
+so the browser opens at that origin in every mode.
 
 ### Output
 

@@ -5,13 +5,13 @@ Run `pst --help`, `pst <group> --help`, or `pst <group> <command> --help` for th
 ## Runtime
 
 ```sh
-pst [--api-port <port>] [--dashboard-port <port>] [--open-browser <boolean>]
+pst [--api-port <port>] [--open-browser <boolean>]
 pst serve [--port <port>] [--host <host>]
 pst close [--force]
 pst logs [--lines <count>] [--path]
 ```
 
-`pst` starts the runtime and dashboard. Detached runtimes require a loopback host.
+`pst` starts the runtime and serves the dashboard on the API's own origin. Detached runtimes require a loopback host.
 
 ## Projects
 

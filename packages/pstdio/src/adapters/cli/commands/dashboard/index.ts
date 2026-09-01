@@ -1,31 +1,24 @@
-import type { Server } from "node:http";
 import type { Argv } from "yargs";
-import { CLI_VERSION } from "@/features/cli-version";
 import { openBrowser as defaultOpenBrowser } from "../../dashboard/open-browser";
-import { resolveDashboardRoot as defaultResolveDashboardRoot } from "../../dashboard/resolve-dashboard-root";
-import { serveDashboard as defaultServeDashboard } from "../../dashboard/serve-dashboard";
-import { isCompiledBinary } from "../serve/embedded-assets";
+
+type LaunchOptions = {
+  apiPort: number;
+  openBrowser: boolean;
+};
 
 type LaunchDeps = {
-  serveDashboard: typeof defaultServeDashboard;
-  resolveDashboardRoot: typeof defaultResolveDashboardRoot;
   openBrowser: (url: string) => void;
 };
 
 const defaultDeps: LaunchDeps = {
-  serveDashboard: defaultServeDashboard,
-  resolveDashboardRoot: defaultResolveDashboardRoot,
   openBrowser: defaultOpenBrowser,
 };
 
-type LaunchOptions = {
-  apiPort: number;
-  dashboardPort: number;
-  openBrowser: boolean;
-};
-
-const launchCompiled = (options: LaunchOptions, deps: Pick<LaunchDeps, "openBrowser">) => {
-  // Startup middleware publishes the descriptor origin before the dashboard command runs.
+// The API auto-start middleware brings up a single `serve` process that hosts
+// the API and the dashboard on one origin, then publishes its URL as
+// PSTDIO_API_URL. Point the browser there. A separate dashboard server on
+// another port would be a cross-origin caller, which the runtime rejects.
+export const launch = async (options: LaunchOptions, deps: LaunchDeps = defaultDeps) => {
   const url = process.env.PSTDIO_API_URL ?? `http://127.0.0.1:${options.apiPort}`;
 
   if (options.openBrowser) {
@@ -36,48 +29,14 @@ const launchCompiled = (options: LaunchOptions, deps: Pick<LaunchDeps, "openBrow
   process.stdout.write(`API:       ${url}/v1\n`);
 };
 
-export const launch = async (options: LaunchOptions, deps: LaunchDeps = defaultDeps, compiled = isCompiledBinary()) => {
-  if (compiled) {
-    launchCompiled(options, deps);
-    return;
-  }
-
-  const { apiPort, dashboardPort, openBrowser } = options;
-  const apiUrl = process.env.PSTDIO_API_URL ?? `http://localhost:${apiPort}`;
-  const dashboardUrl = `http://localhost:${dashboardPort}`;
-
-  const dashboardRoot = deps.resolveDashboardRoot(process.cwd());
-  const server = deps.serveDashboard({
-    root: dashboardRoot,
-    port: dashboardPort,
-    config: { apiBaseUrl: apiUrl, version: CLI_VERSION },
-  });
-
-  if (openBrowser) {
-    deps.openBrowser(dashboardUrl);
-  }
-
-  process.stdout.write(`Dashboard: ${dashboardUrl}\n`);
-  process.stdout.write(`API:       ${apiUrl}\n`);
-
-  const shutdown = () => {
-    (server as Server).close();
-    process.exit(0);
-  };
-
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
-};
-
 export const command = "$0";
-export const describe = "Start API and dashboard, then open in browser";
+export const describe = "Start the API and dashboard, then open the browser";
 
 export const builder = (yargs: Argv) =>
   yargs
     .option("api-port", { type: "number", default: 19840, describe: "API server port" })
-    .option("dashboard-port", { type: "number", default: 5555, describe: "Dashboard server port" })
-    .option("open-browser", { type: "boolean", default: true, describe: "Open dashboard in browser" });
+    .option("open-browser", { type: "boolean", default: true, describe: "Open the dashboard in the browser" });
 
-export const handler = async (args: { apiPort: number; dashboardPort: number; openBrowser: boolean }) => {
+export const handler = async (args: { apiPort: number; openBrowser: boolean }) => {
   await launch(args);
 };

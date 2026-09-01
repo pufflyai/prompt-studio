@@ -6,8 +6,10 @@ import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "./src/default-extensions";
 
 const repoRoot = join(import.meta.dirname, "../..");
 
+// `pstdio serve` hosts the API and the dashboard on a single origin, so the UI
+// and its runtime calls share one port. (`E2E_DASHBOARD_PORT` is still exported
+// by the runner for older tooling; it is unused here.)
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const dashboardPort = Number(process.env.E2E_DASHBOARD_PORT ?? "5174");
 const runId = process.env.E2E_RUN_ID ?? `${Date.now()}-${process.pid}`;
 const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
 const resolvedHomePath = process.env.E2E_HOME ?? homePath;
@@ -49,7 +51,7 @@ export default defineConfig({
   globalSetup: "./src/scripts/global-setup.ts",
   reporter: [["html", { open: "never", outputFolder: `playwright-report/${runId}` }], ["list"]],
   use: {
-    baseURL: `http://localhost:${dashboardPort}`,
+    baseURL: `http://localhost:${apiPort}`,
     navigationTimeout: 60_000,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
@@ -62,35 +64,24 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: `bun run ../../packages/pstdio-api/src/server.ts`,
+      // One process now boots the API, the dashboard, and the extension runtime,
+      // so it keeps the 30s budget the previous dashboard-boot server already
+      // used (the API-only server it replaced needed less).
+      command: `bun run --cwd ../../packages/pstdio pstdio -- serve --foreground --host localhost --port ${apiPort}`,
       port: apiPort,
       reuseExistingServer: false,
-      timeout: 15_000,
+      timeout: 30_000,
       env: {
-        PORT: String(apiPort),
+        PSTDIO_DISABLE_EMBED_MANIFEST: "1",
         PSTDIO_DB_PATH: ":memory:",
         PSTDIO_EVENT_BUS_BUFFER_SIZE: "5",
         PSTDIO_HOME: resolvedHomePath,
         PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
         PSTDIO_EXTENSION_RELEASE_REF: "e2e",
         PSTDIO_EXTENSION_SOURCE_ROOT: repoRoot,
-        PSTDIO_TERMINAL_ORIGINS: `http://localhost:${dashboardPort}`,
+        PSTDIO_TERMINAL_ORIGINS: `http://localhost:${apiPort}`,
         HOME: resolvedHomePath,
         BUN_INSTALL_CACHE_DIR: bunCacheDir,
-      },
-    },
-    {
-      command: `bun run --cwd ../../packages/pstdio pstdio -- --api-port ${apiPort} --dashboard-port ${dashboardPort} --no-open-browser`,
-      port: dashboardPort,
-      reuseExistingServer: false,
-      timeout: 30_000,
-      env: {
-        PSTDIO_DISABLE_EMBED_MANIFEST: "1",
-        PSTDIO_DISABLE_API_AUTO_START: "1",
-        PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
-        PSTDIO_HOME: resolvedHomePath,
-        BUN_INSTALL_CACHE_DIR: bunCacheDir,
-        HOME: resolvedHomePath,
       },
     },
   ],
