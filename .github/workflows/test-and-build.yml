@@ -50,6 +50,45 @@ jobs:
       - name: Test monorepo (non-e2e)
         run: bunx lerna run test --ignore e2e
 
+  # Windows counterpart of `test_and_build`. Kept as a separate, non-blocking job
+  # (rather than an `os` matrix leg) so the existing `test_and_build` required
+  # check keeps its name, and so the known pre-existing Windows-only failures in
+  # `packages/pstdio-api` don't gate merges while they're being burned down.
+  # Flip `continue-on-error` off once the Windows suite is green.
+  windows_test_and_build:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Check formatting
+        run: bun run format:check
+
+      - name: Build monorepo
+        run: bun run build
+
+      - name: Lint monorepo
+        run: bun run lint
+
+      - name: Test monorepo (non-e2e)
+        run: bunx lerna run test --ignore e2e
+
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 18
