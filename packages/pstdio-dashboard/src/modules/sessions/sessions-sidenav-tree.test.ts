@@ -7,7 +7,7 @@ import { buildSessionsSidenavSections } from "./sessions-sidenav-tree";
 const sessionResource = (id: string) =>
   ({
     kind: "session",
-    uri: `dashboard-workbench://session/${id}`,
+    uri: `pstdio://extension-resource/session/${id}`,
     id,
     label: id,
   }) satisfies ResourceRef;
@@ -15,7 +15,7 @@ const sessionResource = (id: string) =>
 const workspaceResource = (id: string) =>
   ({
     kind: "workspace",
-    uri: `dashboard-workbench://workspace/${id}`,
+    uri: `pstdio://extension-resource/workspace/${id}`,
     id,
     label: id,
   }) satisfies ResourceRef;
@@ -111,17 +111,18 @@ describe("buildSessionsSidenavSections", () => {
     expect(sections[0]?.nodes[0]).toMatchObject({ id: "workspace-sessions", canHide: true });
   });
 
-  test("uses command targets for embedded session rows", () => {
+  test("uses the explicit project Session Panel for embedded session rows", () => {
     const sections = buildSessionsSidenavSections({
       nodeTarget: "side",
       sessions: [session({ id: "session-1" })],
     });
     const children = sessionGroupChildren(sections);
 
-    expect(children.find((node) => node.id === "dashboard-workbench://session/session-1")?.target).toMatchObject({
-      kind: "command",
-      commandId: dashboardCommandIds.openSessionPanel,
-      args: { resource: sessionResource("session-1") },
+    expect(children.find((node) => node.id === "pstdio://extension-resource/session/session-1")?.target).toMatchObject({
+      kind: "panel",
+      panel: { extensionId: "pstdio", kind: "placement", id: "project-session" },
+      resource: { type: "session", id: "session-1" },
+      open: "preview",
     });
   });
 
@@ -135,7 +136,7 @@ describe("buildSessionsSidenavSections", () => {
       .filter((node) => node.resource || node.target)
       .map((node) => node.id);
 
-    expect(sessionNodeIds).toEqual(["dashboard-workbench://session/session-1"]);
+    expect(sessionNodeIds).toEqual(["pstdio://extension-resource/session/session-1"]);
   });
 
   test("shows an empty placeholder when a workspace has no sessions", () => {

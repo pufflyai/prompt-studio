@@ -59,10 +59,9 @@ const deleteEntryAction = (
   label: type === "directory" ? "Delete folder" : "Delete file",
   icon: "Trash2",
   run: () => {
-    ctx.layout.openPanel(dashboardWidgetIds.deleteWorkspaceEntry, {
+    ctx.overlays.openOverlay(dashboardWidgetIds.deleteWorkspaceEntry, {
       title: type === "directory" ? "Delete folder" : "Delete file",
       resource: workspaceDeleteResource(resource, path, type),
-      closable: true,
     });
   },
 });

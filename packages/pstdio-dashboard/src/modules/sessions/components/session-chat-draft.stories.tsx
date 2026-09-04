@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbench } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -10,7 +10,7 @@ import { openSessionBubbleWidgets } from "../bubble/session-bubble";
 
 const draftResource = {
   kind: "session-draft",
-  uri: "dashboard-workbench://session-draft/story-preview",
+  uri: "pstdio://extension-resource/session-draft/story-preview",
   id: "story-preview",
   label: "New session",
   icon: "PenBox",
@@ -26,7 +26,7 @@ const queryClient = new QueryClient({
 });
 
 const SessionChatDraftStory = () => {
-  const workbench = createWorkbenchCore({ initialSidePanelMode: "attached" });
+  const workbench = createWorkbench({ initialSidePanelMode: "attached" });
   workbench.registerModule(createSessionBubbleModule({ sessionDraftPersistence: drafts }));
   selectDashboardProject(workbench, { id: "project-story", name: "Prompt Studio" });
   openSessionBubbleWidgets(workbench, { resource: draftResource });

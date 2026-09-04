@@ -70,8 +70,5 @@ export const restoreExtensionContributionRefreshLayout = (
     snapshot.activeModeId !== undefined && ctx.modes.getMode(snapshot.activeModeId) === undefined;
   if (activeModeWasRemoved) return;
 
-  if (snapshot.activeModeId && ctx.modes.getActiveModeId() !== snapshot.activeModeId) {
-    ctx.modes.setActiveMode(snapshot.activeModeId);
-  }
   ctx.layout.restoreLayout(sanitizeLayout(ctx, snapshot));
 };

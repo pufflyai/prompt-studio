@@ -1,5 +1,5 @@
 import { Button, Dialog, Stack } from "@chakra-ui/react";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbench } from "@pstdio/workbench";
 import type { CommandParamEntry, CommandParamValue } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -10,7 +10,7 @@ import { ResourceParamField } from "./resource-param-field";
 import { projectTemplateAssetsQueryKey, TemplateParamField } from "./template-param-field";
 
 const projectId = "project-1";
-const workbench = createWorkbenchCore();
+const workbench = createWorkbench();
 selectDashboardProject(workbench, { id: projectId, name: "Prompt Studio" });
 workbench.resources.registerProvider({
   id: "story.workspaces",

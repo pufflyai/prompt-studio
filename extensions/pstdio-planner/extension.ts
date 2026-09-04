@@ -56,7 +56,6 @@ export default defineExtension({
   pages: plannerUi.pages,
   viewMenus: plannerUi.viewMenus,
   resourceKinds: [ticketResourceKind],
-  resourceViews: plannerUi.resourceViews,
   navigationItems: plannerUi.navigationItems,
   navigationTrees: plannerUi.navigationTrees,
   settingsPanels: plannerUi.settingsPanels,

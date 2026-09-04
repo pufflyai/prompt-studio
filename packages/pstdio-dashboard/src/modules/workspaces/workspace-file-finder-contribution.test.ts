@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, expect, mock, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench";
+import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
 import { dashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { treeViewSections } from "@/shared/workbench/workbench-view-test-helpers";
 import { createWorkspacesModule } from "./module";
 
 const originalFetch = globalThis.fetch;
@@ -17,7 +18,7 @@ const runtime = globalThis as typeof globalThis & {
 const workspace: ResourceRef = {
   kind: "workspace",
   id: "workspace-1",
-  uri: "dashboard-workbench://workspace/workspace-1",
+  uri: "pstdio://extension-resource/workspace/workspace-1",
   label: "PS-118_A5",
   metadata: {
     workspaceId: "workspace-1",
@@ -58,11 +59,11 @@ test("offers Finder reveal only through the macOS desktop bridge", async () => {
       truncated: false,
     });
   }) as unknown as typeof fetch;
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
   workbench.registerModule(createWorkspacesModule());
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
-  const sections = await workbench.renderers.getBody(dashboardWidgetIds.workspaceFileTree, { resource: workspace });
+  const sections = await treeViewSections(workbench, dashboardWidgetIds.workspaceFileTree, { resource: workspace });
   const reveal = sections[0]?.nodes[0]?.contextMenuActions?.find((action) => action.id === "workspace-entry.reveal");
   await reveal?.run?.();
 

@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef, type WorkbenchPanelRenderInput } from "@pstdio/workbench";
+import { workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
+import { createWorkbench, type ResourceRef, type WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import type { Dispatch, SetStateAction } from "react";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
@@ -12,30 +13,54 @@ import type { PendingFollowUpState } from "./session-chat-state";
 
 const draftResource: ResourceRef = {
   kind: "session-draft",
-  uri: "dashboard-workbench://session-draft/new",
+  uri: "pstdio://extension-resource/session-draft/new",
   id: "new",
   label: "New session",
 };
 
 describe("openCreatedSessionFromDraft", () => {
-  test("replaces the current draft placement with the created session", () => {
-    const workbench = createWorkbenchCore();
-    workbench.layout.registerPanel({
+  test("updates the current draft placement with the created session", () => {
+    const workbench = createWorkbench();
+    workbench.views.registerView({
       id: dashboardWidgetIds.sessionBubble,
       title: "Session",
+      body: { kind: "react", render: () => null },
+    });
+    workbench.views.registerView({ id: "start", title: "Start", body: { kind: "react", render: () => null } });
+    workbench.modes.registerMode({ id: "project", activate: () => undefined });
+    workbench.pages.registerPage({
+      id: "start",
+      ref: { extensionId: "pstdio", kind: "page", id: "start" },
+      modeId: "project",
+      path: "",
+      slots: [{ id: "content", role: "primary", region: "main", viewId: "start" }],
+    });
+    workbench.modePlacements.registerPlacement({
+      id: "dashboard.session-bubble.project",
+      ref: workbenchPanels.projectSession,
+      modeId: "project",
+      item: {
+        kind: "resource",
+        viewId: dashboardWidgetIds.sessionBubble,
+        resourceKinds: ["session", "session-draft"],
+        cardinality: "many",
+      },
       region: "side",
-      singleton: false,
-      reuse: "none",
-      rendererId: dashboardWidgetIds.sessionBubble,
     });
-    const placement = workbench.layout.openPanel(dashboardWidgetIds.sessionBubble, {
-      pinned: true,
+    workbench.pageLocations.setProject("project-1");
+    workbench.pageLocations.navigate({
+      kind: "page",
+      page: { extensionId: "pstdio", kind: "page", id: "start" },
+    });
+    workbench.modePlacements.openPlacement({
+      panel: workbenchPanels.projectSession,
       resource: draftResource,
-      title: draftResource.label,
+      open: "pin",
     });
+    const placement = workbench.layout.listPanelInstances("side")[0]!;
     const input: WorkbenchPanelRenderInput = {
       workbench,
-      panel: workbench.layout.getPanel(dashboardWidgetIds.sessionBubble)!,
+      panel: workbench.layout.getPanel(placement.panelId)!,
       instance: placement,
       refresh: () => undefined,
     };
@@ -51,9 +76,66 @@ describe("openCreatedSessionFromDraft", () => {
 
     expect(workbench.layout.getLayout().regions.side.widgets).toHaveLength(1);
     expect(opened?.widgetId).toBe(placement.instanceId);
-    expect(opened?.resourceUri).toBe("dashboard-workbench://session/session-created-from-draft");
+    expect(opened?.resourceUri).toBe("pstdio://extension-resource/session/session-created-from-draft");
     expect(opened?.resource?.kind).toBe("session");
     expect(opened?.title).toBe("Start the project plan");
+  });
+
+  test("replaces a Sessions page draft with the created session", () => {
+    const workbench = createWorkbench();
+    workbench.views.registerView({
+      id: dashboardWidgetIds.session,
+      title: "Session",
+      body: { kind: "react", render: () => null },
+    });
+    workbench.modes.registerMode({ id: "sessions", activate: () => undefined });
+    workbench.pages.registerPage({
+      id: "sessions",
+      ref: workbenchPages.sessions,
+      modeId: "sessions",
+      path: "sessions",
+      slots: [
+        {
+          id: "content",
+          role: "primary",
+          region: "main",
+          binding: {
+            resourceKinds: ["session", "session-draft"],
+            viewId: dashboardWidgetIds.session,
+            cardinality: "one",
+          },
+        },
+      ],
+    });
+    workbench.pageLocations.setProject("project-1");
+    workbench.pageLocations.navigate({
+      kind: "page",
+      page: workbenchPages.sessions,
+      resource: { type: "session-draft", id: "new", label: "New session" },
+    });
+    const placement = workbench.layout.listPanelInstances("main")[0]!;
+
+    openCreatedSessionFromDraft({
+      input: {
+        workbench,
+        panel: workbench.layout.getPanel(placement.panelId)!,
+        instance: placement,
+        refresh: () => undefined,
+      },
+      sessionId: "session-created-from-page-draft",
+      prompt: "Use the diagram",
+      projectId: "project-1",
+    });
+
+    expect(workbench.pages.store.getState().location?.resource).toMatchObject({
+      type: "session",
+      id: "session-created-from-page-draft",
+      label: "Use the diagram",
+    });
+    expect(workbench.getPrimaryResource()).toMatchObject({
+      kind: "session",
+      id: "session-created-from-page-draft",
+    });
   });
 });
 

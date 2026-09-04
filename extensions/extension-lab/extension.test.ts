@@ -138,12 +138,15 @@ describe("extension-lab workbench attachments", () => {
       modes: [{ kind: "mode", id: "lab" }],
       command: { id: "glass-lab-artifacts.create", kind: "command" },
     });
-    expect(extension.activityItems?.find((item) => item.id === "project-home")).toMatchObject({
-      icon: "house",
-      modes: [{ kind: "mode", id: "lab" }],
-      placement: "last",
-      command: { extensionId: "pstdio", id: "workbench.action.switchMode", kind: "command" },
-      params: { modeId: "project" },
+    const labModePage = extension.pages?.find((page) => page.id === "lab-mode");
+    expect(labModePage).toMatchObject({ mode: { kind: "mode", id: "lab" } });
+    expect(labModePage?.slots.find((slot) => slot.id === "content")).toMatchObject({
+      id: "content",
+      role: "primary",
+      view: { kind: "view", id: "overview" },
+    });
+    expect(extension.navigationItems?.find((item) => item.id === "lab-mode")).toMatchObject({
+      action: { kind: "page", page: { kind: "page", id: "lab-mode" } },
     });
     expect(extension.statusBarItems?.[0]).toMatchObject({
       when: { mode: { kind: "mode", id: "lab" } },
@@ -184,19 +187,18 @@ describe("extension-lab workbench attachments", () => {
       kind: "webview",
       entry: { path: "./src/views/lab-artifact.tsx" },
     });
-    // An attached resource adds an inspector; it never replaces the primary
-    // location, so the kind declares no primary slot.
     expect(extension.resourceKinds?.find((kind) => kind.id === "glass-lab-artifact")).toMatchObject({
-      surface: "attached",
-      slots: [{ id: "inspector", cardinality: "many", access: "public" }],
+      id: "glass-lab-artifact",
     });
-    expect(extension.resourceViews?.find((binding) => binding.id === "artifact-detail")).toMatchObject({
-      slot: { id: "inspector" },
-      view: { id: "artifact-detail" },
-    });
-    expect(extension.placements?.find((placement) => placement.id === "artifact-inspector.lab")).toMatchObject({
-      item: { kind: "resource-slot", slot: { id: "inspector" } },
+    expect(extension.pages?.find((page) => page.id === "lab-mode")?.slots[1]).toMatchObject({
+      id: "artifact",
+      role: "auxiliary",
       region: "side",
+      binding: {
+        kind: { id: "glass-lab-artifact" },
+        view: { id: "artifact-detail" },
+        cardinality: "many",
+      },
     });
   });
 

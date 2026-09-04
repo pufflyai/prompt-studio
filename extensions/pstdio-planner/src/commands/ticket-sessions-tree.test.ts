@@ -78,14 +78,16 @@ describe("buildSessionsSection", () => {
     });
   });
 
-  test("opens each session in the Side Panel via a hinted session resource", () => {
+  test("opens each session in the project session panel", () => {
     const sessions = [session({ id: "a", title: "Refine ticket: PS-1", anchors_json: [ticketAnchor("ticket-1")] })];
 
     const node = buildSessionsSection({ sessions, ticketId: "ticket-1" })?.nodes[0];
 
     expect(node?.target).toEqual({
-      kind: "resource",
-      resource: { type: "session", id: "a", label: "Refine ticket: PS-1", metadata: { sessionSurface: "side" } },
+      kind: "panel",
+      panel: { extensionId: "pstdio", kind: "placement", id: "project-session" },
+      resource: { type: "session", id: "a", label: "Refine ticket: PS-1" },
+      open: "preview",
     });
   });
 });

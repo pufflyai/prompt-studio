@@ -1,4 +1,4 @@
-import { Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { Button, Stack, Text } from "@chakra-ui/react";
 import type { WebviewFilesClient } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { useLabHost } from "../hooks/host-context";
@@ -51,23 +51,12 @@ export const FileCapabilitiesCard = () => {
     }
   };
 
-  const openResource = () =>
-    host.call("resource.open", {
-      resource: { type: "glass-lab-artifact", id: "file-capability", label: "File capability artifact" },
-      input: { strategy: "replace-active" },
-    });
-
   return (
-    <LabCard title="Webview files" subtitle="Host-owned files and resource navigation through declared capabilities.">
+    <LabCard title="Webview files" subtitle="Host-owned files through declared capabilities.">
       <Stack gap="md">
-        <HStack gap="xs" wrap="wrap">
-          <Button type="button" variant="primary" disabled={isPending} onClick={testFiles}>
-            Test file capabilities
-          </Button>
-          <Button type="button" variant="outline" onClick={() => void openResource()}>
-            Open file capability resource
-          </Button>
-        </HStack>
+        <Button type="button" variant="primary" disabled={isPending} onClick={testFiles} alignSelf="start">
+          Test file capabilities
+        </Button>
         {result ? (
           <Text textStyle="paragraph/S/regular" color={result.endsWith("passed.") ? "fg.success" : "fg.error"}>
             {result}

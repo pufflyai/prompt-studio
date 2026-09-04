@@ -8,4 +8,4 @@
 "pstdio-skills": patch
 ---
 
-Compose Sidenav placements as vertical sections and move Lab and Tickets onto canonical page navigation.
+Unify Core and extension view authoring, compose Sidenav placements as vertical sections, move Lab and Tickets onto canonical page navigation, hide template settings without a provider, keep new tabs at the right edge, and render one tab status glyph.

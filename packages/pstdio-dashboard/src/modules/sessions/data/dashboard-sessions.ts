@@ -166,7 +166,7 @@ export const resolveDashboardSessionView = (sessionId: string | undefined): Dash
   };
 };
 
-const sessionResourceUriPrefix = "dashboard-workbench://session/";
+const sessionResourceUriPrefix = "pstdio://extension-resource/session/";
 
 const getSessionIdFromResourceUri = (resourceUri: string | undefined) => {
   if (!resourceUri?.startsWith(sessionResourceUriPrefix)) return undefined;

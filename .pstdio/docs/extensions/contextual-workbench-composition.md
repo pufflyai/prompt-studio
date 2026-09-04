@@ -1,82 +1,16 @@
-# Contextual Workbench Composition
+# Contextual workbench composition
 
-Extension API alpha.4 composes the Workbench from references. It replaces the previous
-model where panel records mixed body, resource eligibility, and geometry.
+The visible workbench is the union of shell, active mode, and active page placements. Owners own placements, not regions.
 
-## Ownership
+- A view owns one reusable UI body.
+- A mode placement owns content that remains while the mode stays active.
+- A page owns one primary slot and any auxiliary slots for one routed screen.
+- A resource binding connects a resource kind to a view inside a page slot or mode placement.
 
-| Fact | Owner |
-| --- | --- |
-| Body and display identity | `ViewContribution` |
-| Resource semantics | `ResourceKindDefinition` and `ResourceViewContribution` |
-| Mode and docked region | `PlacementContribution` |
-| Menu lifetime | `ViewMenuContribution.owner` |
-| Navigation behavior | `NavigationItemContribution.action` |
-| Workflow states | `StatusContribution` |
+Mode and page placements may share `main`, `secondary`, or `side`. Leaving a page removes its placements and keeps the mode placements. Leaving a mode removes both that mode and its active page.
 
-No contribution duplicates another contribution's fact. In particular, a view has no
-resource kind or region. A resource-view binding has no region. A placement has no UI
-body.
+Placement identity includes owner kind, owner contribution id, slot or placement id, and resource instance key. Region, label, registration time, and current tab are not identity.
 
-## Identity
+Each region sorts placements by declared `order`, qualified owner id, and instance key. The workbench reconciles the complete desired owner set in one transition. It never clears a region because one owner contributes to it.
 
-Every array contribution has a local `id` and a typed `ref`. The runtime derives the
-canonical id:
-
-```txt
-${extensionId}.${contributionKind}.${localId}
-```
-
-Refs may target the declaring extension, another extension, or a built-in host ref. The
-host normalizes refs before validation and reports missing targets without changing
-unrelated contributions.
-
-## Resource Composition
-
-A resource kind declares semantic slots with cardinality and access. Its owner binds
-views with `resourceViews`. Another extension can bind to a public slot. The active
-mode's placements choose where those slots appear.
-
-```ts
-const ticket = defineResourceKind({
-  id: "ticket",
-  surface: "primary",
-  slots: [
-    { id: "primary", cardinality: "one", access: "owner" },
-    { id: "inspector", cardinality: "many", access: "public" },
-  ],
-});
-
-const primary = resourceSlotRef(ticket.ref, "primary");
-
-defineResourceView({
-  id: "editor",
-  resourceKind: ticket.ref,
-  slot: primary,
-  view: editor.ref,
-});
-
-definePlacement({
-  id: "ticket-primary",
-  mode: workbenchModes.project,
-  item: { kind: "resource-slot", slot: primary },
-  region: "main",
-  required: true,
-});
-```
-
-The primary slot is owner-only. External bindings to owner-only or missing slots are
-rejected. A cardinality-one slot may have one required placement. Cardinality-many
-slots remain optional collections.
-
-## Host Adapters
-
-The runtime keeps alpha.4 ownership intact. A host adapter may translate normalized
-views and placements into private renderer and dock metadata, but those records are not
-extension authoring APIs. Renderer callbacks also stay private to the host transport.
-
-## Persistence
-
-Saved state contains canonical view ids and dock choices only. It never stores view
-bodies, resource definitions, navigation items, settings panels, or status-bar items.
-Required placements are reconciled from current contributions whenever a layout opens.
+The Sidenav is one composed TreeRenderer. Mode navigation sections appear before page sections. Header and footer stay pinned while content scrolls. User tree customization may reorder or hide rows, but the Sidenav movement policy prevents a row from crossing mode and page ownership.

@@ -1,6 +1,5 @@
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
-import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { openDashboardSessionPanel } from "./bubble/session-bubble";
 import { createDashboardSessions, type DashboardSession } from "./data/dashboard-sessions";
 
@@ -25,16 +24,13 @@ export const findLatestSessionForResource = (ctx: WorkbenchModuleContext, resour
 // preview, it leaves the Side Panel presentation alone, and it hands activation straight back
 // to the resource the user actually navigated to.
 export const openResourceSessionPreview = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
-  if (!ctx.layout.getPanel(dashboardWidgetIds.sessionBubble)) return;
-
   const session = findLatestSessionForResource(ctx, resource);
   if (!session) return;
 
-  const activeWidgetId = ctx.layout.getLayout().activeWidgetId;
+  const locationWidgetId = ctx.layout.getLayout().activeLocationWidgetId;
   openDashboardSessionPanel(ctx, {
     resource: session.resource,
-    tabPosition: "start",
     preservePanelMode: true,
   });
-  if (activeWidgetId) ctx.layout.activateWidget(activeWidgetId);
+  if (locationWidgetId) ctx.layout.activateWidget(locationWidgetId);
 };

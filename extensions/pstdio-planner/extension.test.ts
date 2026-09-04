@@ -48,9 +48,10 @@ const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>
 describe("pstdio planner extension contributions", () => {
   test("contributes ticket UI through pages instead of Project-mode placements", () => {
     expect(extension.modes).toBeUndefined();
-    expect(extension.resourceKinds?.[0]).toMatchObject({ id: "ticket", surface: "primary" });
-    expect(extension.resourcePanels).toBeUndefined();
-    expect(extension.resourceViews?.map((binding) => binding.id)).toEqual(["ticket-editor"]);
+    expect(extension.resourceKinds?.[0]).toMatchObject({ id: "ticket" });
+    expect(extension.pages?.find((page) => page.id === "ticket")?.slots[0]).toMatchObject({
+      binding: { kind: { id: "ticket" }, view: { id: "ticket-editor" } },
+    });
     expect(extension.navigationTrees?.[0]).toMatchObject({
       id: "ticket-files",
       owner: { kind: "page", id: "ticket" },

@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbench } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { openSessionsPage } from "@/shared/workbench/page-navigation";
+import { treeViewSections } from "@/shared/workbench/workbench-view-test-helpers";
 import { createSidenavModule } from "../sidenav/module";
 import { createSessionsModule } from "./module";
 
@@ -22,15 +23,15 @@ test("shows existing sessions immediately on the sessions aggregate", async () =
       deleted_at: null,
     },
   ]);
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
 
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
   workbench.registerModule(createSidenavModule());
   workbench.registerModule(createSessionsModule());
 
-  await workbench.views.openView(dashboardViews.sessions.id);
+  openSessionsPage(workbench);
 
-  const sessionRows = (await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav))
+  const sessionRows = (await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav))
     .flatMap((section) => section.nodes)
     .find((node) => node.id === "workspace-sessions")?.children;
 

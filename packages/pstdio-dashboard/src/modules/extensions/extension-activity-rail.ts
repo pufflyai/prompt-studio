@@ -11,16 +11,18 @@ export const registerDashboardActivityRail = (
   ctx: WorkbenchModuleContext,
   getMetadata: () => ResolvedWorkbenchExtensionMetadata | undefined,
 ) => {
-  ctx.layout.registerPanel({
+  ctx.views.registerView({
     id: dashboardWidgetIds.activityRail,
     title: "Activity",
-    region: "activity",
-    singleton: true,
-    rendererId: dashboardWidgetIds.activityRail,
+    body: {
+      kind: "react",
+      render: (renderInput) => createElement(ExtensionActivityRailWidget, { input: renderInput }),
+    },
   });
-  ctx.renderers.registerRenderer({
+  ctx.shellPlacements.registerPlacement({
     id: dashboardWidgetIds.activityRail,
-    render: (renderInput) => createElement(ExtensionActivityRailWidget, { input: renderInput }),
+    item: { kind: "view", viewId: dashboardWidgetIds.activityRail, presence: "closed" },
+    region: "activity",
   });
 
   const sync = () => {
@@ -32,15 +34,28 @@ export const registerDashboardActivityRail = (
     // Layouts persisted before the rail existed have no activity region entry.
     const placement = ctx.layout
       .getLayout()
-      .regions.activity?.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.activityRail);
+      .regions.activity?.widgets.find(
+        (widget) =>
+          widget.placementIdentity?.kind === "shell" &&
+          widget.placementIdentity.placementId === dashboardWidgetIds.activityRail,
+      );
     if (!hasItems) {
-      if (placement) ctx.layout.removeWidgetPlacement(placement.widgetId);
+      if (placement?.placementIdentity) ctx.shellPlacements.closePlacement(placement.placementIdentity);
       return;
     }
-    ctx.layout.clearRegion("sidenav");
-    ctx.layout.openPanel(dashboardWidgetIds.activityRail, { pinned: true });
+    if (placement) return;
+    void ctx.navigation.openPanel({ panel: { kind: "shell-placement", id: dashboardWidgetIds.activityRail } });
   };
-  const subscription = ctx.modes.onDidChangeActive(sync);
+  const modeSubscription = ctx.modes.onDidChangeActive(sync);
+  // Page navigation publishes the mode before it reconciles the page layout.
+  // Reapply mode chrome after that layout commit so the page cannot erase it.
+  const pageSubscription = ctx.pages.store.subscribe(sync);
 
-  return { sync, dispose: () => subscription.dispose() };
+  return {
+    sync,
+    dispose: () => {
+      pageSubscription();
+      modeSubscription.dispose();
+    },
+  };
 };

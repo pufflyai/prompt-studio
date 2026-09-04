@@ -17,7 +17,7 @@ describe("resolveDashboardSessionView", () => {
     const view = resolveDashboardSessionViewForPlacement({
       resource: {
         kind: "session-draft",
-        uri: "dashboard-workbench://session-draft/workspace-1",
+        uri: "pstdio://extension-resource/session-draft/workspace-1",
         id: "workspace-1",
         label: "New session",
         metadata: {
@@ -37,7 +37,7 @@ describe("resolveDashboardSessionView", () => {
     const first = resolveDashboardSessionViewForPlacement({
       resource: {
         kind: "session-draft",
-        uri: "dashboard-workbench://session-draft/new-workspace-1-first",
+        uri: "pstdio://extension-resource/session-draft/new-workspace-1-first",
         id: "new-workspace-1-first",
         label: "New session",
       },
@@ -45,7 +45,7 @@ describe("resolveDashboardSessionView", () => {
     const second = resolveDashboardSessionViewForPlacement({
       resource: {
         kind: "session-draft",
-        uri: "dashboard-workbench://session-draft/new-workspace-1-second",
+        uri: "pstdio://extension-resource/session-draft/new-workspace-1-second",
         id: "new-workspace-1-second",
         label: "New session",
       },

@@ -5,11 +5,7 @@ import {
   workbenchResourceKindContextKey,
   workbenchResourceMetadataContextKey,
 } from "@pstdio/workbench";
-import {
-  openWorkbenchTerminal,
-  WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
-  WORKBENCH_TERMINAL_WIDGET_ID,
-} from "@pstdio/workbench/react";
+import { openWorkbenchTerminal, WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -97,12 +93,12 @@ export const deleteWorkspaceResource = async (ctx: WorkbenchModuleContext, resou
 export const openRenameWorkspaceResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
 
-  ctx.layout.openPanel(dashboardWidgetIds.renameWorkspace, { title: "Rename workspace", resource, closable: true });
+  ctx.overlays.openOverlay(dashboardWidgetIds.renameWorkspace, { title: "Rename workspace", resource });
 };
 
 export const openWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
-  if (!ctx.layout.getPanel(WORKBENCH_TERMINAL_WIDGET_ID)) return;
+  if (!ctx.shellPlacements.getPlacement(WORKBENCH_TERMINAL_WIDGET_ID)) return;
   const terminalResource = resolveWorkspaceTerminalResource(ctx, resource);
   if (!isLocalReadyWorkspace(terminalResource)) return;
 
@@ -111,7 +107,7 @@ export const openWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resou
 
 export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
-  if (!ctx.layout.getPanel(WORKBENCH_TERMINAL_WIDGET_ID)) return;
+  if (!ctx.shellPlacements.getPlacement(WORKBENCH_TERMINAL_WIDGET_ID)) return;
 
   const terminalResource = resolveWorkspaceTerminalResource(ctx, resource);
   if (!isLocalReadyWorkspace(terminalResource)) return;
@@ -120,23 +116,51 @@ export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, res
     .getLayout()
     .regions.secondary.widgets.find(
       (placement) =>
-        placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID && placement.resourceUri === resource.uri,
+        placement.placementIdentity?.kind === "shell" &&
+        placement.placementIdentity.placementId === WORKBENCH_TERMINAL_WIDGET_ID &&
+        placement.resource?.kind === "terminal" &&
+        placement.resource.metadata?.workspaceId === resource.id,
     );
-  if (!existing && autoOpenedUris.has(resource.uri)) {
-    return ctx.layout.openPanel(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, {
-      hiddenByDefault: true,
-      pinned: true,
-      title: "Terminal",
-    });
-  }
-
   if (existing) {
     if (existing.resource?.metadata?.workspacePath === terminalResource.metadata?.workspacePath) return existing;
-    return ctx.layout.updatePanel(existing.widgetId, {
-      resource: terminalResource,
+    const identity = existing.placementIdentity;
+    if (!identity || identity.kind !== "shell") return;
+    const updatedTerminal = existing.resource
+      ? { ...existing.resource, metadata: { ...existing.resource.metadata, ...terminalResource.metadata } }
+      : undefined;
+    return ctx.shellPlacements.updatePlacement(identity, {
+      resource: updatedTerminal,
       title: existing.title,
     });
   }
+
+  const owned = ctx.shellPlacements
+    .resolvePlacements()
+    .find(
+      (placement) =>
+        placement.identity.kind === "shell" &&
+        placement.identity.placementId === WORKBENCH_TERMINAL_WIDGET_ID &&
+        placement.value.resource?.kind === "terminal" &&
+        placement.value.resource.metadata?.workspaceId === resource.id,
+    );
+  if (owned?.identity.kind === "shell") {
+    const updatedTerminal = owned.value.resource
+      ? { ...owned.value.resource, metadata: { ...owned.value.resource.metadata, ...terminalResource.metadata } }
+      : terminalResource;
+    ctx.shellPlacements.updatePlacement(owned.identity, {
+      resource: updatedTerminal,
+      title: owned.value.title,
+    });
+    return ctx.layout
+      .getLayout()
+      .regions.secondary.widgets.find(
+        (placement) =>
+          placement.placementIdentity?.kind === "shell" &&
+          placement.placementIdentity.placementId === WORKBENCH_TERMINAL_WIDGET_ID &&
+          placement.resource?.metadata?.workspaceId === resource.id,
+      );
+  }
+  if (autoOpenedUris.has(resource.uri)) return;
 
   autoOpenedUris.add(resource.uri);
   return openWorkbenchTerminal(ctx, { resource: terminalResource, reveal: false });

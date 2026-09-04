@@ -1,68 +1,20 @@
-# Extension Modes And Layout
+# Extension modes and layout
 
-A mode is a named way of working. Extension API alpha.4 separates the mode identity
-from the placement records that arrange UI.
+A mode describes workbench context and the docked regions it supports. A page declares its base mode, so page navigation always selects the correct mode.
 
-Use a built-in mode ref when the UI belongs in an existing host mode:
+Use `definePlacement` only for content that should remain across pages in that mode:
 
 ```ts
 definePlacement({
-  id: "tickets-project",
+  id: "sessions",
   mode: workbenchModes.project,
-  item: { kind: "view", view: tickets.ref },
-  region: "main",
+  item: { kind: "view", view: sessions.ref, presence: "open" },
+  region: "side",
 });
 ```
 
-Create an extension mode only when the workflow needs its own mode identity:
+A placement can show a static view or bind a resource kind to a view. A static item declares `presence`: `fixed` (always open, not closable), `open` (open until the user closes it), or `closed` (opened from the Add panel). A binding item declares `cardinality` (`one` rebinds a single instance, `many` opens one instance per resource) and an optional `add` action for the Add panel. A placement may also declare `order` and `movableTo`. Region size and collapsibility belong to the mode's `regionSettings`, not to placements. Region choices are `main`, `secondary`, and `side`; navigation belongs in the shared Sidenav tree.
 
-```ts
-const reviewMode = defineMode({
-  id: "review",
-  label: "Review",
-  icon: "check-check",
-});
+Use `definePage` for routed content. Do not model a page as a mode placement, and do not switch a mode as a separate navigation step. A page target activates the page and its declared mode as one transaction.
 
-const reviewQueue = definePlacement({
-  id: "review-queue",
-  mode: reviewMode.ref,
-  item: { kind: "view", view: queue.ref },
-  region: "main",
-  defaultOpen: true,
-});
-
-export default defineExtension({
-  modes: [reviewMode],
-  views: [queue],
-  placements: [reviewQueue],
-});
-```
-
-## Direct Views And Resource Slots
-
-A placement item is either:
-
-- `{ kind: "view", view }` for a mode-wide view
-- `{ kind: "resource-slot", slot }` for views bound to the active resource
-
-The resource kind defines the slot, `resourceViews` binds view capabilities to it, and
-the placement decides its region. This keeps resource meaning separate from geometry.
-
-## Placement Rules
-
-- `region` is one of `sidenav`, `main`, `secondary`, or `side`.
-- `movableTo` lists allowed regions and must include the initial region.
-- `defaultOpen: false` leaves an optional placement closed in a new layout.
-- `required: true` makes the placement structural and cannot be combined with
-  `defaultOpen: false`.
-- A required resource-slot placement needs cardinality `one`.
-- The same view or semantic slot may appear only once in one mode.
-
-Saved layout stores user choices for docked placements. Status-bar, navigation, and
-settings contributions are host chrome and are not stored as dock layout.
-
-## Persistence Migration
-
-The alpha.4 migration rewrites known alpha.3 view ids to canonical view ids and removes
-chrome entries from saved dock layout. It runs once behind a marker. Unknown or invalid
-entries are discarded instead of being kept as hidden compatibility state.
+Mode and page placements are additive. If both use `side`, both appear. Leaving the page removes only the page placement. User open state is stored against the complete owner identity and cannot leak into another page or mode.

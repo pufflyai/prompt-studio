@@ -37,7 +37,7 @@ describe("extension event feed", () => {
         outcome: { ok: true, status: "success" },
       },
       {
-        resourceUri: "dashboard-workbench://ticket/ticket-1",
+        resourceUri: "pstdio://extension-resource/ticket/ticket-1",
         origin: {
           rendererId: "planner.ticketContent",
           instanceId: "planner.ticketEditor:1",
@@ -50,7 +50,7 @@ describe("extension event feed", () => {
     expect(received).toEqual([
       {
         id: "tickets.changed",
-        resourceUri: "dashboard-workbench://ticket/ticket-1",
+        resourceUri: "pstdio://extension-resource/ticket/ticket-1",
         origin: {
           rendererId: "planner.ticketContent",
           instanceId: "planner.ticketEditor:1",

@@ -17,7 +17,7 @@ describe("font editor extension", () => {
       slot: "content",
       group: "Tools",
       when: { mode: { extensionId: "pstdio", kind: "mode", id: "project" } },
-      action: { kind: "view", view: { kind: "view", id: "font-editor" } },
+      action: { kind: "page", page: { kind: "page", id: "font-editor" } },
     });
     expect(extension.skills?.find((skill) => skill.id === "font-editor")).toMatchObject({
       source: { path: "./skills/font-editor" },

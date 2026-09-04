@@ -28,7 +28,7 @@ Every extension package must include a `package.json` next to its entry file.
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.5"
+    "pstdio": "1.0.0-alpha.9"
   },
   "pstdio": {
     "scope": "user"
@@ -39,8 +39,8 @@ Every extension package must include a `package.json` next to its entry file.
 Required fields:
 
 - `engines.pstdio`: the exact extension API version this extension was built against. While the API
-  is in alpha this is a plain version such as `1.0.0-alpha.5`, never a range: `^1.0.0-alpha.5` also
-  matches `1.0.0-alpha.5`, so a range would accept hosts the extension was never tested on. The host
+  is in alpha this is a plain version such as `1.0.0-alpha.9`, never a range: `^1.0.0-alpha.9` also
+  matches `1.0.0-alpha.9`, so a range would accept hosts the extension was never tested on. The host
   refuses an extension whose value does not match its own `EXTENSION_API_VERSION`, with a single
   diagnostic instead of per-contribution errors. Expect to update this on most releases while the
   API is unstable.
@@ -183,12 +183,13 @@ const createTicket = defineCommand({
 export default defineExtension({
   commands: [createTicket],
   views: [],
+  pages: [],
   viewMenus: [],
   placements: [],
   navigationItems: [],
   modes: [],
   resourceKinds: [],
-  resourceViews: [],
+  navigationTrees: [],
   statusBarItems: [],
   statuses: [],
   settingsPanels: [],
@@ -202,15 +203,16 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 | Surface                                           | Product role                                                                                      |
 | ------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
 | `commands`                                        | User-triggered, CLI-triggered, scheduled, or automation-triggered operations.                     |
-| `keybindings`                                     | Global app-level shortcuts that invoke extension commands using TanStack Hotkeys syntax.          |
+| `keybindings`                                     | Global app-level shortcuts that run a navigation action, using TanStack Hotkeys syntax.           |
 | `middlewares`                                     | Pre-command checks that may continue, patch params, replace invocation data, or reject.           |
 | `hooks`                                           | Event observers that run after a product event is emitted.                                        |
 | `schedules`                                       | Cron-driven command invocation.                                                                   |
 | `views`                                           | Reusable webview, tree, file, controls, table, and Kanban bodies.                                  |
 | `viewMenus`                                       | View bodies attached as menus owned by another view.                                               |
-| `placements`                                      | Geometry for direct views or semantic resource slots in a mode.                                   |
-| `navigationItems`                                 | Typed view, resource, command, link, or compound navigation actions.                               |
-| `resourceKinds`, `resourceViews`                  | Domain resource slots and typed bindings from those slots to views.                               |
+| `pages`                                           | Routed screens with one primary slot and optional auxiliary slots.                                 |
+| `placements`                                      | Mode-wide static views or resource bindings.                                                        |
+| `navigationItems`, `navigationTrees`              | Explicit actions and Sidenav trees owned by a mode or page.                                        |
+| `resourceKinds`                                   | Domain resource identity, labels, icons, menus, and hierarchy.                                     |
 | `resourceHierarchyProviders`                      | Parent lookup for resources, used for breadcrumbs and hierarchy.                                   |
 | `statusBarItems`                                  | Views in the host status bar; all visible items render without layout persistence.                 |
 | `statuses`                                        | Workflow status providers shared by Kanban views and the host settings editor.                     |
@@ -273,7 +275,7 @@ Every local contribution id follows one grammar: lowercase kebab-case segments s
 `[a-z0-9]+(?:-[a-z0-9]+)*(?:\.[a-z0-9]+(?:-[a-z0-9]+)*)*`. Dots express local grouping (and derive default CLI paths
 for commands): `ticket-status.create` becomes `pst <extension> ticket-status create`. Ownership never lives in the id:
 a ref's `extensionId` carries it. `pst extensions check` rejects ids outside the grammar with the code
-`extension_contribution_id_invalid`. Host-published refs (for example `workbenchCommands.switchMode`) resolve to the
+`extension_contribution_id_invalid`. Host-published refs (for example `workbenchPages.start`) resolve to the
 host's registered id without owner prefixing, for every contribution kind; runtime ids such as
 `pstdio.planner.command.tickets.create` are opaque routing values that no code may split back into parts.
 
@@ -393,33 +395,38 @@ type CommandOutcome<T = unknown> =
 
 ## Keybindings
 
-Keybindings bind app-level keyboard shortcuts to extension commands. Chords use `@tanstack/hotkeys` syntax and are validated by the extension runtime. Invalid chords, modifier-only chords, and duplicate platform-aware chords are reported by extension checks and dropped from metadata.
+Keybindings bind app-level keyboard shortcuts to a navigation `action`. The action is any navigation target: a command, a page, a panel, an href, or a compound target. Pages and panels bind directly; no wrapper command is needed. Chords use `@tanstack/hotkeys` syntax and are validated by the extension runtime. Invalid chords, modifier-only chords, and duplicate platform-aware chords are reported by extension checks and dropped from metadata.
 
 Prefer `Mod+...` so the chord maps to `Cmd` on macOS and `Ctrl` on Windows/Linux without an override. Avoid chords already claimed by browsers, OSes, or developer tooling (`Mod+T`, `Mod+W`, `Mod+R`, `Mod+P`, `Mod+S`, `Mod+Shift+P`, `Mod+Shift+I`, `F5`, `F11`, `F12`, …); the extension runtime emits a `reserved_keybinding_chord` warning when a contribution hits a reserved chord on any platform. Reach for multi-step chords like `mod+k mod+t` if no single chord is safe.
 
 ```ts
-export default defineExtension({
-  commands: {
-    preview: {
-      title: "Preview",
-      async run(_ctx, _commandParams) {
-        return { opened: true };
-      },
-    },
+import { defineCommand, defineExtension, defineKeybinding } from "@pstdio/sdk/extensions";
+
+const preview = defineCommand({
+  id: "preview",
+  title: "Preview",
+  async run(_ctx, _commandParams) {
+    return { opened: true };
   },
-  keybindings: {
-    preview: {
+});
+
+export default defineExtension({
+  commands: [preview],
+  keybindings: [
+    defineKeybinding({
+      id: "preview",
       key: "mod+shift+y",
       mac: "cmd+shift+y",
       win: "ctrl+shift+y",
       linux: "ctrl+shift+y",
-      command: "preview",
-      args: { surface: "testbench" },
+      action: { kind: "command", target: { command: preview.ref } },
       when: { resourceType: ["marp.presentation"] },
-    },
-  },
+    }),
+  ],
 });
 ```
+
+A command action may pass params with `target: { command: preview.ref, params: { ... } }`. Use `action: { kind: "page", page: somePage.ref }` or `action: { kind: "panel", panel: somePage.panels.someSlot }` to open a page or panel directly.
 
 ## Middlewares And Hooks
 
@@ -471,8 +478,8 @@ when a hook should react to a command outcome.
 Dashboard UI contributions have one ownership model:
 
 - a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, or `kanban`
-- a placement owns geometry and places either a view or a semantic resource slot in a mode
-- a resource view binds one view to one slot declared by a resource kind
+- a page owns a route, base mode, primary slot, and optional auxiliary slots
+- a placement owns mode-wide geometry and places a static view or resource binding
 - a navigation item uses a typed action instead of encoded route or command fields
 - a navigation tree adds a tree view to a mode or page in the shared Sidenav
 - a view menu references its owner view and menu view
@@ -481,7 +488,7 @@ Dashboard UI contributions have one ownership model:
 Local ids are explicit. The runtime normalizes them as
 `${extensionId}.${contributionKind}.${localId}`. Use the `ref` returned by each `define*`
 helper instead of rebuilding that id. Resources still identify domain objects such as
-tickets, workspaces, and sessions. A view `path` is only a deep link to that view.
+tickets, workspaces, and sessions. Paths belong to pages, never views.
 
 ```ts
 import {
@@ -571,8 +578,8 @@ export default defineExtensionView({
   declaration, such as `artifacts.read:runs`.
 - The `files` render helper picks local files and stores extension-owned files. See
   [Webview files](#webview-files).
-- `resource.open` opens an SDK resource in the workbench. See
-  [Open a resource from a webview](#open-a-resource-from-a-webview).
+- `navigation.open` opens an explicit page or panel target. See
+  [Navigate from a webview](#navigate-from-a-webview).
 - Author commands with `defineCommand`. Commands written as inline literals inside
   `defineExtension` keep untyped results (see ADR 0012 in the repository docs).
 - Pass `{ extensionId }` as the second argument only in tests, where no host bridge
@@ -661,16 +668,16 @@ returned `ExtensionBlobRef` contains `id`, `name`, `mimeType`, `size`, `hash`, `
 `createdAt`, and `updatedAt`.
 
 Host-backed file methods need a project extension instance. They are available to
-declared project routes, panels, resource views, and project settings views. A global
+declared project pages, panels, and project settings views. A global
 settings view has no project file owner, so it does not receive these methods. Keep
 `files.pick` available there only when selecting a local file without uploading it.
 
 The declaration gate still applies. If the view omits a declaration, the bridge rejects
 the call before it reaches the file host.
 
-### Open a resource from a webview
+### Navigate from a webview
 
-Add `resource.open` to the view and pass the SDK resource shape to the host:
+Add `navigation.open` to the view and pass an explicit page or panel target:
 
 ```ts
 const details = defineView({
@@ -679,34 +686,29 @@ const details = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./webviews/details.ts", import.meta.url),
-    capabilities: ["resource.open"],
+    capabilities: ["navigation.open"],
   },
 });
 ```
 
 ```ts
-await host.call("resource.open", {
-  resource: {
-    type: "ticket",
-    id: "PS-260",
-    label: "Dashboard webview capabilities",
-    metadata: { status: "in-review" },
+await host.call("navigation.open", {
+  target: {
+    kind: "page",
+    page: { kind: "page", id: "ticket" },
+    resource: {
+      type: "ticket",
+      id: "PS-260",
+      label: "Dashboard webview capabilities",
+      metadata: { status: "in-review" },
+    },
   },
-  input: { strategy: "replace-active" },
 });
 ```
 
-`type` identifies the resource kind and `id` identifies the resource. `label` and
-`metadata` are optional. The dashboard creates the stable workbench URI from `type` and
-`id`; guests do not need to build that URI. The extension must already have registered
-the resource kind and a presenter that can open it. The `ticket` value above is an
-example of such a registered kind.
-
-The default `persistent` strategy opens a normal workbench resource. Use
-`replace-active` to replace the active resource instead. The capability works in a
-dashboard webview wherever the workbench is available, including project and global
-settings. The bridge rejects the call if the view did not declare `resource.open` or if
-the request omits `resource`.
+The target chooses the destination. A resource supplies identity and input only. The
+dashboard does not search for a matching screen by resource kind. The bridge rejects
+the call if the view did not declare `navigation.open` or the target is invalid.
 
 `@pstdio/sdk/extensions/react` ships react-query hooks built on the client. `react` and
 `@tanstack/react-query` are optional peer dependencies used only by this entry.
@@ -859,4 +861,4 @@ The theme id is `planner.monokai` for package `planner`.
 
 Diagnostics should include the extension id when known, the source path, and project/repo context where relevant. If the entry module fails to import, the package still loads with empty contributions and an `extension_import_failed` diagnostic so the dashboard can show the package identity and error.
 
-Warnings are actionable even when the extension still loads. For example, `extension_icon_unknown` means a contribution named an icon the host does not ship; the contribution loads, but the dashboard shows a fallback icon. Composition errors such as `extension_panel_contract_invalid` (a panel placement has an invalid shape) and `extension_resource_slot_closed` (an external contribution targets a closed slot) drop the invalid contribution and keep the rest of the extension loading.
+Warnings are actionable even when the extension still loads. For example, `extension_icon_unknown` means a contribution named an icon the host does not ship; the contribution loads, but the dashboard shows a fallback icon. Composition errors such as `invalid_placement` (a placement has an invalid shape) and `invalid_page_slot` (a page slot has an invalid shape) drop the invalid contribution and keep the rest of the extension loading. A placement or page slot that still declares a removed field (`defaultOpen`, `required`, `closable`, `defaultResource`, `openCommand`, `regionSize`, or `regionCollapsible`) is rejected with a field-specific message that names the replacement, such as `presence` on the static item, `add` on the resource binding, or `regionSettings` on the owning mode.

@@ -41,7 +41,7 @@ describe("dashboard project data selectors", () => {
       resource: {
         kind: "project",
         id: "project-1",
-        uri: "dashboard-workbench://project/project-1",
+        uri: "pstdio://extension-resource/project/project-1",
         label: "Prompt Studio",
         icon: "folder-root",
         metadata: { favoriteScope: { scope: "project", projectId: "project-1" } },

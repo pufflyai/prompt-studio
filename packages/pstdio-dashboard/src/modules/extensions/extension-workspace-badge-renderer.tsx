@@ -107,15 +107,12 @@ export const createWorkspaceBadgeResource = (item: ExtensionWorkspaceBadgeItem, 
     },
   );
 
-// `sessionSurface: "side"` keeps the board in place and opens the session in the Side Panel.
-// The label is only a fallback — the sessions module resolves the live title by session id.
+// The caller chooses the session panel with an explicit navigation target. The
+// resource carries identity and display data only.
 export const createWorkspaceBadgeSessionResource = (
   item: ExtensionWorkspaceBadgeSessionItem,
   projectId: string,
-): ResourceRef =>
-  createDashboardResource("session", item.session.id, item.label, "MessageCircle", projectId, {
-    sessionSurface: "side",
-  });
+): ResourceRef => createDashboardResource("session", item.session.id, item.label, "MessageCircle", projectId);
 
 const WorkspaceDiffTotals = (props: { workspaceId: string }) => {
   const { workspaceId } = props;
@@ -143,11 +140,11 @@ interface ExtensionWorkspaceBadgeDisplayProps {
   items: ExtensionWorkspaceBadgeItem[];
   projectId: string;
   value: unknown;
-  openResource: (resource: ResourceRef) => void;
+  navigate: (resource: ResourceRef) => void;
 }
 
 const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayProps) => {
-  const { items, projectId, value, openResource } = props;
+  const { items, projectId, value, navigate } = props;
   const [, setDiffVersion] = useState(0);
   const selectedId = typeof value === "string" ? value : undefined;
   const selectedItem = items.find((item) => item.id === selectedId) ?? items[0];
@@ -174,7 +171,7 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
   if (!selectedItem) return null;
 
   const openItem = (item: ExtensionWorkspaceBadgeItem) => {
-    openResource(createWorkspaceBadgeResource(item, projectId));
+    navigate(createWorkspaceBadgeResource(item, projectId));
   };
 
   const badge = (
@@ -190,7 +187,7 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
       // without also opening the workspace or the ticket card behind it.
       onSessionIndicatorClick={
         hasBadgeSession(selectedItem)
-          ? () => openResource(createWorkspaceBadgeSessionResource(selectedItem, projectId))
+          ? () => navigate(createWorkspaceBadgeSessionResource(selectedItem, projectId))
           : undefined
       }
     />
@@ -238,7 +235,7 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
 };
 
 export const createBadgeListRenderer =
-  (input: { itemsAttributeId: string; projectId: string; openResource: (resource: ResourceRef) => void }) =>
+  (input: { itemsAttributeId: string; projectId: string; navigate: (resource: ResourceRef) => void }) =>
   (value: unknown, row: KanbanRendererRow) => {
     const items = normalizeWorkspaceBadgeItems(row.attributes[input.itemsAttributeId]);
     if (items.length === 0) return null;
@@ -246,6 +243,6 @@ export const createBadgeListRenderer =
       items,
       projectId: input.projectId,
       value,
-      openResource: input.openResource,
+      navigate: input.navigate,
     });
   };

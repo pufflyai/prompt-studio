@@ -10,8 +10,6 @@ import type {
   ExtensionBenchThemeContribution,
 } from "../lib/api-contract";
 
-const rendererId = "extension-testbench.content.renderer";
-
 type ContentContributionPanelConfig =
   | { kind: "template"; contribution: ExtensionBenchTemplateContribution }
   | { kind: "skill"; contribution: ExtensionBenchSkillContribution }
@@ -103,14 +101,6 @@ const ContentContributionPanel = (props: { config: ContentContributionPanelConfi
 };
 
 export const registerContentContributionWidgets = (workbench: WorkbenchCore, bench: ExtensionBenchLoadResponse) => {
-  workbench.renderers.registerRenderer({
-    id: rendererId,
-    render: ({ panel }) => {
-      const config = panel.config as ContentContributionPanelConfig;
-      return <ContentContributionPanel config={config} />;
-    },
-  });
-
   const configs: ContentContributionPanelConfig[] = [
     ...bench.inventory.templates.map((contribution) => ({ kind: "template" as const, contribution })),
     ...bench.inventory.skills.map((contribution) => ({ kind: "skill" as const, contribution })),
@@ -119,12 +109,10 @@ export const registerContentContributionWidgets = (workbench: WorkbenchCore, ben
   ];
 
   for (const config of configs) {
-    workbench.layout.registerPanel({
+    workbench.views.registerView({
       id: contentContributionWidgetId(config.kind, config.contribution.id),
       title: text(config.contribution.title, config.contribution.id),
-      region: "main",
-      rendererId,
-      config,
+      body: { kind: "react", render: () => <ContentContributionPanel config={config} /> },
     });
   }
 };

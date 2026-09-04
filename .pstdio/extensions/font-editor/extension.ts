@@ -2,7 +2,7 @@ import {
   defineArtifactMount,
   defineExtension,
   defineNavigationItem,
-  definePlacement,
+  definePage,
   defineSkill,
   defineView,
   l10n,
@@ -21,17 +21,18 @@ const fontEditor = defineView({
   },
 });
 
+const fontEditorPage = definePage({
+  id: "font-editor",
+  title: l10n("panels.fontEditor.title", "Font editor"),
+  path: "font-editor",
+  mode: workbenchModes.project,
+  slots: [{ id: "content", role: "primary", region: "main", view: fontEditor.ref }],
+});
+
 const extension = defineExtension({
   commands: fontCommands,
   views: [fontEditor],
-  placements: [
-    definePlacement({
-      id: "font-editor.project",
-      mode: workbenchModes.project,
-      item: { kind: "view", view: fontEditor.ref },
-      region: "main",
-    }),
-  ],
+  pages: [fontEditorPage],
   navigationItems: [
     defineNavigationItem({
       id: "font-editor",
@@ -41,7 +42,7 @@ const extension = defineExtension({
       label: l10n("treeItems.fontEditor.label", "Font editor"),
       icon: "case-upper",
       when: { mode: workbenchModes.project },
-      action: { kind: "view", view: fontEditor.ref },
+      action: { kind: "page", page: fontEditorPage.ref },
     }),
   ],
   artifactMounts: [

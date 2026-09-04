@@ -12,7 +12,7 @@ export const createDashboardResource = (
 ) =>
   ({
     kind,
-    uri: `dashboard-workbench://${kind}/${id}`,
+    uri: `pstdio://extension-resource/${encodeURIComponent(kind)}/${encodeURIComponent(id)}`,
     id,
     label,
     icon,

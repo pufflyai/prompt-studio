@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { AttributeDescriptor } from "@pstdio/ui/kanban-renderer";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbench } from "@pstdio/workbench";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { createDashboardKanbanAdapter } from "./extension-kanban-adapter";
 import { metadata, response } from "./module-test-fixtures";
@@ -9,7 +9,7 @@ describe("dashboard Kanban adapter", () => {
   test("keeps non-workspace badge lists on the generic renderer", () => {
     const genericRender = () => "generic badge";
     const { adapter, disposable } = createDashboardKanbanAdapter({
-      ctx: createWorkbenchCore(),
+      ctx: createWorkbench(),
       executeCommand: async () => response,
       metadata: metadata as ResolvedWorkbenchExtensionMetadata,
       projectId: "project-1",
@@ -38,7 +38,7 @@ describe("dashboard Kanban adapter", () => {
   test("keeps mixed resource badge lists on the generic renderer", () => {
     const genericRender = () => "mixed badges";
     const { adapter, disposable } = createDashboardKanbanAdapter({
-      ctx: createWorkbenchCore(),
+      ctx: createWorkbench(),
       executeCommand: async () => response,
       metadata: metadata as ResolvedWorkbenchExtensionMetadata,
       projectId: "project-1",

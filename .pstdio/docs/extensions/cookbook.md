@@ -22,7 +22,7 @@ This cookbook gives short recipes for the implemented extension API.
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.5"
+    "pstdio": "1.0.0-alpha.9"
   },
   "type": "module",
   "dependencies": {
@@ -203,12 +203,13 @@ export default defineExtension({
 });
 ```
 
-## Add A View And Navigation Item
+## Add A Page And Navigation Item
 
 ```ts
 import {
   defineExtension,
   defineNavigationItem,
+  definePage,
   defineView,
   packageAsset,
   workbenchModes,
@@ -216,7 +217,6 @@ import {
 
 const planner = defineView({
   id: "planner",
-  path: "planner",
   title: "Planner",
   body: {
     kind: "webview",
@@ -225,8 +225,17 @@ const planner = defineView({
   },
 });
 
+const plannerPage = definePage({
+  id: "planner",
+  title: "Planner",
+  path: "planner",
+  mode: workbenchModes.project,
+  slots: [{ id: "content", role: "primary", region: "main", view: planner.ref }],
+});
+
 export default defineExtension({
   views: [planner],
+  pages: [plannerPage],
   navigationItems: [
     defineNavigationItem({
       id: "planner",
@@ -234,39 +243,13 @@ export default defineExtension({
       slot: "content",
       label: "Planner",
       icon: "calendar-check",
-      action: { kind: "view", view: planner.ref },
+      action: { kind: "page", page: plannerPage.ref },
     }),
   ],
 });
 ```
 
-The view has the normalized id `publisher.name.view.planner`. Its `path` adds a deep
-link without creating another UI contribution. Use the returned `planner.ref` anywhere
-the extension needs to target this view.
-
-To make a navigation item switch Workbench modes instead of opening a view, use a `kind: "command"`
-action with the typed `workbenchCommands.switchMode` ref:
-
-```ts
-import { defineNavigationItem, workbenchCommands, workbenchModes } from "@pstdio/sdk/extensions";
-
-defineNavigationItem({
-  id: "lab",
-  owner: workbenchModes.project,
-  slot: "content",
-  label: "Lab",
-  icon: "flask-conical",
-  action: {
-    kind: "command",
-    target: { command: workbenchCommands.switchMode, params: { modeId: "project" } },
-  },
-});
-```
-
-`modeId` takes a host mode id (`"project"`, `"settings"`) or an extension mode's normalized id. Copy the
-normalized id from `pst extensions check` output or from the extension's contributions tab in project
-settings. Do not hand-build `pstdio.<extension>.mode.<id>` strings, and do not hand-type the raw
-`workbench.action.switchMode` command id.
+The page owns the deep link and chooses its declared mode. The navigation item opens the page directly.
 
 ## Call Commands From A Webview
 
@@ -405,10 +388,9 @@ const importFiles = ctx.storage.scope({ type: "import", id: importId }).files;
 the resource id. Extension-defined command scopes require an id. Read from the same
 scope that the webview used for upload and list.
 
-## Open a resource from a webview
+## Navigate from a webview
 
-Declare `resource.open`, then pass a resource reference to the host. The resource type
-must match a resource kind that the workbench can render.
+Declare `navigation.open`, then pass an explicit page or panel target to the host.
 
 ```ts
 const results = defineView({
@@ -417,27 +399,27 @@ const results = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./webviews/results.ts", import.meta.url),
-    capabilities: ["resource.open"],
+    capabilities: ["navigation.open"],
   },
 });
 ```
 
 ```ts
-await host.call("resource.open", {
-  resource: {
-    type: "ticket",
-    id: "PS-260",
-    label: "Dashboard webview capabilities",
-    metadata: { status: "in-review" },
+await host.call("navigation.open", {
+  target: {
+    kind: "page",
+    page: { kind: "page", id: "ticket" },
+    resource: {
+      type: "ticket",
+      id: "PS-260",
+      label: "Dashboard webview capabilities",
+      metadata: { status: "in-review" },
+    },
   },
-  input: { strategy: "replace-active" },
 });
 ```
 
-Omit `input` for a persistent resource. Use `replace-active` when the new resource
-should take the current resource's place. The host converts the SDK fields into the
-workbench resource and creates its URI. Do not build a workbench URI in guest code. The
-kind and one of its presenters must already be registered before the call.
+The page target chooses the screen and its declared mode. The resource carries identity and input only.
 
 ## Read Artifacts From A Webview
 
@@ -489,19 +471,13 @@ import {
   defineNavigationTree,
   definePage,
   defineResourceKind,
-  defineResourceView,
   defineView,
   packageAsset,
-  resourceSlotRef,
   workbenchModes,
+  workbenchPages,
 } from "@pstdio/sdk/extensions";
 
-const ticket = defineResourceKind({
-  id: "ticket",
-  surface: "primary",
-  slots: [{ id: "primary", cardinality: "one", access: "owner" }],
-});
-const primary = resourceSlotRef(ticket.ref, "primary");
+const ticket = defineResourceKind({ id: "ticket", label: "Ticket" });
 const editor = defineView({
   id: "ticket-editor",
   title: "Ticket",
@@ -517,12 +493,13 @@ const ticketPage = definePage({
   title: "Ticket",
   path: "ticket",
   mode: workbenchModes.project,
+  parent: workbenchPages.start,
   slots: [
     {
       id: "content",
       role: "primary",
       region: "main",
-      binding: { kind: ticket.ref, view: editor.ref },
+      binding: { kind: ticket.ref, view: editor.ref, cardinality: "one" },
     },
   ],
 });
@@ -530,15 +507,16 @@ const ticketPage = definePage({
 export default defineExtension({
   resourceKinds: [ticket],
   views: [editor, files],
-  resourceViews: [
-    defineResourceView({ id: "editor", resourceKind: ticket.ref, slot: primary, view: editor.ref }),
-  ],
   pages: [ticketPage],
   navigationTrees: [
     defineNavigationTree({ id: "files", owner: ticketPage.ref, slot: "content", view: files.ref }),
   ],
 });
 ```
+
+Every binding declares `cardinality`: `one` keeps a single instance and rebinds it, `many` opens one
+instance per resource. A page whose primary slot has only a binding must declare `parent`; closing its
+last tab navigates there.
 
 The tree appears after the active mode's content while Ticket is active. Leaving the page removes only the
 page-owned tree; mode navigation remains.

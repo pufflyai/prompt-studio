@@ -7,6 +7,7 @@ import {
   type TreeAction,
   type TreeNode,
   type TreeViewSection,
+  workbenchPages,
 } from "@pstdio/sdk/extensions";
 
 import { statusesCollection, ticketsCollection } from "../data/collections";
@@ -91,10 +92,11 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMet
     id: `workspace-${workspace.id}`,
     label,
     icon: "GitBranch",
-    // Native resource target so the host opens a normal workspace tab instead of
-    // running extension-owned navigation. Its canonical parent edge keeps the workspace
-    // nested beneath the owning ticket in Nav Chrome.
-    target: { kind: "resource", resource: { type: "workspace", id: workspace.id, label, metadata: workspaceMetadata } },
+    target: {
+      kind: "page",
+      page: workbenchPages.workspaces,
+      resource: { type: "workspace", id: workspace.id, label, metadata: workspaceMetadata },
+    },
   };
 };
 

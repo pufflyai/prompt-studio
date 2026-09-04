@@ -1,8 +1,9 @@
 import { Box } from "@chakra-ui/react";
 import type { CommandExecuteRequest, CommandExecuteResponse } from "@pstdio/sdk/api";
+import { workbenchModes } from "@pstdio/sdk/extensions";
 import { getThemePreferenceMode, type ThemePreference, type ThemePreferenceOption } from "@pstdio/ui";
 import { createScriptedTerminalBridge } from "@pstdio/ui/terminal";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbench } from "@pstdio/workbench";
 import {
   createWorkbenchWebviewHostCapabilities,
   refreshOpenWorkbenchExtensionWebviews,
@@ -20,8 +21,9 @@ import { surfaceCommandOutcome } from "./command-outcome";
 import { registerContentContributionWidgets } from "./content-contribution-panel";
 import { ContributionExplorer } from "./contribution-explorer";
 import {
-  openPrimaryResource,
-  openTreePreview,
+  navigateExtensionPage,
+  navigateResourcePreview,
+  registerPreviewPages,
   registerPreviewResourceProvider,
   registerResourceKinds,
 } from "./preview-surfaces";
@@ -76,10 +78,14 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
     publishLastCommand,
     setThemePreference,
   } = props;
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
   const resource = createPreviewResource(bench.metadata);
   const webviewFiles = createPreviewWebviewFileHost();
   let publishExtensionEvent: ((event: { id: string }) => void) | undefined;
+
+  for (const mode of [workbenchModes.project, workbenchModes.sessions]) {
+    workbench.modes.registerMode({ id: mode.id, label: mode.id, activate: () => undefined });
+  }
 
   registerWorkbenchExtensionRendererRefreshEvents({
     metadata: bench.metadata,
@@ -168,17 +174,15 @@ export const createPreviewWorkbench = (props: CreatePreviewWorkbenchProps) => {
     workbench,
   });
   registerContentContributionWidgets(workbench, bench);
+  registerResourceKinds(workbench, bench, resource);
+  registerPreviewPages(workbench, bench, resource);
   registerPreviewResourceProvider(workbench, bench);
 
-  const initialView = bench.metadata.views.find((view) => view.path);
-  if (initialView) {
-    void workbench.views.openView(initialView.id);
+  const initialPage = bench.metadata.pages[0];
+  if (initialPage) {
+    void navigateExtensionPage(workbench, bench, initialPage, resource);
   } else {
-    void workbench.resources.openResource(resource).catch(() => {
-      registerResourceKinds(workbench, bench, resource);
-      openPrimaryResource(workbench, resource, bench);
-      openTreePreview(workbench, bench, resource);
-    });
+    void navigateResourcePreview(workbench, bench, resource);
   }
 
   return workbench;

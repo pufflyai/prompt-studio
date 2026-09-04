@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef, type TreeNode } from "@pstdio/workbench";
+import { createWorkbench, type ResourceRef, type TreeNode } from "@pstdio/workbench";
 import { dashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { fileViewBody, treeViewBody, treeViewSections } from "@/shared/workbench/workbench-view-test-helpers";
 import { createWorkspacesModule } from "./module";
 
 const originalFetch = globalThis.fetch;
@@ -14,9 +16,17 @@ let apiBaseUrlId = 0;
 const workspaceResource = (metadata: Record<string, unknown> = {}): ResourceRef => ({
   kind: "workspace",
   id: "workspace-1",
-  uri: "dashboard-workbench://workspace/workspace-1",
+  uri: "pstdio://extension-resource/workspace/workspace-1",
   label: "PS-118_A5",
   metadata: { workspaceId: "workspace-1", workspaceType: "worktree", ...metadata },
+});
+
+const treeContext = (workbench: ReturnType<typeof createWorkbench>, resource: ResourceRef) => ({
+  resource,
+  state: workbench.treeViews.getTreeState(dashboardWidgetIds.workspaceFileTree),
+  refresh: () => workbench.views.refreshView(dashboardWidgetIds.workspaceFileTree),
+  setSelectedNode: (nodeId: string | undefined) =>
+    workbench.treeViews.setSelectedNode(dashboardWidgetIds.workspaceFileTree, nodeId),
 });
 
 const jsonResponse = (value: unknown, status = 200) =>
@@ -51,13 +61,13 @@ describe("workspace file contributions", () => {
       });
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const workspace = workspaceResource({ workspaceType: "current_branch", workspaceView: "files" });
 
-    const sections = await workbench.renderers.getBody(dashboardWidgetIds.workspaceFileTree, { resource: workspace });
-    const file = await workbench.renderers.getFileRenderer(dashboardWidgetIds.workspaceFileRenderer)?.load(workspace);
+    const sections = await treeViewSections(workbench, dashboardWidgetIds.workspaceFileTree, { resource: workspace });
+    const file = await fileViewBody(workbench, dashboardWidgetIds.workspaceFiles).load(workspace);
 
     expect(sections[0]?.nodes).toEqual([
       expect.objectContaining({
@@ -112,13 +122,13 @@ describe("workspace file contributions", () => {
       });
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const workspace = workspaceResource({ workspaceView: "files" });
 
-    await workbench.resources.openResource(workspace, { replaceActive: true });
-    const sections = await workbench.renderers.getBody(dashboardWidgetIds.workspaceFileTree, {
+    openWorkspacesPage(workbench, workspace);
+    const sections = await treeViewSections(workbench, dashboardWidgetIds.workspaceFileTree, {
       resource: workspace,
       filter: "read",
     });
@@ -129,15 +139,10 @@ describe("workspace file contributions", () => {
 
     const opened = workbench.layout
       .getLayout()
-      .regions.main.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.workspaceFiles)?.resource;
-    const fileRenderer = workbench.renderers.getFileRenderer(dashboardWidgetIds.workspaceFileRenderer);
-    const fileRendererRefreshes: string[] = [];
-    const refreshSubscription = workbench.renderers.onDidRefreshFileRenderer((event) => {
-      fileRendererRefreshes.push(event.fileRendererId);
-    });
-    const loaded = await fileRenderer?.load(opened);
-    await fileRenderer?.save?.(opened, "# Updated");
-    refreshSubscription.dispose();
+      .regions.main.widgets.find((widget) => widget.viewId === dashboardWidgetIds.workspaceFiles)?.resource;
+    const fileView = fileViewBody(workbench, dashboardWidgetIds.workspaceFiles);
+    const loaded = await fileView.load(opened);
+    await fileView.save?.(opened, "# Updated");
 
     expect(opened?.uri).toBe(workspace.uri);
     expect(opened?.metadata?.workspaceFilePath).toBe("README.md");
@@ -147,7 +152,6 @@ describe("workspace file contributions", () => {
     expect(calls[0]?.url).toContain("/v1/workspaces/workspace-1/files?query=read&limit=500");
     expect(calls.some((call) => call.url.includes("/file?path=README.md") && call.method === "GET")).toBe(true);
     expect(calls.some((call) => call.method === "PUT" && call.body === '{"content":"# Updated"}')).toBe(true);
-    expect(fileRendererRefreshes).toEqual([]);
   });
 });
 
@@ -194,13 +198,13 @@ describe("workspace file operations", () => {
       });
     });
     globalThis.fetch = fetchMock as unknown as typeof fetch;
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const workspace = workspaceResource({ workspaceView: "files" });
-    await workbench.resources.openResource(workspace, { replaceActive: true });
+    openWorkspacesPage(workbench, workspace);
 
-    const sections = await workbench.renderers.getBody(dashboardWidgetIds.workspaceFileTree, { resource: workspace });
+    const sections = await treeViewSections(workbench, dashboardWidgetIds.workspaceFileTree, { resource: workspace });
     const createAction = sections[0]?.actions?.find((action) => action.id === "workspace-file.create");
     const createFolderAction = sections[0]?.actions?.find((action) => action.id === "workspace-directory.create");
     expect(createAction?.params).toBeUndefined();
@@ -208,7 +212,7 @@ describe("workspace file operations", () => {
     await createAction?.run?.();
     expect(calls.some((call) => call.method === "POST")).toBe(false);
 
-    const creatingSections = await workbench.renderers.getBody(dashboardWidgetIds.workspaceFileTree, {
+    const creatingSections = await treeViewSections(workbench, dashboardWidgetIds.workspaceFileTree, {
       resource: workspace,
     });
     const inlineNode = creatingSections[0]?.nodes.find((node) => node.id === "workspace-file:new:root") as
@@ -219,13 +223,13 @@ describe("workspace file operations", () => {
 
     const opened = workbench.layout
       .getLayout()
-      .regions.main.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.workspaceFiles)?.resource;
+      .regions.main.widgets.find((widget) => widget.viewId === dashboardWidgetIds.workspaceFiles)?.resource;
     expect(opened?.metadata?.workspaceFilePath).toBe("notes.md");
     expect(calls).toContainEqual(expect.objectContaining({ method: "POST", body: '{"content":""}' }));
     expect(workbench.notifications.listNotifications()).toEqual([]);
 
     await createFolderAction?.run?.();
-    const creatingFolderSections = await workbench.renderers.getBody(dashboardWidgetIds.workspaceFileTree, {
+    const creatingFolderSections = await treeViewSections(workbench, dashboardWidgetIds.workspaceFileTree, {
       resource: workspace,
     });
     const inlineFolder = creatingFolderSections[0]?.nodes.find((node) => node.id === "workspace-directory:new:root") as
@@ -267,16 +271,16 @@ describe("workspace file operations", () => {
     ]);
     expect((file as (TreeNode & { showContextMenuTrigger?: boolean }) | undefined)?.showContextMenuTrigger).toBe(false);
 
-    const treeRenderer = workbench.renderers.getTreeRenderer(dashboardWidgetIds.workspaceFileTree);
+    const treeView = treeViewBody(workbench, dashboardWidgetIds.workspaceFileTree);
     if (!file || !folder || !archive) throw new Error("Expected file and folder nodes.");
-    await treeRenderer?.moveNode?.(file, folder, { resource: workspace });
+    await treeView.moveNode?.(file, folder, treeContext(workbench, workspace));
     expect(calls).toContainEqual(
       expect.objectContaining({
         method: "PATCH",
         body: '{"destination_path":"docs/README.md"}',
       }),
     );
-    await treeRenderer?.moveNode?.(folder, archive, { resource: workspace });
+    await treeView.moveNode?.(folder, archive, treeContext(workbench, workspace));
     expect(calls).toContainEqual(
       expect.objectContaining({
         method: "PATCH",
@@ -312,7 +316,7 @@ describe("workspace file operations", () => {
     await deleteAction?.run?.();
     const confirmation = workbench.layout
       .getLayout()
-      .regions.overlay.widgets.find((widget) => widget.contributionId === dashboardWidgetIds.deleteWorkspaceEntry);
+      .regions.overlay.widgets.find((widget) => widget.viewId === dashboardWidgetIds.deleteWorkspaceEntry);
     expect(confirmation?.resource?.metadata?.workspaceDeletePath).toBe("README.md");
     expect(confirmation?.resource?.metadata?.workspaceDeleteType).toBe("file");
 
@@ -321,7 +325,7 @@ describe("workspace file operations", () => {
       .getLayout()
       .regions.overlay.widgets.find(
         (widget) =>
-          widget.contributionId === dashboardWidgetIds.deleteWorkspaceEntry &&
+          widget.viewId === dashboardWidgetIds.deleteWorkspaceEntry &&
           widget.resource?.metadata?.workspaceDeleteType === "directory",
       );
     expect(folderConfirmation?.resource?.metadata?.workspaceDeletePath).toBe("docs");

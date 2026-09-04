@@ -10,9 +10,8 @@ const readProjectId = (value: unknown) => {
   return typeof projectId === "string" ? projectId : undefined;
 };
 
-// The view to mount is derived from the placement's widget id + the cached manifest, not stored
-// on the resource (PS-11). First open and Back/Forward replay resolve the same view from the same
-// widget id and manifest, so the derived view is stable across navigation.
+// The placement carries the View identity. The panel id identifies only the host
+// chrome created for that placement and must not be used to recover its content.
 export const resolveExtensionView = (input: Pick<WorkbenchPanelRenderInput, "instance" | "panel" | "workbench">) => {
   const projectId =
     readProjectId(input.instance.resource?.metadata) ??
@@ -20,7 +19,7 @@ export const resolveExtensionView = (input: Pick<WorkbenchPanelRenderInput, "ins
     getDashboardSelectedProjectId(input.workbench);
   if (!projectId) return undefined;
   const metadata = getCachedDashboardExtensionMetadata(projectId);
-  const view = metadata?.views.find((candidate) => candidate.id === input.instance.panelId);
+  const view = metadata?.views.find((candidate) => candidate.id === input.instance.viewId);
   if (view?.body.kind !== "webview") return undefined;
   const extension = metadata?.extensions.find((candidate) => candidate.id === view.extensionId);
   return {

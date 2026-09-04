@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbench } from "@pstdio/workbench";
 import { executeWebviewCommand } from "./extension-webview-command";
 import { notificationStatusRouteVerb } from "./notification-transition-route";
 
@@ -15,7 +15,7 @@ describe("notificationStatusRouteVerb", () => {
 
 describe("executeWebviewCommand", () => {
   test("runs registered workbench commands in the host", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const extensionCalls: unknown[] = [];
     workbench.commands.registerCommand(
       { id: "workbench.test.open", label: "Open" },
@@ -51,7 +51,7 @@ describe("executeWebviewCommand", () => {
   });
 
   test("sends extension commands to the project API", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const extensionCalls: unknown[] = [];
 
     await executeWebviewCommand({

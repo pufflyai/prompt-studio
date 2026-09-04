@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench";
+import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -7,6 +7,7 @@ import { useState } from "react";
 import { dashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import {
   workspaceDiffFileQueryKey,
   workspaceDiffFilesQueryKey,
@@ -30,7 +31,7 @@ const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
   return {
     kind: "workspace",
     id: WORKSPACE_ID,
-    uri: `dashboard-workbench://workspace/${WORKSPACE_ID}`,
+    uri: `pstdio://extension-resource/workspace/${WORKSPACE_ID}`,
     label: WORKSPACE_ID,
     icon: "GitBranch",
     metadata: {
@@ -119,17 +120,17 @@ const seedWorkspaceQueries = () => {
 
 const createStoryWorkbench = (state: WorkspaceStoryState) => {
   seedWorkspaceQueries();
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
   workbench.registerModule(createWorkspacesModule());
   selectDashboardProject(workbench, { id: "prompt-studio", name: "Prompt Studio" });
-  void workbench.resources.openResource(workspaceResource(state), { replaceActive: true }).then(() => {
-    workbench.panels.setOpen("sidenav", false);
-    if (state !== "collapsed") return;
+  openWorkspacesPage(workbench, workspaceResource(state));
+  workbench.panels.setOpen("sidenav", false);
+  if (state === "collapsed") {
     const fileMenu = workbench.layout
       .listPanelInstances("main-left-menu")
       .find((panel) => panel.panelId === dashboardWidgetIds.workspaceFileTree);
     if (fileMenu) workbench.panels.setOpen(`panel-menu:${fileMenu.instanceId}`, false);
-  });
+  }
   return workbench;
 };
 

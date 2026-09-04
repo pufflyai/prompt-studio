@@ -84,7 +84,7 @@ describe("extension workspace badge renderer", () => {
     expect(item).not.toHaveProperty("session");
   });
 
-  test("resolves the badge session to a side-panel session resource", () => {
+  test("creates a session resource from the badge session", () => {
     const resource = createWorkspaceBadgeSessionResource(
       {
         id: "workspace-2",
@@ -98,7 +98,6 @@ describe("extension workspace badge renderer", () => {
       kind: "session",
       id: "session-2",
       label: "T-1_A2",
-      metadata: { sessionSurface: "side" },
     });
   });
 
@@ -179,7 +178,7 @@ describe("extension workspace badge renderer", () => {
 
     expect(resource).toMatchObject({
       id: "workspace-42",
-      uri: "dashboard-workbench://workspace/workspace-42",
+      uri: "pstdio://extension-resource/workspace/workspace-42",
       metadata: { workspaceId: "workspace-42" },
     });
   });

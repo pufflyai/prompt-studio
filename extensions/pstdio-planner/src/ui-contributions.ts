@@ -3,14 +3,12 @@ import {
   defineNavigationItem,
   defineNavigationTree,
   definePage,
-  defineResourceView,
   defineSettingsPanel,
   defineSettingsSection,
   defineView,
   defineViewMenu,
   l10n,
   packageAsset,
-  resourceSlotRef,
   workbenchModes,
   workbenchSlots,
 } from "@pstdio/sdk/extensions";
@@ -40,8 +38,6 @@ export const plannerSettingsSection = defineSettingsSection({
   title: l10n("settingsSections.planner.title", "Planner"),
   order: 40,
 });
-
-const ticketPrimary = resourceSlotRef(ticketResourceKind.ref, "primary");
 
 const createPlannerSettingsViews = (baseUrl: string) => ({
   tagSettings: defineView({
@@ -84,7 +80,7 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
         id: "content",
         role: "primary",
         region: "main",
-        binding: { kind: ticketResourceKind.ref, view: editor },
+        binding: { kind: ticketResourceKind.ref, view: editor, cardinality: "one" },
       },
     ],
   });
@@ -97,7 +93,6 @@ export const createPlannerUi = (baseUrl: string) => {
     id: "tickets",
     title: l10n("kanbanRenderers.tickets.title", "Tickets"),
     icon: "square-kanban",
-    path: "tickets",
     body: {
       kind: "kanban",
       attributes: buildTicketAttributes(ticketStatuses.ref),
@@ -235,14 +230,6 @@ export const createPlannerUi = (baseUrl: string) => {
   return {
     views: [tickets, editor, files, properties, tagSettings],
     pages: [ticketsPage, ticketDetailPage],
-    resourceViews: [
-      defineResourceView({
-        id: "ticket-editor",
-        resourceKind: ticketResourceKind.ref,
-        slot: ticketPrimary,
-        view: editor.ref,
-      }),
-    ],
     viewMenus: [
       defineViewMenu({
         id: "ticket.properties",

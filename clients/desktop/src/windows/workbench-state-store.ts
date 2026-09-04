@@ -3,19 +3,19 @@ import { dirname } from "node:path";
 import type { DesktopWorkbenchState } from "../desktop-api";
 
 const readState = (path: string) => {
-  if (!existsSync(path)) return { lastResources: {} };
+  if (!existsSync(path)) return { pageLocations: {} };
   try {
     const value = JSON.parse(readFileSync(path, "utf8")) as unknown;
-    if (!value || typeof value !== "object" || Array.isArray(value)) return { lastResources: {} };
+    if (!value || typeof value !== "object" || Array.isArray(value)) return { pageLocations: {} };
     const state = value as Partial<DesktopWorkbenchState>;
     const selectedProjectId = typeof state.selectedProjectId === "string" ? state.selectedProjectId : undefined;
-    const lastResources =
-      state.lastResources && typeof state.lastResources === "object" && !Array.isArray(state.lastResources)
-        ? Object.fromEntries(Object.entries(state.lastResources).filter((entry) => typeof entry[1] === "string"))
+    const pageLocations =
+      state.pageLocations && typeof state.pageLocations === "object" && !Array.isArray(state.pageLocations)
+        ? Object.fromEntries(Object.entries(state.pageLocations).filter((entry) => typeof entry[1] === "string"))
         : {};
-    return { lastResources, ...(selectedProjectId ? { selectedProjectId } : {}) };
+    return { pageLocations, ...(selectedProjectId ? { selectedProjectId } : {}) };
   } catch {
-    return { lastResources: {} };
+    return { pageLocations: {} };
   }
 };
 
@@ -29,7 +29,7 @@ export class DesktopWorkbenchStateStore {
   }
 
   getState() {
-    return { ...this.#state, lastResources: { ...this.#state.lastResources } };
+    return { ...this.#state, pageLocations: { ...this.#state.pageLocations } };
   }
 
   setSelectedProjectId(projectId: string | null) {
@@ -38,9 +38,9 @@ export class DesktopWorkbenchStateStore {
     this.#write();
   }
 
-  setLastResource(projectId: string, value: string | null) {
-    if (value === null) delete this.#state.lastResources[projectId];
-    else this.#state.lastResources[projectId] = value;
+  setPageLocation(projectId: string, value: string | null) {
+    if (value === null) delete this.#state.pageLocations[projectId];
+    else this.#state.pageLocations[projectId] = value;
     this.#write();
   }
 

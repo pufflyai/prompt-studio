@@ -61,7 +61,7 @@ export const dashboardResourceFromExtensionReference = (
 ): ResourceRef => {
   return {
     kind: reference.type,
-    uri: `dashboard-workbench://${reference.type}/${encodeURIComponent(reference.id)}`,
+    uri: `pstdio://extension-resource/${encodeURIComponent(reference.type)}/${encodeURIComponent(reference.id)}`,
     id: reference.id,
     label: reference.label ?? reference.id,
     icon: reference.icon ?? input.fallbackIcon,

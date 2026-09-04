@@ -33,7 +33,7 @@ describe("notifications service", () => {
       kind: "needs_review",
       priority: "high",
       target_json: { type: "ticket", id: "PS-95", label: "PS-95" },
-      actions_json: [{ id: "open", label: "Review proposal", kind: "open-resource" }],
+      actions_json: [{ id: "open", label: "Review proposal", kind: "navigate" }],
       dedupe_key: "planner:PS-95:review",
     });
 

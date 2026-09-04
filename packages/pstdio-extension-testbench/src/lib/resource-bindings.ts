@@ -6,17 +6,39 @@ export const localContributionId = (id: string) => (id.includes(".") ? id.slice(
 
 const matchesResourceKind = (kindId: string, kind: string) => kindId === kind || localContributionId(kindId) === kind;
 
-/** View ids bound to a resource kind through `resourceViews` edges. */
-export const viewIdsForResourceKind = (metadata: WorkbenchExtensionMetadata, kind: string) =>
-  metadata.resourceViews.filter((edge) => matchesResourceKind(edge.resourceKind.id, kind)).map((edge) => edge.view.id);
+export const viewIdsForResourceKind = (metadata: WorkbenchExtensionMetadata, kind: string) => [
+  ...metadata.pages.flatMap((page) =>
+    page.slots.flatMap((slot) => {
+      const binding = "binding" in slot ? slot.binding : undefined;
+      if (!binding) return [];
+      const kinds = Array.isArray(binding.kind) ? binding.kind : [binding.kind];
+      return kinds.some((candidate) => matchesResourceKind(candidate.id, kind)) ? [binding.view.id] : [];
+    }),
+  ),
+  ...metadata.placements.flatMap((placement) => {
+    const item = placement.item;
+    if (item.kind !== "binding") return [];
+    const kinds = Array.isArray(item.resourceKind) ? item.resourceKind : [item.resourceKind];
+    return kinds.some((candidate) => matchesResourceKind(candidate.id, kind)) ? [item.view.id] : [];
+  }),
+];
 
 export const isViewForResourceKind = (metadata: WorkbenchExtensionMetadata, viewId: string, kind: string) =>
   viewIdsForResourceKind(metadata, kind).includes(viewId);
 
-/** Local kind names from declared resource kinds, then from `resourceViews` edges. */
+export const isPageForResourceKind = (metadata: WorkbenchExtensionMetadata, pageId: string, kind: string) => {
+  const page = metadata.pages.find((candidate) => candidate.localId === pageId);
+  if (!page) return false;
+  return page.slots.some((slot) => {
+    const binding = "binding" in slot ? slot.binding : undefined;
+    if (!binding) return false;
+    const kinds = Array.isArray(binding.kind) ? binding.kind : [binding.kind];
+    return kinds.some((candidate) => matchesResourceKind(candidate.id, kind));
+  });
+};
+
 export const resourceKindsFromMetadata = (metadata: WorkbenchExtensionMetadata) => {
   const kinds = new Set<string>();
   for (const kind of metadata.resourceKinds) kinds.add(kind.localId);
-  for (const edge of metadata.resourceViews) kinds.add(edge.resourceKind.id);
   return [...kinds];
 };

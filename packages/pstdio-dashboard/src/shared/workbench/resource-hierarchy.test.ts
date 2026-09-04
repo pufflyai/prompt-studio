@@ -12,6 +12,6 @@ describe("dashboardResourceFromExtensionReference", () => {
   test("maps domain resource references", () => {
     const resource = dashboardResourceFromExtensionReference({ type: "ticket", id: "t-1" }, { projectId: "project-1" });
 
-    expect(resource.uri).toBe("dashboard-workbench://ticket/t-1");
+    expect(resource.uri).toBe("pstdio://extension-resource/ticket/t-1");
   });
 });

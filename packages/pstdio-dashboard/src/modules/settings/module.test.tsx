@@ -1,36 +1,20 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
-import {
-  buildSettingsTreeBody,
-  SETTINGS_RESOURCE_KIND,
-  WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
-} from "@pstdio/workbench/react";
+import { createWorkbench } from "@pstdio/workbench";
+import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
+import { dashboardEditableTemplatesContextKey } from "@/shared/extensions/workbench-extension-contributions";
 import { createSettingsModule } from "./module";
 
-const collectNodeLabels = (sections: Awaited<ReturnType<typeof buildSettingsTreeBody>>) => {
-  const labels: string[] = [];
-  const visit = (nodes: { label?: string; children?: { label?: string }[] }[]) => {
-    for (const node of nodes) {
-      if (node.label) labels.push(node.label);
-      if (node.children) visit(node.children as typeof nodes);
-    }
-  };
-  for (const section of sections) visit(section.nodes);
-  return labels;
-};
-
 describe("createSettingsModule", () => {
-  test("registers the settings resource kind and the open command", () => {
-    const workbench = createWorkbenchCore();
+  test("registers the settings command", () => {
+    const workbench = createWorkbench();
 
     workbench.registerModule(createSettingsModule());
 
-    expect(workbench.resources.getKind(SETTINGS_RESOURCE_KIND)?.icon).toBe("settings");
     expect(workbench.commands.getCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID)).toBeDefined();
   });
 
   test("registers the workbench and project settings sections", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.registerModule(createSettingsModule());
 
@@ -40,7 +24,7 @@ describe("createSettingsModule", () => {
   });
 
   test("registers Settings once on the shared project sidenav footer", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.registerModule(createSettingsModule());
 
@@ -56,7 +40,7 @@ describe("createSettingsModule", () => {
   });
 
   test("registers the runtime and templates panels with their scope and kind", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.registerModule(createSettingsModule());
 
@@ -64,12 +48,16 @@ describe("createSettingsModule", () => {
     const runtime = panels.find((panel) => panel.id === "runtime");
     const templates = panels.find((panel) => panel.id === "templates");
 
-    expect(runtime).toMatchObject({ kind: "custom", scope: "global" });
-    expect(templates).toMatchObject({ kind: "collection", scope: "project" });
+    expect(runtime).toMatchObject({ kind: "view", scope: "global" });
+    expect(templates).toMatchObject({
+      kind: "collection",
+      scope: "project",
+      when: dashboardEditableTemplatesContextKey,
+    });
   });
 
   test("registers the extensions, repositories, skills, and danger-zone panels", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.registerModule(createSettingsModule());
 
@@ -77,21 +65,9 @@ describe("createSettingsModule", () => {
     const byId = (id: string) => panels.find((panel) => panel.id === id);
 
     expect(byId("harnesses")).toBeUndefined();
-    expect(byId("extensions")).toMatchObject({ kind: "custom", scope: "project" });
-    expect(byId("repositories")).toMatchObject({ kind: "custom", scope: "project" });
+    expect(byId("extensions")).toMatchObject({ kind: "view", scope: "project" });
+    expect(byId("repositories")).toMatchObject({ kind: "view", scope: "project" });
     expect(byId("skills")).toMatchObject({ kind: "collection", scope: "project" });
-    expect(byId("danger-zone")).toMatchObject({ kind: "custom", scope: "project" });
-  });
-
-  test("hides project-scoped entries when no project is selected", async () => {
-    const workbench = createWorkbenchCore();
-
-    workbench.registerModule(createSettingsModule());
-
-    const body = await buildSettingsTreeBody({ settings: workbench.settings, hasProjectScope: false });
-    const labels = collectNodeLabels(body);
-
-    expect(labels).toContain("Runtime");
-    expect(labels).not.toContain("Templates");
+    expect(byId("danger-zone")).toMatchObject({ kind: "view", scope: "project" });
   });
 });

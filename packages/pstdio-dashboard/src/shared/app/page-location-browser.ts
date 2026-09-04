@@ -6,6 +6,8 @@ interface DashboardPageLocationWindow {
     readonly state: unknown;
     pushState(state: unknown, unused: string, url: string): void;
     replaceState(state: unknown, unused: string, url: string): void;
+    back(): void;
+    forward(): void;
   };
   addEventListener(type: "popstate", listener: () => void): void;
   removeEventListener(type: "popstate", listener: () => void): void;
@@ -23,6 +25,8 @@ export const createDashboardPageLocationBrowser = (
     current,
     push: (entry) => browserWindow.history.pushState(entry.state, "", entry.url),
     replace: (entry) => browserWindow.history.replaceState(entry.state, "", entry.url),
+    back: () => browserWindow.history.back(),
+    forward: () => browserWindow.history.forward(),
     onPopState: (listener) => {
       const handlePopState = () => listener(current());
       browserWindow.addEventListener("popstate", handlePopState);

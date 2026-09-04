@@ -1,7 +1,8 @@
-import { standardResourceIcons, type WorkbenchModuleContext } from "@pstdio/workbench";
-import { settingsPanelResource } from "@pstdio/workbench/react";
+import { standardResourceIcons, type WorkbenchModuleContext, type WorkbenchPanelRenderInput } from "@pstdio/workbench";
+import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, getDashboardSelectedProjectName } from "@/shared/app/project-context";
+import { dashboardEditableTemplatesContextKey } from "@/shared/extensions/workbench-extension-contributions";
 import { ExtensionsPanel } from "./components/extensions-panel";
 import { MachineTokensPanel } from "./components/machine-tokens-panel";
 import { ProjectDangerZone } from "./components/project-danger-zone";
@@ -11,7 +12,6 @@ import { SkillViewer } from "./components/skill-viewer";
 import { TemplateSettingsEditor } from "./components/template-settings-editor";
 import { getProjectSkills, type ProjectSkill } from "./data/skills-api";
 import {
-  createProjectTemplate,
   getProjectTemplateAssets,
   type ProjectTemplateAsset,
   templateTypesForProject,
@@ -21,64 +21,137 @@ import {
 // stays reachable even when no project is selected.
 export const dashboardSettingsDefaultPanel = { id: "runtime", title: "Runtime", icon: standardResourceIcons.settings };
 
+const settingsViewIds = {
+  runtime: "dashboard.settings.runtime",
+  extensions: "dashboard.settings.extensions",
+  repositories: "dashboard.settings.repositories",
+  skill: "dashboard.settings.skill",
+  template: "dashboard.settings.template",
+  machineTokens: "dashboard.settings.machine-tokens",
+  dangerZone: "dashboard.settings.danger-zone",
+} as const;
+
+const settingsItem = <TItem,>(input: WorkbenchPanelRenderInput, panelId: string) => {
+  const itemId = input.instance.resource?.metadata?.itemId;
+  return typeof itemId === "string"
+    ? (input.workbench.settings.getCollectionItem(panelId, itemId) as TItem | undefined)
+    : undefined;
+};
+
 // Registers the dashboard's settings sections and panels against the workbench
 // settings registry. The unified surface (`createWorkbenchSettingsModule`) turns
 // these into the navigation tree and dispatching panel.
 export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContext) => {
-  ctx.commands.registerCommand<{ templateType: string }>(
-    { id: dashboardCommandIds.createTemplate, label: "New template" },
-    {
-      execute: async ({ templateType }) => {
-        const projectId = getDashboardSelectedProjectId(ctx);
-        if (!projectId) return;
-        const existing = await getProjectTemplateAssets(projectId);
-        await createProjectTemplate(
-          projectId,
-          existing.map((template) => template.name),
-          templateType,
-        );
-        ctx.settings.refresh();
-      },
-    },
-  );
   ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 10, scope: "global" });
   ctx.settings.registerSection({ id: "project", title: "Project", order: 20, scope: "project" });
 
+  ctx.views.registerView({
+    id: settingsViewIds.runtime,
+    title: "Runtime",
+    body: { kind: "react", render: () => <RuntimeSettingsPanel projectId={getDashboardSelectedProjectId(ctx)} /> },
+  });
+  ctx.views.registerView({
+    id: settingsViewIds.extensions,
+    title: "Extensions",
+    body: { kind: "react", render: () => <ExtensionsPanel projectId={getDashboardSelectedProjectId(ctx)} /> },
+  });
+  ctx.views.registerView({
+    id: settingsViewIds.repositories,
+    title: "Repositories",
+    body: {
+      kind: "react",
+      render: () => <ProjectRepositoriesPanel projectId={getDashboardSelectedProjectId(ctx)} />,
+    },
+  });
+  ctx.views.registerView({
+    id: settingsViewIds.skill,
+    title: "Skill",
+    body: {
+      kind: "react",
+      render: (input) => {
+        const skill = settingsItem<ProjectSkill>(input, "skills");
+        return skill ? <SkillViewer projectId={getDashboardSelectedProjectId(ctx)} skillName={skill.name} /> : null;
+      },
+    },
+  });
+  ctx.views.registerView({
+    id: settingsViewIds.template,
+    title: "Template",
+    body: {
+      kind: "react",
+      render: (input) => {
+        const template = settingsItem<ProjectTemplateAsset>(input, "templates");
+        return template ? (
+          <TemplateSettingsEditor
+            key={template.id}
+            template={template}
+            onDeleted={() => {
+              ctx.settings.refresh();
+              void ctx.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, {
+                panelId: dashboardSettingsDefaultPanel.id,
+              });
+            }}
+          />
+        ) : null;
+      },
+    },
+  });
+  ctx.views.registerView({
+    id: settingsViewIds.machineTokens,
+    title: "Machine tokens",
+    body: { kind: "react", render: () => <MachineTokensPanel projectId={getDashboardSelectedProjectId(ctx)} /> },
+  });
+  ctx.views.registerView({
+    id: settingsViewIds.dangerZone,
+    title: "Danger zone",
+    body: {
+      kind: "react",
+      render: (input) => (
+        <ProjectDangerZone
+          projectId={getDashboardSelectedProjectId(ctx)}
+          projectName={getDashboardSelectedProjectName(ctx) ?? "Project"}
+          onDeleted={() => void input.workbench.commands.executeCommand(dashboardCommandIds.clearSelectedProject)}
+        />
+      ),
+    },
+  });
+
   ctx.settings.registerPanel({
-    kind: "custom",
+    kind: "view",
     id: "runtime",
     title: "Runtime",
     section: "workbench",
     scope: "global",
     order: 10,
     icon: "Cpu",
-    render: () => <RuntimeSettingsPanel projectId={getDashboardSelectedProjectId(ctx)} />,
+    viewId: settingsViewIds.runtime,
   });
 
   ctx.settings.registerPanel({
-    kind: "custom",
+    kind: "view",
     id: "extensions",
     title: "Extensions",
     section: "project",
     scope: "project",
     order: 10,
     icon: "Puzzle",
-    render: () => <ExtensionsPanel projectId={getDashboardSelectedProjectId(ctx)} />,
+    viewId: settingsViewIds.extensions,
   });
 
   ctx.settings.registerPanel({
-    kind: "custom",
+    kind: "view",
     id: "repositories",
     title: "Repositories",
     section: "project",
     scope: "project",
     order: 20,
     icon: "GitBranch",
-    render: () => <ProjectRepositoriesPanel projectId={getDashboardSelectedProjectId(ctx)} />,
+    viewId: settingsViewIds.repositories,
   });
 
   ctx.settings.registerPanel<ProjectSkill>({
     kind: "collection",
+    viewId: settingsViewIds.skill,
     id: "skills",
     title: "Skills",
     section: "project",
@@ -91,15 +164,16 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
     },
     itemId: (skill) => skill.name,
     itemLabel: (skill) => skill.title || skill.name,
-    renderItem: (skill) => <SkillViewer projectId={getDashboardSelectedProjectId(ctx)} skillName={skill.name} />,
   });
 
   ctx.settings.registerPanel<ProjectTemplateAsset>({
     kind: "collection",
+    viewId: settingsViewIds.template,
     id: "templates",
     title: "Templates",
     section: "project",
     scope: "project",
+    when: dashboardEditableTemplatesContextKey,
     order: 40,
     icon: "FileText",
     items: () => {
@@ -114,74 +188,27 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
       label: (key) =>
         templateTypesForProject(getDashboardSelectedProjectId(ctx) ?? "").find((type) => type.id === key)?.label ?? key,
     },
-    renderItem: (template) => (
-      <TemplateSettingsEditor
-        key={template.id}
-        template={template}
-        onDeleted={() => {
-          ctx.settings.refresh();
-          void ctx.resources.openResource(settingsPanelResource(dashboardSettingsDefaultPanel), {
-            replaceActive: true,
-          });
-        }}
-      />
-    ),
-    actions: [
-      {
-        id: "create",
-        label: "New template",
-        icon: "Plus",
-        run: () => {
-          const projectId = getDashboardSelectedProjectId(ctx);
-          if (!projectId) return;
-          const types = templateTypesForProject(projectId);
-          ctx.commandPalette.requestParams({
-            record: {
-              command: {
-                id: dashboardCommandIds.createTemplate,
-                label: "New template",
-                params: {
-                  templateType: {
-                    type: "select",
-                    label: "Template type",
-                    required: true,
-                    options: types.map((type) => ({ label: type.label, value: type.id })),
-                  },
-                },
-              },
-            },
-            label: "New template",
-          });
-        },
-      },
-    ],
   });
 
   ctx.settings.registerPanel({
-    kind: "custom",
+    kind: "view",
     id: "machine-tokens",
     title: "Machine tokens",
     section: "project",
     scope: "project",
     order: 50,
     icon: "KeyRound",
-    render: () => <MachineTokensPanel projectId={getDashboardSelectedProjectId(ctx)} />,
+    viewId: settingsViewIds.machineTokens,
   });
 
   ctx.settings.registerPanel({
-    kind: "custom",
+    kind: "view",
     id: "danger-zone",
     title: "Danger zone",
     section: "project",
     scope: "project",
     order: 90,
     icon: "TriangleAlert",
-    render: (input) => (
-      <ProjectDangerZone
-        projectId={getDashboardSelectedProjectId(ctx)}
-        projectName={getDashboardSelectedProjectName(ctx) ?? "Project"}
-        onDeleted={() => void input.workbench.commands.executeCommand(dashboardCommandIds.clearSelectedProject)}
-      />
-    ),
+    viewId: settingsViewIds.dangerZone,
   });
 };

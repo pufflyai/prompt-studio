@@ -1,13 +1,15 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbench } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { openWorkspacesPage, toPageResource } from "@/shared/workbench/page-navigation";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionBubbleModule } from "./bubble/module";
 import { createSessionsModule } from "./module";
+import { openResourceSessionPreview } from "./session-auto-open";
 
 const workspaceRow = (overrides: Record<string, unknown> = {}) => ({
   id: "workspace-1",
@@ -41,39 +43,50 @@ const sessionRow = (id: string, lastRequestEnded: string, overrides: Record<stri
 });
 
 const createSessionWorkbench = () => {
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
 
   workbench.registerModule(createSidenavModule());
   workbench.registerModule(createSessionBubbleModule());
   workbench.registerModule(createWorkspacesModule());
   workbench.registerModule(createSessionsModule());
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+  workbench.pageLocations.setProject("project-1");
   workbench.sidePanel.setMode("closed");
 
   return workbench;
 };
 
-// Tickets are extension resources; this stands in for the planner's ticket view.
-const registerTicketRoute = (workbench: ReturnType<typeof createWorkbenchCore>) => {
+// Tickets are extension pages; this stands in for the planner's ticket page.
+const registerTicketPage = (workbench: ReturnType<typeof createWorkbench>) => {
+  const page = { extensionId: "pstdio.planner", kind: "page" as const, id: "ticket" };
   workbench.resources.registerKind({ kind: "ticket", label: "Ticket", icon: "component" });
-  workbench.layout.registerPanel({
+  workbench.views.registerView({
     id: "test.ticket",
     title: "Ticket",
-    region: "main",
-    rendererId: "test.ticket",
-    singleton: true,
+    body: { kind: "react", render: () => null },
   });
-  workbench.resources.registerPresenter({
+  workbench.pages.registerPage({
     id: "test.ticket",
-    canOpen: (resource) => resource.kind === "ticket",
-    open: (resource) => workbench.layout.openPanel("test.ticket", { resource, strategy: { kind: "persistent" } }),
+    ref: page,
+    title: "Ticket",
+    path: "ticket",
+    modeId: "project",
+    slots: [
+      {
+        id: "content",
+        role: "primary",
+        region: "main",
+        binding: { resourceKinds: ["ticket"], viewId: "test.ticket", cardinality: "one" },
+      },
+    ],
   });
+  return page;
 };
 
-const sidePanelSession = (workbench: ReturnType<typeof createWorkbenchCore>, sessionId: string) =>
+const sidePanelSession = (workbench: ReturnType<typeof createWorkbench>, sessionId: string) =>
   workbench.layout
     .listPanelInstances("side")
-    .find((panel) => panel.resource?.uri === `dashboard-workbench://session/${sessionId}`);
+    .find((panel) => panel.resource?.uri === `pstdio://extension-resource/session/${sessionId}`);
 
 // Synced rows are process-wide; leave the tables empty so other suites start clean.
 afterEach(() => {
@@ -99,23 +112,23 @@ describe("session auto-open", () => {
     const workspace = workbench.resources
       .listResources("")
       .find((entry) => entry.resource.kind === "workspace")?.resource;
-    await workbench.resources.openResource(workspace!, { replaceActive: true });
+    openWorkspacesPage(workbench, workspace!);
 
     const session = sidePanelSession(workbench, "session-older");
 
     expect(workbench.modes.getActiveModeId()).toBe("project");
-    expect(workbench.layout.getLayout().activeResourceUri).toBe("dashboard-workbench://workspace/workspace-1");
+    expect(workbench.layout.getLayout().activeResourceUri).toBe("pstdio://extension-resource/workspace/workspace-1");
     expect(session?.tabRetention).toBe("preview");
     expect(workbench.layout.getLayout().regions.side.widgets[0]?.widgetId).toBe(session!.instanceId);
     expect(workbench.sidePanel.getMode()).toBe("closed");
-    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe(
-      "dashboard-workbench://session/session-older",
+    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBe(
+      "pstdio://extension-resource/session/session-older",
     );
   });
 
   test("opens a ticket's session as a preview, including sessions of its workspaces", async () => {
     const workbench = createSessionWorkbench();
-    registerTicketRoute(workbench);
+    const ticketPage = registerTicketPage(workbench);
 
     getWriter("workspaces")?.truncateAndWrite([
       workspaceRow({ anchors_json: [{ type: "ticket", id: "ticket-1", label: "PS-307" }] }),
@@ -132,10 +145,39 @@ describe("session auto-open", () => {
     ]);
 
     const ticket = createDashboardResource("ticket", "ticket-1", "PS-307", "component", "project-1");
-    await workbench.resources.openResource(ticket, { replaceActive: true });
+    await workbench.navigation.openTarget({ kind: "page", page: ticketPage, resource: toPageResource(ticket) });
 
     expect(sidePanelSession(workbench, "session-refine")?.tabRetention).toBe("preview");
     expect(sidePanelSession(workbench, "session-unrelated")).toBeUndefined();
+  });
+
+  test("returns focus to the Location when an active session preview is replaced", async () => {
+    const workbench = createSessionWorkbench();
+    const ticketPage = registerTicketPage(workbench);
+    const ticket = createDashboardResource("ticket", "ticket-1", "PS-307", "component", "project-1");
+
+    getWriter("sessions")?.truncateAndWrite([
+      sessionRow("session-old", "2026-05-22T08:35:00Z", {
+        anchors_json: [{ type: "ticket", id: "ticket-1", label: "PS-307" }],
+      }),
+    ]);
+    await workbench.navigation.openTarget({ kind: "page", page: ticketPage, resource: toPageResource(ticket) });
+    workbench.layout.activateWidget(sidePanelSession(workbench, "session-old")!.instanceId);
+
+    getWriter("sessions")?.truncateAndWrite([
+      sessionRow("session-new", "2026-05-22T09:45:00Z", {
+        anchors_json: [{ type: "ticket", id: "ticket-1", label: "PS-307" }],
+      }),
+      sessionRow("session-old", "2026-05-22T08:35:00Z", {
+        anchors_json: [{ type: "ticket", id: "ticket-1", label: "PS-307" }],
+      }),
+    ]);
+
+    openResourceSessionPreview(workbench, ticket);
+
+    expect(sidePanelSession(workbench, "session-old")).toBeUndefined();
+    expect(sidePanelSession(workbench, "session-new")?.tabRetention).toBe("preview");
+    expect(workbench.layout.getLayout().activeWidgetId).toBe(workbench.layout.getLayout().activeLocationWidgetId);
   });
 
   test("leaves the Side Panel alone for a resource without sessions", async () => {
@@ -148,7 +190,7 @@ describe("session auto-open", () => {
     const workspace = workbench.resources
       .listResources("")
       .find((entry) => entry.resource.kind === "workspace")?.resource;
-    await workbench.resources.openResource(workspace!, { replaceActive: true });
+    openWorkspacesPage(workbench, workspace!);
 
     expect(workbench.layout.listPanelInstances("side")).toEqual([]);
   });

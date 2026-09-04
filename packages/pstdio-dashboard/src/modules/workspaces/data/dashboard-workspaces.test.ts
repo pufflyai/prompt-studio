@@ -231,7 +231,7 @@ describe("dashboard workspaces", () => {
     });
 
     expect(toWorkspaceDataTableRow(workspace)).toMatchObject({
-      id: "dashboard-workbench://workspace/workspace-1",
+      id: "pstdio://extension-resource/workspace/workspace-1",
       values: {
         attempt: "PS-307_A1",
         name: "Dashboard workbench datalayer",

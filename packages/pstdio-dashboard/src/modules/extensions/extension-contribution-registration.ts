@@ -1,13 +1,11 @@
-import type { Disposable, OpenWorkbenchViewInput, WorkbenchModuleContext } from "@pstdio/workbench";
+import type { Disposable, WorkbenchModuleContext } from "@pstdio/workbench";
 import {
-  BRIDGE_WEBVIEW_RENDERER_ID,
   fileRendererRefreshEnvelopeFromCommand,
   registerWorkbenchExtensionContributions,
   toWorkbenchWhenExpression,
 } from "@pstdio/workbench/extensions";
 import { createElement } from "react";
 import { buildAbsoluteApiUrl } from "@/lib/api";
-import { prepareDashboardNavigationResource, selectDashboardNavigationView } from "@/shared/app/navigation-state";
 import { uploadExtensionCommandFile } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
 import { toWorkbenchContributionId } from "@/shared/extensions/contribution-ref";
@@ -26,7 +24,6 @@ import {
   buildDashboardWorkbenchWhenExpression,
   dashboardMenuTargetsById,
 } from "@/shared/extensions/workbench-extension-contributions";
-import { setDashboardSidenavSelection } from "@/shared/workbench/dashboard-sidenav";
 import { registerNavigationOwningMode } from "@/shared/workbench/mode-navigation-ownership";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
 import { type ExecuteDashboardExtensionCommand, prepareExtensionCommandArgs } from "./extension-command-handler";
@@ -44,16 +41,6 @@ interface RegisterExtensionContributionsInput {
   metadata: ResolvedWorkbenchExtensionMetadata;
   projectId: string;
 }
-
-export const extensionViewResolveInput =
-  (ctx: WorkbenchModuleContext, view: { id: string; title: string; icon?: string }, navigationItemId = view.id) =>
-  (openInput: OpenWorkbenchViewInput) => {
-    if (openInput.resource) return openInput;
-    selectDashboardNavigationView(ctx, view.id, { modeId: "project" });
-    ctx.breadcrumbs.setItems([{ title: view.title, icon: view.icon }]);
-    setDashboardSidenavSelection(ctx, navigationItemId);
-    return openInput;
-  };
 
 export const registerExtensionActivityNavigationOwnership = (metadata: ResolvedWorkbenchExtensionMetadata) => {
   const modeIds = new Set((metadata.activityItems ?? []).flatMap((item) => item.modes.map(toWorkbenchContributionId)));
@@ -86,14 +73,6 @@ export const withDashboardWebviewUrls = (
   }),
 });
 
-export const registerDashboardExtensionWebviewRenderer = (ctx: WorkbenchModuleContext) => {
-  if (ctx.renderers.getRenderer(BRIDGE_WEBVIEW_RENDERER_ID)) return undefined;
-  return ctx.renderers.registerRenderer({
-    id: BRIDGE_WEBVIEW_RENDERER_ID,
-    render: (renderInput) => createElement(ExtensionViewWidget, { input: renderInput }),
-  });
-};
-
 export const localizeDashboardExtensionCommandResponse = <T extends { extensionId: string }>(response: T) =>
   localizeExtensionValue(response, response.extensionId) as ResolvedLocalizable<T>;
 
@@ -108,8 +87,6 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         message: `The menu target “${unresolved.targetId}” for “${unresolved.contribution.label}” is not available.`,
       });
     }
-    const webviewRenderer = registerDashboardExtensionWebviewRenderer(input.ctx);
-    if (webviewRenderer) disposables.push(webviewRenderer);
     const kanban = createDashboardKanbanAdapter(input);
     disposables.push(kanban.disposable);
     disposables.push(
@@ -154,15 +131,9 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
             projectId: input.projectId,
             uploadFile: uploadExtensionCommandFile,
           }),
-        prepareResource: (resource) => prepareDashboardNavigationResource(input.ctx, resource),
         projectId: input.projectId,
         resolveTreeNodeResource: (resource) => toDashboardExtensionResource(resource, input.projectId)!,
-        resolveViewInput: (view) => {
-          const navigationItem = input.metadata.navigationItems.find(
-            (item) => item.action.kind === "view" && toWorkbenchContributionId(item.action.view) === view.id,
-          );
-          return extensionViewResolveInput(input.ctx, view, navigationItem?.id);
-        },
+        renderWebview: (renderInput) => createElement(ExtensionViewWidget, { input: renderInput }),
         settingsSectionId: "project",
         settingsSectionTitle: "Project",
         subscribeRefreshEvents: (listener) => {

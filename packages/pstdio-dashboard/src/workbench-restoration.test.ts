@@ -3,6 +3,8 @@ import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { createDashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { flushMicrotasks } from "./modules/extensions/module-test-fixtures";
 import { createDashboardWorkbench, dashboardWorkbenchStorageNamespace } from "./workbench";
 
@@ -21,7 +23,7 @@ const createStorage = (): WorkbenchStorageLike => {
 
 const sessionResource = {
   kind: "session",
-  uri: "dashboard-workbench://session/session-1",
+  uri: "pstdio://extension-resource/session/session-1",
   id: "session-1",
   label: "Session one",
 };
@@ -121,17 +123,14 @@ describe("createDashboardWorkbench restoration", () => {
     const first = createDashboardWorkbench({ storage });
     await selectProject(first);
     await flushMicrotasks();
-    await first.views.openView("workspaces", { strategy: { kind: "replace-active" } });
+    openWorkspacesPage(first);
     await flushMicrotasks();
     await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
-    first.history.flush();
-    expect(first.lastResource.get()).toBeUndefined();
 
     const second = createDashboardWorkbench({ storage });
     await flushMicrotasks();
 
-    expect(second.layout.getLayout().regions.main.widgets[0]?.viewId).toBe("workspaces");
-    expect(second.lastResource.get()).toBeUndefined();
+    expect(second.layout.getLayout().regions.main.widgets[0]?.viewId).toBe(dashboardWidgetIds.workspaces);
     expect(sidePanelSessionUris(second)).toEqual([sessionResource.uri]);
   });
 
@@ -143,7 +142,7 @@ describe("createDashboardWorkbench restoration", () => {
     await selectProject(first);
     await flushMicrotasks();
     await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
-    await first.resources.openResource(sessionResource, { replaceActive: true });
+    openSessionsPage(first, sessionResource);
     expect(first.layout.listPanelInstances("side")).toEqual([]);
 
     const second = createDashboardWorkbench({ storage });

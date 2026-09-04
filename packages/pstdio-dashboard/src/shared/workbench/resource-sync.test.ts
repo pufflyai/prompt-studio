@@ -1,69 +1,94 @@
 import { expect, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench";
+import type { PageRef } from "@pstdio/sdk/extensions";
+import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
 import { setResourceBreadcrumb, updateResourceBreadcrumbLabel } from "./resource-sync";
 
-test("derives a breadcrumb with one hierarchy walk", () => {
-  const workbench = createWorkbenchCore();
+const ticketsPage = {
+  extensionId: "pstdio.planner",
+  kind: "page",
+  id: "tickets",
+} satisfies PageRef;
+const ticketPage = {
+  extensionId: "pstdio.planner",
+  kind: "page",
+  id: "ticket",
+} satisfies PageRef;
+
+const createHarness = () => {
+  const workbench = createWorkbench();
+  workbench.modes.registerMode({ id: "project", activate: () => undefined });
+  workbench.views.registerView({
+    id: "tickets-view",
+    title: "Tickets",
+    body: { kind: "react", render: () => null },
+  });
+  workbench.views.registerView({
+    id: "ticket-view",
+    title: "Ticket",
+    body: { kind: "react", render: () => null },
+  });
+  workbench.pages.registerPage({
+    id: "pstdio.planner.page.tickets",
+    ref: ticketsPage,
+    title: "Tickets",
+    path: "tickets",
+    modeId: "project",
+    slots: [{ id: "content", role: "primary", region: "main", viewId: "tickets-view" }],
+  });
+  workbench.pages.registerPage({
+    id: "pstdio.planner.page.ticket",
+    ref: ticketPage,
+    title: "Ticket",
+    path: "tickets/:id",
+    modeId: "project",
+    parentId: "pstdio.planner.page.tickets",
+    slots: [
+      {
+        id: "content",
+        role: "primary",
+        region: "main",
+        binding: { resourceKinds: ["ticket"], viewId: "ticket-view", cardinality: "one" },
+      },
+    ],
+  });
+  workbench.pageLocations.setProject("project-1");
+  workbench.pageLocations.navigate({
+    kind: "page",
+    page: ticketPage,
+    resource: { type: "ticket", id: "PS-1", label: "PS-1 Old title" },
+    parent: { kind: "page", page: ticketsPage },
+  });
+  return workbench;
+};
+
+test("updates the current page resource through its canonical location", () => {
+  const workbench = createHarness();
   const resource = {
     kind: "ticket",
-    uri: "dashboard-workbench://ticket/PS-173",
-    id: "PS-173",
-    label: "PS-173 Resource hierarchy",
+    uri: "pstdio://extension-resource/ticket/PS-1",
+    id: "PS-1",
+    label: "PS-1 New title",
   } satisfies ResourceRef;
-  const originalWalkHierarchy = workbench.resources.walkHierarchy;
-  let walkCount = 0;
-  workbench.resources.walkHierarchy = (selectedResource) => {
-    walkCount += 1;
-    return originalWalkHierarchy(selectedResource);
-  };
 
   setResourceBreadcrumb(workbench, resource);
 
-  expect(walkCount).toBe(1);
-  expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["PS-173 Resource hierarchy"]);
+  expect(workbench.pages.store.getState().location).toMatchObject({
+    page: ticketPage,
+    resource: { type: "ticket", id: "PS-1", label: "PS-1 New title" },
+    parent: { page: ticketsPage },
+  });
 });
 
-test("a label-only refresh keeps the breadcrumb trail", () => {
-  const workbench = createWorkbenchCore();
-  const root = {
-    kind: "extension-view",
-    uri: "dashboard-workbench://project/p1/extension-views/pstdio-planner.tickets",
-    id: "pstdio-planner.tickets",
-    label: "Tickets",
-  } satisfies ResourceRef;
-  const ticket = {
+test("a label refresh keeps the canonical parent breadcrumb", () => {
+  const workbench = createHarness();
+  const resource = {
     kind: "ticket",
-    uri: "dashboard-workbench://ticket/PS-1",
+    uri: "pstdio://extension-resource/ticket/PS-1",
     id: "PS-1",
-    label: "PS-1 Old title",
+    label: "PS-1 New title",
   } satisfies ResourceRef;
-  workbench.breadcrumbs.setItems([
-    { title: root.label, resource: root },
-    { title: ticket.label, resource: ticket },
-  ]);
 
-  updateResourceBreadcrumbLabel(workbench, { ...ticket, label: "PS-1 New title" });
+  updateResourceBreadcrumbLabel(workbench, resource);
 
   expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "PS-1 New title"]);
-});
-
-test("a label refresh for another resource rebuilds the breadcrumb", () => {
-  const workbench = createWorkbenchCore();
-  const other = {
-    kind: "ticket",
-    uri: "dashboard-workbench://ticket/PS-9",
-    id: "PS-9",
-    label: "PS-9 Something else",
-  } satisfies ResourceRef;
-  workbench.breadcrumbs.setItems([{ title: "Stale", resource: other }]);
-
-  const ticket = {
-    kind: "ticket",
-    uri: "dashboard-workbench://ticket/PS-1",
-    id: "PS-1",
-    label: "PS-1 Fresh",
-  } satisfies ResourceRef;
-  updateResourceBreadcrumbLabel(workbench, ticket);
-
-  expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["PS-1 Fresh"]);
 });

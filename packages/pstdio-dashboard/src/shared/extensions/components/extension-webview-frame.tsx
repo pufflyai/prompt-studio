@@ -194,6 +194,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   };
   const capabilities = createDashboardExtensionWebviewCapabilities({
     base: baseCapabilities,
+    extensionId,
     extensionInstanceId,
     projectId,
     webviewId,

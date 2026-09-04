@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { createWorkbenchCore } from "@pstdio/workbench";
+import type { createWorkbench } from "@pstdio/workbench";
 import { createDashboardExtensionWebviewCapabilities } from "./extension-webview-capabilities";
 
 describe("createDashboardExtensionWebviewCapabilities", () => {
@@ -7,6 +7,7 @@ describe("createDashboardExtensionWebviewCapabilities", () => {
     const commandsExecute = async () => "dashboard";
     const capabilities = createDashboardExtensionWebviewCapabilities({
       base: { "commands.execute": commandsExecute },
+      extensionId: "pstdio.lab",
       extensionInstanceId: "instance-1",
       projectId: "project-1",
       webviewId: "view-1",
@@ -22,6 +23,7 @@ describe("createDashboardExtensionWebviewCapabilities", () => {
   test("does not add owner-backed capabilities without both owner ids", () => {
     const capabilities = createDashboardExtensionWebviewCapabilities({
       base: {},
+      extensionId: "pstdio.lab",
       projectId: "project-1",
       webviewId: "view-1",
     });
@@ -32,33 +34,29 @@ describe("createDashboardExtensionWebviewCapabilities", () => {
     expect(capabilities["artifacts.read"]).toBeUndefined();
   });
 
-  test("adds resource.open only when a workbench is available", async () => {
+  test("adds navigation.open only when a workbench is available", async () => {
     const calls: unknown[] = [];
     const workbench = {
-      resources: {
-        openResource: async (resource: unknown) => {
-          calls.push(resource);
-        },
-      },
-    } as unknown as ReturnType<typeof createWorkbenchCore>;
+      navigation: { openTarget: async (target: unknown) => calls.push(target) },
+    } as unknown as ReturnType<typeof createWorkbench>;
     const capabilities = createDashboardExtensionWebviewCapabilities({
       base: {},
+      extensionId: "pstdio.lab",
       webviewId: "view-1",
       workbench,
     });
 
-    await capabilities["resource.open"]?.({ resource: { type: "ticket", id: "PS-1" } });
+    await capabilities["navigation.open"]?.({ target: { kind: "page", page: { kind: "page", id: "tickets" } } });
     expect(calls).toEqual([
       {
-        id: "PS-1",
-        kind: "ticket",
-        uri: "pstdio://extension-resource/ticket/PS-1",
-        label: undefined,
-        metadata: undefined,
+        kind: "page",
+        page: { extensionId: "pstdio.lab", kind: "page", id: "tickets" },
       },
     ]);
     expect(
-      createDashboardExtensionWebviewCapabilities({ base: {}, webviewId: "view-1" })["resource.open"],
+      createDashboardExtensionWebviewCapabilities({ base: {}, extensionId: "pstdio.lab", webviewId: "view-1" })[
+        "navigation.open"
+      ],
     ).toBeUndefined();
   });
 });

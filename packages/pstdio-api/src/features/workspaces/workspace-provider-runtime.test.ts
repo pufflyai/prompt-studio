@@ -22,7 +22,6 @@ const emptyRuntime = {
   privateHandlers: [],
   resourceHierarchyProviders: [],
   resourceKinds: [],
-  resourceViews: [],
   schedules: [],
   settings: [],
   settingsPanels: [],

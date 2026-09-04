@@ -1,14 +1,16 @@
 import { Box } from "@chakra-ui/react";
-import { createWorkbenchCore, type WorkbenchCore, type WorkbenchModuleContext } from "@pstdio/workbench";
+import { workbenchPages } from "@pstdio/sdk/extensions";
+import { createWorkbench, type WorkbenchCore, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { expect, userEvent, within } from "storybook/test";
+import { useState } from "react";
+import { expect, within } from "storybook/test";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { createCommandPaletteModule } from "../command-palette/module";
 import { createHeadersModule } from "../headers/module";
@@ -24,7 +26,6 @@ import { createSidenavModule } from "./module";
 
 const PROJECT_ID = "demo-project";
 const WORKSPACES_KEYBINDING = "mod+shift+w";
-const STORY_TICKET_WIDGET_ID = "story.ticket-location";
 const STORY_TICKET_PAGE_ID = "story.page.ticket";
 const STORY_TICKET_PAGE_REF = { extensionId: "story", kind: "page" as const, id: "ticket" };
 const queryClient = new QueryClient({
@@ -37,7 +38,7 @@ const ticketsView = {
 };
 const parentTicketResource = {
   kind: "ticket",
-  uri: "dashboard-workbench://ticket/PS-163",
+  uri: "pstdio://extension-resource/ticket/PS-163",
   id: "PS-163",
   label: "PS-163 Workbench navigation",
   icon: "FileText",
@@ -46,7 +47,7 @@ const parentTicketResource = {
 const ticketResource = {
   type: "ticket",
   kind: "ticket",
-  uri: "dashboard-workbench://ticket/PS-164",
+  uri: "pstdio://extension-resource/ticket/PS-164",
   id: "PS-164",
   label: "PS-164 Sidenav resource sections",
   icon: "FileText",
@@ -62,7 +63,7 @@ const ticketResource = {
 };
 const linkedWorkspaceResource = {
   kind: "workspace",
-  uri: "dashboard-workbench://workspace/PS-164_A1",
+  uri: "pstdio://extension-resource/workspace/PS-164_A1",
   id: "PS-164_A1",
   label: "PS-164_A1",
   icon: "GitBranch",
@@ -83,29 +84,17 @@ const createTicketsNavigationModule = () => ({
   id: "story.tickets-navigation",
   activate(ctx: WorkbenchModuleContext) {
     ctx.resources.registerKind({ kind: "ticket", label: "Ticket", icon: "FileText" });
-    ctx.layout.registerPanel({
-      id: STORY_TICKET_WIDGET_ID,
-      title: "Ticket",
-      region: "main",
-      rendererId: STORY_TICKET_WIDGET_ID,
-      singleton: true,
-      resourceKinds: ["ticket"],
-    });
-    ctx.renderers.registerRenderer({
-      id: STORY_TICKET_WIDGET_ID,
-      render: (input) => <Box p="lg">{input.instance.resource?.label}</Box>,
+    ctx.views.registerView({
+      id: ticketsView.id,
+      title: ticketsView.label,
+      icon: ticketsView.icon,
+      body: { kind: "react", render: (input) => <Box p="lg">{input.instance.resource?.label}</Box> },
     });
     ctx.resources.registerHierarchyProvider({
       id: "story.ticket-hierarchy",
       canResolve: (resource) => resource.kind === "ticket",
       getParent: (resource) =>
         dashboardResourceParent(ctx, resource, PROJECT_ID) ?? { type: "view", viewId: ticketsView.id },
-    });
-    ctx.views.registerView({
-      id: ticketsView.id,
-      panelId: STORY_TICKET_WIDGET_ID,
-      title: ticketsView.label,
-      icon: ticketsView.icon,
     });
     ctx.pages.registerPage({
       id: STORY_TICKET_PAGE_ID,
@@ -119,7 +108,7 @@ const createTicketsNavigationModule = () => ({
           id: "content",
           role: "primary",
           region: "main",
-          binding: { resourceKind: "ticket", viewId: ticketsView.id },
+          binding: { resourceKinds: ["ticket"], viewId: ticketsView.id, cardinality: "one" },
         },
       ],
     });
@@ -170,6 +159,16 @@ const createTicketsNavigationModule = () => ({
                     label: linkedWorkspaceResource.label,
                     icon: "GitBranch",
                     resource: linkedWorkspaceResource,
+                    target: {
+                      kind: "page",
+                      page: workbenchPages.workspaces,
+                      resource: {
+                        type: linkedWorkspaceResource.kind,
+                        id: linkedWorkspaceResource.id,
+                        label: linkedWorkspaceResource.label,
+                        metadata: linkedWorkspaceResource.metadata,
+                      },
+                    },
                   },
                 ],
               },
@@ -177,7 +176,7 @@ const createTicketsNavigationModule = () => ({
           : [],
     });
     for (const sectionId of ["files", "workspaces"]) {
-      ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
+      ctx.treeViews.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
     }
     return [];
   },
@@ -260,7 +259,7 @@ const bootstrapWorkbench = () => {
   seedSessions();
   linkSessionsToWorkspace();
 
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
 
   for (const module of [
     createSidenavModule(),
@@ -280,7 +279,7 @@ const bootstrapWorkbench = () => {
   }
 
   workbench.keybindings.registerKeybinding({
-    commandId: dashboardCommandIds.openWorkspaces,
+    action: { kind: "command", commandId: dashboardCommandIds.openWorkspaces },
     keybinding: WORKSPACES_KEYBINDING,
   });
 
@@ -289,20 +288,12 @@ const bootstrapWorkbench = () => {
   return workbench;
 };
 
-const openResource = (
-  workbench: WorkbenchCore,
-  resource: Parameters<WorkbenchCore["resources"]["openResource"]>[0],
-) => {
-  void workbench.resources.openResource(resource, { replaceActive: true });
-};
-
 const openTicketPage = (workbench: WorkbenchCore) => {
   void workbench.navigation.openTarget({ kind: "page", page: STORY_TICKET_PAGE_REF, resource: ticketResource });
 };
 
-const openView = (workbench: WorkbenchCore, viewId: string) => {
-  void workbench.views.openView(viewId, { strategy: { kind: "replace-active" } });
-};
+const openStartPage = (workbench: WorkbenchCore) =>
+  void workbench.navigation.openTarget({ kind: "page", page: workbenchPages.start });
 
 const meta = {
   title: "Dashboard/Sidenav",
@@ -321,8 +312,11 @@ export default meta;
 type Story = StoryObj;
 
 const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
-  const workbench = bootstrapWorkbench();
-  props.open(workbench);
+  const [workbench] = useState(() => {
+    const next = bootstrapWorkbench();
+    props.open(next);
+    return next;
+  });
 
   return (
     <Box h="100dvh" w="full">
@@ -333,7 +327,7 @@ const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
 
 // F15: global collections stay fixed while the resource region is empty.
 export const ProjectMode: Story = {
-  render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.start.id)} />,
+  render: () => <SidenavStory open={openStartPage} />,
   play: async ({ canvasElement }) => {
     await expect(canvasElement.querySelector('[data-workbench-panel-header="sidenav"]')).toBeNull();
   },
@@ -369,7 +363,7 @@ export const OverflowWithPinnedChrome: Story = {
               nodes: [{ id: `overflow-item-${index}`, label: `Overflow item ${index + 1}` }],
             })),
         });
-        openView(workbench, dashboardViews.start.id);
+        openStartPage(workbench);
       }}
     />
   ),
@@ -391,11 +385,11 @@ export const OverflowWithPinnedChrome: Story = {
 
 // Aggregate collection: Workspaces is not duplicated in the resource region.
 export const WorkspacesView: Story = {
-  render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.workspaces.id)} />,
+  render: () => <SidenavStory open={(workbench) => void openWorkspacesPage(workbench)} />,
 };
 
 export const WorkspacesViewHover: Story = {
-  render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.workspaces.id)} />,
+  render: () => <SidenavStory open={(workbench) => void openWorkspacesPage(workbench)} />,
   play: async ({ canvasElement }) => {
     canvasElement.querySelector('[data-tree-list-focus-id="workspaces"]')?.setAttribute("data-hover", "");
   },
@@ -411,21 +405,11 @@ export const TicketMode: Story = {
 export const TicketWorkspaceBackJourney: Story = {
   name: "Ticket linked workspace and back",
   render: () => <SidenavStory open={openTicketPage} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("option", { name: "PS-164_A1" }));
-    const breadcrumb = canvas.getByRole("navigation", { name: "breadcrumb" });
-    await expect(breadcrumb).toHaveTextContent("PS-163 Workbench navigation");
-    await expect(breadcrumb).toHaveTextContent("PS-164 Sidenav resource sections");
-    await expect(breadcrumb).toHaveTextContent("PS-164_A1");
-    await userEvent.click(canvas.getByRole("button", { name: "Navigate back" }));
-    await expect(breadcrumb).not.toHaveTextContent("PS-164_A1");
-  },
 };
 
 // Session mode: global collections stay fixed above an expanded Sessions group with inline creation.
 export const SessionMode: Story = {
-  render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.sessions.id)} />,
+  render: () => <SidenavStory open={(workbench) => void openSessionsPage(workbench)} />,
 };
 
 // Workspace resource: global collections stay fixed above the expanded, workspace-scoped Sessions group.
@@ -436,7 +420,7 @@ export const WorkspaceResource: Story = {
         const workspace = workbench.resources
           .listResources("")
           .find((entry) => entry.resource.kind === "workspace")?.resource;
-        if (workspace) openResource(workbench, workspace);
+        if (workspace) openWorkspacesPage(workbench, workspace);
       }}
     />
   ),

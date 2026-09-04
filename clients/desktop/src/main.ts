@@ -260,7 +260,7 @@ const bootstrap = async () => {
     checkForUpdates: () => updateManager.checkForUpdates(),
     quitApp: requestQuit,
     getWorkbenchState: () => workbenchState.getState(),
-    setLastResource: (projectId, value) => workbenchState.setLastResource(projectId, value),
+    setPageLocation: (projectId, value) => workbenchState.setPageLocation(projectId, value),
     setSelectedProjectId: (projectId) => workbenchState.setSelectedProjectId(projectId),
   });
   await startRuntime();

@@ -99,9 +99,9 @@ describe("checkExtensionSource alpha.4", () => {
       export default {
         commands: [preview],
         keybindings: [
-          { id: "preview", ref: { kind: "keybinding", id: "preview" }, key: "mod+shift+p", win: "ctrl+shift+p", command: preview.ref },
-          { id: "duplicate", ref: { kind: "keybinding", id: "duplicate" }, key: "cmd+shift+p", command: preview.ref },
-          { id: "modifier-only", ref: { kind: "keybinding", id: "modifier-only" }, key: "ctrl", command: preview.ref },
+          { id: "preview", ref: { kind: "keybinding", id: "preview" }, key: "mod+shift+p", win: "ctrl+shift+p", action: { kind: "command", target: { command: preview.ref } } },
+          { id: "duplicate", ref: { kind: "keybinding", id: "duplicate" }, key: "cmd+shift+p", action: { kind: "command", target: { command: preview.ref } } },
+          { id: "modifier-only", ref: { kind: "keybinding", id: "modifier-only" }, key: "ctrl", action: { kind: "command", target: { command: preview.ref } } },
         ],
       };`,
     );
@@ -111,7 +111,10 @@ describe("checkExtensionSource alpha.4", () => {
       expect(result.check.keybindings).toEqual([
         expect.objectContaining({
           id: "pstdio.keybinding-check.keybinding.preview",
-          commandId: "pstdio.keybinding-check.command.preview",
+          action: {
+            kind: "command",
+            target: { command: { extensionId: "pstdio.keybinding-check", kind: "command", id: "preview" } },
+          },
           canonicalChord: "Mod+Shift+P",
         }),
       ]);
@@ -140,7 +143,7 @@ describe("checkExtensionSource alpha.4", () => {
         `const preview = { id: "preview", ref: { kind: "command", id: "preview" }, title: "Preview", run: async () => null };
         export default {
           commands: [preview],
-          keybindings: [{ id: "preview", ref: { kind: "keybinding", id: "preview" }, key: ${JSON.stringify(key)}, command: preview.ref }],
+          keybindings: [{ id: "preview", ref: { kind: "keybinding", id: "preview" }, key: ${JSON.stringify(key)}, action: { kind: "command", target: { command: preview.ref } } }],
         };`,
       );
     }

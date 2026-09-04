@@ -56,7 +56,6 @@ const webviewRuntime = (entryPath: string, capabilities?: WebviewCapabilityDecla
   const view = defineView({
     id: "page",
     title: "Lab",
-    path: "lab",
     body: {
       kind: "webview" as const,
       entry: packageAsset(entryPath, "file:///extension/extension.ts"),
@@ -71,7 +70,7 @@ const webviewRuntime = (entryPath: string, capabilities?: WebviewCapabilityDecla
           definePlacement({
             id: "page.project",
             mode: projectMode,
-            item: { kind: "view", view: view.ref },
+            item: { kind: "view", view: view.ref, presence: "open" },
             region: "main",
           }),
         ],
@@ -125,7 +124,7 @@ describe("buildWorkbenchExtensionMetadata", () => {
     });
 
     const view = metadata.views[0];
-    expect(view).toMatchObject({ id: "pstdio.lab.view.page", localId: "page", path: "lab" });
+    expect(view).toMatchObject({ id: "pstdio.lab.view.page", localId: "page" });
     expect(view?.body.kind).toBe("webview");
     if (view?.body.kind !== "webview") throw new Error("Expected a webview body");
     const basePath = webviewUrlIssuer
@@ -156,7 +155,13 @@ describe("buildWorkbenchExtensionMetadata", () => {
           defineExtension({
             commands: [restart],
             views: [services],
-            keybindings: [defineKeybinding({ id: "restart", key: "mod+shift+r", command: restart.ref })],
+            keybindings: [
+              defineKeybinding({
+                id: "restart",
+                key: "mod+shift+r",
+                action: { kind: "command", target: { command: restart.ref } },
+              }),
+            ],
           }),
         ),
       ]),
@@ -175,7 +180,10 @@ describe("buildWorkbenchExtensionMetadata", () => {
       ],
     });
     expect(metadata.keybindings?.[0]).toMatchObject({
-      commandId: "pstdio.lab.command.restart",
+      action: {
+        kind: "command",
+        target: { command: { extensionId: "pstdio.lab", kind: "command", id: "restart" } },
+      },
       canonicalChord: "Mod+Shift+R",
     });
     expect(metadata).not.toHaveProperty("dataTableRenderers");

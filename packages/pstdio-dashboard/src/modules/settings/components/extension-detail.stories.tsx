@@ -83,7 +83,6 @@ const metadata = {
   viewMenus: [],
   placements: [],
   resourceKinds: [],
-  resourceViews: [],
   navigationItems: [],
   navigationTrees: [],
   statusBarItems: [],

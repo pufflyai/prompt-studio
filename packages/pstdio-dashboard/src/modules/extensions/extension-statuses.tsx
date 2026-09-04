@@ -49,18 +49,26 @@ export const registerExtensionStatuses = (
 
 export const registerWorkflowStatusesSettings = (ctx: WorkbenchModuleContext): Disposable[] => {
   const disposables: Disposable[] = [];
+  const viewId = "dashboard.settings.workflow-statuses";
   if (!ctx.settings.getSection("project")) {
     disposables.push(ctx.settings.registerSection({ id: "project", title: "Project", scope: "project" }));
   }
+  disposables.push(
+    ctx.views.registerView({
+      id: viewId,
+      title: "Statuses",
+      body: { kind: "react", render: () => <WorkflowStatusSettings workbench={ctx} /> },
+    }),
+  );
   disposables.push(
     ctx.settings.registerPanel({
       id: "workbench.statuses",
       title: "Statuses",
       icon: "list-checks",
-      kind: "custom",
+      kind: "view",
       section: "project",
       scope: "project",
-      render: () => <WorkflowStatusSettings workbench={ctx} />,
+      viewId,
     }),
   );
   return disposables;

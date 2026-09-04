@@ -22,12 +22,13 @@ metadata:
    - Use schedules for cron-triggered command execution.
    - Use templates, skills, themes, file icon themes, and template types for packaged static catalog assets.
    - Use `views` for webview, Kanban, data table, file, tree, and controls bodies. A view never owns geometry or a resource kind.
-   - Use `resourceKinds` for domain resource slots and `resourceViews` to bind views to those slots. `access: "public"` slots accept bindings from other extensions.
-   - Use `placements` to put direct views or semantic resource slots in docked regions for a typed mode ref.
-   - Use `navigationItems` for typed view, resource, command, href, or compound navigation actions.
+   - Use `resourceKinds` for domain resource identity and resource menus.
+   - Use `pages` for routed screens. A page owns one primary slot and may own auxiliary slots. Slots bind views to resource kinds when the screen needs a resource.
+   - Use `placements` for mode-wide views or resource bindings outside a page.
+   - Use `navigationItems` for explicit page, panel, command, href, or compound navigation actions.
    - Use `viewMenus` to attach one view to another. Use `settingsPanels` and `statusBarItems` to place existing view refs in host chrome.
    - Use `statuses` for workflow status providers shared by Kanban views and the host settings editor.
-   - Use built-in refs from `workbenchModes` and `workbenchSlots` when targeting host modes and slots.
+   - Use built-in refs from `workbenchModes`, `workbenchPages`, `workbenchPanels`, and `workbenchSlots` when targeting host-owned contributions.
    - Use artifact mounts for files under `.pstdio/<extension-package-name>/`.
    - Use Harnesses and workspace types only when adding a new execution or workspace provider.
 3. Implement the smallest useful extension change.

@@ -159,9 +159,8 @@ const toSessionCommandResult = (value: unknown): SessionCommandResult | undefine
 };
 
 const refreshSessionTrees = (ctx: WorkbenchModuleContext) => {
-  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
-    ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
-  }
+  if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav))
+    ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
 };
 
 const openSessionCommandResult = async (

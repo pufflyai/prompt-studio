@@ -22,6 +22,7 @@ export const projectCommandPanelSlotId = "project.commandPanel";
 export const dashboardActiveResourceKindContextKey = "dashboard.activeResource.kind";
 export const dashboardActiveResourceIdContextKey = "dashboard.activeResource.id";
 export const dashboardActiveResourceMetadataContextKey = (key: string) => `dashboard.activeResource.metadata.${key}`;
+export const dashboardEditableTemplatesContextKey = "dashboard.templates.editable";
 
 export type DashboardExtensionMetadata = ResolvedWorkbenchExtensionMetadata;
 type ExtensionMenuContribution = DashboardExtensionMetadata["menuContributions"][number];

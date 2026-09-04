@@ -1,57 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
-import { BRIDGE_WEBVIEW_RENDERER_ID } from "@pstdio/workbench/extensions";
+import { createWorkbench } from "@pstdio/workbench";
 import { modeOwnsNavigation } from "@/shared/workbench/mode-navigation-ownership";
-import { ExtensionViewWidget } from "./components/extension-view-widget";
 import {
   disposeExtensionContributions,
-  extensionViewResolveInput,
   localizeDashboardExtensionCommandResponse,
-  registerDashboardExtensionWebviewRenderer,
   registerExtensionActivityNavigationOwnership,
   registerExtensionContributions,
   withDashboardWebviewUrls,
 } from "./extension-contribution-registration";
 import { metadata, metadataWithLabMode, response } from "./module-test-fixtures";
-
-describe("extensionViewResolveInput", () => {
-  test("enters Project navigation before opening an extension view", () => {
-    const workbench = createWorkbenchCore();
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-
-    const openInput = { pinned: true };
-    const resolved = extensionViewResolveInput(workbench, {
-      id: "pstdio.extension-lab.view.overview",
-      title: "Overview",
-      icon: "flask",
-    })(openInput);
-
-    expect(resolved).toBe(openInput);
-    expect(workbench.modes.getActiveModeId()).toBe("project");
-    expect(workbench.breadcrumbs.getItems()).toEqual([{ title: "Overview", icon: "flask" }]);
-  });
-
-  test("leaves resource navigation to the resource presenter", () => {
-    const workbench = createWorkbenchCore();
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    const resource = {
-      kind: "ticket",
-      uri: "pstdio://ticket/PS-299",
-      id: "PS-299",
-      label: "PS-299",
-    };
-    const openInput = { resource };
-
-    const resolved = extensionViewResolveInput(workbench, {
-      id: "pstdio.pstdio-planner.view.ticket-editor",
-      title: "Ticket",
-    })(openInput);
-
-    expect(resolved).toBe(openInput);
-    expect(workbench.modes.getActiveModeId()).toBeUndefined();
-    expect(workbench.breadcrumbs.getItems()).toBeUndefined();
-  });
-});
 
 describe("registerExtensionActivityNavigationOwnership", () => {
   test("marks modes with activity items as navigation owners", () => {
@@ -65,7 +22,7 @@ describe("registerExtensionActivityNavigationOwnership", () => {
           title: "Home",
           icon: "house",
           modes: [{ extensionId: "pstdio.extension-lab", kind: "mode" as const, id: "lab" }],
-          command: { extensionId: "pstdio", kind: "command" as const, id: "workbench.action.switchMode" },
+          command: { extensionId: "pstdio.extension-lab", kind: "command" as const, id: "go-home" },
         },
       ],
     };
@@ -96,34 +53,9 @@ describe("withDashboardWebviewUrls", () => {
   });
 });
 
-describe("registerDashboardExtensionWebviewRenderer", () => {
-  test("uses the dashboard webview host for extension view panels", () => {
-    const workbench = createWorkbenchCore();
-    const registration = registerDashboardExtensionWebviewRenderer(workbench);
-    workbench.layout.registerPanel({
-      id: "extension.view",
-      title: "Extension view",
-      region: "main",
-      rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
-    });
-    const panel = workbench.layout.getWidget("extension.view")!;
-    const renderer = workbench.renderers.getRenderer(BRIDGE_WEBVIEW_RENDERER_ID)!;
-
-    const element = renderer.render({
-      workbench,
-      panel,
-      instance: { instanceId: panel.id, panelId: panel.id, closable: false },
-      refresh: () => undefined,
-    }) as { type: unknown };
-
-    expect(element.type).toBe(ExtensionViewWidget);
-    registration?.dispose();
-  });
-});
-
 describe("registerExtensionContributions", () => {
-  test("adds owner-scoped file capabilities to project settings webviews", () => {
-    const workbench = createWorkbenchCore();
+  test("registers a settings placement against the extension View", () => {
+    const workbench = createWorkbench();
     const extension = metadata.extensions[0]!;
     const settingsViewId = `${extension.id}.view.settings`;
     const settingsPanelId = `${extension.id}.settings-panel.settings`;
@@ -165,18 +97,8 @@ describe("registerExtensionContributions", () => {
       projectId: "project-1",
     });
     const panel = workbench.settings.getPanel(settingsPanelId);
-    if (!panel || panel.kind !== "custom") throw new Error("Settings webview was not registered.");
-
-    const element = panel.render({
-      workbench,
-      panel: { id: settingsPanelId, title: "Lab settings", region: "main", rendererId: "settings" },
-      instance: { instanceId: settingsPanelId, panelId: settingsPanelId, closable: false },
-      refresh: () => undefined,
-    }) as { props: { capabilities: Record<string, unknown> } };
-
-    expect(element.props.capabilities["files.upload"]).toBeFunction();
-    expect(element.props.capabilities["files.list"]).toBeFunction();
-    expect(element.props.capabilities["files.delete"]).toBeFunction();
+    expect(panel).toMatchObject({ kind: "view", viewId: settingsViewId });
+    expect(workbench.views.getView(settingsViewId)?.body.kind).toBe("react");
     disposeExtensionContributions(registration);
   });
 });

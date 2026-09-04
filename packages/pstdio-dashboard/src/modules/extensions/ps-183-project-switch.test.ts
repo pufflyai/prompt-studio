@@ -3,7 +3,7 @@ import type {
   WorkbenchExtensionMetadata as DashboardExtensionMetadata,
   ListExtensionAppearanceResponse,
 } from "@pstdio/sdk/api";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbench } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import {
@@ -42,14 +42,13 @@ const createBaselineHarness = () => {
     appearanceRequests.set(projectId, request);
     return request.promise;
   });
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
 
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-  workbench.renderers.registerTreeRenderer({
+  workbench.views.registerView({
     id: dashboardWidgetIds.dashboardSidenav,
     title: "Sidenav",
-    getBody: () => [],
-    getChildren: () => [],
+    body: { kind: "tree", getBody: () => [], getChildren: () => [] },
   });
 
   const contributionApplications: string[] = [];
@@ -59,10 +58,6 @@ const createBaselineHarness = () => {
       if (!providerId.startsWith("dashboard.extensions.resource-hierarchy.")) continue;
       contributionApplications.push(providerId);
     }
-  });
-  const sidenavRefreshes: string[] = [];
-  const refreshSubscription = workbench.renderers.onDidRefresh((event) => {
-    if (event.treeId === dashboardWidgetIds.dashboardSidenav) sidenavRefreshes.push(event.treeId);
   });
   const settingsRefreshes: number[] = [];
   const settingsSubscription = workbench.settings.store.subscribe((state, previous) => {
@@ -93,7 +88,6 @@ const createBaselineHarness = () => {
 
   const resetCounts = () => {
     contributionApplications.length = 0;
-    sidenavRefreshes.length = 0;
     settingsRefreshes.length = 0;
     loadAppearance.mockClear();
     loadMetadata.mockClear();
@@ -101,7 +95,6 @@ const createBaselineHarness = () => {
 
   const dispose = () => {
     moduleDisposable.dispose();
-    refreshSubscription.dispose();
     settingsSubscription();
     unsubscribeResources();
     for (const projectId of ["project-a", "project-b", "project-c"]) {
@@ -119,7 +112,6 @@ const createBaselineHarness = () => {
     resetCounts,
     settleProject,
     settingsRefreshes,
-    sidenavRefreshes,
     workbench,
   };
 };
@@ -140,7 +132,6 @@ describe("PS-183 project-switch extension refresh", () => {
         expect(harness.loadAppearance).toHaveBeenCalledTimes(1);
         expect(harness.contributionApplications).toHaveLength(1);
         expect(harness.contributionApplications.every((id) => id.includes("project-b"))).toBe(true);
-        expect(harness.sidenavRefreshes).toHaveLength(1);
         expect(harness.settingsRefreshes.length).toBeGreaterThan(0);
       } finally {
         harness.dispose();
@@ -165,14 +156,12 @@ describe("PS-183 project-switch extension refresh", () => {
 
       expect(getCachedDashboardExtensionMetadata("project-b")).toBeUndefined();
       expect(harness.contributionApplications).toEqual([]);
-      expect(harness.sidenavRefreshes).toEqual([]);
 
       await harness.settleProject("project-c", "appearance-first");
 
       expect(getCachedDashboardExtensionMetadata("project-c")).toBeDefined();
       expect(harness.contributionApplications).toHaveLength(1);
       expect(harness.contributionApplications.every((id) => id.includes("project-c"))).toBe(true);
-      expect(harness.sidenavRefreshes).toHaveLength(1);
     } finally {
       harness.dispose();
     }

@@ -1,4 +1,4 @@
-import { defineView, l10n, packageAsset } from "@pstdio/sdk/extensions";
+import { defineView, l10n, packageAsset, type ResourceRef } from "@pstdio/sdk/extensions";
 import { listCams } from "../commands/cams-commands";
 import {
   deleteGlassLabArtifactCommand,
@@ -9,6 +9,19 @@ import {
 import { queryLabWorkflowArtifacts, updateLabWorkflowArtifact } from "../data/lab-workflow-artifacts";
 import { labArtifactsChanged } from "../events";
 import { labWorkflowStatuses } from "./lab-workflow-statuses";
+
+const labModeArtifactPanel = {
+  kind: "page-slot" as const,
+  page: { kind: "page" as const, id: "lab-mode" },
+  id: "artifact",
+};
+
+const artifactPanelTarget = (resource: ResourceRef) => ({
+  kind: "panel" as const,
+  panel: labModeArtifactPanel,
+  resource,
+  open: "preview" as const,
+});
 
 export const createLabViews = (baseUrl: string) => {
   const overview = defineView({
@@ -24,7 +37,6 @@ export const createLabViews = (baseUrl: string) => {
         "notification.show",
         "preferences.get",
         "preferences.set",
-        "resource.open",
         "files.upload",
         "files.list",
         "files.delete",
@@ -40,8 +52,7 @@ export const createLabViews = (baseUrl: string) => {
       kind: "dataTable",
       query: queryGlassLabArtifacts,
       refreshEvents: [labArtifactsChanged],
-      onRowActivate: (_ctx, { row }) =>
-        row.resource ? { kind: "resource", resource: row.resource, input: { strategy: "replace-active" } } : undefined,
+      onRowActivate: (_ctx, { row }) => (row.resource ? artifactPanelTarget(row.resource) : undefined),
       rowActions: [
         {
           id: "delete",
@@ -87,7 +98,6 @@ export const createLabViews = (baseUrl: string) => {
   const labPage = defineView({
     id: "lab-page",
     title: l10n("routes.lab.label", "Lab"),
-    path: "lab",
     body: {
       kind: "webview",
       entry: packageAsset("./src/views/main.tsx", baseUrl),
@@ -97,7 +107,6 @@ export const createLabViews = (baseUrl: string) => {
         "notification.show",
         "preferences.get",
         "preferences.set",
-        "resource.open",
         "files.upload",
         "files.list",
         "files.delete",
@@ -108,7 +117,6 @@ export const createLabViews = (baseUrl: string) => {
   const faultyPage = defineView({
     id: "faulty-page",
     title: l10n("routes.faulty.label", "Lab (faulty)"),
-    path: "lab-faulty",
     icon: "flask-conical-off",
     body: { kind: "webview", entry: packageAsset("./src/views/faulty-main.tsx", baseUrl) },
   });
@@ -172,8 +180,7 @@ export const createLabViews = (baseUrl: string) => {
       query: queryLabWorkflowArtifacts,
       refreshEvents: [labArtifactsChanged],
       onAttributeChange: updateLabWorkflowArtifact,
-      onRowActivate: (_ctx, { row }) =>
-        row.resource ? { kind: "resource", resource: row.resource, input: { strategy: "replace-active" } } : undefined,
+      onRowActivate: (_ctx, { row }) => (row.resource ? artifactPanelTarget(row.resource) : undefined),
       defaultSettings: {
         viewMode: "board",
         columnGrouping: "status",

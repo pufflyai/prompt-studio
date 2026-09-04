@@ -1,5 +1,7 @@
+import { workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
 import type { ResourceRef, TreeNode, TreeViewSection } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { toPageResource } from "@/shared/workbench/page-navigation";
 import { createDashboardSessions, type DashboardSession } from "./data/dashboard-sessions";
 
 type SessionNodeTarget = "resource" | "side";
@@ -67,15 +69,19 @@ const createSessionNode = (session: DashboardSession, target: SessionNodeTarget)
   icon: sessionStatusIcon(session.status),
   iconColor: sessionStatusColor(session.status),
   ...(target === "resource"
-    ? { resource: session.resource }
+    ? {
+        target: {
+          kind: "page",
+          page: workbenchPages.sessions,
+          resource: toPageResource(session.resource),
+        } as const,
+      }
     : {
         target: {
-          kind: "command",
-          commandId: dashboardCommandIds.openSessionPanel,
-          args: {
-            resource: session.resource,
-            tabPosition: "start",
-          },
+          kind: "panel",
+          panel: workbenchPanels.projectSession,
+          resource: toPageResource(session.resource),
+          open: "preview",
         } as const,
       }),
 });

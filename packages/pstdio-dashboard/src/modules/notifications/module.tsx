@@ -36,28 +36,28 @@ const registerNotificationSidenav = (ctx: WorkbenchModuleContext) => {
 };
 
 const refreshSidenavs = (ctx: WorkbenchModuleContext) => {
-  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
-    ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
-  }
+  if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav))
+    ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
 };
 
 const registerNotificationWidget = (ctx: WorkbenchModuleContext) => {
-  ctx.layout.registerPanel({
+  ctx.views.registerView({
     id: dashboardWidgetIds.notificationsModal,
     title: "Notifications",
-    region: "overlay",
-    singleton: true,
-    rendererId: dashboardWidgetIds.notificationsModal,
+    body: {
+      kind: "react",
+      render: (input) => <NotificationCenterWidget input={input} />,
+    },
+  });
+  ctx.overlays.registerOverlay({
+    id: dashboardWidgetIds.notificationsModal,
+    viewId: dashboardWidgetIds.notificationsModal,
     config: {
       size: "lg",
       placement: "center",
       scrollBehavior: "inside",
       closeTriggerTop: "3.5",
     },
-  });
-  ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.notificationsModal,
-    render: (input) => <NotificationCenterWidget input={input} />,
   });
 };
 
@@ -75,15 +75,11 @@ export const createNotificationsModule = () =>
           icon: "Inbox",
         },
         {
-          execute: () =>
-            ctx.layout.openPanel(dashboardWidgetIds.notificationsModal, {
-              title: "Notifications",
-              closable: true,
-            }),
+          execute: () => ctx.overlays.openOverlay(dashboardWidgetIds.notificationsModal, { title: "Notifications" }),
         },
       );
       ctx.keybindings.registerKeybinding({
-        commandId: dashboardCommandIds.openNotifications,
+        action: { kind: "command", commandId: dashboardCommandIds.openNotifications },
         keybinding: DASHBOARD_NOTIFICATIONS_KEYBINDING,
         when: "!inputFocus",
       });

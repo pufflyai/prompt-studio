@@ -1,5 +1,4 @@
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
-import { getDashboardSelectedResource } from "@/shared/app/navigation-state";
 import { subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -34,7 +33,7 @@ const withoutSessionsLink = (sections: Awaited<ReturnType<WorkbenchModuleContext
 // modes (e.g. ticket) reshape the same widget without opening a different one.
 const composeSidenavSlot = async (ctx: WorkbenchModuleContext, slot: "header" | "content" | "footer") => {
   const mode = ctx.modes.getActiveModeId();
-  const resource = ctx.getPrimaryResource() ?? getDashboardSelectedResource(ctx);
+  const resource = ctx.getPrimaryResource();
   if (!mode) return [];
   const context = resource ? { resource } : {};
   const modeSections = (
@@ -54,33 +53,33 @@ const composeSidenavSlot = async (ctx: WorkbenchModuleContext, slot: "header" | 
 // Recompose the registered Sidenav and update its selection. Mode placements own
 // whether the panel exists; callers must not create a second imperative placement.
 export const updateDashboardSidenav = (ctx: WorkbenchModuleContext, options: { selectedNode?: string | null } = {}) => {
-  if (!ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) return;
+  if (!ctx.views.getView(dashboardWidgetIds.dashboardSidenav)) return;
 
   if ("selectedNode" in options) {
-    ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, options.selectedNode ?? undefined);
+    ctx.treeViews.setSelectedNode(dashboardWidgetIds.dashboardSidenav, options.selectedNode ?? undefined);
   }
   const mode = ctx.modes.getActiveModeId();
   if (mode) {
     for (const owner of sidenavModeOwners(ctx, mode)) {
       for (const sectionId of ctx.navigationTrees.getDefaultExpandedSectionIds(owner)) {
-        ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
+        ctx.treeViews.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
       }
     }
   }
   const pageOwner = activePageOwner(ctx);
   if (pageOwner) {
     for (const sectionId of ctx.navigationTrees.getDefaultExpandedSectionIds(pageOwner)) {
-      ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
+      ctx.treeViews.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
     }
   }
-  ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
+  ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
 };
 
 // Selecting a node is best-effort: routes call this before the sidenav widget is guaranteed to
 // exist (e.g. in unit tests that register a single module), so it no-ops when it is absent.
 export const setDashboardSidenavSelection = (ctx: WorkbenchModuleContext, nodeId: string | undefined) => {
-  if (!ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) return;
-  ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, nodeId);
+  if (!ctx.views.getView(dashboardWidgetIds.dashboardSidenav)) return;
+  ctx.treeViews.setSelectedNode(dashboardWidgetIds.dashboardSidenav, nodeId);
 };
 
 const syncSidenavForActiveMode = (ctx: WorkbenchModuleContext) => {
@@ -89,45 +88,34 @@ const syncSidenavForActiveMode = (ctx: WorkbenchModuleContext) => {
   updateDashboardSidenav(ctx);
 };
 
-const DASHBOARD_SIDENAV_REGION_SIZE = { defaultPx: 250, minPx: 200, maxPx: 360 };
+export const DASHBOARD_SIDENAV_REGION_SIZE = { defaultPx: 250, minPx: 200, maxPx: 360 };
 
 const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
-  ctx.renderers.registerTreeRenderer({
-    id: dashboardWidgetIds.dashboardSidenav,
-    title: "Sidenav",
-    defaultExpandedNodeIds: ["workspace-sessions"],
-    defaultExpandedSectionIds: ["sessions-wrap"],
-    canMove: ({ source, destination }) => source.moveScope === destination.moveScope,
-    getHeader: () => composeSidenavSlot(ctx, "header"),
-    getBody: () => composeSidenavSlot(ctx, "content"),
-    getFooter: () => composeSidenavSlot(ctx, "footer"),
-    getChildren: (node, context) => ctx.navigationTrees.getChildren(node, context),
-  });
-  ctx.layout.registerPanel(
+  ctx.views.registerView(
     {
       id: dashboardWidgetIds.dashboardSidenav,
       title: "Sidenav",
-      region: "sidenav",
-      rendererId: dashboardWidgetIds.dashboardSidenav,
-      singleton: true,
-      regionSize: DASHBOARD_SIDENAV_REGION_SIZE,
+      body: {
+        kind: "tree",
+        defaultExpandedNodeIds: ["workspace-sessions"],
+        defaultExpandedSectionIds: ["sessions-wrap"],
+        canMove: ({ source, destination }) => source.moveScope === destination.moveScope,
+        getHeader: () => composeSidenavSlot(ctx, "header"),
+        getBody: () => composeSidenavSlot(ctx, "content"),
+        getFooter: () => composeSidenavSlot(ctx, "footer"),
+        getChildren: (node, context) => ctx.navigationTrees.getChildren(node, context),
+      },
     },
     { priority: 80 },
   );
-  ctx.views.registerView({
-    id: dashboardWidgetIds.dashboardSidenav,
-    panelId: dashboardWidgetIds.dashboardSidenav,
-    title: "Sidenav",
-  });
 
   for (const modeId of ["project", "sessions"] as const) {
     ctx.modePlacements.registerPlacement({
       id: `dashboard.sidenav.${modeId}`,
       ref: { extensionId: "pstdio", kind: "placement", id: `sidenav.${modeId}` },
       modeId,
-      item: { kind: "view", viewId: dashboardWidgetIds.dashboardSidenav },
+      item: { kind: "view", viewId: dashboardWidgetIds.dashboardSidenav, presence: "fixed" },
       region: "sidenav",
-      required: true,
       movableTo: ["sidenav"],
     });
   }
@@ -139,9 +127,8 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   registerSidenavWidget(ctx);
 
   const refresh = () => {
-    if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
-      ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
-    }
+    if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav))
+      ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
   };
 
   const modeSubscription = ctx.modes.onDidChangeActive(() => syncSidenavForActiveMode(ctx));

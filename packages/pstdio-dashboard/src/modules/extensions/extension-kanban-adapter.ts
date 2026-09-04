@@ -1,4 +1,5 @@
 import type { KanbanRendererResourceRef } from "@pstdio/sdk/extensions";
+import { workbenchPanels } from "@pstdio/sdk/extensions";
 import type { AttributeDescriptor, KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import {
   type Disposable,
@@ -14,6 +15,7 @@ import { type CollectionChange, subscribeCollections } from "@/lib/sync/collecti
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { buildDashboardExtensionMenuRegistrations } from "@/shared/extensions/workbench-extension-contributions";
+import { openWorkspacesPage, toPageResource } from "@/shared/workbench/page-navigation";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { createBadgeListRenderer } from "./extension-workspace-badge-renderer";
 
@@ -38,7 +40,7 @@ export const toDashboardExtensionResource = (resource: unknown, projectId: strin
   const ref = resource as KanbanRendererResourceRef & { icon?: string };
   return {
     kind: ref.type,
-    uri: `dashboard-workbench://${ref.type}/${ref.id}`,
+    uri: `pstdio://extension-resource/${encodeURIComponent(ref.type)}/${encodeURIComponent(ref.id)}`,
     id: ref.id,
     label: ref.label ?? ref.id,
     icon: ref.icon ?? standardResourceIcons.kanbanRenderer,
@@ -54,19 +56,11 @@ const rowResource = (record: KanbanRecord, row: KanbanRendererRow, projectId: st
   if (resolved || !record.resourceKind) return resolved;
   return {
     kind: record.resourceKind,
-    uri: `dashboard-workbench://${record.resourceKind}/${row.id}`,
+    uri: `pstdio://extension-resource/${encodeURIComponent(record.resourceKind)}/${encodeURIComponent(row.id)}`,
     id: row.id,
     label: row.title,
     metadata: { projectId },
   };
-};
-
-const createdResource = (record: KanbanRecord, value: unknown, projectId: string) => {
-  const created = value as { id?: string; resource?: unknown; shorthand?: string; title?: string } | undefined;
-  const resolved = toDashboardExtensionResource(created?.resource, projectId);
-  if (resolved || !created?.id || !record.resourceKind) return resolved;
-  const label = [created.shorthand, created.title].filter(Boolean).join(" ") || created.id;
-  return toDashboardExtensionResource({ type: record.resourceKind, id: created.id, label }, projectId);
 };
 
 const matchingRowAction = (registrations: MenuRegistration[], record: KanbanRecord, commandId: string) => {
@@ -90,7 +84,19 @@ const decorateAttribute = (
   const workspaceRender = createBadgeListRenderer({
     itemsAttributeId,
     projectId,
-    openResource: (resource) => void ctx.resources.openResource(resource, { replaceActive: true }),
+    navigate: (resource) => {
+      if (resource.kind === "workspace") {
+        openWorkspacesPage(ctx, resource);
+        return;
+      }
+      if (resource.kind === "session") {
+        void ctx.navigation.openTarget({
+          kind: "panel",
+          panel: workbenchPanels.projectSession,
+          resource: toPageResource(resource),
+        });
+      }
+    },
   });
   return {
     ...attribute,
@@ -160,7 +166,6 @@ export const createDashboardKanbanAdapter = (input: {
     decorateAttribute: (_record, attribute) => decorateAttribute(ctx, projectId, attribute),
     resolveRowResource: (_record, row) => toDashboardExtensionResource(row.resource, projectId),
     resolveRowActionResource: (record, row) => rowResource(record, row, projectId),
-    resolveNavigationResource: (_record, resource) => toDashboardExtensionResource(resource, projectId)!,
     executeRowAction: ({ record, action, row, resource, runDefault }) => {
       const registration = matchingRowAction(menuRegistrations, record, action.commandId);
       const command = registration ? ctx.commands.getCommand(registration.command.id) : undefined;
@@ -184,10 +189,6 @@ export const createDashboardKanbanAdapter = (input: {
           message: error instanceof Error ? error.message : String(error),
         });
       }
-      const resource = createdResource(record, created, projectId);
-      if (resource && !record.rowActivationHandlerId) {
-        void ctx.resources.openResource(resource, { replaceActive: true }).catch(() => undefined);
-      }
     },
   };
 
@@ -197,7 +198,7 @@ export const createDashboardKanbanAdapter = (input: {
     dispose: subscribeCollections((change) => {
       if (!change || !sessionTables.has(change.table)) return;
       for (const rendererId of rendererIds) {
-        if (ctx.renderers.getKanbanRenderer(rendererId)) ctx.renderers.refreshKanbanRenderer(rendererId);
+        if (ctx.views.getView(rendererId)) ctx.views.refreshView(rendererId);
       }
     }),
   };

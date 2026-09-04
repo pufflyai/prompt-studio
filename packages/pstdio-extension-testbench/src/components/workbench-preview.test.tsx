@@ -22,7 +22,6 @@ const baseBench = {
     viewMenus: [],
     placements: [],
     resourceKinds: [],
-    resourceViews: [],
     resourceHierarchyProviders: [],
     navigationItems: [],
     navigationTrees: [],
@@ -108,9 +107,14 @@ describe("createPreviewWorkbench", () => {
     expect(workbench.terminal.getSession(sessionId)?.status).toBe("killed");
   });
 
-  test("registers the host-owned terminal panel widget", () => {
+  test("registers the host-owned terminal View and placement", () => {
     const workbench = createTestWorkbench(baseBench);
-    expect(workbench.layout.getPanel("workbench.terminal")).toMatchObject({ region: "secondary" });
+    expect(workbench.views.getView("workbench.terminal")).toMatchObject({ id: "workbench.terminal" });
+    expect(workbench.shellPlacements.getPlacement("workbench.terminal")).toMatchObject({
+      region: "secondary",
+      item: { kind: "resource", viewId: "workbench.terminal", cardinality: "many" },
+      mountStrategy: "keep-mounted",
+    });
   });
 
   test("only registers explicitly contributed command palette entries", () => {
@@ -168,6 +172,7 @@ describe("createPreviewWorkbench", () => {
           icon: "component",
         },
         group: "Tickets",
+        activate: expect.any(Function),
       },
     ]);
   });
@@ -262,7 +267,10 @@ describe("ContributionExplorer", () => {
                 {
                   id: "lab.preview",
                   extensionId: "lab",
-                  commandId: "lab.preview",
+                  action: {
+                    kind: "command" as const,
+                    target: { command: { extensionId: "lab", kind: "command" as const, id: "preview" } },
+                  },
                   key: "mod+shift+p",
                   canonicalChord: "Mod+Shift+P",
                   parsed: { key: "P", ctrl: false, shift: true, alt: false, meta: true, modifiers: ["mod", "shift"] },

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import type { StoredTicketAttachment } from "../data/types";
@@ -249,8 +250,8 @@ describe("ticket files tree workspace commands", () => {
           label: "WS-1",
           icon: "GitBranch",
           target: {
-            kind: "resource",
-            // The canonical parent edge nests this workspace beneath the ticket.
+            kind: "page",
+            page: workbenchPages.workspaces,
             resource: {
               type: "workspace",
               id: "ws-1",

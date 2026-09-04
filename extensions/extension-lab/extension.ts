@@ -42,7 +42,6 @@ const extension = defineExtension({
   modes: labModes,
   resourceKinds: labResourceKinds,
   views: labUi.views,
-  resourceViews: labUi.resourceViews,
   viewMenus: labUi.viewMenus,
   placements: labUi.placements,
   pages: labUi.pages,
@@ -65,7 +64,7 @@ const extension = defineExtension({
     defineKeybinding({
       id: "say-hello",
       key: "mod+shift+h",
-      command: sayHelloCommand.ref,
+      action: { kind: "command", target: { command: sayHelloCommand.ref } },
     }),
   ],
 

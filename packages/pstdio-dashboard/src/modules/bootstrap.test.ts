@@ -1,27 +1,38 @@
 import { describe, expect, mock, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench";
+import { createWorkbench, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardViews } from "@/shared/app/resources";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { setDashboardExtensionsReadyProject } from "@/shared/extensions/extension-readiness";
 import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
 import { createBootstrapModule } from "./bootstrap";
 import { createExtensionsModule } from "./extensions/module";
-import {
-  emptyAppearance,
-  flushMicrotasks,
-  metadata,
-  metadataWithResourceExtension,
-} from "./extensions/module-test-fixtures";
+import { emptyAppearance, flushMicrotasks, metadata } from "./extensions/module-test-fixtures";
 import { createStartModule } from "./start/module";
 
-const activeViewId = (workbench: ReturnType<typeof createWorkbenchCore>) => {
-  const layout = workbench.layout.getLayout();
-  const activeWidgetId = layout.regions.main.activeWidgetId;
-  return layout.regions.main.widgets.find((placement) => placement.widgetId === activeWidgetId)?.viewId;
+const activeViewId = (workbench: ReturnType<typeof createWorkbench>) => {
+  const region = workbench.layout.getLayout().regions.main;
+  return region.widgets.find((placement) => placement.widgetId === region.activeWidgetId)?.viewId;
+};
+
+const browserAt = (url: string): WorkbenchPageLocationBrowser => {
+  let current = { url };
+  return {
+    current: () => current,
+    push: (entry) => {
+      current = entry;
+    },
+    replace: (entry) => {
+      current = entry;
+    },
+    back: () => undefined,
+    forward: () => undefined,
+    onPopState: () => ({ dispose: () => undefined }),
+  };
 };
 
 describe("createBootstrapModule", () => {
-  test("opens the Start view when a selected project has no saved location", async () => {
-    const workbench = createWorkbenchCore();
+  test("waits for project extensions before choosing the fixed Start page", async () => {
+    const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const start = workbench.registerModule(createStartModule());
@@ -29,82 +40,42 @@ describe("createBootstrapModule", () => {
 
     try {
       await flushMicrotasks();
-      expect(activeViewId(workbench)).toBe(dashboardViews.start.id);
-      expect(workbench.getPrimaryResource()).toBeUndefined();
+      expect(activeViewId(workbench)).toBeUndefined();
+
+      setDashboardExtensionsReadyProject(workbench, "project-1");
+      await flushMicrotasks();
+      expect(activeViewId(workbench)).toBe(dashboardWidgetIds.start);
     } finally {
       bootstrap.dispose();
       start.dispose();
     }
   });
 
-  test("restores a domain resource after extension metadata registers its presenter", async () => {
-    const issue = {
-      kind: "issue",
-      uri: "acme://issue/ISSUE-10",
-      id: "ISSUE-10",
-      label: "Issue 10",
-      metadata: { projectId: "project-1" },
-    } satisfies ResourceRef;
-    let savedResource: ResourceRef | undefined = issue;
-    let resolveMetadata: (value: typeof metadataWithResourceExtension) => void = () => undefined;
-    const metadataPromise = new Promise<typeof metadataWithResourceExtension>((resolve) => {
-      resolveMetadata = resolve;
-    });
-    const workbench = createWorkbenchCore({
-      lastResourcePersistence: {
-        getLastResource: () => savedResource,
-        setLastResource: (resource) => {
-          savedResource = resource;
-        },
-      },
-    });
+  test("does not open project selection while a persisted project is still loading", () => {
+    const workbench = createWorkbench();
+    workbench.modes.registerMode({ id: "project-selection", label: "Projects", activate: () => undefined });
 
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    const start = workbench.registerModule(createStartModule());
-    const extensions = workbench.registerModule(
-      createExtensionsModule({
-        loadAppearance: mock(async () => emptyAppearance),
-        loadMetadata: mock(() => metadataPromise),
+    const bootstrap = workbench.registerModule(
+      createBootstrapModule({
+        isInitialSyncComplete: () => false,
+        projectSelectionPersistence: {
+          getSelectedProjectId: () => "project-1",
+          setSelectedProjectId: () => undefined,
+        },
       }),
     );
-    const bootstrap = workbench.registerModule(createBootstrapModule());
 
     try {
-      await flushMicrotasks();
-      expect(workbench.getPrimaryResource()).toBeUndefined();
-
-      resolveMetadata(metadataWithResourceExtension);
-      await flushMicrotasks();
-
-      expect(workbench.getPrimaryResource()?.uri).toBe(issue.uri);
+      expect(workbench.modes.getActiveModeId()).toBeUndefined();
     } finally {
       bootstrap.dispose();
-      extensions.dispose();
-      start.dispose();
-      clearCachedDashboardExtensionMetadata("project-1");
     }
   });
 
-  test("falls back to Start when a legacy extension view is gone", async () => {
-    let savedResource: ResourceRef | undefined = {
-      kind: "extension-view",
-      uri: "dashboard-workbench://project/project-1/extension-views/deleted-view",
-      id: "deleted-view",
-      label: "Deleted view",
-    };
-    const lastResourcePersistence = {
-      getLastResource: () => undefined,
-      setLastResource: (resource: ResourceRef | undefined) => {
-        savedResource = resource;
-      },
-      getLegacyViewResource: () => savedResource,
-      clearLegacyViewResource: () => {
-        savedResource = undefined;
-      },
-    };
-    const workbench = createWorkbenchCore({ lastResourcePersistence });
-
+  test("boots an extension page URL after its public page contribution registers", async () => {
+    const workbench = createWorkbench({
+      pageLocationBrowser: browserAt("/projects/project-1/extensions/pstdio.extension-lab/lab"),
+    });
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const start = workbench.registerModule(createStartModule());
@@ -114,13 +85,13 @@ describe("createBootstrapModule", () => {
         loadMetadata: mock(async () => metadata),
       }),
     );
-    const bootstrap = workbench.registerModule(createBootstrapModule({ lastResourcePersistence }));
+    const bootstrap = workbench.registerModule(createBootstrapModule());
 
     try {
       await flushMicrotasks();
       await flushMicrotasks();
-      expect(activeViewId(workbench)).toBe(dashboardViews.start.id);
-      expect(savedResource).toBeUndefined();
+      expect(activeViewId(workbench)).toBe("pstdio.extension-lab.view.labPage");
+      expect(workbench.pages.store.getState().activePageId).toBe("pstdio.extension-lab.page.labPage");
     } finally {
       bootstrap.dispose();
       extensions.dispose();

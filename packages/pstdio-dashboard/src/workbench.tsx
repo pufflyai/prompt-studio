@@ -1,14 +1,8 @@
-import {
-  createWorkbenchCore,
-  type LayoutPersistenceAdapter,
-  type WorkbenchPageLocationBrowser,
-} from "@pstdio/workbench";
-import { createWorkbenchTerminalModule } from "@pstdio/workbench/react";
+import { createWorkbench, type WorkbenchPageLocationBrowser } from "@pstdio/workbench";
+import { createWorkbenchTerminalModule, WORKBENCH_TERMINAL_PANEL_SIZE } from "@pstdio/workbench/react";
 import { createLocalStorageWorkbenchPersistence, type WorkbenchStorageLike } from "@pstdio/workbench/storage";
-import { resolveDashboardViewPath } from "@/shared/app/browser-location";
 import { resolveDashboardStorage } from "@/shared/app/dashboard-storage";
 import { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
-import { createDashboardLastResourcePersistence } from "@/shared/app/last-resource-persistence";
 import { createDashboardPageLocationBrowser } from "@/shared/app/page-location-browser";
 import {
   createDashboardProjectSelectionPersistence,
@@ -37,19 +31,17 @@ import { createSidenavModule } from "./modules/sidenav/module";
 import { createStartModule } from "./modules/start/module";
 import { createTerminalModule } from "./modules/terminal/module";
 import { createWorkspacesModule } from "./modules/workspaces/module";
+import { resolveDashboardPersistenceScope } from "./shared/workbench/dashboard-persistence-scope";
+import { DASHBOARD_SIDENAV_REGION_SIZE } from "./shared/workbench/dashboard-sidenav";
 
 export { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
 
 interface CreateDashboardWorkbenchInput {
-  initialViewPath?: string;
   pageLocationBrowser?: WorkbenchPageLocationBrowser;
   storage?: WorkbenchStorageLike;
 }
 
 type CreateDashboardModulesInput = {
-  initialViewPath?: string;
-  lastResourcePersistence?: ReturnType<typeof createDashboardLastResourcePersistence>;
-  layoutPersistence?: LayoutPersistenceAdapter;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
   sessionDraftPersistence?: DashboardSessionDraftPersistence;
   sessionSelectionPersistence?: DashboardSessionSelectionPersistence;
@@ -58,7 +50,7 @@ type CreateDashboardModulesInput = {
 export const createDashboardModules = (input: CreateDashboardModulesInput = {}) => [
   createSidenavModule(),
   createWorkspacesModule(),
-  createExtensionsModule({ layoutPersistence: input.layoutPersistence }),
+  createExtensionsModule(),
   createProjectsModule({ projectSelectionPersistence: input.projectSelectionPersistence }),
   createHeadersModule(),
   createKeyboardShortcutsModule(),
@@ -75,8 +67,6 @@ export const createDashboardModules = (input: CreateDashboardModulesInput = {}) 
   createWorkbenchTerminalModule(),
   createTerminalModule(),
   createBootstrapModule({
-    initialViewPath: input.initialViewPath,
-    lastResourcePersistence: input.lastResourcePersistence,
     projectSelectionPersistence: input.projectSelectionPersistence,
     sessionSelectionPersistence: input.sessionSelectionPersistence,
   }),
@@ -84,10 +74,6 @@ export const createDashboardModules = (input: CreateDashboardModulesInput = {}) 
 
 export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = {}) => {
   const storage = resolveDashboardStorage(input.storage);
-  const initialViewPath =
-    input.initialViewPath ??
-    (typeof window === "undefined" ? undefined : resolveDashboardViewPath(window.location.pathname));
-
   const projectSelectionPersistence = createDashboardProjectSelectionPersistence({
     namespace: dashboardWorkbenchStorageNamespace,
     storage,
@@ -105,22 +91,22 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
     storage,
   });
 
-  const lastResourcePersistence = createDashboardLastResourcePersistence(scopedByProject);
   const pageLocationBrowser =
     input.pageLocationBrowser ??
     (typeof window === "undefined" ? undefined : createDashboardPageLocationBrowser(window));
-  const workbench = createWorkbenchCore({
+  const workbench = createWorkbench({
     initialSidePanelMode: "closed",
     defaultPanelOpenByRegionId: { secondary: false },
+    regionSettings: {
+      secondary: { size: WORKBENCH_TERMINAL_PANEL_SIZE },
+      sidenav: { size: DASHBOARD_SIDENAV_REGION_SIZE },
+    },
+    resolvePagePersistenceScope: resolveDashboardPersistenceScope,
     ...persistence,
-    lastResourcePersistence,
     ...(pageLocationBrowser ? { pageLocationBrowser } : {}),
   });
 
   const modules = createDashboardModules({
-    initialViewPath,
-    lastResourcePersistence,
-    layoutPersistence: persistence.layoutPersistence,
     projectSelectionPersistence,
     sessionDraftPersistence,
     sessionSelectionPersistence,

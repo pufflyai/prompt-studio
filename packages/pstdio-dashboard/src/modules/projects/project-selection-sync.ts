@@ -2,15 +2,9 @@ import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { isInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import type { SelectProjectInput } from "@/shared/app/commands";
 import {
-  clearDashboardNavigationState,
-  registerDashboardNavigator,
-  syncDashboardLayoutPersistenceScope,
-} from "@/shared/app/navigation-state";
-import {
   clearDashboardProjectSelection,
   getDashboardSelectedProjectId,
   selectDashboardProject,
-  subscribeDashboardSelectedProject,
 } from "@/shared/app/project-context";
 import type { DashboardProjectSelectionPersistence } from "@/shared/app/project-selection-persistence";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -30,8 +24,8 @@ export const closeProjectSelectionOverlays = (ctx: WorkbenchModuleContext) => {
   const overlayWidgets = ctx.layout.getLayout().regions.overlay.widgets;
 
   for (const placement of overlayWidgets) {
-    if (projectSelectionOverlayWidgetIds.has(placement.contributionId)) {
-      ctx.layout.removeWidgetPlacement(placement.widgetId);
+    if (placement.viewId && projectSelectionOverlayWidgetIds.has(placement.viewId)) {
+      ctx.overlays.closeOverlay(placement.widgetId);
     }
   }
 };
@@ -70,35 +64,8 @@ export const selectProject = (
 
   resetProjectModeOnProjectChange(ctx, previousProjectId, project.id);
   selectDashboardProject(selectedProjectContext, project, persistence);
-  if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
-    ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
-  }
-};
-
-export const registerProjectWorkbenchScope = (ctx: WorkbenchModuleContext) => {
-  let currentProjectId = getDashboardSelectedProjectId(ctx);
-
-  // Mode-driven scope rotation is owned by the atomic navigator; this sync covers
-  // project selection changes only, so there is no second navigation path.
-  registerDashboardNavigator(ctx);
-
-  const syncScope = () => {
-    const projectId = getDashboardSelectedProjectId(ctx);
-    if (projectId !== currentProjectId) {
-      clearDashboardNavigationState(ctx);
-      currentProjectId = projectId;
-    }
-    ctx.history.setPersistenceScope(projectId ? `project:${projectId}` : undefined);
-    syncDashboardLayoutPersistenceScope(ctx);
-  };
-
-  syncScope();
-  const unsubscribeProject = subscribeDashboardSelectedProject(ctx, syncScope);
-  return {
-    dispose: () => {
-      unsubscribeProject();
-    },
-  };
+  if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav))
+    ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
 };
 
 export const clearSelectedProject = (
@@ -107,9 +74,8 @@ export const clearSelectedProject = (
   persistence: DashboardProjectSelectionPersistence | undefined,
 ) => {
   clearDashboardProjectSelection(selectedProjectContext, persistence);
+  ctx.pageLocations.clearProject();
   ctx.modes.setActiveMode("project-selection");
-  // Drop project-scoped history after the mode switch so it cannot replay a guarded project view.
-  ctx.history.clear();
 };
 
 const selectPersistedProject = (

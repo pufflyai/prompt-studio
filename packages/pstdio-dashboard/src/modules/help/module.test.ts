@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbench } from "@pstdio/workbench";
 import { createHelpModule } from "./module";
 
 describe("createHelpModule", () => {
   test("registers Help once on the shared project sidenav footer", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.registerModule(createHelpModule());
 

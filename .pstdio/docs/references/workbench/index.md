@@ -9,7 +9,7 @@ for navigation and contribution ownership.
 - [Workbench API](./api.md) covers package entry points, core services, panel
   registration, composition queries, resources, modes, persistence, and extension
   placement.
-- [Navigation](./navigation.md) explains resources, presenters, locations,
+- [Navigation](./navigation.md) explains explicit targets, canonical locations,
   breadcrumbs, and history.
 - [Contribution ownership](./contribution-ownership.md) explains module and
   extension attribution, lifecycle, and instance ownership.

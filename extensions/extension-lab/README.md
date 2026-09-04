@@ -69,16 +69,16 @@ Everything below uses only host-owned workbench targets and lab-internal command
 
 ### Modes, views, placements, and navigation
 
-- `modes.lab` is the single Lab mode: Overview, Artifacts, and Cams as Main tabs, a native activity rail, and a status strip. It omits the `secondary` panel, so no terminal can open inside the Lab.
-- `activityItems` stage the native activity rail for the Lab mode: a create-artifact action and a `Project home` item that returns to Project mode. The rail replaces the dashboard sidenav while the Lab is active.
+- `modes.lab` is the Lab mode used by the Lab mode page. It supports Main and Side Panel content.
+- `activityItems` adds the create-artifact action while Lab mode is active.
 - `views` define each webview or native body once. The status view shows the artifact count and selected camera.
-- `placements` put Overview, Artifacts, Cams, and Workflow in Main. They also place the artifact inspector resource slot in the Side Panel.
+- `pages` define the Project Lab page, the Lab mode page, and the deliberately faulty page. Each navigation entry targets one page explicitly.
+- `placements` put Artifacts, Cams, and Workflow in Main for Lab mode. The Lab mode page supplies Overview as its primary slot.
 - `viewMenus` reuse the controls view for `Create artifacts` and the tree view for `Cameras`.
-- `resourceViews` bind the artifact detail view to the `glass-lab-artifact` inspector slot.
+- The Lab mode page binds the artifact detail view to its auxiliary Side Panel slot.
 - `statusBarItems` places the status view in the leading status-bar slot without adding it to persisted layout.
-- Switching away and back exercises mode seeding, chrome ownership (sidenav restore), and per-mode layout persistence.
-- The Lab page view declares the `lab` deep-link path.
-- `navigationItems` adds the project navigation entry that switches into the Lab mode.
+- `navigationTrees` adds the camera tree only while the Project Lab page is active.
+- Switching pages exercises page cleanup, additive mode composition, and canonical page navigation.
 
 ### Storage
 
@@ -116,7 +116,7 @@ Expected output: a `rejected` outcome with `code: "sentience_rejected"` and a wa
 ## Trying it from the dashboard
 
 - The workbench top actions show **Lab: Say hello** on the lab route and **Bump lab counter / Reset lab counter / Demo middleware rejection** in the overflow.
-- The project Sidenav shows a Lab entry that switches straight into the Build lab mode (Overview and Artifacts tabs). The Lab Sidenav remains mounted while modes rearrange the workbench.
+- The project Sidenav shows separate Lab, Lab mode, and Lab faulty pages. Opening any entry replaces the active page through the same public page path used by other extensions.
 
 ## Layout
 

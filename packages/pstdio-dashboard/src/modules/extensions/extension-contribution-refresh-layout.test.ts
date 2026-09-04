@@ -1,12 +1,12 @@
 import { expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbench } from "@pstdio/workbench";
 import {
   captureExtensionContributionRefreshLayout,
   restoreExtensionContributionRefreshLayout,
 } from "./extension-contribution-refresh-layout";
 
 test("does not restore a removed snapshot mode over the current mode", () => {
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
   const removedMode = workbench.modes.registerMode({
     id: "removed-extension.mode",
     activate: () => undefined,

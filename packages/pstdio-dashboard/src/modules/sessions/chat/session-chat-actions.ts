@@ -95,12 +95,23 @@ export const openCreatedSessionFromDraft = (args: {
   const resource = createDashboardResource("session", args.sessionId, title, "MessageCircle", args.projectId);
 
   rememberDashboardSessionResource(args.input.workbench, resource);
-
-  return args.input.workbench.layout.openPanel(args.input.instance.panelId, {
-    resource,
-    title,
-    strategy: { kind: "replace-panel", instanceId: args.input.instance.instanceId },
-  });
+  const identity = args.input.instance.placementIdentity;
+  if (identity?.kind === "mode") {
+    args.input.workbench.modePlacements.updatePlacement(identity, { resource, title });
+    return identity;
+  }
+  if (identity?.kind === "page") {
+    const page = args.input.workbench.pages.getPage(identity.pageId);
+    if (!page) throw new Error(`Session page is not registered: ${identity.pageId}`);
+    const result = args.input.workbench.pageLocations.navigate({
+      kind: "page",
+      page: page.ref,
+      resource: { type: resource.kind, id: resource.id ?? resource.uri, label: resource.label },
+    });
+    if (!result.ok) throw new Error(result.diagnostic.message);
+    return identity;
+  }
+  throw new Error("A session draft must be opened through an owned placement.");
 };
 
 const clearPendingFollowUpForCreatedSession = (

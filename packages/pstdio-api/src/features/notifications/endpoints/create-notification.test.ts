@@ -71,7 +71,16 @@ describe("notification routes", () => {
         priority: "high",
         target: { type: "ticket", id: "PS-95", label: "PS-95" },
         actions: [
-          { id: "review", label: "Review proposal", kind: "open-resource", resource: { type: "ticket", id: "PS-95" } },
+          {
+            id: "review",
+            label: "Review proposal",
+            kind: "navigate",
+            target: {
+              kind: "page",
+              page: { extensionId: "pstdio-planner", kind: "page", id: "ticket" },
+              resource: { type: "ticket", id: "PS-95" },
+            },
+          },
         ],
         dedupeKey: "planner:PS-95:review",
       }),

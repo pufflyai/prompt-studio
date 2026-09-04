@@ -50,15 +50,14 @@ Treat warnings as actionable. They do not block loading, but they describe behav
 
 Composition diagnostics to expect:
 
-- `extension_panel_contract_invalid`: a panel's `show` value must be one valid placement or a non-empty list of valid placements.
-- `extension_resource_kind_missing`: a resource panel, mode, or hierarchy provider references an unknown resource kind.
-- `extension_resource_slot_missing`: a resource panel or mode references an unknown slot.
-- `extension_resource_slot_closed`: an external extension contributes to a closed slot.
-- `extension_panel_missing`: a resource panel or mode references an unknown panel.
-- `extension_panel_placement_unresolvable`: a mode moves a panel outside the regions allowed by its declaration.
-- `extension_mode_resource_unsupported`: a recipe references a resource kind the mode does not accept, or a panel not registered for it.
-- `extension_placement_required_invalid`: `required` is set on a cardinality-many slot placement without naming a panel.
-- `extension_resource_primary_invalid`: a primary resource has zero or several primary location placements.
+- `invalid_placement`: a placement uses an invalid region or item, or still declares a removed field such as `defaultOpen`, `required`, `closable`, `defaultResource`, `openCommand`, `regionSize`, or `regionCollapsible`. The message names the replacement, for example `presence` on the static item, `add` on the resource binding, or `regionSettings` on the owning mode.
+- `invalid_page` and `invalid_page_slot`: a page field or slot shape is invalid, or a slot still declares one of the removed fields above (or a slot-level `cardinality`). The message names the replacement field.
+- `invalid_mode`: a mode is missing a label or valid regions, or its `regionSettings` keys are not declared regions.
+- `invalid_keybinding`: a keybinding chord is invalid or the contribution declares no navigation `action`.
+- `extension_page_primary_invalid`: a page does not declare exactly one primary slot in `main`, or a bound-only page has no `parent`.
+- `extension_page_region_invalid`: a page slot targets a region its mode does not expose.
+- `extension_resource_kind_missing` and `extension_view_missing`: a binding or hierarchy provider references an unknown resource kind or view.
+- `extension_resource_menu_slot_closed`: an external command targets a closed resource menu slot.
 
 Convention diagnostics to expect:
 
@@ -91,11 +90,6 @@ Inspect what the host actually loaded before clicking through the UI:
   contribution and its diagnostics, even while the extension is disabled.
 - For scripted checks, the same data is served by
   `GET /v1/projects/{projectId}/extensions/{instanceId}/contributions`.
-
-If the dashboard layout looks stale after contribution changes, run the extension's layout reset command
-from the command palette. It appears in the `Extensions` group as `Reset <extension> layout`
-(command id `dashboard.extensions.resetLayout.<extension-id>`) and clears the persisted layout for that
-extension only.
 
 ## Packaged artifacts
 

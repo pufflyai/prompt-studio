@@ -21,6 +21,8 @@ const createBrowserWindow = () => {
           state = nextState;
           writes.push({ kind: "replace", state: nextState, url });
         },
+        back() {},
+        forward() {},
       },
       addEventListener(_type: "popstate", listener: () => void) {
         listeners.add(listener);

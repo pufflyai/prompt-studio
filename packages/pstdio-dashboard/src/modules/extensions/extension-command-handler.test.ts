@@ -69,13 +69,13 @@ describe("extension menu command handler", () => {
     let body: { resource?: { type?: string; id?: string } } | undefined;
     const activeTicket = {
       kind: "ticket",
-      uri: "dashboard-workbench://ticket/PS-1",
+      uri: "pstdio://extension-resource/ticket/PS-1",
       id: "PS-1",
       label: "PS-1",
     } satisfies ResourceRef;
     const rowWorkspace = {
       kind: "workspace",
-      uri: "dashboard-workbench://workspace/ws-1",
+      uri: "pstdio://extension-resource/workspace/ws-1",
       id: "ws-1",
       label: "WS-1",
     } satisfies ResourceRef;

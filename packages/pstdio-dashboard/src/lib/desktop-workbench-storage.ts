@@ -1,6 +1,6 @@
 import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import {
-  dashboardLastResourceStorageKey,
+  dashboardPageLocationStorageKey,
   dashboardProjectSelectionStorageKey,
   dashboardWorkbenchStorageNamespace,
   resolveDesktopWorkbenchStorageKey,
@@ -8,12 +8,12 @@ import {
 
 interface DesktopWorkbenchState {
   selectedProjectId?: string;
-  lastResources: Record<string, string>;
+  pageLocations: Record<string, string>;
 }
 
 export interface DesktopWorkbenchStorageBridge {
   getWorkbenchState: () => Promise<DesktopWorkbenchState>;
-  setLastResource: (projectId: string, value: string | null) => Promise<void>;
+  setPageLocation: (projectId: string, value: string | null) => Promise<void>;
   setSelectedProjectId: (projectId: string | null) => Promise<void>;
 }
 
@@ -52,8 +52,8 @@ export const createDesktopWorkbenchStorage = async (
   if (state.selectedProjectId) {
     durableValues.set(dashboardProjectSelectionStorageKey(dashboardWorkbenchStorageNamespace), state.selectedProjectId);
   }
-  for (const [projectId, resource] of Object.entries(state.lastResources)) {
-    durableValues.set(dashboardLastResourceStorageKey(dashboardWorkbenchStorageNamespace, projectId), resource);
+  for (const [projectId, location] of Object.entries(state.pageLocations)) {
+    durableValues.set(dashboardPageLocationStorageKey(dashboardWorkbenchStorageNamespace, projectId), location);
   }
   const sessionStorage = resolveBrowserStorage(browserStorage);
 
@@ -68,7 +68,7 @@ export const createDesktopWorkbenchStorage = async (
       }
       durableValues.set(key, value);
       if (destination.kind === "selected-project") void bridge.setSelectedProjectId(value);
-      else void bridge.setLastResource(destination.projectId, value);
+      else void bridge.setPageLocation(destination.projectId, value);
     },
     removeItem: (key) => {
       const destination = resolveDesktopWorkbenchStorageKey(key);
@@ -78,7 +78,7 @@ export const createDesktopWorkbenchStorage = async (
       }
       durableValues.delete(key);
       if (destination.kind === "selected-project") void bridge.setSelectedProjectId(null);
-      else void bridge.setLastResource(destination.projectId, null);
+      else void bridge.setPageLocation(destination.projectId, null);
     },
   } satisfies WorkbenchStorageLike;
 };

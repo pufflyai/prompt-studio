@@ -13,7 +13,7 @@ Every extension package needs a `package.json` next to its entry file:
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.8"
+    "pstdio": "1.0.0-alpha.9"
   },
   "private": true,
   "type": "module",
@@ -108,8 +108,9 @@ rejected by `pst extensions check`.
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                          |
 | `templateTypes`                                   | Add a custom template category.                                                   |
 | `views`, `viewMenus`                              | Reusable UI bodies and menus owned by a view.                                      |
-| `pages`, `placements`, `navigationItems`          | Routed screens, mode geometry, and typed navigation actions.                       |
-| `resourceKinds`, `resourceViews`                  | Domain resource slots and typed view-to-slot bindings.                            |
+| `pages`, `navigationItems`, `navigationTrees`     | Routed screens and explicit navigation.                                           |
+| `placements`                                      | Mode-wide views and resource bindings outside pages.                              |
+| `resourceKinds`                                   | Domain resource identity, labels, icons, and menus.                               |
 | `modes`                                           | Typed Workbench modes referenced by placements.                                   |
 | `statusBarItems`                                  | View references rendered outside docked layout.                                   |
 | `statuses`                                        | Workflow status providers shared by boards and settings.                          |
@@ -143,8 +144,10 @@ Current dashboard capability names:
 | `view.controls.v1` | Controls bodies and menus. |
 | `view.kanban.v1` | Kanban bodies. |
 | `view.data-table.v1` | Data table bodies. |
-| `placement.v1` | Docked view and resource-slot placements. |
+| `page.v1` | Routed pages with owned view and resource-bound slots. |
+| `placement.v1` | Mode-wide docked view and resource bindings. |
 | `navigation-item.v1` | Fixed host navigation items. |
+| `navigation-tree.v1` | Page- or mode-owned tree sections. |
 | `status-bar-item.v1` | Views placed in the status bar. |
 | `status.v1` | Workflow status providers. |
 | `settings.section.v1` | Settings navigation sections. |
@@ -153,7 +156,6 @@ Current dashboard capability names:
 | `renderer.command-palette-resource.v1` | Command palette resource providers. |
 | `keybinding.v1` | Dashboard keybindings. |
 | `resource-hierarchy.v1` | Resource hierarchy from native renderers. |
-| `resource-view.v1` | Resource detail views. |
 
 ## Commands and params
 
@@ -213,7 +215,7 @@ inside the extension package. Skill assets may point at a directory containing `
 ## Webviews
 
 A view with `body.kind: "webview"` points at an entry with `packageAsset()`. Declare only the capabilities the
-webview needs, such as `commands.execute`, `resource.open`, `notification.show`, `preferences.get`, and
+webview needs, such as `commands.execute`, `navigation.open`, `notification.show`, `preferences.get`, and
 `preferences.set`. Settings panels and status-bar items reference that view instead of declaring another body.
 
 Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/extensions`.
@@ -289,18 +291,19 @@ Extension-defined command scopes require an id. The host fixes the project and e
 instance owner. Global settings webviews do not get host-backed file methods because
 they have no project owner. The upload limit is 25 MiB.
 
-Declare `resource.open` to open an SDK resource in the workbench:
+Declare `navigation.open` to open an explicit page or panel target:
 
 ```ts
-await host.call("resource.open", {
-  resource: { type: "ticket", id: "PS-260", label: "Dashboard webview capabilities" },
-  input: { strategy: "replace-active" },
+await host.call("navigation.open", {
+  target: {
+    kind: "page",
+    page: ticketPage.ref,
+    resource: { type: "ticket", id: "PS-260", label: "Dashboard webview capabilities" },
+  },
 });
 ```
 
-The default strategy is `persistent`. Guests pass `{ type, id, label?, metadata? }` and
-leave URI creation to the host. The resource kind and a presenter for it must already
-be registered.
+The target chooses the screen. The host never guesses a page or panel from the resource kind.
 
 ## Pages and additive Sidenav sections
 
@@ -326,7 +329,7 @@ const ticketPage = definePage({
       id: "content",
       role: "primary",
       region: "main",
-      binding: { kind: ticketKind.ref, view: ticketEditor.ref },
+      binding: { kind: ticketKind.ref, view: ticketEditor.ref, cardinality: "one" },
     },
   ],
 });
@@ -347,6 +350,8 @@ const ticketFilesNavigation = defineNavigationTree({
 });
 ```
 
+Every binding declares `cardinality`: `one` keeps a single instance and rebinds it, `many` opens one instance per resource. A page whose primary slot has only a binding must declare `parent`; closing its last tab navigates there. A static auxiliary slot declares `presence` (`fixed`, `open`, or `closed`); a bound auxiliary slot has no initial visibility and may declare `openOn: "page-resource"` to follow the page's own resource.
+
 The ticket files tree is page-owned navigation. It appears below mode-owned navigation while Ticket is active and disappears when the user leaves that page.
 
 The Sidenav has no panel header or tabs. It contains one composed tree with pinned `header` and `footer` slots and one scrolling `content` slot. Mode and page sections can be visible together. Leaving the page removes only its sections; leaving the mode removes its sections and the active page sections. Page slots cannot target `sidenav`.
@@ -363,18 +368,9 @@ Page navigation uses canonical browser URLs and history. Target the page explici
 
 ## Native resource views
 
-Use native view bodies when the host should own the editor or tree chrome instead of loading a custom webview. A native
-resource detail screen usually has:
-
-- a `resourceKinds` contribution that declares the resource's surface and semantic slots
-- `views` with `file`, `tree`, `controls`, `dataTable`, or `kanban` bodies
-- `resourceViews` that bind each view to one semantic slot
-- `placements` that assign those slots to docked regions for a typed mode ref
-
-View bodies never own geometry or a resource kind. `resourceViews` owns the semantic
-binding. `placements` owns `region`, `movableTo`, `required`, and `defaultOpen`.
-Use `defineResourceKind`, `resourceSlotRef`, `defineView`, `defineResourceView`, and
-`definePlacement`, then pass the returned contributions as arrays to `defineExtension`.
+Use native view bodies when the host should own the editor or tree chrome instead of loading a custom
+webview. Views own their body only. A page slot binds a routed resource kind to a view and owns its
+placement. A mode placement uses the same binding shape for content that must remain across pages.
 
 File view bodies need a `load` callback; an optional `save` callback makes text content editable.
 Load callbacks return `{ content }` for markdown/code text, `{ dataUrl }` for images, plus optional `fileName`,
@@ -429,39 +425,14 @@ export default defineExtension({
 ## Project navigation UI
 
 For a Planner-style list or board, define a view with `body.kind: "kanban"` and a
-`query` callback. Add a `navigationItems` contribution whose typed action targets the
-view ref. A webview page uses the same model with `body.kind: "webview"`. An optional
-view `path` is only its deep-link path.
-
-To navigate to a Workbench mode instead of a view, use a `kind: "command"` action with the typed
-`workbenchCommands.switchMode` ref from `@pstdio/sdk/extensions`:
-
-```ts
-import { defineNavigationItem, workbenchCommands, workbenchModes } from "@pstdio/sdk/extensions";
-
-defineNavigationItem({
-  id: "lab",
-  owner: workbenchModes.project,
-  slot: "content",
-  label: "Lab",
-  icon: "flask-conical",
-  action: {
-    kind: "command",
-    target: { command: workbenchCommands.switchMode, params: { modeId: "project" } },
-  },
-});
-```
-
-`modeId` is the full Workbench mode id: `"project"` or `"settings"` for host modes, or the normalized id of
-an extension mode. Copy an extension mode's normalized id from `pst extensions check` output or from the
-extension's contributions tab in project settings. Never hand-build `pstdio.<extension>.mode.<id>` strings,
-and never hand-type the raw `workbench.action.switchMode` command id; always use the typed ref. Activity
-items use the same command with `command` and `params` as sibling fields instead of a nested `target`.
+`query` callback. Put the view in a page primary slot. Add a `navigationItems`
+contribution whose action targets that page. Paths belong to pages, never views. The page selects its
+declared mode; navigation never switches a mode as a separate step.
 
 For an editable inspector, define a `controls` view with a `query` callback plus optional
 `onValueChange`, `onApply`, and `onReset` callbacks. Attach it to an owner with
 `defineViewMenu({ owner: owner.ref, view: inspector.ref, side: "right" })`. Bind resource
-views through semantic slots, and keep all region choices in `placements`. Omitting both
+views through page slots, and keep mode-wide region choices in `placements`. Omitting both
 `onValueChange` and `onApply` makes controls read-only. Callback payloads must be JSON.
 Commit file metadata or data URLs, never live `File` objects.
 

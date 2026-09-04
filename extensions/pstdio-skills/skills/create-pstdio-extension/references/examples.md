@@ -196,13 +196,13 @@ export default defineExtension({
 });
 ```
 
-## Dashboard Kanban view
+## Dashboard page
 
 ```ts
 import {
   defineExtension,
   defineNavigationItem,
-  definePlacement,
+  definePage,
   defineView,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
@@ -210,7 +210,6 @@ import {
 const tasks = defineView({
   id: "tasks",
   title: "Tasks",
-  path: "tasks",
   body: {
     kind: "kanban",
     attributes: [{ id: "status", label: "Status", type: { kind: "string" } }],
@@ -224,91 +223,87 @@ const tasks = defineView({
   },
 });
 
+const tasksPage = definePage({
+  id: "tasks",
+  title: "Tasks",
+  path: "tasks",
+  mode: workbenchModes.project,
+  slots: [{ id: "content", role: "primary", region: "main", view: tasks.ref }],
+});
+
 export default defineExtension({
   views: [tasks],
-  placements: [
-    definePlacement({ id: "tasks", mode: workbenchModes.project, item: { kind: "view", view: tasks.ref }, region: "main" }),
-  ],
+  pages: [tasksPage],
   navigationItems: [
     defineNavigationItem({
       id: "tasks",
       owner: workbenchModes.project,
       slot: "content",
       label: "Tasks",
-      action: { kind: "view", view: tasks.ref },
+      action: { kind: "page", page: tasksPage.ref },
     }),
   ],
 });
 ```
 
-The view owns the board. The placement owns its region, and the navigation item opens the same typed view ref.
+The view owns the board body. The page owns its route and placement.
 
-## Resource views and slots
+## Resource detail page
 
-A resource kind owns semantic slots. A resource view binds a view to one slot. A placement decides where the slot
-appears for a mode.
+A resource kind defines identity and menus. A page slot binds that resource to its view.
 
 ```ts
 import {
   defineExtension,
-  definePlacement,
+  definePage,
   defineResourceKind,
-  defineResourceView,
   defineView,
   packageAsset,
-  resourceSlotRef,
   workbenchModes,
+  workbenchPages,
 } from "@pstdio/sdk/extensions";
 
-export const ticket = defineResourceKind({
-  id: "ticket",
-  surface: "primary",
-  slots: [
-    { id: "primary", cardinality: "one", access: "owner" },
-    { id: "inspector", cardinality: "many", access: "public" },
-  ],
-});
-export const primary = resourceSlotRef(ticket.ref, "primary");
-export const inspector = resourceSlotRef(ticket.ref, "inspector");
+export const ticket = defineResourceKind({ id: "ticket", label: "Ticket", icon: "ticket" });
 const editor = defineView({
   id: "ticket-editor",
   title: "Ticket",
   body: { kind: "webview", entry: packageAsset("./src/ticket-editor.tsx", import.meta.url) },
 });
 
+export const ticketPage = definePage({
+  id: "ticket",
+  title: "Ticket",
+  path: "ticket",
+  mode: workbenchModes.project,
+  parent: workbenchPages.start,
+  slots: [
+    {
+      id: "content",
+      role: "primary",
+      region: "main",
+      binding: { kind: ticket.ref, view: editor.ref, cardinality: "one" },
+    },
+  ],
+});
+
 export default defineExtension({
   resourceKinds: [ticket],
   views: [editor],
-  resourceViews: [
-    defineResourceView({ id: "editor", resourceKind: ticket.ref, slot: primary, view: editor.ref }),
-  ],
-  placements: [
-    definePlacement({ id: "primary", mode: workbenchModes.project, item: { kind: "resource-slot", slot: primary }, region: "main", required: true }),
-  ],
+  pages: [ticketPage],
 });
 ```
 
-Another extension can bind a view to the exported public inspector slot:
+The binding declares `cardinality`. `one` keeps a single instance and rebinds it when another ticket opens. `many` opens one instance per resource. A page whose primary slot has only a binding must declare `parent`; closing its last tab navigates there.
+
+Navigation always names the destination page:
 
 ```ts
-import { defineExtension, defineResourceView, defineView } from "@pstdio/sdk/extensions";
-import { inspector, ticket } from "pstdio-planner/ui";
-
-const insights = defineView({
-  id: "ticket-insights",
-  title: "Insights",
-  body: { kind: "controls", query: async () => ({ values: {} }) },
-});
-
-export default defineExtension({
-  views: [insights],
-  resourceViews: [
-    defineResourceView({ id: "ticket-insights", resourceKind: ticket.ref, slot: inspector, view: insights.ref }),
-  ],
-});
+const target = {
+  kind: "page" as const,
+  page: ticketPage.ref,
+  resource: { type: "ticket", id: "PS-326", label: "PS-326" },
+};
 ```
-
-A slot with `access: "owner"` rejects another extension's binding during `pst extensions check`. The primary slot is always owner-only.
 
 ## Native resource detail page with navigation
 
@@ -321,18 +316,12 @@ import {
   defineNavigationTree,
   definePage,
   defineResourceKind,
-  defineResourceView,
   defineView,
-  resourceSlotRef,
   workbenchModes,
+  workbenchPages,
 } from "@pstdio/sdk/extensions";
 
-const note = defineResourceKind({
-  id: "note",
-  surface: "primary",
-  slots: [{ id: "primary", cardinality: "one", access: "owner" }],
-});
-const primary = resourceSlotRef(note.ref, "primary");
+const note = defineResourceKind({ id: "note", label: "Note" });
 const content = defineView({
   id: "note-content",
   title: "Note",
@@ -351,12 +340,13 @@ const notePage = definePage({
   title: "Note",
   path: "note",
   mode: workbenchModes.project,
+  parent: workbenchPages.start,
   slots: [
     {
       id: "content",
       role: "primary",
       region: "main",
-      binding: { kind: note.ref, view: content.ref },
+      binding: { kind: note.ref, view: content.ref, cardinality: "one" },
     },
   ],
 });
@@ -364,9 +354,6 @@ const notePage = definePage({
 export default defineExtension({
   resourceKinds: [note],
   views: [content, files],
-  resourceViews: [
-    defineResourceView({ id: "content", resourceKind: note.ref, slot: primary, view: content.ref }),
-  ],
   pages: [notePage],
   navigationTrees: [
     defineNavigationTree({ id: "files", owner: notePage.ref, slot: "content", view: files.ref }),
@@ -376,12 +363,13 @@ export default defineExtension({
 
 The files tree appears together with mode navigation and disappears when the page is no longer active.
 
-## Dashboard navigation item
+## Webview page
 
 ```ts
 import {
   defineExtension,
   defineNavigationItem,
+  definePage,
   defineView,
   packageAsset,
   workbenchModes,
@@ -389,7 +377,6 @@ import {
 
 const planner = defineView({
   id: "planner",
-  path: "planner",
   title: "Planner",
   body: {
     kind: "webview",
@@ -398,8 +385,17 @@ const planner = defineView({
   },
 });
 
+const plannerPage = definePage({
+  id: "planner",
+  title: "Planner",
+  path: "planner",
+  mode: workbenchModes.project,
+  slots: [{ id: "content", role: "primary", region: "main", view: planner.ref }],
+});
+
 export default defineExtension({
   views: [planner],
+  pages: [plannerPage],
   navigationItems: [
     defineNavigationItem({
       id: "planner",
@@ -407,15 +403,15 @@ export default defineExtension({
       slot: "content",
       label: "Planner",
       icon: "calendar-check",
-      action: { kind: "view", view: planner.ref },
+      action: { kind: "page", page: plannerPage.ref },
     }),
   ],
 });
 ```
 
-The view ref is the navigation target. Its `path` remains the deep link.
+The page ref is the navigation target. Its path is the deep link.
 
-## Webview files and resource navigation
+## Webview files and navigation
 
 Declare each host call on the view body:
 
@@ -426,7 +422,7 @@ const imports = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./src/imports.ts", import.meta.url),
-    capabilities: ["files.upload", "files.list", "files.delete", "resource.open"],
+    capabilities: ["files.upload", "files.list", "files.delete", "navigation.open"],
   },
 });
 ```
@@ -446,9 +442,12 @@ export default defineExtensionView({
     });
     const projectFiles = await files.list();
 
-    await host.call("resource.open", {
-      resource: { type: "ticket", id: uploaded.id, label: uploaded.name },
-      input: { strategy: "replace-active" },
+    await host.call("navigation.open", {
+      target: {
+        kind: "page",
+        page: { kind: "page", id: "ticket" },
+        resource: { type: "ticket", id: uploaded.id, label: uploaded.name },
+      },
     });
 
     await files.delete(uploaded.id);
@@ -462,5 +461,4 @@ owner. Omit scope for project files, or pass the same `{ type, id }` scope to up
 list. Global settings webviews have no project file owner and cannot use host-backed
 file methods.
 
-This example uses the `ticket` resource kind and presenter registered in the resource
-views example above. Use a kind with a registered presenter from your own extension.
+This example targets the extension's `ticket` page. The host does not choose a presenter from the resource kind.

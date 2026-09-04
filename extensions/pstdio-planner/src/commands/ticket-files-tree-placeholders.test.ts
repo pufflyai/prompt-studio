@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "../data/memory-storage";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -91,7 +92,8 @@ describe("ticket files tree workspace metadata", () => {
 
     expect(sections.find((section) => section.id === "workspaces")?.nodes[0]).toMatchObject({
       target: {
-        kind: "resource",
+        kind: "page",
+        page: workbenchPages.workspaces,
         resource: {
           metadata: {
             workspaceId: "ws-1",
