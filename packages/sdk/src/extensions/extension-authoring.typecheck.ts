@@ -17,13 +17,11 @@ import {
   definePlacement,
   defineResourceHierarchyProvider,
   defineResourceKind,
-  defineResourceView,
   defineView,
   eventRef,
   packageAsset,
   params,
   projectSlots,
-  resourceSlotRef,
   workbenchModes,
   workspaceSlots,
 } from "./index";
@@ -119,7 +117,7 @@ defineMode({ id: "invalid-sidenav", label: "Invalid", regions: ["sidenav"] });
 definePlacement({
   id: "invalid-sidenav",
   mode: workbenchModes.project,
-  item: { kind: "view", view: { kind: "view", id: "invalid" } },
+  item: { kind: "view", view: { kind: "view", id: "invalid" }, presence: "open" },
   // @ts-expect-error extension placements cannot create another Sidenav panel
   region: "sidenav",
 });
@@ -153,13 +151,13 @@ const invalidSettingDeclarations = defineExtension({
 
 void invalidSettingDeclarations;
 
-// @ts-expect-error legacy navigation slots are no longer exposed
+// @ts-expect-error removed navigation slots are not exposed
 void projectSlots.sidenavNav;
 
 // @ts-expect-error command palette contributions use command.palette
 void projectSlots.commandPanel;
 
-// @ts-expect-error legacy navigation slots are no longer exposed
+// @ts-expect-error removed navigation slots are not exposed
 void workspaceSlots.tabs;
 
 const sharedRendererResource: ResourceRef = { type: "ticket", id: "PS-1", projectId: "project-1" };
@@ -196,13 +194,7 @@ void controlsQueryParams;
 
 const ticketKind = defineResourceKind({
   id: "ticket",
-  surface: "primary",
-  slots: [
-    { id: "primary", cardinality: "one", access: "owner" },
-    { id: "inspector", cardinality: "many", access: "public" },
-  ],
 });
-const ticketPrimary = resourceSlotRef(ticketKind.ref, "primary");
 const ticketEditor = defineView({
   id: "editor",
   title: "Ticket editor",
@@ -226,8 +218,13 @@ const ticketsPage = definePage({
   path: "tickets",
   mode: reviewMode.ref,
   slots: [
-    { id: "ticket", role: "primary", region: "main", binding: { kind: ticketKind.ref, view: ticketEditor.ref } },
-    { id: "insights", role: "auxiliary", region: "side", view: ticketInsights.ref },
+    {
+      id: "ticket",
+      role: "primary",
+      region: "main",
+      binding: { kind: ticketKind.ref, view: ticketEditor.ref, cardinality: "many" },
+    },
+    { id: "insights", role: "auxiliary", region: "side", view: ticketInsights.ref, presence: "open" },
   ],
 });
 
@@ -240,23 +237,14 @@ void ticketsPage.panels.ticket;
 const compositionExtension = defineExtension({
   resourceKinds: [ticketKind],
   views: [ticketEditor, ticketInsights],
-  resourceViews: [
-    defineResourceView({
-      id: "editor",
-      resourceKind: ticketKind.ref,
-      slot: ticketPrimary,
-      view: ticketEditor.ref,
-    }),
-  ],
   modes: [reviewMode],
   pages: [ticketsPage],
   placements: [
     definePlacement({
       id: "editor",
       mode: reviewMode.ref,
-      item: { kind: "resource-slot", slot: ticketPrimary },
+      item: { kind: "binding", resourceKind: ticketKind.ref, view: ticketEditor.ref, cardinality: "one" },
       region: "main",
-      required: true,
     }),
   ],
   navigationItems: [
@@ -265,7 +253,7 @@ const compositionExtension = defineExtension({
       owner: workbenchModes.project,
       slot: "content",
       label: "Tickets",
-      action: { kind: "resource", resource: { type: "ticket", id: "root" } },
+      action: { kind: "page", page: ticketsPage.ref, resource: { type: "ticket", id: "root" } },
     }),
   ],
   resourceHierarchyProviders: [
@@ -289,9 +277,34 @@ void navigationTarget;
 definePlacement({
   id: "invalid",
   mode: reviewMode.ref,
-  item: { kind: "view", view: ticketEditor.ref },
+  item: { kind: "view", view: ticketEditor.ref, presence: "open" },
   // @ts-expect-error mode recipes accept only declared docked regions
   region: "overlay",
+});
+
+definePlacement({
+  id: "invalid-presence",
+  mode: reviewMode.ref,
+  // @ts-expect-error static placement items must declare a presence
+  item: { kind: "view", view: ticketEditor.ref },
+  region: "main",
+});
+
+definePlacement({
+  id: "invalid-cardinality",
+  mode: reviewMode.ref,
+  // @ts-expect-error resource bindings must declare a cardinality
+  item: { kind: "binding", resourceKind: ticketKind.ref, view: ticketEditor.ref },
+  region: "main",
+});
+
+definePlacement({
+  id: "invalid-legacy",
+  mode: reviewMode.ref,
+  item: { kind: "view", view: ticketEditor.ref, presence: "open" },
+  region: "main",
+  // @ts-expect-error the removed defaultOpen flag is replaced by item presence
+  defaultOpen: true,
 });
 
 // @ts-expect-error local events use typed refs; raw strings must be namespaced

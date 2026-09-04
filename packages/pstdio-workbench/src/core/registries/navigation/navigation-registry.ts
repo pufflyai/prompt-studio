@@ -1,4 +1,7 @@
-import type { NavigationTargetPage as SdkNavigationTargetPage } from "@pstdio/sdk/extensions";
+import type {
+  NavigationTargetPage as SdkNavigationTargetPage,
+  NavigationTargetPanel as SdkNavigationTargetPanel,
+} from "@pstdio/sdk/extensions";
 import {
   type ContributionMetadata,
   normalizeContributionMetadata,
@@ -6,29 +9,26 @@ import {
 } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
-import type { OpenWorkbenchPanelInput } from "../layout/layout-types";
-import type { OpenResourceInput, ResourceRef } from "../resources/resource-registry";
-import type { OpenWorkbenchViewInput } from "../views/view-registry";
 
-export interface NavigationTargetResource {
-  kind: "resource";
-  resource: ResourceRef;
-  input?: OpenResourceInput;
+/** Core-only panel ref for host-owned shell placements. Extensions cannot address them. */
+export interface ShellPlacementRef {
+  kind: "shell-placement";
+  id: string;
 }
 
-export interface NavigationTargetPanel {
+export interface NavigationTargetShellPanel {
   kind: "panel";
-  panelId: string;
-  input?: OpenWorkbenchPanelInput;
+  panel: ShellPlacementRef;
+  resource?: SdkNavigationTargetPanel["resource"];
+  open?: SdkNavigationTargetPanel["open"];
+  title?: string;
 }
+
+export type NavigationTargetPanel = SdkNavigationTargetPanel | NavigationTargetShellPanel;
 
 export type NavigationTargetPage = SdkNavigationTargetPage;
 
-export interface NavigationTargetView {
-  kind: "view";
-  viewId: string;
-  input?: OpenWorkbenchViewInput;
-}
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
 
 export interface NavigationTargetCommand {
   kind: "command";
@@ -43,8 +43,6 @@ export interface NavigationTargetHref {
 
 export type NavigationTargetItem =
   | NavigationTargetPage
-  | NavigationTargetResource
-  | NavigationTargetView
   | NavigationTargetPanel
   | NavigationTargetCommand
   | NavigationTargetHref;
@@ -65,28 +63,14 @@ export interface NavigationParser {
 
 export type RegisteredNavigationParser = Omit<NavigationParser, "priority"> & RegisteredContributionMetadata;
 
-export interface ResourceNavigator<TResult = unknown> {
-  id: string;
-  priority?: number;
-  canNavigate(resource: ResourceRef): boolean;
-  createHref?(resource: ResourceRef): string;
-  navigate(resource: ResourceRef): TResult | Promise<TResult>;
-}
-
-export type RegisteredResourceNavigator = Omit<ResourceNavigator, "priority"> & RegisteredContributionMetadata;
-
 // Minimal presenter surface the navigation dispatcher needs; resolved through a
 // closure to break the otherwise-circular core ↔ navigation dep.
 export interface NavigationDispatcherContext {
-  canOpenResource?(resource: ResourceRef): boolean;
-  canOpenPanel?(panelId: string): boolean;
-  canOpenView?(viewId: string): boolean;
+  canOpenPanel?(target: NavigationTargetPanel): boolean;
   canExecuteCommand?(commandId: string): boolean;
   createCheckpoint?(): undefined | (() => void);
-  openResource(resource: ResourceRef, input?: OpenResourceInput): Promise<unknown>;
-  openPanel(panelId: string, input?: OpenWorkbenchPanelInput): unknown;
+  openPanelTarget?(target: NavigationTargetPanel): unknown;
   openPageTarget?(target: NavigationTargetPage): unknown;
-  openView(viewId: string, input?: OpenWorkbenchViewInput): Promise<unknown> | unknown;
   executeCommand(commandId: string, args?: unknown): Promise<unknown> | unknown;
   openHref?(href: string): Promise<unknown> | unknown;
 }
@@ -96,7 +80,6 @@ const byPriorityAndId = (left: { id: string; priority: number }, right: { id: st
 
 export interface NavigationRegistryStoreState {
   parsers: Record<string, RegisteredNavigationParser>;
-  navigators: Record<string, RegisteredResourceNavigator>;
 }
 
 export interface NavigationRegistry {
@@ -105,15 +88,15 @@ export interface NavigationRegistry {
   listParsers(): RegisteredNavigationParser[];
   resolveLocation(location: string): NavigationTarget;
   openTarget(target: NavigationTarget): Promise<readonly unknown[]>;
+  /** Opens a page location through the shared executor. */
+  openPage(target: Omit<NavigationTargetPage, "kind">): Promise<readonly unknown[]>;
+  /** Opens or activates an owned panel through the shared executor. */
+  openPanel(target: DistributiveOmit<NavigationTargetPanel, "kind">): Promise<readonly unknown[]>;
   navigate(location: string): Promise<readonly unknown[]>;
-  registerNavigator(navigator: ResourceNavigator, metadata?: ContributionMetadata): Disposable;
-  listNavigators(): RegisteredResourceNavigator[];
-  createHref(resource: ResourceRef): string;
-  navigateResource(resource: ResourceRef): Promise<unknown>;
 }
 
 export interface CreateNavigationRegistryInput {
-  // Returns the presenters the dispatcher should call. Lazy so `createWorkbenchCore`
+  // Returns the presenters the dispatcher should call. Lazy so `createWorkbench`
   // can install the navigation registry before the rest of the core is ready.
   resolveDispatcher?(): NavigationDispatcherContext;
 }
@@ -127,9 +110,11 @@ const dispatchItem = async (target: NavigationTargetItem, dispatcher: Navigation
     if (!dispatcher.openPageTarget) throw new Error("navigation.openTarget: page target dispatcher is not configured");
     return dispatcher.openPageTarget(target);
   }
-  if (target.kind === "resource") return dispatcher.openResource(target.resource, target.input);
-  if (target.kind === "view") return dispatcher.openView(target.viewId, target.input);
-  if (target.kind === "panel") return dispatcher.openPanel(target.panelId, target.input);
+  if (target.kind === "panel") {
+    if (!dispatcher.openPanelTarget)
+      throw new Error("navigation.openTarget: panel target dispatcher is not configured");
+    return dispatcher.openPanelTarget(target);
+  }
   if (target.kind === "href") {
     if (!dispatcher.openHref) throw new Error(`Cannot open navigation href target: ${target.href}`);
     return dispatcher.openHref(target.href);
@@ -138,14 +123,8 @@ const dispatchItem = async (target: NavigationTargetItem, dispatcher: Navigation
 };
 
 const validateItem = (target: NavigationTargetItem, dispatcher: NavigationDispatcherContext) => {
-  if (target.kind === "resource" && dispatcher.canOpenResource?.(target.resource) === false) {
-    throw new Error(`Cannot open navigation resource target: ${target.resource.uri}`);
-  }
-  if (target.kind === "panel" && dispatcher.canOpenPanel?.(target.panelId) === false) {
-    throw new Error(`Cannot open navigation Panel target: ${target.panelId}`);
-  }
-  if (target.kind === "view" && dispatcher.canOpenView?.(target.viewId) === false) {
-    throw new Error(`Cannot open navigation view target: ${target.viewId}`);
+  if (target.kind === "panel" && dispatcher.canOpenPanel?.(target) === false) {
+    throw new Error(`Cannot open navigation panel target: ${target.panel.id}`);
   }
   if (target.kind === "command" && dispatcher.canExecuteCommand?.(target.commandId) === false) {
     throw new Error(`Cannot open navigation command target: ${target.commandId}`);
@@ -160,7 +139,7 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
 
   const store = createWorkbenchStore<NavigationRegistryStoreState>({
     name: "workbench.navigation",
-    initialState: { parsers: {}, navigators: {} },
+    initialState: { parsers: {} },
   });
 
   const removeKey = <T>(record: Record<string, T>, key: string): Record<string, T> => {
@@ -222,53 +201,16 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
       return results;
     },
 
+    async openPage(target) {
+      return registry.openTarget({ ...target, kind: "page" });
+    },
+
+    async openPanel(target) {
+      return registry.openTarget({ ...target, kind: "panel" } as NavigationTargetPanel);
+    },
+
     async navigate(location) {
       return registry.openTarget(registry.resolveLocation(location));
-    },
-
-    registerNavigator(navigator, metadata) {
-      const snapshot = store.getState();
-      if (snapshot.navigators[navigator.id]) throw new Error(`Resource navigator already registered: ${navigator.id}`);
-
-      const { priority, ...navigatorContribution } = navigator;
-      const record: RegisteredResourceNavigator = {
-        ...navigatorContribution,
-        ...normalizeContributionMetadata({ ...metadata, priority: metadata?.priority ?? priority }),
-      };
-
-      store.setState(
-        { ...snapshot, navigators: { ...snapshot.navigators, [navigator.id]: record } },
-        false,
-        "registerNavigator",
-      );
-
-      return createDisposable(() => {
-        const current = store.getState();
-        if (current.navigators[navigator.id] !== record) return;
-        store.setState(
-          { ...current, navigators: removeKey(current.navigators, navigator.id) },
-          false,
-          "unregisterNavigator",
-        );
-      });
-    },
-
-    listNavigators() {
-      return Object.values(store.getState().navigators).sort(byPriorityAndId);
-    },
-
-    createHref(resource) {
-      const navigator = this.listNavigators().find(
-        (candidate) => candidate.createHref && candidate.canNavigate(resource),
-      );
-      if (!navigator?.createHref) throw new Error(`No navigator href registered for resource kind: ${resource.kind}`);
-      return navigator.createHref(resource);
-    },
-
-    async navigateResource(resource) {
-      const navigator = this.listNavigators().find((candidate) => candidate.canNavigate(resource));
-      if (!navigator) throw new Error(`No navigator registered for resource kind: ${resource.kind}`);
-      return await navigator.navigate(resource);
     },
   };
 

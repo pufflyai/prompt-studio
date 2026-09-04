@@ -4,11 +4,17 @@ import type {
   ExtensionSettingDefinitionRecord,
   WorkbenchExtensionMetadata,
 } from "@pstdio/sdk/api";
-import type { ContributionKind, ContributionRef, NavigationTarget, WhenExpression } from "@pstdio/sdk/extensions";
+import type { ContributionKind, ContributionRef, WhenExpression } from "@pstdio/sdk/extensions";
 import { toCommandPaletteContributions } from "../../runtime/command-palette-contributions";
 import { serializeWhenExpression } from "../../runtime/normalize/references";
 import type { ExtensionRuntime } from "../../types/runtime";
-import { commandRef, normalizedRef, refreshEventIds } from "./workbench-extension-metadata-normalizers";
+import {
+  commandRef,
+  normalizedRef,
+  normalizeTarget,
+  refreshEventIds,
+} from "./workbench-extension-metadata-normalizers";
+import { toPageRecords, toPlacementRecords } from "./workbench-extension-placement-metadata";
 import {
   type ResolveWorkbenchExtensionWebview,
   type ResolveWorkbenchExtensionWebviewInput,
@@ -17,7 +23,6 @@ import {
 
 export type { ResolveWorkbenchExtensionWebview, ResolveWorkbenchExtensionWebviewInput };
 
-type MetadataNavigationTarget = WorkbenchExtensionMetadata["navigationItems"][number]["action"];
 type MetadataWhen = WorkbenchExtensionMetadata["navigationItems"][number]["when"];
 
 export interface CreateWorkbenchExtensionMetadataInput {
@@ -83,38 +88,6 @@ const normalizeWhen = (when: WhenExpression | undefined, extensionId: string): M
   } as MetadataWhen;
 };
 
-const normalizeTarget = (target: NavigationTarget, extensionId: string): MetadataNavigationTarget => {
-  if (target.kind === "view") return { ...target, view: normalizedRef(target.view, extensionId) };
-  if (target.kind === "page") {
-    return {
-      ...target,
-      page: normalizedRef(target.page, extensionId),
-      parent: target.parent ? (normalizeTarget(target.parent, extensionId) as typeof target.parent) : undefined,
-    } as MetadataNavigationTarget;
-  }
-  if (target.kind === "panel") {
-    return {
-      ...target,
-      panel:
-        target.panel.kind === "page-slot"
-          ? { ...target.panel, page: normalizedRef(target.panel.page, extensionId) }
-          : normalizedRef(target.panel, extensionId),
-    } as MetadataNavigationTarget;
-  }
-  if (target.kind === "command") {
-    return { ...target, target: { ...target.target, command: commandRef(target.target.command, extensionId) } };
-  }
-  if (target.kind === "compound") {
-    return {
-      ...target,
-      targets: target.targets.map(
-        (item) => normalizeTarget(item, extensionId) as Exclude<MetadataNavigationTarget, { kind: "compound" }>,
-      ),
-    };
-  }
-  return target;
-};
-
 export const toKeybindingRecord = (binding: ExtensionRuntime["keybindings"][number]): ExtensionKeybindingRecord => {
   const overrides: ExtensionKeybindingRecord["platformOverrides"] = {};
   if (binding.contribution.mac) overrides.mac = binding.contribution.mac;
@@ -123,13 +96,12 @@ export const toKeybindingRecord = (binding: ExtensionRuntime["keybindings"][numb
   return {
     id: binding.id,
     extensionId: binding.extensionId,
-    commandId: binding.commandId,
+    action: normalizeTarget(binding.action, binding.extensionId) as ExtensionKeybindingRecord["action"],
     key: binding.contribution.key,
     canonicalChord: binding.canonicalChord,
     parsed: binding.parsed,
     platformOverrides: Object.keys(overrides).length > 0 ? overrides : undefined,
     when: serializeWhenExpression(binding.when, binding.extensionId) as ExtensionKeybindingRecord["when"],
-    args: binding.contribution.params as Record<string, unknown> | undefined,
   };
 };
 
@@ -180,27 +152,9 @@ export const createWorkbenchExtensionMetadata = (
     label: mode.contribution.label,
     icon: mode.contribution.icon,
     regions: [...mode.contribution.regions],
+    regionSettings: mode.contribution.regionSettings,
   })),
-  pages: input.runtime.pages.map((page) => ({
-    id: page.id,
-    localId: page.localId,
-    extensionId: page.extensionId,
-    title: page.contribution.title,
-    icon: page.contribution.icon,
-    path: page.contribution.path,
-    mode: normalizedRef(page.contribution.mode, page.extensionId),
-    parent: page.contribution.parent ? normalizedRef(page.contribution.parent, page.extensionId) : undefined,
-    slots: page.contribution.slots.map((slot) => ({
-      ...slot,
-      view: slot.view ? normalizedRef(slot.view, page.extensionId) : undefined,
-      binding: slot.binding
-        ? {
-            kind: normalizedRef(slot.binding.kind, page.extensionId),
-            view: normalizedRef(slot.binding.view, page.extensionId),
-          }
-        : undefined,
-    })),
-  })),
+  pages: toPageRecords(input.runtime),
   views: compact(input.runtime.views.map((view) => toViewRecord(input, view))),
   viewMenus: input.runtime.viewMenus.map((menu) => ({
     id: menu.id,
@@ -213,39 +167,13 @@ export const createWorkbenchExtensionMetadata = (
     hostTreeHeader: menu.contribution.hostTreeHeader,
     hostTreeFooter: menu.contribution.hostTreeFooter,
   })),
-  placements: input.runtime.placements.map((placement) => ({
-    id: placement.id,
-    localId: placement.localId,
-    extensionId: placement.extensionId,
-    mode: normalizedRef(placement.contribution.mode, placement.extensionId),
-    item:
-      placement.contribution.item.kind === "view"
-        ? { kind: "view", view: normalizedRef(placement.contribution.item.view, placement.extensionId) }
-        : {
-            kind: "resource-slot",
-            slot: {
-              ...placement.contribution.item.slot,
-              resourceKind: normalizedRef(placement.contribution.item.slot.resourceKind, placement.extensionId),
-            },
-          },
-    region: placement.contribution.region,
-    order: placement.contribution.order,
-    defaultOpen: placement.contribution.defaultOpen,
-    required: placement.contribution.required,
-    movableTo: placement.contribution.movableTo ? [...placement.contribution.movableTo] : undefined,
-  })),
+  placements: toPlacementRecords(input.runtime),
   resourceKinds: input.runtime.resourceKinds.map((record) => ({
     id: record.id,
     localId: record.localId,
     extensionId: record.extensionId,
-    surface: record.contribution.surface,
     label: record.contribution.label,
     icon: record.contribution.icon,
-    slots: Object.entries(record.contribution.slots).map(([id, slot]) => ({
-      id,
-      cardinality: slot.cardinality,
-      access: slot.external ? ("public" as const) : ("owner" as const),
-    })),
     menuSlots: Object.entries(record.contribution.menuSlots ?? {}).map(([id, slot]) => ({
       id,
       placement: slot.placement,
@@ -254,25 +182,6 @@ export const createWorkbenchExtensionMetadata = (
       order: slot.order,
     })),
   })),
-  resourceViews: input.runtime.resourceViews.map((record) => {
-    const contribution = record.contribution as {
-      resourceKind: ContributionRef<"resource-kind">;
-      slot: { resourceKind: ContributionRef<"resource-kind">; id: string };
-      view: ContributionRef<"view">;
-      order?: number;
-    };
-    return {
-      id: record.id,
-      extensionId: record.extensionId,
-      resourceKind: normalizedRef(contribution.resourceKind, record.extensionId),
-      slot: {
-        ...contribution.slot,
-        resourceKind: normalizedRef(contribution.slot.resourceKind, record.extensionId),
-      },
-      view: normalizedRef(contribution.view, record.extensionId),
-      order: contribution.order,
-    };
-  }),
   resourceHierarchyProviders: input.runtime.resourceHierarchyProviders.map((record) => ({
     id: record.id,
     extensionId: record.extensionId,

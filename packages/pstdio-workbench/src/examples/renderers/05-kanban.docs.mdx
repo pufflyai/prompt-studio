@@ -1,0 +1,29 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as RendererStories from "./renderers.stories";
+
+<Meta of={RendererStories} name="5. Kanban" />
+
+# Kanban renderer
+
+`body.kind: "kanban"` renders rows as a board or list. Attributes define fields that users can group, sort, filter,
+and show on cards. A status attribute may point at a shared status provider, so the board and status settings use the
+same workflow.
+
+Use it for tickets, approval queues, publishing pipelines, leads, or other work that moves between named stages.
+
+<Canvas of={RendererStories.Kanban} sourceState="shown" />
+
+## How it works
+
+| Field | Meaning |
+| --- | --- |
+| `attributes` | Declares status, enum, text, date, number, or user fields. |
+| `query` | Returns rows for the current renderer settings and filters. |
+| `defaultSettings` | Selects board or list mode, grouping, ordering, and visible properties. |
+| `onAttributeChange` | Persists a card edit or a move between columns. |
+| `onReorder` | Persists ordering within a group. |
+| `createRow` | Connects the native create dialog to an extension command. |
+| `onRowActivate` | Returns the page or panel target for an opened card. |
+
+The renderer stores each user's view settings. The extension stores domain data. Do not copy board grouping or filter
+state into the extension unless it changes the query result.

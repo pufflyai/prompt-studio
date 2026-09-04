@@ -1,8 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createResourceRegistry, type ResourceHierarchyCycle } from "./resource-registry";
 
-const panelInstance = (id: string) => ({ instanceId: id, panelId: "test-panel", closable: false });
-
 describe("createResourceRegistry scoped candidates", () => {
   test("passes the active primary resource to providers so candidates can be scoped", () => {
     const workspaceA = { kind: "workspace", uri: "pstdio://workspace/a" };
@@ -23,21 +21,6 @@ describe("createResourceRegistry scoped candidates", () => {
 
     primary = { kind: "workspace", uri: "pstdio://workspace/b" };
     expect(resources.listResources("")).toEqual([]);
-  });
-});
-
-describe("createResourceRegistry surface routing", () => {
-  test("reports the anchor a resource routes to via its kind", () => {
-    const resources = createResourceRegistry();
-    resources.registerKind({ kind: "session", label: "Session", surface: "attached" });
-    resources.registerKind({ kind: "terminal", label: "Terminal", surface: "secondary" });
-    resources.registerKind({ kind: "workspace", label: "Workspace", surface: "primary" });
-    resources.registerKind({ kind: "note", label: "Note" });
-
-    expect(resources.getSurface({ kind: "session", uri: "pstdio://session/a" })).toBe("attached");
-    expect(resources.getSurface({ kind: "terminal", uri: "pstdio://terminal/a" })).toBe("secondary");
-    expect(resources.getSurface({ kind: "workspace", uri: "pstdio://workspace/a" })).toBe("primary");
-    expect(resources.getSurface({ kind: "note", uri: "pstdio://note/a" })).toBeUndefined();
   });
 });
 
@@ -185,80 +168,6 @@ describe("createResourceRegistry", () => {
       source: "module",
       ownerId: "pstdio.sessions",
     });
-  });
-
-  test("opens resources with the highest priority matching presenter", async () => {
-    const resources = createResourceRegistry();
-    const resource = { kind: "session", uri: "pstdio://session/s1", label: "Session 1" };
-
-    resources.registerKind({ kind: "session", label: "Session" });
-    resources.registerPresenter({
-      id: "fallback",
-      priority: 1,
-      canOpen: () => true,
-      open: () => panelInstance("fallback"),
-    });
-    resources.registerPresenter({
-      id: "session-chat",
-      priority: 50,
-      canOpen: ({ kind }) => kind === "session",
-      open: ({ uri }) => panelInstance(`opened:${uri}`),
-    });
-
-    await expect(resources.openResource(resource)).resolves.toEqual(panelInstance("opened:pstdio://session/s1"));
-  });
-
-  test("passes open options to the selected presenter", async () => {
-    const resources = createResourceRegistry();
-    const resource = { kind: "session", uri: "pstdio://session/s1", label: "Session 1" };
-
-    resources.registerKind({ kind: "session", label: "Session" });
-    resources.registerPresenter({
-      id: "session-chat",
-      canOpen: ({ kind }) => kind === "session",
-      open: (_resource, options) => panelInstance(String(options.replaceActive)),
-    });
-
-    await expect(resources.openResource(resource, { replaceActive: true })).resolves.toEqual(panelInstance("true"));
-  });
-
-  test("runs presenter completion after establishing the Location and before ending the open transaction", async () => {
-    const events: string[] = [];
-    const resources = createResourceRegistry({
-      establishLocation: (instance) => {
-        events.push(`establish:${instance.instanceId}`);
-        return { ...instance, title: "Established" };
-      },
-    });
-    const resource = { kind: "workspace", uri: "pstdio://workspace/a" };
-
-    resources.registerKind({ kind: "workspace", label: "Workspace" });
-    resources.registerPresenter({
-      id: "workspace",
-      canOpen: ({ kind }) => kind === "workspace",
-      open: () => {
-        events.push(`open:${resources.isOpeningResource()}`);
-        return panelInstance("workspace");
-      },
-      afterOpen: (_resource, instance) => {
-        events.push(`after:${instance.title}:${resources.isOpeningResource()}`);
-      },
-    });
-    resources.onDidOpenResource(() => events.push(`listener:${resources.isOpeningResource()}`));
-
-    await resources.openResource(resource);
-
-    expect(events).toEqual(["open:true", "establish:workspace", "after:Established:true", "listener:false"]);
-  });
-
-  test("fails clearly when no presenter can handle a known resource", async () => {
-    const resources = createResourceRegistry();
-
-    resources.registerKind({ kind: "template", label: "Template" });
-
-    await expect(resources.openResource({ kind: "template", uri: "pstdio://template/t1" })).rejects.toThrow(
-      "No presenter registered for resource kind: template",
-    );
   });
 
   test("aggregates browse entries from registered providers", () => {

@@ -12,12 +12,15 @@ const createResourceEntry = (input: {
   workbench: WorkbenchCore;
   entry: ResourceBrowseEntry;
   onClose: () => void;
-}): WorkbenchResourcePaletteEntry => {
+}): WorkbenchResourcePaletteEntry | undefined => {
   const { entry, onClose, workbench } = input;
   const { resource } = entry;
   const label = entry.resource.label ?? entry.resource.uri;
   const kind = workbench.resources.getKind(resource.kind);
   const icon = resource.icon ?? kind?.icon;
+
+  const activate = entry.activate;
+  if (!activate) return undefined;
 
   return {
     id: `workbench-resource:${resource.uri}`,
@@ -30,9 +33,7 @@ const createResourceEntry = (input: {
     icon: icon ? <WorkbenchIcon name={icon} /> : undefined,
     onActivate: () => {
       onClose();
-      void Promise.resolve(
-        entry.activate ? entry.activate(resource) : workbench.resources.openResource(resource, kind?.paletteOpenInput),
-      ).catch(() => undefined);
+      void Promise.resolve(activate(resource)).catch(() => undefined);
     },
   };
 };
@@ -43,5 +44,8 @@ export const createWorkbenchResourcePaletteEntries = (input: {
   onClose: () => void;
 }) => {
   const { onClose, query, workbench } = input;
-  return workbench.resources.listResources(query).map((entry) => createResourceEntry({ workbench, entry, onClose }));
+  return workbench.resources
+    .listResources(query)
+    .map((entry) => createResourceEntry({ workbench, entry, onClose }))
+    .filter((entry): entry is WorkbenchResourcePaletteEntry => entry !== undefined);
 };

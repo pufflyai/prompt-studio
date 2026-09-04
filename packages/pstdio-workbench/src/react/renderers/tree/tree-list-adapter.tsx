@@ -1,9 +1,11 @@
 import { Box } from "@chakra-ui/react";
+import type { PageRef } from "@pstdio/sdk/extensions";
 import { PaletteShortcut, Tooltip, type TreeListNode, type TreeListSection } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
 import type { ReactNode } from "react";
 import {
   getWorkbenchSelectionResourceUris,
+  type NavigationTarget,
   type ResourceRef,
   resourceContextMenuPath,
   type TreeNode,
@@ -29,6 +31,7 @@ interface ResolveTreeListSelectionInput {
   sections: TreeViewSection[];
   childrenByNodeId: Record<string, TreeNode[]>;
   activeNodeId?: string | null;
+  activePage?: PageRef;
   activeResource?: ResourceRef;
   selectedNodeId?: string;
 }
@@ -41,7 +44,6 @@ const activeNodeIds = (ids: string[]) => {
 
 const resolveTreeNodeResourceUri = (node: TreeNode) => {
   if (node.resource) return node.resource.uri;
-  if (node.target?.kind === "resource") return node.target.resource.uri;
   return undefined;
 };
 
@@ -74,8 +76,40 @@ const resolveActiveResourceNodeIds = (
 const findSectionNode = (sections: TreeViewSection[], nodeId: string, childrenByNodeId: Record<string, TreeNode[]>) =>
   listSectionNodes(sections, childrenByNodeId).find((node) => node.id === nodeId);
 
+export const filterTreeListSelection = (
+  sections: TreeViewSection[],
+  childrenByNodeId: Record<string, TreeNode[]>,
+  selection: string | string[] | undefined,
+) => {
+  const selectedIds = typeof selection === "string" ? [selection] : (selection ?? []);
+  return activeNodeIds(selectedIds.filter((nodeId) => findSectionNode(sections, nodeId, childrenByNodeId)));
+};
+
+const pageRefsEqual = (left: PageRef, right: PageRef) => left.id === right.id && left.extensionId === right.extensionId;
+
+const targetMatchesPage = (target: NavigationTarget | undefined, activePage: PageRef) => {
+  if (!target) return false;
+  const targets = target.kind === "compound" ? target.targets : [target];
+  return targets.some(
+    (candidate) => candidate.kind === "page" && !candidate.resource && pageRefsEqual(candidate.page, activePage),
+  );
+};
+
+const resolveActivePageNodeIds = (
+  sections: TreeViewSection[],
+  childrenByNodeId: Record<string, TreeNode[]>,
+  activePage: PageRef | undefined,
+) => {
+  if (!activePage) return undefined;
+  return activeNodeIds(
+    listSectionNodes(sections, childrenByNodeId)
+      .filter((node) => targetMatchesPage(node.target, activePage))
+      .map((node) => node.id),
+  );
+};
+
 export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) => {
-  const { sections, childrenByNodeId, activeNodeId, activeResource, selectedNodeId } = input;
+  const { sections, childrenByNodeId, activeNodeId, activePage, activeResource, selectedNodeId } = input;
   if (activeNodeId) return activeNodeId;
 
   const activeResourceUris = getWorkbenchSelectionResourceUris(activeResource);
@@ -88,6 +122,8 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
 
   const activeResourceNodeId = resolveActiveResourceNodeIds(sections, childrenByNodeId, activeResourceUris);
   if (activeResourceNodeId) return activeResourceNodeId;
+  const activePageNodeId = resolveActivePageNodeIds(sections, childrenByNodeId, activePage);
+  if (activePageNodeId) return activePageNodeId;
   if (!selectedNodeId) return undefined;
   if (activeResourceUris.length > 0 && selectedResourceUri) return undefined;
   return selectedNodeId;
@@ -153,7 +189,6 @@ const resolveTreeNodeNavigationIntent = (node: TreeNode) => {
 
 const resolveTreeNodeResource = (node: TreeNode): ResourceRef | undefined => {
   if (node.resource) return node.resource;
-  if (node.target?.kind === "resource") return node.target.resource;
   return undefined;
 };
 
@@ -223,7 +258,7 @@ const toTreeListNode = (
   });
   const menuItems = node.menuPath && contextMenuItems.length > 0 ? contextMenuItems : undefined;
   const shortcuts = new Map(
-    context.workbench.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]),
+    context.workbench.keybindings.listCommandKeybindings().map((k) => [k.commandId, k.keybinding]),
   );
   const binding = node.commandId ? shortcuts.get(node.commandId) : undefined;
 

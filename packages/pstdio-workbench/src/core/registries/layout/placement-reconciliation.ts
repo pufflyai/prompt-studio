@@ -1,9 +1,9 @@
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
-import { type DockedCompositionRegion, dockedCompositionRegions } from "./composition-resolver-types";
+import { type WorkbenchRegion, workbenchRegions } from "./layout-types";
 
 export interface ResolvedOwnedPlacement<Value = unknown> {
   identity: PlacementIdentity;
-  region: DockedCompositionRegion;
+  region: WorkbenchRegion;
   order: number;
   value: Value;
 }
@@ -18,8 +18,8 @@ export interface ComposeOwnedPlacementsInput<Value> {
 export interface ComposedOwnedPlacements<Value> {
   placements: readonly ResolvedOwnedPlacement<Value>[];
   closed: readonly ResolvedOwnedPlacement<Value>[];
-  regions: Record<DockedCompositionRegion, readonly ResolvedOwnedPlacement<Value>[]>;
-  visibleRegions: ReadonlySet<DockedCompositionRegion>;
+  regions: Record<WorkbenchRegion, readonly ResolvedOwnedPlacement<Value>[]>;
+  visibleRegions: ReadonlySet<WorkbenchRegion>;
 }
 
 export interface OwnedPlacementUpdate<Value> {
@@ -105,12 +105,14 @@ const collectPlacements = <Value>(input: ComposeOwnedPlacementsInput<Value>) => 
   return placements;
 };
 
-const emptyRegions = <Value>(): Record<DockedCompositionRegion, ResolvedOwnedPlacement<Value>[]> => ({
-  sidenav: [],
-  main: [],
-  secondary: [],
-  side: [],
-});
+const emptyRegions = <Value>() =>
+  workbenchRegions.reduce(
+    (regions, region) => {
+      regions[region] = [];
+      return regions;
+    },
+    {} as Record<WorkbenchRegion, ResolvedOwnedPlacement<Value>[]>,
+  );
 
 export const composeOwnedPlacements = <Value>(
   input: ComposeOwnedPlacementsInput<Value>,
@@ -128,10 +130,10 @@ export const composeOwnedPlacements = <Value>(
     regions[placement.region].push(placement);
   }
 
-  for (const region of dockedCompositionRegions) regions[region].sort(compareRegionPlacement);
+  for (const region of workbenchRegions) regions[region].sort(compareRegionPlacement);
   closed.sort(comparePlacementIdentity);
-  const placements = dockedCompositionRegions.flatMap((region) => regions[region]);
-  const visibleRegions = new Set(dockedCompositionRegions.filter((region) => regions[region].length > 0));
+  const placements = workbenchRegions.flatMap((region) => regions[region]);
+  const visibleRegions = new Set(workbenchRegions.filter((region) => regions[region].length > 0));
   return { placements, closed, regions, visibleRegions };
 };
 

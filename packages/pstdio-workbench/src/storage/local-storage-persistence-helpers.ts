@@ -7,7 +7,6 @@ export interface WorkbenchStorageLike {
 }
 
 export type WorkbenchStoragePersistenceKind =
-  | "history"
   | "layout"
   | "layout-compatibility"
   | "layout-generation"
@@ -16,8 +15,7 @@ export type WorkbenchStoragePersistenceKind =
   | "panels"
   | "page-location"
   | "side-panel"
-  | "tree"
-  | "last-resource";
+  | "tree";
 
 export interface CreateWorkbenchStoragePersistenceInput {
   debounceMs?: number;

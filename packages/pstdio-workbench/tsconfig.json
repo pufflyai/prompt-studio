@@ -4,7 +4,9 @@
     "types": ["bun", "node"],
     "rootDir": "src",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@pstdio/workbench": ["./src/index.ts"],
+      "@pstdio/workbench/react": ["./src/react/index.ts"]
     }
   },
   "include": ["src"]

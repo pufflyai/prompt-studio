@@ -108,8 +108,8 @@ describe("loadExtensionRuntime", () => {
       export default {
         views: [content, tickets],
         placements: [
-          { id: "content", ref: { kind: "placement", id: "content" }, mode: projectMode, item: { kind: "view", view: content.ref }, region: "main" },
-          { id: "tickets", ref: { kind: "placement", id: "tickets" }, mode: projectMode, item: { kind: "view", view: tickets.ref }, region: "main", movableTo: ["main", "side"] },
+          { id: "content", ref: { kind: "placement", id: "content" }, mode: projectMode, item: { kind: "view", view: content.ref, presence: "open" }, region: "main" },
+          { id: "tickets", ref: { kind: "placement", id: "tickets" }, mode: projectMode, item: { kind: "view", view: tickets.ref, presence: "open" }, region: "main", movableTo: ["main", "side"] },
         ],
       };`,
     );

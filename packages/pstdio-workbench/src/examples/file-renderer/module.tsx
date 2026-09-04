@@ -58,36 +58,31 @@ const renderers = [
 export const createFileRendererStoryModule = (): WorkbenchModuleContribution => ({
   id: "file-renderer.story",
   activate(ctx) {
-    ctx.renderers.registerRenderer({
+    ctx.views.registerView({
       id: PANEL_PLACEHOLDER_RENDERER_ID,
-      render: () => null,
-    });
-    ctx.layout.registerPlaceholder({
-      id: PANEL_PLACEHOLDER_ID,
       title: "Documents",
+      body: { kind: "react", render: () => null },
+    });
+    ctx.placeholders.registerPlaceholder({
+      id: PANEL_PLACEHOLDER_ID,
+      viewId: PANEL_PLACEHOLDER_RENDERER_ID,
       region: "main",
-      rendererId: PANEL_PLACEHOLDER_RENDERER_ID,
     });
 
     for (const renderer of renderers) {
-      ctx.renderers.registerFileRenderer({
-        id: renderer.rendererId,
-        title: renderer.title,
-        load: renderer.load,
-        save: "save" in renderer ? renderer.save : undefined,
-      });
-      ctx.layout.registerPanel({
+      ctx.views.registerView({
         id: renderer.panelId,
         title: renderer.title,
-        region: "main",
-        rendererId: renderer.rendererId,
-        singleton: true,
-        eligibleLocations: {},
+        body: {
+          kind: "file",
+          load: renderer.load,
+          save: "save" in renderer ? renderer.save : undefined,
+        },
       });
-      ctx.layout.openPanel(renderer.panelId, {
-        title: renderer.title,
-        closable: true,
-        strategy: { kind: "persistent" },
+      ctx.shellPlacements.registerPlacement({
+        id: renderer.panelId,
+        item: { kind: "view", viewId: renderer.panelId, presence: "open" },
+        region: "main",
       });
     }
   },
@@ -96,24 +91,22 @@ export const createFileRendererStoryModule = (): WorkbenchModuleContribution => 
 export const createFileRendererErrorStoryModule = (): WorkbenchModuleContribution => ({
   id: "file-renderer.error-story",
   activate(ctx) {
-    const rendererId = "file-renderer.story.load-error";
     const panelId = "file-renderer.story.load-error.widget";
-    ctx.renderers.registerFileRenderer({
-      id: rendererId,
-      title: "unavailable.md",
-      load: async () => {
-        throw new Error("The document could not be loaded.");
-      },
-      save: () => {},
-    });
-    ctx.layout.registerPanel({
+    ctx.views.registerView({
       id: panelId,
       title: "unavailable.md",
-      region: "main",
-      rendererId,
-      singleton: true,
-      eligibleLocations: {},
+      body: {
+        kind: "file",
+        load: async () => {
+          throw new Error("The document could not be loaded.");
+        },
+        save: () => {},
+      },
     });
-    ctx.layout.openPanel(panelId, { strategy: { kind: "persistent" } });
+    ctx.shellPlacements.registerPlacement({
+      id: panelId,
+      item: { kind: "view", viewId: panelId, presence: "open" },
+      region: "main",
+    });
   },
 });

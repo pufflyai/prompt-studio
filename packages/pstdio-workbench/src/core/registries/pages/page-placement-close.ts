@@ -21,9 +21,8 @@ export const resolvePagePlacementClose = <Value>(input: {
   if (slot.role === "primary" && identity.instanceKey === "default") {
     throw new Error(`Static primary placement is not closable: ${page.id}.${slot.id}`);
   }
-  if (!slot.closable) throw new Error(`Page placement is not closable: ${page.id}.${slot.id}`);
 
-  const pageState = state.pageStates[page.id] ?? emptyPageState(page, input.resourceKey);
+  const pageState = state.pageStates[page.id] ?? emptyPageState(page);
   const closedActivePrimary = slot.role === "primary" && pageState.activePrimaryInstanceKey === identity.instanceKey;
   const result = closePageSlot({ page, slot, state: pageState, instanceKey: identity.instanceKey });
   const pageStates = { ...state.pageStates, [page.id]: result.state };

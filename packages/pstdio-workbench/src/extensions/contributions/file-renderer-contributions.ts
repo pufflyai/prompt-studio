@@ -10,23 +10,13 @@ import type {
 } from "../../core";
 import { unwrapCommandValue } from "../host/command-response";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
-import {
-  panelMenuDeclarationOffsets,
-  panelRendererId,
-  registerWorkbenchExtensionPanel,
-  resolveWorkbenchExtensionViewInput,
-  toWorkbenchCompositionPanelContribution,
-  type WorkbenchExtensionViewInputResolver,
-} from "./panel-contributions";
 
 type FileRendererRecord = NonNullable<WorkbenchExtensionMetadata["fileRenderers"]>[number];
-type ViewRecord = WorkbenchExtensionMetadata["panels"][number];
 
 export interface RegisterWorkbenchExtensionFileRenderersInput {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
   metadata: WorkbenchExtensionMetadata;
   projectId: string;
-  resolveViewInput?: WorkbenchExtensionViewInputResolver;
   workbench: WorkbenchModuleContext;
 }
 
@@ -119,55 +109,36 @@ export const fileRendererRefreshEnvelopeFromCommand = (
 };
 
 const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInput, record: FileRendererRecord) =>
-  input.workbench.renderers.registerFileRenderer({
+  input.workbench.views.registerView({
     id: record.id,
     title: text(record.title, record.id),
-    resourceKind: record.resourceKind,
-    load: async (resource) => {
-      const result = await executeFileCommand(input, record.id, record.loadHandlerId, resource);
-      return (result ?? {}) as FileRendererContent;
+    icon: record.icon,
+    body: {
+      kind: "file",
+      resourceKind: record.resourceKind,
+      load: async (resource) => {
+        const result = await executeFileCommand(input, record.id, record.loadHandlerId, resource);
+        return (result ?? {}) as FileRendererContent;
+      },
+      save: record.saveHandlerId
+        ? async (resource, content, origin) => {
+            const result = await executeFileCommand(
+              input,
+              record.id,
+              record.saveHandlerId as string,
+              resource,
+              { content },
+              {
+                ...(origin ? { fileRendererOrigin: origin } : {}),
+                ...(resource?.uri ? { fileRendererResourceUri: resource.uri } : {}),
+              },
+            );
+            const revision = revisionFromValue(result);
+            return revision ? { revision } : undefined;
+          }
+        : undefined,
     },
-    save: record.saveHandlerId
-      ? async (resource, content, origin) => {
-          const result = await executeFileCommand(
-            input,
-            record.id,
-            record.saveHandlerId as string,
-            resource,
-            { content },
-            {
-              ...(origin ? { fileRendererOrigin: origin } : {}),
-              ...(resource?.uri ? { fileRendererResourceUri: resource.uri } : {}),
-            },
-          );
-          const revision = revisionFromValue(result);
-          return revision ? { revision } : undefined;
-        }
-      : undefined,
   });
-
-const registerFileViewWidget = (
-  input: RegisterWorkbenchExtensionFileRenderersInput,
-  panel: ViewRecord,
-  index: number,
-  menuDeclarationOffset: number,
-) => {
-  const rendererId = panelRendererId(panel, "file");
-  if (!rendererId) return undefined;
-  return registerWorkbenchExtensionPanel({
-    workbench: input.workbench,
-    path: panel.path,
-    aliases: panel.aliases,
-    resolveInput: resolveWorkbenchExtensionViewInput(input.resolveViewInput, panel),
-    contribution: toWorkbenchCompositionPanelContribution({
-      panel,
-      rendererId,
-      declarationIndex: index,
-      menuDeclarationOffset: menuDeclarationOffset,
-      resourcePanels: input.metadata.resourcePanels,
-    }),
-  });
-};
 
 export const registerWorkbenchExtensionFileRenderers = (input: RegisterWorkbenchExtensionFileRenderersInput) => {
   const disposables: Disposable[] = [];
@@ -175,12 +146,6 @@ export const registerWorkbenchExtensionFileRenderers = (input: RegisterWorkbench
   for (const record of input.metadata.fileRenderers ?? []) {
     disposables.push(registerFileRenderer(input, record));
   }
-
-  const menuOffsets = panelMenuDeclarationOffsets(input.metadata.panels);
-  input.metadata.panels.forEach((panel, index) => {
-    const disposable = registerFileViewWidget(input, panel, index, menuOffsets[index]!);
-    if (disposable) disposables.push(disposable);
-  });
 
   return {
     dispose() {

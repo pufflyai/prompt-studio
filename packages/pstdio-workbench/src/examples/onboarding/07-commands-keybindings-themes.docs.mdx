@@ -1,35 +1,59 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import source from "../page-composition/module.tsx?raw";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="8. Page composition" />
 
-<Meta of={OnboardingStories} name="7. Commands, keybindings, and themes" parameters={{ layout: "padded" }} />
+# 8. Declare the whole page composition
 
-# 7. Add Keyboard Shortcuts And Themes
+A page declares every placement it owns through slots. This story renders two workbenches so both compositions remain
+visible. It does not demonstrate navigation. Story 8 does that.
 
-Two extras that come up on most workbenches:
+The first workbench shows Session details in Main, changed files in the Sidenav, and a session inspector in the
+full-height Side panel. The second shows Extension Lab in Main, contributions in the Sidenav, and validation output in
+the bottom Secondary panel.
 
-**Keybindings** bind a key chord to a command id. Same command pattern as
-story 3 — once a command is registered, attach a keybinding with
-`keybindings.registerKeybinding({ commandId, keybinding: "mod+k" })`. The
-workbench dispatches it when the chord fires, no extra handler needed.
+<Canvas of={OnboardingStories.PageComposition} sourceState="none" />
 
-Prefer `Mod+...` chords so the same shortcut maps to `Cmd` on macOS and
-`Ctrl` on Windows/Linux. Avoid combinations browsers and OSes already claim
-(`Mod+T`, `Mod+Shift+P`, `Mod+R`, `F5`, `F12`); the extension runtime emits
-a `reserved_keybinding_chord` warning for contributions that hit a reserved
-chord on any platform.
+## Complete example
 
-**Themes** come from the workbench-owned `WorkbenchThemeProvider`, which composes
-the shared `@pstdio/ui` theme preference system. Use the built-in
-`workbench.action.changeTheme` command to open the same theme picker as the
-dashboard. Extension color themes can provide VS Code-compatible color tokens
-for the workbench chrome, while contributed views should use Chakra/UI tokens.
+<Source code={source} language="tsx" />
 
-<Canvas of={OnboardingStories.CommandsKeybindingsThemes} sourceState="shown" />
+## What each field means
 
-The button rows fire the commands directly so you can see they work. Use the
-keybinding shown on each button to confirm the chord dispatches the same
-command. The theme-picker button opens the palette in theme mode.
+The outer setup prepares the workbench:
+
+- `createWorkbench({ startPage })` creates the service container and names the page to open first.
+- `workbench.modes.registerMode(...)` declares each mode. `id` is the mode identity and `activate` runs when the mode
+  becomes active. This example needs no activation work.
+- `workbench.pageLocations.switchProject(...)` selects the active project and opens that workbench's start page.
+
+`registerPage(...)` defines three Views for each page:
+
+- the Main View renders the concrete page content.
+- the Sidenav View renders page-specific context.
+- the auxiliary View renders in the region chosen by that page. Session uses `side`; Extension Lab uses `secondary`.
+- each View `id` is stable. Its matching page slot refers to it.
+- `title` is the default user-facing label.
+- `body.kind: "react"` allows trusted host code to return React.
+- `render` receives the render input. `input.workbench` exposes the core services.
+
+`workbench.pages.registerPage(...)` declares each page and its composition:
+
+- `id` is the stable identity of this page registration.
+- `ref` is the public page reference `{ extensionId, kind: "page", id }`. Navigation targets address the page through
+  this value.
+- `title` is the user-facing page name.
+- `path` is the URL path segment for the page location.
+- `modeId` names the mode that owns the page. Opening a page from another mode switches the mode in the same
+  navigation step.
+- `slots` declares all three placements the page owns. `content` is the primary Main slot and cannot close while the
+  page is active. `context` is a fixed auxiliary Sidenav slot. The third slot reads its region from
+  `page.auxiliary.region`, so one page opens a Side panel and the other opens a Secondary panel.
+
+`PageCompositionExample` creates two workbenches with different start pages. It renders both at once so the region
+layouts can be compared without changing state. `showNavigation: false` removes the replacement controls from this
+story.
+
+Do not open page-owned panels from an activation callback. The page registry is the source of truth, so the runtime can
+add and remove the complete page contribution as one unit.

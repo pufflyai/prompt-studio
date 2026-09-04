@@ -15,6 +15,7 @@ import type { ResourceRef } from "../../registries/resources/resource-registry";
 
 export interface WorkbenchCompositionAddablePanel extends WorkbenchModeAddablePanel {
   contribution: RegisteredWidgetContribution;
+  open?(resource?: ResourceRef): void;
 }
 
 export interface WorkbenchCompositionRegionPanels {
@@ -32,6 +33,12 @@ interface CreateWorkbenchCompositionControllerInput {
   getLayout(): WorkbenchLayout;
   getResource(): ResourceRef | undefined;
   listWidgets(): RegisteredWidgetContribution[];
+  listOwnedAddablePanels?(input: {
+    layout: WorkbenchLayout;
+    mode: WorkbenchModeContribution | undefined;
+    region: WorkbenchPanelRegion;
+    resource: ResourceRef | undefined;
+  }): readonly WorkbenchCompositionAddablePanel[];
 }
 
 const isOpenSingleton = (
@@ -102,6 +109,9 @@ export const createWorkbenchCompositionController = (
     const widgets = input.listWidgets();
     const addable = new Map<string, WorkbenchCompositionAddablePanel>();
 
+    for (const panel of input.listOwnedAddablePanels?.({ layout, mode, region, resource }) ?? []) {
+      addable.set(panel.panelId, panel);
+    }
     addModePanels({ addable, layout, mode, placements, region, resource, widgets });
     addRegisteredPanels({ addable, location, modeId: mode?.id, placements, region, resource, widgets });
 

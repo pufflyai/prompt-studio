@@ -2,7 +2,7 @@ import { describe, expect, mock, test } from "bun:test";
 import { Box } from "@chakra-ui/react";
 import { PaletteShortcut } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
-import { createWorkbenchCore, type ResourceRef, resourceContextMenuPath } from "../../../core";
+import { createWorkbench, type ResourceRef, resourceContextMenuPath } from "../../../core";
 import { resolveTreeListSelection, toTreeListSection } from "./tree-list-adapter";
 
 describe("resolveTreeListSelection", () => {
@@ -17,8 +17,8 @@ describe("resolveTreeListSelection", () => {
             label: "guide.md",
             resource,
             children: [
-              { id: "intro", label: "Intro", target: { kind: "resource" as const, resource } },
-              { id: "details", label: "Details", target: { kind: "resource" as const, resource } },
+              { id: "intro", label: "Intro", resource },
+              { id: "details", label: "Details", resource },
             ],
           },
         ],
@@ -51,10 +51,10 @@ describe("resolveTreeListSelection", () => {
 
 describe("toTreeListSection", () => {
   test("maps navigation targets and resources onto navigable tree rows", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const ticketsResource = {
       kind: "dashboard-view",
-      uri: "dashboard-workbench://dashboard-view/tickets",
+      uri: "pstdio://extension-resource/dashboard-view/tickets",
       id: "tickets",
       label: "Tickets",
     } satisfies ResourceRef;
@@ -90,7 +90,7 @@ describe("toTreeListSection", () => {
   });
 
   test("adds resource context menu items to resource target tree rows", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const requestParams = mock();
     const execute = mock();
     const workspace = {
@@ -123,7 +123,7 @@ describe("toTreeListSection", () => {
           {
             id: "workspace-ws-1",
             label: "WS-1",
-            target: { kind: "resource", resource: workspace },
+            resource: workspace,
           },
         ],
       },
@@ -151,7 +151,7 @@ describe("toTreeListSection", () => {
   });
 
   test("uses the same action set for row overflow and right-click menus", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const workspace = {
       kind: "workspace",
       uri: "pstdio://extension-resource/workspace/ws-1",
@@ -177,7 +177,7 @@ describe("toTreeListSection", () => {
             label: "WS-1",
             menuPath: resourceContextMenuPath("workspace"),
             contextMenuActions: [{ id: "review", label: "Run review", icon: "Search" }],
-            target: { kind: "resource", resource: workspace },
+            resource: workspace,
           },
         ],
       },
@@ -194,7 +194,7 @@ describe("toTreeListSection", () => {
   });
 
   test("renders workspace diff metadata as trailing content", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const workspace = {
       kind: "workspace",
       uri: "pstdio://extension-resource/workspace/ws-1",
@@ -206,7 +206,7 @@ describe("toTreeListSection", () => {
     const section = toTreeListSection(
       {
         id: "primary",
-        nodes: [{ id: "workspace-ws-1", label: "WS-1", target: { kind: "resource", resource: workspace } }],
+        nodes: [{ id: "workspace-ws-1", label: "WS-1", resource: workspace }],
       },
       {},
       { workbench },
@@ -216,7 +216,7 @@ describe("toTreeListSection", () => {
   });
 
   test("maps section empty states to disabled empty-state rows", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     const section = toTreeListSection(
       {
@@ -244,9 +244,12 @@ describe("toTreeListSection", () => {
 
 describe("toTreeListSection end content", () => {
   test("renders active command keybindings as trailing content", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.commands.registerCommand({ id: "project.search", label: "Search project" }, { execute: () => undefined });
-    workbench.keybindings.registerKeybinding({ commandId: "project.search", keybinding: "mod+shift+f" });
+    workbench.keybindings.registerKeybinding({
+      action: { kind: "command", commandId: "project.search" },
+      keybinding: "mod+shift+f",
+    });
 
     const section = toTreeListSection(
       {
@@ -267,7 +270,7 @@ describe("toTreeListSection end content", () => {
   });
 
   test("does not render a chevron for menu-backed tree rows", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.commands.registerCommand({ id: "help.open", label: "Open help" }, { execute: () => undefined });
     workbench.layout.registerMenuItem(resourceContextMenuPath("workspace"), { commandId: "help.open" });
 
@@ -285,7 +288,7 @@ describe("toTreeListSection end content", () => {
   });
 
   test("preserves explicit and diff end content on menu-backed tree rows", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const explicitEndContent = <Box data-testid="custom-end-content" />;
     const workspace = {
       kind: "workspace",
@@ -312,7 +315,7 @@ describe("toTreeListSection end content", () => {
             id: "workspace-ws-1",
             label: "WS-1",
             menuPath: resourceContextMenuPath("workspace"),
-            target: { kind: "resource", resource: workspace },
+            resource: workspace,
           },
         ],
       },
@@ -328,10 +331,13 @@ describe("toTreeListSection end content", () => {
   });
 
   test("prefers explicit end content over command keybindings", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const explicitEndContent = <Box data-testid="custom-end-content" />;
     workbench.commands.registerCommand({ id: "project.search", label: "Search project" }, { execute: () => undefined });
-    workbench.keybindings.registerKeybinding({ commandId: "project.search", keybinding: "mod+shift+f" });
+    workbench.keybindings.registerKeybinding({
+      action: { kind: "command", commandId: "project.search" },
+      keybinding: "mod+shift+f",
+    });
 
     const section = toTreeListSection(
       {

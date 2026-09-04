@@ -16,7 +16,7 @@ export interface SettingsOverlayProps {
 
 // The settings surface rendered inside the overlay dialog: a titled header bar,
 // then a full-height resizable nav on the left and the dispatching panel on the
-// right. Nav clicks route through openResource, which re-opens this singleton
+// right. Nav clicks execute the settings command, which re-opens this singleton
 // overlay with the new resource — selection stays resource-driven and the dialog
 // never closes mid-navigation.
 export const SettingsOverlay = (props: SettingsOverlayProps) => {

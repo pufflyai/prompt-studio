@@ -2,25 +2,21 @@ import type { ContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import type {
   WidgetContribution,
-  WorkbenchLocationContribution,
   WorkbenchPanelContribution,
   WorkbenchPanelMenuContribution,
   WorkbenchPanelMenuDefinition,
   WorkbenchPanelRegion,
-  WorkbenchSubPanelContribution,
 } from "./layout-types";
 import { workbenchPanelMenuRegions, workbenchPanelRegions } from "./layout-types";
 
-type LegacyWorkbenchPanelContribution = WorkbenchLocationContribution | WorkbenchSubPanelContribution;
-type RegisteredPanelInput = LegacyWorkbenchPanelContribution | WorkbenchPanelContribution;
-type WorkbenchPanelKind = "panel" | "location" | "sub-panel";
+type RegisteredPanelInput = WorkbenchPanelContribution;
+type WorkbenchPanelKind = "panel" | "sub-panel";
 
 interface RegisterPanelContributionInput {
   metadata?: ContributionMetadata;
   panel: RegisteredPanelInput;
   registerWidget(widget: WidgetContribution, metadata?: ContributionMetadata): Disposable;
   kind: WorkbenchPanelKind;
-  closable?: boolean;
 }
 
 interface CreatePanelRegistrationsInput {
@@ -47,7 +43,7 @@ const panelMenuContribution = (
 };
 
 export const registerPanelContribution = (input: RegisterPanelContributionInput) => {
-  const { closable, kind, metadata, panel, registerWidget } = input;
+  const { kind, metadata, panel, registerWidget } = input;
   const { panelMenus = [], ...panelContribution } = panel;
   const registrations: Disposable[] = [];
 
@@ -58,7 +54,6 @@ export const registerPanelContribution = (input: RegisterPanelContributionInput)
   try {
     const registeredPanel: WidgetContribution & { ownedPanelMenuIds: readonly string[] } = {
       ...panelContribution,
-      ...(closable === undefined ? {} : { closable }),
       ownedPanelMenuIds: panelMenus.map((menu) => menu.id),
     };
     registrations.push(registerWidget(registeredPanel, metadata));
@@ -85,26 +80,8 @@ export const createPanelRegistrations = (input: CreatePanelRegistrationsInput) =
     });
   };
 
-  const registerLocation = (location: WorkbenchLocationContribution, metadata?: ContributionMetadata) =>
-    registerPanelContribution({
-      panel: location,
-      kind: "location",
-      closable: location.closable ?? false,
-      metadata,
-      registerWidget: input.registerWidget,
-    });
-
-  const registerSubPanel = (subPanel: WorkbenchSubPanelContribution, metadata?: ContributionMetadata) =>
-    registerPanelContribution({
-      panel: { ...subPanel, eligibleLocations: subPanel.eligibleLocations ?? {} },
-      kind: "sub-panel",
-      closable: subPanel.closable ?? true,
-      metadata,
-      registerWidget: input.registerWidget,
-    });
-
   const registerPanelMenu = (panelMenu: WorkbenchPanelMenuContribution, metadata?: ContributionMetadata) =>
     input.registerWidget({ ...panelMenu, panelMenuOwner: panelMenu.panelMenuOwner ?? { level: "panel" } }, metadata);
 
-  return { registerPanel, registerLocation, registerSubPanel, registerPanelMenu };
+  return { registerPanel, registerPanelMenu };
 };

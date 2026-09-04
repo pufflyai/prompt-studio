@@ -1,11 +1,5 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import {
-  isWorkbenchViewHierarchyNode,
-  type ResourceRef,
-  type WorkbenchCommandExecutionContext,
-  type WorkbenchModuleContext,
-} from "../../core";
-import { getActiveLocationPlacement } from "../../core/registries/layout/layout-operations";
+import type { ResourceRef, WorkbenchCommandExecutionContext, WorkbenchModuleContext } from "../../core";
 import { unwrapCommandValue } from "./command-response";
 
 export interface WorkbenchExtensionCommandContext {
@@ -76,24 +70,9 @@ const handleDeletedResource = async (
 ) => {
   if (!resource || deletedResourceId(value) !== (resource.id ?? resource.uri)) return;
 
-  context.workbench.navigator.forgetResource(resource.uri);
   if (context.workbench.getPrimaryResource()?.uri !== resource.uri) return;
-
-  const activePlacement = getActiveLocationPlacement(context.workbench.layout.getLayout());
-  if (activePlacement?.placementIdentity?.kind === "page") {
-    const result = context.workbench.pageLocations.navigateToParent();
-    if (!result.ok) throw new Error(result.diagnostic.message);
-    return;
-  }
-
-  const parent = context.workbench.resources.walkHierarchy(resource).at(-2);
-  if (!parent) return;
-
-  if (isWorkbenchViewHierarchyNode(parent)) {
-    await context.workbench.views.openView(parent.viewId, { strategy: { kind: "replace-active" } });
-    return;
-  }
-  await context.workbench.resources.openResource(parent, { replaceActive: true });
+  const result = context.workbench.pageLocations.navigateToParent();
+  if (!result.ok) throw new Error(result.diagnostic.message);
 };
 
 export const executeWorkbenchExtensionCommand = async (

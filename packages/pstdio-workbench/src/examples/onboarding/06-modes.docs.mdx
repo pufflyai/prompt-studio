@@ -1,26 +1,68 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import source from "./core/mode-page.tsx?raw";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="7. Mode and page contributions" />
 
-<Meta of={OnboardingStories} name="6. Modes" parameters={{ layout: "padded" }} />
+# 7. Compose a mode with a page
 
-# 6. Switch Between Modes
+This is the Core API representation that the validated Extension API compiles into.
 
-A mode is a bundle of contributions that activate together. Use modes when
-parts of your app have completely different layouts — e.g. a Docs view with
-its own tree, and a Review view with a single widget.
+A mode contributes context that stays while related pages change. A page contributes content for one location. This
+example uses a release project, its tickets, and an active coding session so each owner has visible work to do.
 
-<Canvas of={OnboardingStories.Modes} sourceState="shown" />
+Try these transitions in the story:
 
-Each mode declares its available logical Panels. Its `activate(ctx)` callback
-registers widgets and renderers once, while `seed(ctx)` can open defaults the
-first time a layout scope is visited. Switching with `modes.setActiveMode(id)`
-restores that mode's prior Panel layout without rebuilding project chrome.
+1. Start on Project overview. The Sidenav contains **Northstar project** navigation and a release summary owned by the
+   page.
+2. Open Tickets. Northstar navigation stays, while the release summary becomes the ticket filter.
+3. Open the current session. Both project contributions disappear. **Session S-104** navigation and session context
+   replace them.
+4. Use Back and Forward. The workbench restores the complete mode and page composition for each location.
 
-Use the activity bar (left rail) to switch between Docs and Review. Notice
-that the project Sidenav remains stable while the Main Panel changes.
+<Canvas of={OnboardingStories.ModeContribution} sourceState="none" />
 
-If your app has just one screen, you don't need modes — modules are enough.
+## Complete example
+
+<Source code={source} language="tsx" />
+
+## What each field means
+
+The outer setup prepares the workbench:
+
+- `createWorkbench({ startPage })` creates the service container and names the page to open first.
+- `workbench.modes.registerMode(...)` declares each mode. `id` is the mode identity, `label` is its user-facing name,
+  and `activate` runs when the mode becomes active. This example needs no activation work.
+- `workbench.pageLocations.switchProject(...)` selects the active project. Navigation needs an active project before
+  it can commit a page location.
+
+`registerModeSidenav` contributes the mode-owned navigation:
+
+- the tree View uses `body.kind: "tree"`. `defaultExpandedSectionIds` lists the sections that start expanded.
+  `getBody` returns one section with an `id`, a `label`, and its `nodes`. Each node has an `id`, a `label`, and a
+  page `target`, the NavigationTarget `{ kind: "page", page }`. The project tree lists Overview and Tickets. The
+  session tree lists only the current session. `getChildren` returns an empty list because each tree is flat.
+- `workbench.modePlacements.registerPlacement(...)` places the tree. `id` is the registration identity. `ref` is the
+  public placement reference. `modeId` names the owning mode, so the placement appears only while that mode is active
+  and is removed when the mode changes. `item.kind: "view"` with `item.viewId` renders one static View.
+  `item.presence: "fixed"` keeps it open while the mode is active; the user cannot close it. `region: "sidenav"` and
+  `movableTo: ["sidenav"]` keep it in the Sidenav.
+
+`registerPage` contributes each page and the Views it renders:
+
+- the main View uses `body.kind: "react"`. Its `render` receives the render input, and `input.workbench` exposes the
+  core services. The buttons call `input.workbench.pageLocations.navigate({ kind: "page", page })` to open another
+  page and commit one canonical location.
+- the sidenav View is a second React View that renders the page-owned tools.
+- `workbench.pages.registerPage(...)` registers the page. `id` is the registration identity. `ref` is the public page
+  reference that navigation targets use. `title` is the page name. `path` is the URL path segment. `modeId` names the
+  owning mode, so opening the page also activates that mode.
+- `slots` declares the placements the page owns. The primary slot has `role: "primary"` in `region: "main"` with the
+  `viewId` of the page content. It is always present while the page is open. The auxiliary slot has
+  `role: "auxiliary"` in `region: "sidenav"` with its own `viewId` and `presence: "open"`. Presence uses the same
+  values as placements: `"open"` starts open and the user may close it, and a saved user choice wins on the next
+  visit.
+
+Mode placements are removed when the mode changes. Page slots are removed when the page changes. In the additive
+Sidenav, mode placements appear before page placements. User layout changes may reorder content inside one ownership
+layer, but cannot move page content ahead of mode content.

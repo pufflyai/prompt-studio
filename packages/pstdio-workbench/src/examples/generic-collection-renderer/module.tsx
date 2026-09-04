@@ -116,22 +116,15 @@ export const createGenericCollectionRendererModule = (): WorkbenchModuleContribu
       },
       [configuredRecord, fallbackRecord],
     );
-
-    ctx.layout.registerPanel({
+    ctx.shellPlacements.registerPlacement({
       id: "recipes-configured-panel",
-      title: configuredRecord.title,
+      item: { kind: "view", viewId: configuredRecord.id, presence: "fixed" },
       region: "main",
-      rendererId: configuredRecord.id,
-      singleton: true,
     });
-    ctx.layout.registerPanel({
+    ctx.shellPlacements.registerPlacement({
       id: "recipes-fallback-panel",
-      title: fallbackRecord.title,
+      item: { kind: "view", viewId: fallbackRecord.id, presence: "fixed" },
       region: "secondary",
-      rendererId: fallbackRecord.id,
-      singleton: true,
     });
-    ctx.layout.openPanel("recipes-configured-panel");
-    ctx.layout.openPanel("recipes-fallback-panel");
   },
 });

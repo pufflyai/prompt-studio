@@ -19,7 +19,6 @@ import {
   executeWorkbenchExtensionCommand,
   type WorkbenchExtensionCommandContext,
 } from "./workbench-extension-command";
-import { registerComposition, registerModes, registerResourcePresenters } from "./workbench-extension-composition";
 import type {
   InternalRegisterWorkbenchExtensionContributionsInput,
   RegisterWorkbenchExtensionContributionsInput,
@@ -31,11 +30,12 @@ export type { RegisterWorkbenchExtensionContributionsInput } from "./workbench-e
 import { toInternalWorkbenchExtensionMetadata } from "./workbench-extension-metadata-adapter";
 import { registerWorkbenchExtensionRendererRefreshEvents } from "./workbench-extension-refresh";
 import {
-  registerBridgeRenderer,
   registerSettings,
   registerStatuses,
+  registerViewMenus,
   registerWebviewPanels,
 } from "./workbench-extension-surfaces";
+import { createWorkbenchExtensionTabPresentation } from "./workbench-extension-tab-presentation";
 
 const disposeAll = (disposables: Disposable[]) => {
   for (let index = disposables.length - 1; index >= 0; index -= 1) disposables[index]?.dispose();
@@ -171,90 +171,97 @@ const registerStatusBarItems = (input: InternalRegisterWorkbenchExtensionContrib
 const registerPages = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.pages.map((page) => input.workbench.pages.registerPage(page));
 
+const registerResourceKinds = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
+  input.metadata.resourceKinds.map((kind) =>
+    input.workbench.resources.registerKind({
+      kind: kind.id,
+      label: text(kind.label, kind.id),
+      icon: kind.icon ?? "FileText",
+    }),
+  );
+
+const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
+  input.metadata.modes.map((mode) =>
+    input.workbench.modes.registerMode({
+      id: mode.modeId,
+      label: text(mode.label, mode.modeId),
+      panels: mode.panelRegions,
+      regionSettings: mode.regionSettings,
+      activate: () => undefined,
+    }),
+  );
+
+const registerModePlacements = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
+  input.metadata.placements.map((placement) => input.workbench.modePlacements.registerPlacement(placement));
+
 export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWorkbenchExtensionContributionsInput) => {
   const input: InternalRegisterWorkbenchExtensionContributionsInput = {
     ...sourceInput,
-    metadata: toInternalWorkbenchExtensionMetadata(sourceInput.metadata),
+    metadata: toInternalWorkbenchExtensionMetadata(sourceInput.metadata, {
+      createTab: (metadata) => createWorkbenchExtensionTabPresentation(sourceInput, metadata),
+    }),
   };
   const disposables: Disposable[] = [];
   const context: WorkbenchExtensionCommandContext = input;
 
-  disposables.push(...registerBridgeRenderer(input));
-  disposables.push(...registerCommands(context, input.metadata));
-  disposables.push(
-    ...registerWorkbenchExtensionKeybindings({
-      bindings: input.metadata.keybindings,
-      createWhenExpression: input.createKeybindingWhenExpression,
-      workbench: input.workbench,
-    }),
-  );
-  disposables.push(...registerMenus(input, context));
-  disposables.push(...registerCommandPaletteContributions(input, context));
-  disposables.push(
-    registerWorkbenchExtensionTreeRenderers({ ...input, resolveNodeResource: input.resolveTreeNodeResource }),
-  );
-  disposables.push(registerWorkbenchExtensionFileRenderers(input));
-  disposables.push(
-    registerWorkbenchExtensionControlsRenderers(
-      context,
-      input.metadata.controlsRenderers ?? [],
-      input.metadata.panels,
-      { resolveViewInput: input.resolveViewInput },
-      input.metadata.resourcePanels,
-    ),
-  );
-  disposables.push(...registerWebviewPanels(input));
-  disposables.push(...registerSettings(input));
-  // Status-backed renderers query their provider while they register. Providers
-  // must exist first so the renderer's live option source can load immediately.
-  disposables.push(...registerStatuses(input, context));
-  disposables.push(
-    registerWorkbenchExtensionKanbanRenderers(
-      context,
-      input.metadata.kanbanRenderers ?? [],
-      { ...input.kanbanAdapter, resolveViewInput: input.resolveViewInput },
-      input.metadata.panels,
-      input.metadata.resourcePanels,
-    ),
-  );
-  disposables.push(
-    registerWorkbenchExtensionDataTableRenderers(
-      context,
-      input.metadata.dataTableRenderers ?? [],
-      input.metadata.panels,
-      input.metadata.resourcePanels,
-      input.resolveViewInput,
-    ),
-  );
-  disposables.push(
-    registerWorkbenchExtensionCommandPaletteResources(context, input.metadata.commandPaletteResources ?? []),
-  );
-  disposables.push(
-    ...registerWorkbenchExtensionNavigationItems({
-      createWhenExpression: sourceInput.createNavigationWhenExpression,
-      metadata: sourceInput.metadata,
-      workbench: sourceInput.workbench,
-    }),
-  );
-  if (sourceInput.subscribeRefreshEvents) {
+  try {
+    disposables.push(...registerCommands(context, input.metadata));
     disposables.push(
-      registerWorkbenchExtensionRendererRefreshEvents({
+      ...registerWorkbenchExtensionKeybindings({
+        bindings: input.metadata.keybindings,
+        createWhenExpression: input.createKeybindingWhenExpression,
+        workbench: input.workbench,
+      }),
+    );
+    disposables.push(...registerMenus(input, context));
+    disposables.push(...registerCommandPaletteContributions(input, context));
+    disposables.push(
+      registerWorkbenchExtensionTreeRenderers({ ...input, resolveNodeResource: input.resolveTreeNodeResource }),
+    );
+    disposables.push(registerWorkbenchExtensionFileRenderers(input));
+    disposables.push(registerWorkbenchExtensionControlsRenderers(context, input.metadata.controlsRenderers ?? []));
+    disposables.push(...registerWebviewPanels(input));
+    disposables.push(...registerSettings(input));
+    // Status-backed renderers query their provider while they register. Providers
+    // must exist first so the renderer's live option source can load immediately.
+    disposables.push(...registerStatuses(input, context));
+    disposables.push(
+      registerWorkbenchExtensionKanbanRenderers(context, input.metadata.kanbanRenderers ?? [], input.kanbanAdapter),
+    );
+    disposables.push(registerWorkbenchExtensionDataTableRenderers(context, input.metadata.dataTableRenderers ?? []));
+    disposables.push(...registerViewMenus(input));
+    disposables.push(
+      registerWorkbenchExtensionCommandPaletteResources(context, input.metadata.commandPaletteResources ?? []),
+    );
+    disposables.push(
+      ...registerWorkbenchExtensionNavigationItems({
+        createWhenExpression: sourceInput.createNavigationWhenExpression,
         metadata: sourceInput.metadata,
-        subscribe: sourceInput.subscribeRefreshEvents,
         workbench: sourceInput.workbench,
       }),
     );
-  }
-  disposables.push(...registerStatusBarItems(input));
-  disposables.push(...registerResourcePresenters(input));
-  disposables.push(...registerPages(input));
-  const composition = registerComposition(input);
-  disposables.push(...composition.disposables);
-  disposables.push(...registerModes(input, composition.registry));
+    if (sourceInput.subscribeRefreshEvents) {
+      disposables.push(
+        registerWorkbenchExtensionRendererRefreshEvents({
+          metadata: sourceInput.metadata,
+          subscribe: sourceInput.subscribeRefreshEvents,
+          workbench: sourceInput.workbench,
+        }),
+      );
+    }
+    disposables.push(...registerStatusBarItems(input));
+    disposables.push(...registerResourceKinds(input));
+    disposables.push(...registerPages(input));
+    disposables.push(...registerModes(input));
+    disposables.push(...registerModePlacements(input));
 
-  return {
-    dispose() {
-      disposeAll(disposables);
-    },
-  };
+    return {
+      dispose() {
+        disposeAll(disposables);
+      },
+    };
+  } catch (error) {
+    disposeAll(disposables);
+    throw error;
+  }
 };

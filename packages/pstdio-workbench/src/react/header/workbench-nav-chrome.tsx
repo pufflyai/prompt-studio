@@ -49,9 +49,7 @@ interface WorkbenchNavigationControlsProps {
 
 const WorkbenchNavigationControls = (props: WorkbenchNavigationControlsProps) => {
   const { workbench, regionControls } = props;
-  const history = useWorkbenchStore(workbench.history.store, (state) => state);
-  const canNavigateBack = !history.hydrating && history.cursor > 0;
-  const canNavigateForward = !history.hydrating && history.cursor >= 0 && history.cursor < history.entries.length - 1;
+  const history = useWorkbenchStore(workbench.pageLocations.historyStore, (state) => state);
 
   return (
     <HStack gap="2xs" flexShrink={0}>
@@ -63,8 +61,8 @@ const WorkbenchNavigationControls = (props: WorkbenchNavigationControlsProps) =>
           size="xs"
           variant="ghost"
           aria-label="Navigate back"
-          disabled={!canNavigateBack}
-          onClick={() => workbench.history.goBack()}
+          disabled={!history.canGoBack}
+          onClick={() => workbench.pageLocations.goBack()}
         >
           <WorkbenchIcon name="ArrowLeft" size={14} />
         </IconButton>
@@ -74,8 +72,8 @@ const WorkbenchNavigationControls = (props: WorkbenchNavigationControlsProps) =>
           size="xs"
           variant="ghost"
           aria-label="Navigate forward"
-          disabled={!canNavigateForward}
-          onClick={() => workbench.history.goForward()}
+          disabled={!history.canGoForward}
+          onClick={() => workbench.pageLocations.goForward()}
         >
           <WorkbenchIcon name="ArrowRight" size={14} />
         </IconButton>

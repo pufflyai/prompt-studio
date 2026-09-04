@@ -8,12 +8,9 @@ import {
   definePage,
   definePlacement,
   defineResourceKind,
-  defineResourceView,
   defineView,
   packageAsset,
   resourceMenuSlotRef,
-  resourceSlotRef,
-  workbenchCommands,
   workbenchModes,
   workbenchPages,
 } from "./index";
@@ -28,7 +25,7 @@ describe("extension contribution definitions", () => {
     const placement = definePlacement({
       id: "tickets.main",
       mode: workbenchModes.project,
-      item: { kind: "view", view: view.ref },
+      item: { kind: "view", view: view.ref, presence: "open" },
       region: "main",
     });
     const page = definePage({
@@ -38,7 +35,7 @@ describe("extension contribution definitions", () => {
       mode: workbenchModes.project,
       slots: [
         { id: "list", role: "primary", region: "main", view: view.ref },
-        { id: "details", role: "auxiliary", region: "side", view: view.ref },
+        { id: "details", role: "auxiliary", region: "side", view: view.ref, presence: "open" },
       ],
     });
     const navigationItem = defineNavigationItem({
@@ -46,7 +43,7 @@ describe("extension contribution definitions", () => {
       owner: workbenchModes.project,
       slot: "content",
       label: "Tickets",
-      action: { kind: "view", view: view.ref },
+      action: { kind: "page", page: page.ref },
     });
     const navigationTree = defineNavigationTree({
       id: "ticket-files",
@@ -58,15 +55,7 @@ describe("extension contribution definitions", () => {
     const command = defineCommand({ id: "tickets.open", title: "Open ticket", run: async () => undefined });
     const resourceKind = defineResourceKind({
       id: "ticket",
-      surface: "primary",
-      slots: [{ id: "primary", cardinality: "one", access: "owner" }],
       menuSlots: [{ id: "headerOverflow", placement: "header-overflow", access: "public" }],
-    });
-    const resourceView = defineResourceView({
-      id: "ticket.editor",
-      resourceKind: resourceKind.ref,
-      slot: resourceSlotRef(resourceKind.ref, "primary"),
-      view: view.ref,
     });
 
     expect(view.ref).toEqual({ kind: "view", id: "tickets" });
@@ -85,12 +74,6 @@ describe("extension contribution definitions", () => {
     expect(resourceMenuSlotRef(resourceKind.ref, "headerOverflow")).toEqual({
       id: "ticket.headerOverflow",
       kind: "menu",
-    });
-    expect(resourceView.ref).toEqual({ kind: "resource-view", id: "ticket.editor" });
-    expect(workbenchCommands.switchMode).toEqual({
-      extensionId: "pstdio",
-      kind: "command",
-      id: "workbench.action.switchMode",
     });
     expect(workbenchPages.start).toEqual({ extensionId: "pstdio", kind: "page", id: "start" });
   });

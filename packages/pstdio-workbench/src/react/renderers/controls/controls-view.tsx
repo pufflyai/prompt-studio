@@ -1,24 +1,13 @@
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
-import type { InputGroup, Param, ParamValue, ParamValueMap, ResourceRefValue } from "@pstdio/ui";
+import type { InputGroup, Param, ParamValue, ParamValueMap } from "@pstdio/ui";
 import { ParamEditor, ScrollArea } from "@pstdio/ui";
 import { useEffect, useRef, useState } from "react";
-import type { RegisteredControlsRendererContribution, WorkbenchCore, WorkbenchPanelInstance } from "../../../core";
-
-// A resource param chip carries a serializable ref; open it as a workbench tab so
-// links (e.g. a ticket's parent/dependency) navigate like the old webview did.
-const openResourceRef = (workbench: WorkbenchCore, ref: ResourceRefValue) => {
-  void workbench.resources
-    .openResource(
-      {
-        kind: ref.type,
-        uri: `pstdio://extension-resource/${encodeURIComponent(ref.type)}/${encodeURIComponent(ref.id)}`,
-        id: ref.id,
-        label: ref.label,
-      },
-      { replaceActive: true },
-    )
-    .catch(() => undefined);
-};
+import {
+  getWorkbenchRenderers,
+  type RegisteredControlsRendererContribution,
+  type WorkbenchCore,
+  type WorkbenchPanelInstance,
+} from "../../../core";
 
 interface WorkbenchControlsViewProps {
   workbench: WorkbenchCore;
@@ -72,7 +61,7 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
     runQuery();
 
     const subscription = contribution.subscribe?.(runQuery);
-    const refreshSubscription = workbench.renderers.onDidRefreshControlsRenderer((event) => {
+    const refreshSubscription = getWorkbenchRenderers(workbench).onDidRefreshControlsRenderer((event) => {
       if (event.controlsRendererId === contribution.id) runQuery();
     });
     return () => {
@@ -112,7 +101,6 @@ export const WorkbenchControlsView = (props: WorkbenchControlsViewProps) => {
             defaultValues={state.values}
             readOnly={readOnly}
             onChange={handleChange}
-            onOpenResource={(ref) => openResourceRef(workbench, ref)}
           />
         ) : (
           <Box p="md">

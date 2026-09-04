@@ -8,7 +8,7 @@ const ticketPlacement = (projectId: string): WorkbenchPanelInstance => ({
   closable: false,
   resource: {
     kind: "dashboard-view",
-    uri: "dashboard-workbench://dashboard-view/pstdio-planner.tickets",
+    uri: "pstdio://extension-resource/dashboard-view/pstdio-planner.tickets",
     id: "pstdio-planner.tickets",
     metadata: { favoriteScope: { scope: "project", projectId } },
   },

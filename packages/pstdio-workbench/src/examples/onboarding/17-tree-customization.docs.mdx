@@ -1,27 +1,58 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import source from "../layout-scope/module.tsx?raw";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="15. Layout scopes" />
 
-<Meta of={OnboardingStories} name="17. Tree customization" parameters={{ layout: "padded" }} />
+# 15. Persist layouts at the right scope
 
-# 17. Let Users Customize Trees
+Users can arrange panels differently per project or workspace. A layout scope selects which persisted arrangement is
+active. Changing scope stores the old layout and restores the target layout.
 
-Tree rows and sections can opt into the workbench visibility system. The tree
-host persists visibility per tree id and builds a background Customize menu from
-the unfiltered tree data.
+Scope is host state. Extensions contribute placement rules but do not choose persistence keys or restore layouts on
+their own.
 
-<Canvas of={OnboardingStories.TreeCustomization} sourceState="shown" />
+<Canvas of={OnboardingStories.LayoutScopes} sourceState="none" />
 
-Use these fields when contributing tree data:
+## Complete example
 
-- `hiddenByDefault` starts a node or section hidden while keeping it available
-  in Customize.
-- `canHide: false` keeps an important node out of the hide/show controls.
-- The regular `resource` or `target` still drives navigation when a visible row
-  is selected.
+<Source code={source} language="tsx" />
 
-Right-click empty space in the tree body to open Customize. Hidden rows remain
-listed there, so users can restore them without a reset.
+## What each field means
+
+The host wires persistence into the workbench:
+
+- `createWorkbench({ layoutPersistence, panelsPersistence })` accepts one adapter for region layout and one for panel
+  open state. The example uses in-memory maps; a real host writes to disk or a database.
+- `LayoutPersistenceAdapter` has `getLayout(scope)` and `setLayout(layout, scope)`. The workbench calls them with the
+  active scope key, so the adapter stores one layout per scope.
+- `WorkbenchPanelsPersistenceAdapter` has `getPanelStates(scope)` and `setPanelStates(state, scope)` for panel open
+  state, keyed the same way.
+
+Scopes name one persisted arrangement:
+
+- A `LayoutScope` is a string key such as `"project/demo/mode/tickets/resource/ticket:PS-100"`. The host chooses the
+  key format; the workbench only uses it to store and look up state.
+- `workbench.layout.setPersistenceScope(scope, options?)` saves the current layout under the old scope and restores
+  the layout saved under the new one.
+- `carryRegionState: ["sidenav"]` keeps the named regions unchanged across the switch. The example uses it so the
+  project-owned Sidenav does not remount while resource scopes rotate.
+- `workbench.panels.setPersistenceScope(scope)` does the same switch for panel open state.
+- `workbench.layout.getPersistenceScope()` returns the active scope key. It lives outside the store, so the example
+  mirrors it in local state to drive the button highlight.
+
+The demo controls change state that the scope persists:
+
+- `workbench.layout.setRegionSize("secondary", size)` resizes one region.
+- `workbench.panels.setOpen("secondary", open)` and `workbench.layout.setRegionVisible("secondary", open)` open or
+  close the Secondary Panel region.
+- `useWorkbenchStore(workbench.layout.store, selector)` and `useWorkbenchStore(workbench.panels.store, selector)`
+  subscribe to the live values so the panel re-renders after each switch.
+
+The rest is the standard module setup:
+
+- `ctx.views.registerView(...)` defines each demo View with a React `body`.
+- `ctx.shellPlacements.registerPlacement(...)` places each View. `item.presence: "fixed"` keeps them open, and
+  `region` picks `main`, `sidenav`, or `secondary`.
+- The story seeds three scopes with different Secondary Panel sizes and open states, so switching shows a visible
+  difference.

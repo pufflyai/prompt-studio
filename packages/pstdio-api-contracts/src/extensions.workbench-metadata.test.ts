@@ -16,14 +16,23 @@ const metadata = () => ({
       regions: ["main"],
     },
   ],
-  pages: [],
+  pages: [
+    {
+      id: "pstdio.lab.page.files",
+      localId: "files",
+      extensionId: "pstdio.lab",
+      title: "Files",
+      path: "files",
+      mode: ref("mode", "project"),
+      slots: [{ id: "content", role: "primary", region: "main", view: ref("view", "files") }],
+    },
+  ],
   views: [
     {
       id: "pstdio.lab.view.files",
       localId: "files",
       extensionId: "pstdio.lab",
       title: "Files",
-      path: "/files",
       body: { kind: "tree", bodyHandlerId: "pstdio.lab.private.tree.files.body" },
     },
   ],
@@ -34,13 +43,11 @@ const metadata = () => ({
       localId: "files",
       extensionId: "pstdio.lab",
       mode: ref("mode", "project"),
-      item: { kind: "view", view: ref("view", "files") },
+      item: { kind: "view", view: ref("view", "files"), presence: "fixed" },
       region: "main",
-      required: true,
     },
   ],
   resourceKinds: [],
-  resourceViews: [],
   navigationItems: [
     {
       id: "pstdio.lab.navigation-item.files",
@@ -48,7 +55,7 @@ const metadata = () => ({
       owner: ref("mode", "project"),
       slot: "content",
       label: "Files",
-      action: { kind: "view", view: ref("view", "files") },
+      action: { kind: "page", page: ref("page", "files") },
     },
   ],
   navigationTrees: [],
@@ -64,7 +71,6 @@ describe("workbench extension metadata", () => {
 
     expect(parsed.views[0]).toMatchObject({
       id: "pstdio.lab.view.files",
-      path: "/files",
       body: { kind: "tree", bodyHandlerId: "pstdio.lab.private.tree.files.body" },
     });
     expect(parsed.placements[0]).toMatchObject({
@@ -72,7 +78,7 @@ describe("workbench extension metadata", () => {
       item: { kind: "view", view: ref("view", "files") },
       region: "main",
     });
-    expect(parsed.navigationItems[0]?.action).toEqual({ kind: "view", view: ref("view", "files") });
+    expect(parsed.navigationItems[0]?.action).toEqual({ kind: "page", page: ref("page", "files") });
     expect(parsed).not.toHaveProperty("panels");
     expect(parsed).not.toHaveProperty("treeRenderers");
     expect(parsed).not.toHaveProperty("routes");
@@ -99,7 +105,7 @@ describe("workbench extension metadata", () => {
           mode: ref("mode", "project"),
           slots: [
             { id: "list", role: "primary", region: "main", view: ref("view", "files") },
-            { id: "tools", role: "auxiliary", region: "side", view: ref("view", "files") },
+            { id: "tools", role: "auxiliary", region: "side", view: ref("view", "files"), presence: "open" },
           ],
         },
       ],

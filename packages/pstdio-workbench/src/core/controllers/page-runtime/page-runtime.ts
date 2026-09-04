@@ -1,7 +1,11 @@
 import type { ResourceRef as PageResourceRef } from "@pstdio/sdk/extensions";
 import type { LayoutModel } from "../../registries/layout/layout-model";
+import { createPlacement } from "../../registries/layout/layout-operations";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
-import { reconcileOwnedWidgetLayout } from "../../registries/layout/owned-placement-layout";
+import {
+  applyOwnedWidgetLayoutReconciliation,
+  reconcileOwnedWidgetLayout,
+} from "../../registries/layout/owned-placement-layout";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
@@ -14,21 +18,25 @@ import {
   type WorkbenchPageResourceCodec,
 } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
+import type { WorkbenchShellPlacementRegistry } from "../../registries/placements/shell-placement-registry";
+import type { WorkbenchViewMenuRegistry } from "../../registries/view-menus/view-menu-registry";
+import { pagePlacementContributionId, registerWorkbenchViewPlacement } from "../../registries/views/view-placement";
 import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
 import { createDisposable } from "../../shared/disposable";
 
 export interface ConnectWorkbenchPageRuntimeInput {
+  beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   layout: LayoutModel;
   modes: WorkbenchModeRegistry;
   registry: WorkbenchPageRegistry<WorkbenchWidgetPlacement>;
 }
 
-const syncPagePanelMenus = (layout: LayoutModel) => {
-  const pagePlacements = Object.values(layout.getLayout().regions)
+const syncOwnedPanelMenus = (layout: LayoutModel) => {
+  const ownedPlacements = Object.values(layout.getLayout().regions)
     .flatMap((region) => region.widgets)
-    .filter((placement) => placement.placementIdentity?.kind === "page");
+    .filter((placement) => Boolean(placement.placementIdentity));
 
-  for (const placement of pagePlacements) {
+  for (const placement of ownedPlacements) {
     const owner = layout.getWidget(placement.contributionId);
     for (const menuId of owner?.ownedPanelMenuIds ?? []) {
       const menu = layout.getWidget(menuId);
@@ -36,6 +44,7 @@ const syncPagePanelMenus = (layout: LayoutModel) => {
       layout.openWidget(menuId, {
         pinned: true,
         role: "panel-menu",
+        viewId: menu.rendererId,
         resource: placement.resource,
         title: menu.region.endsWith("-left-menu") ? placement.resource?.label : menu.title,
       });
@@ -44,27 +53,74 @@ const syncPagePanelMenus = (layout: LayoutModel) => {
   layout.reconcilePanelMenus();
 };
 
+const bindPlacementsToActivePageLocation = (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) => {
+  const pageId = state.activePageId;
+  const instanceKey = pageId ? state.pageStates[pageId]?.activePrimaryInstanceKey : undefined;
+  if (!pageId || !instanceKey) return state.placements;
+  const location = state.placements.find(
+    (placement) =>
+      placement.identity.kind === "page" &&
+      placement.identity.pageId === pageId &&
+      placement.identity.instanceKey === instanceKey &&
+      placement.value.role === "location",
+  );
+  const ownerResourceUri = location?.value.resourceUri;
+  if (!ownerResourceUri) return state.placements;
+  return state.placements.map((placement) =>
+    placement.value.role === "sub-panel" && (placement.identity.kind === "page" || Boolean(placement.value.resourceUri))
+      ? { ...placement, value: { ...placement.value, ownerResourceUri } }
+      : placement,
+  );
+};
+
 const applyPageState = (
   input: ConnectWorkbenchPageRuntimeInput,
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
+  source: "transition" | "scope-restore",
+  storeBeforeTransition = input.registry.store.getState(),
 ) => {
-  if (!state.projectId && !state.activePageId && !state.activeModeId) return;
-  const layout = reconcileOwnedWidgetLayout({
-    layout: input.layout.getLayout(),
-    placements: state.placements,
-    activate: state.reconciliation.activate.map((placement) => placement.identity),
-  });
   activateWorkbenchPageMode(input.modes, state.activeModeId, () => {
+    // Mode listeners may open or close mode/shell placements after the mode is
+    // published. Reconcile the latest registry state so this transition cannot
+    // overwrite those declarative changes with the snapshot that began it.
+    const stored = input.registry.store.getState();
+    const latest = stored === storeBeforeTransition ? state : stored;
+    const activation =
+      latest.reconciliation.activate.length > 0 ? latest.reconciliation.activate : state.reconciliation.activate;
+    const layoutInput = {
+      layout: input.layout.getLayout(),
+      placements: bindPlacementsToActivePageLocation(latest),
+      activate: activation.map((placement) => placement.identity),
+    };
+    let layout: ReturnType<typeof reconcileOwnedWidgetLayout>;
+    if (source === "scope-restore") {
+      layout = reconcileOwnedWidgetLayout(layoutInput);
+    } else {
+      layout = applyOwnedWidgetLayoutReconciliation({
+        ...layoutInput,
+        remove: latest.reconciliation.remove.map((placement) => placement.identity),
+      });
+    }
     input.layout.restoreLayout(layout);
-    syncPagePanelMenus(input.layout);
+    syncOwnedPanelMenus(input.layout);
   });
 };
 
 export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeInput) => {
-  const runtime = getWorkbenchPageRegistryInternals(input.registry).connectRuntime((state) =>
-    applyPageState(input, state),
-  );
-  const scope = input.layout.onDidChangePersistenceScope(() => applyPageState(input, input.registry.store.getState()));
+  let applyingTransition = false;
+  const runtime = getWorkbenchPageRegistryInternals(input.registry).connectRuntime((state) => {
+    const storeBeforeTransition = input.registry.store.getState();
+    applyingTransition = true;
+    try {
+      input.beforeApply?.(state);
+      applyPageState(input, state, "transition", storeBeforeTransition);
+    } finally {
+      applyingTransition = false;
+    }
+  });
+  const scope = input.layout.onDidChangePersistenceScope(() => {
+    if (!applyingTransition) applyPageState(input, input.registry.store.getState(), "scope-restore");
+  });
   return createDisposable(() => {
     scope.dispose();
     runtime.dispose();
@@ -107,41 +163,73 @@ const toTabState = (open: WorkbenchPagePlacementInput["open"]) => {
 const toWidgetPlacement = (
   input: WorkbenchPagePlacementInput,
   resources: WorkbenchPageResourceCodec,
+  layout: LayoutModel,
   views: WorkbenchViewRegistry,
 ): WorkbenchWidgetPlacement => {
   const resource = input.resource ? toWorkbenchPageResource(input.resource, resources) : undefined;
   const view = views.getView(input.viewId);
   if (!view) throw new Error(`Workbench page view is not registered: ${input.viewId}`);
+  const panelId = pagePlacementContributionId(input.pageId, input.slotId);
+  const panel = layout.getWidget(panelId);
+  if (!panel) throw new Error(`Workbench page placement is not registered: ${input.pageId}.${input.slotId}`);
   return {
-    widgetId: `workbench.page.${encodeURIComponent(placementIdentityKey(input.identity))}`,
-    contributionId: view.panelId,
-    viewId: input.viewId,
-    role: input.role === "primary" ? "location" : "sub-panel",
-    closable: input.closable,
+    ...createPlacement(`workbench.page.${encodeURIComponent(placementIdentityKey(input.identity))}`, panel, {
+      viewId: input.viewId,
+      title: view.title ?? panel.title,
+      role: input.role === "primary" ? "location" : "sub-panel",
+      closable: input.closable,
+      ...(resource ? { resource } : {}),
+      ...toTabState(input.open),
+    }),
     ...(input.section ? { section: input.section } : {}),
-    ...(resource ? { resource, resourceUri: resource.uri, title: resource.label } : {}),
-    ...toTabState(input.open),
   };
 };
 
 export interface CreateLiveWorkbenchPageRegistryInput {
+  beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   layout: LayoutModel;
   modePlacements: WorkbenchModePlacementRegistry;
+  shellPlacements: WorkbenchShellPlacementRegistry;
   modes: WorkbenchModeRegistry;
   resources?: WorkbenchPageResourceCodec;
   views: WorkbenchViewRegistry;
+  viewMenus?: WorkbenchViewMenuRegistry;
 }
 
 export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRegistryInput) => {
   const resources = input.resources ?? defaultPageResourceCodec;
   const registry = createWorkbenchPageRegistry<WorkbenchWidgetPlacement>({
-    resolveShellPlacements: () => [],
-    resolveModePlacements: (modeId, current) => input.modePlacements.resolvePlacements(modeId, current),
-    resolvePagePlacement: (placement) => toWidgetPlacement(placement, resources, input.views),
+    resolveShellPlacements: () => input.shellPlacements.resolvePlacements(),
+    resolveModePlacements: (modeId) => input.modePlacements.resolvePlacements(modeId),
+    resolvePagePlacement: (placement) => toWidgetPlacement(placement, resources, input.layout, input.views),
     resources,
     valuesEqual: (left, right) => JSON.stringify(left) === JSON.stringify(right),
+    registerPagePlacements: (page) => {
+      const registrations = page.slots.map((slot) => {
+        const viewId = slot.viewId ?? slot.binding?.viewId;
+        if (!viewId) throw new Error(`Workbench page slot view is not registered: ${page.id}.${slot.id}`);
+        const closable = slot.role === "auxiliary" && (!slot.viewId || slot.presence !== "fixed");
+        return registerWorkbenchViewPlacement(
+          input.layout,
+          input.views,
+          {
+            ...slot,
+            id: pagePlacementContributionId(page.id, slot.id),
+            viewId,
+            role: slot.role === "primary" ? "location" : "sub-panel",
+            singleton: slot.binding?.cardinality !== "many",
+            closable,
+          },
+          input.viewMenus,
+        );
+      });
+      return createDisposable(() => {
+        for (const registration of registrations.reverse()) registration.dispose();
+      });
+    },
   });
-  connectWorkbenchPageRuntime({ layout: input.layout, modes: input.modes, registry });
+  connectWorkbenchPageRuntime({ beforeApply: input.beforeApply, layout: input.layout, modes: input.modes, registry });
   input.modePlacements.onDidChange(() => getWorkbenchPageRegistryInternals(registry).refreshModePlacements());
+  input.shellPlacements.onDidChange(() => getWorkbenchPageRegistryInternals(registry).refreshShellPlacements());
   return registry;
 };

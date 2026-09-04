@@ -1,0 +1,29 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as RendererStories from "./renderers.stories";
+
+<Meta of={RendererStories} name="1. React view" />
+
+# React view
+
+`body.kind: "react"` lets a trusted host render a component for each View instance. The callback receives the
+resolved `instance` and the `workbench`. The instance carries its resource, title, section, and placement identity.
+
+Use it for host-owned UI that needs direct React composition, such as application chrome, a terminal adapter, or a
+native screen that implements platform behavior. Do not use it for installable tools. Extensions cannot send React
+through the extension boundary.
+
+<Canvas of={RendererStories.ReactView} sourceState="shown" />
+
+## How it works
+
+1. The host registers a View with a React body.
+2. A shell placement, mode placement, or page slot references the View.
+3. The workbench calls `render` for each active placement instance.
+4. Disposing the owning module removes the View and its placements together.
+
+| Field | Meaning |
+| --- | --- |
+| `render` | Returns React content for one active instance. |
+| `instance.resource` | Domain object bound to this use of the View, when present. |
+| `instance.config` | Serializable input supplied by the placement. |
+| `workbench` | Host commands, navigation, resources, and other Core APIs. |

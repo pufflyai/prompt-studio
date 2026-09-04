@@ -1,7 +1,7 @@
 import { Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
 import {
-  createWorkbenchCore,
+  createWorkbench,
   type LayoutPersistenceAdapter,
   type LayoutScope,
   type WorkbenchCore,
@@ -12,10 +12,8 @@ import {
 import { useWorkbenchStore } from "../../react";
 
 const PANEL_WIDGET_ID = "layout-scope.example.panel";
-const PANEL_RENDERER_ID = "layout-scope.example.renderer";
 const SECONDARY_WIDGET_ID = "layout-scope.example.secondary";
 const SIDENAV_WIDGET_ID = "layout-scope.example.sidenav";
-const SIDENAV_RENDERER_ID = "layout-scope.example.sidenav-renderer";
 
 const SCOPES: Array<{ id: LayoutScope; label: string }> = [
   {
@@ -133,45 +131,44 @@ const SidenavPanel = () => (
 export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution => ({
   id: "layout-scope.example",
   activate(ctx) {
-    ctx.renderers.registerRenderer({
-      id: PANEL_RENDERER_ID,
-      render: ({ workbench }) => <SwitcherPanel workbench={workbench} />,
-    });
-
-    ctx.renderers.registerRenderer({
-      id: SIDENAV_RENDERER_ID,
-      render: () => <SidenavPanel />,
-    });
-
-    ctx.layout.registerPanel({
+    ctx.views.registerView({
       id: PANEL_WIDGET_ID,
       title: "Scope switcher",
+      body: { kind: "react", render: ({ workbench }) => <SwitcherPanel workbench={workbench} /> },
+    });
+    ctx.shellPlacements.registerPlacement({
+      id: PANEL_WIDGET_ID,
+      item: { kind: "view", viewId: PANEL_WIDGET_ID, presence: "fixed" },
       region: "main",
-      singleton: true,
-      rendererId: PANEL_RENDERER_ID,
     });
 
-    ctx.layout.registerPanel({
+    ctx.views.registerView({
       id: SIDENAV_WIDGET_ID,
       title: "Project Sidenav",
+      body: { kind: "react", render: () => <SidenavPanel /> },
+    });
+    ctx.shellPlacements.registerPlacement({
+      id: SIDENAV_WIDGET_ID,
+      item: { kind: "view", viewId: SIDENAV_WIDGET_ID, presence: "fixed" },
       region: "sidenav",
-      singleton: true,
-      rendererId: SIDENAV_RENDERER_ID,
     });
 
-    ctx.layout.registerPanel({
+    ctx.views.registerView({
       id: SECONDARY_WIDGET_ID,
       title: "Resource details",
+      body: { kind: "react", render: () => <SidenavPanel /> },
+    });
+    ctx.shellPlacements.registerPlacement({
+      id: SECONDARY_WIDGET_ID,
+      item: { kind: "view", viewId: SECONDARY_WIDGET_ID, presence: "fixed" },
       region: "secondary",
-      singleton: true,
-      rendererId: SIDENAV_RENDERER_ID,
     });
   },
 });
 
 export const createLayoutScopeExampleWorkbench = () => {
   const persistence = createInMemoryAdapter();
-  const workbench = createWorkbenchCore({
+  const workbench = createWorkbench({
     layoutPersistence: persistence.layout,
     panelsPersistence: persistence.panels,
   });
@@ -180,9 +177,6 @@ export const createLayoutScopeExampleWorkbench = () => {
   const seedScope = (scope: LayoutScope, secondarySize: number, secondaryOpen: boolean) => {
     workbench.panels.setPersistenceScope(scope);
     workbench.layout.setPersistenceScope(scope);
-    workbench.layout.openPanel(PANEL_WIDGET_ID);
-    workbench.layout.openPanel(SIDENAV_WIDGET_ID, { pinned: true });
-    workbench.layout.openPanel(SECONDARY_WIDGET_ID);
     workbench.layout.setRegionSize("secondary", secondarySize);
     setSecondaryOpen(workbench, secondaryOpen);
   };

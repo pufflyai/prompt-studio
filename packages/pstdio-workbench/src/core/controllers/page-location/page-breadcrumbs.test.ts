@@ -1,11 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import type { NavigationTargetPage, PageLocation } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageContribution } from "../../registries/pages/page-registry";
-import { createResourceRegistry } from "../../registries/resources/resource-registry";
-import { createViewRegistry } from "../../registries/views/view-registry";
 import { createWorkbenchBreadcrumbController } from "../breadcrumbs/breadcrumb-registry";
-import { defaultPageResourceCodec } from "../page-runtime/page-runtime";
 import { createWorkbenchPageBreadcrumbItems, setWorkbenchPageBreadcrumbs } from "./page-breadcrumbs";
+
+const resources = {
+  normalize: (resource: { type: string; id: string; label?: string }) => ({ ...resource }),
+  toUri: (resource: { type: string; id: string }) => `pstdio://${resource.type}/${resource.id}`,
+  fromUri: () => undefined,
+};
 
 const page = (id: string, title: string): WorkbenchPageContribution => ({
   id,
@@ -30,48 +33,43 @@ describe("page breadcrumbs", () => {
     const items = createWorkbenchPageBreadcrumbItems({
       location,
       pages: [tickets, ticket],
+      resources,
       navigate: (target) => targets.push(target),
     });
 
     expect(items.map((item) => item.title)).toEqual(["Tickets", "PS-326 Additive pages"]);
+    expect(items.at(-1)?.resource).toMatchObject({
+      kind: "ticket",
+      uri: "pstdio://ticket/PS-326",
+      id: "PS-326",
+      label: "PS-326 Additive pages",
+    });
     items[0]?.onClick?.();
     expect(targets).toEqual([{ kind: "page", page: tickets.ref }]);
     expect(items[1]?.onClick).toBeUndefined();
   });
 
-  test("keeps the canonical page parent and appends the resource hierarchy", () => {
+  test("uses only canonical page locations for contextual resource ancestry", () => {
     const tickets = page("tickets", "Tickets");
     const ticket = { ...page("ticket", "Ticket"), parentId: tickets.id };
-    const root = {
-      kind: "ticket",
-      uri: "pstdio://extension-resource/ticket/PS-1",
-      id: "PS-1",
-      label: "PS-1 Root",
-    };
     const child = { type: "ticket", id: "PS-2", label: "PS-2 Child" };
     const location: PageLocation = {
       page: ticket.ref,
       resource: child,
-      parent: { page: tickets.ref },
+      parent: {
+        page: ticket.ref,
+        resource: { type: "ticket", id: "PS-1", label: "PS-1 Root" },
+        parent: { page: tickets.ref },
+      },
     };
     const targets: NavigationTargetPage[] = [];
-    const resources = createResourceRegistry();
-    const views = createViewRegistry({ getPanel: () => ({}), openPanel: () => ({}) as never });
-    views.registerView({ id: "planner.tickets", panelId: "tickets", title: "Tickets" });
-    resources.registerHierarchyProvider({
-      id: "ticket-hierarchy",
-      canResolve: (resource) => resource.kind === "ticket",
-      getParent: (resource) => (resource.id === child.id ? root : { type: "view", viewId: "planner.tickets" }),
-    });
     const breadcrumbs = createWorkbenchBreadcrumbController();
 
     setWorkbenchPageBreadcrumbs({
       breadcrumbs,
       location,
       pages: [tickets, ticket],
-      pageResources: defaultPageResourceCodec,
       resources,
-      views,
       navigate: (target) => targets.push(target),
     });
 
@@ -84,13 +82,8 @@ describe("page breadcrumbs", () => {
       kind: "page",
       page: ticket.ref,
       resource: { type: "ticket", id: "PS-1", label: "PS-1 Root" },
+      parent: { kind: "page", page: tickets.ref },
     });
-    expect(items?.at(-1)?.resource).toEqual({
-      kind: "ticket",
-      uri: "pstdio://extension-resource/ticket/PS-2",
-      id: "PS-2",
-      label: "PS-2 Child",
-      metadata: undefined,
-    });
+    expect(items?.at(-1)?.onClick).toBeUndefined();
   });
 });

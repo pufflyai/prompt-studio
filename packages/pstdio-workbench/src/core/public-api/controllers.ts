@@ -3,10 +3,7 @@ export type {
   WorkbenchBreadcrumbController,
   WorkbenchBreadcrumbItem,
 } from "../controllers/breadcrumbs/breadcrumb-registry";
-export {
-  createResourceBreadcrumbItems,
-  createWorkbenchBreadcrumbController,
-} from "../controllers/breadcrumbs/breadcrumb-registry";
+export { createWorkbenchBreadcrumbController } from "../controllers/breadcrumbs/breadcrumb-registry";
 export type {
   CreateWorkbenchCommandPaletteControllerInput,
   WorkbenchCommandPaletteChangeListener,
@@ -31,44 +28,13 @@ export type {
 } from "../controllers/focus/focus-controller";
 export { createWorkbenchFocusController, workbenchFocusRegions } from "../controllers/focus/focus-controller";
 export type {
-  CreateHistoryControllerInput,
-  HistoryController,
-  HistoryEntry,
-  HistoryStoreState,
-  PersistedWorkbenchHistory,
-  WorkbenchHistoryPersistence,
-  WorkbenchLocation,
-  WorkbenchLocationRef,
-  WorkbenchLocationWorkspaceState,
-  WorkbenchNavigationEntry,
-  WorkbenchPanelMenuRef,
-  WorkbenchPanelMenuWorkspaceState,
-  WorkbenchPanelWorkspaceState,
-  WorkbenchSubPanelRef,
-} from "../controllers/history/history-controller";
-export { createHistoryController } from "../controllers/history/history-controller";
-export type {
-  CreateWorkbenchLastResourceControllerInput,
-  LastResourcePersistenceAdapter,
-  WorkbenchLastResourceController,
-} from "../controllers/last-resource/last-resource-controller";
-export { createWorkbenchLastResourceController } from "../controllers/last-resource/last-resource-controller";
-export {
-  createWorkbenchNavigator,
-  type WorkbenchNavigationCommit,
-  type WorkbenchNavigationDiagnosticCode,
-  type WorkbenchNavigationResult,
-  type WorkbenchNavigationTarget,
-  type WorkbenchNavigator,
-  type WorkbenchNavigatorHostHooks,
-} from "../controllers/navigator/workbench-navigator";
-export type {
   CreateWorkbenchPageLocationControllerInput,
   WorkbenchPageBrowserEntry,
   WorkbenchPageHistoryState,
   WorkbenchPageLocationBrowser,
   WorkbenchPageLocationController,
   WorkbenchPageLocationDiagnostic,
+  WorkbenchPageLocationHistoryState,
   WorkbenchPageLocationPersistence,
   WorkbenchPageNavigationResult,
 } from "../controllers/page-location/page-location-controller";

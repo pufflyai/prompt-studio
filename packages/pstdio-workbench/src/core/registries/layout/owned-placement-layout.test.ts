@@ -2,7 +2,11 @@ import { describe, expect, test } from "bun:test";
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import { createLayoutModel } from "./layout-model";
 import { createDefaultWorkbenchLayout, type WorkbenchWidgetPlacement } from "./layout-types";
-import { reconcileOwnedWidgetLayout, type WorkbenchOwnedWidgetPlacement } from "./owned-placement-layout";
+import {
+  applyOwnedWidgetLayoutReconciliation,
+  reconcileOwnedWidgetLayout,
+  type WorkbenchOwnedWidgetPlacement,
+} from "./owned-placement-layout";
 
 const owned = (
   identity: PlacementIdentity,
@@ -35,9 +39,32 @@ const renderedIdentities = (widgets: readonly WorkbenchWidgetPlacement[]) =>
   widgets.map((placement) => placement.placementIdentity);
 
 describe("owned placement layout reconciliation", () => {
+  test("applies exact removals without deleting placements outside the published transition", () => {
+    const existing = owned(pageIdentity("ticket", "content"), "main", 0, "ticket-content", "ticket-view");
+    const unrelated = owned(modeIdentity("navigation"), "sidenav", 0, "project-navigation", "navigation-view");
+    const layout = reconcileOwnedWidgetLayout({
+      layout: createDefaultWorkbenchLayout(),
+      placements: [existing, unrelated],
+    });
+
+    const next = applyOwnedWidgetLayoutReconciliation({
+      layout,
+      placements: [],
+      remove: [existing.identity],
+    });
+
+    expect(next.regions.main.widgets).toEqual([]);
+    expect(next.regions.sidenav.widgets).toEqual([
+      expect.objectContaining({
+        widgetId: "project-navigation",
+        placementIdentity: unrelated.identity,
+      }),
+    ]);
+  });
+
   test("keeps foreign widgets while replacing the complete owned set by identity", () => {
     const layout = createDefaultWorkbenchLayout();
-    const foreign = { widgetId: "foreign", contributionId: "legacy.help" };
+    const foreign = { widgetId: "foreign", contributionId: "host.help" };
     const staleIdentity = pageIdentity("old-page", "tools");
     layout.regions.side = {
       ...layout.regions.side,
@@ -70,6 +97,58 @@ describe("owned placement layout reconciliation", () => {
 
     expect(next.regions.side.activeWidgetId).toBe("project-sessions");
     expect(next.activeWidgetId).toBe("project-sessions");
+  });
+
+  test("binds declarative Sub Panels to the active Location", () => {
+    const board = owned(pageIdentity("workspaces", "content"), "main", 0, "board", "workspace-view");
+    const initial = reconcileOwnedWidgetLayout({
+      layout: createDefaultWorkbenchLayout(),
+      placements: [board],
+      activate: [board.identity],
+    });
+    const workspace = owned(
+      { ...pageIdentity("workspaces", "content"), instanceKey: "workspace:one" },
+      "main",
+      0,
+      "workspace",
+      "workspace-view",
+    );
+    workspace.value.resource = { kind: "workspace", uri: "workspace:one" };
+    workspace.value.resourceUri = "workspace:one";
+    const terminal = owned(modeIdentity("terminal"), "secondary", 0, "terminal", "terminal-view");
+    terminal.value.resource = { kind: "terminal", uri: "terminal:one" };
+    terminal.value.resourceUri = "terminal:one";
+
+    const workspaceLayout = reconcileOwnedWidgetLayout({
+      layout: initial,
+      placements: [board, workspace, terminal],
+      activate: [workspace.identity, terminal.identity],
+    });
+    const next = reconcileOwnedWidgetLayout({
+      layout: workspaceLayout,
+      placements: [board, workspace, terminal],
+      activate: [board.identity],
+    });
+
+    expect(next.regions.secondary.widgets[0]).toMatchObject({
+      widgetId: "terminal",
+      ownerResourceUri: "workspace:one",
+    });
+  });
+
+  test("keeps unscoped mode chrome independent from the active Location", () => {
+    const identity = modeIdentity("navigation");
+    const staleNavigation = owned(identity, "sidenav", 0, "project-navigation", "navigation-view");
+    staleNavigation.value.ownerResourceUri = "ticket:one";
+    const current = reconcileOwnedWidgetLayout({
+      layout: createDefaultWorkbenchLayout(),
+      placements: [staleNavigation],
+    });
+    const navigation = owned(identity, "sidenav", 0, "project-navigation", "navigation-view");
+
+    const next = reconcileOwnedWidgetLayout({ layout: current, placements: [navigation] });
+
+    expect(next.regions.sidenav.widgets[0]).not.toHaveProperty("ownerResourceUri");
   });
 
   test("updates placement input without changing instance identity", () => {
@@ -107,7 +186,9 @@ describe("owned placement layout reconciliation", () => {
       "Rendered widget ID belongs to another placement: shared-instance",
     );
   });
+});
 
+describe("owned placement layout reconciliation lifecycle", () => {
   test("transfers one shared view between mode owners without replacing its widget instance", () => {
     const project = owned(modeIdentity("project-navigation"), "sidenav", 0, "shared-navigation", "navigation");
     project.value.viewId = "navigation";
@@ -131,6 +212,24 @@ describe("owned placement layout reconciliation", () => {
         widgetId: "shared-navigation",
         placementIdentity: sessions.identity,
       }),
+    ]);
+  });
+
+  test("does not transfer a widget instance between resources of one mode placement", () => {
+    const firstIdentity = { ...modeIdentity("sessions"), instanceKey: "session:first" };
+    const secondIdentity = { ...modeIdentity("sessions"), instanceKey: "session:second" };
+    const first = owned(firstIdentity, "side", 0, "session-first", "session-view");
+    first.value.viewId = "session-view";
+    const initial = reconcileOwnedWidgetLayout({ layout: createDefaultWorkbenchLayout(), placements: [first] });
+    const second = owned(secondIdentity, "side", 0, "session-second", "session-view");
+    second.value.viewId = "session-view";
+
+    const replaced = reconcileOwnedWidgetLayout({ layout: initial, placements: [second] });
+    const reopened = reconcileOwnedWidgetLayout({ layout: replaced, placements: [second, first] });
+
+    expect(reopened.regions.side.widgets.map((placement) => placement.widgetId)).toEqual([
+      "session-second",
+      "session-first",
     ]);
   });
 
@@ -161,21 +260,21 @@ describe("owned placement layout reconciliation", () => {
     expect(layout.getLayout().activeWidgetId).toBe("tickets-content");
   });
 
-  test("replaces an unowned legacy location when a page primary becomes active", () => {
+  test("replaces an unowned location when a page primary becomes active", () => {
     const layout = createDefaultWorkbenchLayout();
     layout.regions.main = {
       ...layout.regions.main,
       widgets: [
         {
-          widgetId: "legacy-session",
+          widgetId: "unowned-session",
           contributionId: "dashboard.session",
           role: "location",
         },
       ],
-      activeWidgetId: "legacy-session",
+      activeWidgetId: "unowned-session",
     };
-    layout.activeWidgetId = "legacy-session";
-    layout.activeLocationWidgetId = "legacy-session";
+    layout.activeWidgetId = "unowned-session";
+    layout.activeLocationWidgetId = "unowned-session";
     const lab = owned(pageIdentity("lab", "content"), "main", 0, "lab-content", "lab-view");
 
     const next = reconcileOwnedWidgetLayout({ layout, placements: [lab], activate: [lab.identity] });

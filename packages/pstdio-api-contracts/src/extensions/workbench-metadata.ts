@@ -20,6 +20,11 @@ import { extensionCommandPaletteResourceRecordSchema, extensionKanbanRendererRec
 import { extensionKeybindingRecordSchema } from "./keybindings";
 import { navigationTargetSchema } from "./navigation-target-metadata";
 import { workbenchExtensionPageRecordSchema } from "./page-metadata";
+import {
+  placementPresenceSchema,
+  regionSettingsSchema,
+  workbenchPlacementPresentationSchema,
+} from "./placement-metadata";
 import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } from "./renderers";
 import { extensionSettingDefinitionRecordSchema, extensionSettingsSectionRecordSchema } from "./settings";
 
@@ -116,7 +121,6 @@ export const workbenchExtensionViewRecordSchema = z.object({
   extensionId: z.string(),
   title: localizableStringSchema,
   icon: z.string().optional(),
-  path: z.string().optional(),
   body: workbenchExtensionViewBodySchema,
 });
 
@@ -127,24 +131,26 @@ const workbenchExtensionModeRecordSchema = z.object({
   label: localizableStringSchema,
   icon: z.string().optional(),
   regions: z.array(z.enum(extensionPanelRegions)),
+  regionSettings: z.partialRecord(z.enum(extensionPanelRegions), regionSettingsSchema).optional(),
 });
 
-const workbenchExtensionPlacementRecordSchema = z.object({
+const workbenchExtensionPlacementRecordSchema = workbenchPlacementPresentationSchema.extend({
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),
   mode: modeRefSchema,
   item: z.discriminatedUnion("kind", [
-    z.object({ kind: z.literal("view"), view: viewRefSchema }),
+    z.object({ kind: z.literal("view"), view: viewRefSchema, presence: placementPresenceSchema }),
     z.object({
-      kind: z.literal("resource-slot"),
-      slot: z.object({ resourceKind: resourceKindRefSchema, id: z.string() }),
+      kind: z.literal("binding"),
+      resourceKind: z.union([resourceKindRefSchema, z.array(resourceKindRefSchema)]),
+      view: viewRefSchema,
+      cardinality: z.enum(["one", "many"]),
+      add: navigationTargetSchema.optional(),
     }),
   ]),
   region: z.enum(extensionPanelRegions),
   order: z.number().optional(),
-  defaultOpen: z.boolean().optional(),
-  required: z.boolean().optional(),
   movableTo: z.array(z.enum(extensionPanelRegions)).optional(),
 });
 
@@ -184,12 +190,8 @@ const workbenchExtensionResourceKindRecordSchema = z.object({
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),
-  surface: z.enum(["primary", "secondary", "attached"]),
   label: localizableStringSchema.optional(),
   icon: z.string().optional(),
-  slots: z
-    .array(z.object({ id: z.string(), cardinality: z.enum(["one", "many"]), access: z.enum(["owner", "public"]) }))
-    .optional(),
   menuSlots: z
     .array(
       z.object({
@@ -201,15 +203,6 @@ const workbenchExtensionResourceKindRecordSchema = z.object({
       }),
     )
     .optional(),
-});
-
-const workbenchExtensionResourceViewRecordSchema = z.object({
-  id: z.string(),
-  extensionId: z.string(),
-  resourceKind: resourceKindRefSchema,
-  slot: z.object({ resourceKind: resourceKindRefSchema, id: z.string() }),
-  view: viewRefSchema,
-  order: z.number().optional(),
 });
 
 const workbenchExtensionSettingsPanelRecordSchema = z.object({
@@ -252,7 +245,6 @@ export const workbenchExtensionMetadataSchema = z.object({
   viewMenus: z.array(workbenchExtensionViewMenuRecordSchema),
   placements: z.array(workbenchExtensionPlacementRecordSchema),
   resourceKinds: z.array(workbenchExtensionResourceKindRecordSchema),
-  resourceViews: z.array(workbenchExtensionResourceViewRecordSchema),
   resourceHierarchyProviders: z
     .array(z.object({ id: z.string(), extensionId: z.string(), resourceKind: resourceKindRefSchema }))
     .optional(),

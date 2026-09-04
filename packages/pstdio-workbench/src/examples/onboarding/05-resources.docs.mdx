@@ -1,46 +1,79 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import source from "./core/resource-panel.tsx?raw";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="6. Resource-backed panel" />
 
-<Meta of={OnboardingStories} name="5. Resources" parameters={{ layout: "padded" }} />
+# 6. Open domain objects as resources
 
-# 5. Make Tree Nodes Open Tabs
+This story uses the Core API to register a resource kind, a View, and a resource-bound shell placement.
 
-To make a tree node open a tab when clicked, give it a `resource` ref and tell
-the workbench how to open that kind of resource.
+A resource is stable domain identity: a file, ticket, session, or another object a user can open. Passing it to a
+placement lets the View load the right data and lets the workbench reuse the right instance. When the module
+activates, it opens the Getting started guide as a pinned tab in Main.
 
-<Canvas of={OnboardingStories.Resources} sourceState="shown" />
+Press any **Open** button to add or select a guide tab. The + menu in the Main tab bar now has an **Open another guide**
+action. It opens the next guide through the same resource placement.
 
-Three pieces:
+<Canvas of={OnboardingStories.ResourceBackedPanel} sourceState="none" />
 
-- `resources.registerKind({ kind, label, icon })` — declares the type once.
-- `resources.registerPresenter({ canOpen, open })` — maps a Resource to the
-  Panel instance that presents it.
-- Attach `resource: { kind, uri, label }` to each tree node.
+## Complete example
 
-Standard icon names for shared resource concepts:
+<Source code={source} language="tsx" />
 
-| Concept       | Icon                      |
-| ------------- | ------------------------- |
-| Project       | `folder-root`             |
-| Workspace     | `computer`                |
-| Worktree      | `git-pull-request-draft`  |
-| Ticket        | `component`               |
-| Kanban renderer | `square-kanban`           |
-| Settings      | `settings`                |
+## What each field means
 
-Now clicking a node calls `resources.openResource`. The resource service selects
-a presenter, waits for it to return a Panel, and then makes that Panel the active
-navigation Location. History, breadcrumbs, and resource scope follow that
-successful navigation.
+Each entry in `guides` is a `ResourceRef`, the value that identifies one domain object:
 
-Calling `layout.openPanel` directly only displays a Panel. It does not create a
-Location or history entry. Use that direct operation for supporting Panels whose
-definitions declare `eligibleLocations`.
+- `kind` groups objects of the same type. The placement accepts only `guide` resources.
+- `uri` is the globally unique identity of this object. Instance reuse keys on this value.
+- `id` is the short identity inside the kind.
+- `label` is the user-facing name of the object.
 
-Build your features around resources whenever there's a "thing you can open".
-History and navigation both speak resource refs, so your tree rows, command
-targets, and routed widgets can share the same data shape.
+The module setup is the same as in the earlier guides: `createWorkbench()` creates the container,
+`registerModule(...)` groups the registrations under one owner, and `activate(ctx)` runs once with the Core
+contribution APIs.
+
+`ctx.resources.registerKind(...)` declares the resource kind:
+
+- `kind` is the kind identity. It must match the `kind` on the resources that open here.
+- `label` is the user-facing name of the kind.
+- `icon` is the icon name shown for objects of this kind.
+
+`ctx.views.registerView(...)` defines the panel content:
+
+- `id` is the stable View identity. The placement refers to this value.
+- `title` is the default label. Each opened instance may carry a more specific title.
+- `body.kind: "react"` allows trusted host code to return React.
+- `render` receives the render input for one instance. `instance.resource` carries the resource that instance opened,
+  so the View reads `label` and `uri` from it instead of holding its own state.
+- each button calls `openGuide(...)` with a different resource. Reopening a guide selects the tab already bound to its
+  URI.
+
+`ctx.commands.registerCommand(...)` gives the placement's + menu a real action:
+
+- `openNextGuideCommandId` identifies the action.
+- the handler advances through `guides` and calls `openGuide(...)`.
+- `item.add` links the resource placement to that command. Without an Add action or an accepted active resource, a
+  resource placement has nothing to open from the + menu.
+
+`ctx.shellPlacements.registerPlacement(...)` binds the View to the resource kind:
+
+- `id` is the stable identity of this shell-owned placement.
+- `item.kind: "resource"` says this placement hosts one instance per opened resource rather than one static View.
+- `item.viewId` names the View that renders each instance.
+- `item.resourceKinds` lists the kinds this placement accepts.
+- `item.cardinality` is required. `"many"` gives each resource URI its own instance, and reopening a URI selects the
+  existing tab. `"one"` would keep a single instance and rebind it when another resource opens. Cardinality does not
+  control initial visibility or closability: resource placements start empty, and resource tabs are always closable.
+- `region` puts the instances in `main`.
+
+`openGuide(...)` calls `ctx.shellPlacements.openPlacement(...)` for one instance:
+
+- `placementId` names the registered placement to open.
+- `resource` is the selected `ResourceRef`.
+- `title` sets the tab title for this instance.
+- `open: "pin"` opens a pinned tab. `"preview"` would open a reusable preview tab instead. Open intent applies only
+  to `cardinality: "many"`.
+
+Use page navigation when opening the resource must also establish a routed location.

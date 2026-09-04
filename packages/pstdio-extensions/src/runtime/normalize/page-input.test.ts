@@ -62,7 +62,7 @@ describe("page input validation", () => {
       mode: mode.ref,
       slots: [
         { id: "content", role: "primary", region: "main", view: pageView.ref },
-        { id: "tools", role: "auxiliary", region: "side", view: pageView.ref },
+        { id: "tools", role: "auxiliary", region: "side", view: pageView.ref, presence: "open" },
       ],
     });
 
@@ -152,6 +152,33 @@ describe("page input validation", () => {
           path: "broken-slot-fields",
           mode: workbenchModes.project,
           slots: [{ id: "content", role: "other", region: "main", view: pageView.ref }],
+          panels: {},
+        },
+      ] as never,
+    });
+
+    expect(diagnosticsFor(definition).map((diagnostic) => diagnostic.code)).toContain("invalid_page_slot");
+  });
+
+  test("rejects a page slot with a non-callable tab query", () => {
+    const definition = defineExtension({
+      views: [pageView],
+      pages: [
+        {
+          id: "broken-tab",
+          ref: { kind: "page", id: "broken-tab" },
+          title: "Broken tab",
+          path: "broken-tab",
+          mode: workbenchModes.project,
+          slots: [
+            {
+              id: "content",
+              role: "primary",
+              region: "main",
+              view: pageView.ref,
+              tab: { query: "not-a-function" },
+            },
+          ],
           panels: {},
         },
       ] as never,

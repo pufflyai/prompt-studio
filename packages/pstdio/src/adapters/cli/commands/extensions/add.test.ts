@@ -43,7 +43,6 @@ const installed = {
     viewMenus: [],
     placements: [],
     resourceKinds: [],
-    resourceViews: [],
     resourceHierarchyProviders: [],
     navigationItems: [],
     navigationTrees: [],

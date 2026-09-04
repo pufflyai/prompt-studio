@@ -6,6 +6,7 @@ import type {
   WorkbenchPageRuntimeState,
   WorkbenchPageSlot,
 } from "./page-registry-types";
+import { staticSlotOpen } from "./page-slot-lifecycle";
 
 export const pagePlacementIdentity = (pageId: string, slotId: string, instanceKey: string): PlacementIdentity => ({
   kind: "page",
@@ -32,6 +33,12 @@ export const validateWorkbenchPage = (page: WorkbenchPageContribution) => {
   }
 };
 
+const instanceClosable = (slot: WorkbenchPageSlot, resource: boolean) => {
+  if (slot.role === "primary") return resource;
+  if (slot.viewId) return slot.presence !== "fixed";
+  return true;
+};
+
 const placementFor = <Value>(input: {
   page: WorkbenchPageContribution;
   slot: WorkbenchPageSlot;
@@ -41,9 +48,10 @@ const placementFor = <Value>(input: {
   section?: WorkbenchPagePlacementInput["section"];
   open?: WorkbenchPagePlacementInput["open"];
 }): ResolvedOwnedPlacement<Value> => {
-  const viewId = input.resource ? input.slot.binding?.viewId : input.slot.viewId;
+  const binding =
+    input.resource && input.slot.binding?.resourceKinds.includes(input.resource.type) ? input.slot.binding : undefined;
+  const viewId = input.resource ? binding?.viewId : input.slot.viewId;
   if (!viewId) throw new Error(`Page slot "${input.page.id}.${input.slot.id}" has no view for its active instance`);
-  const staticPrimary = input.slot.role === "primary" && input.slot.viewId && !input.resource;
   const identity = pagePlacementIdentity(input.page.id, input.slot.id, input.instanceKey);
   return {
     identity,
@@ -58,7 +66,7 @@ const placementFor = <Value>(input: {
       ...(input.resource ? { resource: input.resource } : {}),
       ...(input.section ? { section: input.section } : {}),
       ...(input.open ? { open: input.open } : {}),
-      closable: staticPrimary ? false : Boolean(input.slot.closable),
+      closable: instanceClosable(input.slot, Boolean(input.resource)),
     }),
   };
 };
@@ -71,10 +79,9 @@ export const resolvePagePlacements = <Value>(input: {
   const placements: ResolvedOwnedPlacement<Value>[] = [];
   for (const slot of input.page.slots) {
     const resources = input.state.resourceInstances[slot.id] ?? [];
-    const showPrimaryDefault = slot.role === "primary" && Boolean(slot.viewId);
-    const showAuxiliaryStatic =
-      slot.role === "auxiliary" && Boolean(slot.viewId) && input.state.openStaticSlotIds.includes(slot.id);
-    if (showPrimaryDefault || showAuxiliaryStatic) {
+    const oneResourceReplacesDefault = slot.binding?.cardinality === "one" && resources.length > 0;
+    const showPrimaryDefault = slot.role === "primary" && Boolean(slot.viewId) && !oneResourceReplacesDefault;
+    if (showPrimaryDefault || staticSlotOpen(slot, input.state)) {
       placements.push(
         placementFor({
           page: input.page,

@@ -5,101 +5,121 @@ export const parameters = {
   layout: "padded",
 };
 
-<Meta of={ApiStories} name="API overview" parameters={{ layout: "padded" }} />
+<Meta of={ApiStories} name="Guide" parameters={{ layout: "padded" }} />
 
-# Workbench API
+# Placements and pages
 
-The Workbench package separates panel definitions from their open instances. A
-definition says what the panel can render. Each call to `layout.openPanel()`
-returns a panel instance, which may be a new tab or an existing tab selected
-again.
+This guide uses the Core API from `@pstdio/workbench`. A View defines content. A placement puts that View in a region
+for the lifetime of the shell, a mode, or a page. The workbench renders panel chrome around each placement instance.
+Authors do not register panels.
 
-- `@pstdio/workbench` contains the core registries, controllers, contributions,
-  resources, layout, and navigation.
-- `@pstdio/workbench/react` contains the React shell, providers, views, and store
-  hooks.
-- `@pstdio/workbench/storage` contains browser persistence adapters.
-- `@pstdio/workbench/extensions` maps extension metadata into Workbench
-  contributions.
-- `@pstdio/workbench/testing` contains test fixtures and helpers.
-- `@pstdio/workbench/webview-runtime` contains the extension webview runtime.
+A placement's `item` decides its lifecycle:
 
-## Panel definitions, instances, and tabs
+- A static item (`kind: "view"`) has one instance and declares a `presence`: `"fixed"` placements always show and
+  cannot close, `"open"` placements start open and the user may close them, `"closed"` placements stay hidden until an
+  action or the Add panel opens them. A saved user choice wins over `"open"` and `"closed"` on the next visit.
+- A resource item (`kind: "resource"`) has one instance per opened resource. It declares a `cardinality` and has no
+  initial visibility: nothing shows until an action supplies a resource.
 
-`singleton` and `reuse` decide whether an open call creates a new instance.
+Opening always goes through the shared navigation executor. `workbench.navigation.openPage(...)` navigates to a page,
+and `workbench.navigation.openPanel(...)` opens or activates a declared placement.
 
-- `singleton: true` reuses one instance. This is the default. A Sub Panel has one
-  singleton per Location.
-- `singleton: false` with `reuse: "resource"` creates one instance per resource
-  URI. Reopening the same resource selects its tab.
-- `singleton: false` with `reuse: "none"` creates a new instance for every open
-  call.
+## Static placement and presence
 
-The three tab-hosting regions are `main`, `secondary`, and `side`. Use
-`strategy: { kind: "persistent" }` when several tabs must remain open. Without
-an explicit strategy, an open call creates a preview tab, and the next preview
-may replace it.
+The View and placement have different ids in this example. The placement declares `presence: "closed"`, so nothing
+shows at registration; the module opens it through `navigation.openPanel`. Press the button inside the workbench:
+opening the placement again selects its existing `default` instance.
 
-### Singleton panel
+<Canvas of={ApiStories.StaticPlacement} sourceState="none" />
 
-Opening this panel repeatedly returns the same instance ID. The open singleton
-is also removed from the region's `+` menu because there is no second tab to
-create.
+<Source of={ApiStories.StaticPlacement} />
 
-<Canvas of={ApiStories.SingletonPanel} sourceState="none" />
+### What each field means
 
-<Source of={ApiStories.SingletonPanel} />
+- `views.registerView({ id, title, body })` defines reusable content. Registering a View opens nothing.
+- `shellPlacements.registerPlacement({ id, item, region })` declares one shell-owned placement.
+- `item.kind: "view"` makes this a static placement with a single instance.
+- `item.viewId` names the registered View to render.
+- `item.presence: "closed"` keeps the placement hidden until something opens it. `"open"` would show it right away,
+  and `"fixed"` would show it permanently with no close button.
+- `region: "main"` selects the region that hosts the instance.
+- `navigation.openPanel({ panel: { kind: "shell-placement", id } })` opens the placement through the shared executor.
+  Opening an already-open static placement activates the existing instance instead of adding a tab.
 
-### Multiple tabs by resource
+## Resource placement with `cardinality: "many"`
 
-Set `singleton: false` and keep the default `reuse: "resource"` policy when one
-panel definition should open one tab per resource. Alpha and Beta have different
-URIs, so they have separate tabs. Reopening Alpha selects its existing tab.
+The placement binds one View to the `document` resource kind with `cardinality: "many"`. Preview Alpha, then Preview
+Beta: Beta replaces the unpinned Alpha preview. Pin a document before previewing the other one to keep both tabs.
+Cardinality controls only how instances map to resources. It does not control initial visibility (a resource placement
+always starts empty) and it does not control closability (resource tabs are always closable).
 
 <Canvas of={ApiStories.ResourceTabs} sourceState="none" />
 
 <Source of={ApiStories.ResourceTabs} />
 
-### Multiple tabs without reuse
+### What each field means
 
-Set `reuse: "none"` for terminals, scratch buffers, and other panels where every
-open call owns separate state. The panel ID stays the same, while every returned
-instance ID is different.
+- `item.kind: "resource"` makes this placement resource-bound: each opened resource becomes one instance.
+- `item.resourceKinds` lists the resource kinds this placement accepts.
+- `item.cardinality: "many"` keeps one instance per resource URI. Opening the same resource again selects its
+  existing tab instead of duplicating it.
+- `openPlacement({ placementId, resource, open })` supplies the resource that creates or selects an instance.
+- `open: "preview"` creates a replaceable tab; the next preview replaces it. `open: "pin"` keeps the tab while other
+  resources open. The open intent applies only to `"many"` placements.
+- `title` labels the instance tab; without it the tab uses the resource label.
 
-<Canvas of={ApiStories.DuplicateTabs} sourceState="none" />
+## Resource placement with `cardinality: "one"`
 
-<Source of={ApiStories.DuplicateTabs} />
+The inspector declares `cardinality: "one"`. Open main, then release: the placement keeps one instance and rebinds it
+to the newest resource. Use `"one"` for inspectors and detail panels that always follow the latest selection.
 
-## Composition panel query
+<Canvas of={ApiStories.ResourceRebind} sourceState="none" />
 
-`workbench.composition.panelsFor("main" | "secondary" | "side")` returns the
-panel controls for the active mode and resource.
+<Source of={ApiStories.ResourceRebind} />
 
-- `open` contains current placements.
-- `addable` contains optional closed panels that can open in the region.
-- `closable` contains contribution IDs that the user may close.
+### What each field means
 
-The inspector above the workbench renders the live return value. It does not
-copy the composition rules into the React view.
+- `item.cardinality: "one"` keeps a single instance. Opening resource B while A is open rebinds the same instance to
+  B; no second tab appears.
+- Open intent (`"preview"` and `"pin"`) is not accepted here because there is never more than one tab.
+- Everything else matches the `"many"` example: the placement starts empty, and its one instance closes like any
+  resource tab. Cardinality never changes initial visibility or closability.
 
-<Canvas of={ApiStories.CompositionPanelQuery} sourceState="none" />
+## Tab presentation
 
-<Source of={ApiStories.CompositionPanelQuery} />
+A tab may replace its View icon with a dynamic status indicator. The workbench renders the indicator as the one leading
+glyph instead of showing the indicator and View icon together.
 
-## Extension panel placement
+<Canvas of={ApiStories.TabPresentation} sourceState="none" />
 
-An extension panel uses `show.region` for its default placement.
-`show.allowedRegions` limits user movement and mode overrides. `show.required`
-controls whether composition may close the panel.
+<Source of={ApiStories.TabPresentation} />
 
-The story passes checked extension metadata to
-`registerWorkbenchExtensionContributions()`. Its controls move the same
-singleton panel between `main` and `sidenav`. Both regions are allowed, so the
-move keeps the same panel instance.
+### What each field means
 
-<Canvas of={ApiStories.ExtensionPanelPlacement} sourceState="none" />
+- `tab.query` returns the current tab snapshot: an optional label, icon, indicator, and menu.
+- `tab.refreshEvents` lists the events that invalidate the snapshot and re-run the query.
+- `indicator` supplies a leading status glyph with an optional color and accessible label.
 
-<Source of={ApiStories.ExtensionPanelPlacement} />
+## Page composition
 
-`sidenav` is a docked composition region. It does not host tabs, so it is not
-accepted by `composition.panelsFor()`.
+A page declares every placement it owns as slots. Navigating to another page replaces that placement set in one
+operation. Mode-owned placements remain only when the target page uses that mode.
+
+This example begins on the Session page. Its action navigates to Lab. The Lab page replaces the Session content
+instead of opening beside it.
+
+<Canvas of={ApiStories.PageReplacement} sourceState="none" />
+
+<Source of={ApiStories.PageReplacement} />
+
+### What each field means
+
+- `pages.registerPage({ id, ref, path, modeId, slots })` declares a routed page and everything it places.
+- the `role: "primary"` slot is the page's routed content in `main`. It is always present while the page is open and
+  the user cannot hide the slot itself.
+- an auxiliary slot with a `viewId` is a static panel the page owns; its `presence` follows the same three values as
+  placements.
+- an auxiliary slot with a `binding` opens instances only when an action supplies a resource; `openOn:
+  "page-resource"` also opens it for the page's own resource when the kind matches.
+- `navigation.openPage({ page, resource? })` selects the page's mode, commits one canonical location, updates URL and
+  history once, and reconciles the page placements in one operation.

@@ -1,6 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbenchSelectionResourceMetadata, type ResourceRef } from "../../../core";
-import { canVirtualizeTreeSections, resolveTreeListActiveNodeId, resolveTreeListSelection } from "./tree-list-adapter";
+import {
+  canVirtualizeTreeSections,
+  filterTreeListSelection,
+  resolveTreeListActiveNodeId,
+  resolveTreeListSelection,
+} from "./tree-list-adapter";
 
 const ticketsResource = {
   kind: "dashboard-view",
@@ -25,6 +30,30 @@ describe("resolveTreeListActiveNodeId", () => {
 });
 
 describe("resolveTreeListSelection", () => {
+  test("selects a page target when that page is the current location", () => {
+    expect(
+      resolveTreeListSelection({
+        activePage: { extensionId: "host", kind: "page", id: "search" },
+        childrenByNodeId: {},
+        sections: [
+          {
+            id: "navigation",
+            nodes: [
+              {
+                id: "search",
+                label: "Search",
+                target: {
+                  kind: "page",
+                  page: { extensionId: "host", kind: "page", id: "search" },
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    ).toBe("search");
+  });
+
   test("matches active resources by resource uri when the node id has a different shape", () => {
     const session = { kind: "session", uri: "pstdio://sessions/session-1", label: "Session 1" } satisfies ResourceRef;
 
@@ -69,7 +98,7 @@ describe("resolveTreeListSelection", () => {
               {
                 id: "tickets",
                 label: "Tickets",
-                target: { kind: "resource", resource: ticketsResource },
+                resource: ticketsResource,
               },
             ],
           },
@@ -124,6 +153,16 @@ describe("resolveTreeListSelection", () => {
         selectedNodeId: "src/old.ts",
       }),
     ).toBe("src/index.ts");
+  });
+});
+
+describe("filterTreeListSelection", () => {
+  test("keeps the global selection only in the slot that contains it", () => {
+    const header = [{ id: "header", nodes: [{ id: "search", label: "Search" }] }];
+    const body = [{ id: "body", nodes: [{ id: "sessions", label: "Sessions" }] }];
+
+    expect(filterTreeListSelection(header, {}, "search")).toBe("search");
+    expect(filterTreeListSelection(body, {}, "search")).toBeUndefined();
   });
 });
 

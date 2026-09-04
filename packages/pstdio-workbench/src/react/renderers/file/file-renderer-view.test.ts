@@ -26,7 +26,7 @@ describe("file renderer loaded state", () => {
       fileRendererId: "planner.ticketContent",
       resource: {
         kind: "ticket",
-        uri: "dashboard-workbench://ticket/ticket-1",
+        uri: "pstdio://extension-resource/ticket/ticket-1",
         metadata: { documentId: "ticket-body" },
       },
     });
@@ -34,7 +34,7 @@ describe("file renderer loaded state", () => {
       fileRendererId: "planner.ticketContent",
       resource: {
         kind: "ticket",
-        uri: "dashboard-workbench://ticket/ticket-1",
+        uri: "pstdio://extension-resource/ticket/ticket-1",
         metadata: { documentId: "file-1" },
       },
     });
@@ -47,7 +47,7 @@ describe("file renderer loaded state", () => {
       fileRendererId: "planner.ticketContent",
       resource: {
         kind: "ticket",
-        uri: "dashboard-workbench://ticket/ticket-1",
+        uri: "pstdio://extension-resource/ticket/ticket-1",
         metadata: { documentId: "file-1", nested: { projectId: "proj-1", workspaceId: "workspace-1" } },
       },
     });
@@ -55,7 +55,7 @@ describe("file renderer loaded state", () => {
       fileRendererId: "planner.ticketContent",
       resource: {
         kind: "ticket",
-        uri: "dashboard-workbench://ticket/ticket-1",
+        uri: "pstdio://extension-resource/ticket/ticket-1",
         metadata: { nested: { workspaceId: "workspace-1", projectId: "proj-1" }, documentId: "file-1" },
       },
     });

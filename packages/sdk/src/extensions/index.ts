@@ -4,7 +4,6 @@ export type {
   ListNotificationsResponse,
   Notification,
   NotificationAction,
-  NotificationActionResult,
   NotificationActorType,
   NotificationKind,
   NotificationOrigin,
@@ -45,7 +44,6 @@ export {
   WEBVIEW_DECLARABLE_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITY_VERSION,
-  workbenchCommands,
   workbenchModeDefinitions,
   workbenchModes,
   workbenchPageDefinitions,
@@ -76,7 +74,6 @@ export {
   definePlacement,
   defineResourceHierarchyProvider,
   defineResourceKind,
-  defineResourceView,
   defineSchedule,
   defineSettingsPanel,
   defineSettingsSection,
@@ -90,7 +87,6 @@ export {
   defineViewMenu,
   defineWorkspaceType,
   resourceMenuSlotRef,
-  resourceSlotRef,
 } from "./define-contribution";
 export { defineExtension } from "./define-extension";
 export {

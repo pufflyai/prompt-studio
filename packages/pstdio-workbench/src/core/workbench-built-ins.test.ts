@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { findReservedKeybindingConflict } from "pstdio-extensions";
 import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
-import { createWorkbenchCore } from "./workbench-core";
+import { createWorkbench } from "./workbench-core";
 
 describe("workbench built-ins", () => {
   test("registers command-backed chrome actions and default keybindings", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     await workbench.commands.executeCommand("workbench.toggleSideBar");
     expect(workbench.panels.isOpen("sidenav")).toBe(false);
@@ -20,7 +20,7 @@ describe("workbench built-ins", () => {
     await workbench.commands.executeCommand("workbench.action.showCommands");
     expect(workbench.commandPalette.getInitialQuery()).toBe("> ");
 
-    const keybindings = workbench.keybindings.listKeybindings();
+    const keybindings = workbench.keybindings.listCommandKeybindings();
 
     expect(keybindings).toMatchObject([
       { commandId: "workbench.toggleCommandPalette" },
@@ -55,9 +55,9 @@ describe("workbench built-ins", () => {
   });
 
   test("built-in chords avoid known reserved browser shortcuts on every platform", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
-    for (const keybinding of workbench.keybindings.listKeybindings()) {
+    for (const keybinding of workbench.keybindings.listCommandKeybindings()) {
       if (keybinding.commandId === "workbench.toggleCommandPalette") continue;
       // Only the first step of a sequence is typed in isolation, so it is the
       // step that can collide with browser/OS chords. Later steps fire only
@@ -76,8 +76,8 @@ describe("workbench built-ins", () => {
   });
 
   test("built-in keybindings are not ambiguous sequence prefixes", () => {
-    const workbench = createWorkbenchCore();
-    const keybindings = workbench.keybindings.listKeybindings();
+    const workbench = createWorkbench();
+    const keybindings = workbench.keybindings.listCommandKeybindings();
 
     for (const keybinding of keybindings) {
       const sequence = Array.isArray(keybinding.keybinding) ? keybinding.keybinding : [keybinding.keybinding];
@@ -102,7 +102,7 @@ describe("workbench built-ins", () => {
   });
 
   test("does not register removed default workbench commands", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const removedCommandIds = [
       "workbench.focusMain",
       "workbench.focusSideBar",
@@ -113,7 +113,9 @@ describe("workbench built-ins", () => {
     ];
 
     const commandIds = workbench.layout.listMenuItems(workbenchCommandPaletteMenuPath).map((item) => item.commandId);
-    const keybindingCommandIds = workbench.keybindings.listKeybindings().map((keybinding) => keybinding.commandId);
+    const keybindingCommandIds = workbench.keybindings
+      .listCommandKeybindings()
+      .map((keybinding) => keybinding.commandId);
 
     for (const commandId of removedCommandIds) {
       expect(workbench.commands.getCommand(commandId)).toBeUndefined();
@@ -122,47 +124,8 @@ describe("workbench built-ins", () => {
     }
   });
 
-  test("switches modes through a built-in command", async () => {
-    const workbench = createWorkbenchCore();
-
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.modes.registerMode({ id: "pstdio.extension-lab.lab", label: "Lab", activate: () => undefined });
-    workbench.modes.setActiveMode("project");
-
-    await workbench.commands.executeCommand("workbench.action.switchMode", { modeId: "pstdio.extension-lab.lab" });
-
-    expect(workbench.modes.getActiveModeId()).toBe("pstdio.extension-lab.lab");
-  });
-
-  test("opens the mode picker when switch mode runs without a mode id", async () => {
-    const workbench = createWorkbenchCore();
-
-    await workbench.commands.executeCommand("workbench.action.switchMode");
-
-    expect(workbench.commandPalette.isOpen()).toBe(true);
-    expect(workbench.commandPalette.getView()).toBe("mode");
-  });
-
-  test("switch mode command reports unknown mode ids without mutating active state", async () => {
-    const workbench = createWorkbenchCore();
-
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.modes.setActiveMode("project");
-
-    await workbench.commands.executeCommand("workbench.action.switchMode", { modeId: "does-not-exist" });
-
-    expect(workbench.modes.getActiveModeId()).toBe("project");
-    expect(workbench.notifications.listNotifications()).toEqual([
-      expect.objectContaining({
-        level: "error",
-        title: "Mode unavailable",
-        message: "Workbench mode not registered: does-not-exist",
-      }),
-    ]);
-  });
-
   test("does not register collection persistence commands", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const commandIds = workbench.layout.listMenuItems(workbenchCommandPaletteMenuPath).map((item) => item.commandId);
 
     expect(workbench.commands.getCommand("favorites.toggleCurrentResource")).toBeUndefined();

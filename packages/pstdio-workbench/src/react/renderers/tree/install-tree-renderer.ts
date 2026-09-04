@@ -1,6 +1,6 @@
 import type { ResourceContextAction } from "@pstdio/ui";
 import { createElement } from "react";
-import type { WorkbenchCore } from "../../../core";
+import { getWorkbenchRenderers, type WorkbenchCore } from "../../../core";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { WorkbenchTreeView } from "./tree-view";
 
@@ -16,6 +16,18 @@ interface WorkbenchTreeRendererInstallation {
 
 // Track per-core installation so repeated <Workbench> renders are idempotent.
 const installed = new WeakMap<WorkbenchCore, WorkbenchTreeRendererInstallation>();
+
+const isSidenavPlacement = (workbench: WorkbenchCore, instanceId: string) =>
+  workbench.layout.getLayout().regions.sidenav.widgets.some((placement) => placement.widgetId === instanceId);
+
+const viewContextId = (workbench: WorkbenchCore, panelId: string, viewId: string | undefined) => {
+  const config = workbench.layout.getPanel(panelId)?.config;
+  if (config && typeof config === "object" && "viewContextId" in config) {
+    const candidate = config.viewContextId;
+    if (typeof candidate === "string") return candidate;
+  }
+  return viewId;
+};
 
 export const installWorkbenchTreeRenderer = (
   workbench: WorkbenchCore,
@@ -33,17 +45,16 @@ export const installWorkbenchTreeRenderer = (
     onSidenavContextActionsChange: input.onSidenavContextActionsChange,
   };
   installed.set(workbench, installation);
-  workbench.renderers.setTreeRendererImplementation(({ workbench: scope, instance, treeId }) =>
+  getWorkbenchRenderers(workbench).setTreeRendererImplementation(({ workbench: scope, instance, treeId }) =>
     createElement(WorkbenchTreeView, {
       workbench: scope,
       treeViewId: treeId,
       resource: instance.resource,
-      viewId: instance.panelId,
+      viewId: viewContextId(scope, instance.panelId, instance.viewId),
       renderParamField: installation.renderParamField,
-      onSidenavContextActionsChange:
-        scope.layout.getPanel(instance.panelId)?.region === "sidenav"
-          ? installation.onSidenavContextActionsChange
-          : undefined,
+      onSidenavContextActionsChange: isSidenavPlacement(scope, instance.instanceId)
+        ? installation.onSidenavContextActionsChange
+        : undefined,
     }),
   );
 };

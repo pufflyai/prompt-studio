@@ -89,7 +89,7 @@ describe("page primary slot lifecycle", () => {
           id: "content",
           role: "primary",
           region: "main",
-          binding: { resourceKind: "ticket", viewId: "detail" },
+          binding: { resourceKinds: ["ticket"], viewId: "detail", cardinality: "one" },
         },
       ],
     });
@@ -102,7 +102,7 @@ describe("page primary slot lifecycle", () => {
           role: "primary",
           region: "main",
           viewId: "list",
-          binding: { resourceKind: "ticket", viewId: "detail" },
+          binding: { resourceKinds: ["ticket"], viewId: "detail", cardinality: "many" },
         },
       ],
     });
@@ -131,6 +131,35 @@ describe("page primary slot lifecycle", () => {
     );
   });
 
+  test("rebinds a one-cardinality hybrid primary instead of opening another tab", () => {
+    const registry = createRegistry();
+    registerPage(registry, {
+      id: "sessions",
+      modeId: "sessions",
+      slots: [
+        {
+          id: "content",
+          role: "primary",
+          region: "main",
+          viewId: "sessions",
+          binding: { resourceKinds: ["session"], viewId: "session", cardinality: "one" },
+        },
+      ],
+    });
+
+    activatePage(registry, { pageId: "sessions" });
+    expect(activePagePlacements(registry, "content").map((item) => item.identity.instanceKey)).toEqual(["default"]);
+
+    activatePage(registry, { pageId: "sessions", resource: { type: "session", id: "one" } });
+    expect(activePagePlacements(registry, "content").map((item) => item.identity.instanceKey)).toEqual(["session:one"]);
+
+    activatePage(registry, { pageId: "sessions", resource: { type: "session", id: "two" } });
+    expect(activePagePlacements(registry, "content").map((item) => item.identity.instanceKey)).toEqual(["session:two"]);
+
+    activatePage(registry, { pageId: "sessions" });
+    expect(activePagePlacements(registry, "content").map((item) => item.identity.instanceKey)).toEqual(["default"]);
+  });
+
   test("owns preview replacement and pinning inside one many slot", () => {
     const registry = createRegistry();
     registerPage(registry, {
@@ -141,9 +170,7 @@ describe("page primary slot lifecycle", () => {
           id: "content",
           role: "primary",
           region: "main",
-          cardinality: "many",
-          closable: true,
-          binding: { resourceKind: "file", viewId: "editor" },
+          binding: { resourceKinds: ["file"], viewId: "editor", cardinality: "many" },
         },
       ],
     });
@@ -168,8 +195,7 @@ describe("page primary slot lifecycle", () => {
           id: "content",
           role: "primary",
           region: "main",
-          cardinality: "many",
-          binding: { resourceKind: "ticket", viewId: "detail" },
+          binding: { resourceKinds: ["ticket"], viewId: "detail", cardinality: "many" },
         },
       ],
     });
@@ -203,13 +229,13 @@ describe("page primary slot lifecycle", () => {
           id: "left",
           role: "primary",
           region: "main",
-          binding: { resourceKind: "file", viewId: "editor" },
+          binding: { resourceKinds: ["file"], viewId: "editor", cardinality: "one" },
         },
         {
           id: "right",
           role: "auxiliary",
           region: "side",
-          binding: { resourceKind: "file", viewId: "editor" },
+          binding: { resourceKinds: ["file"], viewId: "editor", cardinality: "one" },
         },
       ],
     });
@@ -233,14 +259,14 @@ describe("page primary slot lifecycle", () => {
           id: "content",
           role: "primary",
           region: "main",
-          binding: { resourceKind: "ticket", viewId: "editor" },
+          binding: { resourceKinds: ["ticket"], viewId: "editor", cardinality: "one" },
         },
         {
           id: "files",
           role: "auxiliary",
           region: "sidenav",
-          binding: { resourceKind: "ticket", viewId: "files" },
-          defaultOpen: true,
+          binding: { resourceKinds: ["ticket"], viewId: "files", cardinality: "one" },
+          openOn: "page-resource",
         },
       ],
     });
@@ -265,8 +291,8 @@ describe("page placement close lifecycle", () => {
       modeId: "project",
       slots: [
         { id: "content", role: "primary", region: "main", viewId: "content" },
-        { id: "emoji", role: "auxiliary", region: "side", viewId: "emoji", defaultOpen: true, closable: true },
-        { id: "notes", role: "auxiliary", region: "side", viewId: "notes", defaultOpen: true, closable: true },
+        { id: "emoji", role: "auxiliary", region: "side", viewId: "emoji", presence: "open" },
+        { id: "notes", role: "auxiliary", region: "side", viewId: "notes", presence: "open" },
       ],
     });
     activatePage(registry, { pageId: "tools" });
@@ -298,10 +324,8 @@ describe("page placement close lifecycle", () => {
           id: "content",
           role: "primary",
           region: "main",
-          cardinality: "many",
-          closable: true,
           viewId: "list",
-          binding: { resourceKind: "ticket", viewId: "detail" },
+          binding: { resourceKinds: ["ticket"], viewId: "detail", cardinality: "many" },
         },
       ],
     });
@@ -314,8 +338,7 @@ describe("page placement close lifecycle", () => {
           id: "content",
           role: "primary",
           region: "main",
-          closable: true,
-          binding: { resourceKind: "ticket", viewId: "detail" },
+          binding: { resourceKinds: ["ticket"], viewId: "detail", cardinality: "one" },
         },
       ],
     });

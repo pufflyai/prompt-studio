@@ -1,0 +1,186 @@
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
+import firstExtensionSource from "../onboarding/extensions/tree-page-extension.ts?raw";
+import * as ExtensionApiStories from "./extension-api.stories";
+
+<Meta of={ExtensionApiStories} name="API reference" />
+
+# Extension API
+
+Use the Extension API to build tools that Prompt Studio can install, validate, enable, and remove. This is the only
+workbench authoring API available to first-party and third-party extensions.
+
+| | Extension API |
+| --- | --- |
+| Audience | Extension developers and agents that build extensions |
+| Package | `@pstdio/sdk/extensions` |
+| API version | `1.0.0-alpha.9` |
+| Code location | An extension package |
+| UI runtime | Native host renderer or isolated webview |
+| Host access | Validated contributions and declared capabilities |
+
+## Runnable example
+
+This is the complete extension used by the preview. The source panel under the preview shows the same TypeScript that
+Storybook runs.
+
+<Canvas of={ExtensionApiStories.RunnableExample} sourceState="shown" />
+
+## Extension entry point
+
+Each contribution has a local id and a typed ref. `defineExtension` collects those contributions. Package identity
+comes from `package.json`.
+
+<Source language="tsx" code={firstExtensionSource} />
+
+`defineExtension` accepts arrays named for each contribution type. In this example:
+
+- `views` contains reusable content definitions.
+- `pages` contains page locations and their placements.
+- `navigationItems` contains user actions that open those locations.
+
+The SDK adds a typed `ref` to every `define...` result. Pass the ref to another contribution instead of copying string
+ids. The host adds the extension id when it loads the package.
+
+## Views
+
+`defineView(...)` defines content and does not place or open it.
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `id` | Yes | Stable id inside this extension. The SDK creates `view.ref` from it. |
+| `title` | Yes | Default user-facing label. It may be a string or a localizable value. |
+| `icon` | No | Design-system icon name used where the host shows View chrome. |
+| `body` | Yes | Native View or webview definition. |
+| `body.kind` | Yes | Selects `tree`, `file`, `controls`, `dataTable`, `kanban`, or `webview`. |
+
+The remaining `body` fields belong to the selected kind. For example, a tree `body` callback returns sections and
+nodes. A file body supplies `load` and optional `save`. A webview body declares its packaged entry and capabilities.
+Extensions cannot supply React or register a renderer directly.
+
+## Pages and slots
+
+`definePage(...)` defines one replaceable location. Its `slots` are the complete set of page-owned placements.
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `id` | Yes | Stable id inside the extension. The SDK creates `page.ref` from it. |
+| `title` | Yes | User-facing page title. |
+| `path` | Yes | Stable URL segment for this page type, without a resource id. |
+| `mode` | Yes | Mode that owns the page, such as `workbenchModes.project`. |
+| `parent` | No | Parent page type used to validate and build nested locations. Required when the primary slot has only a binding; closing its last tab navigates to the parent. |
+| `slots` | Yes | Every View placement that belongs to this page. |
+
+Every slot declares `id`, `role` (`primary` or `auxiliary`), and `region` (`main`, `secondary`, or `side`), plus
+optional `order` and `mountStrategy`. The role and content fields select one of three slot shapes:
+
+| Slot shape | Content fields | Behavior |
+| --- | --- | --- |
+| Primary | `view` and/or `binding` | The page's routed content. Always present while the page is open; the user cannot close the slot itself. With a binding, each opened resource becomes an instance, and the static view (when declared) shows while no resource is open. |
+| Static auxiliary | `view` and `presence` | An optional page-owned panel. `presence` sets its initial state. |
+| Bound auxiliary | `binding` and optional `openOn: "page-resource"` | No initial visibility. An instance opens only when an action supplies a resource. `openOn: "page-resource"` also opens it for the page's own resource when the kind matches the binding. |
+
+`presence` is required on a static auxiliary slot and has no default:
+
+- `fixed`: always open while the page is open. The user cannot close it.
+- `open`: starts open. The user may close it.
+- `closed`: starts closed until the user or an action opens it.
+
+A saved user choice wins over `open` and `closed` on the next visit.
+
+A `binding` inside any slot accepts these fields:
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `kind` | Yes | Resource kind, or an array of kinds, the binding accepts. |
+| `view` | Yes | View rendered for each bound resource. |
+| `cardinality` | Yes | `one` keeps a single instance and rebinds it when another resource opens. `many` creates one instance per resource URI and selects the existing tab on reopen. |
+| `add` | No | Navigation target the Add panel runs to create or select a resource before the slot can open. |
+
+Cardinality does not control initial visibility or closability. Bound slots start empty, and resource tabs are always
+closable.
+
+Presentation fields such as `headerBorderBottom`, `floatingPanels`, and `tab` have the same meaning on page slots and
+mode placements. The Core reference lists those shared fields. Region size and collapsibility are not slot fields; they
+live in `regionSettings` on the mode contribution or on the host.
+
+## Mode placements
+
+`definePlacement(...)` adds a View to a mode independently of any page.
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `id` | Yes | Stable placement id inside the extension. |
+| `mode` | Yes | Mode that owns the placement. Leaving the mode removes it. |
+| `item` | Yes | A static View or a resource binding. |
+| `region` | Yes | `main`, `secondary`, or `side`. |
+| `movableTo` | No | Regions the user may move it to; the list must include its initial region. |
+| `order` | No | Initial order among placements owned by the same mode. |
+
+For a static item, use `{ kind: "view", view: someView.ref, presence }`. `presence` is required and has the same
+`fixed`, `open`, and `closed` values as a static page slot. For a resource item, use
+`{ kind: "binding", resourceKind, view, cardinality, add? }` with the same required `cardinality` and optional `add`
+target as a page slot binding.
+
+Region layout policy lives on the mode: `defineMode` accepts `regionSettings` with `size` and `collapsible` per
+declared region. A placement cannot set region size or collapsibility.
+
+## Keybindings
+
+`defineKeybinding(...)` binds a keyboard chord to a navigation action.
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `id` | Yes | Stable id inside the extension. |
+| `key` | Yes | Default chord, such as `mod+shift+h`. `mod` is Cmd on macOS and Ctrl elsewhere. |
+| `mac`, `linux`, `win` | No | Platform overrides for `key`. |
+| `action` | Yes | Any navigation target. A page or panel binds directly; no wrapper command is needed. |
+| `when` | No | Context expression that gates the chord. |
+
+## Navigation items
+
+`defineNavigationItem(...)` gives the user a visible way to run an action.
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `id` | Yes | Stable item id inside the extension. |
+| `owner` | Yes | Mode or page whose navigation tree receives the item. |
+| `slot` | `content` | Pinned `header`, scrolling `content`, or pinned `footer`. |
+| `group` | No | Visible section label. Items with the same group are rendered together. |
+| `label` | Yes | User-facing item label. |
+| `icon` | No | Design-system icon name. |
+| `when` | No | Context expression that controls visibility. |
+| `action` | Yes | Page, panel, command, link, or compound navigation target. |
+
+## UI contributions
+
+| Helper | What it defines |
+| --- | --- |
+| `defineView` | A webview or a native tree, file, controls, Kanban, or data table view |
+| `definePage` | A replaceable location made from primary and auxiliary view slots |
+| `defineMode` | A long-lived context with supported workbench regions and region settings |
+| `definePlacement` | A mode-owned view or resource binding |
+| `defineNavigationItem` | A page, panel, command, link, or compound navigation action |
+| `defineKeybinding` | A keyboard chord bound to any navigation target |
+| `defineNavigationTree` | A tree view added to a mode or page navigation slot |
+| `defineViewMenu` | A view placed in the menu area of another view |
+| `defineResourceKind` | Domain identity, resource bindings, and typed menu slots |
+| `defineStatusBarItem` | A view placed in the leading or trailing status bar slot |
+| `defineSettingsSection` and `defineSettingsPanel` | Extension settings in shared host settings |
+| `defineStatuses` | Workflow states used by native collection views |
+
+## Native view bodies
+
+| `body.kind` | Extension supplies | Prompt Studio supplies |
+| --- | --- | --- |
+| `tree` | Sections, nodes, children, and actions | Tree interaction, scrolling, expansion, and customization |
+| `file` | Load and optional save callbacks | Text, code, Markdown, and image rendering |
+| `controls` | Parameter declarations, values, and mutations | Shared form controls and validation |
+| `dataTable` | Columns, rows, and actions | Sorting, paging, selection, and table layout |
+| `kanban` | Attributes, rows, statuses, and mutations | Board grouping, filtering, dragging, and card layout |
+| `webview` | A packaged UI entry and requested capabilities | Isolation, bridge transport, theme, and capability checks |
+
+Renderer callbacks receive an extension context and structured input. They do not receive the workbench core or a React
+render function.
+
+Use the Onboarding guide to build a first page. The Renderers guide covers every `body.kind` with a live preview,
+complete extension source, field reference, and concrete use cases.

@@ -16,6 +16,7 @@ import type {
   WorkbenchCore,
   WorkbenchPanelInstance,
 } from "../../../core";
+import { getWorkbenchRenderers } from "../../../core";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import { createKanbanViewQuerySequencer, executeKanbanViewQuery } from "./kanban-view-query";
 import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
@@ -118,7 +119,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
     runQuery();
 
     const subscription = contribution.subscribe?.(runQuery);
-    const refreshSubscription = workbench.renderers.onDidRefreshKanbanRenderer((event) => {
+    const refreshSubscription = getWorkbenchRenderers(workbench).onDidRefreshKanbanRenderer((event) => {
       if (event.kanbanRendererId === contribution.id) runQuery();
     });
     return () => {

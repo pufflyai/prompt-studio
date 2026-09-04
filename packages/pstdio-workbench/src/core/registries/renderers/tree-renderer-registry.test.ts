@@ -3,7 +3,7 @@ import { createWorkbenchRendererRegistry } from "./renderer-registry";
 import { createTreeRendererRegistry, type PersistedTreeRendererStates } from "./tree-renderer-registry";
 
 const createRegistry = (input: { persistence?: PersistedTreeRendererStates } = {}) => {
-  const rendererRegistry = createWorkbenchRendererRegistry({ createHost: () => ({}) as HTMLElement });
+  const rendererRegistry = createWorkbenchRendererRegistry();
   if (input.persistence) {
     const persistence = {
       getTreeStates: () => input.persistence,
@@ -96,7 +96,7 @@ describe("createTreeRendererRegistry", () => {
     });
 
     const renderer = rendererRegistry.getRenderer("sessions.tree");
-    if (!renderer || renderer.keepAlive) throw new Error("expected non-keep-alive renderer");
+    if (!renderer) throw new Error("expected renderer");
     renderer.render({} as Parameters<typeof renderer.render>[0]);
 
     expect(calls).toEqual([{ treeId: "sessions.tree" }]);
@@ -205,7 +205,7 @@ describe("createTreeRendererRegistry persistence", () => {
         stored.push(next);
       },
     };
-    const rendererRegistry = createWorkbenchRendererRegistry({ createHost: () => ({}) as HTMLElement });
+    const rendererRegistry = createWorkbenchRendererRegistry();
     const trees = createTreeRendererRegistry({ rendererRegistry, persistence });
 
     trees.registerTreeRenderer({
@@ -247,7 +247,7 @@ describe("createTreeRendererRegistry persistence", () => {
         stored.push(next);
       },
     };
-    const rendererRegistry = createWorkbenchRendererRegistry({ createHost: () => ({}) as HTMLElement });
+    const rendererRegistry = createWorkbenchRendererRegistry();
     const trees = createTreeRendererRegistry({ rendererRegistry, persistence });
 
     trees.registerTreeRenderer({

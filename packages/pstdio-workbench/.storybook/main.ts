@@ -17,6 +17,8 @@ const config: StorybookConfig = {
     mergeConfig(config, {
       resolve: {
         alias: [
+          { find: /^@pstdio\/workbench\/react$/, replacement: resolve(rootDir, "../src/react/index.ts") },
+          { find: /^@pstdio\/workbench$/, replacement: resolve(rootDir, "../src/index.ts") },
           { find: /^@pstdio\/ui$/, replacement: resolve(rootDir, "../../ui/src/index.ts") },
           { find: /^@pstdio\/ui\/chat-ui$/, replacement: resolve(rootDir, "../../ui/src/components/chat-ui/index.ts") },
           {

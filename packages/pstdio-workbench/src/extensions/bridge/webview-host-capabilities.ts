@@ -1,7 +1,6 @@
-import type { ExtensionResourceOpenIntent } from "@pstdio/sdk/extensions";
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
-import type { PreferenceScopeRef, PreferenceValue, ResourceRef, WorkbenchCore } from "../../core";
+import type { NavigationTarget, PreferenceScopeRef, PreferenceValue, WorkbenchCore } from "../../core";
 import { createTerminalSessionCapability } from "./terminal-session-capability";
 
 interface CreateWorkbenchWebviewHostCapabilitiesInput {
@@ -17,21 +16,16 @@ const dispatchDocumentKeyboardEvent = (params: KeyboardEventInit) => {
   document.dispatchEvent(event);
 };
 
-export const toOpenResourceInput = (input: ExtensionResourceOpenIntent | undefined) => {
-  if (!input?.strategy || input.strategy === "persistent") return {};
-  return { replaceActive: true };
-};
-
 export const createWorkbenchWebviewHostCapabilities = (input: CreateWorkbenchWebviewHostCapabilitiesInput) =>
   ({
     "commands.execute": (params: unknown) => {
       const request = params as { commandId: string; params?: unknown };
       return input.workbench.commands.executeCommand(request.commandId, request.params);
     },
-    "resource.open": (params: unknown) => {
-      const request = params as { input?: ExtensionResourceOpenIntent; resource?: ResourceRef };
-      if (!request.resource) throw new Error("resource.open requires a resource.");
-      return input.workbench.resources.openResource(request.resource, toOpenResourceInput(request.input));
+    "navigation.open": (params: unknown) => {
+      const request = params as { target?: NavigationTarget };
+      if (!request.target) throw new Error("navigation.open requires a target.");
+      return input.workbench.navigation.openTarget(request.target);
     },
     "notification.show": (params: unknown) => {
       const notification = params as Parameters<WorkbenchCore["notifications"]["show"]>[0];

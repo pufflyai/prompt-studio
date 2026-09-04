@@ -1,9 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { createWorkbenchCore, type WorkbenchModuleContribution } from "./workbench-core";
+import { createWorkbench, type WorkbenchModuleContribution } from "./workbench-core";
+import { getWorkbenchRenderers } from "./workbench-renderers";
 
 describe("workbench modules", () => {
   it("registers a module through workbench resources, widgets, commands, menus, notifications, and trees", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const projectResource = {
       kind: "project",
       uri: "pstdio://project/project-1",
@@ -21,31 +22,31 @@ describe("workbench modules", () => {
 
         return [
           ctx.resources.registerKind({ kind: "project", label: "Project", icon: "folder" }),
-          ctx.layout.registerLocation({
+          ctx.views.registerView({
             id: "project.settings",
             title: "Project settings",
-            region: "main",
-            singleton: true,
-            resourceKinds: ["project"],
-            rendererId: "project.settings",
+            body: { kind: "react", render: () => null },
           }),
           ctx.commands.registerCommand(
             { id: "project.openSettings", label: "Open project settings", category: "Project" },
             {
-              execute: () => ctx.layout.openWidget("project.settings", { resource: projectResource }),
+              execute: () => projectResource,
             },
           ),
           ctx.layout.registerMenuItem(["commandPalette"], {
             commandId: "project.openSettings",
             label: "Open project settings",
           }),
-          ctx.renderers.registerTreeRenderer({
+          ctx.views.registerView({
             id: "project.navigation",
             title: "Project",
-            getBody: () => [
-              { id: "root", nodes: [{ id: "project-1", label: "Prompt Studio", resource: projectResource }] },
-            ],
-            getChildren: () => [],
+            body: {
+              kind: "tree",
+              getBody: () => [
+                { id: "root", nodes: [{ id: "project-1", label: "Prompt Studio", resource: projectResource }] },
+              ],
+              getChildren: () => [],
+            },
           }),
         ];
       },
@@ -55,18 +56,15 @@ describe("workbench modules", () => {
 
     expect(workbench.resources.getKind("project")?.ownerId).toBe("dashboard.project");
     expect(workbench.resources.getKind("project")?.source).toBe("module");
-    expect(workbench.layout.getWidget("project.settings")?.ownerId).toBe("dashboard.project");
+    expect(workbench.views.getView("project.settings")?.ownerId).toBe("dashboard.project");
     expect(workbench.commands.getCommand("project.openSettings")?.ownerId).toBe("dashboard.project");
     expect(workbench.layout.listMenuItems(["commandPalette"])[0]?.ownerId).toBe("dashboard.project");
     expect(workbench.notifications.listNotifications()[0]?.ownerId).toBe("dashboard.project");
-    expect((await workbench.renderers.getBody("project.navigation"))[0]?.nodes[0]?.resource?.uri).toBe(
+    expect((await getWorkbenchRenderers(workbench).getBody("project.navigation"))[0]?.nodes[0]?.resource?.uri).toBe(
       projectResource.uri,
     );
 
-    await workbench.commands.executeCommand("project.openSettings");
-
-    expect(workbench.layout.getLayout().activeWidgetId).toBe("project.settings");
-    expect(workbench.layout.getLayout().activeResourceUri).toBe(projectResource.uri);
+    expect(await workbench.commands.executeCommand("project.openSettings")).toEqual(projectResource);
 
     disposable.dispose();
 
@@ -74,14 +72,17 @@ describe("workbench modules", () => {
   });
 
   it("auto-tracks module registrations and unregisters them by module id", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.registerModule({
       id: "dashboard.project",
       activate(ctx) {
         ctx.resources.registerKind({ kind: "project", label: "Project" });
         ctx.commands.registerCommand({ id: "project.open", label: "Open project" }, { execute: () => undefined });
-        ctx.keybindings.registerKeybinding({ commandId: "project.open", keybinding: "mod+shift+o" });
+        ctx.keybindings.registerKeybinding({
+          action: { kind: "command", commandId: "project.open" },
+          keybinding: "mod+shift+o",
+        });
         ctx.layout.registerMenuItem(["commandPalette"], { commandId: "project.open" });
       },
     });
@@ -91,7 +92,12 @@ describe("workbench modules", () => {
     expect(
       workbench.keybindings
         .listKeybindings()
-        .some((keybinding) => keybinding.commandId === "project.open" && keybinding.ownerId === "dashboard.project"),
+        .some(
+          (keybinding) =>
+            keybinding.action.kind === "command" &&
+            keybinding.action.commandId === "project.open" &&
+            keybinding.ownerId === "dashboard.project",
+        ),
     ).toBe(true);
     expect(workbench.layout.listMenuItems(["commandPalette"])).toHaveLength(1);
 
@@ -99,14 +105,14 @@ describe("workbench modules", () => {
 
     expect(workbench.resources.getKind("project")).toBeUndefined();
     expect(workbench.commands.getCommand("project.open")).toBeUndefined();
-    expect(workbench.keybindings.listKeybindings().map((keybinding) => keybinding.commandId)).not.toContain(
+    expect(workbench.keybindings.listCommandKeybindings().map((keybinding) => keybinding.commandId)).not.toContain(
       "project.open",
     );
     expect(workbench.layout.listMenuItems(["commandPalette"])).toEqual([]);
   });
 
   it("auto-tracks module subscriptions", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     let paletteChanges = 0;
 
     const disposable = workbench.registerModule({
@@ -126,7 +132,7 @@ describe("workbench modules", () => {
   });
 
   it("disposes child modules with their parent", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const parent = workbench.registerModule({
       id: "dashboard.extensions",
       activate(ctx) {
@@ -150,7 +156,7 @@ describe("workbench modules", () => {
   });
 
   it("rejects duplicate module ids and keeps stale disposables from removing newer modules", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const createModule = (label: string): WorkbenchModuleContribution => ({
       id: "dashboard.project",
       activate(ctx) {
@@ -172,7 +178,7 @@ describe("workbench modules", () => {
   });
 
   it("stamps extension wrapper modules as extension-owned contributions", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.registerModule({
       id: "extension.pstdio.extension-lab",
@@ -189,7 +195,7 @@ describe("workbench modules", () => {
   });
 
   it("cleans up module-owned context keys without removing global context", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.context.set("hostReady", true);
     const disposable = workbench.registerModule({
@@ -211,7 +217,7 @@ describe("workbench modules", () => {
   });
 
   it("uses module metadata for initialized mode contributions and disposes them with the module", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     const moduleRegistration = workbench.registerModule({
       id: "dashboard.modes",
@@ -223,11 +229,10 @@ describe("workbench modules", () => {
               { id: "project.refresh", label: "Refresh project" },
               { execute: () => undefined },
             );
-            modeCtx.renderers.registerTreeRenderer({
+            modeCtx.views.registerView({
               id: "project.navigation",
               title: "Project",
-              getBody: () => [],
-              getChildren: () => [],
+              body: { kind: "tree", getBody: () => [], getChildren: () => [] },
             });
           },
         });
@@ -240,7 +245,7 @@ describe("workbench modules", () => {
       source: "module",
       ownerId: "dashboard.modes",
     });
-    expect(workbench.renderers.getTreeRenderer("project.navigation")).toMatchObject({
+    expect(getWorkbenchRenderers(workbench).getTreeRenderer("project.navigation")).toMatchObject({
       source: "module",
       ownerId: "dashboard.modes",
     });
@@ -248,11 +253,11 @@ describe("workbench modules", () => {
     workbench.modes.setActiveMode(undefined);
 
     expect(workbench.commands.getCommand("project.refresh")).toBeDefined();
-    expect(workbench.renderers.getTreeRenderer("project.navigation")).toBeDefined();
+    expect(getWorkbenchRenderers(workbench).getTreeRenderer("project.navigation")).toBeDefined();
 
     moduleRegistration.dispose();
 
     expect(workbench.commands.getCommand("project.refresh")).toBeUndefined();
-    expect(workbench.renderers.getTreeRenderer("project.navigation")).toBeUndefined();
+    expect(getWorkbenchRenderers(workbench).getTreeRenderer("project.navigation")).toBeUndefined();
   });
 });

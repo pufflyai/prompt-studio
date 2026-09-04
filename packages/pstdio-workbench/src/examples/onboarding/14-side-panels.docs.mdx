@@ -1,138 +1,78 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import source from "../region-map/module.tsx?raw";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="12. Workbench regions" />
 
-<Meta
-  of={OnboardingStories}
-  name="14. Locations, Panels, and Sub Panels"
-  parameters={{ layout: "padded" }}
-/>
+# 12. Choose the correct workbench region
 
-# 14. Resources, Locations, and Panels
+The area map shows every supported placement region at once. Use it to choose an API target, not as a product layout.
+Most extensions need only `main`, `sidenav`, `secondary`, or `side`.
 
-These terms describe different things:
+The Activity Bar is the narrow strip at the far left. Panel menus are attached to the left and right edges of Main,
+Secondary, and Side. They collapse into **Open … menu** buttons when a panel is narrow. Drag a visible menu's resize
+handle to change its width or collapse it.
 
-- A **Resource** is domain identity: ticket `PS-199`, workspace `alpha`, or a settings page.
-- A **Panel** is a UI instance that presents content in `main`, `secondary`, `side`, or another region.
-- A **Location** is navigation state: the active Resource plus the Main Panel returned by its presenter.
+`workbenchRegions` is the canonical region list. `main`, `secondary`, and `side` are panel regions. Each panel owns a
+left and a right menu region through `viewMenus.registerViewMenu`. The example attaches both menus to all three panel
+Views so you can inspect all six menu regions. The status bar is different: it is not a placement region, so the example
+registers a backing View through `workbench.statusBar` instead. The complete area map also lives under **Reference →
+Core API → Region map**.
 
-A Panel definition is never declared as a Location. The navigation operation establishes that relationship:
+<Canvas of={OnboardingStories.WorkbenchRegions} sourceState="none" />
 
-```ts
-ctx.resources.registerPresenter({
-  id: "tickets.presenter",
-  canOpen: (resource) => resource.kind === "ticket",
-  open: (resource) => ctx.layout.openPanel("tickets.editor", { resource }),
-});
+## Complete example
 
-await ctx.resources.openResource(ticket);
-```
+<Source code={source} language="tsx" />
 
-After the presenter returns, `openResource` makes that Panel instance the Location and records navigation. Opening the
-same definition with `layout.openPanel` directly displays a Panel without changing Location, history, or breadcrumbs.
-A mode likewise establishes the first Main Panel it seeds as that mode's Location before it opens supporting Panels.
+## What each field means
 
-## Supporting Panels
+`createRegionMapModule()` returns one module contribution. `id` is the module's stable identity, and `activate(ctx)`
+registers everything through the module context. `RegionMapPlaceholder`, `regionLabels`, `describeSurface`,
+`createRegionResource`, `regionResourceKind`, and `regionWidgetId` are local example helpers, not workbench API.
 
-`eligibleLocations` explicitly marks a Panel as subordinate and controls where it can appear:
+The setup calls:
 
-```ts
-ctx.layout.registerPanel({
-  id: "tickets.editor",
-  title: "Ticket",
-  region: "main",
-  rendererId: "tickets.editor.renderer",
-  resourceKinds: ["ticket"],
-  panelMenus: [
-    {
-      id: "tickets.properties",
-      title: "Properties",
-      side: "right",
-      rendererId: "tickets.properties.renderer",
-    },
-  ],
-});
+- `ctx.sidePanel.setMode("attached")` docks the Side region so it is visible. The other modes are `"floating"` and
+  `"closed"`.
+- `ctx.resources.registerKind({ kind, label, icon })` declares the resource kind the example's region resources use.
 
-ctx.layout.registerPanel({
-  id: "tickets.terminal",
-  title: "Terminal",
-  region: "secondary",
-  rendererId: "terminal.renderer",
-  eligibleLocations: { resourceKinds: ["ticket"] },
-});
-```
+The Views and the status bar:
 
-`resourceKinds` is renderer input: it says which Resources the Panel can present. It does not make the Panel a
-Location. `eligibleLocations` says the Panel is supporting content and limits the Locations that may own it. `region`
-does not carry navigation meaning. Closability belongs to the open placement, not the registered Panel.
+- `ctx.views.registerView({ id, title, body })` defines one View per region. `body.kind: "react"` renders the
+  placeholder content.
+- `ctx.statusBar.registerItem({ id, viewId, slot })` places a backing View in the status bar. `slot` is `"leading"` or
+  `"trailing"`. The status bar has its own registry because it is not a placement region.
 
-Panel Menus are nested under their owning Panel through `panelMenus`. They follow the selected instance and never
-become tabs or Add-panel entries.
+The overlay:
 
-<Canvas of={OnboardingStories.LocationContentOnly} />
+- `ctx.overlays.registerOverlay({ id, viewId, config })` declares an overlay backed by a View.
+- `config.modal: false` keeps the rest of the workbench interactive while the overlay is open.
+- `config.closeOnInteractOutside: false` keeps the overlay open when the user clicks elsewhere.
+- `workbench.overlays.openOverlay(id)` opens it. The button in the Main region calls this.
 
-<Canvas of={OnboardingStories.EligibleSubPanels} />
+The shell placements:
 
-<Canvas of={OnboardingStories.OpenSubPanels} />
+- `ctx.shellPlacements.registerPlacement({ id, item, region })` places one View in one region. The shell owns these
+  placements, so they exist in every mode.
+- `item.kind: "view"` says this is one static View rather than a resource-bound set of instances.
+- `item.viewId` names the registered View to render.
+- `item.presence` is required and sets the item's presence. `"fixed"` means the item is always open while its owner is
+  active; the user cannot close it, and the Add panel does not offer it. `"open"` means the item starts open when the
+  owner has no saved state, and the user may close it. `"closed"` means the item stays hidden until the user or an
+  action opens it from the Add panel. A saved user choice wins over `"open"` and `"closed"` on the next visit. Every
+  placement here uses `"fixed"` so the whole map stays visible.
+- `region` names the target region from the canonical `workbenchRegions` list.
+- placements carry no size or collapse settings. Region layout policy lives in `regionSettings` on the mode
+  (`defineMode({ regionSettings })`) or on the host (`createWorkbench({ regionSettings })`), and the active mode's
+  settings win over the host's.
 
-<Canvas of={OnboardingStories.PanelMenuOnly} />
+The panel menus:
 
-<Canvas of={OnboardingStories.CollapsedPanelMenu} />
-
-<Canvas of={OnboardingStories.SubPanelsWithPanelMenus} />
-
-<Canvas of={OnboardingStories.AllThreePanels} />
-
-<Canvas of={OnboardingStories.LocationSwitch} />
-
-<Canvas of={OnboardingStories.BubbleFreeLocation} />
-
-## History and persistence
-
-Each successful Resource navigation records its Location and the selected supporting Panel in every Panel region.
-Back and Forward restore that snapshot without adding another entry. Each Location owns its supporting Panel
-placements and selection, so returning to it restores the same tabs, menus, sizes, and open state.
-
-<Canvas of={OnboardingStories.CrossPanelHistory} />
-
-<Canvas of={OnboardingStories.RefreshAtTimelineEnd} />
-
-<Canvas of={OnboardingStories.RefreshAfterBack} />
-
-<Canvas of={OnboardingStories.ResourcePanelRestore} />
-
-## Extension composition
-
-Extensions declare panel bodies and composition placement separately:
-
-```ts
-panels: {
-  ticket: {
-    title: "Ticket",
-    show: { for: "ticket", region: "main", required: true },
-    webview: { entry: packageAsset("./ticket.tsx", import.meta.url) },
-    panelMenus: {
-      properties: {
-        title: "Properties",
-        side: "right",
-        renderer: { kind: "controls", id: "ticketProperties" },
-      },
-    },
-  },
-  report: {
-    title: "Report",
-    show: {
-      for: "ticket",
-      region: "secondary",
-      allowedRegions: ["secondary", "side"],
-    },
-    webview: { entry: packageAsset("./report.tsx", import.meta.url) },
-  },
-}
-```
-
-`required` makes the resolved placement non-closable. Optional placements can be closed and restored through Add
-Panel. A mode may move a panel only within its declared `allowedRegions`.
+- `ctx.viewMenus.registerViewMenu({ id, ownerViewId, viewId, side, regionSize })` attaches a menu to one edge of a panel
+  View.
+- `ownerViewId` names the panel View the menu belongs to. The menu appears wherever that View is placed.
+- `viewId` names the View rendered inside the menu.
+- `side` is `"left"` or `"right"`.
+- `regionSize` sets the menu region's width in pixels. `defaultPx` is the starting width and `minPx` the minimum. This
+  field belongs to view menus only; placements have no size field.

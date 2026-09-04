@@ -14,6 +14,9 @@ const createContext = (layout: LayoutModel) =>
     context: createContextKeyService(),
     layout,
     panels: createWorkbenchPanelsController(),
+    views: {
+      registerView: () => createDisposable(() => undefined),
+    },
   }) as unknown as WorkbenchModeActivationContext;
 
 const trackingMode = (id: string, log: string[]): WorkbenchModeContribution => ({
@@ -28,10 +31,25 @@ const trackingMode = (id: string, log: string[]): WorkbenchModeContribution => (
 });
 
 describe("createWorkbenchModeRegistry", () => {
+  test("does not resolve the activation context while constructing the registry", () => {
+    const layout = createLayoutModel();
+    let resolutions = 0;
+    const registry = createWorkbenchModeRegistry({
+      layout,
+      resolveContext: () => {
+        resolutions += 1;
+        return createContext(layout);
+      },
+    });
+
+    expect(resolutions).toBe(0);
+    registry.dispose();
+  });
+
   test("initializes each mode once and disposes it when unregistered", () => {
     const log: string[] = [];
     const layout = createLayoutModel();
-    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
+    const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => createContext(layout) });
 
     const project = registry.registerMode(trackingMode("project", log));
     const settings = registry.registerMode(trackingMode("settings", log));
@@ -51,7 +69,7 @@ describe("createWorkbenchModeRegistry", () => {
   test("notifies listeners on active mode change", () => {
     const log: string[] = [];
     const layout = createLayoutModel();
-    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
+    const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => createContext(layout) });
     registry.registerMode({ id: "a", panels: ["main"], activate: () => undefined });
 
     registry.onDidChangeActive(() => log.push("change"));
@@ -74,7 +92,7 @@ describe("createWorkbenchModeRegistry", () => {
         subscription.dispose();
       });
     };
-    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
+    const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => createContext(layout) });
     let seeds = 0;
     registry.registerMode({
       id: "project",
@@ -98,6 +116,7 @@ describe("createWorkbenchModeRegistry", () => {
     const context = createContextKeyService();
     const panels = createWorkbenchPanelsController();
     const registry = createWorkbenchModeRegistry({
+      layout,
       resolveContext: () => ({ context, layout, panels }) as unknown as WorkbenchModeActivationContext,
     });
 
@@ -115,7 +134,7 @@ describe("createWorkbenchModeRegistry", () => {
   test("disposes the active mode when the registration is disposed", () => {
     const log: string[] = [];
     const layout = createLayoutModel();
-    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
+    const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => createContext(layout) });
     const registration = registry.registerMode(trackingMode("temp", log));
 
     registry.setActiveMode("temp");
@@ -128,7 +147,7 @@ describe("createWorkbenchModeRegistry", () => {
   test("activates with multiple disposables in reverse order", () => {
     const log: string[] = [];
     const layout = createLayoutModel();
-    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
+    const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => createContext(layout) });
     const make = (id: string): Disposable => createDisposable(() => log.push(`dispose:${id}`));
 
     const registration = registry.registerMode({
@@ -160,22 +179,22 @@ describe("mode panel layouts", () => {
     layout.registerWidget({ id: "sessions.chat", title: "Session", region: "main", rendererId: "sessions.chat" });
     layout.openWidget("workbench.status", { pinned: true });
 
-    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
+    const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => createContext(layout) });
 
     registry.registerMode({
       id: "sessions",
       panels: ["main", "secondary", "side"],
-      activate: (ctx) => {
-        return ctx.layout.registerLocation({
+      activate: () => {
+        return layout.registerPanel({
           id: "sessions.secondary",
           title: "Session details",
           region: "secondary",
           rendererId: "sessions.secondary",
         });
       },
-      seed: (ctx) => {
-        ctx.layout.openWidget("sessions.chat");
-        ctx.layout.openWidget("sessions.secondary");
+      seed: () => {
+        layout.openWidget("sessions.chat");
+        layout.openWidget("sessions.secondary");
       },
     });
     registry.registerMode({
@@ -207,14 +226,14 @@ describe("mode panel layouts", () => {
     layout.registerWidget({ id: "sessions.notes", title: "Notes", region: "main", rendererId: "sessions.notes" });
 
     let seeds = 0;
-    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
+    const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => createContext(layout) });
     registry.registerMode({
       id: "sessions",
       panels: ["main"],
       activate: () => undefined,
-      seed: (ctx) => {
+      seed: () => {
         seeds += 1;
-        ctx.layout.openWidget("sessions.chat");
+        layout.openWidget("sessions.chat");
       },
     });
     registry.registerMode({ id: "zen", panels: ["main"], activate: () => undefined });
@@ -244,14 +263,14 @@ describe("mode panel layouts", () => {
     layout.registerWidget({ id: "workspace.editor", title: "Editor", region: "main", rendererId: "workspace.editor" });
 
     let seeds = 0;
-    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
+    const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => createContext(layout) });
     registry.registerMode({
       id: "workspace",
       panels: ["main", "secondary", "side"],
       activate: () => undefined,
-      seed: (ctx) => {
+      seed: () => {
         seeds += 1;
-        ctx.layout.openWidget("workspace.editor");
+        layout.openWidget("workspace.editor");
       },
     });
 
@@ -275,13 +294,14 @@ describe("mode panel layouts", () => {
     const established: string[] = [];
     const registry = createWorkbenchModeRegistry({
       establishLocation: (instanceId) => established.push(instanceId),
+      layout,
       resolveContext: () => createContext(layout),
     });
     registry.registerMode({
       id: "review",
       activate: () => undefined,
-      seed: (ctx) => {
-        ctx.layout.openPanel("review");
+      seed: () => {
+        layout.openPanel("review");
       },
     });
 
@@ -310,14 +330,15 @@ describe("mode panel layouts", () => {
       establishLocation: (instanceId) => {
         layout.establishLocation(instanceId);
       },
+      layout,
       resolveContext: () => createContext(layout),
     });
     registry.registerMode({
       id: "review",
       activate: () => undefined,
-      seed: (ctx) => {
-        ctx.layout.openPanel("review", { resource });
-        ctx.layout.openPanel("checks");
+      seed: () => {
+        layout.openPanel("review", { resource });
+        layout.openPanel("checks");
       },
     });
 
@@ -331,7 +352,7 @@ describe("mode panel layouts", () => {
   test("defers seeding until the caller establishes the persistence scope", () => {
     const layout = createLayoutModel();
     const seededScopes: (string | undefined)[] = [];
-    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
+    const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => createContext(layout) });
     registry.registerMode({
       id: "workspace",
       panels: ["main"],
@@ -353,7 +374,7 @@ describe("mode panel layouts", () => {
   test("enters on every switch and disposes active behavior on leave", () => {
     const log: string[] = [];
     const layout = createLayoutModel();
-    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
+    const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => createContext(layout) });
     registry.registerMode({
       id: "project",
       panels: ["main"],
@@ -381,7 +402,7 @@ describe("mode panel layouts", () => {
       rendererId: "sessions.chat",
     });
 
-    const registry = createWorkbenchModeRegistry({ resolveContext: () => createContext(layout) });
+    const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => createContext(layout) });
     registry.registerMode({ id: "project", panels: ["main", "secondary", "side"], activate: () => undefined });
     registry.registerMode({ id: "sessions", panels: ["main", "secondary", "side"], activate: () => undefined });
 

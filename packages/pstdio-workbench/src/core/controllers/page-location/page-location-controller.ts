@@ -1,191 +1,49 @@
-import type { NavigationTargetPage, PageLocation, PageRef, PlacementIdentity } from "@pstdio/sdk/extensions";
-import type { WorkbenchPageRegistry, WorkbenchPageRuntimeState } from "../../registries/pages/page-registry";
-import {
-  getWorkbenchPageRegistryInternals,
-  type WorkbenchPageCloseResolution,
-} from "../../registries/pages/page-registry-internals";
+import type { PageLocation } from "@pstdio/sdk/extensions";
+import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
+import { createWorkbenchStore } from "../../shared/store/workbench-store";
+import { createPageLocationControllerActions } from "./page-location-actions";
 import { isWorkbenchProjectUrl, parseWorkbenchPageUrl, serializeWorkbenchPageUrl } from "./page-location-codec";
 import {
   normalizeDirectWorkbenchPageLocation,
   normalizeWorkbenchPageLocation,
   normalizeWorkbenchPageTarget,
   workbenchPageLocationRouteKey,
+  workbenchPageLocationsEqual,
 } from "./page-location-normalization";
+import type {
+  CreateWorkbenchPageLocationControllerInput,
+  ResolvedPageLocation,
+  WorkbenchPageBrowserEntry,
+  WorkbenchPageHistoryState,
+  WorkbenchPageLocationController,
+  WorkbenchPageLocationDiagnostic,
+  WorkbenchPageLocationHistoryState,
+  WorkbenchPageNavigationResult,
+} from "./page-location-types";
+import { createPagePlacementCloser } from "./page-placement-closer";
 
-export interface WorkbenchPageBrowserEntry {
-  url: string;
-  state?: unknown;
-}
-
-export interface WorkbenchPageLocationBrowser {
-  current(): WorkbenchPageBrowserEntry;
-  push(entry: WorkbenchPageBrowserEntry): void;
-  replace(entry: WorkbenchPageBrowserEntry): void;
-  onPopState(listener: (entry: WorkbenchPageBrowserEntry) => void): { dispose(): void };
-}
-
-export interface WorkbenchPageLocationPersistence {
-  load(projectId: string): PageLocation | undefined;
-  save(projectId: string, location: PageLocation): void;
-}
-
-export interface WorkbenchPageLocationDiagnostic {
-  code: "page-location-unresolved";
-  source: "boot" | "history" | "navigation" | "project-switch";
-  message: string;
-}
-
-export interface WorkbenchPageHistoryState {
-  kind: "pstdio.page-location";
-  projectId: string;
-  routeKey: string;
-  location: PageLocation;
-}
-
-interface WorkbenchModeLocationState {
-  kind: "pstdio.mode-location";
-  modeId: string;
-  projectId: string;
-}
-
-export type WorkbenchPageNavigationResult =
-  | { ok: true; location: PageLocation }
-  | { ok: false; diagnostic: WorkbenchPageLocationDiagnostic };
-
-export interface CreateWorkbenchPageLocationControllerInput<Value> {
-  registry: WorkbenchPageRegistry<Value>;
-  browser: WorkbenchPageLocationBrowser;
-  persistence: WorkbenchPageLocationPersistence;
-  startPage: PageRef;
-  reportDiagnostic?(diagnostic: WorkbenchPageLocationDiagnostic): void;
-}
-
-export interface WorkbenchPageLocationController {
-  setProject(projectId: string): void;
-  leavePage(modeId: string): void;
-  isCurrentProjectUrl(projectId: string): boolean;
-  hasCurrentPageUrl(projectId: string): boolean;
-  hasCurrentModeUrl(projectId: string): boolean;
-  boot(projectId: string): WorkbenchPageNavigationResult;
-  switchProject(projectId: string): WorkbenchPageNavigationResult;
-  navigate(target: NavigationTargetPage): WorkbenchPageNavigationResult;
-  replay(location: PageLocation): WorkbenchPageNavigationResult;
-  navigateToParent(): WorkbenchPageNavigationResult;
-  closePlacement(identity: PlacementIdentity): WorkbenchPageNavigationResult;
-  dispose(): void;
-}
-
-interface ResolvedLocation {
-  pageId: string;
-  location: PageLocation;
-  open?: NavigationTargetPage["open"];
-  pageStates?: Readonly<Record<string, WorkbenchPageRuntimeState>>;
-}
+export type {
+  CreateWorkbenchPageLocationControllerInput,
+  WorkbenchPageBrowserEntry,
+  WorkbenchPageHistoryState,
+  WorkbenchPageLocationBrowser,
+  WorkbenchPageLocationController,
+  WorkbenchPageLocationDiagnostic,
+  WorkbenchPageLocationHistoryState,
+  WorkbenchPageLocationPersistence,
+  WorkbenchPageNavigationResult,
+} from "./page-location-types";
 
 const isHistoryState = (value: unknown): value is WorkbenchPageHistoryState => {
   if (!value || typeof value !== "object") return false;
   const state = value as Partial<WorkbenchPageHistoryState>;
   return (
     state.kind === "pstdio.page-location" &&
+    typeof state.index === "number" &&
     typeof state.projectId === "string" &&
     typeof state.routeKey === "string" &&
     Boolean(state.location && typeof state.location === "object")
   );
-};
-
-const isModeLocationState = (value: unknown): value is WorkbenchModeLocationState => {
-  if (!value || typeof value !== "object") return false;
-  const state = value as Partial<WorkbenchModeLocationState>;
-  return (
-    state.kind === "pstdio.mode-location" && typeof state.modeId === "string" && typeof state.projectId === "string"
-  );
-};
-
-const hasResolvableCurrentPageUrl = (
-  browser: WorkbenchPageLocationBrowser,
-  projectId: string,
-  resolveUrl: (projectId: string, entry: WorkbenchPageBrowserEntry) => ResolvedLocation | undefined,
-) => {
-  try {
-    return Boolean(resolveUrl(projectId, browser.current()));
-  } catch {
-    return false;
-  }
-};
-
-interface PagePlacementCloserInput {
-  commit(
-    projectId: string,
-    resolved: ResolvedLocation,
-    history: "push" | "replace" | "none",
-    action: string,
-  ): WorkbenchPageNavigationResult;
-  fail(source: "navigation", error: unknown): WorkbenchPageNavigationResult;
-  getCurrent(): { projectId?: string; location?: PageLocation };
-  getPageRef(pageId: string): PageRef | undefined;
-  normalizePage(page: PageRef): ResolvedLocation;
-  normalizeStored(location: PageLocation): ResolvedLocation;
-  resolveClosePlacement(identity: PlacementIdentity): WorkbenchPageCloseResolution;
-}
-
-const createPagePlacementCloser = (input: PagePlacementCloserInput) => {
-  const closeToParent = (
-    projectId: string,
-    location: PageLocation,
-    resolution: Extract<WorkbenchPageCloseResolution, { kind: "parent" }>,
-  ) => {
-    const contextualParent = location.parent ? input.normalizeStored(location.parent) : undefined;
-    const parent = input.getPageRef(resolution.parentId);
-    if (!parent) throw new Error(`Unknown parent page: ${resolution.parentId}`);
-    const resolved = contextualParent?.pageId === resolution.parentId ? contextualParent : input.normalizePage(parent);
-    return input.commit(
-      projectId,
-      { ...resolved, pageStates: resolution.pageStates },
-      "replace",
-      "closePagePlacementToParent",
-    );
-  };
-
-  const closeWithinPage = (
-    projectId: string,
-    location: PageLocation,
-    resolution: Extract<WorkbenchPageCloseResolution, { kind: "stay" }>,
-  ) => {
-    const page = input.getPageRef(resolution.target.pageId);
-    if (!page) throw new Error(`Unknown page: ${resolution.target.pageId}`);
-    const resolved = input.normalizeStored({
-      page,
-      ...(resolution.target.resource ? { resource: resolution.target.resource } : {}),
-      ...(resolution.target.section ? { section: resolution.target.section } : {}),
-      ...(location.parent ? { parent: location.parent } : {}),
-    });
-    return input.commit(
-      projectId,
-      {
-        ...resolved,
-        pageStates: resolution.pageStates,
-        ...(resolution.target.open ? { open: resolution.target.open } : {}),
-      },
-      resolution.locationChanged ? "replace" : "none",
-      "closePagePlacement",
-    );
-  };
-
-  return (identity: PlacementIdentity) => {
-    const current = input.getCurrent();
-    if (!current.projectId || !current.location) {
-      return input.fail("navigation", new Error("Cannot close a page placement without an active location"));
-    }
-    try {
-      if (identity.kind !== "page") throw new Error("Only page-owned placements can close through page navigation");
-      const resolution = input.resolveClosePlacement(identity);
-      return resolution.kind === "parent"
-        ? closeToParent(current.projectId, current.location, resolution)
-        : closeWithinPage(current.projectId, current.location, resolution);
-    } catch (error) {
-      return input.fail("navigation", error);
-    }
-  };
 };
 
 export const createWorkbenchPageLocationController = <Value>(
@@ -193,6 +51,23 @@ export const createWorkbenchPageLocationController = <Value>(
 ): WorkbenchPageLocationController => {
   const internals = getWorkbenchPageRegistryInternals(input.registry);
   const pages = () => input.registry.listPages();
+  let historyIndex = 0;
+  let maxHistoryIndex = 0;
+  const historyStore = createWorkbenchStore<WorkbenchPageLocationHistoryState>({
+    name: "workbench.page-location-history",
+    initialState: { canGoBack: false, canGoForward: false },
+  });
+  const publishHistory = () =>
+    historyStore.setState(
+      { canGoBack: historyIndex > 0, canGoForward: historyIndex < maxHistoryIndex },
+      false,
+      "pageLocationHistory",
+    );
+  const resetHistory = () => {
+    historyIndex = 0;
+    maxHistoryIndex = 0;
+    publishHistory();
+  };
 
   const fail = (source: WorkbenchPageLocationDiagnostic["source"], error: unknown): WorkbenchPageNavigationResult => {
     const diagnostic: WorkbenchPageLocationDiagnostic = {
@@ -208,6 +83,7 @@ export const createWorkbenchPageLocationController = <Value>(
     url: serializeWorkbenchPageUrl({ projectId, location, pages: pages(), resources: internals.resources }),
     state: {
       kind: "pstdio.page-location",
+      index: historyIndex,
       projectId,
       routeKey: workbenchPageLocationRouteKey(location, internals.resources),
       location,
@@ -216,7 +92,7 @@ export const createWorkbenchPageLocationController = <Value>(
 
   const commit = (
     projectId: string,
-    resolved: ResolvedLocation,
+    resolved: ResolvedPageLocation,
     history: "push" | "replace" | "none",
     action: string,
   ) => {
@@ -231,14 +107,22 @@ export const createWorkbenchPageLocationController = <Value>(
       ...(resolved.pageStates ? { pageStates: resolved.pageStates } : {}),
     });
     input.persistence.save(projectId, resolved.location);
-    if (history !== "none") input.browser[history](historyEntry(projectId, resolved.location));
+    if (history === "push") {
+      historyIndex += 1;
+      maxHistoryIndex = historyIndex;
+      input.browser.push(historyEntry(projectId, resolved.location));
+      publishHistory();
+    } else if (history === "replace") {
+      input.browser.replace(historyEntry(projectId, resolved.location));
+      publishHistory();
+    }
     return { ok: true, location: resolved.location } as const;
   };
 
-  const normalizeStored = (location: PageLocation): ResolvedLocation =>
+  const normalizeStored = (location: PageLocation): ResolvedPageLocation =>
     normalizeWorkbenchPageLocation({ location, pages: pages(), resources: internals.resources });
 
-  const start = (): ResolvedLocation =>
+  const start = (): ResolvedPageLocation =>
     normalizeWorkbenchPageTarget({
       target: { kind: "page", page: input.startPage },
       pages: pages(),
@@ -246,7 +130,6 @@ export const createWorkbenchPageLocationController = <Value>(
     });
 
   const resolveUrl = (projectId: string, entry: WorkbenchPageBrowserEntry) => {
-    if (isModeLocationState(entry.state) && entry.state.projectId === projectId) return undefined;
     const parsed = parseWorkbenchPageUrl({
       url: entry.url,
       projectId,
@@ -274,6 +157,13 @@ export const createWorkbenchPageLocationController = <Value>(
   ): WorkbenchPageNavigationResult => {
     try {
       const browserEntry = input.browser.current();
+      if (isHistoryState(browserEntry.state) && browserEntry.state.projectId === projectId) {
+        historyIndex = browserEntry.state.index;
+        maxHistoryIndex = Math.max(maxHistoryIndex, historyIndex);
+      } else {
+        historyIndex = 0;
+        maxHistoryIndex = 0;
+      }
       const hasProjectUrl = useCurrentUrl && isWorkbenchProjectUrl(browserEntry.url, projectId);
       const fromUrl = hasProjectUrl ? resolveUrl(projectId, browserEntry) : undefined;
       if (hasProjectUrl && !fromUrl) throw new Error(`Cannot resolve page URL: ${browserEntry.url}`);
@@ -294,6 +184,11 @@ export const createWorkbenchPageLocationController = <Value>(
     const projectId = input.registry.store.getState().projectId;
     if (!projectId) return;
     try {
+      if (isHistoryState(entry.state) && entry.state.projectId === projectId) {
+        historyIndex = entry.state.index;
+        maxHistoryIndex = Math.max(maxHistoryIndex, historyIndex);
+        publishHistory();
+      }
       const resolved = resolveUrl(projectId, entry);
       if (!resolved) throw new Error(`Cannot resolve page URL: ${entry.url}`);
       commit(projectId, resolved, "none", "replayPageHistory");
@@ -346,85 +241,29 @@ export const createWorkbenchPageLocationController = <Value>(
     resolveClosePlacement: internals.resolveClosePlacement,
   });
 
-  return {
-    setProject(projectId) {
-      if (input.registry.store.getState().projectId === projectId) return;
-      internals.clearProject(projectId);
-    },
-
-    leavePage(modeId) {
-      const projectId = input.registry.store.getState().projectId;
-      if (!projectId) return;
-      internals.activateMode(projectId, modeId);
-      input.browser.replace({
-        url: `/projects/${encodeURIComponent(projectId)}`,
-        state: { kind: "pstdio.mode-location", modeId, projectId } satisfies WorkbenchModeLocationState,
-      });
-    },
-
-    isCurrentProjectUrl: (projectId) => isWorkbenchProjectUrl(input.browser.current().url, projectId),
-
-    hasCurrentPageUrl: (projectId) => hasResolvableCurrentPageUrl(input.browser, projectId, resolveUrl),
-
-    hasCurrentModeUrl: (projectId) => {
-      const state = input.browser.current().state;
-      return isModeLocationState(state) && state.projectId === projectId;
-    },
-
-    boot(projectId) {
-      return restore(projectId, "boot", true);
-    },
-
-    switchProject(projectId) {
-      internals.clearProject(projectId);
-      return restore(projectId, "project-switch", false);
-    },
-
-    navigate(target) {
-      const projectId = input.registry.store.getState().projectId;
-      if (!projectId) return fail("navigation", new Error("Cannot navigate before a project is active"));
-      try {
-        const resolved = normalizeWorkbenchPageTarget({ target, pages: pages(), resources: internals.resources });
-        return commit(projectId, resolved, "push", "navigatePageLocation");
-      } catch (error) {
-        return fail("navigation", error);
-      }
-    },
-
-    replay(location) {
-      const projectId = input.registry.store.getState().projectId;
-      if (!projectId) return fail("history", new Error("Cannot replay a page before a project is active"));
-      try {
-        return commit(projectId, normalizeStored(location), "replace", "replayWorkbenchPageHistory");
-      } catch (error) {
-        return fail("history", error);
-      }
-    },
-
-    navigateToParent() {
-      const current = input.registry.store.getState();
-      if (!current.projectId || !current.location?.parent) {
-        return fail("navigation", new Error("The active page does not have a parent location"));
-      }
-      try {
-        return commit(
-          current.projectId,
-          normalizeStored(current.location.parent),
-          "replace",
-          "navigateToParentPageLocation",
-        );
-      } catch (error) {
-        return fail("navigation", error);
-      }
-    },
-
-    closePlacement(identity) {
-      return closeActivePlacement(identity);
-    },
-
+  return createPageLocationControllerActions({
+    input,
+    historyStore,
+    clearProject: internals.clearProject,
+    resetHistory,
+    restore,
+    resolveUrl,
+    normalizeTarget: (target) =>
+      normalizeWorkbenchPageTarget({
+        target: input.contextualizeTarget?.(target) ?? target,
+        pages: pages(),
+        resources: internals.resources,
+      }),
+    normalizeStored,
+    locationsEqual: (left, right) => workbenchPageLocationsEqual(left, right, internals.resources),
+    commit,
+    fail,
+    closePlacement: closeActivePlacement,
+    canGoBack: () => historyIndex > 0,
+    canGoForward: () => historyIndex < maxHistoryIndex,
     dispose() {
       popStateSubscription.dispose();
       pageRemovalSubscription();
     },
-  };
+  });
 };

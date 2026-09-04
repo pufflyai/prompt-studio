@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import type { ResourceRef, TreeNode, TreeViewSection, WorkbenchCore } from "../../../core";
+import {
+  getWorkbenchRenderers,
+  type ResourceRef,
+  type TreeNode,
+  type TreeViewSection,
+  type WorkbenchCore,
+} from "../../../core";
 import {
   expandDefaultTreeSections,
   loadExpandedTreeChildren,
@@ -25,23 +31,23 @@ export const useTreeData = (
 
   useEffect(() => {
     let cancelled = false;
-    expandDefaultTreeSections(workbench.renderers, treeViewId);
+    expandDefaultTreeSections(getWorkbenchRenderers(workbench), treeViewId);
 
     const loadTree = () => {
       const loadRevision = ++loadRevisionRef.current;
       if (shouldShowTreeLoading(loadedTreeIdRef.current, treeViewId)) setLoading(true);
       setError(null);
-      void loadTreeData(workbench.renderers, treeViewId, { resource, viewId, filter })
+      void loadTreeData(getWorkbenchRenderers(workbench), treeViewId, { resource, viewId, filter })
         .then(async (data) => {
           if (cancelled || loadRevision !== loadRevisionRef.current) return;
-          const treeStillRegistered = workbench.renderers.getTreeRenderer(treeViewId);
+          const treeStillRegistered = getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId);
           const children =
             data && treeStillRegistered
               ? await loadExpandedTreeChildren(
-                  workbench.renderers,
+                  getWorkbenchRenderers(workbench),
                   treeViewId,
                   data,
-                  workbench.renderers.getTreeState(treeViewId).expandedNodeIds,
+                  getWorkbenchRenderers(workbench).getTreeState(treeViewId).expandedNodeIds,
                   { resource, viewId, filter },
                 )
               : {};
@@ -61,7 +67,7 @@ export const useTreeData = (
     };
 
     loadTree();
-    const disposable = workbench.renderers.onDidRefresh((event) => {
+    const disposable = getWorkbenchRenderers(workbench).onDidRefresh((event) => {
       if (event.treeId === treeViewId) loadTree();
     });
     return () => {

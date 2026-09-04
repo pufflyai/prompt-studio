@@ -63,11 +63,12 @@ describe("Panel registration", () => {
   test("registers and opens menus declared by their Location Panel", () => {
     const layout = createLayoutModel();
 
-    layout.registerLocation({
+    layout.registerPanel({
       id: "project.notes",
       title: "Notes",
       region: "main",
       singleton: false,
+      closable: false,
       rendererId: "notes.renderer",
       panelMenus: [
         {
@@ -104,7 +105,7 @@ describe("Panel registration", () => {
   test("gives every registration of a Sub Panel its declared menus", () => {
     const layout = createLayoutModel();
 
-    layout.registerLocation({
+    layout.registerPanel({
       id: "project.location",
       title: "Project",
       region: "main",
@@ -116,7 +117,8 @@ describe("Panel registration", () => {
     });
 
     for (const region of ["main", "secondary", "side"] as const) {
-      layout.registerSubPanel({
+      layout.registerPanel({
+        eligibleLocations: {},
         id: `project.${region}.notes`,
         title: "Notes",
         region,
@@ -145,7 +147,8 @@ describe("Panel registration", () => {
 
   test("disposes a Panel and all menus declared by it", () => {
     const layout = createLayoutModel();
-    const registration = layout.registerSubPanel({
+    const registration = layout.registerPanel({
+      eligibleLocations: {},
       id: "project.notes",
       title: "Notes",
       region: "main",
@@ -170,7 +173,7 @@ describe("Panel registration", () => {
     const layout = createLayoutModel();
 
     expect(() =>
-      layout.registerLocation({
+      layout.registerPanel({
         id: "project.navigator",
         title: "Navigator",
         region: "sidenav",

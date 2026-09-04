@@ -2,7 +2,6 @@ import type { ContributionMetadata, RegisteredContributionMetadata } from "../..
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
-import type { WorkbenchPanelRenderInput } from "../renderers/renderer-registry";
 
 /** Settings are stored either per-user (global) or per-project. Projectless surfaces show only global entries. */
 export type SettingsScope = "global" | "project";
@@ -49,13 +48,9 @@ export interface SchemaSettingsPanel extends SettingsPanelBase {
   save?: "live" | "apply";
 }
 
-/**
- * Renders its own page. `render` returns `unknown` so core stays React-free — the
- * React layer treats the result as a node, exactly like WorkbenchRendererRegistration.
- */
-export interface CustomSettingsPanel extends SettingsPanelBase {
-  kind: "custom";
-  render(input: WorkbenchPanelRenderInput): unknown;
+export interface ViewSettingsPanel extends SettingsPanelBase {
+  kind: "view";
+  viewId: string;
 }
 
 export interface SettingsCollectionGroupBy<TItem> {
@@ -71,16 +66,16 @@ export interface SettingsCollectionGroupBy<TItem> {
  */
 export interface CollectionSettingsPanel<TItem = unknown> extends SettingsPanelBase {
   kind: "collection";
+  viewId: string;
   items(): TItem[] | Promise<TItem[]>;
   itemId(item: TItem): string;
   itemLabel(item: TItem): string;
   itemIcon?(item: TItem): string | undefined;
   groupBy?: SettingsCollectionGroupBy<TItem>;
-  renderItem(item: TItem, input: WorkbenchPanelRenderInput): unknown;
   actions?: SettingsAction[];
 }
 
-export type SettingsPanelContribution = SchemaSettingsPanel | CustomSettingsPanel | CollectionSettingsPanel;
+export type SettingsPanelContribution = SchemaSettingsPanel | ViewSettingsPanel | CollectionSettingsPanel;
 export type RegisteredSettingsPanel = SettingsPanelContribution & RegisteredContributionMetadata;
 
 export interface SettingsRegistryStoreState {
@@ -94,13 +89,15 @@ export interface SettingsRegistry {
   store: WorkbenchStore<SettingsRegistryStoreState>;
   registerSection(section: SettingsSectionContribution, metadata?: ContributionMetadata): Disposable;
   registerPanel<TItem = unknown>(
-    panel: SchemaSettingsPanel | CustomSettingsPanel | CollectionSettingsPanel<TItem>,
+    panel: SchemaSettingsPanel | ViewSettingsPanel | CollectionSettingsPanel<TItem>,
     metadata?: ContributionMetadata,
   ): Disposable;
   getSection(id: string): RegisteredSettingsSection | undefined;
   getPanel(id: string): RegisteredSettingsPanel | undefined;
   listSections(): RegisteredSettingsSection[];
   listPanels(): RegisteredSettingsPanel[];
+  resolveCollectionItem(panelId: string, itemId: string): Promise<unknown | undefined>;
+  getCollectionItem(panelId: string, itemId: string): unknown | undefined;
   /** Signal that a collection's backing data changed so the surface refreshes. */
   refresh(): void;
 }
@@ -108,16 +105,19 @@ export interface SettingsRegistry {
 const byOrderThenPriority = <T extends RegisteredContributionMetadata & { order?: number }>(left: T, right: T) =>
   (left.order ?? 0) - (right.order ?? 0) || byContributionPriority(left, right);
 
-export const createSettingsRegistry = (): SettingsRegistry => {
+export const createSettingsRegistry = (input: { hasView?: (viewId: string) => boolean } = {}): SettingsRegistry => {
   const store = createWorkbenchStore<SettingsRegistryStoreState>({
     name: "workbench.settings",
     initialState: { sections: {}, panels: {}, revision: 0 },
   });
+  const collectionItems = new Map<string, unknown>();
+  const itemKey = (panelId: string, itemId: string) => JSON.stringify([panelId, itemId]);
 
   return {
     store,
 
     refresh() {
+      collectionItems.clear();
       const snapshot = store.getState();
       store.setState({ ...snapshot, revision: snapshot.revision + 1 }, false, "refreshSettings");
     },
@@ -144,6 +144,9 @@ export const createSettingsRegistry = (): SettingsRegistry => {
     registerPanel(panel, metadata) {
       const snapshot = store.getState();
       if (snapshot.panels[panel.id]) throw new Error(`Settings panel already registered: ${panel.id}`);
+      if (panel.kind !== "schema" && input.hasView && !input.hasView(panel.viewId)) {
+        throw new Error(`Settings panel View is not registered: ${panel.viewId}`);
+      }
 
       const record = { ...normalizeContributionMetadata(metadata), ...panel } as RegisteredSettingsPanel;
       store.setState({ ...snapshot, panels: { ...snapshot.panels, [panel.id]: record } }, false, "registerPanel");
@@ -152,6 +155,9 @@ export const createSettingsRegistry = (): SettingsRegistry => {
         const current = store.getState();
         if (current.panels[panel.id] !== record) return;
         const { [panel.id]: _removed, ...nextPanels } = current.panels;
+        for (const key of collectionItems.keys()) {
+          if (key.startsWith(`["${panel.id}",`)) collectionItems.delete(key);
+        }
         store.setState({ ...current, panels: nextPanels }, false, "unregisterPanel");
       });
     },
@@ -171,5 +177,15 @@ export const createSettingsRegistry = (): SettingsRegistry => {
     listPanels() {
       return Object.values(store.getState().panels).sort(byOrderThenPriority);
     },
+
+    async resolveCollectionItem(panelId, itemId) {
+      const panel = store.getState().panels[panelId];
+      if (!panel || panel.kind !== "collection") return undefined;
+      const item = (await panel.items()).find((candidate) => panel.itemId(candidate) === itemId);
+      if (item !== undefined) collectionItems.set(itemKey(panelId, itemId), item);
+      return item;
+    },
+
+    getCollectionItem: (panelId, itemId) => collectionItems.get(itemKey(panelId, itemId)),
   };
 };

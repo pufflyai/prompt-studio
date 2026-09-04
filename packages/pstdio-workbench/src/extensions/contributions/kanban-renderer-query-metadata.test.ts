@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
-import { createWorkbenchCore, type KanbanRendererQueryState } from "../../core";
+import { createWorkbench, getWorkbenchRenderers, type KanbanRendererQueryState } from "../../core";
 import { registerWorkbenchExtensionKanbanRenderers } from "./kanban-renderer-contributions";
 
 const createDeferred = <TValue>() => {
@@ -23,7 +23,7 @@ const queryState: KanbanRendererQueryState = {
 };
 
 test("keeps rows and query metadata from the latest overlapping request", async () => {
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
   workbench.statuses.registerStatusSet({
     id: "example.recipes.status.workflow",
     title: "Workflow",
@@ -60,7 +60,7 @@ test("keeps rows and query metadata from the latest overlapping request", async 
     [record],
   );
 
-  const renderer = workbench.renderers.getKanbanRenderer("recipes")!;
+  const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("recipes")!;
   const workflowQuery = renderer.executeQuery(queryState);
   const reviewQuery = renderer.executeQuery({
     ...queryState,

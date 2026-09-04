@@ -12,7 +12,7 @@ const tick = (ms = DEBOUNCE_MS * 3) => new Promise((resolve) => setTimeout(resol
 const binding = {
   rendererId: "planner.ticketContent",
   instanceId: "planner.ticketEditor:1",
-  resourceUri: "dashboard-workbench://ticket/ticket-1",
+  resourceUri: "pstdio://extension-resource/ticket/ticket-1",
 };
 
 const createHarness = (input?: { failSaves?: number; saveRevision?: string }) => {
@@ -108,7 +108,7 @@ describe("file edit controller", () => {
     const { controller, loads } = createHarness();
     controller.setBaseline("loaded");
 
-    controller.handleRefreshEvent({ resourceUri: "dashboard-workbench://ticket/ticket-2", revision: "2" });
+    controller.handleRefreshEvent({ resourceUri: "pstdio://extension-resource/ticket/ticket-2", revision: "2" });
 
     expect(loads()).toBe(0);
   });

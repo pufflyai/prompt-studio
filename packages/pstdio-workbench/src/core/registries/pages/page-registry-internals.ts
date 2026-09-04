@@ -33,9 +33,9 @@ export interface WorkbenchPageRegistryInternals<Value> {
   getPublishingState(): WorkbenchPageRegistryStoreState<Value>;
   connectRuntime(apply: (state: WorkbenchPageRegistryStoreState<Value>) => void): Disposable;
   activateLocation(input: WorkbenchPageLocationCommitInput): void;
-  activateMode(projectId: string, modeId: string): void;
   refreshModePlacements(): void;
-  clearProject(projectId: string): void;
+  refreshShellPlacements(): void;
+  clearProject(projectId: string | undefined): void;
   resolveClosePlacement(identity: PlacementIdentity): WorkbenchPageCloseResolution;
 }
 

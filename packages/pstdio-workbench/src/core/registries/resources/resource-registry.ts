@@ -7,7 +7,6 @@ import {
 } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
-import type { WorkbenchPanelInstance } from "../layout/layout-types";
 import {
   isWorkbenchViewHierarchyNode,
   type ResolvedResourceHierarchyProvider,
@@ -72,34 +71,13 @@ export const getWorkbenchSelectionResourceUris = (resource: ResourceRef | undefi
   return [resource.uri, selectionResourceUri];
 };
 
-export interface OpenResourceInput {
-  replaceActive?: boolean;
-}
-
-// The anchor a resource kind routes to. `primary` is the main subject; `secondary` and
-// `attached` are the side anchors (derived terminals, detached sessions). Independent of
-// the region id that currently hosts each anchor.
-export type ResourceSurface = "primary" | "secondary" | "attached";
-
 export interface ResourceKindContribution {
   kind: string;
   label: string;
   icon?: string;
-  surface?: ResourceSurface;
-  paletteOpenInput?: OpenResourceInput;
 }
 
 export interface RegisteredResourceKind extends ResourceKindContribution, RegisteredContributionMetadata {}
-
-export interface ResourcePresenter {
-  id: string;
-  priority?: number;
-  canOpen(resource: ResourceRef): boolean;
-  open(resource: ResourceRef, input: OpenResourceInput): WorkbenchPanelInstance | Promise<WorkbenchPanelInstance>;
-  afterOpen?(resource: ResourceRef, instance: WorkbenchPanelInstance, input: OpenResourceInput): void;
-}
-
-type ResolvedResourcePresenter = Omit<ResourcePresenter, "priority"> & { priority: number };
 
 export interface ResourceBrowseEntry {
   resource: ResourceRef;
@@ -124,7 +102,6 @@ export interface ResourceProvider {
 
 export interface ResourceRegistryStoreState {
   kinds: Record<string, RegisteredResourceKind>;
-  presenters: Record<string, ResolvedResourcePresenter>;
   providers: Record<string, ResourceProvider>;
   hierarchyProviders: Record<string, ResolvedResourceHierarchyProvider>;
 }
@@ -133,11 +110,7 @@ export interface ResourceRegistry {
   store: WorkbenchStore<ResourceRegistryStoreState>;
   registerKind(kind: ResourceKindContribution, metadata?: ContributionMetadata): Disposable;
   getKind(kind: string): RegisteredResourceKind | undefined;
-  // The anchor a resource routes to, declared by its kind (undefined → not surface-routed).
-  getSurface(resource: ResourceRef): ResourceSurface | undefined;
   listKinds(): RegisteredResourceKind[];
-  registerPresenter(presenter: ResourcePresenter): Disposable;
-  listPresenters(): ResolvedResourcePresenter[];
   registerProvider(provider: ResourceProvider): Disposable;
   listProviders(): ResourceProvider[];
   listResources(query: string): readonly ResourceBrowseEntry[];
@@ -145,35 +118,19 @@ export interface ResourceRegistry {
   listHierarchyProviders(): ResolvedResourceHierarchyProvider[];
   walkHierarchy(resource: ResourceRef | undefined): WorkbenchHierarchyNode[];
   onDidDetectHierarchyCycle(listener: (cycle: ResourceHierarchyCycle) => void): Disposable;
-  isOpeningResource(): boolean;
-  openResource(resource: ResourceRef, input?: OpenResourceInput): Promise<WorkbenchPanelInstance>;
-  onDidOpenResource(listener: (resource: ResourceRef) => void): Disposable;
 }
-
-const sortPresenters = (presenters: ResolvedResourcePresenter[]) =>
-  [...presenters].sort((left, right) => right.priority - left.priority || left.id.localeCompare(right.id));
-
-const isPromiseLike = (value: unknown): value is PromiseLike<unknown> =>
-  (typeof value === "object" || typeof value === "function") &&
-  value !== null &&
-  "then" in value &&
-  typeof value.then === "function";
 
 export interface CreateResourceRegistryInput {
   // Resolves the active primary resource so listResources can scope provider candidates.
   getPrimary?: () => ResourceRef | undefined;
-  establishLocation?: (instance: WorkbenchPanelInstance) => WorkbenchPanelInstance;
   resolveView?: (viewId: string) => { label?: string; icon?: string } | undefined;
 }
 
 export const createResourceRegistry = (input: CreateResourceRegistryInput = {}): ResourceRegistry => {
-  const openListeners = new Set<(resource: ResourceRef) => void>();
   const cycleListeners = new Set<(cycle: ResourceHierarchyCycle) => void>();
-  const establishLocation = input.establishLocation;
-  let openingResourceDepth = 0;
   const store = createWorkbenchStore<ResourceRegistryStoreState>({
     name: "workbench.resources",
-    initialState: { kinds: {}, presenters: {}, providers: {}, hierarchyProviders: {} },
+    initialState: { kinds: {}, providers: {}, hierarchyProviders: {} },
   });
 
   return {
@@ -202,35 +159,8 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
       return store.getState().kinds[kind];
     },
 
-    getSurface(resource) {
-      return store.getState().kinds[resource.kind]?.surface;
-    },
-
     listKinds() {
       return Object.values(store.getState().kinds).sort(byContributionPriority);
-    },
-
-    registerPresenter(presenter) {
-      const snapshot = store.getState();
-      if (snapshot.presenters[presenter.id]) throw new Error(`Resource presenter already registered: ${presenter.id}`);
-
-      const record: ResolvedResourcePresenter = { ...presenter, priority: presenter.priority ?? 0 };
-      store.setState(
-        { ...snapshot, presenters: { ...snapshot.presenters, [presenter.id]: record } },
-        false,
-        "registerPresenter",
-      );
-
-      return createDisposable(() => {
-        const current = store.getState();
-        if (current.presenters[presenter.id] !== record) return;
-        const { [presenter.id]: _removed, ...rest } = current.presenters;
-        store.setState({ ...current, presenters: rest }, false, "unregisterPresenter");
-      });
-    },
-
-    listPresenters() {
-      return sortPresenters(Object.values(store.getState().presenters));
     },
 
     registerProvider(provider) {
@@ -309,40 +239,6 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
       cycleListeners.add(listener);
       return createDisposable(() => {
         cycleListeners.delete(listener);
-      });
-    },
-
-    isOpeningResource() {
-      return openingResourceDepth > 0;
-    },
-
-    async openResource(resource, input = {}) {
-      const snapshot = store.getState();
-      if (!snapshot.kinds[resource.kind]) throw new Error(`Unknown resource kind: ${resource.kind}`);
-
-      const presenter = sortPresenters(Object.values(snapshot.presenters)).find((candidate) =>
-        candidate.canOpen(resource),
-      );
-      if (!presenter) throw new Error(`No presenter registered for resource kind: ${resource.kind}`);
-
-      openingResourceDepth += 1;
-      let result: WorkbenchPanelInstance;
-      try {
-        const opened = presenter.open(resource, input);
-        result = isPromiseLike(opened) ? ((await opened) as WorkbenchPanelInstance) : opened;
-        result = establishLocation?.(result) ?? result;
-        presenter.afterOpen?.(resource, result, input);
-      } finally {
-        openingResourceDepth -= 1;
-      }
-      for (const listener of openListeners) listener(resource);
-      return result;
-    },
-
-    onDidOpenResource(listener) {
-      openListeners.add(listener);
-      return createDisposable(() => {
-        openListeners.delete(listener);
       });
     },
   };

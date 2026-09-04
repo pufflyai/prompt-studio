@@ -1,6 +1,5 @@
 export type {
   CollectionSettingsPanel,
-  CustomSettingsPanel,
   RegisteredSettingsPanel,
   RegisteredSettingsSection,
   SchemaSettingsPanel,
@@ -13,6 +12,7 @@ export type {
   SettingsRegistryStoreState,
   SettingsScope,
   SettingsSectionContribution,
+  ViewSettingsPanel,
 } from "../registries/settings/settings-registry";
 export { createSettingsRegistry } from "../registries/settings/settings-registry";
 export type {
@@ -50,11 +50,16 @@ export type {
 export type { ThemeRegistry, WorkbenchThemeStoreState } from "../registries/themes/theme-registry";
 export { createThemeRegistry } from "../registries/themes/theme-registry";
 export type {
+  WorkbenchViewMenuContribution,
+  WorkbenchViewMenuRegistry,
+} from "../registries/view-menus/view-menu-registry";
+export { createWorkbenchViewMenuRegistry, viewMenuPanelId } from "../registries/view-menus/view-menu-registry";
+export type {
   CreateWorkbenchViewRegistryInput,
-  OpenWorkbenchViewInput,
   RegisteredWorkbenchView,
+  WorkbenchReactViewBody,
+  WorkbenchViewBody,
   WorkbenchViewContribution,
-  WorkbenchViewOpenEvent,
   WorkbenchViewRegistry,
   WorkbenchViewRegistryStoreState,
 } from "../registries/views/view-registry";

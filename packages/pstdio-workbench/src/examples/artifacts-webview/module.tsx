@@ -1,8 +1,8 @@
 import type { WorkbenchModuleContribution } from "../../core";
 import {
-  BRIDGE_WEBVIEW_RENDERER_ID,
-  createBridgeWebviewRenderer,
   createWorkbenchWebviewHostCapabilities,
+  getBridgeWebviewHostEventPublisher,
+  renderBridgeWebviewFrame,
 } from "../../extensions";
 import type { ArtifactsBridgeDocumentAssets } from "./bridge-document";
 import { artifactsWebviewCapabilities } from "./bridge-document";
@@ -42,30 +42,39 @@ export const createArtifactsWebviewExampleModule = (
   id: "artifacts-webview",
   activate(ctx) {
     const bridgeDocument = input.createBridgeDocument();
-
-    ctx.layout.registerPanel({
+    ctx.views.registerView({
       id: panelId,
       title: "Run report",
-      region: "main",
-      rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
-      singleton: true,
-      config: {
-        capabilities: [...artifactsWebviewCapabilities],
-        moduleUrl: bridgeDocument.moduleUrl,
-        runtimeUrl: bridgeDocument.runtimeUrl,
+      body: {
+        kind: "react",
+        render: ({ workbench, instance }) =>
+          renderBridgeWebviewFrame({
+            context: {
+              workbench,
+              webviewId: panelId,
+              placement: instance,
+              hostEvents: getBridgeWebviewHostEventPublisher(workbench, instance),
+            },
+            createHostCapabilities: (context) => ({
+              ...createWorkbenchWebviewHostCapabilities(context),
+              "artifacts.read": readArtifacts,
+            }),
+            createProps: ({ placement }) => ({ placement, resource: placement.resource }),
+            ownerId: "workbench",
+            title: "Run report",
+            webview: {
+              capabilities: [...artifactsWebviewCapabilities],
+              moduleUrl: bridgeDocument.moduleUrl,
+              runtimeUrl: bridgeDocument.runtimeUrl,
+            },
+          }),
       },
     });
-
-    ctx.renderers.registerRenderer(
-      createBridgeWebviewRenderer({
-        createHostCapabilities: (context) => ({
-          ...createWorkbenchWebviewHostCapabilities(context),
-          "artifacts.read": readArtifacts,
-        }),
-      }),
-    );
-
-    ctx.layout.openPanel(panelId);
+    ctx.overlays.registerOverlay({
+      id: panelId,
+      viewId: panelId,
+    });
+    ctx.overlays.openOverlay(panelId);
 
     return { dispose: () => bridgeDocument.dispose() };
   },

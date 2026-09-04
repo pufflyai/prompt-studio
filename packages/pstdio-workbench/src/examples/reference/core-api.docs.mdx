@@ -1,0 +1,197 @@
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
+import * as CoreApiStories from "./core-api.stories";
+
+<Meta of={CoreApiStories} name="API reference" />
+
+# Core API
+
+Use the Core API to build a host application around the Prompt Studio workbench. It runs trusted React code in the
+same process as the host.
+
+| | Core API |
+| --- | --- |
+| Audience | Prompt Studio host maintainers |
+| Packages | `@pstdio/workbench`, `@pstdio/workbench/react`, `@pstdio/workbench/storage` |
+| Code location | The host application |
+| UI runtime | Native React in the host process |
+| Extension access | None |
+
+Extensions must use `@pstdio/sdk/extensions`. A first-party tool must not use this API to bypass the extension
+contract.
+
+## Runnable example
+
+The preview and source below register host React Views and place them in three regions. Open the source panel under the
+preview to see the complete TypeScript file.
+
+<Canvas of={CoreApiStories.RunnableExample} sourceState="shown" />
+
+## Create and render a workbench
+
+<Source
+  language="tsx"
+  code={`import { createWorkbench } from "@pstdio/workbench";
+import { Workbench, WorkbenchThemeProvider } from "@pstdio/workbench/react";
+
+const workbench = createWorkbench();
+
+export const App = () => (
+  <WorkbenchThemeProvider>
+    <Workbench workbench={workbench} />
+  </WorkbenchThemeProvider>
+);`}
+/>
+
+## Register host behavior
+
+`registerModule` gives one host feature a lifecycle. Disposing the returned registration removes everything installed
+through its context.
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Stable owner identity for all contributions registered by the module. |
+| `activate` | Function called when the module starts. |
+| `ctx` | Scoped Core APIs. Registrations made through this context are disposed with the module. |
+
+<Source
+  language="tsx"
+  code={`import type { WorkbenchModuleContribution } from "@pstdio/workbench";
+
+export const searchModule: WorkbenchModuleContribution = {
+  id: "host.search",
+  activate(ctx) {
+    ctx.views.registerView({
+      id: "host.search",
+      title: "Search",
+      body: {
+        kind: "react",
+        render: () => <div>Search</div>,
+      },
+    });
+  },
+};`}
+/>
+
+## Views
+
+`views.registerView` defines reusable content. It has no layout side effect.
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Stable identity used by placements and other View-backed surfaces. |
+| `title` | Default label for instances of the View. |
+| `icon` | Optional design-system icon name. |
+| `body` | Rendering adapter for the content. |
+| `body.kind: "react"` | Trusted host React content. This body kind is not exposed to extensions. |
+| `body.kind: "tree" \| "file" \| "controls" \| "kanban" \| "dataTable"` | A native workbench renderer with structured data callbacks. |
+| `body.render` | React function called for one placement instance when the body kind is `react`. |
+
+The React render input contains `instance` and `workbench`. `instance` identifies this use of the View and carries its
+resolved title, resource, section, and placement identity. `workbench` exposes host services such as commands and page
+navigation. Do not use the render callback to choose a region or open itself.
+
+## Placements
+
+A placement references a View and gives it a lifetime and location. Register placements through `shellPlacements`,
+`modePlacements`, or a page's `slots`.
+
+### Identity, content, and ownership
+
+| Field | Required | Meaning |
+| --- | --- | --- |
+| `id` | Yes | Stable identity within the shell, mode, or page that owns the placement. |
+| `item` | Shell and mode | Either one static View or a resource binding that creates View instances. |
+| `item.kind: "view"` | Static item | Places one instance of `viewId`. |
+| `item.presence` | Static item | Initial state of the static instance: `fixed`, `open`, or `closed`. Required, with no default. |
+| `item.kind: "resource"` | Resource item | Places instances of `viewId` for accepted `resourceKinds`. |
+| `item.viewId` | Yes | Id of the View rendered by this placement. |
+| `item.resourceKinds` | Resource item | Resource kinds this placement accepts. |
+| `item.cardinality` | Resource item | Required. `one` keeps a single instance and rebinds it when another resource opens. `many` creates one instance per resource URI and selects the existing tab on reopen. |
+| `item.add` | Resource item | Optional navigation target the Add panel runs to create or select a resource before the placement can open. |
+| `modeId` | Mode placement | Mode that owns the placement. The placement disappears when that mode is inactive. |
+| `ref` | Mode placement | Typed identity used by navigation targets. |
+
+The `presence` values mean:
+
+- `fixed`: always open while the owner is active. The user cannot close it, and the Add panel does not offer it.
+- `open`: open when the owner has no saved state. The user may close it.
+- `closed`: closed until the user or an action opens it. The Add panel offers it.
+
+A saved user choice wins over `open` and `closed` on the next visit. Cardinality does not control initial visibility
+or closability: resource placements start empty, and resource tabs are always closable.
+
+A page's primary slot declares `viewId`, a `binding`, or both, and is always present while the page is open. Auxiliary
+page slots use `viewId` plus `presence` for static content or a `binding` with `cardinality` for resource content. The
+page owns every slot and removes the complete slot set when navigation leaves that page.
+
+### Location and visibility
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `region` | Required | Region that owns the panel chrome. Pages and modes use `main`, `secondary`, or `side`. |
+| `hiddenByDefault` | `false` | Starts non-closeable placement chrome hidden in the user's visibility settings. |
+| `order` | `0` | Initial order among contributions from the same owner. User ordering wins after customization. |
+| `movableTo` | Initial region only | Regions to which the user may move a mode placement. The list must include `region`. |
+
+`presence` describes initial availability. It does not make a View globally visible. Owner lifetime still wins: page
+content leaves with its page, and mode content leaves with its mode.
+
+### Lifecycle and presentation
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `mountStrategy` | `active` | `active` mounts only the selected tab. `keep-mounted` retains inactive instances until their owner leaves. |
+| `headerBorderBottom` | Region default | Whether the region header draws its bottom divider. |
+| `floatingPanels` | `visible` | Whether attached panel instances may be shown in the floating Side Panel presentation. |
+| `tab` | View title and icon | Supplies a dynamic label, icon, status indicator, grouped menu rows, and refresh events. A status indicator replaces the ordinary icon. |
+| `config` | None | View-specific serializable input carried to the rendered instance. |
+
+Region-level layout policy is not a placement concern. It lives in `regionSettings`, keyed by region id with `size`
+(`defaultPx`, `minPx`, `maxPx`) and `collapsible` values. A mode declares it on its contribution, and the host can pass
+defaults to `createWorkbench({ regionSettings })`. The active mode's settings win over the host's. A placement cannot
+set region size or collapsibility.
+
+Shell placements live with the workbench. Mode placements live only while their mode is active. Page slots live only
+while their page is active. Registering a View alone never creates a panel.
+
+## Navigation
+
+`navigation` executes navigation targets. A target opens a page, opens a panel, runs a command, opens a link, or groups
+several of those in a compound target. Navigation items, keybindings, tab menu rows, and Add panel actions all use the
+same target values.
+
+| Method | Meaning |
+| --- | --- |
+| `navigation.openPage({ page, resource?, section?, open?, parent? })` | Navigates to a page. It selects the page's mode, commits one canonical location, updates URL and history once, and reconciles placements once. |
+| `navigation.openPanel({ panel, resource?, open? })` | Opens or activates a declared placement. `panel` is a mode placement ref, a page slot ref, or the Core-only `{ kind: "shell-placement", id }`. |
+| `navigation.openTarget(target)` | Shared executor for any navigation target. `openPage` and `openPanel` delegate to it. |
+
+A compound target executes its items in order as one atomic step. When an item fails, the executor rolls workbench
+navigation state back to the checkpoint taken before the first item.
+
+Keybindings use the same targets. `keybindings.registerKeybinding({ action, keybinding, when? })` binds a chord to any
+navigation target, so a page or panel can be bound directly without a wrapper command.
+
+## Registries
+
+| API | What it owns |
+| --- | --- |
+| `views` | Content definitions. A View owns its React or native body. |
+| `shellPlacements` | Host content that lives with the workbench shell. |
+| `modePlacements` | Content owned by the active mode. |
+| `pages` | Page definitions and their complete placement sets. |
+| `layout` | Visible placement instances, regions, and user arrangement. Raw panel registration is internal. |
+| `modes` | Long-lived host contexts such as project and session mode |
+| `navigation` | Typed page and panel open methods and the shared target executor |
+| `keybindings` | Keyboard chords bound to navigation targets |
+| `pageLocations` | Page navigation, replacement, parent links, and active resources |
+| `navigationTrees` | Header, content, and footer contributions for navigation trees |
+| `commands` | Host commands and execution |
+| `settings` and `preferences` | Host settings UI, schemas, and scoped values |
+| `statuses` | Workflow status providers used by native renderers |
+| `statusBar` | Views placed in host status chrome |
+| `resources` and `breadcrumbs` | Domain identity and visible location hierarchy |
+| `terminal` | Host terminal sessions and panel integration |
+
+Use the Onboarding guide for the host setup in context. The Renderers guide compares every View body and includes a
+runnable source file for each one.

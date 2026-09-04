@@ -30,6 +30,7 @@ export const toOpenWidgetInput = (
 export const toPanelInstance = (placement: WorkbenchWidgetPlacement): WorkbenchPanelInstance => ({
   instanceId: placement.widgetId,
   panelId: placement.contributionId,
+  placementIdentity: placement.placementIdentity,
   viewId: placement.viewId,
   ownerId: placement.ownerId,
   source: placement.source,

@@ -3,7 +3,6 @@ import { headerTrailingMenuPath, type WorkbenchModuleContext, type WorkbenchModu
 import { AttributeEditor } from "./attribute-editor";
 import {
   kanbanRendererStoryEditorWidgetId,
-  kanbanRendererStoryRendererId,
   kanbanRendererStoryViewKind,
   kanbanRendererStoryWidgetId,
   type StoryRow,
@@ -72,17 +71,18 @@ const createStoryRowsStore = () => {
 };
 
 const registerSchemaEditor = (ctx: WorkbenchModuleContext) => {
-  ctx.layout.registerPanel({
+  ctx.views.registerView({
     id: kanbanRendererStoryEditorWidgetId,
     title: "Configure attributes",
-    region: "overlay",
-    singleton: true,
-    rendererId: kanbanRendererStoryEditorWidgetId,
-    config: { size: "lg", placement: "center", scrollBehavior: "inside" },
+    body: {
+      kind: "react",
+      render: () => <AttributeEditor />,
+    },
   });
-  ctx.renderers.registerRenderer({
+  ctx.overlays.registerOverlay({
     id: kanbanRendererStoryEditorWidgetId,
-    render: () => <AttributeEditor />,
+    viewId: kanbanRendererStoryEditorWidgetId,
+    config: { size: "lg", placement: "center", scrollBehavior: "inside" },
   });
 
   ctx.commands.registerCommand(
@@ -93,7 +93,7 @@ const registerSchemaEditor = (ctx: WorkbenchModuleContext) => {
       icon: "settings",
     },
     {
-      execute: () => ctx.layout.openPanel(kanbanRendererStoryEditorWidgetId),
+      execute: () => ctx.overlays.openOverlay(kanbanRendererStoryEditorWidgetId),
     },
   );
   ctx.layout.registerMenuItem(headerTrailingMenuPath("main"), {
@@ -108,28 +108,28 @@ export const createKanbanRendererStoryModule = (): WorkbenchModuleContribution =
   activate(ctx) {
     const rowsStore = createStoryRowsStore();
 
-    ctx.renderers.registerKanbanRenderer({
-      id: kanbanRendererStoryRendererId,
+    ctx.views.registerView({
+      id: kanbanRendererStoryWidgetId,
       title: "Rows",
-      resourceKind: kanbanRendererStoryViewKind,
-      attributes: storySchemaStore.source,
-      defaultSettings,
-      getBoardColumnConfig: resolveBoardColumnConfig,
-      executeQuery: () => rowsStore.getRows(),
-      subscribe: rowsStore.subscribe,
-      onAttributeChange: rowsStore.updateAttribute,
-      onReorder: rowsStore.reorder,
+      body: {
+        kind: "kanban",
+        resourceKind: kanbanRendererStoryViewKind,
+        attributes: storySchemaStore.source,
+        defaultSettings,
+        getBoardColumnConfig: resolveBoardColumnConfig,
+        executeQuery: () => rowsStore.getRows(),
+        subscribe: rowsStore.subscribe,
+        onAttributeChange: rowsStore.updateAttribute,
+        onReorder: rowsStore.reorder,
+      },
     });
 
     registerSchemaEditor(ctx);
 
-    ctx.layout.registerPanel({
+    ctx.shellPlacements.registerPlacement({
       id: kanbanRendererStoryWidgetId,
-      title: "Rows",
+      item: { kind: "view", viewId: kanbanRendererStoryWidgetId, presence: "fixed" },
       region: "main",
-      rendererId: kanbanRendererStoryRendererId,
-      singleton: true,
     });
-    ctx.layout.openPanel(kanbanRendererStoryWidgetId, { title: "Rows" });
   },
 });

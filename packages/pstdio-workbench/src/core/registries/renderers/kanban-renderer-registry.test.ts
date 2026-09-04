@@ -4,7 +4,7 @@ import { createKanbanRendererRegistry } from "./kanban-renderer-registry";
 import { createWorkbenchRendererRegistry } from "./renderer-registry";
 
 const createRegistry = () => {
-  const rendererRegistry = createWorkbenchRendererRegistry({ createHost: () => ({}) as HTMLElement });
+  const rendererRegistry = createWorkbenchRendererRegistry();
   const data = createKanbanRendererRegistry({ rendererRegistry });
   return { rendererRegistry, data };
 };
@@ -40,7 +40,7 @@ describe("createKanbanRendererRegistry", () => {
     });
 
     const renderer = rendererRegistry.getRenderer("tickets");
-    if (!renderer || renderer.keepAlive) throw new Error("expected non-keep-alive renderer");
+    if (!renderer) throw new Error("expected renderer");
     renderer.render({} as Parameters<typeof renderer.render>[0]);
 
     expect(calls).toEqual([{ kanbanRendererId: "tickets" }]);

@@ -1,13 +1,10 @@
 import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import type { ExtensionResourceOpenIntent } from "@pstdio/sdk/extensions";
+import type { NavigationTarget } from "@pstdio/sdk/extensions";
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
-import {
-  createExtensionSlot,
-  toExtensionCommandResource,
-  toWorkbenchResource,
-} from "../host/workbench-extension-command";
+import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
+import { createExtensionSlot, toExtensionCommandResource } from "../host/workbench-extension-command";
 import type { CreateBridgeWebviewHostCapabilities } from "./bridge-webview-renderer";
-import { createWorkbenchWebviewHostCapabilities, toOpenResourceInput } from "./webview-host-capabilities";
+import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
 
 type ExtensionWebviewSlotKind = NonNullable<CommandExecuteRequest["slot"]>["kind"];
 
@@ -24,6 +21,7 @@ export interface ExtensionWebviewArtifactCapabilities {
 interface CreateExtensionWebviewHostCapabilitiesInput {
   artifacts?: ExtensionWebviewArtifactCapabilities;
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
+  extensionIdForWebview(webviewId: string): string | undefined;
   files?: ExtensionWebviewFileCapabilities;
   projectId: string;
   slotKind: ExtensionWebviewSlotKind;
@@ -33,11 +31,6 @@ type WebviewCommandExecuteParams = {
   commandId: string;
   params?: Record<string, unknown>;
   resource?: CommandExecuteRequest["resource"];
-};
-
-type WebviewResourceOpenParams = {
-  resource?: CommandExecuteRequest["resource"];
-  input?: ExtensionResourceOpenIntent;
 };
 
 export const createExtensionWebviewHostCapabilities =
@@ -50,15 +43,13 @@ export const createExtensionWebviewHostCapabilities =
 
     return {
       ...base,
-      // Extension guests speak the SDK resource shape (`type`); normalize to the
-      // workbench shape (`kind` + synthesized uri) the resource registry expects,
-      // mirroring how commands.execute and tree targets normalize their resources.
-      "resource.open": (params) => {
-        const request = params as WebviewResourceOpenParams;
-        if (!request.resource) throw new Error("resource.open requires a resource.");
-        return context.workbench.resources.openResource(
-          toWorkbenchResource(request.resource),
-          toOpenResourceInput(request.input),
+      "navigation.open": (params) => {
+        const request = params as { target?: NavigationTarget };
+        if (!request.target) throw new Error("navigation.open requires a target.");
+        return context.workbench.navigation.openTarget(
+          toWorkbenchNavigationTarget(request.target, {
+            extensionId: input.extensionIdForWebview(context.webviewId),
+          }),
         );
       },
       "commands.execute": async (params) => {

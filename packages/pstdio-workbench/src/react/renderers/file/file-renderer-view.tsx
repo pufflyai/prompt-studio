@@ -6,6 +6,7 @@ import type {
   WorkbenchCore,
   WorkbenchPanelInstance,
 } from "../../../core";
+import { getWorkbenchRenderers } from "../../../core";
 import {
   getFileSectionNavigation,
   resolveFileSectionTargetId,
@@ -49,16 +50,16 @@ const syncActiveFileSection = (input: {
   sectionId: string | null;
 }) => {
   const { workbench, navigation, sectionId } = input;
-  if (!navigation || !workbench.renderers.getTreeRenderer(navigation.treeId)) return;
+  if (!navigation || !getWorkbenchRenderers(workbench).getTreeRenderer(navigation.treeId)) return;
 
   if (sectionId && navigation.anchors.some((anchor) => anchor.id === sectionId)) {
-    workbench.renderers.setSelectedNode(navigation.treeId, sectionId);
+    getWorkbenchRenderers(workbench).setSelectedNode(navigation.treeId, sectionId);
     return;
   }
 
-  const selectedNodeId = workbench.renderers.getTreeState(navigation.treeId).selectedNodeId;
+  const selectedNodeId = getWorkbenchRenderers(workbench).getTreeState(navigation.treeId).selectedNodeId;
   if (selectedNodeId && navigation.anchors.some((anchor) => anchor.id === selectedNodeId)) {
-    workbench.renderers.setSelectedNode(navigation.treeId, undefined);
+    getWorkbenchRenderers(workbench).setSelectedNode(navigation.treeId, undefined);
   }
 };
 
@@ -67,8 +68,8 @@ const getEditorSectionNavigation = (
   navigation: ReturnType<typeof getFileSectionNavigation>,
 ) => {
   if (!navigation) return undefined;
-  const selectedNodeId = workbench.renderers.getTreeRenderer(navigation.treeId)
-    ? workbench.renderers.getTreeState(navigation.treeId).selectedNodeId
+  const selectedNodeId = getWorkbenchRenderers(workbench).getTreeRenderer(navigation.treeId)
+    ? getWorkbenchRenderers(workbench).getTreeState(navigation.treeId).selectedNodeId
     : undefined;
 
   return {
@@ -97,8 +98,8 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   useEffect(() => {
     const previous = previousSectionNavigationRef.current;
     const selectedNodeId =
-      previous && workbench.renderers.getTreeRenderer(previous.treeId)
-        ? workbench.renderers.getTreeState(previous.treeId).selectedNodeId
+      previous && getWorkbenchRenderers(workbench).getTreeRenderer(previous.treeId)
+        ? getWorkbenchRenderers(workbench).getTreeState(previous.treeId).selectedNodeId
         : undefined;
 
     if (
@@ -110,7 +111,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       }) &&
       previous
     ) {
-      workbench.renderers.setSelectedNode(previous.treeId, undefined);
+      getWorkbenchRenderers(workbench).setSelectedNode(previous.treeId, undefined);
     }
 
     previousSectionNavigationRef.current = sectionNavigation
@@ -188,7 +189,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     if (cached) controllerRef.current?.setBaseline(cached.content, cached.revision);
     setEditState({ dirty: false, saving: false });
     load();
-    const refreshSubscription = workbench.renderers.onDidRefreshFileRenderer((event) => {
+    const refreshSubscription = getWorkbenchRenderers(workbench).onDidRefreshFileRenderer((event) => {
       if (event.fileRendererId !== contributionId) return;
       const controller = controllerRef.current;
       if (controller) controller.handleRefreshEvent(event);

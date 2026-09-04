@@ -1,16 +1,16 @@
-import type { PlacementIdentity } from "@pstdio/sdk/extensions";
 import { createDisposable } from "../../shared/disposable";
-import { createWorkbenchStore } from "../../shared/store/workbench-store";
-import {
-  composeOwnedPlacements,
-  type OwnedPlacementReconciliation,
-  type ResolvedOwnedPlacement,
-  reconcileOwnedPlacements,
-} from "../layout/placement-reconciliation";
+import { composeOwnedPlacements, reconcileOwnedPlacements } from "../layout/placement-reconciliation";
 import { resolvePagePlacementClose } from "./page-placement-close";
 import { pagePlacementIdentity, resolvePagePlacements } from "./page-placement-resolver";
 import { registerWorkbenchPage } from "./page-registration";
 import { setWorkbenchPageRegistryInternals } from "./page-registry-internals";
+import {
+  createPageRegistryStore,
+  type PageRegistryCommitInput,
+  refreshActiveModePlacements,
+  refreshShellPlacements,
+  resolveModePlacementSet,
+} from "./page-registry-state";
 import type {
   CreateWorkbenchPageRegistryInput,
   WorkbenchPageOpenInput,
@@ -21,7 +21,7 @@ import type {
 } from "./page-registry-types";
 import {
   emptyPageState,
-  openDefaultAuxiliaryBindings,
+  openPageResourceBindings,
   openResourceSlot,
   primarySlot,
   requirePageSlot,
@@ -44,85 +44,6 @@ export type {
   WorkbenchPageSlotOpenInput,
 } from "./page-registry-types";
 
-const emptyReconciliation = <Value>(): OwnedPlacementReconciliation<Value> => ({
-  add: [],
-  retain: [],
-  update: [],
-  activate: [],
-  remove: [],
-});
-
-interface PageRegistryCommitInput<Value> {
-  pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>;
-  projectId?: string;
-  location?: WorkbenchPageRegistryStoreState<Value>["location"];
-  activePageId?: string;
-  activeModeId?: string;
-  modePlacements?: readonly ResolvedOwnedPlacement<Value>[];
-  activate?: readonly PlacementIdentity[];
-  action: string;
-}
-
-const refreshActiveModePlacements = <Value>(input: {
-  state: WorkbenchPageRegistryStoreState<Value>;
-  registryInput: CreateWorkbenchPageRegistryInput<Value>;
-  commit(next: PageRegistryCommitInput<Value>): void;
-}) => {
-  const modeId = input.state.activeModeId;
-  if (!modeId) return;
-  const current = input.state.placements.filter(
-    (placement) => placement.identity.kind === "mode" && placement.identity.modeId === modeId,
-  );
-  input.commit({
-    pageStates: input.state.pageStates,
-    projectId: input.state.projectId,
-    location: input.state.location,
-    activePageId: input.state.activePageId,
-    activeModeId: modeId,
-    modePlacements: input.registryInput.resolveModePlacements(modeId, current),
-    action: "refreshModePlacements",
-  });
-};
-
-const activateModeState = <Value>(
-  state: WorkbenchPageRegistryStoreState<Value>,
-  projectId: string,
-  modeId: string,
-  commit: (next: PageRegistryCommitInput<Value>) => void,
-) => {
-  commit({
-    pageStates: state.pageStates,
-    projectId,
-    activeModeId: modeId,
-    action: "leavePageLocation",
-  });
-};
-
-const createPageRegistryStore = <Value>(input: CreateWorkbenchPageRegistryInput<Value>) =>
-  createWorkbenchStore<WorkbenchPageRegistryStoreState<Value>>({
-    name: "workbench.pages",
-    initialState: {
-      pages: {},
-      pageStates: {},
-      placements: composeOwnedPlacements({ shell: input.resolveShellPlacements() }).placements,
-      reconciliation: emptyReconciliation(),
-    },
-  });
-
-const resolveModePlacementSet = <Value>(input: {
-  current: WorkbenchPageRegistryStoreState<Value>;
-  modeId: string | undefined;
-  desired: readonly ResolvedOwnedPlacement<Value>[] | undefined;
-  resolveModePlacements: CreateWorkbenchPageRegistryInput<Value>["resolveModePlacements"];
-}) => {
-  if (!input.modeId) return undefined;
-  if (input.desired) return input.desired;
-  if (input.modeId !== input.current.activeModeId) return input.resolveModePlacements(input.modeId);
-  return input.current.placements.filter(
-    (placement) => placement.identity.kind === "mode" && placement.identity.modeId === input.modeId,
-  );
-};
-
 export const createWorkbenchPageRegistry = <Value>(
   input: CreateWorkbenchPageRegistryInput<Value>,
 ): WorkbenchPageRegistry<Value> => {
@@ -135,13 +56,17 @@ export const createWorkbenchPageRegistry = <Value>(
   let publishingState: WorkbenchPageRegistryStoreState<Value> | undefined;
 
   const publishState = (state: WorkbenchPageRegistryStoreState<Value>, action: string) => {
+    const storeBeforeRuntime = store.getState();
+    const previousPublishingState = publishingState;
     publishingState = state;
     try {
       runtime?.(state);
     } finally {
-      publishingState = undefined;
+      publishingState = previousPublishingState;
     }
-    store.setState(state, false, action);
+    // A layout listener may synchronously commit a panel opened for the new page.
+    // That nested commit already includes this state and must not be overwritten.
+    if (store.getState() === storeBeforeRuntime) store.setState(state, false, action);
   };
 
   const requirePage = (pageId: string) => {
@@ -151,7 +76,7 @@ export const createWorkbenchPageRegistry = <Value>(
   };
 
   const commit = (next: PageRegistryCommitInput<Value>) => {
-    const current = store.getState();
+    const current = publishingState ?? store.getState();
     const page = next.activePageId ? current.pages[next.activePageId] : undefined;
     const pageState = page ? next.pageStates[page.id] : undefined;
     const modePlacements = resolveModePlacementSet({
@@ -207,14 +132,14 @@ export const createWorkbenchPageRegistry = <Value>(
       ...target,
       ...(target.resource ? { resource: normalizeResource(target.resource) } : {}),
     };
-    const currentPageState = pageStates[page.id] ?? emptyPageState(page, resourceKey);
+    const currentPageState = pageStates[page.id] ?? emptyPageState(page);
     const primaryState = selectPrimaryTarget({
       page,
       state: currentPageState,
       target: normalizedTarget,
       resourceKey,
     });
-    const pageState = openDefaultAuxiliaryBindings({
+    const pageState = openPageResourceBindings({
       page,
       state: primaryState,
       target: normalizedTarget,
@@ -262,9 +187,9 @@ export const createWorkbenchPageRegistry = <Value>(
       const page = requirePage(target.pageId);
       const slot = requirePageSlot(page, target.slotId);
       if (slot.role !== "auxiliary") throw new Error(`Page slot is not an auxiliary panel: ${page.id}.${slot.id}`);
-      let pageState = current.pageStates[page.id] ?? emptyPageState(page, resourceKey);
+      let pageState = current.pageStates[page.id] ?? emptyPageState(page);
       let instanceKey = "default";
-      const resource = target.resource ? normalizeResource(target.resource) : slot.defaultResource;
+      const resource = target.resource ? normalizeResource(target.resource) : undefined;
       if (resource) {
         instanceKey = resourceKey(resource);
         pageState = openResourceSlot({
@@ -276,7 +201,7 @@ export const createWorkbenchPageRegistry = <Value>(
       } else {
         if (slot.binding) throw new Error(`Page slot "${slot.id}" requires a resource`);
         if (target.open) throw new Error(`Page slot "${slot.id}" accepts open intent only with a resource`);
-        pageState = setStaticSlotOpen(pageState, slot.id, true);
+        if (slot.presence !== "fixed") pageState = setStaticSlotOpen(pageState, slot.id, true);
       }
       commit({
         pageStates: { ...current.pageStates, [page.id]: pageState },
@@ -307,7 +232,10 @@ export const createWorkbenchPageRegistry = <Value>(
       });
     },
     refreshModePlacements() {
-      refreshActiveModePlacements({ state: store.getState(), registryInput: input, commit });
+      refreshActiveModePlacements({ state: publishingState ?? store.getState(), registryInput: input, commit });
+    },
+    refreshShellPlacements() {
+      refreshShellPlacements({ state: publishingState ?? store.getState(), commit });
     },
     activateLocation(target) {
       activatePageWithStates(target, target.pageStates ?? store.getState().pageStates, target.action, {
@@ -315,14 +243,11 @@ export const createWorkbenchPageRegistry = <Value>(
         location: target.location,
       });
     },
-    activateMode(projectId, modeId) {
-      activateModeState(store.getState(), projectId, modeId, commit);
-    },
     clearProject(projectId) {
       const current = store.getState();
       const placements = composeOwnedPlacements({ shell: input.resolveShellPlacements() }).placements;
       const pageStates = Object.fromEntries(
-        Object.values(current.pages).map((page) => [page.id, emptyPageState(page, resourceKey)]),
+        Object.values(current.pages).map((page) => [page.id, emptyPageState(page)]),
       );
       publishState(
         {

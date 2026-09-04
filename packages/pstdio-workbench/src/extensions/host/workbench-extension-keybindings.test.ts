@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ExtensionKeybindingRecord } from "pstdio-api-contracts";
-import { createWorkbenchCore } from "../../core";
+import { createWorkbench } from "../../core";
 import {
   registerWorkbenchExtensionKeybindings,
   resolveExtensionKeybindingChord,
@@ -9,13 +9,18 @@ import {
 const binding = {
   id: "pstdio.lab.keybinding.hello",
   extensionId: "pstdio.lab",
-  commandId: "pstdio.lab.command.hello",
+  action: {
+    kind: "command" as const,
+    target: {
+      command: { extensionId: "pstdio.lab", kind: "command" as const, id: "hello" },
+      params: { greeting: "hello" },
+    },
+  },
   key: "mod+h",
   canonicalChord: "Mod+H",
   parsed: { key: "H", ctrl: false, shift: false, alt: false, meta: true, modifiers: ["Meta"] },
   platformOverrides: { mac: "cmd+shift+h", linux: "ctrl+shift+h" },
   when: { mode: "pstdio.lab.mode.lab" },
-  args: { greeting: "hello" },
 } satisfies ExtensionKeybindingRecord;
 
 describe("extension keybindings", () => {
@@ -26,8 +31,11 @@ describe("extension keybindings", () => {
   });
 
   test("registers the command, context, and arguments with the workbench", () => {
-    const workbench = createWorkbenchCore();
-    workbench.commands.registerCommand({ id: binding.commandId, label: "Hello" }, { execute: () => undefined });
+    const workbench = createWorkbench();
+    workbench.commands.registerCommand(
+      { id: "pstdio.lab.command.hello", label: "Hello" },
+      { execute: () => undefined },
+    );
 
     registerWorkbenchExtensionKeybindings({
       bindings: [binding],
@@ -37,10 +45,13 @@ describe("extension keybindings", () => {
 
     expect(workbench.keybindings.listKeybindings()).toContainEqual(
       expect.objectContaining({
-        commandId: binding.commandId,
+        action: {
+          kind: "command",
+          commandId: "pstdio.lab.command.hello",
+          args: { greeting: "hello" },
+        },
         keybinding: expect.any(String),
         when: "activeWorkbenchMode == pstdio.lab.mode.lab",
-        args: { greeting: "hello" },
       }),
     );
   });

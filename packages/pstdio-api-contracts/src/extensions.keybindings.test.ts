@@ -8,7 +8,10 @@ import {
 const record = {
   id: "lab.preview",
   extensionId: "pstdio.lab",
-  commandId: "lab.preview",
+  action: {
+    kind: "command" as const,
+    target: { command: { extensionId: "pstdio.lab", kind: "command" as const, id: "preview" } },
+  },
   key: "mod+shift+p",
   canonicalChord: "Mod+Shift+P",
   parsed: {
@@ -51,7 +54,6 @@ describe("extension keybinding contracts", () => {
         placements: [],
         pages: [],
         resourceKinds: [],
-        resourceViews: [],
         navigationItems: [],
         navigationTrees: [],
         statusBarItems: [],
@@ -77,7 +79,6 @@ describe("extension keybinding contracts", () => {
       placements: [],
       pages: [],
       resourceKinds: [],
-      resourceViews: [],
       navigationItems: [],
       navigationTrees: [],
       statusBarItems: [],

@@ -1,8 +1,15 @@
 import { Box, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 import { EmptyState, ScrollArea } from "@pstdio/ui";
 import { type ReactNode, useEffect, useState } from "react";
-import type { CollectionSettingsPanel, PreferenceScope, SettingsRegistry, WorkbenchPanelRenderInput } from "../../core";
+import {
+  type CollectionSettingsPanel,
+  getWorkbenchRenderers,
+  type PreferenceScope,
+  type SettingsRegistry,
+  type WorkbenchPanelRenderInput,
+} from "../../core";
 import { WorkbenchPreferencesForm } from "../renderers/settings/preferences-form";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useSettingsRevision } from "./use-settings-revision";
 
 export interface SettingsSurfacePanelProps {
@@ -25,30 +32,48 @@ const ScrollableSettingsContent = (props: { children: ReactNode }) => (
   </ScrollArea>
 );
 
-// Resolves a collection item by id (items() may be async) and renders the
-// contributor-supplied editor. The framework never knows what the item is.
+const SettingsViewContent = (props: { input: WorkbenchPanelRenderInput; panelId: string; viewId: string }) => {
+  const { input, panelId, viewId } = props;
+  const renderer = useWorkbenchStore(getWorkbenchRenderers(input.workbench).store, (state) => state.renderers[viewId]);
+  useWorkbenchStore(getWorkbenchRenderers(input.workbench).store, (state) => state.refreshKeys[viewId] ?? 0);
+  if (!renderer) {
+    return (
+      <Centered>
+        <EmptyState title="Settings View not found" />
+      </Centered>
+    );
+  }
+  return (
+    <ScrollableSettingsContent>
+      {renderer.render({ ...input, instance: { ...input.instance, panelId, viewId } }) as ReactNode}
+    </ScrollableSettingsContent>
+  );
+};
+
+// Resolve async collection data before rendering its registered View. The View
+// can read the current item from settings by the stable panel and item ids.
 const CollectionItemView = (props: {
   panel: CollectionSettingsPanel;
   itemId: string;
   input: WorkbenchPanelRenderInput;
 }) => {
   const { panel, itemId, input } = props;
-  const [state, setState] = useState<{ status: "loading" | "ready" | "missing"; item?: unknown }>({
+  const resolveCollectionItem = input.workbench.settings.resolveCollectionItem;
+  const [state, setState] = useState<{ status: "loading" | "ready" | "missing" }>({
     status: "loading",
   });
 
   useEffect(() => {
     let alive = true;
     setState({ status: "loading" });
-    Promise.resolve(panel.items()).then((items) => {
+    resolveCollectionItem(panel.id, itemId).then((item) => {
       if (!alive) return;
-      const item = items.find((candidate) => panel.itemId(candidate) === itemId);
-      setState(item === undefined ? { status: "missing" } : { status: "ready", item });
+      setState(item === undefined ? { status: "missing" } : { status: "ready" });
     });
     return () => {
       alive = false;
     };
-  }, [panel, itemId]);
+  }, [panel, itemId, resolveCollectionItem]);
 
   if (state.status === "loading")
     return (
@@ -62,7 +87,7 @@ const CollectionItemView = (props: {
         <EmptyState title="Item not found" />
       </Centered>
     );
-  return <ScrollableSettingsContent>{panel.renderItem(state.item, input) as ReactNode}</ScrollableSettingsContent>;
+  return <SettingsViewContent input={input} panelId={panel.id} viewId={panel.viewId} />;
 };
 
 // The single main-region renderer for the settings surface. Dispatches the open
@@ -83,8 +108,7 @@ export const SettingsSurfacePanel = (props: SettingsSurfacePanelProps) => {
     );
   }
 
-  if (panel.kind === "custom")
-    return <ScrollableSettingsContent>{panel.render(input) as ReactNode}</ScrollableSettingsContent>;
+  if (panel.kind === "view") return <SettingsViewContent input={input} panelId={panel.id} viewId={panel.viewId} />;
 
   if (panel.kind === "collection") {
     if (!itemId)

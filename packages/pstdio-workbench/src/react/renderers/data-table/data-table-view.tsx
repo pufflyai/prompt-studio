@@ -15,6 +15,7 @@ import type {
   WorkbenchCore,
   WorkbenchPanelInstance,
 } from "../../../core";
+import { getWorkbenchRenderers } from "../../../core";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
 import {
   buildDataTableRendererData,
@@ -63,7 +64,7 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     };
     runQuery();
     const subscription = contribution.subscribe?.(runQuery);
-    const refreshSubscription = workbench.renderers.onDidRefreshDataTableRenderer((event) => {
+    const refreshSubscription = getWorkbenchRenderers(workbench).onDidRefreshDataTableRenderer((event) => {
       if (event.dataTableRendererId === contribution.id) runQuery();
     });
     return () => {

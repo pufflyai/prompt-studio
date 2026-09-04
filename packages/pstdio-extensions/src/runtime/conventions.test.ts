@@ -114,7 +114,7 @@ describe("extension convention diagnostics", () => {
             definePlacement({
               id: "dangling-view",
               mode: workbenchModes.project,
-              item: { kind: "view", view: { kind: "view", id: "missing" } },
+              item: { kind: "view", view: { kind: "view", id: "missing" }, presence: "open" },
               region: "main",
             }),
           ],

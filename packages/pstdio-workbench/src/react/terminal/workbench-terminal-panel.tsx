@@ -86,11 +86,15 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
     const region = state.layout.regions.secondary;
     return (region.activeWidgetId ?? region.widgets[0]?.widgetId) === placement.instanceId;
   });
+  const updateShellPlacement = workbench.shellPlacements.updatePlacement;
 
   useEffect(() => {
     if (!sessionId || !processTitle) return;
-    workbench.layout.updatePanel(placement.instanceId, { title: processTitle });
-  }, [sessionId, processTitle, placement.instanceId, workbench.layout]);
+    const identity = workbench.layout
+      .getLayout()
+      .regions.secondary.widgets.find((candidate) => candidate.widgetId === placement.instanceId)?.placementIdentity;
+    if (identity?.kind === "shell") updateShellPlacement(identity, { title: processTitle });
+  }, [sessionId, processTitle, placement.instanceId, workbench.layout, updateShellPlacement]);
 
   if (!workbench.terminal.isAvailable()) {
     return (

@@ -45,7 +45,6 @@ const makeCheck = (errorCount = 0): ExtensionsCheckResponse => ({
       localId: "overview",
       extensionId: "pstdio.dev-test",
       title: "Overview",
-      path: "overview",
       body: {
         kind: "webview",
         webview: {
@@ -59,7 +58,6 @@ const makeCheck = (errorCount = 0): ExtensionsCheckResponse => ({
   viewMenus: [],
   placements: [],
   resourceKinds: [],
-  resourceViews: [],
   resourceHierarchyProviders: [],
   navigationItems: [],
   navigationTrees: [],

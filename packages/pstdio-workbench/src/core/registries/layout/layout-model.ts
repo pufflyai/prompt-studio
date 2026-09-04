@@ -49,10 +49,10 @@ export type {
   WidgetContribution,
   WidgetMountStrategy,
   WidgetReusePolicy,
+  WorkbenchCommandTarget,
   WorkbenchFloatingPanelVisibility,
   WorkbenchLayout,
   WorkbenchLayoutStoreState,
-  WorkbenchLocationContribution,
   WorkbenchLocationEligibility,
   WorkbenchPanelContribution,
   WorkbenchPanelInstance,
@@ -67,11 +67,15 @@ export type {
   WorkbenchPanelReusePolicy,
   WorkbenchPanelTab,
   WorkbenchRegion,
+  WorkbenchRegionSettings,
   WorkbenchRegionSize,
   WorkbenchRegionState,
-  WorkbenchSubPanelContribution,
+  WorkbenchTabAction,
+  WorkbenchTabMenuGroup,
+  WorkbenchTabMenuRow,
   WorkbenchTabPosition,
   WorkbenchTabRetention,
+  WorkbenchTabSnapshot,
   WorkbenchWidgetPlacement,
   WorkbenchWidgetRole,
   WorkbenchWidgetTab,
@@ -178,7 +182,12 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
   const getPlaceholders = () => store.getState().placeholders;
   const getWidgets = () => store.getState().widgets;
   const getPlaceholder = (regionId: WorkbenchRegion) => getPlaceholders()[regionId];
-  const regionQueries = createRegionQueries({ getLayout, getWidgets, getPlaceholder });
+  const regionQueries = createRegionQueries({
+    getLayout,
+    getWidgets,
+    getPlaceholder,
+    getRegionSettings: input.getRegionSettings,
+  });
   const contributionLists = createContributionLists({ getPlaceholders, getWidgets });
 
   const scopeMethods = createLayoutScopeMethods({

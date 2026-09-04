@@ -14,12 +14,8 @@ export type {
   WorkbenchStoreSelectorListener,
 } from "../shared/store/workbench-store";
 export { createWorkbenchStore } from "../shared/store/workbench-store";
-export {
-  getSwitchModeNavigationTargetModeId,
-  workbenchSwitchModeCommandId,
-} from "../workbench-built-ins";
 export type {
-  CreateWorkbenchCoreInput,
+  createWorkbenchInput,
   WorkbenchCore,
   WorkbenchCoreContributionContext,
   WorkbenchHost,
@@ -27,8 +23,10 @@ export type {
   WorkbenchModuleContext,
   WorkbenchModuleContribution,
   WorkbenchModuleContributionContext,
+  WorkbenchPagePersistenceScope,
+  WorkbenchPagePersistenceScopeInput,
   WorkbenchPersistenceAdapter,
   WorkbenchRenderers,
   WorkbenchSnapshot,
 } from "../workbench-core";
-export { createWorkbenchCore } from "../workbench-core";
+export { createWorkbench } from "../workbench-core";

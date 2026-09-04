@@ -37,6 +37,7 @@ const openOwnedPanelMenus = (input: {
     input.openWidget(panelMenuId, {
       pinned: true,
       role: "panel-menu",
+      viewId: panelMenu.rendererId,
       resource: input.placement.resource,
       title: panelMenu.region === "main-left-menu" ? input.placement.resource?.label : panelMenu.title,
     });

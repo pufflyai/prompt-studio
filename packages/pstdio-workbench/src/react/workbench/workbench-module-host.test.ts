@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, type WorkbenchModuleContribution } from "../../core";
+import { createWorkbench, type WorkbenchModuleContribution } from "../../core";
 import {
   disposeWorkbenchModuleHostRegistrations,
   syncWorkbenchModuleHostRegistrations,
@@ -15,7 +15,7 @@ const createCommandModule = (id: string, commandId: string): WorkbenchModuleCont
 
 describe("WorkbenchModuleHost", () => {
   test("syncs registered modules by module id", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const registrations = new Map<string, WorkbenchModuleHostRegistration>();
 
     syncWorkbenchModuleHostRegistrations(workbench, registrations, [
@@ -33,7 +33,7 @@ describe("WorkbenchModuleHost", () => {
   });
 
   test("disposes all registrations on host teardown", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const registrations = new Map<string, WorkbenchModuleHostRegistration>();
 
     syncWorkbenchModuleHostRegistrations(workbench, registrations, [createCommandModule("module.a", "command.a")]);

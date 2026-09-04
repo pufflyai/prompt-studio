@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "../../core";
+import { createWorkbench } from "../../core";
 import { createWorkbenchHotkeyRegistrations, normalizeWorkbenchKeybinding } from "./workbench-keybinding-dispatcher";
 
 describe("createWorkbenchHotkeyRegistrations", () => {
   test("maps active keybindings to command-backed hotkey registrations", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     let executed = false;
 
     workbench.commands.registerCommand(
@@ -12,7 +12,7 @@ describe("createWorkbenchHotkeyRegistrations", () => {
       { execute: () => (executed = true) },
     );
     workbench.keybindings.registerKeybinding({
-      commandId: "project.refresh",
+      action: { kind: "command", commandId: "project.refresh" },
       keybinding: "mod+r",
       when: "activeWorkbenchMode == project",
     });
@@ -22,14 +22,14 @@ describe("createWorkbenchHotkeyRegistrations", () => {
 
     expect(registrations).toContainEqual(
       expect.objectContaining({
-        commandId: "project.refresh",
+        id: "project.refresh",
         hotkey: "Mod+R",
         enabled: true,
         ignoreInputs: true,
       }),
     );
 
-    await registrations.find((registration) => registration.commandId === "project.refresh")?.execute();
+    await registrations.find((registration) => registration.id === "project.refresh")?.execute();
 
     expect(executed).toBe(true);
   });
@@ -40,31 +40,31 @@ describe("createWorkbenchHotkeyRegistrations", () => {
   });
 
   test("maps chord keybindings to command-backed hotkey registrations", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.commands.registerCommand({ id: "sessions.new", label: "New Session" }, { execute: () => undefined });
     workbench.keybindings.registerKeybinding({
-      commandId: "sessions.new",
+      action: { kind: "command", commandId: "sessions.new" },
       keybinding: "Ctrl+Shift+S N",
     });
 
     expect(createWorkbenchHotkeyRegistrations({ workbench })).toContainEqual(
       expect.objectContaining({
-        commandId: "sessions.new",
+        id: "sessions.new",
         hotkey: ["Control+Shift+S", "N"],
       }),
     );
   });
 
   test("filters registrations to allowed command ids", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     const registrations = createWorkbenchHotkeyRegistrations({
       workbench,
       commandIds: ["workbench.action.navigateBack", "workbench.action.navigateForward"],
     });
 
-    expect(registrations.map((registration) => registration.commandId).sort()).toEqual([
+    expect(registrations.map((registration) => registration.id).sort()).toEqual([
       "workbench.action.navigateBack",
       "workbench.action.navigateForward",
     ]);

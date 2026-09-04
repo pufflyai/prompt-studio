@@ -1,33 +1,52 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import source from "./extensions/tree-page-extension.ts?raw";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="3. First extension page" />
 
-<Meta of={OnboardingStories} name="11. Extensions" parameters={{ layout: "padded" }} />
+# 3. Build the first extension page
 
-# 11. Install And Remove Extensions At Runtime
+This is the smallest useful workbench extension in the guide. It declares a native tree view, places that view on a
+page, and adds a navigation entry that opens the page.
 
-An **extension** is a workbench module that a host can register and dispose
-while the workbench is running. There is no separate extension API: enabling an
-extension calls `workbench.registerModule(...)`, and disabling it disposes the
-returned registration, which removes every widget, renderer, command, and menu
-item the module contributed.
+<Canvas of={OnboardingStories.FirstExtensionPage} sourceState="shown" />
 
-<Canvas of={OnboardingStories.Extensions} sourceState="shown" />
+## Complete example
 
-The **Extensions** sidenav lists two installed extensions. Toggle them:
+The story runs this extension definition. It uses only the public Extension API from `@pstdio/sdk/extensions`.
 
-- **Theme Pack** contributes color themes and the gallery in the editor region.
-  The themes are a declarative contribution on the extension definition, so the
-  host adds them to the theme picker while the extension is enabled and drops
-  them when you disable it — the workbench then falls back to a built-in theme,
-  and the gallery and its renderer are gone too.
-- **Theme Status** contributes a status-bar item. Disable it and the status bar
-  empties.
+<Source code={source} language="tsx" />
 
-The manager itself is a normal, always-registered module — keep the enable
-/disable surface separate from the extensions it controls. Re-enabling builds a
-fresh module instance, so an extension can be toggled as often as you like
-without any per-contribution cleanup.
+## What each field means
+
+`defineView(...)` creates reusable content:
+
+- `id` is the View's stable local identity. The returned `guideTree.ref` is the typed reference other definitions use.
+- `title` is its default user-facing label.
+- `body.kind: "tree"` asks the host to render the shared native tree UI.
+- `defaultExpandedSectionIds` opens the named section on first use.
+- the inner `body` function loads the tree sections and nodes. Section and node ids remain stable across refreshes;
+  labels and icons are visible to the user.
+- `selected: true` marks the node the host highlights as the current selection.
+
+`definePage(...)` creates the location that owns the View placement:
+
+- `id` creates `guidePage.ref`.
+- `title` is the page label.
+- `path` is the page's stable URL segment.
+- `mode: workbenchModes.project` makes the page available in Project mode.
+- `slots` is the complete page layout. The `content` slot is the primary location, belongs in `main`, and renders
+  `guideTree.ref`.
+
+`defineNavigationItem(...)` creates the action visible inside the workbench:
+
+- `owner` puts the item in Project mode's navigation tree.
+- `slot: "content"` places it in the scrolling middle area, below pinned header content and above pinned footer content.
+- `group: "Learn"` places it under a visible Learn section.
+- `label` and `icon` describe the row.
+- `action` is a navigation target. `{ kind: "page", page: guidePage.ref }` opens the Guide page. Page navigation
+  replaces the previous page placements instead of appending to them.
+
+Finally, `defineExtension(...)` exports all four definitions as one installable unit. The host loads, validates, and
+removes them together. Registering the View alone would show nothing; the page places it, and the navigation item gives
+the user a way to reach it.

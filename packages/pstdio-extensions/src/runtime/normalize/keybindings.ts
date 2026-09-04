@@ -5,6 +5,7 @@ import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
+import { normalizeNavigationAction } from "./navigation-action";
 import { resolveCommandRef } from "./references";
 import { findReservedKeybindingConflicts } from "./reserved-keybindings";
 
@@ -109,7 +110,7 @@ const validatePlatformOverrides = (
   return true;
 };
 
-const resolveCommandId = (
+const validateKeybindingAction = (
   contribution: KeybindingContribution,
   contributionId: string,
   ext: NormalizedExtension,
@@ -117,7 +118,20 @@ const resolveCommandId = (
   runtime: Accumulator,
   index: RegistryIndex,
 ) => {
-  const commandId = resolveCommandRef(ext, contribution.command);
+  if (!isRecord(contribution.action) || typeof contribution.action.kind !== "string") {
+    runtime.diagnostics.push(
+      createDiagnostic({
+        code: "invalid_keybinding",
+        message: `Keybinding "${contributionId}" must declare a navigation action`,
+        extensionId: ext.id,
+        sourcePath: source.sourcePath,
+        metadata: { contributionId },
+      }),
+    );
+    return false;
+  }
+  if (contribution.action.kind !== "command") return true;
+  const commandId = resolveCommandRef(ext, contribution.action.target.command);
   if (!index.commandIds.has(commandId)) {
     runtime.diagnostics.push(
       createDiagnostic({
@@ -128,10 +142,9 @@ const resolveCommandId = (
         metadata: { contributionId, commandId },
       }),
     );
-    return undefined;
+    return false;
   }
-
-  return commandId;
+  return true;
 };
 
 const findDuplicateKeybinding = (
@@ -192,8 +205,8 @@ export const registerKeybindings = (
     const overrides = collectPlatformOverrides(contribution);
     if (!validatePlatformOverrides(overrides, contributionId, ext, source, runtime)) continue;
 
-    const commandId = resolveCommandId(contribution, contributionId, ext, source, runtime, index);
-    if (!commandId) continue;
+    if (!validateKeybindingAction(contribution, contributionId, ext, source, runtime, index)) continue;
+    const action = normalizeNavigationAction(ext, contribution.action);
 
     const canonicalChord = normalizeHotkey(contribution.key, "mac");
     const reservedConflicts = findReservedKeybindingConflicts({
@@ -238,7 +251,6 @@ export const registerKeybindings = (
           severity: "warning",
           message: `Keybinding "${contributionId}" duplicates "${duplicate.existing.id}" on ${duplicate.platform} (canonical chord "${duplicate.canonicalChord}")`,
           extensionId: ext.id,
-          commandId,
           sourcePath: source.sourcePath,
           metadata: {
             contributionId,
@@ -254,7 +266,7 @@ export const registerKeybindings = (
 
     const record: RuntimeKeybindingRecord = {
       ...base,
-      commandId,
+      action,
       contribution,
       canonicalChord,
       parsed: toParsedChord(contribution.key),

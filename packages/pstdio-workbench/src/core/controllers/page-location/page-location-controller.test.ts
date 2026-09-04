@@ -9,49 +9,6 @@ import {
   workspaceRef,
 } from "./page-location-controller.test-support";
 
-describe("page location handoff", () => {
-  test("selects a project without inventing a page and leaves only the public page for a legacy route", () => {
-    const harness = createHarness();
-    const writes = harness.browser.pushes.length + harness.browser.replacements.length;
-
-    harness.controller.setProject("p1");
-    expect(harness.registry.store.getState()).toMatchObject({ projectId: "p1" });
-    expect(harness.registry.store.getState().activePageId).toBeUndefined();
-
-    expect(harness.controller.navigate({ kind: "page", page: ticketsRef }).ok).toBe(true);
-    harness.controller.leavePage("project");
-
-    expect(harness.registry.store.getState()).toMatchObject({ projectId: "p1" });
-    expect(harness.registry.store.getState().activePageId).toBeUndefined();
-    expect(harness.registry.store.getState().activeModeId).toBe("project");
-    expect(harness.registry.store.getState().location).toBeUndefined();
-    expect(harness.registry.store.getState().placements.map((placement) => placement.identity.kind)).toEqual([
-      "shell",
-      "mode",
-    ]);
-    expect(harness.browser.pushes.length + harness.browser.replacements.length).toBe(writes + 2);
-    expect(harness.browser.current()).toEqual({
-      url: "/projects/p1",
-      state: { kind: "pstdio.mode-location", modeId: "project", projectId: "p1" },
-    });
-    expect(harness.controller.hasCurrentPageUrl("p1")).toBe(false);
-    expect(harness.controller.hasCurrentModeUrl("p1")).toBe(true);
-  });
-
-  test("keeps the active mode when the same project is selected again", () => {
-    const harness = createHarness();
-    harness.controller.setProject("p1");
-    harness.controller.leavePage("project");
-
-    harness.controller.setProject("p1");
-
-    expect(harness.registry.store.getState()).toMatchObject({
-      projectId: "p1",
-      activeModeId: "project",
-    });
-  });
-});
-
 describe("page location controller", () => {
   test("commits canonical location, mode, page, and placements in one observable transition", () => {
     const harness = createHarness();
@@ -75,6 +32,19 @@ describe("page location controller", () => {
       "/projects/p1/extensions/acme.planner/ticket?resource=pstdio%3A%2F%2Fticket%2FPS-326",
     );
     expect(harness.persistence.values.get("p1")?.resource?.id).toBe("PS-326");
+  });
+
+  test("does not add history when navigating to the active location again", () => {
+    const harness = createHarness();
+    harness.controller.boot("p1");
+    harness.controller.navigate(ticketTarget());
+
+    for (let click = 0; click < 20; click += 1) {
+      harness.controller.navigate(ticketTarget("PS-326"));
+    }
+
+    expect(harness.browser.pushes).toHaveLength(1);
+    expect(harness.controller.historyStore.getState()).toEqual({ canGoBack: true, canGoForward: false });
   });
 
   test("lets a direct URL beat saved state and uses declared parents instead of stale context", () => {
@@ -160,7 +130,9 @@ describe("page location controller", () => {
     });
     expect(harness.browser.pushes.length + harness.browser.replacements.length).toBe(writesBeforePop);
   });
+});
 
+describe("page location project and owner lifecycle", () => {
   test("clears the old project composition before resolving the new project", () => {
     const harness = createHarness();
     harness.controller.boot("p1");
@@ -195,6 +167,18 @@ describe("page location controller", () => {
           candidate.identity.kind === "page" ? [candidate.identity.instanceKey] : [],
         ),
     ).toEqual(["pstdio://ticket/PS-2"]);
+  });
+
+  test("clears page history when the active project is cleared", () => {
+    const harness = createHarness();
+    harness.controller.boot("p1");
+    harness.controller.navigate(ticketTarget());
+
+    expect(harness.controller.historyStore.getState()).toEqual({ canGoBack: true, canGoForward: false });
+
+    harness.controller.clearProject();
+
+    expect(harness.controller.historyStore.getState()).toEqual({ canGoBack: false, canGoForward: false });
   });
 
   test("leaves location and history unchanged when a target cannot resolve", () => {

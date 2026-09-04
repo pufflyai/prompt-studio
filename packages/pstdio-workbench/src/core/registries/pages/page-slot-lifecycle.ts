@@ -7,25 +7,11 @@ import type {
   WorkbenchPageSlotInstance,
 } from "./page-registry-types";
 
-export const emptyPageState = (
-  page: WorkbenchPageContribution,
-  resourceKey: (resource: ResourceRef) => string,
-): WorkbenchPageRuntimeState => ({
+export const emptyPageState = (page: WorkbenchPageContribution): WorkbenchPageRuntimeState => ({
   openStaticSlotIds: page.slots
-    .filter((slot) => slot.role === "auxiliary" && Boolean(slot.viewId) && slot.defaultOpen)
+    .filter((slot) => slot.role === "auxiliary" && slot.viewId !== undefined && slot.presence === "open")
     .map((slot) => slot.id),
-  resourceInstances: Object.fromEntries(
-    page.slots.flatMap((slot) => {
-      if (slot.role !== "auxiliary" || !slot.defaultOpen || !slot.defaultResource) return [];
-      const instanceKey = resourceKey(slot.defaultResource);
-      const instance: WorkbenchPageSlotInstance = {
-        instanceKey,
-        resource: slot.defaultResource,
-        ...(slot.cardinality === "many" ? { open: "preview" as const } : {}),
-      };
-      return [[slot.id, [instance]] as const];
-    }),
-  ),
+  resourceInstances: {},
   activePrimaryInstanceKey: undefined,
 });
 
@@ -41,8 +27,13 @@ export const primarySlot = (page: WorkbenchPageContribution) => {
   return slot;
 };
 
+export const staticSlotOpen = (slot: WorkbenchPageSlot, state: WorkbenchPageRuntimeState) => {
+  if (slot.role !== "auxiliary" || !slot.viewId) return false;
+  return slot.presence === "fixed" || state.openStaticSlotIds.includes(slot.id);
+};
+
 const assertOpenIntent = (slot: WorkbenchPageSlot, open: PageOpenIntent | undefined) => {
-  if (open && slot.cardinality !== "many") {
+  if (open && slot.binding?.cardinality !== "many") {
     throw new Error(`Page slot "${slot.id}" accepts open intent only with many cardinality`);
   }
 };
@@ -53,7 +44,7 @@ const requireMatchingResource = (slot: WorkbenchPageSlot, resource: ResourceRef 
     return undefined;
   }
   if (!resource) throw new Error(`Page slot "${slot.id}" requires a resource`);
-  if (resource.type !== slot.binding.resourceKind) {
+  if (!slot.binding.resourceKinds.includes(resource.type)) {
     throw new Error(`Page slot "${slot.id}" does not accept resource kind "${resource.type}"`);
   }
   return resource;
@@ -64,7 +55,7 @@ const nextResourceInstances = (
   current: readonly WorkbenchPageSlotInstance[],
   instance: WorkbenchPageSlotInstance,
 ): WorkbenchPageSlotInstance[] => {
-  if (slot.cardinality !== "many") return [instance];
+  if (slot.binding?.cardinality !== "many") return [instance];
   const existing = current.find((candidate) => candidate.instanceKey === instance.instanceKey);
   const open: PageOpenIntent = existing?.open === "pin" || instance.open === "pin" ? "pin" : "preview";
   const retained = current.filter(
@@ -89,7 +80,7 @@ export const openResourceSlot = (input: {
     instanceKey,
     resource,
     ...(target.section ? { section: target.section } : {}),
-    ...(slot.cardinality === "many" ? { open: target.open ?? "preview" } : {}),
+    ...(slot.binding.cardinality === "many" ? { open: target.open ?? "preview" } : {}),
   };
   const resourceInstances = {
     ...state.resourceInstances,
@@ -116,10 +107,18 @@ export const selectPrimaryTarget = (input: {
   }
   if (slot.binding && !slot.viewId) throw new Error(`Page slot "${slot.id}" requires a resource`);
   if (input.target.open) throw new Error(`Page slot "${slot.id}" accepts open intent only with a resource`);
-  return { ...input.state, activePrimaryInstanceKey: "default" };
+  if (slot.binding?.cardinality !== "one") {
+    return { ...input.state, activePrimaryInstanceKey: "default" };
+  }
+  return {
+    ...input.state,
+    activePrimaryInstanceKey: "default",
+    resourceInstances: { ...input.state.resourceInstances, [slot.id]: [] },
+  };
 };
 
-export const openDefaultAuxiliaryBindings = (input: {
+/** Opens bound auxiliary slots that declare `openOn: "page-resource"` for the page's own resource. */
+export const openPageResourceBindings = (input: {
   page: WorkbenchPageContribution;
   state: WorkbenchPageRuntimeState;
   target: WorkbenchPageOpenInput;
@@ -127,12 +126,12 @@ export const openDefaultAuxiliaryBindings = (input: {
 }) => {
   if (!input.target.resource) return input.state;
   return input.page.slots.reduce((state, slot) => {
-    const followsPrimaryResource =
+    const followsPageResource =
       slot.role === "auxiliary" &&
-      slot.defaultOpen &&
-      slot.binding?.resourceKind === input.target.resource?.type &&
-      !slot.defaultResource;
-    if (!followsPrimaryResource) return state;
+      slot.binding !== undefined &&
+      slot.openOn === "page-resource" &&
+      slot.binding.resourceKinds.includes(input.target.resource?.type ?? "");
+    if (!followsPageResource) return state;
     return openResourceSlot({
       slot,
       state,
@@ -169,6 +168,9 @@ export const closePageSlot = (input: {
   instanceKey: string;
 }): ClosePageSlotResult => {
   const { page, slot, instanceKey } = input;
+  if (slot.role === "auxiliary" && slot.viewId && slot.presence === "fixed") {
+    throw new Error(`Page slot "${slot.id}" is fixed and cannot close`);
+  }
   const state =
     instanceKey === "default"
       ? setStaticSlotOpen(input.state, slot.id, false)

@@ -5,7 +5,7 @@ export const WEBVIEW_HOST_CAPABILITY_VERSION = 1;
 // Capabilities a webview must declare in its manifest before the bridge will route them.
 export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "commands.execute",
-  "resource.open",
+  "navigation.open",
   "notification.show",
   "notification.action",
   "notification.resolve",

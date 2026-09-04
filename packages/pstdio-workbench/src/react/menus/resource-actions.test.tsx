@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef, resourceContextMenuPath } from "../../core";
+import { createWorkbench, type ResourceRef, resourceContextMenuPath } from "../../core";
 import { createWorkbenchResourceActions } from "./resource-actions";
 
 const ticket: ResourceRef = {
@@ -18,7 +18,7 @@ const workspace: ResourceRef = {
 
 describe("createWorkbenchResourceActions", () => {
   test("uses the selected resource context for visibility and execution", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     let openedResource: ResourceRef | undefined;
 
     workbench.commands.registerCommand(

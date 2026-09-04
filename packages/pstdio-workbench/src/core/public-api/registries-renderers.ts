@@ -66,7 +66,6 @@ export type {
 export { createKanbanRendererRegistry } from "../registries/renderers/kanban-renderer-registry";
 export type {
   CreateWorkbenchRendererRegistryInput,
-  RegisteredKeepAliveHost,
   WorkbenchPanelRenderInput,
   WorkbenchRendererRegistration,
   WorkbenchRendererRegistry,
@@ -83,6 +82,7 @@ export type {
   TreeMovePolicy,
   TreeNode,
   TreeNodeInlineInput,
+  TreeQueryContext,
   TreeRendererContribution,
   TreeRendererImplementation,
   TreeRendererPersistenceAdapter,
@@ -97,7 +97,6 @@ export type { StandardResourceIcon } from "../registries/resources/resource-icon
 export { standardResourceIcons } from "../registries/resources/resource-icons";
 export type {
   CreateResourceRegistryInput,
-  OpenResourceInput,
   RegisteredResourceKind,
   ResolvedResourceHierarchyProvider,
   ResourceBrowseEntry,
@@ -105,11 +104,9 @@ export type {
   ResourceHierarchyProvider,
   ResourceKindContribution,
   ResourceListContext,
-  ResourcePresenter,
   ResourceProvider,
   ResourceRef,
   ResourceRegistry,
-  ResourceSurface,
   WorkbenchHierarchyNode,
   WorkbenchViewHierarchyNode,
 } from "../registries/resources/resource-registry";

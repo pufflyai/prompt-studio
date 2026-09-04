@@ -8,7 +8,7 @@ import {
 } from "./tree-view-load";
 
 const createTrees = () => {
-  const rendererRegistry = createWorkbenchRendererRegistry({ createHost: () => ({}) as HTMLElement });
+  const rendererRegistry = createWorkbenchRendererRegistry();
   return createTreeRendererRegistry({ rendererRegistry });
 };
 

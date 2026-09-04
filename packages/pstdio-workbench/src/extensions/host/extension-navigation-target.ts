@@ -1,10 +1,5 @@
-import type { NavigationTarget as ExtensionNavigationTarget, ExtensionPlacementStrategy } from "@pstdio/sdk/extensions";
-import type { NavigationTarget, NavigationTargetCommand, ResourceRef } from "../../core";
-import { toWorkbenchResource } from "./workbench-extension-command";
-
-export interface ExtensionNavigationSourcePlacement {
-  instanceId: string;
-}
+import type { NavigationTarget as ExtensionNavigationTarget } from "@pstdio/sdk/extensions";
+import type { NavigationTarget, NavigationTargetCommand } from "../../core";
 
 export interface ToWorkbenchNavigationTargetInput {
   commandIdOf?(
@@ -12,11 +7,6 @@ export interface ToWorkbenchNavigationTargetInput {
   ): string | undefined;
   commandTargetOf?(target: Extract<ExtensionNavigationTarget, { kind: "command" }>): NavigationTargetCommand;
   extensionId?: string;
-  resourceOf?(
-    resource: Parameters<typeof toWorkbenchResource>[0],
-    target: Extract<ExtensionNavigationTarget, { kind: "resource" }>,
-  ): ResourceRef;
-  sourcePlacement?: ExtensionNavigationSourcePlacement;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -27,28 +17,6 @@ const isContributionRef = (value: unknown, kind: string) =>
 
 const isResource = (value: unknown) =>
   isRecord(value) && typeof value.type === "string" && typeof value.id === "string";
-
-const isResourceTarget = (target: Record<string, unknown>) => {
-  if (!isResource(target.resource)) return false;
-  if (target.input === undefined) return true;
-  if (!isRecord(target.input)) return false;
-  const strategy = target.input.strategy;
-  return strategy === undefined || strategy === "persistent" || strategy === "replace-active";
-};
-
-const isViewTarget = (target: Record<string, unknown>) => {
-  if (!isContributionRef(target.view, "view")) return false;
-  if (target.input === undefined) return true;
-  if (!isRecord(target.input)) return false;
-  const strategy = target.input.strategy;
-  return (
-    strategy === undefined ||
-    strategy === "persistent" ||
-    strategy === "preview" ||
-    strategy === "replace-active" ||
-    strategy === "replace-invoking"
-  );
-};
 
 const isOpenIntent = (value: unknown) => value === undefined || value === "preview" || value === "pin";
 
@@ -64,11 +32,19 @@ const isPageTarget = (value: unknown, ancestors = new Set<unknown>()): boolean =
   return isPageTarget(value.parent, next);
 };
 
+const isPanelTarget = (value: unknown) => {
+  if (!isRecord(value) || value.kind !== "panel" || !isRecord(value.panel)) return false;
+  const panel = value.panel;
+  const validPanel =
+    isContributionRef(panel, "placement") ||
+    (panel.kind === "page-slot" && isContributionRef(panel.page, "page") && typeof panel.id === "string");
+  return validPanel && (value.resource === undefined || isResource(value.resource)) && isOpenIntent(value.open);
+};
+
 const isItemTarget = (value: unknown): value is Exclude<ExtensionNavigationTarget, { kind: "compound" }> => {
   if (!isRecord(value)) return false;
   if (value.kind === "page") return isPageTarget(value);
-  if (value.kind === "resource") return isResourceTarget(value);
-  if (value.kind === "view") return isViewTarget(value);
+  if (value.kind === "panel") return isPanelTarget(value);
   if (value.kind === "href") return typeof value.href === "string";
   return (
     value.kind === "command" &&
@@ -80,35 +56,12 @@ const isItemTarget = (value: unknown): value is Exclude<ExtensionNavigationTarge
 
 export const isExtensionNavigationTarget = (value: unknown): value is ExtensionNavigationTarget => {
   if (isItemTarget(value)) return true;
-  return (
-    isRecord(value) &&
-    value.kind === "compound" &&
-    Array.isArray(value.targets) &&
-    value.targets.length > 0 &&
-    value.targets.every(isItemTarget) &&
-    value.targets.every((target) => target.kind !== "page")
-  );
-};
-
-const toResourceInput = (
-  strategy: "persistent" | "replace-active" | undefined,
-  _sourcePlacement: ExtensionNavigationSourcePlacement | undefined,
-) => {
-  if (!strategy || strategy === "persistent") return {};
-  return { replaceActive: true };
-};
-
-const toViewInput = (
-  input: { strategy?: ExtensionPlacementStrategy } | undefined,
-  sourcePlacement: ExtensionNavigationSourcePlacement | undefined,
-) => {
-  const strategy = input?.strategy;
-  if (!strategy) return {};
-  if (strategy === "persistent" || strategy === "preview" || strategy === "replace-active") {
-    return { strategy: { kind: strategy } } as const;
+  if (!isRecord(value) || value.kind !== "compound" || !Array.isArray(value.targets) || value.targets.length === 0) {
+    return false;
   }
-  if (!sourcePlacement) throw new Error("replace-invoking requires a live source placement.");
-  return { strategy: { kind: "replace-panel", instanceId: sourcePlacement.instanceId } } as const;
+  if (!value.targets.every(isItemTarget)) return false;
+  const pageIndexes = value.targets.flatMap((target, index) => (target.kind === "page" ? [index] : []));
+  return pageIndexes.length === 0 || (pageIndexes.length === 1 && pageIndexes[0] === 0);
 };
 
 const toCommandTarget = (
@@ -123,13 +76,6 @@ const toCommandTarget = (
     input.commandIdOf?.(command) ??
     (extensionId && extensionId !== "pstdio" ? `${extensionId}.command.${command.id}` : command.id);
   return { kind: "command", commandId, args: target.target.params } satisfies NavigationTargetCommand;
-};
-
-const viewIdOf = (target: Extract<ExtensionNavigationTarget, { kind: "view" }>, extensionId: string | undefined) => {
-  const owner = target.view.extensionId ?? extensionId;
-  // Host-published refs resolve to the host's registered id without owner prefixing,
-  // the same rule commands follow in toCommandTarget.
-  return owner && owner !== "pstdio" ? `${owner}.view.${target.view.id}` : target.view.id;
 };
 
 const withExtensionOwner = <Ref extends { extensionId?: string }>(ref: Ref, extensionId: string | undefined): Ref =>
@@ -150,30 +96,18 @@ export const toWorkbenchNavigationTarget = (
   target: ExtensionNavigationTarget,
   input: ToWorkbenchNavigationTargetInput = {},
 ): NavigationTarget => {
-  if (target.kind === "resource") {
-    // A section only means something with the caller's container context
-    // (tree id, target node). Failing loudly beats silently dropping the
-    // requested section.
-    if (target.section && !input.resourceOf) {
-      throw new Error("Resource targets with a section need a resourceOf translator that encodes the section.");
-    }
-    return {
-      kind: "resource",
-      resource: input.resourceOf ? input.resourceOf(target.resource, target) : toWorkbenchResource(target.resource),
-      input: toResourceInput(target.input?.strategy, input.sourcePlacement),
-    };
-  }
-  if (target.kind === "view") {
-    return {
-      kind: "view",
-      viewId: viewIdOf(target, input.extensionId),
-      input: toViewInput(target.input, input.sourcePlacement),
-    };
-  }
   if (target.kind === "command") return toCommandTarget(target, input);
   if (target.kind === "href") return target;
   if (target.kind === "page") return toPageTarget(target, input.extensionId);
-  if (target.kind === "panel") throw new Error("Panel navigation targets require dashboard capability panel.v1.");
+  if (target.kind === "panel") {
+    return {
+      ...target,
+      panel:
+        target.panel.kind === "page-slot"
+          ? { ...target.panel, page: withExtensionOwner(target.panel.page, input.extensionId) }
+          : withExtensionOwner(target.panel, input.extensionId),
+    };
+  }
   return {
     kind: "compound",
     targets: target.targets.map(

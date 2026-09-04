@@ -8,11 +8,17 @@ import type { NavigationTarget } from "../navigation/navigation-registry";
 import type { ResourceRef } from "../resources/resource-registry";
 import type { WorkbenchPanelRenderInput, WorkbenchRendererRegistry } from "./renderer-registry";
 
-export interface TreeContext {
+export interface TreeQueryContext {
   filter?: string;
   resource?: ResourceRef;
   /** Widget/view contribution id for trees rendered through a view-backed widget. */
   viewId?: string;
+}
+
+export interface TreeContext extends TreeQueryContext {
+  state: Readonly<TreeRendererState>;
+  refresh(): void;
+  setSelectedNode(nodeId: string | undefined): void;
 }
 
 export interface TreeAction {
@@ -190,10 +196,10 @@ export interface TreeRendererRegistry {
   setTreeRendererImplementation(impl: TreeRendererImplementation): void;
   getTreeRenderer(id: string): RegisteredTreeRendererContribution | undefined;
   listTreeRenderers(): RegisteredTreeRendererContribution[];
-  getBody(id: string, ctx?: TreeContext): Promise<TreeViewSection[]>;
-  getHeader(id: string, ctx?: TreeContext): Promise<TreeViewSection[]>;
-  getFooter(id: string, ctx?: TreeContext): Promise<TreeViewSection[]>;
-  getChildren(id: string, node: TreeNode, ctx?: TreeContext): Promise<TreeNode[]>;
+  getBody(id: string, ctx?: TreeQueryContext): Promise<TreeViewSection[]>;
+  getHeader(id: string, ctx?: TreeQueryContext): Promise<TreeViewSection[]>;
+  getFooter(id: string, ctx?: TreeQueryContext): Promise<TreeViewSection[]>;
+  getChildren(id: string, node: TreeNode, ctx?: TreeQueryContext): Promise<TreeNode[]>;
   getTreeState(id: string): TreeRendererState;
   setNodeExpanded(id: string, nodeId: string, expanded: boolean): void;
   setSectionExpanded(id: string, sectionId: string, expanded: boolean): void;
@@ -272,7 +278,7 @@ export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInpu
     persistStates();
   };
 
-  return {
+  const registry: TreeRendererRegistry = {
     treeStore,
 
     setTreeRendererImplementation(impl) {
@@ -337,23 +343,43 @@ export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInpu
     },
 
     async getBody(id, ctx = {}) {
-      return await requireTree(id).getBody(ctx);
+      return await requireTree(id).getBody({
+        ...ctx,
+        state: registry.getTreeState(id),
+        refresh: () => registry.refresh(id),
+        setSelectedNode: (nodeId) => registry.setSelectedNode(id, nodeId),
+      });
     },
 
     async getHeader(id, ctx = {}) {
       const tree = requireTree(id);
       if (!tree.getHeader) return [];
-      return await tree.getHeader(ctx);
+      return await tree.getHeader({
+        ...ctx,
+        state: registry.getTreeState(id),
+        refresh: () => registry.refresh(id),
+        setSelectedNode: (nodeId) => registry.setSelectedNode(id, nodeId),
+      });
     },
 
     async getFooter(id, ctx = {}) {
       const tree = requireTree(id);
       if (!tree.getFooter) return [];
-      return await tree.getFooter(ctx);
+      return await tree.getFooter({
+        ...ctx,
+        state: registry.getTreeState(id),
+        refresh: () => registry.refresh(id),
+        setSelectedNode: (nodeId) => registry.setSelectedNode(id, nodeId),
+      });
     },
 
     async getChildren(id, node, ctx = {}) {
-      return await requireTree(id).getChildren(node, ctx);
+      return await requireTree(id).getChildren(node, {
+        ...ctx,
+        state: registry.getTreeState(id),
+        refresh: () => registry.refresh(id),
+        setSelectedNode: (nodeId) => registry.setSelectedNode(id, nodeId),
+      });
     },
 
     getTreeState(id) {
@@ -443,4 +469,5 @@ export const createTreeRendererRegistry = (input: CreateTreeRendererRegistryInpu
       });
     },
   };
+  return registry;
 };

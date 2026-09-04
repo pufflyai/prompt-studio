@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
-import { createWorkbenchCore, type KanbanRendererQueryState } from "../../core";
+import { createWorkbench, getWorkbenchRenderers, type KanbanRendererQueryState } from "../../core";
 import { registerWorkbenchExtensionKanbanRenderers } from "./kanban-renderer-contributions";
 
 const createDeferred = () => {
@@ -24,7 +24,7 @@ const queryState: KanbanRendererQueryState = {
 
 describe("registerWorkbenchExtensionKanbanRenderers", () => {
   test("registers extension-declared default saved views", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const record = {
       id: "tickets",
       extensionId: "pstdio.pstdio-planner",
@@ -46,7 +46,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
       record,
     ]);
 
-    const renderer = workbench.renderers.getKanbanRenderer("tickets");
+    const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("tickets");
 
     expect(renderer?.defaultViews).toEqual([
       {
@@ -61,7 +61,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
   });
 
   test("maps extension board column action icons into column actions", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const record = {
       id: "tickets",
       extensionId: "pstdio.pstdio-planner",
@@ -85,7 +85,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
       [record],
     );
 
-    const renderer = workbench.renderers.getKanbanRenderer("tickets");
+    const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("tickets");
     await renderer?.executeQuery(queryState);
 
     const action = renderer?.getBoardColumnConfig?.("todo").actions?.[0];
@@ -98,7 +98,7 @@ describe("registerWorkbenchExtensionKanbanRenderers", () => {
 
 describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
   test("resolves independent live workflow status sets", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const firstId = "pstdio.planner.status.first";
     const secondId = "pstdio.planner.status.second";
     workbench.statuses.registerStatusSet({
@@ -133,17 +133,25 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
       [record("first-board", "first"), record("second-board", "second")],
     );
 
-    expect(workbench.renderers.getKanbanRenderer("first-board")?.getBoardColumnConfig?.("todo").color).toBe("blue");
-    expect(workbench.renderers.getKanbanRenderer("second-board")?.getBoardColumnConfig?.("todo").color).toBe("purple");
+    expect(
+      getWorkbenchRenderers(workbench).getKanbanRenderer("first-board")?.getBoardColumnConfig?.("todo").color,
+    ).toBe("blue");
+    expect(
+      getWorkbenchRenderers(workbench).getKanbanRenderer("second-board")?.getBoardColumnConfig?.("todo").color,
+    ).toBe("purple");
 
     await workbench.statuses.save(firstId, [{ id: "todo", label: "Todo", color: "green", sortOrder: 0 }]);
 
-    expect(workbench.renderers.getKanbanRenderer("first-board")?.getBoardColumnConfig?.("todo").color).toBe("green");
-    expect(workbench.renderers.getKanbanRenderer("second-board")?.getBoardColumnConfig?.("todo").color).toBe("purple");
+    expect(
+      getWorkbenchRenderers(workbench).getKanbanRenderer("first-board")?.getBoardColumnConfig?.("todo").color,
+    ).toBe("green");
+    expect(
+      getWorkbenchRenderers(workbench).getKanbanRenderer("second-board")?.getBoardColumnConfig?.("todo").color,
+    ).toBe("purple");
   });
 
   test("keeps declared attributes when a query returns only rows", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.statuses.registerStatusSet({
       id: "pstdio.lab.status.workflow",
       title: "Workflow",
@@ -168,7 +176,7 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
       [record],
     );
 
-    const renderer = workbench.renderers.getKanbanRenderer("workflow")!;
+    const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("workflow")!;
     if (!("getSnapshot" in renderer.attributes)) throw new Error("Expected live status attributes");
     expect(renderer.attributes.getSnapshot()).toHaveLength(1);
     await renderer.executeQuery(queryState);
@@ -176,7 +184,7 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
   });
 
   test("uses board column configs for a declared status attribute", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.statuses.registerStatusSet({
       id: "pstdio.planner.status.tickets",
       title: "Tickets",
@@ -204,14 +212,14 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
       [record],
     );
 
-    const renderer = workbench.renderers.getKanbanRenderer("tickets");
+    const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("tickets");
     await renderer?.executeQuery(queryState);
 
     expect(renderer?.getBoardColumnConfig?.("todo").color).toBe("red");
   });
 
   test("uses the status color when a board does not configure the column", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.statuses.registerStatusSet({
       id: "example.recipes.status.workflow",
       title: "Recipe workflow",
@@ -236,14 +244,14 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
       [record],
     );
 
-    const renderer = workbench.renderers.getKanbanRenderer("recipes");
+    const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("recipes");
     await renderer?.executeQuery(queryState);
 
     expect(renderer?.getBoardColumnConfig?.("draft").color).toBe("orange");
   });
 
   test("uses the status color from the active column grouping", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.statuses.registerStatusSet({
       id: "example.recipes.status.workflow",
       title: "Workflow",
@@ -281,7 +289,7 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
       [record],
     );
 
-    const renderer = workbench.renderers.getKanbanRenderer("recipes");
+    const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("recipes");
     await renderer?.executeQuery({
       ...queryState,
       settings: { ...queryState.settings, columnGrouping: "review" },
@@ -291,7 +299,7 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
   });
 
   test("reports an unknown display kind and falls back to the attribute type", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const record = {
       id: "recipes",
       extensionId: "example.recipes",
@@ -312,7 +320,7 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
       [record],
     );
 
-    const renderer = workbench.renderers.getKanbanRenderer("recipes")!;
+    const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("recipes")!;
     if (!("getSnapshot" in renderer.attributes)) throw new Error("Expected live attributes");
     expect(renderer.attributes.getSnapshot()[0]?.display).toBeUndefined();
     expect(workbench.notifications.listNotifications()).toMatchObject([
@@ -327,7 +335,7 @@ describe("registerWorkbenchExtensionKanbanRenderers workflow statuses", () => {
 
 describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
   test("maps extension row action icons into context menu actions", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const record = {
       id: "tickets",
       extensionId: "pstdio.pstdio-planner",
@@ -347,7 +355,7 @@ describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
       record,
     ]);
 
-    const actions = workbench.renderers.getKanbanRenderer("tickets")?.getRowContextMenuActions?.({
+    const actions = getWorkbenchRenderers(workbench).getKanbanRenderer("tickets")?.getRowContextMenuActions?.({
       id: "ticket-1",
       title: "Ticket 1",
       attributes: {},
@@ -358,7 +366,7 @@ describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
   });
 
   test("requests params before running row actions with command params", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const calls: Array<{ commandId: string; request: unknown }> = [];
     const record = {
       id: "tickets",
@@ -398,7 +406,7 @@ describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
       [record],
     );
 
-    workbench.renderers
+    getWorkbenchRenderers(workbench)
       .getKanbanRenderer("tickets")
       ?.getRowContextMenuActions?.({
         id: "ticket-1",
@@ -421,7 +429,7 @@ describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
   });
 
   test("awaits mutation commands and refreshes after board move mutations", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const updateDeferred = createDeferred();
     const reorderDeferred = createDeferred();
     const calls: string[] = [];
@@ -435,7 +443,7 @@ describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
       reorderHandlerId: "pstdio-planner.tickets.onReorder",
     } satisfies WorkbenchExtensionKanbanRendererRecord;
 
-    workbench.renderers.onDidRefreshKanbanRenderer((event) => {
+    getWorkbenchRenderers(workbench).onDidRefreshKanbanRenderer((event) => {
       refreshes.push(event.kanbanRendererId);
     });
     registerWorkbenchExtensionKanbanRenderers(
@@ -450,10 +458,10 @@ describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
         },
       },
       [record],
-      { onAfterMutation: (mutatedRecord) => workbench.renderers.refreshKanbanRenderer(mutatedRecord.id) },
+      { onAfterMutation: (mutatedRecord) => getWorkbenchRenderers(workbench).refreshKanbanRenderer(mutatedRecord.id) },
     );
 
-    const renderer = workbench.renderers.getKanbanRenderer("tickets");
+    const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("tickets");
     const attributeChange = renderer?.onAttributeChange?.("ticket-1", "status", "done");
 
     await Promise.resolve();
@@ -484,7 +492,7 @@ describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
 
 describe("registerWorkbenchExtensionKanbanRenderers row activation", () => {
   test("runs row activation callbacks and leaves resource rows inert without them", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const calls: Array<{ commandId: string; resourceType: unknown; rowId: unknown }> = [];
     const record = {
       id: "tickets",
@@ -516,21 +524,21 @@ describe("registerWorkbenchExtensionKanbanRenderers row activation", () => {
       [record, inertRecord],
     );
 
-    const rows = await workbench.renderers.getKanbanRenderer("tickets")?.executeQuery(queryState);
-    await workbench.renderers.getKanbanRenderer("tickets")?.onRowActivate?.(rows![0]!);
+    const rows = await getWorkbenchRenderers(workbench).getKanbanRenderer("tickets")?.executeQuery(queryState);
+    await getWorkbenchRenderers(workbench).getKanbanRenderer("tickets")?.onRowActivate?.(rows![0]!);
 
     expect(calls.at(-1)).toEqual({
       commandId: "pstdio-planner.tickets.onRowActivate",
       resourceType: "ticket",
       rowId: "ticket-1",
     });
-    expect(workbench.renderers.getKanbanRenderer("inertTickets")?.onRowActivate).toBeUndefined();
+    expect(getWorkbenchRenderers(workbench).getKanbanRenderer("inertTickets")?.onRowActivate).toBeUndefined();
   });
 });
 
 describe("registerWorkbenchExtensionKanbanRenderers create forms", () => {
   test("activates the created row through the declared row target", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const calls: Array<{ commandId: string; rowId?: unknown }> = [];
     const record = {
       id: "tickets",
@@ -563,7 +571,7 @@ describe("registerWorkbenchExtensionKanbanRenderers create forms", () => {
       [record],
     );
 
-    await workbench.renderers.getKanbanRenderer("tickets")?.onCreateRow?.({
+    await getWorkbenchRenderers(workbench).getKanbanRenderer("tickets")?.onCreateRow?.({
       columnId: "ready",
       values: {},
       attributeValues: {},
@@ -577,7 +585,7 @@ describe("registerWorkbenchExtensionKanbanRenderers create forms", () => {
   });
 
   test("runs renderer-owned create forms with declarative fields, editable attributes, and attachments", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const calls: Array<{ commandId: string; params: Record<string, unknown> }> = [];
     const afterCreate: unknown[] = [];
     const record = {
@@ -622,7 +630,7 @@ describe("registerWorkbenchExtensionKanbanRenderers create forms", () => {
       },
     );
 
-    const renderer = workbench.renderers.getKanbanRenderer("tickets");
+    const renderer = getWorkbenchRenderers(workbench).getKanbanRenderer("tickets");
 
     expect(renderer?.createRow).toMatchObject({
       title: "New ticket",

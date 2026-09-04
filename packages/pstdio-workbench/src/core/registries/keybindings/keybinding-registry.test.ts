@@ -11,7 +11,7 @@ describe("createKeybindingRegistry", () => {
 
     commands.registerCommand({ id: "resource.open", label: "Open Resource" }, { execute: () => undefined });
     keybindings.registerKeybinding({
-      commandId: "resource.open",
+      action: { kind: "command", commandId: "resource.open" },
       keybinding: "enter",
       when: "resourceSelected && !inputFocus",
     });
@@ -19,7 +19,9 @@ describe("createKeybindingRegistry", () => {
     context.set("resourceSelected", true);
     context.set("inputFocus", false);
 
-    expect(keybindings.listActiveKeybindings()).toMatchObject([{ commandId: "resource.open", keybinding: "enter" }]);
+    expect(keybindings.listActiveKeybindings()).toMatchObject([
+      { action: { kind: "command", commandId: "resource.open" }, keybinding: "enter" },
+    ]);
   });
 
   test("expands whitespace-delimited keybinding chords", () => {
@@ -29,12 +31,12 @@ describe("createKeybindingRegistry", () => {
 
     commands.registerCommand({ id: "sessions.new", label: "New Session" }, { execute: () => undefined });
     keybindings.registerKeybinding({
-      commandId: "sessions.new",
+      action: { kind: "command", commandId: "sessions.new" },
       keybinding: "Ctrl+Shift+S N",
     });
 
     expect(keybindings.listKeybindings()).toMatchObject([
-      { commandId: "sessions.new", keybinding: ["Ctrl+Shift+S", "N"] },
+      { action: { kind: "command", commandId: "sessions.new" }, keybinding: ["Ctrl+Shift+S", "N"] },
     ]);
   });
 
@@ -43,8 +45,8 @@ describe("createKeybindingRegistry", () => {
     const context = createContextKeyService();
     const keybindings = createKeybindingRegistry({ commands, context });
 
-    expect(() => keybindings.registerKeybinding({ commandId: "missing", keybinding: "mod+k" })).toThrow(
-      "Keybinding command not registered: missing",
-    );
+    expect(() =>
+      keybindings.registerKeybinding({ action: { kind: "command", commandId: "missing" }, keybinding: "mod+k" }),
+    ).toThrow("Keybinding command not registered: missing");
   });
 });

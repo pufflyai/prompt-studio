@@ -1,0 +1,33 @@
+import { Meta } from "@storybook/addon-docs/blocks";
+import * as RendererStories from "./renderers.stories";
+
+<Meta of={RendererStories} name="0. Choose a renderer" />
+
+# Choose a renderer
+
+A View defines content. Its `body.kind` selects how Prompt Studio renders that content. A page or placement then gives
+the View a region and a lifetime. Renderer code should not choose its own region or open itself.
+
+```text
+extension data or trusted host code
+  -> View body
+  -> workbench renderer
+  -> page or placement instance
+```
+
+## Renderer guide
+
+| Body kind | Who can use it | Your code supplies | Good uses |
+| --- | --- | --- | --- |
+| `react` | Core hosts | A React render function | Host chrome, native adapters, trusted application screens |
+| `tree` | Core and extensions | Sections, nodes, children, and actions | File trees, navigation, grouped catalogs |
+| `controls` | Core and extensions | Form fields, current values, and save callbacks | Properties, settings, filters, creation forms |
+| `dataTable` | Core and extensions | Columns, rows, paging, and row actions | Service lists, inventories, audit records |
+| `kanban` | Core and extensions | Attributes, rows, statuses, and mutations | Ticket boards, review queues, content pipelines |
+| `file` | Core and extensions | Load and optional save callbacks | Markdown, source code, text, images |
+| `webview` | Extensions | A packaged UI entry and requested capabilities | Charts, maps, editors, and other custom interaction |
+
+Start with a native renderer. It gives the tool the same keyboard, theme, loading, empty, and error behavior as the
+rest of the workbench. Use a webview when none of the native data models fit. Use `react` only for trusted host code.
+
+Each renderer page runs the source shown under its preview.

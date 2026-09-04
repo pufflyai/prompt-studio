@@ -60,16 +60,15 @@ const WorkbenchStatusBarItems = (props: WorkbenchStatusBarItemsProps) => {
 
   return items.map((item) => {
     const view = workbench.views.getView(item.viewId);
-    const widget = view ? workbench.layout.getWidget(view.panelId) : undefined;
-    if (!view || !widget) return null;
+    if (!view) return null;
     return (
       <Box key={item.id} minW="0" h="full">
         <WorkbenchWidgetHost
           workbench={workbench}
-          widget={widget}
+          region="status"
           placement={{
             widgetId: item.id,
-            contributionId: view.panelId,
+            contributionId: view.id,
             viewId: view.id,
             title: view.title,
             closable: false,

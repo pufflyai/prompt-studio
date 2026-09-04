@@ -3,10 +3,6 @@ import type { ContributionKind } from "./types/contribution-identity";
 
 const hostRef = <Kind extends ContributionKind>(kind: Kind, id: string) => ({ extensionId: "pstdio", kind, id });
 
-export const workbenchCommands = {
-  switchMode: hostRef("command", "workbench.action.switchMode"),
-};
-
 export const workbenchModes = {
   project: hostRef("mode", "project"),
   sessions: hostRef("mode", "sessions"),
@@ -26,7 +22,6 @@ const hostResourceKind = (
 ): ResourceKindDefinition => ({
   id,
   ref: hostRef("resource-kind", id),
-  surface: "primary",
   label,
   menuSlots,
 });
@@ -65,7 +60,7 @@ export const workbenchPageDefinitions = {
     ref: workbenchPages.sessions,
     mode: workbenchModes.sessions,
     path: "sessions",
-    primary: { cardinality: "many", resourceKinds: ["session", "session-draft"] },
+    primary: { cardinality: "one", resourceKinds: ["session", "session-draft"] },
   },
   workspaces: {
     ref: workbenchPages.workspaces,

@@ -6,10 +6,8 @@ import {
   defineExtension,
   definePage,
   defineResourceKind,
-  defineResourceView,
   defineSettingsSection,
   defineView,
-  resourceSlotRef,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -267,8 +265,6 @@ describe("checkExtensionHostCompatibility", () => {
   test("flags registered dashboard surfaces when the host does not advertise their bridges", () => {
     const ticket = defineResourceKind({
       id: "ticket",
-      surface: "primary",
-      slots: [{ id: "inspector", cardinality: "many", access: "public" }],
     });
     const rows = defineView({
       id: "rows",
@@ -300,14 +296,6 @@ describe("checkExtensionHostCompatibility", () => {
             }),
           ],
           resourceKinds: [ticket],
-          resourceViews: [
-            defineResourceView({
-              id: "rows-for-ticket",
-              resourceKind: ticket.ref,
-              slot: resourceSlotRef(ticket.ref, "inspector"),
-              view: rows.ref,
-            }),
-          ],
           settingsSections: [defineSettingsSection({ id: "lab", title: "Lab" })],
         }),
       },
@@ -317,7 +305,7 @@ describe("checkExtensionHostCompatibility", () => {
       hostVersion: "0.25.1",
       capabilities: Object.fromEntries(
         Object.entries(dashboardExtensionHostCapabilities.capabilities).filter(
-          ([name]) => name !== "view.data-table.v1" && name !== "settings.section.v1" && name !== "resource-view.v1",
+          ([name]) => name !== "view.data-table.v1" && name !== "settings.section.v1",
         ),
       ),
     };
@@ -328,7 +316,6 @@ describe("checkExtensionHostCompatibility", () => {
     expect(result.diagnostics.map((diagnostic) => diagnostic.metadata?.missingCapability)).toEqual([
       "view.data-table.v1",
       "settings.section.v1",
-      "resource-view.v1",
     ]);
   });
 });

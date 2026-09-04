@@ -1,11 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { PageLocation } from "@pstdio/sdk/extensions";
-import {
-  createDefaultWorkbenchLayout,
-  type PersistedTreeRendererStates,
-  type PersistedWorkbenchHistory,
-  type PersistedWorkbenchPanels,
-} from "../core";
+import { createDefaultWorkbenchLayout, type PersistedTreeRendererStates, type PersistedWorkbenchPanels } from "../core";
 import {
   createLocalStorageLayoutPersistence,
   createLocalStoragePanelsPersistence,
@@ -122,21 +117,6 @@ describe("local storage workbench persistence", () => {
         },
       },
     };
-    const resource = { kind: "workspace", uri: "workspace:one", label: "Workspace One" };
-    const history: PersistedWorkbenchHistory = {
-      version: 1,
-      cursor: 0,
-      entries: [
-        {
-          entryId: "entry-one",
-          recordedAt: 1,
-          kind: "widget",
-          location: { key: "location:one", contributionId: "location.one" },
-          selectedSubPanels: {},
-        },
-      ],
-      recentlyClosed: [],
-    };
     const pageLocation: PageLocation = {
       page: { extensionId: "acme.planner", kind: "page", id: "ticket" },
       resource: { type: "ticket", id: "PS-326" },
@@ -146,8 +126,6 @@ describe("local storage workbench persistence", () => {
     persistence.snapshotPersistence.setSnapshot({ layout }, "project:one");
     persistence.snapshotPersistence.flush?.();
     persistence.treePersistence.setTreeStates(trees);
-    persistence.lastResourcePersistence.setLastResource(resource);
-    persistence.historyPersistence.setHistory(history, "project:one");
     persistence.pageLocationPersistence.save("project:one", pageLocation);
 
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"))).toBe(
@@ -155,15 +133,9 @@ describe("local storage workbench persistence", () => {
     );
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "panels", "project:one"))).toBeNull();
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "tree", "project:one"))).toBe(JSON.stringify(trees));
-    expect(storage.getItem(workbenchStoragePersistenceKey("demo", "last-resource", "project:one"))).toBe(
-      JSON.stringify(resource),
-    );
     expect(persistence.snapshotPersistence.getSnapshot("project:one")).toEqual({ layout });
     expect(persistence.treePersistence.getTreeStates()).toEqual(trees);
-    expect(persistence.lastResourcePersistence.getLastResource()).toEqual(resource);
-    expect(persistence.historyPersistence.getHistory("project:one")).toEqual(history);
     expect(persistence.pageLocationPersistence.load("project:one")).toEqual(pageLocation);
-    expect(persistence.historyPersistence.getHistory("project:two")).toBeUndefined();
     expect(persistence.pageLocationPersistence.load("project:two")).toBeUndefined();
   });
 });

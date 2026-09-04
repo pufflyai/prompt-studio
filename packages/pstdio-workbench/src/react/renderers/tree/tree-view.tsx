@@ -9,13 +9,18 @@ import type {
   TreeViewSection,
   WorkbenchCore,
 } from "../../../core";
-import { getAnchorResource } from "../../../core";
+import { getAnchorResource, getWorkbenchRenderers } from "../../../core";
 import type { CommandParamFieldRenderer } from "../../command-palette/command-params-dialog";
 import { WorkbenchIcon } from "../../shared/icon";
 import { useWorkbenchStore } from "../../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../../theme/workbench-theme-background";
 import type { TreeActionParamsRequest } from "./tree-actions";
-import { findNodeInSections, resolveTreeListSelection, toTreeListSection } from "./tree-list-adapter";
+import {
+  filterTreeListSelection,
+  findNodeInSections,
+  resolveTreeListSelection,
+  toTreeListSection,
+} from "./tree-list-adapter";
 import { TreeParamsDialog } from "./tree-params-dialog";
 import { TreeViewBody } from "./tree-view-body";
 import { createMoveTreeNode } from "./tree-view-move";
@@ -83,17 +88,11 @@ const navigateTreeNode = (
   if (intent?.id === "target") {
     const target = intent.payload as NavigationTarget;
     if (shouldSelectTreeNodeForNavigationTarget(target)) {
-      context.workbench.renderers.setSelectedNode(context.treeViewId, nodeId);
+      getWorkbenchRenderers(context.workbench).setSelectedNode(context.treeViewId, nodeId);
     }
     void context.workbench.navigation.openTarget(target).catch(context.onOpenResourceError);
     return;
   }
-
-  if (intent?.id !== "resource" || !intent.payload || typeof intent.payload !== "object") return;
-  context.workbench.renderers.setSelectedNode(context.treeViewId, nodeId);
-  void context.workbench.resources
-    .openResource(intent.payload as ResourceRef, { replaceActive: true })
-    .catch(context.onOpenResourceError);
 };
 
 interface ToggleTreeNodeContext {
@@ -116,10 +115,10 @@ const createToggleTreeNode = (context: ToggleTreeNodeContext) => (nodeId: string
   if (!node) return;
 
   const expanded = context.expandedNodeIds.includes(nodeId);
-  context.workbench.renderers.setNodeExpanded(context.treeViewId, nodeId, !expanded);
+  getWorkbenchRenderers(context.workbench).setNodeExpanded(context.treeViewId, nodeId, !expanded);
   if (expanded || context.childrenByNodeId[nodeId] || node.children) return;
 
-  void context.workbench.renderers
+  void getWorkbenchRenderers(context.workbench)
     .getChildren(context.treeViewId, node, { resource: context.resource, viewId: context.viewId })
     .then((children) => {
       context.setChildrenByNodeId((current) => ({ ...current, [nodeId]: children }));
@@ -138,11 +137,15 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     onSidenavContextActionsChange,
   } = props;
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const treeRenderer = workbench.renderers.getTreeRenderer(treeViewId);
+  const treeRenderer = getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId);
   const [filter, setFilter] = useState("");
   const treeState =
-    useWorkbenchStore(workbench.renderers.treeStore, (state) => state.statesByTreeId[treeViewId]) ?? EMPTY_TREE_STATE;
+    useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.statesByTreeId[treeViewId]) ??
+    EMPTY_TREE_STATE;
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
+  const activePage = useWorkbenchStore(workbench.pages.store, (state) =>
+    state.location?.resource ? undefined : state.location?.page,
+  );
   const activeResource = useWorkbenchStore(workbench.layout.store, (state) => resolveTreeActiveResource(state.layout));
   const { body, childrenByNodeId, error, footer, header, loading, setChildrenByNodeId } = useTreeData(
     workbench,
@@ -210,7 +213,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
   const toggleSection = (sectionId: string) => {
     const expanded = treeState.expandedSectionIds.includes(sectionId);
 
-    workbench.renderers.setSectionExpanded(treeViewId, sectionId, !expanded);
+    getWorkbenchRenderers(workbench).setSectionExpanded(treeViewId, sectionId, !expanded);
   };
   const moveNode = createMoveTreeNode({
     workbench,
@@ -224,20 +227,17 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
 
   const navigationContext = { workbench, treeViewId, onOpenResourceError };
 
-  const bodyActiveNodeId = resolveTreeListSelection({
-    sections: body,
+  const activeNodeSelection = resolveTreeListSelection({
+    sections: [...header, ...body, ...footer],
     childrenByNodeId,
     activeNodeId,
+    activePage,
     activeResource,
     selectedNodeId: treeState.selectedNodeId,
   });
-  const regionActiveNodeId = resolveTreeListSelection({
-    sections: [...header, ...footer],
-    childrenByNodeId,
-    activeNodeId,
-    activeResource,
-    selectedNodeId: treeState.selectedNodeId,
-  });
+  const headerActiveNodeId = filterTreeListSelection(header, childrenByNodeId, activeNodeSelection);
+  const bodyActiveNodeId = filterTreeListSelection(body, childrenByNodeId, activeNodeSelection);
+  const footerActiveNodeId = filterTreeListSelection(footer, childrenByNodeId, activeNodeSelection);
 
   return (
     <TreeListDragProvider
@@ -254,7 +254,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               draggable={Boolean(onSidenavContextActionsChange)}
               expandedNodeIds={treeState.expandedNodeIds}
               expandedSectionIds={treeState.expandedSectionIds}
-              activeNodeId={regionActiveNodeId}
+              activeNodeId={headerActiveNodeId}
               rowVariant="compact"
               sectionGap="md"
               nodeGap="1px"
@@ -316,7 +316,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
               draggable={Boolean(onSidenavContextActionsChange)}
               expandedNodeIds={treeState.expandedNodeIds}
               expandedSectionIds={treeState.expandedSectionIds}
-              activeNodeId={regionActiveNodeId}
+              activeNodeId={footerActiveNodeId}
               rowVariant="compact"
               sectionGap="md"
               nodeGap="1px"

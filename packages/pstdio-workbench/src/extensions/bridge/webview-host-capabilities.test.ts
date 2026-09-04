@@ -1,32 +1,32 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "../../core";
+import { createWorkbench } from "../../core";
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
 
 describe("createWorkbenchWebviewHostCapabilities", () => {
   test("maps v1 webview capabilities onto workbench registries", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const keyboardEvents: unknown[] = [];
-    const openedResources: unknown[] = [];
+    const page = { extensionId: "pstdio.lab", kind: "page" as const, id: "tickets" };
 
     workbench.commands.registerCommand(
       { id: "lab.hello", label: "Hello" },
       { execute: (params) => ({ params, status: "ok" }) },
     );
-    workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
-    workbench.layout.registerPanel({
-      id: "ticket",
-      title: "Ticket",
-      region: "main",
-      rendererId: "test",
+    workbench.modes.registerMode({ id: "project", activate: () => undefined });
+    workbench.views.registerView({
+      id: "tickets",
+      title: "Tickets",
+      body: { kind: "react", render: () => null },
     });
-    workbench.resources.registerPresenter({
-      id: "ticket-presenter",
-      canOpen: (resource) => resource.kind === "ticket",
-      open: (resource, input) => {
-        openedResources.push({ input, resource });
-        return workbench.layout.openPanel("ticket", { resource });
-      },
+    workbench.pages.registerPage({
+      id: "pstdio.lab.page.tickets",
+      ref: page,
+      title: "Tickets",
+      path: "tickets",
+      modeId: "project",
+      slots: [{ id: "content", role: "primary", region: "main", viewId: "tickets" }],
     });
+    workbench.pageLocations.setProject("project-1");
     workbench.preferences.registerSchema({
       properties: {
         "lab.theme": {
@@ -49,14 +49,10 @@ describe("createWorkbenchWebviewHostCapabilities", () => {
       status: "ok",
     });
     await expect(
-      capabilities["resource.open"]?.({
-        input: { strategy: "replace-active" },
-        resource: { kind: "ticket", uri: "pstdio://ticket/PS-276" },
+      capabilities["navigation.open"]?.({
+        target: { kind: "page", page },
       }),
-    ).resolves.toMatchObject({
-      panelId: "ticket",
-      resourceUri: "pstdio://ticket/PS-276",
-    });
+    ).resolves.toEqual([expect.objectContaining({ location: { page } })]);
 
     capabilities["notification.show"]?.({ level: "info", title: "Bridge ready" });
     capabilities["preferences.set"]?.({ name: "lab.theme", scope: { scope: "user" }, value: "dark" });
@@ -64,12 +60,7 @@ describe("createWorkbenchWebviewHostCapabilities", () => {
     capabilities["host.dispatchKeyboardEvent"]?.({ code: "KeyP", ctrlKey: true, key: "p" });
 
     expect(preference).toBe("dark");
-    expect(openedResources).toEqual([
-      {
-        input: { replaceActive: true },
-        resource: { kind: "ticket", uri: "pstdio://ticket/PS-276" },
-      },
-    ]);
+    expect(workbench.pages.store.getState().activePageId).toBe("pstdio.lab.page.tickets");
     expect(workbench.notifications.listNotifications()).toMatchObject([{ title: "Bridge ready" }]);
     expect(keyboardEvents).toEqual([{ code: "KeyP", ctrlKey: true, key: "p" }]);
   });

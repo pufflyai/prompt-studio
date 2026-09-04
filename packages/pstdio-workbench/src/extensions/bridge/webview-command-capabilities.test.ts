@@ -1,30 +1,30 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "../../core";
+import { createWorkbench } from "../../core";
 import { createExtensionWebviewHostCapabilities } from "./webview-command-capabilities";
 
 describe("createExtensionWebviewHostCapabilities", () => {
-  test("resource.open normalizes the SDK resource shape (type) into a workbench resource (kind + uri)", async () => {
-    const workbench = createWorkbenchCore();
-    const opened: { kind: string; uri: string; id?: string; label?: string }[] = [];
-
-    workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
-    workbench.layout.registerPanel({
-      id: "ticket",
-      title: "Ticket",
-      region: "main",
-      rendererId: "test",
+  test("navigation.open resolves page refs against the webview extension", async () => {
+    const workbench = createWorkbench();
+    const page = { extensionId: "pstdio.lab", kind: "page" as const, id: "tickets" };
+    workbench.modes.registerMode({ id: "project", activate: () => undefined });
+    workbench.views.registerView({
+      id: "tickets",
+      title: "Tickets",
+      body: { kind: "react", render: () => null },
     });
-    workbench.resources.registerPresenter({
-      id: "ticket-presenter",
-      canOpen: (resource) => resource.kind === "ticket",
-      open: (resource) => {
-        opened.push(resource);
-        return workbench.layout.openPanel("ticket", { resource });
-      },
+    workbench.pages.registerPage({
+      id: "pstdio.lab.page.tickets",
+      ref: page,
+      title: "Tickets",
+      path: "tickets",
+      modeId: "project",
+      slots: [{ id: "content", role: "primary", region: "main", viewId: "tickets" }],
     });
+    workbench.pageLocations.setProject("project-1");
 
     const capabilities = createExtensionWebviewHostCapabilities({
       executeCommand: async () => ({}),
+      extensionIdForWebview: () => "pstdio.lab",
       projectId: "proj-1",
       slotKind: "panel",
     })({
@@ -33,14 +33,8 @@ describe("createExtensionWebviewHostCapabilities", () => {
       workbench,
     } as never);
 
-    await capabilities["resource.open"]?.({ resource: { type: "ticket", id: "PS-15", label: "PS-15" } });
+    await capabilities["navigation.open"]?.({ target: { kind: "page", page: { kind: "page", id: "tickets" } } });
 
-    expect(opened).toHaveLength(1);
-    expect(opened[0]).toMatchObject({
-      kind: "ticket",
-      uri: "pstdio://extension-resource/ticket/PS-15",
-      id: "PS-15",
-      label: "PS-15",
-    });
+    expect(workbench.pages.store.getState().activePageId).toBe("pstdio.lab.page.tickets");
   });
 });

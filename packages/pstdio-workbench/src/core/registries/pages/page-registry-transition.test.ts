@@ -73,11 +73,9 @@ const registerPages = (registry: WorkbenchPageRegistry<string>) => {
         id: "content",
         role: "primary",
         region: "main",
-        cardinality: "many",
-        closable: true,
-        binding: { resourceKind: "ticket", viewId: "detail" },
+        binding: { resourceKinds: ["ticket"], viewId: "detail", cardinality: "many" },
       },
-      { id: "emoji", role: "auxiliary", region: "side", viewId: "shared", defaultOpen: true },
+      { id: "emoji", role: "auxiliary", region: "side", viewId: "shared", presence: "open" },
     ],
   });
   registerPage(registry, {

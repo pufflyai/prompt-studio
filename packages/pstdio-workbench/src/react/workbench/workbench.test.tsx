@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { renderToStaticMarkup } from "react-dom/server";
-import { createWorkbenchCore } from "../../core";
+import { createWorkbench } from "../../core";
 import { resolveActiveSidePanelSlot, Workbench } from "./workbench";
 
 describe("Workbench", () => {
   test("owns the UI theme providers needed by the React shell", () => {
-    const markup = renderToStaticMarkup(<Workbench workbench={createWorkbenchCore()} />);
+    const markup = renderToStaticMarkup(<Workbench workbench={createWorkbench()} />);
 
     expect(markup.length).toBeGreaterThan(0);
   });

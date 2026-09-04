@@ -1,6 +1,6 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef } from "./commands";
-import type { ResourceHierarchyProvider, ResourceKindDefinition, ResourceViewContribution } from "./composition";
+import type { ResourceHierarchyProvider, ResourceKindDefinition } from "./composition";
 import type { CommandMiddlewareHandler, CommandRunHandler, EventContext, ExtensionContextBase } from "./context";
 import type { ContributionDefinition } from "./contribution-identity";
 import type {
@@ -39,7 +39,7 @@ import type {
 /** Current host extension API version. `engines.pstdio` in package.json is a semver range checked against this. */
 // While the API is unstable the version carries an `-alpha.N` suffix and extensions must
 // declare it exactly. Bump the alpha in the same change that breaks an extension contract.
-export const EXTENSION_API_VERSION = "1.0.0-alpha.8";
+export const EXTENSION_API_VERSION = "1.0.0-alpha.9";
 
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema
   ? ParamsOf<TSchema>
@@ -241,13 +241,11 @@ export interface UiContributions {
   modes?: readonly ModeContribution[];
   pages?: readonly PageContribution[];
   resourceKinds?: readonly ResourceKindDefinition[];
-  resourceViews?: readonly ResourceViewContribution[];
   activityItems?: readonly ActivityItemContribution[];
   settingsSections?: readonly SettingsSectionContribution[];
   settingsPanels?: readonly SettingsPanelContribution[];
   commandPaletteResources?: readonly CommandPaletteResourceContribution[];
-  // biome-ignore lint/suspicious/noExplicitAny: heterogeneous keybinding shapes
-  keybindings?: readonly KeybindingContribution<any>[];
+  keybindings?: readonly KeybindingContribution[];
 }
 
 /** Behavioural surface: commands, middleware, hooks, schedules. */

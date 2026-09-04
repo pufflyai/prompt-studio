@@ -5,6 +5,7 @@ import type {
   TreeViewSection,
   WorkbenchCore,
 } from "../../../core";
+import { getWorkbenchRenderers } from "../../../core";
 import { findNodeInSections } from "./tree-list-adapter";
 
 interface MoveTreeNodeContext {
@@ -25,8 +26,15 @@ export const createMoveTreeNode = (context: MoveTreeNodeContext) =>
           ? (findNodeInSections(context.sections, targetNodeId, context.childrenByNodeId) ?? undefined)
           : undefined;
         if (!source || (targetNodeId && !target)) return;
+        const trees = getWorkbenchRenderers(context.workbench);
         void Promise.resolve(
-          context.renderer.moveNode?.(source, target, { resource: context.resource, viewId: context.viewId }),
+          context.renderer.moveNode?.(source, target, {
+            resource: context.resource,
+            viewId: context.viewId,
+            state: trees.getTreeState(context.renderer.id),
+            refresh: () => trees.refresh(context.renderer.id),
+            setSelectedNode: (nodeId) => trees.setSelectedNode(context.renderer.id, nodeId),
+          }),
         ).catch(context.onError);
       }
     : undefined;

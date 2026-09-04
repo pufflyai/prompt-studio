@@ -1,6 +1,6 @@
-import type { ContributionRef, PageSlot } from "@pstdio/sdk/extensions";
+import type { ContributionRef, ResourceKindRef } from "@pstdio/sdk/extensions";
 import { isValidLocalContributionId, workbenchModeDefinitions, workbenchPageDefinitions } from "@pstdio/sdk/extensions";
-import type { RuntimePageRecord } from "../../types/runtime";
+import type { RuntimePageRecord, RuntimePageSlot } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { Accumulator } from "./accumulator";
 
@@ -56,7 +56,12 @@ const ownRefMissing = (
   });
 };
 
-const validateSlotContent = (runtime: Accumulator, record: RuntimePageRecord, slot: PageSlot, index: number) => {
+const bindingKinds = (slot: RuntimePageSlot) => {
+  if (!slot.binding) return [];
+  return Array.isArray(slot.binding.kind) ? slot.binding.kind : [slot.binding.kind as ResourceKindRef];
+};
+
+const validateSlotContent = (runtime: Accumulator, record: RuntimePageRecord, slot: RuntimePageSlot, index: number) => {
   const fieldPath = `pages.${record.localId}.slots.${index}`;
   const hasView = Boolean(slot.view);
   const hasBinding = Boolean(slot.binding);
@@ -78,24 +83,10 @@ const validateSlotContent = (runtime: Accumulator, record: RuntimePageRecord, sl
   }
   if (slot.view) ownRefMissing(runtime, record, slot.view, `${fieldPath}.view`);
   if (slot.binding) {
-    ownRefMissing(runtime, record, slot.binding.kind, `${fieldPath}.binding.kind`);
+    for (const [kindIndex, kind] of bindingKinds(slot).entries()) {
+      ownRefMissing(runtime, record, kind, `${fieldPath}.binding.kind.${kindIndex}`);
+    }
     ownRefMissing(runtime, record, slot.binding.view, `${fieldPath}.binding.view`);
-  }
-  if (slot.defaultResource && !slot.binding) {
-    addPageDiagnostic(runtime, {
-      code: "extension_page_slot_invalid",
-      fieldPath: `${fieldPath}.defaultResource`,
-      message: `Slot "${slot.id}" has a default resource but no binding`,
-      record,
-    });
-  }
-  if (slot.defaultResource && slot.binding && slot.defaultResource.type !== slot.binding.kind.id) {
-    addPageDiagnostic(runtime, {
-      code: "extension_page_slot_invalid",
-      fieldPath: `${fieldPath}.defaultResource`,
-      message: `Default resource kind "${slot.defaultResource.type}" does not match "${slot.binding.kind.id}"`,
-      record,
-    });
   }
 };
 
@@ -146,31 +137,23 @@ const validatePageStructure = (runtime: Accumulator, record: RuntimePageRecord) 
       record,
     });
   }
-  if (primary[0]?.view && !primary[0].binding && primary[0].closable === true) {
-    addPageDiagnostic(runtime, {
-      code: "extension_page_primary_invalid",
-      fieldPath: `pages.${record.localId}.slots.${record.contribution.slots.indexOf(primary[0])}.closable`,
-      message: `Static primary slot "${primary[0].id}" cannot be closable`,
-      record,
-    });
-  }
-  if (primary[0]?.binding && !primary[0].view && primary[0].closable === true && !record.contribution.parent) {
+  if (primary[0]?.binding && !primary[0].view && !record.contribution.parent) {
     addPageDiagnostic(runtime, {
       code: "extension_page_primary_invalid",
       fieldPath: `pages.${record.localId}.parent`,
-      message: `Closable bound-only page "${record.localId}" must declare a parent`,
+      message: `Bound-only page "${record.localId}" must declare a parent to return to when its last tab closes`,
       record,
     });
   }
 
   for (const [index, slot] of record.contribution.slots.entries()) {
-    const followsPrimaryResource =
-      slot.role === "auxiliary" && slot.defaultOpen && slot.binding && !slot.defaultResource;
-    if (!followsPrimaryResource || slot.binding?.kind.id === primary[0]?.binding?.kind.id) continue;
+    const followsPageResource = slot.role === "auxiliary" && slot.binding && slot.openOn === "page-resource";
+    const primaryKinds = primary[0] ? bindingKinds(primary[0]).map((kind) => kind.id) : [];
+    if (!followsPageResource || bindingKinds(slot).some((kind) => primaryKinds.includes(kind.id))) continue;
     addPageDiagnostic(runtime, {
       code: "extension_page_slot_invalid",
-      fieldPath: `pages.${record.localId}.slots.${index}.defaultOpen`,
-      message: `Bound auxiliary slot "${slot.id}" can open by default only when it matches the primary resource kind`,
+      fieldPath: `pages.${record.localId}.slots.${index}.openOn`,
+      message: `Bound auxiliary slot "${slot.id}" can follow the page resource only when it matches the primary resource kind`,
       record,
     });
   }

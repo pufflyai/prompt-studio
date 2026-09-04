@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { createHostCapabilityGate, type HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import { createHostEventPublisher, type HostEventMessage } from "pstdio-extensions/bridge/host";
-import { createWorkbenchCore, type WorkbenchTerminalSessionAdapter } from "../../core";
+import { createWorkbench, type WorkbenchTerminalSessionAdapter } from "../../core";
 import { createTerminalSessionCapability } from "./terminal-session-capability";
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
 
@@ -38,7 +38,7 @@ const createScriptedAdapter = (id: string) => {
 };
 
 const setupTerminal = () => {
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
   const scripted = createScriptedAdapter("session-1");
   workbench.terminal.setSessionOpener(async () => scripted.adapter);
   const events: HostEventMessage[] = [];

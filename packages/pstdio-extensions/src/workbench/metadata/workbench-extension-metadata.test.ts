@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  defineCommand,
   defineConnection,
   defineExtension,
   defineMode,
@@ -35,7 +36,6 @@ describe("createWorkbenchExtensionMetadata", () => {
   test("publishes resource menu slot declarations", () => {
     const resourceKind = defineResourceKind({
       id: "note",
-      surface: "primary",
       menuSlots: [
         { id: "headerPrimary", placement: "header-primary", access: "owner", order: 20 },
         { id: "context", placement: "context-menu", access: "public" },
@@ -78,25 +78,63 @@ describe("createWorkbenchExtensionMetadata", () => {
   });
 
   test("publishes alpha.4 view, placement, and navigation arrays without renderer records", () => {
-    const mode = defineMode({ id: "review", label: "Review", regions: ["main"] });
+    const mode = defineMode({ id: "review", label: "Review", regions: ["main", "side"] });
+    const open = defineCommand({ id: "open", title: "Open", run: async () => undefined });
+    const runKind = defineResourceKind({ id: "run" });
     const view = defineView({
       id: "tickets",
       title: "Tickets",
-      path: "tickets",
       body: { kind: "webview", entry: packageAsset("./views/tickets.tsx", "file:///fake/lab/") },
+    });
+    const page = definePage({
+      id: "tickets",
+      title: "Tickets",
+      path: "tickets",
+      mode: mode.ref,
+      slots: [
+        {
+          id: "content",
+          role: "primary",
+          region: "main",
+          view: view.ref,
+          mountStrategy: "keep-mounted",
+          tab: {
+            query: async () => ({ label: "Current ticket" }),
+            refreshEvents: [{ kind: "event", id: "command.completed:open" }],
+          },
+        },
+      ],
     });
     const runtime = normalizeExtensionSources([
       source(
         defineExtension({
+          commands: [open],
           modes: [mode],
+          pages: [page],
           views: [view],
+          resourceKinds: [runKind],
           placements: [
             definePlacement({
               id: "tickets.review",
               mode: mode.ref,
-              item: { kind: "view", view: view.ref },
+              item: { kind: "view", view: view.ref, presence: "open" },
               region: "main",
-              defaultOpen: true,
+              tab: {
+                query: async () => ({ label: "Tickets" }),
+                refreshEvents: [{ kind: "event", id: "command.completed:open" }],
+              },
+            }),
+            definePlacement({
+              id: "runs.review",
+              mode: mode.ref,
+              item: {
+                kind: "binding",
+                resourceKind: runKind.ref,
+                view: view.ref,
+                cardinality: "many",
+                add: { kind: "command", target: { command: open.ref, params: { source: "placement" } } },
+              },
+              region: "side",
             }),
           ],
           navigationItems: [
@@ -105,7 +143,7 @@ describe("createWorkbenchExtensionMetadata", () => {
               owner: workbenchModes.project,
               slot: "content",
               label: "Tickets",
-              action: { kind: "view", view: view.ref },
+              action: { kind: "page", page: page.ref },
             }),
           ],
         }),
@@ -130,16 +168,47 @@ describe("createWorkbenchExtensionMetadata", () => {
     expect(metadata.placements[0]).toMatchObject({
       id: "pstdio.lab.placement.tickets.review",
       mode: { extensionId: "pstdio.lab", kind: "mode", id: "review" },
-      item: { kind: "view", view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" } },
+      item: {
+        kind: "view",
+        view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" },
+        presence: "open",
+      },
+      tab: {
+        queryHandlerId: "pstdio.lab.placement.tickets.review.tab.query",
+        refreshEventIds: ["command.completed:pstdio.lab.command.open"],
+      },
+    });
+    expect(metadata.placements[1]).toMatchObject({
+      id: "pstdio.lab.placement.runs.review",
+      item: {
+        kind: "binding",
+        cardinality: "many",
+        add: {
+          kind: "command",
+          target: {
+            command: { extensionId: "pstdio.lab", kind: "command", id: "open" },
+            params: { source: "placement" },
+          },
+        },
+      },
+    });
+    expect(metadata.pages[0]?.slots[0]).toMatchObject({
+      mountStrategy: "keep-mounted",
+      tab: {
+        queryHandlerId: "pstdio.lab.page.tickets.content.tab.query",
+        refreshEventIds: ["command.completed:pstdio.lab.command.open"],
+      },
     });
     expect(metadata.navigationItems[0]?.action).toEqual({
-      kind: "view",
-      view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" },
+      kind: "page",
+      page: { extensionId: "pstdio.lab", kind: "page", id: "tickets" },
     });
     expect(metadata).not.toHaveProperty("panels");
     expect(metadata).not.toHaveProperty("kanbanRenderers");
   });
+});
 
+describe("createWorkbenchExtensionMetadata pages", () => {
   test("publishes pages and keeps page and panel targets explicit", () => {
     const view = defineView({
       id: "tickets",
@@ -153,7 +222,7 @@ describe("createWorkbenchExtensionMetadata", () => {
       mode: workbenchModes.project,
       slots: [
         { id: "list", role: "primary", region: "main", view: view.ref },
-        { id: "tools", role: "auxiliary", region: "side", view: view.ref },
+        { id: "tools", role: "auxiliary", region: "side", view: view.ref, presence: "open" },
       ],
     });
     const runtime = normalizeExtensionSources([

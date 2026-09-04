@@ -5,20 +5,12 @@ import { createElement } from "react";
 import type { Disposable, PreferencePropertySchema, PreferenceScope, PreferenceValue } from "../../core";
 import { WorkflowStatusSettings } from "../../react/statuses/workflow-status-settings";
 import {
-  BRIDGE_WEBVIEW_RENDERER_ID,
   type CreateBridgeWebviewHostCapabilities,
-  createBridgeWebviewRenderer,
   getBridgeWebviewHostEventPublisher,
   renderBridgeWebviewFrame,
 } from "../bridge/bridge-webview-renderer";
 import { createExtensionWebviewHostCapabilities } from "../bridge/webview-command-capabilities";
 import { toBridgeWebviewConfig } from "../bridge/webview-contribution-config";
-import {
-  panelMenuDeclarationOffsets,
-  registerWorkbenchExtensionPanel,
-  resolveWorkbenchExtensionViewInput,
-  toWorkbenchCompositionPanelContribution,
-} from "../contributions/panel-contributions";
 import { executeWorkbenchExtensionCommand, type WorkbenchExtensionCommandContext } from "./workbench-extension-command";
 import type { InternalRegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
 
@@ -52,6 +44,7 @@ const createExtensionHostCapabilities = (
     createExtensionWebviewHostCapabilities({
       artifacts: input.webviewArtifacts,
       executeCommand: input.executeCommand,
+      extensionIdForWebview: (webviewId) => input.metadata.panels.find((panel) => panel.id === webviewId)?.extensionId,
       files: input.webviewFiles,
       projectId: input.projectId,
       slotKind,
@@ -60,41 +53,62 @@ const createExtensionHostCapabilities = (
   return withHostCapabilityOverrides(createBase, input.createWebviewHostCapabilityOverrides);
 };
 
-export const registerBridgeRenderer = (input: InternalRegisterWorkbenchExtensionContributionsInput) => {
-  if (input.workbench.renderers.getRenderer(BRIDGE_WEBVIEW_RENDERER_ID)) return [] as Disposable[];
-  return [
-    input.workbench.renderers.registerRenderer(
-      createBridgeWebviewRenderer({
-        createHostCapabilities: createExtensionHostCapabilities(input, "panel"),
-        createProps: input.createWebviewProps,
-        createTheme: input.createWebviewTheme,
-      }),
-    ),
-  ];
-};
-
 export const registerWebviewPanels = (input: InternalRegisterWorkbenchExtensionContributionsInput) => {
-  const menuOffsets = panelMenuDeclarationOffsets(input.metadata.panels);
-  return input.metadata.panels.flatMap((panel, index) => {
+  return input.metadata.panels.flatMap((panel) => {
     if (!panel.webview) return [];
+    const webview = toBridgeWebviewConfig(panel.webview);
     return [
-      registerWorkbenchExtensionPanel({
-        workbench: input.workbench,
-        path: panel.path,
-        aliases: panel.aliases,
-        resolveInput: resolveWorkbenchExtensionViewInput(input.resolveViewInput, panel),
-        contribution: toWorkbenchCompositionPanelContribution({
-          panel,
-          rendererId: BRIDGE_WEBVIEW_RENDERER_ID,
-          declarationIndex: index,
-          menuDeclarationOffset: menuOffsets[index]!,
-          resourcePanels: input.metadata.resourcePanels,
-          config: toBridgeWebviewConfig(panel.webview),
-        }),
+      input.workbench.views.registerView({
+        id: panel.id,
+        title: text(panel.title, panel.id),
+        icon: panel.icon,
+        body: {
+          kind: "react",
+          render: (renderInput) => {
+            const slotKind = input.metadata.settingsPanels.some(
+              (settingsPanel) => settingsPanel.id === renderInput.instance.panelId && settingsPanel.viewId === panel.id,
+            )
+              ? "settings"
+              : "panel";
+            return (
+              input.renderWebview?.(renderInput) ??
+              renderBridgeWebviewFrame({
+                context: {
+                  workbench: renderInput.workbench,
+                  webviewId: panel.id,
+                  placement: renderInput.instance,
+                  hostEvents: getBridgeWebviewHostEventPublisher(renderInput.workbench, renderInput.instance),
+                },
+                createHostCapabilities: createExtensionHostCapabilities(input, slotKind),
+                createProps:
+                  input.createWebviewProps ?? (({ placement }) => ({ placement, resource: placement.resource })),
+                createTheme: input.createWebviewTheme,
+                ownerId: panel.extensionId,
+                title: text(panel.title, panel.id),
+                webview,
+              })
+            );
+          },
+        },
       }),
     ];
   });
 };
+
+const viewMenuPlacementPriority = { first: 1_000_000, default: 0, last: -1_000_000 } as const;
+
+export const registerViewMenus = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
+  input.metadata.panels
+    .flatMap((panel) => panel.panelMenus ?? [])
+    .map((menu, index) =>
+      input.workbench.viewMenus.registerViewMenu({
+        id: menu.id,
+        ownerViewId: menu.ownerPanelId,
+        viewId: menu.viewId,
+        side: menu.side,
+        priority: viewMenuPlacementPriority[menu.placement ?? "default"] - index,
+      }),
+    );
 
 const statusResult = (value: unknown) => {
   if (!value || typeof value !== "object" || !("statuses" in value) || !Array.isArray(value.statuses)) {
@@ -109,6 +123,7 @@ export const registerStatuses = (
 ) => {
   const records = input.metadata.statuses ?? [];
   if (records.length === 0) return [] as Disposable[];
+  const settingsViewId = "workbench.extension-statuses.settings";
   const disposables = records.map((record, index) =>
     input.workbench.statuses.registerStatusSet(
       {
@@ -132,15 +147,25 @@ export const registerStatuses = (
     ),
   );
   disposables.push(
+    input.workbench.views.registerView({
+      id: settingsViewId,
+      title: "Statuses",
+      body: {
+        kind: "react",
+        render: () => createElement(WorkflowStatusSettings, { workbench: input.workbench }),
+      },
+    }),
+  );
+  disposables.push(
     input.workbench.settings.registerPanel({
       id: "workbench.statuses",
       title: "Statuses",
       icon: "list-checks",
-      kind: "custom",
+      kind: "view",
       order: statusesSettingsOrder,
       section: input.settingsSectionId ?? settingsSectionIdDefault,
       scope: "project",
-      render: () => createElement(WorkflowStatusSettings, { workbench: input.workbench }),
+      viewId: settingsViewId,
     }),
   );
   return disposables;
@@ -196,25 +221,11 @@ export const registerSettings = (input: InternalRegisterWorkbenchExtensionContri
         id: panel.id,
         title: text(panel.title, panel.id),
         icon: panel.icon,
-        kind: "custom",
+        kind: "view",
         order: extensionSettingsOrderBase + index,
         section: panel.section ?? sectionId,
         scope: panel.scope,
-        render: (renderInput) =>
-          renderBridgeWebviewFrame({
-            context: {
-              workbench: renderInput.workbench,
-              webviewId: panel.id,
-              placement: { ...renderInput.instance, panelId: panel.id },
-              hostEvents: getBridgeWebviewHostEventPublisher(renderInput.workbench, renderInput.instance),
-            },
-            createHostCapabilities: createExtensionHostCapabilities(input, "settings"),
-            createProps: input.createWebviewProps ?? (({ placement }) => ({ placement, resource: placement.resource })),
-            createTheme: input.createWebviewTheme,
-            ownerId: panel.extensionId,
-            title: text(panel.title, panel.id),
-            webview: toBridgeWebviewConfig(panel.webview),
-          }),
+        viewId: panel.viewId,
       }),
     );
   }

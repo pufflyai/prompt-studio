@@ -9,7 +9,6 @@
  */
 
 export {
-  workbenchCommands,
   workbenchModeDefinitions,
   workbenchModes,
   workbenchPageDefinitions,

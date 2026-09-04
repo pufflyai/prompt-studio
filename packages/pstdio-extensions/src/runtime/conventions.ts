@@ -88,7 +88,6 @@ const localIdRecordsByKind = (runtime: ExtensionRuntime): [string, ContributionS
   ["placement", runtime.placements],
   ["resourceHierarchyProvider", runtime.resourceHierarchyProviders],
   ["resourceKind", runtime.resourceKinds],
-  ["resourceView", runtime.resourceViews],
   ["schedule", runtime.schedules],
   ["settingsPanel", runtime.settingsPanels],
   ["settingsSection", runtime.settingsSections],
@@ -122,8 +121,8 @@ const collectIdGrammarDiagnostics = (runtime: ExtensionRuntime) => {
   // Resource-kind slot and menu-slot ids are author-declared identifiers too: other
   // extensions reference them, so they follow the same grammar.
   for (const record of runtime.resourceKinds) {
-    const { slots, menuSlots } = record.contribution;
-    for (const slotId of [...Object.keys(slots), ...Object.keys(menuSlots)]) {
+    const { menuSlots } = record.contribution;
+    for (const slotId of Object.keys(menuSlots)) {
       if (isValidLocalContributionId(slotId)) continue;
       diagnostics.push(invalidIdDiagnostic("resourceKind slot", record, slotId));
     }

@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "../../core";
+import { createWorkbench } from "../../core";
 import { openPanelWidget } from "./panel-widget-open";
 
 describe("openPanelWidget", () => {
   test("titles an added tab by its widget, not the location resource it binds to", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.layout.registerPanel({
       id: "chrome.overview",
@@ -50,7 +50,7 @@ describe("openPanelWidget", () => {
   });
 
   test("gives a composition panel the role implied by its destination region", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.layout.registerPanel({
       id: "lab.artifacts",
@@ -70,7 +70,7 @@ describe("openPanelWidget", () => {
   });
 
   test("applies composition pinning when the user adds a panel", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.layout.registerPanel({ id: "timeline", title: "Timeline", region: "side", rendererId: "timeline" });
 
     openPanelWidget({

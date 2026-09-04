@@ -1,6 +1,6 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef, CommandSource } from "./commands";
-import type { ExtensionPanelRegion } from "./composition";
+import type { ExtensionPanelRegion, RegionSize } from "./composition";
 import type { RendererCallback } from "./context";
 import type {
   ContributionDefinition,
@@ -68,10 +68,17 @@ export interface ActivityItemContribution<TParams extends Struct = Struct>
   params?: Partial<TParams>;
 }
 
+export interface ModeRegionSettings {
+  readonly size?: RegionSize;
+  readonly collapsible?: boolean;
+}
+
 export interface ModeContribution extends ContributionDefinition<"mode"> {
   label: Localizable<string>;
   icon?: string;
   regions: readonly ExtensionPanelRegion[];
+  /** Region-level layout policy. The mode owns it; placements cannot set it. */
+  regionSettings?: Readonly<Partial<Record<ExtensionPanelRegion, ModeRegionSettings>>>;
 }
 
 export interface WebviewContribution {
@@ -215,7 +222,7 @@ export interface FileIconThemeContribution extends ContributionDefinition<"file-
  */
 export type KeybindingChord = string;
 
-export interface KeybindingContribution<TParams extends Struct = Struct> extends ContributionDefinition<"keybinding"> {
+export interface KeybindingContribution extends ContributionDefinition<"keybinding"> {
   /** Default chord. Used on every platform unless an override is provided. */
   key: KeybindingChord;
   /** macOS override. */
@@ -224,10 +231,8 @@ export interface KeybindingContribution<TParams extends Struct = Struct> extends
   linux?: KeybindingChord;
   /** Windows override. */
   win?: KeybindingChord;
-  /** Command this chord executes. */
-  command: CommandRef<TParams, unknown>;
-  /** Optional command params. */
-  params?: Partial<TParams>;
+  /** Action this chord executes through the shared navigation executor. */
+  action: NavigationTarget;
   /** Optional gating predicate. The host evaluates it at dispatch time. */
   when?: WhenExpression;
 }

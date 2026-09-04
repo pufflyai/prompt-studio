@@ -1,7 +1,12 @@
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { WorkbenchCoreContributionContext } from "../../workbench-core";
-import type { WorkbenchLayout, WorkbenchPanelRegion, WorkbenchRegion } from "../layout/layout-model";
+import type {
+  WorkbenchLayout,
+  WorkbenchPanelRegion,
+  WorkbenchRegion,
+  WorkbenchRegionSettings,
+} from "../layout/layout-model";
 import type { ResourceRef } from "../resources/resource-registry";
 import {
   applyModePanelAvailability,
@@ -34,6 +39,8 @@ export interface WorkbenchModeContribution {
   id: string;
   label?: string;
   panels?: readonly WorkbenchPanelRegion[];
+  /** Region-level layout policy while this mode is active. */
+  regionSettings?: Partial<Record<WorkbenchRegion, WorkbenchRegionSettings>>;
   // Resource kinds this mode accepts. The atomic navigator validates targets
   // against this list; a mode without kinds navigates with a cleared resource.
   resourceKinds?: readonly string[];
@@ -80,6 +87,7 @@ const toDisposables = (result: WorkbenchModeActivationResult) => {
 
 export interface CreateWorkbenchModeRegistryInput {
   establishLocation?(instanceId: string): void;
+  layout: Pick<WorkbenchCoreContributionContext["layout"], "onDidChangePersistenceScope">;
   resolveContext(): WorkbenchModeActivationContext;
 }
 
@@ -189,19 +197,18 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
       applyLayout();
       return;
     }
-    // Page composition owns the complete layout transaction. Mode activation here
-    // changes only long-lived behavior, so legacy seed/reconcile cannot publish an
-    // intermediate region snapshot during page navigation.
+    // Publish the page's mode before its layout. Layout listeners may open panels
+    // owned by that mode as soon as the new primary resource appears.
     transitioning = true;
     deferredSeedModeId = undefined;
     try {
-      applyLayout();
       disposeActive();
       if (id === undefined) {
         store.setState({ ...store.getState(), activeModeId: undefined }, false, "deactivatePageMode");
+        applyLayout();
         return;
       }
-      activate(id, { seed: false });
+      activate(id, { seed: false, afterPublish: applyLayout });
     } finally {
       transitioning = false;
     }
@@ -214,7 +221,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     activeModeContext = undefined;
   };
 
-  const activate = (id: string, options: { seed: boolean }) => {
+  const activate = (id: string, options: { seed: boolean; afterPublish?: () => void }) => {
     const context = input.resolveContext();
     const mode = store.getState().modes[id];
     if (!mode) throw new Error(`Workbench mode not registered: ${id}`);
@@ -226,6 +233,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     try {
       initializeMode(mode);
       store.setState({ ...store.getState(), activeModeId: id }, false, "activateMode");
+      options.afterPublish?.();
       if (options.seed) prepareScope(mode);
       activeDisposables = toDisposables(mode.enter?.(context));
       if (options.seed) mode.reconcile?.(input.resolveContext());
@@ -236,7 +244,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     }
   };
 
-  const scopeSubscription = input.resolveContext().layout.onDidChangePersistenceScope(() => {
+  const scopeSubscription = input.layout.onDidChangePersistenceScope(() => {
     const activeModeId = store.getState().activeModeId;
     if (activeModeId === deferredSeedModeId) return;
     const mode = activeModeId ? store.getState().modes[activeModeId] : undefined;

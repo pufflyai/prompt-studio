@@ -1,19 +1,20 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "../../../core/workbench-core";
+import { createWorkbench } from "../../../core/workbench-core";
+import { getWorkbenchRenderers } from "../../../core/workbench-renderers";
 
 describe("file renderer refresh events", () => {
   test("preserves optional resource, origin, and revision context", () => {
-    const workbench = createWorkbenchCore();
-    workbench.renderers.registerFileRenderer({
+    const workbench = createWorkbench();
+    getWorkbenchRenderers(workbench).registerFileRenderer({
       id: "planner.ticketContent",
       title: "Ticket",
       load: () => ({ content: "" }),
     });
     const received: unknown[] = [];
-    workbench.renderers.onDidRefreshFileRenderer((event) => received.push(event));
+    getWorkbenchRenderers(workbench).onDidRefreshFileRenderer((event) => received.push(event));
 
-    workbench.renderers.refreshFileRenderer("planner.ticketContent", {
-      resourceUri: "dashboard-workbench://ticket/ticket-1",
+    getWorkbenchRenderers(workbench).refreshFileRenderer("planner.ticketContent", {
+      resourceUri: "pstdio://extension-resource/ticket/ticket-1",
       origin: {
         rendererId: "planner.ticketContent",
         instanceId: "planner.ticketEditor:1",
@@ -25,7 +26,7 @@ describe("file renderer refresh events", () => {
     expect(received).toEqual([
       {
         fileRendererId: "planner.ticketContent",
-        resourceUri: "dashboard-workbench://ticket/ticket-1",
+        resourceUri: "pstdio://extension-resource/ticket/ticket-1",
         origin: {
           rendererId: "planner.ticketContent",
           instanceId: "planner.ticketEditor:1",

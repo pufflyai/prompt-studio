@@ -24,7 +24,11 @@ export const registerModes = (ext: NormalizedExtension, source: LoadedExtensionS
           typeof region === "string" &&
           extensionPanelRegions.includes(region as (typeof extensionPanelRegions)[number]),
       );
-    if (!isRecord(mode) || !isLocalizableString(mode.label) || !hasValidRegions) {
+    const hasValidRegionSettings =
+      mode.regionSettings === undefined ||
+      (isRecord(mode.regionSettings) &&
+        Object.keys(mode.regionSettings).every((region) => (mode.regions as readonly string[]).includes(region)));
+    if (!isRecord(mode) || !isLocalizableString(mode.label) || !hasValidRegions || !hasValidRegionSettings) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_mode",

@@ -5,7 +5,6 @@ import { allowsWorkbenchFloatingPanels, type WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
 import type { CommandParamFieldRenderer } from "../command-palette/command-params-dialog";
 import { WorkbenchNavChrome, type WorkbenchNavRegionControl } from "../header/workbench-nav-chrome";
-import { WorkbenchKeepAliveLayer } from "../keep-alive/workbench-keep-alive-layer";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
 import { useWorkbenchPanelHeaderVisible } from "../region/region-tabs";
@@ -315,9 +314,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
         mounted={mountSidePanel}
         sidePanelHost={sidePanelHostRef.current}
       />
-      {/* Kept-alive renderer portals sit at the workbench root so their hosts
-          stay stable while widget slots and Side Panel containers move. */}
-      <WorkbenchKeepAliveLayer workbench={workbench} />
     </WorkbenchThemeScope>
   );
 };

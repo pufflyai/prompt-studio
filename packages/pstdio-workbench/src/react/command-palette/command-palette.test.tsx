@@ -1,12 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, workbenchCommandPaletteMenuPath } from "../../core";
+import { createWorkbench, workbenchCommandPaletteMenuPath } from "../../core";
 import { createWorkbenchCommandPaletteEntries, createWorkbenchResourcePaletteEntries } from "./command-palette";
-import { createWorkbenchModePaletteEntries, getModeEntryIndex } from "./mode-palette";
 import { createWorkbenchThemePreferencePaletteEntries, getThemePreferenceEntryIndex } from "./theme-palette";
 
 describe("createWorkbenchCommandPaletteEntries", () => {
   test("keeps command palette groups contiguous and orders actions inside each group", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.commands.registerCommand(
       { id: "projects.show", label: "Show projects", category: "Projects" },
@@ -50,7 +49,7 @@ describe("createWorkbenchCommandPaletteEntries", () => {
   });
 
   test("tags command palette entries with the command mode", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.commands.registerCommand(
       { id: "projects.show", label: "Show projects", category: "Projects" },
       { execute: () => undefined },
@@ -62,7 +61,7 @@ describe("createWorkbenchCommandPaletteEntries", () => {
   });
 
   test("includes command ids in palette search text", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.commands.registerCommand(
       { id: "extension-lab.demo.try-awaken", label: "Demo middleware rejection" },
       { execute: () => undefined },
@@ -74,7 +73,7 @@ describe("createWorkbenchCommandPaletteEntries", () => {
   });
 
   test("requests params instead of executing parameterized commands immediately", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     let executions = 0;
     const requests: string[] = [];
 
@@ -100,7 +99,7 @@ describe("createWorkbenchCommandPaletteEntries", () => {
   });
 
   test("does not create success notifications for command return values", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.commands.registerCommand(
       { id: "extension-lab.counter.read", label: "Read lab counter" },
       { execute: () => ({ counter: 1 }) },
@@ -145,32 +144,9 @@ describe("createWorkbenchThemePreferencePaletteEntries", () => {
   });
 });
 
-describe("createWorkbenchModePaletteEntries", () => {
-  test("builds selectable mode entries from registered workbench modes", () => {
-    const workbench = createWorkbenchCore();
-    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    workbench.modes.registerMode({ id: "workspace", label: "Workspace", activate: () => undefined });
-    workbench.modes.setActiveMode("project");
-
-    let closed = false;
-    const entries = createWorkbenchModePaletteEntries({ workbench, onClose: () => (closed = true) });
-
-    expect(entries.map((entry) => ({ id: entry.id, mode: entry.mode, isSelected: entry.isSelected }))).toEqual([
-      { id: "mode:project", mode: "mode", isSelected: true },
-      { id: "mode:workspace", mode: "mode", isSelected: false },
-    ]);
-
-    entries.find((entry) => entry.modeId === "workspace")?.onActivate();
-
-    expect(workbench.modes.getActiveModeId()).toBe("workspace");
-    expect(closed).toBe(true);
-    expect(getModeEntryIndex("missing", workbench.modes.listModes())).toBe(0);
-  });
-});
-
 describe("createWorkbenchResourcePaletteEntries", () => {
   test("flattens entries from every resource provider, tagged with the search mode", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
     workbench.resources.registerKind({ kind: "session", label: "Session" });
 
@@ -181,6 +157,7 @@ describe("createWorkbenchResourcePaletteEntries", () => {
         {
           resource: { kind: "ticket", uri: "pstdio://ticket/PS-1", label: "PS-1 Ship it" },
           group: "Tickets",
+          activate: () => undefined,
         },
       ],
     });
@@ -191,6 +168,7 @@ describe("createWorkbenchResourcePaletteEntries", () => {
         {
           resource: { kind: "session", uri: "pstdio://session/s1", label: "Session 1" },
           group: "Sessions",
+          activate: () => undefined,
         },
       ],
     });
@@ -203,76 +181,8 @@ describe("createWorkbenchResourcePaletteEntries", () => {
     ]);
   });
 
-  test("activating a resource entry opens the resource through the registry", async () => {
-    const workbench = createWorkbenchCore();
-    workbench.resources.registerKind({ kind: "ticket", label: "Ticket" });
-    workbench.layout.registerPanel({
-      id: "ticket",
-      title: "Ticket",
-      region: "main",
-      rendererId: "test",
-    });
-    const opened: { uri: string; replaceActive: boolean | undefined }[] = [];
-    workbench.resources.registerPresenter({
-      id: "tickets",
-      canOpen: (resource) => resource.kind === "ticket",
-      open: (resource, input) => {
-        opened.push({ uri: resource.uri, replaceActive: input.replaceActive });
-        return workbench.layout.openPanel("ticket", { resource });
-      },
-    });
-    workbench.resources.registerProvider({
-      id: "tickets",
-      kind: "ticket",
-      list: () => [{ resource: { kind: "ticket", uri: "pstdio://ticket/PS-1", label: "PS-1" } }],
-    });
-
-    let closed = false;
-    const entries = createWorkbenchResourcePaletteEntries({ workbench, query: "", onClose: () => (closed = true) });
-    entries[0]?.onActivate();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(opened).toEqual([{ uri: "pstdio://ticket/PS-1", replaceActive: undefined }]);
-    expect(closed).toBe(true);
-  });
-
-  test("activating a resource entry applies palette open input from the resource kind", async () => {
-    const workbench = createWorkbenchCore();
-    workbench.resources.registerKind({
-      kind: "workspace",
-      label: "Workspace",
-      paletteOpenInput: { replaceActive: true },
-    });
-    workbench.layout.registerPanel({
-      id: "workspace",
-      title: "Workspace",
-      region: "main",
-      rendererId: "test",
-    });
-    const opened: { uri: string; replaceActive: boolean | undefined }[] = [];
-    workbench.resources.registerPresenter({
-      id: "workspaces",
-      canOpen: (resource) => resource.kind === "workspace",
-      open: (resource, input) => {
-        opened.push({ uri: resource.uri, replaceActive: input.replaceActive });
-        return workbench.layout.openPanel("workspace", { resource });
-      },
-    });
-    workbench.resources.registerProvider({
-      id: "workspaces",
-      kind: "workspace",
-      list: () => [{ resource: { kind: "workspace", uri: "pstdio://workspace/PS-1", label: "PS-1" } }],
-    });
-
-    const entries = createWorkbenchResourcePaletteEntries({ workbench, query: "", onClose: () => undefined });
-    entries[0]?.onActivate();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(opened).toEqual([{ uri: "pstdio://workspace/PS-1", replaceActive: true }]);
-  });
-
   test("uses a browse entry activation override when present", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.resources.registerKind({ kind: "session", label: "Session" });
     const activatedUris: string[] = [];
 

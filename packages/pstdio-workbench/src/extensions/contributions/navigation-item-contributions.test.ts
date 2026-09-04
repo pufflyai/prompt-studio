@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore } from "../../core";
+import { createWorkbench } from "../../core";
 import { registerWorkbenchExtensionNavigationItems } from "./navigation-item-contributions";
 
 describe("extension navigation items", () => {
   test("expands named groups by default", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const metadata = {
       navigationItems: [
         {
@@ -16,8 +16,8 @@ describe("extension navigation items", () => {
           group: "Lab",
           label: "Lab",
           action: {
-            kind: "view" as const,
-            view: { extensionId: "pstdio.lab", kind: "view" as const, id: "lab" },
+            kind: "page" as const,
+            page: { extensionId: "pstdio.lab", kind: "page" as const, id: "lab" },
           },
         },
       ],

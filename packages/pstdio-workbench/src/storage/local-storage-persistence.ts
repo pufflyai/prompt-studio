@@ -1,12 +1,8 @@
 import type { PageLocation } from "@pstdio/sdk/extensions";
 import type {
-  LastResourcePersistenceAdapter,
   PersistedTreeRendererStates,
-  PersistedWorkbenchHistory,
   PersistedWorkbenchPanels,
-  ResourceRef,
   TreeRendererPersistenceAdapter,
-  WorkbenchHistoryPersistence,
   WorkbenchPageLocationPersistence,
   WorkbenchPanelsPersistenceAdapter,
   WorkbenchPersistenceAdapter,
@@ -38,19 +34,6 @@ export interface CreateLocalStorageTreePersistenceInput extends CreateWorkbenchS
 export interface CreateLocalStorageWorkbenchPersistenceInput extends CreateWorkbenchStoragePersistenceInput {
   scope?: string;
 }
-
-export const createLocalStorageHistoryPersistence = (
-  input: CreateWorkbenchStoragePersistenceInput,
-): WorkbenchHistoryPersistence => {
-  const storage = resolveStorage(input.storage);
-  return {
-    getHistory: (scope) =>
-      readJson<PersistedWorkbenchHistory>(storage, workbenchStoragePersistenceKey(input.namespace, "history", scope)),
-    setHistory: (history, scope) => {
-      storage.setItem(workbenchStoragePersistenceKey(input.namespace, "history", scope), JSON.stringify(history));
-    },
-  };
-};
 
 interface PersistedWorkbenchPageLocation {
   version: 1;
@@ -113,33 +96,6 @@ export const createLocalStorageTreePersistence = (
   };
 };
 
-export interface CreateLocalStorageLastResourcePersistenceInput extends CreateWorkbenchStoragePersistenceInput {
-  scope?: string;
-}
-
-const isResourceRef = (value: unknown): value is ResourceRef =>
-  Boolean(value) && typeof (value as ResourceRef).kind === "string" && typeof (value as ResourceRef).uri === "string";
-
-export const createLocalStorageLastResourcePersistence = (
-  input: CreateLocalStorageLastResourcePersistenceInput,
-): LastResourcePersistenceAdapter => {
-  const storage = resolveStorage(input.storage);
-  const key = workbenchStoragePersistenceKey(input.namespace, "last-resource", input.scope);
-  return {
-    getLastResource: () => {
-      const parsed = readJson<unknown>(storage, key);
-      return isResourceRef(parsed) ? parsed : undefined;
-    },
-    setLastResource: (resource) => {
-      if (!resource) {
-        storage.removeItem?.(key);
-        return;
-      }
-      storage.setItem(key, JSON.stringify(resource));
-    },
-  };
-};
-
 interface PersistedWorkbenchSidePanel {
   version: 1;
   mode: WorkbenchSidePanelMode;
@@ -190,7 +146,6 @@ export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorage
 
   return {
     snapshotPersistence,
-    historyPersistence: createLocalStorageHistoryPersistence({ namespace: input.namespace, storage }),
     layoutPersistence,
     panelsPersistence: createLocalStoragePanelsPersistence({
       namespace: input.namespace,
@@ -199,11 +154,6 @@ export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorage
     }),
     pageLocationPersistence: createLocalStoragePageLocationPersistence({ namespace: input.namespace, storage }),
     treePersistence: createLocalStorageTreePersistence({ namespace: input.namespace, scope: input.scope, storage }),
-    lastResourcePersistence: createLocalStorageLastResourcePersistence({
-      namespace: input.namespace,
-      scope: input.scope,
-      storage,
-    }),
     sidePanelPersistence: createLocalStorageSidePanelPersistence({
       namespace: input.namespace,
       scope: input.scope,

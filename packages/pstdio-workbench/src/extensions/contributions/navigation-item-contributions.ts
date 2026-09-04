@@ -108,17 +108,7 @@ const registerTrees = (input: RegisterWorkbenchExtensionNavigationItemsInput) =>
       sourceExtensionId: tree.extensionId,
       declarationIndex: input.metadata.navigationItems.length + declarationIndex,
       slot: tree.slot as NavigationTreeSlot,
-      defaultExpandedSectionIds: input.workbench.renderers.getTreeRenderer(viewId)?.defaultExpandedSectionIds,
-      getSections: ({ resource }) =>
-        input.workbench.renderers.getBody(viewId, {
-          resource,
-          viewId,
-        }),
-      getChildren: (node, { resource }) =>
-        input.workbench.renderers.getChildren(viewId, node, {
-          resource,
-          viewId,
-        }),
+      viewId,
     });
   });
 

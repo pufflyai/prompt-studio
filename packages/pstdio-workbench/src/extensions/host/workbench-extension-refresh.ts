@@ -1,11 +1,5 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { text } from "pstdio-extensions/workbench";
-import type {
-  Disposable,
-  FileRendererRefreshEnvelope,
-  WorkbenchModuleContext,
-  WorkbenchPanelInstance,
-} from "../../core";
+import type { Disposable, FileRendererRefreshEnvelope, WorkbenchModuleContext } from "../../core";
 
 export type WorkbenchExtensionRendererKind = "tree" | "file" | "controls" | "dataTable" | "kanban";
 
@@ -29,11 +23,7 @@ export const refreshWorkbenchExtensionRenderer = (
   target: RendererRefreshTarget,
   envelope: FileRendererRefreshEnvelope = {},
 ) => {
-  if (target.kind === "tree") workbench.renderers.refresh(target.id);
-  if (target.kind === "file") workbench.renderers.refreshFileRenderer(target.id, envelope);
-  if (target.kind === "controls") workbench.renderers.refreshControlsRenderer(target.id);
-  if (target.kind === "dataTable") workbench.renderers.refreshDataTableRenderer(target.id);
-  if (target.kind === "kanban") workbench.renderers.refreshKanbanRenderer(target.id);
+  workbench.views.refreshView(target.id, target.kind === "file" ? envelope : undefined);
 };
 
 const rendererRefreshTargets = (metadata: WorkbenchExtensionMetadata) => {
@@ -65,35 +55,12 @@ export const registerWorkbenchExtensionRendererRefreshEvents = (
   });
 };
 
-const findOpenPlacement = (workbench: WorkbenchModuleContext, panelId: string): WorkbenchPanelInstance | undefined => {
-  return workbench.layout.listPanelInstances().find((candidate) => candidate.panelId === panelId);
-};
-
-const restoreActiveWidget = (workbench: WorkbenchModuleContext, panelId: string | undefined) => {
-  if (!panelId) return;
-  try {
-    workbench.layout.activatePanel(panelId);
-  } catch {
-    // The refreshed widget may have been closed by the command.
-  }
-};
-
 export const refreshOpenWorkbenchExtensionWebviews = (
   workbench: WorkbenchModuleContext,
   metadata: WorkbenchExtensionMetadata,
 ) => {
-  const activeWidgetId = workbench.layout.getLayout().activeWidgetId;
-
   for (const view of metadata.views) {
     if (view.body.kind !== "webview") continue;
-    const placement = findOpenPlacement(workbench, view.id);
-    if (!placement) continue;
-    workbench.layout.openPanel(view.id, {
-      resource: placement.resource,
-      title: text(view.title, placement.title),
-      strategy: { kind: "replace-panel", instanceId: placement.instanceId },
-    });
+    if (workbench.views.getView(view.id)) workbench.views.refreshView(view.id);
   }
-
-  restoreActiveWidget(workbench, activeWidgetId);
 };

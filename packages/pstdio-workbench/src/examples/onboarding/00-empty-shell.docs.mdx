@@ -1,18 +1,32 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import { onboardingSources } from "./onboarding-sources";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="0. Empty workbench" />
 
-<Meta of={OnboardingStories} name="0. Empty shell" parameters={{ layout: "padded" }} />
+# 0. Create a workbench
 
-# 0. Start Here
+This guide is for host application developers. It uses the Core API from `@pstdio/workbench`.
 
-`createWorkbenchCore()` builds a workbench. `<Workbench workbench={core} />`
-renders it. With no contributions, it draws nothing — see below.
+`createWorkbench()` creates the platform services. `Workbench` renders those services. An empty workbench has no
+panels because the host and extensions have not contributed anything yet.
 
-<Canvas of={OnboardingStories.EmptyWorkbench} sourceState="shown" />
+Create one workbench for the lifetime of the host view. Render it inside `WorkbenchThemeProvider`.
 
-The rest of these stories add one contribution at a time, in roughly the order
-you'd add them when building a real workbench.
+<Canvas of={OnboardingStories.EmptyWorkbench} sourceState="none" />
+
+## Complete example
+
+<Source code={onboardingSources.emptyWorkbench} language="tsx" />
+
+## What each field means
+
+- `createWorkbench()` creates one workbench service container. Every registration in the later guides goes through
+  this container.
+- The example calls it once at module scope, so the same container lives as long as the host view.
+- `WorkbenchThemeProvider` supplies the theme tokens the workbench components need. Render it once, above the shell.
+- `Workbench` is the React component that renders the shell layout.
+- The `workbench` prop connects the rendered shell to the service container. The shell shows whatever that container
+  holds, which is nothing yet.
+
+The next guide adds a placeholder without changing the shell.

@@ -1,687 +1,101 @@
-import { type PageRef, workbenchPages } from "@pstdio/sdk/extensions";
-import {
-  createWorkbenchBreadcrumbController,
-  type WorkbenchBreadcrumbController,
-} from "./controllers/breadcrumbs/breadcrumb-registry";
-import {
-  createWorkbenchCommandPaletteController,
-  type WorkbenchCommandPaletteController,
-} from "./controllers/command-palette/command-palette-controller";
-import {
-  createWorkbenchCompositionController,
-  type WorkbenchCompositionController,
-} from "./controllers/composition/composition-controller";
-import { createWorkbenchFocusController, type WorkbenchFocusController } from "./controllers/focus/focus-controller";
-import {
-  createHistoryController,
-  type HistoryController,
-  type WorkbenchHistoryPersistence,
-} from "./controllers/history/history-controller";
-import {
-  createWorkbenchLastResourceController,
-  type LastResourcePersistenceAdapter,
-  type WorkbenchLastResourceController,
-} from "./controllers/last-resource/last-resource-controller";
-import { createWorkbenchNavigator, type WorkbenchNavigator } from "./controllers/navigator/workbench-navigator";
+import { workbenchPages } from "@pstdio/sdk/extensions";
+import { createWorkbenchBreadcrumbController } from "./controllers/breadcrumbs/breadcrumb-registry";
+import { createWorkbenchCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
+import { createWorkbenchFocusController } from "./controllers/focus/focus-controller";
 import { connectWorkbenchPageBreadcrumbs } from "./controllers/page-location/page-breadcrumbs";
-import {
-  createWorkbenchPageLocationController,
-  type WorkbenchPageLocationBrowser,
-  type WorkbenchPageLocationController,
-  type WorkbenchPageLocationPersistence,
-} from "./controllers/page-location/page-location-controller";
+import { createWorkbenchPageLocationController } from "./controllers/page-location/page-location-controller";
+import { contextualizeWorkbenchPageTarget } from "./controllers/page-location/page-location-hierarchy";
 import {
   createMemoryWorkbenchPageLocationBrowser,
   createMemoryWorkbenchPageLocationPersistence,
 } from "./controllers/page-location/page-location-memory";
-import { createLiveWorkbenchPageRegistry, defaultPageResourceCodec } from "./controllers/page-runtime/page-runtime";
 import {
-  createWorkbenchPanelsController,
-  type WorkbenchPanelsController,
-  type WorkbenchPanelsPersistenceAdapter,
-} from "./controllers/panels/panels-controller";
-import { createPrimaryCoordinator, createScopedIsInScope } from "./controllers/primary-coordinator/primary-coordinator";
-import {
-  createWorkbenchShellController,
-  isWorkbenchShellOpenRegion,
-  type WorkbenchShellController,
-} from "./controllers/shell/shell-controller";
-import {
-  createWorkbenchSidePanelController,
-  type WorkbenchSidePanelController,
-  type WorkbenchSidePanelMode,
-  type WorkbenchSidePanelPersistenceAdapter,
-} from "./controllers/side-panel/side-panel-controller";
-import {
-  createWorkbenchTerminalController,
-  type WorkbenchTerminalController,
-} from "./controllers/terminal/terminal-controller";
-import {
-  type CommandPaletteResourceRegistry,
-  createCommandPaletteResourceRegistry,
-} from "./registries/command-palette-resources/command-palette-resource-registry";
-import { type CommandRegistry, createCommandRegistry } from "./registries/commands/command-registry";
-import { createKeybindingRegistry, type KeybindingRegistry } from "./registries/keybindings/keybinding-registry";
-import {
-  createLayoutModel,
-  type LayoutModel,
-  type LayoutPersistenceAdapter,
-  type OpenWorkbenchPanelInput,
-  type WorkbenchLayout,
-  type WorkbenchRegion,
-  type WorkbenchWidgetPlacement,
-} from "./registries/layout/layout-model";
+  createLiveWorkbenchPageRegistry,
+  defaultPageResourceCodec,
+  toWorkbenchPageResource,
+} from "./controllers/page-runtime/page-runtime";
+import { createWorkbenchPanelsController } from "./controllers/panels/panels-controller";
+import { createWorkbenchShellController } from "./controllers/shell/shell-controller";
+import { createWorkbenchSidePanelController } from "./controllers/side-panel/side-panel-controller";
+import { createWorkbenchTerminalController } from "./controllers/terminal/terminal-controller";
+import { createCommandPaletteResourceRegistry } from "./registries/command-palette-resources/command-palette-resource-registry";
+import { createCommandRegistry } from "./registries/commands/command-registry";
+import { createKeybindingRegistry } from "./registries/keybindings/keybinding-registry";
+import { createLayoutModel } from "./registries/layout/layout-model";
 import { getActiveLocationPlacement } from "./registries/layout/layout-operations";
-import { createMenuRegistry, type MenuRegistry } from "./registries/menus/menu-registry";
-import {
-  createWorkbenchModePlacementRegistry,
-  type WorkbenchModePlacementRegistry,
-} from "./registries/modes/mode-placement-registry";
-import { createWorkbenchModeRegistry, type WorkbenchModeRegistry } from "./registries/modes/mode-registry";
-import { createNavigationRegistry, type NavigationRegistry } from "./registries/navigation/navigation-registry";
-import {
-  createNavigationTreeRegistry,
-  type NavigationTreeRegistry,
-} from "./registries/navigation/navigation-tree-registry";
-import {
-  createNotificationRegistry,
-  type NotificationRegistry,
-} from "./registries/notifications/notification-registry";
-import type { WorkbenchPageRegistry, WorkbenchPageResourceCodec } from "./registries/pages/page-registry";
-import { getWorkbenchPageRegistryInternals } from "./registries/pages/page-registry-internals";
-import {
-  createPreferenceRegistry,
-  type PreferencePersistenceAdapter,
-  type PreferenceRegistry,
-} from "./registries/preferences/preference-registry";
-import {
-  type ControlsRendererRegistry,
-  createControlsRendererRegistry,
-} from "./registries/renderers/controls-renderer-registry";
-import {
-  createDataTableRendererRegistry,
-  type DataTableRendererRegistry,
-} from "./registries/renderers/data-table-renderer-registry";
-import { createFileRendererRegistry, type FileRendererRegistry } from "./registries/renderers/file-renderer-registry";
-import {
-  createKanbanRendererRegistry,
-  type KanbanRendererRegistry,
-} from "./registries/renderers/kanban-renderer-registry";
-import {
-  type CreateWorkbenchRendererRegistryInput,
-  createWorkbenchRendererRegistry,
-  type WorkbenchRendererRegistry,
-} from "./registries/renderers/renderer-registry";
-import {
-  createTreeRendererRegistry,
-  type TreeRendererPersistenceAdapter,
-  type TreeRendererRegistry,
-} from "./registries/renderers/tree-renderer-registry";
-import {
-  createResourceRegistry,
-  type ResourceRef,
-  type ResourceRegistry,
-} from "./registries/resources/resource-registry";
-import { createSettingsRegistry, type SettingsRegistry } from "./registries/settings/settings-registry";
-import { createStatusBarRegistry, type WorkbenchStatusBarRegistry } from "./registries/status-bar/status-bar-registry";
-import { createStatusRegistry, type WorkbenchStatusRegistry } from "./registries/statuses/status-registry";
-import { createFileIconThemeRegistry, type FileIconThemeRegistry } from "./registries/themes/file-icon-theme-registry";
-import { createThemeRegistry, type ThemeRegistry } from "./registries/themes/theme-registry";
-import {
-  createViewRegistry,
-  type WorkbenchViewRegistry,
-  workbenchViewIdContextKey,
-} from "./registries/views/view-registry";
-import { type ContextKeyService, createContextKeyService } from "./shared/context/context-key-service";
-import type { ContributionMetadata, ContributionSource } from "./shared/contributions/metadata";
+import type { WorkbenchWidgetPlacement } from "./registries/layout/layout-types";
+import { createMenuRegistry } from "./registries/menus/menu-registry";
+import { createWorkbenchModePlacementRegistry } from "./registries/modes/mode-placement-registry";
+import { createWorkbenchModeRegistry } from "./registries/modes/mode-registry";
+import { createNavigationTreeRegistry } from "./registries/navigation/navigation-tree-registry";
+import { createNotificationRegistry } from "./registries/notifications/notification-registry";
+import { createWorkbenchOverlayRegistry } from "./registries/overlays/overlay-registry";
+import type { WorkbenchPageRegistryStoreState, WorkbenchPageResourceCodec } from "./registries/pages/page-registry";
+import { createWorkbenchPlaceholderRegistry } from "./registries/placeholders/placeholder-registry";
+import { createWorkbenchShellPlacementRegistry } from "./registries/placements/shell-placement-registry";
+import { createPreferenceRegistry } from "./registries/preferences/preference-registry";
+import { createResourceRegistry } from "./registries/resources/resource-registry";
+import { createSettingsRegistry } from "./registries/settings/settings-registry";
+import { createStatusBarRegistry } from "./registries/status-bar/status-bar-registry";
+import { createStatusRegistry } from "./registries/statuses/status-registry";
+import { createFileIconThemeRegistry } from "./registries/themes/file-icon-theme-registry";
+import { createThemeRegistry } from "./registries/themes/theme-registry";
+import { createWorkbenchViewMenuRegistry } from "./registries/view-menus/view-menu-registry";
+import { createWorkbenchViewBodyRegistration } from "./registries/views/view-body-registration";
+import { createViewRegistry } from "./registries/views/view-registry";
+import { createContextKeyService } from "./shared/context/context-key-service";
 import type { Disposable } from "./shared/disposable";
 import { createDisposable } from "./shared/disposable";
-import { registerWorkbenchBuiltIns } from "./workbench-built-ins";
+import {
+  activeWorkbenchResource,
+  connectWorkbenchCoreState,
+  createCoreCompositionController,
+  primaryWorkbenchResource,
+} from "./workbench-core-connections";
+import { createCoreNavigationRegistry } from "./workbench-core-navigation";
+import { createCoreRenderers } from "./workbench-core-renderers";
+import type { createWorkbenchInput, WorkbenchCore } from "./workbench-core-types";
+import { createModuleContext, disposeDisposables, toDisposables } from "./workbench-module-context";
+import { setWorkbenchRenderers } from "./workbench-renderers";
 
-// The workbench layout namespace owns both spatial placements (widgets,
-// placeholders) and command-to-menu-path bindings. Menus collapsed into layout
-// because a menu item is just another "bind X to a place" contribution.
-export type WorkbenchLayoutModel = LayoutModel & MenuRegistry;
+export * from "./workbench-core-types";
 
-// Extension modules place declared views. Widget registration is an internal
-// implementation detail used by the workbench's renderer and panel registries.
-export type WorkbenchModuleLayoutModel = Omit<WorkbenchLayoutModel, "registerWidget">;
-
-// The renderer namespace owns content-producing registrations. Tree renderers
-// and kanban renderers live here too: each connects its content to an internal
-// view-backed widget renderer.
-export type WorkbenchRenderers = WorkbenchRendererRegistry &
-  TreeRendererRegistry &
-  KanbanRendererRegistry &
-  DataTableRendererRegistry &
-  FileRendererRegistry &
-  ControlsRendererRegistry;
-
-export interface WorkbenchCoreContributionContext {
-  breadcrumbs: WorkbenchBreadcrumbController;
-  commandPalette: WorkbenchCommandPaletteController;
-  commandPaletteResources: CommandPaletteResourceRegistry;
-  commands: CommandRegistry;
-  composition: WorkbenchCompositionController;
-  context: ContextKeyService;
-  focus: WorkbenchFocusController;
-  history: HistoryController;
-  keybindings: KeybindingRegistry;
-  lastResource: WorkbenchLastResourceController;
-  layout: WorkbenchModuleLayoutModel;
-  modes: WorkbenchModeRegistry;
-  modePlacements: WorkbenchModePlacementRegistry;
-  navigation: NavigationRegistry;
-  navigationTrees: NavigationTreeRegistry;
-  navigator: WorkbenchNavigator;
-  notifications: NotificationRegistry;
-  pageLocations: WorkbenchPageLocationController;
-  pages: WorkbenchPageRegistry<WorkbenchWidgetPlacement>;
-  panels: WorkbenchPanelsController;
-  preferences: PreferenceRegistry;
-  renderers: WorkbenchRenderers;
-  resources: ResourceRegistry;
-  views: WorkbenchViewRegistry;
-  settings: SettingsRegistry;
-  statusBar: WorkbenchStatusBarRegistry;
-  statuses: WorkbenchStatusRegistry;
-  shell: WorkbenchShellController;
-  sidePanel: WorkbenchSidePanelController;
-  terminal: WorkbenchTerminalController;
-  themes: ThemeRegistry;
-  fileIconThemes: FileIconThemeRegistry;
-  // The resource hosted by the primary (main) anchor specifically — free of the global
-  // active-resource pollution that any side-region activation introduces. Projections
-  // (side panels, headers) follow this signal, not the global active resource.
-  getPrimaryResource(): ResourceRef | undefined;
-  onDidChangePrimaryResource(listener: (resource: ResourceRef | undefined) => void): Disposable;
-  // The globally-focused resource — includes side-anchor selections. Extension hosts
-  // (command palette, etc.) read this so they reflect whatever the user is acting on.
-  getActiveResource(): ResourceRef | undefined;
-  onDidChangeActiveResource(listener: (resource: ResourceRef | undefined) => void): Disposable;
-  registerChildModule(module: WorkbenchModuleContribution): Disposable;
-}
-
-export interface WorkbenchSnapshot {
-  layout: WorkbenchLayout;
-}
-
-export interface WorkbenchPersistenceAdapter {
-  getSnapshot(scope?: string): WorkbenchSnapshot | undefined;
-  setSnapshot(snapshot: WorkbenchSnapshot, scope?: string): void;
-  flush?(): void;
-  dispose?(): void;
-}
-
-export interface WorkbenchHost {
-  getSnapshot(): WorkbenchSnapshot;
-  restoreSnapshot(snapshot: WorkbenchSnapshot): void;
-  setPersistenceScope(scope: string | undefined, input?: { carryRegions?: readonly WorkbenchRegion[] }): void;
-  getPersistenceScope(): string | undefined;
-}
-
-export interface WorkbenchCore extends WorkbenchCoreContributionContext {
-  host: WorkbenchHost;
-  layout: WorkbenchLayoutModel;
-  registerModule(module: WorkbenchModuleContribution): Disposable;
-  unregisterModule(moduleId: string): void;
-}
-
-export type WorkbenchModuleContext = WorkbenchCoreContributionContext;
-
-export type WorkbenchModuleContributionContext = WorkbenchModuleContext;
-
-export interface CreateWorkbenchCoreInput {
-  // Whether a detached anchor's resource still belongs to the active primary's scope.
-  // Defaults to keeping detached anchors; apps wire this once scoped providers exist.
-  isInScope?: (resource: ResourceRef, primary: ResourceRef | undefined) => boolean;
-  layoutPersistence?: LayoutPersistenceAdapter;
-  pageLocationBrowser?: WorkbenchPageLocationBrowser;
-  pageLocationPersistence?: WorkbenchPageLocationPersistence;
-  pageResources?: WorkbenchPageResourceCodec;
-  persistence?: WorkbenchPersistenceAdapter;
-  historyPersistence?: WorkbenchHistoryPersistence;
-  preferencePersistence?: PreferencePersistenceAdapter;
-  treePersistence?: TreeRendererPersistenceAdapter;
-  panelsPersistence?: WorkbenchPanelsPersistenceAdapter;
-  defaultPanelOpenByRegionId?: Partial<Record<WorkbenchRegion, boolean>>;
-  lastResourcePersistence?: LastResourcePersistenceAdapter;
-  sidePanelPersistence?: WorkbenchSidePanelPersistenceAdapter;
-  initialSidePanelMode?: WorkbenchSidePanelMode;
-  renderers?: CreateWorkbenchRendererRegistryInput;
-  startPage?: PageRef;
-}
-
-type WorkbenchModuleActivationResult = Disposable | readonly Disposable[] | undefined;
-
-export interface WorkbenchModuleContribution {
-  id: string;
-  source?: ContributionSource;
-  ownerId?: string;
-  activate(ctx: WorkbenchModuleContributionContext): WorkbenchModuleActivationResult;
-}
-
-const withModuleMetadata = (
-  input: { ownerId: string; source: ContributionSource },
-  metadata?: ContributionMetadata,
-) => ({
-  ...metadata,
-  source: input.source,
-  ownerId: input.ownerId,
-});
-
-const toDisposables = (result: WorkbenchModuleActivationResult) => {
-  if (!result) return [] as Disposable[];
-  return Array.isArray(result) ? [...result] : [result as Disposable];
-};
-
-const disposeDisposables = (disposables: Disposable[]) => {
-  for (let index = disposables.length - 1; index >= 0; index -= 1) {
-    disposables[index]?.dispose();
-  }
-};
-
-interface CreateModuleContextInput {
-  ownerId: string;
-  source: ContributionSource;
-  track(disposable: Disposable): void;
-}
-
-const createModuleContext = (core: WorkbenchCore, input: CreateModuleContextInput) => {
-  const contextScope = core.context.createScope(input.ownerId);
-  input.track(contextScope);
-
-  const track = <TDisposable extends Disposable>(disposable: TDisposable) => {
-    input.track(disposable);
-    return disposable;
+const createPagePersistenceScopeHandler = (
+  input: createWorkbenchInput,
+  layout: Pick<ReturnType<typeof createLayoutModel>, "getPersistenceScope" | "setPersistenceScope">,
+  panels: ReturnType<typeof createWorkbenchPanelsController>,
+  pageResources: WorkbenchPageResourceCodec,
+) => {
+  const resolveScope = input.resolvePagePersistenceScope;
+  if (!resolveScope) return undefined;
+  return (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) => {
+    const resolved = resolveScope({
+      currentScope: layout.getPersistenceScope(),
+      modeId: state.activeModeId,
+      pageId: state.activePageId,
+      projectId: state.projectId,
+      resource: state.location?.resource ? toWorkbenchPageResource(state.location.resource, pageResources) : undefined,
+    });
+    panels.setPersistenceScope(resolved.scope);
+    layout.setPersistenceScope(resolved.scope, { carryRegionState: resolved.carryRegions });
   };
-
-  const { registerWidget: _registerWidget, ...moduleLayout } = core.layout;
-
-  const context = {
-    ...core,
-    registerChildModule: (module) => track(core.registerModule(module)),
-    onDidChangePrimaryResource: (listener: (resource: ResourceRef | undefined) => void) =>
-      track(core.onDidChangePrimaryResource(listener)),
-    onDidChangeActiveResource: (listener: (resource: ResourceRef | undefined) => void) =>
-      track(core.onDidChangeActiveResource(listener)),
-    breadcrumbs: {
-      ...core.breadcrumbs,
-      setItems: (items) => track(core.breadcrumbs.setItems(items)),
-      onDidChange: (listener) => track(core.breadcrumbs.onDidChange(listener)),
-    },
-    commandPalette: {
-      ...core.commandPalette,
-      onDidChange: (listener) => track(core.commandPalette.onDidChange(listener)),
-    },
-    context: {
-      ...core.context,
-      set: (key, value) => contextScope.set(key, value),
-      delete: (key) => contextScope.delete(key),
-      createScope: (ownerId) => track(core.context.createScope(ownerId)),
-    },
-    focus: {
-      ...core.focus,
-      onDidChange: (listener) => track(core.focus.onDidChange(listener)),
-    },
-    commands: {
-      ...core.commands,
-      registerCommand: (command, handler, metadata) =>
-        track(core.commands.registerCommand(command, handler, withModuleMetadata(input, metadata))),
-      onDidExecuteError: (listener) => track(core.commands.onDidExecuteError(listener)),
-    },
-    keybindings: {
-      ...core.keybindings,
-      registerKeybinding: (keybinding, metadata) =>
-        track(core.keybindings.registerKeybinding(keybinding, withModuleMetadata(input, metadata))),
-    },
-    lastResource: { ...core.lastResource },
-    navigator: core.navigator,
-    layout: {
-      ...moduleLayout,
-      openPanel: (id, openInput) => {
-        const instance = core.layout.openPanel(id, openInput);
-        track(createDisposable(() => core.layout.removeWidgetPlacement(instance.instanceId)));
-        return instance;
-      },
-      openWidget: (id, openInput) => {
-        const placement = core.layout.openWidget(id, {
-          ...openInput,
-          ownerId: input.ownerId,
-          source: input.source,
-        });
-        track(createDisposable(() => core.layout.removeWidgetPlacement(placement.widgetId)));
-        return placement;
-      },
-      registerPlaceholder: (placeholder, metadata) =>
-        track(core.layout.registerPlaceholder(placeholder, withModuleMetadata(input, metadata))),
-      registerPanel: (panel, metadata) => track(core.layout.registerPanel(panel, withModuleMetadata(input, metadata))),
-      registerLocation: (location, metadata) =>
-        track(core.layout.registerLocation(location, withModuleMetadata(input, metadata))),
-      registerSubPanel: (subPanel, metadata) =>
-        track(core.layout.registerSubPanel(subPanel, withModuleMetadata(input, metadata))),
-      registerPanelMenu: (panelMenu, metadata) =>
-        track(core.layout.registerPanelMenu(panelMenu, withModuleMetadata(input, metadata))),
-      registerMenuItem: (path, item, metadata) =>
-        track(core.layout.registerMenuItem(path, item, withModuleMetadata(input, metadata))),
-      onWillChangePersistenceScope: (listener) => track(core.layout.onWillChangePersistenceScope(listener)),
-      onDidChangePersistenceScope: (listener) => track(core.layout.onDidChangePersistenceScope(listener)),
-    },
-    modes: {
-      ...core.modes,
-      registerMode: (mode) =>
-        track(
-          core.modes.registerMode({
-            ...mode,
-            activate: () => {
-              const modeDisposables: Disposable[] = [];
-              const modeContext = createModuleContext(core, {
-                ...input,
-                track: (disposable) => {
-                  modeDisposables.push(disposable);
-                },
-              });
-              const returnedDisposables = toDisposables(mode.activate(modeContext));
-              return createDisposable(() => disposeDisposables([...modeDisposables, ...returnedDisposables]));
-            },
-          }),
-        ),
-      onDidChangeActive: (listener) => track(core.modes.onDidChangeActive(listener)),
-    },
-    modePlacements: {
-      ...core.modePlacements,
-      registerPlacement: (placement) => track(core.modePlacements.registerPlacement(placement)),
-      onDidChange: (listener) => track(core.modePlacements.onDidChange(listener)),
-    },
-    navigation: {
-      ...core.navigation,
-      registerNavigator: (navigator, metadata) =>
-        track(core.navigation.registerNavigator(navigator, withModuleMetadata(input, metadata))),
-      registerParser: (parser, metadata) =>
-        track(core.navigation.registerParser(parser, withModuleMetadata(input, metadata))),
-    },
-    navigationTrees: {
-      ...core.navigationTrees,
-      registerContribution: (contribution) => track(core.navigationTrees.registerContribution(contribution)),
-      onDidChange: (listener) => track(core.navigationTrees.onDidChange(listener)),
-    },
-    notifications: {
-      ...core.notifications,
-      show: (notification, metadata) => core.notifications.show(notification, withModuleMetadata(input, metadata)),
-    },
-    pages: {
-      ...core.pages,
-      registerPage: (page) => track(core.pages.registerPage(page)),
-    },
-    panels: {
-      ...core.panels,
-      onDidChange: (listener) => track(core.panels.onDidChange(listener)),
-    },
-    preferences: {
-      ...core.preferences,
-      registerSchema: (schema, metadata) =>
-        track(core.preferences.registerSchema(schema, withModuleMetadata(input, metadata))),
-    },
-    renderers: {
-      ...core.renderers,
-      registerRenderer: (renderer) => track(core.renderers.registerRenderer(renderer)),
-      registerTreeRenderer: (view, metadata) =>
-        track(core.renderers.registerTreeRenderer(view, withModuleMetadata(input, metadata))),
-      registerKanbanRenderer: (contribution, metadata) =>
-        track(core.renderers.registerKanbanRenderer(contribution, withModuleMetadata(input, metadata))),
-      registerDataTableRenderer: (contribution, metadata) =>
-        track(core.renderers.registerDataTableRenderer(contribution, withModuleMetadata(input, metadata))),
-      registerFileRenderer: (contribution, metadata) =>
-        track(core.renderers.registerFileRenderer(contribution, withModuleMetadata(input, metadata))),
-      registerControlsRenderer: (contribution, metadata) =>
-        track(core.renderers.registerControlsRenderer(contribution, withModuleMetadata(input, metadata))),
-      onDidChange: (listener) => track(core.renderers.onDidChange(listener)),
-      onDidRefresh: (listener) => track(core.renderers.onDidRefresh(listener)),
-    },
-    resources: {
-      ...core.resources,
-      registerKind: (kind, metadata) => track(core.resources.registerKind(kind, withModuleMetadata(input, metadata))),
-      registerHierarchyProvider: (provider) => track(core.resources.registerHierarchyProvider(provider)),
-      registerPresenter: (presenter) => track(core.resources.registerPresenter(presenter)),
-      registerProvider: (provider) => track(core.resources.registerProvider(provider)),
-      onDidOpenResource: (listener) => track(core.resources.onDidOpenResource(listener)),
-    },
-    views: {
-      ...core.views,
-      registerView: (view, metadata) => track(core.views.registerView(view, withModuleMetadata(input, metadata))),
-      onDidOpenView: (listener) => track(core.views.onDidOpenView(listener)),
-    },
-    settings: {
-      ...core.settings,
-      registerSection: (section, metadata) =>
-        track(core.settings.registerSection(section, withModuleMetadata(input, metadata))),
-      registerPanel: (panel, metadata) =>
-        track(core.settings.registerPanel(panel, withModuleMetadata(input, metadata))),
-    },
-    statusBar: {
-      ...core.statusBar,
-      registerItem: (item) => track(core.statusBar.registerItem(item)),
-    },
-    statuses: {
-      ...core.statuses,
-      registerStatusSet: (statusSet, metadata) =>
-        track(core.statuses.registerStatusSet(statusSet, withModuleMetadata(input, metadata))),
-    },
-    shell: {
-      ...core.shell,
-      onDidChange: (listener) => track(core.shell.onDidChange(listener)),
-    },
-    sidePanel: {
-      ...core.sidePanel,
-      onDidChange: (listener) => track(core.sidePanel.onDidChange(listener)),
-    },
-    themes: {
-      ...core.themes,
-      register: (themes) => track(core.themes.register(themes)),
-    },
-    fileIconThemes: {
-      ...core.fileIconThemes,
-      register: (themes) => track(core.fileIconThemes.register(themes)),
-    },
-  } satisfies WorkbenchModuleContributionContext;
-
-  return context;
 };
 
-const createCoreCompositionController = (core: WorkbenchCore) =>
-  createWorkbenchCompositionController({
-    getActiveMode: () => {
-      const modeId = core.modes.getActiveModeId();
-      return modeId ? core.modes.getMode(modeId) : undefined;
-    },
-    getLayout: core.layout.getLayout,
-    getResource: core.getPrimaryResource,
-    listWidgets: core.layout.listWidgets,
-  });
-
-const connectWorkbenchCoreState = (core: WorkbenchCore, input: CreateWorkbenchCoreInput) => {
-  const syncPanelChrome = () => {
-    for (const region of Object.values(core.layout.getLayout().regions)) {
-      if (isWorkbenchShellOpenRegion(region.id)) core.panels.setOpen(region.id, region.visible);
-    }
-  };
-
-  core.layout.store.subscribe((state) => {
-    const activeRegion = core.focus.getActiveRegion();
-    if (activeRegion && !state.layout.regions[activeRegion].visible) core.focus.clearFocus();
-    // Region visibility belongs to the layout. The panels controller is only the
-    // chrome-facing projection and must follow every layout transaction, including
-    // page reconciliation and persistence restoration.
-    syncPanelChrome();
-  });
-  syncPanelChrome();
-  core.layout.store.subscribeSelector(
-    (state) => {
-      const activeId = state.layout.activeWidgetId;
-      if (!activeId) return undefined;
-      return Object.values(state.layout.regions)
-        .flatMap((region) => region.widgets)
-        .find((placement) => placement.widgetId === activeId)?.viewId;
-    },
-    (viewId) => {
-      if (viewId) core.context.set(workbenchViewIdContextKey, viewId);
-      else core.context.delete(workbenchViewIdContextKey);
-    },
-    { fireImmediately: true },
-  );
-
-  // Supporting selections such as Side Panel sessions do not replace the main subject.
-  core.onDidChangePrimaryResource((resource) => {
-    if (resource) core.lastResource.set(resource);
-  });
-
-  createPrimaryCoordinator({
-    layout: core.layout,
-    isInScope: input.isInScope ?? createScopedIsInScope(core.resources),
-  });
-  registerWorkbenchBuiltIns(core);
-};
-
-const createCoreNavigationRegistry = (
-  resolveCore: () => WorkbenchCore,
-  openPanel: WorkbenchCore["layout"]["openPanel"],
-) =>
-  createNavigationRegistry({
-    resolveDispatcher: () => {
-      const core = resolveCore();
-      return {
-        createCheckpoint: () => {
-          // The checkpoint covers the navigation state the workbench owns:
-          // layout, history, and breadcrumbs. Side effects of commands that
-          // already executed belong to their extensions and cannot be undone.
-          const layout = core.layout.getLayout();
-          const restoreHistory = core.history.createCheckpoint();
-          const breadcrumbs = core.breadcrumbs.getItems();
-          return () => {
-            core.layout.restoreLayout(layout);
-            restoreHistory();
-            if (breadcrumbs) core.breadcrumbs.setItems(breadcrumbs);
-            else core.breadcrumbs.clearItems();
-          };
-        },
-        canOpenResource: (resource) => {
-          const state = core.resources.store.getState();
-          return Boolean(
-            state.kinds[resource.kind] &&
-              Object.values(state.presenters).some((presenter) => presenter.canOpen(resource)),
-          );
-        },
-        canOpenPanel: (panelId) => Boolean(core.layout.getPanel(panelId)),
-        canOpenView: (viewId) => core.views.canResolveView(viewId),
-        canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
-        openResource: (resource, openInput) => core.resources.openResource(resource, openInput),
-        openPanel,
-        openPageTarget: (target) => {
-          const result = core.pageLocations.navigate(target);
-          if (!result.ok) throw new Error(result.diagnostic.message);
-          return result;
-        },
-        openView: (viewId, openInput) => core.views.openView(viewId, openInput),
-        executeCommand: (commandId, args) => core.commands.executeCommand(commandId, args),
-        openHref: (href) => globalThis.open(href, "_blank", "noopener,noreferrer"),
-      };
-    },
-  });
-
-const createCorePanelOpener =
-  (input: {
-    layout: Pick<LayoutModel, "getPanel" | "openPanel">;
-    establishLocation(instanceId: string): ReturnType<LayoutModel["openPanel"]>;
-    shell: WorkbenchShellController;
-  }) =>
-  (panelId: string, openInput: OpenWorkbenchPanelInput = {}) => {
-    const opened = input.layout.openPanel(panelId, openInput);
-    const instance = openInput.viewId ? input.establishLocation(opened.instanceId) : opened;
-    const panel = input.layout.getPanel(panelId);
-    const region = openInput.region ?? panel?.region;
-    if (region) {
-      if (region === "side") input.shell.setSidePanelPresentation("attached");
-      else if (isWorkbenchShellOpenRegion(region)) input.shell.setRegionOpen(region, true);
-    }
-    return instance;
-  };
-
-const connectCoreServices = (input: {
-  core: WorkbenchCore;
-  createInput: CreateWorkbenchCoreInput;
-  establishLocation: ReturnType<typeof createLayoutModel>["establishLocation"];
-  pageResources: WorkbenchPageResourceCodec;
-}) => {
-  const { core, createInput, establishLocation, pageResources } = input;
-  core.modes = createWorkbenchModeRegistry({
-    establishLocation: (instanceId) => establishLocation(instanceId),
-    resolveContext: () => core,
-  });
-  core.pages = createLiveWorkbenchPageRegistry({
-    layout: core.layout,
-    modePlacements: core.modePlacements,
-    modes: core.modes,
-    views: core.views,
-    resources: pageResources,
-  });
-  core.pageLocations = createWorkbenchPageLocationController({
-    registry: core.pages,
-    browser: createInput.pageLocationBrowser ?? createMemoryWorkbenchPageLocationBrowser(),
-    persistence: createInput.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
-    startPage: createInput.startPage ?? workbenchPages.start,
-  });
-  connectWorkbenchPageBreadcrumbs({
-    breadcrumbs: core.breadcrumbs,
-    locations: core.pageLocations,
-    pages: core.pages,
-    pageResources,
-    resources: core.resources,
-    views: core.views,
-  });
-  core.navigator = createWorkbenchNavigator({
-    modes: core.modes,
-    getSelectedResource: () => core.getPrimaryResource(),
-    presentResource: (resource, present) => core.resources.openResource(resource, present),
-  });
-  core.composition = createCoreCompositionController(core);
-  core.history = createHistoryController({
-    layout: core.layout,
-    modes: core.modes,
-    resources: core.resources,
-    views: core.views,
-    getPageLocation: () => getWorkbenchPageRegistryInternals(core.pages).getPublishingState().location,
-    canResolvePage: (page) =>
-      core.pages
-        .listPages()
-        .some((candidate) => candidate.ref.id === page.id && candidate.ref.extensionId === page.extensionId),
-    replayPageLocation: (location) => core.pageLocations.replay(location),
-    persistence: createInput.historyPersistence,
-    commitNavigation: (commit) => core.navigator.commitContext(commit),
-  });
-  core.navigation.registerParser({
-    id: "workbench.views.paths",
-    priority: 1_000,
-    canParse: (location) => Boolean(core.views.resolvePath(location)),
-    parse: (location) => core.views.resolvePath(location)!,
-  });
-  connectWorkbenchCoreState(core, createInput);
-};
-
-export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
+export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const context = createContextKeyService();
   const commands = createCommandRegistry({ context });
   const moduleRecords = new Map<string, { disposable: Disposable }>();
-  const rendererRegistry = createWorkbenchRendererRegistry(input.renderers);
-  const treeRendererRegistry = createTreeRendererRegistry({
-    rendererRegistry,
-    persistence: input.treePersistence,
-  });
-  const kanbanRendererRegistry = createKanbanRendererRegistry({ rendererRegistry });
-  const dataTableRendererRegistry = createDataTableRendererRegistry({ rendererRegistry });
-  const fileRendererRegistry = createFileRendererRegistry({ rendererRegistry });
-  const controlsRendererRegistry = createControlsRendererRegistry({ rendererRegistry });
+  const renderers = createCoreRenderers(input);
+
   const locationAwareLayout = createLayoutModel({
     defaultRegionVisibility: input.defaultPanelOpenByRegionId,
+    // The active mode owns region policy; the host input is the fallback. Resolved
+    // lazily because the mode registry is created after the layout model.
+    getRegionSettings: (regionId) => {
+      const activeModeId = core?.modes.getActiveModeId();
+      const activeMode = activeModeId ? core?.modes.getMode(activeModeId) : undefined;
+      return activeMode?.regionSettings?.[regionId] ?? input.regionSettings?.[regionId];
+    },
     persistence: input.persistence
       ? {
           getLayout: (scope) => input.persistence?.getSnapshot(scope)?.layout,
@@ -691,32 +105,109 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
         }
       : input.layoutPersistence,
   });
+
   const { establishLocation, ...layoutModel } = locationAwareLayout;
+
   const layout = {
     ...layoutModel,
     ...createMenuRegistry({ commands }),
   };
+
   const focus = createWorkbenchFocusController({
     context,
     isRegionFocusable: (region) => layout.getLayout().regions[region].visible,
   });
+
   const sidePanel = createWorkbenchSidePanelController({
     initialMode: input.initialSidePanelMode,
     persistence: input.sidePanelPersistence,
   });
-  const shell = createWorkbenchShellController({ layout, sidePanel });
-  const openPanel = createCorePanelOpener({ layout, establishLocation, shell });
-  const views = createViewRegistry({ getPanel: layout.getPanel, openPanel });
-  const pageResources = input.pageResources ?? defaultPageResourceCodec;
-  const modePlacements = createWorkbenchModePlacementRegistry({ views });
-  const statusBar = createStatusBarRegistry({ hasView: (viewId) => Boolean(views.getView(viewId)) });
-  const navigationTrees = createNavigationTreeRegistry();
 
-  const core: WorkbenchCore = {
-    breadcrumbs: createWorkbenchBreadcrumbController(),
+  const shell = createWorkbenchShellController({ layout, sidePanel });
+  const views = createViewRegistry({ registerBody: createWorkbenchViewBodyRegistration(renderers) });
+  const viewMenus = createWorkbenchViewMenuRegistry({ views });
+  const pageResources = input.pageResources ?? defaultPageResourceCodec;
+
+  const modePlacements = createWorkbenchModePlacementRegistry({
+    views,
+    viewMenus,
+    getPanel: layout.getWidget,
+    registerPanel: layout,
+  });
+
+  const shellPlacements = createWorkbenchShellPlacementRegistry({
+    views,
+    viewMenus,
+    getPanel: layout.getWidget,
+    registerPanel: layout,
+    activatePanel: layout.activatePanel,
+    getLayout: layout.getLayout,
+    enteredWithPersistedLayout: layout.enteredWithPersistedLayout,
+    onDidChangePersistenceScope: layout.onDidChangePersistenceScope,
+  });
+
+  const statusBar = createStatusBarRegistry({ hasView: (viewId) => Boolean(views.getView(viewId)) });
+
+  const navigationTrees = createNavigationTreeRegistry({
+    getViewDefaultExpandedSectionIds: (viewId) => renderers.getTreeRenderer(viewId)?.defaultExpandedSectionIds,
+    getViewSections: (viewId, context) => renderers.getBody(viewId, { ...context, viewId }),
+    getViewChildren: (viewId, node, context) => renderers.getChildren(viewId, node, { ...context, viewId }),
+  });
+
+  const overlays = createWorkbenchOverlayRegistry({ layout, views, viewMenus });
+  const placeholders = createWorkbenchPlaceholderRegistry({ layout, views });
+  const breadcrumbs = createWorkbenchBreadcrumbController();
+  const panels = createWorkbenchPanelsController({
+    defaultOpenByRegionId: input.defaultPanelOpenByRegionId,
+    persistence: input.panelsPersistence,
+  });
+
+  const resources = createResourceRegistry({
+    getPrimary: () => getActiveLocationPlacement(layout.getLayout())?.resource,
+    resolveView: views.getView,
+  });
+
+  let core: WorkbenchCore;
+
+  const modes = createWorkbenchModeRegistry({
+    establishLocation,
+    layout,
+    resolveContext: () => core,
+  });
+
+  const pages = createLiveWorkbenchPageRegistry({
+    beforeApply: createPagePersistenceScopeHandler(input, layout, panels, pageResources),
+    layout,
+    modePlacements,
+    modes,
+    shellPlacements,
+    views,
+    viewMenus,
+    resources: pageResources,
+  });
+
+  const pageLocations = createWorkbenchPageLocationController({
+    registry: pages,
+    browser: input.pageLocationBrowser ?? createMemoryWorkbenchPageLocationBrowser(),
+    persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
+    startPage: input.startPage ?? workbenchPages.start,
+    contextualizeTarget: (target) =>
+      contextualizeWorkbenchPageTarget({
+        target,
+        pages: pages.listPages(),
+        registry: resources,
+        resources: pageResources,
+      }),
+  });
+
+  const composition = createCoreCompositionController(() => core);
+  const navigation = createCoreNavigationRegistry(() => core, pageResources);
+
+  core = {
+    breadcrumbs,
     commandPalette: createWorkbenchCommandPaletteController(),
     commands,
-    composition: undefined as unknown as WorkbenchCompositionController,
+    composition,
     context,
     focus,
     host: {
@@ -726,42 +217,31 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
         layout.setPersistenceScope(scope, { carryRegionState: scopeInput.carryRegions }),
       getPersistenceScope: layout.getPersistenceScope,
     },
-    history: undefined as unknown as HistoryController,
     keybindings: createKeybindingRegistry({ commands, context }),
-    lastResource: createWorkbenchLastResourceController({
-      persistence: input.lastResourcePersistence,
-      openResource: (resource) => core.resources.openResource(resource, { replaceActive: true }),
-    }),
     layout,
-    modes: undefined as unknown as WorkbenchModeRegistry,
+    modes,
     modePlacements,
-    navigator: undefined as unknown as WorkbenchNavigator,
+    shellPlacements,
     notifications: createNotificationRegistry(),
-    pageLocations: undefined as unknown as WorkbenchPageLocationController,
-    pages: undefined as unknown as WorkbenchPageRegistry<WorkbenchWidgetPlacement>,
-    navigation: createCoreNavigationRegistry(() => core, openPanel),
+    overlays,
+    placeholders,
+    pageLocations,
+    pages,
+    navigation,
     navigationTrees,
-    panels: createWorkbenchPanelsController({
-      defaultOpenByRegionId: input.defaultPanelOpenByRegionId,
-      persistence: input.panelsPersistence,
-    }),
+    panels,
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
-    renderers: {
-      ...rendererRegistry,
-      ...treeRendererRegistry,
-      ...kanbanRendererRegistry,
-      ...dataTableRendererRegistry,
-      ...fileRendererRegistry,
-      ...controlsRendererRegistry,
+    treeViews: {
+      getTreeState: renderers.getTreeState,
+      setNodeExpanded: renderers.setNodeExpanded,
+      setSectionExpanded: renderers.setSectionExpanded,
+      setSelectedNode: renderers.setSelectedNode,
     },
     commandPaletteResources: createCommandPaletteResourceRegistry(),
-    resources: createResourceRegistry({
-      getPrimary: () => getActiveLocationPlacement(core.layout.getLayout())?.resource,
-      establishLocation: (instance) => establishLocation(instance.instanceId),
-      resolveView: (viewId) => core.views.getView(viewId),
-    }),
+    resources,
     views,
-    settings: createSettingsRegistry(),
+    viewMenus,
+    settings: createSettingsRegistry({ hasView: (viewId) => Boolean(views.getView(viewId)) }),
     statusBar,
     statuses: createStatusRegistry(),
     shell,
@@ -771,15 +251,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     fileIconThemes: createFileIconThemeRegistry(),
 
     getActiveResource() {
-      const activeWidgetId = core.layout.getLayout().activeWidgetId;
-      if (!activeWidgetId) return undefined;
-
-      for (const region of Object.values(core.layout.getLayout().regions)) {
-        const placement = region.widgets.find((candidate) => candidate.widgetId === activeWidgetId);
-        if (placement) return placement.resource;
-      }
-
-      return undefined;
+      return activeWorkbenchResource(core);
     },
 
     onDidChangeActiveResource(listener) {
@@ -792,7 +264,7 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     },
 
     getPrimaryResource() {
-      return getActiveLocationPlacement(core.layout.getLayout())?.resource;
+      return primaryWorkbenchResource(core);
     },
 
     onDidChangePrimaryResource(listener) {
@@ -812,14 +284,15 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
       if (moduleRecords.has(module.id)) throw new Error(`Workbench module already registered: ${module.id}`);
 
       const disposables: Disposable[] = [];
-      const record = {
-        disposable: undefined as unknown as Disposable,
-      };
-      record.disposable = createDisposable(() => {
-        if (moduleRecords.get(module.id) !== record) return;
+      let registration: Disposable;
+
+      registration = createDisposable(() => {
+        if (moduleRecords.get(module.id)?.disposable !== registration) return;
         moduleRecords.delete(module.id);
         disposeDisposables(disposables);
       });
+
+      const record = { disposable: registration };
 
       moduleRecords.set(module.id, record);
 
@@ -845,7 +318,9 @@ export const createWorkbenchCore = (input: CreateWorkbenchCoreInput = {}) => {
     },
   };
 
-  connectCoreServices({ core, createInput: input, establishLocation, pageResources });
+  setWorkbenchRenderers(core, renderers);
+  connectWorkbenchPageBreadcrumbs({ breadcrumbs, locations: pageLocations, pages, resources: pageResources });
+  connectWorkbenchCoreState(core, input);
 
   return core;
 };

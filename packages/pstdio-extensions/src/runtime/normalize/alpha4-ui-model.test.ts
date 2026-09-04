@@ -4,14 +4,13 @@ import {
   defineExtension,
   defineMode,
   defineNavigationItem,
+  definePage,
   definePlacement,
   defineResourceKind,
-  defineResourceView,
   defineTemplateType,
   defineView,
   packageAsset,
   params,
-  resourceSlotRef,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -38,34 +37,40 @@ const alpha4Definition = () => {
   const view = defineView({
     id: "tickets",
     title: "Tickets",
-    path: "tickets",
     body: { kind: "webview", entry: packageAsset("./views/tickets.tsx", "file:///fake/lab/") },
   });
-  const resourceKind = defineResourceKind({
-    id: "ticket",
-    surface: "primary",
-    slots: [{ id: "primary", cardinality: "one", access: "owner" }],
+  const resourceKind = defineResourceKind({ id: "ticket" });
+  const page = definePage({
+    id: "tickets",
+    title: "Tickets",
+    path: "tickets",
+    mode: mode.ref,
+    slots: [
+      {
+        id: "content",
+        role: "primary",
+        region: "main",
+        view: view.ref,
+        binding: { kind: resourceKind.ref, view: view.ref, cardinality: "one" },
+      },
+    ],
   });
-  const primary = resourceSlotRef(resourceKind.ref, "primary");
   return defineExtension({
     modes: [mode],
+    pages: [page],
     views: [view],
     resourceKinds: [resourceKind],
-    resourceViews: [
-      defineResourceView({ id: "ticket-editor", resourceKind: resourceKind.ref, slot: primary, view: view.ref }),
-    ],
     placements: [
       definePlacement({
         id: "tickets.review",
         mode: mode.ref,
-        item: { kind: "view", view: view.ref },
+        item: { kind: "view", view: view.ref, presence: "fixed" },
         region: "main",
-        required: true,
       }),
       definePlacement({
         id: "ticket-primary.review",
         mode: mode.ref,
-        item: { kind: "resource-slot", slot: primary },
+        item: { kind: "binding", resourceKind: resourceKind.ref, view: view.ref, cardinality: "one" },
         region: "main",
       }),
     ],
@@ -75,7 +80,7 @@ const alpha4Definition = () => {
         owner: workbenchModes.project,
         slot: "content",
         label: "Tickets",
-        action: { kind: "view", view: view.ref },
+        action: { kind: "page", page: page.ref },
       }),
     ],
   });
@@ -92,12 +97,13 @@ describe("alpha.4 UI normalization", () => {
       contribution: { ref: { extensionId: "pstdio.lab", kind: "view", id: "tickets" } },
     });
     expect(runtime.placements).toHaveLength(2);
-    expect(runtime.resourceViews[0]?.contribution).toMatchObject({
+    expect(runtime.placements[1]?.contribution.item).toMatchObject({
+      kind: "binding",
       view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" },
     });
     expect(runtime.navigationItems[0]?.contribution.action).toEqual({
-      kind: "view",
-      view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" },
+      kind: "page",
+      page: { extensionId: "pstdio.lab", kind: "page", id: "tickets" },
     });
   });
 
@@ -121,7 +127,7 @@ describe("alpha.4 UI normalization", () => {
     const invalidPlacement = definePlacement({
       id: "invalid",
       mode: base.modes![0]!.ref,
-      item: { kind: "view", view: base.views![0]!.ref },
+      item: { kind: "view", view: base.views![0]!.ref, presence: "open" },
       region: "side",
       movableTo: ["main"],
     });
@@ -167,6 +173,27 @@ describe("alpha.4 UI normalization", () => {
         expect.objectContaining({ code: "invalid_placement" }),
       ]),
     );
+  });
+
+  test("rejects a placement with a non-callable tab query", () => {
+    const base = alpha4Definition();
+    const invalidPlacement = {
+      ...base.placements![0]!,
+      id: "broken-tab",
+      ref: { kind: "placement" as const, id: "broken-tab" },
+      tab: { query: "not-a-function" },
+    };
+    const runtime = normalizeExtensionSources([
+      source(
+        defineExtension({
+          ...base,
+          placements: [...base.placements!, invalidPlacement] as never,
+        }),
+      ),
+    ]);
+
+    expect(runtime.placements.some((placement) => placement.localId === "broken-tab")).toBe(false);
+    expect(runtime.diagnostics).toContainEqual(expect.objectContaining({ code: "invalid_placement" }));
   });
 
   test("qualifies template parameter types with their owning extension", () => {

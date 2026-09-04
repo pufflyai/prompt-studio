@@ -1,6 +1,7 @@
 import type { ResourceRef, SettingsScope } from "../../core";
 
 export const SETTINGS_RESOURCE_KIND = "workbench-settings";
+export const WORKBENCH_SETTINGS_OPEN_COMMAND_ID = "workbench.settings.open";
 
 export const settingsPanelResource = (panel: { id: string; title: string; icon?: string }): ResourceRef => ({
   kind: SETTINGS_RESOURCE_KIND,

@@ -82,9 +82,7 @@ const createRegistry = () => {
         id: "content",
         role: "primary",
         region: "main",
-        cardinality: "many",
-        closable: true,
-        binding: { resourceKind: "ticket", viewId: "ticket" },
+        binding: { resourceKinds: ["ticket"], viewId: "ticket", cardinality: "many" },
       },
     ],
   });
@@ -100,9 +98,7 @@ const createRegistry = () => {
         id: "content",
         role: "primary",
         region: "main",
-        cardinality: "many",
-        closable: true,
-        binding: { resourceKind: "workspace", viewId: "workspace" },
+        binding: { resourceKinds: ["workspace"], viewId: "workspace", cardinality: "many" },
       },
     ],
   });
@@ -124,6 +120,8 @@ const createBrowser = (initialUrl: string) => {
       current = entry;
       replacements.push(entry);
     },
+    back: () => undefined,
+    forward: () => undefined,
     onPopState: (listener) => {
       listeners.add(listener);
       return { dispose: () => listeners.delete(listener) };

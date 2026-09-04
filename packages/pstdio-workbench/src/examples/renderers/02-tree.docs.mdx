@@ -1,0 +1,29 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as RendererStories from "./renderers.stories";
+
+<Meta of={RendererStories} name="2. Tree" />
+
+# Tree renderer
+
+`body.kind: "tree"` turns structured sections and nodes into the shared workbench tree. The extension describes data
+and actions. Prompt Studio handles indentation, expansion, scrolling, selection, search, drag-and-drop, and pinned
+header or footer sections.
+
+Use it for file explorers, project navigation, grouped commands, nested catalogs, or any list whose parent-child
+shape matters.
+
+<Canvas of={RendererStories.Tree} sourceState="shown" />
+
+## How it works
+
+| Field | Meaning |
+| --- | --- |
+| `body` | Returns the main sections and their first node level. |
+| `header` and `footer` | Return sections pinned above or below the scrolling body. |
+| `children` | Loads children when a node expands. Omit it for a fully loaded tree. |
+| `defaultExpandedSectionIds` | Opens named sections on first render. |
+| `defaultExpandedNodeIds` | Opens named nodes on first render. |
+| `searchable` | Adds the native tree search field. |
+
+A node action is a normal navigation target. It may open a page, open a panel, or run a command. Keep loading and
+domain rules in the extension callback. Keep tree interaction in the renderer.

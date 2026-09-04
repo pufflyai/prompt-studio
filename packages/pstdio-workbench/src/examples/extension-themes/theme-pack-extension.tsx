@@ -5,7 +5,6 @@ import { WorkbenchIcon } from "../../react";
 import { type ExtensionColorTheme, extensionColorThemes } from "./themes";
 
 const THEME_PACK_WIDGET_ID = "extension.theme-pack.panel";
-const THEME_PACK_RENDERER_ID = "extension.theme-pack.renderer";
 const CHANGE_THEME_COMMAND_ID = "workbench.action.changeTheme";
 
 // VS Code tokens worth previewing as swatches — they map onto the workbench
@@ -111,16 +110,15 @@ const ThemePackPanel = (props: { input: WorkbenchPanelRenderInput }) => {
 export const createThemePackExtension = (): WorkbenchModuleContribution => ({
   id: "extension.theme-pack",
   activate(ctx) {
-    ctx.layout.registerPanel({
+    ctx.views.registerView({
       id: THEME_PACK_WIDGET_ID,
       title: "Theme Pack",
+      body: { kind: "react", render: (input) => <ThemePackPanel input={input} /> },
+    });
+    ctx.shellPlacements.registerPlacement({
+      id: THEME_PACK_WIDGET_ID,
+      item: { kind: "view", viewId: THEME_PACK_WIDGET_ID, presence: "fixed" },
       region: "main",
-      rendererId: THEME_PACK_RENDERER_ID,
     });
-    ctx.renderers.registerRenderer({
-      id: THEME_PACK_RENDERER_ID,
-      render: (input) => <ThemePackPanel input={input} />,
-    });
-    ctx.layout.openPanel(THEME_PACK_WIDGET_ID);
   },
 });

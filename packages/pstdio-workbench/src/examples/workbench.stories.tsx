@@ -1,351 +1,151 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, waitFor, within } from "storybook/test";
-import { createWorkbenchCore } from "../core";
+import { createWorkbench } from "../core";
 import { createStorybookArtifactsBridgeDocument } from "./artifacts-webview/bridge-document.storybook";
 import { createArtifactsWebviewExampleModule } from "./artifacts-webview/module";
-import { createDashboardWorkbench } from "./dashboard/module";
-import { createDynamicModulesWorkbench } from "./dynamic-modules/module";
-import { createExtensionThemesWorkbench } from "./extension-themes/module";
+import artifactsWebviewSource from "./artifacts-webview/module.tsx?raw";
 import { createFileRendererErrorStoryModule, createFileRendererStoryModule } from "./file-renderer/module";
-import { createFoundationWorkbench } from "./foundation/module";
+import fileRendererSource from "./file-renderer/module.tsx?raw";
 import { createHelloWorldModule } from "./hello-world/module";
-import { createHistoryExampleModule } from "./history/module";
-import { createHostTerminalWorkbench, createRestoredHostTerminalWorkbench } from "./host-terminal-story";
+import helloWorldSource from "./hello-world/module.tsx?raw";
+import { createHostTerminalWorkbench } from "./host-terminal-story";
+import hostTerminalSource from "./host-terminal-story.tsx?raw";
 import { createKanbanRendererStoryModule } from "./kanban-renderer/module";
-import { createKeepAliveExampleModule } from "./keep-alive/module";
+import kanbanRendererSource from "./kanban-renderer/module.tsx?raw";
 import { createLayoutScopeExampleWorkbench } from "./layout-scope/module";
-import { createModeChromeExampleModule } from "./mode-chrome/module";
-import { createNavigationExampleModule } from "./navigation/module";
+import layoutScopeSource from "./layout-scope/module.tsx?raw";
+import { createPageCompositionWorkbench } from "./page-composition/module";
+import pageCompositionSource from "./page-composition/module.tsx?raw";
 import { createPreferenceSchemasExampleModule } from "./preferences/module";
-import { createPreviewTabsExampleModule } from "./preview-tabs/module";
-import { createRandomExampleModule } from "./random/module";
+import preferenceSchemasSource from "./preferences/module.tsx?raw";
 import { createRegionMapModule } from "./region-map/module";
-import { createStorybookBridgeDocument } from "./renderer-types/bridge-document.storybook";
-import { createRendererTypesExampleModule } from "./renderer-types/module";
-import { createSurfaceAnchorsModule } from "./surface-anchors/module";
-import { createTreeNavigationWorkbench } from "./tree-navigation/module";
-import { createWorkbenchModesExampleModule } from "./workbench-modes/module";
+import regionMapSource from "./region-map/module.tsx?raw";
 import { WorkbenchStory } from "./workbench-story";
 
-// Story chrome and theming live in WorkbenchStory so the workbench owns its own
-// theme provider — no story-level theme decorator.
 const meta = {
-  title: "pstdio-workbench/Examples",
-  parameters: { layout: "fullscreen" },
+  title: "pstdio-workbench/Reference/Core API/Visual states",
+  tags: ["autodocs"],
+  parameters: {
+    layout: "fullscreen",
+    docs: {
+      description: {
+        component:
+          "Host API reference for @pstdio/workbench and @pstdio/workbench/react. These APIs build the application shell. Extension authors should use the separate Extension API reference.",
+      },
+    },
+  },
 } satisfies Meta;
 
 export default meta;
-
 type Story = StoryObj<typeof meta>;
 
-// Workbenches are constructed at module scope so their state (open panels, active
-// mode, etc.) survives Storybook decorator remounts — notably the theme
-// decorator, which keys WorkbenchThemeProvider by theme id and unmounts the
-// story subtree on every theme switch.
-
-const helloWorldWorkbench = createWorkbenchCore();
+const helloWorldWorkbench = createWorkbench();
 helloWorldWorkbench.registerModule(createHelloWorldModule());
 
-const workbenchModesWorkbench = createWorkbenchCore();
-workbenchModesWorkbench.registerModule(createWorkbenchModesExampleModule());
+const pageCompositionWorkbench = createPageCompositionWorkbench();
 
-const modeChromeWorkbench = createWorkbenchCore();
-modeChromeWorkbench.registerModule(createModeChromeExampleModule());
-
-const workbenchModesWorkspaceWorkbench = createWorkbenchCore();
-workbenchModesWorkspaceWorkbench.registerModule(createWorkbenchModesExampleModule("workspace"));
-
-const workbenchModesSettingsWorkbench = createWorkbenchCore();
-workbenchModesSettingsWorkbench.registerModule(createWorkbenchModesExampleModule("settings"));
-
-const regionMapWorkbench = createWorkbenchCore();
+const regionMapWorkbench = createWorkbench();
 regionMapWorkbench.registerModule(createRegionMapModule());
 
-const surfaceAnchorsWorkbench = createWorkbenchCore();
-surfaceAnchorsWorkbench.registerModule(createSurfaceAnchorsModule());
-
-const dynamicModulesWorkbench = createDynamicModulesWorkbench();
-
-const rendererTypesWorkbench = createWorkbenchCore();
-rendererTypesWorkbench.registerModule(
-  createRendererTypesExampleModule({ createBridgeDocument: createStorybookBridgeDocument }),
-);
-
-const artifactsWebviewWorkbench = createWorkbenchCore();
+const artifactsWebviewWorkbench = createWorkbench();
 artifactsWebviewWorkbench.registerModule(
   createArtifactsWebviewExampleModule({ createBridgeDocument: createStorybookArtifactsBridgeDocument }),
 );
 
-const dashboardWorkbench = createDashboardWorkbench({ canonicalGeometry: true });
-
-const kanbanRendererWorkbench = createWorkbenchCore();
+const kanbanRendererWorkbench = createWorkbench();
 kanbanRendererWorkbench.registerModule(createKanbanRendererStoryModule());
 
-const fileRendererWorkbench = createWorkbenchCore();
+const fileRendererWorkbench = createWorkbench();
 fileRendererWorkbench.registerModule(createFileRendererStoryModule());
 
-const fileRendererErrorWorkbench = createWorkbenchCore();
+const fileRendererErrorWorkbench = createWorkbench();
 fileRendererErrorWorkbench.registerModule(createFileRendererErrorStoryModule());
 
-const foundationWorkbench = createFoundationWorkbench();
-
-const randomWorkbench = createWorkbenchCore();
-randomWorkbench.registerModule(createRandomExampleModule());
-
-const keepAliveWorkbench = createWorkbenchCore({ initialSidePanelMode: "attached" });
-keepAliveWorkbench.registerModule(createKeepAliveExampleModule());
-
-const navigationWorkbench = createWorkbenchCore();
-navigationWorkbench.registerModule(createNavigationExampleModule());
-
-const historyWorkbench = createWorkbenchCore();
-historyWorkbench.registerModule(createHistoryExampleModule());
-
-const layoutScopeWorkbench = createLayoutScopeExampleWorkbench();
-
-const preferenceSchemasWorkbench = createWorkbenchCore();
+const preferenceSchemasWorkbench = createWorkbench();
 preferenceSchemasWorkbench.registerModule(createPreferenceSchemasExampleModule());
 
-const previewTabsWorkbench = createWorkbenchCore({ initialSidePanelMode: "attached" });
-previewTabsWorkbench.registerModule(createPreviewTabsExampleModule());
-
-const extensionThemesWorkbench = createExtensionThemesWorkbench();
-const treeNavigationWorkbench = createTreeNavigationWorkbench();
+const layoutScopeWorkbench = createLayoutScopeExampleWorkbench();
 const hostTerminalWorkbench = createHostTerminalWorkbench();
-const restoredHostTerminalWorkbench = createRestoredHostTerminalWorkbench();
 
-const findOption = async (canvasElement: HTMLElement, name: string) => {
-  const canvas = within(canvasElement);
-  const options = await canvas.findAllByRole("option", { name });
-  const option = options[0];
-  if (!option) throw new Error(`Expected option: ${name}`);
-  return option;
-};
+const referenceParameters = (description: string, code: string) => ({
+  docs: {
+    description: { story: description },
+    source: { code, language: "tsx", type: "code" },
+  },
+});
 
-const expectSelectedOption = async (canvasElement: HTMLElement, name: string) => {
-  await expect(await findOption(canvasElement, name)).toHaveAttribute("aria-selected", "true");
-};
-
-const expectUnselectedOption = async (canvasElement: HTMLElement, name: string) => {
-  await expect(await findOption(canvasElement, name)).toHaveAttribute("aria-selected", "false");
+export const PageComposition: Story = {
+  parameters: referenceParameters(
+    "Pages declare the complete set of page-owned placements. Navigation replaces that set atomically.",
+    pageCompositionSource,
+  ),
+  render: () => <WorkbenchStory workbench={pageCompositionWorkbench} />,
 };
 
 export const HelloWorld: Story = {
+  parameters: referenceParameters("The smallest complete View and placement registration.", helloWorldSource),
   render: () => <WorkbenchStory workbench={helloWorldWorkbench} />,
 };
 
-export const WorkbenchModes: Story = {
-  render: () => <WorkbenchStory workbench={workbenchModesWorkbench} />,
-};
-
-export const ModeChrome: Story = {
-  render: () => <WorkbenchStory workbench={modeChromeWorkbench} />,
-};
-
-export const WorkbenchModesWorkspace: Story = {
-  render: () => <WorkbenchStory workbench={workbenchModesWorkspaceWorkbench} />,
-};
-
-export const WorkbenchModesSettings: Story = {
-  render: () => <WorkbenchStory workbench={workbenchModesSettingsWorkbench} />,
-};
-
 export const RegionMap: Story = {
+  parameters: referenceParameters(
+    "Every supported workbench placement region. This is an API map, not a suggested product layout.",
+    regionMapSource,
+  ),
   render: () => <WorkbenchStory workbench={regionMapWorkbench} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const showOverlay = await canvas.findByRole("button", { name: "Show overlay" });
-    const backgroundControlBox = showOverlay.getBoundingClientRect();
-
-    await userEvent.click(showOverlay);
-
-    const dialog = await within(document.body).findByRole("dialog");
-    const positioner = dialog.closest('[data-scope="dialog"][data-part="positioner"]');
-    await expect(positioner).toHaveStyle({ pointerEvents: "auto" });
-    await expect(
-      document
-        .elementFromPoint(
-          backgroundControlBox.x + backgroundControlBox.width / 2,
-          backgroundControlBox.y + backgroundControlBox.height / 2,
-        )
-        ?.closest('[data-scope="dialog"][data-part="positioner"]'),
-    ).toBe(positioner);
-  },
 };
 
-// Demonstrates the resource-projected surface model: primary anchor + projections, the
-// derived (secondary) and detached (floating) anchors, scoped candidates, surface routing,
-// and primary-vs-global. Switch workspaces to watch terminals re-scope and a session
-// disconnect when it leaves scope.
-export const SurfaceAnchors: Story = {
-  render: () => <WorkbenchStory workbench={surfaceAnchorsWorkbench} />,
-};
-
-export const DynamicModules: Story = {
-  render: () => <WorkbenchStory workbench={dynamicModulesWorkbench} />,
-};
-
-export const RendererTypes: Story = {
-  render: () => <WorkbenchStory workbench={rendererTypesWorkbench} />,
-};
-
-// A report-style webview reading artifact metadata, text, and an image through
-// the mount-scoped artifacts.read capability. The capability gate is the real
-// one: the "Read undeclared mount" button shows the denial naming the missing
-// artifacts.read:secrets declaration.
 export const ArtifactsWebview: Story = {
+  parameters: referenceParameters(
+    "A webview with explicit bridge capabilities for commands and artifact access.",
+    artifactsWebviewSource,
+  ),
   render: () => <WorkbenchStory workbench={artifactsWebviewWorkbench} />,
 };
 
-export const DashboardWorkbench: Story = {
-  render: () => <WorkbenchStory workbench={dashboardWorkbench} />,
-};
-
 export const KanbanRenderer: Story = {
+  parameters: referenceParameters(
+    "The built-in board renderer driven by an extension-owned schema, query, and mutations.",
+    kanbanRendererSource,
+  ),
   render: () => <WorkbenchStory workbench={kanbanRendererWorkbench} />,
 };
 
-// The file renderer dispatches by file type: markdown (notes.md) via the
-// MarkdownEditor, code (example.ts) via Monaco, and a read-only image (logo.svg).
 export const FileRenderer: Story = {
+  parameters: referenceParameters(
+    "The native file renderer selects an editor or preview from the loaded MIME type.",
+    fileRendererSource,
+  ),
   render: () => <WorkbenchStory workbench={fileRendererWorkbench} />,
 };
 
 export const FileRendererLoadError: Story = {
+  parameters: referenceParameters(
+    "A file loader failure is contained in the panel and leaves the rest of the workbench usable.",
+    fileRendererSource,
+  ),
   render: () => <WorkbenchStory workbench={fileRendererErrorWorkbench} />,
 };
 
-export const FoundationConcepts: Story = {
-  render: () => <WorkbenchStory workbench={foundationWorkbench} />,
-};
-
-export const Random: Story = {
-  render: () => <WorkbenchStory workbench={randomWorkbench} />,
-};
-
-export const KeepAlive: Story = {
-  render: () => <WorkbenchStory workbench={keepAliveWorkbench} />,
-};
-
-export const Navigation: Story = {
-  render: () => <WorkbenchStory workbench={navigationWorkbench} />,
-};
-
-export const History: Story = {
-  render: () => <WorkbenchStory workbench={historyWorkbench} />,
-};
-
 export const LayoutScope: Story = {
+  parameters: referenceParameters(
+    "Layout scopes isolate user panel arrangements by project or workspace.",
+    layoutScopeSource,
+  ),
   render: () => <WorkbenchStory workbench={layoutScopeWorkbench} />,
 };
 
 export const PreferenceSchemas: Story = {
+  parameters: referenceParameters(
+    "Typed preference schemas drive shared controls, defaults, validation, and scoped storage.",
+    preferenceSchemasSource,
+  ),
   render: () => <WorkbenchStory workbench={preferenceSchemasWorkbench} />,
 };
 
-export const PreviewTabs: Story = {
-  render: () => <WorkbenchStory workbench={previewTabsWorkbench} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const sessionTab = await canvas.findByRole("tab", { name: "Session 42" });
-
-    if (sessionTab.getAttribute("aria-selected") === "false") {
-      await userEvent.click(sessionTab);
-      await expect(sessionTab).toHaveAttribute("aria-selected", "true");
-      await expect(sessionTab).toHaveAttribute("aria-expanded", "false");
-    }
-
-    await userEvent.click(sessionTab);
-    const customMenu = await within(document.body).findByRole("menu", { name: "Session 42 menu" });
-    await waitFor(() => expect(within(customMenu).getByRole("menuitem", { name: "New session" })).toBeVisible());
-    await expect(within(customMenu).queryByRole("menuitem", { name: "Keep Open" })).not.toBeInTheDocument();
-    await userEvent.keyboard("{Escape}");
-
-    await userEvent.pointer({ target: sessionTab, keys: "[MouseRight]" });
-    const contextMenu = await within(document.body).findByRole("menu", { name: "Session 42 context menu" });
-    await waitFor(() => expect(within(contextMenu).getByRole("menuitem", { name: "Keep Open" })).toBeVisible());
-    await expect(within(contextMenu).queryByRole("menuitem", { name: "New session" })).not.toBeInTheDocument();
-    await userEvent.keyboard("{Escape}");
-  },
-};
-
-// The Theme Pack extension registers its color themes into `workbench.themes`;
-// the workbench theme picker lists them only while the extension is enabled.
-export const ExtensionThemes: Story = {
-  render: () => <WorkbenchStory workbench={extensionThemesWorkbench} />,
-};
-
-// Type into the terminal to see the scripted echo; the panel resizes with the
-// bottom region splitter.
 export const HostTerminal: Story = {
+  parameters: referenceParameters(
+    "The host provides terminal process operations while the workbench owns the panel UI.",
+    hostTerminalSource,
+  ),
   render: () => <WorkbenchStory workbench={hostTerminalWorkbench} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const firstTerminalTab = await canvas.findByRole("tab", { name: /Terminal 1/ });
-    const secondTerminalTab = await canvas.findByRole("tab", { name: /Terminal 2/ });
-    const notesTab = await canvas.findByRole("tab", { name: /notes\.md/ });
-    const terminalTabsBefore = await canvas.findAllByRole("tab", { name: /Terminal \d+/ });
-    const nextTerminalTitle = `Terminal ${terminalTabsBefore.length + 1}`;
-
-    await userEvent.click(await canvas.findByRole("button", { name: "Add panel" }));
-
-    const newTerminalTab = await canvas.findByRole("tab", { name: new RegExp(nextTerminalTitle) });
-    await expect(newTerminalTab).toHaveAttribute("aria-selected", "true");
-
-    await userEvent.click(firstTerminalTab);
-    await expect(firstTerminalTab).toHaveAttribute("aria-selected", "true");
-    await expect(await canvas.findByText("workbench host terminal (scripted)")).toBeVisible();
-
-    await userEvent.click(notesTab);
-    await expect(notesTab).toHaveAttribute("aria-selected", "true");
-
-    await userEvent.click(firstTerminalTab);
-    await expect(firstTerminalTab).toHaveAttribute("aria-selected", "true");
-    await expect(await canvas.findByText("workbench host terminal (scripted)")).toBeVisible();
-
-    await userEvent.click(secondTerminalTab);
-    await expect(secondTerminalTab).toHaveAttribute("aria-selected", "true");
-  },
-};
-
-// A persisted hidden launcher is never shown as the selected Secondary Panel tab.
-// The latest real tab is restored when the workbench enters the saved layout scope.
-export const RestoredHostTerminal: Story = {
-  render: () => <WorkbenchStory workbench={restoredHostTerminalWorkbench} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const notesTab = await canvas.findByRole("tab", { name: /notes\.md/ });
-    const terminalTab = await canvas.findByRole("tab", { name: /Terminal 1/ });
-
-    await expect(notesTab).toHaveAttribute("aria-selected", "true");
-    await expect(terminalTab).toHaveAttribute("aria-selected", "false");
-    await expect(await canvas.findByText("build: ready")).toBeVisible();
-  },
-};
-
-export const TreeNavigation: Story = {
-  render: () => <WorkbenchStory workbench={treeNavigationWorkbench} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-
-    await userEvent.click(await findOption(canvasElement, "Tickets"));
-    await expectSelectedOption(canvasElement, "Tickets");
-
-    await userEvent.click(await canvas.findByRole("button", { name: "Open ticket" }));
-    await expectSelectedOption(canvasElement, "Tickets");
-
-    await userEvent.click(await findOption(canvasElement, "Workspaces"));
-    await expectSelectedOption(canvasElement, "Workspaces");
-
-    await userEvent.click(await canvas.findByRole("button", { name: "Return to ticket" }));
-    await expectSelectedOption(canvasElement, "Tickets");
-    await expectUnselectedOption(canvasElement, "Workspaces");
-
-    await userEvent.click(await findOption(canvasElement, "Settings"));
-    await expectSelectedOption(canvasElement, "Settings");
-
-    await userEvent.click(await within(document.body).findByLabelText("Close Settings"));
-    await expectSelectedOption(canvasElement, "Tickets");
-    await expectUnselectedOption(canvasElement, "Settings");
-  },
 };

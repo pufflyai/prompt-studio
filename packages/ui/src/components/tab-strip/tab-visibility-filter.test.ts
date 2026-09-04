@@ -15,6 +15,24 @@ describe("filterVisibleTabs", () => {
     expect(result.find((placement) => placement.contributionId === "gamma")).toBeDefined();
   });
 
+  test("keeps a pinned closeable tab visible when its contribution is hidden by default", () => {
+    const result = filterVisibleTabs(
+      [
+        {
+          contributionId: "terminal",
+          title: "Terminal 2",
+          closable: true,
+          hiddenByDefault: true,
+          pinned: true,
+        },
+      ],
+      {},
+      getKey,
+    );
+
+    expect(result.map((placement) => placement.contributionId)).toEqual(["terminal"]);
+  });
+
   test("hides non-closeable tabs that resolve to 'hidden'", () => {
     const result = filterVisibleTabs(placements, {}, getKey);
     expect(result.map((placement) => placement.contributionId)).toEqual(["alpha", "gamma"]);

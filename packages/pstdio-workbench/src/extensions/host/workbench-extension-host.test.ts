@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore, type WorkbenchModuleContribution } from "../../core";
+import { createWorkbench, getWorkbenchRenderers, type WorkbenchModuleContribution } from "../../core";
 import { buildSettingsTreeBody } from "../../react/settings/settings-tree";
 import { registerWorkbenchExtensionContributions } from "./workbench-extension-host";
 
@@ -18,7 +18,24 @@ const metadata = {
   menuContributions: [],
   commandPaletteContributions: [],
   modes: [{ id: modeId, localId: "review", extensionId, label: "Review", regions: ["main"] }],
-  pages: [],
+  pages: [
+    {
+      id: `${extensionId}.page.review`,
+      localId: "review",
+      extensionId,
+      title: "Review",
+      path: "review",
+      mode: { extensionId, kind: "mode", id: "review" },
+      slots: [
+        {
+          id: "content",
+          role: "primary",
+          region: "main",
+          view: { extensionId, kind: "view", id: "filters" },
+        },
+      ],
+    },
+  ],
   views: [
     {
       id: treeViewId,
@@ -70,17 +87,25 @@ const metadata = {
       },
     },
   ],
-  viewMenus: [],
+  viewMenus: [
+    {
+      id: `${extensionId}.view-menu.review-outline`,
+      extensionId,
+      owner: { extensionId, kind: "view", id: "filters" },
+      view: { extensionId, kind: "view", id: "outline" },
+      side: "left",
+      placement: "first",
+      hostTreeHeader: "default",
+    },
+  ],
   placements: [
     {
       id: `${extensionId}.placement.outline`,
       localId: "outline",
       extensionId,
       mode: { extensionId, kind: "mode", id: "review" },
-      item: { kind: "view", view: { extensionId, kind: "view", id: "outline" } },
+      item: { kind: "view", view: { extensionId, kind: "view", id: "outline" }, presence: "fixed" },
       region: "main",
-      defaultOpen: true,
-      required: true,
     },
     {
       id: `${extensionId}.placement.detail`,
@@ -88,11 +113,10 @@ const metadata = {
       extensionId,
       mode: { extensionId, kind: "mode", id: "review" },
       item: {
-        kind: "resource-slot",
-        slot: {
-          resourceKind: { extensionId, kind: "resource-kind", id: "artifact" },
-          id: "inspector",
-        },
+        kind: "binding",
+        resourceKind: { extensionId, kind: "resource-kind", id: "artifact" },
+        view: { extensionId, kind: "view", id: "detail" },
+        cardinality: "many",
       },
       region: "side",
     },
@@ -102,21 +126,7 @@ const metadata = {
       id: "artifact",
       localId: "artifact",
       extensionId,
-      surface: "attached",
       label: "Artifact",
-      slots: [{ id: "inspector", cardinality: "many", access: "public" }],
-    },
-  ],
-  resourceViews: [
-    {
-      id: `${extensionId}.resource-view.detail`,
-      extensionId,
-      resourceKind: { extensionId, kind: "resource-kind", id: "artifact" },
-      slot: {
-        resourceKind: { extensionId, kind: "resource-kind", id: "artifact" },
-        id: "inspector",
-      },
-      view: { extensionId, kind: "view", id: "detail" },
     },
   ],
   navigationItems: [],
@@ -146,32 +156,39 @@ const metadata = {
 
 describe("registerWorkbenchExtensionContributions", () => {
   test("groups extension settings by owner and keeps statuses in the Project section", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
+    for (const [id, title] of [
+      ["host.extensions.settings", "Extension settings"],
+      ["host.repositories.settings", "Repository settings"],
+      ["host.danger.settings", "Danger zone settings"],
+    ] as const) {
+      workbench.views.registerView({ id, title, body: { kind: "react", render: () => null } });
+    }
     workbench.settings.registerSection({ id: "workbench", title: "Workbench", order: 10 });
     workbench.settings.registerSection({ id: "project", title: "Project", order: 20 });
     workbench.settings.registerPanel({
       id: "host.extensions",
       title: "Extensions",
-      kind: "custom",
+      kind: "view",
       order: 10,
       section: "project",
-      render: () => null,
+      viewId: "host.extensions.settings",
     });
     workbench.settings.registerPanel({
       id: "host.repositories",
       title: "Repositories",
-      kind: "custom",
+      kind: "view",
       order: 20,
       section: "project",
-      render: () => null,
+      viewId: "host.repositories.settings",
     });
     workbench.settings.registerPanel({
       id: "host.danger",
       title: "Danger zone",
-      kind: "custom",
+      kind: "view",
       order: 90,
       section: "project",
-      render: () => null,
+      viewId: "host.danger.settings",
     });
     const settingsMetadata = {
       ...metadata,
@@ -218,6 +235,13 @@ describe("registerWorkbenchExtensionContributions", () => {
       ],
       settingsPanels: [
         {
+          id: `${extensionId}.settings-panel.filters`,
+          extensionId,
+          view: { extensionId, kind: "view", id: "filters" },
+          slot: { id: "project.settingsPanels" },
+          section: { extensionId, kind: "settings-section", id: "lab" },
+        },
+        {
           id: `${extensionId}.settings-panel.zebra`,
           extensionId,
           view: { extensionId, kind: "view", id: "zebra-settings" },
@@ -243,10 +267,14 @@ describe("registerWorkbenchExtensionContributions", () => {
       workbench,
     });
 
-    const tree = await buildSettingsTreeBody({ settings: workbench.settings, hasProjectScope: true });
+    const tree = await buildSettingsTreeBody({
+      settings: workbench.settings,
+      hasProjectScope: true,
+      matchesWhen: (when) => workbench.context.matches(when),
+    });
     expect(tree.map((section) => ({ label: section.label, nodes: section.nodes.map((node) => node.label) }))).toEqual([
       { label: "Project", nodes: ["Extensions", "Repositories", "Statuses", "Danger zone"] },
-      { label: "Lab", nodes: ["Alpha settings", "Zebra settings"] },
+      { label: "Lab", nodes: ["Alpha settings", "Filters", "Zebra settings"] },
     ]);
     expect(workbench.settings.getPanel("workbench.statuses")).toMatchObject({
       icon: "list-checks",
@@ -256,7 +284,7 @@ describe("registerWorkbenchExtensionContributions", () => {
   });
 
   test("prepares extension command arguments through the host adapter", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const commandId = `${extensionId}.command.inspect`;
     const argumentChanges: unknown[] = [];
     const preparedCalls: Array<{ commandId: string; args: unknown }> = [];
@@ -296,13 +324,23 @@ describe("registerWorkbenchExtensionContributions", () => {
     expect(argumentChanges).toEqual([{ files: ["uploaded-file"] }]);
     expect(prepared).toEqual({ files: ["uploaded-file"] });
   });
+});
 
+describe("registerWorkbenchExtensionContributions workbench surfaces", () => {
   test("registers alpha.4 views, placements, status chrome, and workflow statuses", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.views.registerView({ id: "start", title: "Start", body: { kind: "react", render: () => null } });
+    const startPage = { extensionId: "pstdio", kind: "page" as const, id: "start" };
+    workbench.pages.registerPage({
+      id: "start",
+      ref: startPage,
+      title: "Start",
+      path: "",
+      modeId: "project",
+      slots: [{ id: "content", role: "primary", region: "main", viewId: "start" }],
+    });
     const calls: string[] = [];
-    const openedViews: string[] = [];
-    const preparedResources: string[] = [];
     const module: WorkbenchModuleContribution = {
       id: "test.extension-host",
       activate: (ctx) =>
@@ -315,24 +353,33 @@ describe("registerWorkbenchExtensionContributions", () => {
             return [];
           },
           metadata,
-          prepareResource: (resource) => preparedResources.push(resource.uri),
           projectId: "project-1",
-          resolveViewInput: (view) => (openInput) => {
-            openedViews.push(view.id);
-            return openInput;
-          },
           workbench: ctx,
         }),
     };
 
     workbench.registerModule(module);
-    workbench.modes.setActiveMode(modeId);
+    workbench.pageLocations.setProject("project-1");
+    workbench.pageLocations.navigate({
+      kind: "page",
+      page: { extensionId, kind: "page", id: "review" },
+    });
 
-    expect(workbench.views.getView(treeViewId)?.panelId).toBe(treeViewId);
-    expect(workbench.renderers.getTreeRenderer(treeViewId)).toBeDefined();
-    expect(workbench.renderers.getControlsRenderer(controlsViewId)).toBeDefined();
+    expect(workbench.views.getView(treeViewId)?.id).toBe(treeViewId);
+    expect(getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId)).toBeDefined();
+    expect(getWorkbenchRenderers(workbench).getControlsRenderer(controlsViewId)).toBeDefined();
+    expect(workbench.viewMenus.getViewMenu(`${extensionId}.view-menu.review-outline`)).toMatchObject({
+      ownerViewId: controlsViewId,
+      viewId: treeViewId,
+      side: "left",
+      priority: 1_000_000,
+    });
     expect(workbench.layout.listPanelInstances("main")).toContainEqual(
-      expect.objectContaining({ panelId: treeViewId, closable: false }),
+      expect.objectContaining({
+        panelId: `workbench.mode-placement.${extensionId}.placement.outline`,
+        viewId: treeViewId,
+        closable: false,
+      }),
     );
     expect(workbench.statusBar.listItems()).toEqual([
       expect.objectContaining({
@@ -342,25 +389,15 @@ describe("registerWorkbenchExtensionContributions", () => {
       }),
     ]);
     expect(workbench.statusBar.listVisibleItems()).toHaveLength(1);
-    workbench.modes.setActiveMode("project");
+    workbench.pageLocations.navigate({ kind: "page", page: startPage });
     expect(workbench.statusBar.listVisibleItems()).toHaveLength(0);
-    workbench.modes.setActiveMode(modeId);
-    expect(workbench.views.getView(statusViewId)).toBeDefined();
-    expect(workbench.layout.getWidget(statusViewId)).toBeDefined();
-    expect(workbench.layout.listPanelInstances().some((panel) => panel.panelId === statusViewId)).toBe(false);
-
-    await workbench.views.openView(detailViewId);
-    expect(openedViews).toEqual([detailViewId]);
-
-    workbench.sidePanel.setMode("closed");
-    await workbench.resources.openResource({
-      kind: "artifact",
-      uri: "pstdio://artifact/artifact-1",
-      id: "artifact-1",
-      label: "Artifact 1",
+    workbench.pageLocations.navigate({
+      kind: "page",
+      page: { extensionId, kind: "page", id: "review" },
     });
-    expect(preparedResources).toEqual(["pstdio://artifact/artifact-1"]);
-    expect(workbench.sidePanel.getMode()).toBe("attached");
+    expect(workbench.views.getView(statusViewId)).toBeDefined();
+    expect(workbench.layout.getWidget(statusViewId)).toBeUndefined();
+    expect(workbench.layout.listPanelInstances().some((panel) => panel.panelId === statusViewId)).toBe(false);
 
     await expect(workbench.statuses.query(statusesId)).resolves.toEqual([
       { id: "todo", label: "Todo", color: "blue", sortOrder: 0 },

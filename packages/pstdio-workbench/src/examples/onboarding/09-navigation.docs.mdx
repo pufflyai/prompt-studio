@@ -1,31 +1,73 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import source from "../api/resource-tabs-example.tsx?raw";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="10. Resource cardinality: one and many" />
 
-<Meta of={OnboardingStories} name="9. Navigation" parameters={{ layout: "padded" }} />
+# 10. Compare one resource with many resource tabs
 
-# 9. Handle Deep Links
+The Secondary panel starts with three tabs from two resource placements:
 
-To support URLs or other ingress strings, register a navigation parser that
-turns the string into a target the workbench knows how to dispatch.
+- **Inspect main** belongs to a `cardinality: "one"` placement. Press **Inspect release/v0.31**. The inspector keeps one
+  tab and rebinds it from `main` to `release/v0.31`.
+- **Alpha.md** and **Beta.md** belong to a `cardinality: "many"` placement. Alpha is pinned and Beta is the preview.
+  Press **Preview Gamma**. Gamma replaces the Beta preview while Alpha stays open.
 
-<Canvas of={OnboardingStories.Navigation} sourceState="shown" />
+Press **Pin Beta** and then preview Gamma. All three documents stay available because each pinned resource URI owns a
+tab. Reopening any open resource selects its existing tab instead of making a duplicate.
 
-A parser returns one of:
+<Canvas of={OnboardingStories.ResourceReuse} sourceState="none" />
 
-- `{ kind: "resource", resource }` — open a resource (uses your presenters from
-  story 5).
-- `{ kind: "panel", widgetId, region?, resource? }` — reveal a specific widget.
-- `{ kind: "command", commandId, args? }` — run a command.
-- `{ kind: "compound", targets }` — apply multiple targets together. If any
-  one fails, the layout is rolled back, so a deep link either applies fully
-  or not at all.
+## Complete example
 
-Then `navigation.openTarget(target)` (or `navigation.openLocation(uri)` for
-strings) is the one entry point — same path regardless of who triggered it.
+<Source code={source} language="tsx" />
 
-The story exposes each shape as buttons so you can compare the URL form
-against the equivalent direct target.
+## What each field means
+
+The branches and documents are plain resource values:
+
+- each document is a `ResourceRef`: `{ kind, uri, id, label }`.
+- `kind` groups resources of one type. The resource placement below accepts this kind.
+- `uri` is the resource's stable identity. Tabs are matched by this value.
+- `label` is the user-facing name. The launcher passes it as the tab title.
+
+`inspectBranch` and `openDocument` open resources through `shellPlacements.openPlacement(...)`:
+
+- `placementId` names the registered resource placement to open in.
+- `resource` is the document to show.
+- `title` sets the tab title for this instance.
+- `inspectBranch` omits `open` because its placement has `cardinality: "one"`.
+- `openDocument` supplies the open intent. `"preview"` uses the shared preview tab, so
+  the next preview replaces it. `"pin"` keeps the tab as a persistent tab.
+- the call returns a `PlacementIdentity` that names the created or reused instance.
+
+The first View and placement build the launcher:
+
+- `views.registerView({ id: "guide.documents", ... })` renders the buttons with a `body.kind: "react"` body.
+- `shellPlacements.registerPlacement(...)` places it with `item: { kind: "view", viewId, presence: "fixed" }` in
+  `region: "main"`. `presence: "fixed"` keeps the launcher always open with no close button.
+
+The document View and placement demonstrate `cardinality: "many"`:
+
+- `views.registerView({ id: "guide.document-view", ... })` renders one document. `instance.resource` carries the
+  resource bound to that instance.
+- `item.kind: "resource"` makes the placement resource-bound: one instance per opened resource. Resource placements
+  start empty; nothing shows until a caller opens a resource.
+- `item.resourceKinds: ["document"]` limits which resource kinds the placement accepts.
+- `item.cardinality: "many"` creates one tab per pinned resource URI and at most one unpinned preview tab. Reopening a
+  URI selects its existing tab.
+- cardinality controls the instance count only. It does not control initial visibility, and it does not control
+  closability: resource tabs are always closable.
+- `region: "secondary"` puts the document tabs in the Secondary panel.
+
+The branch View and placement demonstrate `cardinality: "one"`:
+
+- `resourceKinds: ["branch"]` keeps branch resources separate from documents even though both placements use the same
+  region.
+- `item.cardinality: "one"` keeps one inspector instance. Opening a different branch changes that instance's resource
+  and title.
+- preview and pin do not apply because this placement can never have a second tab.
+
+The onboarding story passes `showCardinalityComparison` to seed the inspector, a pinned Alpha document, and a Beta
+preview. The focused Panels and pages guide renders the same component without the comparison flag so readers can open
+the `"many"` placement from an empty state.

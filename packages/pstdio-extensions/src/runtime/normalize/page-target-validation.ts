@@ -2,12 +2,12 @@ import {
   type NavigationTarget,
   type NavigationTargetPage,
   type NavigationTargetPanel,
-  type PageSlot,
+  type ResourceKindRef,
   type ResourceRef,
   workbenchPageDefinitions,
   workbenchPanelDefinitions,
 } from "@pstdio/sdk/extensions";
-import type { RuntimeNavigationItemRecord } from "../../types/runtime";
+import type { RuntimeNavigationItemRecord, RuntimePageSlot } from "../../types/runtime";
 import type { Accumulator } from "./accumulator";
 import { addPageDiagnostic, normalizedRefId } from "./page-validation";
 
@@ -66,9 +66,13 @@ const validateResourceInput = (
   }
 };
 
-const slotDestination = (slot: PageSlot): Destination => ({
-  bindingKinds: slot.binding ? [slot.binding.kind.id] : [],
-  cardinality: slot.cardinality ?? "one",
+const slotDestination = (slot: RuntimePageSlot): Destination => ({
+  bindingKinds: slot.binding
+    ? (Array.isArray(slot.binding.kind) ? slot.binding.kind : [slot.binding.kind as ResourceKindRef]).map(
+        (kind) => kind.id,
+      )
+    : [],
+  cardinality: slot.binding?.cardinality ?? "one",
   staticView: Boolean(slot.view),
 });
 
@@ -212,14 +216,12 @@ const resolvePlacementDestination = (
   if (placement.contribution.item.kind === "view") {
     return { bindingKinds: [], cardinality: "one", staticView: true } satisfies Destination;
   }
-  const resourceKind = placement.contribution.item.slot.resourceKind;
-  const kind = runtime.resourceKinds.find(
-    (candidate) => candidate.extensionId === resourceKind.extensionId && candidate.localId === resourceKind.id,
-  );
-  const slot = kind?.contribution.slots[placement.contribution.item.slot.id];
+  const resourceKinds = Array.isArray(placement.contribution.item.resourceKind)
+    ? placement.contribution.item.resourceKind
+    : [placement.contribution.item.resourceKind];
   return {
-    bindingKinds: [resourceKind.id],
-    cardinality: slot?.cardinality ?? "one",
+    bindingKinds: resourceKinds.map((kind) => kind.id),
+    cardinality: placement.contribution.item.cardinality ?? "one",
     staticView: false,
   } satisfies Destination;
 };

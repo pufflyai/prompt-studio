@@ -1,5 +1,4 @@
 export type {
-  CreateLocalStorageLastResourcePersistenceInput,
   CreateLocalStoragePanelsPersistenceInput,
   CreateLocalStorageTreePersistenceInput,
   CreateLocalStorageWorkbenchPersistenceInput,
@@ -7,8 +6,6 @@ export type {
   WorkbenchStoragePersistenceKind,
 } from "./local-storage-persistence";
 export {
-  createLocalStorageHistoryPersistence,
-  createLocalStorageLastResourcePersistence,
   createLocalStorageLayoutPersistence,
   createLocalStoragePageLocationPersistence,
   createLocalStoragePanelsPersistence,

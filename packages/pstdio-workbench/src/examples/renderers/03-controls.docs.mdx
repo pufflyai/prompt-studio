@@ -1,0 +1,28 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as RendererStories from "./renderers.stories";
+
+<Meta of={RendererStories} name="3. Controls" />
+
+# Controls renderer
+
+`body.kind: "controls"` renders JSON-safe field declarations with the shared parameter editor. The extension loads
+the fields and current values. It may save each change, apply the full form, reset values, or return a read-only form.
+
+Use it for resource properties, extension settings, filters, small creation forms, and inspector menus. It is a poor
+fit for free-form documents or layouts that cannot be described as fields and groups.
+
+<Canvas of={RendererStories.Controls} sourceState="shown" />
+
+## How it works
+
+| Field | Meaning |
+| --- | --- |
+| `query` | Returns `params`, `groups`, `values`, and optional `readOnly`. |
+| `onValueChange` | Saves one changed field and receives the complete current value map. |
+| `onApply` | Saves the complete form when the user presses Apply. |
+| `onReset` | Restores some or all controls when the user presses Reset. |
+| `defaultValues` | Supplies values when `query` does not return them. |
+| `emptyTitle`, `emptyDescription` | Explain why no controls are available. |
+
+Omit `onValueChange` for an Apply-style form. Omit both `onValueChange` and `onApply` for read-only properties. The
+workbench owns field rendering and validation, so the same declaration works in a panel, menu, or overlay.

@@ -7,12 +7,14 @@ import type {
   Localizable,
   ModeContribution,
   NavigationItemContribution,
+  NavigationTarget,
   NavigationTreeContribution,
   PageContribution,
+  PageSlot,
   PlacementContribution,
+  RendererEventReference,
   ResourceHierarchyProvider,
   ResourceKindDefinition,
-  ResourceViewContribution,
   SettingsPanelContribution,
   SettingsSectionContribution,
   SkillContribution,
@@ -60,13 +62,22 @@ export interface RuntimeViewMenuRecord {
   contribution: ViewMenuContribution;
 }
 
+export interface RuntimePlacementTab {
+  queryHandlerId: string;
+  refreshEvents?: readonly RendererEventReference[];
+}
+
+export type RuntimePlacementContribution = Omit<PlacementContribution, "tab"> & {
+  tab?: RuntimePlacementTab;
+};
+
 export interface RuntimePlacementRecord {
   id: string;
   localId: string;
   extensionId: string;
   name: string;
   sourcePath: string;
-  contribution: PlacementContribution;
+  contribution: RuntimePlacementContribution;
 }
 
 export interface RuntimeNavigationItemRecord {
@@ -93,8 +104,17 @@ export interface RuntimePageRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
-  contribution: PageContribution;
+  contribution: Omit<PageContribution, "slots"> & {
+    slots: RuntimePageSlot[];
+  };
 }
+
+// Omit must distribute over the PageSlot union so each variant keeps its own fields.
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
+
+export type RuntimePageSlot = DistributiveOmit<PageSlot, "tab"> & {
+  tab?: RuntimePlacementTab;
+};
 
 export interface RuntimeStatusBarItemRecord {
   id: string;
@@ -120,8 +140,7 @@ export interface RuntimeResourceKindRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
-  contribution: Omit<ResourceKindDefinition, "slots" | "menuSlots"> & {
-    slots: Record<string, { cardinality: "one" | "many"; external: boolean }>;
+  contribution: Omit<ResourceKindDefinition, "menuSlots"> & {
     menuSlots: Record<
       string,
       {
@@ -132,18 +151,6 @@ export interface RuntimeResourceKindRecord {
       }
     >;
   };
-}
-
-export interface RuntimeResourceViewRecord {
-  id: string;
-  localId: string;
-  extensionId: string;
-  name: string;
-  sourcePath: string;
-  resourceKindId: string;
-  viewId: string;
-  slotId: string;
-  contribution: ResourceViewContribution;
 }
 
 export interface RuntimeResourceHierarchyProviderRecord {
@@ -216,7 +223,8 @@ export interface RuntimeKeybindingRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
-  commandId: string;
+  /** The contribution's action with contribution refs resolved to absolute ids. */
+  action: NavigationTarget;
   contribution: KeybindingContribution;
   /** Platform-independent canonical chord produced by TanStack hotkey normalization. */
   canonicalChord: string;

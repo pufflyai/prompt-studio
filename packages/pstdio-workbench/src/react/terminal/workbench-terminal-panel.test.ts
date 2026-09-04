@@ -5,7 +5,7 @@ import { createControllerTerminalBridge } from "./workbench-terminal-panel";
 const workspaceResource: ResourceRef = {
   kind: "workspace",
   id: "workspace-1",
-  uri: "dashboard-workbench://workspace/workspace-1",
+  uri: "pstdio://extension-resource/workspace/workspace-1",
   metadata: { workspacePath: "/repo/.pstdio/workspaces/PS-307_A1" },
 };
 

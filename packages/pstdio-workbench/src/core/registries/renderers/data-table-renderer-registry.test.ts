@@ -3,7 +3,7 @@ import { createDataTableRendererRegistry } from "./data-table-renderer-registry"
 import { createWorkbenchRendererRegistry } from "./renderer-registry";
 
 const createRegistry = () => {
-  const rendererRegistry = createWorkbenchRendererRegistry({ createHost: () => ({}) as HTMLElement });
+  const rendererRegistry = createWorkbenchRendererRegistry();
   const tables = createDataTableRendererRegistry({ rendererRegistry });
   return { rendererRegistry, tables };
 };
@@ -24,7 +24,7 @@ describe("createDataTableRendererRegistry", () => {
     tables.registerDataTableRenderer({ id: "health", title: "Health", executeQuery: () => ({ rows: [] }) }, undefined);
 
     const renderer = rendererRegistry.getRenderer("health");
-    if (!renderer || renderer.keepAlive) throw new Error("expected a widget renderer");
+    if (!renderer) throw new Error("expected a widget renderer");
     renderer.render({} as Parameters<typeof renderer.render>[0]);
 
     expect(calls).toEqual(["health"]);

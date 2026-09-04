@@ -40,8 +40,6 @@ const resourceView = defineView({
 });
 const ticketKind = defineResourceKind({
   id: "ticket",
-  surface: "primary",
-  slots: [{ id: "primary", cardinality: "one", access: "owner" }],
 });
 
 const diagnosticsFor = (definition: LoadedExtensionSource["definition"]) =>
@@ -55,8 +53,13 @@ describe("page target validation", () => {
       path: "tickets",
       mode: workbenchModes.project,
       slots: [
-        { id: "ticket", role: "primary", region: "main", binding: { kind: ticketKind.ref, view: resourceView.ref } },
-        { id: "files", role: "auxiliary", region: "side", view: pageView.ref },
+        {
+          id: "ticket",
+          role: "primary",
+          region: "main",
+          binding: { kind: ticketKind.ref, view: resourceView.ref, cardinality: "one" },
+        },
+        { id: "files", role: "auxiliary", region: "side", view: pageView.ref, presence: "open" },
       ],
     });
     const navigationItems = [
@@ -115,7 +118,7 @@ describe("page target validation", () => {
       mode: workbenchModes.project,
       slots: [
         { id: "ticket", role: "primary", region: "main", view: pageView.ref },
-        { id: "files", role: "auxiliary", region: "side", view: pageView.ref },
+        { id: "files", role: "auxiliary", region: "side", view: pageView.ref, presence: "open" },
       ],
     });
     const navigationItem = defineNavigationItem({

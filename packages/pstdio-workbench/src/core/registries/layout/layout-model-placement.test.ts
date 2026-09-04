@@ -174,14 +174,15 @@ describe("createLayoutModel Location-owned placements", () => {
   test("keeps singleton Sub Panels scoped to their Location when switching Locations", () => {
     const layout = createLayoutModel();
 
-    layout.registerLocation({
+    layout.registerPanel({
       id: "project.location",
       title: "Project",
       region: "main",
       singleton: false,
       rendererId: "test.renderer",
     });
-    layout.registerSubPanel({
+    layout.registerPanel({
+      eligibleLocations: {},
       id: "project.notes",
       title: "Notes",
       region: "main",
@@ -210,14 +211,15 @@ describe("createLayoutModel Location-owned placements", () => {
   test("reuses a pinned Sub Panel across Locations instead of duplicating chrome", () => {
     const layout = createLayoutModel();
 
-    layout.registerLocation({
+    layout.registerPanel({
       id: "project.location",
       title: "Project",
       region: "main",
       singleton: false,
       rendererId: "test.renderer",
     });
-    layout.registerSubPanel({
+    layout.registerPanel({
+      eligibleLocations: {},
       id: "lab.sidenav",
       title: "Lab Sidenav",
       region: "side",
@@ -241,7 +243,7 @@ describe("createLayoutModel Location-owned placements", () => {
   test("keeps singleton Panel Menus scoped to their Location", () => {
     const layout = createLayoutModel();
 
-    layout.registerLocation({
+    layout.registerPanel({
       id: "project.location",
       title: "Project",
       region: "main",
@@ -273,7 +275,7 @@ describe("createLayoutModel Location-owned placements", () => {
 describe("createLayoutModel placement lifecycle", () => {
   test("keeps the active Side Panel tab when the primary resource changes", () => {
     const layout = createLayoutModel();
-    layout.registerLocation({
+    layout.registerPanel({
       id: "project.workspace",
       title: "Workspace",
       region: "main",
@@ -281,7 +283,8 @@ describe("createLayoutModel placement lifecycle", () => {
       rendererId: "test.renderer",
     });
     for (const id of ["project.files", "project.diff"]) {
-      layout.registerSubPanel({
+      layout.registerPanel({
+        eligibleLocations: {},
         id,
         title: id,
         region: "side",
@@ -307,14 +310,16 @@ describe("createLayoutModel placement lifecycle", () => {
     const previewA = { kind: "session", uri: "pstdio://session/a", label: "Session A" };
     const previewB = { kind: "session", uri: "pstdio://session/b", label: "Session B" };
 
-    layout.registerSubPanel({
+    layout.registerPanel({
+      eligibleLocations: {},
       id: "project.session",
       title: "Session",
       region: "side",
       singleton: false,
       rendererId: "test.renderer",
     });
-    layout.registerSubPanel({
+    layout.registerPanel({
+      eligibleLocations: {},
       id: "project.files",
       title: "Files",
       region: "side",
@@ -348,14 +353,15 @@ describe("createLayoutModel placement lifecycle", () => {
     const layout = createLayoutModel();
     const session = { kind: "session", uri: "pstdio://session/a", label: "Session A" };
 
-    layout.registerLocation({
+    layout.registerPanel({
       id: "project.workspace",
       title: "Workspace",
       region: "main",
       singleton: false,
       rendererId: "test.renderer",
     });
-    layout.registerSubPanel({
+    layout.registerPanel({
+      eligibleLocations: {},
       id: "project.session",
       title: "Session",
       region: "side",
@@ -387,7 +393,8 @@ describe("createLayoutModel placement lifecycle", () => {
     const layout = createLayoutModel();
 
     for (const id of ["project.files", "project.diff", "project.terminal"]) {
-      layout.registerSubPanel({
+      layout.registerPanel({
+        eligibleLocations: {},
         id,
         title: id,
         region: "side",
@@ -414,14 +421,15 @@ describe("createLayoutModel placement lifecycle", () => {
     const workspaceA = { kind: "workspace", uri: "pstdio://workspace/a", label: "Workspace A" };
     const workspaceB = { kind: "workspace", uri: "pstdio://workspace/b", label: "Workspace B" };
 
-    layout.registerLocation({
+    layout.registerPanel({
       id: "project.workspace",
       title: "Workspace",
       region: "main",
       singleton: false,
       rendererId: "test.renderer",
     });
-    layout.registerSubPanel({
+    layout.registerPanel({
+      eligibleLocations: {},
       id: "project.session",
       title: "Session",
       region: "side",
@@ -455,7 +463,8 @@ describe("createLayoutModel placement management", () => {
     const sessionB = { kind: "session", uri: "pstdio://session/b", label: "Session B" };
     const sessionC = { kind: "session", uri: "pstdio://session/c", label: "Session C" };
 
-    layout.registerSubPanel({
+    layout.registerPanel({
+      eligibleLocations: {},
       id: "project.session",
       title: "Session",
       region: "side",

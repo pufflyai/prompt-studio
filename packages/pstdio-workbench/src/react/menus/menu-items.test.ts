@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, type MenuPath, workbenchRegionTabLeadingMenuPath } from "../../core";
+import { createWorkbench, type MenuPath, workbenchRegionTabLeadingMenuPath } from "../../core";
 import { listWorkbenchMenuItems, listWorkbenchMenuItemsFromState } from "./menu-items";
 
 const menuPath = ["workbench", "top", "actions"] as const satisfies MenuPath;
 
 describe("listWorkbenchMenuItems", () => {
   test("resolves workbench region tab leading actions", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.commands.registerCommand(
       { id: "workbench.terminal.open", label: "Open terminal", icon: "Plus" },
@@ -28,7 +28,7 @@ describe("listWorkbenchMenuItems", () => {
   });
 
   test("resolves visible menu actions into command-backed header items", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.context.set("project.open", true);
     workbench.commands.registerCommand(
@@ -68,7 +68,7 @@ describe("listWorkbenchMenuItems", () => {
   });
 
   test("marks disabled commands without dropping them", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.commands.registerCommand(
       { id: "project.download", label: "Download" },
@@ -83,7 +83,7 @@ describe("listWorkbenchMenuItems", () => {
   });
 
   test("keeps a contextual overflow trigger label with the menu action", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.commands.registerCommand(
       { id: "sessions.archive", label: "Archive session" },
@@ -102,7 +102,7 @@ describe("listWorkbenchMenuItems", () => {
   });
 
   test("keeps read-only metadata on menu actions", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.commands.registerCommand(
       { id: "app.info", label: "Prompt Studio", description: "v1.2.3" },
@@ -125,7 +125,7 @@ describe("listWorkbenchMenuItems", () => {
   });
 
   test("resolves from explicit store snapshots for reactive header rendering", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.commands.registerCommand(
       { id: "sessions.archive", label: "Archive session" },
@@ -165,7 +165,7 @@ describe("listWorkbenchMenuItems", () => {
   });
 
   test("uses explicit resource context before ambient resource context", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.commands.registerCommand({ id: "tickets.run", label: "Run ticket" }, { execute: () => undefined });
     workbench.layout.registerMenuItem(menuPath, {
@@ -187,7 +187,7 @@ describe("listWorkbenchMenuItems", () => {
   });
 
   test("clears ambient resource context when an explicit resource context is provided", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.commands.registerCommand({ id: "tickets.run", label: "Run ticket" }, { execute: () => undefined });
     workbench.layout.registerMenuItem(menuPath, {

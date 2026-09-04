@@ -13,7 +13,7 @@ interface PersistedWorkbenchLayoutV3 {
 
 type PersistedWorkbenchLayout = PersistedWorkbenchLayoutV3;
 
-// Version 3 is the composition-resolver layout model (PS-267). Layouts persisted by
+// Version 3 is the owned-placement layout model (PS-267). Layouts persisted by
 // earlier versions carry replaced panel roles and bindings, so they are discarded
 // rather than interpreted.
 const WORKBENCH_LAYOUT_VERSION = 3 as const;

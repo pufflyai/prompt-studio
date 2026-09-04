@@ -1,3 +1,4 @@
+export { type DockedWorkbenchRegion, dockedWorkbenchRegions } from "@pstdio/sdk/extensions";
 export type {
   CommandPaletteResourceProvider,
   CommandPaletteResourceProviderResult,
@@ -26,27 +27,6 @@ export type {
   RegisteredKeybinding,
 } from "../registries/keybindings/keybinding-registry";
 export { createKeybindingRegistry, getKeybindingSteps } from "../registries/keybindings/keybinding-registry";
-export { resolveComposition } from "../registries/layout/composition-resolver";
-export type {
-  CompositionDiagnostic,
-  CompositionModeDefinition,
-  CompositionModeRecipe,
-  CompositionPanelDefinition,
-  CompositionPanelPlacement,
-  CompositionPlacementPolicy,
-  CompositionResolutionContext,
-  CompositionResourceKindDefinition,
-  CompositionResourcePanelEdge,
-  CompositionSlotDefinition,
-  DockedCompositionRegion,
-  PersistedCompositionLayout,
-  ResolveCompositionInput,
-  ResolvedComposition,
-  ResolvedCompositionAddablePanel,
-  ResolvedCompositionPlacement,
-  WorkbenchComposition,
-} from "../registries/layout/composition-resolver-types";
-export { dockedCompositionRegions } from "../registries/layout/composition-resolver-types";
 export type {
   CreateLayoutModelInput,
   LayoutModel,
@@ -59,10 +39,10 @@ export type {
   WidgetContribution,
   WidgetMountStrategy,
   WidgetReusePolicy,
+  WorkbenchCommandTarget,
   WorkbenchFloatingPanelVisibility,
   WorkbenchLayout,
   WorkbenchLayoutStoreState,
-  WorkbenchLocationContribution,
   WorkbenchLocationEligibility,
   WorkbenchPanelContribution,
   WorkbenchPanelInstance,
@@ -79,9 +59,12 @@ export type {
   WorkbenchRegion,
   WorkbenchRegionSize,
   WorkbenchRegionState,
-  WorkbenchSubPanelContribution,
+  WorkbenchTabAction,
+  WorkbenchTabMenuGroup,
+  WorkbenchTabMenuRow,
   WorkbenchTabPosition,
   WorkbenchTabRetention,
+  WorkbenchTabSnapshot,
   WorkbenchWidgetPlacement,
   WorkbenchWidgetRole,
   WorkbenchWidgetTab,
@@ -140,7 +123,6 @@ export {
 } from "../registries/menus/workbench-menu-paths";
 export type {
   WorkbenchModePlacementContribution,
-  WorkbenchModePlacementItem,
   WorkbenchModePlacementRegistry,
 } from "../registries/modes/mode-placement-registry";
 export { createWorkbenchModePlacementRegistry } from "../registries/modes/mode-placement-registry";
@@ -167,11 +149,7 @@ export type {
   NavigationTargetCompound,
   NavigationTargetItem,
   NavigationTargetPanel,
-  NavigationTargetResource,
-  NavigationTargetView,
   RegisteredNavigationParser,
-  RegisteredResourceNavigator,
-  ResourceNavigator,
 } from "../registries/navigation/navigation-registry";
 export { createNavigationRegistry } from "../registries/navigation/navigation-registry";
 export type {
@@ -192,6 +170,12 @@ export type {
 } from "../registries/notifications/notification-registry";
 export { createNotificationRegistry } from "../registries/notifications/notification-registry";
 export type {
+  OpenWorkbenchOverlayInput,
+  WorkbenchOverlayContribution,
+  WorkbenchOverlayRegistry,
+} from "../registries/overlays/overlay-registry";
+export { createWorkbenchOverlayRegistry } from "../registries/overlays/overlay-registry";
+export type {
   CreateWorkbenchPageRegistryInput,
   WorkbenchPageContribution,
   WorkbenchPagePlacementInput,
@@ -205,6 +189,24 @@ export type {
   WorkbenchPageSlotOpenInput,
 } from "../registries/pages/page-registry";
 export { createWorkbenchPageRegistry } from "../registries/pages/page-registry";
+export type {
+  WorkbenchPlaceholderContribution,
+  WorkbenchPlaceholderRegistry,
+} from "../registries/placeholders/placeholder-registry";
+export { createWorkbenchPlaceholderRegistry } from "../registries/placeholders/placeholder-registry";
+export type {
+  WorkbenchOwnedPlacementItem,
+  WorkbenchPlacementPresence,
+} from "../registries/placements/owned-placement-lifecycle";
+export type {
+  OpenWorkbenchShellPlacementInput,
+  WorkbenchShellPlacementContribution,
+  WorkbenchShellPlacementRegistry,
+} from "../registries/placements/shell-placement-registry";
+export {
+  createWorkbenchShellPlacementRegistry,
+  shellPlacementContributionId,
+} from "../registries/placements/shell-placement-registry";
 export type {
   CreatePreferenceRegistryInput,
   PreferencePersistenceAdapter,
@@ -231,3 +233,4 @@ export type {
   RegisteredControlsRendererContribution,
 } from "../registries/renderers/controls-renderer-registry";
 export { createControlsRendererRegistry } from "../registries/renderers/controls-renderer-registry";
+export type { WorkbenchPlacementPresentation } from "../registries/views/view-placement";

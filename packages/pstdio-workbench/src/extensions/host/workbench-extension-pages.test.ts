@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore } from "../../core";
+import { createWorkbench } from "../../core";
 import { emptyWorkbenchExtensionMetadata } from "../contributions/extension-contributions";
 import { registerWorkbenchExtensionContributions } from "./workbench-extension-host";
 
@@ -51,7 +51,7 @@ const metadata = {
 
 describe("extension page registration", () => {
   test("registers normalized pages in the shared workbench registry", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const registration = registerWorkbenchExtensionContributions({
       executeCommand: () => undefined,
       metadata,

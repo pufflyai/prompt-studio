@@ -1,4 +1,10 @@
-import type { RegisteredWidgetContribution, ResourceRef, WorkbenchCore, WorkbenchPanelRegion } from "../../core";
+import type {
+  RegisteredWidgetContribution,
+  ResourceRef,
+  WorkbenchCompositionAddablePanel,
+  WorkbenchCore,
+  WorkbenchPanelRegion,
+} from "../../core";
 
 interface OpenPanelWidgetInput {
   workbench: WorkbenchCore;
@@ -6,6 +12,7 @@ interface OpenPanelWidgetInput {
   region: WorkbenchPanelRegion;
   resource?: ResourceRef;
   pinned?: boolean;
+  open?: WorkbenchCompositionAddablePanel["open"];
 }
 
 export const getPanelLabel = (region: WorkbenchPanelRegion) => {
@@ -15,10 +22,12 @@ export const getPanelLabel = (region: WorkbenchPanelRegion) => {
 };
 
 export const openPanelWidget = (input: OpenPanelWidgetInput) => {
-  const { pinned, region, resource, widget, workbench } = input;
+  const { open, pinned, region, resource, widget, workbench } = input;
 
-  if (widget.openCommandId) {
-    void workbench.commands.executeCommand(widget.openCommandId, undefined, {
+  if (open) {
+    open(resource);
+  } else if (widget.openCommand) {
+    void workbench.commands.executeCommand(widget.openCommand.commandId, widget.openCommand.args, {
       source: "panel-add",
       ...(resource ? { resource } : {}),
     });

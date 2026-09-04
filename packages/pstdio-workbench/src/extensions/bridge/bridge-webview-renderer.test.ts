@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
-import { createWorkbenchCore, type WorkbenchPanelInstance } from "../../core";
+import { createWorkbench, type WorkbenchPanelInstance } from "../../core";
 import { BRIDGE_WEBVIEW_RENDERER_ID, createBridgeWebviewRenderer } from "./bridge-webview-renderer";
 
 const setupWebviewWidget = () => {
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
 
   workbench.layout.registerPanel({
     id: "lab.page",
@@ -56,7 +56,7 @@ describe("createBridgeWebviewRenderer", () => {
     };
 
     expect(typeof element.props.capabilities["commands.execute"]).toBe("function");
-    expect(typeof element.props.capabilities["resource.open"]).toBe("function");
+    expect(typeof element.props.capabilities["navigation.open"]).toBe("function");
   });
 
   test("uses the injected createProps factory", () => {

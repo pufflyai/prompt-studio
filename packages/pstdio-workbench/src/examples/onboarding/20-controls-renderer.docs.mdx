@@ -1,30 +1,56 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import source from "../host-terminal-story.tsx?raw";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="16. Host terminal" />
 
-<Meta of={OnboardingStories} name="20. Controls renderer" parameters={{ layout: "padded" }} />
+# 16. Connect the native terminal
 
-# 20. Add A Controls Panel
+The workbench owns terminal panels and interaction. The host supplies process operations because only the host can
+create a PTY safely. Extensions request a terminal panel without receiving direct process access.
 
-When a resource needs an editable inspector — grouped properties, alignment,
-ranges, colors — register a **controls renderer** instead of building a webview.
-It renders through the `@pstdio/ui` ParamEditor.
+The adapter must forward output events and release sessions when panels close. Keep operating-system details outside
+the renderer.
 
-<Canvas of={OnboardingStories.ControlsRenderer} sourceState="shown" />
+The story opens Terminal 1 at startup. Press **Open another terminal** in Main to create Terminal 2, Terminal 3, and as
+many later tabs as you need. The + menu in the Secondary panel runs the same command.
 
-You provide:
+<Canvas of={OnboardingStories.HostTerminal} sourceState="none" />
 
-- **`executeQuery(resource)`** — returns serializable `{ params?, groups?, values?, readOnly? }`
-  ParamEditor declarations plus the current values for the active resource.
-- **`updateValue`** — live-saves a single edit. Omit it (along with `apply`) to
-  make the panel read-only.
-- Optional **`apply`** / **`reset`** for a sticky footer that commits or restores
-  the whole value map.
+## Complete example
 
-Like the kanban renderer, `registerControlsRenderer` auto-creates a Panel renderer
-with the same id; place it with `layout.registerPanel` (default region `main-right`,
-so it companions the active resource). Extensions declare this as a `controls`
-contribution and the dashboard bridges the query/update/apply/reset command ids.
+<Source code={source} language="tsx" />
+
+## What each field means
+
+The host connects a process adapter and activates the terminal module:
+
+- `createScriptedTerminalBridge({ initial })` builds a scripted stand-in for a real PTY bridge. `initial` lists the
+  output the terminal shows first. A real host replaces this with an adapter that spawns processes.
+- `ctx.terminal.setSessionOpener((request) => ...)` registers the host callback that opens one terminal session. The
+  workbench calls it whenever a terminal panel needs a process.
+- `createWorkbenchTerminalModule().activate(ctx)` registers the terminal Views and placements. It returns
+  disposables the module passes back so deactivation cleans them up.
+
+The demo places a launcher in Main and a plain notes View beside terminals in the Secondary panel:
+
+- the launcher calls `workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID)` each time you press its
+  button.
+- `createWorkbenchTerminalModule()` connects the same command to the terminal placement's Add action, so the Secondary
+  panel + menu can also create another terminal.
+
+- `ctx.views.registerView(...)` defines the notes View with a React `body`.
+- `ctx.shellPlacements.registerPlacement(...)` places it. `item.kind: "view"` places one static View, `item.viewId`
+  names it, and `region: "secondary"` targets the Secondary Panel region.
+- `item.presence: "closed"` keeps the placement hidden until the user or an action opens it. The Add panel offers it.
+
+The story-level setup opens panels and shows persistence:
+
+- `createWorkbench({ layoutPersistence })` creates the workbench, optionally with a layout persistence adapter. The
+  adapter has `getLayout(scope)` and `setLayout(layout, scope)`.
+- `openWorkbenchTerminal(workbench)` opens Terminal 1 before the story renders.
+- each launcher click runs the registered open command, which creates a new terminal resource and tab.
+- `workbench.shellPlacements.openPlacement({ placementId })` opens a declared placement by id. The example uses it to
+  open the closed notes placement.
+- `workbench.layout.setPersistenceScope(scope)` selects which persisted layout is active. The restored story writes a
+  layout under one scope, then creates a second workbench on the same scope to show the layout coming back.

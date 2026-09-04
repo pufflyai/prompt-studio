@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "../../workbench-core";
+import { createWorkbench } from "../../workbench-core";
 
 describe("workbench composition query", () => {
   test("returns open, addable, and closable panels for one region", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.layout.registerPanel({
       id: "notes",
       title: "Notes",
@@ -38,7 +38,7 @@ describe("workbench composition query", () => {
   });
 
   test("offers registered panels that match the active location resource", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const resource = { kind: "ticket", uri: "pstdio://ticket/PS-281", id: "PS-281" };
     workbench.layout.registerPanel({
       id: "ticket",
@@ -59,10 +59,23 @@ describe("workbench composition query", () => {
     expect(workbench.composition.panelsFor("side").addable.map((panel) => panel.panelId)).toEqual(["session"]);
   });
 
-  test("offers registered panels that match the active view location", async () => {
-    const workbench = createWorkbenchCore();
-    workbench.layout.registerPanel({ id: "start", title: "Start", region: "main", rendererId: "start" });
-    workbench.views.registerView({ id: "start", panelId: "start", title: "Start" });
+  test("offers registered panels that match the active page view", () => {
+    const workbench = createWorkbench();
+    const startPage = { extensionId: "pstdio", kind: "page" as const, id: "start" };
+    workbench.modes.registerMode({ id: "project", activate: () => undefined });
+    workbench.views.registerView({
+      id: "start",
+      title: "Start",
+      body: { kind: "react", render: () => null },
+    });
+    workbench.pages.registerPage({
+      id: "start",
+      ref: startPage,
+      title: "Start",
+      path: "",
+      modeId: "project",
+      slots: [{ id: "content", role: "primary", region: "main", viewId: "start" }],
+    });
     workbench.layout.registerPanel({
       id: "session",
       title: "Session",
@@ -71,13 +84,14 @@ describe("workbench composition query", () => {
       eligibleLocations: { canOpenLocation: ({ viewId }) => viewId === "start" },
     });
 
-    await workbench.views.openView("start");
+    workbench.pageLocations.setProject("project-1");
+    workbench.pageLocations.navigate({ kind: "page", page: startPage });
 
     expect(workbench.composition.panelsFor("side").addable.map((panel) => panel.panelId)).toEqual(["session"]);
   });
 
   test("does not offer panels in a region excluded by the active mode", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.layout.registerPanel({
       id: "terminal",
       title: "Terminal",
@@ -92,7 +106,7 @@ describe("workbench composition query", () => {
   });
 
   test("does not offer a singleton Location that is already open for the active resource", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const resource = { kind: "ticket", uri: "pstdio://ticket/PS-281", id: "PS-281" };
     workbench.layout.registerPanel({
       id: "ticket",
@@ -106,5 +120,45 @@ describe("workbench composition query", () => {
     workbench.layout.openWidget("ticket", { region: "main", resource, role: "location" });
 
     expect(workbench.composition.panelsFor("main").addable).toEqual([]);
+  });
+
+  test("runs a resource binding's add action through the navigation executor", () => {
+    const workbench = createWorkbench();
+    let received: unknown;
+    let source: string | undefined;
+    workbench.commands.registerCommand(
+      { id: "create-session", label: "Create session" },
+      {
+        execute: (args, context) => {
+          received = args;
+          source = context?.source;
+        },
+      },
+    );
+    workbench.views.registerView({
+      id: "session",
+      title: "Session",
+      body: { kind: "react", render: () => null },
+    });
+    workbench.modes.registerMode({ id: "project", activate: () => undefined });
+    workbench.modePlacements.registerPlacement({
+      id: "project.session",
+      ref: { extensionId: "pstdio", kind: "placement", id: "session" },
+      modeId: "project",
+      item: {
+        kind: "resource",
+        viewId: "session",
+        resourceKinds: ["session"],
+        cardinality: "many",
+        add: { kind: "command", commandId: "create-session", args: { origin: "panel-add" } },
+      },
+      region: "side",
+    });
+    workbench.modes.setActiveMode("project");
+
+    workbench.composition.panelsFor("side").addable[0]?.open?.();
+
+    expect(received).toEqual({ origin: "panel-add" });
+    expect(source).toBe("panel-add");
   });
 });

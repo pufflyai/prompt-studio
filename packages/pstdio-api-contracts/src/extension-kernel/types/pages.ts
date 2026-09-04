@@ -9,7 +9,9 @@ import type {
   ViewRef,
 } from "./contribution-identity";
 import type { FileRendererSectionTarget } from "./file-renderer";
+import type { NavigationTarget } from "./navigation-target";
 import type { ResourceRef } from "./resources";
+import type { PlacementPresence, PlacementPresentation } from "./views";
 
 export type PageSlotRole = "primary" | "auxiliary";
 export type PageSlotCardinality = "one" | "many";
@@ -17,22 +19,57 @@ export type PageOpenIntent = "preview" | "pin";
 export type PageSlotRegion = ExtensionPanelRegion;
 
 export interface PageSlotBinding {
-  readonly kind: ResourceKindRef;
+  readonly kind: ResourceKindRef | readonly ResourceKindRef[];
   readonly view: ViewRef;
+  readonly cardinality: PageSlotCardinality;
+  /**
+   * Action the Add panel runs to create or select a resource before the slot
+   * can open. Without it the Add panel opens the slot with the active
+   * resource when the kind matches.
+   */
+  readonly add?: NavigationTarget;
 }
 
-export interface PageSlot {
+interface PageSlotBase extends PlacementPresentation {
   readonly id: string;
-  readonly role: PageSlotRole;
   readonly region: PageSlotRegion;
-  readonly view?: ViewRef;
-  readonly binding?: PageSlotBinding;
-  readonly cardinality?: PageSlotCardinality;
-  readonly closable?: boolean;
-  readonly defaultOpen?: boolean;
-  readonly defaultResource?: ResourceRef;
   readonly order?: number;
 }
+
+/**
+ * The page's routed content. Always present while the page is open; the user
+ * cannot hide the slot itself. With a binding, each opened resource becomes
+ * an instance; the static view (when declared) shows while no resource is
+ * open.
+ */
+export interface PagePrimarySlot extends PageSlotBase {
+  readonly role: "primary";
+  readonly view?: ViewRef;
+  readonly binding?: PageSlotBinding;
+}
+
+/** An optional static panel the page owns. `presence` sets its initial state. */
+export interface PageStaticSlot extends PageSlotBase {
+  readonly role: "auxiliary";
+  readonly view: ViewRef;
+  readonly presence: PlacementPresence;
+  readonly binding?: undefined;
+}
+
+/**
+ * A resource-bound panel the page owns. It has no initial visibility: an
+ * instance opens only when an action supplies a resource. `openOn:
+ * "page-resource"` also opens it for the page's own resource when the kind
+ * matches.
+ */
+export interface PageBoundSlot extends PageSlotBase {
+  readonly role: "auxiliary";
+  readonly binding: PageSlotBinding;
+  readonly view?: undefined;
+  readonly openOn?: "page-resource";
+}
+
+export type PageSlot = PagePrimarySlot | PageStaticSlot | PageBoundSlot;
 
 export interface PageSlotRef {
   readonly kind: "page-slot";

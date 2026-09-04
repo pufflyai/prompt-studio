@@ -33,10 +33,6 @@
       "types": "./dist/extensions.d.ts",
       "import": "./dist/extensions.js"
     },
-    "./testing": {
-      "types": "./dist/testing.d.ts",
-      "import": "./dist/testing.js"
-    },
     "./webview-runtime": {
       "types": "./dist/webview-runtime.d.ts",
       "import": "./dist/webview-runtime.js"

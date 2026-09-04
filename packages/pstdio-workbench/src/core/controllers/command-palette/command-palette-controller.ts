@@ -3,7 +3,7 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 
 export type WorkbenchCommandPaletteChangeListener = (open: boolean) => void;
-export type WorkbenchCommandPaletteView = "main" | "theme" | "mode";
+export type WorkbenchCommandPaletteView = "main" | "theme";
 
 // A pending request to collect a command's params before running it. Held on the
 // controller (not in a single React tree) so any surface — palette entries, header

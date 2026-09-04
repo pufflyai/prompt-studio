@@ -1,4 +1,4 @@
-import type { TreeContext, TreeNode, TreeRendererRegistry, TreeViewSection } from "../../../core";
+import type { TreeNode, TreeQueryContext, TreeRendererRegistry, TreeViewSection } from "../../../core";
 
 const isUnregisteredTreeError = (trees: TreeRendererRegistry, treeId: string, error: unknown) =>
   error instanceof Error &&
@@ -22,7 +22,7 @@ export const loadExpandedTreeChildren = async (
   treeId: string,
   data: LoadedTreeData,
   expandedNodeIds: string[],
-  ctx: TreeContext = {},
+  ctx: TreeQueryContext = {},
 ) => {
   const expanded = new Set(expandedNodeIds);
   const visited = new Set<string>();
@@ -61,7 +61,7 @@ export const expandDefaultTreeSections = (trees: TreeRendererRegistry, treeId: s
 export const loadTreeData = async (
   trees: TreeRendererRegistry,
   treeId: string,
-  ctx: TreeContext = {},
+  ctx: TreeQueryContext = {},
 ): Promise<LoadedTreeData | null> => {
   if (!trees.getTreeRenderer(treeId)) return null;
 

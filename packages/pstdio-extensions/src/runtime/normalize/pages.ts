@@ -1,10 +1,13 @@
-import type { PageContribution, PageSlot } from "@pstdio/sdk/extensions";
-import type { NormalizedExtension, RuntimePageRecord } from "../../types/runtime";
+import type { PageContribution, PageSlot, PageSlotBinding, ResourceKindRef } from "@pstdio/sdk/extensions";
+import type { NormalizedExtension, RuntimePageSlot } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
-import { type Accumulator, isRecord } from "./accumulator";
+import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { isLocalizableString } from "./localizable";
+import { normalizeNavigationAction } from "./navigation-action";
+import { isPlacementPresentation, removedPlacementField } from "./placement-presentation";
+import { registerPrivateHandler } from "./private-handlers";
 import { normalizeContributionRef } from "./references";
 
 const isRef = (value: unknown, kind: string) =>
@@ -13,20 +16,36 @@ const isRef = (value: unknown, kind: string) =>
   typeof value.id === "string" &&
   (value.extensionId === undefined || typeof value.extensionId === "string");
 
-const isOptionalBoolean = (value: unknown) => value === undefined || typeof value === "boolean";
-
 const isPageSlotBinding = (value: unknown) =>
-  value === undefined || (isRecord(value) && isRef(value.kind, "resource-kind") && isRef(value.view, "view"));
+  isRecord(value) &&
+  (isRef(value.kind, "resource-kind") ||
+    (Array.isArray(value.kind) && value.kind.length > 0 && value.kind.every((kind) => isRef(kind, "resource-kind")))) &&
+  isRef(value.view, "view") &&
+  (value.cardinality === "one" || value.cardinality === "many") &&
+  (value.add === undefined || (isRecord(value.add) && typeof value.add.kind === "string"));
 
-const isDefaultResource = (value: unknown) =>
-  value === undefined || (isRecord(value) && typeof value.type === "string" && typeof value.id === "string");
+const isOrder = (value: unknown) => value === undefined || (typeof value === "number" && Number.isFinite(value));
 
-const hasValidSlotOptions = (value: Record<string, unknown>) =>
-  (value.cardinality === undefined || value.cardinality === "one" || value.cardinality === "many") &&
-  isOptionalBoolean(value.closable) &&
-  isOptionalBoolean(value.defaultOpen) &&
-  (value.order === undefined || (typeof value.order === "number" && Number.isFinite(value.order))) &&
-  isDefaultResource(value.defaultResource);
+const isPresence = (value: unknown) => value === "fixed" || value === "open" || value === "closed";
+
+const isSlotContent = (value: Record<string, unknown>) => {
+  if (value.role === "primary") {
+    return (
+      (value.view === undefined || isRef(value.view, "view")) &&
+      (value.binding === undefined || isPageSlotBinding(value.binding)) &&
+      value.presence === undefined &&
+      value.openOn === undefined
+    );
+  }
+  if (value.view !== undefined) {
+    return isRef(value.view, "view") && isPresence(value.presence) && value.binding === undefined;
+  }
+  return (
+    isPageSlotBinding(value.binding) &&
+    value.presence === undefined &&
+    (value.openOn === undefined || value.openOn === "page-resource")
+  );
+};
 
 const isPageSlot = (value: unknown): value is PageSlot => {
   if (
@@ -37,8 +56,7 @@ const isPageSlot = (value: unknown): value is PageSlot => {
   ) {
     return false;
   }
-  if (value.view !== undefined && !isRef(value.view, "view")) return false;
-  return isPageSlotBinding(value.binding) && hasValidSlotOptions(value);
+  return isSlotContent(value) && isOrder(value.order) && isPlacementPresentation(value);
 };
 
 const invalidPageField = (contribution: PageContribution) => {
@@ -50,20 +68,58 @@ const invalidPageField = (contribution: PageContribution) => {
   return undefined;
 };
 
-const normalizeSlot = (ext: NormalizedExtension, slot: PageSlot): PageSlot => ({
-  ...slot,
-  ...(slot.view ? { view: normalizeContributionRef(ext, slot.view) } : {}),
-  ...(slot.binding
-    ? {
-        binding: {
-          kind: normalizeContributionRef(ext, slot.binding.kind),
-          view: normalizeContributionRef(ext, slot.binding.view),
-        },
-      }
-    : {}),
+const normalizeBinding = (ext: NormalizedExtension, binding: PageSlotBinding) => ({
+  kind: Array.isArray(binding.kind)
+    ? binding.kind.map((kind) => normalizeContributionRef(ext, kind))
+    : normalizeContributionRef(ext, binding.kind as ResourceKindRef),
+  view: normalizeContributionRef(ext, binding.view),
+  cardinality: binding.cardinality,
+  ...(binding.add ? { add: normalizeNavigationAction(ext, binding.add) } : {}),
 });
 
-export const registerPages = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
+const normalizeSlot = (input: {
+  ext: NormalizedExtension;
+  source: LoadedExtensionSource;
+  runtime: Accumulator;
+  index: RegistryIndex;
+  pageId: string;
+  slot: PageSlot;
+}): RuntimePageSlot => {
+  const { tab: _tab, ...slot } = input.slot;
+  const queryHandlerId = input.slot.tab
+    ? registerPrivateHandler({
+        ext: input.ext,
+        source: input.source,
+        runtime: input.runtime,
+        index: input.index,
+        rendererId: `${input.pageId}.${input.slot.id}`,
+        rendererKind: "tab",
+        rendererLocalId: `${input.pageId}.${input.slot.id}`,
+        operation: "query",
+        handler: input.slot.tab.query,
+      })
+    : undefined;
+  const tab =
+    input.slot.tab && queryHandlerId ? { refreshEvents: input.slot.tab.refreshEvents, queryHandlerId } : undefined;
+  return {
+    ...slot,
+    ...(tab ? { tab } : {}),
+    ...(input.slot.view ? { view: normalizeContributionRef(input.ext, input.slot.view) } : {}),
+    ...(input.slot.binding ? { binding: normalizeBinding(input.ext, input.slot.binding) } : {}),
+  } as RuntimePageSlot;
+};
+
+const removedSlotCardinality = (slot: unknown) => {
+  if (!isRecord(slot) || slot.cardinality === undefined) return undefined;
+  return { field: "cardinality", replacement: 'declare "cardinality" on the binding instead' };
+};
+
+export const registerPages = (
+  ext: NormalizedExtension,
+  source: LoadedExtensionSource,
+  runtime: Accumulator,
+  index: RegistryIndex,
+) => {
   const contributions = uniqueContributions({
     ext,
     source,
@@ -98,28 +154,45 @@ export const registerPages = (ext: NormalizedExtension, source: LoadedExtensionS
       );
       continue;
     }
-    const validSlots = contribution.slots.filter((slot, index): slot is PageSlot => {
+    const validSlots = contribution.slots.filter((slot, slotIndex): slot is PageSlot => {
+      const removed = removedPlacementField(slot) ?? removedSlotCardinality(slot);
+      if (removed) {
+        runtime.diagnostics.push(
+          createDiagnostic({
+            code: "invalid_page_slot",
+            message: `Page "${contribution.id}" slot at index ${slotIndex} uses removed field "${removed.field}"; ${removed.replacement}`,
+            extensionId: ext.id,
+            sourcePath: source.sourcePath,
+            metadata: {
+              contributionId: contribution.id,
+              fieldPath: `pages.${contribution.id}.slots.${slotIndex}.${removed.field}`,
+            },
+          }),
+        );
+        return false;
+      }
       if (isPageSlot(slot)) return true;
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_page_slot",
-          message: `Page "${contribution.id}" has an invalid slot at index ${index}`,
+          message: `Page "${contribution.id}" has an invalid slot at index ${slotIndex}`,
           extensionId: ext.id,
           sourcePath: source.sourcePath,
-          metadata: { contributionId: contribution.id, fieldPath: `pages.${contribution.id}.slots.${index}` },
+          metadata: { contributionId: contribution.id, fieldPath: `pages.${contribution.id}.slots.${slotIndex}` },
         }),
       );
       return false;
     });
+    const base = contributionRecordBase(ext, source, "page", contribution.id);
     const ref = normalizeContributionRef(ext, contribution.ref);
-    const slots = validSlots.map((slot) => normalizeSlot(ext, slot));
+    const slots = validSlots.map((slot) => normalizeSlot({ ext, source, runtime, index, pageId: base.id, slot }));
     const panels = Object.fromEntries(
       slots
         .filter((slot) => slot.role === "auxiliary")
         .map((slot) => [slot.id, { kind: "page-slot" as const, page: ref, id: slot.id }]),
     );
     runtime.pages.push({
-      ...contributionRecordBase(ext, source, "page", contribution.id),
+      ...base,
       contribution: {
         ...contribution,
         ref,
@@ -128,6 +201,6 @@ export const registerPages = (ext: NormalizedExtension, source: LoadedExtensionS
         slots,
         panels,
       },
-    } as RuntimePageRecord);
+    });
   }
 };

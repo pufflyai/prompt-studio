@@ -51,16 +51,14 @@ export const registerWorkbenchPage = <Value>(input: {
   const registered = {
     ...page,
     ref: { ...page.ref },
-    slots: page.slots.map((slot) => ({
-      ...slot,
-      ...(slot.defaultResource ? { defaultResource: input.normalizeResource(slot.defaultResource) } : {}),
-    })),
+    slots: page.slots.map((slot) => ({ ...slot })),
   };
+  const placementRegistration = input.registryInput.registerPagePlacements?.(registered);
   store.setState(
     {
       ...current,
       pages: { ...current.pages, [page.id]: registered },
-      pageStates: { ...current.pageStates, [page.id]: emptyPageState(registered, input.resourceKey) },
+      pageStates: { ...current.pageStates, [page.id]: emptyPageState(registered) },
       reconciliation: emptyReconciliation(),
     },
     false,
@@ -90,8 +88,10 @@ export const registerWorkbenchPage = <Value>(input: {
         },
         "unregisterActivePage",
       );
+      placementRegistration?.dispose();
       return;
     }
     store.setState({ ...snapshot, pages, pageStates, reconciliation: emptyReconciliation() }, false, "unregisterPage");
+    placementRegistration?.dispose();
   });
 };

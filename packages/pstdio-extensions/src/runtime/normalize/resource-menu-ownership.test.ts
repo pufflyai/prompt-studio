@@ -23,8 +23,6 @@ describe("resource menu slot ownership", () => {
   test("rejects another extension from an owner-only menu slot but keeps public slots", () => {
     const ticket = defineResourceKind({
       id: "ticket",
-      surface: "primary",
-      slots: [{ id: "primary", cardinality: "one", access: "owner" }],
       menuSlots: [
         { id: "private", placement: "header-overflow", access: "owner" },
         { id: "public", placement: "header-overflow", access: "public" },
@@ -60,14 +58,10 @@ describe("resource menu slot ownership", () => {
   test("keeps the first resource kind when another extension declares the same id", () => {
     const first = defineResourceKind({
       id: "recipe",
-      surface: "primary",
-      slots: [{ id: "primary", cardinality: "one", access: "owner" }],
       menuSlots: [{ id: "first", placement: "header-overflow", access: "owner" }],
     });
     const duplicate = defineResourceKind({
       id: "recipe",
-      surface: "primary",
-      slots: [{ id: "primary", cardinality: "one", access: "owner" }],
       menuSlots: [{ id: "duplicate", placement: "header-overflow", access: "owner" }],
     });
 
@@ -93,8 +87,6 @@ describe("resource menu slot ownership", () => {
   test("rejects extension declarations of host resource kinds", () => {
     const project = defineResourceKind({
       id: "project",
-      surface: "primary",
-      slots: [{ id: "primary", cardinality: "one", access: "owner" }],
       menuSlots: [{ id: "intruder", placement: "header-overflow", access: "owner" }],
     });
 

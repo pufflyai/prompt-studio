@@ -31,8 +31,14 @@ describe("reconcileAnchors", () => {
 
   test("keeps a Location-owned Sub Panel when its Location becomes active", () => {
     const layout = createLayoutModel();
-    layout.registerLocation({ id: "ticket", title: "Ticket", region: "main", rendererId: "noop" });
-    layout.registerSubPanel({ id: "terminal", title: "Terminal", region: "secondary", rendererId: "noop" });
+    layout.registerPanel({ id: "ticket", title: "Ticket", region: "main", rendererId: "noop" });
+    layout.registerPanel({
+      id: "terminal",
+      title: "Terminal",
+      region: "secondary",
+      rendererId: "noop",
+      eligibleLocations: {},
+    });
     layout.openWidget("ticket", { resource: ticket, role: "location" });
     layout.openWidget("terminal", {
       resource: { kind: "terminal", uri: "pstdio://terminal/x" },

@@ -22,9 +22,16 @@ export interface NavigationTreeContribution {
   sourceExtensionId: string;
   declarationIndex: number;
   slot?: NavigationTreeSlot;
+  viewId?: string;
   defaultExpandedSectionIds?: string[];
-  getSections(context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
+  getSections?(context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getChildren?(node: TreeNode, context: NavigationTreeContext): Promise<TreeNode[]> | TreeNode[];
+}
+
+export interface CreateNavigationTreeRegistryInput {
+  getViewDefaultExpandedSectionIds?(viewId: string): readonly string[] | undefined;
+  getViewSections?(viewId: string, context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
+  getViewChildren?(viewId: string, node: TreeNode, context: NavigationTreeContext): Promise<TreeNode[]> | TreeNode[];
 }
 
 export interface NavigationTreeRegistry {
@@ -68,7 +75,7 @@ const mergeSection = (sections: TreeViewSection[], section: TreeViewSection) => 
   sections[index] = { ...current, nodes: [...current.nodes, ...section.nodes] };
 };
 
-export const createNavigationTreeRegistry = (): NavigationTreeRegistry => {
+export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistryInput = {}): NavigationTreeRegistry => {
   const contributions = new Map<string, NavigationTreeContribution>();
   const nodeSources = new WeakMap<TreeNode, { contribution: NavigationTreeContribution; node: TreeNode }>();
   const listeners = new Set<() => void>();
@@ -112,6 +119,9 @@ export const createNavigationTreeRegistry = (): NavigationTreeRegistry => {
       if (contributions.has(contribution.id)) {
         throw new Error(`Navigation tree contribution already registered: ${contribution.id}`);
       }
+      if (!contribution.viewId && !contribution.getSections) {
+        throw new Error(`Navigation tree contribution must declare a viewId or getSections: ${contribution.id}`);
+      }
       contributions.set(contribution.id, contribution);
       emit();
       return createDisposable(() => {
@@ -131,7 +141,10 @@ export const createNavigationTreeRegistry = (): NavigationTreeRegistry => {
       const sections: TreeViewSection[] = [];
       const moveScope = ownerId(owner);
       for (const contribution of matching(owner, slot)) {
-        for (const section of await contribution.getSections(context)) {
+        const sourceSections = contribution.viewId
+          ? await input.getViewSections?.(contribution.viewId, context)
+          : await contribution.getSections?.(context);
+        for (const section of sourceSections ?? []) {
           mergeSection(sections, projectSection(section, contribution, moveScope));
         }
       }
@@ -140,16 +153,23 @@ export const createNavigationTreeRegistry = (): NavigationTreeRegistry => {
 
     async getChildren(node, context = {}) {
       const source = nodeSources.get(node);
-      if (!source?.contribution.getChildren) return node.children ?? [];
+      if (!source) return node.children ?? [];
       const moveScope = node.moveScope ?? ownerId(source.contribution.owner);
-      const children = await source.contribution.getChildren(source.node, context);
+      const children = source.contribution.viewId
+        ? await input.getViewChildren?.(source.contribution.viewId, source.node, context)
+        : await source.contribution.getChildren?.(source.node, context);
+      if (!children) return node.children ?? [];
       return children.map((child) => projectNode(child, source.contribution, moveScope));
     },
 
     getDefaultExpandedSectionIds(owner) {
       return (["header", "content", "footer"] as const).flatMap((slot) =>
         matching(owner, slot).flatMap((contribution) =>
-          (contribution.defaultExpandedSectionIds ?? []).map((id) => scopedId(contribution.idScope, id)),
+          (
+            contribution.defaultExpandedSectionIds ??
+            (contribution.viewId ? input.getViewDefaultExpandedSectionIds?.(contribution.viewId) : undefined) ??
+            []
+          ).map((id) => scopedId(contribution.idScope, id)),
         ),
       );
     },

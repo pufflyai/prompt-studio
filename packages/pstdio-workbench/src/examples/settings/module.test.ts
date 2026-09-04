@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, type WorkbenchCore } from "../../core";
-import { buildSettingsTreeBody, settingsItemResource, settingsPanelResource } from "../../react";
+import { createWorkbench, type WorkbenchCore } from "../../core";
+import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "../../react";
+import { buildSettingsTreeBody } from "../../react/settings/settings-tree";
 import { createSettingsModule } from "./module";
 
 const activeOverlayResource = (workbench: WorkbenchCore) => {
@@ -8,7 +9,7 @@ const activeOverlayResource = (workbench: WorkbenchCore) => {
 };
 
 const setup = () => {
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
   workbench.registerModule(createSettingsModule());
   return workbench;
 };
@@ -16,7 +17,11 @@ const setup = () => {
 describe("settings example module", () => {
   test("derives a grouped tree from the registry, including a collection's items", async () => {
     const workbench = setup();
-    const body = await buildSettingsTreeBody({ settings: workbench.settings, hasProjectScope: true });
+    const body = await buildSettingsTreeBody({
+      settings: workbench.settings,
+      hasProjectScope: true,
+      matchesWhen: (when) => workbench.context.matches(when),
+    });
 
     const workbenchSection = body.find((section) => section.id === "workbench");
     expect(workbenchSection?.nodes.map((node) => node.label)).toEqual(["Appearance", "Editor"]);
@@ -30,22 +35,36 @@ describe("settings example module", () => {
 
   test("hides project-scoped entries when there is no project scope", async () => {
     const workbench = setup();
-    const body = await buildSettingsTreeBody({ settings: workbench.settings, hasProjectScope: false });
+    const body = await buildSettingsTreeBody({
+      settings: workbench.settings,
+      hasProjectScope: false,
+      matchesWhen: (when) => workbench.context.matches(when),
+    });
 
     expect(body.find((section) => section.id === "workbench")?.nodes.map((node) => node.label)).toEqual(["Appearance"]);
     expect(body.find((section) => section.id === "extensions")?.nodes.map((node) => node.label)).toEqual(["Lab"]);
   });
 
   test("keeps the settings tree visible when a collection fails to load", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
+    workbench.views.registerView({
+      id: "runtime-settings",
+      title: "Runtime settings",
+      body: { kind: "react", render: () => null },
+    });
+    workbench.views.registerView({
+      id: "skill-settings",
+      title: "Skill settings",
+      body: { kind: "react", render: () => null },
+    });
     workbench.settings.registerSection({ id: "workbench", title: "Workbench", order: 10 });
     workbench.settings.registerSection({ id: "project", title: "Project", order: 20 });
     workbench.settings.registerPanel({
-      kind: "custom",
+      kind: "view",
       id: "runtime",
       title: "Runtime",
       section: "workbench",
-      render: () => null,
+      viewId: "runtime-settings",
     });
     workbench.settings.registerPanel({
       kind: "collection",
@@ -57,25 +76,51 @@ describe("settings example module", () => {
       },
       itemId: (item) => String(item),
       itemLabel: (item) => String(item),
-      renderItem: () => null,
+      viewId: "skill-settings",
     });
 
-    const body = await buildSettingsTreeBody({ settings: workbench.settings, hasProjectScope: true });
+    const body = await buildSettingsTreeBody({
+      settings: workbench.settings,
+      hasProjectScope: true,
+      matchesWhen: (when) => workbench.context.matches(when),
+    });
 
     expect(body.find((section) => section.id === "workbench")?.nodes.map((node) => node.label)).toEqual(["Runtime"]);
     expect(body.find((section) => section.id === "project")?.nodes.map((node) => node.label)).toEqual(["Skills"]);
   });
 
-  test("presenter swaps the overlay panel across schema, custom, and collection-item resources", async () => {
+  test("the settings command swaps the overlay across schema, custom, and collection entries", async () => {
     const workbench = setup();
 
-    await workbench.resources.openResource(settingsPanelResource({ id: "appearance", title: "Appearance" }));
+    await workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "appearance" });
     expect(activeOverlayResource(workbench)?.metadata?.panelId).toBe("appearance");
 
-    await workbench.resources.openResource(settingsPanelResource({ id: "lab", title: "Lab" }));
+    await workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "lab" });
     expect(activeOverlayResource(workbench)?.metadata?.panelId).toBe("lab");
 
-    await workbench.resources.openResource(settingsItemResource("snippets", { id: "greeting", label: "Greeting" }));
+    await workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, {
+      panelId: "snippets",
+      itemId: "greeting",
+    });
     expect(activeOverlayResource(workbench)?.metadata?.itemId).toBe("greeting");
+  });
+
+  test("does not open a panel until its context condition matches", async () => {
+    const workbench = setup();
+    workbench.settings.registerPanel({
+      kind: "schema",
+      id: "conditional",
+      title: "Conditional",
+      section: "extensions",
+      when: "templates.available",
+      preferences: [],
+    });
+
+    await workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "conditional" });
+    expect(activeOverlayResource(workbench)?.metadata?.panelId).toBe("appearance");
+
+    workbench.context.set("templates.available", true);
+    await workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "conditional" });
+    expect(activeOverlayResource(workbench)?.metadata?.panelId).toBe("conditional");
   });
 });

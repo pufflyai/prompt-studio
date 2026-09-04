@@ -38,8 +38,6 @@ const resourceView = defineView({
 });
 const ticketKind = defineResourceKind({
   id: "ticket",
-  surface: "primary",
-  slots: [{ id: "primary", cardinality: "one", access: "owner" }],
 });
 
 const diagnosticsFor = (definition: LoadedExtensionSource["definition"]) =>
@@ -57,17 +55,15 @@ describe("page slot validation", () => {
           id: "ticket",
           role: "primary",
           region: "main",
-          cardinality: "many",
           view: pageView.ref,
-          binding: { kind: ticketKind.ref, view: resourceView.ref },
+          binding: { kind: ticketKind.ref, view: resourceView.ref, cardinality: "many" },
         },
-        { id: "files", role: "auxiliary", region: "side", view: pageView.ref, defaultOpen: true },
+        { id: "files", role: "auxiliary", region: "side", view: pageView.ref, presence: "open" },
         {
           id: "inspector",
           role: "auxiliary",
           region: "side",
-          cardinality: "one",
-          binding: { kind: ticketKind.ref, view: resourceView.ref },
+          binding: { kind: ticketKind.ref, view: resourceView.ref, cardinality: "one" },
         },
       ],
     });
@@ -88,7 +84,7 @@ describe("page slot validation", () => {
       title: "Missing",
       path: "missing-primary",
       mode: workbenchModes.project,
-      slots: [{ id: "tools", role: "auxiliary", region: "side", view: pageView.ref }],
+      slots: [{ id: "tools", role: "auxiliary", region: "side", view: pageView.ref, presence: "open" }],
     });
     const misplacedPrimary = definePage({
       id: "misplaced-primary",
@@ -118,16 +114,18 @@ describe("page slot validation", () => {
           id: "content",
           role: "auxiliary",
           region: "side",
-          binding: { kind: ticketKind.ref, view: resourceView.ref },
-          defaultOpen: true,
+          binding: { kind: ticketKind.ref, view: resourceView.ref, cardinality: "one" },
         },
+        // @ts-expect-error an auxiliary slot must declare a view or a binding
         { id: "empty", role: "auxiliary", region: "secondary" },
         {
           id: "both",
           role: "auxiliary",
           region: "side",
           view: pageView.ref,
-          binding: { kind: ticketKind.ref, view: resourceView.ref },
+          presence: "open",
+          // @ts-expect-error a static auxiliary slot cannot also bind resources
+          binding: { kind: ticketKind.ref, view: resourceView.ref, cardinality: "one" },
         },
       ],
     });
@@ -137,7 +135,45 @@ describe("page slot validation", () => {
     ).map((diagnostic) => diagnostic.code);
 
     expect(codes).toContain("extension_page_slot_duplicate");
-    expect(codes.filter((code) => code === "extension_page_slot_invalid")).toHaveLength(3);
+    expect(codes.filter((code) => code === "invalid_page_slot")).toHaveLength(2);
+  });
+
+  test("rejects removed alpha.8 lifecycle fields with field-specific diagnostics", () => {
+    const page = definePage({
+      id: "legacy-slots",
+      title: "Legacy slots",
+      path: "legacy-slots",
+      mode: workbenchModes.project,
+      slots: [
+        { id: "content", role: "primary", region: "main", view: pageView.ref },
+        {
+          id: "files",
+          role: "auxiliary",
+          region: "side",
+          view: pageView.ref,
+          presence: "open",
+          // A JSON-declared extension can still send the removed field.
+          ...({ defaultOpen: true } as object),
+        },
+        {
+          id: "inspector",
+          role: "auxiliary",
+          region: "side",
+          binding: { kind: ticketKind.ref, view: resourceView.ref, cardinality: "one" },
+          ...({ defaultResource: { type: "ticket", id: "PS-1" } } as object),
+        },
+      ],
+    });
+
+    const diagnostics = diagnosticsFor(
+      defineExtension({ views: [pageView, resourceView], resourceKinds: [ticketKind], pages: [page] }),
+    );
+
+    const fieldPaths = diagnostics.map((diagnostic) => diagnostic.metadata?.fieldPath);
+    expect(diagnostics.every((diagnostic) => diagnostic.code === "invalid_page_slot")).toBe(true);
+    expect(fieldPaths).toContain("pages.legacy-slots.slots.1.defaultOpen");
+    expect(fieldPaths).toContain("pages.legacy-slots.slots.2.defaultResource");
+    expect(diagnostics.map((diagnostic) => diagnostic.message).join(" ")).toContain("presence");
   });
 
   test("allows the same resource kind in different slots without choosing a first match", () => {
@@ -146,9 +182,20 @@ describe("page slot validation", () => {
       title: "Compare",
       path: "compare",
       mode: workbenchModes.project,
+      parent: { extensionId: "pstdio", kind: "page", id: "start" },
       slots: [
-        { id: "left", role: "primary", region: "main", binding: { kind: ticketKind.ref, view: resourceView.ref } },
-        { id: "right", role: "auxiliary", region: "side", binding: { kind: ticketKind.ref, view: resourceView.ref } },
+        {
+          id: "left",
+          role: "primary",
+          region: "main",
+          binding: { kind: ticketKind.ref, view: resourceView.ref, cardinality: "one" },
+        },
+        {
+          id: "right",
+          role: "auxiliary",
+          region: "side",
+          binding: { kind: ticketKind.ref, view: resourceView.ref, cardinality: "one" },
+        },
       ],
     });
 
@@ -157,20 +204,26 @@ describe("page slot validation", () => {
     ).toEqual([]);
   });
 
-  test("allows a default-open auxiliary to follow the matching primary resource", () => {
+  test("allows a bound auxiliary to follow the matching page resource", () => {
     const page = definePage({
       id: "ticket",
       title: "Ticket",
       path: "ticket",
       mode: workbenchModes.project,
+      parent: { extensionId: "pstdio", kind: "page", id: "start" },
       slots: [
-        { id: "content", role: "primary", region: "main", binding: { kind: ticketKind.ref, view: resourceView.ref } },
+        {
+          id: "content",
+          role: "primary",
+          region: "main",
+          binding: { kind: ticketKind.ref, view: resourceView.ref, cardinality: "one" },
+        },
         {
           id: "files",
           role: "auxiliary",
           region: "side",
-          binding: { kind: ticketKind.ref, view: resourceView.ref },
-          defaultOpen: true,
+          binding: { kind: ticketKind.ref, view: resourceView.ref, cardinality: "one" },
+          openOn: "page-resource",
         },
       ],
     });
@@ -178,6 +231,29 @@ describe("page slot validation", () => {
     expect(
       diagnosticsFor(defineExtension({ views: [resourceView], resourceKinds: [ticketKind], pages: [page] })),
     ).toEqual([]);
+  });
+
+  test("requires a parent on a bound-only page", () => {
+    const page = definePage({
+      id: "orphan",
+      title: "Orphan",
+      path: "orphan",
+      mode: workbenchModes.project,
+      slots: [
+        {
+          id: "content",
+          role: "primary",
+          region: "main",
+          binding: { kind: ticketKind.ref, view: resourceView.ref, cardinality: "one" },
+        },
+      ],
+    });
+
+    const diagnostics = diagnosticsFor(
+      defineExtension({ views: [resourceView], resourceKinds: [ticketKind], pages: [page] }),
+    );
+
+    expect(diagnostics.filter((diagnostic) => diagnostic.code === "extension_page_primary_invalid")).toHaveLength(1);
   });
 });
 

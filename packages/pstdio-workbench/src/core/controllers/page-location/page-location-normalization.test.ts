@@ -23,7 +23,20 @@ const page = (id: string, parentId?: string): WorkbenchPageContribution => ({
   slots: [{ id: "content", role: "primary", region: "main", viewId: id }],
 });
 
-const pages = [page("root"), page("detail", "root"), page("workspace", "root")];
+const hybridPage = (): WorkbenchPageContribution => ({
+  ...page("sessions"),
+  slots: [
+    {
+      id: "content",
+      role: "primary",
+      region: "main",
+      viewId: "sessions",
+      binding: { resourceKinds: ["session"], viewId: "session", cardinality: "one" },
+    },
+  ],
+});
+
+const pages = [page("root"), page("detail", "root"), page("workspace", "root"), hybridPage()];
 
 describe("page location normalization", () => {
   test("uses canonical route identity without parent context and full equality with it", () => {
@@ -81,5 +94,19 @@ describe("page location normalization", () => {
     };
 
     expect(() => normalizeWorkbenchPageLocation({ location: cyclic, pages, resources })).toThrow(/cycle/);
+  });
+
+  test("uses the static hybrid page as the normal parent of a bound resource", () => {
+    const location = normalizeWorkbenchPageTarget({
+      target: { kind: "page", page: pages[3]!.ref, resource: { type: "session", id: "one" } },
+      pages,
+      resources,
+    }).location;
+
+    expect(location).toMatchObject({
+      page: pages[3]!.ref,
+      resource: { type: "session", id: "ONE" },
+      parent: { page: pages[3]!.ref },
+    });
   });
 });

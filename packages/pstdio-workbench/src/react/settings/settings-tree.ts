@@ -7,7 +7,12 @@ import type {
   TreeNode,
   TreeViewSection,
 } from "../../core";
-import { isSettingsScopeVisible, settingsItemResource, settingsPanelResource } from "./settings-resources";
+import {
+  isSettingsScopeVisible,
+  settingsItemResource,
+  settingsPanelResource,
+  WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
+} from "./settings-resources";
 
 export const FALLBACK_SECTION_ID = "settings";
 
@@ -19,7 +24,17 @@ const collectionItemNode = (panel: CollectionSettingsPanel, item: unknown): Tree
   const label = panel.itemLabel(item);
   const icon = panel.itemIcon?.(item);
   const resource = settingsItemResource(panel.id, { id, label, icon });
-  return { id: resource.uri, label, icon, resource };
+  return {
+    id: resource.uri,
+    label,
+    icon,
+    resource,
+    target: {
+      kind: "command",
+      commandId: WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
+      args: { panelId: panel.id, itemId: id },
+    },
+  };
 };
 
 const orderGroupKeys = (keys: string[], order: string[] | undefined) => {
@@ -65,22 +80,35 @@ const panelToNode = async (panel: RegisteredSettingsPanel): Promise<TreeNode> =>
   }
 
   const resource = settingsPanelResource(panel);
-  return { id: resource.uri, label: panel.title, icon: panel.icon, resource };
+  return {
+    id: resource.uri,
+    label: panel.title,
+    icon: panel.icon,
+    resource,
+    target: {
+      kind: "command",
+      commandId: WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
+      args: { panelId: panel.id },
+    },
+  };
 };
 
 export interface BuildSettingsTreeInput {
   settings: SettingsRegistry;
   hasProjectScope: boolean;
+  matchesWhen(expression?: string): boolean;
 }
 
 // Derives the settings navigation tree from the registry: one section per registered
 // section (headerless when titleless), schema/custom panels as leaves, and collection
 // panels expanded into per-item nodes (optionally grouped). Scope gates project entries.
 export const buildSettingsTreeBody = async (input: BuildSettingsTreeInput): Promise<TreeViewSection[]> => {
-  const { settings, hasProjectScope } = input;
+  const { settings, hasProjectScope, matchesWhen } = input;
   const sections = settings.listSections();
   const sectionsById = new Map(sections.map((section) => [section.id, section]));
-  const panels = settings.listPanels().filter((panel) => isSettingsScopeVisible(panel.scope, hasProjectScope));
+  const panels = settings
+    .listPanels()
+    .filter((panel) => isSettingsScopeVisible(panel.scope, hasProjectScope) && matchesWhen(panel.when));
 
   const bySection = new Map<string, RegisteredSettingsPanel[]>();
   for (const panel of panels) {

@@ -62,7 +62,6 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
   const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
   const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state);
-  const historyHydrating = useWorkbenchStore(workbench.history.store, (state) => state.hydrating);
   const regionState = layoutState.layout.regions[region];
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
@@ -168,7 +167,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
         size={PANEL_HEADER_CONTROL_SIZE}
         variant="ghost"
         aria-label={item.label}
-        disabled={historyHydrating || item.disabled}
+        disabled={item.disabled}
         flexShrink={0}
         onPointerDown={(event) => event.stopPropagation()}
         onClick={(event) => {
@@ -201,7 +200,6 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
     <Tabs.Root
       value={activeWidgetId}
       onValueChange={(details) => {
-        if (historyHydrating) return;
         const placement = visiblePlacements.find((candidate) => candidate.widgetId === details.value);
         if (placement?.role === "location") {
           workbench.layout.setRegionActiveWidget(region, placement.widgetId);
@@ -238,10 +236,10 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
         {/* Chakra's size="sm" list sets a 36px min-height that overflows the 2rem header and
             makes the horizontal-only viewport scroll vertically; minH="0" lets h="full" win. */}
         <SortableRegionTabList
+          disabled={false}
           workbench={workbench}
           placements={visiblePlacements}
           activeWidgetId={activeWidgetId}
-          disabled={historyHydrating}
           panelRegion={panelRegion}
           resource={resource}
           eligibleSubPanels={eligibleSubPanels}

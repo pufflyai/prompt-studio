@@ -1,7 +1,7 @@
 import type { TerminalSessionOperation } from "../../extensions.terminal";
 import type { CreateNotificationInput, NotificationStatus } from "../../notifications/types";
 import type { JsonObject } from "./json";
-import type { ExtensionResourceOpenIntent } from "./navigation-target";
+import type { NavigationTarget } from "./navigation-target";
 import type { RepoContext, ResourceRef } from "./resources";
 
 export type { ExtensionBlobRef } from "./context";
@@ -11,7 +11,7 @@ export const WEBVIEW_HOST_CAPABILITY_VERSION = 1;
 // Capabilities a webview must declare in its manifest before the bridge will route them.
 export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "commands.execute",
-  "resource.open",
+  "navigation.open",
   "notification.show",
   "notification.action",
   "notification.resolve",
@@ -58,10 +58,8 @@ export interface WebviewCommandsExecuteParams {
   metadata?: JsonObject;
 }
 
-export interface WebviewResourceOpenParams {
-  href?: string;
-  resource?: ResourceRef;
-  input?: ExtensionResourceOpenIntent;
+export interface WebviewNavigationOpenParams {
+  target: NavigationTarget;
 }
 
 export interface WebviewNotificationShowParams {
@@ -144,7 +142,7 @@ export interface WebviewKeyboardEventParams {
 
 export interface WebviewHostCapabilityParams {
   "commands.execute": WebviewCommandsExecuteParams;
-  "resource.open": WebviewResourceOpenParams;
+  "navigation.open": WebviewNavigationOpenParams;
   "notification.show": WebviewNotificationShowParams;
   "notification.action": WebviewNotificationActionParams;
   "notification.resolve": WebviewNotificationResolveParams;

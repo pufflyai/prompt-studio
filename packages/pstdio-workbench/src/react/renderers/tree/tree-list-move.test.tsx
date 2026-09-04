@@ -1,10 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import {
-  createWorkbenchCore,
-  type RegisteredTreeRendererContribution,
-  type ResourceRef,
-  type TreeNode,
-} from "../../../core";
+import { createWorkbench, getWorkbenchRenderers, type ResourceRef, type TreeNode } from "../../../core";
 import { toTreeListSection } from "./tree-list-adapter";
 import { createMoveTreeNode } from "./tree-view-move";
 
@@ -19,7 +14,7 @@ const file = { id: "README.md", label: "README.md", canDrag: true } satisfies Tr
 
 describe("movable tree nodes", () => {
   test("maps drag and drop capabilities onto tree list rows", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const section = toTreeListSection({ id: "files", nodes: [folder, file] }, {}, { workbench });
 
     expect(section.nodes[0]).toMatchObject({ id: "docs", canDrop: true });
@@ -27,9 +22,14 @@ describe("movable tree nodes", () => {
   });
 
   test("resolves source and target nodes before moving", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const moveNode = mock();
-    const renderer = { moveNode } as unknown as RegisteredTreeRendererContribution;
+    workbench.views.registerView({
+      id: "files",
+      title: "Files",
+      body: { kind: "tree", getBody: () => [], getChildren: () => [], moveNode },
+    });
+    const renderer = getWorkbenchRenderers(workbench).getTreeRenderer("files")!;
     const move = createMoveTreeNode({
       workbench,
       renderer,
@@ -40,6 +40,10 @@ describe("movable tree nodes", () => {
 
     move?.("README.md", "docs");
 
-    expect(moveNode).toHaveBeenCalledWith(file, folder, { resource, viewId: undefined });
+    expect(moveNode).toHaveBeenCalledWith(
+      file,
+      folder,
+      expect.objectContaining({ resource, viewId: undefined, state: expect.any(Object) }),
+    );
   });
 });
