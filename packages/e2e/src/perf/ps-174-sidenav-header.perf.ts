@@ -99,7 +99,7 @@ test("PS-174 navigates global collections within the interaction budget", async 
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     document.addEventListener(
       "click",
       (event) => {

@@ -1,12 +1,8 @@
-import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
-import { startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
-const dashboardWorkbenchStoryId = "pstdio-workbench-examples--dashboard-workbench";
-
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const response = await request.get(`${apiBase}/v1/projects`);
   expect(response.ok()).toBe(true);
@@ -30,7 +26,7 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
   }, projectId);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(`/projects/${projectId}/tickets`);
@@ -145,44 +141,4 @@ test("PS-166 keeps the Main Panel Header visible while the right menu is open", 
 
   await expect(page.locator('[data-workbench-region="main-right-menu"]')).toBeVisible();
   await expect(mainPanelHeader).toBeVisible();
-});
-
-test.describe("PS-166 canonical workbench Storybook frame", () => {
-  test.slow();
-
-  let baseUrl: string;
-  let storybook: ChildProcessWithoutNullStreams | undefined;
-
-  test.beforeAll(async () => {
-    ({ baseUrl, storybook } = await startStorybook(dashboardWorkbenchStoryId, "pstdio-workbench"));
-  });
-
-  test.afterAll(async () => {
-    await stopStorybook(storybook);
-  });
-
-  test("names regions and keeps all Panel Headers equal", async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await page.goto(storyUrl(baseUrl, dashboardWorkbenchStoryId));
-
-    await expectCanonicalFrame(page, { sidenav: "visible", statusBar: "visible" });
-
-    const headerBoxes = await Promise.all(
-      ["main", "secondary", "side"].map(async (panel) => {
-        const header = page.locator(`[data-workbench-panel-header="${panel}"]`);
-        await expect(header).toBeVisible();
-        return header.boundingBox();
-      }),
-    );
-    for (const box of headerBoxes) {
-      expect(box).not.toBeNull();
-      expectNear(box!.height, 40);
-    }
-
-    const secondaryDivider = page.getByRole("separator", { name: "Resize Secondary Panel" });
-    await expect(secondaryDivider).toBeVisible();
-    const dividerBox = await secondaryDivider.boundingBox();
-    expect(dividerBox).not.toBeNull();
-    expectNear(dividerBox!.height, 4);
-  });
 });

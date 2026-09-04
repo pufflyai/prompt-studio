@@ -13,7 +13,7 @@ test("PS-299 lists every registered keyboard shortcut", async ({ page, request }
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
   }, project.id);
   await page.goto(`/projects/${project.id}/tickets`);
   await expect(page.getByRole("option", { name: "Tickets", exact: true }).first()).toBeVisible({ timeout: 30_000 });

@@ -5,11 +5,12 @@ import { executePlannerCommand, getPlannerTicketTags } from "../helpers/planner-
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 
-const bypassOnboarding = async (page: import("@playwright/test").Page) => {
-  await page.addInitScript(() => {
+const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
+  await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.harness-open-code.harness.opencode");
-  });
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
+  }, projectId);
 };
 
 const createProjectViaApi = async (request: import("@playwright/test").APIRequestContext, name: string) => {
@@ -19,19 +20,6 @@ const createProjectViaApi = async (request: import("@playwright/test").APIReques
   expect(res.ok()).toBe(true);
   return (await res.json()) as { id: string; name: string };
 };
-
-const savePromptTemplate = (
-  request: import("@playwright/test").APIRequestContext,
-  projectId: string,
-  name: string,
-  content = "",
-) =>
-  executePlannerCommand<{ content: string; name: string }>(request, apiBase, projectId, "templates.save", {
-    name,
-    title: name,
-    type: "prompt",
-    content,
-  });
 
 const listSkillsViaApi = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
   const res = await request.get(`${apiBase}/v1/projects/${projectId}/skills`);
@@ -62,52 +50,36 @@ const closeSessionBubble = async (page: import("@playwright/test").Page, project
   }, projectId);
 };
 
+const openProjectSettings = async (page: import("@playwright/test").Page, projectId: string) => {
+  await bypassOnboarding(page, projectId);
+  await page.goto(`/projects/${projectId}/`);
+  await page.getByRole("option", { name: "Settings", exact: true }).click();
+  const settings = page.getByRole("dialog").last();
+  await expect(settings).toBeVisible();
+  return settings;
+};
+
 const navigateToTemplate = async (page: import("@playwright/test").Page, projectId: string, templateName: string) => {
-  await bypassOnboarding(page);
-  await page.goto(`/projects/${projectId}/settings`);
-  await page.getByText("Templates", { exact: true }).click();
-  await page.getByText("Prompt", { exact: true }).click();
-  await page.getByText(templateName, { exact: true }).click();
+  const settings = await openProjectSettings(page, projectId);
+  await settings.getByText("Templates", { exact: true }).click();
+  await settings.getByText("Prompt", { exact: true }).click();
+  await settings.getByText(templateName, { exact: true }).click();
 };
 
 test.describe("Project settings", () => {
-  test("creates a template through its extension provider", async ({ page, request }) => {
-    const project = await createProjectViaApi(request, `Template Action ${Date.now()}`);
-    await enablePlannerExtension(request, apiBase, project.id);
+  test("hides templates when no extension supplies them", async ({ page, request }) => {
+    const project = await createProjectViaApi(request, `No Templates ${Date.now()}`);
+    const settings = await openProjectSettings(page, project.id);
 
-    await bypassOnboarding(page);
-    await page.goto(`/projects/${project.id}/settings`);
-
-    const createResponse = page.waitForResponse(
-      (response) =>
-        response.url().includes("extensions%2Fcommands") === false &&
-        response.url().includes("extensions/commands/") &&
-        response.request().method() === "POST" &&
-        response.status() === 200,
-    );
-    await page.getByText("Templates", { exact: true }).hover();
-    await page.getByRole("button", { name: "New template" }).click();
-    await page.getByText("Template type").click();
-    await page.getByText("Prompt", { exact: true }).last().click();
-    await page.getByRole("button", { name: "Run" }).click();
-    await createResponse;
-
-    const templates = await executePlannerCommand<Array<{ name: string; type: string }>>(
-      request,
-      apiBase,
-      project.id,
-      "templates.list",
-    );
-    expect(templates).toContainEqual(expect.objectContaining({ name: "new-template", type: "prompt" }));
+    await expect(settings.getByText("Templates", { exact: true })).toHaveCount(0);
   });
 
-  test("saves edited template content", async ({ page, request }) => {
+  test("saves edited extension template content", async ({ page, request }) => {
     const project = await createProjectViaApi(request, `Save Flow ${Date.now()}`);
     await enablePlannerExtension(request, apiBase, project.id);
-    const templateName = `save-test-${Date.now()}`;
-    await savePromptTemplate(request, project.id, templateName, "Original content");
+    const templateName = "implement-ticket";
 
-    await navigateToTemplate(page, project.id, templateName);
+    await navigateToTemplate(page, project.id, "Implement ticket");
 
     const editor = page.getByRole("textbox");
     await editor.fill("Updated content");
@@ -136,7 +108,7 @@ test.describe("Project settings", () => {
     expect(createRes.ok()).toBe(true);
     const created = (await createRes.json()) as { id: string; name: string };
 
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, project.id);
     await closeSessionBubble(page, project.id);
     await page.goto(`/projects/${project.id}/settings?panel=ticket-statuses`);
     await expect(page.getByText("to-delete")).toBeVisible();
@@ -174,7 +146,7 @@ test.describe("Project settings", () => {
       data: { name: "temp-status", color: "pink" },
     });
 
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, project.id);
     await closeSessionBubble(page, project.id);
     await page.goto(`/projects/${project.id}/settings?panel=ticket-statuses`);
     await expect(page.getByText("temp-status")).toBeVisible();
@@ -199,7 +171,7 @@ test.describe("Project settings", () => {
   test("status save and cancel are disabled when no changes are made", async ({ page, request }) => {
     const project = await createProjectViaApi(request, `Status Disabled ${Date.now()}`);
 
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, project.id);
     await page.goto(`/projects/${project.id}/settings?panel=ticket-statuses`);
     await expect(page.getByText("Statuses", { exact: true }).first()).toBeVisible();
 
@@ -232,7 +204,7 @@ test.describe("Project settings — skills", () => {
       .find((line) => line.length > 0)!;
     expect(siblingSnippet).toBeDefined();
 
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, project.id);
     await page.goto(`/projects/${project.id}/settings?panel=skill:${encodeURIComponent(multiFileSkill!.name)}`);
 
     const fileTree = page.getByTestId("project-skill-file-tree");
@@ -262,7 +234,7 @@ test.describe("Project settings — skills", () => {
       .find((line) => line.length > 0);
     expect(expectedContentSnippet).toBeDefined();
 
-    await bypassOnboarding(page);
+    await bypassOnboarding(page, project.id);
     await page.goto(`/projects/${project.id}/settings?panel=skill:${encodeURIComponent(selectedSkill.name)}`);
 
     await expect(page.getByTestId("project-skill-name")).toContainText(selectedSkill.name);

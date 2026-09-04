@@ -38,7 +38,7 @@ test("PS-119 answers a hydrated question tool call from the session composer", a
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
 
   await page.goto(`/projects/${project.id}/`);

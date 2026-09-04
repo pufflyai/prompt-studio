@@ -21,7 +21,7 @@ const sharedStorybooks = [
   },
   {
     packageName: "pstdio-workbench",
-    probeStoryId: "pstdio-workbench-examples--dashboard-workbench",
+    probeStoryId: "pstdio-workbench-reference-core-api-visual-states--page-composition",
     urlEnvironmentVariable: "E2E_STORYBOOK_WORKBENCH_URL",
   },
 ] as const satisfies ReadonlyArray<{

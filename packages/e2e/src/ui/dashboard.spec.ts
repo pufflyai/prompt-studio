@@ -78,7 +78,7 @@ test("dashboard keeps project selection open when no project is selected", async
     const dashboardWindow = window as unknown as {
       __pstdioDashboardWorkbench?: {
         layout: {
-          getLayout(): { regions: { overlay: { widgets: { contributionId: string; widgetId: string }[] } } };
+          getLayout(): { regions: { overlay: { widgets: { viewId?: string; widgetId: string }[] } } };
           removeWidgetPlacement(widgetId: string): void;
         };
       };
@@ -86,7 +86,7 @@ test("dashboard keeps project selection open when no project is selected", async
     const workbench = dashboardWindow.__pstdioDashboardWorkbench;
     const placement = workbench?.layout
       .getLayout()
-      .regions.overlay.widgets.find((widget) => widget.contributionId === "dashboard-workbench.project-picker");
+      .regions.overlay.widgets.find((widget) => widget.viewId === "dashboard-workbench.project-picker");
     if (!workbench || !placement) throw new Error("Project picker is not open");
     workbench.layout.removeWidgetPlacement(placement.widgetId);
   });
@@ -102,7 +102,7 @@ test("dashboard keeps the project mode and blocks controls behind the project sw
   const project = await createProjectViaApi(request, "Overlay Blocking Test");
 
   await page.addInitScript((selectedProjectId) => {
-    window.localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    window.localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
   }, project.id);
   await page.goto("/");
 
@@ -199,7 +199,7 @@ test("dashboard selects the only project on first load", async ({ page, request 
 
   await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
   await expect
-    .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb:selected-project:global")))
+    .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb2:selected-project:global")))
     .toBeTruthy();
 });
 
@@ -210,7 +210,7 @@ test("dashboard clears a saved project that no longer exists", async ({ page, re
   const secondProject = await createProjectViaApi(request, "Other Project");
 
   await page.addInitScript(() => {
-    window.localStorage.setItem("dashboard-wb:selected-project:global", "deleted-project");
+    window.localStorage.setItem("dashboard-wb2:selected-project:global", "deleted-project");
   });
 
   await page.goto("/");
@@ -218,7 +218,7 @@ test("dashboard clears a saved project that no longer exists", async ({ page, re
   await expect(page.getByText(firstProject.name, { exact: true })).toBeVisible();
   await expect(page.getByText(secondProject.name, { exact: true })).toBeVisible();
   await expect
-    .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb:selected-project:global")))
+    .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb2:selected-project:global")))
     .toBeNull();
 });
 
@@ -228,7 +228,7 @@ test("project picker stays open when the background is clicked", async ({ page, 
   const firstProject = await createProjectViaApi(request, "First Project");
   await createProjectViaApi(request, "Second Project");
   await page.addInitScript((projectId) => {
-    window.localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+    window.localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, firstProject.id);
 
   await page.goto("/");
@@ -246,7 +246,7 @@ test("switching projects never reopens the picker while restoring the landing vi
   const firstProject = await createProjectViaApi(request, "First Switch Project");
   const secondProject = await createProjectViaApi(request, "Second Switch Project");
   await page.addInitScript((projectId) => {
-    window.localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+    window.localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, firstProject.id);
 
   await page.goto("/");
@@ -259,20 +259,20 @@ test("switching projects never reopens the picker while restoring the landing vi
     const dashboardWindow = window as unknown as {
       __projectPickerOpenedAfterSelection?: boolean;
       __pstdioDashboardWorkbench?: {
-        layout: {
-          openPanel: (id: string, input?: unknown) => unknown;
+        overlays: {
+          openOverlay: (id: string, input?: unknown) => unknown;
         };
       };
     };
-    const layout = dashboardWindow.__pstdioDashboardWorkbench?.layout;
-    if (!layout) throw new Error("Dashboard workbench is not available");
-    const openPanel = layout.openPanel.bind(layout);
+    const overlays = dashboardWindow.__pstdioDashboardWorkbench?.overlays;
+    if (!overlays) throw new Error("Dashboard workbench is not available");
+    const openOverlay = overlays.openOverlay.bind(overlays);
     dashboardWindow.__projectPickerOpenedAfterSelection = false;
-    layout.openPanel = (id, input) => {
+    overlays.openOverlay = (id, input) => {
       if (id === "dashboard-workbench.project-picker") {
         dashboardWindow.__projectPickerOpenedAfterSelection = true;
       }
-      return openPanel(id, input);
+      return openOverlay(id, input);
     };
   });
 
@@ -280,7 +280,7 @@ test("switching projects never reopens the picker while restoring the landing vi
 
   await expect(picker).not.toBeVisible();
   await expect
-    .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb:selected-project:global")))
+    .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb2:selected-project:global")))
     .toBe(secondProject.id);
   await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
   expect(
@@ -298,7 +298,7 @@ test("dashboard opens the start page for a selected project without a saved loca
   const session = await createSessionViaApi(request, project.id, "Recent start session");
 
   await page.addInitScript((selectedProjectId) => {
-    window.localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    window.localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
     const dashboardWindow = window as typeof window & { __projectPickerAppearedDuringStartup?: boolean };
     dashboardWindow.__projectPickerAppearedDuringStartup = false;
     const observeProjectPicker = () => {

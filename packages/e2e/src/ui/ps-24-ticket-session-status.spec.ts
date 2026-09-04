@@ -29,7 +29,7 @@ const bypassOnboarding = async (page: Page, projectId: string) => {
   await page.addInitScript((currentProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", currentProjectId);
   }, projectId);
 };
 
@@ -99,11 +99,12 @@ test.describe("PS-24 session status on ticket workspace badges", () => {
 
     // Scenario 3: the indicator opens its session in the Side Panel and leaves the board in place.
     await indicator.click();
-    await expect(page.getByRole("dialog", { name: "Side Panel" })).toBeVisible({ timeout: 15_000 });
+    const sidePanel = page.locator('[data-workbench-region="side"]');
+    await expect(sidePanel).toBeVisible({ timeout: 15_000 });
     await expect(card).toBeVisible();
 
-    await page.getByRole("button", { name: "Close Side Panel" }).click();
-    await expect(page.getByRole("dialog", { name: "Side Panel" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Hide Side Panel" }).click();
+    await expect(sidePanel).not.toBeVisible();
 
     const workspaceBadgeTrigger = card.getByTestId("workspace-badge-trigger");
     await expect(workspaceBadgeTrigger).toHaveRole("button");

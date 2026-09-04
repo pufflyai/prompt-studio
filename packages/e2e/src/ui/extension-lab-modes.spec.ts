@@ -15,7 +15,7 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
     localStorage.setItem(
       `pstdio-project-settings/projects/${selectedProjectId}/values`,
       JSON.stringify({
@@ -71,8 +71,8 @@ test("the Lab mode swaps the sidenav for activity and status chrome without a te
   // No secondary panel means no place to open a terminal in the Lab.
   await expect(page.locator('[data-workbench-panel="secondary"]')).toHaveCount(0);
 
-  // Leaving through the rail's home item restores the dashboard sidenav.
-  await activityRail.getByRole("button", { name: "Project home" }).click();
+  // The global project header remains the escape from a mode-owned activity rail.
+  await page.getByRole("button", { name: /Extension Lab Modes/ }).click();
   await expect(page.locator('[data-workbench-region="sidenav"]')).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('[data-workbench-region="activity"]')).toHaveCount(0);
 });
@@ -118,7 +118,7 @@ test("artifacts are created from the panel menu and inspected in the Side Panel"
   await expect(createMenu.getByText("Catalog intake")).toBeVisible({ timeout: 30_000 });
   const dataTable = page.locator("table.data-table");
   const rows = dataTable.locator("tbody tr");
-  await expect(rows).toHaveCount(2, { timeout: 15_000 });
+  await expect(page.getByText("No artifacts found", { exact: true })).toBeVisible({ timeout: 15_000 });
   const initialArtifactCount = await rows.count();
   const createResponse = page.waitForResponse(
     (response) =>

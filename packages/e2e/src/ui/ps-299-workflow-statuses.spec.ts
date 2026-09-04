@@ -16,7 +16,7 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
     localStorage.setItem(
       `pstdio-project-settings/projects/${selectedProjectId}/values`,
       JSON.stringify({
@@ -53,7 +53,7 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
     }
   });
 
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
   await expect(page.getByTestId("board-column-backlog")).toContainText("Keep the Planner board visible", {
     timeout: 30_000,
   });
@@ -115,7 +115,7 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
   const artifact = page.frameLocator('iframe[title="Artifact"]');
   await expect(artifact.getByRole("heading", { name: "Shape the concept" })).toBeVisible({ timeout: 15_000 });
 
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
   await expect(page.getByTestId("board-column-backlog")).toContainText("Keep the Planner board visible", {
     timeout: 30_000,
   });
@@ -137,7 +137,7 @@ test("state commands in the status editor control the matching column", async ({
   await prepareDashboard(page, project.id);
   await page.setViewportSize({ width: 1440, height: 900 });
 
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
   const backlogColumn = page.getByTestId(`board-column-${backlog!.id}`);
   const doneColumn = page.getByTestId(`board-column-${done!.id}`);
   await expect(backlogColumn).toContainText("Keep the backlog column visible", { timeout: 30_000 });

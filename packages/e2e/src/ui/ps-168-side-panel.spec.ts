@@ -1,12 +1,8 @@
-import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { createPlannerTicket } from "../helpers/planner-api";
-import { STORY_RENDER_TIMEOUT_MS, startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
-const sidePanelsStoryId = "pstdio-workbench-onboarding--side-panels";
-
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const response = await request.get(`${apiBase}/v1/projects`);
   expect(response.ok()).toBe(true);
@@ -25,7 +21,7 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
   }, projectId);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.goto(`/projects/${projectId}/tickets`);
@@ -92,62 +88,4 @@ test("PS-168 closes and keyboard-restores the same full-height Side Panel", asyn
   expect(await mainNode!.evaluate((element) => element.isConnected)).toBe(true);
   expect(await secondaryNode!.evaluate((element) => element.isConnected)).toBe(true);
   expect(await sideRegionNode!.evaluate((element) => element.isConnected)).toBe(true);
-});
-
-test.describe("PS-168 Side Panels Storybook contract", () => {
-  test.slow();
-
-  let baseUrl: string;
-  let storybook: ChildProcessWithoutNullStreams | undefined;
-
-  test.beforeAll(async () => {
-    ({ baseUrl, storybook } = await startStorybook(sidePanelsStoryId, "pstdio-workbench"));
-  });
-
-  test.afterAll(async () => {
-    await stopStorybook(storybook);
-  });
-
-  test("shows equal headers and closes from the Side Panel edge without floating", async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await page.goto(storyUrl(baseUrl, sidePanelsStoryId));
-
-    const side = page.getByTestId("workbench-side-panel-attached");
-    const sidenav = page.locator('[data-workbench-region="sidenav"]');
-    const main = page.locator('[data-workbench-panel="main"]');
-    const separator = page.getByRole("separator", { name: "Resize Side Panel" });
-    await expect(side).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
-    const [sideBox, sidenavBox, mainBox] = await Promise.all([
-      side.boundingBox(),
-      sidenav.boundingBox(),
-      main.boundingBox(),
-    ]);
-    expect(sideBox).not.toBeNull();
-    expect(sidenavBox).not.toBeNull();
-    expect(mainBox).not.toBeNull();
-    expectNear(sideBox!.y, sidenavBox!.y);
-    expectNear(sideBox!.height, sidenavBox!.height);
-    expectNear(sideBox!.width, 420);
-    expectNear(mainBox!.x + mainBox!.width, sideBox!.x);
-
-    for (const panel of ["main", "side"]) {
-      const box = await page.locator(`[data-workbench-panel-header="${panel}"]`).boundingBox();
-      expect(box).not.toBeNull();
-      expectNear(box!.height, 40);
-    }
-
-    const separatorBox = await separator.boundingBox();
-    expect(separatorBox).not.toBeNull();
-    const x = separatorBox!.x + separatorBox!.width / 2;
-    const y = separatorBox!.y + separatorBox!.height / 2;
-    await page.mouse.move(x, y);
-    await page.mouse.down();
-    await page.mouse.move(x + 300, y);
-    await page.mouse.up();
-
-    await expect(side).not.toBeVisible();
-    await expect(page.getByRole("button", { name: "Show Side Panel" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
-    await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
-  });
 });

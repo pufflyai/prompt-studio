@@ -16,17 +16,20 @@ const CONTAINER_DASHBOARD_PORT = 5173;
 const CONTAINER_API_PORT = 19841;
 const SEEDED_PROJECT_NAME = "project";
 const ISOLATED_BROWSER_HOST = "127.0.0.1";
-const SEEDED_RELEASE_EXTENSIONS = [
-  "harness-claude-code",
-  "harness-codex",
-  "harness-open-code",
-  "pstdio-base-themes",
-  "pstdio-planner",
-  "pstdio-planner-loops",
-  "pstdio-skills",
-];
 const WINDOWS_CONTAINER_WORKTREE = "/workspace/prompt-studio";
 const WINDOWS_CONTAINER_GIT_COMMON_DIR = "/workspace/git-common";
+const SEEDED_LOCAL_EXTENSIONS = [
+  ["harness-claude-code", "extensions/harness-claude-code"],
+  ["harness-codex", "extensions/harness-codex"],
+  ["harness-open-code", "extensions/harness-open-code"],
+  ["pstdio-base-themes", "extensions/pstdio-base-themes"],
+  ["pstdio-planner", "extensions/pstdio-planner"],
+  ["pstdio-planner-loops", ".pstdio/extensions/pstdio-planner-loops"],
+  ["pstdio-reports", "extensions/pstdio-reports"],
+  ["pstdio-skills", "extensions/pstdio-skills"],
+  ["extension-lab", "extensions/extension-lab"],
+  ["local-example", "infra/local/extensions/local-example"],
+] as const;
 
 const usage = `Usage:
   bun run dev:isolated                          # build + up; prints dashboard URL
@@ -92,19 +95,11 @@ export const resolveIsolatedDefaultExtensions = (
 ) =>
   env.PSTDIO_DEFAULT_EXTENSIONS ??
   JSON.stringify({
-    defaultExtensions: [
-      ...SEEDED_RELEASE_EXTENSIONS,
-      {
-        source: resolve(repoRoot, "extensions/extension-lab"),
-        installName: "extension-lab",
-        skipInstall: true,
-      },
-      {
-        source: resolve(repoRoot, "infra/local/extensions/local-example"),
-        installName: "local-example",
-        skipInstall: true,
-      },
-    ],
+    defaultExtensions: SEEDED_LOCAL_EXTENSIONS.map(([installName, source]) => ({
+      source: resolve(repoRoot, source),
+      installName,
+      skipInstall: true,
+    })),
   });
 
 export const resolveIsolatedExtensionReleaseRef = (

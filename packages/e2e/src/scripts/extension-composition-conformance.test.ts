@@ -26,10 +26,6 @@ describe("shipped extension composition", () => {
       ["ticket", "pstdio.pstdio-planner"],
       ["glass-lab-artifact", "pstdio.extension-lab"],
     ]);
-    expect(runtime.resourceViews.find((view) => view.localId === "ticket-editor")?.contribution).toMatchObject({
-      view: { kind: "view", id: "ticket-editor" },
-      slot: { id: "primary" },
-    });
     expect(runtime.placements.filter((placement) => placement.extensionId === "pstdio.pstdio-planner")).toEqual([]);
     expect(runtime.pages.find((page) => page.localId === "tickets")?.contribution).toMatchObject({
       path: "tickets",
@@ -58,7 +54,19 @@ describe("shipped extension composition", () => {
     const runtime = await loadRuntime([labPath]);
 
     expect(runtime.diagnostics).toEqual([]);
-    expect(runtime.resourceViews.map((view) => view.localId)).toContain("artifact-detail");
+    const artifactSlot = runtime.pages
+      .find((page) => page.localId === "lab-mode")
+      ?.contribution.slots.find((slot) => slot.id === "artifact");
+    expect(artifactSlot).toMatchObject({
+      id: "artifact",
+      role: "auxiliary",
+      region: "side",
+      binding: {
+        kind: { id: "glass-lab-artifact" },
+        view: { id: "artifact-detail" },
+        cardinality: "many",
+      },
+    });
   });
 
   test("keeps Lab page navigation in the composed Sidenav contract", async () => {

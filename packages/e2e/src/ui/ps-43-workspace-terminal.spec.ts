@@ -9,7 +9,7 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
   await page.addInitScript((selectedProjectId) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
   }, projectId);
 };
 
@@ -46,8 +46,8 @@ const persistHiddenLauncherAsActive = async (page: import("@playwright/test").Pa
   await page.waitForTimeout(300);
   const updatedKeys = await page.evaluate(() => {
     const keys = Object.keys(localStorage).filter((candidate) => {
-      if (!candidate.startsWith("dashboard-wb:layout:")) return false;
-      return localStorage.getItem(candidate)?.includes('"contributionId":"workbench.terminal"') === true;
+      if (!candidate.startsWith("dashboard-wb2:layout:")) return false;
+      return localStorage.getItem(candidate)?.includes('"viewId":"workbench.terminal"') === true;
     });
 
     for (const key of keys) {

@@ -15,7 +15,7 @@ const createProject = async (request: APIRequestContext) => {
 const prepareDashboard = async (page: Page, projectId: string) => {
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
   }, projectId);
 };
 

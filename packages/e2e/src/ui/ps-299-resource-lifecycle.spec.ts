@@ -28,7 +28,7 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
   }, projectId);
 };
 
@@ -44,7 +44,7 @@ test("PS-299 returns to a resource's parent after deleting the open resource", a
   });
 
   await prepareDashboard(page, project.id);
-  await page.goto(`/projects/${project.id}/tickets`);
+  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
   const ticketCard = page.getByTestId("renderer-card").filter({ hasText: "Delete open resource" }).first();
   await expect(ticketCard).toBeVisible();
   await ticketCard.getByText("Delete open resource", { exact: true }).click();

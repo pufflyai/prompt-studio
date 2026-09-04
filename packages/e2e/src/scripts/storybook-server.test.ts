@@ -25,7 +25,7 @@ describe("shared Storybook servers", () => {
     expect(started).toEqual([
       "ui:patterns-editors-mermaid-renderer--default",
       "pstdio-dashboard:dashboard-sidenav--workspace-resource",
-      "pstdio-workbench:pstdio-workbench-examples--dashboard-workbench",
+      "pstdio-workbench:pstdio-workbench-reference-core-api-visual-states--page-composition",
     ]);
     expect(getSharedStorybookBaseUrl("ui", env)).toBe("http://ui.test");
     expect(getSharedStorybookBaseUrl("pstdio-dashboard", env)).toBe("http://pstdio-dashboard.test");

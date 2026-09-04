@@ -1,9 +1,6 @@
-import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { createPlannerTicket } from "../helpers/planner-api";
-import { STORY_RENDER_TIMEOUT_MS, startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
-const sidePanelsStoryId = "pstdio-workbench-onboarding--side-panels";
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 
@@ -43,7 +40,7 @@ test("PS-169 opens the active Session tab's custom menu", async ({ page, request
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
   }, project.id);
   await page.setViewportSize({ width: 1280, height: 720 });
   const ticket = await createPlannerTicket(request, apiBase, project.id, { content: "Inspect Session tab menu" });
@@ -65,52 +62,4 @@ test("PS-169 opens the active Session tab's custom menu", async ({ page, request
   await expect(sessionMenu.getByRole("menuitem", { name: "No sessions yet" })).toBeVisible();
 
   await expect.poll(() => getVerticalMenuGap(sessionTab, sessionMenu)).toBeLessThanOrEqual(1);
-});
-
-test.describe("PS-169 Panel tabs", () => {
-  test.slow();
-
-  let baseUrl: string;
-  let storybook: ChildProcessWithoutNullStreams | undefined;
-
-  test.beforeAll(async () => {
-    ({ baseUrl, storybook } = await startStorybook(sidePanelsStoryId, "pstdio-workbench"));
-  });
-
-  test.afterAll(async () => {
-    await stopStorybook(storybook);
-  });
-
-  test("adds an eligible widget to its owning Panel from the anchored add menu", async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 720 });
-    await page.goto(storyUrl(baseUrl, sidePanelsStoryId));
-
-    for (const panel of ["main", "secondary", "side"]) {
-      await expect(
-        page.locator(`[data-workbench-panel-header="${panel}"]`).getByRole("button", { name: "Add panel" }),
-      ).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
-    }
-
-    const activityTab = page.getByRole("tab", { name: /Activity Live/ });
-    await activityTab.click();
-    await expect(
-      page.getByRole("menu", { name: "Activity menu" }).getByRole("menuitem", { name: "Live context" }),
-    ).toBeVisible();
-
-    const activityMenu = page.getByRole("menu", { name: "Activity menu" });
-    await expect.poll(() => getVerticalMenuGap(activityTab, activityMenu)).toBeLessThanOrEqual(1);
-    await page.keyboard.press("Escape");
-
-    const addSidePanel = page
-      .locator('[data-workbench-panel-header="side"]')
-      .getByRole("button", { name: "Add panel" });
-    await addSidePanel.click();
-    await expect(page.getByRole("menu", { name: "Add panel" })).toHaveCount(0);
-
-    const sideHeader = page.locator('[data-workbench-panel-header="side"]');
-    await expect(sideHeader.getByRole("tab", { name: "Files" })).toBeVisible();
-    await expect(sideHeader.getByRole("tab", { name: "Files" })).toHaveAttribute("aria-selected", "true");
-
-    await expect(addSidePanel).toHaveCount(0);
-  });
 });

@@ -192,7 +192,7 @@ browserTest("updates an incompatible default extension and reinstalls it from Ma
     const page = await browser.newPage();
     await page.addInitScript((projectId: string) => {
       localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+      localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
       localStorage.setItem(
         `pstdio-project-settings/projects/${projectId}/values`,
         JSON.stringify({ state: { sessionModalState: "closed" }, version: 0 }),

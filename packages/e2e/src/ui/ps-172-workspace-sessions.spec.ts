@@ -59,6 +59,13 @@ test.describe("PS-172 workspace sessions", () => {
     });
     await expect(sidenav.getByRole("option", { name: "PS-164_A1", exact: true })).toBeVisible();
 
+    await sidenav.getByRole("option", { name: "PS-164_A1", exact: true }).click();
+    await expect(breadcrumb.getByText("PS-164_A1", { exact: true })).toBeVisible();
+
+    await page.getByRole("button", { name: "Navigate back" }).click();
+    await expect(breadcrumb.getByText("PS-164_A1", { exact: true })).not.toBeVisible();
+    await expect(page.getByRole("button", { name: "Navigate forward" })).toBeEnabled();
+
     await page.getByRole("button", { name: "Navigate forward" }).click();
     await expect(breadcrumb.getByText("PS-164_A1", { exact: true })).toBeVisible();
 

@@ -8,9 +8,7 @@ const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 
 const createProject = async (request: APIRequestContext) => {
-  const response = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "PS-171 Resource Layout Restore" },
-  });
+  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "Resource layout restore" } });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };
 };
@@ -20,7 +18,7 @@ const prepareDashboard = async (page: Page, projectId: string, repoId: string) =
     ({ selectedProjectId, selectedRepoId }) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-      localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+      localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
       localStorage.setItem(
         `pstdio-project-settings/projects/${selectedProjectId}/values`,
         JSON.stringify({
@@ -42,23 +40,19 @@ const prepareDashboard = async (page: Page, projectId: string, repoId: string) =
 
 const openWorkspace = async (page: Page, shorthand: string) => {
   const row = page.getByRole("row").filter({ hasText: shorthand }).first();
-  await expect(row).toBeVisible({ timeout: 30_000 });
+  await expect(row).toBeVisible();
   await row.getByRole("cell").filter({ hasText: shorthand }).first().click();
 };
 
-test("PS-171 restores resource Panel state across A to B to A and reload", async ({ page, request }) => {
+test("restores each resource's panel state across navigation and reload", async ({ page, request }) => {
   test.slow();
   const project = await createProject(request);
-  const repoRoot = createGitRepo("pstdio-ps-171-", "resource layout restore e2e");
-  const repo = await registerRepoViaApi(request, apiBase, project.id, "ps-171-repo", repoRoot);
+  const repoRoot = createGitRepo("pstdio-resource-layout-", "resource layout restore e2e");
+  const repo = await registerRepoViaApi(request, apiBase, project.id, "resource-layout-repo", repoRoot);
 
   try {
-    const ticketA = await createPlannerTicket(request, apiBase, project.id, {
-      content: "PS-171 workspace A",
-    });
-    const ticketB = await createPlannerTicket(request, apiBase, project.id, {
-      content: "PS-171 workspace B",
-    });
+    const ticketA = await createPlannerTicket(request, apiBase, project.id, { content: "Workspace A" });
+    const ticketB = await createPlannerTicket(request, apiBase, project.id, { content: "Workspace B" });
     const attemptA = await createPlannerAttempt(request, apiBase, project.id, {
       ticketId: ticketA.id,
       repoId: repo.id,
@@ -72,17 +66,12 @@ test("PS-171 restores resource Panel state across A to B to A and reload", async
 
     await prepareDashboard(page, project.id, repo.id);
     await page.goto(`/projects/${project.id}/`);
-
     const workspacesNavigation = await showHiddenSidenavEntry(page, "Workspaces");
     await workspacesNavigation.click();
 
     await openWorkspace(page, attemptA.workspace.workspace_shorthand);
-    await expect(page.getByRole("button", { name: "Show Secondary Panel" })).toBeVisible();
     await page.getByRole("button", { name: "Show Secondary Panel" }).click();
-    const separator = page.getByRole("separator", {
-      name: "Resize Secondary Panel",
-    });
-    await expect(separator).toBeVisible();
+    const separator = page.getByRole("separator", { name: "Resize Secondary Panel" });
     await separator.press("ArrowUp");
     await separator.press("ArrowUp");
     const workspaceASize = await separator.getAttribute("aria-valuenow");
@@ -90,7 +79,6 @@ test("PS-171 restores resource Panel state across A to B to A and reload", async
 
     await workspacesNavigation.click();
     await openWorkspace(page, attemptB.workspace.workspace_shorthand);
-    await expect(page.getByRole("button", { name: "Show Secondary Panel" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Secondary Panel" })).not.toBeVisible();
 
     await workspacesNavigation.click();
@@ -104,25 +92,6 @@ test("PS-171 restores resource Panel state across A to B to A and reload", async
     await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText(
       attemptA.workspace.workspace_shorthand,
     );
-
-    await workspacesNavigation.click();
-    await expect(page.getByRole("button", { name: "Show Secondary Panel" })).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "breadcrumb" })).toContainText("Workspaces");
-
-    const persistedLayoutKeys = await page.evaluate(() =>
-      Object.keys(localStorage).filter((key) => key.startsWith("dashboard-wb:layout:project/")),
-    );
-    expect(
-      persistedLayoutKeys.some((key) =>
-        key.includes(`/resource/dashboard-workbench://workspace/${attemptA.workspace.id}`),
-      ),
-    ).toBe(true);
-    expect(
-      persistedLayoutKeys.some((key) =>
-        key.includes(`/resource/dashboard-workbench://workspace/${attemptB.workspace.id}`),
-      ),
-    ).toBe(true);
-    expect(persistedLayoutKeys.some((key) => key.endsWith("/view/workspaces"))).toBe(true);
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

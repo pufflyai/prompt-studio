@@ -9,7 +9,7 @@ const apiBase = `http://localhost:${apiPort}`;
 
 const createProject = async (request: APIRequestContext) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "PS-179 Resource Actions" },
+    data: { name: "Resource Actions" },
   });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };
@@ -20,7 +20,7 @@ const prepareDashboard = async (page: Page, projectId: string, repoId: string) =
     ({ selectedProjectId, selectedRepoId }) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-      localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+      localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
       localStorage.setItem(
         `pstdio-project-settings/projects/${selectedProjectId}/values`,
         JSON.stringify({
@@ -46,17 +46,17 @@ const expectMenuItems = async (page: Page, labels: string[]) => {
   }
 };
 
-test("PS-179 exposes the same ticket and workspace actions on rows and breadcrumbs", async ({ page, request }) => {
+test("shows the same ticket and workspace actions on rows and breadcrumbs", async ({ page, request }) => {
   test.slow();
   const project = await createProject(request);
-  const repoRoot = createGitRepo("pstdio-ps-179-", "resource actions e2e");
-  const repo = await registerRepoViaApi(request, apiBase, project.id, "ps-179-repo", repoRoot);
+  const repoRoot = createGitRepo("pstdio-resource-actions-", "resource actions e2e");
+  const repo = await registerRepoViaApi(request, apiBase, project.id, "resource-actions-repo", repoRoot);
 
   try {
     const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
     const statusId = (statuses.find((status) => status.isDefault) ?? statuses[0])?.id;
     const ticket = await createPlannerTicket(request, apiBase, project.id, {
-      content: "PS-179 keeps actions beside resources",
+      content: "Keep actions beside resources",
       statusId,
     });
     const attempt = await createPlannerAttempt(request, apiBase, project.id, {
@@ -81,7 +81,9 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
     ).toBeVisible();
     const workspacesNavigation = await showHiddenSidenavEntry(page, "Workspaces");
     await workspacesNavigation.click();
-    await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
+    const ticketsNavigation = sidenav.getByRole("option", { name: "Tickets", exact: true }).first();
+    await expect(ticketsNavigation).toBeVisible();
+    await ticketsNavigation.click();
     await expect(ticketCard).toBeVisible();
 
     await ticketCard.click({ button: "right" });
@@ -96,7 +98,8 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
       }),
     ).toBeVisible();
     await workspacesNavigation.click();
-    await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
+    await expect(ticketsNavigation).toBeVisible();
+    await ticketsNavigation.click();
     await expect(ticketCard).toBeVisible();
 
     const typeTag = ticketCard.getByRole("button", { name: "Type", exact: true });
@@ -125,7 +128,7 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
       exact: true,
     });
     await expect(selectedTicketRow).toBeVisible();
-    await expect(page.getByTestId("content-editable").first()).toContainText("PS-179 keeps actions beside resources");
+    await expect(page.getByTestId("content-editable").first()).toContainText("Keep actions beside resources");
     const breadcrumbAction = page.locator("[data-workbench-breadcrumb-resource-actions]");
     await expect(breadcrumbAction).toBeVisible();
     await breadcrumbAction.click();
@@ -151,7 +154,7 @@ test("PS-179 exposes the same ticket and workspace actions on rows and breadcrum
   }
 });
 
-test("PS-179 keeps ticket creation and ticket status settings available", async ({ page, request }) => {
+test("keeps ticket creation and ticket status settings available", async ({ page, request }) => {
   test.slow();
   const project = await createProject(request);
   await prepareDashboard(page, project.id, "");
@@ -179,7 +182,9 @@ test("PS-179 keeps ticket creation and ticket status settings available", async 
   await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();
   await expect(page.getByTestId("renderer-card").filter({ hasText: "Create flow remains available" })).toBeVisible();
 
-  await sidenav.getByRole("option", { name: "Settings", exact: true }).click();
+  const settingsNavigation = sidenav.getByRole("option", { name: "Settings", exact: true });
+  await expect(settingsNavigation).toBeVisible();
+  await settingsNavigation.click();
   const settingsDialog = page.getByRole("dialog").last();
   await expect(settingsDialog.getByRole("option", { name: "Statuses", exact: true })).toBeVisible();
   await expect(settingsDialog.getByRole("option", { name: "Ticket tags", exact: true })).toBeVisible();

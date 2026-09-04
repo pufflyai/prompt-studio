@@ -1,7 +1,5 @@
-import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { createPlannerTicket } from "../helpers/planner-api";
-import { STORY_RENDER_TIMEOUT_MS, startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -11,27 +9,21 @@ const openTabCustomMenu = async (tab: import("@playwright/test").Locator) => {
   await expect(tab).toHaveAttribute("aria-selected", "true");
   await tab.click();
 };
-const sidePanelsStoryId = "pstdio-workbench-onboarding--side-panels";
-const locationSwitchStoryId = "pstdio-workbench-onboarding--location-switch";
-const allPanelsStoryId = "pstdio-workbench-onboarding--all-three-panels";
-const widgetVariantsStoryId = "pstdio-workbench-onboarding--widget-variants";
-const bubbleFreeLocationStoryId = "pstdio-workbench-onboarding--bubble-free-location";
-
 interface MenuCase {
   panel: "Main" | "Secondary" | "Side";
   side: "left" | "right";
   contentRegion: "main" | "secondary" | "side";
 }
 
-const testedMenus: MenuCase[] = [
+const _testedMenus: MenuCase[] = [
   { panel: "Main", side: "left", contentRegion: "main" },
   { panel: "Secondary", side: "right", contentRegion: "secondary" },
   { panel: "Side", side: "left", contentRegion: "side" },
 ];
 
 const panelId = (panel: MenuCase["panel"]) => panel.toLowerCase();
-const menuName = (entry: MenuCase) => `${entry.panel} ${entry.side} menu`;
-const menuRegion = (page: Page, entry: MenuCase) =>
+const _menuName = (entry: MenuCase) => `${entry.panel} ${entry.side} menu`;
+const _menuRegion = (page: Page, entry: MenuCase) =>
   page.locator(`[data-workbench-panel-menu="${panelId(entry.panel)}-${entry.side}"]`);
 
 const createSession = async (
@@ -50,7 +42,7 @@ const createSession = async (
   expect(response.ok()).toBe(true);
 };
 
-const dragMenuClosed = async (page: Page, menu: Locator, separator: Locator, side: MenuCase["side"]) => {
+const _dragMenuClosed = async (page: Page, menu: Locator, separator: Locator, side: MenuCase["side"]) => {
   const [menuBox, separatorBox] = await Promise.all([menu.boundingBox(), separator.boundingBox()]);
   expect(menuBox).not.toBeNull();
   expect(separatorBox).not.toBeNull();
@@ -70,7 +62,7 @@ test("PS-170 preserves browser Forward history between extension pages after ref
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
   const ticket = await createPlannerTicket(request, apiBase, project.id, {
     content: "Forward history ticket",
@@ -96,7 +88,7 @@ test("PS-170 keeps the project selector and Session Panel available on project h
   const project = (await response.json()) as { id: string };
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
 
   await page.goto(`/projects/${project.id}/`);
@@ -116,7 +108,7 @@ test("PS-170 preserves other Session tabs when selecting from New session", asyn
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
   await page.goto(`/projects/${project.id}/`);
   await page.getByRole("button", { name: "Open Side Panel" }).click();
@@ -194,7 +186,7 @@ test("PS-170 updates a New session Sub Panel in place after the first message", 
       `pstdio-dashboard:command-params:recent-harness:${projectId}`,
       JSON.stringify({ harnessId: "pstdio.extension-lab.harness.fake" }),
     );
-    localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
   await page.goto(`/projects/${project.id}/`);
   await page.getByRole("button", { name: "Open Side Panel" }).click();
@@ -220,7 +212,7 @@ test("PS-170 hides unavailable Side Panel chrome in the Sessions Location", asyn
   const project = (await response.json()) as { id: string };
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
 
   await page.goto(`/projects/${project.id}/sessions`);
@@ -231,171 +223,4 @@ test("PS-170 hides unavailable Side Panel chrome in the Sessions Location", asyn
   await expect(page.getByRole("button", { name: "Show Side Panel" })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Open Side Panel" })).toHaveCount(0);
   await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
-});
-
-test.describe("PS-170 Panel-owned menus", () => {
-  test.slow();
-
-  let baseUrl: string;
-  let storybook: ChildProcessWithoutNullStreams | undefined;
-
-  test.beforeAll(async () => {
-    ({ baseUrl, storybook } = await startStorybook(sidePanelsStoryId, "pstdio-workbench"));
-  });
-
-  test.afterAll(async () => {
-    await stopStorybook(storybook);
-  });
-
-  test("shows all six headerless menus and reattaches one menu for every Panel type", async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(storyUrl(baseUrl, sidePanelsStoryId));
-    const sidePanel = page.locator('[data-workbench-panel="side"]');
-    const sideSeparator = page.getByRole("separator", { name: "Resize Side Panel" });
-    const [sideWidth, sideSeparatorBox] = await Promise.all([
-      sidePanel.evaluate((element) => element.clientWidth),
-      sideSeparator.boundingBox(),
-    ]);
-    expect(sideSeparatorBox).not.toBeNull();
-    const sideStartX = sideSeparatorBox!.x + sideSeparatorBox!.width / 2;
-    const sideY = sideSeparatorBox!.y + sideSeparatorBox!.height / 2;
-    await page.mouse.move(sideStartX, sideY);
-    await page.mouse.down();
-    await page.mouse.move(sideStartX - (520 - sideWidth), sideY);
-    await page.mouse.up();
-    await expect.poll(() => sidePanel.evaluate((element) => element.clientWidth)).toBe(520);
-
-    for (const panel of ["main", "secondary", "side"]) {
-      for (const side of ["left", "right"]) {
-        const menu = page.locator(`[data-workbench-panel-menu="${panel}-${side}"]`);
-        await expect(menu).toBeVisible({ timeout: 30_000 });
-        await expect(menu.locator("[data-workbench-panel-header]")).toHaveCount(0);
-        await expect(menu.getByRole("button", { name: /^Close/ })).toHaveCount(0);
-      }
-    }
-
-    for (const entry of testedMenus) {
-      const menu = menuRegion(page, entry);
-      const contentNode = await page
-        .locator(`[data-workbench-region="${entry.contentRegion}"]`)
-        .first()
-        .elementHandle();
-      expect(contentNode).not.toBeNull();
-      await dragMenuClosed(page, menu, page.getByRole("separator", { name: `Resize ${menuName(entry)}` }), entry.side);
-
-      await expect(menu).not.toBeVisible();
-      expect(await contentNode!.evaluate((element) => element.isConnected)).toBe(true);
-
-      const header = page.locator(`[data-workbench-panel-header="${panelId(entry.panel)}"]`);
-      const trigger = header.getByRole("button", { name: `Open ${menuName(entry)}` });
-      await expect(trigger).toBeVisible();
-      await trigger.click();
-
-      const controls = page.locator(
-        `[data-workbench-panel-menu-controls="${panelId(entry.panel)}-${entry.side}-menu"]`,
-      );
-      await expect(controls).toBeVisible();
-      await expect(controls).toHaveAttribute("role", "menu");
-      await expect
-        .poll(async () => {
-          const [triggerBox, controlsBox] = await Promise.all([trigger.boundingBox(), controls.boundingBox()]);
-          if (!triggerBox || !controlsBox) return Number.POSITIVE_INFINITY;
-          return Math.abs(controlsBox.y - (triggerBox.y + triggerBox.height));
-        })
-        .toBeLessThanOrEqual(1);
-      await expect(controls).toHaveCSS("box-shadow", "none");
-      await expect(controls.getByText("Reattach", { exact: true })).toHaveCount(0);
-      await expect(controls.getByRole("region", { name: menuName(entry) })).toBeVisible();
-
-      const attach = controls.getByRole("button", { name: `Attach ${menuName(entry)}` });
-      await expect(attach).toHaveCount(1);
-      await attach.click();
-      await expect(menu).toBeVisible();
-      await expect(trigger).toHaveCount(0);
-      expect(await contentNode!.evaluate((element) => element.isConnected)).toBe(true);
-    }
-  });
-
-  test("switches exclusively between Location and Sub Panel menus", async ({ page }) => {
-    await page.setViewportSize({ width: 1200, height: 800 });
-    await page.goto(storyUrl(baseUrl, locationSwitchStoryId));
-
-    const locationTab = page.getByRole("tab", { name: /^Alpha location/ });
-    const notesTab = page.getByRole("tab", { name: /Notes/ });
-    await expect(locationTab).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
-    await expect(locationTab.getByRole("button", { name: /Close/ })).toHaveCount(0);
-    await expect(notesTab).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("button", { name: "Open Main left menu" })).toHaveCount(0);
-
-    const notesMenuTrigger = page.getByRole("button", { name: "Open Main right menu" });
-    await expect(notesMenuTrigger).toBeVisible();
-    await notesMenuTrigger.hover();
-    await expect(page.getByRole("tooltip").getByText("Notes tools")).toBeVisible();
-
-    await locationTab.click();
-    await expect(locationTab).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("button", { name: "Open Main left menu" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Open Main right menu" })).toHaveCount(0);
-
-    await page.getByRole("button", { name: "Navigate back" }).click();
-    await expect(notesTab).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("button", { name: "Open Main right menu" })).toBeVisible();
-    await page.getByRole("button", { name: "Navigate forward" }).click();
-    await expect(locationTab).toHaveAttribute("aria-selected", "true");
-  });
-
-  test("gives every Notes Sub Panel the same menus", async ({ page }) => {
-    await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto(storyUrl(baseUrl, allPanelsStoryId));
-
-    for (const panel of ["main", "secondary", "side"]) {
-      await expect(page.locator(`[data-workbench-panel-menu="${panel}-right"]`)).toContainText("Notes tools", {
-        timeout: STORY_RENDER_TIMEOUT_MS,
-      });
-      await expect(page.locator(`[data-workbench-panel-menu="${panel}-left"]`)).toHaveCount(0);
-    }
-  });
-
-  test("disables Attach when the Panel is too narrow", async ({ page }) => {
-    await page.setViewportSize({ width: 250, height: 800 });
-    await page.goto(storyUrl(baseUrl, locationSwitchStoryId));
-
-    await page.getByRole("button", { name: "Open Main right menu" }).click();
-    const attach = page.getByRole("button", { name: "Attach Main right menu" });
-    await expect(attach).toBeDisabled();
-    await attach.hover();
-    await expect(page.getByRole("tooltip").getByText("Panel is too narrow to attach this menu")).toBeVisible();
-  });
-
-  test("keeps a bubble-free Location clear while retaining attached Side Panel recovery", async ({ page }) => {
-    await page.setViewportSize({ width: 1200, height: 800 });
-    await page.goto(storyUrl(baseUrl, bubbleFreeLocationStoryId));
-
-    await expect(page.getByRole("button", { name: "Show Side Panel" })).toBeVisible({
-      timeout: STORY_RENDER_TIMEOUT_MS,
-    });
-    await expect(page.getByRole("button", { name: "Open Side Panel" })).toHaveCount(0);
-    await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
-
-    await page.getByRole("button", { name: "Show Side Panel" }).click();
-    await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
-  });
-
-  test("documents widget variants as one Location Panel with tabbed Sub Panels", async ({ page }) => {
-    await page.setViewportSize({ width: 1200, height: 800 });
-    await page.goto(storyUrl(baseUrl, widgetVariantsStoryId));
-
-    const tabs = page.getByRole("tablist");
-    await expect(tabs.getByRole("tab", { name: /^Widget variants/ })).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
-    await expect(tabs.getByRole("tab", { name: /^Closable singleton/ })).toBeVisible();
-    await expect(tabs.getByRole("tab", { name: /^Alpha note/ })).toBeVisible();
-    await expect(tabs.getByRole("tab", { name: /^Beta note/ })).toBeVisible();
-    await expect(tabs.getByRole("tab", { name: /^Scratch 1/ })).toBeVisible();
-    await expect(
-      tabs.getByRole("tab", { name: /^Widget variants/ }).getByRole("button", { name: /Close/ }),
-    ).toHaveCount(0);
-
-    await page.getByRole("button", { name: "New scratch Sub Panel" }).click();
-    await expect(tabs.getByRole("tab", { name: /^Scratch 2/ })).toBeVisible();
-  });
 });

@@ -32,12 +32,11 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
   }, projectId);
 };
 
 test("an extension page navigates through the public API and browser history", async ({ page, request }) => {
-  test.slow();
   const project = await createProject(request);
   await prepareDashboard(page, project.id);
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -62,6 +61,12 @@ test("an extension page navigates through the public API and browser history", a
   await expect(sidenav.getByRole("option", { name: "Lab", exact: true })).toBeVisible();
   await expect(sidenav.getByRole("option", { name: /Session 1 — first contact/ })).toBeVisible();
 
+  const historyLength = await page.evaluate(() => window.history.length);
+  for (let click = 0; click < 20; click += 1) {
+    await sidenav.getByRole("option", { name: "Lab", exact: true }).click();
+  }
+  expect(await page.evaluate(() => window.history.length)).toBe(historyLength);
+
   await page.goBack();
 
   await expect(page).toHaveURL(`/projects/${project.id}`);
@@ -78,7 +83,6 @@ test("an extension page navigates through the public API and browser history", a
 });
 
 test("Tickets and Start remain exclusive page locations", async ({ page, request }) => {
-  test.slow();
   const project = await createProject(request);
   await prepareDashboard(page, project.id);
   await page.setViewportSize({ width: 1440, height: 900 });
@@ -98,7 +102,6 @@ test("Tickets and Start remain exclusive page locations", async ({ page, request
 });
 
 test("Sessions mode reuses project navigation without duplicate chrome", async ({ page, request }) => {
-  test.slow();
   const project = await createProject(request);
   await prepareDashboard(page, project.id);
   await page.goto(`/projects/${project.id}`);
@@ -123,7 +126,6 @@ test("Sessions mode reuses project navigation without duplicate chrome", async (
 });
 
 test("Lab replaces an active session page in main", async ({ page, request }) => {
-  test.slow();
   const project = await createProject(request);
   const sessionTitle = "Session replaced by Lab";
   await createSession(request, project.id, sessionTitle);

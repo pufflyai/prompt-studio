@@ -21,7 +21,7 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
   await page.addInitScript((selectedProjectId) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
   }, projectId);
 };
 
@@ -64,8 +64,7 @@ test("keeps ticket editor focus and selection across debounce and save", async (
     statusId: status!.id,
   });
   await bypassOnboarding(page, project.id);
-  await page.goto("/");
-  await page.getByRole("option", { name: "Tickets", exact: true }).click();
+  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
   const card = page.getByTestId("renderer-card").filter({ hasText: ticket.title }).first();
   await expect(card).toBeVisible({ timeout: 15_000 });
   await card.click();

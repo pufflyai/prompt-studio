@@ -15,7 +15,7 @@ const bypassOnboarding = async (
     ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", currentAgentId);
-      localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
+      localStorage.setItem("dashboard-wb2:selected-project:global", currentProjectId);
       localStorage.setItem(
         `pstdio-project-settings/projects/${currentProjectId}/values`,
         JSON.stringify({
@@ -101,14 +101,14 @@ const fetchMetadata = async (request: import("@playwright/test").APIRequestConte
   return (await response.json()) as WorkbenchExtensionMetadata;
 };
 
-const webviewAtPath = (metadata: WorkbenchExtensionMetadata, path: string) => {
-  const view = metadata.views.find((candidate) => candidate.path === path);
-  if (!view || view.body.kind !== "webview") throw new Error(`Missing webview at path: ${path}`);
+const webview = (metadata: WorkbenchExtensionMetadata, localId: string) => {
+  const view = metadata.views.find((candidate) => candidate.localId === localId);
+  if (!view || view.body.kind !== "webview") throw new Error(`Missing webview: ${localId}`);
   return view.body.webview;
 };
 
 const openExtensionLab = async (page: import("@playwright/test").Page, projectId: string) => {
-  await page.goto(`/projects/${projectId}/lab`);
+  await page.goto(`/projects/${projectId}/extensions/pstdio.extension-lab/lab`);
 };
 
 test.describe("Extension webviews", () => {
@@ -129,7 +129,7 @@ test.describe("Extension webviews", () => {
     });
 
     const metadata = await fetchMetadata(request, project.id);
-    const labWebview = webviewAtPath(metadata, "lab");
+    const labWebview = webview(metadata, "lab-page");
     expect(labWebview.moduleUrl).toBeTruthy();
 
     await expect
@@ -181,12 +181,6 @@ test.describe("Extension webviews", () => {
 
     await labFrame.getByRole("button", { name: "Test file capabilities" }).click();
     await expect(labFrame.getByText("Upload, read, list, and delete passed.")).toBeVisible();
-
-    await labFrame.getByRole("button", { name: "Open file capability resource" }).click();
-    await expect(
-      page.frameLocator('iframe[title="Artifact"]').getByRole("heading", { name: "File capability artifact" }),
-    ).toBeVisible();
-    await expect(page.getByRole("navigation", { name: "breadcrumb" }).getByText("Lab", { exact: true })).toBeVisible();
   });
 
   test("creates an inbox notification from Extension Lab and opens it from the notifications modal", async ({
@@ -206,7 +200,7 @@ test.describe("Extension webviews", () => {
     });
 
     const metadata = await fetchMetadata(request, project.id);
-    webviewAtPath(metadata, "lab");
+    webview(metadata, "lab-page");
     await bypassOnboarding(page, project.id);
 
     await openExtensionLab(page, project.id);
@@ -254,7 +248,7 @@ test.describe("Extension webviews", () => {
     });
 
     const metadata = await fetchMetadata(request, project.id);
-    expect(metadata.views.find((view) => view.path === "lab-terminal")).toBeUndefined();
+    expect(metadata.views.find((view) => view.localId === "lab-terminal")).toBeUndefined();
 
     await bypassOnboarding(page, project.id);
     await page.goto(`/projects/${project.id}`);

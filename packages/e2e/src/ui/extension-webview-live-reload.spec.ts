@@ -39,7 +39,7 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
     ({ currentProjectId }) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-      localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
+      localStorage.setItem("dashboard-wb2:selected-project:global", currentProjectId);
       localStorage.setItem(
         `pstdio-project-settings/projects/${currentProjectId}/values`,
         JSON.stringify({
@@ -131,10 +131,32 @@ const getExtensionLoadState = async (
   return { lastError: extension?.lastError ?? null, status: extension?.status };
 };
 
-const expectWebviewAtPath = (metadata: WorkbenchExtensionMetadata, path: string) => {
-  const view = metadata.views.find((candidate) => candidate.path === path);
+const expectWebview = (metadata: WorkbenchExtensionMetadata, localId: string) => {
+  const view = metadata.views.find((candidate) => candidate.localId === localId);
   expect(view?.body.kind).toBe("webview");
 };
+
+const getWebviewModuleUrl = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  localId: string,
+) => {
+  const response = await request.get(`${apiBase}/v1/projects/${projectId}/extensions/ui`);
+  expect(response.ok()).toBe(true);
+  const metadata = (await response.json()) as WorkbenchExtensionMetadata;
+  const view = metadata.views.find((candidate) => candidate.localId === localId);
+  return view?.body.kind === "webview" ? view.body.webview.moduleUrl : undefined;
+};
+
+const getActivePageId = (page: import("@playwright/test").Page) =>
+  page.evaluate(() => {
+    const dashboardWindow = window as unknown as {
+      __pstdioDashboardWorkbench?: {
+        pages: { store: { getState(): { activePageId?: string } } };
+      };
+    };
+    return dashboardWindow.__pstdioDashboardWorkbench?.pages.store.getState().activePageId;
+  });
 
 test.describe("Extension webview live reload", () => {
   test.beforeEach(async ({ request }) => {
@@ -152,10 +174,11 @@ test.describe("Extension webview live reload", () => {
       const metadataResponse = await request.get(`${apiBase}/v1/projects/${project.id}/extensions/ui`);
       expect(metadataResponse.ok()).toBe(true);
       const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
-      expectWebviewAtPath(metadata, "lab");
+      expectWebview(metadata, "lab-page");
+      const initialModuleUrl = await getWebviewModuleUrl(request, project.id, "lab-page");
       await bypassOnboarding(page, project.id);
 
-      await page.goto(`/projects/${project.id}/lab`);
+      await page.goto(`/projects/${project.id}/extensions/pstdio.extension-lab/lab`);
       const frame = page.frameLocator('iframe[title="Lab"]');
       await expect(frame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
 
@@ -165,6 +188,8 @@ test.describe("Extension webview live reload", () => {
       writeFileSync(viewFile, current.replace('"Sandbox webview"', `"${nextHeading}"`));
 
       const startedAt = Date.now();
+      await expect.poll(() => getWebviewModuleUrl(request, project.id, "lab-page")).not.toBe(initialModuleUrl);
+      await expect.poll(() => getActivePageId(page)).toBe("pstdio.extension-lab.page.lab");
       await expect(frame.getByRole("heading", { name: nextHeading })).toBeVisible({ timeout: 5_000 });
       const elapsedMs = Date.now() - startedAt;
 
@@ -192,9 +217,9 @@ test.describe("Extension webview live reload", () => {
       const metadataResponse = await request.get(`${apiBase}/v1/projects/${project.id}/extensions/ui`);
       expect(metadataResponse.ok()).toBe(true);
       const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
-      expectWebviewAtPath(metadata, "lab");
+      expectWebview(metadata, "lab-page");
       await bypassOnboarding(page, project.id);
-      await page.goto(`/projects/${project.id}/lab`);
+      await page.goto(`/projects/${project.id}/extensions/pstdio.extension-lab/lab`);
 
       const frame = page.frameLocator('iframe[title="Lab"]');
       await expect(frame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
@@ -212,6 +237,7 @@ test.describe("Extension webview live reload", () => {
           lastError: null,
           status: "loaded",
         });
+      await expect.poll(() => getActivePageId(page)).toBe("pstdio.extension-lab.page.lab");
       await expect(frame.getByRole("heading", { name: recoveredHeading })).toBeVisible({ timeout: 5_000 });
     } finally {
       rmSync(extensionRoot, { recursive: true, force: true });

@@ -88,7 +88,7 @@ export const bypassOnboarding = async (page: Page, input: BypassOnboardingInput)
     }) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", agentId);
-      localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+      localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
       localStorage.setItem(
         `pstdio-dashboard:command-params:recent-harness:${projectId}`,
         JSON.stringify({ harnessId: agentId, ...(models[0] ? { model: models[0] } : {}) }),

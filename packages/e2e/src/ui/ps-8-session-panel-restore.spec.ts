@@ -21,7 +21,7 @@ const bypassOnboarding = async (page: Page, projectId: string) => {
   await page.addInitScript((currentProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", currentProjectId);
     localStorage.setItem(
       `pstdio-project-settings/projects/${currentProjectId}/values`,
       JSON.stringify({
@@ -86,9 +86,9 @@ test("PS-8 reuses a dashboard session tab selected again from a planner ticket",
   await expect(sessionRow).toBeVisible();
   await sessionRow.click();
 
-  const floatingPanel = page.getByRole("dialog", { name: "Side Panel" });
-  const sessionTabs = floatingPanel.getByRole("tab");
-  const sessionTab = floatingPanel.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) });
+  const sideHeader = page.locator('[data-workbench-panel-header="side"]');
+  const sessionTabs = sideHeader.getByRole("tab");
+  const sessionTab = sideHeader.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) });
   await expect(sessionTabs).toHaveCount(1);
   await expect(sessionTab).toHaveAttribute("aria-selected", "true");
 
@@ -140,17 +140,13 @@ test("PS-8 restores an attached session Side Panel and its session across refres
   await expect(sessionRow).toBeVisible();
   await sessionRow.click();
 
-  const floatingPanel = page.getByRole("dialog", { name: "Side Panel" });
-  await expect(
-    floatingPanel.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) }),
-  ).toHaveAttribute("aria-selected", "true");
-
-  // Reattach the floating Side Panel, then refresh like a user reopening the page.
-  await floatingPanel.getByRole("button", { name: "Reattach Side Panel" }).click();
   const attachedPanel = page.getByTestId("workbench-side-panel-attached");
   await expect(attachedPanel).toBeVisible();
-  await expect(page.getByRole("dialog", { name: "Side Panel" })).toHaveCount(0);
+  await expect(
+    attachedPanel.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) }),
+  ).toHaveAttribute("aria-selected", "true");
 
+  // Refresh like a user reopening the page with the attached Side Panel visible.
   await page.reload();
   await expect(async () => {
     await expect(attachedPanel).toBeVisible({ timeout: 5_000 });

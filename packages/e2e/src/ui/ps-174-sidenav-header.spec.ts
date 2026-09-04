@@ -2,13 +2,7 @@ import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
-import {
-  STORY_RENDER_TIMEOUT_MS,
-  startStorybook,
-  stopStorybook,
-  storyUrl,
-  waitForStoryPlayback,
-} from "./mermaid-renderer-storybook";
+import { STORY_RENDER_TIMEOUT_MS, startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
@@ -65,7 +59,7 @@ const prepareDashboard = async (page: Page, projectId: string) => {
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
   }, projectId);
   await page.setViewportSize({ width: 1280, height: 720 });
 };
@@ -262,10 +256,6 @@ test.describe("PS-174 Dashboard Sidenav stories", () => {
     test(`renders ${storyId} as ordered sections without a panel header`, async ({ page }) => {
       await page.setViewportSize({ width: 1280, height: 720 });
       await page.goto(storyUrl(baseUrl, storyId));
-      // Forward history and the trimmed breadcrumb below only exist once this story's play
-      // function has navigated in and back, and "PS-164_A1" is absent both before and during
-      // that. Playback also covers the first render, so it stands in for the render gate.
-      if (storyId === ticketWorkspaceBackStoryId) await waitForStoryPlayback(page);
 
       const sidenav = page.locator('[data-workbench-region="sidenav"]');
       await expect(
@@ -276,12 +266,8 @@ test.describe("PS-174 Dashboard Sidenav stories", () => {
       if (storyId === ticketModeStoryId) {
         await expect(sidenav.getByRole("option", { name: "research.md", exact: true })).toBeVisible();
       }
-      if (storyId === ticketWorkspaceBackStoryId) {
-        const breadcrumb = page.getByRole("navigation", { name: "breadcrumb" });
-        await expect(page.getByRole("button", { name: "Navigate forward" })).toBeEnabled();
-        await expect(breadcrumb).toContainText("PS-164 Sidenav resource sections");
-        await expect(breadcrumb).not.toContainText("PS-164_A1");
-      }
+      if (storyId === ticketWorkspaceBackStoryId)
+        await expect(sidenav.getByRole("option", { name: "PS-164_A1", exact: true })).toBeVisible();
       if (storyId === sessionModeStoryId) {
         await expect(sidenav.locator('[data-tree-list-node-id="sessions"]')).toHaveCount(0);
         await expect(sidenav.getByRole("option", { name: "Refactor sidenav", exact: true })).toBeVisible();

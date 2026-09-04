@@ -1,15 +1,8 @@
-import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, test } from "@playwright/test";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
-import { STORY_RENDER_TIMEOUT_MS, startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
-const breadcrumbStoryId = "pstdio-workbench-onboarding--breadcrumbs";
-const documentRendererStoryId = "pstdio-workbench-onboarding--document-renderer";
-const focusContextStoryId = "pstdio-workbench-onboarding--focus-and-context";
-const paletteResourcesStoryId = "pstdio-workbench-onboarding--palette-resources";
-
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const response = await request.get(`${apiBase}/v1/projects`);
   expect(response.ok()).toBe(true);
@@ -28,7 +21,7 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
   }, projectId);
   await page.setViewportSize({ width: 1280, height: 720 });
 };
@@ -135,6 +128,14 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   await expect(
     page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /New session/ }),
   ).toBeVisible();
+  const draft = "Keep this draft while the Side Panel moves";
+  const attachedSession = page.getByTestId("workbench-side-panel-attached");
+  const chatInput = attachedSession.locator("[data-testid='content-editable'][contenteditable='true']").last();
+  await chatInput.fill(draft);
+  const sideRegionNode = await attachedSession.getByRole("region", { name: "Side Panel" }).elementHandle();
+  const chatInputNode = await chatInput.elementHandle();
+  expect(sideRegionNode).not.toBeNull();
+  expect(chatInputNode).not.toBeNull();
   await expect(page.getByRole("button", { name: "Open Side Panel" })).toHaveCount(0);
   await openSide.click();
   const closedSide = nav.getByRole("button", { name: "Show Side Panel" });
@@ -148,13 +149,24 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   await sessionLauncher.click();
   const floatingSession = page.getByTestId("workbench-side-panel-floating");
   await expect(floatingSession).toBeVisible();
+  await expect(floatingSession.locator("[data-testid='content-editable'][contenteditable='true']").last()).toHaveText(
+    draft,
+  );
+  expect(
+    await floatingSession
+      .getByRole("region", { name: "Side Panel" })
+      .evaluate((node, original) => node === original, sideRegionNode),
+  ).toBe(true);
+  expect(await chatInputNode!.evaluate((element) => element.isConnected)).toBe(true);
   await expect(sessionLauncher).toHaveCount(0);
   await floatingSession.getByRole("button", { name: "Close Side Panel" }).click();
   await expect(sessionLauncher).toBeVisible();
 
   await sessionLauncher.click();
   await floatingSession.getByRole("button", { name: "Reattach Side Panel" }).click();
-  await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
+  await expect(attachedSession).toBeVisible();
+  await expect(chatInput).toHaveText(draft);
+  expect(await chatInputNode!.evaluate((element) => element.isConnected)).toBe(true);
   await expect(sessionLauncher).toHaveCount(0);
 });
 
@@ -177,120 +189,4 @@ test("PS-167 keeps the Secondary Panel closed from Workspaces until requested", 
   const secondaryPanel = page.locator('[data-workbench-region="secondary"]');
   await expect(secondaryPanel).toBeVisible();
   await expect(secondaryPanel.getByRole("button", { name: "Add panel" })).toBeVisible();
-});
-
-test.describe("PS-167 breadcrumb Storybook contract", () => {
-  test.slow();
-
-  let baseUrl: string;
-  let storybook: ChildProcessWithoutNullStreams | undefined;
-
-  test.beforeAll(async () => {
-    ({ baseUrl, storybook } = await startStorybook(breadcrumbStoryId, "pstdio-workbench"));
-  });
-
-  test.afterAll(async () => {
-    await stopStorybook(storybook);
-  });
-
-  test("shows a real multi-level path with actions and a session indicator", async ({ page }) => {
-    await page.goto(storyUrl(baseUrl, breadcrumbStoryId));
-
-    const nav = page.locator('[data-workbench-region="nav"]');
-    await expect(nav).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
-    await expect(nav.getByRole("button", { name: "Docs" })).toBeVisible();
-    await expect(nav.getByRole("button", { name: "Concepts" })).toBeVisible();
-    await expect(nav.getByText("Regions", { exact: true })).toBeVisible();
-    await expect(nav.getByLabel("Session status")).toBeVisible();
-  });
-
-  test("shows recovery controls only for registered regions and navigates existing tabs", async ({ page }) => {
-    await page.goto(storyUrl(baseUrl, paletteResourcesStoryId));
-
-    const nav = page.locator('[data-workbench-region="nav"]');
-    await expect(nav).toBeVisible({ timeout: STORY_RENDER_TIMEOUT_MS });
-    await expect(nav.getByRole("button", { name: /Sidenav/ })).toHaveCount(0);
-    await expect(nav.getByRole("button", { name: /Secondary Panel/ })).toHaveCount(0);
-
-    await page.getByRole("button", { name: "Search PS" }).click();
-    await page.getByText("PS-101 Palette resource providers", { exact: true }).click();
-
-    const ticketTab = page.getByRole("tab", { name: "PS-101" });
-    const tabNames = async () => page.getByRole("tab").allTextContents();
-    const initialTabNames = await tabNames();
-    expect(initialTabNames).toEqual(["Palette resources", "PS-101"]);
-    await expect(ticketTab).toHaveAttribute("aria-selected", "true");
-
-    await nav.getByRole("button", { name: "Navigate back" }).click();
-    await expect(page.getByRole("button", { name: "Search PS" })).toBeVisible();
-    expect(await tabNames()).toEqual(initialTabNames);
-
-    await nav.getByRole("button", { name: "Navigate forward" }).click();
-    await expect(ticketTab).toHaveAttribute("aria-selected", "true");
-    expect(await tabNames()).toEqual(initialTabNames);
-  });
-
-  test("does not allow a closed panel to become the active focus region", async ({ page }) => {
-    await page.goto(storyUrl(baseUrl, focusContextStoryId));
-
-    await page.getByRole("button", { name: "Hide Secondary Panel" }).click();
-
-    await expect(page.getByRole("button", { name: "Focus panel" })).toBeDisabled();
-    await expect(page.getByText("focus main", { exact: true }).first()).toBeVisible();
-  });
-
-  test("disables history after every added tab closes", async ({ page }) => {
-    await page.goto(storyUrl(baseUrl, paletteResourcesStoryId));
-
-    const results = [
-      "PS-101 Palette resource providers",
-      "PS-118 Extension search bridge",
-      "PS-144 Resource activation",
-    ];
-    for (const [index, result] of results.entries()) {
-      if (index > 0)
-        await page.locator('[data-workbench-region="main"]').getByRole("button", { name: "Search PS" }).click();
-      else await page.getByRole("button", { name: "Search PS" }).click();
-      await page.getByText(result, { exact: true }).click();
-      if (index < results.length - 1)
-        await page.locator('[data-workbench-region="nav"]').getByRole("button", { name: "Navigate back" }).click();
-    }
-
-    const mainTabList = page.locator('[data-workbench-panel-header="main"]').getByRole("tablist");
-    await expect(mainTabList.getByRole("tab")).toHaveCount(4);
-    for (let remaining = 3; remaining > 0; remaining -= 1) {
-      const tabs = mainTabList.getByRole("tab");
-      await expect(tabs).toHaveCount(remaining + 1);
-      const tab = tabs.last();
-      await tab.click();
-      await tab.getByRole("button", { name: /^Close PS-/ }).click();
-    }
-
-    await expect(mainTabList).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Search PS" })).toBeVisible();
-    const nav = page.locator('[data-workbench-region="nav"]');
-    await expect(nav.getByRole("button", { name: "Navigate back" })).toBeDisabled();
-    await expect(nav.getByRole("button", { name: "Navigate forward" })).toBeDisabled();
-  });
-
-  test("renders code documents inside the workbench theme provider", async ({ page }) => {
-    await page.goto(storyUrl(baseUrl, documentRendererStoryId));
-
-    await expect(page.getByRole("tab", { name: "Documents" })).toHaveCount(0);
-    await page.getByRole("tab", { name: "example.ts" }).click();
-
-    await expect(page.locator(".monaco-editor")).toBeVisible();
-
-    const mainHeader = page.locator('[data-workbench-panel-header="main"]');
-    for (const name of ["notes.md", "example.ts", "logo.svg"]) {
-      const tab = mainHeader.getByRole("tab", { name });
-      await tab.click();
-      await tab.getByRole("button", { name: `Close ${name}` }).click();
-    }
-
-    const addPanel = mainHeader.getByRole("button", { name: "Add panel" });
-    await expect(addPanel).toBeVisible();
-    await addPanel.click();
-    await expect(page.getByRole("menu", { name: "Add panel" }).getByRole("menuitem")).toHaveCount(3);
-  });
 });

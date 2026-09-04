@@ -282,12 +282,13 @@ test.describe("Workspace table", () => {
     });
 
     await page.addInitScript((selectedProjectId) => {
-      window.localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+      window.localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
     }, projectId);
 
     await page.goto(`/projects/${projectId}/workspaces`);
     const workspaceRow = page.getByRole("row").filter({ hasText: workspace.workspace_shorthand }).first();
     await expect(workspaceRow).toBeVisible();
+    await expect(workspaceRow).toContainText("+0 -0");
 
     await workspaceRow.getByRole("button", { name: "Row actions" }).click();
     await page.getByRole("menuitem", { name: "Rename workspace" }).click();
@@ -314,7 +315,7 @@ test.describe("Workspace table", () => {
     expect(archiveResponse.ok()).toBe(true);
 
     await page.addInitScript((selectedProjectId) => {
-      window.localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+      window.localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
     }, projectId);
 
     await page.goto(`/projects/${projectId}/workspaces`);
