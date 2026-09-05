@@ -57,6 +57,7 @@ describe("isolated development paths", () => {
         ["extension-lab", "extensions/extension-lab"],
         ["local-example", "infra/local/extensions/local-example"],
       ].map(([installName, source]) => ({
+        force: true,
         installName,
         skipInstall: true,
         source: resolve("/repo", source!),

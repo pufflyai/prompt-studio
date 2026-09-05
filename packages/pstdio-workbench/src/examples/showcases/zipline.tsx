@@ -1,5 +1,12 @@
-import { Badge, Box, Button, HStack, IconButton, Input, Stack, Text } from "@chakra-ui/react";
+import { Badge, Box, Button, HStack, IconButton, Stack, Text } from "@chakra-ui/react";
 import type { PageRef, ResourceRef } from "@pstdio/sdk/extensions";
+import {
+  type AttributeDescriptor,
+  type KanbanRendererRow,
+  type KanbanRendererSettings,
+  MANUAL_ORDERING,
+  NO_GROUPING,
+} from "@pstdio/ui/kanban-renderer";
 import { createWorkbench, type WorkbenchPanelRenderInput } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { createShowcaseStore, initials, useShowcaseStore } from "./showcase-store";
@@ -7,12 +14,9 @@ import { ziplineTheme } from "./themes";
 import { type IssueStatus, type ZiplineIssue, ziplineIssues } from "./zipline-data";
 import { WorkspaceNav, ZiplineRail } from "./zipline-navigation";
 
-type Filter = "All" | IssueStatus;
 const page: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "zipline" };
 const resource = (issue: ZiplineIssue): ResourceRef => ({ type: "zipline.issue", id: issue.id, label: issue.title });
 const store = createShowcaseStore({
-  filter: "All" as Filter,
-  query: "",
   statuses: Object.fromEntries(ziplineIssues.map((issue) => [issue.id, issue.status])) as Record<string, IssueStatus>,
 });
 const statusIcons: Record<IssueStatus, string> = {
@@ -27,115 +31,106 @@ const nextStatuses: Record<IssueStatus, IssueStatus> = {
   Done: "Backlog",
 };
 
-const StatusBadge = (props: { status: IssueStatus }) => (
-  <Badge colorPalette={statusColors[props.status]}>
-    <WorkbenchIcon name={statusIcons[props.status]} size={11} />
-    {props.status}
-  </Badge>
-);
+interface ZiplineBoardRow extends KanbanRendererRow {
+  attributes: {
+    id: string;
+    status: IssueStatus;
+    priority: ZiplineIssue["priority"];
+    team: string;
+    assignee: string;
+  };
+}
 
-const IssueList = (props: { input: WorkbenchPanelRenderInput }) => {
-  const { input } = props;
-  const state = useShowcaseStore(store);
-  const issues = ziplineIssues.filter(
-    (issue) =>
-      (state.filter === "All" || state.statuses[issue.id] === state.filter) &&
-      `${issue.id} ${issue.title}`.toLowerCase().includes(state.query.toLowerCase()),
-  );
-  return (
-    <Stack h="full" bg="bg" overflow="hidden" gap="0">
-      <HStack px="lg" py="md" borderBottomWidth="1px" borderColor="border.subtle" justify="space-between">
-        <Stack gap="0">
-          <Text textStyle="heading/M/semibold">My issues</Text>
-          <Text color="fg.muted" textStyle="paragraph/S/regular">
-            Work assigned to you across Northstar
-          </Text>
-        </Stack>
-        <Button size="sm">
-          <WorkbenchIcon name="Plus" />
-          New issue
-        </Button>
-      </HStack>
-      <HStack p="md" borderBottomWidth="1px" borderColor="border.subtle" gap="sm" flexWrap="wrap">
-        <Box position="relative" flex="1" minW="44">
-          <Box position="absolute" insetStart="sm" top="50%" transform="translateY(-50%)">
-            <WorkbenchIcon name="Search" color="fg.muted" />
-          </Box>
-          <Input
-            aria-label="Search issues"
-            value={state.query}
-            onChange={(event) => store.setState({ query: event.target.value })}
-            ps="xl"
-            size="sm"
-            placeholder="Search issues"
-          />
-        </Box>
-        {(["All", "Backlog", "In progress", "Done"] as const).map((filter) => (
-          <Button
-            key={filter}
-            aria-pressed={state.filter === filter}
-            size="xs"
-            variant={state.filter === filter ? "subtle" : "ghost"}
-            onClick={() => store.setState({ filter })}
-          >
-            {filter}
-          </Button>
-        ))}
-      </HStack>
-      <Stack overflowY="auto" gap="0">
-        {issues.map((issue) => {
-          const status = state.statuses[issue.id];
-          return (
-            <HStack
-              key={issue.id}
-              role="button"
-              tabIndex={0}
-              aria-label={`Open ${issue.id}: ${issue.title}`}
-              px="lg"
-              py="md"
-              borderBottomWidth="1px"
-              borderColor="border.subtle"
-              cursor="pointer"
-              _hover={{ bg: "bg.hover" }}
-              onClick={() => input.workbench.pageLocations.navigate({ kind: "page", page, resource: resource(issue) })}
-              onKeyDown={(event) => {
-                if (event.key === "Enter" || event.key === " ") {
-                  input.workbench.pageLocations.navigate({ kind: "page", page, resource: resource(issue) });
-                }
-              }}
-            >
-              <WorkbenchIcon name={statusIcons[status]} color={status === "Done" ? "fg.success" : "fg.muted"} />
-              <Stack minW="0" flex="1" gap="xs">
-                <HStack>
-                  <Text color="fg.muted" textStyle="paragraph/XS/regular">
-                    {issue.id}
-                  </Text>
-                  <Badge variant="outline">{issue.team}</Badge>
-                </HStack>
-                <Text truncate textStyle="paragraph/S/semibold">
-                  {issue.title}
-                </Text>
-              </Stack>
-              <StatusBadge status={status} />
-              <Text display={{ base: "none", lg: "block" }} w="16" color="fg.muted" textStyle="paragraph/XS/regular">
-                {issue.priority}
-              </Text>
-              <Box boxSize="7" borderRadius="full" bg="bg.muted" display="grid" placeItems="center">
-                <Text textStyle="paragraph/XS/semibold">{initials(issue.assignee)}</Text>
-              </Box>
-            </HStack>
-          );
-        })}
-        {issues.length === 0 ? (
-          <Stack align="center" py="3xl">
-            <WorkbenchIcon name="SearchX" size={28} color="fg.muted" />
-            <Text color="fg.muted">No matching issues.</Text>
-          </Stack>
-        ) : null}
-      </Stack>
-    </Stack>
-  );
+const boardAttributes: AttributeDescriptor[] = [
+  { id: "id", label: "ID", type: { kind: "string" }, displayable: true },
+  {
+    id: "status",
+    label: "Status",
+    type: {
+      kind: "enum",
+      options: [
+        { value: "Backlog", label: "Backlog", color: "gray", icon: "circle" },
+        { value: "In progress", label: "In progress", color: "purple", icon: "circle-dot-dashed" },
+        { value: "Done", label: "Done", color: "green", icon: "circle-check" },
+      ],
+    },
+    filterable: true,
+    groupable: true,
+    sortable: true,
+    editable: true,
+  },
+  {
+    id: "priority",
+    label: "Priority",
+    type: {
+      kind: "enum",
+      options: [
+        { value: "High", label: "High", color: "red" },
+        { value: "Medium", label: "Medium", color: "yellow" },
+        { value: "Low", label: "Low", color: "gray" },
+      ],
+    },
+    filterable: true,
+    sortable: true,
+    displayable: true,
+  },
+  {
+    id: "team",
+    label: "Team",
+    type: {
+      kind: "enum",
+      options: ["Product", "Platform", "Design", "Growth"].map((team) => ({ value: team, label: team })),
+    },
+    filterable: true,
+    groupable: true,
+    displayable: true,
+  },
+  {
+    id: "assignee",
+    label: "Assignee",
+    type: { kind: "user" },
+    filterable: true,
+    groupable: true,
+    displayable: true,
+  },
+];
+
+const boardSettings = {
+  viewMode: "board",
+  columnGrouping: "status",
+  rowGrouping: NO_GROUPING,
+  ordering: { attributeId: MANUAL_ORDERING, direction: "asc" },
+  displayProperties: ["id", "priority", "team", "assignee"],
+} satisfies Partial<KanbanRendererSettings>;
+
+const getBoardRows = () => {
+  const { statuses } = store.getState();
+  return ziplineIssues.map((issue) => ({
+    id: issue.id,
+    title: issue.title,
+    attributes: {
+      id: issue.id,
+      status: statuses[issue.id],
+      priority: issue.priority,
+      team: issue.team,
+      assignee: issue.assignee,
+    },
+  })) satisfies ZiplineBoardRow[];
 };
+
+const isIssueStatus = (value: unknown): value is IssueStatus =>
+  value === "Backlog" || value === "In progress" || value === "Done";
+
+const updateBoardAttribute = (rowId: string, attributeId: string, value: unknown) => {
+  if (attributeId !== "status" || !isIssueStatus(value)) return;
+  store.setState((state) => ({ ...state, statuses: { ...state.statuses, [rowId]: value } }));
+};
+
+const getBoardColumnConfig = (groupKey: string) => ({
+  color: isIssueStatus(groupKey) ? statusColors[groupKey] : "gray",
+  canDragIn: true,
+  canDragOut: true,
+});
 
 const IssueInspector = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
@@ -257,9 +252,24 @@ export const createZiplineWorkbench = () => {
     body: { kind: "react", render: () => <WorkspaceNav /> },
   });
   workbench.views.registerView({
-    id: "zipline.issues",
+    id: "zipline.board",
     title: "My issues",
-    body: { kind: "react", render: (input) => <IssueList input={input} /> },
+    body: {
+      kind: "kanban",
+      resourceKind: "zipline.issue",
+      attributes: boardAttributes,
+      defaultSettings: boardSettings,
+      executeQuery: getBoardRows,
+      subscribe: store.subscribe,
+      onRowActivate: (row) => {
+        const issue = ziplineIssues.find((item) => item.id === row.id);
+        if (issue) workbench.pageLocations.navigate({ kind: "page", page, resource: resource(issue) });
+      },
+      onAttributeChange: updateBoardAttribute,
+      getBoardColumnConfig,
+      emptyTitle: "No issues",
+      emptyDescription: "Change the board filters to see more work.",
+    },
   });
   workbench.views.registerView({
     id: "zipline.inspector",
@@ -285,7 +295,13 @@ export const createZiplineWorkbench = () => {
     modeId: "zipline",
     slots: [
       { id: "workspace", role: "auxiliary", region: "sidenav", viewId: "zipline.workspace", presence: "fixed" },
-      { id: "issues", role: "primary", region: "main", viewId: "zipline.issues" },
+      {
+        id: "issues",
+        role: "primary",
+        region: "main",
+        viewId: "zipline.board",
+        binding: { resourceKinds: ["zipline.issue"], viewId: "zipline.board", cardinality: "one" },
+      },
       {
         id: "inspector",
         role: "auxiliary",

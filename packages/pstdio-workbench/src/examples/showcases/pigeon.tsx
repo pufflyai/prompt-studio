@@ -248,7 +248,7 @@ const Composer = (props: { input: WorkbenchPanelRenderInput }) => {
 };
 
 export const createPigeonWorkbench = () => {
-  const workbench = createWorkbench({ startPage: page, initialSidePanelMode: "attached" });
+  const workbench = createWorkbench({ startPage: page, initialSidePanelMode: "floating" });
   workbench.themes.register([pigeonTheme]);
   workbench.modes.registerMode({
     id: "pigeon",
@@ -299,13 +299,21 @@ export const createPigeonWorkbench = () => {
     modeId: "pigeon",
     slots: [
       { id: "folders", role: "auxiliary", region: "sidenav", viewId: "pigeon.folders", presence: "fixed" },
-      { id: "inbox", role: "primary", region: "main", viewId: "pigeon.inbox" },
+      {
+        id: "inbox",
+        role: "primary",
+        region: "main",
+        viewId: "pigeon.inbox",
+        binding: { resourceKinds: ["pigeon.thread"], viewId: "pigeon.inbox", cardinality: "one" },
+        floatingPanels: "visible",
+      },
       {
         id: "reader",
         role: "auxiliary",
         region: "side",
         binding: { resourceKinds: ["pigeon.thread"], viewId: "pigeon.reader", cardinality: "one" },
         openOn: "page-resource",
+        floatingPanels: "visible",
       },
     ],
   });

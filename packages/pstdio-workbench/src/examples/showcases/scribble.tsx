@@ -1,5 +1,6 @@
 import { Box, Button, HStack, IconButton, Input, Stack, Text } from "@chakra-ui/react";
 import type { PageRef, ResourceRef } from "@pstdio/sdk/extensions";
+import { MarkdownEditor } from "@pstdio/ui/rich-text";
 import { createWorkbench, type WorkbenchCore, type WorkbenchPanelRenderInput } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { scribbleDocuments } from "./scribble-data";
@@ -12,7 +13,22 @@ const resource = (id: string): ResourceRef => ({
   id,
   label: scribbleDocuments.find((doc) => doc.id === id)?.title,
 });
-const store = createShowcaseStore({ query: "", favoriteIds: ["north-star"], checkedIds: ["north-star:0"] });
+
+const documentMarkdown = (document: (typeof scribbleDocuments)[number]) => {
+  const sections = document.sections.flatMap((section) => [`## ${section.title}`, "", section.body, ""]);
+  const tasks = document.tasks.map((task, index) => {
+    const checked = document.id === "north-star" && index === 0;
+    return `- [${checked ? "x" : " "}] ${task}`;
+  });
+
+  return [document.intro, "", ...sections, "## Next steps", "", ...tasks].join("\n");
+};
+
+const store = createShowcaseStore({
+  query: "",
+  favoriteIds: ["north-star"],
+  contentById: Object.fromEntries(scribbleDocuments.map((document) => [document.id, documentMarkdown(document)])),
+});
 
 const ScribbleTree = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
@@ -90,15 +106,12 @@ const DocumentCanvas = (props: { input: WorkbenchPanelRenderInput }) => {
       ...current,
       favoriteIds: favorite ? current.favoriteIds.filter((id) => id !== doc.id) : [...current.favoriteIds, doc.id],
     }));
-  const toggleTask = (index: number) => {
-    const key = `${doc.id}:${index}`;
+  const markdown = state.contentById[doc.id] ?? documentMarkdown(doc);
+  const updateMarkdown = (content: string) =>
     store.setState((current) => ({
       ...current,
-      checkedIds: current.checkedIds.includes(key)
-        ? current.checkedIds.filter((id) => id !== key)
-        : [...current.checkedIds, key],
+      contentById: { ...current.contentById, [doc.id]: content },
     }));
-  };
   return (
     <Box h="full" overflowY="auto" bg="bg">
       <HStack
@@ -150,41 +163,15 @@ const DocumentCanvas = (props: { input: WorkbenchPanelRenderInput }) => {
             <WorkbenchIcon name="Star" color={favorite ? "fg.warning" : "fg.muted"} />
           </IconButton>
         </HStack>
-        <Text textStyle="paragraph/L/regular" color="fg.muted">
-          {doc.intro}
-        </Text>
-        {doc.sections.map((section) => (
-          <Stack key={section.title} gap="sm">
-            <Text textStyle="heading/M/semibold">{section.title}</Text>
-            <Text textStyle="paragraph/M/regular" lineHeight="tall">
-              {section.body}
-            </Text>
-          </Stack>
-        ))}
-        <Stack gap="sm">
-          <Text textStyle="heading/M/semibold">Next steps</Text>
-          {doc.tasks.map((task, index) => {
-            const key = `${doc.id}:${index}`;
-            const checked = state.checkedIds.includes(key);
-            return (
-              <Button
-                key={task}
-                aria-pressed={checked}
-                variant="ghost"
-                justifyContent="flex-start"
-                onClick={() => toggleTask(index)}
-              >
-                <WorkbenchIcon
-                  name={checked ? "SquareCheckBig" : "Square"}
-                  color={checked ? "fg.success" : "fg.muted"}
-                />
-                <Text textDecoration={checked ? "line-through" : undefined} color={checked ? "fg.muted" : "fg"}>
-                  {task}
-                </Text>
-              </Button>
-            );
-          })}
-        </Stack>
+        <MarkdownEditor
+          key={doc.id}
+          defaultState={markdown}
+          fullWidth
+          isEditable
+          padding="0"
+          scrollable={false}
+          onChange={updateMarkdown}
+        />
       </Stack>
     </Box>
   );

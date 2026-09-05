@@ -8,6 +8,7 @@ import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { join, resolve } from "node:path";
+import { resolveWorkingTreeDefaultExtensions } from "./working-tree-extensions";
 
 const COMPOSE_FILE = "infra/local/compose.yaml";
 const PROJECT_PREFIX = "pstdio-cmp";
@@ -18,18 +19,6 @@ const SEEDED_PROJECT_NAME = "project";
 const ISOLATED_BROWSER_HOST = "127.0.0.1";
 const WINDOWS_CONTAINER_WORKTREE = "/workspace/prompt-studio";
 const WINDOWS_CONTAINER_GIT_COMMON_DIR = "/workspace/git-common";
-const SEEDED_LOCAL_EXTENSIONS = [
-  ["harness-claude-code", "extensions/harness-claude-code"],
-  ["harness-codex", "extensions/harness-codex"],
-  ["harness-open-code", "extensions/harness-open-code"],
-  ["pstdio-base-themes", "extensions/pstdio-base-themes"],
-  ["pstdio-planner", "extensions/pstdio-planner"],
-  ["pstdio-planner-loops", ".pstdio/extensions/pstdio-planner-loops"],
-  ["pstdio-reports", "extensions/pstdio-reports"],
-  ["pstdio-skills", "extensions/pstdio-skills"],
-  ["extension-lab", "extensions/extension-lab"],
-  ["local-example", "infra/local/extensions/local-example"],
-] as const;
 
 const usage = `Usage:
   bun run dev:isolated                          # build + up; prints dashboard URL
@@ -92,15 +81,7 @@ export const resolveIsolatedDashboardUrl = (port: number) => `http://${ISOLATED_
 export const resolveIsolatedDefaultExtensions = (
   repoRoot: string,
   env: Record<string, string | undefined> = process.env,
-) =>
-  env.PSTDIO_DEFAULT_EXTENSIONS ??
-  JSON.stringify({
-    defaultExtensions: SEEDED_LOCAL_EXTENSIONS.map(([installName, source]) => ({
-      source: resolve(repoRoot, source),
-      installName,
-      skipInstall: true,
-    })),
-  });
+) => env.PSTDIO_DEFAULT_EXTENSIONS ?? JSON.stringify(resolveWorkingTreeDefaultExtensions(repoRoot));
 
 export const resolveIsolatedExtensionReleaseRef = (
   repoRoot: string,

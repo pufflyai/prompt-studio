@@ -24,7 +24,6 @@ export const PigeonNav = () => {
           value={state.query}
           onChange={(event) => pigeonStore.setState({ query: event.target.value })}
           ps="2xl"
-          borderRadius="full"
           placeholder="Search mail"
         />
       </Box>
@@ -35,9 +34,6 @@ export const PigeonNav = () => {
         <IconButton aria-label="Settings" size="xs" variant="ghost">
           <WorkbenchIcon name="Settings" />
         </IconButton>
-        <Box boxSize="8" borderRadius="full" bg="bg.muted" display="grid" placeItems="center">
-          <Text textStyle="paragraph/XS/semibold">AS</Text>
-        </Box>
       </HStack>
     </HStack>
   );
