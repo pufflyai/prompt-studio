@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Simplify the Kiln showcase and add a Three.js editor with an animated track timeline.
+Simplify the Kiln showcase and add a Three.js editor with a fixed-height animated track timeline.

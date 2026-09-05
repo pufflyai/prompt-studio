@@ -19,7 +19,7 @@ export const createKilnWorkbench = () => {
     resourceKinds: ["kiln.object"],
     regionSettings: {
       side: { size: { defaultPx: 340, minPx: 300, maxPx: 440 }, collapsible: false },
-      secondary: { size: { defaultPx: 188, minPx: 180, maxPx: 280 }, collapsible: false },
+      secondary: { size: { defaultPx: 188, minPx: 188, maxPx: 188 }, collapsible: false },
     },
     activate: () => undefined,
   });
