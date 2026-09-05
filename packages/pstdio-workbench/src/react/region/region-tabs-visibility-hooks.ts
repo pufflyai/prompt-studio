@@ -26,7 +26,8 @@ export const shouldShowRegionTabs = (
   options: { alwaysShowTabs?: boolean } = {},
 ) =>
   placements.length > 1 ||
-  (placements.length === 1 && (options.alwaysShowTabs === true || placements[0]?.closable === true));
+  (placements.length === 1 &&
+    (options.alwaysShowTabs === true || (placements[0]?.role !== "location" && placements[0]?.closable === true)));
 
 interface WorkbenchPanelHeaderVisibility {
   hasTabs?: boolean;

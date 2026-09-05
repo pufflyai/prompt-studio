@@ -26,7 +26,11 @@ import {
 } from "@/shared/extensions/workbench-extension-contributions";
 import { registerNavigationOwningMode } from "@/shared/workbench/mode-navigation-ownership";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
-import { type ExecuteDashboardExtensionCommand, prepareExtensionCommandArgs } from "./extension-command-handler";
+import {
+  type ExecuteDashboardExtensionCommand,
+  openSessionCommandResult,
+  prepareExtensionCommandArgs,
+} from "./extension-command-handler";
 import { createDashboardKanbanAdapter, toDashboardExtensionResource } from "./extension-kanban-adapter";
 import { registerExtensionResourceHierarchy } from "./extension-resource-hierarchy";
 import { withWorkspaceDiffMetadata } from "./extension-tree-workspace-diffs";
@@ -116,6 +120,7 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
             });
           }
           publishExtensionCommandEvent(response, fileRendererRefreshEnvelopeFromCommand(body, response));
+          await openSessionCommandResult(input.ctx, input.projectId, response);
           return response;
         },
         kanbanAdapter: kanban.adapter,

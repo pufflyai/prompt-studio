@@ -1,5 +1,6 @@
 import type { PageLocation, PageRef, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageCloseResolution } from "../../registries/pages/page-registry-internals";
+import { workbenchPageRefKey } from "./page-location-normalization";
 import type { ResolvedPageLocation, WorkbenchPageNavigationResult } from "./page-location-types";
 
 interface PagePlacementCloserInput {
@@ -42,11 +43,17 @@ export const createPagePlacementCloser = (input: PagePlacementCloserInput) => {
   ) => {
     const page = input.getPageRef(resolution.target.pageId);
     if (!page) throw new Error(`Unknown page: ${resolution.target.pageId}`);
+    const returnsToHybridRoot =
+      !resolution.target.resource &&
+      location.parent &&
+      !location.parent.resource &&
+      workbenchPageRefKey(location.parent.page) === workbenchPageRefKey(page);
+    const parent = returnsToHybridRoot ? location.parent?.parent : location.parent;
     const resolved = input.normalizeStored({
       page,
       ...(resolution.target.resource ? { resource: resolution.target.resource } : {}),
       ...(resolution.target.section ? { section: resolution.target.section } : {}),
-      ...(location.parent ? { parent: location.parent } : {}),
+      ...(parent ? { parent } : {}),
     });
     return input.commit(
       projectId,

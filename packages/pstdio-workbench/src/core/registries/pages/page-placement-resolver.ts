@@ -79,8 +79,8 @@ export const resolvePagePlacements = <Value>(input: {
   const placements: ResolvedOwnedPlacement<Value>[] = [];
   for (const slot of input.page.slots) {
     const resources = input.state.resourceInstances[slot.id] ?? [];
-    const oneResourceReplacesDefault = slot.binding?.cardinality === "one" && resources.length > 0;
-    const showPrimaryDefault = slot.role === "primary" && Boolean(slot.viewId) && !oneResourceReplacesDefault;
+    const showPrimaryDefault =
+      slot.role === "primary" && Boolean(slot.viewId) && input.state.activePrimaryInstanceKey === "default";
     if (showPrimaryDefault || staticSlotOpen(slot, input.state)) {
       placements.push(
         placementFor({

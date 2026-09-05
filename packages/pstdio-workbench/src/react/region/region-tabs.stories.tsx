@@ -6,7 +6,13 @@ import { createWorkbench, workbenchPanelRegions, workbenchRegionTabLeadingMenuPa
 import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createPanelWorkbench = (
-  options: { alwaysShowTabs?: boolean; multiple?: boolean; actions?: boolean; closable?: boolean } = {},
+  options: {
+    alwaysShowTabs?: boolean;
+    multiple?: boolean;
+    actions?: boolean;
+    closable?: boolean;
+    resource?: boolean;
+  } = {},
 ) => {
   const page: PageRef = { extensionId: "storybook", kind: "page", id: "panel-tabs" };
   const workbench = createWorkbench({
@@ -52,10 +58,16 @@ const createPanelWorkbench = (
     slots: workbenchPanelRegions.flatMap((region) => [
       {
         id: `${region}.first`,
-        role: region === "main" ? ("primary" as const) : ("auxiliary" as const),
         region,
         viewId: `${region}.first`,
-        presence: options.closable ? ("open" as const) : ("fixed" as const),
+        ...(region === "main"
+          ? {
+              role: "primary" as const,
+              ...(options.resource
+                ? { binding: { resourceKinds: ["document"], viewId: `${region}.first`, cardinality: "one" as const } }
+                : {}),
+            }
+          : { role: "auxiliary" as const, presence: options.closable ? ("open" as const) : ("fixed" as const) }),
       },
       ...(options.multiple
         ? [
@@ -71,6 +83,9 @@ const createPanelWorkbench = (
     ]),
   });
   workbench.pageLocations.switchProject("storybook-panel-tabs");
+  if (options.resource) {
+    workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "document", id: "one" } });
+  }
   return workbench;
 };
 
@@ -83,7 +98,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "A closable panel keeps its tab and Close button visible. A lone fixed panel hides its tab unless alwaysShowTabs is set. Header actions remain available in either case.",
+          "A lone page hides its tab. Closable auxiliary panels keep their Close button visible. alwaysShowTabs can show either kind, and header actions remain available.",
       },
     },
   },
@@ -109,6 +124,23 @@ export const AlwaysShowTabs: Story = {
     for (const region of workbenchPanelRegions) {
       await expect(await canvas.findByRole("tab", { name: `${region} first` })).toBeVisible();
     }
+  },
+};
+export const SingleResourcePage: Story = {
+  args: { workbench: createPanelWorkbench({ resource: true }) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByText("main.first content")).toBeVisible();
+    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
+  },
+};
+export const CloseResourcePage: Story = {
+  args: { workbench: createPanelWorkbench({ resource: true, alwaysShowTabs: true }) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Close main first" }));
+    await expect(canvas.queryByRole("button", { name: "Close main first" })).toBeNull();
+    await expect(canvas.getByText("main.first content")).toBeVisible();
   },
 };
 export const SingleClosablePanel: Story = {

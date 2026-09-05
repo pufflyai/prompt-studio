@@ -41,6 +41,14 @@ Without an explicit parent, navigation uses the page's declared hierarchy. The h
 parent page by resource kind or view. Closing the last bound-only primary instance always follows
 the declared parent; a hybrid primary shows its static view again.
 
+A hybrid primary shows its default view only while its resource-free location is active. Opening a
+resource replaces that default view. A lone primary page hides its tab strip unless `alwaysShowTabs`
+is enabled. Closable auxiliary panels keep their tabs so their Close buttons stay available.
+
+Navigation trees follow the refresh events declared by their source views. A file creation or other
+change can refresh a contributed navigation tree without reloading the page. Dashboard commands
+that return a session open that session in the Side Panel and keep the current ticket page active.
+
 `openOn: "page-resource"` opens a matching auxiliary binding on resource navigation. Closing the
 instance does not replay that open action. Navigating without a resource retains existing auxiliary
 instances. The Side Panel's open, attached, or floating state remains a separate user choice.

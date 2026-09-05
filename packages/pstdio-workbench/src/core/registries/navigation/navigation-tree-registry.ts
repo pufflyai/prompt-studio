@@ -29,6 +29,7 @@ export interface NavigationTreeContribution {
 }
 
 export interface CreateNavigationTreeRegistryInput {
+  subscribeViewRefresh?(viewId: string, listener: () => void): Disposable;
   getViewDefaultExpandedSectionIds?(viewId: string): readonly string[] | undefined;
   getViewSections?(viewId: string, context: NavigationTreeContext): Promise<TreeViewSection[]> | TreeViewSection[];
   getViewChildren?(viewId: string, node: TreeNode, context: NavigationTreeContext): Promise<TreeNode[]> | TreeNode[];
@@ -123,9 +124,13 @@ export const createNavigationTreeRegistry = (input: CreateNavigationTreeRegistry
         throw new Error(`Navigation tree contribution must declare a viewId or getSections: ${contribution.id}`);
       }
       contributions.set(contribution.id, contribution);
+      const refreshSubscription = contribution.viewId
+        ? input.subscribeViewRefresh?.(contribution.viewId, emit)
+        : undefined;
       emit();
       return createDisposable(() => {
         if (contributions.get(contribution.id) !== contribution) return;
+        refreshSubscription?.dispose();
         contributions.delete(contribution.id);
         emit();
       });

@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import { modeOwnsNavigation } from "@/shared/workbench/mode-navigation-ownership";
 import {
   disposeExtensionContributions,
@@ -54,6 +55,35 @@ describe("withDashboardWebviewUrls", () => {
 });
 
 describe("registerExtensionContributions", () => {
+  test("opens the session returned by a registered extension action", async () => {
+    const workbench = createWorkbench();
+    const opened: unknown[] = [];
+    workbench.commands.registerCommand(
+      { id: dashboardCommandIds.openSessionPanel, label: "Open session" },
+      {
+        execute: (args) => {
+          opened.push(args);
+        },
+      },
+    );
+    const registration = registerExtensionContributions({
+      ctx: workbench,
+      metadata,
+      projectId: "project-1",
+      executeCommand: async () => ({
+        ...response,
+        outcome: {
+          ok: true,
+          status: "success",
+          value: { type: "session", id: "session-1", title: "Refine ticket", status: "running" },
+        },
+      }),
+    });
+    await workbench.commands.executeCommand(metadata.commands[0]!.id);
+    expect(opened).toMatchObject([{ resource: { kind: "session", id: "session-1", label: "Refine ticket" } }]);
+    disposeExtensionContributions(registration);
+  });
+
   test("registers a settings placement against the extension View", () => {
     const workbench = createWorkbench();
     const extension = metadata.extensions[0]!;

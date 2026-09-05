@@ -96,6 +96,16 @@ export const createWorkbenchPageLocationController = <Value>(
     history: "push" | "replace" | "none",
     action: string,
   ) => {
+    // Subscribers can refresh the resource immediately. Commit history first so
+    // those updates replace this entry without overwriting the previous page.
+    input.persistence.save(projectId, resolved.location);
+    if (history === "push") {
+      historyIndex += 1;
+      maxHistoryIndex = historyIndex;
+      input.browser.push(historyEntry(projectId, resolved.location));
+    } else if (history === "replace") {
+      input.browser.replace(historyEntry(projectId, resolved.location));
+    }
     internals.activateLocation({
       pageId: resolved.pageId,
       projectId,
@@ -106,16 +116,7 @@ export const createWorkbenchPageLocationController = <Value>(
       ...(resolved.location.section ? { section: resolved.location.section } : {}),
       ...(resolved.pageStates ? { pageStates: resolved.pageStates } : {}),
     });
-    input.persistence.save(projectId, resolved.location);
-    if (history === "push") {
-      historyIndex += 1;
-      maxHistoryIndex = historyIndex;
-      input.browser.push(historyEntry(projectId, resolved.location));
-      publishHistory();
-    } else if (history === "replace") {
-      input.browser.replace(historyEntry(projectId, resolved.location));
-      publishHistory();
-    }
+    if (history !== "none") publishHistory();
     return { ok: true, location: resolved.location } as const;
   };
 

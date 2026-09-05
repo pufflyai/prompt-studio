@@ -5,12 +5,10 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
 import { updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
-import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { registerWorkspaceDataTableView } from "./collections/workspace-data-table-renderer";
 import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
 import { DeleteWorkspaceEntryWidget } from "./components/delete-workspace-entry-widget";
@@ -20,6 +18,7 @@ import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
 import { resourceMetadataString } from "./resource-metadata";
 import { registerWorkspaceFileContributions } from "./workspace-file-contributions";
 import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
+import { watchOpenWorkspaceResource } from "./workspace-resource-sync";
 
 const openCreateWorkspace = (ctx: WorkbenchModuleContext) => {
   const projectId = getDashboardSelectedProjectId(ctx);
@@ -55,40 +54,6 @@ const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContext) => {
     id: "dashboard.workspaces.project-nav",
     modes: ["project"],
     getSections: () => [{ id: "navigation.root", nodes: [workspaceNavigationNode()] }],
-  });
-};
-
-// A rename streams back through the synced rows, but the breadcrumb was built from the
-// resource captured when the workspace opened. Re-apply it whenever the open workspace's
-// synced name changes so the new name shows in the breadcrumb trail too.
-const watchOpenWorkspaceRename = (ctx: WorkbenchModuleContext) => {
-  let shownLabel: string | undefined;
-
-  const sync = () => {
-    const primary = ctx.getPrimaryResource();
-    if (primary?.kind !== "workspace" || !primary.id) {
-      shownLabel = undefined;
-      return;
-    }
-
-    const current = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).find(
-      (workspace) => workspace.id === primary.id,
-    );
-    const label = current?.resource.label;
-    if (!current || label === undefined) return;
-
-    // Baseline against the label shown when the workspace opened; only react to later renames.
-    shownLabel ??= primary.label;
-    if (label === shownLabel) return;
-
-    shownLabel = label;
-    setResourceBreadcrumb(ctx, current.resource);
-  };
-
-  subscribeDashboardData(sync);
-  ctx.onDidChangePrimaryResource(() => {
-    shownLabel = undefined;
-    sync();
   });
 };
 
@@ -237,7 +202,7 @@ export const createWorkspacesModule = () =>
       registerWorkspaceDataTableView(ctx);
       registerWorkspaceDetailWidgets(ctx);
       registerWorkspacesPage(ctx);
-      watchOpenWorkspaceRename(ctx);
+      const workspaceResourceSubscription = watchOpenWorkspaceResource(ctx);
 
       registerWorkspaceSidenavContributions(ctx);
 
@@ -274,6 +239,7 @@ export const createWorkspacesModule = () =>
       const primaryResourceSubscription = ctx.onDidChangePrimaryResource(() => syncActiveWorkspacePage(ctx));
       return {
         dispose: () => {
+          workspaceResourceSubscription.dispose();
           unsubscribePage();
           primaryResourceSubscription.dispose();
         },

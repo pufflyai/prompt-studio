@@ -124,7 +124,6 @@ describe("createWorkspacesModule", () => {
     ]);
     expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.workspaceDiffs);
     expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.viewId)).toEqual([
-      dashboardWidgetIds.workspaces,
       dashboardWidgetIds.workspaceDiffs,
       dashboardWidgetIds.workspaceFiles,
     ]);

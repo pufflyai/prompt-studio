@@ -149,6 +149,10 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const statusBar = createStatusBarRegistry({ hasView: (viewId) => Boolean(views.getView(viewId)) });
 
   const navigationTrees = createNavigationTreeRegistry({
+    subscribeViewRefresh: (viewId, listener) =>
+      renderers.onDidRefresh(({ treeId }) => {
+        if (treeId === viewId) listener();
+      }),
     getViewDefaultExpandedSectionIds: (viewId) => renderers.getTreeRenderer(viewId)?.defaultExpandedSectionIds,
     getViewSections: (viewId, context) => renderers.getBody(viewId, { ...context, viewId }),
     getViewChildren: (viewId, node, context) => renderers.getChildren(viewId, node, { ...context, viewId }),

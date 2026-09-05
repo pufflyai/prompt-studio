@@ -119,7 +119,6 @@ describe("page primary slot lifecycle", () => {
     );
     activatePage(registry, { pageId: "hybrid", resource: { type: "ticket", id: "one" } });
     expect(activePagePlacements(registry, "content").map((candidate) => candidate.identity.instanceKey)).toEqual([
-      "default",
       "ticket:one",
     ]);
     expect(registry.store.getState().reconciliation.activate[0]?.identity).toEqual(
