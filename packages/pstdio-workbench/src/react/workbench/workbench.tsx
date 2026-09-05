@@ -1,6 +1,6 @@
 import { Flex } from "@chakra-ui/react";
 import { ResizableSplitLayout, type ResourceContextAction, Toaster } from "@pstdio/ui";
-import { useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useLayoutEffect, useRef, useState } from "react";
 import { allowsWorkbenchFloatingPanels, type WorkbenchCore } from "../../core";
 import { WorkbenchCommandPalette } from "../command-palette/command-palette";
 import type { CommandParamFieldRenderer } from "../command-palette/command-params-dialog";
@@ -36,6 +36,8 @@ import { WorkbenchSidePanelRegionHeader, WorkbenchSidePanelRegionPortal } from "
 interface WorkbenchProps {
   workbench: WorkbenchCore;
   renderParamField?: CommandParamFieldRenderer;
+  /** Icon shown in the closed Side Panel's bubble launcher. */
+  sidePanelBubbleIcon?: ReactNode;
 }
 
 const SIDENAV_PANEL_ID = "sidenav";
@@ -144,7 +146,7 @@ const createWorkbenchRegionControls = (input: WorkbenchRegionControlsInput) => {
 };
 
 const WorkbenchContent = (props: WorkbenchProps) => {
-  const { workbench, renderParamField } = props;
+  const { workbench, renderParamField, sidePanelBubbleIcon } = props;
   const [sidenavContextActions, setSidenavContextActions] = useState<ResourceContextAction[]>([]);
   installWorkbenchTreeRenderer(workbench, {
     renderParamField,
@@ -293,6 +295,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
         {hasSidePanel && floatingPanelsAllowed ? (
           <WorkbenchFloatingSidePanel
             workbench={workbench}
+            bubbleIcon={sidePanelBubbleIcon}
             contentSlotRef={setFloatingSidePanelSlot}
             bottomOffset={hasStatusWidgets ? WORKBENCH_STATUS_BAR_HEIGHT : undefined}
             header={sideHeader}

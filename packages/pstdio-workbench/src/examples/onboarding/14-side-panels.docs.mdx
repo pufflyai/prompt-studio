@@ -25,6 +25,35 @@ Core API → Region map**.
 
 <Source code={source} language="tsx" />
 
+## Side Panel presentation
+
+The Side Panel supports attached, floating, and closed presentations. Hosts can disable detachment when floating
+content does not suit the application, such as Kiln's inspector:
+
+```tsx
+const workbench = createWorkbench({
+  initialSidePanelMode: "attached",
+  sidePanelDetachable: false,
+});
+```
+
+`sidePanelDetachable` defaults to `true`. Setting it to `false` removes the Float Side Panel button and the bubble
+launcher. The navigation bar still closes and reopens the attached panel. Saved floating state and calls to
+`workbench.sidePanel.setMode("floating")` resolve to `"attached"`.
+
+Pass `sidePanelBubbleIcon` to the React host to choose a bubble icon. This accepts a React node and defaults to the
+chat icon. It changes the icon while keeping the launcher's tooltip, accessible label, and click behavior:
+
+```tsx
+import { SlidersHorizontal } from "lucide-react";
+import { Workbench } from "@pstdio/workbench/react";
+
+<Workbench workbench={workbench} sidePanelBubbleIcon={<SlidersHorizontal size={20} />} />;
+```
+
+The bubble is shown only for closed panels that allow detachment. See the Side Panel stories in the Core API reference
+for the default icon, a custom icon, and a panel that stays attached.
+
 ## What each field means
 
 `createRegionMapModule()` returns one module contribution. `id` is the module's stable identity, and `activate(ctx)`

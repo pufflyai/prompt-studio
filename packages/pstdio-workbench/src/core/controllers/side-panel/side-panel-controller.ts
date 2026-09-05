@@ -10,6 +10,7 @@ export interface WorkbenchSidePanelState {
 }
 
 export interface WorkbenchSidePanelController {
+  readonly detachable: boolean;
   store: WorkbenchStore<WorkbenchSidePanelState>;
   getMode(): WorkbenchSidePanelMode;
   setMode(mode: WorkbenchSidePanelMode): void;
@@ -22,30 +23,33 @@ export interface WorkbenchSidePanelPersistenceAdapter {
 }
 
 export interface CreateWorkbenchSidePanelControllerInput {
+  detachable?: boolean;
   initialMode?: WorkbenchSidePanelMode;
   persistence?: WorkbenchSidePanelPersistenceAdapter;
 }
 
-export const createWorkbenchSidePanelController = (
-  input: CreateWorkbenchSidePanelControllerInput = {},
-): WorkbenchSidePanelController => {
+export const createWorkbenchSidePanelController = (input: CreateWorkbenchSidePanelControllerInput = {}) => {
+  const detachable = input.detachable ?? true;
+  const resolveMode = (mode: WorkbenchSidePanelMode) => (!detachable && mode === "floating" ? "attached" : mode);
   const internal = createWorkbenchStore<WorkbenchSidePanelState>({
     name: "workbench.sidePanel",
     // What the user last chose outranks the app's opening default.
-    initialState: { mode: input.persistence?.getMode() ?? input.initialMode ?? "floating" },
+    initialState: { mode: resolveMode(input.persistence?.getMode() ?? input.initialMode ?? "floating") },
   });
 
   return {
+    detachable,
     store: internal,
     getMode() {
       return internal.getState().mode;
     },
-    setMode(next) {
+    setMode(mode: WorkbenchSidePanelMode) {
+      const next = resolveMode(mode);
       if (internal.getState().mode === next) return;
       internal.setState({ mode: next }, false, "setMode");
       input.persistence?.setMode(next);
     },
-    onDidChange(listener) {
+    onDidChange(listener: WorkbenchSidePanelChangeListener) {
       const unsubscribe = internal.subscribeSelector(
         (state) => state.mode,
         (mode) => listener(mode),

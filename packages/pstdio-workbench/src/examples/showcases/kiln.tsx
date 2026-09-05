@@ -10,6 +10,7 @@ export const createKilnWorkbench = () => {
   const workbench = createWorkbench({
     startPage: kilnPage,
     initialSidePanelMode: "attached",
+    sidePanelDetachable: false,
     defaultPanelOpenByRegionId: { secondary: true },
   });
   workbench.themes.register([kilnTheme]);

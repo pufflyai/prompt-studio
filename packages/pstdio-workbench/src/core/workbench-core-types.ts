@@ -178,6 +178,8 @@ export interface createWorkbenchInput {
   /** Host-level region layout policy. The active mode's regionSettings win over it. */
   regionSettings?: Partial<Record<WorkbenchRegion, WorkbenchRegionSettings>>;
   sidePanelPersistence?: WorkbenchSidePanelPersistenceAdapter;
+  /** Whether the Side Panel can float or show a bubble launcher. Defaults to true. */
+  sidePanelDetachable?: boolean;
   initialSidePanelMode?: WorkbenchSidePanelMode;
   startPage?: PageRef;
 }

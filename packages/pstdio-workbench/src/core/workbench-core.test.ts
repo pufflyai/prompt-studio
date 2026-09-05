@@ -2,6 +2,15 @@ import { describe, expect, it } from "bun:test";
 import { createWorkbench, type WorkbenchModuleContribution } from "./workbench-core";
 
 describe("workbench modules", () => {
+  it("enforces the host detachment option through the shell API", () => {
+    const workbench = createWorkbench({ sidePanelDetachable: false, initialSidePanelMode: "floating" });
+
+    expect(workbench.sidePanel.getMode()).toBe("attached");
+    workbench.shell.setSidePanelPresentation("closed");
+    workbench.shell.setSidePanelPresentation("floating");
+    expect(workbench.sidePanel.getMode()).toBe("attached");
+  });
+
   it("uses layout visibility as the source of truth for panel chrome", () => {
     const workbench = createWorkbench();
     const layout = workbench.layout.getLayout();

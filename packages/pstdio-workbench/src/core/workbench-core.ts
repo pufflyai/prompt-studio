@@ -119,6 +119,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const sidePanel = createWorkbenchSidePanelController({
+    detachable: input.sidePanelDetachable,
     initialMode: input.initialSidePanelMode,
     persistence: input.sidePanelPersistence,
   });
