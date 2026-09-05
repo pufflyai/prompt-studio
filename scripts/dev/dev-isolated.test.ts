@@ -69,6 +69,14 @@ describe("isolated development paths", () => {
     expect(resolveIsolatedDefaultExtensions("/repo", { PSTDIO_DEFAULT_EXTENSIONS: '["custom"]' })).toBe('["custom"]');
   });
 
+  test("seeds Windows checkouts using Linux container extension paths", () => {
+    const config = JSON.parse(resolveIsolatedDefaultExtensions("C:\\repo", {}, "win32"));
+
+    expect(
+      config.defaultExtensions.find((extension: { installName: string }) => extension.installName === "extension-lab"),
+    ).toMatchObject({ source: "/workspace/prompt-studio/extensions/extension-lab" });
+  });
+
   test("uses the Prompt Studio package release for marketplace installs", () => {
     const readFile = (path: string) => {
       expect(path).toBe(resolve("/repo/packages/pstdio/package.json"));

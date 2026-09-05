@@ -32,7 +32,17 @@ const main = async () => {
   const children = [
     spawn(
       "bun",
-      ["packages/pstdio/src/index.ts", "--", "serve", "--foreground", "--host", "127.0.0.1", "--port", "19841"],
+      [
+        "--conditions=source",
+        "packages/pstdio/src/index.ts",
+        "--",
+        "serve",
+        "--foreground",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "19841",
+      ],
       { cwd: repoRoot, env, stdio: "inherit" },
     ),
     spawn("bun", ["run", "--cwd", "packages/pstdio-dashboard", "dev", "--", "--host", "localhost", "--port", "5173"], {

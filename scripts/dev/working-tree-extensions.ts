@@ -13,11 +13,11 @@ const WORKING_TREE_EXTENSIONS = [
   ["local-example", "infra/local/extensions/local-example"],
 ] as const;
 
-export const resolveWorkingTreeDefaultExtensions = (repoRoot: string) => ({
+export const resolveWorkingTreeDefaultExtensions = (repoRoot: string, resolvePath = resolve) => ({
   defaultExtensions: WORKING_TREE_EXTENSIONS.map(([installName, source]) => ({
     force: true,
     installName,
     skipInstall: true,
-    source: resolve(repoRoot, source),
+    source: resolvePath(repoRoot, source),
   })),
 });
