@@ -264,14 +264,12 @@ test.describe("Extension webviews", () => {
     };
 
     await addTerminal();
-    await expect(terminalTabs).toHaveCount(1);
-    await expect(terminalTabs.first()).toHaveAttribute("aria-selected", "true");
-    await expect(terminalTabs.first()).toHaveAttribute("title", /^(bash|zsh|dash|sh)$/);
     await expectVisibleTerminalOutput();
 
     await addTerminal();
     await expect(terminalTabs).toHaveCount(2);
     await expect(terminalTabs.nth(1)).toHaveAttribute("aria-selected", "true");
+    await expect(terminalTabs.nth(1)).toHaveAttribute("title", /^(bash|zsh|dash|sh)$/);
     await expectVisibleTerminalOutput();
 
     await terminalTabs.first().click();
@@ -283,17 +281,13 @@ test.describe("Extension webviews", () => {
     await page.getByRole("button", { name: "Show Secondary Panel" }).click();
     await expectVisibleTerminalOutput();
 
-    // Close both terminals via the active tab's close button, then reopen one.
-    await terminalTabs
-      .first()
-      .getByRole("button", { name: /^Close/ })
-      .click();
+    // Close the active terminal, then add another alongside the remaining content.
     await terminalTabs
       .first()
       .getByRole("button", { name: /^Close/ })
       .click();
     await addTerminal();
-    await expect(terminalTabs).toHaveCount(1);
+    await expect(terminalTabs).toHaveCount(2);
     await expectVisibleTerminalOutput();
   });
 });

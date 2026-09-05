@@ -62,7 +62,7 @@ const WorkbenchStatusBarItems = (props: WorkbenchStatusBarItemsProps) => {
     const view = workbench.views.getView(item.viewId);
     if (!view) return null;
     return (
-      <Box key={item.id} minW="0" h="full">
+      <Box key={item.id} display="flex" alignItems="center" minW="0" h="full">
         <WorkbenchWidgetHost
           workbench={workbench}
           region="status"

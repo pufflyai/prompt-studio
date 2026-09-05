@@ -1,34 +1,21 @@
 import { HStack, IconButton, Menu, Portal, Tabs } from "@chakra-ui/react";
 import {
   buildTabVisibilityMenuActions,
-  filterVisibleTabs,
   ListRow,
   PANEL_HEADER_CONTROL_SIZE,
   PANEL_HEADER_TAB_SIZE,
   ScrollArea,
   Tooltip,
-  useTabVisibilityStore,
 } from "@pstdio/ui";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useState } from "react";
-import {
-  type WorkbenchCore,
-  type WorkbenchPanelRegion,
-  type WorkbenchRegion as WorkbenchRegionId,
-  type WorkbenchWidgetPlacement,
-  workbenchPanelRegions,
-  workbenchRegionTabLeadingMenuPath,
-} from "../../core";
+import type { WorkbenchCore, WorkbenchRegion as WorkbenchRegionId, WorkbenchWidgetPlacement } from "../../core";
 import { hasCommandParameters } from "../command-palette/command-palette-params";
 import type { WorkbenchMenuItem } from "../menus/menu-items";
-import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
 import { WorkbenchIcon } from "../shared/icon";
-import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
-import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
-import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchPanelAddMenu } from "./panel-add-menu";
 import { resolveDisplayedActiveWidgetId, resolveTabIconName, toTabKey } from "./region-tabs-visibility";
-import { isPlacementEligibleForRegion, shouldShowRegionTabs } from "./region-tabs-visibility-hooks";
+import { useWorkbenchRegionTabsState } from "./region-tabs-visibility-hooks";
 import { SortableRegionTabList } from "./sortable-region-tab-list";
 
 export {
@@ -44,9 +31,6 @@ interface WorkbenchRegionTabsProps {
   visibilityStorageKey?: string;
 }
 
-const isWorkbenchPanelRegion = (region: WorkbenchRegionId): region is WorkbenchPanelRegion =>
-  workbenchPanelRegions.some((panelRegion) => panelRegion === region);
-
 const resolvePlacementIcon = (workbench: WorkbenchCore, placement: WorkbenchWidgetPlacement) => {
   const iconName = resolveTabIconName(
     placement,
@@ -58,40 +42,21 @@ const resolvePlacementIcon = (workbench: WorkbenchCore, placement: WorkbenchWidg
 
 export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const { workbench, region, visibilityStorageKey } = props;
-  const commands = useWorkbenchStore(workbench.commands.store, (state) => state.commands);
-  const contextValues = useWorkbenchStore(workbench.context.store, (state) => state.values);
-  const itemsByPath = useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
-  const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state);
-  const regionState = layoutState.layout.regions[region];
-  const resource = useWorkbenchLocationResource(workbench);
-  const modeId = useWorkbenchActiveModeId(workbench);
-  const compositionPanels = useWorkbenchCompositionPanels(workbench);
-  const subPanelPlacements = regionState.widgets.filter(
-    (placement) =>
-      placement.role === "sub-panel" && isPlacementEligibleForRegion(workbench, region, placement, resource, modeId),
-  );
-  // Visibility is on by default; the host can override the storage key. When no key is supplied, fall
-  // back to the region id so persistence has a sensible default.
-  const visibilityKey = visibilityStorageKey ?? region;
-  const tabStore = useTabVisibilityStore(visibilityKey, (state) => state);
+  const {
+    commands,
+    regionState,
+    resource,
+    tabStore,
+    subPanelPlacements,
+    visiblePlacements,
+    leadingItems,
+    panelRegion,
+    eligibleSubPanels,
+    showTabs,
+    hasActions,
+  } = useWorkbenchRegionTabsState(workbench, region, visibilityStorageKey);
   const tabOverrides = tabStore.tabOverrides;
   const getKey = (placement: WorkbenchWidgetPlacement) => toTabKey(region, placement);
-  const visibleSubPanels = filterVisibleTabs(subPanelPlacements, tabOverrides, getKey);
-  const visibleSubPanelIds = new Set(visibleSubPanels.map((placement) => placement.widgetId));
-  const locationPanels =
-    region === "main" ? regionState.widgets.filter((placement) => placement.role === "location") : [];
-  // A sub-panels-only Location presents no tab of its own; only its Sub Panels do.
-  const tabbedLocationPanels = locationPanels.filter(
-    (placement) => !workbench.layout.getWidget(placement.contributionId)?.subPanelsOnly,
-  );
-  const visiblePlacements =
-    tabbedLocationPanels.length + visibleSubPanels.length > 1
-      ? regionState.widgets.filter(
-          (placement) =>
-            tabbedLocationPanels.some((location) => location.widgetId === placement.widgetId) ||
-            visibleSubPanelIds.has(placement.widgetId),
-        )
-      : visibleSubPanels;
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
@@ -112,18 +77,6 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
     (placement) => resolvePlacementIcon(workbench, placement),
   );
   const hasVisibilityMenu = menuActions.length > 0;
-  const leadingItems = listWorkbenchMenuItemsFromState(
-    { itemsByPath, commands, contextValues },
-    workbenchRegionTabLeadingMenuPath(region),
-  );
-  const panelRegion = isWorkbenchPanelRegion(region) ? region : undefined;
-  const eligibleSubPanels = panelRegion ? compositionPanels[panelRegion].addable : [];
-  const hasAddAction = eligibleSubPanels.length > 0;
-  const showTabs = shouldShowRegionTabs(visiblePlacements, {
-    hasLeadingActions: leadingItems.length > 0,
-    hasAddAction,
-  });
-
   const openVisibilityMenu = (event: ReactMouseEvent<HTMLElement>) => {
     if (!hasVisibilityMenu) return;
 
@@ -149,7 +102,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
     return () => viewport.removeEventListener("wheel", onWheel);
   }, [viewport]);
 
-  if (!showTabs) return null;
+  if (!showTabs && !hasActions) return null;
 
   const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, regionState.activeWidgetId);
   const onSelectLeadingItem = (item: WorkbenchMenuItem) => {
@@ -180,7 +133,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
     </Tooltip>
   ));
 
-  if (visiblePlacements.length === 0) {
+  if (!showTabs) {
     return (
       <HStack flex="1 1 auto" h="full" minW="0" gap="2xs">
         {panelRegion ? (

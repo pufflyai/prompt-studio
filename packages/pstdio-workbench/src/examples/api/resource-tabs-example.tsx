@@ -90,7 +90,7 @@ const DocumentLauncher = (props: { showCardinalityComparison: boolean; workbench
 };
 
 export const createResourceTabsWorkbench = (showCardinalityComparison = false) => {
-  const workbench = createWorkbench();
+  const workbench = createWorkbench({ regionSettings: { secondary: { alwaysShowTabs: true } } });
 
   workbench.views.registerView({
     id: "guide.documents",

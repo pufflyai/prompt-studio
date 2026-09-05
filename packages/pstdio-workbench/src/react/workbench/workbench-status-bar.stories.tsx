@@ -1,5 +1,6 @@
-import { Box, Text } from "@chakra-ui/react";
+import { Box, Button, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect } from "storybook/test";
 import { createWorkbench } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { WorkbenchStatusBar } from "./workbench-panels";
@@ -13,9 +14,9 @@ const registerItem = (input: { id: string; label: string; order: number; slot: "
     body: {
       kind: "react",
       render: () => (
-        <Box display="flex" alignItems="center" h="full" px="sm">
-          <Text textStyle="xs">{input.label}</Text>
-        </Box>
+        <Text textStyle="xs" px="sm">
+          {input.label}
+        </Text>
       ),
     },
   });
@@ -45,9 +46,7 @@ const registerItem = (id, label, order, slot) => {
     id,
     title: label,
     body: { kind: "react", render: () => (
-      <Box display="flex" alignItems="center" h="full" px="sm">
-        <Text textStyle="xs">{label}</Text>
-      </Box>
+      <Text textStyle="xs" px="sm">{label}</Text>
     ) },
   });
   workbench.statusBar.registerItem({
@@ -79,7 +78,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "The host status-bar registry places registered views on its leading or trailing side. Extensions reach it through defineStatusBarItem.",
+          "The host status-bar registry places registered views on its leading or trailing side and centers each item vertically. Extensions reach it through defineStatusBarItem.",
       },
     },
   },
@@ -103,4 +102,52 @@ export const SeveralOwnersInOrder: Story = {
       </WorkbenchThemeProvider>
     ),
   ],
+};
+
+const mixedWorkbench = createWorkbench();
+for (const slot of ["leading", "trailing"] as const) {
+  for (const kind of ["label", "button"] as const) {
+    const id = `${slot}.${kind}`;
+    mixedWorkbench.views.registerView({
+      id,
+      title: id,
+      body: {
+        kind: "react",
+        render: () =>
+          kind === "label" ? (
+            <Text textStyle="xs" px="sm">
+              {slot} status
+            </Text>
+          ) : (
+            <Button size="xs" variant="ghost">
+              {slot} action
+            </Button>
+          ),
+      },
+    });
+    mixedWorkbench.statusBar.registerItem({ id, viewId: id, slot });
+  }
+}
+
+export const MixedItemHeights: Story = {
+  ...SeveralOwnersInOrder,
+  args: { workbench: mixedWorkbench },
+  parameters: {
+    docs: {
+      description: {
+        story: "Text and buttons in both slots share the vertical center without layout wrappers in the views.",
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const footer = canvasElement.querySelector("footer");
+    if (!footer) throw new Error("The status bar must be mounted.");
+    const bounds = footer.getBoundingClientRect();
+    const border = Number.parseFloat(getComputedStyle(footer).borderTopWidth);
+    const center = bounds.top + border + (bounds.height - border) / 2;
+    for (const item of footer.querySelectorAll("p, button")) {
+      const itemBounds = item.getBoundingClientRect();
+      await expect(Math.abs(itemBounds.top + itemBounds.height / 2 - center)).toBeLessThan(1);
+    }
+  },
 };

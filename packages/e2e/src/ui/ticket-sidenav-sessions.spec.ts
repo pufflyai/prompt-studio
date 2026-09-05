@@ -102,10 +102,9 @@ test.describe("Ticket sidenav sessions", () => {
     // Clicking it opens the session in the Side Panel and keeps the ticket in view (the ticket
     // stays in its own sidenav — we did not navigate away to sessions mode).
     await sessionRow.click();
-    const sideHeader = page.locator('[data-workbench-panel-header="side"]');
-    await expect(
-      sideHeader.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) }),
-    ).toHaveAttribute("aria-selected", "true");
+    const sidePanel = page.getByTestId("workbench-side-panel-attached");
+    await expect(sidePanel).toBeVisible();
+    await expect(sidePanel.locator("[data-testid='content-editable'][contenteditable='true']")).toBeVisible();
     await expect(sidenav.getByRole("option", { name: `${ticket.shorthand} Sidenav session proof` })).toBeVisible();
   });
 });

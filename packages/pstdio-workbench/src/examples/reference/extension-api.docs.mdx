@@ -121,8 +121,9 @@ For a static item, use `{ kind: "view", view: someView.ref, presence }`. `presen
 `{ kind: "binding", resourceKind, view, cardinality, add? }` with the same required `cardinality` and optional `add`
 target as a page slot binding.
 
-Region layout policy lives on the mode: `defineMode` accepts `regionSettings` with `size` and `collapsible` per
+Region layout policy lives on the mode: `defineMode` accepts `regionSettings` with `size`, `collapsible`, and `alwaysShowTabs` per
 declared region. A placement cannot set region size or collapsibility.
+Panels hide a single tab by default. Set `alwaysShowTabs: true` for a region to keep its single tab visible.
 
 ## Keybindings
 

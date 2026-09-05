@@ -44,7 +44,8 @@ test.describe("PS-172 workspace sessions", () => {
 
     const sidePanel = page.getByTestId("workbench-side-panel-floating");
     await expect(sidePanel).toBeVisible();
-    await expect(sidePanel.getByText("Wire up board", { exact: true })).toBeVisible();
+    await expect(sidePanel.getByRole("textbox")).toBeVisible();
+    await expect(sidePanel.getByText("Mode-driven sidenav", { exact: true })).toBeVisible();
     await expect(breadcrumb.getByText("Mode-driven sidenav", { exact: true })).toBeVisible();
   });
 

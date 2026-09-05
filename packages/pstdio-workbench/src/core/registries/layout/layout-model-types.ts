@@ -54,6 +54,7 @@ export interface LayoutModel {
   getWidget(id: string): RegisteredWidgetContribution | undefined;
   getPanel(id: string): WorkbenchPanelContribution | undefined;
   getRegionSize(regionId: WorkbenchRegion): WorkbenchRegionSize | undefined;
+  getRegionSettings(regionId: WorkbenchRegion): WorkbenchRegionSettings | undefined;
   getRegionCollapsible(regionId: WorkbenchRegion): boolean;
   getRegionHeaderBorderBottom(regionId: WorkbenchRegion): boolean;
   setRegionVisible(regionId: WorkbenchRegion, visible: boolean): void;

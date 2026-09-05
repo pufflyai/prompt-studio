@@ -71,6 +71,8 @@ export interface ActivityItemContribution<TParams extends Struct = Struct>
 export interface ModeRegionSettings {
   readonly size?: RegionSize;
   readonly collapsible?: boolean;
+  /** Keep a tab visible when this region has only one visible item. */
+  readonly alwaysShowTabs?: boolean;
 }
 
 export interface ModeContribution extends ContributionDefinition<"mode"> {

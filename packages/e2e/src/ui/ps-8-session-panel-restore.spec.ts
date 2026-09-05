@@ -87,16 +87,18 @@ test("PS-8 reuses a dashboard session tab selected again from a planner ticket",
   await sessionRow.click();
 
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
+  await sideHeader.getByRole("button", { name: "Add panel" }).click();
+  await sessionRow.click();
   const sessionTabs = sideHeader.getByRole("tab");
   const sessionTab = sideHeader.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) });
-  await expect(sessionTabs).toHaveCount(1);
+  await expect(sessionTabs).toHaveCount(2);
   await expect(sessionTab).toHaveAttribute("aria-selected", "true");
 
   await page.getByRole("option", { name: "Tickets", exact: true }).click();
   await openTicketCard(page, "Reuse session A across resource surfaces");
   await sessionRow.click();
 
-  await expect(sessionTabs).toHaveCount(1);
+  await expect(sessionTabs).toHaveCount(2);
   await expect(sessionTab).toHaveAttribute("aria-selected", "true");
 });
 
@@ -142,18 +144,14 @@ test("PS-8 restores an attached session Side Panel and its session across refres
 
   const attachedPanel = page.getByTestId("workbench-side-panel-attached");
   await expect(attachedPanel).toBeVisible();
-  await expect(
-    attachedPanel.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) }),
-  ).toHaveAttribute("aria-selected", "true");
+  await expect(attachedPanel.locator("[data-testid='content-editable'][contenteditable='true']")).toBeVisible();
 
   // Refresh like a user reopening the page with the attached Side Panel visible.
   await page.reload();
   await expect(async () => {
     await expect(attachedPanel).toBeVisible({ timeout: 5_000 });
   }).toPass({ timeout: 30_000 });
-  await expect(
-    attachedPanel.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) }),
-  ).toHaveAttribute("aria-selected", "true");
+  await expect(attachedPanel.locator("[data-testid='content-editable'][contenteditable='true']")).toBeVisible();
 
   const draft = "Keep this unsent PS-8 draft across refresh";
   const chatInput = attachedPanel.locator("[data-testid='content-editable'][contenteditable='true']");

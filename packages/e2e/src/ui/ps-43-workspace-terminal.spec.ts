@@ -125,8 +125,6 @@ test("PS-43 restores the first terminal when the hidden launcher was persisted a
     await expect(page.getByText("Recent sessions", { exact: true })).toBeVisible();
     await page.getByRole("button", { name: "Show Secondary Panel" }).click();
 
-    const secondaryHeader = page.locator('[data-workbench-panel-header="secondary"]');
-    await expect(secondaryHeader.getByRole("tab")).toHaveCount(1);
     await expect(page.locator(".xterm:visible")).toHaveCount(1);
     const terminalInput = page.getByRole("textbox", { name: "Terminal input" });
     await terminalInput.pressSequentially("echo __ps43_restored_terminal__");

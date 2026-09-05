@@ -147,9 +147,13 @@ content leaves with its page, and mode content leaves with its mode.
 | `config` | None | View-specific serializable input carried to the rendered instance. |
 
 Region-level layout policy is not a placement concern. It lives in `regionSettings`, keyed by region id with `size`
-(`defaultPx`, `minPx`, `maxPx`) and `collapsible` values. A mode declares it on its contribution, and the host can pass
+(`defaultPx`, `minPx`, `maxPx`), `collapsible`, and `alwaysShowTabs` values. A mode declares it on its contribution, and the host can pass
 defaults to `createWorkbench({ regionSettings })`. The active mode's settings win over the host's. A placement cannot
 set region size or collapsibility.
+
+Main, secondary, and side panels hide tabs when only one item is visible. To keep a single tab visible, set
+`regionSettings: { secondary: { alwaysShowTabs: true } }` on the host or mode. The setting applies to each region
+separately. Headers still show available actions when tabs are hidden.
 
 Shell placements live with the workbench. Mode placements live only while their mode is active. Page slots live only
 while their page is active. Registering a View alone never creates a panel.

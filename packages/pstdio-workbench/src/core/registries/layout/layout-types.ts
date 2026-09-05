@@ -61,6 +61,8 @@ export interface WorkbenchRegionSize {
 export interface WorkbenchRegionSettings {
   size?: WorkbenchRegionSize;
   collapsible?: boolean;
+  /** Show a tab for a single item. By default, tabs need at least two visible items. */
+  alwaysShowTabs?: boolean;
 }
 
 export type WidgetReusePolicy = "resource" | "none";

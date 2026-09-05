@@ -125,9 +125,6 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   await expect.poll(() => backgroundColor(openSide)).not.toBe(closedPanelBackground);
   await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
   await page.locator('[data-workbench-panel-header="side"]').getByRole("button", { name: "Add panel" }).click();
-  await expect(
-    page.locator('[data-workbench-panel-header="side"]').getByRole("tab", { name: /New session/ }),
-  ).toBeVisible();
   const draft = "Keep this draft while the Side Panel moves";
   const attachedSession = page.getByTestId("workbench-side-panel-attached");
   const chatInput = attachedSession.locator("[data-testid='content-editable'][contenteditable='true']").last();

@@ -292,6 +292,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
     getPlaceholder,
 
     getRegionSize: regionQueries.getRegionSize,
+    getRegionSettings: (regionId) => input.getRegionSettings?.(regionId),
     getRegionCollapsible: regionQueries.getRegionCollapsible,
     getRegionHeaderBorderBottom: regionQueries.getRegionHeaderBorderBottom,
 

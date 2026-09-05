@@ -115,8 +115,9 @@ test("PS-170 preserves other Session tabs when selecting from New session", asyn
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
+  await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionTabs = sideHeader.getByRole("tab");
-  await expect(sessionTabs).toHaveCount(1);
+  await expect(sessionTabs).toHaveCount(2);
 
   await openTabCustomMenu(sessionTabs.first());
   const menu = page.getByRole("menu", { name: "New session menu" });
@@ -131,12 +132,12 @@ test("PS-170 preserves other Session tabs when selecting from New session", asyn
 
   await menu.getByRole("menuitem", { name: "First context session" }).click();
   await expect(sideHeader.getByRole("tab", { name: /First context session/ })).toBeVisible();
-  await expect(sessionTabs).toHaveCount(2);
+  await expect(sessionTabs).toHaveCount(3);
 
-  const firstNewSessionTab = sideHeader.getByRole("tab", { name: /New session/ });
+  const firstNewSessionTab = sideHeader.getByRole("tab", { name: /New session/ }).first();
   await firstNewSessionTab.click();
   await firstNewSessionTab.getByRole("button", { name: "Close New session" }).click();
-  await expect(sessionTabs).toHaveCount(1);
+  await expect(sessionTabs).toHaveCount(2);
 
   await openTabCustomMenu(sideHeader.getByRole("tab", { name: /First context session/ }));
   await page
@@ -144,9 +145,6 @@ test("PS-170 preserves other Session tabs when selecting from New session", asyn
     .getByRole("menuitem", { name: "Second context session" })
     .click();
   await expect(sideHeader.getByRole("tab", { name: /Second context session/ })).toBeVisible();
-  await expect(sessionTabs).toHaveCount(1);
-
-  await sideHeader.getByRole("button", { name: "Add panel" }).click();
   await expect(sessionTabs).toHaveCount(2);
 
   await openTabCustomMenu(sideHeader.getByRole("tab", { name: /New session/ }));
@@ -193,16 +191,18 @@ test("PS-170 updates a New session Sub Panel in place after the first message", 
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
+  await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionTabs = sideHeader.getByRole("tab");
-  await expect(sessionTabs).toHaveCount(1);
-  await expect(sessionTabs.first()).toContainText("New session");
+  const activeTab = sideHeader.getByRole("tab", { selected: true });
+  await expect(sessionTabs).toHaveCount(2);
+  await expect(activeTab).toContainText("New session");
 
   const prompt = "Continue in this session tab";
   await page.locator("[data-testid='content-editable'][contenteditable='true']").last().fill(prompt);
   await page.locator("[data-testid='send-message-button']").last().click();
 
-  await expect(sessionTabs).toHaveCount(1);
-  await expect(sessionTabs.first()).toContainText(prompt);
+  await expect(sessionTabs).toHaveCount(2);
+  await expect(activeTab).toContainText(prompt);
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/?$`));
 });
 
