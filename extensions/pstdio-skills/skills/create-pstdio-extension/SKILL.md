@@ -2,7 +2,7 @@
 name: create-pstdio-extension
 description: "Create or edit a Prompt Studio extension. Use for extension commands, hooks, schedules, templates, skills, pages, native editors, file trees, settings, themes, artifact storage, workspaces, agent harnesses, and validation."
 metadata:
-  version: 0.0.2
+  version: 0.0.3
 ---
 
 # Create a Prompt Studio extension
@@ -16,6 +16,8 @@ metadata:
    - Use [references/scope.md](references/scope.md) to choose repo-local vs user scope before scaffolding new files.
    - Inspect the target `package.json`, `extension.ts`, tests, and nearby extension patterns before editing.
 2. Choose the contribution type.
+   - Read [references/pages.md](references/pages.md) for page ownership, close behavior, contextual navigation, and refreshing installed guidance.
+   - Start with the complete public SDK modules in [references/examples.md](references/examples.md). Scribble covers documents and a navigation tree; Zipline covers a board and inspector; Pigeon covers a list and reader.
    - Use commands for user-triggered operations from the CLI, dashboard menus, command palette, schedules, or other commands.
    - Use middlewares to validate, reject, or rewrite command invocations before a command runs.
    - Use hooks to react to project, ticket, workspace, worktree, git, session, attempt-status, or command lifecycle events.

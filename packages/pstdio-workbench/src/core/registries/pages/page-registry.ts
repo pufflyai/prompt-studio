@@ -3,7 +3,7 @@ import { composeOwnedPlacements, reconcileOwnedPlacements } from "../layout/plac
 import { resolvePagePlacementClose } from "./page-placement-close";
 import { pagePlacementIdentity, resolvePagePlacements } from "./page-placement-resolver";
 import { registerWorkbenchPage } from "./page-registration";
-import { setWorkbenchPageRegistryInternals } from "./page-registry-internals";
+import { setWorkbenchPageRegistryInternals, type WorkbenchPageLocationCommitInput } from "./page-registry-internals";
 import {
   createPageRegistryStore,
   type PageRegistryCommitInput,
@@ -13,11 +13,9 @@ import {
 } from "./page-registry-state";
 import type {
   CreateWorkbenchPageRegistryInput,
-  WorkbenchPageOpenInput,
   WorkbenchPageRegistry,
   WorkbenchPageRegistryStoreState,
   WorkbenchPageResourceCodec,
-  WorkbenchPageRuntimeState,
 } from "./page-registry-types";
 import {
   emptyPageState,
@@ -121,12 +119,8 @@ export const createWorkbenchPageRegistry = <Value>(
     );
   };
 
-  const activatePageWithStates = (
-    target: WorkbenchPageOpenInput,
-    pageStates: Readonly<Record<string, WorkbenchPageRuntimeState>>,
-    action: string,
-    locationState: Pick<WorkbenchPageRegistryStoreState<Value>, "projectId" | "location"> = store.getState(),
-  ) => {
+  const activatePageWithStates = (target: WorkbenchPageLocationCommitInput) => {
+    const pageStates = target.pageStates ?? store.getState().pageStates;
     const page = requirePage(target.pageId);
     const normalizedTarget = {
       ...target,
@@ -139,23 +133,26 @@ export const createWorkbenchPageRegistry = <Value>(
       target: normalizedTarget,
       resourceKey,
     });
-    const pageState = openPageResourceBindings({
-      page,
-      state: primaryState,
-      target: normalizedTarget,
-      resourceKey,
-    });
+    // A close supplies resolved owner state. Replaying automatic opens would undo that close.
+    const pageState = target.pageStates
+      ? primaryState
+      : openPageResourceBindings({
+          page,
+          state: primaryState,
+          target: normalizedTarget,
+          resourceKey,
+        });
     const primary = primarySlot(page);
     const instanceKey = pageState.activePrimaryInstanceKey;
     if (!instanceKey) throw new Error(`Page "${page.id}" did not resolve a primary instance`);
     commit({
       pageStates: { ...pageStates, [page.id]: pageState },
-      projectId: locationState.projectId,
-      location: locationState.location,
+      projectId: target.projectId,
+      location: target.location,
       activePageId: page.id,
       activeModeId: page.modeId,
       activate: [pagePlacementIdentity(page.id, primary.id, instanceKey)],
-      action,
+      action: target.action,
     });
   };
 
@@ -237,12 +234,7 @@ export const createWorkbenchPageRegistry = <Value>(
     refreshShellPlacements() {
       refreshShellPlacements({ state: publishingState ?? store.getState(), commit });
     },
-    activateLocation(target) {
-      activatePageWithStates(target, target.pageStates ?? store.getState().pageStates, target.action, {
-        projectId: target.projectId,
-        location: target.location,
-      });
-    },
+    activateLocation: activatePageWithStates,
     clearProject(projectId) {
       const current = store.getState();
       const placements = composeOwnedPlacements({ shell: input.resolveShellPlacements() }).placements;

@@ -14,6 +14,7 @@ import { statusesCollection, ticketsCollection } from "../data/collections";
 import { selectedDocumentFromResource } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
+import { ticketPageTarget } from "../data/ticket-page-target";
 import {
   linkedResourceParentMetadata,
   type TicketResourceReference,
@@ -21,7 +22,6 @@ import {
 } from "../data/ticket-resource-hierarchy";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { plannerTicketsChanged } from "../events";
-import { ticketPageRef } from "../resource-kinds";
 import { isImageAttachment } from "../utils/is-image-attachment";
 import { createWorkspaceCommand } from "./ticket-actions";
 import { buildSessionsSection } from "./ticket-sessions-tree";
@@ -96,6 +96,7 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMet
       kind: "page",
       page: workbenchPages.workspaces,
       resource: { type: "workspace", id: workspace.id, label, metadata: workspaceMetadata },
+      parent: ticketPageTarget(ticket.resourceParent),
     },
   };
 };
@@ -271,14 +272,10 @@ export const listTicketFilesTree = async (
   // in the workbench and lets every renderer callback receive the same selection.
   const ticketResource = ticketResourceReference(ticket, parentLookup);
   const selectTarget = (documentId: string) =>
-    ({
-      kind: "page" as const,
-      page: ticketPageRef,
-      resource: {
-        ...ticketResource,
-        metadata: { ...ticketResource.metadata, documentId },
-      },
-    }) satisfies TreeNode["target"];
+    ticketPageTarget({
+      ...ticketResource,
+      metadata: { ...ticketResource.metadata, documentId },
+    });
 
   const ticketSection: TreeViewSection = {
     id: "ticket",

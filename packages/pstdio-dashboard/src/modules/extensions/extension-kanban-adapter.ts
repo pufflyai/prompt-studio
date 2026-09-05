@@ -84,7 +84,11 @@ const decorateAttribute = (
   const workspaceRender = createBadgeListRenderer({
     itemsAttributeId,
     projectId,
-    navigate: (resource) => {
+    navigate: (resource, target) => {
+      if (target) {
+        void ctx.navigation.openTarget(target);
+        return;
+      }
       if (resource.kind === "workspace") {
         openWorkspacesPage(ctx, resource);
         return;

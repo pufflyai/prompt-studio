@@ -326,7 +326,8 @@ describe("pstdio planner workspace contributions", () => {
     });
     expect(detailTarget).toEqual({
       kind: "page",
-      page: { kind: "page", id: "ticket" },
+      page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
+      parent: { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.pstdio-planner" } },
       resource: { type: "ticket", id: "ticket-1", label: "PS-1 Ticket one" },
     });
     expect(extension.navigationItems?.find((item) => item.id === "tickets")).toMatchObject({

@@ -1,318 +1,64 @@
-# Extension examples
+# Runnable extension examples
 
-## Command with CLI and dashboard menu
+These complete modules live in `extensions/extension-lab/src/examples`. Each exports a public `defineExtension` value. Extension Lab installs their contributions together. The repository compiles them, normalizes them into host metadata, and exercises their UI with Playwright.
 
-```ts
-import { defineExtension, params } from "@pstdio/sdk/extensions";
+Copy one module to `extension.ts` in a package with the current `@pstdio/sdk` dependency and matching `engines.pstdio`. Use `pst extensions dev <path>` in a linked project.
 
-export default defineExtension({
-  commands: {
-    "release.prepare": {
-      title: "Prepare release",
-      description: "Create release notes and run the release preflight.",
-      cli: {
-        path: ["release", "prepare"],
-        examples: ["pst planner release prepare --version 1.2.3"],
-      },
-      palette: { label: "Prepare release" },
-      params: {
-        version: params.text({ label: "Version", required: true }),
-      },
-      async run(ctx, commandParams) {
-        await ctx.notify.toast({
-          type: "info",
-          title: "Release",
-          message: `Preparing ${commandParams.version}`,
-        });
+## Commands and resource header actions
 
-        return { version: commandParams.version };
-      },
-    },
-  },
-});
-```
-
-## Middleware validation
+Contributions are arrays of definitions. Each definition has an id. A resource kind owns menus; its page chooses placement.
 
 ```ts
-import { commandRef, defineExtension, params } from "@pstdio/sdk/extensions";
+import {
+  defineCommand,
+  defineExtension,
+  defineResourceKind,
+  params,
+  resourceMenuSlotRef,
+} from "@pstdio/sdk/extensions";
 
-const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "planner" });
-const publishCommand = plannerCommand<{ version: string }, { published: boolean }>("release.publish");
-
-export default defineExtension({
-  commands: {
-    "release.publish": {
-      title: "Publish release",
-      params: {
-        version: params.text({ required: true }),
-      },
-      async run(_ctx, commandParams) {
-        return { published: true, version: commandParams.version };
-      },
-    },
+const ticket = defineResourceKind({
+  id: "example-ticket",
+  menuSlots: [{ id: "header-actions", placement: "header-primary", access: "owner" }],
+});
+const createTicket = defineCommand({
+  id: "example-create-ticket",
+  title: "Create example ticket",
+  cli: {
+    path: ["example", "create-ticket"],
+    examples: ['pst extension-lab example create-ticket --title "Review the API"'],
   },
-  middlewares: {
-    requireSemver: {
-      command: publishCommand,
-      async handler(ctx, commandParams) {
-        if (!/^\d+\.\d+\.\d+$/.test(commandParams.version)) {
-          return ctx.commands.reject({
-            code: "invalid_version",
-            reason: "Version must be a semver string.",
-          });
-        }
-      },
-    },
+  params: { title: params.text({ label: "Title", required: true }) },
+  async run(_ctx, input) {
+    return { title: input.title };
   },
 });
-```
-
-## Hook on session completion
-
-```ts
-import { defineExtension, sessionEvents } from "@pstdio/sdk/extensions";
-
-export default defineExtension({
-  hooks: {
-    recordCompletedSession: {
-      event: sessionEvents.completed,
-      async handler(ctx, payload) {
-        await ctx.activity.record({
-          message: `Session ${payload.sessionId} completed`,
-          target: { type: "session", id: payload.sessionId },
-        });
-      },
+const runAttempt = defineCommand({
+  id: "example-run-attempt",
+  title: "Run attempt",
+  menus: [
+    {
+      slot: resourceMenuSlotRef(ticket.ref, "header-actions"),
+      label: "Run attempt",
+      icon: "play",
+      presentation: "button",
     },
+  ],
+  async run(ctx) {
+    return { ticket: ctx.resource?.id };
   },
 });
+export default defineExtension({ resourceKinds: [ticket], commands: [createTicket, runAttempt] });
 ```
 
-## Workspace provisioning hook
+## Editable documents with navigation
 
-`workspace.provision` is awaited: it gates session launch until your hook resolves, so use it to
-materialize files a session needs (e.g. an agent's skills dir). Long background setup belongs in the
-fire-and-forget `workspace.ready` hook.
-
-```ts
-import { defineExtension, workspaceEvents } from "@pstdio/sdk/extensions";
-
-export default defineExtension({
-  hooks: {
-    provision: {
-      event: workspaceEvents.provision,
-      async handler(ctx, _event) {
-        const skills = (await ctx.skills?.list?.()) ?? [];
-        const files = skills.flatMap((skill) =>
-          skill.files.map((file) => ({ path: `${skill.name}/${file.path}`, content: file.content })),
-        );
-
-        // Reconcile the agent dir to exactly these files (writes atomically, prunes the rest).
-        if (ctx.workspaceFiles) await ctx.workspaceFiles.syncDir(".claude/skills", files);
-      },
-    },
-    ready: {
-      event: workspaceEvents.ready,
-      async handler(_ctx, event) {
-        await _ctx.process.runOrThrow({ command: ["bun", "install"], cwd: event.workspaceDir });
-      },
-    },
-  },
-});
-```
-
-## Schedule
-
-```ts
-import { commandRef, defineExtension } from "@pstdio/sdk/extensions";
-
-const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "planner" });
-const heartbeat = plannerCommand("heartbeat");
-
-export default defineExtension({
-  commands: {
-    heartbeat: {
-      title: "Heartbeat",
-      async run(ctx, _commandParams) {
-        ctx.logger.info("Planner heartbeat", { projectId: ctx.projectId });
-        return { ok: true };
-      },
-    },
-  },
-  schedules: {
-    heartbeat: {
-      title: "Planner heartbeat",
-      cron: "*/15 * * * *",
-      command: heartbeat,
-    },
-  },
-});
-```
-
-## Templates and skills
-
-```ts
-import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
-
-export default defineExtension({
-  templates: {
-    releaseNotes: {
-      title: "Release Notes",
-      type: "document",
-      source: packageAsset("./templates/release-notes.md", import.meta.url),
-    },
-  },
-  skills: {
-    releaseManager: {
-      title: "Release manager",
-      source: packageAsset("./skills/release-manager", import.meta.url),
-    },
-  },
-});
-```
-
-## Artifact mount
-
-```ts
-import { defineExtension } from "@pstdio/sdk/extensions";
-
-export default defineExtension({
-  artifactMounts: {
-    reports: {
-      path: "reports",
-      label: "Reports",
-      repoRole: "default",
-    },
-  },
-  commands: {
-    "reports.write": {
-      title: "Write report",
-      async run(ctx, _commandParams) {
-        await ctx.artifacts.mount("reports").writeText("latest.txt", "done\n");
-        return { path: "latest.txt" };
-      },
-    },
-  },
-});
-```
-
-## Dashboard page
+Scribble saves through ctx.storage and supplies a page-owned navigation tree. Each pinned document has its own primary instance.
 
 ```ts
 import {
   defineExtension,
   defineNavigationItem,
-  definePage,
-  defineView,
-  workbenchModes,
-} from "@pstdio/sdk/extensions";
-
-const tasks = defineView({
-  id: "tasks",
-  title: "Tasks",
-  body: {
-    kind: "kanban",
-    attributes: [{ id: "status", label: "Status", type: { kind: "string" } }],
-    query: async () => ({ rows: [] }),
-    defaultSettings: {
-      viewMode: "list",
-      columnGrouping: "none",
-      rowGrouping: "none",
-      displayProperties: ["status"],
-    },
-  },
-});
-
-const tasksPage = definePage({
-  id: "tasks",
-  title: "Tasks",
-  path: "tasks",
-  mode: workbenchModes.project,
-  slots: [{ id: "content", role: "primary", region: "main", view: tasks.ref }],
-});
-
-export default defineExtension({
-  views: [tasks],
-  pages: [tasksPage],
-  navigationItems: [
-    defineNavigationItem({
-      id: "tasks",
-      owner: workbenchModes.project,
-      slot: "content",
-      label: "Tasks",
-      action: { kind: "page", page: tasksPage.ref },
-    }),
-  ],
-});
-```
-
-The view owns the board body. The page owns its route and placement.
-
-## Resource detail page
-
-A resource kind defines identity and menus. A page slot binds that resource to its view.
-
-```ts
-import {
-  defineExtension,
-  definePage,
-  defineResourceKind,
-  defineView,
-  packageAsset,
-  workbenchModes,
-  workbenchPages,
-} from "@pstdio/sdk/extensions";
-
-export const ticket = defineResourceKind({ id: "ticket", label: "Ticket", icon: "ticket" });
-const editor = defineView({
-  id: "ticket-editor",
-  title: "Ticket",
-  body: { kind: "webview", entry: packageAsset("./src/ticket-editor.tsx", import.meta.url) },
-});
-
-export const ticketPage = definePage({
-  id: "ticket",
-  title: "Ticket",
-  path: "ticket",
-  mode: workbenchModes.project,
-  parent: workbenchPages.start,
-  slots: [
-    {
-      id: "content",
-      role: "primary",
-      region: "main",
-      binding: { kind: ticket.ref, view: editor.ref, cardinality: "one" },
-    },
-  ],
-});
-
-export default defineExtension({
-  resourceKinds: [ticket],
-  views: [editor],
-  pages: [ticketPage],
-});
-```
-
-The binding declares `cardinality`. `one` keeps a single instance and rebinds it when another ticket opens. `many` opens one instance per resource. A page whose primary slot has only a binding must declare `parent`; closing its last tab navigates there.
-
-Navigation always names the destination page:
-
-```ts
-const target = {
-  kind: "page" as const,
-  page: ticketPage.ref,
-  resource: { type: "ticket", id: "PS-326", label: "PS-326" },
-};
-```
-
-## Native resource detail page with navigation
-
-Use this pattern for host-rendered resource screens: a page owns the routed primary view, while a page-owned
-navigation tree adds contextual rows to the shared Sidenav.
-
-```ts
-import {
-  defineExtension,
   defineNavigationTree,
   definePage,
   defineResourceKind,
@@ -321,144 +67,283 @@ import {
   workbenchPages,
 } from "@pstdio/sdk/extensions";
 
-const note = defineResourceKind({ id: "note", label: "Note" });
-const content = defineView({
-  id: "note-content",
+const note = defineResourceKind({ id: "scribble-note", label: "Note" });
+const documents = [
+  { id: "welcome", label: "Welcome note", content: "# Welcome\n\nWrite something here.\n" },
+  { id: "ideas", label: "Ideas note", content: "# Ideas\n\nKeep your ideas here.\n" },
+];
+const editor = defineView({
+  id: "scribble-editor",
   title: "Note",
   body: {
     kind: "file",
-    load: async (_ctx, input) => ({ fileName: "note.md", content: `# ${input.renderer.resource.label}` }),
+    load: async (ctx, { renderer }) => ({
+      fileName: `${renderer.resource!.id}.md`,
+      content:
+        (await ctx.storage.get<string>(`scribble:${renderer.resource!.id}`)) ??
+        documents.find((document) => document.id === renderer.resource!.id)?.content ??
+        "",
+    }),
+    save: async (ctx, { renderer, content }) => {
+      await ctx.storage.set(`scribble:${renderer.resource!.id}`, content);
+    },
   },
 });
-const files = defineView({
-  id: "note-files",
-  title: "Files",
-  body: { kind: "tree", body: async () => [{ id: "files", label: "Files", nodes: [] }] },
-});
-const notePage = definePage({
-  id: "note",
-  title: "Note",
-  path: "note",
+export const scribblePage = definePage({
+  id: "scribble",
+  title: "Scribble",
+  path: "scribble",
   mode: workbenchModes.project,
   parent: workbenchPages.start,
   slots: [
     {
-      id: "content",
+      id: "document",
       role: "primary",
       region: "main",
-      binding: { kind: note.ref, view: content.ref, cardinality: "one" },
+      binding: { kind: note.ref, view: editor.ref, cardinality: "many" },
     },
   ],
 });
-
+const openNote = (document: (typeof documents)[number]) => ({
+  kind: "page" as const,
+  page: scribblePage.ref,
+  resource: { type: note.id, id: document.id, label: document.label },
+  open: "pin" as const,
+});
+const files = defineView({
+  id: "scribble-files",
+  title: "Notes",
+  body: {
+    kind: "tree",
+    body: async () => [
+      {
+        id: "notes",
+        label: "Notes",
+        collapsible: false,
+        nodes: documents.map((document) => ({
+          id: document.id,
+          label: document.label,
+          icon: "FileText",
+          target: openNote(document),
+        })),
+      },
+    ],
+  },
+});
 export default defineExtension({
   resourceKinds: [note],
-  views: [content, files],
-  pages: [notePage],
+  views: [editor, files],
+  pages: [scribblePage],
+  navigationItems: [
+    defineNavigationItem({
+      id: "scribble",
+      label: "Scribble",
+      icon: "Notebook",
+      owner: workbenchModes.project,
+      slot: "content",
+      action: openNote(documents[0]),
+    }),
+  ],
   navigationTrees: [
-    defineNavigationTree({ id: "files", owner: notePage.ref, slot: "content", view: files.ref }),
+    defineNavigationTree({ id: "scribble-files", owner: scribblePage.ref, slot: "content", view: files.ref }),
   ],
 });
 ```
 
-The files tree appears together with mode navigation and disappears when the page is no longer active.
+## A board with an inspector
 
-## Webview page
+Zipline keeps the board in main. Selecting a row opens a resource in the same page and opens its inspector in side.
 
 ```ts
 import {
   defineExtension,
   defineNavigationItem,
   definePage,
+  defineResourceKind,
   defineView,
-  packageAsset,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 
-const planner = defineView({
-  id: "planner",
-  title: "Planner",
+const task = defineResourceKind({ id: "zipline-task", label: "Task" });
+const pageRef = { kind: "page" as const, id: "zipline" };
+const tasks = [
+  { id: "design", title: "Design the board", status: "todo" },
+  { id: "ship", title: "Ship the board", status: "done" },
+];
+const board = defineView({
+  id: "zipline-board",
+  title: "Zipline board",
   body: {
-    kind: "webview",
-    entry: packageAsset("./src/main.tsx", import.meta.url),
-    capabilities: ["commands.execute", "notification.show"],
+    kind: "kanban",
+    attributes: [
+      {
+        id: "status",
+        label: "Status",
+        type: {
+          kind: "enum",
+          options: [
+            { value: "todo", label: "To do" },
+            { value: "done", label: "Done" },
+          ],
+        },
+      },
+    ],
+    defaultSettings: { viewMode: "board", columnGrouping: "status", rowGrouping: "none", displayProperties: [] },
+    query: async () => ({
+      rows: tasks.map((item) => ({
+        id: item.id,
+        title: item.title,
+        attributes: { status: item.status },
+        resource: { type: task.id, id: item.id, label: item.title },
+      })),
+    }),
+    onRowActivate: async (_ctx, { row }) => ({ kind: "page", page: pageRef, resource: row.resource }),
   },
 });
-
-const plannerPage = definePage({
-  id: "planner",
-  title: "Planner",
-  path: "planner",
-  mode: workbenchModes.project,
-  slots: [{ id: "content", role: "primary", region: "main", view: planner.ref }],
+const inspector = defineView({
+  id: "zipline-inspector",
+  title: "Task inspector",
+  body: {
+    kind: "file",
+    load: async (_ctx, { renderer }) => ({
+      fileName: "task.md",
+      content: `# ${renderer.resource!.label}\n\nInspect ${renderer.resource!.id}.`,
+    }),
+  },
 });
-
+export const ziplinePage = definePage({
+  id: pageRef.id,
+  title: "Zipline",
+  path: "zipline",
+  mode: workbenchModes.project,
+  slots: [
+    {
+      id: "board",
+      role: "primary",
+      region: "main",
+      view: board.ref,
+      binding: { kind: task.ref, view: board.ref, cardinality: "one" },
+    },
+    {
+      id: "inspector",
+      role: "auxiliary",
+      region: "side",
+      openOn: "page-resource",
+      binding: { kind: task.ref, view: inspector.ref, cardinality: "one" },
+    },
+  ],
+});
 export default defineExtension({
-  views: [planner],
-  pages: [plannerPage],
+  resourceKinds: [task],
+  views: [board, inspector],
+  pages: [ziplinePage],
   navigationItems: [
     defineNavigationItem({
-      id: "planner",
+      id: "zipline",
+      label: "Zipline",
+      icon: "Columns3",
       owner: workbenchModes.project,
       slot: "content",
-      label: "Planner",
-      icon: "calendar-check",
-      action: { kind: "page", page: plannerPage.ref },
+      action: { kind: "page", page: ziplinePage.ref },
     }),
   ],
 });
 ```
 
-The page ref is the navigation target. Its path is the deep link.
+## A list with a reader
 
-## Webview files and navigation
-
-Declare each host call on the view body:
+Pigeon uses a native table and read-only file view. It uses the same page and auxiliary binding rules as Zipline.
 
 ```ts
-const imports = defineView({
-  id: "imports",
-  title: "Imports",
+import {
+  defineExtension,
+  defineNavigationItem,
+  definePage,
+  defineResourceKind,
+  defineView,
+  workbenchModes,
+} from "@pstdio/sdk/extensions";
+
+const message = defineResourceKind({ id: "pigeon-message", label: "Message" });
+const pageRef = { kind: "page" as const, id: "pigeon" };
+const messages = [
+  { id: "hello", subject: "Hello from Pigeon", content: "Your first message." },
+  { id: "meeting", subject: "Friday meeting", content: "Meet at ten on Friday." },
+];
+const inbox = defineView({
+  id: "pigeon-inbox",
+  title: "Inbox",
   body: {
-    kind: "webview",
-    entry: packageAsset("./src/imports.ts", import.meta.url),
-    capabilities: ["files.upload", "files.list", "files.delete", "navigation.open"],
+    kind: "dataTable",
+    columns: [{ id: "subject", label: "Subject" }],
+    query: async () => ({
+      rows: messages.map((item) => ({
+        id: item.id,
+        values: { subject: item.subject },
+        resource: { type: message.id, id: item.id, label: item.subject },
+      })),
+    }),
+    onRowActivate: async (_ctx, { row }) => ({ kind: "page", page: pageRef, resource: row.resource }),
   },
+});
+const reader = defineView({
+  id: "pigeon-reader",
+  title: "Message reader",
+  body: {
+    kind: "file",
+    load: async (_ctx, { renderer }) => ({
+      fileName: "message.md",
+      content: `# ${renderer.resource!.label}\n\n${messages.find((item) => item.id === renderer.resource!.id)?.content ?? ""}`,
+    }),
+  },
+});
+export const pigeonPage = definePage({
+  id: pageRef.id,
+  title: "Pigeon",
+  path: "pigeon",
+  mode: workbenchModes.project,
+  slots: [
+    {
+      id: "inbox",
+      role: "primary",
+      region: "main",
+      view: inbox.ref,
+      binding: { kind: message.ref, view: inbox.ref, cardinality: "one" },
+    },
+    {
+      id: "reader",
+      role: "auxiliary",
+      region: "side",
+      openOn: "page-resource",
+      binding: { kind: message.ref, view: reader.ref, cardinality: "one" },
+    },
+  ],
+});
+export default defineExtension({
+  resourceKinds: [message],
+  views: [inbox, reader],
+  pages: [pigeonPage],
+  navigationItems: [
+    defineNavigationItem({
+      id: "pigeon",
+      label: "Pigeon",
+      icon: "Mail",
+      owner: workbenchModes.project,
+      slot: "content",
+      action: { kind: "page", page: pigeonPage.ref },
+    }),
+  ],
 });
 ```
 
-The webview receives the file client from `defineExtensionView`:
+## Navigation and close behavior
 
-```ts
-export default defineExtensionView({
-  async render({ files, host }) {
-    const [selected] = await files.pick({ accept: ".csv,text/csv" });
-    if (!selected) return;
+Use `parent` on a page target for contextual breadcrumbs. Name each destination page explicitly; resource metadata does not choose pages. Without a target parent, the declared page hierarchy applies.
 
-    const uploaded = await files.upload({
-      name: selected.name,
-      data: await selected.arrayBuffer(),
-      mimeType: selected.type || "text/csv",
-    });
-    const projectFiles = await files.list();
+Closing the last primary instance of a bound-only page follows its declared `parent`, even when the current breadcrumb has a contextual parent. A hybrid primary returns to its static view.
 
-    await host.call("navigation.open", {
-      target: {
-        kind: "page",
-        page: { kind: "page", id: "ticket" },
-        resource: { type: "ticket", id: uploaded.id, label: uploaded.name },
-      },
-    });
+`openOn: "page-resource"` opens the auxiliary binding when navigation supplies a matching page resource. Closing it keeps it closed until another navigation opens it. Navigating without a resource does not clear previously opened auxiliary instances. Leaving the page removes its panels from the active layout.
 
-    await files.delete(uploaded.id);
-  },
-});
-```
+Use `navigationTrees` or `navigationItems` for the shared Sidenav. Page slots accept `main`, `side`, or `secondary`; the primary slot must use `main`.
 
-`files.pick()` stays in the browser. The other methods cross the host bridge. The host
-sets the active project and extension instance, so guest code cannot select another
-owner. Omit scope for project files, or pass the same `{ type, id }` scope to upload and
-list. Global settings webviews have no project file owner and cannot use host-backed
-file methods.
-
-This example targets the extension's `ticket` page. The host does not choose a presenter from the resource kind.
+See [the API reference](extension-api.md) for hooks, schedules, assets, connections, and other contribution types.

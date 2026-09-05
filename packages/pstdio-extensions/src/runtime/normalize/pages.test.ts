@@ -91,7 +91,10 @@ describe("page slot validation", () => {
       title: "Misplaced",
       path: "misplaced-primary",
       mode: workbenchModes.project,
-      slots: [{ id: "content", role: "primary", region: "side", view: pageView.ref }],
+      slots: [
+        // @ts-expect-error validate JavaScript callers too
+        { id: "content", role: "primary", region: "side", view: pageView.ref },
+      ],
     });
 
     const diagnostics = diagnosticsFor(
@@ -234,6 +237,7 @@ describe("page slot validation", () => {
   });
 
   test("requires a parent on a bound-only page", () => {
+    // @ts-expect-error validate JavaScript callers too
     const page = definePage({
       id: "orphan",
       title: "Orphan",

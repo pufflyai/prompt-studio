@@ -140,6 +140,7 @@ describe("core extension catalog", () => {
       "references/examples.md",
       "references/extension-api.md",
       "references/host-storage-and-workspaces.md",
+      "references/pages.md",
       "references/scope.md",
       "references/validation.md",
     ]);

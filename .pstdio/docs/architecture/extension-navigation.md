@@ -1,99 +1,49 @@
-# Extension Navigation
+# Extension navigation
 
-This page defines the navigation architecture for extension resources and modes. PS-255 proposed it. PS-266 through PS-270 implemented it.
+PS-326 routes screens through pages. Each page declares its mode and primary content. Navigation
+names a page explicitly; resource kinds and views do not choose routes or breadcrumb destinations.
 
-Mode and resource are separate parts of one navigation context. A mode describes the current task and layout. A resource describes the active domain object. Opening one does not silently select the other.
-
-## Navigation Context
-
-One committed navigation context contains:
-
-- project id;
-- mode id;
-- primary resource;
-- layout persistence scope;
-- breadcrumb path;
-- primary history identity.
-
-These values change through one navigation transaction. Observers never receive an intermediate mode-resource pair.
-
-## Navigation Targets
-
-A target may request a mode, a resource, or both:
+## Page targets
 
 ```ts
-type WorkbenchNavigationTarget = {
-  modeId?: string;
-  resource?: ResourceRef;
-  replaceActive?: boolean;
+const target = {
+  kind: "page" as const,
+  page: ticketPage.ref,
+  resource: { type: "ticket", id: "PS-326", label: "PS-326" },
 };
 ```
 
-The navigator resolves and validates the final context before committing it.
+The page-location controller resolves the page, validates its resource against the primary binding,
+and resolves its parent chain before committing a location. The page runtime activates the declared
+mode and reconciles owned placements. A failed target leaves the current location unchanged.
 
-### Resource-only target
+The canonical `PageLocation` contains the page ref, optional resource and document section, and
+optional parent location. URLs, browser history, breadcrumbs, and saved navigation use that location.
+Panels can open without replacing it, through a `kind: "panel"` target.
 
-The active mode remains unchanged. The operation succeeds only when that mode accepts the target resource kind. An incompatible resource leaves the current context unchanged and returns a diagnostic.
+## Contextual parents
 
-### Mode-only target
+A target may supply a nested `parent` page target. For example, Planner opens a workspace under the
+specific ticket page that owns it. Planner knows its ticket hierarchy and constructs that chain.
+The host does not select the first page that accepts a resource kind or displays a view.
 
-The current resource remains active when the target mode accepts its kind. Otherwise the navigator restores the target mode's last compatible resource. If none exists, it resolves the mode's default resource.
+Without an explicit parent, the controller uses the page's declared parent. Breadcrumbs project the
+canonical chain and retain an explicit target for each ancestor. A separate resource hierarchy
+provider can describe domain relationships, but it does not choose navigation destinations.
 
-Selecting an already-active mode still reconciles its context and restores a missing required location.
+## Placement lifetime
 
-### Combined target
+The visible layout combines shell, mode, and page placements. Leaving a page removes its placements;
+leaving a mode removes that mode and its active page. Ownership is independent of region.
 
-The navigator validates the requested mode and resource together, then commits both once. Commands that intend to change both must provide both explicitly.
+A close action commits the resolved remaining instances. It does not replay automatic auxiliary
+opens. Closing the last primary instance of a bound-only page navigates to its declared parent.
+A hybrid primary returns to its static view.
 
-## Commit Flow
+`openOn: "page-resource"` opens matching auxiliary bindings when navigation supplies a resource.
+Navigation without a resource retains existing auxiliary instances. The Side Panel container's
+visibility remains a separate user choice.
 
-```text
-target
-  -> resolve mode
-  -> resolve resource or fallback
-  -> validate compatibility
-  -> resolve hierarchy and layout scope
-  -> commit context
-  -> notify observers
-```
-
-A failed step changes nothing.
-
-## History
-
-Primary history records the canonical mode id and resource identity. The same resource in two modes creates distinct history contexts because each has a different layout scope.
-
-Back and Forward replay through the same atomic navigator. Replay never activates a mode first and a resource second. Attached inspectors and side-only resources do not replace primary history.
-
-## Last and Default Resources
-
-The host records the last primary resource separately for each project and mode. Deleted or unresolved resources are removed from this state.
-
-A mode that can be entered without a compatible active resource must provide a deterministic default resource or resolver. A missing default is a navigation diagnostic, not permission to keep an incompatible resource.
-
-## Resource Hierarchy and Breadcrumbs
-
-Hierarchy comes from resource identity, not UI placement. A browse root such as Tickets is a resource. Ticket details and nested child tickets resolve their parents through the hierarchy provider.
-
-The complete acyclic path forms the breadcrumb. Opening a breadcrumb parent replaces the primary resource without changing mode.
-
-## Layout Rotation
-
-Layout persistence is scoped by project, mode, and resource URI. A successful navigation commit rotates to the final scope once.
-
-When two modes accept the same resource, switching modes keeps the resource and restores the other layout. Required placements are reconciled. Optional placements the user closed remain closed.
-
-## Invariants
-
-- Resource open does not infer mode.
-- Mode and resource compatibility is checked before state changes.
-- No observer sees an invalid intermediate context.
-- History replay uses the same transaction as direct navigation.
-- Breadcrumb parents come from resource hierarchy.
-- A failed target leaves history, layout, breadcrumbs, mode, and resource unchanged.
-
-## Related Product Requirements
-
-- [Extension Navigation and Layout State](../extensions/navigation-and-layout-state.md)
-- [Contextual Workbench Composition](../extensions/contextual-workbench-composition.md)
-- [Extension Conformance and Regression Coverage](../extensions/conformance.md)
+See [navigation and layout state](../extensions/navigation-and-layout-state.md),
+[composition](../extensions/contextual-workbench-composition.md), and the
+[runnable examples](../../../extensions/extension-lab/src/examples).

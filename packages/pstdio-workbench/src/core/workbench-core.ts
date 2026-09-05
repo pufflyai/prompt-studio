@@ -4,7 +4,6 @@ import { createWorkbenchCommandPaletteController } from "./controllers/command-p
 import { createWorkbenchFocusController } from "./controllers/focus/focus-controller";
 import { connectWorkbenchPageBreadcrumbs } from "./controllers/page-location/page-breadcrumbs";
 import { createWorkbenchPageLocationController } from "./controllers/page-location/page-location-controller";
-import { contextualizeWorkbenchPageTarget } from "./controllers/page-location/page-location-hierarchy";
 import {
   createMemoryWorkbenchPageLocationBrowser,
   createMemoryWorkbenchPageLocationPersistence,
@@ -192,13 +191,6 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     browser: input.pageLocationBrowser ?? createMemoryWorkbenchPageLocationBrowser(),
     persistence: input.pageLocationPersistence ?? createMemoryWorkbenchPageLocationPersistence(),
     startPage: input.startPage ?? workbenchPages.start,
-    contextualizeTarget: (target) =>
-      contextualizeWorkbenchPageTarget({
-        target,
-        pages: pages.listPages(),
-        registry: resources,
-        resources: pageResources,
-      }),
   });
 
   const composition = createCoreCompositionController(() => core);

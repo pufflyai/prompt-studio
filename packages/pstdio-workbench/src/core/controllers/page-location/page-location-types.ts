@@ -44,7 +44,6 @@ export interface CreateWorkbenchPageLocationControllerInput<Value> {
   browser: WorkbenchPageLocationBrowser;
   persistence: WorkbenchPageLocationPersistence;
   startPage: PageRef;
-  contextualizeTarget?(target: NavigationTargetPage): NavigationTargetPage;
   reportDiagnostic?(diagnostic: WorkbenchPageLocationDiagnostic): void;
 }
 

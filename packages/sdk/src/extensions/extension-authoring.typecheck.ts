@@ -23,6 +23,7 @@ import {
   params,
   projectSlots,
   workbenchModes,
+  workbenchPages,
   workspaceSlots,
 } from "./index";
 
@@ -217,6 +218,7 @@ const ticketsPage = definePage({
   title: "Tickets",
   path: "tickets",
   mode: reviewMode.ref,
+  parent: workbenchPages.start,
   slots: [
     {
       id: "ticket",

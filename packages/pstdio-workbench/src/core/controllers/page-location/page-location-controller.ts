@@ -250,7 +250,7 @@ export const createWorkbenchPageLocationController = <Value>(
     resolveUrl,
     normalizeTarget: (target) =>
       normalizeWorkbenchPageTarget({
-        target: input.contextualizeTarget?.(target) ?? target,
+        target,
         pages: pages(),
         resources: internals.resources,
       }),

@@ -37,18 +37,14 @@ artifact roots, themes, and CLI paths.
 `extension.ts` should only export contributions:
 
 ```ts
-import {
-  defineCommand,
-  defineExtension,
-  packageAsset,
-  params,
-} from "@pstdio/sdk/extensions";
+import { defineTemplate } from "@pstdio/sdk/extensions";
+import { defineCommand, defineExtension, packageAsset, params } from "@pstdio/sdk/extensions";
 
 const createTicket = defineCommand({
   id: "tickets.create",
   title: "Create ticket",
   cli: true,
-  palette: { label: "Create ticket" },
+  palette: [{ label: "Create ticket" }],
   params: { title: params.text({ label: "Title", required: true }) },
   async run(_ctx, commandParams) {
     return { title: commandParams.title };
@@ -57,21 +53,19 @@ const createTicket = defineCommand({
 
 export default defineExtension({
   settings: {
-    defaultStatus: params.text({
-      label: "Default status",
-      defaultValue: "backlog",
-    }),
+    properties: { defaultStatus: { type: "string", title: "Default status", scope: "project", default: "backlog" } },
   },
 
   commands: [createTicket],
 
-  templates: {
-    ticket: {
+  templates: [
+    defineTemplate({
+      id: "ticket",
       title: "Ticket",
       type: "ticket",
       source: packageAsset("./templates/ticket.md", import.meta.url),
-    },
-  },
+    }),
+  ],
 });
 ```
 
@@ -83,7 +77,8 @@ For package name `planner`:
 
 ```txt
 extension id     pstdio.planner
-command id       planner.tickets.create
+local command id tickets.create
+runtime id       pstdio.planner.command.tickets.create
 CLI path         pst planner tickets create
 artifact root    <repo>/.pstdio/extension-storage/planner/
 template id      planner.ticket
@@ -114,7 +109,7 @@ rejected by `pst extensions check`.
 | `modes`                                           | Typed Workbench modes referenced by placements.                                   |
 | `statusBarItems`                                  | View references rendered outside docked layout.                                   |
 | `statuses`                                        | Workflow status providers shared by boards and settings.                          |
-| `resourceHierarchyProviders`                      | Parent lookup for resources, used for breadcrumbs and hierarchy.                  |
+| `resourceHierarchyProviders`                      | Domain parent lookup for resources. Page targets supply breadcrumb destinations.                  |
 | `settingsPanels`                                  | References from host settings slots to views.                                     |
 | `activityItems`                                   | Activity-rail entries that select a Workbench mode.                               |
 | `artifactMounts`                                  | Safe file access under `.pstdio/extension-storage/<package-name>/`.                                 |
@@ -394,9 +389,10 @@ string id for an event owned by another extension. Emit the event only after the
 only renderer callbacks that declared that event; it does not refresh renderers after unrelated commands.
 
 ```ts
+import { defineCommand } from "@pstdio/sdk/extensions";
 import { defineExtension, defineView, eventRef } from "@pstdio/sdk/extensions";
 
-const ticketsChanged = eventRef<{ ticketId: string }>("example.tickets.changed");
+const ticketsChanged = eventRef<{ ticketId: string }>({ extensionId: "example.tickets", id: "changed" });
 
 const tickets = defineView({
   id: "tickets",
@@ -410,15 +406,16 @@ const tickets = defineView({
 
 export default defineExtension({
   views: [tickets],
-  commands: {
-    updateTicket: {
+  commands: [
+    defineCommand({
+      id: "update-ticket",
       title: "Update ticket",
       async run(ctx, _commandParams) {
         // Persist the update first.
         await ctx.events.emit(ticketsChanged, { ticketId: "ticket-1" });
       },
-    },
-  },
+    }),
+  ],
 });
 ```
 
@@ -444,10 +441,18 @@ transitions are keyed off the returned `HarnessSession`. Ids are namespaced as
 `${publisher}.${package-name}.${provider.id}` (for example `pstdio.harness-claude-code.harness.claude-code`).
 
 ```ts
-import { defineExtension, l10n } from "@pstdio/sdk/extensions";
+import { defineExtension, defineHarness, l10n } from "@pstdio/sdk/extensions";
 import type { HarnessProvider, HarnessSession } from "@pstdio/sdk/extensions";
 
-const myAgent: HarnessProvider = {
+// Implement these process adapters for your agent. See harness-codex for a complete provider.
+declare const runAgent: (
+  ctx: Parameters<HarnessProvider["start"]>[0],
+  input: Parameters<HarnessProvider["start"]>[1],
+) => HarnessSession["done"];
+declare const abort: () => void;
+declare const resumeAgent: NonNullable<HarnessProvider["resume"]>;
+
+const myAgent = defineHarness({
   id: "my-agent",
   label: l10n("harness.myAgent", "My Agent"),
   capabilities: () => ["ContextUsage"],
@@ -461,9 +466,9 @@ const myAgent: HarnessProvider = {
     return { agentSessionId: input.sessionId, done: runAgent(ctx, input), stop: () => abort() };
   },
   resume: (ctx, input) => resumeAgent(ctx, input),
-};
+});
 
-export default defineExtension({ harnesses: { myAgent } });
+export default defineExtension({ harnesses: [myAgent] });
 ```
 
 - `start`/`resume` push `SessionMessage` JSON patches into `input.events` and return a `HarnessSession` whose `done`

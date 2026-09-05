@@ -11,6 +11,7 @@ import { labCommands, labSchedules } from "./src/commands";
 import { queryLabResources } from "./src/commands/lab-resources-command";
 import { sayHelloCommand } from "./src/commands/say-hello-command";
 import { labSettings } from "./src/data/lab-settings";
+import { pageExamples } from "./src/examples";
 import { labHarnesses } from "./src/harnesses";
 import { labHooks } from "./src/hooks";
 import { labMiddlewares } from "./src/middlewares";
@@ -33,20 +34,20 @@ const extension = defineExtension({
 
   settings: labSettings,
 
-  commands: labCommands,
+  commands: [...labCommands, ...(pageExamples.commands ?? [])],
   middlewares: labMiddlewares,
   hooks: labHooks,
   schedules: labSchedules,
   harnesses: labHarnesses,
 
   modes: labModes,
-  resourceKinds: labResourceKinds,
-  views: labUi.views,
+  resourceKinds: [...labResourceKinds, ...pageExamples.resourceKinds],
+  views: [...labUi.views, ...pageExamples.views],
   viewMenus: labUi.viewMenus,
   placements: labUi.placements,
-  pages: labUi.pages,
-  navigationItems: labUi.navigationItems,
-  navigationTrees: labUi.navigationTrees,
+  pages: [...labUi.pages, ...pageExamples.pages],
+  navigationItems: [...labUi.navigationItems, ...pageExamples.navigationItems],
+  navigationTrees: [...labUi.navigationTrees, ...(pageExamples.navigationTrees ?? [])],
   statusBarItems: labUi.statusBarItems,
   statuses: [labWorkflowStatuses],
   activityItems: labActivityItems,

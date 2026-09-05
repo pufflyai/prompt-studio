@@ -52,6 +52,7 @@ describe("page target validation", () => {
       title: "Tickets",
       path: "tickets",
       mode: workbenchModes.project,
+      parent: workbenchPages.start,
       slots: [
         {
           id: "ticket",

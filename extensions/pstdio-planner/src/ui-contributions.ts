@@ -27,8 +27,9 @@ import { listTicketFilesTree } from "./commands/ticket-files";
 import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
 import { buildTicketAttributes, TICKET_ARCHIVE_STATE_ACTIVE, TICKET_ARCHIVE_STATE_ATTRIBUTE_ID } from "./data/mappers";
+import { ticketPageTarget } from "./data/ticket-page-target";
 import { plannerTicketsChanged } from "./events";
-import { ticketPageRef, ticketResourceKind } from "./resource-kinds";
+import { ticketResourceKind } from "./resource-kinds";
 import { ticketStatuses } from "./ticket-status-provider";
 
 export { ticketResourceKind } from "./resource-kinds";
@@ -98,14 +99,7 @@ export const createPlannerUi = (baseUrl: string) => {
       attributes: buildTicketAttributes(ticketStatuses.ref),
       query: queryTickets,
       refreshEvents: [plannerTicketsChanged],
-      onRowActivate: (_ctx, { row }) =>
-        row.resource
-          ? {
-              kind: "page",
-              page: ticketPageRef,
-              resource: row.resource,
-            }
-          : undefined,
+      onRowActivate: (_ctx, { row }) => (row.resource ? ticketPageTarget(row.resource) : undefined),
       onAttributeChange: setTicketAttribute,
       onReorder: reorderTicket,
       onColumnAction: archiveTicketColumnAction,

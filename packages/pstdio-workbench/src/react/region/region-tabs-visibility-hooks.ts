@@ -24,7 +24,9 @@ const isWorkbenchPanelRegion = (region: WorkbenchRegion): region is WorkbenchPan
 export const shouldShowRegionTabs = (
   placements: WorkbenchWidgetPlacement[],
   options: { alwaysShowTabs?: boolean } = {},
-) => placements.length > 1 || (placements.length === 1 && options.alwaysShowTabs === true);
+) =>
+  placements.length > 1 ||
+  (placements.length === 1 && (options.alwaysShowTabs === true || placements[0]?.closable === true));
 
 interface WorkbenchPanelHeaderVisibility {
   hasTabs?: boolean;
@@ -95,7 +97,7 @@ export const useWorkbenchRegionTabsState = (
     commands,
     regionState,
     resource,
-    tabStore,
+    tabStore: { tabOverrides: tabStore.tabOverrides, toggleTab: tabStore.toggleTab, reset: tabStore.reset },
     subPanelPlacements,
     visiblePlacements,
     leadingItems,

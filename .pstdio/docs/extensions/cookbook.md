@@ -2,6 +2,13 @@
 
 This cookbook gives short recipes for the implemented extension API.
 
+The complete [command and header-action example](../../../extensions/extension-lab/src/examples/commands.ts)
+is compiled and normalized in the test suite. For page patterns, start with
+[Scribble](../../../extensions/extension-lab/src/examples/scribble.ts),
+[Zipline](../../../extensions/extension-lab/src/examples/zipline.ts), or
+[Pigeon](../../../extensions/extension-lab/src/examples/pigeon.ts). Extension Lab runs these modules
+through the same public API available to other authors.
+
 ## Create A Package
 
 ```txt
@@ -34,11 +41,13 @@ This cookbook gives short recipes for the implemented extension API.
 ## Add A CLI Command
 
 ```ts
+import { defineCommand } from "@pstdio/sdk/extensions";
 import { defineExtension, params } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
-  commands: {
-    "tickets.create": {
+  commands: [
+    defineCommand({
+      id: "tickets.create",
       title: "Create ticket",
       cli: {
         path: ["tickets", "create"],
@@ -50,8 +59,8 @@ export default defineExtension({
       async run(_ctx, commandParams) {
         return { title: commandParams.title };
       },
-    },
-  },
+    }),
+  ],
 });
 ```
 
@@ -68,10 +77,7 @@ import {
 
 const ticket = defineResourceKind({
   id: "ticket",
-  surface: "primary",
-  menuSlots: [
-    { id: "headerActions", placement: "header-primary", access: "owner" },
-  ],
+  menuSlots: [{ id: "header-actions", placement: "header-primary", access: "owner" }],
 });
 
 const runAttempt = defineCommand({
@@ -79,7 +85,7 @@ const runAttempt = defineCommand({
   title: "Run attempt",
   menus: [
     {
-      slot: resourceMenuSlotRef(ticket.ref, "headerActions"),
+      slot: resourceMenuSlotRef(ticket.ref, "header-actions"),
       label: "Run attempt",
       icon: "play",
       presentation: "button",
@@ -146,20 +152,19 @@ Middleware can return:
 Hooks observe emitted events. They do not veto the event or mutate the operation that emitted it.
 
 ```ts
+import { defineHook } from "@pstdio/sdk/extensions";
 import { defineExtension, sessionEvents } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
-  hooks: {
-    recordStartedSession: {
+  hooks: [
+    defineHook({
+      id: "record-started-session",
       event: sessionEvents.started,
-      async handler(ctx, event) {
-        await ctx.storage.set(
-          `session:${event.sessionId}:started`,
-          new Date().toISOString(),
-        );
+      async run(ctx, event) {
+        await ctx.storage.set(`session:${event.sessionId}:started`, new Date().toISOString());
       },
-    },
-  },
+    }),
+  ],
 });
 ```
 
@@ -172,34 +177,33 @@ run through planner commands/storage rather than removed core ticket events.
 Use `commandEvent()` when a hook should react to a command outcome:
 
 ```ts
-import {
-  commandEvent,
-  commandRef,
-  defineExtension,
-} from "@pstdio/sdk/extensions";
+import { defineCommand, defineHook } from "@pstdio/sdk/extensions";
+import { commandEvent, commandRef, defineExtension } from "@pstdio/sdk/extensions";
 
 const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "planner" });
 const publishCommand = plannerCommand<{ version: string }, { published: boolean }>("publish");
 
 export default defineExtension({
-  commands: {
-    publish: {
+  commands: [
+    defineCommand({
+      id: "publish",
       title: "Publish",
       async run(_ctx, _commandParams) {
         return { published: true };
       },
-    },
-  },
-  hooks: {
-    recordPublishFailure: {
+    }),
+  ],
+  hooks: [
+    defineHook({
+      id: "record-publish-failure",
       event: commandEvent(publishCommand, "failed"),
-      async handler(ctx, event) {
+      async run(ctx, event) {
         await ctx.activity.record({
           message: `Publish failed: ${event.reason}`,
         });
       },
-    },
-  },
+    }),
+  ],
 });
 ```
 
@@ -262,12 +266,14 @@ import { defineCommand, params } from "@pstdio/sdk/extensions";
 
 export const commands = {
   "ticket-status.read": defineCommand({
+    id: "ticket-status.read",
     title: "Read ticket statuses",
     async run(_ctx, _commandParams) {
       return { statuses: [] as { id: string; name: string }[] };
     },
   }),
   "ticket-status.create": defineCommand({
+    id: "ticket-status.create",
     title: "Create ticket status",
     params: { label: params.text({ required: true }) },
     async run(_ctx, commandParams) {
@@ -508,15 +514,25 @@ export default defineExtension({
   resourceKinds: [ticket],
   views: [editor, files],
   pages: [ticketPage],
-  navigationTrees: [
-    defineNavigationTree({ id: "files", owner: ticketPage.ref, slot: "content", view: files.ref }),
-  ],
+  navigationTrees: [defineNavigationTree({ id: "files", owner: ticketPage.ref, slot: "content", view: files.ref })],
 });
 ```
 
 Every binding declares `cardinality`: `one` keeps a single instance and rebinds it, `many` opens one
 instance per resource. A page whose primary slot has only a binding must declare `parent`; closing its
 last tab navigates there.
+
+Use `parent` on a navigation target for contextual breadcrumbs. Name the parent page and resource
+explicitly. The host does not infer a page from a resource kind, view, or resource metadata. Without
+a target parent, it uses the page's declared hierarchy.
+
+Closing the last bound-only primary follows the page's declared `parent`, even if the breadcrumb
+has a contextual parent. Closing a hybrid primary's last resource shows its static view.
+
+`openOn: "page-resource"` opens an auxiliary instance when navigation supplies a matching resource.
+Closing that instance keeps it closed until another navigation opens it. Navigating to the same page
+without a resource keeps previously opened auxiliary instances. Leaving the page removes its panels
+from the active layout.
 
 The tree appears after the active mode's content while Ticket is active. Leaving the page removes only the
 page-owned tree; mode navigation remains.
@@ -550,22 +566,21 @@ rendered rich editor.
 ## Add Packaged Assets
 
 ```ts
+import { defineTemplate, defineSkill } from "@pstdio/sdk/extensions";
 import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
-  templates: {
-    reviewPrompt: {
+  templates: [
+    defineTemplate({
+      id: "review-prompt",
       title: "Review prompt",
       type: "ticket",
       source: packageAsset("./templates/review.md", import.meta.url),
-    },
-  },
-  skills: {
-    reviewer: {
-      title: "Reviewer",
-      source: packageAsset("./skills/reviewer", import.meta.url),
-    },
-  },
+    }),
+  ],
+  skills: [
+    defineSkill({ id: "reviewer", title: "Reviewer", source: packageAsset("./skills/reviewer", import.meta.url) }),
+  ],
 });
 ```
 
@@ -623,6 +638,11 @@ return { removed: result.removed };
 ```
 
 ## Validate An Extension
+
+After updating the SDK across a breaking API change, update `pstdio-skills` from the same release
+and run `pst agents install-skills <agent-id>` in the linked repository. This replaces managed
+skill copies in the agent's skill directory. Restart the agent session so it reads the new guide.
+For source development, first load `extensions/pstdio-skills` with `pst extensions dev <path>`.
 
 ```bash
 pst extensions check

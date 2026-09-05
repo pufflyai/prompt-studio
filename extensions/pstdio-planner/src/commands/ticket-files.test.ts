@@ -33,7 +33,11 @@ const ticketRendererParams = (ticket: { id: string; shorthand: string }, documen
 
 const ticketDocumentTarget = (ticket: { id: string; shorthand: string; title?: string }, documentId: string) => ({
   kind: "page" as const,
-  page: { kind: "page" as const, id: "ticket" },
+  page: { kind: "page" as const, id: "ticket", extensionId: "pstdio.pstdio-planner" },
+  parent: {
+    kind: "page" as const,
+    page: { kind: "page" as const, id: "tickets", extensionId: "pstdio.pstdio-planner" },
+  },
   resource: {
     type: "ticket",
     id: ticket.id,
@@ -252,6 +256,20 @@ describe("ticket files tree workspace commands", () => {
           target: {
             kind: "page",
             page: workbenchPages.workspaces,
+            parent: {
+              kind: "page",
+              page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
+              resource: {
+                type: "ticket",
+                id: ticket.id,
+                label: `${ticket.shorthand} ${ticket.title}`,
+                metadata: {
+                  shorthand: ticket.shorthand,
+                  resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+                },
+              },
+              parent: { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.pstdio-planner" } },
+            },
             resource: {
               type: "workspace",
               id: "ws-1",

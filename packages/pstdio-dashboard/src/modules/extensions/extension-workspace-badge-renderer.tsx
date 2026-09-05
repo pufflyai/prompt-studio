@@ -1,5 +1,5 @@
 import { Box, Icon, Menu } from "@chakra-ui/react";
-import type { KanbanRendererResourceRef } from "@pstdio/sdk/extensions";
+import type { KanbanRendererResourceRef, NavigationTargetPage } from "@pstdio/sdk/extensions";
 import {
   ListRow,
   type SessionCompletionStatus,
@@ -10,6 +10,7 @@ import {
 import { DiffBubble } from "@pstdio/ui/diff";
 import type { KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
 import type { ResourceRef } from "@pstdio/workbench";
+import { isExtensionNavigationTarget } from "@pstdio/workbench/extensions";
 import { GitBranch } from "lucide-react";
 import { createElement, useEffect, useState } from "react";
 import { createDashboardResource } from "@/shared/app/resources";
@@ -33,6 +34,7 @@ export interface ExtensionWorkspaceBadgeItem {
   label: string;
   icon?: string;
   resource?: KanbanRendererResourceRef;
+  target?: NavigationTargetPage;
   createdAt?: string;
   resourceParent?: ExtensionResourceReference;
   session?: ExtensionWorkspaceBadgeSession;
@@ -66,6 +68,9 @@ const badgeSessionFrom = (value: unknown): ExtensionWorkspaceBadgeSession | unde
 const hasBadgeSession = (item: ExtensionWorkspaceBadgeItem): item is ExtensionWorkspaceBadgeSessionItem =>
   Boolean(item.session);
 
+const pageTargetFrom = (value: unknown) =>
+  isExtensionNavigationTarget(value) && value.kind === "page" ? value : undefined;
+
 export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspaceBadgeItem[] => {
   if (!Array.isArray(value)) return [];
 
@@ -79,6 +84,7 @@ export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspace
     const createdAt = textValue(item.createdAt);
     const resourceParent = normalizeExtensionResourceReference(item.resourceParent);
     const session = badgeSessionFrom(item.session);
+    const target = pageTargetFrom(item.target);
     return [
       {
         id,
@@ -88,6 +94,7 @@ export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspace
         ...(createdAt ? { createdAt } : {}),
         ...(resourceParent ? { resourceParent } : {}),
         ...(session ? { session } : {}),
+        ...(target ? { target } : {}),
       },
     ];
   });
@@ -140,7 +147,7 @@ interface ExtensionWorkspaceBadgeDisplayProps {
   items: ExtensionWorkspaceBadgeItem[];
   projectId: string;
   value: unknown;
-  navigate: (resource: ResourceRef) => void;
+  navigate: (resource: ResourceRef, target?: NavigationTargetPage) => void;
 }
 
 const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayProps) => {
@@ -171,7 +178,7 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
   if (!selectedItem) return null;
 
   const openItem = (item: ExtensionWorkspaceBadgeItem) => {
-    navigate(createWorkspaceBadgeResource(item, projectId));
+    navigate(createWorkspaceBadgeResource(item, projectId), item.target);
   };
 
   const badge = (
@@ -235,7 +242,11 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
 };
 
 export const createBadgeListRenderer =
-  (input: { itemsAttributeId: string; projectId: string; navigate: (resource: ResourceRef) => void }) =>
+  (input: {
+    itemsAttributeId: string;
+    projectId: string;
+    navigate: (resource: ResourceRef, target?: NavigationTargetPage) => void;
+  }) =>
   (value: unknown, row: KanbanRendererRow) => {
     const items = normalizeWorkspaceBadgeItems(row.attributes[input.itemsAttributeId]);
     if (items.length === 0) return null;

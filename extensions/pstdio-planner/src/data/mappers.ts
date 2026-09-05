@@ -5,10 +5,12 @@ import type {
   KanbanRendererBoardColumnConfig,
   KanbanRendererEnumOption,
   Localizable,
+  NavigationTargetPage,
   StatusRef,
 } from "@pstdio/sdk/extensions";
-import { l10n } from "@pstdio/sdk/extensions";
+import { l10n, workbenchPages } from "@pstdio/sdk/extensions";
 import { bySortOrder } from "../utils/sort";
+import { ticketPageTarget } from "./ticket-page-target";
 import {
   resolveTicketHierarchy,
   type TicketParentLookup,
@@ -39,6 +41,7 @@ const COLUMN_ACTION_ICONS: Record<string, string> = {
 
 type TagOptionsLookup = Array<{ tag: StoredTag; optionIds: Set<string> }>;
 export type TicketWorkspaceBadgeItem = CollectionBadgeItem & {
+  target?: NavigationTargetPage;
   createdAt?: string;
   resourceParent?: TicketResourceReference;
   session?: TicketWorkspaceSession;
@@ -135,6 +138,16 @@ const ticketWorkspaceValues = (
   const items = (workspaceLookup.get(ticket.shorthand) ?? []).map((item) => ({
     ...item,
     ...parentMetadata,
+    ...(item.resource
+      ? {
+          target: {
+            kind: "page" as const,
+            page: workbenchPages.workspaces,
+            resource: item.resource,
+            parent: ticketPageTarget(resourceReference),
+          },
+        }
+      : {}),
     resource: item.resource
       ? { ...item.resource, metadata: { ...item.resource.metadata, ...parentMetadata } }
       : undefined,

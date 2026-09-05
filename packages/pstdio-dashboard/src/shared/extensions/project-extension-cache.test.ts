@@ -46,6 +46,30 @@ const response = (enabled: boolean): ListProjectExtensionsResponse => ({
 });
 
 describe("project extension cache", () => {
+  test("keeps all known automations when metadata refresh is pending after re-enabling", async () => {
+    const client = new QueryClient();
+    const metadataKey = ["project-extension-metadata", "project-1"];
+    const contributionKey = ["extension-contributions", "project-1", "instance-1"];
+    const automations = ["refine", "implement", "review", "merge"].map((id) => ({
+      id,
+      localId: id,
+      extensionId: "test.example",
+      extensionInstanceId: "instance-1",
+      title: id,
+      cron: "0 * * * *",
+      commandId: id,
+      enabled: true,
+    }));
+    client.setQueryData(metadataKey, { automations: [] });
+    client.setQueryData(contributionKey, { automations });
+    await createProjectExtensionCache(client, "project-1").storeAutomation("instance-1", {
+      ...automations[0],
+      enabled: false,
+    });
+    const result = client.getQueryData<{ automations: WorkbenchExtensionAutomationRecord[] }>(metadataKey)!;
+    expect(result.automations).toHaveLength(4);
+    expect(result.automations.filter((item) => item.enabled)).toHaveLength(3);
+  });
   test("cancels an older list read before applying committed enablement", async () => {
     const queryClient = new QueryClient();
     const queryKey = ["project-extensions", "project-1"] as const;

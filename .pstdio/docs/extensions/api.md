@@ -213,7 +213,7 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 | `placements`                                      | Mode-wide static views or resource bindings.                                                        |
 | `navigationItems`, `navigationTrees`              | Explicit actions and Sidenav trees owned by a mode or page.                                        |
 | `resourceKinds`                                   | Domain resource identity, labels, icons, menus, and hierarchy.                                     |
-| `resourceHierarchyProviders`                      | Parent lookup for resources, used for breadcrumbs and hierarchy.                                   |
+| `resourceHierarchyProviders`                      | Domain parent lookup for resources. Page targets supply breadcrumb destinations.                                   |
 | `statusBarItems`                                  | Views in the host status bar; all visible items render without layout persistence.                 |
 | `statuses`                                        | Workflow status providers shared by Kanban views and the host settings editor.                     |
 | `settingsPanels`                                  | References that place views in host-owned settings slots.                                          |
@@ -314,11 +314,13 @@ Commands are executable operations used by the CLI, dashboard menus, command pal
 Set `automation: true` only on commands that a scoped machine token may run. The host validates the declared params before it creates a durable automation run. Commands without this flag cannot be added to a machine token.
 
 ```ts
+import { defineCommand } from "@pstdio/sdk/extensions";
 import { defineExtension, params } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
-  commands: {
-    publish: {
+  commands: [
+    defineCommand({
+      id: "publish",
       title: "Publish release",
       description: "Create release notes and run the publish workflow.",
       cli: true,
@@ -328,8 +330,8 @@ export default defineExtension({
       async run(_ctx, commandParams) {
         return { ok: true, version: commandParams.version };
       },
-    },
-  },
+    }),
+  ],
 });
 ```
 
@@ -420,7 +422,7 @@ export default defineExtension({
       win: "ctrl+shift+y",
       linux: "ctrl+shift+y",
       action: { kind: "command", target: { command: preview.ref } },
-      when: { resourceType: ["marp.presentation"] },
+      when: { resourceType: [{ extensionId: "pstdio.marp", kind: "resource-kind", id: "presentation" }] },
     }),
   ],
 });
@@ -433,11 +435,16 @@ A command action may pass params with `target: { command: preview.ref, params: {
 Middleware attaches to a command and runs before the command handler. Use it for gates and command-shaping logic: validation, default params, context normalization, and rejections with user-facing reasons.
 
 ```ts
+import { commandRef, defineExtension, defineMiddleware } from "@pstdio/sdk/extensions";
+const createTicket = commandRef.forExtension({ publisher: "pstdio", name: "planner" })<{ title: string }>(
+  "tickets.create",
+);
 export default defineExtension({
-  middlewares: {
-    requireTitle: {
-      commandId: "planner.tickets.create",
-      async handler(ctx, commandParams) {
+  middlewares: [
+    defineMiddleware<{ title: string }>({
+      id: "require-title",
+      command: createTicket,
+      async run(ctx, commandParams) {
         if (!commandParams.title) {
           return ctx.commands.reject({
             code: "missing_title",
@@ -445,8 +452,8 @@ export default defineExtension({
           });
         }
       },
-    },
-  },
+    }),
+  ],
 });
 ```
 
@@ -455,15 +462,17 @@ Middleware may return `ctx.commands.continue()`, `patchParams()`, `replaceParams
 Hooks observe emitted events. Use them for follow-up automation after something has happened: status sync, worktree cleanup, session creation, notifications, activity records, or command lifecycle reactions. Hooks cannot mutate or veto the operation that emitted the event.
 
 ```ts
+import { defineExtension, defineHook, sessionEvents } from "@pstdio/sdk/extensions";
 export default defineExtension({
-  hooks: {
-    recordCreatedTicket: {
-      eventId: "planner.ticket.created",
-      async handler(ctx, event) {
-        await ctx.storage.set("lastTicketId", event.ticketId);
+  hooks: [
+    defineHook<{ sessionId: string }>({
+      id: "record-started-session",
+      event: sessionEvents.started,
+      async run(ctx, event) {
+        await ctx.storage.set("lastSessionId", event.sessionId);
       },
-    },
-  },
+    }),
+  ],
 });
 ```
 
@@ -491,12 +500,7 @@ helper instead of rebuilding that id. Resources still identify domain objects su
 tickets, workspaces, and sessions. Paths belong to pages, never views.
 
 ```ts
-import {
-  defineExtension,
-  defineNavigationTree,
-  defineView,
-  workbenchModes,
-} from "@pstdio/sdk/extensions";
+import { defineExtension, defineNavigationTree, defineView, workbenchModes } from "@pstdio/sdk/extensions";
 
 const files = defineView({
   id: "files",
@@ -751,20 +755,21 @@ The command values use these shapes:
 - `delete`: accepts `{ name }`.
 
 ```ts
+import { defineTemplate } from "@pstdio/sdk/extensions";
 import { defineExtension, defineView, packageAsset } from "@pstdio/sdk/extensions";
 
 export default defineExtension({
-  templates: {
-    ticket: {
+  templates: [
+    defineTemplate({
+      id: "ticket",
       title: "Ticket",
       type: "ticket",
       source: packageAsset("./templates/ticket.md", import.meta.url),
-    },
-  },
+    }),
+  ],
   views: [
     defineView({
       id: "planner",
-      path: "planner",
       title: "Planner",
       body: {
         kind: "webview",

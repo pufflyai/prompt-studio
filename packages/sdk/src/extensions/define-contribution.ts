@@ -12,7 +12,9 @@ import type {
   NavigationItemContribution,
   NavigationTreeContribution,
   PageContribution,
+  PageRef,
   PageSlot,
+  PageSlotBinding,
   PageSlotRef,
   PlacementContribution,
   ResourceHierarchyProvider,
@@ -94,8 +96,13 @@ type PagePanelRefs<Slots extends readonly PageSlot[]> = {
 };
 
 type PageDefinition = Omit<PageContribution, "ref" | "panels">;
+type RequiredPageParent<Definition extends PageDefinition> =
+  Extract<Definition["slots"][number], { role: "primary"; binding: PageSlotBinding; view?: undefined }> extends never
+    ? unknown
+    : { readonly parent: PageRef };
+
 export const definePage = <const Definition extends PageDefinition>(
-  definition: NoExtraFields<Definition, PageDefinition>,
+  definition: NoExtraFields<Definition, PageDefinition> & RequiredPageParent<Definition>,
 ): Definition & ContributionDefinition<"page"> & { readonly panels: PagePanelRefs<Definition["slots"]> } => {
   const ref = { kind: "page" as const, id: definition.id };
   const panels = Object.fromEntries(

@@ -42,11 +42,16 @@ interface PageSlotBase extends PlacementPresentation {
  * an instance; the static view (when declared) shows while no resource is
  * open.
  */
-export interface PagePrimarySlot extends PageSlotBase {
+interface PagePrimarySlotBase extends Omit<PageSlotBase, "region"> {
   readonly role: "primary";
-  readonly view?: ViewRef;
-  readonly binding?: PageSlotBinding;
+  readonly region: "main";
 }
+
+export type PagePrimarySlot = PagePrimarySlotBase &
+  (
+    | { readonly view: ViewRef; readonly binding?: PageSlotBinding }
+    | { readonly view?: undefined; readonly binding: PageSlotBinding }
+  );
 
 /** An optional static panel the page owns. `presence` sets its initial state. */
 export interface PageStaticSlot extends PageSlotBase {

@@ -1,11 +1,13 @@
 import { Box, Text } from "@chakra-ui/react";
 import type { PageRef } from "@pstdio/sdk/extensions";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench, workbenchPanelRegions, workbenchRegionTabLeadingMenuPath } from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
-const createPanelWorkbench = (options: { alwaysShowTabs?: boolean; multiple?: boolean; actions?: boolean } = {}) => {
+const createPanelWorkbench = (
+  options: { alwaysShowTabs?: boolean; multiple?: boolean; actions?: boolean; closable?: boolean } = {},
+) => {
   const page: PageRef = { extensionId: "storybook", kind: "page", id: "panel-tabs" };
   const workbench = createWorkbench({
     startPage: page,
@@ -53,7 +55,7 @@ const createPanelWorkbench = (options: { alwaysShowTabs?: boolean; multiple?: bo
         role: region === "main" ? ("primary" as const) : ("auxiliary" as const),
         region,
         viewId: `${region}.first`,
-        presence: "fixed" as const,
+        presence: options.closable ? ("open" as const) : ("fixed" as const),
       },
       ...(options.multiple
         ? [
@@ -81,7 +83,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Panels hide a lone tab by default. Set alwaysShowTabs in the host or mode regionSettings to keep it visible. Header actions remain available in either case.",
+          "A closable panel keeps its tab and Close button visible. A lone fixed panel hides its tab unless alwaysShowTabs is set. Header actions remain available in either case.",
       },
     },
   },
@@ -107,6 +109,17 @@ export const AlwaysShowTabs: Story = {
     for (const region of workbenchPanelRegions) {
       await expect(await canvas.findByRole("tab", { name: `${region} first` })).toBeVisible();
     }
+  },
+};
+export const SingleClosablePanel: Story = {
+  args: { workbench: createPanelWorkbench({ closable: true }) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const close = await canvas.findByRole("button", { name: "Close side first" });
+    await expect(close).toBeVisible();
+    await userEvent.click(close);
+    await expect(canvas.queryByText("side.first content")).not.toBeInTheDocument();
+    await expect(canvas.getByText("main.first content")).toBeVisible();
   },
 };
 export const MultipleItems: Story = { args: { workbench: createPanelWorkbench({ multiple: true }) } };

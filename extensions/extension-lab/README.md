@@ -137,3 +137,16 @@ extensions/extension-lab/
   skills/lab-resource/ Glass Lab artifact skill asset bundled via packageAsset
   templates/           template asset bundled via packageAsset
 ```
+# Public page examples
+
+The complete modules in [src/examples](src/examples) use only `@pstdio/sdk/extensions`.
+Extension Lab installs them alongside its other contributions.
+
+- [Scribble](src/examples/scribble.ts) saves documents and contributes a page-owned navigation tree.
+- [Zipline](src/examples/zipline.ts) selects board rows and opens a resource inspector.
+- [Pigeon](src/examples/pigeon.ts) selects table rows and opens a read-only message reader.
+- [Commands](src/examples/commands.ts) declares a CLI command and resource header action.
+
+Run `bun run --cwd extensions/extension-lab typecheck` to check the authoring code.
+The normalizer tests load each module independently, and `public-page-patterns.spec.ts` exercises
+them through the dashboard. The richer Workbench showcases demonstrate host customization.

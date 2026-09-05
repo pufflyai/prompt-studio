@@ -415,7 +415,7 @@ describe("createWorkspacesModule breadcrumbs", () => {
     ]);
   });
 
-  test("uses the ticket parent when a linked workspace opens directly", async () => {
+  test("uses the declared workspace hierarchy when no contextual target is supplied", async () => {
     const workbench = createWorkbench();
 
     workbench.registerModule(createWorkspacesModule());
@@ -454,6 +454,6 @@ describe("createWorkspacesModule breadcrumbs", () => {
 
     openWorkspacesPage(workbench, workspace!);
 
-    expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "PS-307", "PS-307_A1"]);
+    expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Workspaces", "PS-307_A1"]);
   });
 });

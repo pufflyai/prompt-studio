@@ -10,7 +10,15 @@ import { createZiplineWorkbench } from "./zipline";
 
 const meta = {
   title: "pstdio-workbench/Showcases",
-  parameters: { layout: "fullscreen" },
+  parameters: {
+    layout: "fullscreen",
+    docs: {
+      description: {
+        component:
+          "These host examples use direct Workbench registries and React bodies. For complete public extension versions of Scribble, Zipline, and Pigeon, see extensions/extension-lab/src/examples. Their dashboard journeys are covered by public-page-patterns.spec.ts.",
+      },
+    },
+  },
 } satisfies Meta;
 
 export default meta;

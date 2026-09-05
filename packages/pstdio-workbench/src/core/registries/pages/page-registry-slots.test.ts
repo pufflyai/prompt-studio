@@ -40,7 +40,7 @@ const registerPage = (registry: ReturnType<typeof createRegistry>, page: PageInp
 const activatePage = (
   registry: ReturnType<typeof createRegistry>,
   target: WorkbenchPageOpenInput,
-  pageStates = registry.store.getState().pageStates,
+  pageStates?: ReturnType<typeof registry.store.getState>["pageStates"],
 ) => {
   const page = registry.getPage(target.pageId);
   if (!page) throw new Error(`Unknown test page: ${target.pageId}`);

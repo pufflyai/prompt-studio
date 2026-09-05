@@ -1,4 +1,11 @@
-import { defineExtension, definePage, defineResourceKind, defineView, workbenchModes } from "@pstdio/sdk/extensions";
+import {
+  defineExtension,
+  definePage,
+  defineResourceKind,
+  defineView,
+  workbenchModes,
+  workbenchPages,
+} from "@pstdio/sdk/extensions";
 
 const fixtureItem = defineResourceKind({
   id: "fixture-item",
@@ -30,6 +37,7 @@ const itemPage = definePage({
   title: "Items",
   path: "items",
   mode: workbenchModes.project,
+  parent: workbenchPages.start,
   slots: [
     {
       id: "content",
