@@ -7,6 +7,7 @@ import { createTestApp } from "../../../test-utils/create-test-app";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
+let closeApp: () => Promise<void>;
 let tempRoot: string;
 let projectId: string;
 let deps: Awaited<ReturnType<typeof createTestApp>>["deps"];
@@ -42,13 +43,15 @@ beforeAll(async () => {
   const created = await createTestApp({ databasePath: ":memory:", storageRoot: join(tempRoot, "storage") });
 
   app = created.app;
+  closeApp = created.close;
   deps = created.deps;
 
   const project = await deps.projectService.create({ name: "resolve-session-id-project" });
   projectId = project.id;
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await closeApp();
   rmSync(tempRoot, { recursive: true, force: true });
 });
 

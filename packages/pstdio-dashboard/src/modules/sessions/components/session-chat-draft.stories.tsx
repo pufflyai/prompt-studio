@@ -9,28 +9,23 @@ import { createSessionBubbleModule } from "../bubble/module";
 import { openSessionBubbleWidgets } from "../bubble/session-bubble";
 
 const draftResource = {
-  kind: "session-draft",
-  uri: "pstdio://extension-resource/session-draft/story-preview",
+  type: "session-draft",
   id: "story-preview",
   label: "New session",
   icon: "PenBox",
 };
-
 const drafts: DashboardSessionDraftPersistence = {
   getDraft: (draftKey) => (draftKey === draftResource.id ? "Keep the restored Side Panel attached after refresh." : ""),
   setDraft: () => undefined,
 };
-
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
-
 const SessionChatDraftStory = () => {
   const workbench = createWorkbench({ initialSidePanelMode: "attached" });
   workbench.registerModule(createSessionBubbleModule({ sessionDraftPersistence: drafts }));
   selectDashboardProject(workbench, { id: "project-story", name: "Prompt Studio" });
   openSessionBubbleWidgets(workbench, { resource: draftResource });
-
   return (
     <QueryClientProvider client={queryClient}>
       <Box h="100dvh" w="full">
@@ -39,15 +34,11 @@ const SessionChatDraftStory = () => {
     </QueryClientProvider>
   );
 };
-
 const meta = {
   title: "Modules/Sessions/Session Chat Draft",
   component: SessionChatDraftStory,
   parameters: { layout: "fullscreen" },
 } satisfies Meta<typeof SessionChatDraftStory>;
-
 export default meta;
-
 type Story = StoryObj<typeof meta>;
-
 export const PreviewWithRestoredDraft: Story = {};

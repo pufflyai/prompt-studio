@@ -50,8 +50,7 @@ describe("createPreviewResource", () => {
     });
 
     expect(resource).toEqual({
-      kind: "extension-preview",
-      uri: "bench://extension-preview/default",
+      type: "extension-preview",
       id: "preview",
       label: "Extension preview",
       icon: "FileText",
@@ -72,8 +71,7 @@ describe("createPreviewResource", () => {
     });
 
     expect(resource).toEqual({
-      kind: "ticket",
-      uri: "bench://ticket/PS-16",
+      type: "ticket",
       id: "PS-16",
       label: "PS-16 Tree renderer preview",
       icon: "FileText",

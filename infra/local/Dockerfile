@@ -1,5 +1,7 @@
 FROM oven/bun:1.3.14
 
+COPY --from=node:24.19.0-slim /usr/local/bin/node /usr/local/bin/node
+
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PATH="/root/.bun/bin:/root/.local/bin:${PATH}"
 
@@ -9,7 +11,6 @@ RUN apt-get update \
 
 RUN mkdir -p /root/.local/bin
 RUN bun add -g opencode-ai@1.15.5
-RUN ln -sf /usr/local/bin/bun /usr/local/bin/node
 RUN ln -sf /root/.bun/install/global/node_modules/opencode-ai/bin/opencode.exe /root/.local/bin/opencode
 RUN ln -sf /root/.bun/install/global/node_modules/opencode-ai/bin/opencode.exe /usr/local/bin/opencode
 RUN curl -fsSL https://claude.ai/install.sh | bash

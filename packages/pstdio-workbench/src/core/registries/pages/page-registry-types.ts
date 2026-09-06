@@ -1,55 +1,29 @@
 import type {
-  DockedWorkbenchRegion,
   FileRendererSectionTarget,
   Localizable,
   PageLocation,
+  PageMain,
   PageOpenIntent,
   PageRef,
-  PageSlotCardinality,
+  PageSlot,
   PageSlotRole,
   PlacementIdentity,
+  ResourceConstraint,
   ResourceRef,
 } from "@pstdio/sdk/extensions";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 import type { OwnedPlacementReconciliation, ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
-import type { NavigationTarget } from "../navigation/navigation-registry";
-import type { WorkbenchPlacementPresence } from "../placements/owned-placement-lifecycle";
 import type { WorkbenchPlacementPresentation } from "../views/view-placement";
 
-export interface WorkbenchPageSlotBinding {
-  resourceKinds: readonly string[];
-  viewId: string;
-  cardinality: PageSlotCardinality;
-  add?: NavigationTarget;
+export interface WorkbenchPageSlot extends Omit<PageSlot, "tab"> {
+  readonly tab?: WorkbenchPlacementPresentation["tab"];
 }
 
-interface WorkbenchPageSlotBase extends WorkbenchPlacementPresentation {
-  id: string;
-  region: DockedWorkbenchRegion;
-  order?: number;
-}
-
-export type WorkbenchPagePrimarySlot = WorkbenchPageSlotBase & {
-  role: "primary";
-  region: "main";
-  subPanelsOnly?: boolean;
-} & ({ viewId: string; binding?: undefined } | { viewId?: undefined; binding: WorkbenchPageSlotBinding });
-
-export interface WorkbenchPageStaticSlot extends WorkbenchPageSlotBase {
-  role: "auxiliary";
-  viewId: string;
-  presence: WorkbenchPlacementPresence;
-  binding?: undefined;
-}
-
-export interface WorkbenchPageBoundSlot extends WorkbenchPageSlotBase {
-  role: "auxiliary";
-  binding: WorkbenchPageSlotBinding;
-  viewId?: undefined;
-  openOn?: "page-resource";
-}
-
-export type WorkbenchPageSlot = WorkbenchPagePrimarySlot | WorkbenchPageStaticSlot | WorkbenchPageBoundSlot;
+export type WorkbenchPageMain = PageMain extends infer Main
+  ? Main extends PageMain
+    ? Omit<Main, "tab"> & { readonly tab?: WorkbenchPlacementPresentation["tab"] }
+    : never
+  : never;
 
 export interface WorkbenchPageContribution {
   id: string;
@@ -59,6 +33,8 @@ export interface WorkbenchPageContribution {
   path: string;
   modeId: string;
   parentId?: string;
+  resource?: ResourceConstraint;
+  main: WorkbenchPageMain;
   slots: readonly WorkbenchPageSlot[];
 }
 
@@ -119,8 +95,24 @@ export interface WorkbenchPageRegistryStoreState<Value> {
 }
 
 export interface CreateWorkbenchPageRegistryInput<Value> {
-  resolveShellPlacements(): readonly ResolvedOwnedPlacement<Value>[];
-  resolveModePlacements(modeId: string): readonly ResolvedOwnedPlacement<Value>[];
+  validateMode?(modeId: string): void;
+  restorePageState?(
+    page: WorkbenchPageContribution,
+    location: PageLocation,
+    projectId: string,
+  ): WorkbenchPageRuntimeState | undefined;
+  resolveShellPlacements(context?: {
+    modeId: string;
+    pageId?: string;
+    projectId?: string;
+    location?: PageLocation;
+  }): readonly ResolvedOwnedPlacement<Value>[];
+  resolveModePlacements(
+    modeId: string,
+    location?: PageLocation,
+    projectId?: string,
+    pageId?: string,
+  ): readonly ResolvedOwnedPlacement<Value>[];
   resolvePagePlacement(input: WorkbenchPagePlacementInput): Value;
   resources: WorkbenchPageResourceCodec;
   valuesEqual(current: Value, desired: Value): boolean;
@@ -132,5 +124,6 @@ export interface WorkbenchPageRegistry<Value> {
   registerPage(page: WorkbenchPageContribution): { dispose(): void };
   getPage(pageId: string): WorkbenchPageContribution | undefined;
   listPages(): WorkbenchPageContribution[];
+  pinPlacement(identity: PlacementIdentity): void;
   openSlot(input: WorkbenchPageSlotOpenInput): void;
 }

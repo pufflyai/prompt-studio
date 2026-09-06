@@ -12,7 +12,7 @@ const tick = (ms = DEBOUNCE_MS * 3) => new Promise((resolve) => setTimeout(resol
 const binding = {
   rendererId: "planner.ticketContent",
   instanceId: "planner.ticketEditor:1",
-  resourceUri: "pstdio://extension-resource/ticket/ticket-1",
+  resourceKey: "pstdio://extension-resource/ticket/ticket-1",
 };
 
 const createHarness = (input?: { failSaves?: number; saveRevision?: string }) => {
@@ -93,7 +93,7 @@ describe("file edit controller", () => {
     controller.handleChange("edited");
     controller.flush();
     controller.handleRefreshEvent({
-      resourceUri: binding.resourceUri,
+      resourceKey: binding.resourceKey,
       origin: { ...binding, operationId: "operation-1" },
     });
     expect(loads()).toBe(0);
@@ -108,7 +108,7 @@ describe("file edit controller", () => {
     const { controller, loads } = createHarness();
     controller.setBaseline("loaded");
 
-    controller.handleRefreshEvent({ resourceUri: "pstdio://extension-resource/ticket/ticket-2", revision: "2" });
+    controller.handleRefreshEvent({ resourceKey: "pstdio://extension-resource/ticket/ticket-2", revision: "2" });
 
     expect(loads()).toBe(0);
   });
@@ -117,8 +117,8 @@ describe("file edit controller", () => {
     const { controller, loads } = createHarness();
     controller.setBaseline("loaded", "1");
 
-    controller.handleRefreshEvent({ resourceUri: binding.resourceUri, revision: "2" });
-    controller.handleRefreshEvent({ resourceUri: binding.resourceUri, revision: "2" });
+    controller.handleRefreshEvent({ resourceKey: binding.resourceKey, revision: "2" });
+    controller.handleRefreshEvent({ resourceKey: binding.resourceKey, revision: "2" });
 
     expect(loads()).toBe(1);
   });
@@ -129,8 +129,8 @@ describe("file edit controller", () => {
 
     controller.handleChange("edited");
     controller.flush();
-    controller.handleRefreshEvent({ resourceUri: binding.resourceUri, revision: "3" });
-    controller.handleRefreshEvent({ resourceUri: binding.resourceUri, revision: "3" });
+    controller.handleRefreshEvent({ resourceKey: binding.resourceKey, revision: "3" });
+    controller.handleRefreshEvent({ resourceKey: binding.resourceKey, revision: "3" });
     expect(loads()).toBe(0);
     await tick();
 
@@ -144,7 +144,7 @@ describe("file edit controller", () => {
 
     controller.handleChange("edited");
     controller.flush();
-    controller.handleRefreshEvent({ resourceUri: binding.resourceUri, revision: "3" });
+    controller.handleRefreshEvent({ resourceKey: binding.resourceKey, revision: "3" });
     await tick();
 
     expect(loads()).toBe(0);
@@ -165,7 +165,7 @@ describe("file edit controller", () => {
   test("a load that settles after an edit cannot replace the draft", () => {
     const { controller } = createHarness();
     controller.setBaseline("loaded", "1");
-    controller.handleRefreshEvent({ resourceUri: binding.resourceUri, revision: "2" });
+    controller.handleRefreshEvent({ resourceKey: binding.resourceKey, revision: "2" });
     controller.handleChange("draft");
 
     expect(controller.acceptLoaded("external", "2")).toBe(false);

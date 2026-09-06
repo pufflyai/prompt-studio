@@ -20,7 +20,6 @@ describe("registerDashboardActivityRail", () => {
         },
       ],
     };
-
     workbench.modes.registerMode({ id: modeId, label: "Lab", activate: () => undefined });
     workbench.views.registerView({
       id: "lab-view",
@@ -36,7 +35,14 @@ describe("registerDashboardActivityRail", () => {
       id: "lab-artifacts",
       ref: { extensionId: "pstdio.extension-lab", kind: "placement", id: "lab-artifacts" },
       modeId,
-      item: { kind: "view", viewId: "artifacts-view", presence: "open" },
+      item: {
+        kind: "view",
+        presence: "open",
+        view: {
+          kind: "view",
+          id: "artifacts-view",
+        },
+      },
       region: "main",
     });
     const labPage = { extensionId: "pstdio.extension-lab", kind: "page" as const, id: "lab-mode" };
@@ -46,20 +52,25 @@ describe("registerDashboardActivityRail", () => {
       title: "Lab mode",
       path: "lab-mode",
       modeId,
-      slots: [{ id: "content", role: "primary", region: "main", viewId: "lab-view" }],
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "lab-view",
+        },
+        cardinality: "one",
+      },
+      slots: [],
     });
     const activityRail = registerDashboardActivityRail(workbench, () => metadata);
-
     workbench.pageLocations.setProject("project-1");
     workbench.pageLocations.navigate({ kind: "page", page: labPage });
-
     expect(workbench.layout.getLayout().regions.sidenav.widgets).toEqual([]);
     expect(workbench.layout.getLayout().regions.activity.widgets).toEqual([
       expect.objectContaining({ viewId: "dashboard-workbench.activity-rail" }),
     ]);
     expect(workbench.layout.getActivePanel("main")?.viewId).toBe("lab-view");
     expect(workbench.getPrimaryResource()).toBeUndefined();
-
     activityRail.dispose();
   });
 });

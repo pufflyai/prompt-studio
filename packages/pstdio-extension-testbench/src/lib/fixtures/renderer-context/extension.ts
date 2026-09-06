@@ -38,16 +38,16 @@ const itemPage = definePage({
   path: "items",
   mode: workbenchModes.project,
   parent: workbenchPages.start,
-  slots: [
-    {
-      id: "content",
-      role: "primary",
-      region: "main",
-      binding: { kind: fixtureItem.ref, view: items.ref, cardinality: "one" },
-    },
-  ],
+  resource: {
+    kinds: [fixtureItem.ref],
+  },
+  main: {
+    kind: "view",
+    view: items.ref,
+    cardinality: "one",
+  },
+  slots: [],
 });
-
 export default defineExtension({
   resourceKinds: [fixtureItem],
   views: [items],

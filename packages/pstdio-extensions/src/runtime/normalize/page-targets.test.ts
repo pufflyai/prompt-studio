@@ -27,7 +27,6 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
   },
   definition,
 });
-
 const pageView = defineView({
   id: "page",
   title: "Page",
@@ -41,10 +40,8 @@ const resourceView = defineView({
 const ticketKind = defineResourceKind({
   id: "ticket",
 });
-
 const diagnosticsFor = (definition: LoadedExtensionSource["definition"]) =>
   normalizeExtensionSources([source(definition)]).diagnostics;
-
 describe("page target validation", () => {
   test("validates page and panel targets against their exact destination", () => {
     const page = definePage({
@@ -53,14 +50,24 @@ describe("page target validation", () => {
       path: "tickets",
       mode: workbenchModes.project,
       parent: workbenchPages.start,
+      resource: {
+        kinds: [ticketKind.ref],
+      },
+      main: {
+        kind: "view",
+        view: resourceView.ref,
+        cardinality: "one",
+      },
       slots: [
         {
-          id: "ticket",
-          role: "primary",
-          region: "main",
-          binding: { kind: ticketKind.ref, view: resourceView.ref, cardinality: "one" },
+          id: "files",
+          region: "side",
+          item: {
+            kind: "view",
+            view: pageView.ref,
+            presence: "open",
+          },
         },
-        { id: "files", role: "auxiliary", region: "side", view: pageView.ref, presence: "open" },
       ],
     });
     const navigationItems = [
@@ -79,15 +86,12 @@ describe("page target validation", () => {
         action: { kind: "panel", panel: page.panels.files, resource: { type: "ticket", id: "PS-1" } },
       }),
     ];
-
     const diagnostics = diagnosticsFor(
       defineExtension({ views: [pageView, resourceView], resourceKinds: [ticketKind], pages: [page], navigationItems }),
     );
-
     expect(diagnostics.filter((diagnostic) => diagnostic.code === "extension_page_target_invalid")).toHaveLength(1);
     expect(diagnostics.filter((diagnostic) => diagnostic.code === "extension_panel_target_invalid")).toHaveLength(1);
   });
-
   test("accepts host pages and rejects a resource their primary slot does not bind", () => {
     const navigationItems = [
       defineNavigationItem({
@@ -105,21 +109,30 @@ describe("page target validation", () => {
         action: { kind: "page", page: workbenchPages.workspace, resource: { type: "ticket", id: "PS-1" } },
       }),
     ];
-
     const diagnostics = diagnosticsFor(defineExtension({ navigationItems }));
-
     expect(diagnostics.filter((diagnostic) => diagnostic.code === "extension_page_target_invalid")).toHaveLength(1);
   });
-
-  test("requires a compound page target to come before its panel targets", () => {
+  test("accepts compound page and panel targets in declaration order", () => {
     const page = definePage({
       id: "tickets",
       title: "Tickets",
       path: "tickets",
       mode: workbenchModes.project,
+      main: {
+        kind: "view",
+        view: pageView.ref,
+        cardinality: "one",
+      },
       slots: [
-        { id: "ticket", role: "primary", region: "main", view: pageView.ref },
-        { id: "files", role: "auxiliary", region: "side", view: pageView.ref, presence: "open" },
+        {
+          id: "files",
+          region: "side",
+          item: {
+            kind: "view",
+            view: pageView.ref,
+            presence: "open",
+          },
+        },
       ],
     });
     const navigationItem = defineNavigationItem({
@@ -135,13 +148,11 @@ describe("page target validation", () => {
         ],
       },
     });
-
     const diagnostics = diagnosticsFor(
       defineExtension({ views: [pageView], pages: [page], navigationItems: [navigationItem] }),
     );
-
     expect(diagnostics.filter((diagnostic) => diagnostic.code === "extension_navigation_target_invalid")).toHaveLength(
-      1,
+      0,
     );
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import { workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
+import { resourceKey, workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
 import { createWorkbench, type ResourceRef, type WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import type { Dispatch, SetStateAction } from "react";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -12,12 +12,10 @@ import {
 import type { PendingFollowUpState } from "./session-chat-state";
 
 const draftResource: ResourceRef = {
-  kind: "session-draft",
-  uri: "pstdio://extension-resource/session-draft/new",
+  type: "session-draft",
   id: "new",
   label: "New session",
 };
-
 describe("openCreatedSessionFromDraft", () => {
   test("updates the current draft placement with the created session", () => {
     const workbench = createWorkbench();
@@ -33,17 +31,39 @@ describe("openCreatedSessionFromDraft", () => {
       ref: { extensionId: "pstdio", kind: "page", id: "start" },
       modeId: "project",
       path: "",
-      slots: [{ id: "content", role: "primary", region: "main", viewId: "start" }],
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "start",
+        },
+        cardinality: "one",
+      },
+      slots: [],
     });
     workbench.modePlacements.registerPlacement({
       id: "dashboard.session-bubble.project",
       ref: workbenchPanels.projectSession,
       modeId: "project",
       item: {
-        kind: "resource",
-        viewId: dashboardWidgetIds.sessionBubble,
-        resourceKinds: ["session", "session-draft"],
-        cardinality: "many",
+        kind: "binding",
+        binding: {
+          kinds: [
+            {
+              kind: "resource-kind",
+              id: "session",
+            },
+            {
+              kind: "resource-kind",
+              id: "session-draft",
+            },
+          ],
+          view: {
+            kind: "view",
+            id: dashboardWidgetIds.sessionBubble,
+          },
+          cardinality: "many",
+        },
       },
       region: "side",
     });
@@ -64,23 +84,19 @@ describe("openCreatedSessionFromDraft", () => {
       instance: placement,
       refresh: () => undefined,
     };
-
     openCreatedSessionFromDraft({
       input,
       sessionId: "session-created-from-draft",
       prompt: "Start the project plan",
       projectId: "project-1",
     });
-
     const opened = workbench.layout.getLayout().regions.side.widgets[0];
-
     expect(workbench.layout.getLayout().regions.side.widgets).toHaveLength(1);
     expect(opened?.widgetId).toBe(placement.instanceId);
-    expect(opened?.resourceUri).toBe("pstdio://extension-resource/session/session-created-from-draft");
-    expect(opened?.resource?.kind).toBe("session");
+    expect(opened?.resourceKey).toBe(resourceKey({ type: "session", id: "session-created-from-draft" }));
+    expect(opened?.resource?.type).toBe("session");
     expect(opened?.title).toBe("Start the project plan");
   });
-
   test.each(["home", "draft"])("opens the created session from the %s page", (origin) => {
     const workbench = createWorkbench();
     workbench.views.registerView({
@@ -94,7 +110,15 @@ describe("openCreatedSessionFromDraft", () => {
       ref: workbenchPages.sessions,
       modeId: "sessions",
       path: "sessions",
-      slots: [{ id: "content", role: "primary", region: "main", viewId: dashboardWidgetIds.session }],
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: dashboardWidgetIds.session,
+        },
+        cardinality: "one",
+      },
+      slots: [],
     });
     workbench.pages.registerPage({
       id: "session",
@@ -102,18 +126,27 @@ describe("openCreatedSessionFromDraft", () => {
       ref: workbenchPages.session,
       modeId: "sessions",
       path: "session",
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          binding: {
-            resourceKinds: ["session", "session-draft"],
-            viewId: dashboardWidgetIds.session,
-            cardinality: "one",
+      resource: {
+        kinds: [
+          {
+            kind: "resource-kind",
+            id: "session",
           },
+          {
+            kind: "resource-kind",
+            id: "session-draft",
+          },
+        ],
+      },
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: dashboardWidgetIds.session,
         },
-      ],
+        cardinality: "one",
+      },
+      slots: [],
     });
     workbench.pageLocations.setProject("project-1");
     workbench.pageLocations.navigate({
@@ -123,7 +156,6 @@ describe("openCreatedSessionFromDraft", () => {
         : { page: workbenchPages.sessions }),
     });
     const placement = workbench.layout.listPanelInstances("main")[0]!;
-
     openCreatedSessionFromDraft({
       input: {
         workbench,
@@ -135,7 +167,6 @@ describe("openCreatedSessionFromDraft", () => {
       prompt: "Use the diagram",
       projectId: "project-1",
     });
-
     expect(workbench.pages.store.getState().location?.page).toEqual(workbenchPages.session);
     expect(workbench.pages.store.getState().location?.resource).toMatchObject({
       type: "session",
@@ -143,12 +174,11 @@ describe("openCreatedSessionFromDraft", () => {
       label: "Use the diagram",
     });
     expect(workbench.getPrimaryResource()).toMatchObject({
-      kind: "session",
+      type: "session",
       id: "session-created-from-page-draft",
     });
   });
 });
-
 describe("submitSessionMessage", () => {
   test("creates draft sessions in the selected workspace", () => {
     let pendingFollowUp: PendingFollowUpState | null = null;
@@ -163,7 +193,6 @@ describe("submitSessionMessage", () => {
         options.onSuccess({ sessionId: "session-1", status: "running" });
       },
     );
-
     submitSessionMessage({
       sessionId: null,
       projectId: "project-1",
@@ -178,7 +207,6 @@ describe("submitSessionMessage", () => {
       followUp: { mutate: mock(() => undefined) },
       reconnect: () => undefined,
     });
-
     expect(mutate).toHaveBeenCalledWith(
       {
         projectId: "project-1",
@@ -191,7 +219,6 @@ describe("submitSessionMessage", () => {
     );
   });
 });
-
 describe("moveQueuedFollowUpBySteps", () => {
   test("uses each returned adjacent queue position for a multi-step move", async () => {
     const mutateAsync = mock(async (input: { queuePosition: number }) => ({
@@ -199,7 +226,6 @@ describe("moveQueuedFollowUpBySteps", () => {
       queuePosition: input.queuePosition === 9 ? 4 : 1,
     }));
     const reconnect = mock(() => undefined);
-
     await moveQueuedFollowUpBySteps({
       sessionId: "session-1",
       queuePosition: 9,
@@ -208,17 +234,14 @@ describe("moveQueuedFollowUpBySteps", () => {
       mutation: { mutateAsync },
       reconnect,
     });
-
     expect(mutateAsync.mock.calls.map(([input]) => input.queuePosition)).toEqual([9, 4]);
     expect(reconnect).toHaveBeenCalledTimes(1);
   });
-
   test("reconnects after a move mutation fails", async () => {
     const mutateAsync = mock(async () => {
       throw new Error("move failed");
     });
     const reconnect = mock(() => undefined);
-
     await moveQueuedFollowUpBySteps({
       sessionId: "session-1",
       queuePosition: 9,
@@ -227,7 +250,6 @@ describe("moveQueuedFollowUpBySteps", () => {
       mutation: { mutateAsync },
       reconnect,
     });
-
     expect(reconnect).toHaveBeenCalledTimes(1);
   });
 });

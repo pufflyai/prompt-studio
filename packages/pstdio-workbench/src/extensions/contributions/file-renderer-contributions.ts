@@ -1,4 +1,5 @@
 import type { CommandExecuteRequest, CommandExecuteResponse } from "@pstdio/sdk/api";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type {
   Disposable,
@@ -12,7 +13,6 @@ import { unwrapCommandValue } from "../host/command-response";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 
 type FileRendererRecord = NonNullable<WorkbenchExtensionMetadata["fileRenderers"]>[number];
-
 export interface RegisterWorkbenchExtensionFileRenderersInput {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
   metadata: WorkbenchExtensionMetadata;
@@ -20,24 +20,7 @@ export interface RegisterWorkbenchExtensionFileRenderersInput {
   workbench: WorkbenchModuleContext;
 }
 
-interface ExtensionResource {
-  type: string;
-  id: string;
-  label?: string;
-  metadata?: Record<string, unknown>;
-}
-
-const toExtensionResource = (resource: ResourceRef | undefined): ExtensionResource | undefined => {
-  if (!resource) return undefined;
-  return {
-    type: resource.kind,
-    id: resource.id ?? resource.uri,
-    label: resource.label,
-    metadata: resource.metadata,
-  };
-};
-
-const slotContext = (input: { projectId: string; rendererId: string; resource?: ExtensionResource }) => ({
+const slotContext = (input: { projectId: string; rendererId: string; resource?: ResourceRef }) => ({
   id: input.rendererId,
   kind: "renderer" as const,
   context: {
@@ -45,7 +28,6 @@ const slotContext = (input: { projectId: string; rendererId: string; resource?: 
     ...(input.resource ? { resourceType: input.resource.type, resourceId: input.resource.id } : {}),
   },
 });
-
 const executeFileCommand = async (
   input: RegisterWorkbenchExtensionFileRenderersInput,
   rendererId: string,
@@ -54,7 +36,7 @@ const executeFileCommand = async (
   extra: Record<string, unknown> = {},
   metadata?: CommandExecuteRequest["metadata"],
 ) => {
-  const ext = toExtensionResource(resource);
+  const ext = resource;
   const result = await input.executeCommand(commandId, {
     projectId: input.projectId,
     params: {
@@ -73,13 +55,15 @@ const executeFileCommand = async (
   });
   return unwrapCommandValue(result);
 };
-
 const revisionFromValue = (value: unknown) => {
   if (!value || typeof value !== "object") return undefined;
-  const revision = (value as { revision?: unknown }).revision;
+  const revision = (
+    value as {
+      revision?: unknown;
+    }
+  ).revision;
   return typeof revision === "string" ? revision : undefined;
 };
-
 export const fileRendererRefreshEnvelopeFromCommand = (
   body: CommandExecuteRequest,
   response: CommandExecuteResponse,
@@ -95,7 +79,7 @@ export const fileRendererRefreshEnvelopeFromCommand = (
   ) {
     return undefined;
   }
-  const resourceUri = metadata?.fileRendererResourceUri;
+  const resourceKey = metadata?.fileRendererResourceKey;
   const revision = revisionFromValue(response.outcome.value);
   return {
     origin: {
@@ -103,11 +87,10 @@ export const fileRendererRefreshEnvelopeFromCommand = (
       instanceId: candidate.instanceId,
       operationId: candidate.operationId,
     },
-    ...(typeof resourceUri === "string" ? { resourceUri } : {}),
+    ...(typeof resourceKey === "string" ? { resourceKey } : {}),
     ...(revision ? { revision } : {}),
   };
 };
-
 const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInput, record: FileRendererRecord) =>
   input.workbench.views.registerView({
     id: record.id,
@@ -130,7 +113,7 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
               { content },
               {
                 ...(origin ? { fileRendererOrigin: origin } : {}),
-                ...(resource?.uri ? { fileRendererResourceUri: resource.uri } : {}),
+                ...(resourceKey(resource) ? { fileRendererResourceKey: resourceKey(resource) } : {}),
               },
             );
             const revision = revisionFromValue(result);
@@ -139,14 +122,11 @@ const registerFileRenderer = (input: RegisterWorkbenchExtensionFileRenderersInpu
         : undefined,
     },
   });
-
 export const registerWorkbenchExtensionFileRenderers = (input: RegisterWorkbenchExtensionFileRenderersInput) => {
   const disposables: Disposable[] = [];
-
   for (const record of input.metadata.fileRenderers ?? []) {
     disposables.push(registerFileRenderer(input, record));
   }
-
   return {
     dispose() {
       for (let index = disposables.length - 1; index >= 0; index -= 1) disposables[index]?.dispose();

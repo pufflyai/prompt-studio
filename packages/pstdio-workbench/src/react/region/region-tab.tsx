@@ -17,7 +17,6 @@ interface WorkbenchRegionTabProps {
   previousWidgetId?: string;
   sortable?: boolean;
 }
-
 const useTabSnapshot = (placement: WorkbenchWidgetPlacement): WorkbenchTabSnapshot => {
   const tab = placement.tab;
   const [, setVersion] = useState(0);
@@ -28,7 +27,6 @@ const useTabSnapshot = (placement: WorkbenchWidgetPlacement): WorkbenchTabSnapsh
   }, [tab]);
   return tab?.getSnapshot(toPanelInstance(placement)) ?? {};
 };
-
 const useRegionTabBehavior = (input: WorkbenchRegionTabProps, tabSnapshot: WorkbenchTabSnapshot) => {
   const { disabled = false, nextWidgetId, placement, previousWidgetId, sortable = false, workbench } = input;
   const isPreview = placement.tabRetention === "preview";
@@ -78,9 +76,13 @@ const useRegionTabBehavior = (input: WorkbenchRegionTabProps, tabSnapshot: Workb
     tabSnapshot,
   };
 };
-
 const WorkbenchRegionTabMenuSurface = (props: {
-  anchor: { x: number; y: number; width: number; height: number };
+  anchor: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
   children: ReactNode;
   label: string;
   open: boolean;
@@ -103,9 +105,13 @@ const WorkbenchRegionTabMenuSurface = (props: {
     </Menu.Root>
   );
 };
-
 const WorkbenchRegionTabContextMenu = (props: {
-  anchor: { x: number; y: number; width: number; height: number };
+  anchor: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
   label: string;
   open: boolean;
   placement: WorkbenchWidgetPlacement;
@@ -127,17 +133,15 @@ const WorkbenchRegionTabContextMenu = (props: {
           id="keep-open"
           label="Keep Open"
           icon={<WorkbenchIcon name="pin" size={14} />}
-          onActivate={() =>
-            workbench.layout.updatePanel(placement.widgetId, {
-              strategy: { kind: "persistent" },
-            })
-          }
+          onActivate={() => {
+            if (placement.placementIdentity) workbench.pinPlacement(placement.placementIdentity);
+            else workbench.layout.updatePanel(placement.widgetId, { strategy: { kind: "persistent" } });
+          }}
         />
       </Menu.Item>
     </WorkbenchRegionTabMenuSurface>
   );
 };
-
 const WorkbenchRegionTabLabel = (props: {
   icon?: string;
   indicator?: WorkbenchTabSnapshot["indicator"];
@@ -164,7 +168,6 @@ const WorkbenchRegionTabLabel = (props: {
     </>
   );
 };
-
 const activateTabAction = (
   workbench: WorkbenchCore,
   action: NonNullable<WorkbenchTabMenuGroup["rows"][number]["action"]>,
@@ -175,7 +178,6 @@ const activateTabAction = (
   }
   void workbench.navigation.openTarget(action.target);
 };
-
 const WorkbenchStructuredTabMenu = (props: { groups: readonly WorkbenchTabMenuGroup[]; workbench: WorkbenchCore }) => {
   const { groups, workbench } = props;
   return groups.map((group, groupIndex) => (
@@ -199,7 +201,6 @@ const WorkbenchStructuredTabMenu = (props: { groups: readonly WorkbenchTabMenuGr
     </Box>
   ));
 };
-
 const WorkbenchRegionTabCloseButton = (props: {
   disabled: boolean;
   isActive: boolean;
@@ -235,16 +236,8 @@ const WorkbenchRegionTabCloseButton = (props: {
         event.stopPropagation();
         if (disabled) return;
         const identity = placement.placementIdentity;
-        if (identity?.kind === "page") {
-          workbench.pageLocations.closePlacement(identity);
-          return;
-        }
-        if (identity?.kind === "mode") {
-          workbench.modePlacements.closePlacement(identity);
-          return;
-        }
-        if (identity?.kind === "shell") {
-          workbench.shellPlacements.closePlacement(identity);
+        if (identity) {
+          workbench.closePlacement(identity);
           return;
         }
         workbench.layout.closePanel(placement.widgetId);
@@ -252,7 +245,6 @@ const WorkbenchRegionTabCloseButton = (props: {
     />
   );
 };
-
 const WorkbenchRegionTabMenus = (props: {
   behavior: ReturnType<typeof useRegionTabBehavior>;
   label: string;
@@ -285,18 +277,17 @@ const WorkbenchRegionTabMenus = (props: {
     </>
   );
 };
-
 export const WorkbenchRegionTab = (props: WorkbenchRegionTabProps) => {
   const { activeWidgetId, disabled = false, placement, sortable = false, workbench } = props;
   const isActive = placement.widgetId === activeWidgetId;
   const tabSnapshot = useTabSnapshot(placement);
-  const label = tabSnapshot.label ?? placement.title ?? placement.contributionId;
+  const label = tabSnapshot.label ?? placement.resource?.label ?? placement.title ?? placement.contributionId;
   const labelId = `workbench-tab-label-${placement.widgetId}`;
   const widget = workbench.layout.getWidget(placement.contributionId);
   const icon = resolveTabIconName(
     placement,
     widget,
-    placement.resource ? workbench.resources.getKind(placement.resource.kind)?.icon : undefined,
+    placement.resource ? workbench.resources.getKind(placement.resource.type)?.icon : undefined,
   );
   const behavior = useRegionTabBehavior(props, tabSnapshot);
   const { isDragging, listeners, setNodeRef, transform, transition } = behavior.sortableState;

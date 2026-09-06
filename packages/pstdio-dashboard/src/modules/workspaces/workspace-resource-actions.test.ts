@@ -80,7 +80,7 @@ describe("registerWorkspaceResourceActions", () => {
       expect.objectContaining({
         viewId: WORKBENCH_TERMINAL_WIDGET_ID,
         mountStrategy: "keep-mounted",
-        resource: expect.objectContaining({ kind: "terminal", metadata: workspace.metadata }),
+        resource: expect.objectContaining({ type: "terminal", metadata: workspace.metadata }),
         title: "Terminal 1",
       }),
     ]);

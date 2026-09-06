@@ -9,7 +9,6 @@ import {
 
 const notesWidgetId = "host-terminal-story.notes";
 const launcherWidgetId = "host-terminal-story.launcher";
-
 const createHostTerminalModule = () => ({
   id: "host-terminal-story",
   activate(ctx: WorkbenchCoreContributionContext) {
@@ -46,7 +45,14 @@ const createHostTerminalModule = () => ({
     });
     const launcherPlacement = ctx.shellPlacements.registerPlacement({
       id: launcherWidgetId,
-      item: { kind: "view", viewId: launcherWidgetId, presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: launcherWidgetId,
+        },
+      },
       region: "main",
     });
     const notesView = ctx.views.registerView({
@@ -68,7 +74,14 @@ const createHostTerminalModule = () => ({
     });
     const notesPlacement = ctx.shellPlacements.registerPlacement({
       id: notesWidgetId,
-      item: { kind: "view", viewId: notesWidgetId, presence: "closed" },
+      item: {
+        kind: "view",
+        presence: "closed",
+        view: {
+          kind: "view",
+          id: notesWidgetId,
+        },
+      },
       region: "secondary",
     });
     return [
@@ -80,7 +93,6 @@ const createHostTerminalModule = () => ({
     ];
   },
 });
-
 const setupHostTerminalWorkbench = (layoutPersistence?: {
   getLayout: (scope?: string) => WorkbenchLayout | undefined;
   setLayout: (layout: WorkbenchLayout, scope?: string) => void;
@@ -89,14 +101,12 @@ const setupHostTerminalWorkbench = (layoutPersistence?: {
   workbench.registerModule(createHostTerminalModule());
   return workbench;
 };
-
 export const createHostTerminalWorkbench = () => {
   const workbench = setupHostTerminalWorkbench();
   openWorkbenchTerminal(workbench);
   workbench.shellPlacements.openPlacement({ placementId: notesWidgetId });
   return workbench;
 };
-
 export const createRestoredHostTerminalWorkbench = () => {
   const layouts = new Map<string | undefined, WorkbenchLayout>();
   const layoutPersistence = {
@@ -108,7 +118,6 @@ export const createRestoredHostTerminalWorkbench = () => {
   source.layout.setPersistenceScope(scope);
   openWorkbenchTerminal(source);
   source.shellPlacements.openPlacement({ placementId: notesWidgetId });
-
   const restored = setupHostTerminalWorkbench(layoutPersistence);
   restored.layout.setPersistenceScope(scope);
   return restored;

@@ -8,9 +8,7 @@ const webview = (path: string, id: string) => ({
   runtimeUrl: "/v1/extensions/runtime",
   moduleUrl: `/v1/extensions/installed/extension-lab/webviews/${id}/module.js`,
 });
-
 export const emptyAppearance = { themes: [], fileIconThemes: [], translations: [], diagnostics: [] };
-
 export const metadata = {
   extensions: [{ id: labExtensionId, name: "extension-lab", displayName: "Extension Lab", sourcePath: "" }],
   commands: [
@@ -29,14 +27,12 @@ export const metadata = {
       title: "Lab",
       path: "lab",
       mode: ref("pstdio", "mode", "project"),
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          view: ref(labExtensionId, "view", "labPage"),
-        },
-      ],
+      main: {
+        kind: "view",
+        view: ref(labExtensionId, "view", "labPage"),
+        cardinality: "one",
+      },
+      slots: [],
     },
   ],
   views: [
@@ -74,13 +70,11 @@ export const metadata = {
   keybindings: [],
   settingsDefinitions: [],
 } satisfies DashboardExtensionMetadata;
-
 export const response = {
   commandId: `${labExtensionId}.command.say-hello`,
   extensionId: labExtensionId,
   outcome: { ok: true, status: "success", value: { message: "hello" } },
 } satisfies CommandExecuteResponse;
-
 export const metadataWithLabMode = {
   ...metadata,
   modes: [
@@ -114,7 +108,6 @@ export const metadataWithLabMode = {
     },
   ],
 } satisfies DashboardExtensionMetadata;
-
 export const metadataWithResourceExtension = {
   ...metadata,
   extensions: [
@@ -151,18 +144,10 @@ export const metadataWithResourceExtension = {
       title: "Issue",
       path: "issue",
       mode: ref("pstdio", "mode", "project"),
-      slots: [
-        {
-          id: "content",
-          role: "primary" as const,
-          region: "main" as const,
-          binding: {
-            kind: ref(issuesExtensionId, "resource-kind", "issue"),
-            view: ref(issuesExtensionId, "view", "issueFiles"),
-            cardinality: "one" as const,
-          },
-        },
-      ],
+      parent: ref(labExtensionId, "page", "labPage"),
+      resource: { kinds: [ref(issuesExtensionId, "resource-kind", "issue")] },
+      main: { kind: "view", view: ref(issuesExtensionId, "view", "issueFiles"), cardinality: "one" },
+      slots: [],
     },
   ],
   resourceKinds: [
@@ -175,7 +160,6 @@ export const metadataWithResourceExtension = {
     },
   ],
 } satisfies DashboardExtensionMetadata;
-
 export const flushMicrotasks = async () => {
   await Promise.resolve();
   await Promise.resolve();

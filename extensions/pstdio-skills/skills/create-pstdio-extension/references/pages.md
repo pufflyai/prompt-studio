@@ -1,52 +1,44 @@
 # Pages and panels
 
-A page owns a route, one primary slot in `main`, and optional auxiliary panels. A view owns its content.
-Use `navigationItems` and `navigationTrees` for the shared Sidenav. Page slots do not target `sidenav`.
+A page owns a route, its routed resource, and page panels. A view supplies content. A mode owns shared panels, region policy, and chrome. Use Main, Side, and Secondary for panels; use `navigationItems` and `navigationTrees` for Sidenav content.
 
-Start with the complete [Scribble, Zipline, and Pigeon examples](examples.md). They use native renderers
-and the public SDK. The Workbench React showcases demonstrate host customization.
+## Resource and Main presentation
 
-## Primary content
+Declare `resource: { kinds }` when the route accepts a resource. Pass `ResourceRef` with `type`, `id`, and optional `label`. Keep ownership fields intact. Do not build resource URIs in author code.
 
-- A static primary declares `view`.
-- A resource primary declares `binding` and a page `parent` for closing its last instance.
+Choose Main separately:
 
-Declare exactly one primary content source. Use two pages for a list and its details. Both pages can
-share a view and mode. Put persistent panels, such as a player or timeline, in mode placements.
+- `main: { kind: "view", view, cardinality }` renders routed content. Multiple instances require a resource-bound page. Resource view pages declare a `parent` for closing their last tab.
+- `main: { kind: "panels", empty }` renders peer Main panels and shows the empty view when none are open. A routed workspace remains the page context while its file panels change.
 
-Every binding declares `cardinality`. `one` replaces the current resource; `many` keeps an instance
-per resource. Use `open: "pin"` when navigation should retain a document instead of replacing a preview.
-TypeScript checks the primary region, content, and resource parent. `pst extensions check` also
-validates references and rules that need the whole extension.
+Additional page `slots` and mode placements both use `item`. A static item has `kind: "view"`, `view`, and `presence`. A binding item has `kind: "binding"` and `binding: { kinds, view, cardinality, add? }`. The same region, mounting, and tab rules apply to both.
+
+`cardinality: "one"` rebinds one instance. `"many"` retains separate resource instances. Use `open: "pin"` to retain a tab or `"preview"` to permit replacement. Generated references such as `page.panels.inspector` identify page slots.
 
 ## Navigation
 
-Page targets name a page ref. Static pages take no resource; resource pages require one. Use a nested `parent` page target for contextual
-breadcrumbs. Name every destination explicitly. The host does not infer a page from resource metadata,
-a resource kind, or a view. Without an explicit parent, it follows the declared page hierarchy.
+A page target changes location and selects the page's mode. Use an explicit nested `parent` page target for contextual breadcrumbs. The host does not infer destinations from a resource kind or view.
 
-A panel target uses `page.panels.<slot-id>` and leaves the current page location unchanged.
+A panel target opens a panel while preserving the route and breadcrumbs. Its page or mode must be active. To enter an owner and open its panel together, use a compound target containing page and panel steps. All steps prepare before any state changes. Commands and links are standalone; complete command work before requesting navigation.
 
-## Closing and automatic opens
+Omitted mode chrome keeps host navigation, including navigation owned by a custom mode. A replacement view or `false` overrides it. Shared mode panels retain mounted state across pages when declared `keep-mounted` and dispose when their owner is removed.
 
-Closing the last resource primary follows the page's declared parent, even when the breadcrumb has
-a contextual parent.
+## Closing
 
-`openOn: "page-resource"` opens an auxiliary binding on navigation with a matching resource. Closing
-the instance keeps it closed until another navigation opens it. Leaving the page removes its panels from the active layout.
+Static presence is `fixed`, `open`, or `closed`. Fixed panels cannot close. Open and closed are initial values; saved user choices win later.
 
-The host's Side Panel can be closed, floating, or attached. This is a separate user choice. In the
-dashboard, use Open Side Panel and Reattach Side Panel to inspect the examples. Closing a panel tab
-removes that instance; closing the Side Panel window hides the container.
+Closing the last routed resource view follows the page's declared parent. Closing an auxiliary panel preserves the route. `openOn: "page-resource"` opens a matching binding on page navigation. Closing it keeps it closed until another navigation opens it.
+
+A webview declares `placement.close` and calls `host.call("placement.close", {})`. It supplies no placement identity. The host uses the same controller as native tabs.
+
+Tab labels use explicit tab presentation, resource label, then view title. Close actions use the same label. Hiding a region preserves its instances; removing an owner disposes them.
+
+## Provider refs and host pages
+
+Export `qualifyRef(owner, ref)` from provider contract modules. It supports nested page-panel refs and preserves command parameter/result types. Providers continue to register local definitions.
+
+Use `workbenchPages.sessions` and `workbenchPages.workspaces` without a resource for their home pages. Use `workbenchPages.session` with a session or session draft, and `workbenchPages.workspace` with a workspace.
 
 ## Refresh installed guidance
 
-Update `pstdio-skills` with the SDK release, then run `pst agents install-skills <agent-id>` from the
-linked repository. This replaces managed skill copies. Restart the agent session to load the new
-instructions. For source development, first use `pst extensions dev <path-to-pstdio-skills>`.
-
-## Host pages
-
-Use `workbenchPages.sessions` and `workbenchPages.workspaces` without a resource for their home pages.
-Use `workbenchPages.session` with a `session` or `session-draft`, and `workbenchPages.workspace` with a
-`workspace`. Detail pages declare their home page as `parent`.
+Update `pstdio-skills` with the SDK release, then run `pst agents install-skills <agent-id>` from the linked repository. Restart the agent session to read the updated files. For source development, first load the skill extension through `pst extensions dev <path-to-pstdio-skills>`.

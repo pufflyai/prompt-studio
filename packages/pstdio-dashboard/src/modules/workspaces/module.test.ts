@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { createWorkbenchResourceActions } from "@pstdio/workbench/react";
 import { getWriter } from "@/lib/sync/collections";
@@ -20,10 +20,9 @@ const registerTicketHierarchy = (workbench: ReturnType<typeof createWorkbench>) 
     icon: "component",
   });
   const tickets = createDashboardResource("dashboard-view", "tickets", "Tickets", "square-kanban", "project-1");
-
   workbench.resources.registerHierarchyProvider({
     id: "test.ticket-hierarchy",
-    canResolve: (resource) => resource.kind === "ticket",
+    canResolve: (resource) => resource.type === "ticket",
     getParent: (resource) => dashboardResourceParent(workbench, resource, "project-1") ?? tickets,
   });
   workbench.views.registerView({
@@ -45,7 +44,15 @@ const registerTicketHierarchy = (workbench: ReturnType<typeof createWorkbench>) 
     icon: "square-kanban",
     path: "tickets",
     modeId: "project",
-    slots: [{ id: "content", role: "primary", region: "main", viewId: "test.tickets" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "test.tickets",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pages.registerPage({
     id: "test.ticket",
@@ -55,25 +62,30 @@ const registerTicketHierarchy = (workbench: ReturnType<typeof createWorkbench>) 
     path: "ticket",
     modeId: "project",
     parentId: "test.tickets",
-    slots: [
-      {
-        id: "content",
-        role: "primary",
-        region: "main",
-        binding: { resourceKinds: ["ticket"], viewId: "test.ticket", cardinality: "one" },
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "ticket",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "test.ticket",
       },
-    ],
+      cardinality: "one",
+    },
+    slots: [],
   });
 };
-
 describe("createWorkspacesModule", () => {
   test("registers the workspace collection as a data table", () => {
     const workbench = createWorkbench();
-
     workbench.registerModule(createWorkspacesModule());
-
     expect(dataTableViewBody(workbench, dashboardWidgetIds.workspaces)).toBeDefined();
-
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-296_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
       workspaceShorthand: "PS-296_A1",
@@ -90,19 +102,16 @@ describe("createWorkspacesModule", () => {
       "Delete workspace",
     ]);
   });
-
   test("opens workspace resources in project mode", async () => {
     const workbench = createWorkbench();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
       workspaceShorthand: "PS-307_A1",
     });
-
     workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     openWorkspacesPage(workbench, workspace);
-
     expect(workbench.pages.store.getState().activePageId).toBe(workbenchPages.workspace.id);
     expect(workbench.pages.getPage(workbenchPages.workspace.id)).toMatchObject({
       ref: workbenchPages.workspace,
@@ -116,49 +125,45 @@ describe("createWorkspacesModule", () => {
       expect.objectContaining({
         viewId: dashboardWidgetIds.dashboardSidenav,
         placementIdentity: {
-          kind: "mode",
-          modeId: "project",
-          placementId: "dashboard.sidenav.project",
+          kind: "shell",
+          placementId: "dashboard.sidenav",
           instanceKey: "default",
         },
       }),
     ]);
     expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.workspaceDiffs);
     expect(workbench.layout.getLayout().regions.main.widgets.map((widget) => widget.viewId)).toEqual([
-      dashboardWidgetIds.workspace,
       dashboardWidgetIds.workspaceDiffs,
       dashboardWidgetIds.workspaceFiles,
     ]);
     expect(
       workbench.layout
-        .getLayout()
-        .regions.main.widgets.filter(
+        .listPanelInstances("main")
+        .filter(
           (widget) =>
             widget.viewId === dashboardWidgetIds.workspaceFiles || widget.viewId === dashboardWidgetIds.workspaceDiffs,
         )
-        .map((widget) => widget.title),
+        .map((widget) => widget.tab?.getSnapshot(widget).label),
     ).toEqual(["Changes", "Files"]);
     expect(workbench.views.getView(dashboardWidgetIds.workspaceDiffs)?.icon).toBe("FileDiff");
     expect(workbench.layout.getLayout().regions["main-left-menu"].widgets).toEqual([
       expect.objectContaining({
         viewId: dashboardWidgetIds.workspaceFileTree,
-        ownerResourceUri: workspace.uri,
-        resource: expect.objectContaining({ kind: "workspace", id: "workspace-1", label: "PS-307_A1" }),
+        ownerResourceKey: resourceKey(workspace),
+        resource: expect.objectContaining({ type: "workspace", id: "workspace-1", label: "PS-307_A1" }),
       }),
     ]);
     expect(workbench.layout.getLayout().regions["main-right-menu"].widgets).toEqual([]);
-    expect(workbench.layout.getLayout().activeResourceUri).toBe(workspace.uri);
+    expect(workbench.layout.getLayout().activeResourceKey).toBe(resourceKey(workspace));
     expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).selectedNodeId).toBeUndefined();
-
     const sidenavNodeIds = (
       await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav, { resource: workspace })
     )
       .flatMap((section) => section.nodes)
       .map((node) => node.id);
-    expect(sidenavNodeIds).not.toContain(workspace.uri);
-    expect(sidenavNodeIds).not.toContain("pstdio://extension-resource/dashboard-view/sessions");
+    expect(sidenavNodeIds).not.toContain(resourceKey(workspace));
+    expect(sidenavNodeIds).not.toContain(resourceKey({ type: "dashboard-view", id: "sessions" }));
   });
-
   test("opens same-URI workspace file metadata in Files without changing workspace ownership", async () => {
     const workbench = createWorkbench();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
@@ -169,29 +174,23 @@ describe("createWorkspacesModule", () => {
       ...workspace,
       metadata: { ...workspace.metadata, workspaceView: "files", workspaceFilePath: "src/index.ts" },
     };
-
     workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-
     openWorkspacesPage(workbench, workspace);
     openWorkspacesPage(workbench, fileResource);
-
     const layout = workbench.layout.getLayout();
     expect(workbench.layout.getActivePanel("main")?.viewId).toBe(dashboardWidgetIds.workspaceFiles);
-    expect(layout.activeResourceUri).toBe(workspace.uri);
+    expect(layout.activeResourceKey).toBe(resourceKey(workspace));
     expect(
       layout.regions.main.widgets.find((widget) => widget.viewId === dashboardWidgetIds.workspaceFiles)?.resource,
-    ).toEqual({ ...fileResource, icon: undefined });
-    expect(layout.regions["main-left-menu"].widgets[0]?.resource).toEqual({ ...fileResource, icon: undefined });
+    ).toEqual(fileResource);
+    expect(layout.regions["main-left-menu"].widgets[0]?.resource).toEqual(fileResource);
   });
-
   test("lists workspaces of the selected project as command panel resources", () => {
     const workbench = createWorkbench();
-
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-
     getWriter("workspaces")?.truncateAndWrite([
       {
         id: "workspace-1",
@@ -220,35 +219,26 @@ describe("createWorkspacesModule", () => {
         deleted_at: null,
       },
     ]);
-
     const entries = workbench.resources.listResources("");
     const workspaceUris = entries
-      .filter((entry) => entry.resource.kind === "workspace")
-      .map((entry) => entry.resource.uri);
-
-    expect(workspaceUris).toEqual(["pstdio://extension-resource/workspace/workspace-1"]);
+      .filter((entry) => entry.resource.type === "workspace")
+      .map((entry) => resourceKey(entry.resource));
+    expect(workspaceUris).toEqual([resourceKey({ type: "workspace", id: "workspace-1" })]);
   });
-
   test("opens the workspace creation overlay from the new workspace command", async () => {
     const workbench = createWorkbench();
-
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-
     await workbench.commands.executeCommand(dashboardCommandIds.createWorkspace);
-
     const overlay = workbench.layout.getActivePanel("overlay");
     expect(overlay?.viewId).toBe(dashboardWidgetIds.createWorkspace);
   });
 });
-
 describe("createWorkspacesModule navigation", () => {
   test("places workspace creation on the Workspaces navigation row", async () => {
     const workbench = createWorkbench();
-
     workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
-
     const nodeIds = (
       await workbench.navigationTrees.getSections({ kind: "mode", id: "project", extensionId: "pstdio" })
     )
@@ -259,7 +249,6 @@ describe("createWorkspacesModule navigation", () => {
     )
       .flatMap((section) => section.nodes)
       .find((node) => node.id === dashboardViews.workspaces.id);
-
     expect(nodeIds).not.toContain("new-workspace");
     expect(workspacesNode).toMatchObject({
       commandId: dashboardCommandIds.openWorkspaces,
@@ -276,7 +265,6 @@ describe("createWorkspacesModule navigation", () => {
     expect(nodeIds).toContain(dashboardViews.workspaces.id);
   });
 });
-
 describe("createWorkspacesModule sidenav state", () => {
   test("keeps persistent Side Panel tabs when a workspace resource opens", async () => {
     const workbench = createWorkbench();
@@ -284,7 +272,6 @@ describe("createWorkspacesModule sidenav state", () => {
       workspaceId: "workspace-1",
       workspaceShorthand: "PS-307_A1",
     });
-
     workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
@@ -296,35 +283,28 @@ describe("createWorkspacesModule sidenav state", () => {
       rendererId: "test.files",
     });
     workbench.layout.openPanel("test.files", { strategy: { kind: "persistent" } });
-
     openWorkspacesPage(workbench, workspace);
-
     expect(workbench.layout.listPanelInstances("side")).toEqual([
       expect.objectContaining({ panelId: "test.files", tabRetention: "persistent" }),
     ]);
   });
-
   test("keeps the sidenav collapsed when a workspace resource opens", async () => {
     const workbench = createWorkbench();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
       workspaceShorthand: "PS-307_A1",
     });
-
     workbench.registerModule(createSidenavModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     openWorkspacesPage(workbench);
     workbench.shell.setRegionOpen("sidenav", false);
     workbench.layout.setRegionVisible("sidenav", false);
-
     openWorkspacesPage(workbench, workspace);
-
     expect(workbench.shell.getRegionState("sidenav").open).toBe(false);
     expect(workbench.layout.getLayout().regions.sidenav.visible).toBe(false);
   });
 });
-
 describe("createWorkspacesModule breadcrumbs", () => {
   test("nests workspace breadcrumbs under the ticket when opened from a ticket", async () => {
     const workbench = createWorkbench();
@@ -338,11 +318,9 @@ describe("createWorkspacesModule breadcrumbs", () => {
         metadata: { shorthand: "PS-307" },
       },
     });
-
     workbench.registerModule(createWorkspacesModule());
     registerTicketHierarchy(workbench);
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-
     const ticket = (workspace.metadata as Record<string, unknown> | undefined)?.resourceParent as {
       type: string;
       id: string;
@@ -353,7 +331,6 @@ describe("createWorkspacesModule breadcrumbs", () => {
       page: { extensionId: "pstdio.pstdio-planner", kind: "page", id: "ticket" },
       resource: ticket,
     });
-
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual([
       "Tickets",
       "PS-307 Dashboard workbench datalayer",
@@ -365,7 +342,6 @@ describe("createWorkspacesModule breadcrumbs", () => {
       dashboardViews.workspaces.icon,
     ]);
   });
-
   test("uses planner ticket ancestry when opening a ticket-linked workspace", async () => {
     const workbench = createWorkbench();
     const workspace = createDashboardResource("workspace", "workspace-child", "PS-308_A1", "GitBranch", "project-1", {
@@ -386,16 +362,20 @@ describe("createWorkspacesModule breadcrumbs", () => {
         },
       },
     });
-
     workbench.registerModule(createWorkspacesModule());
     registerTicketHierarchy(workbench);
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-
     const childTicket = (workspace.metadata as Record<string, unknown> | undefined)?.resourceParent as {
       type: string;
       id: string;
       label: string;
-      metadata: { resourceParent: { type: string; id: string; label: string } };
+      metadata: {
+        resourceParent: {
+          type: string;
+          id: string;
+          label: string;
+        };
+      };
     };
     openWorkspacesPage(workbench, workspace, {
       kind: "page",
@@ -407,7 +387,6 @@ describe("createWorkspacesModule breadcrumbs", () => {
         resource: childTicket.metadata.resourceParent,
       },
     });
-
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual([
       "Tickets",
       "PS-307 Parent",
@@ -415,14 +394,11 @@ describe("createWorkspacesModule breadcrumbs", () => {
       "PS-308_A1",
     ]);
   });
-
   test("uses the declared workspace hierarchy when no contextual target is supplied", async () => {
     const workbench = createWorkbench();
-
     workbench.registerModule(createWorkspacesModule());
     registerTicketHierarchy(workbench);
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-
     getWriter("workspaces")?.truncateAndWrite([
       {
         id: "workspace-1",
@@ -448,13 +424,10 @@ describe("createWorkspacesModule breadcrumbs", () => {
         deleted_at: null,
       },
     ]);
-
     const workspace = workbench.resources
       .listResources("")
-      .find((entry) => entry.resource.kind === "workspace")?.resource;
-
+      .find((entry) => entry.resource.type === "workspace")?.resource;
     openWorkspacesPage(workbench, workspace!);
-
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Workspaces", "PS-307_A1"]);
   });
 });

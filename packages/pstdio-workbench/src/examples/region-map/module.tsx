@@ -1,4 +1,5 @@
 import { Box, Button, HStack, Stack } from "@chakra-ui/react";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContribution, WorkbenchPanelRenderInput, WorkbenchRegion } from "../../core";
 import type { WorkbenchOverlayWidgetConfig } from "../../react";
 import { RegionMapPlaceholder } from "./components/region-map-placeholder";
@@ -14,7 +15,6 @@ const overlayConfig: WorkbenchOverlayWidgetConfig = {
   closeOnInteractOutside: false,
   modal: false,
 };
-
 const statusPanelId = regionWidgetId("status");
 const mappedRegions = [
   "nav",
@@ -29,7 +29,6 @@ const mappedRegions = [
   "overlay",
 ] as const;
 const panelRegions = ["main", "secondary", "side"] as const;
-
 const RegionMapView = (props: { input: WorkbenchPanelRenderInput; region: WorkbenchRegion }) => {
   const { input, region } = props;
   const resource = createRegionResource(region);
@@ -38,7 +37,7 @@ const RegionMapView = (props: { input: WorkbenchPanelRenderInput; region: Workbe
       region={region}
       role={describeSurface(region)}
       name={input.instance.resource?.label ?? input.instance.title ?? regionLabels[region]}
-      uri={input.instance.resource?.uri ?? resource.uri}
+      uri={resourceKey(input.instance.resource) ?? resourceKey(resource)}
     />
   );
   if (region === "overlay")
@@ -65,19 +64,15 @@ const RegionMapView = (props: { input: WorkbenchPanelRenderInput; region: Workbe
     </Stack>
   );
 };
-
 const panelMenuRegion = (panel: (typeof panelRegions)[number], side: "left" | "right") =>
   `${panel}-${side}-menu` as const;
-
 const isPanelRegion = (region: WorkbenchRegion): region is (typeof panelRegions)[number] =>
   panelRegions.some((panel) => panel === region);
-
 export const createRegionMapModule = (): WorkbenchModuleContribution => ({
   id: "region-map",
   activate(ctx) {
     ctx.sidePanel.setMode("attached");
     ctx.resources.registerKind({ kind: regionResourceKind, label: "Workbench region", icon: "SquareDashed" });
-
     ctx.views.registerView({
       id: statusPanelId,
       title: regionLabels.status,
@@ -88,13 +83,12 @@ export const createRegionMapModule = (): WorkbenchModuleContribution => ({
             region="status"
             role={describeSurface("status")}
             name={regionLabels.status}
-            uri={createRegionResource("status").uri}
+            uri={resourceKey(createRegionResource("status"))}
           />
         ),
       },
     });
     ctx.statusBar.registerItem({ id: `${statusPanelId}.item`, viewId: statusPanelId, slot: "leading" });
-
     for (const region of mappedRegions) {
       ctx.views.registerView({
         id: regionWidgetId(region),
@@ -110,12 +104,18 @@ export const createRegionMapModule = (): WorkbenchModuleContribution => ({
       } else if (!isPanelRegion(region)) {
         ctx.shellPlacements.registerPlacement({
           id: regionWidgetId(region),
-          item: { kind: "view", viewId: regionWidgetId(region), presence: "fixed" },
+          item: {
+            kind: "view",
+            presence: "fixed",
+            view: {
+              kind: "view",
+              id: regionWidgetId(region),
+            },
+          },
           region,
         });
       }
     }
-
     for (const panel of panelRegions) {
       for (const side of ["left", "right"] as const) {
         const region = panelMenuRegion(panel, side);
@@ -133,10 +133,16 @@ export const createRegionMapModule = (): WorkbenchModuleContribution => ({
           regionSize: { defaultPx: 160, minPx: 120 },
         });
       }
-
       ctx.shellPlacements.registerPlacement({
         id: regionWidgetId(panel),
-        item: { kind: "view", viewId: regionWidgetId(panel), presence: "fixed" },
+        item: {
+          kind: "view",
+          presence: "fixed",
+          view: {
+            kind: "view",
+            id: regionWidgetId(panel),
+          },
+        },
         region: panel,
       });
     }

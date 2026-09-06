@@ -1,3 +1,4 @@
+import type { ControlsQueryResult } from "@pstdio/sdk/extensions";
 import {
   defineCommand,
   type ExtensionContextBase,
@@ -101,27 +102,28 @@ export const createGlassLabArtifactCommand = defineCommand({
   },
 });
 
-export const queryArtifactMenu = async (_ctx: ExtensionContextBase, _input: object) => ({
-  groups: [
-    {
-      id: "create",
-      title: "Catalog intake",
-      description: "Create Glass Lab artifacts without leaving the table.",
-      params: [
-        {
-          id: "create",
-          name: "New artifact",
-          type: "actions",
-          options: [
-            { id: "random", name: "Random artifact" },
-            { id: "testing", name: "Testing artifact" },
-          ],
-        },
-      ],
-    },
-  ],
-  values: {},
-});
+export const queryArtifactMenu = async (_ctx: ExtensionContextBase, _input: object) =>
+  ({
+    groups: [
+      {
+        id: "create",
+        title: "Catalog intake",
+        description: "Create Glass Lab artifacts without leaving the table.",
+        params: [
+          {
+            id: "create",
+            name: "New artifact",
+            type: "actions",
+            options: [
+              { id: "random", name: "Random artifact" },
+              { id: "testing", name: "Testing artifact" },
+            ],
+          },
+        ],
+      },
+    ],
+    values: {},
+  }) satisfies ControlsQueryResult;
 
 export const queryArtifactMenuCommand = defineCommand({
   id: "artifact-menu.query",

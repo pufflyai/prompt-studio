@@ -5,7 +5,6 @@ let content = [
   "",
   "The extension supplies file content. Prompt Studio supplies the editor.",
 ].join("\n");
-
 const notes = defineView({
   id: "notes",
   title: "notes.md",
@@ -17,15 +16,18 @@ const notes = defineView({
     },
   },
 });
-
 export const notesPage = definePage({
   id: "notes",
   title: "Notes",
   path: "notes",
   mode: workbenchModes.project,
-  slots: [{ id: "content", role: "primary", region: "main", view: notes.ref }],
+  main: {
+    kind: "view",
+    view: notes.ref,
+    cardinality: "one",
+  },
+  slots: [],
 });
-
 export default defineExtension({
   views: [notes],
   pages: [notesPage],

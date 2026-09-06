@@ -5,14 +5,12 @@ import { labArtifactsChanged } from "./src/events";
 const commandMenus = () => Object.values(extension.commands ?? {}).flatMap((command) => command.menus ?? []);
 const commandPalettes = () => Object.values(extension.commands ?? {}).flatMap((command) => command.palette ?? []);
 const view = (id: string) => extension.views?.find((candidate) => candidate.id === id);
-
 describe("workbench-fixture workbench attachments", () => {
   test("refreshes artifact renderers from the shared artifact event", () => {
     expect(view("artifacts")?.body.refreshEvents).toEqual([labArtifactsChanged]);
     expect(view("artifact-create")?.body.refreshEvents).toEqual([labArtifactsChanged]);
     expect(view("workflow")?.body.refreshEvents).toEqual([labArtifactsChanged]);
   });
-
   test("uses stored artifact resources as movable workflow rows", async () => {
     const artifacts = new Map<string, Record<string, unknown>>();
     const values = new Map<string, unknown>();
@@ -34,14 +32,19 @@ describe("workbench-fixture workbench attachments", () => {
       }),
     };
     const events = {
-      emit: async (event: string | { id: string }) => {
+      emit: async (
+        event:
+          | string
+          | {
+              id: string;
+            },
+      ) => {
         emitted.push(typeof event === "string" ? event : event.id);
         return { delivered: 0 };
       },
     };
     const workflow = view("workflow")?.body;
     if (workflow?.kind !== "kanban") throw new Error("Workflow Kanban view is missing.");
-
     const initial = await workflow.query({ events, storage } as never, {} as never);
     expect(initial.rows).toEqual(
       expect.arrayContaining([
@@ -53,13 +56,11 @@ describe("workbench-fixture workbench attachments", () => {
       ]),
     );
     expect(workflow.onAttributeChange).toBeFunction();
-
     await workflow.onAttributeChange?.({ events, storage } as never, {
       rowId: "concept",
       attributeId: "status",
       value: "testing",
     });
-
     const moved = await workflow.query({ events, storage } as never, {} as never);
     expect(moved.rows.find((row) => row.id === "concept")).toMatchObject({
       attributes: { status: "testing" },
@@ -68,7 +69,6 @@ describe("workbench-fixture workbench attachments", () => {
     expect(artifacts.get("concept")).toMatchObject({ status: "testing" });
     expect(emitted).toContain("artifacts.changed");
   });
-
   test("exercises PS-313 attachment targets", () => {
     expect(commandMenus()).toEqual(
       expect.arrayContaining([
@@ -107,14 +107,12 @@ describe("workbench-fixture workbench attachments", () => {
     expect(extension.pages?.find((page) => page.id === "lab")).toMatchObject({
       path: "lab",
       mode: { extensionId: "pstdio", kind: "mode", id: "project" },
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          view: { kind: "view", id: "lab-page" },
-        },
-      ],
+      main: {
+        kind: "view",
+        view: { kind: "view", id: "lab-page" },
+        cardinality: "one",
+      },
+      slots: [],
     });
     expect(extension.navigationItems?.find((item) => item.id === "lab")).toMatchObject({
       action: { kind: "page", page: { kind: "page", id: "lab" } },
@@ -126,7 +124,8 @@ describe("workbench-fixture workbench attachments", () => {
       view: { kind: "view", id: "camera-tree" },
     });
   });
-
+});
+describe("lab composition", () => {
   test("stages a single Lab mode with native activity items and status chrome", () => {
     expect(extension.modes?.map((mode) => mode.id)).toEqual(["lab"]);
     expect(extension.modes?.[0]).toMatchObject({
@@ -140,9 +139,8 @@ describe("workbench-fixture workbench attachments", () => {
     });
     const labModePage = extension.pages?.find((page) => page.id === "lab-mode");
     expect(labModePage).toMatchObject({ mode: { kind: "mode", id: "lab" } });
-    expect(labModePage?.slots.find((slot) => slot.id === "content")).toMatchObject({
-      id: "content",
-      role: "primary",
+    expect(labModePage?.main).toMatchObject({
+      kind: "view",
       view: { kind: "view", id: "overview" },
     });
     expect(extension.navigationItems?.find((item) => item.id === "lab-mode")).toMatchObject({
@@ -154,7 +152,6 @@ describe("workbench-fixture workbench attachments", () => {
     });
     expect(view("status")?.body).toMatchObject({ kind: "webview", entry: { path: "./src/views/lab-status-bar.tsx" } });
   });
-
   test("gives each main view an icon and a separate action menu", () => {
     expect(view("overview")).toMatchObject({
       icon: "layout-dashboard",
@@ -181,7 +178,6 @@ describe("workbench-fixture workbench attachments", () => {
       onValueChange: expect.any(Function),
     });
   });
-
   test("opens artifacts as a side inspector bound to the resource kind", () => {
     expect(view("artifact-detail")?.body).toMatchObject({
       kind: "webview",
@@ -190,18 +186,21 @@ describe("workbench-fixture workbench attachments", () => {
     expect(extension.resourceKinds?.find((kind) => kind.id === "glass-lab-artifact")).toMatchObject({
       id: "glass-lab-artifact",
     });
-    expect(extension.pages?.find((page) => page.id === "lab-mode")?.slots[1]).toMatchObject({
+    expect(
+      extension.pages?.find((page) => page.id === "lab-mode")?.slots.find((slot) => slot.id === "artifact"),
+    ).toMatchObject({
       id: "artifact",
-      role: "auxiliary",
       region: "side",
-      binding: {
-        kind: { id: "glass-lab-artifact" },
-        view: { id: "artifact-detail" },
-        cardinality: "many",
+      item: {
+        kind: "binding",
+        binding: {
+          kinds: [{ id: "glass-lab-artifact" }],
+          view: { id: "artifact-detail" },
+          cardinality: "many",
+        },
       },
     });
   });
-
   test("keeps the remaining lab surfaces", () => {
     const labPage = view("lab-page");
     expect(labPage?.body.kind === "webview" ? labPage.body.capabilities : undefined).toContain("notification.action");

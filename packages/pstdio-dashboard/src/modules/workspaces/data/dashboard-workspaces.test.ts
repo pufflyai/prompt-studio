@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { buildDashboardWorkspacesFromRows, toWorkspaceDataTableRow } from "./dashboard-workspaces";
 
 const rows = {
@@ -63,7 +64,7 @@ describe("dashboard workspaces", () => {
       diffOverview: "+83 -9",
       diffFileCount: 4,
       resource: {
-        kind: "workspace",
+        type: "workspace",
         id: "workspace-1",
         metadata: {
           diffOverview: "+83 -9",
@@ -231,7 +232,7 @@ describe("dashboard workspaces", () => {
     });
 
     expect(toWorkspaceDataTableRow(workspace)).toMatchObject({
-      id: "pstdio://extension-resource/workspace/workspace-1",
+      id: resourceKey({ type: "workspace", id: "workspace-1" }),
       values: {
         attempt: "PS-307_A1",
         name: "Dashboard workbench datalayer",

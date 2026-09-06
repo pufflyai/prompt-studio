@@ -16,6 +16,7 @@ import {
 const FAKE_ID = testHarnessId("fake");
 
 let app: OpenAPIHono<AppBindings>;
+let closeApp: () => Promise<void>;
 let tempRoot: string;
 
 // Mirrors the canonical fake harness: pushes a user + assistant message then completes shortly after.
@@ -82,7 +83,7 @@ const waitForSessionStatus = async (sessionId: string, expectedStatus: string) =
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-create-session-test-"));
-  ({ app } = await createTestApp({
+  ({ app, close: closeApp } = await createTestApp({
     databasePath: ":memory:",
     storageRoot: join(tempRoot, "storage"),
     harnessRegistry: createTestHarnessRegistry([
@@ -99,7 +100,8 @@ beforeAll(async () => {
   }));
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await closeApp();
   rmSync(tempRoot, { recursive: true, force: true });
 });
 

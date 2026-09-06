@@ -34,7 +34,15 @@ test("restores an open extension page after a transient metadata gap", async () 
     title: "Start",
     path: "",
     modeId: "project",
-    slots: [{ id: "content", role: "primary", region: "main", viewId: "start" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "start",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   selectDashboardProject(workbench, { id: projectId, name: "Extension page refresh" });
   const extensions = workbench.registerModule(
@@ -44,7 +52,6 @@ test("restores an open extension page after a transient metadata gap", async () 
     }),
   );
   const writer = getWriter("extension_instances");
-
   try {
     await flushMicrotasks();
     await flushMicrotasks();
@@ -54,7 +61,6 @@ test("restores an open extension page after a transient metadata gap", async () 
       page: { extensionId: "pstdio.extension-lab", kind: "page", id: "labPage" },
     });
     expect(open.ok).toBe(true);
-
     currentMetadata = {
       ...surroundingMetadata,
       views: surroundingMetadata.views.map((view) =>
@@ -73,18 +79,15 @@ test("restores an open extension page after a transient metadata gap", async () 
     await flushMicrotasks();
     await flushMicrotasks();
     expect(workbench.pages.store.getState().activePageId).toBe("pstdio.extension-lab.page.labPage");
-
     currentMetadata = emptyDashboardExtensionMetadata;
     writer?.upsert({ id: "transient-gap" });
     await flushMicrotasks();
     await flushMicrotasks();
     expect(workbench.pages.store.getState().activePageId).toBe("start");
-
     currentMetadata = surroundingMetadata;
     writer?.upsert({ id: "restored-metadata" });
     await flushMicrotasks();
     await flushMicrotasks();
-
     expect(workbench.pages.store.getState()).toMatchObject({
       activePageId: "pstdio.extension-lab.page.labPage",
       location: { page: { extensionId: "pstdio.extension-lab", kind: "page", id: "labPage" } },

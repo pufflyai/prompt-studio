@@ -99,7 +99,8 @@ export const createBreadcrumbWorkbench = () => {
       path: page.path,
       modeId: "review",
       parentId: page.parentId,
-      slots: [{ id: "content", role: "primary", region: "main", viewId }],
+      main: { kind: "view", view: { kind: "view", id: viewId }, cardinality: "one" },
+      slots: [],
     });
   }
 

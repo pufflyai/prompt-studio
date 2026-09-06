@@ -1,10 +1,6 @@
-import type { ResourceRef as PageResourceRef } from "@pstdio/sdk/extensions";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { LayoutModel, WorkbenchRegion } from "../../registries/layout/layout-model";
-import {
-  activateInLayout,
-  createPlacement,
-  getActiveLocationPlacement,
-} from "../../registries/layout/layout-operations";
+import { createPlacement } from "../../registries/layout/layout-operations";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import {
   applyOwnedWidgetLayoutReconciliation,
@@ -14,7 +10,9 @@ import { placementIdentityKey } from "../../registries/layout/placement-reconcil
 import type { WorkbenchModePlacementRegistry } from "../../registries/modes/mode-placement-registry";
 import type { WorkbenchModeRegistry } from "../../registries/modes/mode-registry";
 import { activateWorkbenchPageMode } from "../../registries/modes/mode-registry-internals";
+import { pagePlacementDeclarations } from "../../registries/pages/page-main";
 import {
+  type CreateWorkbenchPageRegistryInput,
   createWorkbenchPageRegistry,
   type WorkbenchPagePlacementInput,
   type WorkbenchPageRegistry,
@@ -22,12 +20,15 @@ import {
   type WorkbenchPageResourceCodec,
 } from "../../registries/pages/page-registry";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
+import { createOwnedPlacementState } from "../../registries/placements/owned-placement-lifecycle";
+import { getOwnedPlacementPreparation } from "../../registries/placements/owned-placement-preparation";
 import type { WorkbenchShellPlacementRegistry } from "../../registries/placements/shell-placement-registry";
 import type { WorkbenchViewMenuRegistry } from "../../registries/view-menus/view-menu-registry";
 import { pagePlacementContributionId, registerWorkbenchViewPlacement } from "../../registries/views/view-placement";
 import type { WorkbenchViewRegistry } from "../../registries/views/view-registry";
+import { contributionRefId } from "../../shared/contributions/reference-id";
 import { createDisposable } from "../../shared/disposable";
-
+import { defaultPageResourceCodec } from "../page-location/page-resource-codec";
 export interface ConnectWorkbenchPageRuntimeInput {
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   revealRegion?(region: WorkbenchRegion): void;
@@ -35,12 +36,10 @@ export interface ConnectWorkbenchPageRuntimeInput {
   modes: WorkbenchModeRegistry;
   registry: WorkbenchPageRegistry<WorkbenchWidgetPlacement>;
 }
-
 const syncOwnedPanelMenus = (layout: LayoutModel) => {
   const ownedPlacements = Object.values(layout.getLayout().regions)
     .flatMap((region) => region.widgets)
     .filter((placement) => Boolean(placement.placementIdentity));
-
   for (const placement of ownedPlacements) {
     const owner = layout.getWidget(placement.contributionId);
     for (const menuId of owner?.ownedPanelMenuIds ?? []) {
@@ -57,27 +56,15 @@ const syncOwnedPanelMenus = (layout: LayoutModel) => {
   }
   layout.reconcilePanelMenus();
 };
-
 const bindPlacementsToActivePageLocation = (state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>) => {
-  const pageId = state.activePageId;
-  const instanceKey = pageId ? state.pageStates[pageId]?.activePrimaryInstanceKey : undefined;
-  if (!pageId || !instanceKey) return state.placements;
-  const location = state.placements.find(
-    (placement) =>
-      placement.identity.kind === "page" &&
-      placement.identity.pageId === pageId &&
-      placement.identity.instanceKey === instanceKey &&
-      placement.value.role === "location",
-  );
-  const ownerResourceUri = location?.value.resourceUri;
-  if (!ownerResourceUri) return state.placements;
+  const ownerResourceKey = resourceKey(state.location?.resource);
+  if (!ownerResourceKey) return state.placements;
   return state.placements.map((placement) =>
-    placement.value.role === "sub-panel" && (placement.identity.kind === "page" || Boolean(placement.value.resourceUri))
-      ? { ...placement, value: { ...placement.value, ownerResourceUri } }
+    placement.value.role === "sub-panel" && (placement.identity.kind === "page" || Boolean(placement.value.resourceKey))
+      ? { ...placement, value: { ...placement.value, ownerResourceKey } }
       : placement,
   );
 };
-
 const applyPageState = (
   input: ConnectWorkbenchPageRuntimeInput,
   state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>,
@@ -106,19 +93,6 @@ const applyPageState = (
         remove: latest.reconciliation.remove.map((placement) => placement.identity),
       });
     }
-    const location = getActiveLocationPlacement(layout);
-    if (
-      location &&
-      layout.regions.main.activeWidgetId === location.widgetId &&
-      input.layout.getWidget(location.contributionId)?.subPanelsOnly
-    ) {
-      const panel = layout.regions.main.widgets.find(
-        (placement) =>
-          placement.role === "sub-panel" &&
-          (!placement.ownerResourceUri || placement.ownerResourceUri === location.resourceUri),
-      );
-      if (panel) layout = activateInLayout(layout, "main", panel);
-    }
     input.layout.restoreLayout(layout);
     syncOwnedPanelMenus(input.layout);
     if (source === "transition") {
@@ -126,7 +100,6 @@ const applyPageState = (
     }
   });
 };
-
 export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeInput) => {
   let applyingTransition = false;
   const runtime = getWorkbenchPageRegistryInternals(input.registry).connectRuntime((state) => {
@@ -147,47 +120,17 @@ export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeIn
     runtime.dispose();
   });
 };
-
-const parsePageResourceUri = (uri: string) => {
-  try {
-    const parsed = new URL(uri);
-    if (parsed.protocol !== "pstdio:" || parsed.hostname !== "extension-resource") return undefined;
-    const [type, id, ...rest] = parsed.pathname.slice(1).split("/");
-    if (!type || !id || rest.length > 0) return undefined;
-    return { type: decodeURIComponent(type), id: decodeURIComponent(id) };
-  } catch {
-    return undefined;
-  }
-};
-
-export const defaultPageResourceCodec: WorkbenchPageResourceCodec = {
-  normalize: (resource) => ({ ...resource }),
-  toUri: (resource) =>
-    `pstdio://extension-resource/${encodeURIComponent(resource.type)}/${encodeURIComponent(resource.id)}`,
-  fromUri: parsePageResourceUri,
-};
-
-export const toWorkbenchPageResource = (resource: PageResourceRef, codec: WorkbenchPageResourceCodec) => ({
-  kind: resource.type,
-  uri: codec.toUri(resource),
-  id: resource.id,
-  label: resource.label,
-  metadata: resource.metadata,
-});
-
 const toTabState = (open: WorkbenchPagePlacementInput["open"]) => {
   if (!open) return {};
   if (open === "pin") return { pinned: true, tabRetention: "persistent" as const };
   return { pinned: false, tabRetention: "preview" as const };
 };
-
 const toWidgetPlacement = (
   input: WorkbenchPagePlacementInput,
-  resources: WorkbenchPageResourceCodec,
   layout: LayoutModel,
   views: WorkbenchViewRegistry,
 ): WorkbenchWidgetPlacement => {
-  const resource = input.resource ? toWorkbenchPageResource(input.resource, resources) : undefined;
+  const resource = input.resource;
   const view = views.getView(input.viewId);
   if (!view) throw new Error(`Workbench page view is not registered: ${input.viewId}`);
   const panelId = pagePlacementContributionId(input.pageId, input.slotId);
@@ -196,7 +139,7 @@ const toWidgetPlacement = (
   return {
     ...createPlacement(`workbench.page.${encodeURIComponent(placementIdentityKey(input.identity))}`, panel, {
       viewId: input.viewId,
-      title: view.title ?? panel.title,
+      title: resource?.label ?? view.title ?? panel.title,
       role: input.role === "primary" ? "location" : "sub-panel",
       closable: input.closable,
       ...(resource ? { resource } : {}),
@@ -205,8 +148,8 @@ const toWidgetPlacement = (
     ...(input.section ? { section: input.section } : {}),
   };
 };
-
 export interface CreateLiveWorkbenchPageRegistryInput {
+  restorePageState?: CreateWorkbenchPageRegistryInput<WorkbenchWidgetPlacement>["restorePageState"];
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   revealRegion?(region: WorkbenchRegion): void;
   layout: LayoutModel;
@@ -217,20 +160,24 @@ export interface CreateLiveWorkbenchPageRegistryInput {
   views: WorkbenchViewRegistry;
   viewMenus?: WorkbenchViewMenuRegistry;
 }
-
 export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRegistryInput) => {
   const resources = input.resources ?? defaultPageResourceCodec;
   const registry = createWorkbenchPageRegistry<WorkbenchWidgetPlacement>({
-    resolveShellPlacements: () => input.shellPlacements.resolvePlacements(),
-    resolveModePlacements: (modeId) => input.modePlacements.resolvePlacements(modeId),
-    resolvePagePlacement: (placement) => toWidgetPlacement(placement, resources, input.layout, input.views),
+    restorePageState: input.restorePageState,
+    validateMode: (modeId) => {
+      if (!input.modes.getMode(modeId)) throw new Error(`Workbench mode not registered: ${modeId}`);
+    },
+    resolveShellPlacements: (context) => input.shellPlacements.resolvePlacements(context),
+    resolveModePlacements: (modeId, location, projectId, pageId) =>
+      input.modePlacements.resolvePlacements(modeId, projectId ? { modeId, location, projectId, pageId } : undefined),
+    resolvePagePlacement: (placement) => toWidgetPlacement(placement, input.layout, input.views),
     resources,
     valuesEqual: (left, right) => JSON.stringify(left) === JSON.stringify(right),
     registerPagePlacements: (page) => {
-      const registrations = page.slots.map((slot) => {
-        const viewId = slot.viewId ?? slot.binding?.viewId;
+      const registrations = pagePlacementDeclarations(page).map((slot) => {
+        const viewId = contributionRefId(slot.item.kind === "view" ? slot.item.view : slot.item.binding.view);
         if (!viewId) throw new Error(`Workbench page slot view is not registered: ${page.id}.${slot.id}`);
-        const closable = slot.role === "auxiliary" && (!slot.viewId || slot.presence !== "fixed");
+        const closable = slot.item.kind === "binding" || slot.item.presence !== "fixed";
         return registerWorkbenchViewPlacement(
           input.layout,
           input.views,
@@ -239,7 +186,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
             id: pagePlacementContributionId(page.id, slot.id),
             viewId,
             role: slot.role === "primary" ? "location" : "sub-panel",
-            singleton: slot.binding?.cardinality !== "many",
+            singleton: slot.item.kind === "view" || slot.item.binding.cardinality !== "many",
             closable,
           },
           input.viewMenus,
@@ -251,13 +198,35 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     },
   });
   connectWorkbenchPageRuntime({
-    beforeApply: input.beforeApply,
+    beforeApply: (state) => {
+      input.beforeApply?.(state);
+      const shell = getOwnedPlacementPreparation(input.shellPlacements);
+      shell.apply(
+        shell.adopt!(
+          state.activeModeId ?? "",
+          state.placements.map((placement) => ({ ...placement.value, placementIdentity: placement.identity })),
+        ),
+      );
+      const mode = getOwnedPlacementPreparation(input.modePlacements);
+      if (state.projectId !== registry.store.getState().projectId) mode.apply(createOwnedPlacementState());
+      if (state.activeModeId)
+        mode.apply(
+          mode.adopt!(
+            state.activeModeId,
+            state.placements.map((placement) => ({ ...placement.value, placementIdentity: placement.identity })),
+          ),
+        );
+    },
     revealRegion: input.revealRegion,
     layout: input.layout,
     modes: input.modes,
     registry,
   });
-  input.modePlacements.onDidChange(() => getWorkbenchPageRegistryInternals(registry).refreshModePlacements());
-  input.shellPlacements.onDidChange(() => getWorkbenchPageRegistryInternals(registry).refreshShellPlacements());
+  getOwnedPlacementPreparation(input.modePlacements).connectRuntime(() =>
+    getWorkbenchPageRegistryInternals(registry).refreshModePlacements(),
+  );
+  getOwnedPlacementPreparation(input.shellPlacements).connectRuntime(() =>
+    getWorkbenchPageRegistryInternals(registry).refreshShellPlacements(),
+  );
   return registry;
 };

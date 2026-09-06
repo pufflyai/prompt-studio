@@ -1,33 +1,23 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type { NavigationTarget as ExtensionNavigationTarget } from "@pstdio/sdk/extensions";
 import type { ParamObjectSchema } from "pstdio-api-contracts";
-import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 import type { InternalWorkbenchExtensionMetadata } from "./internal-workbench-extension-metadata";
 import { metadataCommandId, metadataRefId, toInternalWhen } from "./workbench-extension-metadata-ref";
 import { toInternalWorkbenchPages } from "./workbench-extension-page-metadata";
 import type { WorkbenchExtensionTabMetadata } from "./workbench-extension-tab-presentation";
 
 type MetadataView = WorkbenchExtensionMetadata["views"][number];
-
-const firstKindId = <Ref extends { id: string }>(value: Ref | readonly Ref[]) =>
-  (Array.isArray(value) ? value[0] : value)?.id;
-
 const resourceKindForView = (metadata: WorkbenchExtensionMetadata, viewId: string) => {
-  const pageBinding = metadata.pages
-    .flatMap((page) => page.slots)
-    .flatMap((slot) => ("binding" in slot && slot.binding ? [slot.binding] : []))
-    .find((binding) => metadataRefId(binding.view) === viewId);
-  if (pageBinding) return firstKindId(pageBinding.kind);
-
-  const placement = metadata.placements.find(
-    (candidate) => candidate.item.kind === "binding" && metadataRefId(candidate.item.view) === viewId,
+  const bindings = metadata.pages.flatMap((page) => [
+    ...(page.main.kind === "view" && page.resource ? [{ ...page.resource, view: page.main.view }] : []),
+    ...page.slots.flatMap((slot) => (slot.item.kind === "binding" ? [slot.item.binding] : [])),
+  ]);
+  bindings.push(
+    ...metadata.placements.flatMap((placement) => (placement.item.kind === "binding" ? [placement.item.binding] : [])),
   );
-  return placement?.item.kind === "binding" ? firstKindId(placement.item.resourceKind) : undefined;
+  return bindings.find((binding) => metadataRefId(binding.view) === viewId)?.kinds[0]?.id;
 };
-
 const viewBody = (view: MetadataView) =>
   view.body.kind === "webview" ? { webview: view.body.webview } : { renderer: { kind: view.body.kind, id: view.id } };
-
 const panelMenus = (metadata: WorkbenchExtensionMetadata, owner: MetadataView) =>
   metadata.viewMenus.flatMap((menu) => {
     if (metadataRefId(menu.owner) !== owner.id) return [];
@@ -49,7 +39,6 @@ const panelMenus = (metadata: WorkbenchExtensionMetadata, owner: MetadataView) =
       },
     ];
   });
-
 const panels = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensionMetadata["panels"] =>
   metadata.views.map((view) => {
     const menus = panelMenus(metadata, view);
@@ -62,10 +51,16 @@ const panels = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensio
       ...viewBody(view),
     };
   });
-
-const commandActions = <T extends { command: { extensionId: string; id: string } }>(actions: T[] | undefined) =>
-  actions?.map(({ command, ...action }) => ({ ...action, commandId: metadataCommandId(command) }));
-
+const commandActions = <
+  T extends {
+    command: {
+      extensionId: string;
+      id: string;
+    };
+  },
+>(
+  actions: T[] | undefined,
+) => actions?.map(({ command, ...action }) => ({ ...action, commandId: metadataCommandId(command) }));
 const kanbanRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensionMetadata["kanbanRenderers"] =>
   metadata.views.flatMap((view) => {
     const body = view.body;
@@ -100,7 +95,6 @@ const kanbanRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenc
       },
     ];
   });
-
 const dataTableRenderers = (
   metadata: WorkbenchExtensionMetadata,
 ): InternalWorkbenchExtensionMetadata["dataTableRenderers"] =>
@@ -120,7 +114,6 @@ const dataTableRenderers = (
       },
     ];
   });
-
 const treeRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensionMetadata["treeRenderers"] =>
   metadata.views.flatMap((view) =>
     view.body.kind === "tree"
@@ -136,7 +129,6 @@ const treeRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchE
         ]
       : [],
   );
-
 const fileRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensionMetadata["fileRenderers"] =>
   metadata.views.flatMap((view) =>
     view.body.kind === "file"
@@ -152,7 +144,6 @@ const fileRenderers = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchE
         ]
       : [],
   );
-
 const controlsRenderers = (
   metadata: WorkbenchExtensionMetadata,
 ): InternalWorkbenchExtensionMetadata["controlsRenderers"] =>
@@ -170,7 +161,6 @@ const controlsRenderers = (
         ]
       : [],
   );
-
 const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtensionMetadata["modes"] =>
   metadata.modes.map((mode) => ({
     id: mode.id,
@@ -190,7 +180,6 @@ const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtension
         }
       : {}),
   }));
-
 export const toInternalWorkbenchExtensionMetadata = (
   metadata: WorkbenchExtensionMetadata,
   input: {
@@ -211,25 +200,7 @@ export const toInternalWorkbenchExtensionMetadata = (
       id: placement.id,
       ref: { extensionId: placement.extensionId, kind: "placement", id: placement.localId },
       modeId: metadataRefId(placement.mode),
-      item:
-        placement.item.kind === "view"
-          ? { kind: "view", viewId: metadataRefId(placement.item.view), presence: placement.item.presence }
-          : {
-              kind: "resource",
-              viewId: metadataRefId(placement.item.view),
-              resourceKinds: (Array.isArray(placement.item.resourceKind)
-                ? placement.item.resourceKind
-                : [placement.item.resourceKind]
-              ).map((kind) => kind.id),
-              cardinality: placement.item.cardinality,
-              ...(placement.item.add
-                ? {
-                    add: toWorkbenchNavigationTarget(placement.item.add as ExtensionNavigationTarget, {
-                      extensionId: placement.extensionId,
-                    }),
-                  }
-                : {}),
-            },
+      item: placement.item,
       region: placement.region,
       order: placement.order,
       movableTo: placement.movableTo,

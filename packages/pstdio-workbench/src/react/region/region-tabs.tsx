@@ -30,16 +30,14 @@ interface WorkbenchRegionTabsProps {
   region: WorkbenchRegionId;
   visibilityStorageKey?: string;
 }
-
 const resolvePlacementIcon = (workbench: WorkbenchCore, placement: WorkbenchWidgetPlacement) => {
   const iconName = resolveTabIconName(
     placement,
     workbench.layout.getWidget(placement.contributionId),
-    placement.resource ? workbench.resources.getKind(placement.resource.kind)?.icon : undefined,
+    placement.resource ? workbench.resources.getKind(placement.resource.type)?.icon : undefined,
   );
   return iconName ? <WorkbenchIcon name={iconName} size={14} /> : undefined;
 };
-
 export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const { workbench, region, visibilityStorageKey } = props;
   const {
@@ -60,7 +58,6 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const [viewport, setViewport] = useState<HTMLDivElement | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [anchor, setAnchor] = useState({ x: 0, y: 0, width: 0, height: 0 });
-
   const menuActions = buildTabVisibilityMenuActions(
     subPanelPlacements,
     tabOverrides,
@@ -79,31 +76,25 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
   const hasVisibilityMenu = menuActions.length > 0;
   const openVisibilityMenu = (event: ReactMouseEvent<HTMLElement>) => {
     if (!hasVisibilityMenu) return;
-
     event.preventDefault();
     const target = event.target instanceof Element ? event.target.closest('[role="tab"]') : undefined;
     const rect = (target ?? event.currentTarget).getBoundingClientRect();
     setAnchor({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });
     setMenuOpen(true);
   };
-
   // Translate vertical wheel into horizontal scrolling so the tab strip scrolls
   // with a plain mouse wheel — no modifier key required.
   useEffect(() => {
     if (!viewport) return;
-
     const onWheel = (event: WheelEvent) => {
       if (event.deltaY === 0 || viewport.scrollWidth <= viewport.clientWidth) return;
       viewport.scrollLeft += event.deltaY;
       event.preventDefault();
     };
-
     viewport.addEventListener("wheel", onWheel, { passive: false });
     return () => viewport.removeEventListener("wheel", onWheel);
   }, [viewport]);
-
   if (!showTabs && !hasActions) return null;
-
   const activeWidgetId = resolveDisplayedActiveWidgetId(visiblePlacements, regionState.activeWidgetId);
   const onSelectLeadingItem = (item: WorkbenchMenuItem) => {
     const command = commands[item.commandId]?.command;
@@ -113,7 +104,6 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
     }
     void workbench.commands.executeCommand(item.commandId, item.args).catch(() => undefined);
   };
-
   const leadingActions = leadingItems.map((item) => (
     <Tooltip key={item.id} content={item.label}>
       <IconButton
@@ -132,7 +122,6 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
       </IconButton>
     </Tooltip>
   ));
-
   if (!showTabs) {
     return (
       <HStack flex="1 1 auto" h="full" minW="0" gap="2xs">
@@ -148,7 +137,6 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
       </HStack>
     );
   }
-
   return (
     <Tabs.Root
       value={activeWidgetId}
@@ -174,7 +162,7 @@ export const WorkbenchRegionTabs = (props: WorkbenchRegionTabsProps) => {
       onContextMenu={hasVisibilityMenu ? openVisibilityMenu : undefined}
     >
       {/* Overflowing tabs scroll horizontally; the overlay scrollbar adds no
-          height so the active tab still meets the header's bottom edge. */}
+            height so the active tab still meets the header's bottom edge. */}
       <ScrollArea
         viewportRef={setViewport}
         size="xs"

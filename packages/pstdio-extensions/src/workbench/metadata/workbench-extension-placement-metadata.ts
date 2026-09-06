@@ -1,20 +1,22 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type { ResourceKindRef } from "@pstdio/sdk/extensions";
-import type { ExtensionRuntime, RuntimePageSlot, RuntimePlacementTab } from "../../types/runtime";
+import type { PlacementItem } from "@pstdio/sdk/extensions";
+import type { ExtensionRuntime, RuntimePageMain, RuntimePageSlot, RuntimePlacementTab } from "../../types/runtime";
 import { normalizedRef, normalizeTarget, refreshEventIds } from "./workbench-extension-metadata-normalizers";
 
-type MetadataPageSlot = WorkbenchExtensionMetadata["pages"][number]["slots"][number];
-type MetadataSlotBinding = NonNullable<Extract<MetadataPageSlot, { binding: unknown }>["binding"]>;
-
-const bindingRecord = (binding: NonNullable<RuntimePageSlot["binding"]>, extensionId: string): MetadataSlotBinding => ({
-  kind: Array.isArray(binding.kind)
-    ? binding.kind.map((kind) => normalizedRef(kind, extensionId))
-    : normalizedRef(binding.kind as ResourceKindRef, extensionId),
-  view: normalizedRef(binding.view, extensionId),
-  cardinality: binding.cardinality,
-  add: binding.add ? (normalizeTarget(binding.add, extensionId) as MetadataSlotBinding["add"]) : undefined,
-});
-
+type MetadataItem = WorkbenchExtensionMetadata["placements"][number]["item"];
+const itemRecord = (item: PlacementItem, extensionId: string): MetadataItem => {
+  if (item.kind === "view") return { ...item, view: normalizedRef(item.view, extensionId) };
+  const { binding } = item;
+  return {
+    kind: "binding",
+    binding: {
+      kinds: binding.kinds.map((kind) => normalizedRef(kind, extensionId)),
+      view: normalizedRef(binding.view, extensionId),
+      cardinality: binding.cardinality,
+      add: binding.add ? normalizeTarget(binding.add, extensionId) : undefined,
+    },
+  };
+};
 const tabRecord = (tab: RuntimePlacementTab | undefined, extensionId: string) =>
   tab
     ? {
@@ -22,44 +24,15 @@ const tabRecord = (tab: RuntimePlacementTab | undefined, extensionId: string) =>
         refreshEventIds: refreshEventIds(tab.refreshEvents, extensionId),
       }
     : undefined;
-
-const slotRecord = (slot: RuntimePageSlot, extensionId: string): MetadataPageSlot => {
-  const base = {
-    id: slot.id,
-    region: slot.region,
-    order: slot.order,
-    mountStrategy: slot.mountStrategy,
-    hiddenByDefault: slot.hiddenByDefault,
-    headerBorderBottom: slot.headerBorderBottom,
-    tab: tabRecord(slot.tab, extensionId),
-  };
-  if (slot.role === "primary") {
-    return {
-      ...base,
-      role: "primary",
-      region: "main",
-      subPanelsOnly: slot.subPanelsOnly,
-      ...(slot.binding
-        ? { binding: bindingRecord(slot.binding, extensionId) }
-        : { view: normalizedRef(slot.view!, extensionId) }),
-    };
-  }
-  if (slot.view) {
-    return {
-      ...base,
-      role: "auxiliary",
-      view: normalizedRef(slot.view, extensionId),
-      presence: slot.presence,
-    };
-  }
-  return {
-    ...base,
-    role: "auxiliary",
-    binding: bindingRecord(slot.binding, extensionId),
-    openOn: slot.openOn,
-  };
+const mainRecord = (main: RuntimePageMain, extensionId: string) => {
+  if (main.kind === "panels") return { ...main, empty: normalizedRef(main.empty, extensionId) };
+  return { ...main, view: normalizedRef(main.view, extensionId), tab: tabRecord(main.tab, extensionId) };
 };
-
+const slotRecord = (slot: RuntimePageSlot, extensionId: string) => ({
+  ...slot,
+  item: itemRecord(slot.item, extensionId),
+  tab: tabRecord(slot.tab, extensionId),
+});
 export const toPageRecords = (runtime: ExtensionRuntime): WorkbenchExtensionMetadata["pages"] =>
   runtime.pages.map((page) => ({
     id: page.id,
@@ -70,33 +43,19 @@ export const toPageRecords = (runtime: ExtensionRuntime): WorkbenchExtensionMeta
     path: page.contribution.path,
     mode: normalizedRef(page.contribution.mode, page.extensionId),
     parent: page.contribution.parent ? normalizedRef(page.contribution.parent, page.extensionId) : undefined,
+    resource: page.contribution.resource
+      ? { kinds: page.contribution.resource.kinds.map((kind) => normalizedRef(kind, page.extensionId)) }
+      : undefined,
+    main: mainRecord(page.contribution.main, page.extensionId),
     slots: page.contribution.slots.map((slot) => slotRecord(slot, page.extensionId)),
   }));
-
 export const toPlacementRecords = (runtime: ExtensionRuntime): WorkbenchExtensionMetadata["placements"] =>
   runtime.placements.map((placement) => ({
     id: placement.id,
     localId: placement.localId,
     extensionId: placement.extensionId,
     mode: normalizedRef(placement.contribution.mode, placement.extensionId),
-    item:
-      placement.contribution.item.kind === "view"
-        ? {
-            kind: "view",
-            view: normalizedRef(placement.contribution.item.view, placement.extensionId),
-            presence: placement.contribution.item.presence,
-          }
-        : {
-            kind: "binding",
-            resourceKind: Array.isArray(placement.contribution.item.resourceKind)
-              ? placement.contribution.item.resourceKind.map((kind) => normalizedRef(kind, placement.extensionId))
-              : normalizedRef(placement.contribution.item.resourceKind as ResourceKindRef, placement.extensionId),
-            view: normalizedRef(placement.contribution.item.view, placement.extensionId),
-            cardinality: placement.contribution.item.cardinality,
-            add: placement.contribution.item.add
-              ? (normalizeTarget(placement.contribution.item.add, placement.extensionId) as MetadataSlotBinding["add"])
-              : undefined,
-          },
+    item: itemRecord(placement.contribution.item, placement.extensionId),
     region: placement.contribution.region,
     order: placement.contribution.order,
     movableTo: placement.contribution.movableTo ? [...placement.contribution.movableTo] : undefined,

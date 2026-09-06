@@ -18,10 +18,17 @@ describe("createExtensionWebviewHostCapabilities", () => {
       title: "Tickets",
       path: "tickets",
       modeId: "project",
-      slots: [{ id: "content", role: "primary", region: "main", viewId: "tickets" }],
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "tickets",
+        },
+        cardinality: "one",
+      },
+      slots: [],
     });
     workbench.pageLocations.setProject("project-1");
-
     const capabilities = createExtensionWebviewHostCapabilities({
       executeCommand: async () => ({}),
       extensionIdForWebview: () => "pstdio.lab",
@@ -32,9 +39,7 @@ describe("createExtensionWebviewHostCapabilities", () => {
       webviewId: "panel-1",
       workbench,
     } as never);
-
     await capabilities["navigation.open"]?.({ target: { kind: "page", page: { kind: "page", id: "tickets" } } });
-
     expect(workbench.pages.store.getState().activePageId).toBe("pstdio.lab.page.tickets");
   });
 });

@@ -39,9 +39,7 @@ The outer setup prepares the workbench:
 - `title` is the user-facing page name.
 - `path` is the URL path segment for the page location.
 - `modeId` names the mode that owns the page. Opening the page activates that mode.
-- `slots` declares the placements the page owns. Each page here has one primary slot: `role: "primary"` in
-  `region: "main"`, with `viewId` naming the page content View. The primary slot is always present while the page is
-  open.
+- `main: { kind: "view", view, cardinality: "one" }` renders the page content. `slots` contains additional panels.
 
 The tree `body` inside `ctx.views.registerView(...)` supplies the tree data:
 
@@ -62,7 +60,7 @@ The tree `body` inside `ctx.views.registerView(...)` supplies the tree data:
 - `ref` is the public placement reference. Navigation targets and keybindings can address the placement through it.
 - `modeId` names the mode that owns the placement. The placement appears only while that mode is active.
 - `item.kind: "view"` says this is one static View rather than a resource-bound set of instances.
-- `item.viewId` names the registered View to render.
+- `item.view` names the registered View to render.
 - `item.presence: "fixed"` keeps the tree open while the mode is active. The user cannot close it and the Add panel
   does not offer it.
 - `region` puts the placement in the `sidenav` region.

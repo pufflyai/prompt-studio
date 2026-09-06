@@ -1,4 +1,4 @@
-import type { GuestHost } from "@pstdio/sdk/extensions";
+import type { CommandResponse, GuestHost, JsonObject } from "@pstdio/sdk/extensions";
 
 export type CounterCommandId =
   | "pstdio.workbench-fixture.command.counter.bump"
@@ -11,16 +11,7 @@ const counterCommandIds = new Set<string>([
   "pstdio.workbench-fixture.command.counter.reset",
 ]);
 
-interface LabCommandResponse {
-  commandId: string;
-  extensionId: string;
-  outcome: {
-    ok: boolean;
-    status: "success" | "rejected" | "error";
-    reason?: string;
-    value?: unknown;
-  };
-}
+type LabCommandResponse = CommandResponse;
 
 interface LabCommandEvent {
   commandId: string;
@@ -35,7 +26,7 @@ interface LabCommandEvent {
 interface CounterCommandInput {
   host: GuestHost;
   commandId: CounterCommandId;
-  params?: Record<string, unknown>;
+  params?: JsonObject;
 }
 
 interface SayHelloCommandInput {
@@ -69,9 +60,8 @@ export const getCounterFromCommandEvent = (event: LabCommandEvent | null | undef
 
 const executeLabCommand = async (
   commandId: CounterCommandId | "pstdio.workbench-fixture.command.say-hello",
-  input: { host: GuestHost; params?: Record<string, unknown> },
-): Promise<LabCommandResponse> =>
-  input.host.call<LabCommandResponse>("commands.execute", { commandId, params: input.params });
+  input: { host: GuestHost; params?: JsonObject },
+) => input.host.call("commands.execute", { commandId, params: input.params });
 
 export const executeCounterCommand = async (input: CounterCommandInput) => {
   const { host, commandId, params } = input;

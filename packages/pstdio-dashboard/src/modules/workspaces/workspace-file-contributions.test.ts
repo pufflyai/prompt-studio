@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench, type ResourceRef, type TreeNode } from "@pstdio/workbench";
 import { dashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -9,18 +10,17 @@ import { createWorkspacesModule } from "./module";
 
 const originalFetch = globalThis.fetch;
 const runtime = globalThis as typeof globalThis & {
-  __PSTDIO_CONFIG__?: { apiBaseUrl?: string };
+  __PSTDIO_CONFIG__?: {
+    apiBaseUrl?: string;
+  };
 };
 let apiBaseUrlId = 0;
-
 const workspaceResource = (metadata: Record<string, unknown> = {}): ResourceRef => ({
-  kind: "workspace",
+  type: "workspace",
   id: "workspace-1",
-  uri: "pstdio://extension-resource/workspace/workspace-1",
   label: "PS-118_A5",
   metadata: { workspaceId: "workspace-1", workspaceType: "worktree", ...metadata },
 });
-
 const treeContext = (workbench: ReturnType<typeof createWorkbench>, resource: ResourceRef) => ({
   resource,
   state: workbench.treeViews.getTreeState(dashboardWidgetIds.workspaceFileTree),
@@ -28,22 +28,18 @@ const treeContext = (workbench: ReturnType<typeof createWorkbench>, resource: Re
   setSelectedNode: (nodeId: string | undefined) =>
     workbench.treeViews.setSelectedNode(dashboardWidgetIds.workspaceFileTree, nodeId),
 });
-
 const jsonResponse = (value: unknown, status = 200) =>
   new Response(JSON.stringify(value), { status, headers: { "content-type": "application/json" } });
-
 beforeEach(() => {
   dashboardQueryClient.clear();
   apiBaseUrlId += 1;
   runtime.__PSTDIO_CONFIG__ = { apiBaseUrl: `http://workspace-files-${apiBaseUrlId}.test` };
 });
-
 afterEach(() => {
   dashboardQueryClient.clear();
   globalThis.fetch = originalFetch;
   delete runtime.__PSTDIO_CONFIG__;
 });
-
 describe("workspace file contributions", () => {
   test("loads files for a current-branch workspace through the API", async () => {
     const fetchMock = mock(async (input: string | URL | Request) => {
@@ -65,10 +61,8 @@ describe("workspace file contributions", () => {
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const workspace = workspaceResource({ workspaceType: "current_branch", workspaceView: "files" });
-
     const sections = await treeViewSections(workbench, dashboardWidgetIds.workspaceFileTree, { resource: workspace });
     const file = await fileViewBody(workbench, dashboardWidgetIds.workspaceFiles).load(workspace);
-
     expect(sections[0]?.nodes).toEqual([
       expect.objectContaining({
         id: "README.md",
@@ -83,9 +77,12 @@ describe("workspace file contributions", () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/v1/workspaces/workspace-1/files?limit=500");
     expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/diff-files?mode=current"))).toBe(true);
   });
-
   test("searches, opens, loads, and saves a workspace text file through one resource", async () => {
-    const calls: Array<{ url: string; method: string; body?: string }> = [];
+    const calls: Array<{
+      url: string;
+      method: string;
+      body?: string;
+    }> = [];
     const fetchMock = mock(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       calls.push({ url, method: init?.method ?? "GET", body: typeof init?.body === "string" ? init.body : undefined });
@@ -126,7 +123,6 @@ describe("workspace file contributions", () => {
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const workspace = workspaceResource({ workspaceView: "files" });
-
     openWorkspacesPage(workbench, workspace);
     const sections = await treeViewSections(workbench, dashboardWidgetIds.workspaceFileTree, {
       resource: workspace,
@@ -136,15 +132,13 @@ describe("workspace file contributions", () => {
     expect(target).toEqual(expect.objectContaining({ kind: "command" }));
     if (!target || target.kind !== "command") throw new Error("Expected a file command target.");
     await workbench.navigation.openTarget(target);
-
     const opened = workbench.layout
       .getLayout()
       .regions.main.widgets.find((widget) => widget.viewId === dashboardWidgetIds.workspaceFiles)?.resource;
     const fileView = fileViewBody(workbench, dashboardWidgetIds.workspaceFiles);
     const loaded = await fileView.load(opened);
     await fileView.save?.(opened, "# Updated");
-
-    expect(opened?.uri).toBe(workspace.uri);
+    expect(resourceKey(opened)).toBe(resourceKey(workspace));
     expect(opened?.metadata?.workspaceFilePath).toBe("README.md");
     expect(loaded).toEqual(
       expect.objectContaining({ filePath: "README.md", content: "# Readme", editable: true, textRenderer: "monaco" }),
@@ -154,10 +148,13 @@ describe("workspace file contributions", () => {
     expect(calls.some((call) => call.method === "PUT" && call.body === '{"content":"# Updated"}')).toBe(true);
   });
 });
-
 describe("workspace file operations", () => {
   test("creates inline and keeps file and folder operations in their context menus", async () => {
-    const calls: Array<{ url: string; method: string; body?: string }> = [];
+    const calls: Array<{
+      url: string;
+      method: string;
+      body?: string;
+    }> = [];
     const fetchMock = mock(async (input: string | URL | Request, init?: RequestInit) => {
       const url = String(input);
       calls.push({ url, method: init?.method ?? "GET", body: typeof init?.body === "string" ? init.body : undefined });
@@ -203,7 +200,6 @@ describe("workspace file operations", () => {
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     const workspace = workspaceResource({ workspaceView: "files" });
     openWorkspacesPage(workbench, workspace);
-
     const sections = await treeViewSections(workbench, dashboardWidgetIds.workspaceFileTree, { resource: workspace });
     const createAction = sections[0]?.actions?.find((action) => action.id === "workspace-file.create");
     const createFolderAction = sections[0]?.actions?.find((action) => action.id === "workspace-directory.create");
@@ -211,38 +207,41 @@ describe("workspace file operations", () => {
     expect(createFolderAction?.params).toBeUndefined();
     await createAction?.run?.();
     expect(calls.some((call) => call.method === "POST")).toBe(false);
-
     const creatingSections = await treeViewSections(workbench, dashboardWidgetIds.workspaceFileTree, {
       resource: workspace,
     });
     const inlineNode = creatingSections[0]?.nodes.find((node) => node.id === "workspace-file:new:root") as
-      | (TreeNode & { inlineInput?: { onCommit(value: string): Promise<void> | void } })
+      | (TreeNode & {
+          inlineInput?: {
+            onCommit(value: string): Promise<void> | void;
+          };
+        })
       | undefined;
     expect(inlineNode?.inlineInput).toEqual(expect.objectContaining({ ariaLabel: "New file name" }));
     await inlineNode?.inlineInput?.onCommit("notes.md");
-
     const opened = workbench.layout
       .getLayout()
       .regions.main.widgets.find((widget) => widget.viewId === dashboardWidgetIds.workspaceFiles)?.resource;
     expect(opened?.metadata?.workspaceFilePath).toBe("notes.md");
     expect(calls).toContainEqual(expect.objectContaining({ method: "POST", body: '{"content":""}' }));
     expect(workbench.notifications.listNotifications()).toEqual([]);
-
     await createFolderAction?.run?.();
     const creatingFolderSections = await treeViewSections(workbench, dashboardWidgetIds.workspaceFileTree, {
       resource: workspace,
     });
     const inlineFolder = creatingFolderSections[0]?.nodes.find((node) => node.id === "workspace-directory:new:root") as
-      | (TreeNode & { inlineInput?: { onCommit(value: string): Promise<void> | void } })
+      | (TreeNode & {
+          inlineInput?: {
+            onCommit(value: string): Promise<void> | void;
+          };
+        })
       | undefined;
     expect(inlineFolder?.inlineInput).toEqual(expect.objectContaining({ ariaLabel: "New folder name" }));
     await inlineFolder?.inlineInput?.onCommit("generated");
     expect(calls).toContainEqual(
       expect.objectContaining({ method: "POST", url: expect.stringContaining("/directory?path=generated") }),
     );
-
     expect(sections[0]?.nodes.map((node) => node.id)).toEqual(["archive", "docs", "README.md"]);
-
     const folder = sections[0]?.nodes.find((node) => node.id === "docs");
     const archive = sections[0]?.nodes.find((node) => node.id === "archive");
     expect(folder?.iconElement).toBeUndefined();
@@ -257,7 +256,6 @@ describe("workspace file operations", () => {
       "Copy relative path",
       "Delete folder",
     ]);
-
     const file = sections[0]?.nodes.find((node) => node.id === "README.md");
     expect(file?.iconElement).toBeDefined();
     expect(file?.canDrag).toBe(true);
@@ -269,8 +267,15 @@ describe("workspace file operations", () => {
       "Copy relative path",
       "Delete file",
     ]);
-    expect((file as (TreeNode & { showContextMenuTrigger?: boolean }) | undefined)?.showContextMenuTrigger).toBe(false);
-
+    expect(
+      (
+        file as
+          | (TreeNode & {
+              showContextMenuTrigger?: boolean;
+            })
+          | undefined
+      )?.showContextMenuTrigger,
+    ).toBe(false);
     const treeView = treeViewBody(workbench, dashboardWidgetIds.workspaceFileTree);
     if (!file || !folder || !archive) throw new Error("Expected file and folder nodes.");
     await treeView.moveNode?.(file, folder, treeContext(workbench, workspace));
@@ -287,7 +292,6 @@ describe("workspace file operations", () => {
         body: '{"destination_path":"archive/docs"}',
       }),
     );
-
     const renameFile = file.contextMenuActions?.find((action) => action.id === "workspace-entry.rename");
     expect(renameFile).toMatchObject({
       args: { name: "README.md" },
@@ -301,7 +305,6 @@ describe("workspace file operations", () => {
         body: '{"destination_path":"README-renamed.md"}',
       }),
     );
-
     const renameFolder = folder.contextMenuActions?.find((action) => action.id === "workspace-entry.rename");
     expect(renameFolder?.params).toEqual({ name: { type: "text", label: "Folder name", required: true } });
     await renameFolder?.run?.({ name: "docs-renamed" });
@@ -311,7 +314,6 @@ describe("workspace file operations", () => {
         body: '{"destination_path":"docs-renamed"}',
       }),
     );
-
     const deleteAction = file?.contextMenuActions?.find((action) => action.id === "workspace-entry.delete");
     await deleteAction?.run?.();
     const confirmation = workbench.layout
@@ -319,7 +321,6 @@ describe("workspace file operations", () => {
       .regions.overlay.widgets.find((widget) => widget.viewId === dashboardWidgetIds.deleteWorkspaceEntry);
     expect(confirmation?.resource?.metadata?.workspaceDeletePath).toBe("README.md");
     expect(confirmation?.resource?.metadata?.workspaceDeleteType).toBe("file");
-
     await folder?.contextMenuActions?.find((action) => action.id === "workspace-entry.delete")?.run?.();
     const folderConfirmation = workbench.layout
       .getLayout()

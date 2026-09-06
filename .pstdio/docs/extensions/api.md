@@ -28,7 +28,7 @@ Every extension package must include a `package.json` next to its entry file.
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.9"
+    "pstdio": "1.0.0-alpha.10"
   },
   "pstdio": {
     "scope": "user"
@@ -39,8 +39,8 @@ Every extension package must include a `package.json` next to its entry file.
 Required fields:
 
 - `engines.pstdio`: the exact extension API version this extension was built against. While the API
-  is in alpha this is a plain version such as `1.0.0-alpha.9`, never a range: `^1.0.0-alpha.9` also
-  matches `1.0.0-alpha.9`, so a range would accept hosts the extension was never tested on. The host
+  is in alpha this is a plain version such as `1.0.0-alpha.10`, never a range: `^1.0.0-alpha.10` also
+  matches `1.0.0-alpha.10`, so a range would accept hosts the extension was never tested on. The host
   refuses an extension whose value does not match its own `EXTENSION_API_VERSION`, with a single
   diagnostic instead of per-contribution errors. Expect to update this on most releases while the
   API is unstable.
@@ -209,7 +209,7 @@ Do not include `id`, `name`, `namespace`, `version`, `description`, or `apiVersi
 | `schedules`                                       | Cron-driven command invocation.                                                                   |
 | `views`                                           | Reusable webview, tree, file, controls, table, and Kanban bodies.                                  |
 | `viewMenus`                                       | View bodies attached as menus owned by another view.                                               |
-| `pages`                                           | Routed screens with one primary slot and optional auxiliary slots.                                 |
+| `pages`                                           | Routed screens with resource constraints, Main presentation, and extra panel slots.                                 |
 | `placements`                                      | Mode-wide static views or resource bindings.                                                        |
 | `navigationItems`, `navigationTrees`              | Explicit actions and Sidenav trees owned by a mode or page.                                        |
 | `resourceKinds`                                   | Domain resource identity, labels, icons, menus, and hierarchy.                                     |
@@ -487,8 +487,8 @@ when a hook should react to a command outcome.
 Dashboard UI contributions have one ownership model:
 
 - a view owns its body and may use `webview`, `tree`, `file`, `controls`, `dataTable`, or `kanban`
-- a page owns a route, base mode, primary slot, and optional auxiliary slots
-- a placement owns mode-wide geometry and places a static view or resource binding
+- a page owns a route, mode, optional resource constraint, Main presentation, and extra slots
+- a placement owns a shared mode panel with a static-view or resource-binding item
 - a navigation item uses a typed action instead of encoded route or command fields
 - a navigation tree adds a tree view to a mode or page in the shared Sidenav
 - a view menu references its owner view and menu view
@@ -866,4 +866,4 @@ The theme id is `planner.monokai` for package `planner`.
 
 Diagnostics should include the extension id when known, the source path, and project/repo context where relevant. If the entry module fails to import, the package still loads with empty contributions and an `extension_import_failed` diagnostic so the dashboard can show the package identity and error.
 
-Warnings are actionable even when the extension still loads. For example, `extension_icon_unknown` means a contribution named an icon the host does not ship; the contribution loads, but the dashboard shows a fallback icon. Composition errors such as `invalid_placement` (a placement has an invalid shape) and `invalid_page_slot` (a page slot has an invalid shape) drop the invalid contribution and keep the rest of the extension loading. A placement or page slot that still declares a removed field (`defaultOpen`, `required`, `closable`, `defaultResource`, `openCommand`, `regionSize`, or `regionCollapsible`) is rejected with a field-specific message that names the replacement, such as `presence` on the static item, `add` on the resource binding, or `regionSettings` on the owning mode.
+Warnings are actionable even when the extension still loads. For example, `extension_icon_unknown` means a contribution named an icon the host does not ship; the contribution loads, but the dashboard shows a fallback icon. Composition errors such as `invalid_placement` (a placement has an invalid shape) and `invalid_page_slot` (a page slot has an invalid shape) drop the invalid contribution and keep the rest of the extension loading. Invalid declarations report the extension, contribution, field path, and expected contract. Nested unknown fields are rejected.

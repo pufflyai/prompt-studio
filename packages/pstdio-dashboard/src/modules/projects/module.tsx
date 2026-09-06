@@ -74,6 +74,7 @@ const registerProjectSelectionMode = (ctx: WorkbenchModuleContext) => {
   ctx.modes.registerMode({
     id: "project-selection",
     label: "Projects",
+    chrome: { sidenav: false },
     panels: [],
     activate: () => undefined,
     enter: (modeCtx) => {

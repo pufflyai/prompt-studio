@@ -73,6 +73,7 @@ export const HorizontalTextInput = (props: HorizontalTextInputProps) => {
           <Flex alignItems="center" justifyContent="space-between" height="2rem" gap="xs">
             {!hideLabel && <ParamEditorLabel name={name} description={description} />}
             <Input
+              aria-label={name}
               className="nodrag"
               readOnly={readOnly}
               flex="1"
@@ -115,6 +116,7 @@ export const HorizontalTextInput = (props: HorizontalTextInputProps) => {
               </Box>
             )}
             <Textarea
+              aria-label={name}
               className="nodrag"
               readOnly={readOnly}
               width="100%"

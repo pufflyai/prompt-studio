@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { loadEmbedConfig } from "../build/embed-manifest";
 import { getHostPlatformPackage, resolveCompiledBinaryPath, runCompiledBunSmoke } from "./compiled-bun-smoke";
 import { resolvePackagedRuntimeTestArgs } from "./packaged-runtime-smoke";
+import { verifyPublicPackages } from "./public-package-consumer";
 
 const config = loadEmbedConfig();
 const platformPackage = getHostPlatformPackage(config.platformBinaries);
@@ -25,6 +26,8 @@ if (build.status !== 0) {
   process.stderr.write("\nVerification failed: all-target compiled build failed.\n");
   process.exit(build.status ?? 1);
 }
+
+verifyPublicPackages(process.cwd());
 
 let failed = false;
 

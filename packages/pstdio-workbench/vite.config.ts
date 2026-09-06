@@ -53,7 +53,8 @@ export default defineConfig({
       },
     }),
     dts({
-      tsconfigPath: "./tsconfig.json",
+      tsconfigPath: "./tsconfig.build.json",
+      entryRoot: "..",
       rollupTypes: true,
       exclude: [
         "src/**/*.test.ts",

@@ -8,7 +8,6 @@ import { createElement } from "react";
 import { buildAbsoluteApiUrl } from "@/lib/api";
 import { uploadExtensionCommandFile } from "@/shared/extensions/api";
 import { collectExtensionCommandNotifications } from "@/shared/extensions/command-outcome";
-import { toWorkbenchContributionId } from "@/shared/extensions/contribution-ref";
 import {
   localizeExtensionValue,
   type ResolvedLocalizable,
@@ -24,7 +23,6 @@ import {
   buildDashboardWorkbenchWhenExpression,
   dashboardMenuTargetsById,
 } from "@/shared/extensions/workbench-extension-contributions";
-import { registerNavigationOwningMode } from "@/shared/workbench/mode-navigation-ownership";
 import { ExtensionViewWidget } from "./components/extension-view-widget";
 import {
   type ExecuteDashboardExtensionCommand,
@@ -45,16 +43,6 @@ interface RegisterExtensionContributionsInput {
   metadata: ResolvedWorkbenchExtensionMetadata;
   projectId: string;
 }
-
-export const registerExtensionActivityNavigationOwnership = (metadata: ResolvedWorkbenchExtensionMetadata) => {
-  const modeIds = new Set((metadata.activityItems ?? []).flatMap((item) => item.modes.map(toWorkbenchContributionId)));
-  const registrations = [...modeIds].map(registerNavigationOwningMode);
-  return {
-    dispose() {
-      for (const registration of registrations) registration.dispose();
-    },
-  };
-};
 
 export const withDashboardWebviewUrls = (
   metadata: ResolvedWorkbenchExtensionMetadata,
@@ -147,7 +135,6 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
         },
         workbench: input.ctx,
       }),
-      registerExtensionActivityNavigationOwnership(input.metadata),
       registerExtensionResourceHierarchy(input.ctx, { metadata: input.metadata, projectId: input.projectId }),
     );
   } catch (error) {

@@ -4,7 +4,6 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { toWorkbenchContributionId } from "@/shared/extensions/contribution-ref";
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { ExtensionActivityRailWidget } from "./components/extension-activity-rail";
-
 // The rail is dashboard chrome: it opens for modes with extension activity items
 // and leaves the region with them, so other modes render no empty rail.
 export const registerDashboardActivityRail = (
@@ -21,10 +20,16 @@ export const registerDashboardActivityRail = (
   });
   ctx.shellPlacements.registerPlacement({
     id: dashboardWidgetIds.activityRail,
-    item: { kind: "view", viewId: dashboardWidgetIds.activityRail, presence: "closed" },
+    item: {
+      kind: "view",
+      presence: "closed",
+      view: {
+        kind: "view",
+        id: dashboardWidgetIds.activityRail,
+      },
+    },
     region: "activity",
   });
-
   const sync = () => {
     const activeModeId = ctx.modes.getActiveModeId();
     const items = getMetadata()?.activityItems ?? [];
@@ -50,7 +55,6 @@ export const registerDashboardActivityRail = (
   // Page navigation publishes the mode before it reconciles the page layout.
   // Reapply mode chrome after that layout commit so the page cannot erase it.
   const pageSubscription = ctx.pages.store.subscribe(sync);
-
   return {
     sync,
     dispose: () => {

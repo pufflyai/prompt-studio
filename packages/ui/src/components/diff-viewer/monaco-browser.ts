@@ -9,6 +9,7 @@ import jsonWorker from "monaco-editor/esm/vs/language/json/json.worker?worker";
 import tsWorker from "monaco-editor/esm/vs/language/typescript/ts.worker?worker";
 
 export const initializeMonaco = () => {
+  monaco.typescript.typescriptDefaults.setCompilerOptions({ jsx: monaco.typescript.JsxEmit.React });
   self.MonacoEnvironment = {
     getWorker(_, label) {
       if (label === "json") return new jsonWorker();

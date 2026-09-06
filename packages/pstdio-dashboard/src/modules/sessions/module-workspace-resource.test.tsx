@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
@@ -19,7 +20,6 @@ const createWorkspaceSessionWorkbench = () => {
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
   return workbench;
 };
-
 describe("createSessionsModule workspace session scoping", () => {
   test("scopes the project-mode session list to the open workspace resource", async () => {
     getWriter("workspaces")?.truncateAndWrite([
@@ -66,25 +66,20 @@ describe("createSessionsModule workspace session scoping", () => {
     getWriter("workspace_sessions")?.truncateAndWrite([
       { id: "link-1", workspace_id: "workspace-1", session_id: "session-linked" },
     ]);
-
     const workbench = createWorkspaceSessionWorkbench();
     const workspace = workbench.resources
       .listResources("")
-      .find((entry) => entry.resource.kind === "workspace")?.resource;
+      .find((entry) => entry.resource.type === "workspace")?.resource;
     openWorkspacesPage(workbench, workspace!);
-
     expect(workbench.modes.getActiveModeId()).toBe("project");
-
     const sessionsGroup = (await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav))
       .flatMap((section) => section.nodes)
       .find((node) => node.id === "workspace-sessions");
     const sessionRowIds = (sessionsGroup?.children ?? [])
       .filter((node) => node.resource || node.target)
       .map((node) => node.id);
-
-    expect(sessionRowIds).toEqual(["pstdio://extension-resource/session/session-linked"]);
+    expect(sessionRowIds).toEqual([resourceKey({ type: "session", id: "session-linked" })]);
   });
-
   test("rescopes the session list when switching between workspaces", async () => {
     getWriter("workspaces")?.truncateAndWrite([
       {
@@ -144,7 +139,6 @@ describe("createSessionsModule workspace session scoping", () => {
       { id: "link-1", workspace_id: "workspace-1", session_id: "session-one" },
       { id: "link-2", workspace_id: "workspace-2", session_id: "session-two" },
     ]);
-
     const workbench = createWorkspaceSessionWorkbench();
     let displayed = await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav);
     const renderSidenav = async () => {
@@ -156,13 +150,11 @@ describe("createSessionsModule workspace session scoping", () => {
         .map((node) => node.id);
     const workspaceResource = (id: string) =>
       workbench.resources.listResources("").find((entry) => entry.resource.id === id)?.resource;
-
     openWorkspacesPage(workbench, workspaceResource("workspace-1")!);
     await renderSidenav();
-    expect(displayedSessionRowIds()).toEqual(["pstdio://extension-resource/session/session-one"]);
-
+    expect(displayedSessionRowIds()).toEqual([resourceKey({ type: "session", id: "session-one" })]);
     openWorkspacesPage(workbench, workspaceResource("workspace-2")!);
     await renderSidenav();
-    expect(displayedSessionRowIds()).toEqual(["pstdio://extension-resource/session/session-two"]);
+    expect(displayedSessionRowIds()).toEqual([resourceKey({ type: "session", id: "session-two" })]);
   });
 });

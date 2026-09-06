@@ -1,12 +1,11 @@
 import { activateModePlacementInstance } from "./controllers/composition/owned-addable-panels";
-import { toWorkbenchPageResource } from "./controllers/page-runtime/page-runtime";
+import { prepareWorkbenchNavigation } from "./controllers/navigation/compound-navigation";
 import type { WorkbenchRegion } from "./registries/layout/layout-model";
 import {
   createNavigationRegistry,
   type NavigationTargetPanel,
   type NavigationTargetShellPanel,
 } from "./registries/navigation/navigation-registry";
-import type { WorkbenchPageResourceCodec } from "./registries/pages/page-registry";
 import type { WorkbenchCore } from "./workbench-core-types";
 
 type PageSlotPanelRef = Extract<NavigationTargetPanel["panel"], { kind: "page-slot" }>;
@@ -20,9 +19,7 @@ const canOpenCorePanel = (core: WorkbenchCore, target: NavigationTargetPanel) =>
   const panel = target.panel;
   if (panel.kind === "shell-placement") return Boolean(core.shellPlacements.getPlacement(panel.id));
   if (panel.kind !== "page-slot") return Boolean(core.modePlacements.getPlacement(panel));
-  return Boolean(
-    findPagePanelOwner(core, panel)?.slots.some((slot) => slot.id === panel.id && slot.role === "auxiliary"),
-  );
+  return Boolean(findPagePanelOwner(core, panel)?.slots.some((slot) => slot.id === panel.id));
 };
 
 export const revealPanelRegion = (core: WorkbenchCore, region: WorkbenchRegion) => {
@@ -37,7 +34,7 @@ const openPageSlotTarget = (core: WorkbenchCore, target: NavigationTargetPanel, 
   if (!page || core.pages.store.getState().activePageId !== page.id) {
     throw new Error(`Page panel "${panel.id}" is not owned by the active page`);
   }
-  const slot = page.slots.find((candidate) => candidate.id === panel.id && candidate.role === "auxiliary");
+  const slot = page.slots.find((candidate) => candidate.id === panel.id);
   if (!slot) throw new Error(`Page panel "${panel.id}" is not an auxiliary slot`);
   core.pages.openSlot({
     pageId: page.id,
@@ -48,11 +45,7 @@ const openPageSlotTarget = (core: WorkbenchCore, target: NavigationTargetPanel, 
   revealPanelRegion(core, slot.region);
 };
 
-const openModePlacementTarget = (
-  core: WorkbenchCore,
-  target: NavigationTargetPanel,
-  pageResources: WorkbenchPageResourceCodec,
-) => {
+const openModePlacementTarget = (core: WorkbenchCore, target: NavigationTargetPanel) => {
   const panel = target.panel;
   if (panel.kind !== "placement") throw new Error(`Expected a mode placement panel: ${panel.id}`);
   const placement = core.modePlacements.getPlacement(panel);
@@ -61,23 +54,19 @@ const openModePlacementTarget = (
   }
   const identity = core.modePlacements.openPlacement({
     panel,
-    ...(target.resource ? { resource: toWorkbenchPageResource(target.resource, pageResources) } : {}),
+    ...(target.resource ? { resource: target.resource } : {}),
     ...(target.open ? { open: target.open } : {}),
   });
   revealPanelRegion(core, placement.region);
   activateModePlacementInstance(core, identity);
 };
 
-const openShellPlacementTarget = (
-  core: WorkbenchCore,
-  target: NavigationTargetShellPanel,
-  pageResources: WorkbenchPageResourceCodec,
-) => {
+const openShellPlacementTarget = (core: WorkbenchCore, target: NavigationTargetShellPanel) => {
   const placement = core.shellPlacements.getPlacement(target.panel.id);
   if (!placement) throw new Error(`Unknown shell placement: ${target.panel.id}`);
   const identity = core.shellPlacements.openPlacement({
     placementId: target.panel.id,
-    ...(target.resource ? { resource: toWorkbenchPageResource(target.resource, pageResources) } : {}),
+    ...(target.resource ? { resource: target.resource } : {}),
     ...(target.open ? { open: target.open } : {}),
     ...(target.title ? { title: target.title } : {}),
   });
@@ -85,45 +74,28 @@ const openShellPlacementTarget = (
   activateModePlacementInstance(core, identity);
 };
 
-const openCorePanelTarget = (
-  core: WorkbenchCore,
-  target: NavigationTargetPanel,
-  pageResources: WorkbenchPageResourceCodec,
-) => {
+const openCorePanelTarget = (core: WorkbenchCore, target: NavigationTargetPanel) => {
   const panel = target.panel;
   if (panel.kind === "shell-placement") {
-    openShellPlacementTarget(core, { ...target, panel }, pageResources);
+    openShellPlacementTarget(core, { ...target, panel });
     return;
   }
   if (panel.kind === "page-slot") {
     openPageSlotTarget(core, target, panel);
     return;
   }
-  openModePlacementTarget(core, target, pageResources);
+  openModePlacementTarget(core, target);
 };
 
-export const createCoreNavigationRegistry = (
-  resolveCore: () => WorkbenchCore,
-  pageResources: WorkbenchPageResourceCodec,
-) =>
+export const createCoreNavigationRegistry = (resolveCore: () => WorkbenchCore) =>
   createNavigationRegistry({
     resolveDispatcher: () => {
       const core = resolveCore();
       return {
-        createCheckpoint: () => {
-          const layout = core.layout.getLayout();
-          const location = core.pages.store.getState().location;
-          const breadcrumbs = core.breadcrumbs.getItems();
-          return () => {
-            core.layout.restoreLayout(layout);
-            if (location) core.pageLocations.replay(location);
-            if (breadcrumbs) core.breadcrumbs.setItems(breadcrumbs);
-            else core.breadcrumbs.clearItems();
-          };
-        },
+        prepareNavigation: (targets) => prepareWorkbenchNavigation(core, targets),
         canOpenPanel: (target) => canOpenCorePanel(core, target),
         canExecuteCommand: (commandId) => Boolean(core.commands.getCommand(commandId)),
-        openPanelTarget: (target) => openCorePanelTarget(core, target, pageResources),
+        openPanelTarget: (target) => openCorePanelTarget(core, target),
         openPageTarget: (target) => {
           const result = core.pageLocations.navigate(target);
           if (!result.ok) throw new Error(result.diagnostic.message);

@@ -29,7 +29,6 @@ const wrap = (name: string, definition: LoadedExtensionSource["definition"]): Lo
   },
   definition,
 });
-
 describe("extension convention diagnostics", () => {
   test("flags unknown icon names", () => {
     const runtime = normalizeExtensionSources([
@@ -44,12 +43,10 @@ describe("extension convention diagnostics", () => {
         }),
       ),
     ]);
-
     const diagnostics = collectConventionDiagnostics(runtime).filter((item) => item.code === "extension_icon_unknown");
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]?.metadata).toMatchObject({ icon: "definitely-not-an-icon" });
   });
-
   test("accepts dotted kebab-case local ids", () => {
     const runtime = normalizeExtensionSources([
       wrap(
@@ -62,13 +59,11 @@ describe("extension convention diagnostics", () => {
         }),
       ),
     ]);
-
     const diagnostics = collectConventionDiagnostics(runtime).filter(
       (item) => item.code === "extension_contribution_id_invalid",
     );
     expect(diagnostics).toEqual([]);
   });
-
   test("rejects camelCase and snake_case local ids with the grammar", () => {
     const runtime = normalizeExtensionSources([
       wrap(
@@ -81,7 +76,6 @@ describe("extension convention diagnostics", () => {
         }),
       ),
     ]);
-
     const diagnostics = collectConventionDiagnostics(runtime).filter(
       (item) => item.code === "extension_contribution_id_invalid",
     );
@@ -89,7 +83,6 @@ describe("extension convention diagnostics", () => {
     expect(diagnostics.map((item) => item.metadata?.invalidId).sort()).toEqual(["ticketStatus.create", "use_reports"]);
     expect(diagnostics[0]?.message).toContain("kebab-case");
   });
-
   test("flags dangling typed command and view references", () => {
     const view = defineView({
       id: "existing",
@@ -121,7 +114,6 @@ describe("extension convention diagnostics", () => {
         }),
       ),
     ]);
-
     expect(collectConventionDiagnostics(runtime)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -135,7 +127,6 @@ describe("extension convention diagnostics", () => {
       ]),
     );
   });
-
   test("flags missing navigation owners and non-tree navigation views", () => {
     const pageView = defineView({
       id: "page",
@@ -147,7 +138,12 @@ describe("extension convention diagnostics", () => {
       title: "Existing",
       path: "existing",
       mode: workbenchModes.project,
-      slots: [{ id: "content", role: "primary", region: "main", view: pageView.ref }],
+      main: {
+        kind: "view",
+        view: pageView.ref,
+        cardinality: "one",
+      },
+      slots: [],
     });
     const runtime = normalizeExtensionSources([
       wrap(
@@ -173,7 +169,6 @@ describe("extension convention diagnostics", () => {
         }),
       ),
     ]);
-
     expect(collectConventionDiagnostics(runtime)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

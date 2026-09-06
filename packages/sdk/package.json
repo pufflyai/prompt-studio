@@ -6,7 +6,8 @@
     "url": "https://github.com/pufflyai/prompt-studio"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "directory": ".publish"
   },
   "files": [
     "dist"
@@ -14,44 +15,38 @@
   "type": "module",
   "exports": {
     "./resources": {
-      "types": "./dist/resources/index.d.ts",
-      "source": "./src/resources/index.ts",
+      "types": "./dist/resources.d.ts",
       "import": "./dist/resources/index.js"
     },
     "./api": {
-      "types": "./dist/api/index.d.ts",
-      "source": "./src/api/index.ts",
+      "types": "./dist/api.d.ts",
       "import": "./dist/api/index.js"
     },
     "./client": {
-      "types": "./dist/client/index.d.ts",
-      "source": "./src/client/index.ts",
+      "types": "./dist/client.d.ts",
       "import": "./dist/client/index.js"
     },
     "./extensions": {
-      "types": "./dist/extensions/index.d.ts",
-      "source": "./src/extensions/index.ts",
+      "types": "./dist/extensions.d.ts",
       "import": "./dist/extensions/index.js"
     },
     "./extensions/react": {
-      "types": "./dist/extensions/react/index.d.ts",
+      "types": "./dist/extensions-react.d.ts",
       "import": "./dist/extensions/react/index.js"
     },
     "./prompts": {
-      "types": "./dist/prompts/index.d.ts",
-      "source": "./src/prompts/index.ts",
+      "types": "./dist/prompts.d.ts",
       "import": "./dist/prompts/index.js"
     },
     "./hooks": {
-      "types": "./dist/hooks/index.d.ts",
-      "source": "./src/hooks/index.ts",
+      "types": "./dist/hooks.d.ts",
       "import": "./dist/hooks/index.js"
     }
   },
   "scripts": {
-    "build": "rm -rf ./dist && bun run build:js && bun run build:types",
+    "build": "rm -rf ./dist && bun run build:js && bun run build:types && bun ../../scripts/release/stage-package.ts .",
     "build:js": "bun build ./src/api/index.ts ./src/client/index.ts ./src/extensions/index.ts ./src/extensions/react/index.ts ./src/prompts/index.ts ./src/hooks/index.ts ./src/resources/index.ts --outdir ./dist --root ./src --target node --format esm --external mustache --external react --external @tanstack/react-query",
-    "build:types": "tsc --project ./tsconfig.build.json",
+    "build:types": "vite build --config vite.types.config.ts",
     "prepack": "bun run build",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
@@ -60,7 +55,8 @@
     "test:coverage": "bun test --coverage"
   },
   "dependencies": {
-    "mustache": "^4.2.0"
+    "mustache": "^4.2.0",
+    "zod": "^4.3.6"
   },
   "peerDependencies": {
     "@tanstack/react-query": "^5.0.0",
@@ -81,6 +77,8 @@
     "@types/react": "^19.2.0",
     "pstdio-api-contracts": "workspace:*",
     "react": "^19.0.0",
-    "typescript": "6.0.2"
+    "typescript": "6.0.2",
+    "vite": "^7.2.4",
+    "vite-plugin-dts": "^4.5.4"
   }
 }

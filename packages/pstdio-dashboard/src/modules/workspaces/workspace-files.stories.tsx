@@ -18,21 +18,17 @@ import {
 import { createWorkspacesModule } from "./module";
 
 const WORKSPACE_ID = "PS-118_A5";
-
 type WorkspaceStoryState = "diffs" | "files" | "text" | "image" | "default" | "collapsed" | "remote";
-
 const selectedPathForStory = (state: WorkspaceStoryState) => {
   if (state === "text" || state === "default" || state === "collapsed") return "README.md";
   if (state === "image") return "assets/logo.png";
   return undefined;
 };
-
 const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
   const selectedPath = selectedPathForStory(state);
   return {
-    kind: "workspace",
+    type: "workspace",
     id: WORKSPACE_ID,
-    uri: `pstdio://extension-resource/workspace/${WORKSPACE_ID}`,
     label: WORKSPACE_ID,
     icon: "GitBranch",
     metadata: {
@@ -52,7 +48,6 @@ const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
     },
   };
 };
-
 const seedWorkspaceQueries = () => {
   dashboardQueryClient.clear();
   dashboardQueryClient.setQueryDefaults(["workspace-files", WORKSPACE_ID], { staleTime: Number.POSITIVE_INFINITY });
@@ -118,7 +113,6 @@ const seedWorkspaceQueries = () => {
     });
   }
 };
-
 const createStoryWorkbench = (state: WorkspaceStoryState) => {
   seedWorkspaceQueries();
   const workbench = createWorkbench();
@@ -134,7 +128,6 @@ const createStoryWorkbench = (state: WorkspaceStoryState) => {
   }
   return workbench;
 };
-
 const WorkspaceFilesStory = (props: { state: WorkspaceStoryState }) => {
   const { state } = props;
   const [workbench] = useState(() => createStoryWorkbench(state));
@@ -146,19 +139,14 @@ const WorkspaceFilesStory = (props: { state: WorkspaceStoryState }) => {
     </QueryClientProvider>
   );
 };
-
 const meta = {
   title: "Modules/Workspaces/Files and Changes",
   component: WorkspaceFilesStory,
   parameters: { layout: "fullscreen" },
 } satisfies Meta<typeof WorkspaceFilesStory>;
-
 export default meta;
-
 type Story = StoryObj<typeof meta>;
-
 export const ChangesSelected: Story = { args: { state: "diffs" } };
-
 export const ClosePanelsIndependently: Story = {
   args: { state: "diffs" },
   play: async ({ canvasElement }) => {
@@ -171,15 +159,9 @@ export const ClosePanelsIndependently: Story = {
     await expect(canvas.getByRole("button", { name: "Add panel" })).toBeVisible();
   },
 };
-
 export const FilesNoSelection: Story = { args: { state: "files" } };
-
 export const MonacoTextFile: Story = { args: { state: "text" } };
-
 export const ImagePreview: Story = { args: { state: "image" } };
-
 export const DefaultWorkspace: Story = { args: { state: "default" } };
-
 export const CollapsedFilesMenu: Story = { args: { state: "collapsed" } };
-
 export const RemoteWithoutFileViews: Story = { args: { state: "remote" } };

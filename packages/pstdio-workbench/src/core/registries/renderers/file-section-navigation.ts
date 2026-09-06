@@ -43,7 +43,7 @@ export const resolveFileSectionTargetId = (navigation: FileSectionNavigation, se
 };
 
 export interface PreviousFileSectionNavigation {
-  resourceUri?: string;
+  resourceKey?: string;
   treeId: string;
   anchorIds: string[];
 }
@@ -51,12 +51,12 @@ export interface PreviousFileSectionNavigation {
 export const shouldClearFileSectionSelection = (input: {
   previous: PreviousFileSectionNavigation | null;
   current: FileSectionNavigation | undefined;
-  currentResourceUri?: string;
+  currentResourceKey?: string;
   selectedNodeId?: string;
 }) => {
-  const { previous, current, currentResourceUri, selectedNodeId } = input;
+  const { previous, current, currentResourceKey, selectedNodeId } = input;
   if (!previous || !selectedNodeId || !previous.anchorIds.includes(selectedNodeId)) return false;
   if (current?.targetNodeId === selectedNodeId) return false;
 
-  return !current || previous.treeId !== current.treeId || previous.resourceUri !== currentResourceUri;
+  return !current || previous.treeId !== current.treeId || previous.resourceKey !== currentResourceKey;
 };

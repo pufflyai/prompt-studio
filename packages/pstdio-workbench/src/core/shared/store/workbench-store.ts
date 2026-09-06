@@ -1,5 +1,6 @@
 import { devtools, type NamedSet } from "zustand/middleware";
 import { createStore, type StoreApi } from "zustand/vanilla";
+import { notifyWorkbenchChange } from "./workbench-batch";
 
 export type WorkbenchStoreSelector<TState, TValue> = (state: TState) => TValue;
 
@@ -35,13 +36,18 @@ export const createWorkbenchStore = <TState>(
 ): InternalWorkbenchStore<TState> => {
   const api = createStore<TState>()(devtools(() => input.initialState, { name: input.name ?? "workbench.store" }));
 
+  const subscribe: WorkbenchStore<TState>["subscribe"] = (listener) => {
+    const owner = {};
+    return api.subscribe((_state, previous) => notifyWorkbenchChange(owner, () => listener(api.getState(), previous)));
+  };
+
   const subscribeSelector: WorkbenchStore<TState>["subscribeSelector"] = (selector, listener, options = {}) => {
     const equalityFn = options.equalityFn ?? defaultEquality;
     let previousValue = selector(api.getState());
 
     if (options.fireImmediately) listener(previousValue, previousValue);
 
-    return api.subscribe((state) => {
+    return subscribe((state) => {
       const nextValue = selector(state);
       if (equalityFn(previousValue, nextValue)) return;
       const previous = previousValue;
@@ -53,7 +59,7 @@ export const createWorkbenchStore = <TState>(
   return {
     getState: api.getState,
     getInitialState: api.getInitialState,
-    subscribe: api.subscribe,
+    subscribe,
     subscribeSelector,
     setState: api.setState,
     api,

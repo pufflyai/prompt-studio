@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { PlacementIdentity } from "@pstdio/sdk/extensions";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import type { ResolvedOwnedPlacement } from "../../registries/layout/placement-reconciliation";
 import {
@@ -11,6 +12,7 @@ import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-r
 import { createDisposable } from "../../shared/disposable";
 import { createWorkbench } from "../../workbench-core";
 import { connectWorkbenchPageRuntime } from "./page-runtime";
+import { registerResourcePage } from "./page-runtime-test-support";
 
 const owned = (
   identity: PlacementIdentity,
@@ -26,16 +28,22 @@ const owned = (
     role: region === "main" ? "location" : "sub-panel",
   },
 });
-
 const page = (id: string, modeId: string): WorkbenchPageContribution => ({
   id,
   ref: { extensionId: "pstdio.test", kind: "page", id },
   title: id,
   path: id,
   modeId,
-  slots: [{ id: "content", role: "primary", region: "main", viewId: `${id}-view` }],
+  main: {
+    kind: "view",
+    view: {
+      kind: "view",
+      id: `${id}-view`,
+    },
+    cardinality: "one",
+  },
+  slots: [],
 });
-
 const activate = (registry: ReturnType<typeof createRegistry>, pageId: string, action = "activateTestPage") => {
   const registered = registry.getPage(pageId);
   if (!registered) throw new Error(`Unknown test page: ${pageId}`);
@@ -46,7 +54,6 @@ const activate = (registry: ReturnType<typeof createRegistry>, pageId: string, a
     action,
   });
 };
-
 const createRegistry = () =>
   createWorkbenchPageRegistry<WorkbenchWidgetPlacement>({
     resolveShellPlacements: () => [],
@@ -67,9 +74,8 @@ const createRegistry = () =>
     valuesEqual: (left, right) =>
       left.contributionId === right.contributionId &&
       left.viewId === right.viewId &&
-      left.resourceUri === right.resourceUri,
+      left.resourceKey === right.resourceKey,
   });
-
 describe("workbench page runtime", () => {
   test("keeps placements restored by a resource persistence scope", async () => {
     const layouts = new Map<
@@ -82,7 +88,7 @@ describe("workbench page runtime", () => {
         setLayout: (layout, scope) => layouts.set(scope, structuredClone(layout)),
       },
       resolvePagePersistenceScope: ({ projectId, resource }) => ({
-        scope: projectId && resource ? `${projectId}/${resource.uri}` : undefined,
+        scope: projectId && resource ? `${projectId}/${resourceKey(resource)}` : undefined,
       }),
     });
     const pageRef = { extensionId: "pstdio.test", kind: "page" as const, id: "workspace" };
@@ -99,26 +105,49 @@ describe("workbench page runtime", () => {
     });
     workbench.shellPlacements.registerPlacement({
       id: "terminal",
-      item: { kind: "resource", viewId: "terminal", resourceKinds: ["terminal"], cardinality: "many" },
+      item: {
+        kind: "binding",
+        binding: {
+          kinds: [
+            {
+              kind: "resource-kind",
+              id: "terminal",
+            },
+          ],
+          view: {
+            kind: "view",
+            id: "terminal",
+          },
+          cardinality: "many",
+        },
+      },
       region: "secondary",
     });
-    workbench.pages.registerPage({
+    registerResourcePage(workbench, {
       id: "workspace",
       ref: pageRef,
       title: "Workspace",
       path: "workspace",
       modeId: "project",
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          binding: { resourceKinds: ["workspace"], viewId: "workspace", cardinality: "one" },
+      resource: {
+        kinds: [
+          {
+            kind: "resource-kind",
+            id: "workspace",
+          },
+        ],
+      },
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "workspace",
         },
-      ],
+        cardinality: "one",
+      },
+      slots: [],
     });
     workbench.pageLocations.setProject("project-1");
-
     await workbench.navigation.openTarget({
       kind: "page",
       page: pageRef,
@@ -126,11 +155,13 @@ describe("workbench page runtime", () => {
     });
     workbench.shellPlacements.openPlacement({
       placementId: "terminal",
-      resource: { kind: "terminal", uri: "terminal://workspace-1" },
+      resource: {
+        type: "terminal",
+        id: "terminal://workspace-1",
+      },
       open: "pin",
     });
     workbench.layout.setRegionVisible("secondary", true);
-
     await workbench.navigation.openTarget({
       kind: "page",
       page: pageRef,
@@ -141,17 +172,17 @@ describe("workbench page runtime", () => {
       page: pageRef,
       resource: { type: "workspace", id: "workspace-1" },
     });
-
     expect(workbench.layout.getLayout().regions.secondary).toMatchObject({
       visible: true,
-      widgets: [expect.objectContaining({ resourceUri: "terminal://workspace-1" })],
+      widgets: [expect.objectContaining({ resource: { type: "terminal", id: "terminal://workspace-1" } })],
     });
   });
-
   test("rotates the host persistence scope before applying a page resource", async () => {
     const workbench = createWorkbench({
       resolvePagePersistenceScope: ({ projectId, resource }) => ({
-        scope: projectId ? `project/${projectId}/${resource ? `resource/${resource.uri}` : "page"}` : undefined,
+        scope: projectId
+          ? `project/${projectId}/${resource ? `resource/${resourceKey(resource)}` : "page"}`
+          : undefined,
       }),
     });
     const pageRef = { extensionId: "pstdio.test", kind: "page" as const, id: "workspace" };
@@ -161,36 +192,42 @@ describe("workbench page runtime", () => {
       title: "Workspace",
       body: { kind: "react", render: () => null },
     });
-    workbench.pages.registerPage({
+    registerResourcePage(workbench, {
       id: "workspace",
       ref: pageRef,
       title: "Workspace",
       path: "workspace",
       modeId: "project",
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          binding: { resourceKinds: ["workspace"], viewId: "workspace", cardinality: "one" },
+      resource: {
+        kinds: [
+          {
+            kind: "resource-kind",
+            id: "workspace",
+          },
+        ],
+      },
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "workspace",
         },
-      ],
+        cardinality: "one",
+      },
+      slots: [],
     });
-
     workbench.pageLocations.setProject("project-1");
     await workbench.navigation.openTarget({
       kind: "page",
       page: pageRef,
       resource: { type: "workspace", id: "workspace-1" },
     });
-
-    const expectedScope = "project/project-1/resource/pstdio://extension-resource/workspace/workspace-1";
+    const expectedScope = `project/project-1/resource/${resourceKey({ type: "workspace", id: "workspace-1" })}`;
     expect(workbench.layout.getPersistenceScope()).toBe(expectedScope);
     expect(workbench.panelMenuState.getPersistenceScope()).toBe(expectedScope);
-    expect(workbench.getPrimaryResource()?.uri).toBe("pstdio://extension-resource/workspace/workspace-1");
+    expect(workbench.getPrimaryResource()).toMatchObject({ type: "workspace", id: "workspace-1" });
   });
-
-  test("uses the declared view title for a resource-backed page slot", async () => {
+  test("uses the resource label for a resource-backed page slot", async () => {
     const workbench = createWorkbench();
     const pageRef = { extensionId: "pstdio.test", kind: "page" as const, id: "workspace" };
     workbench.modes.registerMode({ id: "project", activate: () => undefined });
@@ -199,33 +236,39 @@ describe("workbench page runtime", () => {
       title: "Files",
       body: { kind: "react", render: () => null },
     });
-    workbench.pages.registerPage({
+    registerResourcePage(workbench, {
       id: "test-workspace",
       ref: pageRef,
       title: "Workspace",
       path: "workspace",
       modeId: "project",
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          binding: { resourceKinds: ["workspace"], viewId: "workspace-files", cardinality: "one" },
+      resource: {
+        kinds: [
+          {
+            kind: "resource-kind",
+            id: "workspace",
+          },
+        ],
+      },
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "workspace-files",
         },
-      ],
+        cardinality: "one",
+      },
+      slots: [],
     });
     workbench.pageLocations.setProject("project-1");
-
     await workbench.navigation.openTarget({
       kind: "page",
       page: pageRef,
       resource: { type: "workspace", id: "workspace-1", label: "Workspace A" },
     });
-
-    expect(workbench.layout.getLayout().regions.main.widgets[0]?.title).toBe("Files");
+    expect(workbench.layout.getLayout().regions.main.widgets[0]?.title).toBe("Workspace A");
   });
 });
-
 describe("workbench page runtime placement composition", () => {
   test("keeps registered panel chrome on page and mode placements", () => {
     const workbench = createWorkbench();
@@ -244,36 +287,42 @@ describe("workbench page runtime placement composition", () => {
       id: "project-mode-panel",
       ref: { extensionId: "pstdio.test", kind: "placement", id: "project-mode-panel" },
       modeId: "project",
-      item: { kind: "view", viewId: "mode-view", presence: "open" },
+      item: {
+        kind: "view",
+        presence: "open",
+        view: {
+          kind: "view",
+          id: "mode-view",
+        },
+      },
       region: "side",
       tab: { getSnapshot: () => ({ label: "Mode panel" }) },
     });
-    workbench.pages.registerPage({
+    registerResourcePage(workbench, {
       id: "test-page",
       ref: { extensionId: "pstdio.test", kind: "page", id: "test-page" },
       title: "Test page",
       path: "test-page",
       modeId: "project",
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          viewId: "page-view",
-          tab: { getSnapshot: () => ({ label: "Page panel" }) },
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "page-view",
         },
-      ],
+        cardinality: "one",
+        tab: { getSnapshot: () => ({ label: "Page panel" }) },
+      },
+      slots: [],
     });
-
     getWorkbenchPageRegistryInternals(workbench.pages).activateLocation({
       pageId: "test-page",
       projectId: "project-1",
       location: { page: { extensionId: "pstdio.test", kind: "page", id: "test-page" } },
       action: "testPanelChrome",
     });
-
     expect(workbench.layout.getLayout().regions.main.widgets[0]).toMatchObject({
-      contributionId: "workbench.page-placement.test-page.content",
+      contributionId: "workbench.page-placement.test-page.%24main",
       title: "Page panel",
       tab: { getSnapshot: expect.any(Function) },
     });
@@ -283,7 +332,6 @@ describe("workbench page runtime placement composition", () => {
       tab: { getSnapshot: expect.any(Function) },
     });
   });
-
   test("changes mode behavior and the complete owned layout through mode placements", () => {
     const workbench = createWorkbench();
     const registry = createRegistry();
@@ -318,11 +366,9 @@ describe("workbench page runtime placement composition", () => {
           .map((placement) => placement.contributionId),
       );
     });
-
     activate(registry, "tickets");
     activate(registry, "ticket");
     activate(registry, "sessions");
-
     expect(observed).toEqual([
       ["tickets-view", "project-sessions"],
       ["ticket-view", "project-sessions"],
@@ -336,12 +382,10 @@ describe("workbench page runtime placement composition", () => {
       "enter:sessions",
     ]);
     expect(workbench.modes.getActiveModeId()).toBe("sessions");
-    expect(workbench.layout.getLayout().activeLocationWidgetId).toBe("renderer-sessions-content");
-
+    expect(workbench.layout.getLayout().activeLocationWidgetId).toBe("renderer-sessions-$main");
     unsubscribe();
     runtime.dispose();
   });
-
   test("rejects an unavailable page mode before changing page or layout state", () => {
     const workbench = createWorkbench();
     const registry = createRegistry();
@@ -350,7 +394,6 @@ describe("workbench page runtime placement composition", () => {
     registry.registerPage(page("broken", "missing"));
     const runtime = connectWorkbenchPageRuntime({ layout: workbench.layout, modes: workbench.modes, registry });
     activate(registry, "tickets");
-
     expect(() => activate(registry, "broken")).toThrow("Workbench mode not registered: missing");
     expect(registry.store.getState().activePageId).toBe("tickets");
     expect(registry.store.getState().activeModeId).toBe("project");
@@ -358,10 +401,8 @@ describe("workbench page runtime placement composition", () => {
     expect(workbench.layout.getLayout().regions.main.widgets.map((placement) => placement.contributionId)).toEqual([
       "tickets-view",
     ]);
-
     runtime.dispose();
   });
-
   test("reapplies active page and mode placements after a persistence scope rotation", () => {
     const workbench = createWorkbench({
       layoutPersistence: {
@@ -374,16 +415,13 @@ describe("workbench page runtime placement composition", () => {
     registry.registerPage(page("tickets", "project"));
     const runtime = connectWorkbenchPageRuntime({ layout: workbench.layout, modes: workbench.modes, registry });
     activate(registry, "tickets");
-
     workbench.layout.setPersistenceScope("project/one/view/tickets");
-
     expect(workbench.layout.getLayout().regions.main.widgets.map((placement) => placement.contributionId)).toEqual([
       "tickets-view",
     ]);
     expect(workbench.layout.getLayout().regions.side.widgets.map((placement) => placement.contributionId)).toEqual([
       "project-sessions",
     ]);
-
     runtime.dispose();
   });
 });

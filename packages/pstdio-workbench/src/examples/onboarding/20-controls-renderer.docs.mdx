@@ -40,7 +40,7 @@ The demo places a launcher in Main and a plain notes View beside terminals in th
   panel + menu can also create another terminal.
 
 - `ctx.views.registerView(...)` defines the notes View with a React `body`.
-- `ctx.shellPlacements.registerPlacement(...)` places it. `item.kind: "view"` places one static View, `item.viewId`
+- `ctx.shellPlacements.registerPlacement(...)` places it. `item.kind: "view"` places one static View, `item.view`
   names it, and `region: "secondary"` targets the Secondary Panel region.
 - `item.presence: "closed"` keeps the placement hidden until the user or an action opens it. The Add panel offers it.
 

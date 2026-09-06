@@ -59,9 +59,7 @@ export const isExtensionNavigationTarget = (value: unknown): value is ExtensionN
   if (!isRecord(value) || value.kind !== "compound" || !Array.isArray(value.targets) || value.targets.length === 0) {
     return false;
   }
-  if (!value.targets.every(isItemTarget)) return false;
-  const pageIndexes = value.targets.flatMap((target, index) => (target.kind === "page" ? [index] : []));
-  return pageIndexes.length === 0 || (pageIndexes.length === 1 && pageIndexes[0] === 0);
+  return value.targets.every((target) => isPageTarget(target) || isPanelTarget(target));
 };
 
 const toCommandTarget = (
@@ -92,10 +90,19 @@ const toPageTarget = (
 
 // The return type stays explicit: the compound branch recurses, and TypeScript
 // cannot infer the return type of a self-referencing function.
-export const toWorkbenchNavigationTarget = (
+type NavigationOperation = Extract<ExtensionNavigationTarget, { kind: "page" | "panel" }>;
+export function toWorkbenchNavigationTarget(
+  target: NavigationOperation,
+  input?: ToWorkbenchNavigationTargetInput,
+): NavigationOperation;
+export function toWorkbenchNavigationTarget(
+  target: ExtensionNavigationTarget,
+  input?: ToWorkbenchNavigationTargetInput,
+): NavigationTarget;
+export function toWorkbenchNavigationTarget(
   target: ExtensionNavigationTarget,
   input: ToWorkbenchNavigationTargetInput = {},
-): NavigationTarget => {
+): NavigationTarget {
   if (target.kind === "command") return toCommandTarget(target, input);
   if (target.kind === "href") return target;
   if (target.kind === "page") return toPageTarget(target, input.extensionId);
@@ -110,11 +117,9 @@ export const toWorkbenchNavigationTarget = (
   }
   return {
     kind: "compound",
-    targets: target.targets.map(
-      (item) => toWorkbenchNavigationTarget(item, input) as Exclude<NavigationTarget, { kind: "compound" }>,
-    ),
+    targets: target.targets.map((item) => toWorkbenchNavigationTarget(item, input)),
   };
-};
+}
 
 export const toWorkbenchNavigationTargetResult = (
   value: unknown,

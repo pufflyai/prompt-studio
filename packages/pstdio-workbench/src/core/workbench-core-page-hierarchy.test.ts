@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { createWorkbench } from "./workbench-core";
 
 const pageRef = (id: string) => ({ extensionId: "example.tools", kind: "page" as const, id });
-
 const createTools = () => {
   const workbench = createWorkbench({ startPage: pageRef("start") });
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
@@ -14,7 +13,15 @@ const createTools = () => {
     ref: pageRef("start"),
     path: "start",
     modeId: "project",
-    slots: [{ id: "content", role: "primary", region: "main", viewId: "start" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "start",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   for (const id of ["ticket", "archive", "workspace"]) {
     const kind = id === "workspace" ? "workspace" : "ticket";
@@ -24,25 +31,36 @@ const createTools = () => {
       path: id,
       modeId: "project",
       parentId: "start",
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          binding: { resourceKinds: [kind], viewId: kind, cardinality: "one" },
+      resource: {
+        kinds: [
+          {
+            kind: "resource-kind",
+            id: kind,
+          },
+        ],
+      },
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: kind,
         },
-      ],
+        cardinality: "one",
+      },
+      slots: [],
     });
   }
   workbench.resources.registerHierarchyProvider({
     id: "workspace-ticket",
-    canResolve: (resource) => resource.kind === "workspace",
-    getParent: () => ({ kind: "ticket", id: "PS-326", uri: "pstdio://ticket/PS-326" }),
+    canResolve: (resource) => resource.type === "workspace",
+    getParent: () => ({
+      type: "ticket",
+      id: "PS-326",
+    }),
   });
   workbench.pageLocations.setProject("project-1");
   return workbench;
 };
-
 describe("explicit page ancestry", () => {
   test("uses the declared parent when several pages accept the same parent resource and view", () => {
     const workbench = createTools();
@@ -54,7 +72,6 @@ describe("explicit page ancestry", () => {
     expect(result.ok).toBe(true);
     expect(workbench.pages.store.getState().location?.parent).toEqual({ page: pageRef("start") });
   });
-
   test("returns to the exact contextual parent supplied by the navigation owner", () => {
     const workbench = createTools();
     workbench.pageLocations.navigate({

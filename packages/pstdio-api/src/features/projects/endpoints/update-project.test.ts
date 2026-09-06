@@ -10,17 +10,19 @@ import { testHarnessId } from "../../harnesses/test-harness-registry";
 const CLAUDE_CODE_ID = testHarnessId("claude-code");
 
 let app: OpenAPIHono<AppBindings>;
+let closeApp: () => Promise<void>;
 let tempRoot: string;
 
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-update-project-test-"));
-  ({ app } = await createTestApp({
+  ({ app, close: closeApp } = await createTestApp({
     databasePath: ":memory:",
     storageRoot: join(tempRoot, "storage"),
   }));
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await closeApp();
   rmSync(tempRoot, { recursive: true, force: true });
 });
 

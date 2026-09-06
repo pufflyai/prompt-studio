@@ -39,7 +39,6 @@ for (const first of [dashboardWidgetIds.workspaceFiles, dashboardWidgetIds.works
       });
     }
     expect(workbench.layout.getLayout().regions.main.widgets.map((item) => item.viewId)).toEqual([
-      dashboardWidgetIds.workspace,
       dashboardWidgetIds.workspaceDiffs,
       dashboardWidgetIds.workspaceFiles,
     ]);

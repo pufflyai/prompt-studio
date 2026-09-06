@@ -30,15 +30,18 @@ const services = defineView({
     }),
   },
 });
-
 export const servicesPage = definePage({
   id: "services",
   title: "Services",
   path: "services",
   mode: workbenchModes.project,
-  slots: [{ id: "content", role: "primary", region: "main", view: services.ref }],
+  main: {
+    kind: "view",
+    view: services.ref,
+    cardinality: "one",
+  },
+  slots: [],
 });
-
 export default defineExtension({
   views: [services],
   pages: [servicesPage],

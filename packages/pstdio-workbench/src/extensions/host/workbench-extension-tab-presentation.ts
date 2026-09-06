@@ -1,4 +1,5 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, WorkbenchPanelTab, WorkbenchTabSnapshot } from "../../core";
 import { toWorkbenchNavigationTargetResult } from "./extension-navigation-target";
@@ -11,10 +12,8 @@ export type WorkbenchExtensionTabMetadata = NonNullable<MetadataPlacement["tab"]
   extensionId: string;
   placementId: string;
 };
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object" && !Array.isArray(value));
-
 const toSnapshot = (value: unknown, extensionId: string): WorkbenchTabSnapshot => {
   if (!isRecord(value)) return {};
   const indicator = isRecord(value.indicator)
@@ -56,7 +55,6 @@ const toSnapshot = (value: unknown, extensionId: string): WorkbenchTabSnapshot =
     menu,
   };
 };
-
 export const createWorkbenchExtensionTabPresentation = (
   input: RegisterWorkbenchExtensionContributionsInput,
   metadata: WorkbenchExtensionTabMetadata,
@@ -65,14 +63,13 @@ export const createWorkbenchExtensionTabPresentation = (
   const loading = new Set<string>();
   const listeners = new Set<() => void>();
   const refreshEvents = new Set(metadata.refreshEventIds ?? []);
-
   const load = (instance: Parameters<WorkbenchPanelTab["getSnapshot"]>[0]) => {
     if (loading.has(instance.instanceId)) return;
     loading.add(instance.instanceId);
     const resource = instance.resource
       ? {
-          type: instance.resource.kind,
-          id: instance.resource.id ?? instance.resource.uri,
+          type: instance.resource.type,
+          id: instance.resource.id ?? resourceKey(instance.resource),
           label: instance.resource.label,
           metadata: instance.resource.metadata,
         }
@@ -99,7 +96,6 @@ export const createWorkbenchExtensionTabPresentation = (
       })
       .finally(() => loading.delete(instance.instanceId));
   };
-
   return {
     refreshEvents: metadata.refreshEventIds,
     getSnapshot(instance) {

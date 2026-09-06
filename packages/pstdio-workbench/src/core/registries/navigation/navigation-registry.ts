@@ -49,7 +49,7 @@ export type NavigationTargetItem =
 
 export interface NavigationTargetCompound {
   kind: "compound";
-  targets: readonly NavigationTargetItem[];
+  targets: readonly (NavigationTargetPage | NavigationTargetPanel)[];
 }
 
 export type NavigationTarget = NavigationTargetItem | NavigationTargetCompound;
@@ -68,7 +68,7 @@ export type RegisteredNavigationParser = Omit<NavigationParser, "priority"> & Re
 export interface NavigationDispatcherContext {
   canOpenPanel?(target: NavigationTargetPanel): boolean;
   canExecuteCommand?(commandId: string): boolean;
-  createCheckpoint?(): undefined | (() => void);
+  prepareNavigation?(targets: readonly (NavigationTargetPage | NavigationTargetPanel)[]): { commit(): unknown };
   openPanelTarget?(target: NavigationTargetPanel): unknown;
   openPageTarget?(target: NavigationTargetPage): unknown;
   executeCommand(commandId: string, args?: unknown): Promise<unknown> | unknown;
@@ -186,18 +186,15 @@ export const createNavigationRegistry = (input: CreateNavigationRegistryInput = 
 
       for (const item of items) validateItem(item, dispatcher);
 
-      const rollback = target.kind === "compound" ? dispatcher.createCheckpoint?.() : undefined;
-      try {
-        for (const item of items) {
-          // Sequential by design: a `compound` target's items often depend on
-          // each other (open resource, then reveal the view that hosts it).
-          const result = await dispatchItem(item, dispatcher);
-          results.push(result);
-        }
-      } catch (error) {
-        rollback?.();
-        throw error;
+      if (target.kind === "compound") {
+        if (target.targets.some((item) => item.kind !== "page" && item.kind !== "panel"))
+          throw new Error("Compound navigation accepts only page and panel targets");
+        if (!dispatcher.prepareNavigation)
+          throw new Error("navigation.openTarget: navigation preparation is not configured");
+        const prepared = dispatcher.prepareNavigation(target.targets);
+        return [prepared.commit()];
       }
+      for (const item of items) results.push(await dispatchItem(item, dispatcher));
       return results;
     },
 

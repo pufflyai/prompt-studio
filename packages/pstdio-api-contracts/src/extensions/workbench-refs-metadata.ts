@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { jsonObjectSchema } from "./common";
+import { serializableJsonObjectSchema } from "./common";
 
 export const contributionRefSchema = <Kind extends string>(kind: Kind) =>
   z.object({ extensionId: z.string(), kind: z.literal(kind), id: z.string() });
@@ -20,5 +20,5 @@ export const panelRefSchema = z.union([placementRefSchema, pageSlotRefSchema]);
 
 export const commandTargetSchema = z.object({
   command: contributionRefSchema("command"),
-  params: jsonObjectSchema.optional(),
+  params: serializableJsonObjectSchema.optional(),
 });

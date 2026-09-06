@@ -49,8 +49,8 @@ export const createLayoutPlacementMethods = (input: {
     throw new Error(`Widget placement not found: ${widgetId}`);
   },
 
-  expirePreviewTabs(ownerResourceUri) {
-    input.setLayout(expirePreviewTabsInLayout(input.getLayout(), ownerResourceUri));
+  expirePreviewTabs(ownerResourceKey) {
+    input.setLayout(expirePreviewTabsInLayout(input.getLayout(), ownerResourceKey));
     input.persistLayout();
   },
 

@@ -34,6 +34,13 @@ export { WorkbenchRegion } from "./region/region";
 export { WorkbenchRegionTabs } from "./region/region-tabs";
 export { WorkbenchWidgetHost } from "./region/widget-host";
 export { WorkbenchDataTableView } from "./renderers/data-table/data-table-view";
+export type {
+  ReactAttributeDescriptor,
+  ReactAttributesSource,
+  ReactBoardColumnConfig,
+  ReactKanbanRendererContribution,
+  ReactResourceContextAction,
+} from "./renderers/kanban/kanban-presentation";
 export type { PreferenceParamEntry } from "./renderers/settings/preference-schema-to-params";
 export { paramValueToPreference, preferenceSchemaToParams } from "./renderers/settings/preference-schema-to-params";
 export type { WorkbenchPreferencesFormProps } from "./renderers/settings/preferences-form";

@@ -13,7 +13,6 @@ const hook = (id: string) => extension.hooks?.find((contribution) => contributio
 const skill = (id: string) => extension.skills?.find((contribution) => contribution.id === id);
 const template = (id: string) => extension.templates?.find((contribution) => contribution.id === id);
 const templateType = (id: string) => extension.templateTypes?.find((contribution) => contribution.id === id);
-
 const fileMount = (root: string) => ({
   exists: async (path: string) => existsSync(join(root, path)),
   readText: async (path: string) => readFileSync(join(root, path), "utf8"),
@@ -23,7 +22,6 @@ const fileMount = (root: string) => ({
     writeFileSync(absolutePath, content);
   },
 });
-
 const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>) =>
   putTicket(storage, {
     id: "ticket-1",
@@ -44,13 +42,13 @@ const seedBacklogTicket = async (storage: ReturnType<typeof createMemoryStorage>
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
   } satisfies StoredTicket);
-
 describe("pstdio planner extension contributions", () => {
-  test("contributes ticket UI through pages instead of Project-mode placements", () => {
+  test("contributes a routed ticket editor with page-owned navigation", () => {
     expect(extension.modes).toBeUndefined();
     expect(extension.resourceKinds?.[0]).toMatchObject({ id: "ticket" });
-    expect(extension.pages?.find((page) => page.id === "ticket")?.slots[0]).toMatchObject({
-      binding: { kind: { id: "ticket" }, view: { id: "ticket-editor" } },
+    expect(extension.pages?.find((page) => page.id === "ticket")).toMatchObject({
+      resource: { kinds: [{ id: "ticket" }] },
+      main: { kind: "view", view: { id: "ticket-editor" } },
     });
     expect(extension.navigationTrees?.[0]).toMatchObject({
       id: "ticket-files",
@@ -66,7 +64,6 @@ describe("pstdio planner extension contributions", () => {
     });
     expect(extension.placements).toBeUndefined();
   });
-
   test("uses a native tree body for ticket files", () => {
     expect(extension.views?.find((view) => view.id === "ticket-files")).toMatchObject({
       title: { $l10n: "panels.ticketFiles.title", default: "Files" },
@@ -78,15 +75,12 @@ describe("pstdio planner extension contributions", () => {
       },
     });
   });
-
   test("refreshes native ticket view bodies from the shared ticket event", () => {
     const event = { extensionId: "pstdio.pstdio-planner", id: "tickets.changed", kind: "event" };
-
     for (const id of ["ticket-files", "ticket-editor", "ticket-properties", "tickets"]) {
       expect(extension.views?.find((view) => view.id === id)?.body.refreshEvents).toEqual([event]);
     }
   });
-
   test("contributes shared document templates and planner skills", () => {
     expect(templateType("document")).toMatchObject({ label: "Document" });
     expect(template("prd")).toMatchObject({ title: "PRD", type: "document" });
@@ -95,14 +89,12 @@ describe("pstdio planner extension contributions", () => {
     expect(skill("create-pstdio-extension")).toBeUndefined();
     expect(skill("pstdio")).toBeUndefined();
   });
-
   test("registers the link review ticket command", () => {
     expect(command("link-review")).toMatchObject({
       title: "Link review",
       cli: { globalAliases: [["tickets", "link-review"]] },
     });
   });
-
   test("exposes manual planner settings commands through the CLI", () => {
     expect(command("ticket-status.update")?.cli).toEqual({
       globalAliases: [["statuses", "update"]],
@@ -132,7 +124,6 @@ describe("pstdio planner extension contributions", () => {
       globalAliases: [["tags", "apply-draft"]],
     });
   });
-
   test("owns planner translation bundles and localizable contribution copy", () => {
     expect(extension.defaultLocale).toBe("en");
     expect(extension.translations).toEqual({
@@ -170,13 +161,11 @@ describe("pstdio planner extension contributions", () => {
     expect(extension.statuses?.[0]?.title).toBe("Ticket status");
   });
 });
-
 describe("pstdio planner workspace contributions", () => {
   test("copies the linked ticket file when a ticket worktree is created", async () => {
     const storage = createMemoryStorage();
     const ticket = await seedBacklogTicket(storage);
     const worktreePath = mkdtempSync(join(tmpdir(), "planner-worktree-"));
-
     try {
       await hook("worktree-created")?.run(
         {
@@ -199,7 +188,6 @@ describe("pstdio planner workspace contributions", () => {
           },
         },
       );
-
       const path = join(worktreePath, ticketMarkdownPath(ticket.shorthand));
       expect(existsSync(path)).toBe(true);
       expect(readFileSync(path, "utf8")).toContain(ticket.content);
@@ -207,7 +195,6 @@ describe("pstdio planner workspace contributions", () => {
       rmSync(worktreePath, { recursive: true, force: true });
     }
   });
-
   test("copies an existing local ticket file into a ticket worktree", async () => {
     const storage = createMemoryStorage();
     const ticket = await seedBacklogTicket(storage);
@@ -217,7 +204,6 @@ describe("pstdio planner workspace contributions", () => {
     const localContent = "# Local ticket edits\n";
     mkdirSync(join(repoPath, ".pstdio", "tickets", ticket.shorthand), { recursive: true });
     writeFileSync(repoTicketPath, localContent);
-
     try {
       await hook("worktree-created")?.run(
         {
@@ -240,14 +226,12 @@ describe("pstdio planner workspace contributions", () => {
           },
         },
       );
-
       expect(readFileSync(join(worktreePath, ticketMarkdownPath(ticket.shorthand)), "utf8")).toBe(localContent);
     } finally {
       rmSync(repoPath, { recursive: true, force: true });
       rmSync(worktreePath, { recursive: true, force: true });
     }
   });
-
   // Session-start ticket movement and loop automations live in the repo-local
   // pstdio-planner-loops extension; the planner keeps only worktreeCreated and the
   // blocked-notification hook.
@@ -257,7 +241,6 @@ describe("pstdio planner workspace contributions", () => {
       "worktree-created",
     ]);
   });
-
   test("mounts run review in the workspace overflow menu", () => {
     expect(command("run-review")?.menus).toMatchObject([
       {
@@ -268,14 +251,11 @@ describe("pstdio planner workspace contributions", () => {
       },
     ]);
   });
-
   test("run-review only exposes workspace and harness options", () => {
     const runReview = command("run-review");
-
     expect(Object.keys(runReview?.params ?? {}).sort()).toEqual(["harness", "workspaceId"]);
     expect(runReview?.params?.workspaceId).toMatchObject({ required: false });
   });
-
   test("opens the Tickets list and ticket detail as separate pages", async () => {
     const tickets = extension.views?.find((view) => view.id === "tickets");
     if (tickets?.body.kind !== "kanban") throw new Error("Tickets view must use a Kanban body");
@@ -291,30 +271,26 @@ describe("pstdio planner workspace contributions", () => {
     expect(extension.pages?.find((page) => page.id === "tickets")).toMatchObject({
       path: "tickets",
       mode: { extensionId: "pstdio", kind: "mode", id: "project" },
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          view: tickets.ref,
-        },
-      ],
+      main: {
+        kind: "view",
+        view: tickets.ref,
+        cardinality: "one",
+      },
+      slots: [],
     });
     expect(extension.pages?.find((page) => page.id === "ticket")).toMatchObject({
       path: "ticket",
       mode: { extensionId: "pstdio", kind: "mode", id: "project" },
       parent: { kind: "page", id: "tickets" },
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          binding: {
-            kind: { kind: "resource-kind", id: "ticket" },
-            view: { kind: "view", id: "ticket-editor" },
-          },
-        },
-      ],
+      resource: {
+        kinds: [{ kind: "resource-kind", id: "ticket" }],
+      },
+      main: {
+        kind: "view",
+        view: { kind: "view", id: "ticket-editor" },
+        cardinality: "one",
+      },
+      slots: [],
     });
     const detailTarget = await tickets.body.onRowActivate?.({} as never, {
       row: {
@@ -335,7 +311,6 @@ describe("pstdio planner workspace contributions", () => {
     });
     expect(extension.placements?.find((placement) => placement.id === "tickets.project")).toBeUndefined();
   });
-
   test("exposes ticket workspace creation as an extension-owned row action", () => {
     const tickets = extension.views?.find((view) => view.id === "tickets");
     expect(tickets?.body.kind === "kanban" ? tickets.body.rowActions : undefined).toContainEqual({
@@ -345,7 +320,6 @@ describe("pstdio planner workspace contributions", () => {
       command: { id: "create-workspace", kind: "command" },
     });
   });
-
   test("keeps tag and board rule settings separate from shared status fields", () => {
     expect(extension.settingsPanels?.map((panel) => panel.id)).toEqual(["ticket-tags"]);
     expect(extension.settingsSections).toEqual([
@@ -354,13 +328,11 @@ describe("pstdio planner workspace contributions", () => {
     expect(extension.statuses?.map((provider) => provider.id)).toEqual(["ticket-statuses"]);
   });
 });
-
 describe("pstdio planner notification hooks", () => {
   test("creates blocked notifications from session anchors when workspace anchors are empty", async () => {
     const storage = createMemoryStorage();
     const ticket = await seedBacklogTicket(storage);
     const notifications: unknown[] = [];
-
     await hook("session-awaiting-input")?.run(
       {
         storage,
@@ -378,7 +350,6 @@ describe("pstdio planner notification hooks", () => {
         anchors: [{ type: "ticket", id: ticket.id, label: ticket.shorthand }],
       } as never,
     );
-
     expect(notifications).toEqual([
       expect.objectContaining({
         dedupeKey: "pstdio-planner:ticket:T-1:blocked",

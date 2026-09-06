@@ -18,6 +18,7 @@ import type {
 } from "../../../core";
 import { getWorkbenchRenderers } from "../../../core";
 import { useWorkbenchResourceActionResolver } from "../../menus/resource-actions";
+import { bindReactKanbanPresentation } from "./kanban-presentation";
 import { createKanbanViewQuerySequencer, executeKanbanViewQuery } from "./kanban-view-query";
 import { resolveKanbanRendererStorageKey } from "./kanban-view-storage";
 
@@ -56,12 +57,14 @@ const WorkbenchKanbanViewFrame = (props: WorkbenchKanbanViewFrameProps) => {
 
 const noopSubscribe = () => () => {};
 
-const isResourceRef = (resource: unknown): resource is ResourceRef =>
+export const isKanbanRowResource = (resource: unknown): resource is ResourceRef =>
   Boolean(
     resource &&
       typeof resource === "object" &&
-      typeof (resource as { kind?: unknown }).kind === "string" &&
-      typeof (resource as { uri?: unknown }).uri === "string",
+      "type" in resource &&
+      typeof resource.type === "string" &&
+      "id" in resource &&
+      typeof resource.id === "string",
   );
 
 const useResolvedContributionAttributes = (attributes: AttributeDescriptor[] | AttributesSource) => {
@@ -88,7 +91,8 @@ export const mergeKanbanViewRowActions = (
 };
 
 export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
-  const { workbench, contribution, placement } = props;
+  const { workbench, placement } = props;
+  const contribution = bindReactKanbanPresentation(props.contribution);
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
   const attributes = useResolvedContributionAttributes(contribution.attributes);
   const storageKey = resolveKanbanRendererStorageKey(contribution.id, placement, contribution.storageScope);
@@ -138,7 +142,7 @@ export const WorkbenchKanbanView = (props: WorkbenchKanbanViewProps) => {
   };
 
   const getRowContextMenuActions = (row: KanbanRendererRow) => {
-    const resourceActions = isResourceRef(row.resource) ? resolveResourceActions(row.resource) : [];
+    const resourceActions = isKanbanRowResource(row.resource) ? resolveResourceActions(row.resource) : [];
     const contributionActions = contribution.getRowContextMenuActions?.(row) ?? [];
     return mergeKanbanViewRowActions(resourceActions, contributionActions);
   };

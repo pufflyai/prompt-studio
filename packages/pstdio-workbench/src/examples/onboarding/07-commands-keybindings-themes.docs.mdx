@@ -6,7 +6,7 @@ import source from "../page-composition/module.tsx?raw";
 
 # 8. Declare the whole page composition
 
-A page declares every placement it owns through slots. This story renders two workbenches so both compositions remain
+A page declares its Main content through `main` and additional panels through `slots`. This story renders two workbenches so both compositions remain
 visible. It does not demonstrate navigation. Story 8 does that.
 
 The first workbench shows Session details in Main, changed files in the Sidenav, and a session inspector in the
@@ -47,9 +47,8 @@ The outer setup prepares the workbench:
 - `path` is the URL path segment for the page location.
 - `modeId` names the mode that owns the page. Opening a page from another mode switches the mode in the same
   navigation step.
-- `slots` declares all three placements the page owns. `content` is the primary Main slot and cannot close while the
-  page is active. `context` is a fixed auxiliary Sidenav slot. The third slot reads its region from
-  `page.auxiliary.region`, so one page opens a Side panel and the other opens a Secondary panel.
+- `main: { kind: "view", view, cardinality: "one" }` renders the Main view.
+- `slots` declares the fixed Sidenav panel and the additional panel in `page.auxiliary.region`. Session uses Side; Extension Lab uses Secondary. Each uses the shared `item` contract.
 
 `PageCompositionExample` creates two workbenches with different start pages. It renders both at once so the region
 layouts can be compared without changing state. `showNavigation: false` removes the replacement controls from this

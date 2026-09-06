@@ -52,7 +52,7 @@ The outer setup creates and owns the module:
 - `id` is the stable identity of this shell-owned placement. It is separate from the View id; two placements here
   reuse one View.
 - `item.kind: "view"` says this is one static View rather than a resource-bound set of instances.
-- `item.viewId` names the registered View to render.
+- `item.view` names the registered View to render.
 - `item.presence` sets the initial state: `"fixed"` always shows and cannot close, `"open"` starts open and the user
   may close it, `"closed"` stays hidden until the user or an action opens it. A saved user choice wins over `"open"`
   and `"closed"` on the next visit.

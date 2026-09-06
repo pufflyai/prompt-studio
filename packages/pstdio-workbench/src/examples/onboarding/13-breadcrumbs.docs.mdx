@@ -34,7 +34,7 @@ The setup creates the workbench and its page mode:
 `workbench.views.registerView(...)` and `workbench.pages.registerPage(...)` build each location:
 
 - the View uses `body.kind: "react"` to render the active location and page buttons.
-- the page owns one primary slot in Main.
+- `main` renders the page content; `resource` declares its routed resource constraint.
 - `parentId` points to the registered parent page. The location controller follows those links to build the breadcrumb
   trail.
 

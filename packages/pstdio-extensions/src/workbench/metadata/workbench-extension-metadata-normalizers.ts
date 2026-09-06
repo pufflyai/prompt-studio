@@ -32,7 +32,11 @@ export const refreshEventIds = (events: readonly RendererEventReference[] | unde
 
 export type MetadataNavigationTarget = WorkbenchExtensionMetadata["navigationItems"][number]["action"];
 
-export const normalizeTarget = (target: NavigationTarget, extensionId: string): MetadataNavigationTarget => {
+type NavigationOperation = Extract<NavigationTarget, { kind: "page" | "panel" }>;
+type MetadataOperation = Extract<MetadataNavigationTarget, { kind: "page" | "panel" }>;
+export function normalizeTarget(target: NavigationOperation, extensionId: string): MetadataOperation;
+export function normalizeTarget(target: NavigationTarget, extensionId: string): MetadataNavigationTarget;
+export function normalizeTarget(target: NavigationTarget, extensionId: string): MetadataNavigationTarget {
   if (target.kind === "page") {
     return {
       ...target,
@@ -55,10 +59,8 @@ export const normalizeTarget = (target: NavigationTarget, extensionId: string): 
   if (target.kind === "compound") {
     return {
       ...target,
-      targets: target.targets.map(
-        (item) => normalizeTarget(item, extensionId) as Exclude<MetadataNavigationTarget, { kind: "compound" }>,
-      ),
+      targets: target.targets.map((item) => normalizeTarget(item, extensionId)),
     };
   }
   return target;
-};
+}

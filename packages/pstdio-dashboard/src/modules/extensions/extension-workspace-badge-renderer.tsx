@@ -1,5 +1,5 @@
 import { Box, Icon, Menu } from "@chakra-ui/react";
-import type { KanbanRendererResourceRef, NavigationTargetPage } from "@pstdio/sdk/extensions";
+import type { KanbanRendererResourceRef, NavigationTargetPage, ResourceRef } from "@pstdio/sdk/extensions";
 import {
   ListRow,
   type SessionCompletionStatus,
@@ -9,15 +9,11 @@ import {
 } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
 import type { KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
-import type { ResourceRef } from "@pstdio/workbench";
 import { isExtensionNavigationTarget } from "@pstdio/workbench/extensions";
 import { GitBranch } from "lucide-react";
 import { createElement, useEffect, useState } from "react";
 import { createDashboardResource } from "@/shared/app/resources";
-import {
-  type ExtensionResourceReference,
-  normalizeExtensionResourceReference,
-} from "@/shared/workbench/resource-hierarchy";
+import { normalizeExtensionResourceReference } from "@/shared/workbench/resource-hierarchy";
 import {
   getDashboardWorkspaceDiffSummary,
   requestDashboardWorkspaceDiffSummaries,
@@ -36,7 +32,7 @@ export interface ExtensionWorkspaceBadgeItem {
   resource?: KanbanRendererResourceRef;
   target?: NavigationTargetPage;
   createdAt?: string;
-  resourceParent?: ExtensionResourceReference;
+  resourceParent?: ResourceRef;
   session?: ExtensionWorkspaceBadgeSession;
 }
 

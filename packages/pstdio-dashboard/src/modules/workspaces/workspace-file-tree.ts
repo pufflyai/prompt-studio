@@ -236,7 +236,7 @@ export const loadWorkspaceFileEntries = async (
   const nodes = response.entries.map((entry) =>
     fileNode(ctx, resource, entry, actions, { change: changeByPath.get(entry.path), revealInFinder }),
   );
-  if (pendingCreation?.workspaceId === workspaceId && pendingCreation.parentPath === path) {
+  if (pendingCreation && pendingCreation.workspaceId === workspaceId && pendingCreation.parentPath === path) {
     nodes.unshift(inlineCreateNode(resource, path, pendingCreation.type, actions));
   }
   if (response.truncated) {

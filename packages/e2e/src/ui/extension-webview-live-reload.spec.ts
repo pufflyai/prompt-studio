@@ -185,7 +185,10 @@ test.describe("Extension webview live reload", () => {
       const nextHeading = `Sandbox webview ${Date.now()}`;
       const viewFile = join(extensionRoot, "src/views/lab-page.tsx");
       const current = readFileSync(viewFile, "utf8");
-      writeFileSync(viewFile, current.replace('"Sandbox webview"', `"${nextHeading}"`));
+      writeFileSync(
+        viewFile,
+        current.replace('t("webview.labPage.heading", "Sandbox webview")', JSON.stringify(nextHeading)),
+      );
 
       const startedAt = Date.now();
       await expect.poll(() => getWebviewModuleUrl(request, project.id, "lab-page")).not.toBe(initialModuleUrl);

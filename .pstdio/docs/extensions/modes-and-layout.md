@@ -48,7 +48,7 @@ Declare `floatingPanels: "hidden"` on the mode to prevent floating side panels. 
 
 `regionSettings[region].collapsible: false` prevents dragging the region closed. The shared navigation buttons can still hide and reopen it. Hiding preserves its placements. Docked content stays mounted through hide and reopen. It does not close a tab or change the page.
 
-`alwaysShowTabs: true` keeps a lone tab visible. Otherwise, a tab strip needs at least two visible items. Tab visibility does not affect panel visibility or floating permission.
+A lone closable panel keeps its tab visible by default. `alwaysShowTabs: true` shows every lone tab; `false` hides a lone tab. Multiple visible items always show tabs. Tab visibility does not affect panel visibility or floating permission.
 
 | Mode | Panel policy |
 | --- | --- |

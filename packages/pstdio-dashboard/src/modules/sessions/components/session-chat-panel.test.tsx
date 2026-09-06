@@ -58,7 +58,7 @@ describe("openReviewWorkspace", () => {
       },
     });
     expect(workbench.getPrimaryResource()).toMatchObject({
-      kind: "workspace",
+      type: "workspace",
       id: "workspace-1",
       label: "Dashboard workbench datalayer",
       metadata: {
@@ -108,7 +108,7 @@ describe("openSelectedWorkspace", () => {
       },
     });
     expect(workbench.getPrimaryResource()).toMatchObject({
-      kind: "workspace",
+      type: "workspace",
       id: "workspace-2",
       label: "Second attempt",
       metadata: {

@@ -44,8 +44,8 @@ const sanitizeLayout = (ctx: WorkbenchModuleContext, snapshot: ExtensionContribu
     Boolean(panelId && placements.some((placement) => placement.widgetId === panelId));
   const retainedWidgetIds = new Set(placements.map((placement) => placement.widgetId));
   const locationSubPanelSelections = Object.fromEntries(
-    Object.entries(snapshot.layout.locationSubPanelSelections ?? {}).map(([resourceUri, selections]) => [
-      resourceUri,
+    Object.entries(snapshot.layout.locationSubPanelSelections ?? {}).map(([resourceKey, selections]) => [
+      resourceKey,
       Object.fromEntries(Object.entries(selections).filter(([, widgetId]) => retainedWidgetIds.has(widgetId))),
     ]),
   );
@@ -57,7 +57,7 @@ const sanitizeLayout = (ctx: WorkbenchModuleContext, snapshot: ExtensionContribu
     activeLocationWidgetId: hasPlacement(snapshot.layout.activeLocationWidgetId)
       ? snapshot.layout.activeLocationWidgetId
       : undefined,
-    activeResourceUri: hasPlacement(snapshot.layout.activeWidgetId) ? snapshot.layout.activeResourceUri : undefined,
+    activeResourceKey: hasPlacement(snapshot.layout.activeWidgetId) ? snapshot.layout.activeResourceKey : undefined,
     locationSubPanelSelections,
   };
 };

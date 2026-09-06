@@ -48,16 +48,7 @@ PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions check
 
 Treat warnings as actionable. They do not block loading, but they describe behavior an author should confirm.
 
-Composition diagnostics to expect:
-
-- `invalid_placement`: a placement uses an invalid region or item, or still declares a removed field such as `defaultOpen`, `required`, `closable`, `defaultResource`, `openCommand`, `regionSize`, or `regionCollapsible`. The message names the replacement, for example `presence` on the static item, `add` on the resource binding, or `regionSettings` on the owning mode.
-- `invalid_page` and `invalid_page_slot`: a page field or slot shape is invalid, or a slot still declares one of the removed fields above (or a slot-level `cardinality`). The message names the replacement field.
-- `invalid_mode`: a mode is missing a label or valid regions, or its `regionSettings` keys are not declared regions.
-- `invalid_keybinding`: a keybinding chord is invalid or the contribution declares no navigation `action`.
-- `extension_page_primary_invalid`: a page does not declare exactly one primary slot in `main`, or a resource page has no `parent`.
-- `extension_page_region_invalid`: a page slot targets a region its mode does not expose.
-- `extension_resource_kind_missing` and `extension_view_missing`: a binding or hierarchy provider references an unknown resource kind or view.
-- `extension_resource_menu_slot_closed`: an external command targets a closed resource menu slot.
+Composition diagnostics name the extension, contribution, field path, and expected contract. Fix the named field first. A page declares Main separately from its resource constraint. Every binding needs kinds, view, and cardinality. A page with multiple routed view instances requires a resource; a routed view page requires a parent. A slot's region must be available in its mode. Missing resource kinds, views, owners, and capabilities are reported during extension checking.
 
 Convention diagnostics to expect:
 

@@ -1,3 +1,4 @@
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { ResourceContextAction } from "@pstdio/ui";
 import type { DataTableSelectionAction, RowData } from "@pstdio/ui/data-table";
 import type { ReactNode } from "react";
@@ -8,7 +9,6 @@ import type {
   DataTableRendererSelectionAction,
   WorkbenchPanelInstance,
 } from "../../../core";
-
 export const resolveDataTableRendererColumns = (
   result: DataTableRendererQueryResult,
   contributionColumns?: DataTableRendererColumn[],
@@ -18,7 +18,6 @@ export const resolveDataTableRendererColumns = (
   const firstRow = result.rows[0];
   return firstRow ? Object.keys(firstRow.values).map((id): DataTableRendererColumn => ({ id })) : [];
 };
-
 export const buildDataTableRendererData = (rows: DataTableRendererRow[], columns: DataTableRendererColumn[]) => {
   const rowByData = new WeakMap<Record<string, unknown>, DataTableRendererRow>();
   const data = rows.map((row) => {
@@ -28,7 +27,6 @@ export const buildDataTableRendererData = (rows: DataTableRendererRow[], columns
   });
   return { data, rowByData };
 };
-
 export const resolveDataTableRendererSelectionActions = (
   actions: DataTableRendererSelectionAction[],
   rowByData: WeakMap<RowData, DataTableRendererRow>,
@@ -45,7 +43,6 @@ export const resolveDataTableRendererSelectionActions = (
       void action.run(rows);
     },
   }));
-
 export const resolveDataTableRendererResourceActions = (
   data: RowData,
   rowByData: WeakMap<RowData, DataTableRendererRow>,
@@ -53,7 +50,6 @@ export const resolveDataTableRendererResourceActions = (
 ) => {
   const resource = rowByData.get(data)?.resource;
   if (!resource) return [];
-
   return resolveResourceActions(resource)
     .filter((action) => !action.isDisabled)
     .map((action) => ({
@@ -62,8 +58,7 @@ export const resolveDataTableRendererResourceActions = (
       onSelect: (_context?: unknown) => void action.onClick(),
     }));
 };
-
 export const resolveDataTableRendererStorageKey = (rendererId: string, placement: WorkbenchPanelInstance) => {
-  const resourceKey = placement.resource?.uri ?? placement.resource?.id ?? "unscoped";
-  return `pstdio:workbench:dataTableRenderer:${rendererId}:${placement.instanceId}:${resourceKey}`;
+  const identity = resourceKey(placement.resource) ?? placement.resource?.id ?? "unscoped";
+  return `pstdio:workbench:dataTableRenderer:${rendererId}:${placement.instanceId}:${identity}`;
 };

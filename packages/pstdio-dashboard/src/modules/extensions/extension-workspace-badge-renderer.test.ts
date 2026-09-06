@@ -110,7 +110,7 @@ describe("extension workspace badge renderer", () => {
     );
 
     expect(resource).toMatchObject({
-      kind: "session",
+      type: "session",
       id: "session-2",
       label: "T-1_A2",
     });
@@ -150,7 +150,7 @@ describe("extension workspace badge renderer", () => {
     );
 
     expect(resource).toMatchObject({
-      kind: "workspace",
+      type: "workspace",
       id: "workspace-2",
       label: "Latest attempt",
       icon: "GitCommit",
@@ -192,8 +192,8 @@ describe("extension workspace badge renderer", () => {
     );
 
     expect(resource).toMatchObject({
+      type: "workspace",
       id: "workspace-42",
-      uri: "pstdio://extension-resource/workspace/workspace-42",
       metadata: { workspaceId: "workspace-42" },
     });
   });

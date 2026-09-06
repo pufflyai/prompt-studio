@@ -1,31 +1,55 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "../../workbench-core";
+import { registerResourcePage } from "./page-runtime-test-support";
 
 test("selecting a resource reveals its page follower in a closed side panel", () => {
   const workbench = createWorkbench({ initialSidePanelMode: "closed" });
   const page = { extensionId: "test", kind: "page" as const, id: "issues" };
   workbench.modes.registerMode({ id: "issues", activate: () => undefined });
   workbench.views.registerView({ id: "board", title: "Board", body: { kind: "react", render: () => null } });
-  workbench.pages.registerPage({
+  registerResourcePage(workbench, {
     id: "issues",
     ref: page,
     title: "Issues",
     path: "issues",
     modeId: "issues",
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "issue",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "board",
+      },
+      cardinality: "one",
+    },
     slots: [
       {
-        id: "main",
-        role: "primary",
-        region: "main",
-
-        binding: { resourceKinds: ["issue"], viewId: "board", cardinality: "one" },
-      },
-      {
         id: "reader",
-        role: "auxiliary",
         region: "side",
-        binding: { resourceKinds: ["issue"], viewId: "board", cardinality: "one" },
         openOn: "page-resource",
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [
+              {
+                kind: "resource-kind",
+                id: "issue",
+              },
+            ],
+            view: {
+              kind: "view",
+              id: "board",
+            },
+            cardinality: "one",
+          },
+        },
       },
     ],
   });

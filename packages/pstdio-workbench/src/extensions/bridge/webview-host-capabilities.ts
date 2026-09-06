@@ -1,11 +1,18 @@
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import type { HostEventPublisher } from "pstdio-extensions/bridge/host";
-import type { NavigationTarget, PreferenceScopeRef, PreferenceValue, WorkbenchCore } from "../../core";
+import type {
+  NavigationTarget,
+  PreferenceScopeRef,
+  PreferenceValue,
+  WorkbenchCore,
+  WorkbenchPanelInstance,
+} from "../../core";
 import { createTerminalSessionCapability } from "./terminal-session-capability";
 
 interface CreateWorkbenchWebviewHostCapabilitiesInput {
   dispatchKeyboardEvent?: (event: KeyboardEventInit) => void;
   workbench: WorkbenchCore;
+  placement?: WorkbenchPanelInstance;
   /** Event channel into the guest; terminal.session is only offered when present. */
   hostEvents?: HostEventPublisher;
 }
@@ -18,6 +25,19 @@ const dispatchDocumentKeyboardEvent = (params: KeyboardEventInit) => {
 
 export const createWorkbenchWebviewHostCapabilities = (input: CreateWorkbenchWebviewHostCapabilitiesInput) =>
   ({
+    ...(input.placement?.placementIdentity
+      ? {
+          "placement.close": (params: unknown) => {
+            if (
+              params !== undefined &&
+              (typeof params !== "object" || params === null || Array.isArray(params) || Object.keys(params).length > 0)
+            ) {
+              throw new Error("placement.close takes no parameters; the host supplies the calling placement.");
+            }
+            input.workbench.closePlacement(input.placement!.placementIdentity!);
+          },
+        }
+      : {}),
     "commands.execute": (params: unknown) => {
       const request = params as { commandId: string; params?: unknown };
       return input.workbench.commands.executeCommand(request.commandId, request.params);

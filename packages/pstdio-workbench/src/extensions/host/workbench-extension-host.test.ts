@@ -11,7 +11,6 @@ const controlsViewId = `${extensionId}.view.filters`;
 const detailViewId = `${extensionId}.view.detail`;
 const statusViewId = `${extensionId}.view.sync-status`;
 const statusesId = `${extensionId}.status.workflow`;
-
 const metadata = {
   extensions: [{ id: extensionId, name: "lab", displayName: "Lab", sourcePath: "/extensions/lab" }],
   commands: [],
@@ -26,14 +25,12 @@ const metadata = {
       title: "Review",
       path: "review",
       mode: { extensionId, kind: "mode", id: "review" },
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          view: { extensionId, kind: "view", id: "filters" },
-        },
-      ],
+      main: {
+        kind: "view",
+        view: { extensionId, kind: "view", id: "filters" },
+        cardinality: "one",
+      },
+      slots: [],
     },
   ],
   views: [
@@ -114,9 +111,11 @@ const metadata = {
       mode: { extensionId, kind: "mode", id: "review" },
       item: {
         kind: "binding",
-        resourceKind: { extensionId, kind: "resource-kind", id: "artifact" },
-        view: { extensionId, kind: "view", id: "detail" },
-        cardinality: "many",
+        binding: {
+          kinds: [{ extensionId, kind: "resource-kind", id: "artifact" }],
+          view: { extensionId, kind: "view", id: "detail" },
+          cardinality: "many",
+        },
       },
       region: "side",
     },
@@ -153,7 +152,6 @@ const metadata = {
   settingsPanels: [],
   diagnostics: [],
 } satisfies WorkbenchExtensionMetadata;
-
 describe("registerWorkbenchExtensionContributions", () => {
   test("groups extension settings by owner and keeps statuses in the Project section", async () => {
     const workbench = createWorkbench();
@@ -257,7 +255,6 @@ describe("registerWorkbenchExtensionContributions", () => {
         },
       ],
     } satisfies WorkbenchExtensionMetadata;
-
     registerWorkbenchExtensionContributions({
       executeCommand: () => undefined,
       metadata: settingsMetadata,
@@ -266,7 +263,6 @@ describe("registerWorkbenchExtensionContributions", () => {
       settingsSectionTitle: "Project",
       workbench,
     });
-
     const tree = await buildSettingsTreeBody({
       settings: workbench.settings,
       hasProjectScope: true,
@@ -282,12 +278,14 @@ describe("registerWorkbenchExtensionContributions", () => {
       section: "project",
     });
   });
-
   test("prepares extension command arguments through the host adapter", async () => {
     const workbench = createWorkbench();
     const commandId = `${extensionId}.command.inspect`;
     const argumentChanges: unknown[] = [];
-    const preparedCalls: Array<{ commandId: string; args: unknown }> = [];
+    const preparedCalls: Array<{
+      commandId: string;
+      args: unknown;
+    }> = [];
     const commandMetadata = {
       ...metadata,
       commands: [
@@ -299,7 +297,6 @@ describe("registerWorkbenchExtensionContributions", () => {
         },
       ],
     } satisfies WorkbenchExtensionMetadata;
-
     registerWorkbenchExtensionContributions({
       executeCommand: () => [],
       metadata: commandMetadata,
@@ -312,20 +309,17 @@ describe("registerWorkbenchExtensionContributions", () => {
       projectId: "project-1",
       workbench,
     });
-
     const prepared = await workbench.commands.prepareCommandArgs(
       commandId,
       { files: ["browser-file"] },
       undefined,
       (args) => argumentChanges.push(args),
     );
-
     expect(preparedCalls).toEqual([{ commandId, args: { files: ["browser-file"] } }]);
     expect(argumentChanges).toEqual([{ files: ["uploaded-file"] }]);
     expect(prepared).toEqual({ files: ["uploaded-file"] });
   });
 });
-
 describe("registerWorkbenchExtensionContributions workbench surfaces", () => {
   test("registers alpha.4 views, placements, status chrome, and workflow statuses", async () => {
     const workbench = createWorkbench();
@@ -338,7 +332,15 @@ describe("registerWorkbenchExtensionContributions workbench surfaces", () => {
       title: "Start",
       path: "",
       modeId: "project",
-      slots: [{ id: "content", role: "primary", region: "main", viewId: "start" }],
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "start",
+        },
+        cardinality: "one",
+      },
+      slots: [],
     });
     const calls: string[] = [];
     const module: WorkbenchModuleContribution = {
@@ -357,14 +359,12 @@ describe("registerWorkbenchExtensionContributions workbench surfaces", () => {
           workbench: ctx,
         }),
     };
-
     workbench.registerModule(module);
     workbench.pageLocations.setProject("project-1");
     workbench.pageLocations.navigate({
       kind: "page",
       page: { extensionId, kind: "page", id: "review" },
     });
-
     expect(workbench.views.getView(treeViewId)?.id).toBe(treeViewId);
     expect(getWorkbenchRenderers(workbench).getTreeRenderer(treeViewId)).toBeDefined();
     expect(getWorkbenchRenderers(workbench).getControlsRenderer(controlsViewId)).toBeDefined();
@@ -372,7 +372,7 @@ describe("registerWorkbenchExtensionContributions workbench surfaces", () => {
       ownerViewId: controlsViewId,
       viewId: treeViewId,
       side: "left",
-      priority: 1_000_000,
+      priority: 1000000,
     });
     expect(workbench.layout.listPanelInstances("main")).toContainEqual(
       expect.objectContaining({
@@ -398,7 +398,6 @@ describe("registerWorkbenchExtensionContributions workbench surfaces", () => {
     expect(workbench.views.getView(statusViewId)).toBeDefined();
     expect(workbench.layout.getWidget(statusViewId)).toBeUndefined();
     expect(workbench.layout.listPanelInstances().some((panel) => panel.panelId === statusViewId)).toBe(false);
-
     await expect(workbench.statuses.query(statusesId)).resolves.toEqual([
       { id: "todo", label: "Todo", color: "blue", sortOrder: 0 },
     ]);

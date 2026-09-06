@@ -8,32 +8,28 @@ import {
 } from "./tree-list-adapter";
 
 const ticketsResource = {
-  kind: "dashboard-view",
-  uri: "pstdio://dashboard/tickets",
+  type: "dashboard-view",
   label: "Tickets",
+  id: "pstdio://dashboard/tickets",
 } satisfies ResourceRef;
-
 const workspacesResource = {
-  kind: "dashboard-view",
-  uri: "pstdio://dashboard/workspaces",
+  type: "dashboard-view",
   label: "Workspaces",
+  id: "pstdio://dashboard/workspaces",
 } satisfies ResourceRef;
-
 describe("resolveTreeListActiveNodeId", () => {
   test("does not keep a stale selected node when an active node is available", () => {
     expect(resolveTreeListActiveNodeId("tickets", "workspaces")).toBe("tickets");
   });
-
   test("falls back to selected node when there is no active resource", () => {
     expect(resolveTreeListActiveNodeId(undefined, "session:session-1")).toBe("session:session-1");
   });
 });
-
 describe("resolveTreeListSelection", () => {
   test("selects a page target when that page is the current location", () => {
     expect(
       resolveTreeListSelection({
-        activePage: { extensionId: "host", kind: "page", id: "search" },
+        activeLocation: { page: { extensionId: "host", kind: "page", id: "search" } },
         childrenByNodeId: {},
         sections: [
           {
@@ -53,10 +49,12 @@ describe("resolveTreeListSelection", () => {
       }),
     ).toBe("search");
   });
-
   test("matches active resources by resource uri when the node id has a different shape", () => {
-    const session = { kind: "session", uri: "pstdio://sessions/session-1", label: "Session 1" } satisfies ResourceRef;
-
+    const session = {
+      type: "session",
+      label: "Session 1",
+      id: "pstdio://sessions/session-1",
+    } satisfies ResourceRef;
     expect(
       resolveTreeListSelection({
         activeResource: session,
@@ -66,7 +64,6 @@ describe("resolveTreeListSelection", () => {
       }),
     ).toBe("session:session-1");
   });
-
   test("selects the active resource row instead of a stale selected resource row", () => {
     expect(
       resolveTreeListSelection({
@@ -85,7 +82,6 @@ describe("resolveTreeListSelection", () => {
       }),
     ).toBe("tickets");
   });
-
   test("matches active resources through resource navigation targets", () => {
     expect(
       resolveTreeListSelection({
@@ -107,15 +103,13 @@ describe("resolveTreeListSelection", () => {
       }),
     ).toBe("tickets");
   });
-
   test("selects a parent navigation row when the active detail resource provides a selection resource", () => {
     const ticket = {
-      kind: "ticket",
-      uri: "pstdio://ticket/PS-1",
+      type: "ticket",
       label: "PS-1",
       metadata: createWorkbenchSelectionResourceMetadata(ticketsResource),
+      id: "pstdio://ticket/PS-1",
     } satisfies ResourceRef;
-
     expect(
       resolveTreeListSelection({
         activeResource: ticket,
@@ -125,10 +119,12 @@ describe("resolveTreeListSelection", () => {
       }),
     ).toBe("tickets");
   });
-
   test("clears a stale resource selection when the active resource has no row in the tree", () => {
-    const ticket = { kind: "ticket", uri: "pstdio://ticket/PS-1", label: "PS-1" } satisfies ResourceRef;
-
+    const ticket = {
+      type: "ticket",
+      label: "PS-1",
+      id: "pstdio://ticket/PS-1",
+    } satisfies ResourceRef;
     expect(
       resolveTreeListSelection({
         activeResource: ticket,
@@ -143,7 +139,6 @@ describe("resolveTreeListSelection", () => {
       }),
     ).toBeUndefined();
   });
-
   test("keeps explicit non-resource active node ids", () => {
     expect(
       resolveTreeListSelection({
@@ -155,17 +150,14 @@ describe("resolveTreeListSelection", () => {
     ).toBe("src/index.ts");
   });
 });
-
 describe("filterTreeListSelection", () => {
   test("keeps the global selection only in the slot that contains it", () => {
     const header = [{ id: "header", nodes: [{ id: "search", label: "Search" }] }];
     const body = [{ id: "body", nodes: [{ id: "sessions", label: "Sessions" }] }];
-
     expect(filterTreeListSelection(header, {}, "search")).toBe("search");
     expect(filterTreeListSelection(body, {}, "search")).toBeUndefined();
   });
 });
-
 describe("canVirtualizeTreeSections", () => {
   test("allows flat tree sections", () => {
     expect(
@@ -175,7 +167,6 @@ describe("canVirtualizeTreeSections", () => {
       ]),
     ).toBe(true);
   });
-
   test("rejects sections with nested nodes", () => {
     expect(
       canVirtualizeTreeSections([
@@ -186,7 +177,6 @@ describe("canVirtualizeTreeSections", () => {
       ]),
     ).toBe(false);
   });
-
   test("rejects expandable container nodes", () => {
     expect(
       canVirtualizeTreeSections([{ id: "workspace", nodes: [{ id: "folder", label: "Folder", isContainer: true }] }]),

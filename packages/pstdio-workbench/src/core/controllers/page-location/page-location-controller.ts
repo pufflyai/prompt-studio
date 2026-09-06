@@ -2,7 +2,8 @@ import type { PageLocation } from "@pstdio/sdk/extensions";
 import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import { createWorkbenchStore } from "../../shared/store/workbench-store";
 import { createPageLocationControllerActions } from "./page-location-actions";
-import { isWorkbenchProjectUrl, parseWorkbenchPageUrl, serializeWorkbenchPageUrl } from "./page-location-codec";
+import { isWorkbenchProjectUrl, parseWorkbenchPageUrl } from "./page-location-codec";
+import { createPageHistoryEntry, createPageLocationFailureHandler } from "./page-location-history-entry";
 import {
   normalizeDirectWorkbenchPageLocation,
   normalizeWorkbenchPageLocation,
@@ -10,13 +11,14 @@ import {
   workbenchPageLocationRouteKey,
   workbenchPageLocationsEqual,
 } from "./page-location-normalization";
+import { setPageLocationPreparation } from "./page-location-preparation";
+import { createPageLocationPublisher } from "./page-location-publish";
 import type {
   CreateWorkbenchPageLocationControllerInput,
   ResolvedPageLocation,
   WorkbenchPageBrowserEntry,
   WorkbenchPageHistoryState,
   WorkbenchPageLocationController,
-  WorkbenchPageLocationDiagnostic,
   WorkbenchPageLocationHistoryState,
   WorkbenchPageNavigationResult,
 } from "./page-location-types";
@@ -69,55 +71,38 @@ export const createWorkbenchPageLocationController = <Value>(
     publishHistory();
   };
 
-  const fail = (source: WorkbenchPageLocationDiagnostic["source"], error: unknown): WorkbenchPageNavigationResult => {
-    const diagnostic: WorkbenchPageLocationDiagnostic = {
-      code: "page-location-unresolved",
-      source,
-      message: error instanceof Error ? error.message : String(error),
-    };
-    input.reportDiagnostic?.(diagnostic);
-    return { ok: false, diagnostic };
-  };
+  const fail = createPageLocationFailureHandler(input.reportDiagnostic);
+  const historyEntry = createPageHistoryEntry({ pages, resources: internals.resources });
 
-  const historyEntry = (projectId: string, location: PageLocation): WorkbenchPageBrowserEntry => ({
-    url: serializeWorkbenchPageUrl({ projectId, location, pages: pages(), resources: internals.resources }),
-    state: {
-      kind: "pstdio.page-location",
-      index: historyIndex,
-      projectId,
-      routeKey: workbenchPageLocationRouteKey(location, internals.resources),
-      location,
-    } satisfies WorkbenchPageHistoryState,
+  const publish = createPageLocationPublisher(input, internals, {
+    getIndex: () => historyIndex,
+    commitIndex: (index, push) => {
+      historyIndex = index;
+      if (push) maxHistoryIndex = index;
+    },
+    entry: historyEntry,
+    publish: publishHistory,
   });
-
   const commit = (
     projectId: string,
     resolved: ResolvedPageLocation,
     history: "push" | "replace" | "none",
     action: string,
   ) => {
-    // Subscribers can refresh the resource immediately. Commit history first so
-    // those updates replace this entry without overwriting the previous page.
-    input.persistence.save(projectId, resolved.location);
-    if (history === "push") {
-      historyIndex += 1;
-      maxHistoryIndex = historyIndex;
-      input.browser.push(historyEntry(projectId, resolved.location));
-    } else if (history === "replace") {
-      input.browser.replace(historyEntry(projectId, resolved.location));
-    }
-    internals.activateLocation({
-      pageId: resolved.pageId,
-      projectId,
-      location: resolved.location,
-      action,
-      ...(resolved.open ? { open: resolved.open } : {}),
-      ...(resolved.location.resource ? { resource: resolved.location.resource } : {}),
-      ...(resolved.location.section ? { section: resolved.location.section } : {}),
-      ...(resolved.pageStates ? { pageStates: resolved.pageStates } : {}),
-    });
-    if (history !== "none") publishHistory();
-    return { ok: true, location: resolved.location } as const;
+    const state = internals.prepare.location(
+      {
+        pageId: resolved.pageId,
+        projectId,
+        location: resolved.location,
+        action,
+        open: resolved.open,
+        resource: resolved.location.resource,
+        section: resolved.location.section,
+        pageStates: resolved.pageStates,
+      },
+      input.registry.store.getState(),
+    );
+    return publish(projectId, state, history, action);
   };
 
   const normalizeStored = (location: PageLocation): ResolvedPageLocation =>
@@ -242,7 +227,7 @@ export const createWorkbenchPageLocationController = <Value>(
     resolveClosePlacement: internals.resolveClosePlacement,
   });
 
-  return createPageLocationControllerActions({
+  const controller = createPageLocationControllerActions({
     input,
     historyStore,
     clearProject: internals.clearProject,
@@ -267,4 +252,19 @@ export const createWorkbenchPageLocationController = <Value>(
       pageRemovalSubscription();
     },
   });
+  setPageLocationPreparation<Value>(controller, {
+    resolve: (target) => normalizeWorkbenchPageTarget({ target, pages: pages(), resources: internals.resources }),
+    commit: (state, beforePublish) => {
+      if (!state.projectId || !state.location) throw new Error("Cannot navigate before a project is active");
+      const history = workbenchPageLocationsEqual(
+        input.registry.store.getState().location,
+        state.location,
+        internals.resources,
+      )
+        ? "none"
+        : "push";
+      return publish(state.projectId, state, history, "navigateCompoundTarget", beforePublish);
+    },
+  });
+  return controller;
 };

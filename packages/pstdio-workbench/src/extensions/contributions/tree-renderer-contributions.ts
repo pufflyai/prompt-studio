@@ -29,7 +29,6 @@ import {
   resolveHostTreeHeaderNodes,
   treeViewsFor,
 } from "./tree-renderer-host-defaults";
-
 export interface RegisterWorkbenchExtensionTreeRenderersInput {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
   getHostTreeFooterNodes?: HostTreeDefaultNodesResolver;
@@ -45,25 +44,6 @@ export interface RegisterWorkbenchExtensionTreeRenderersInput {
   resolveNodeResource?: (resource: ExtensionTreeResource) => ResourceRef;
   workbench: WorkbenchModuleContext;
 }
-
-const toExtensionResource = (resource: ResourceRef | undefined): ExtensionTreeResource | undefined => {
-  if (!resource) return undefined;
-  return {
-    type: resource.kind,
-    id: resource.id ?? resource.uri,
-    label: resource.label,
-    metadata: resource.metadata,
-  };
-};
-
-const toWorkbenchResource = (resource: ExtensionTreeResource): ResourceRef => ({
-  kind: resource.type,
-  uri: `pstdio://extension-resource/${encodeURIComponent(resource.type)}/${encodeURIComponent(resource.id)}`,
-  id: resource.id,
-  label: resource.label,
-  metadata: resource.metadata,
-});
-
 const slotContext = (input: {
   modeId?: string;
   projectId: string;
@@ -79,14 +59,13 @@ const slotContext = (input: {
     ...(input.resource ? { resourceType: input.resource.type, resourceId: input.resource.id } : {}),
   },
 });
-
 const createQueryParams = (
   input: RegisterWorkbenchExtensionTreeRenderersInput,
   record: ExtensionTreeRendererRecord,
   ctx: TreeContext,
   node?: ExtensionTreeNode,
 ) => {
-  const resource = toExtensionResource(ctx.resource);
+  const resource = ctx.resource;
   const modeId = input.workbench.modes.getActiveModeId();
   return {
     renderer: {
@@ -101,14 +80,18 @@ const createQueryParams = (
     ...(node ? { node } : {}),
   };
 };
-
 const executeCallback = async (
   input: RegisterWorkbenchExtensionTreeRenderersInput,
   record: ExtensionTreeRendererRecord,
   commandId: string,
   params: Record<string, unknown>,
 ) => {
-  const renderer = params.renderer as { modeId?: string; resource?: ExtensionTreeResource } | undefined;
+  const renderer = params.renderer as
+    | {
+        modeId?: string;
+        resource?: ExtensionTreeResource;
+      }
+    | undefined;
   const resource = renderer?.resource;
   const result = await input.executeCommand(commandId, {
     projectId: input.projectId,
@@ -124,7 +107,6 @@ const executeCallback = async (
   });
   return unwrapCommandValue(result);
 };
-
 const executeTreeActionCommand = async (
   input: RegisterWorkbenchExtensionTreeRenderersInput,
   record: ExtensionTreeRendererRecord,
@@ -153,24 +135,19 @@ const executeTreeActionCommand = async (
   });
   return unwrapCommandValue(result);
 };
-
 const toActionParams = (params: unknown, fallback: Record<string, unknown> | undefined) => {
   if (params && typeof params === "object" && !Array.isArray(params)) return params as Record<string, unknown>;
   return fallback;
 };
-
 const toRecordParams = (params: object | undefined) =>
   params && !Array.isArray(params) ? (params as Record<string, unknown>) : undefined;
-
 const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, record: ExtensionTreeRendererRecord) => {
   const originalNodes = new WeakMap<TreeNode, ExtensionTreeNode>();
   const runnerCommandId = `workbench.extensionTreeRenderer.${record.id}.command`;
-
-  const resolveResource: typeof toWorkbenchResource = (resource) => {
+  const resolveResource: (resource: ExtensionTreeResource) => ResourceRef = (resource) => {
     const resolved = input.resolveNodeResource?.(resource);
-    return resolved ?? toWorkbenchResource(resource);
+    return resolved ?? resource;
   };
-
   const mapEmptyState = (section: ExtensionTreeSection): TreeViewSection["emptyState"] => {
     if (!section.emptyState) return undefined;
     return {
@@ -179,21 +156,27 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       icon: section.emptyState.icon,
     };
   };
-
   const mapTarget = (
     target: ExtensionTreeTarget | undefined,
     node: ExtensionTreeNode,
     ctx: TreeContext,
   ): NavigationTarget | undefined => {
     if (!target) return undefined;
-    const commandTargetOf = (commandTarget: Extract<ExtensionTreeTarget, { kind: "command" }>) => ({
+    const commandTargetOf = (
+      commandTarget: Extract<
+        ExtensionTreeTarget,
+        {
+          kind: "command";
+        }
+      >,
+    ) => ({
       kind: "command" as const,
       commandId: runnerCommandId,
       args: {
         commandId: `${commandTarget.target.command.extensionId ?? record.extensionId}.command.${commandTarget.target.command.id}`,
         nodeId: node.id,
         params: commandTarget.target.params,
-        resource: node.resource ?? toExtensionResource(ctx.resource),
+        resource: node.resource ?? ctx.resource,
         treeId: record.id,
       } satisfies TargetCommandArgs,
     });
@@ -202,7 +185,6 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       extensionId: record.extensionId,
     });
   };
-
   const mapAction = (
     action: ExtensionTreeAction,
     node: ExtensionTreeNode | undefined,
@@ -229,14 +211,13 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
               record,
               commandId,
               toActionParams(params, toRecordParams(action.params)),
-              node?.resource ?? toExtensionResource(ctx.resource),
+              node?.resource ?? ctx.resource,
             );
             ctx.refresh();
           }
         : undefined,
     };
   };
-
   const mapNode = (node: ExtensionTreeNode, ctx: TreeContext): TreeNode => {
     const mapped: TreeNode = {
       id: node.id,
@@ -260,7 +241,6 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     originalNodes.set(mapped, node);
     return mapped;
   };
-
   const mapSections = (sections: ExtensionTreeSection[], ctx: TreeContext): TreeViewSection[] =>
     sections.map((section) => ({
       id: section.id,
@@ -272,22 +252,16 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       hiddenByDefault: section.hiddenByDefault,
       canHide: section.canHide,
     }));
-
   const mapNodes = (nodes: ExtensionTreeNode[], ctx: TreeContext): TreeNode[] =>
     nodes.map((node) => mapNode(node, ctx));
-
   return { mapNodes, mapSections, originalNodes, runnerCommandId };
 };
-
 const isTreeSectionArray = (value: unknown): value is ExtensionTreeSection[] =>
   Array.isArray(value) && value.every((section) => section && typeof section === "object" && "nodes" in section);
-
 const isTreeNodeArray = (value: unknown): value is ExtensionTreeNode[] =>
   Array.isArray(value) && value.every((node) => node && typeof node === "object" && "id" in node);
-
 const hostNodeSection = (id: string, nodes: TreeNode[]): TreeViewSection[] =>
   nodes.length > 0 ? [{ id, nodes, canReorder: false }] : [];
-
 // The node a command marks with `selected: true` (e.g. the open document in a
 // files tree) becomes the tree's highlighted selection.
 const selectedNodeIdFromNodes = (nodes: ExtensionTreeNode[]): string | undefined => {
@@ -298,7 +272,6 @@ const selectedNodeIdFromNodes = (nodes: ExtensionTreeNode[]): string | undefined
   }
   return undefined;
 };
-
 export const selectedNodeIdFromSections = (sections: ExtensionTreeSection[]): string | undefined => {
   for (const section of sections) {
     const selectedNodeId = selectedNodeIdFromNodes(section.nodes);
@@ -306,7 +279,6 @@ export const selectedNodeIdFromSections = (sections: ExtensionTreeSection[]): st
   }
   return undefined;
 };
-
 const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, record: ExtensionTreeRendererRecord) => {
   const mapper = createTreeMapper(input, record);
   const treeViews = treeViewsFor(input.metadata, record);
@@ -323,7 +295,6 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
       },
     },
   );
-
   const treeDisposable = input.workbench.views.registerView({
     id: record.id,
     title: text(record.title, record.id),
@@ -394,7 +365,6 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
       },
     },
   });
-
   return {
     dispose() {
       treeDisposable.dispose();
@@ -402,14 +372,11 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
     },
   };
 };
-
 export const registerWorkbenchExtensionTreeRenderers = (input: RegisterWorkbenchExtensionTreeRenderersInput) => {
   const disposables: Disposable[] = [];
-
   for (const record of input.metadata.treeRenderers ?? []) {
     disposables.push(registerTree(input, record));
   }
-
   return {
     dispose() {
       for (let index = disposables.length - 1; index >= 0; index -= 1) disposables[index]?.dispose();

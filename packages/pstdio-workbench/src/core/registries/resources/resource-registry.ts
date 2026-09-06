@@ -1,3 +1,8 @@
+import type { ResourceRef } from "@pstdio/sdk/extensions";
+
+export type { ResourceRef } from "@pstdio/sdk/extensions";
+
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { ContextKeyValue } from "../../shared/context/context-key-service";
 import {
   byContributionPriority,
@@ -26,59 +31,39 @@ export type {
 } from "./resource-hierarchy";
 export { isWorkbenchViewHierarchyNode, resourceHierarchyCycleCode } from "./resource-hierarchy";
 
-export interface ResourceRef {
-  kind: string;
-  uri: string;
-  id?: string;
-  label?: string;
-  icon?: string;
-  metadata?: Record<string, unknown>;
-}
-
-export const workbenchResourceKindContextKey = "workbench.resource.kind";
+export const workbenchResourceTypeContextKey = "workbench.resource.type";
 export const workbenchResourceIdContextKey = "workbench.resource.id";
 export const workbenchResourceMetadataContextKey = (key: string) => `workbench.resource.metadata.${key}`;
-export const workbenchSelectionResourceUriMetadataKey = "workbench.selectionResourceUri";
-
+export const workbenchSelectionResourceKeyMetadataKey = "workbench.selectionResourceKey";
 const isContextPrimitive = (value: unknown): value is Exclude<ContextKeyValue, undefined> =>
   typeof value === "string" || typeof value === "number" || typeof value === "boolean";
-
 export const createWorkbenchResourceContextValues = (resource: ResourceRef | undefined) => {
   if (!resource) return {};
-
   const values: Record<string, ContextKeyValue> = {
-    [workbenchResourceKindContextKey]: resource.kind,
-    [workbenchResourceIdContextKey]: resource.id ?? resource.uri,
+    [workbenchResourceTypeContextKey]: resource.type,
+    [workbenchResourceIdContextKey]: resource.id,
   };
-
   for (const [key, value] of Object.entries(resource.metadata ?? {})) {
     if (isContextPrimitive(value)) values[workbenchResourceMetadataContextKey(key)] = value;
   }
-
   return values;
 };
-
-export const createWorkbenchSelectionResourceMetadata = (resource: Pick<ResourceRef, "uri">) => ({
-  [workbenchSelectionResourceUriMetadataKey]: resource.uri,
+export const createWorkbenchSelectionResourceMetadata = (resource: ResourceRef) => ({
+  [workbenchSelectionResourceKeyMetadataKey]: resourceKey(resource),
 });
-
-export const getWorkbenchSelectionResourceUris = (resource: ResourceRef | undefined) => {
+export const getWorkbenchSelectionResourceKeys = (resource: ResourceRef | undefined) => {
   if (!resource) return [];
-
-  const selectionResourceUri = resource.metadata?.[workbenchSelectionResourceUriMetadataKey];
-  if (typeof selectionResourceUri !== "string" || selectionResourceUri === resource.uri) return [resource.uri];
-
-  return [resource.uri, selectionResourceUri];
+  const selectionResourceKey = resource.metadata?.[workbenchSelectionResourceKeyMetadataKey];
+  if (typeof selectionResourceKey !== "string" || selectionResourceKey === resourceKey(resource))
+    return [resourceKey(resource)];
+  return [resourceKey(resource), selectionResourceKey];
 };
-
 export interface ResourceKindContribution {
   kind: string;
   label: string;
   icon?: string;
 }
-
 export interface RegisteredResourceKind extends ResourceKindContribution, RegisteredContributionMetadata {}
-
 export interface ResourceBrowseEntry {
   resource: ResourceRef;
   searchText?: string;
@@ -87,25 +72,21 @@ export interface ResourceBrowseEntry {
   order?: number;
   activate?: (resource: ResourceRef) => unknown | Promise<unknown>;
 }
-
 // Context handed to providers so candidate lists can be scoped to the current surface
 // hierarchy — e.g. only the sessions/terminals belonging to the active primary resource.
 export interface ResourceListContext {
   primary?: ResourceRef;
 }
-
 export interface ResourceProvider {
   id: string;
   kind: string;
   list(query: string, context: ResourceListContext): readonly ResourceBrowseEntry[];
 }
-
 export interface ResourceRegistryStoreState {
   kinds: Record<string, RegisteredResourceKind>;
   providers: Record<string, ResourceProvider>;
   hierarchyProviders: Record<string, ResolvedResourceHierarchyProvider>;
 }
-
 export interface ResourceRegistry {
   store: WorkbenchStore<ResourceRegistryStoreState>;
   registerKind(kind: ResourceKindContribution, metadata?: ContributionMetadata): Disposable;
@@ -119,34 +100,32 @@ export interface ResourceRegistry {
   walkHierarchy(resource: ResourceRef | undefined): WorkbenchHierarchyNode[];
   onDidDetectHierarchyCycle(listener: (cycle: ResourceHierarchyCycle) => void): Disposable;
 }
-
 export interface CreateResourceRegistryInput {
   // Resolves the active primary resource so listResources can scope provider candidates.
   getPrimary?: () => ResourceRef | undefined;
-  resolveView?: (viewId: string) => { label?: string; icon?: string } | undefined;
+  resolveView?: (viewId: string) =>
+    | {
+        label?: string;
+        icon?: string;
+      }
+    | undefined;
 }
-
 export const createResourceRegistry = (input: CreateResourceRegistryInput = {}): ResourceRegistry => {
   const cycleListeners = new Set<(cycle: ResourceHierarchyCycle) => void>();
   const store = createWorkbenchStore<ResourceRegistryStoreState>({
     name: "workbench.resources",
     initialState: { kinds: {}, providers: {}, hierarchyProviders: {} },
   });
-
   return {
     store,
-
     registerKind(kind, metadata) {
       const snapshot = store.getState();
       if (snapshot.kinds[kind.kind]) throw new Error(`Resource kind already registered: ${kind.kind}`);
-
       const record: RegisteredResourceKind = {
         ...normalizeContributionMetadata(metadata),
         ...kind,
       };
-
       store.setState({ ...snapshot, kinds: { ...snapshot.kinds, [kind.kind]: record } }, false, "registerKind");
-
       return createDisposable(() => {
         const current = store.getState();
         if (current.kinds[kind.kind] !== record) return;
@@ -154,25 +133,20 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
         store.setState({ ...current, kinds: rest }, false, "unregisterKind");
       });
     },
-
     getKind(kind) {
       return store.getState().kinds[kind];
     },
-
     listKinds() {
       return Object.values(store.getState().kinds).sort(byContributionPriority);
     },
-
     registerProvider(provider) {
       const snapshot = store.getState();
       if (snapshot.providers[provider.id]) throw new Error(`Resource provider already registered: ${provider.id}`);
-
       store.setState(
         { ...snapshot, providers: { ...snapshot.providers, [provider.id]: provider } },
         false,
         "registerProvider",
       );
-
       return createDisposable(() => {
         const current = store.getState();
         if (current.providers[provider.id] !== provider) return;
@@ -180,11 +154,9 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
         store.setState({ ...current, providers: rest }, false, "unregisterProvider");
       });
     },
-
     listProviders() {
       return Object.values(store.getState().providers);
     },
-
     listResources(query) {
       const context: ResourceListContext = { primary: input.getPrimary?.() };
       const entries: ResourceBrowseEntry[] = [];
@@ -193,13 +165,11 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
       }
       return entries;
     },
-
     registerHierarchyProvider(provider) {
       const snapshot = store.getState();
       if (snapshot.hierarchyProviders[provider.id]) {
         throw new Error(`Resource hierarchy provider already registered: ${provider.id}`);
       }
-
       const record: ResolvedResourceHierarchyProvider = { ...provider, priority: provider.priority ?? 0 };
       store.setState(
         {
@@ -209,7 +179,6 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
         false,
         "registerHierarchyProvider",
       );
-
       return createDisposable(() => {
         const current = store.getState();
         if (current.hierarchyProviders[provider.id] !== record) return;
@@ -217,14 +186,11 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
         store.setState({ ...current, hierarchyProviders: rest }, false, "unregisterHierarchyProvider");
       });
     },
-
     listHierarchyProviders() {
       return sortHierarchyProviders(Object.values(store.getState().hierarchyProviders));
     },
-
     walkHierarchy(resource) {
       if (!resource) return [];
-
       const path = walkResourceHierarchy(Object.values(store.getState().hierarchyProviders), resource, (cycle) => {
         for (const listener of cycleListeners) listener(cycle);
       });
@@ -234,7 +200,6 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
         return view ? { ...node, label: view.label, icon: view.icon } : node;
       });
     },
-
     onDidDetectHierarchyCycle(listener) {
       cycleListeners.add(listener);
       return createDisposable(() => {

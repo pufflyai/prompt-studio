@@ -8,13 +8,10 @@ const navigationPages = [
   { id: "tickets", title: "Tickets", icon: "Ticket" },
   { id: "settings", title: "Settings", icon: "Settings" },
 ] as const;
-
 const pageRef = (id: string): PageRef => ({ extensionId: "host", kind: "page", id });
 const pageTarget = (id: string) => ({ kind: "page" as const, page: pageRef(id) });
-
 const registerNavigationPage = (workbench: WorkbenchCore, page: (typeof navigationPages)[number]) => {
   const contributionId = `host.project-navigation.${page.id}`;
-
   workbench.views.registerView({
     id: contributionId,
     title: page.title,
@@ -34,16 +31,21 @@ const registerNavigationPage = (workbench: WorkbenchCore, page: (typeof navigati
     title: page.title,
     path: page.id,
     modeId: "project",
-    slots: [{ id: "content", role: "primary", region: "main", viewId: contributionId }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: contributionId,
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
 };
-
 export const createTreeWorkbench = () => {
   const workbench = createWorkbench({ startPage: pageRef("search") });
-
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
   for (const page of navigationPages) registerNavigationPage(workbench, page);
-
   workbench.views.registerView({
     id: "host.project-navigation",
     title: "Project navigation",
@@ -103,11 +105,17 @@ export const createTreeWorkbench = () => {
     id: "host.project-navigation",
     ref: { extensionId: "host", kind: "placement", id: "project-navigation" },
     modeId: "project",
-    item: { kind: "view", viewId: "host.project-navigation", presence: "fixed" },
+    item: {
+      kind: "view",
+      presence: "fixed",
+      view: {
+        kind: "view",
+        id: "host.project-navigation",
+      },
+    },
     region: "sidenav",
     movableTo: ["sidenav"],
   });
-
   workbench.pageLocations.switchProject("storybook");
   return workbench;
 };

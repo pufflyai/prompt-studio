@@ -10,6 +10,7 @@ import type {
   NavigationTarget,
   NavigationTreeContribution,
   PageContribution,
+  PageMain,
   PageSlot,
   PlacementContribution,
   RendererEventReference,
@@ -104,8 +105,9 @@ export interface RuntimePageRecord {
   extensionId: string;
   name: string;
   sourcePath: string;
-  contribution: Omit<PageContribution, "slots"> & {
+  contribution: Omit<PageContribution, "slots" | "main"> & {
     slots: RuntimePageSlot[];
+    main: RuntimePageMain;
   };
 }
 
@@ -306,3 +308,5 @@ export interface RuntimeFileIconThemeRecord {
   defaults: { file?: string; folder?: string };
   fonts: RuntimeFileIconThemeFont[];
 }
+
+export type RuntimePageMain = DistributiveOmit<PageMain, "tab"> & { tab?: RuntimePlacementTab };

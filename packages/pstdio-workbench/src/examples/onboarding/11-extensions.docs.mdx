@@ -35,8 +35,7 @@ The story runs this extension definition. It uses only the public Extension API 
 - `title` is the page label.
 - `path` is the page's stable URL segment.
 - `mode: workbenchModes.project` makes the page available in Project mode.
-- `slots` is the complete page layout. The `content` slot is the primary location, belongs in `main`, and renders
-  `guideTree.ref`.
+- `main: { kind: "view", view: guideTree.ref, cardinality: "one" }` renders the tree in Main.
 
 `defineNavigationItem(...)` creates the action visible inside the workbench:
 

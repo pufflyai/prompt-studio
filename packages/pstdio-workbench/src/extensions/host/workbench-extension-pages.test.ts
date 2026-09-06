@@ -8,7 +8,6 @@ const extensionId = "pstdio.lab";
 const modeId = `${extensionId}.mode.review`;
 const pageId = `${extensionId}.page.review`;
 const viewId = `${extensionId}.view.outline`;
-
 const metadata = {
   ...emptyWorkbenchExtensionMetadata,
   extensions: [{ id: extensionId, name: "lab", displayName: "Lab", sourcePath: "/extensions/lab" }],
@@ -21,14 +20,12 @@ const metadata = {
       title: "Review",
       path: "review",
       mode: { extensionId, kind: "mode", id: "review" },
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          view: { extensionId, kind: "view", id: "outline" },
-        },
-      ],
+      main: {
+        kind: "view",
+        view: { extensionId, kind: "view", id: "outline" },
+        cardinality: "one",
+      },
+      slots: [],
     },
   ],
   views: [
@@ -48,7 +45,6 @@ const metadata = {
     },
   ],
 } satisfies WorkbenchExtensionMetadata;
-
 describe("extension page registration", () => {
   test("keeps an extension page open as its Main panels close independently", () => {
     const workbench = createWorkbench();
@@ -59,14 +55,12 @@ describe("extension page registration", () => {
         pages: [
           {
             ...metadata.pages[0],
+            main: { kind: "panels", empty: metadata.pages[0].main.view },
             slots: [
-              { ...metadata.pages[0].slots[0], subPanelsOnly: true },
               ...["files", "changes"].map((id) => ({
                 id,
-                role: "auxiliary" as const,
                 region: "main" as const,
-                view: metadata.pages[0].slots[0].view,
-                presence: "open" as const,
+                item: { kind: "view" as const, view: metadata.pages[0].main.view, presence: "open" as const },
               })),
             ],
           },
@@ -92,7 +86,6 @@ describe("extension page registration", () => {
     expect(workbench.layout.getLayout().regions.main.widgets).toHaveLength(1);
     registration.dispose();
   });
-
   test("registers normalized pages in the shared workbench registry", () => {
     const workbench = createWorkbench();
     const registration = registerWorkbenchExtensionContributions({
@@ -101,16 +94,15 @@ describe("extension page registration", () => {
       projectId: "project-1",
       workbench,
     });
-
-    expect(workbench.pages.getPage(pageId)).toEqual({
+    expect(workbench.pages.getPage(pageId)).toMatchObject({
       id: pageId,
       ref: { extensionId, kind: "page", id: "review" },
       title: "Review",
       path: "review",
       modeId,
-      slots: [{ id: "content", role: "primary", region: "main", viewId }],
+      main: metadata.pages[0].main,
+      slots: [],
     });
-
     registration.dispose();
     expect(workbench.pages.getPage(pageId)).toBeUndefined();
   });

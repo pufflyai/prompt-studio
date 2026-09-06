@@ -13,31 +13,43 @@ const resources: WorkbenchPageResourceCodec = {
   toUri: (resource) => `${resource.type}:${resource.id}`,
   fromUri: () => undefined,
 };
-
 const page = (id: string, parentId?: string): WorkbenchPageContribution => ({
   id,
   ref: { extensionId: "acme.test", kind: "page", id },
   path: id,
   modeId: "project",
   ...(parentId ? { parentId } : {}),
-  slots: [{ id: "content", role: "primary", region: "main", viewId: id }],
+  main: {
+    kind: "view",
+    view: {
+      kind: "view",
+      id: id,
+    },
+    cardinality: "one",
+  },
+  slots: [],
 });
-
 const sessionPage = (): WorkbenchPageContribution => ({
   ...page("session", "sessions"),
-  slots: [
-    {
-      id: "content",
-      role: "primary",
-      region: "main",
-
-      binding: { resourceKinds: ["session"], viewId: "session", cardinality: "one" },
+  resource: {
+    kinds: [
+      {
+        kind: "resource-kind",
+        id: "session",
+      },
+    ],
+  },
+  main: {
+    kind: "view",
+    view: {
+      kind: "view",
+      id: "session",
     },
-  ],
+    cardinality: "one",
+  },
+  slots: [],
 });
-
 const pages = [page("root"), page("detail", "root"), page("workspace", "root"), sessionPage(), page("sessions")];
-
 describe("page location normalization", () => {
   test("uses canonical route identity without parent context and full equality with it", () => {
     const declared = normalizeWorkbenchPageTarget({
@@ -55,7 +67,6 @@ describe("page location normalization", () => {
       pages,
       resources,
     }).location;
-
     expect(workbenchPageLocationRouteKey(declared, resources)).toBe(
       workbenchPageLocationRouteKey(contextual, resources),
     );
@@ -63,7 +74,6 @@ describe("page location normalization", () => {
     expect(Object.isFrozen(contextual)).toBe(true);
     expect(Object.isFrozen(contextual.resource)).toBe(true);
   });
-
   test("rejects repeated contextual locations and declared parent cycles", () => {
     expect(() =>
       normalizeWorkbenchPageTarget({
@@ -76,7 +86,6 @@ describe("page location normalization", () => {
         resources,
       }),
     ).toThrow(/cycle/);
-
     const cyclicPages = [page("a", "b"), page("b", "a")];
     expect(() =>
       normalizeWorkbenchPageTarget({
@@ -86,23 +95,19 @@ describe("page location normalization", () => {
       }),
     ).toThrow(/cycle/);
   });
-
   test("rejects a repeated route restored from persistence", () => {
     const cyclic: PageLocation = {
       page: pages[1]!.ref,
       parent: { page: pages[1]!.ref },
     };
-
     expect(() => normalizeWorkbenchPageLocation({ location: cyclic, pages, resources })).toThrow(/cycle/);
   });
-
   test("uses the declared home page as the parent of a resource page", () => {
     const location = normalizeWorkbenchPageTarget({
       target: { kind: "page", page: pages[3]!.ref, resource: { type: "session", id: "one" } },
       pages,
       resources,
     }).location;
-
     expect(location).toMatchObject({
       page: pages[3]!.ref,
       resource: { type: "session", id: "ONE" },

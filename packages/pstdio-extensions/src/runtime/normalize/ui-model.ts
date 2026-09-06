@@ -22,16 +22,17 @@ import type {
   RuntimeStatusRecord,
   RuntimeViewRecord,
 } from "../../types/runtime";
-import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
-import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
+import type { Accumulator, RegistryIndex } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
-import { isLocalizableString } from "./localizable";
+import { validateDeclaration } from "./declaration-diagnostic";
 import { normalizeNavigationAction } from "./navigation-action";
+import { navigationItemDeclarationSchema } from "./navigation-declaration";
 import { registerPlacements } from "./placements";
 import { registerPrivateHandler } from "./private-handlers";
 import { normalizeContributionRef } from "./references";
 import { normalizeViewBody } from "./view-body";
+import { viewDeclarationSchema } from "./view-declaration";
 
 const recordBase = contributionRecordBase;
 
@@ -53,18 +54,8 @@ const registerViews = (
   });
   for (const contribution of contributions) {
     const base = recordBase(ext, source, "view", contribution.id);
-    if (!isLocalizableString(contribution.title) || !isRecord(contribution.body)) {
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "invalid_view",
-          message: `View "${base.id}" must define title and body`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-          metadata: { contributionId: base.id },
-        }),
-      );
+    if (!validateDeclaration({ ext, source, runtime, kind: "view", contribution, schema: viewDeclarationSchema }))
       continue;
-    }
     const record: RuntimeViewRecord = {
       ...base,
       contribution: {
@@ -110,6 +101,17 @@ const registerNavigationItems = (ext: NormalizedExtension, source: LoadedExtensi
   });
   for (const contribution of contributions) {
     const base = recordBase(ext, source, "navigation-item", contribution.id);
+    if (
+      !validateDeclaration({
+        ext,
+        source,
+        runtime,
+        kind: "navigation-item",
+        contribution,
+        schema: navigationItemDeclarationSchema,
+      })
+    )
+      continue;
     const action = normalizeNavigationAction(ext, contribution.action);
     runtime.navigationItems.push({
       ...base,

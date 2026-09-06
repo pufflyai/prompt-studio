@@ -36,7 +36,7 @@ export const CounterCard = () => {
     if (next !== undefined) setCounter(next);
   }, [lastCommand, setCounter]);
 
-  const runCounterCommand = async (commandId: CounterCommandId, params?: Record<string, unknown>) => {
+  const runCounterCommand = async (commandId: CounterCommandId, params?: JsonObject) => {
     if (isPending) return;
 
     setIsPending(true);
@@ -97,3 +97,5 @@ export const CounterCard = () => {
     </LabCard>
   );
 };
+
+import type { JsonObject } from "@pstdio/sdk/extensions";

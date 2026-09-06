@@ -6,17 +6,16 @@ import {
   workbenchStoragePersistenceKey,
 } from "./local-storage-persistence-helpers";
 
-interface PersistedWorkbenchLayoutV3 {
-  version: 3;
+interface PersistedWorkbenchLayoutV4 {
+  version: 4;
   layout: WorkbenchLayout;
 }
 
-type PersistedWorkbenchLayout = PersistedWorkbenchLayoutV3;
+type PersistedWorkbenchLayout = PersistedWorkbenchLayoutV4;
 
-// Version 3 is the owned-placement layout model (PS-267). Layouts persisted by
-// earlier versions carry replaced panel roles and bindings, so they are discarded
-// rather than interpreted.
-const WORKBENCH_LAYOUT_VERSION = 3 as const;
+// Version 4 stores ResourceRef identity keys and page Main collections. Only the
+// layout cache changes; routed locations and independent preferences stay valid.
+const WORKBENCH_LAYOUT_VERSION = 4 as const;
 const WORKBENCH_LAYOUT_INDEX_VERSION = 1 as const;
 const WORKBENCH_LAYOUT_RESOURCE_LIMIT = 50;
 
@@ -157,7 +156,7 @@ export const createLocalStorageLayoutPersistence = (
       return undefined;
     },
     setLayout: (layout, scope) => {
-      const persisted: PersistedWorkbenchLayoutV3 = { version: WORKBENCH_LAYOUT_VERSION, layout };
+      const persisted: PersistedWorkbenchLayoutV4 = { version: WORKBENCH_LAYOUT_VERSION, layout };
       const key = workbenchStoragePersistenceKey(input.namespace, "layout", scope);
       pending.delete(key);
       pending.set(key, {
@@ -191,7 +190,7 @@ export const createLocalStorageLayoutPersistence = (
         }
         storage.setItem(
           key,
-          JSON.stringify({ version: WORKBENCH_LAYOUT_VERSION, layout } satisfies PersistedWorkbenchLayoutV3),
+          JSON.stringify({ version: WORKBENCH_LAYOUT_VERSION, layout } satisfies PersistedWorkbenchLayoutV4),
         );
       }
     },

@@ -2,9 +2,7 @@ import type { WorkbenchModuleContribution } from "../../core";
 import { WorkbenchIcon } from "../../react";
 
 const rendererId = "data-table-renderer.story.health";
-
 const themeColor = (light: string, dark: string) => ({ light, dark });
-
 const rows = Array.from({ length: 24 }, (_, index) => {
   const score = 35 + ((index * 17) % 66);
   const status = score >= 80 ? "healthy" : score >= 55 ? "degraded" : "critical";
@@ -19,7 +17,6 @@ const rows = Array.from({ length: 24 }, (_, index) => {
     },
   };
 });
-
 export const createDataTableRendererStoryModule = (): WorkbenchModuleContribution => ({
   id: "data-table-renderer.story",
   activate(ctx) {
@@ -91,7 +88,14 @@ export const createDataTableRendererStoryModule = (): WorkbenchModuleContributio
     });
     ctx.shellPlacements.registerPlacement({
       id: rendererId,
-      item: { kind: "view", viewId: rendererId, presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: rendererId,
+        },
+      },
       region: "main",
     });
   },

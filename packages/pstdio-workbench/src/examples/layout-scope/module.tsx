@@ -13,8 +13,10 @@ import { useWorkbenchStore } from "../../react";
 const PANEL_WIDGET_ID = "layout-scope.example.panel";
 const SECONDARY_WIDGET_ID = "layout-scope.example.secondary";
 const SIDENAV_WIDGET_ID = "layout-scope.example.sidenav";
-
-const SCOPES: Array<{ id: LayoutScope; label: string }> = [
+const SCOPES: Array<{
+  id: LayoutScope;
+  label: string;
+}> = [
   {
     id: "project/demo/mode/tickets/resource/ticket:PS-100",
     label: "Ticket PS-100",
@@ -28,11 +30,9 @@ const SCOPES: Array<{ id: LayoutScope; label: string }> = [
     label: "Tickets aggregate",
   },
 ];
-
 const setSecondaryOpen = (workbench: WorkbenchCore, open: boolean) => {
   workbench.shell.setRegionOpen("secondary", open);
 };
-
 const createInMemoryAdapter = () => {
   const layouts = new Map<string, WorkbenchLayout>();
   return {
@@ -44,11 +44,9 @@ const createInMemoryAdapter = () => {
     } satisfies LayoutPersistenceAdapter,
   };
 };
-
 interface SwitcherPanelProps {
   workbench: WorkbenchCore;
 }
-
 const SwitcherPanel = (props: SwitcherPanelProps) => {
   const { workbench } = props;
   const secondarySize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.secondary.size);
@@ -56,14 +54,12 @@ const SwitcherPanel = (props: SwitcherPanelProps) => {
   // `getPersistenceScope` lives outside the store; mirror it in local state so
   // the button highlight reflects switches even when scoped layouts coincide.
   const [activeScope, setActiveScope] = useState<LayoutScope | undefined>(() => workbench.layout.getPersistenceScope());
-
   const switchTo = (scope: LayoutScope) => {
     workbench.layout.setPersistenceScope(scope, {
       carryRegionState: ["sidenav"],
     });
     setActiveScope(scope);
   };
-
   return (
     <Stack p="lg" gap="md">
       <Text textStyle="title/S/semibold">Scoped layout persistence</Text>
@@ -110,14 +106,12 @@ const SwitcherPanel = (props: SwitcherPanelProps) => {
     </Stack>
   );
 };
-
 const SidenavPanel = () => (
   <Stack p="md" gap="xs">
     <Text textStyle="label/S/semibold">Project Sidenav</Text>
     <Text textStyle="paragraph/S/regular">This project-owned chrome stays mounted while resource scopes rotate.</Text>
   </Stack>
 );
-
 export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution => ({
   id: "layout-scope.example",
   activate(ctx) {
@@ -128,10 +122,16 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
     });
     ctx.shellPlacements.registerPlacement({
       id: PANEL_WIDGET_ID,
-      item: { kind: "view", viewId: PANEL_WIDGET_ID, presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: PANEL_WIDGET_ID,
+        },
+      },
       region: "main",
     });
-
     ctx.views.registerView({
       id: SIDENAV_WIDGET_ID,
       title: "Project Sidenav",
@@ -139,10 +139,16 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
     });
     ctx.shellPlacements.registerPlacement({
       id: SIDENAV_WIDGET_ID,
-      item: { kind: "view", viewId: SIDENAV_WIDGET_ID, presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: SIDENAV_WIDGET_ID,
+        },
+      },
       region: "sidenav",
     });
-
     ctx.views.registerView({
       id: SECONDARY_WIDGET_ID,
       title: "Resource details",
@@ -150,28 +156,31 @@ export const createLayoutScopeExampleModule = (): WorkbenchModuleContribution =>
     });
     ctx.shellPlacements.registerPlacement({
       id: SECONDARY_WIDGET_ID,
-      item: { kind: "view", viewId: SECONDARY_WIDGET_ID, presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: SECONDARY_WIDGET_ID,
+        },
+      },
       region: "secondary",
     });
   },
 });
-
 export const createLayoutScopeExampleWorkbench = () => {
   const persistence = createInMemoryAdapter();
   const workbench = createWorkbench({
     layoutPersistence: persistence.layout,
   });
   workbench.registerModule(createLayoutScopeExampleModule());
-
   const seedScope = (scope: LayoutScope, secondarySize: number, secondaryOpen: boolean) => {
     workbench.layout.setPersistenceScope(scope);
     workbench.layout.setRegionSize("secondary", secondarySize);
     setSecondaryOpen(workbench, secondaryOpen);
   };
-
   seedScope(SCOPES[0]!.id, 220, true);
   seedScope(SCOPES[1]!.id, 340, false);
   seedScope(SCOPES[2]!.id, 280, false);
-
   return workbench;
 };

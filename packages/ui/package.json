@@ -6,7 +6,8 @@
     "url": "https://github.com/pufflyai/prompt-studio"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "directory": ".publish"
   },
   "files": [
     "dist"
@@ -56,7 +57,7 @@
     "./style.css": "./dist/style.css"
   },
   "scripts": {
-    "build": "bun run typegen:tokens && vite build",
+    "build": "bun run typegen:tokens && vite build && bun ../../scripts/release/stage-package.ts .",
     "visualize-bundle": "bunx vite-bundle-visualizer",
     "lint": "biome check .",
     "typegen:tokens": "chakra typegen ./src/theme/theme.ts && rm -f chakra-config.json",
@@ -95,6 +96,7 @@
     "@lexical/utils": "^0.40.0",
     "@lexical/yjs": "^0.40.0",
     "@monaco-editor/react": "^4.7.0",
+    "@pstdio/sdk": "workspace:*",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.19",
     "@types/mdast": "^4.0.4",

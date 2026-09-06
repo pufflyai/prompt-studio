@@ -18,8 +18,7 @@ workbench.resources.registerProvider({
   list: () => [
     {
       resource: {
-        kind: "workspace",
-        uri: "pstdio://workspace/ps-324-a1",
+        type: "workspace",
         id: "workspace-1",
         label: "PS-324_A1",
         icon: "GitBranch",
@@ -28,8 +27,7 @@ workbench.resources.registerProvider({
     },
     {
       resource: {
-        kind: "workspace",
-        uri: "pstdio://workspace/ps-323-a1",
+        type: "workspace",
         id: "workspace-2",
         label: "PS-323_A1",
         icon: "GitBranch",
@@ -38,7 +36,6 @@ workbench.resources.registerProvider({
     },
   ],
 });
-
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: Number.POSITIVE_INFINITY } } });
 queryClient.setQueryData<ProjectTemplateAsset[]>(projectTemplateAssetsQueryKey(projectId), [
   {
@@ -64,7 +61,6 @@ queryClient.setQueryData<ProjectTemplateAsset[]>(projectTemplateAssetsQueryKey(p
     commands: { list: "list", read: "read", save: "save", delete: "delete" },
   },
 ]);
-
 const templateEntry = {
   key: "template",
   type: "template",
@@ -72,7 +68,6 @@ const templateEntry = {
   required: false,
   templateType: "pstdio.pstdio-planner.template-type.ticket",
 } satisfies CommandParamEntry;
-
 const workspaceEntry = {
   key: "workspace",
   type: "resource",
@@ -80,11 +75,9 @@ const workspaceEntry = {
   required: false,
   resourceType: "workspace",
 } satisfies CommandParamEntry;
-
 const DashboardParamFieldsPreview = () => {
   const [template, setTemplate] = useState<CommandParamValue>("");
   const [workspace, setWorkspace] = useState<CommandParamValue>("");
-
   return (
     <QueryClientProvider client={queryClient}>
       <Dialog.Root open size="lg">
@@ -126,15 +119,11 @@ const DashboardParamFieldsPreview = () => {
     </QueryClientProvider>
   );
 };
-
 const meta = {
   title: "CommandParams/DashboardParamFields",
   component: DashboardParamFieldsPreview,
   parameters: { layout: "fullscreen" },
 } satisfies Meta<typeof DashboardParamFieldsPreview>;
-
 export default meta;
-
 type Story = StoryObj<typeof meta>;
-
 export const TemplateAndResourceDropdowns: Story = {};

@@ -15,14 +15,11 @@ describe("registerExtensionResourceHierarchy", () => {
       projectId: "project-1",
     });
     const child = {
-      kind: "ticket",
-      uri: "pstdio://extension-resource/ticket/child",
+      type: "ticket",
       id: "child",
       metadata: { resourceParent: { type: "ticket", id: "parent", label: "Parent" } },
     } satisfies ResourceRef;
-
     const parent = workbench.resources.walkHierarchy(child)[0];
-
-    expect(parent).toMatchObject({ kind: "ticket", id: "parent", label: "Parent" });
+    expect(parent).toMatchObject({ type: "ticket", id: "parent", label: "Parent" });
   });
 });

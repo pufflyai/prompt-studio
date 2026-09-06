@@ -13,7 +13,6 @@ const ticketPage = {
   kind: "page",
   id: "ticket",
 } satisfies PageRef;
-
 const createHarness = () => {
   const workbench = createWorkbench();
   workbench.modes.registerMode({ id: "project", activate: () => undefined });
@@ -33,7 +32,15 @@ const createHarness = () => {
     title: "Tickets",
     path: "tickets",
     modeId: "project",
-    slots: [{ id: "content", role: "primary", region: "main", viewId: "tickets-view" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "tickets-view",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pages.registerPage({
     id: "pstdio.planner.page.ticket",
@@ -42,14 +49,23 @@ const createHarness = () => {
     path: "tickets/:id",
     modeId: "project",
     parentId: "pstdio.planner.page.tickets",
-    slots: [
-      {
-        id: "content",
-        role: "primary",
-        region: "main",
-        binding: { resourceKinds: ["ticket"], viewId: "ticket-view", cardinality: "one" },
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "ticket",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "ticket-view",
       },
-    ],
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pageLocations.setProject("project-1");
   workbench.pageLocations.navigate({
@@ -60,35 +76,27 @@ const createHarness = () => {
   });
   return workbench;
 };
-
 test("updates the current page resource through its canonical location", () => {
   const workbench = createHarness();
   const resource = {
-    kind: "ticket",
-    uri: "pstdio://extension-resource/ticket/PS-1",
+    type: "ticket",
     id: "PS-1",
     label: "PS-1 New title",
   } satisfies ResourceRef;
-
   setResourceBreadcrumb(workbench, resource);
-
   expect(workbench.pages.store.getState().location).toMatchObject({
     page: ticketPage,
     resource: { type: "ticket", id: "PS-1", label: "PS-1 New title" },
     parent: { page: ticketsPage },
   });
 });
-
 test("a label refresh keeps the canonical parent breadcrumb", () => {
   const workbench = createHarness();
   const resource = {
-    kind: "ticket",
-    uri: "pstdio://extension-resource/ticket/PS-1",
+    type: "ticket",
     id: "PS-1",
     label: "PS-1 New title",
   } satisfies ResourceRef;
-
   updateResourceBreadcrumbLabel(workbench, resource);
-
   expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Tickets", "PS-1 New title"]);
 });

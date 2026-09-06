@@ -1,20 +1,28 @@
 import type { DockedWorkbenchRegion, PageOpenIntent, PlacementIdentity, PlacementRef } from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
+import { notifyWorkbenchChange } from "../../shared/store/workbench-batch";
+import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import { createPlacement } from "../layout/layout-operations";
-import type { RegisteredWidgetContribution, WorkbenchWidgetPlacement } from "../layout/layout-types";
+import type { RegisteredWidgetContribution, WorkbenchLayout, WorkbenchWidgetPlacement } from "../layout/layout-types";
 import type { ResolvedOwnedPlacement } from "../layout/placement-reconciliation";
 import {
   clearOwnedPlacementState,
   closeOwnedPlacementInstance,
   createOwnedPlacementState,
   isStaticPlacementOpen,
-  openResourcePlacement,
-  openStaticPlacement,
+  placementItemViewId,
   staticPlacementClosable,
   updateResourcePlacementInstance,
   validateOwnedPlacementItem,
   type WorkbenchOwnedPlacementItem,
 } from "../placements/owned-placement-lifecycle";
+import type { OwnedPlacementLocationContext } from "../placements/owned-placement-preparation";
+import {
+  type OwnedPlacementPreparation,
+  prepareOwnedPlacement,
+  setOwnedPlacementPreparation,
+} from "../placements/owned-placement-preparation";
+import { restoreOwnedPlacementState } from "../placements/owned-placement-restoration";
 import type { ResourceRef } from "../resources/resource-registry";
 import type { WorkbenchViewMenuRegistry } from "../view-menus/view-menu-registry";
 import {
@@ -45,9 +53,15 @@ export interface WorkbenchModePlacementRegistry {
   getPlacement(ref: PlacementRef): WorkbenchModePlacementContribution | undefined;
   listPlacements(modeId?: string): WorkbenchModePlacementContribution[];
   openPlacement(input: OpenModePlacementTarget): PlacementIdentity;
-  updatePlacement(identity: PlacementIdentity, input: { resource?: ResourceRef; title?: string }): void;
+  updatePlacement(
+    identity: PlacementIdentity,
+    input: { resource?: ResourceRef; title?: string; open?: PageOpenIntent },
+  ): void;
   closePlacement(identity: PlacementIdentity): void;
-  resolvePlacements(modeId: string): readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[];
+  resolvePlacements(
+    modeId: string,
+    context?: OwnedPlacementLocationContext,
+  ): readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[];
   onDidChange(listener: () => void): Disposable;
 }
 
@@ -83,8 +97,8 @@ const validatePlacement = (input: {
     throw new Error(`Mode placement "${placement.id}" must include its initial region in movableTo`);
   }
   validateOwnedPlacementItem("Mode placement", placement.id, placement.item);
-  if (!views.getView(placement.item.viewId)) {
-    throw new Error(`Workbench mode placement view is not registered: ${placement.item.viewId}`);
+  if (!views.getView(placementItemViewId(placement.item))) {
+    throw new Error(`Workbench mode placement view is not registered: ${placementItemViewId(placement.item)}`);
   }
   return refKey;
 };
@@ -98,13 +112,15 @@ const copyPlacement = (placement: WorkbenchModePlacementContribution) => ({
 
 export const createWorkbenchModePlacementRegistry = (input: {
   views: WorkbenchViewRegistry;
+  getProjectId?(): string | undefined;
+  loadLayout?(context: OwnedPlacementLocationContext): WorkbenchLayout | undefined;
   viewMenus?: WorkbenchViewMenuRegistry;
   getPanel(panelId: string): RegisteredWidgetContribution | undefined;
   registerPanel: Parameters<typeof registerWorkbenchViewPlacement>[0];
 }): WorkbenchModePlacementRegistry => {
   const placements = new Map<string, WorkbenchModePlacementContribution>();
   const refs = new Map<string, WorkbenchModePlacementContribution>();
-  const state = createOwnedPlacementState();
+  let state = createOwnedPlacementState();
   const listeners = new Set<() => void>();
   const label = "Mode placement";
 
@@ -113,8 +129,11 @@ export const createWorkbenchModePlacementRegistry = (input: {
       .filter((placement) => !modeId || placement.modeId === modeId)
       .sort((left, right) => left.id.localeCompare(right.id));
 
+  let runtime: (() => void) | undefined;
   const emitChange = () => {
-    for (const listener of listeners) listener();
+    runtime?.();
+    for (const listener of listeners)
+      notifyWorkbenchChange(listener, () => runWorkbenchEffect("mode placement subscriber", listener));
   };
 
   const resolve = (
@@ -124,8 +143,9 @@ export const createWorkbenchModePlacementRegistry = (input: {
     open?: PageOpenIntent,
     title?: string,
   ): ResolvedOwnedPlacement<WorkbenchWidgetPlacement> => {
-    const view = input.views.getView(placement.item.viewId);
-    if (!view) throw new Error(`Workbench mode placement view is not registered: ${placement.item.viewId}`);
+    const view = input.views.getView(placementItemViewId(placement.item));
+    if (!view)
+      throw new Error(`Workbench mode placement view is not registered: ${placementItemViewId(placement.item)}`);
     const contributionId = modePlacementContributionId(placement.id);
     const panel = input.getPanel(contributionId);
     if (!panel) throw new Error(`Workbench mode placement is not registered: ${placement.id}`);
@@ -138,7 +158,7 @@ export const createWorkbenchModePlacementRegistry = (input: {
         `workbench.mode.${encodeURIComponent(placement.id)}.${encodeURIComponent(instanceKey)}`,
         panel,
         {
-          viewId: placement.item.viewId,
+          viewId: placementItemViewId(placement.item),
           role: placement.region === "main" ? "location" : "sub-panel",
           closable: staticPlacementClosable(placement.item),
           ...(resource ? { resource } : {}),
@@ -149,6 +169,66 @@ export const createWorkbenchModePlacementRegistry = (input: {
     };
   };
 
+  const preparation: OwnedPlacementPreparation = {
+    connectRuntime(listener) {
+      runtime = listener;
+      return createDisposable(() => {
+        if (runtime === listener) runtime = undefined;
+      });
+    },
+    getState: () => state,
+    restore(context, current = state) {
+      if (input.getProjectId && context.projectId !== input.getProjectId()) current = createOwnedPlacementState();
+      const saved = input.loadLayout?.(context);
+      if (!saved) return current;
+      const declarations = listPlacements(context.modeId).filter((placement) =>
+        placement.item.kind === "view"
+          ? !current.staticOverrides.has(placement.id)
+          : !current.resourceInstances.has(placement.id),
+      );
+      if (!declarations.length) return current;
+      return restoreOwnedPlacementState({
+        state: current,
+        declarations,
+        saved: Object.values(saved.regions).flatMap((region) => region.widgets),
+        owns: (identity) => identity.kind === "mode" && identity.modeId === context.modeId,
+      });
+    },
+    adopt(modeId, saved, current = state) {
+      return restoreOwnedPlacementState({
+        state: current,
+        declarations: listPlacements(modeId),
+        saved,
+        owns: (identity) => identity.kind === "mode" && identity.modeId === modeId,
+      });
+    },
+    open(target, current = state) {
+      const placement = placements.get(target.placementId);
+      if (!placement) throw new Error(`Unknown mode placement: ${target.placementId}`);
+      return prepareOwnedPlacement({
+        label,
+        target,
+        item: placement.item,
+        current,
+        identityFor: (instanceKey) => identityFor(placement, instanceKey),
+      });
+    },
+    apply: (next) => {
+      state = next;
+    },
+    publish: emitChange,
+    resolve(modeId, current = state) {
+      if (!modeId) return [];
+      return listPlacements(modeId).flatMap((placement) => {
+        if (placement.item.kind === "view") {
+          return isStaticPlacementOpen(placement.item, current, placement.id) ? [resolve(placement, "default")] : [];
+        }
+        return (current.resourceInstances.get(placement.id) ?? []).map((instance) =>
+          resolve(placement, instance.instanceKey, instance.resource, instance.open, instance.title),
+        );
+      });
+    },
+  };
   const registry: WorkbenchModePlacementRegistry = {
     registerPlacement(placement) {
       const refKey = validatePlacement({ placement, placements, refs, views: input.views });
@@ -159,9 +239,9 @@ export const createWorkbenchModePlacementRegistry = (input: {
         {
           ...registered,
           id: modePlacementContributionId(registered.id),
-          viewId: registered.item.viewId,
+          viewId: placementItemViewId(registered.item),
           role: registered.region === "main" ? "location" : "sub-panel",
-          singleton: registered.item.kind === "view" || registered.item.cardinality === "one",
+          singleton: registered.item.kind === "view" || registered.item.binding.cardinality === "one",
           closable: staticPlacementClosable(registered.item),
         },
         input.viewMenus,
@@ -188,14 +268,10 @@ export const createWorkbenchModePlacementRegistry = (input: {
     openPlacement(target) {
       const placement = refs.get(placementRefKey(target.panel));
       if (!placement) throw new Error(`Unknown mode panel: ${target.panel.extensionId}.${target.panel.id}`);
-      let instanceKey = "default";
-      if (placement.item.kind === "view") {
-        openStaticPlacement({ label, id: placement.id, item: placement.item, state, ...target });
-      } else {
-        instanceKey = openResourcePlacement({ label, id: placement.id, item: placement.item, state, ...target });
-      }
-      emitChange();
-      return identityFor(placement, instanceKey);
+      const prepared = preparation.open({ ...target, placementId: placement.id });
+      preparation.apply(prepared.state);
+      preparation.publish();
+      return prepared.identity;
     },
 
     closePlacement(identity) {
@@ -227,22 +303,14 @@ export const createWorkbenchModePlacementRegistry = (input: {
       emitChange();
     },
 
-    resolvePlacements(modeId) {
-      return listPlacements(modeId).flatMap((placement) => {
-        if (placement.item.kind === "view") {
-          return isStaticPlacementOpen(placement.item, state, placement.id) ? [resolve(placement, "default")] : [];
-        }
-        return (state.resourceInstances.get(placement.id) ?? []).map((instance) =>
-          resolve(placement, instance.instanceKey, instance.resource, instance.open, instance.title),
-        );
-      });
-    },
-
+    resolvePlacements: (modeId, context) =>
+      preparation.resolve(modeId, context ? preparation.restore!(context) : state),
     onDidChange(listener) {
       listeners.add(listener);
       return createDisposable(() => listeners.delete(listener));
     },
   };
 
+  setOwnedPlacementPreparation(registry, preparation);
   return registry;
 };

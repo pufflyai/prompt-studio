@@ -11,7 +11,6 @@ import {
 } from "./mock-data";
 
 const configureAttributesCommandId = "kanban-renderer.story.configureAttributes";
-
 const defaultSettings = {
   viewMode: "board",
   columnGrouping: "status",
@@ -19,7 +18,6 @@ const defaultSettings = {
   ordering: { attributeId: "updated", direction: "desc" },
   displayProperties: ["status", "assignee", "priority"],
 } satisfies Partial<KanbanRendererSettings>;
-
 const resolveBoardColumnConfig = (groupKey: string) => {
   const status = storySchemaStore.getAttributes().find((attribute) => attribute.id === "status");
   if (!status || status.type.kind !== "enum") {
@@ -30,25 +28,20 @@ const resolveBoardColumnConfig = (groupKey: string) => {
   if (!option) return { color: "gray", canDragIn: true, canDragOut: true, canCreate: true };
   return { color: option.color, canDragIn: true, canDragOut: true, canCreate: true };
 };
-
 const reorderRows = (items: StoryRow[], rowId: string, beforeRowId?: string) => {
   const moving = items.find((row) => row.id === rowId);
   if (!moving) return items;
-
   const remaining = items.filter((row) => row.id !== rowId);
   const beforeIndex = beforeRowId ? remaining.findIndex((row) => row.id === beforeRowId) : -1;
   const insertIndex = beforeIndex === -1 ? remaining.length : beforeIndex;
-
   return [...remaining.slice(0, insertIndex), moving, ...remaining.slice(insertIndex)];
 };
-
 const createStoryRowsStore = () => {
   let rows = storyRows;
   const listeners = new Set<() => void>();
   const notify = () => {
     for (const listener of listeners) listener();
   };
-
   return {
     getRows: () => rows,
     updateAttribute: (rowId: string, attributeId: string, value: unknown) => {
@@ -69,7 +62,6 @@ const createStoryRowsStore = () => {
     },
   };
 };
-
 const registerSchemaEditor = (ctx: WorkbenchModuleContext) => {
   ctx.views.registerView({
     id: kanbanRendererStoryEditorWidgetId,
@@ -84,7 +76,6 @@ const registerSchemaEditor = (ctx: WorkbenchModuleContext) => {
     viewId: kanbanRendererStoryEditorWidgetId,
     config: { size: "lg", placement: "center", scrollBehavior: "inside" },
   });
-
   ctx.commands.registerCommand(
     {
       id: configureAttributesCommandId,
@@ -102,12 +93,10 @@ const registerSchemaEditor = (ctx: WorkbenchModuleContext) => {
     order: 10,
   });
 };
-
 export const createKanbanRendererStoryModule = (): WorkbenchModuleContribution => ({
   id: "kanban-renderer.story",
   activate(ctx) {
     const rowsStore = createStoryRowsStore();
-
     ctx.views.registerView({
       id: kanbanRendererStoryWidgetId,
       title: "Rows",
@@ -123,12 +112,17 @@ export const createKanbanRendererStoryModule = (): WorkbenchModuleContribution =
         onReorder: rowsStore.reorder,
       },
     });
-
     registerSchemaEditor(ctx);
-
     ctx.shellPlacements.registerPlacement({
       id: kanbanRendererStoryWidgetId,
-      item: { kind: "view", viewId: kanbanRendererStoryWidgetId, presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: kanbanRendererStoryWidgetId,
+        },
+      },
       region: "main",
     });
   },

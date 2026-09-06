@@ -1,5 +1,7 @@
-import type { TerminalSessionOperation } from "../../extensions.terminal";
-import type { CreateNotificationInput, NotificationStatus } from "../../notifications/types";
+import type { TerminalSessionOperation, TerminalSessionResult } from "../../extensions.terminal";
+import type { CreateNotificationInput, Notification, NotificationStatus } from "../../notifications/types";
+import type { CommandOutcome } from "./commands";
+import type { ExtensionBlobRef } from "./context";
 import type { JsonObject } from "./json";
 import type { NavigationTarget } from "./navigation-target";
 import type { RepoContext, ResourceRef } from "./resources";
@@ -12,6 +14,7 @@ export const WEBVIEW_HOST_CAPABILITY_VERSION = 1;
 export const WEBVIEW_DECLARABLE_CAPABILITIES = [
   "commands.execute",
   "navigation.open",
+  "placement.close",
   "notification.show",
   "notification.action",
   "notification.resolve",
@@ -143,6 +146,7 @@ export interface WebviewKeyboardEventParams {
 export interface WebviewHostCapabilityParams {
   "commands.execute": WebviewCommandsExecuteParams;
   "navigation.open": WebviewNavigationOpenParams;
+  "placement.close": Record<string, never>;
   "notification.show": WebviewNotificationShowParams;
   "notification.action": WebviewNotificationActionParams;
   "notification.resolve": WebviewNotificationResolveParams;
@@ -160,3 +164,42 @@ export interface WebviewHostCapabilityParams {
   "artifacts.read": WebviewArtifactsReadParams;
   "host.dispatchKeyboardEvent": WebviewKeyboardEventParams;
 }
+
+export interface WebviewHostCapabilityResults {
+  "commands.execute": { outcome: CommandOutcome };
+  "navigation.open": void;
+  "placement.close": void;
+  "notification.show": void;
+  "notification.action": Notification;
+  "notification.resolve": Notification | { resolved: number; notifications: Notification[] };
+  "notification.dismiss": Notification | { resolved: number; notifications: Notification[] };
+  "preferences.get": WebviewPreferencesSetParams["value"] | undefined;
+  "preferences.set": { name: string; value: WebviewPreferencesSetParams["value"] };
+  "extension.settings.all": Record<string, unknown>;
+  "extension.settings.get": unknown;
+  "extension.settings.set": void;
+  "extension.settings.delete": void;
+  "terminal.session": TerminalSessionResult;
+  "files.upload": ExtensionBlobRef;
+  "files.list": { files: ExtensionBlobRef[] };
+  "files.delete": void;
+  "artifacts.read": WebviewArtifactFile[] | string;
+  "host.dispatchKeyboardEvent": void;
+}
+
+export type WebviewHostCapabilityResult<
+  Capability extends WebviewHostCapability,
+  Params extends WebviewHostCapabilityParams[Capability] = WebviewHostCapabilityParams[Capability],
+> = Capability extends "artifacts.read"
+  ? Params extends { op: "list" }
+    ? WebviewArtifactFile[]
+    : Params extends { op: "readText" | "imageUrl" }
+      ? string
+      : WebviewHostCapabilityResults[Capability]
+  : Capability extends "terminal.session"
+    ? Params extends { operation: "open" }
+      ? Extract<TerminalSessionResult, { operation: "open" }>
+      : Params extends { operation: "write" | "resize" | "kill" | "subscribe" }
+        ? Exclude<TerminalSessionResult, { operation: "open" }>
+        : TerminalSessionResult
+    : WebviewHostCapabilityResults[Capability];

@@ -11,7 +11,6 @@ const page: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "b
 const homePage: PageRef = { ...page, id: "boombox" };
 const resource = (track: BoomboxTrack): ResourceRef => ({ type: "boombox.track", id: track.id, label: track.title });
 const store = createShowcaseStore({ playing: true, likedIds: ["paper-moon"], queueIds: ["afterimage", "still-life"] });
-
 const Artwork = (props: { size?: string; track: BoomboxTrack }) => (
   <Box
     flexShrink={0}
@@ -26,7 +25,6 @@ const Artwork = (props: { size?: string; track: BoomboxTrack }) => (
     <WorkbenchIcon name="AudioWaveform" color="white" size={20} />
   </Box>
 );
-
 const Playlist = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const state = useShowcaseStore(store);
@@ -141,7 +139,6 @@ const Playlist = (props: { input: WorkbenchPanelRenderInput }) => {
     </Stack>
   );
 };
-
 const Queue = (props: { workbench: WorkbenchCore }) => {
   const state = useShowcaseStore(store);
   const activeId = usePrimaryResource(props.workbench)?.id;
@@ -194,7 +191,6 @@ const Queue = (props: { workbench: WorkbenchCore }) => {
     </Stack>
   );
 };
-
 const Player = (props: { workbench: WorkbenchCore }) => {
   const state = useShowcaseStore(store);
   const activeResource = usePrimaryResource(props.workbench);
@@ -259,7 +255,6 @@ const Player = (props: { workbench: WorkbenchCore }) => {
     </HStack>
   );
 };
-
 export const createBoomboxWorkbench = () => {
   const workbench = createWorkbench({ startPage: homePage });
   workbench.themes.register([boomboxTheme]);
@@ -298,7 +293,14 @@ export const createBoomboxWorkbench = () => {
     ref: { extensionId: "storybook.showcases", kind: "placement", id: "boombox.player" },
     modeId: "boombox",
     region: "secondary",
-    item: { kind: "view", viewId: "boombox.player", presence: "fixed" },
+    item: {
+      kind: "view",
+      presence: "fixed",
+      view: {
+        kind: "view",
+        id: "boombox.player",
+      },
+    },
   });
   workbench.pages.registerPage({
     id: "boombox.home",
@@ -306,7 +308,15 @@ export const createBoomboxWorkbench = () => {
     title: "Lazy Sunday",
     path: "boombox",
     modeId: "boombox",
-    slots: [{ id: "playlist", role: "primary", region: "main", viewId: "boombox.playlist" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "boombox.playlist",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pages.registerPage({
     id: "boombox.resource",
@@ -315,14 +325,23 @@ export const createBoomboxWorkbench = () => {
     path: "boombox/resource",
     modeId: "boombox",
     parentId: "boombox.home",
-    slots: [
-      {
-        id: "playlist",
-        role: "primary",
-        region: "main",
-        binding: { resourceKinds: ["boombox.track"], viewId: "boombox.playlist", cardinality: "one" },
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "boombox.track",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "boombox.playlist",
       },
-    ],
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pageLocations.switchProject("storybook-boombox");
   workbench.pageLocations.navigate({ kind: "page", page, resource: resource(boomboxTracks[0]) });

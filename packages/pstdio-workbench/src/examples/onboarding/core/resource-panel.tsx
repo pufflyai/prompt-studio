@@ -1,15 +1,26 @@
 import { Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench, type ResourceRef } from "../../../core";
 
 const guidePlacementId = "host.resource-guide";
 const openNextGuideCommandId = "host.resource-guide.open-next";
-
 const guides = [
-  { kind: "guide", uri: "guide:getting-started", id: "getting-started", label: "Getting started" },
-  { kind: "guide", uri: "guide:views", id: "views", label: "Views and placements" },
-  { kind: "guide", uri: "guide:resources", id: "resources", label: "Resource identity" },
+  {
+    type: "guide",
+    id: "getting-started",
+    label: "Getting started",
+  },
+  {
+    type: "guide",
+    id: "views",
+    label: "Views and placements",
+  },
+  {
+    type: "guide",
+    id: "resources",
+    label: "Resource identity",
+  },
 ] as const satisfies readonly ResourceRef[];
-
 export const createResourceWorkbench = () => {
   const workbench = createWorkbench();
   workbench.registerModule({
@@ -23,7 +34,6 @@ export const createResourceWorkbench = () => {
           title: resource.label,
           open: "pin",
         });
-
       ctx.resources.registerKind({ kind: "guide", label: "Guide", icon: "BookOpen" });
       ctx.views.registerView({
         id: guidePlacementId,
@@ -37,10 +47,10 @@ export const createResourceWorkbench = () => {
                 Each button sends a different resource to the same placement. Reopening a guide selects its existing
                 tab.
               </Text>
-              <Code alignSelf="flex-start">{instance.resource?.uri}</Code>
+              <Code alignSelf="flex-start">{resourceKey(instance.resource)}</Code>
               <HStack gap="sm" flexWrap="wrap" pt="sm">
                 {guides.map((guide) => (
-                  <Button key={guide.uri} size="sm" variant="outline" onClick={() => openGuide(guide)}>
+                  <Button key={resourceKey(guide)} size="sm" variant="outline" onClick={() => openGuide(guide)}>
                     Open {guide.label}
                   </Button>
                 ))}
@@ -70,11 +80,21 @@ export const createResourceWorkbench = () => {
       ctx.shellPlacements.registerPlacement({
         id: guidePlacementId,
         item: {
-          kind: "resource",
-          viewId: guidePlacementId,
-          resourceKinds: ["guide"],
-          cardinality: "many",
-          add: { kind: "command", commandId: openNextGuideCommandId },
+          kind: "binding",
+          binding: {
+            kinds: [
+              {
+                kind: "resource-kind",
+                id: "guide",
+              },
+            ],
+            view: {
+              kind: "view",
+              id: guidePlacementId,
+            },
+            cardinality: "many",
+            add: { kind: "command", target: { command: { kind: "command", id: openNextGuideCommandId } } },
+          },
         },
         region: "main",
       });

@@ -1,51 +1,58 @@
 import { describe, expect, test } from "bun:test";
+import { registerResourcePage } from "./controllers/page-runtime/page-runtime-test-support";
 import { getWorkbenchPageRegistryInternals } from "./registries/pages/page-registry-internals";
 import { createWorkbench } from "./workbench-core";
 
-const registerView = (workbench: ReturnType<typeof createWorkbench>, view: { id: string; title: string }) =>
-  workbench.views.registerView({ ...view, body: { kind: "react", render: () => null } });
-
+const registerView = (
+  workbench: ReturnType<typeof createWorkbench>,
+  view: {
+    id: string;
+    title: string;
+  },
+) => workbench.views.registerView({ ...view, body: { kind: "react", render: () => null } });
 describe("workbench core pages", () => {
   test("leaves the layout untouched before a page project starts", () => {
     const workbench = createWorkbench();
-
     expect(workbench.layout.getLayout().regions.main.visible).toBe(true);
     expect(workbench.layout.getLayout().regions.secondary.visible).toBe(true);
   });
-
   test("rejects a malformed resource URI without throwing", () => {
     const workbench = createWorkbench();
-
     expect(getWorkbenchPageRegistryInternals(workbench.pages).resources.fromUri("not a URI")).toBeUndefined();
   });
-
   test("renders a registered page through the shared page runtime", () => {
     const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", activate: () => undefined });
     registerView(workbench, { id: "tickets-view", title: "Tickets" });
-    workbench.pages.registerPage({
+    registerResourcePage(workbench, {
       id: "pstdio.planner.page.tickets",
       ref: { extensionId: "pstdio.planner", kind: "page", id: "tickets" },
       title: "Tickets",
       path: "tickets",
       modeId: "project",
-      slots: [{ id: "content", role: "primary", region: "main", viewId: "tickets-view" }],
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "tickets-view",
+        },
+        cardinality: "one",
+      },
+      slots: [],
     });
-
     getWorkbenchPageRegistryInternals(workbench.pages).activateLocation({
       pageId: "pstdio.planner.page.tickets",
       projectId: "project-1",
       location: { page: { extensionId: "pstdio.planner", kind: "page", id: "tickets" } },
       action: "testOpenPage",
     });
-
     expect(workbench.layout.getLayout().regions.main.widgets).toEqual([
       expect.objectContaining({
-        contributionId: "workbench.page-placement.pstdio.planner.page.tickets.content",
+        contributionId: "workbench.page-placement.pstdio.planner.page.tickets.%24main",
         placementIdentity: {
           kind: "page",
           pageId: "pstdio.planner.page.tickets",
-          slotId: "content",
+          slotId: "$main",
           instanceKey: "default",
         },
         role: "location",
@@ -53,29 +60,36 @@ describe("workbench core pages", () => {
       }),
     ]);
   });
-
   test("updates renderer section input without opening a second resource placement", () => {
     const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", activate: () => undefined });
     registerView(workbench, { id: "ticket-detail", title: "Ticket" });
-    workbench.pages.registerPage({
+    registerResourcePage(workbench, {
       id: "pstdio.planner.page.ticket",
       ref: { extensionId: "pstdio.planner", kind: "page", id: "ticket" },
       title: "Ticket",
       path: "tickets/:id",
       modeId: "project",
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          binding: { resourceKinds: ["ticket"], viewId: "ticket-detail", cardinality: "one" },
+      resource: {
+        kinds: [
+          {
+            kind: "resource-kind",
+            id: "ticket",
+          },
+        ],
+      },
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "ticket-detail",
         },
-      ],
+        cardinality: "one",
+      },
+      slots: [],
     });
     const internals = getWorkbenchPageRegistryInternals(workbench.pages);
     const resource = { type: "ticket", id: "PS-326" };
-
     internals.activateLocation({
       pageId: "pstdio.planner.page.ticket",
       projectId: "project-1",
@@ -100,10 +114,9 @@ describe("workbench core pages", () => {
       },
       action: "testOpenTicketAcceptance",
     });
-
     expect(workbench.layout.getLayout().regions.main.widgets).toEqual([
       expect.objectContaining({
-        contributionId: "workbench.page-placement.pstdio.planner.page.ticket.content",
+        contributionId: "workbench.page-placement.pstdio.planner.page.ticket.%24main",
         section: { anchors: [{ id: "acceptance", heading: "Acceptance" }] },
       }),
     ]);
@@ -111,7 +124,6 @@ describe("workbench core pages", () => {
       anchors: [{ id: "acceptance", heading: "Acceptance" }],
     });
   });
-
   test("tracks module page registrations through the shared registry", () => {
     const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", activate: () => undefined });
@@ -129,17 +141,22 @@ describe("workbench core pages", () => {
           title: "Start",
           path: "start",
           modeId: "project",
-          slots: [{ id: "content", role: "primary", region: "main", viewId: "start-view" }],
+          main: {
+            kind: "view",
+            view: {
+              kind: "view",
+              id: "start-view",
+            },
+            cardinality: "one",
+          },
+          slots: [],
         });
       },
     });
-
     expect(workbench.pages.getPage("pstdio.planner.page.start")).toBeDefined();
-
     registration.dispose();
     expect(workbench.pages.getPage("pstdio.planner.page.start")).toBeUndefined();
   });
-
   test("removes an active page while its persistence scope changes", () => {
     const workbench = createWorkbench({
       resolvePagePersistenceScope: ({ pageId, projectId }) => ({
@@ -149,45 +166,66 @@ describe("workbench core pages", () => {
     workbench.modes.registerMode({ id: "project", activate: () => undefined });
     registerView(workbench, { id: "start-view", title: "Start" });
     registerView(workbench, { id: "lab-view", title: "Lab" });
-    workbench.pages.registerPage({
+    registerResourcePage(workbench, {
       id: "start",
       ref: { extensionId: "pstdio", kind: "page", id: "start" },
       title: "Start",
       path: "",
       modeId: "project",
-      slots: [{ id: "content", role: "primary", region: "main", viewId: "start-view" }],
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "start-view",
+        },
+        cardinality: "one",
+      },
+      slots: [],
     });
-    const lab = workbench.pages.registerPage({
+    const lab = registerResourcePage(workbench, {
       id: "lab",
       ref: { extensionId: "pstdio.lab", kind: "page", id: "lab" },
       title: "Lab",
       path: "lab",
       modeId: "project",
-      slots: [{ id: "content", role: "primary", region: "main", viewId: "lab-view" }],
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "lab-view",
+        },
+        cardinality: "one",
+      },
+      slots: [],
     });
     workbench.pageLocations.setProject("project-1");
     workbench.pageLocations.navigate({ kind: "page", page: { extensionId: "pstdio.lab", kind: "page", id: "lab" } });
-
     lab.dispose();
-
     expect(workbench.pages.getPage("lab")).toBeUndefined();
     expect(workbench.pages.store.getState().activePageId).toBe("start");
   });
 });
-
 describe("workbench core mode placement pages", () => {
   test("reconciles live mode placement registration and disposal through its backing view", () => {
     const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", activate: () => undefined });
     registerView(workbench, { id: "sessions-view", title: "Sessions" });
     registerView(workbench, { id: "tickets-view", title: "Tickets" });
-    workbench.pages.registerPage({
+    registerResourcePage(workbench, {
       id: "pstdio.planner.page.tickets",
       ref: { extensionId: "pstdio.planner", kind: "page", id: "tickets" },
       title: "Tickets",
       path: "tickets",
       modeId: "project",
-      slots: [{ id: "content", role: "primary", region: "main", viewId: "tickets-view" }],
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "tickets-view",
+        },
+        cardinality: "one",
+      },
+      slots: [],
     });
     getWorkbenchPageRegistryInternals(workbench.pages).activateLocation({
       pageId: "pstdio.planner.page.tickets",
@@ -195,12 +233,18 @@ describe("workbench core mode placement pages", () => {
       location: { page: { extensionId: "pstdio.planner", kind: "page", id: "tickets" } },
       action: "testOpenPage",
     });
-
     const registration = workbench.modePlacements.registerPlacement({
       id: "pstdio.placement.sessions",
       ref: { extensionId: "pstdio", kind: "placement", id: "sessions" },
       modeId: "project",
-      item: { kind: "view", viewId: "sessions-view", presence: "open" },
+      item: {
+        kind: "view",
+        presence: "open",
+        view: {
+          kind: "view",
+          id: "sessions-view",
+        },
+      },
       region: "side",
     });
     expect(workbench.layout.getLayout().regions.side.widgets).toEqual([
@@ -215,11 +259,9 @@ describe("workbench core mode placement pages", () => {
         },
       }),
     ]);
-
     registration.dispose();
     expect(workbench.layout.getLayout().regions.side.widgets).toEqual([]);
   });
-
   test("opens an explicit resource panel without replacing the active page", async () => {
     const workbench = createWorkbench({ initialSidePanelMode: "closed" });
     const projectPage = { extensionId: "pstdio.test", kind: "page" as const, id: "project" };
@@ -230,27 +272,58 @@ describe("workbench core mode placement pages", () => {
     registerView(workbench, { id: "project-view", title: "Project" });
     registerView(workbench, { id: "sessions-view", title: "Sessions" });
     registerView(workbench, { id: "session-view", title: "Session" });
-    workbench.pages.registerPage({
+    registerResourcePage(workbench, {
       id: "test.project",
       ref: projectPage,
       title: "Project",
       path: "",
       modeId: "project",
-      slots: [{ id: "content", role: "primary", region: "main", viewId: "project-view" }],
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "project-view",
+        },
+        cardinality: "one",
+      },
+      slots: [],
     });
-    workbench.pages.registerPage({
+    registerResourcePage(workbench, {
       id: "test.sessions",
       ref: sessionsPage,
       title: "Sessions",
       path: "sessions",
       modeId: "sessions",
-      slots: [{ id: "content", role: "primary", region: "main", viewId: "sessions-view" }],
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "sessions-view",
+        },
+        cardinality: "one",
+      },
+      slots: [],
     });
     workbench.modePlacements.registerPlacement({
       id: "test.session",
       ref: sessionPanel,
       modeId: "project",
-      item: { kind: "resource", viewId: "session-view", resourceKinds: ["session"], cardinality: "many" },
+      item: {
+        kind: "binding",
+        binding: {
+          kinds: [
+            {
+              kind: "resource-kind",
+              id: "session",
+            },
+          ],
+          view: {
+            kind: "view",
+            id: "session-view",
+          },
+          cardinality: "many",
+        },
+      },
       region: "side",
     });
     workbench.pageLocations.setProject("project-1");
@@ -261,55 +334,59 @@ describe("workbench core mode placement pages", () => {
       resource: { type: "session", id: "session-1", label: "Session one" },
       open: "preview",
     });
-
     expect(workbench.pages.store.getState().activePageId).toBe("test.project");
     expect(workbench.layout.getLayout().regions.main.widgets.map((item) => item.contributionId)).toEqual([
-      "workbench.page-placement.test.project.content",
+      "workbench.page-placement.test.project.%24main",
     ]);
     expect(workbench.layout.getLayout().regions.side.widgets[0]).toMatchObject({
       contributionId: "workbench.mode-placement.test.session",
-      resource: { kind: "session", id: "session-1" },
+      resource: { type: "session", id: "session-1" },
       tabRetention: "preview",
     });
     expect(workbench.sidePanel.getMode()).toBe("attached");
-
     await workbench.navigation.openTarget({ kind: "page", page: sessionsPage });
     expect(workbench.layout.getLayout().regions.main.widgets.map((item) => item.contributionId)).toEqual([
-      "workbench.page-placement.test.sessions.content",
+      "workbench.page-placement.test.sessions.%24main",
     ]);
     expect(workbench.layout.getLayout().regions.side.widgets).toEqual([]);
   });
-
   test("publishes the page mode before notifying primary-resource listeners", async () => {
     const workbench = createWorkbench();
     const page = { extensionId: "pstdio.test", kind: "page" as const, id: "ticket" };
     workbench.modes.registerMode({ id: "project", activate: () => undefined });
     registerView(workbench, { id: "ticket", title: "Ticket" });
-    workbench.pages.registerPage({
+    registerResourcePage(workbench, {
       id: "test.ticket",
       ref: page,
       title: "Ticket",
       path: "ticket",
       modeId: "project",
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          binding: { resourceKinds: ["ticket"], viewId: "ticket", cardinality: "one" },
+      resource: {
+        kinds: [
+          {
+            kind: "resource-kind",
+            id: "ticket",
+          },
+        ],
+      },
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "ticket",
         },
-      ],
+        cardinality: "one",
+      },
+      slots: [],
     });
     workbench.pageLocations.setProject("project-1");
     const observedModes: Array<string | undefined> = [];
     workbench.onDidChangePrimaryResource(() => observedModes.push(workbench.modes.getActiveModeId()));
-
     await workbench.navigation.openTarget({
       kind: "page",
       page,
       resource: { type: "ticket", id: "PS-1", label: "Ticket" },
     });
-
     expect(observedModes).toEqual(["project"]);
   });
 });

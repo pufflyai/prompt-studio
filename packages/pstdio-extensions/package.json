@@ -31,7 +31,8 @@
     "@tanstack/hotkeys": "^0.7.1",
     "pstdio-api-contracts": "workspace:*",
     "pstdio-paths": "workspace:*",
-    "rimless": "0.8.2"
+    "rimless": "0.8.2",
+    "zod": "^4.1.12"
   },
   "peerDependencies": {
     "react": "^19.0.0"

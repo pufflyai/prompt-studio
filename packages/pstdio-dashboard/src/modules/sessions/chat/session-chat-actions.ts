@@ -104,7 +104,7 @@ export const openCreatedSessionFromDraft = (args: {
     const result = args.input.workbench.pageLocations.navigate({
       kind: "page",
       page: workbenchPages.session,
-      resource: { type: resource.kind, id: resource.id ?? resource.uri, label: resource.label },
+      resource,
     });
     if (!result.ok) throw new Error(result.diagnostic.message);
     return identity;

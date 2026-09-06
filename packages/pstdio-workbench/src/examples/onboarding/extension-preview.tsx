@@ -1,7 +1,8 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type { ContributionRef, ExtensionDefinition, RendererCallback, ViewBody } from "@pstdio/sdk/extensions";
+import type { ExtensionDefinition, RendererCallback, ViewBody } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "../../core";
 import { emptyWorkbenchExtensionMetadata, registerWorkbenchExtensionContributions } from "../../extensions";
+import { previewNavigationTarget, previewPage } from "./extension-preview-composition";
 
 const extensionId = "storybook.guide";
 const contributionId = (kind: string, id: string) => `${extensionId}.${kind}.${id}`;
@@ -111,28 +112,9 @@ const createPreviewMetadata = (definition: ExtensionDefinition) => {
     };
   });
 
-  const pages = (definition.pages ?? []).map((page) => ({
-    id: contributionId("page", page.id),
-    localId: page.id,
-    extensionId,
-    title: page.title,
-    icon: page.icon,
-    path: page.path,
-    mode: normalizedRef(page.mode),
-    parent: page.parent ? normalizedRef(page.parent) : undefined,
-    slots: page.slots.map((slot) => ({
-      ...slot,
-      view: slot.view ? normalizedRef(slot.view) : undefined,
-      binding: slot.binding
-        ? {
-            kind: Array.isArray(slot.binding.kind)
-              ? slot.binding.kind.map((kind) => normalizedRef(kind))
-              : normalizedRef(slot.binding.kind as ContributionRef<"resource-kind">),
-            view: normalizedRef(slot.binding.view),
-          }
-        : undefined,
-    })),
-  }));
+  const pages = (definition.pages ?? []).map((page) =>
+    previewPage(page, (id, tab) => (tab ? { queryHandlerId: handler(id, "tab", "query", tab.query)! } : undefined)),
+  );
 
   const navigationItems = (definition.navigationItems ?? []).map((item) => ({
     id: contributionId("navigation-item", item.id),
@@ -142,7 +124,7 @@ const createPreviewMetadata = (definition: ExtensionDefinition) => {
     label: item.label,
     icon: item.icon,
     group: item.group,
-    action: item.action.kind === "page" ? { ...item.action, page: normalizedRef(item.action.page) } : item.action,
+    action: previewNavigationTarget(item.action),
   }));
 
   const metadata = {

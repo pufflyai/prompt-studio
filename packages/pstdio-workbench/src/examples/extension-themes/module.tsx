@@ -11,7 +11,6 @@ import { extensionThemePreferences } from "./themes";
 const MANAGER_WIDGET_ID = "extension.manager.panel";
 const EMPTY_MAIN_ID = "extension.manager.empty-main";
 const EMPTY_MAIN_RENDERER_ID = "extension.manager.empty-main.renderer";
-
 const extensionDefinitions: ExtensionDefinition[] = [
   {
     id: "theme-pack",
@@ -31,27 +30,21 @@ const extensionDefinitions: ExtensionDefinition[] = [
     createModule: createThemeStatusExtension,
   },
 ];
-
 const useEnabledExtensionIds = (host: ExtensionHost) => {
   const [enabledIds, setEnabledIds] = useState(host.getEnabledIds());
-
   useEffect(() => {
     const subscription = host.subscribe(() => setEnabledIds(host.getEnabledIds()));
     return () => subscription.dispose();
   }, [host]);
-
   return enabledIds;
 };
-
 interface ExtensionRowProps {
   definition: ExtensionDefinition;
   enabled: boolean;
   onToggle: (enabled: boolean) => void;
 }
-
 const ExtensionRow = (props: ExtensionRowProps) => {
   const { definition, enabled, onToggle } = props;
-
   return (
     <Stack gap="2xs" p="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md">
       <HStack justify="space-between" align="start" gap="sm">
@@ -80,11 +73,9 @@ const ExtensionRow = (props: ExtensionRowProps) => {
     </Stack>
   );
 };
-
 const ExtensionManagerPanel = (props: { host: ExtensionHost }) => {
   const { host } = props;
   const enabledIds = useEnabledExtensionIds(host);
-
   return (
     <ScrollArea
       h="full"
@@ -110,7 +101,6 @@ const ExtensionManagerPanel = (props: { host: ExtensionHost }) => {
     </ScrollArea>
   );
 };
-
 const EmptyMainPanel = () => (
   <Stack h="full" minH="0" align="center" justify="center" gap="xs" bg="bg" color="fg" p="lg">
     <WorkbenchIcon name="Puzzle" size={20} color="fg.muted" />
@@ -122,7 +112,6 @@ const EmptyMainPanel = () => (
     </Text>
   </Stack>
 );
-
 // The extension manager is always present — it owns the enable/disable UI, so it
 // must not be one of the extensions it can dispose.
 const createExtensionManagerModule = (host: ExtensionHost): WorkbenchModuleContribution => ({
@@ -135,7 +124,14 @@ const createExtensionManagerModule = (host: ExtensionHost): WorkbenchModuleContr
     });
     ctx.shellPlacements.registerPlacement({
       id: MANAGER_WIDGET_ID,
-      item: { kind: "view", viewId: MANAGER_WIDGET_ID, presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: MANAGER_WIDGET_ID,
+        },
+      },
       region: "side",
     });
     ctx.views.registerView({
@@ -150,7 +146,6 @@ const createExtensionManagerModule = (host: ExtensionHost): WorkbenchModuleContr
     });
   },
 });
-
 export const createExtensionThemesWorkbench = () => {
   const workbench = createWorkbench();
   const host = createExtensionHost(workbench, extensionDefinitions);

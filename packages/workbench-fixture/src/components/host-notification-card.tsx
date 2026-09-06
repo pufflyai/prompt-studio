@@ -1,29 +1,31 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
+import type { WebviewNotificationActionParams } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { useLabHost } from "../hooks/host-context";
 import { LabCard } from "./lab-card";
 
-export const createLabInboxNotificationInput = () => ({
-  title: "Review Extension Lab notification",
-  body: "Durable notifications land in the dashboard inbox until a user resolves them.",
-  kind: "needs_review",
-  priority: "normal",
-  target: {
-    type: "lab.slide",
-    id: "notification-demo",
-    label: "Notification demo",
-  },
-  actions: [
-    {
-      id: "say-hello",
-      label: "Say hello",
-      kind: "command",
-      command: "pstdio.workbench-fixture.command.say-hello",
-      primary: true,
+export const createLabInboxNotificationInput = () =>
+  ({
+    title: "Review Extension Lab notification",
+    body: "Durable notifications land in the dashboard inbox until a user resolves them.",
+    kind: "needs_review",
+    priority: "normal",
+    target: {
+      type: "lab.slide",
+      id: "notification-demo",
+      label: "Notification demo",
     },
-  ],
-  metadata: { demo: true },
-});
+    actions: [
+      {
+        id: "say-hello",
+        label: "Say hello",
+        kind: "command",
+        command: "pstdio.workbench-fixture.command.say-hello",
+        primary: true,
+      },
+    ],
+    metadata: { demo: true },
+  }) satisfies WebviewNotificationActionParams;
 
 export const HostNotificationCard = () => {
   const { host } = useLabHost();

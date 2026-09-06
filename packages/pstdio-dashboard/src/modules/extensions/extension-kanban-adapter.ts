@@ -15,54 +15,68 @@ import { type CollectionChange, subscribeCollections } from "@/lib/sync/collecti
 import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/extension-localization";
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { buildDashboardExtensionMenuRegistrations } from "@/shared/extensions/workbench-extension-contributions";
-import { openWorkspacesPage, toPageResource } from "@/shared/workbench/page-navigation";
+import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { createBadgeListRenderer } from "./extension-workspace-badge-renderer";
 
 type KanbanRecord = Parameters<NonNullable<WorkbenchExtensionKanbanRendererAdapter["resolveRowResource"]>>[0];
 type MenuRegistration = ReturnType<typeof buildDashboardExtensionMenuRegistrations>["registrations"][number];
-
 const isWorkbenchResource = (resource: unknown): resource is ResourceRef =>
-  Boolean(resource && typeof resource === "object" && typeof (resource as { kind?: unknown }).kind === "string");
-
+  Boolean(
+    resource &&
+      typeof resource === "object" &&
+      typeof (
+        resource as {
+          kind?: unknown;
+        }
+      ).kind === "string",
+  );
 const hasOnlyWorkspaceBadgeResources = (value: unknown) =>
   Array.isArray(value) &&
   value.length > 0 &&
   value.every((item) => {
     if (!item || typeof item !== "object") return false;
-    const resource = (item as { resource?: unknown }).resource;
-    return Boolean(resource && typeof resource === "object" && (resource as { type?: unknown }).type === "workspace");
+    const resource = (
+      item as {
+        resource?: unknown;
+      }
+    ).resource;
+    return Boolean(
+      resource &&
+        typeof resource === "object" &&
+        (
+          resource as {
+            type?: unknown;
+          }
+        ).type === "workspace",
+    );
   });
-
 export const toDashboardExtensionResource = (resource: unknown, projectId: string): ResourceRef | undefined => {
   if (!resource || typeof resource !== "object") return undefined;
   if (isWorkbenchResource(resource)) return resource;
-  const ref = resource as KanbanRendererResourceRef & { icon?: string };
+  const ref = resource as KanbanRendererResourceRef & {
+    icon?: string;
+  };
   return {
-    kind: ref.type,
-    uri: `pstdio://extension-resource/${encodeURIComponent(ref.type)}/${encodeURIComponent(ref.id)}`,
+    type: ref.type,
     id: ref.id,
     label: ref.label ?? ref.id,
     icon: ref.icon ?? standardResourceIcons.kanbanRenderer,
     metadata: { ...ref.metadata, projectId: ref.projectId ?? projectId },
   };
 };
-
 const sameMenuPath = (left: MenuPath, right: MenuPath) =>
   left.length === right.length && left.every((entry, index) => entry === right[index]);
-
 const rowResource = (record: KanbanRecord, row: KanbanRendererRow, projectId: string) => {
   const resolved = toDashboardExtensionResource(row.resource, projectId);
   if (resolved || !record.resourceKind) return resolved;
   return {
-    kind: record.resourceKind,
-    uri: `pstdio://extension-resource/${encodeURIComponent(record.resourceKind)}/${encodeURIComponent(row.id)}`,
+    type: record.resourceKind,
     id: row.id,
     label: row.title,
     metadata: { projectId },
   };
 };
-
 const matchingRowAction = (registrations: MenuRegistration[], record: KanbanRecord, commandId: string) => {
   if (!record.resourceKind) return undefined;
   const path = resourceContextMenuPath(record.resourceKind);
@@ -72,7 +86,6 @@ const matchingRowAction = (registrations: MenuRegistration[], record: KanbanReco
       registration.menuItems.some((item) => sameMenuPath(item.menuPath, path)),
   );
 };
-
 const decorateAttribute = (
   ctx: WorkbenchModuleContext,
   projectId: string,
@@ -89,15 +102,15 @@ const decorateAttribute = (
         void ctx.navigation.openTarget(target);
         return;
       }
-      if (resource.kind === "workspace") {
+      if (resource.type === "workspace") {
         openWorkspacesPage(ctx, resource);
         return;
       }
-      if (resource.kind === "session") {
+      if (resource.type === "session") {
         void ctx.navigation.openTarget({
           kind: "panel",
           panel: workbenchPanels.projectSession,
-          resource: toPageResource(resource),
+          resource: resource,
         });
       }
     },
@@ -112,7 +125,6 @@ const decorateAttribute = (
     },
   };
 };
-
 const uploadCreatedFile = async (input: {
   extensionInstanceId: string;
   file: File;
@@ -132,7 +144,6 @@ const uploadCreatedFile = async (input: {
     },
   );
 };
-
 const attachCreatedFiles = async (input: {
   created: unknown;
   executeCommand: ExecuteDashboardExtensionCommand;
@@ -141,10 +152,15 @@ const attachCreatedFiles = async (input: {
   record: KanbanRecord;
 }) => {
   const attachment = input.record.createRow?.attachments;
-  const resourceId = (input.created as { id?: unknown } | undefined)?.id;
+  const resourceId = (
+    input.created as
+      | {
+          id?: unknown;
+        }
+      | undefined
+  )?.id;
   if (!attachment || input.files.length === 0 || typeof resourceId !== "string") return;
   if (!input.record.extensionInstanceId) throw new Error(`Extension instance missing: ${input.record.id}`);
-
   for (const file of input.files) {
     const ref = await uploadCreatedFile({
       extensionInstanceId: input.record.extensionInstanceId,
@@ -157,7 +173,6 @@ const attachCreatedFiles = async (input: {
     });
   }
 };
-
 export const createDashboardKanbanAdapter = (input: {
   ctx: WorkbenchModuleContext;
   executeCommand: ExecuteDashboardExtensionCommand;
@@ -195,7 +210,6 @@ export const createDashboardKanbanAdapter = (input: {
       }
     },
   };
-
   const rendererIds = metadata.views.filter((view) => view.body.kind === "kanban").map((view) => view.id);
   const sessionTables = new Set<CollectionChange["table"]>(["sessions", "workspace_sessions"]);
   const disposable: Disposable = {
@@ -206,6 +220,5 @@ export const createDashboardKanbanAdapter = (input: {
       }
     }),
   };
-
   return { adapter, disposable };
 };

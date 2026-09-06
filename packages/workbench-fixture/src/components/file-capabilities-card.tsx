@@ -1,19 +1,10 @@
 import { Button, Stack, Text } from "@chakra-ui/react";
-import type { WebviewFilesClient } from "@pstdio/sdk/extensions";
+import { unwrapCommandOutcome } from "@pstdio/sdk/extensions";
 import { useState } from "react";
 import { useLabHost } from "../hooks/host-context";
 import { LabCard } from "./lab-card";
 
 const expectedText = "Extension Lab webview file bytes";
-type ExtensionBlobRef = Awaited<ReturnType<WebviewFilesClient["upload"]>>;
-
-interface CommandResponse {
-  outcome: {
-    reason?: string;
-    status: "error" | "rejected" | "success";
-    value?: { text?: string };
-  };
-}
 
 export const FileCapabilitiesCard = () => {
   const { host } = useLabHost();
@@ -24,23 +15,24 @@ export const FileCapabilitiesCard = () => {
     setIsPending(true);
     setResult(null);
     try {
-      const uploaded = await host.call<ExtensionBlobRef>("files.upload", {
+      const uploaded = await host.call("files.upload", {
         name: "webview-capability.txt",
         data: new TextEncoder().encode(expectedText),
         mimeType: "text/plain",
       });
-      const response = await host.call<CommandResponse>("commands.execute", {
+      const response = await host.call("commands.execute", {
         commandId: "pstdio.workbench-fixture.command.webview-file.read",
         params: { id: uploaded.id },
       });
-      if (response.outcome.status !== "success" || response.outcome.value?.text !== expectedText) {
-        throw new Error(response.outcome.reason ?? "Uploaded bytes did not match.");
+      const value = unwrapCommandOutcome(response);
+      if (!value || typeof value !== "object" || !("text" in value) || value.text !== expectedText) {
+        throw new Error("Uploaded bytes did not match.");
       }
 
-      const listed = await host.call<{ files: ExtensionBlobRef[] }>("files.list", {});
+      const listed = await host.call("files.list", {});
       if (!listed.files.some((file) => file.id === uploaded.id)) throw new Error("Uploaded file was not listed.");
       await host.call("files.delete", { id: uploaded.id });
-      const afterDelete = await host.call<{ files: ExtensionBlobRef[] }>("files.list", {});
+      const afterDelete = await host.call("files.list", {});
       if (afterDelete.files.some((file) => file.id === uploaded.id)) throw new Error("Deleted file was still listed.");
 
       setResult("Upload, read, list, and delete passed.");

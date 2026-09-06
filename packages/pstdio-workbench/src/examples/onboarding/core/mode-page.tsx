@@ -3,11 +3,9 @@ import type { PageRef } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchCore, type WorkbenchPanelRenderInput } from "@pstdio/workbench";
 
 const pageRef = (id: string): PageRef => ({ extensionId: "host", kind: "page", id });
-
 const overviewPage = pageRef("overview");
 const ticketsPage = pageRef("tickets");
 const sessionPage = pageRef("session");
-
 interface GuidePage {
   id: string;
   ref: PageRef;
@@ -17,9 +15,11 @@ interface GuidePage {
   pageContribution: string;
   pageContributionDetail: string;
   description: string;
-  links: readonly { label: string; page: PageRef }[];
+  links: readonly {
+    label: string;
+    page: PageRef;
+  }[];
 }
-
 const guidePages: readonly GuidePage[] = [
   {
     id: "overview",
@@ -61,7 +61,6 @@ const guidePages: readonly GuidePage[] = [
     links: [{ label: "Open project overview", page: overviewPage }],
   },
 ];
-
 const ModePageContent = (props: { input: WorkbenchPanelRenderInput; page: GuidePage }) => {
   const { input, page } = props;
   return (
@@ -74,7 +73,7 @@ const ModePageContent = (props: { input: WorkbenchPanelRenderInput; page: GuideP
         Mode-owned Sidenav: <strong>{page.modeId === "project" ? "Northstar navigation" : "Session S-104"}</strong>
       </Text>
       <Text>
-        Page-owned content: <strong>{page.pageContribution}</strong> in the Sidenav and this panel in Main
+        Page-owned content: <strong>{page.pageContribution}</strong> in Secondary and this panel in Main
       </Text>
       <HStack gap="sm" flexWrap="wrap">
         {page.links.map((link) => (
@@ -90,7 +89,6 @@ const ModePageContent = (props: { input: WorkbenchPanelRenderInput; page: GuideP
     </Stack>
   );
 };
-
 const registerModeSidenav = (workbench: WorkbenchCore, modeId: GuidePage["modeId"], label: string) => {
   const contributionId = `host.${modeId}.navigation`;
   workbench.views.registerView({
@@ -119,16 +117,21 @@ const registerModeSidenav = (workbench: WorkbenchCore, modeId: GuidePage["modeId
     id: contributionId,
     ref: { extensionId: "host", kind: "placement", id: `${modeId}-navigation` },
     modeId,
-    item: { kind: "view", viewId: contributionId, presence: "fixed" },
+    item: {
+      kind: "view",
+      presence: "fixed",
+      view: {
+        kind: "view",
+        id: contributionId,
+      },
+    },
     region: "sidenav",
     movableTo: ["sidenav"],
   });
 };
-
 const registerPage = (workbench: WorkbenchCore, page: GuidePage) => {
   const mainId = `host.${page.id}.main`;
   const sidenavId = `host.${page.id}.sidenav`;
-
   workbench.views.registerView({
     id: mainId,
     title: page.title,
@@ -154,13 +157,30 @@ const registerPage = (workbench: WorkbenchCore, page: GuidePage) => {
     title: page.title,
     path: page.path,
     modeId: page.modeId,
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: mainId,
+      },
+      cardinality: "one",
+    },
     slots: [
-      { id: "content", role: "primary", region: "main", viewId: mainId },
-      { id: "tools", role: "auxiliary", region: "sidenav", viewId: sidenavId, presence: "open" },
+      {
+        id: "tools",
+        region: "secondary",
+        item: {
+          kind: "view",
+          view: {
+            kind: "view",
+            id: sidenavId,
+          },
+          presence: "open",
+        },
+      },
     ],
   });
 };
-
 export const createModeContributionWorkbench = () => {
   const workbench = createWorkbench({ startPage: overviewPage });
   workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });

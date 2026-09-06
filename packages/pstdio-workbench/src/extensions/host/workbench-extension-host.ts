@@ -40,10 +40,8 @@ import { createWorkbenchExtensionTabPresentation } from "./workbench-extension-t
 const disposeAll = (disposables: Disposable[]) => {
   for (let index = disposables.length - 1; index >= 0; index -= 1) disposables[index]?.dispose();
 };
-
 const asParams = (value: unknown): Record<string, unknown> | undefined =>
   value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
-
 const prepareCommandArgs = (
   context: WorkbenchExtensionCommandContext,
   commandId: string,
@@ -51,7 +49,6 @@ const prepareCommandArgs = (
   executionContext?: WorkbenchCommandExecutionContext,
   onArgsChange?: (args: unknown) => void,
 ) => context.prepareCommandArgs?.(commandId, args, executionContext, onArgsChange) ?? args;
-
 const registerCommands = (
   context: WorkbenchExtensionCommandContext,
   metadata: Pick<WorkbenchExtensionMetadata, "commands">,
@@ -75,12 +72,10 @@ const registerCommands = (
       },
     ),
   );
-
 const menuCommandResource = (
   input: InternalRegisterWorkbenchExtensionContributionsInput,
   executionContext: WorkbenchCommandExecutionContext | undefined,
 ) => executionContext?.resource ?? input.workbench.getPrimaryResource();
-
 const registerMenus = (
   input: InternalRegisterWorkbenchExtensionContributionsInput,
   context: WorkbenchExtensionCommandContext,
@@ -97,7 +92,6 @@ const registerMenus = (
     menuItems: [{ menuItem, menuPath }],
   }));
   const resolvedRegistrations = input.menuRegistrations ?? defaultRegistrations;
-
   return resolvedRegistrations.flatMap((registration) => [
     input.workbench.commands.registerCommand(registration.command, {
       prepareArgs: (args, executionContext, onArgsChange) =>
@@ -119,13 +113,11 @@ const registerMenus = (
     ),
   ]);
 };
-
 const registerCommandPaletteContributions = (
   input: InternalRegisterWorkbenchExtensionContributionsInput,
   context: WorkbenchExtensionCommandContext,
 ) => {
   const registrations = buildWorkbenchExtensionCommandPaletteRegistrations({ metadata: input.metadata });
-
   return registrations.flatMap((registration) => [
     input.workbench.commands.registerCommand(registration.command, {
       prepareArgs: (args, executionContext, onArgsChange) =>
@@ -141,22 +133,24 @@ const registerCommandPaletteContributions = (
             context: { panelId: registration.contribution.id },
           }),
         }),
-      isVisible: () => matchesResourceWhen(registration.contribution.when, input.workbench.getPrimaryResource()?.kind),
+      isVisible: () => matchesResourceWhen(registration.contribution.when, input.workbench.getPrimaryResource()?.type),
     }),
     input.workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, registration.menuItem),
   ]);
 };
-
 const matchesActiveMode = (
   input: InternalRegisterWorkbenchExtensionContributionsInput,
-  when: { mode?: string | string[] } | undefined,
+  when:
+    | {
+        mode?: string | string[];
+      }
+    | undefined,
 ) => {
   const modes = when?.mode;
   if (!modes) return true;
   const active = input.workbench.modes.getActiveModeId() ?? "";
   return Array.isArray(modes) ? modes.includes(active) : modes === active;
 };
-
 const registerStatusBarItems = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   (input.metadata.statusBarItems ?? []).map((item) =>
     input.workbench.statusBar.registerItem({
@@ -164,13 +158,19 @@ const registerStatusBarItems = (input: InternalRegisterWorkbenchExtensionContrib
       viewId: item.viewId,
       slot: item.slot,
       order: item.order,
-      isVisible: () => matchesActiveMode(input, item.when as { mode?: string | string[] } | undefined),
+      isVisible: () =>
+        matchesActiveMode(
+          input,
+          item.when as
+            | {
+                mode?: string | string[];
+              }
+            | undefined,
+        ),
     }),
   );
-
 const registerPages = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.pages.map((page) => input.workbench.pages.registerPage(page));
-
 const registerResourceKinds = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.resourceKinds.map((kind) =>
     input.workbench.resources.registerKind({
@@ -179,7 +179,6 @@ const registerResourceKinds = (input: InternalRegisterWorkbenchExtensionContribu
       icon: kind.icon ?? "FileText",
     }),
   );
-
 const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.modes.map((mode) =>
     input.workbench.modes.registerMode({
@@ -193,10 +192,8 @@ const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInp
       activate: () => undefined,
     }),
   );
-
 const registerModePlacements = (input: InternalRegisterWorkbenchExtensionContributionsInput) =>
   input.metadata.placements.map((placement) => input.workbench.modePlacements.registerPlacement(placement));
-
 export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWorkbenchExtensionContributionsInput) => {
   const input: InternalRegisterWorkbenchExtensionContributionsInput = {
     ...sourceInput,
@@ -206,7 +203,6 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
   };
   const disposables: Disposable[] = [];
   const context: WorkbenchExtensionCommandContext = input;
-
   try {
     disposables.push(...registerCommands(context, input.metadata));
     disposables.push(
@@ -257,7 +253,6 @@ export const registerWorkbenchExtensionContributions = (sourceInput: RegisterWor
     disposables.push(...registerPages(input));
     disposables.push(...registerModes(input));
     disposables.push(...registerModePlacements(input));
-
     return {
       dispose() {
         disposeAll(disposables);

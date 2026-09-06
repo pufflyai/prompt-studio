@@ -39,7 +39,7 @@ opening the placement again selects its existing `default` instance.
 - `views.registerView({ id, title, body })` defines reusable content. Registering a View opens nothing.
 - `shellPlacements.registerPlacement({ id, item, region })` declares one shell-owned placement.
 - `item.kind: "view"` makes this a static placement with a single instance.
-- `item.viewId` names the registered View to render.
+- `item.view` names the registered View to render.
 - `item.presence: "closed"` keeps the placement hidden until something opens it. `"open"` would show it right away,
   and `"fixed"` would show it permanently with no close button.
 - `region: "main"` selects the region that hosts the instance.
@@ -59,9 +59,9 @@ always starts empty) and it does not control closability (resource tabs are alwa
 
 ### What each field means
 
-- `item.kind: "resource"` makes this placement resource-bound: each opened resource becomes one instance.
-- `item.resourceKinds` lists the resource kinds this placement accepts.
-- `item.cardinality: "many"` keeps one instance per resource URI. Opening the same resource again selects its
+- `item.kind: "binding"` makes this placement resource-bound: each opened resource becomes one instance.
+- `item.binding.kinds` lists the resource kinds this placement accepts.
+- `item.binding.cardinality: "many"` keeps one instance per resource identity. Opening the same resource again selects its
   existing tab instead of duplicating it.
 - `openPlacement({ placementId, resource, open })` supplies the resource that creates or selects an instance.
 - `open: "preview"` creates a replaceable tab; the next preview replaces it. `open: "pin"` keeps the tab while other
@@ -79,7 +79,7 @@ to the newest resource. Use `"one"` for inspectors and detail panels that always
 
 ### What each field means
 
-- `item.cardinality: "one"` keeps a single instance. Opening resource B while A is open rebinds the same instance to
+- `item.binding.cardinality: "one"` keeps a single instance. Opening resource B while A is open rebinds the same instance to
   B; no second tab appears.
 - Open intent (`"preview"` and `"pin"`) is not accepted here because there is never more than one tab.
 - Everything else matches the `"many"` example: the placement starts empty, and its one instance closes like any
@@ -102,7 +102,7 @@ glyph instead of showing the indicator and View icon together.
 
 ## Page composition
 
-A page declares every placement it owns as slots. Navigating to another page replaces that placement set in one
+A page declares its Main content through `main` and additional panels through `slots`. Navigating to another page replaces that placement set in one
 operation. Mode-owned placements remain only when the target page uses that mode.
 
 This example begins on the Session page. Its action navigates to Lab. The Lab page replaces the Session content
@@ -114,12 +114,10 @@ instead of opening beside it.
 
 ### What each field means
 
-- `pages.registerPage({ id, ref, path, modeId, slots })` declares a routed page and everything it places.
-- the `role: "primary"` slot is the page's routed content in `main`. It is always present while the page is open and
-  the user cannot hide the slot itself.
-- an auxiliary slot with a `viewId` is a static panel the page owns; its `presence` follows the same three values as
-  placements.
-- an auxiliary slot with a `binding` opens instances only when an action supplies a resource; `openOn:
-  "page-resource"` also opens it for the page's own resource when the kind matches.
+- `pages.registerPage({ id, ref, path, modeId, resource?, main, slots })` declares a routed page.
+- `resource: { kinds }` constrains the route independently of its presentation.
+- `main: { kind: "view", view, cardinality }` renders routed content. `"many"` requires a resource-bound page.
+- `main: { kind: "panels", empty }` renders peer Main panels and an empty-state view when none are open.
+- `slots` contains additional panels. Each uses `item: { kind: "view", view, presence }` or `item: { kind: "binding", binding: { kinds, view, cardinality, add? } }`.
 - `navigation.openPage({ page, resource? })` selects the page's mode, commits one canonical location, updates URL and
   history once, and reconciles the page placements in one operation.

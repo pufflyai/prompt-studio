@@ -15,7 +15,6 @@ const registerStartWidget = (ctx: WorkbenchModuleContext) => {
     { priority: 90 },
   );
 };
-
 export const createStartModule = () =>
   ({
     id: "dashboard.start",
@@ -28,14 +27,15 @@ export const createStartModule = () =>
         icon: dashboardViews.start.icon,
         path: "",
         modeId: "project",
-        slots: [
-          {
-            id: "content",
-            role: "primary",
-            region: "main",
-            viewId: dashboardWidgetIds.start,
+        main: {
+          kind: "view",
+          view: {
+            kind: "view",
+            id: dashboardWidgetIds.start,
           },
-        ],
+          cardinality: "one",
+        },
+        slots: [],
       });
       const unsubscribe = ctx.pages.store.subscribeSelector(
         (state) => state.activePageId,

@@ -1,15 +1,22 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench, type ResourceRef, type WorkbenchCore } from "@pstdio/workbench";
 import { Workbench, WorkbenchThemeProvider } from "@pstdio/workbench/react";
 import { useState } from "react";
 
 const inspectorPlacementId = "guide.inspector";
-
 const branches = {
-  main: { kind: "branch", uri: "branch:main", id: "main", label: "main" },
-  release: { kind: "branch", uri: "branch:release", id: "release", label: "release" },
+  main: {
+    type: "branch",
+    id: "main",
+    label: "main",
+  },
+  release: {
+    type: "branch",
+    id: "release",
+    label: "release",
+  },
 } as const satisfies Record<string, ResourceRef>;
-
 const inspectBranch = (workbench: WorkbenchCore, resource: ResourceRef) => {
   workbench.shellPlacements.openPlacement({
     placementId: inspectorPlacementId,
@@ -17,10 +24,8 @@ const inspectBranch = (workbench: WorkbenchCore, resource: ResourceRef) => {
     title: resource.label,
   });
 };
-
 const BranchLauncher = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
-
   return (
     <Stack gap="md" p="lg">
       <Text textStyle="heading/M">Branches</Text>
@@ -39,10 +44,8 @@ const BranchLauncher = (props: { workbench: WorkbenchCore }) => {
     </Stack>
   );
 };
-
 const createResourceRebindWorkbench = () => {
   const workbench = createWorkbench();
-
   workbench.views.registerView({
     id: "guide.branches",
     title: "Branches",
@@ -53,7 +56,14 @@ const createResourceRebindWorkbench = () => {
   });
   workbench.shellPlacements.registerPlacement({
     id: "guide.branches",
-    item: { kind: "view", viewId: "guide.branches", presence: "fixed" },
+    item: {
+      kind: "view",
+      presence: "fixed",
+      view: {
+        kind: "view",
+        id: "guide.branches",
+      },
+    },
     region: "main",
   });
   workbench.views.registerView({
@@ -64,7 +74,7 @@ const createResourceRebindWorkbench = () => {
       render: ({ instance }) => (
         <Stack gap="sm" p="lg">
           <Text textStyle="heading/M">{instance.resource?.label}</Text>
-          <Text color="fg.muted">Bound resource: {instance.resource?.uri}</Text>
+          <Text color="fg.muted">Bound resource: {resourceKey(instance.resource)}</Text>
         </Stack>
       ),
     },
@@ -72,20 +82,27 @@ const createResourceRebindWorkbench = () => {
   workbench.shellPlacements.registerPlacement({
     id: inspectorPlacementId,
     item: {
-      kind: "resource",
-      viewId: "guide.branch-inspector",
-      resourceKinds: ["branch"],
-      cardinality: "one",
+      kind: "binding",
+      binding: {
+        kinds: [
+          {
+            kind: "resource-kind",
+            id: "branch",
+          },
+        ],
+        view: {
+          kind: "view",
+          id: "guide.branch-inspector",
+        },
+        cardinality: "one",
+      },
     },
     region: "secondary",
   });
-
   return workbench;
 };
-
 export const ResourceRebindExample = () => {
   const [workbench] = useState(createResourceRebindWorkbench);
-
   return (
     <WorkbenchThemeProvider>
       <Box h="480px" minH="360px" borderWidth="1px" borderColor="border.subtle" overflow="hidden">

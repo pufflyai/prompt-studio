@@ -26,7 +26,7 @@ action. It opens the next guide through the same resource placement.
 Each entry in `guides` is a `ResourceRef`, the value that identifies one domain object:
 
 - `kind` groups objects of the same type. The placement accepts only `guide` resources.
-- `uri` is the globally unique identity of this object. Instance reuse keys on this value.
+- `type` and `id`, together with any extension and project owner, identify this object. Instance reuse follows that identity.
 - `id` is the short identity inside the kind.
 - `label` is the user-facing name of the object.
 
@@ -46,24 +46,24 @@ contribution APIs.
 - `title` is the default label. Each opened instance may carry a more specific title.
 - `body.kind: "react"` allows trusted host code to return React.
 - `render` receives the render input for one instance. `instance.resource` carries the resource that instance opened,
-  so the View reads `label` and `uri` from it instead of holding its own state.
+  so the View reads `label` and its identity from it instead of holding its own state.
 - each button calls `openGuide(...)` with a different resource. Reopening a guide selects the tab already bound to its
-  URI.
+  identity.
 
 `ctx.commands.registerCommand(...)` gives the placement's + menu a real action:
 
 - `openNextGuideCommandId` identifies the action.
 - the handler advances through `guides` and calls `openGuide(...)`.
-- `item.add` links the resource placement to that command. Without an Add action or an accepted active resource, a
+- `item.binding.add` links the resource placement to that command. Without an Add action or an accepted active resource, a
   resource placement has nothing to open from the + menu.
 
 `ctx.shellPlacements.registerPlacement(...)` binds the View to the resource kind:
 
 - `id` is the stable identity of this shell-owned placement.
-- `item.kind: "resource"` says this placement hosts one instance per opened resource rather than one static View.
-- `item.viewId` names the View that renders each instance.
-- `item.resourceKinds` lists the kinds this placement accepts.
-- `item.cardinality` is required. `"many"` gives each resource URI its own instance, and reopening a URI selects the
+- `item.kind: "binding"` says this placement hosts one instance per opened resource rather than one static View.
+- `item.binding.view` names the View that renders each resource instance.
+- `item.binding.kinds` lists the kinds this placement accepts.
+- `item.binding.cardinality` is required. `"many"` gives each resource identity its own instance, and reopening a resource selects the
   existing tab. `"one"` would keep a single instance and rebind it when another resource opens. Cardinality does not
   control initial visibility or closability: resource placements start empty, and resource tabs are always closable.
 - `region` puts the instances in `main`.

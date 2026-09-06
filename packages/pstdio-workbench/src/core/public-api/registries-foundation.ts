@@ -176,13 +176,13 @@ export { createWorkbenchOverlayRegistry } from "../registries/overlays/overlay-r
 export type {
   CreateWorkbenchPageRegistryInput,
   WorkbenchPageContribution,
+  WorkbenchPageMain,
   WorkbenchPagePlacementInput,
   WorkbenchPageRegistry,
   WorkbenchPageRegistryStoreState,
   WorkbenchPageResourceCodec,
   WorkbenchPageRuntimeState,
   WorkbenchPageSlot,
-  WorkbenchPageSlotBinding,
   WorkbenchPageSlotInstance,
   WorkbenchPageSlotOpenInput,
 } from "../registries/pages/page-registry";

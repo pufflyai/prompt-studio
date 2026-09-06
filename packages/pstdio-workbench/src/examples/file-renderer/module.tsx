@@ -2,7 +2,6 @@ import type { WorkbenchModuleContribution } from "../../core";
 
 const PANEL_PLACEHOLDER_ID = "file-renderer.story.placeholder";
 const PANEL_PLACEHOLDER_RENDERER_ID = "file-renderer.story.placeholder.renderer";
-
 // In-memory documents the example file renderers read and write. The markdown and
 // code renderers are editable (they declare a `save`); the image is read-only.
 let markdownContent = [
@@ -15,7 +14,6 @@ let markdownContent = [
   "- Monaco for code files",
   "- read-only `<img>` for images",
 ].join("\n");
-
 let codeContent = [
   "export const greet = (name: string) => {",
   "  // Edited in the Monaco code editor.",
@@ -23,11 +21,7 @@ let codeContent = [
   "};",
   "",
 ].join("\n");
-
-const imageDataUrl = `data:image/svg+xml,${encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160"><rect width="240" height="160" rx="12" fill="#5b8def"/><text x="120" y="90" font-family="sans-serif" font-size="20" fill="white" text-anchor="middle">image</text></svg>',
-)}`;
-
+const imageDataUrl = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160"><rect width="240" height="160" rx="12" fill="#5b8def"/><text x="120" y="90" font-family="sans-serif" font-size="20" fill="white" text-anchor="middle">image</text></svg>')}`;
 const renderers = [
   {
     rendererId: "file-renderer.story.markdown",
@@ -54,7 +48,6 @@ const renderers = [
     load: () => ({ fileName: "logo.svg", mimeType: "image/svg+xml", dataUrl: imageDataUrl }),
   },
 ] as const;
-
 export const createFileRendererStoryModule = (): WorkbenchModuleContribution => ({
   id: "file-renderer.story",
   activate(ctx) {
@@ -68,7 +61,6 @@ export const createFileRendererStoryModule = (): WorkbenchModuleContribution => 
       viewId: PANEL_PLACEHOLDER_RENDERER_ID,
       region: "main",
     });
-
     for (const renderer of renderers) {
       ctx.views.registerView({
         id: renderer.panelId,
@@ -81,13 +73,19 @@ export const createFileRendererStoryModule = (): WorkbenchModuleContribution => 
       });
       ctx.shellPlacements.registerPlacement({
         id: renderer.panelId,
-        item: { kind: "view", viewId: renderer.panelId, presence: "open" },
+        item: {
+          kind: "view",
+          presence: "open",
+          view: {
+            kind: "view",
+            id: renderer.panelId,
+          },
+        },
         region: "main",
       });
     }
   },
 });
-
 export const createFileRendererErrorStoryModule = (): WorkbenchModuleContribution => ({
   id: "file-renderer.error-story",
   activate(ctx) {
@@ -105,7 +103,14 @@ export const createFileRendererErrorStoryModule = (): WorkbenchModuleContributio
     });
     ctx.shellPlacements.registerPlacement({
       id: panelId,
-      item: { kind: "view", viewId: panelId, presence: "open" },
+      item: {
+        kind: "view",
+        presence: "open",
+        view: {
+          kind: "view",
+          id: panelId,
+        },
+      },
       region: "main",
     });
   },

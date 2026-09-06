@@ -1,40 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { modeOwnsNavigation } from "@/shared/workbench/mode-navigation-ownership";
 import {
   disposeExtensionContributions,
   localizeDashboardExtensionCommandResponse,
-  registerExtensionActivityNavigationOwnership,
   registerExtensionContributions,
   withDashboardWebviewUrls,
 } from "./extension-contribution-registration";
 import { metadata, metadataWithLabMode, response } from "./module-test-fixtures";
-
-describe("registerExtensionActivityNavigationOwnership", () => {
-  test("marks modes with activity items as navigation owners", () => {
-    const modeId = "pstdio.extension-lab.mode.lab";
-    const metadata = {
-      ...metadataWithLabMode,
-      activityItems: [
-        {
-          id: "pstdio.extension-lab.activity-item.home",
-          extensionId: "pstdio.extension-lab",
-          title: "Home",
-          icon: "house",
-          modes: [{ extensionId: "pstdio.extension-lab", kind: "mode" as const, id: "lab" }],
-          command: { extensionId: "pstdio.extension-lab", kind: "command" as const, id: "go-home" },
-        },
-      ],
-    };
-
-    const registration = registerExtensionActivityNavigationOwnership(metadata);
-    expect(modeOwnsNavigation(modeId)).toBe(true);
-
-    registration.dispose();
-    expect(modeOwnsNavigation(modeId)).toBe(false);
-  });
-});
 
 describe("withDashboardWebviewUrls", () => {
   test("points extension webviews at the configured API origin", () => {
@@ -80,7 +53,7 @@ describe("registerExtensionContributions", () => {
       }),
     });
     await workbench.commands.executeCommand(metadata.commands[0]!.id);
-    expect(opened).toMatchObject([{ resource: { kind: "session", id: "session-1", label: "Refine ticket" } }]);
+    expect(opened).toMatchObject([{ resource: { type: "session", id: "session-1", label: "Refine ticket" } }]);
     disposeExtensionContributions(registration);
   });
 

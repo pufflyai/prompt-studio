@@ -1,4 +1,5 @@
 import { Box, Button, Center, Flex, Spinner, Text } from "@chakra-ui/react";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type {
   FileRendererContent,
@@ -32,18 +33,14 @@ interface WorkbenchFileRendererViewProps {
   // commands operate on.
   placement?: WorkbenchPanelInstance;
 }
-
 interface LoadedFile extends FileRendererContent {
   // Bumped on every (re)load so the uncontrolled editors remount with fresh
   // content on a refresh, but never mid-edit (load only runs on mount/refresh).
   editorRevision: number;
   loadKey: string;
 }
-
 const SAVE_DEBOUNCE_MS = 600;
-
 const describeError = (error: unknown) => (error instanceof Error ? error.message : "Failed to load file.");
-
 const syncActiveFileSection = (input: {
   workbench: WorkbenchCore;
   navigation: ReturnType<typeof getFileSectionNavigation>;
@@ -51,18 +48,15 @@ const syncActiveFileSection = (input: {
 }) => {
   const { workbench, navigation, sectionId } = input;
   if (!navigation || !getWorkbenchRenderers(workbench).getTreeRenderer(navigation.treeId)) return;
-
   if (sectionId && navigation.anchors.some((anchor) => anchor.id === sectionId)) {
     getWorkbenchRenderers(workbench).setSelectedNode(navigation.treeId, sectionId);
     return;
   }
-
   const selectedNodeId = getWorkbenchRenderers(workbench).getTreeState(navigation.treeId).selectedNodeId;
   if (selectedNodeId && navigation.anchors.some((anchor) => anchor.id === selectedNodeId)) {
     getWorkbenchRenderers(workbench).setSelectedNode(navigation.treeId, undefined);
   }
 };
-
 const getEditorSectionNavigation = (
   workbench: WorkbenchCore,
   navigation: ReturnType<typeof getFileSectionNavigation>,
@@ -71,13 +65,11 @@ const getEditorSectionNavigation = (
   const selectedNodeId = getWorkbenchRenderers(workbench).getTreeRenderer(navigation.treeId)
     ? getWorkbenchRenderers(workbench).getTreeState(navigation.treeId).selectedNodeId
     : undefined;
-
   return {
     anchors: navigation.anchors,
     targetId: resolveFileSectionTargetId(navigation, selectedNodeId),
   };
 };
-
 export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps) => {
   const { workbench, contribution } = props;
   const resource = props.placement?.resource;
@@ -85,44 +77,43 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   const editorSectionNavigation = getEditorSectionNavigation(workbench, sectionNavigation);
   const loadKey = createFileRendererLoadKey({ fileRendererId: contribution.id, resource });
   const [loaded, setLoaded] = useState<LoadedFile | null>(null);
-  const [error, setError] = useState<{ loadKey: string; message: string } | null>(null);
+  const [error, setError] = useState<{
+    loadKey: string;
+    message: string;
+  } | null>(null);
   const [editState, setEditState] = useState<FileEditControllerState>({ dirty: false, saving: false });
   const controllerRef = useRef<FileEditController | null>(null);
   const rendererRef = useRef<HTMLDivElement>(null);
   const previousSectionNavigationRef = useRef<{
-    resourceUri?: string;
+    resourceKey?: string;
     treeId: string;
     anchorIds: string[];
   } | null>(null);
-
   useEffect(() => {
     const previous = previousSectionNavigationRef.current;
     const selectedNodeId =
       previous && getWorkbenchRenderers(workbench).getTreeRenderer(previous.treeId)
         ? getWorkbenchRenderers(workbench).getTreeState(previous.treeId).selectedNodeId
         : undefined;
-
     if (
       shouldClearFileSectionSelection({
         previous,
         current: sectionNavigation,
-        currentResourceUri: resource?.uri,
+        currentResourceKey: resourceKey(resource),
         selectedNodeId,
       }) &&
       previous
     ) {
       getWorkbenchRenderers(workbench).setSelectedNode(previous.treeId, undefined);
     }
-
     previousSectionNavigationRef.current = sectionNavigation
       ? {
-          resourceUri: resource?.uri,
+          resourceKey: resourceKey(resource),
           treeId: sectionNavigation.treeId,
           anchorIds: sectionNavigation.anchors.map((anchor) => anchor.id),
         }
       : null;
-  }, [resource?.uri, sectionNavigation, workbench]);
-
+  }, [resource, sectionNavigation, workbench]);
   // Contribution refresh re-registers an identical contribution as a new
   // object, and a save that changes the document title produces a new resource
   // object with a fresh label. The load key uses resource values instead of
@@ -133,10 +124,8 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     contributionRef.current = contribution;
     resourceRef.current = resource;
   });
-
   const contributionId = contribution.id;
   const hasSave = Boolean(contribution.save);
-
   // Re-binding a singleton widget to another resource changes `resource` and reloads.
   useEffect(() => {
     let cancelled = false;
@@ -171,7 +160,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           binding: {
             rendererId: contributionId,
             instanceId: props.placement?.instanceId ?? contributionId,
-            resourceUri: resourceRef.current?.uri,
+            resourceKey: resourceKey(resourceRef.current),
           },
           debounceMs: SAVE_DEBOUNCE_MS,
           load,
@@ -204,7 +193,6 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       controllerRef.current = null;
     };
   }, [contributionId, hasSave, workbench, loadKey, props.placement?.instanceId]);
-
   // The last keystrokes are also flushed when the tab is hidden or closed.
   useEffect(() => {
     const flush = () => controllerRef.current?.flush();
@@ -218,19 +206,15 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
-
   const handleChange = (value: string) => {
     controllerRef.current?.handleChange(value);
   };
-
   const currentLoaded = isCurrentLoadedFile(loaded, loadKey) ? loaded : null;
   const scrollResetKey = currentLoaded ? `${currentLoaded.loadKey}:${currentLoaded.editorRevision}` : "";
-
   useLayoutEffect(() => {
     if (!scrollResetKey || sectionNavigation) return;
     const node = rendererRef.current;
     if (!node) return;
-
     requestAnimationFrame(() => {
       let current = node.parentElement;
       while (current) {
@@ -242,11 +226,9 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       }
     });
   }, [scrollResetKey, sectionNavigation]);
-
   const loadError = error?.loadKey === loadKey ? error.message : undefined;
   const retryLoad = () => controllerRef.current?.retryLoad();
   const retrySave = () => controllerRef.current?.retry();
-
   if (loadError && !currentLoaded) {
     return (
       <Center h="full" minH="0" bg="bg" p="md" flexDirection="column" gap="sm">
@@ -257,7 +239,6 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       </Center>
     );
   }
-
   if (!currentLoaded) {
     return (
       <Center h="full" minH="0" bg="bg">
@@ -265,7 +246,6 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       </Center>
     );
   }
-
   // The key must carry the document identity, not just the contribution: two
   // documents from the same renderer both start at revision 1, so keying on the
   // contribution alone reuses the editor and keeps showing the previous file.
@@ -275,11 +255,9 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   ) : editState.saveError ? (
     <FileRendererErrorNotice message={editState.saveError} onRetry={retrySave} />
   ) : null;
-
   const handleActiveSectionChange = (sectionId: string | null) => {
     syncActiveFileSection({ workbench, navigation: sectionNavigation, sectionId });
   };
-
   return (
     <Flex direction="column" h="full" minH="0" bg="bg">
       {currentLoaded.filePath ? (

@@ -20,15 +20,18 @@ const fontEditor = defineView({
     capabilities: ["commands.execute", "notification.show"],
   },
 });
-
 const fontEditorPage = definePage({
   id: "font-editor",
   title: l10n("panels.fontEditor.title", "Font editor"),
   path: "font-editor",
   mode: workbenchModes.project,
-  slots: [{ id: "content", role: "primary", region: "main", view: fontEditor.ref }],
+  main: {
+    kind: "view",
+    view: fontEditor.ref,
+    cardinality: "one",
+  },
+  slots: [],
 });
-
 const extension = defineExtension({
   commands: fontCommands,
   views: [fontEditor],
@@ -61,5 +64,4 @@ const extension = defineExtension({
     }),
   ],
 });
-
 export default extension;

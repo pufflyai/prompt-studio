@@ -9,6 +9,7 @@ export const resolvePagePlacementClose = <Value>(input: {
   page: WorkbenchPageContribution;
   state: WorkbenchPageRegistryStoreState<Value>;
   resourceKey(resource: ResourceRef): string;
+  stateKey: string;
 }): WorkbenchPageCloseResolution => {
   const { identity, page, state } = input;
   if (identity.kind !== "page") throw new Error("Page registry can close only page-owned placements");
@@ -22,10 +23,10 @@ export const resolvePagePlacementClose = <Value>(input: {
     throw new Error(`Static primary placement is not closable: ${page.id}.${slot.id}`);
   }
 
-  const pageState = state.pageStates[page.id] ?? emptyPageState(page);
+  const pageState = state.pageStates[input.stateKey] ?? emptyPageState(page);
   const closedActivePrimary = slot.role === "primary" && pageState.activePrimaryInstanceKey === identity.instanceKey;
   const result = closePageSlot({ page, slot, state: pageState, instanceKey: identity.instanceKey });
-  const pageStates = { ...state.pageStates, [page.id]: result.state };
+  const pageStates = { ...state.pageStates, [input.stateKey]: result.state };
   if (result.kind === "parent") return { kind: "parent", pageStates, parentId: result.parentId };
   if (slot.role === "auxiliary") {
     if (!state.location) throw new Error("Active page has no canonical location");

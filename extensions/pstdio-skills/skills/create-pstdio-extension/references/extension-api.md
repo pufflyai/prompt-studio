@@ -13,7 +13,7 @@ Every extension package needs a `package.json` next to its entry file:
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.9"
+    "pstdio": "1.0.0-alpha.10"
   },
   "private": true,
   "type": "module",
@@ -300,72 +300,18 @@ await host.call("navigation.open", {
 
 The target chooses the screen. The host never guesses a page or panel from the resource kind.
 
-## Pages and additive Sidenav sections
+## Pages and navigation
 
-Use a page for a routed screen. A page owns one primary slot in `main` and may add auxiliary slots to other docked regions. Page placements are added to the active mode; they do not replace the mode's placements.
+A page owns its route and declares an optional resource constraint separately from Main presentation. Main shows a view or peer panels with an empty view. Extra slots and mode placements share the same static-view or resource-binding item.
 
-```ts
-const ticketsPage = definePage({
-  id: "tickets",
-  title: "Tickets",
-  path: "tickets",
-  mode: workbenchModes.project,
-  slots: [{ id: "content", role: "primary", region: "main", view: ticketsView.ref }],
-});
+Use the compiled [Scribble](examples/scribble.ts), [Zipline](examples/zipline.ts), and [Pigeon](examples/pigeon.ts) modules for declarations. Read [pages and panels](pages.md) for cardinality, shared mode panels, resource identity, and closing.
 
-const ticketPage = definePage({
-  id: "ticket",
-  title: "Ticket",
-  path: "ticket",
-  mode: workbenchModes.project,
-  parent: ticketsPage.ref,
-  slots: [
-    {
-      id: "content",
-      role: "primary",
-      region: "main",
-      binding: { kind: ticketKind.ref, view: ticketEditor.ref, cardinality: "one" },
-    },
-  ],
-});
-
-const ticketsNavigation = defineNavigationItem({
-  id: "tickets",
-  owner: workbenchModes.project,
-  slot: "content",
-  label: "Tickets",
-  action: { kind: "page", page: ticketsPage.ref },
-});
-
-const ticketFilesNavigation = defineNavigationTree({
-  id: "ticket-files",
-  owner: ticketPage.ref,
-  slot: "content",
-  view: ticketFiles.ref,
-});
-```
-
-Every binding declares `cardinality`: `one` keeps a single instance and rebinds it, `many` opens one instance per resource. A page whose primary slot has only a binding must declare `parent`; closing its last tab navigates there. A static auxiliary slot declares `presence` (`fixed`, `open`, or `closed`); a bound auxiliary slot has no initial visibility and may declare `openOn: "page-resource"` to follow the page's own resource.
-
-The ticket files tree is page-owned navigation. It appears below mode-owned navigation while Ticket is active and disappears when the user leaves that page.
-
-The Sidenav has no panel header or tabs. It contains one composed tree with pinned `header` and `footer` slots and one scrolling `content` slot. Mode and page sections can be visible together. Leaving the page removes only its sections; leaving the mode removes its sections and the active page sections. Page slots cannot target `sidenav`.
-
-Page navigation uses canonical browser URLs and history. Target the page explicitly when opening a resource:
-
-```ts
-{
-  kind: "page",
-  page: ticketPage.ref,
-  resource: { type: "ticket", id: "PS-326", label: "PS-326" },
-}
-```
+Navigation items and trees belong to a mode or page. Omitted mode chrome keeps the host sidebar in custom modes. A replacement view or false overrides it. Page navigation owns browser history; panel navigation preserves location. Compounds accept only page and panel steps.
 
 ## Native resource views
 
 Use native view bodies when the host should own the editor or tree chrome instead of loading a custom
-webview. Views own their body only. A page slot binds a routed resource kind to a view and owns its
-placement. A mode placement uses the same binding shape for content that must remain across pages.
+webview. Views own their body only. A page declares its routed resource and Main presentation separately. Extra page slots and mode placements use the same resource binding for their own instances.
 
 File view bodies need a `load` callback; an optional `save` callback makes text content editable.
 Load callbacks return `{ content }` for markdown/code text, `{ dataUrl }` for images, plus optional `fileName`,
@@ -422,7 +368,7 @@ export default defineExtension({
 ## Project navigation UI
 
 For a Planner-style list or board, define a view with `body.kind: "kanban"` and a
-`query` callback. Put the view in a page primary slot. Add a `navigationItems`
+`query` callback. Use the view as the page's Main presentation. Add a `navigationItems`
 contribution whose action targets that page. Paths belong to pages, never views. The page selects its
 declared mode; navigation never switches a mode as a separate step.
 

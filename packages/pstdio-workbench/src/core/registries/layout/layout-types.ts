@@ -138,9 +138,6 @@ export interface WidgetContribution {
   // Non-closeable widgets opt into the tab visibility menu; closeable widgets
   // ignore this and use the X button for dismissal.
   hiddenByDefault?: boolean;
-  // A Location that presents only its Sub Panels: it renders no tab and no
-  // content of its own — establishing it activates its first Sub Panel.
-  subPanelsOnly?: boolean;
   regionSize?: WorkbenchRegionSize;
   regionCollapsible?: boolean;
   headerBorderBottom?: boolean;
@@ -184,7 +181,6 @@ export interface WorkbenchPanelContribution {
   mountStrategy?: WorkbenchPanelMountStrategy;
   closable?: boolean;
   hiddenByDefault?: boolean;
-  subPanelsOnly?: boolean;
   regionSize?: WorkbenchRegionSize;
   regionCollapsible?: boolean;
   headerBorderBottom?: boolean;
@@ -236,8 +232,8 @@ export interface WorkbenchWidgetPlacement {
   source?: ContributionSource;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
-  resourceUri?: string;
-  ownerResourceUri?: string;
+  resourceKey?: string;
+  ownerResourceKey?: string;
   title?: string;
   pinned?: boolean;
   closable?: boolean;
@@ -257,8 +253,8 @@ export interface WorkbenchPanelInstance {
   source?: ContributionSource;
   resource?: ResourceRef;
   section?: FileRendererSectionTarget;
-  resourceUri?: string;
-  ownerResourceUri?: string;
+  resourceKey?: string;
+  ownerResourceKey?: string;
   title?: string;
   pinned?: boolean;
   closable: boolean;
@@ -281,7 +277,7 @@ export interface WorkbenchLayout {
   locationSubPanelSelections?: Record<string, Partial<Record<WorkbenchPanelRegion, string>>>;
   activeWidgetId?: string;
   activeLocationWidgetId?: string;
-  activeResourceUri?: string;
+  activeResourceKey?: string;
 }
 
 export interface WorkbenchLayoutStoreState {
@@ -378,7 +374,7 @@ const normalizeWidgetIds = (layout: WorkbenchLayout) => {
   const widgetIds = new Set<string>();
   const regions = {} as WorkbenchLayout["regions"];
   let activeWidgetId = layout.activeWidgetId;
-  let activeResourceUri = layout.activeResourceUri;
+  let activeResourceKey = layout.activeResourceKey;
 
   for (const [id, region] of Object.entries(layout.regions) as [WorkbenchRegion, WorkbenchRegionState][]) {
     const originalActiveWidgetId = region.activeWidgetId;
@@ -393,11 +389,11 @@ const normalizeWidgetIds = (layout: WorkbenchLayout) => {
 
     if (originalActiveWidgetId && layout.activeWidgetId === originalActiveWidgetId && activeIndex >= 0) {
       activeWidgetId = normalizedActiveWidgetId;
-      activeResourceUri = widgets[activeIndex]?.resourceUri;
+      activeResourceKey = widgets[activeIndex]?.resourceKey;
     }
   }
 
-  return { ...layout, regions, activeWidgetId, activeResourceUri };
+  return { ...layout, regions, activeWidgetId, activeResourceKey };
 };
 
 export const mergeWithDefaultRegions = (

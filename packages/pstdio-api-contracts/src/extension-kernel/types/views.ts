@@ -1,7 +1,7 @@
 import type { Localizable } from "../l10n";
 import type { ExtensionPanelRegion } from "./composition";
 import type { RendererCallback } from "./context";
-import type { ContributionDefinition, ModeRef, PageRef, ResourceKindRef, ViewRef } from "./contribution-identity";
+import type { ContributionDefinition, ModeRef, PageRef, ViewRef } from "./contribution-identity";
 import type { KanbanRendererContribution, WebviewContribution, WhenExpression } from "./contributions";
 import type { ControlsRendererContribution } from "./controls";
 import type { DataTableRendererContribution } from "./data-table-renderer";
@@ -9,6 +9,7 @@ import type { FileRendererContribution } from "./file-renderer";
 import type { JsonObject, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
 import type { RendererEventReference } from "./renderer-base";
+import type { ResourceBinding } from "./resource-binding";
 import type { TreeRendererContribution } from "./tree-renderer";
 
 type NativeViewBody<Kind extends string, Definition> = { readonly kind: Kind } & Omit<
@@ -67,18 +68,7 @@ export type PlacementPresence = "fixed" | "open" | "closed";
 
 export type PlacementItem =
   | { readonly kind: "view"; readonly view: ViewRef; readonly presence: PlacementPresence }
-  | {
-      readonly kind: "binding";
-      readonly resourceKind: ResourceKindRef | readonly ResourceKindRef[];
-      readonly view: ViewRef;
-      readonly cardinality: "one" | "many";
-      /**
-       * Action the Add panel runs to create or select a resource before the
-       * placement can open. Without it the Add panel opens the placement with
-       * the active resource when the kind matches.
-       */
-      readonly add?: NavigationTarget;
-    };
+  | { readonly kind: "binding"; readonly binding: ResourceBinding };
 
 export type PlacementMountStrategy = "active" | "keep-mounted";
 

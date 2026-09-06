@@ -1,16 +1,11 @@
-# Contextual workbench composition
+# Workbench composition
 
-The visible workbench is the union of shell, active mode, and active page placements. Owners own placements, not regions.
+A view supplies content. A page owns its route, routed resource, Main presentation, and extra panels. A mode owns shared panels, chrome, and region policy. A resource identifies data; it does not choose a route or panel.
 
-- A view owns one reusable UI body.
-- A mode placement owns content that remains while the mode stays active.
-- A page owns one primary slot and any auxiliary slots for one routed screen.
-- A resource binding connects a resource kind to a view inside a page slot or mode placement.
+Pages declare `resource: { kinds }` separately from `main`. A Main view renders routed content; a Main collection renders peer panels and an empty view. Page `slots` and mode placements use the same static-view or resource-binding item contract. Presence, mounting, and tab presentation have the same meaning for both.
 
-Mode and page placements may share `main`, `secondary`, or `side`. Leaving a page removes its placements and keeps the mode placements. Leaving a mode removes both that mode and its active page.
+Main, Side, and Secondary are the three panel regions. Page and mode owners can contribute to the same region. A panel target opens one instance without changing the page location. A compound page-and-panel target enters an owner before opening its dependent panel and commits only when all steps resolve.
 
-Placement identity includes owner kind, owner contribution id, slot or placement id, and resource instance key. Region, label, registration time, and current tab are not identity.
+Omitted mode chrome retains host navigation, including custom-mode navigation items. A declared view replaces the chrome; `false` hides it. Mode placements keep their identity across pages in the same mode and dispose when their owner is removed.
 
-Each region sorts placements by declared `order`, qualified owner id, and instance key. The workbench reconciles the complete desired owner set in one transition. It never clears a region because one owner contributes to it.
-
-The Sidenav is one composed TreeRenderer. Mode navigation sections appear before page sections. Header and footer stay pinned while content scrolls. User tree customization may reorder or hide rows, but the Sidenav movement policy prevents a row from crossing mode and page ownership.
+Read the [cookbook](cookbook.md), [navigation and layout state](navigation-and-layout-state.md), and [composition architecture](../architecture/extension-workbench-composition.md).

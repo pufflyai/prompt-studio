@@ -9,13 +9,9 @@
  * can push updates into.
  */
 
-export type GuestHost = {
-  call: <TResult = unknown>(method: string, params?: unknown) => Promise<TResult>;
-  /** Subscribe to host-pushed events for a capability scope (e.g. "terminal.session"). */
-  onEvent: (scope: string, handler: (payload: unknown) => void) => () => void;
-  /** Id of the extension that owns this webview. Missing only on hosts older than the bridge that sends it. */
-  extensionId?: string;
-};
+import type { GuestHost } from "./guest-host";
+
+export type { GuestHost } from "./guest-host";
 
 export type PropsStore<TProps = unknown> = {
   get: () => TProps;
@@ -87,11 +83,8 @@ const createFilesClient = (host: GuestHost): WebviewFilesClient => ({
   pick: pickFiles,
   upload: (input) => host.call("files.upload", input),
   list: async (input) => {
-    const response = await host.call<{ files?: import("pstdio-api-contracts/extension-kernel").ExtensionBlobRef[] }>(
-      "files.list",
-      input ?? {},
-    );
-    return response.files ?? [];
+    const response = await host.call("files.list", input ?? {});
+    return response.files;
   },
   delete: (id) => host.call("files.delete", { id }),
 });

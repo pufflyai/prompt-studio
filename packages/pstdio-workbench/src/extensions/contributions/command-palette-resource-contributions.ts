@@ -4,7 +4,7 @@ import { text } from "pstdio-extensions/workbench";
 import type { CommandPaletteResourceResult, Disposable } from "../../core";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
-import { executeWorkbenchExtensionCommand, toExtensionCommandResource } from "../host/workbench-extension-command";
+import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
 
 interface ResourceItem {
   id: string;
@@ -14,19 +14,20 @@ interface ResourceItem {
   keywords?: string[];
   target: NavigationTarget;
 }
-
 interface ProviderQueryResult {
   items?: ResourceItem[];
 }
-
 const isProviderQueryResult = (value: unknown): value is ProviderQueryResult =>
   typeof value === "object" && value !== null && !Array.isArray(value);
-
 const commandIdOf = (
-  command: Extract<NavigationTarget, { kind: "command" }>["target"]["command"],
+  command: Extract<
+    NavigationTarget,
+    {
+      kind: "command";
+    }
+  >["target"]["command"],
   extensionId: string,
 ) => `${command.extensionId ?? extensionId}.command.${command.id}`;
-
 const activateTarget = async (
   context: WorkbenchExtensionCommandContext,
   record: WorkbenchExtensionCommandPaletteResourceRecord,
@@ -42,14 +43,12 @@ const activateTarget = async (
     context.workbench.commandPaletteResources.refresh();
     return;
   }
-
   await context.workbench.navigation.openTarget(
     toWorkbenchNavigationTarget(target, {
       extensionId: record.extensionId,
     }),
   );
 };
-
 const toResult = (
   context: WorkbenchExtensionCommandContext,
   record: WorkbenchExtensionCommandPaletteResourceRecord,
@@ -64,13 +63,11 @@ const toResult = (
   group: groupLabel,
   activate: () => activateTarget(context, record, item),
 });
-
 export const registerWorkbenchExtensionCommandPaletteResources = (
   context: WorkbenchExtensionCommandContext,
   records: readonly WorkbenchExtensionCommandPaletteResourceRecord[],
 ) => {
   const disposables: Disposable[] = [];
-
   for (const record of records) {
     const groupLabel = text(record.title, record.id);
     disposables.push(
@@ -84,7 +81,7 @@ export const registerWorkbenchExtensionCommandPaletteResources = (
             params: {
               projectId: context.projectId,
               modeId: context.workbench.modes.getActiveModeId(),
-              activeResource: toExtensionCommandResource(activeResource),
+              activeResource: activeResource,
               providerId: record.id,
               query,
               limit,
@@ -96,7 +93,6 @@ export const registerWorkbenchExtensionCommandPaletteResources = (
       }),
     );
   }
-
   return {
     dispose() {
       for (let index = disposables.length - 1; index >= 0; index -= 1) disposables[index]?.dispose();

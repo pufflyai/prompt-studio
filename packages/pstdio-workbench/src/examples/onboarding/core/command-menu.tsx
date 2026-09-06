@@ -11,10 +11,8 @@ const placeholderViewId = "host.command-guide.placeholder";
 const openCommandId = "host.open-command-guide";
 const closeCommandId = "host.close-command-guide";
 const panelOpenContextKey = "host.commandGuideOpen";
-
 const CommandPlaceholder = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
-
   return (
     <Stack h="full" align="center" justify="center" gap="sm" bg="bg">
       <Stack gap="xs" textAlign="center">
@@ -25,7 +23,6 @@ const CommandPlaceholder = (props: { input: WorkbenchPanelRenderInput }) => {
     </Stack>
   );
 };
-
 export const createCommandWorkbench = () => {
   const workbench = createWorkbench();
   workbench.registerModule({
@@ -46,7 +43,14 @@ export const createCommandWorkbench = () => {
       });
       ctx.shellPlacements.registerPlacement({
         id: panelId,
-        item: { kind: "view", viewId: panelId, presence: "closed" },
+        item: {
+          kind: "view",
+          presence: "closed",
+          view: {
+            kind: "view",
+            id: panelId,
+          },
+        },
         region: "main",
       });
       ctx.views.registerView({
@@ -97,13 +101,11 @@ export const createCommandWorkbench = () => {
       // item makes the command searchable by its label and category.
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: openCommandId, order: 10 });
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, { commandId: closeCommandId, order: 11 });
-
       const unsubscribe = ctx.layout.store.subscribeSelector(
         (state) => state.layout.regions.main.widgets.some((widget) => widget.viewId === panelId),
         (open) => ctx.context.set(panelOpenContextKey, open),
         { fireImmediately: true },
       );
-
       return { dispose: unsubscribe };
     },
   });

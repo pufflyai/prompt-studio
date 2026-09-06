@@ -17,7 +17,6 @@ const attributes = [
     display: { kind: "badge-list" as const, itemsAttributeId: "contributorItems" },
   },
 ];
-
 const rows = [
   {
     id: "soup",
@@ -50,7 +49,6 @@ const rows = [
     },
   },
 ];
-
 const defaultSettings = {
   viewMode: "board" as const,
   columnGrouping: "status",
@@ -58,7 +56,6 @@ const defaultSettings = {
   ordering: { attributeId: "manual", direction: "asc" as const },
   displayProperties: ["contributors"],
 };
-
 const configuredRecord = {
   id: "recipes-configured",
   extensionId: "example.recipes",
@@ -76,7 +73,6 @@ const configuredRecord = {
   ],
   defaultSettings: { ...defaultSettings, displayProperties: ["contributors", "season"] },
 } satisfies WorkbenchExtensionKanbanRendererRecord;
-
 const fallbackRecord = {
   id: "recipes-fallback",
   extensionId: "example.recipes",
@@ -85,7 +81,6 @@ const fallbackRecord = {
   attributes,
   defaultSettings,
 } satisfies WorkbenchExtensionKanbanRendererRecord;
-
 export const createGenericCollectionRendererModule = (): WorkbenchModuleContribution => ({
   id: "generic-collection-renderer.story",
   activate(ctx) {
@@ -97,7 +92,6 @@ export const createGenericCollectionRendererModule = (): WorkbenchModuleContribu
         { id: "published", label: "Published", color: "green", sortOrder: 1 },
       ],
     });
-
     registerWorkbenchExtensionKanbanRenderers(
       {
         projectId: "story-project",
@@ -118,12 +112,26 @@ export const createGenericCollectionRendererModule = (): WorkbenchModuleContribu
     );
     ctx.shellPlacements.registerPlacement({
       id: "recipes-configured-panel",
-      item: { kind: "view", viewId: configuredRecord.id, presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: configuredRecord.id,
+        },
+      },
       region: "main",
     });
     ctx.shellPlacements.registerPlacement({
       id: "recipes-fallback-panel",
-      item: { kind: "view", viewId: fallbackRecord.id, presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: fallbackRecord.id,
+        },
+      },
       region: "secondary",
     });
   },

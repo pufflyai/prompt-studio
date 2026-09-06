@@ -1,48 +1,13 @@
 # Extension navigation
 
-PS-326 routes screens through pages. Each page declares its mode and primary content. Navigation
-names a page explicitly; resource kinds and views do not choose routes or breadcrumb destinations.
+The page-location controller owns routes, browser history, breadcrumbs, and location persistence. Pages declare an optional resource constraint independently from Main presentation. Resource kinds and views do not choose destinations.
 
-## Page targets
+Navigation targets name a page or panel explicitly. A page target can include a resource and a contextual parent target. A panel target preserves location and requires its owner to be active. `ResourceRef` retains type, id, optional label, and ownership throughout these APIs; URI conversion stays in location adapters.
 
-```ts
-const target = {
-  kind: "page" as const,
-  page: ticketPage.ref,
-  resource: { type: "ticket", id: "PS-326", label: "PS-326" },
-};
-```
+Compound navigation contains page and panel targets only. Preparation resolves dependent targets against proposed page and placement state. Commit publishes final state as one batch and creates at most one browser history entry. Failed preparation has no observable navigation or composition effects. Commands and external links are standalone actions because their effects cannot participate in this transaction.
 
-The page-location controller resolves the page, validates its resource against the primary binding,
-and resolves its parent chain before committing a location. The page runtime activates the declared
-mode and reconciles owned placements. A failed target leaves the current location unchanged.
+Serialization and the browser history write precede changes to live owners. Browser adapters must leave history unchanged when a write throws. Cache writes, mode hooks, and public subscribers run after this boundary. The workbench reports each failed host effect and continues notifying observers; an observer failure cannot reject an already committed route. Internal composition and breadcrumb updates finish before public subscribers run.
 
-The canonical `PageLocation` contains the page ref, optional resource and document section, and
-optional parent location. URLs, browser history, breadcrumbs, and saved navigation use that location.
-Panels can open without replacing it, through a `kind: "panel"` target.
+The visible layout composes shell, mode, and page placements. Page changes preserve shared mode placements. Closing an auxiliary panel preserves location. Native and webview closing use one controller that protects fixed placements and follows the page's declared parent when its last routed resource view closes.
 
-## Contextual parents
-
-A target may supply a nested `parent` page target. For example, Planner opens a workspace under the
-specific ticket page that owns it. Planner knows its ticket hierarchy and constructs that chain.
-The host does not select the first page that accepts a resource kind or displays a view.
-
-Without an explicit parent, the controller uses the page's declared parent. Breadcrumbs project the
-canonical chain and retain an explicit target for each ancestor. A separate resource hierarchy
-provider can describe domain relationships, but it does not choose navigation destinations.
-
-## Placement lifetime
-
-The visible layout combines shell, mode, and page placements. Leaving a page removes its placements;
-leaving a mode removes that mode and its active page. Ownership is independent of region.
-
-A close action commits the resolved remaining instances. It does not replay automatic auxiliary
-opens. Closing the last primary instance of a resource page navigates to its declared parent.
-
-`openOn: "page-resource"` opens matching auxiliary bindings when navigation supplies a resource.
-Navigation without a resource retains existing auxiliary instances. The Side Panel container's
-visibility remains a separate user choice.
-
-See [navigation and layout state](../extensions/navigation-and-layout-state.md),
-[composition](../extensions/contextual-workbench-composition.md), and the
-[runnable examples](../../../extensions/extension-lab/src/examples).
+See [composition architecture](extension-workbench-composition.md) and [navigation and layout state](../extensions/navigation-and-layout-state.md).

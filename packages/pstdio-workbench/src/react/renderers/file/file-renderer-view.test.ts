@@ -17,53 +17,47 @@ describe("file renderer loaded state", () => {
       fileRendererId: "file-renderer.story.code",
       resource: undefined,
     });
-
     expect(isCurrentLoadedFile({ loadKey: markdownLoadKey }, codeLoadKey)).toBe(false);
   });
-
   test("treats two documents selected through resource metadata as different documents", () => {
     const bodyLoadKey = createFileRendererLoadKey({
       fileRendererId: "planner.ticketContent",
       resource: {
-        kind: "ticket",
-        uri: "pstdio://extension-resource/ticket/ticket-1",
+        type: "ticket",
         metadata: { documentId: "ticket-body" },
+        id: "pstdio://extension-resource/ticket/ticket-1",
       },
     });
     const fileLoadKey = createFileRendererLoadKey({
       fileRendererId: "planner.ticketContent",
       resource: {
-        kind: "ticket",
-        uri: "pstdio://extension-resource/ticket/ticket-1",
+        type: "ticket",
         metadata: { documentId: "file-1" },
+        id: "pstdio://extension-resource/ticket/ticket-1",
       },
     });
-
     expect(isCurrentLoadedFile({ loadKey: bodyLoadKey }, fileLoadKey)).toBe(false);
   });
-
   test("keeps one document stable when unrelated metadata is reordered", () => {
     const first = createFileRendererLoadKey({
       fileRendererId: "planner.ticketContent",
       resource: {
-        kind: "ticket",
-        uri: "pstdio://extension-resource/ticket/ticket-1",
+        type: "ticket",
         metadata: { documentId: "file-1", nested: { projectId: "proj-1", workspaceId: "workspace-1" } },
+        id: "pstdio://extension-resource/ticket/ticket-1",
       },
     });
     const second = createFileRendererLoadKey({
       fileRendererId: "planner.ticketContent",
       resource: {
-        kind: "ticket",
-        uri: "pstdio://extension-resource/ticket/ticket-1",
+        type: "ticket",
         metadata: { nested: { workspaceId: "workspace-1", projectId: "proj-1" }, documentId: "file-1" },
+        id: "pstdio://extension-resource/ticket/ticket-1",
       },
     });
-
     expect(isCurrentLoadedFile({ loadKey: first }, second)).toBe(true);
   });
 });
-
 describe("file renderer section navigation", () => {
   test("reads a typed section target from resource metadata", () => {
     const navigation = {
@@ -74,29 +68,26 @@ describe("file renderer section navigation", () => {
         { id: "details-2", heading: "Details", occurrence: 1 },
       ],
     };
-
     expect(
       getFileSectionNavigation({
-        kind: "markdown",
-        uri: "pstdio://file/guide",
+        type: "markdown",
         metadata: { [FILE_SECTION_NAVIGATION_METADATA_KEY]: navigation },
+        id: "pstdio://file/guide",
       }),
     ).toEqual(navigation);
   });
-
   test("ignores invalid or stale section metadata", () => {
     expect(
       getFileSectionNavigation({
-        kind: "markdown",
-        uri: "pstdio://file/guide",
+        type: "markdown",
         metadata: { [FILE_SECTION_NAVIGATION_METADATA_KEY]: { treeId: "guide.outline", anchors: [] } },
+        id: "pstdio://file/guide",
       }),
     ).toBeUndefined();
   });
-
   test("preserves selection on refresh and clears it when the document changes", () => {
     const previous = {
-      resourceUri: "pstdio://file/guide",
+      resourceKey: "pstdio://file/guide",
       treeId: "guide.outline",
       anchorIds: ["intro", "details"],
     };
@@ -108,12 +99,11 @@ describe("file renderer section navigation", () => {
         { id: "details", heading: "Details" },
       ],
     };
-
     expect(
       shouldClearFileSectionSelection({
         previous,
         current,
-        currentResourceUri: "pstdio://file/guide",
+        currentResourceKey: "pstdio://file/guide",
         selectedNodeId: "details",
       }),
     ).toBe(false);
@@ -121,12 +111,11 @@ describe("file renderer section navigation", () => {
       shouldClearFileSectionSelection({
         previous,
         current: undefined,
-        currentResourceUri: "pstdio://file/other",
+        currentResourceKey: "pstdio://file/other",
         selectedNodeId: "details",
       }),
     ).toBe(true);
   });
-
   test("reopens the currently selected heading after a renderer refresh", () => {
     const navigation = {
       treeId: "guide.outline",
@@ -136,7 +125,6 @@ describe("file renderer section navigation", () => {
         { id: "details", heading: "Details" },
       ],
     };
-
     expect(resolveFileSectionTargetId(navigation, "details")).toBe("details");
     expect(resolveFileSectionTargetId(navigation, "stale-section")).toBe("intro");
   });

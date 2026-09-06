@@ -14,23 +14,19 @@ const resource = (id: string): ResourceRef => ({
   id,
   label: scribbleDocuments.find((doc) => doc.id === id)?.title,
 });
-
 const documentMarkdown = (document: (typeof scribbleDocuments)[number]) => {
   const sections = document.sections.flatMap((section) => [`## ${section.title}`, "", section.body, ""]);
   const tasks = document.tasks.map((task, index) => {
     const checked = document.id === "north-star" && index === 0;
     return `- [${checked ? "x" : " "}] ${task}`;
   });
-
   return [document.intro, "", ...sections, "## Next steps", "", ...tasks].join("\n");
 };
-
 const store = createShowcaseStore({
   query: "",
   favoriteIds: ["north-star"],
   contentById: Object.fromEntries(scribbleDocuments.map((document) => [document.id, documentMarkdown(document)])),
 });
-
 const ScribbleTree = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   const state = useShowcaseStore(store);
@@ -96,7 +92,6 @@ const ScribbleTree = (props: { workbench: WorkbenchCore }) => {
     </Stack>
   );
 };
-
 const DocumentCanvas = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const state = useShowcaseStore(store);
@@ -177,7 +172,6 @@ const DocumentCanvas = (props: { input: WorkbenchPanelRenderInput }) => {
     </Box>
   );
 };
-
 export const createScribbleWorkbench = () => {
   const workbench = createWorkbench({ startPage: homePage });
   workbench.themes.register([scribbleTheme]);
@@ -220,7 +214,15 @@ export const createScribbleWorkbench = () => {
     title: "Scribble",
     path: "scribble",
     modeId: "scribble",
-    slots: [{ id: "document", role: "primary", region: "main", viewId: "scribble.document" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "scribble.document",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pages.registerPage({
     id: "scribble.resource",
@@ -229,14 +231,23 @@ export const createScribbleWorkbench = () => {
     path: "scribble/resource",
     modeId: "scribble",
     parentId: "scribble.home",
-    slots: [
-      {
-        id: "document",
-        role: "primary",
-        region: "main",
-        binding: { resourceKinds: ["scribble.document"], viewId: "scribble.document", cardinality: "one" },
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "scribble.document",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "scribble.document",
       },
-    ],
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pageLocations.switchProject("storybook-scribble");
   workbench.pageLocations.navigate({ kind: "page", page, resource: resource(scribbleDocuments[0].id) });

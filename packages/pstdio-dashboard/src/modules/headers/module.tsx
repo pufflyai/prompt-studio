@@ -10,11 +10,17 @@ const registerHeaders = (ctx: WorkbenchModuleContext) => {
   });
   ctx.shellPlacements.registerPlacement({
     id: dashboardWidgetIds.projectHeader,
-    item: { kind: "view", viewId: dashboardWidgetIds.projectHeader, presence: "fixed" },
+    item: {
+      kind: "view",
+      presence: "fixed",
+      view: {
+        kind: "view",
+        id: dashboardWidgetIds.projectHeader,
+      },
+    },
     region: "nav",
   });
 };
-
 export const createHeadersModule = () =>
   ({
     id: "dashboard.headers",

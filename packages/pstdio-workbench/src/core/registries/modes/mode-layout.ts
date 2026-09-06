@@ -1,4 +1,5 @@
 import type { Disposable } from "../../shared/disposable";
+import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import {
   type WorkbenchLayout,
   type WorkbenchPanelRegion,
@@ -43,7 +44,7 @@ const withActivePlacement = (
   return {
     ...layout,
     activeWidgetId: active?.widgetId,
-    activeResourceUri: active?.resourceUri,
+    activeResourceKey: active?.resourceKey,
   };
 };
 
@@ -68,8 +69,8 @@ const clearRegions = (layout: WorkbenchLayout, regionIds: readonly WorkbenchRegi
     regions[regionId] = { ...regions[regionId], widgets: [], activeWidgetId: undefined, visible: false };
   }
   const locationSubPanelSelections = Object.fromEntries(
-    Object.entries(layout.locationSubPanelSelections ?? {}).map(([resourceUri, selections]) => [
-      resourceUri,
+    Object.entries(layout.locationSubPanelSelections ?? {}).map(([resourceKey, selections]) => [
+      resourceKey,
       Object.fromEntries(
         Object.entries(selections).filter(([panel]) => !clearedPanels.has(panel as WorkbenchPanelRegion)),
       ),
@@ -135,7 +136,7 @@ export const restoreUnscopedModeLayout = (
 
 export const disposeReverse = (disposables: readonly Disposable[]) => {
   for (let index = disposables.length - 1; index >= 0; index -= 1) {
-    disposables[index]?.dispose();
+    runWorkbenchEffect("mode disposal", () => disposables[index]?.dispose());
   }
 };
 

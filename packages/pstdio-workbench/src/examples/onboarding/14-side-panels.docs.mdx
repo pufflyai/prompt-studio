@@ -89,7 +89,7 @@ The shell placements:
 - `ctx.shellPlacements.registerPlacement({ id, item, region })` places one View in one region. The shell owns these
   placements, so they exist in every mode.
 - `item.kind: "view"` says this is one static View rather than a resource-bound set of instances.
-- `item.viewId` names the registered View to render.
+- `item.view` names the registered View to render.
 - `item.presence` is required and sets the item's presence. `"fixed"` means the item is always open while its owner is
   active; the user cannot close it, and the Add panel does not offer it. `"open"` means the item starts open when the
   owner has no saved state, and the user may close it. `"closed"` means the item stays hidden until the user or an

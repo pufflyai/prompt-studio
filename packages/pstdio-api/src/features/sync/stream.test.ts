@@ -7,6 +7,7 @@ import { createTestApp } from "../../test-utils/create-test-app";
 import type { AppBindings } from "../../types";
 
 let app: OpenAPIHono<AppBindings>;
+let closeApp: () => Promise<void>;
 let tempRoot: string;
 let previousDefaultExtensions: string | undefined;
 
@@ -14,13 +15,14 @@ beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-sync-test-"));
   previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
-  ({ app } = await createTestApp({
+  ({ app, close: closeApp } = await createTestApp({
     databasePath: ":memory:",
     storageRoot: join(tempRoot, "storage"),
   }));
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await closeApp();
   if (previousDefaultExtensions === undefined) delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
   else process.env.PSTDIO_DEFAULT_EXTENSIONS = previousDefaultExtensions;
   rmSync(tempRoot, { recursive: true, force: true });

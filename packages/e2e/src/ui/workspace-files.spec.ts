@@ -25,6 +25,7 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
   expect(projectResponse.ok()).toBe(true);
   const project = (await projectResponse.json()) as { id: string };
   const repoRoot = createGitRepo("pstdio-ps-118-", "Workspace files e2e");
+  let workspaceId: string | undefined;
 
   try {
     mkdirSync(join(repoRoot, "assets"));
@@ -49,6 +50,7 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
       mode: "worktree",
       startSession: false,
     });
+    workspaceId = attempt.workspace.id;
     const worktreePath = attempt.workspace.worktree_path;
     writeFileSync(join(worktreePath, "changed.ts"), "export const before = true;\n");
     execSync("git add changed.ts", { cwd: worktreePath, stdio: "pipe" });
@@ -108,6 +110,7 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
     await expect(nestedLogo).toBeVisible();
 
     await search.fill("README");
+    await expect(filesTree.getByRole("option")).toHaveCount(1);
     await page.getByRole("option", { name: "README.md" }).click();
     const editor = page.locator(".monaco-editor");
     await expect(editor).toBeVisible();
@@ -158,7 +161,11 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
     );
     expect(unsafe.status()).toBe(400);
   } finally {
-    rmSync(repoRoot, { recursive: true, force: true });
+    try {
+      if (workspaceId) expect((await request.delete(`${apiBase}/v1/workspaces/${workspaceId}`)).ok()).toBe(true);
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
   }
 });
 
@@ -192,6 +199,7 @@ test("browses and edits files in the default workspace", async ({ page, request 
     await page.getByRole("tab", { name: "Files" }).click();
     const search = page.getByRole("textbox", { name: "Search files" });
     await search.fill("README");
+    await expect(page.getByRole("region", { name: "Files", exact: true }).getByRole("option")).toHaveCount(1);
     await page.getByRole("option", { name: "README.md" }).click();
     const editor = page.locator(".monaco-editor");
     await expect(editor).toBeVisible();

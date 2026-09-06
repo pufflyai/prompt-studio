@@ -21,7 +21,11 @@ export interface KanbanRendererQueryState {
   filters: KanbanRendererFilterState;
 }
 
-export interface KanbanRendererContribution<TRow extends KanbanRendererRow = KanbanRendererRow> {
+export interface KanbanRendererContribution<
+  TRow extends KanbanRendererRow = KanbanRendererRow,
+  TNode = unknown,
+  TIcon = unknown,
+> {
   id: string;
   title: string;
   resourceKind?: string;
@@ -37,10 +41,10 @@ export interface KanbanRendererContribution<TRow extends KanbanRendererRow = Kan
    * `WorkbenchKanbanView` subscribes so additions / removals / kind changes
    * propagate live without re-registering the renderer.
    */
-  attributes: AttributeDescriptor[] | AttributesSource;
+  attributes: AttributeDescriptor<TNode>[] | AttributesSource<TNode>;
 
   /** Per-board-column overrides (color, drag/create rules, custom actions). */
-  getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig;
+  getBoardColumnConfig?: (groupKey: string) => BoardColumnConfig<TIcon>;
   hideToolbar?: boolean;
   emptyTitle?: string;
   emptyDescription?: string;
@@ -62,7 +66,7 @@ export interface KanbanRendererContribution<TRow extends KanbanRendererRow = Kan
   /** Row activation surfaced by the renderer (mirrored from <KanbanRenderer>). */
   onRowActivate?: (row: TRow) => Promise<void> | void;
   /** Per-row right-click context menu actions (mirrored from <KanbanRenderer>). */
-  getRowContextMenuActions?: (row: TRow) => ResourceContextAction[];
+  getRowContextMenuActions?: (row: TRow) => ResourceContextAction<TNode>[];
   /**
    * Fires for inline attribute edits AND for cross-column drag-to-reorder on
    * the board (the renderer passes the grouping attribute id + the target
@@ -76,8 +80,11 @@ export interface KanbanRendererContribution<TRow extends KanbanRendererRow = Kan
   onColumnAction?: (columnId: string, actionId: string) => Promise<void> | void;
 }
 
-export interface RegisteredKanbanRendererContribution<TRow extends KanbanRendererRow = KanbanRendererRow>
-  extends KanbanRendererContribution<TRow>,
+export interface RegisteredKanbanRendererContribution<
+  TRow extends KanbanRendererRow = KanbanRendererRow,
+  TNode = unknown,
+  TIcon = unknown,
+> extends KanbanRendererContribution<TRow, TNode, TIcon>,
     RegisteredContributionMetadata {}
 
 export interface KanbanRendererStoreState {

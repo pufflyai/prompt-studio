@@ -1,7 +1,8 @@
 import { Center, Text } from "@chakra-ui/react";
+import type { ResourceRef } from "@pstdio/sdk/extensions";
 import { getThemePreferenceMode, toaster, useThemePreference } from "@pstdio/ui";
-import type { WorkbenchCore, WorkbenchTerminalController } from "@pstdio/workbench";
-import { createTerminalSessionCapability } from "@pstdio/workbench/extensions";
+import type { WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "@pstdio/workbench";
+import { createTerminalSessionCapability, createWorkbenchWebviewHostCapabilities } from "@pstdio/workbench/extensions";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import i18n from "@/i18n";
@@ -29,7 +30,8 @@ interface ExtensionWebviewFrameProps {
   extensionInstanceId?: string;
   installName?: string;
   projectId: string | undefined;
-  resource?: { id: string; label?: string; metadata?: Record<string, unknown> };
+  resource?: ResourceRef;
+  placement?: WorkbenchPanelInstance;
   terminal?: WorkbenchTerminalController;
   title?: string;
   webview?: WebviewDescriptor;
@@ -125,6 +127,9 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   };
 
   const baseCapabilities = {
+    ...(props.workbench
+      ? createWorkbenchWebviewHostCapabilities({ workbench: props.workbench, placement: props.placement, hostEvents })
+      : {}),
     "commands.execute": async (params: unknown) => {
       const commandInput = params as Parameters<typeof executeWebviewCommand>[0];
       return executeWebviewCommand({
@@ -180,13 +185,13 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       const { key } = params as { key: string };
       return readSettingValue(key);
     },
-    "extension.settings.set": (params: unknown) => {
+    "extension.settings.set": async (params: unknown) => {
       const { key, value } = params as { key: string; value: unknown };
-      return updateSettingValue(key, value);
+      await updateSettingValue(key, value);
     },
-    "extension.settings.delete": (params: unknown) => {
+    "extension.settings.delete": async (params: unknown) => {
       const { key } = params as { key: string };
-      return deleteSettingValue(key);
+      await deleteSettingValue(key);
     },
     "host.dispatchKeyboardEvent": (params: unknown) => {
       const event = new KeyboardEvent("keydown", {

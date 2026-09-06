@@ -141,7 +141,7 @@ describe("readPackageManifest validation", () => {
       version: "1.0.0",
       publisher: "pstdio",
       main: "./extension.ts",
-      engines: { pstdio: "1.0.0-alpha.999" },
+      engines: { pstdio: "1.0.0-alpha.1099" },
     });
 
     const result = readPackageManifest(dir);
@@ -150,7 +150,7 @@ describe("readPackageManifest validation", () => {
     expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toEqual([
       "extension_manifest_unsupported_api_version",
     ]);
-    expect(result.diagnostics[0]?.message).toContain("1.0.0-alpha.999");
+    expect(result.diagnostics[0]?.message).toContain("1.0.0-alpha.1099");
     expect(result.diagnostics[0]?.message).toContain(EXTENSION_API_VERSION);
   });
 

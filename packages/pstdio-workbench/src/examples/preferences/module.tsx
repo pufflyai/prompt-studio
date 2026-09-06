@@ -17,7 +17,6 @@ const defaultRegionPreferenceName = "preferences.example.defaultOpenRegion";
 const userScope = { scope: "user" } satisfies PreferenceScopeRef;
 const projectScope = { scope: "project", scopeId: "storybook-project" } satisfies PreferenceScopeRef;
 const preferenceNames = [densityPreferenceName, defaultRegionPreferenceName] as const;
-
 const preferenceSchema = {
   properties: {
     [densityPreferenceName]: {
@@ -36,24 +35,19 @@ const preferenceSchema = {
     },
   },
 } satisfies PreferenceSchemaContribution;
-
 const densityOptions = [
   { value: "comfortable", label: "Comfortable", icon: "PanelTop" },
   { value: "compact", label: "Compact", icon: "Rows3" },
 ] as const;
-
 const defaultRegionOptions = [
   { value: "main", label: "Main", icon: "PanelTop" },
   { value: "secondary", label: "Bottom", icon: "PanelBottom" },
   { value: "main-right-menu", label: "Right", icon: "PanelRight" },
 ] as const;
 const editorFiles = ["README.md", "extension.ts", "package.json"];
-
 const formatPreferenceValue = (value: PreferenceValue | undefined) => String(value ?? "unset");
-
 const SchemaRow = (props: { name: string; schema: PreferencePropertySchema }) => {
   const { name, schema } = props;
-
   return (
     <Box borderWidth="1px" borderColor="border.subtle" p="md">
       <HStack gap="sm" align="flex-start">
@@ -80,10 +74,8 @@ const SchemaRow = (props: { name: string; schema: PreferencePropertySchema }) =>
     </Box>
   );
 };
-
 const PreferenceOptionButton = (props: { icon: string; label: string; onClick: () => void; selected: boolean }) => {
   const { icon, label, onClick, selected } = props;
-
   return (
     <Button
       aria-pressed={selected}
@@ -97,19 +89,16 @@ const PreferenceOptionButton = (props: { icon: string; label: string; onClick: (
     </Button>
   );
 };
-
 const PreferenceSchemasPanel = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const schemas = useWorkbenchStore(input.workbench.preferences.store, (state) => state.schemas);
   const [revision, setRevision] = useState(0);
   const density = input.workbench.preferences.getValue(densityPreferenceName, userScope);
   const defaultRegion = input.workbench.preferences.getValue(defaultRegionPreferenceName, projectScope);
-
   const setPreference = (name: string, value: PreferenceValue, scope: PreferenceScopeRef) => {
     input.workbench.preferences.setValue(name, value, scope);
     setRevision((current) => current + 1);
   };
-
   return (
     <ScrollArea
       h="full"
@@ -218,21 +207,25 @@ const PreferenceSchemasPanel = (props: { input: WorkbenchPanelRenderInput }) => 
     </ScrollArea>
   );
 };
-
 export const createPreferenceSchemasExampleModule = (): WorkbenchModuleContribution => ({
   id: "preferences-example",
   activate(ctx) {
     ctx.preferences.registerSchema(preferenceSchema);
-
     ctx.views.registerView({
       id: preferencesWidgetId,
       title: "Preference schemas",
       body: { kind: "react", render: (input) => <PreferenceSchemasPanel input={input} /> },
     });
-
     ctx.shellPlacements.registerPlacement({
       id: preferencesWidgetId,
-      item: { kind: "view", viewId: preferencesWidgetId, presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: preferencesWidgetId,
+        },
+      },
       region: "main",
     });
   },

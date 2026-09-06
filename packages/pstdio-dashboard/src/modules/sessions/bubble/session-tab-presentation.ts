@@ -7,7 +7,6 @@ import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { createDashboardSessions, resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
 
 const maxSessionsInMenu = 5;
-
 const sessionStatusIcon = (status: SessionCompletionStatus | undefined) => {
   if (status === "in_progress") return "LoaderCircle";
   if (status === "completed") return "CircleCheck";
@@ -18,12 +17,10 @@ const sessionStatusIcon = (status: SessionCompletionStatus | undefined) => {
   if (status === "awaiting_input") return "CircleDot";
   return "CircleDashed";
 };
-
 const sessionStatus = (instance: WorkbenchPanelInstance, status: string | undefined) => {
   const value = status ?? instance.resource?.metadata?.status;
   return typeof value === "string" ? (value as SessionCompletionStatus) : undefined;
 };
-
 const workspaceResource = (input: {
   projectId: string | undefined;
   workspaceId: string | null;
@@ -45,10 +42,9 @@ const workspaceResource = (input: {
     },
   );
 };
-
 const resolveWorkspace = (ctx: WorkbenchModuleContext, instance: WorkbenchPanelInstance) => {
   const primary = ctx.getPrimaryResource();
-  if (primary?.kind === "workspace") return primary;
+  if (primary?.type === "workspace") return primary;
   const view = resolveDashboardSessionViewForPlacement(instance);
   const projectId = ctx.context.get(dashboardSelectedProjectIdContextKey);
   return workspaceResource({
@@ -59,7 +55,6 @@ const resolveWorkspace = (ctx: WorkbenchModuleContext, instance: WorkbenchPanelI
     workspaceBranch: view.workspaceBranch,
   });
 };
-
 export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): WorkbenchWidgetTab => ({
   subscribe: subscribeDashboardData,
   getSnapshot(instance) {
@@ -81,11 +76,10 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
         commandId: dashboardCommandIds.openSessionPanel,
         args: {
           resource: session.resource,
-          pinPreviewSessions: instance.resource?.kind === "session-draft",
+          pinPreviewSessions: instance.resource?.type === "session-draft",
         },
       },
     }));
-
     return {
       label: selected?.title ?? instance.resource?.label ?? "New session",
       indicator: {

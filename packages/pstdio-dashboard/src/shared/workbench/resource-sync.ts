@@ -1,10 +1,9 @@
 import type { ResourceRef, WorkbenchModuleContext } from "@pstdio/workbench";
-import { toPageResource } from "./page-navigation";
 
 export const setResourceBreadcrumb = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   const location = ctx.pages.store.getState().location;
   if (!location?.resource) return;
-  ctx.pageLocations.replay({ ...location, resource: toPageResource(resource) });
+  ctx.pageLocations.replay({ ...location, resource: resource });
 };
 
 // A save can change only the display title of the open resource. Update the

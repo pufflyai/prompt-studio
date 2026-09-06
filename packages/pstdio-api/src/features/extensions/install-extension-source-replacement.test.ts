@@ -159,7 +159,7 @@ describe("installExtensionSource replacement", () => {
       "bun",
       ["install", "--no-save"],
       expect.objectContaining({
-        cwd: expect.stringContaining(".extension-install-"),
+        cwd: source,
       }),
     );
   });

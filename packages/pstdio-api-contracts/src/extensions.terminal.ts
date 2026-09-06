@@ -24,7 +24,7 @@ export type TerminalEvent =
   | { kind: "data"; chunk: Uint8Array }
   // Name of the PTY's foreground process (VSCode-style tab titles); re-emitted whenever it changes.
   | { kind: "title"; title: string }
-  | { kind: "exit"; code: number | null; signal: NodeJS.Signals | null }
+  | { kind: "exit"; code: number | null; signal: string | null }
   | { kind: "error"; message: string };
 
 export interface TerminalSessionHandle {
@@ -35,7 +35,7 @@ export interface TerminalSessionHandle {
   /** Adjust the PTY geometry. */
   resize(cols: number, rows: number): void;
   /** Terminate the child and clean up host resources. */
-  kill(signal?: NodeJS.Signals): Promise<void>;
+  kill(signal?: string): Promise<void>;
   /**
    * Async iterable of output / exit / error events. A single iterator is
    * supported per session — calling this twice throws. `exit` is always the

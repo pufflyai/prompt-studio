@@ -44,6 +44,7 @@ export {
   workbenchPageLocationRouteKey,
   workbenchPageLocationsEqual,
 } from "../controllers/page-location/page-location-normalization";
+export { defaultPageResourceCodec } from "../controllers/page-location/page-resource-codec";
 export type {
   CreateWorkbenchPanelMenuStateControllerInput,
   PersistedWorkbenchPanelMenuState,

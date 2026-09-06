@@ -41,6 +41,7 @@ const canonicalResource = (resource: ResourceRef | undefined, resources: Workben
     id: normalized.id,
     ...(normalized.projectId ? { projectId: normalized.projectId } : {}),
     ...(normalized.label ? { label: normalized.label } : {}),
+    ...(normalized.icon ? { icon: normalized.icon } : {}),
     ...(normalized.extensionId ? { extensionId: normalized.extensionId } : {}),
     ...(normalized.metadata ? { metadata: cloneMetadata(normalized.metadata) } : {}),
   };

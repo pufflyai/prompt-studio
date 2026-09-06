@@ -1,5 +1,6 @@
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { WorkbenchCoreContributionContext } from "../../workbench-core";
 import type {
   WorkbenchLayout,
@@ -110,7 +111,9 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
 
   const initializeMode = (mode: WorkbenchModeContribution) => {
     if (initializedModes.has(mode.id)) return;
-    const disposables = toDisposables(mode.activate(input.resolveContext()));
+    const disposables = toDisposables(
+      runWorkbenchEffect(`mode ${mode.id}.activate`, () => mode.activate(input.resolveContext())),
+    );
     initializedModes.set(mode.id, disposables);
   };
 
@@ -137,7 +140,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
       establishSeededLocation,
     );
     try {
-      mode.seed?.(context);
+      runWorkbenchEffect(`mode ${mode.id}.seed`, () => mode.seed?.(context));
       establishSeededLocation();
     } finally {
       unsubscribeMainPanel();
@@ -165,7 +168,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
   // rerun activate or enter.
   const reconcileScope = (mode: WorkbenchModeContribution) => {
     prepareScope(mode);
-    mode.reconcile?.(input.resolveContext());
+    runWorkbenchEffect(`mode ${mode.id}.reconcile`, () => mode.reconcile?.(input.resolveContext()));
   };
 
   // Switching modes stashes the outgoing unscoped layout, disposes the active mode,
@@ -238,8 +241,8 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
       store.setState({ ...store.getState(), activeModeId: id }, false, "activateMode");
       options.afterPublish?.();
       if (options.seed) prepareScope(mode);
-      activeDisposables = toDisposables(mode.enter?.(context));
-      if (options.seed) mode.reconcile?.(input.resolveContext());
+      activeDisposables = toDisposables(runWorkbenchEffect(`mode ${mode.id}.enter`, () => mode.enter?.(context)));
+      if (options.seed) runWorkbenchEffect(`mode ${mode.id}.reconcile`, () => mode.reconcile?.(input.resolveContext()));
     } catch (error) {
       disposeActive();
       store.setState({ ...store.getState(), activeModeId: undefined }, false, "deactivateMode");

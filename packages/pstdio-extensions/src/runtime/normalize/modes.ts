@@ -1,26 +1,11 @@
-import { extensionPanelRegions, type ModeContribution } from "@pstdio/sdk/extensions";
-import { regionSettingsSchema } from "pstdio-api-contracts";
+import type { ModeContribution } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension } from "../../types/runtime";
-import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
-import { type Accumulator, isRecord } from "./accumulator";
+import type { Accumulator } from "./accumulator";
+import { modeDeclarationSchema } from "./composition-declarations";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
-import { isLocalizableString } from "./localizable";
+import { validateDeclaration } from "./declaration-diagnostic";
 import { normalizeContributionRef } from "./references";
-
-const isRef = (value: unknown, kind: string) =>
-  isRecord(value) &&
-  value.kind === kind &&
-  typeof value.id === "string" &&
-  value.id.length > 0 &&
-  (value.extensionId === undefined || typeof value.extensionId === "string");
-const validChrome = (value: unknown) =>
-  value === undefined ||
-  (isRecord(value) &&
-    Object.entries(value).every(
-      ([region, view]) =>
-        ["nav", "sidenav", "activity", "status"].includes(region) && (view === false || isRef(view, "view")),
-    ));
 
 export const registerModes = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   const modes = uniqueContributions({
@@ -32,42 +17,8 @@ export const registerModes = (ext: NormalizedExtension, source: LoadedExtensionS
   });
   for (const mode of modes) {
     const localId = mode.id;
-    const hasValidRegions =
-      Array.isArray(mode.regions) &&
-      mode.regions.every(
-        (region) =>
-          typeof region === "string" &&
-          extensionPanelRegions.includes(region as (typeof extensionPanelRegions)[number]),
-      );
-    const hasValidRegionSettings =
-      mode.regionSettings === undefined ||
-      (hasValidRegions &&
-        isRecord(mode.regionSettings) &&
-        Object.entries(mode.regionSettings).every(
-          ([region, settings]) =>
-            (region === "sidenav" || (mode.regions as readonly string[]).includes(region)) &&
-            regionSettingsSchema.safeParse(settings).success,
-        ));
-    if (
-      !isRecord(mode) ||
-      !isLocalizableString(mode.label) ||
-      !hasValidRegions ||
-      !hasValidRegionSettings ||
-      (mode.floatingPanels !== undefined && mode.floatingPanels !== "visible" && mode.floatingPanels !== "hidden") ||
-      (mode.defaultTheme !== undefined && !isRef(mode.defaultTheme, "theme")) ||
-      !validChrome(mode.chrome)
-    ) {
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "invalid_mode",
-          message: `Mode "${localId}" must declare a label and valid workbench regions`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-          metadata: { contributionId: localId, fieldPath: `modes.${localId}.regions` },
-        }),
-      );
+    if (!validateDeclaration({ ext, source, runtime, kind: "mode", contribution: mode, schema: modeDeclarationSchema }))
       continue;
-    }
     runtime.modes.push({
       ...contributionRecordBase(ext, source, "mode", localId),
       contribution: {

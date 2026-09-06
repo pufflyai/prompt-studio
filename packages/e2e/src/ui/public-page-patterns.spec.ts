@@ -64,6 +64,9 @@ test.beforeEach(async ({ page, request }) => {
 
 test("Scribble saves edits and creates documents", async ({ page }) => {
   await openExample(page, "scribble", "scribble.document/north-star");
+  const sidenav = page.locator('[data-workbench-region="sidenav"]');
+  await expect(sidenav.locator('iframe[title="Pages"]')).toBeVisible();
+  await expect(sidenav.getByRole("option", { name: "Sessions", exact: true })).toHaveCount(0);
   const pages = view(page, "Pages");
   const editor = () => view(page, "Document").locator('[contenteditable="true"]').first();
   await expect(editor()).toContainText("Why now");
@@ -85,8 +88,12 @@ test("Scribble saves edits and creates documents", async ({ page }) => {
   await expect(editor()).toContainText("A new document");
 });
 
-test("Boombox keeps its player mounted across home, resource, and browser history navigation", async ({ page }) => {
+test("Boombox retains its player across pages and disposes it when its extension is disabled", async ({
+  page,
+  request,
+}) => {
   await openExample(page, "boombox");
+  await expect(page.locator('[data-workbench-region="sidenav"]')).toHaveCount(0);
   await expect(view(page, "Player").getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   const playerFrame = await page.locator('iframe[title="Player"]').elementHandle();
   const homeUrl = page.url();
@@ -110,6 +117,18 @@ test("Boombox keeps its player mounted across home, resource, and browser histor
   await view(page, "Library").getByRole("button", { name: "Liked songs", exact: true }).click();
   await expect(view(page, "Lazy Sunday").getByRole("button", { name: "Play Paper Moon by Mira Vale" })).toBeVisible();
   await expect(view(page, "Lazy Sunday").getByRole("button", { name: "Play Soft Focus by Low Island" })).toHaveCount(0);
+  const extensionsUrl = `http://localhost:${process.env.E2E_API_PORT ?? "3200"}/v1/projects/${projectId(page)}/extensions`;
+  const listed = await request.get(extensionsUrl);
+  expect(listed.ok()).toBe(true);
+  const { extensions } = await listed.json();
+  const owner = extensions.find(
+    (extension: { extensionId: string }) => extension.extensionId === "pstdio.extension-lab",
+  );
+  expect(owner).toBeDefined();
+  const disabled = await request.patch(`${extensionsUrl}/${owner.id}`, { data: { enabled: false } });
+  expect(disabled.ok()).toBe(true);
+  await expect(page.locator('iframe[title="Player"]')).toHaveCount(0);
+  expect(await playerFrame!.evaluate((frame) => frame.isConnected)).toBe(false);
 });
 
 test("Zipline opens its inspector and persists a status change", async ({ page }) => {
@@ -153,6 +172,11 @@ test("Pigeon sends a local message and keeps it in Sent", async ({ page }) => {
   await expect(inbox.getByText("Showcase review", { exact: true })).toBeVisible();
   await inbox.getByText("Showcase review", { exact: true }).click();
   await expect(view(page, "Message").getByText("The examples are ready.", { exact: true })).toBeVisible();
+  const messageUrl = page.url();
+  await view(page, "Message").getByRole("button", { name: "Close message", exact: true }).click();
+  await expect(page.locator('iframe[title="Message"]')).toHaveCount(0);
+  await expect(page).toHaveURL(messageUrl);
+  await expect(inbox.getByText("Showcase review", { exact: true })).toBeVisible();
 });
 
 test("Kiln docks the inspector and persists object changes", async ({ page }) => {

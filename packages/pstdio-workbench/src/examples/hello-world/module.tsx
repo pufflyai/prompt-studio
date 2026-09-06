@@ -4,10 +4,8 @@ const emptyMainViewId = "hello-world.empty-main";
 const welcomeWidgetId = "hello-world.welcome";
 const openWelcomeCommandId = "hello-world.openWelcome";
 const mainHeaderTrailingMenuPath = headerTrailingMenuPath("main");
-
 const ExamplePanel = (props: { title: string; description: string }) => {
   const { title, description } = props;
-
   return (
     <div style={{ padding: 24 }}>
       <h1 style={{ marginTop: 0 }}>{title}</h1>
@@ -15,7 +13,6 @@ const ExamplePanel = (props: { title: string; description: string }) => {
     </div>
   );
 };
-
 export const createHelloWorldModule = (): WorkbenchModuleContribution => ({
   id: "hello-world",
   activate(ctx) {
@@ -31,7 +28,14 @@ export const createHelloWorldModule = (): WorkbenchModuleContribution => ({
     });
     ctx.shellPlacements.registerPlacement({
       id: welcomeWidgetId,
-      item: { kind: "view", viewId: welcomeWidgetId, presence: "closed" },
+      item: {
+        kind: "view",
+        presence: "closed",
+        view: {
+          kind: "view",
+          id: welcomeWidgetId,
+        },
+      },
       region: "main",
     });
     ctx.views.registerView({
@@ -47,7 +51,6 @@ export const createHelloWorldModule = (): WorkbenchModuleContribution => ({
       viewId: emptyMainViewId,
       region: "main",
     });
-
     ctx.commands.registerCommand(
       {
         id: openWelcomeCommandId,
@@ -59,7 +62,6 @@ export const createHelloWorldModule = (): WorkbenchModuleContribution => ({
         execute: () => ctx.navigation.openPanel({ panel: { kind: "shell-placement", id: welcomeWidgetId } }),
       },
     );
-
     ctx.layout.registerMenuItem(mainHeaderTrailingMenuPath, {
       commandId: openWelcomeCommandId,
       group: "primary",

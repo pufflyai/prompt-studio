@@ -31,7 +31,6 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
   },
   definition,
 });
-
 describe("createWorkbenchExtensionMetadata", () => {
   test("publishes resource menu slot declarations", () => {
     const resourceKind = defineResourceKind({
@@ -42,15 +41,12 @@ describe("createWorkbenchExtensionMetadata", () => {
       ],
     });
     const runtime = normalizeExtensionSources([source(defineExtension({ resourceKinds: [resourceKind] }))]);
-
     const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
-
     expect(metadata.resourceKinds[0]?.menuSlots).toEqual([
       { id: "headerPrimary", placement: "header-primary", access: "owner", order: 20 },
       { id: "context", placement: "context-menu", access: "public" },
     ]);
   });
-
   test("publishes named connection settings metadata without credentials", () => {
     const connection = defineConnection({
       id: "control-plane",
@@ -62,9 +58,7 @@ describe("createWorkbenchExtensionMetadata", () => {
       check: { method: "GET", path: "/v1/workspaces/health" },
     });
     const runtime = normalizeExtensionSources([source(defineExtension({ connections: [connection] }))]);
-
     const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
-
     expect(metadata.connections).toEqual([
       {
         id: "pstdio.lab.connection.control-plane",
@@ -76,7 +70,6 @@ describe("createWorkbenchExtensionMetadata", () => {
       },
     ]);
   });
-
   test("publishes alpha.4 view, placement, and navigation arrays without renderer records", () => {
     const mode = defineMode({ id: "review", label: "Review", regions: ["main", "side"] });
     const open = defineCommand({ id: "open", title: "Open", run: async () => undefined });
@@ -91,19 +84,17 @@ describe("createWorkbenchExtensionMetadata", () => {
       title: "Tickets",
       path: "tickets",
       mode: mode.ref,
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          view: view.ref,
-          mountStrategy: "keep-mounted",
-          tab: {
-            query: async () => ({ label: "Current ticket" }),
-            refreshEvents: [{ kind: "event", id: "command.completed:open" }],
-          },
+      main: {
+        kind: "view",
+        view: view.ref,
+        cardinality: "one",
+        mountStrategy: "keep-mounted",
+        tab: {
+          query: async () => ({ label: "Current ticket" }),
+          refreshEvents: [{ kind: "event", id: "command.completed:open" }],
         },
-      ],
+      },
+      slots: [],
     });
     const runtime = normalizeExtensionSources([
       source(
@@ -129,10 +120,12 @@ describe("createWorkbenchExtensionMetadata", () => {
               mode: mode.ref,
               item: {
                 kind: "binding",
-                resourceKind: runKind.ref,
-                view: view.ref,
-                cardinality: "many",
-                add: { kind: "command", target: { command: open.ref, params: { source: "placement" } } },
+                binding: {
+                  kinds: [runKind.ref],
+                  view: view.ref,
+                  cardinality: "many",
+                  add: { kind: "command", target: { command: open.ref, params: { source: "placement" } } },
+                },
               },
               region: "side",
             }),
@@ -149,7 +142,6 @@ describe("createWorkbenchExtensionMetadata", () => {
         }),
       ),
     ]);
-
     const metadata = createWorkbenchExtensionMetadata({
       runtime,
       resolveWebview: ({ webview }) => ({
@@ -158,7 +150,6 @@ describe("createWorkbenchExtensionMetadata", () => {
         moduleUrl: "/extension-assets/tickets.js",
       }),
     });
-
     expect(metadata.views[0]).toMatchObject({
       id: "pstdio.lab.view.tickets",
       localId: "tickets",
@@ -182,20 +173,22 @@ describe("createWorkbenchExtensionMetadata", () => {
       id: "pstdio.lab.placement.runs.review",
       item: {
         kind: "binding",
-        cardinality: "many",
-        add: {
-          kind: "command",
-          target: {
-            command: { extensionId: "pstdio.lab", kind: "command", id: "open" },
-            params: { source: "placement" },
+        binding: {
+          cardinality: "many",
+          add: {
+            kind: "command",
+            target: {
+              command: { extensionId: "pstdio.lab", kind: "command", id: "open" },
+              params: { source: "placement" },
+            },
           },
         },
       },
     });
-    expect(metadata.pages[0]?.slots[0]).toMatchObject({
+    expect(metadata.pages[0]?.main).toMatchObject({
       mountStrategy: "keep-mounted",
       tab: {
-        queryHandlerId: "pstdio.lab.page.tickets.content.tab.query",
+        queryHandlerId: "pstdio.lab.page.tickets.$main.tab.query",
         refreshEventIds: ["command.completed:pstdio.lab.command.open"],
       },
     });
@@ -207,7 +200,6 @@ describe("createWorkbenchExtensionMetadata", () => {
     expect(metadata).not.toHaveProperty("kanbanRenderers");
   });
 });
-
 describe("createWorkbenchExtensionMetadata pages", () => {
   test("publishes pages and keeps page and panel targets explicit", () => {
     const view = defineView({
@@ -220,9 +212,20 @@ describe("createWorkbenchExtensionMetadata pages", () => {
       title: "Tickets",
       path: "tickets",
       mode: workbenchModes.project,
+      main: {
+        kind: "panels",
+        empty: view.ref,
+      },
       slots: [
-        { id: "list", role: "primary", region: "main", view: view.ref, subPanelsOnly: true },
-        { id: "tools", role: "auxiliary", region: "side", view: view.ref, presence: "open" },
+        {
+          id: "tools",
+          region: "side",
+          item: {
+            kind: "view",
+            view: view.ref,
+            presence: "open",
+          },
+        },
       ],
     });
     const runtime = normalizeExtensionSources([
@@ -248,20 +251,20 @@ describe("createWorkbenchExtensionMetadata pages", () => {
         }),
       ),
     ]);
-
     const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
-
     expect(metadata.pages[0]).toMatchObject({
       id: "pstdio.lab.page.tickets",
       mode: { extensionId: "pstdio", kind: "mode", id: "project" },
+      main: {
+        kind: "panels",
+        empty: { extensionId: "pstdio.lab", kind: "view", id: "tickets" },
+      },
       slots: [
         {
-          id: "list",
-          role: "primary",
-          view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" },
-          subPanelsOnly: true,
+          id: "tools",
+          region: "side",
+          item: { kind: "view", presence: "open", view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" } },
         },
-        { id: "tools", role: "auxiliary", view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" } },
       ],
     });
     expect(metadata.navigationItems[0]?.action).toEqual({
@@ -279,7 +282,6 @@ describe("createWorkbenchExtensionMetadata pages", () => {
       ],
     });
   });
-
   test("publishes page-owned navigation trees with normalized refs", () => {
     const tree = defineView({
       id: "files",
@@ -291,7 +293,12 @@ describe("createWorkbenchExtensionMetadata pages", () => {
       title: "Ticket",
       path: "ticket",
       mode: workbenchModes.project,
-      slots: [{ id: "content", role: "primary", region: "main", view: tree.ref }],
+      main: {
+        kind: "view",
+        view: tree.ref,
+        cardinality: "one",
+      },
+      slots: [],
     });
     const runtime = normalizeExtensionSources([
       source(
@@ -302,9 +309,7 @@ describe("createWorkbenchExtensionMetadata pages", () => {
         }),
       ),
     ]);
-
     const metadata = createWorkbenchExtensionMetadata({ runtime, resolveWebview: () => null });
-
     expect(metadata.navigationTrees).toEqual([
       {
         id: "pstdio.lab.navigation-tree.files",

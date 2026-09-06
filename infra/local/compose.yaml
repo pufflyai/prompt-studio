@@ -34,6 +34,7 @@ services:
         export PSTDIO_API_URL="$$api_url"
 
         bun install --frozen-lockfile
+        bun run --cwd packages/sdk build
         bun run pstdio:local:add-dev --install-dir /usr/local/bin --api-url "$$api_url"
 
         if [ "$$PSTDIO_DESKTOP_FLOW" = "1" ]; then

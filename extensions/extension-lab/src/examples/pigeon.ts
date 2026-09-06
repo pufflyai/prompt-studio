@@ -3,11 +3,11 @@ import { defineExample, webview } from "../definition";
 
 const views = [
   webview("pigeon-inbox", "Inbox"),
-  webview("pigeon-reader", "Message"),
+  webview("pigeon-reader", "Message", ["placement.close"]),
   webview("pigeon-folders", "Folders"),
   webview("pigeon-nav", "Pigeon"),
 ];
-const example = defineExample({
+export const example = defineExample({
   name: "pigeon",
   label: "Pigeon",
   icon: "Mail",
@@ -20,10 +20,16 @@ const example = defineExample({
   slots: [
     {
       id: "reader",
-      role: "auxiliary",
       region: "side",
-      binding: { kind: { kind: "resource-kind", id: "pigeon.thread" }, view: views[1].ref, cardinality: "one" },
       openOn: "page-resource",
+      item: {
+        kind: "binding",
+        binding: {
+          kinds: [{ kind: "resource-kind", id: "pigeon.thread" }],
+          view: views[1].ref,
+          cardinality: "one",
+        },
+      },
     },
   ],
   initialResource: false,

@@ -138,6 +138,12 @@ describe("core extension catalog", () => {
     expect(coreExtensionSkill.files.map((file: { path: string }) => file.path).sort()).toEqual([
       "SKILL.md",
       "references/examples.md",
+      "references/examples/commands.ts",
+      "references/examples/controls.ts",
+      "references/examples/pigeon.ts",
+      "references/examples/scribble.ts",
+      "references/examples/table-navigation.ts",
+      "references/examples/zipline.ts",
       "references/extension-api.md",
       "references/host-storage-and-workspaces.md",
       "references/pages.md",

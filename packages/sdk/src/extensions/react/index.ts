@@ -1,4 +1,4 @@
-import { type QueryKey, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { type QueryKey, type UseQueryResult, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface CommandQueryInput<TResult> {
   queryKey: QueryKey;
@@ -10,12 +10,13 @@ interface CommandQueryInput<TResult> {
 /** Reads server state via a typed client command, cached and deduped by react-query. */
 export const useCommandQuery = <TResult>(input: CommandQueryInput<TResult>) => {
   const { command, enabled, queryKey, staleTime } = input;
-  return useQuery({
+  const query: UseQueryResult<TResult> = useQuery<TResult>({
     queryKey,
     enabled,
     staleTime,
     queryFn: () => command(),
   });
+  return query;
 };
 
 interface CommandMutationInput<TParams, TResult> {

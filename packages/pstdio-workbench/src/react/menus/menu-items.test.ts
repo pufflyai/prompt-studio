@@ -3,11 +3,9 @@ import { createWorkbench, type MenuPath, workbenchRegionTabLeadingMenuPath } fro
 import { listWorkbenchMenuItems, listWorkbenchMenuItemsFromState } from "./menu-items";
 
 const menuPath = ["workbench", "top", "actions"] as const satisfies MenuPath;
-
 describe("listWorkbenchMenuItems", () => {
   test("resolves workbench region tab leading actions", () => {
     const workbench = createWorkbench();
-
     workbench.commands.registerCommand(
       { id: "workbench.terminal.open", label: "Open terminal", icon: "Plus" },
       { execute: () => undefined },
@@ -17,7 +15,6 @@ describe("listWorkbenchMenuItems", () => {
       label: "New terminal",
       icon: "Plus",
     });
-
     expect(listWorkbenchMenuItems(workbench, workbenchRegionTabLeadingMenuPath("secondary"))).toEqual([
       expect.objectContaining({
         commandId: "workbench.terminal.open",
@@ -26,10 +23,8 @@ describe("listWorkbenchMenuItems", () => {
       }),
     ]);
   });
-
   test("resolves visible menu actions into command-backed header items", () => {
     const workbench = createWorkbench();
-
     workbench.context.set("project.open", true);
     workbench.commands.registerCommand(
       { id: "project.download", label: "Download", icon: "Download" },
@@ -53,7 +48,6 @@ describe("listWorkbenchMenuItems", () => {
       label: "Closed project action",
       when: "!project.open",
     });
-
     expect(listWorkbenchMenuItems(workbench, menuPath)).toEqual([
       {
         id: "project.download:0",
@@ -66,25 +60,20 @@ describe("listWorkbenchMenuItems", () => {
       },
     ]);
   });
-
   test("marks disabled commands without dropping them", () => {
     const workbench = createWorkbench();
-
     workbench.commands.registerCommand(
       { id: "project.download", label: "Download" },
       { execute: () => undefined, isEnabled: () => false },
     );
     workbench.layout.registerMenuItem(menuPath, { commandId: "project.download" });
-
     expect(listWorkbenchMenuItems(workbench, menuPath)[0]).toMatchObject({
       commandId: "project.download",
       disabled: true,
     });
   });
-
   test("keeps a contextual overflow trigger label with the menu action", () => {
     const workbench = createWorkbench();
-
     workbench.commands.registerCommand(
       { id: "sessions.archive", label: "Archive session" },
       { execute: () => undefined },
@@ -94,16 +83,13 @@ describe("listWorkbenchMenuItems", () => {
       group: "overflow",
       overflowLabel: "Session actions",
     });
-
     expect(listWorkbenchMenuItems(workbench, menuPath)[0]).toMatchObject({
       commandId: "sessions.archive",
       overflowLabel: "Session actions",
     });
   });
-
   test("keeps read-only metadata on menu actions", () => {
     const workbench = createWorkbench();
-
     workbench.commands.registerCommand(
       { id: "app.info", label: "Prompt Studio", description: "v1.2.3" },
       { execute: () => undefined },
@@ -114,7 +100,6 @@ describe("listWorkbenchMenuItems", () => {
       iconSrc: "/logo.svg",
       readOnly: true,
     });
-
     expect(listWorkbenchMenuItems(workbench, menuPath)[0]).toMatchObject({
       commandId: "app.info",
       description: "v1.2.3",
@@ -123,10 +108,8 @@ describe("listWorkbenchMenuItems", () => {
       disabled: true,
     });
   });
-
   test("resolves from explicit store snapshots for reactive header rendering", () => {
     const workbench = createWorkbench();
-
     workbench.commands.registerCommand(
       { id: "sessions.archive", label: "Archive session" },
       { execute: () => undefined },
@@ -137,7 +120,6 @@ describe("listWorkbenchMenuItems", () => {
       overflowLabel: "Session actions",
       when: "sessionId",
     });
-
     expect(
       listWorkbenchMenuItemsFromState(
         {
@@ -148,7 +130,6 @@ describe("listWorkbenchMenuItems", () => {
         menuPath,
       ),
     ).toEqual([]);
-
     expect(
       listWorkbenchMenuItemsFromState(
         {
@@ -163,52 +144,53 @@ describe("listWorkbenchMenuItems", () => {
       overflowLabel: "Session actions",
     });
   });
-
   test("uses explicit resource context before ambient resource context", () => {
     const workbench = createWorkbench();
-
     workbench.commands.registerCommand({ id: "tickets.run", label: "Run ticket" }, { execute: () => undefined });
     workbench.layout.registerMenuItem(menuPath, {
       commandId: "tickets.run",
-      when: 'workbench.resource.kind == "ticket"',
+      when: 'workbench.resource.type == "ticket"',
     });
-
     expect(
       listWorkbenchMenuItemsFromState(
         {
           itemsByPath: workbench.layout.menuStore.getState().itemsByPath,
           commands: workbench.commands.store.getState().commands,
-          contextValues: { "workbench.resource.kind": "workspace" },
+          contextValues: { "workbench.resource.type": "workspace" },
         },
         menuPath,
-        { resource: { kind: "ticket", uri: "pstdio://ticket/PS-1", id: "PS-1" } },
+        {
+          resource: {
+            type: "ticket",
+            id: "PS-1",
+          },
+        },
       ).map((item) => item.label),
     ).toEqual(["Run ticket"]);
   });
-
   test("clears ambient resource context when an explicit resource context is provided", () => {
     const workbench = createWorkbench();
-
     workbench.commands.registerCommand({ id: "tickets.run", label: "Run ticket" }, { execute: () => undefined });
     workbench.layout.registerMenuItem(menuPath, {
       commandId: "tickets.run",
-      when: 'workbench.resource.kind == "ticket" || workbench.resource.metadata.status == "ready"',
+      when: 'workbench.resource.type == "ticket" || workbench.resource.metadata.status == "ready"',
     });
-
     const state = {
       itemsByPath: workbench.layout.menuStore.getState().itemsByPath,
       commands: workbench.commands.store.getState().commands,
       contextValues: {
-        "workbench.resource.kind": "ticket",
+        "workbench.resource.type": "ticket",
         "workbench.resource.metadata.status": "ready",
       },
     };
-
     expect(listWorkbenchMenuItemsFromState(state, menuPath).map((item) => item.label)).toEqual(["Run ticket"]);
     expect(listWorkbenchMenuItemsFromState(state, menuPath, { resource: undefined })).toEqual([]);
     expect(
       listWorkbenchMenuItemsFromState(state, menuPath, {
-        resource: { kind: "workspace", uri: "pstdio://workspace/workspace-1", id: "workspace-1" },
+        resource: {
+          type: "workspace",
+          id: "workspace-1",
+        },
       }),
     ).toEqual([]);
   });

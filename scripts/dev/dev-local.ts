@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { resolveWorkingTreeDefaultExtensions } from "./working-tree-extensions";
@@ -29,6 +29,12 @@ const waitForExit = (child: ChildProcess) =>
 const main = async () => {
   const repoRoot = resolve(import.meta.dirname, "../..");
   const env = resolveLocalDevelopmentEnv(repoRoot);
+  const sdkBuild = spawnSync("bun", ["run", "--cwd", "packages/sdk", "build"], {
+    cwd: repoRoot,
+    env,
+    stdio: "inherit",
+  });
+  if (sdkBuild.status !== 0) throw new Error("SDK build failed before local development startup.");
   const children = [
     spawn(
       "bun",

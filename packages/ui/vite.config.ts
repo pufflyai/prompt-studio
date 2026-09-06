@@ -47,6 +47,7 @@ export default defineConfig({
     }),
     dts({
       tsconfigPath: "./tsconfig.json",
+      insertTypesEntry: true,
       exclude: ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.stories.tsx"],
       afterDiagnostic: () => {},
     }),

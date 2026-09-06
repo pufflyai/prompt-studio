@@ -9,7 +9,6 @@ import { createWorkbench } from "./workbench-core";
 
 const startRef: PageRef = { extensionId: "pstdio", kind: "page", id: "start" };
 const ticketsRef: PageRef = { extensionId: "acme.planner", kind: "page", id: "tickets" };
-
 const createBrowser = () => {
   let current: WorkbenchPageBrowserEntry = { url: "/projects/p1" };
   const pushes: WorkbenchPageBrowserEntry[] = [];
@@ -34,7 +33,6 @@ const createBrowser = () => {
   };
   return { browser, pushes, replacements };
 };
-
 const createPersistence = () => {
   const values = new Map<string, PageLocation>();
   const persistence: WorkbenchPageLocationPersistence = {
@@ -43,7 +41,6 @@ const createPersistence = () => {
   };
   return { persistence, values };
 };
-
 const createHarness = () => {
   const browser = createBrowser();
   const persistence = createPersistence();
@@ -69,7 +66,15 @@ const createHarness = () => {
     title: "Start",
     path: "",
     modeId: "project",
-    slots: [{ id: "content", role: "primary", region: "main", viewId: "start-view" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "start-view",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pages.registerPage({
     id: "tickets",
@@ -78,21 +83,26 @@ const createHarness = () => {
     path: "tickets",
     modeId: "project",
     parentId: "start",
-    slots: [{ id: "content", role: "primary", region: "main", viewId: "tickets-view" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "tickets-view",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   return { browser, persistence, workbench };
 };
-
 describe("workbench core page navigation", () => {
   test("owns page location navigation in the live core", () => {
     const harness = createHarness();
-
     harness.workbench.pageLocations.boot("p1");
     harness.workbench.pageLocations.navigate({ kind: "page", page: ticketsRef });
-
     expect(harness.workbench.pages.store.getState().activePageId).toBe("tickets");
     expect(harness.workbench.layout.getLayout().regions.main.widgets).toEqual([
-      expect.objectContaining({ contributionId: "workbench.page-placement.tickets.content" }),
+      expect.objectContaining({ contributionId: "workbench.page-placement.tickets.%24main" }),
     ]);
     expect(harness.browser.pushes.at(-1)?.url).toBe("/projects/p1/extensions/acme.planner/tickets");
     expect(harness.persistence.values.get("p1")?.page).toEqual(ticketsRef);

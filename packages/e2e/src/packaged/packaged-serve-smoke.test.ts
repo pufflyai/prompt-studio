@@ -47,7 +47,8 @@ const expectExamplePages = (metadata: WorkbenchExtensionMetadata) => {
       expect.objectContaining({
         extensionId: "pstdio.extension-lab",
         localId: name,
-        slots: [expect.objectContaining({ role: "primary", view: expect.any(Object) })],
+        main: { kind: "view", view: expect.any(Object), cardinality: "one" },
+        slots: [],
       }),
     );
     expect(metadata.pages).toContainEqual(
@@ -55,10 +56,20 @@ const expectExamplePages = (metadata: WorkbenchExtensionMetadata) => {
         extensionId: "pstdio.extension-lab",
         localId: `${name}-resource`,
         parent: { extensionId: "pstdio.extension-lab", kind: "page", id: name },
-        slots: expect.arrayContaining([expect.objectContaining({ role: "primary", binding: expect.any(Object) })]),
+        resource: { kinds: [expect.any(Object)] },
+        main: { kind: "view", view: expect.any(Object), cardinality: "one" },
       }),
     );
   }
+  expect(metadata.views).toContainEqual(
+    expect.objectContaining({
+      localId: "pigeon-reader",
+      body: expect.objectContaining({
+        kind: "webview",
+        webview: expect.objectContaining({ capabilities: expect.arrayContaining(["placement.close"]) }),
+      }),
+    }),
+  );
 };
 
 describe("packaged pstdio — self-hosted serve", () => {

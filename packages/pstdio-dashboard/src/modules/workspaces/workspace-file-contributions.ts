@@ -13,18 +13,21 @@ import {
 import { loadWorkspaceFileEntries, type WorkspaceFileTreeActions } from "./workspace-file-tree";
 
 const OPEN_WORKSPACE_FILE_COMMAND = "dashboard.workspace.open-file";
-
 const filePathArg = (rawArgs: unknown) => {
-  const path = (rawArgs as { path?: unknown } | undefined)?.path;
+  const path = (
+    rawArgs as
+      | {
+          path?: unknown;
+        }
+      | undefined
+  )?.path;
   if (typeof path !== "string" || !path.trim()) throw new Error("File path is required.");
   return path.trim();
 };
-
 const refreshWorkspaceFiles = async (ctx: WorkbenchModuleContext, workspaceId: string) => {
   await invalidateWorkspaceFileData(dashboardQueryClient, workspaceId);
   ctx.views.refreshView(dashboardWidgetIds.workspaceFileTree);
 };
-
 export const createWorkspaceFile = async (ctx: WorkbenchModuleContext, resource: ResourceRef, rawArgs: unknown) => {
   const workspaceId = workspaceIdOf(resource);
   if (!workspaceId) throw new Error("Workspace details are missing.");
@@ -35,7 +38,6 @@ export const createWorkspaceFile = async (ctx: WorkbenchModuleContext, resource:
   ctx.treeViews.setSelectedNode(dashboardWidgetIds.workspaceFileTree, path);
   openWorkspacesPage(ctx, workspaceFileResource(resource, path));
 };
-
 const createWorkspaceDirectory = async (ctx: WorkbenchModuleContext, resource: ResourceRef, path: string) => {
   const workspaceId = workspaceIdOf(resource);
   if (!workspaceId) throw new Error("Workspace details are missing.");
@@ -43,13 +45,11 @@ const createWorkspaceDirectory = async (ctx: WorkbenchModuleContext, resource: R
   await refreshWorkspaceFiles(ctx, workspaceId);
   ctx.treeViews.setNodeExpanded(dashboardWidgetIds.workspaceFileTree, path, true);
 };
-
 const remapEntryPath = (path: string | undefined, sourcePath: string, destinationPath: string) => {
   if (path === sourcePath) return destinationPath;
   if (path?.startsWith(`${sourcePath}/`)) return `${destinationPath}${path.slice(sourcePath.length)}`;
   return path;
 };
-
 const moveWorkspaceEntry = async (
   ctx: WorkbenchModuleContext,
   resource: ResourceRef,
@@ -69,7 +69,6 @@ const moveWorkspaceEntry = async (
   const movedExpandedPaths = expandedSourcePaths
     .map((path) => remapEntryPath(path, sourcePath, destinationPath))
     .filter((path): path is string => Boolean(path));
-
   await getApiClient().workspaces.moveEntry(workspaceId, sourcePath, destinationPath);
   dashboardQueryClient.removeQueries({
     predicate: (query) => {
@@ -99,16 +98,20 @@ const moveWorkspaceEntry = async (
     openWorkspacesPage(ctx, workspaceFileResource(resource, movedActivePath));
   }
 };
-
 const entryNameArg = (rawArgs: unknown, type: "file" | "directory") => {
-  const value = (rawArgs as { name?: unknown } | undefined)?.name;
+  const value = (
+    rawArgs as
+      | {
+          name?: unknown;
+        }
+      | undefined
+  )?.name;
   const name = typeof value === "string" ? value.trim() : "";
   if (!name || name === "." || name === ".." || name.includes("/") || name.includes("\\")) {
     throw new Error(`Enter a ${type === "directory" ? "folder" : "file"} name without folders.`);
   }
   return name;
 };
-
 export const deleteWorkspaceEntry = async (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   const workspaceId = workspaceIdOf(resource);
   const path = workspaceMetadataString(resource, "workspaceDeletePath");
@@ -138,11 +141,16 @@ export const deleteWorkspaceEntry = async (ctx: WorkbenchModuleContext, resource
   }
   ctx.notifications.show({ level: "success", title: `Deleted ${path}` });
 };
-
 const registerWorkspaceFileTree = (
   ctx: WorkbenchModuleContext,
   treeActions: WorkspaceFileTreeActions,
-  pendingCreation: () => { workspaceId: string; parentPath: string; type: "file" | "directory" } | undefined,
+  pendingCreation: () =>
+    | {
+        workspaceId: string;
+        parentPath: string;
+        type: "file" | "directory";
+      }
+    | undefined,
 ) => {
   ctx.views.registerView({
     id: dashboardWidgetIds.workspaceFileTree,
@@ -172,7 +180,6 @@ const registerWorkspaceFileTree = (
     },
   });
 };
-
 const registerWorkspaceFileRenderer = (ctx: WorkbenchModuleContext) => {
   ctx.views.registerView({
     id: dashboardWidgetIds.workspaceFiles,
@@ -212,9 +219,14 @@ const registerWorkspaceFileRenderer = (ctx: WorkbenchModuleContext) => {
     },
   });
 };
-
 export const registerWorkspaceFileContributions = (ctx: WorkbenchModuleContext) => {
-  let pendingCreation: { workspaceId: string; parentPath: string; type: "file" | "directory" } | undefined;
+  let pendingCreation:
+    | {
+        workspaceId: string;
+        parentPath: string;
+        type: "file" | "directory";
+      }
+    | undefined;
   const treeActions: WorkspaceFileTreeActions = {
     beginCreate: (resource, parentPath, type) => {
       const workspaceId = workspaceIdOf(resource);
@@ -249,20 +261,24 @@ export const registerWorkspaceFileContributions = (ctx: WorkbenchModuleContext) 
       return moveWorkspaceEntry(ctx, resource, sourcePath, destinationPath);
     },
   };
-
   ctx.commands.registerCommand(
     { id: OPEN_WORKSPACE_FILE_COMMAND, label: "Open workspace file", category: "Workspace" },
     {
       execute: async (rawArgs) => {
-        const path = (rawArgs as { path?: unknown } | undefined)?.path;
+        const path = (
+          rawArgs as
+            | {
+                path?: unknown;
+              }
+            | undefined
+        )?.path;
         const resource = ctx.getPrimaryResource();
-        if (typeof path !== "string" || resource?.kind !== "workspace") return;
+        if (typeof path !== "string" || resource?.type !== "workspace") return;
         ctx.treeViews.setSelectedNode(dashboardWidgetIds.workspaceFileTree, path);
         return openWorkspacesPage(ctx, workspaceFileResource(resource, path));
       },
     },
   );
-
   registerWorkspaceFileTree(ctx, treeActions, () => pendingCreation);
   registerWorkspaceFileRenderer(ctx);
 };

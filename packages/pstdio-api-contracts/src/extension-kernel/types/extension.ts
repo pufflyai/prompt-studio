@@ -39,11 +39,11 @@ import type {
 /** Current host extension API version. `engines.pstdio` in package.json is a semver range checked against this. */
 // While the API is unstable the version carries an `-alpha.N` suffix and extensions must
 // declare it exactly. Bump the alpha in the same change that breaks an extension contract.
-export const EXTENSION_API_VERSION = "1.0.0-alpha.9";
+export const EXTENSION_API_VERSION = "1.0.0-alpha.10";
 
 type SchemaParams<TSchema extends ParamObjectSchema | undefined> = TSchema extends ParamObjectSchema
   ? ParamsOf<TSchema>
-  : Struct;
+  : Record<string, never>;
 
 export interface WorkspaceProviderRef {
   version: number;
@@ -126,6 +126,7 @@ export interface CommandDefinition<
   TResult = unknown,
   TSettings extends Record<string, unknown> = Record<string, unknown>,
 > extends ContributionDefinition<"command"> {
+  readonly ref: CommandRef<SchemaParams<TSchema>, TResult>;
   title: Localizable<string>;
   description?: Localizable<string>;
   params?: TSchema;

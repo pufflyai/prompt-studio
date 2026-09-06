@@ -91,7 +91,7 @@ const viewItems = (props: ContributionExplorerProps) => {
         workbench,
         bench,
         view.localId,
-        isViewForResourceKind(bench.metadata, view.localId, resource.kind) ? resource : undefined,
+        isViewForResourceKind(bench.metadata, view.localId, resource.type) ? resource : undefined,
       ),
   }));
 };
@@ -200,7 +200,7 @@ const treeViewItems = (props: ContributionExplorerProps) => {
           workbench,
           bench,
           view.localId,
-          isViewForResourceKind(bench.metadata, view.localId, resource.kind) ? resource : undefined,
+          isViewForResourceKind(bench.metadata, view.localId, resource.type) ? resource : undefined,
         ),
     }));
 };
@@ -288,7 +288,7 @@ export const ContributionExplorer = (props: ContributionExplorerProps) => {
       ))}
       <Box flex="1" minW="3" />
       <ContributionButton
-        label={resource.id ?? resource.uri}
+        label={resource.id}
         onClick={() => void navigateResourcePreview(workbench, props.bench, resource)}
       />
     </Box>

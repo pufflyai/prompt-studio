@@ -4,15 +4,14 @@ import type {
   WorkbenchPageRegistry,
   WorkbenchPageResourceCodec,
 } from "../../registries/pages/page-registry";
+import { getWorkbenchPageRegistryInternals } from "../../registries/pages/page-registry-internals";
 import { createDisposable } from "../../shared/disposable";
 import type { WorkbenchBreadcrumbController, WorkbenchBreadcrumbItem } from "../breadcrumbs/breadcrumb-registry";
 import type { WorkbenchPageLocationController } from "./page-location-controller";
 
 const pageRefKey = (ref: PageRef) => `${ref.extensionId ?? ""}:${ref.id}`;
-
 const locationsFromRoot = (location: PageLocation): PageLocation[] =>
   location.parent ? [...locationsFromRoot(location.parent), location] : [location];
-
 const targetFromLocation = (location: PageLocation): NavigationTargetPage => ({
   kind: "page",
   page: location.page,
@@ -20,27 +19,11 @@ const targetFromLocation = (location: PageLocation): NavigationTargetPage => ({
   ...(location.section ? { section: location.section } : {}),
   ...(location.parent ? { parent: targetFromLocation(location.parent) } : {}),
 });
-
 const pageTitle = (page: WorkbenchPageContribution) => {
   if (page.title === undefined) return page.ref.id;
   if (!isLocalizedString(page.title)) return page.title;
   return page.title.default ?? page.title.$l10n;
 };
-
-const toBreadcrumbResource = (
-  resource: NonNullable<PageLocation["resource"]>,
-  resources: WorkbenchPageResourceCodec,
-) => {
-  const normalized = resources.normalize(resource);
-  return {
-    kind: normalized.type,
-    uri: resources.toUri(normalized),
-    id: normalized.id,
-    label: normalized.label,
-    metadata: normalized.metadata,
-  };
-};
-
 export const createWorkbenchPageBreadcrumbItems = (input: {
   location: PageLocation;
   pages: readonly WorkbenchPageContribution[];
@@ -49,13 +32,12 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
 }): WorkbenchBreadcrumbItem[] => {
   const pagesByRef = new Map(input.pages.map((page) => [pageRefKey(page.ref), page]));
   const locations = locationsFromRoot(input.location);
-
   return locations.map((location, index) => {
     const page = pagesByRef.get(pageRefKey(location.page));
     const item: WorkbenchBreadcrumbItem = {
       title: location.resource?.label ?? (page ? pageTitle(page) : location.page.id),
       icon: page?.icon,
-      ...(location.resource ? { resource: toBreadcrumbResource(location.resource, input.resources) } : {}),
+      ...(location.resource ? { resource: input.resources.normalize(location.resource) } : {}),
     };
     if (index < locations.length - 1) {
       item.onClick = () => input.navigate(targetFromLocation(location));
@@ -63,7 +45,6 @@ export const createWorkbenchPageBreadcrumbItems = (input: {
     return item;
   });
 };
-
 export const setWorkbenchPageBreadcrumbs = (input: {
   breadcrumbs: WorkbenchBreadcrumbController;
   location: PageLocation;
@@ -71,14 +52,17 @@ export const setWorkbenchPageBreadcrumbs = (input: {
   resources: WorkbenchPageResourceCodec;
   navigate(target: NavigationTargetPage): void;
 }) => input.breadcrumbs.setItems(createWorkbenchPageBreadcrumbItems(input));
-
 export const connectWorkbenchPageBreadcrumbs = (input: {
   breadcrumbs: WorkbenchBreadcrumbController;
   locations: WorkbenchPageLocationController;
   pages: WorkbenchPageRegistry<unknown>;
   resources: WorkbenchPageResourceCodec;
 }) => {
-  let ownedBreadcrumbs: { dispose(): void } | undefined;
+  let ownedBreadcrumbs:
+    | {
+        dispose(): void;
+      }
+    | undefined;
   const sync = () => {
     const state = input.pages.store.getState();
     if (!state.activePageId || !state.location) {
@@ -86,7 +70,6 @@ export const connectWorkbenchPageBreadcrumbs = (input: {
       ownedBreadcrumbs = undefined;
       return;
     }
-
     ownedBreadcrumbs?.dispose();
     ownedBreadcrumbs = setWorkbenchPageBreadcrumbs({
       breadcrumbs: input.breadcrumbs,
@@ -98,11 +81,10 @@ export const connectWorkbenchPageBreadcrumbs = (input: {
       },
     });
   };
-
-  const subscriptions = [input.pages.store.subscribe(sync)];
+  const subscription = getWorkbenchPageRegistryInternals(input.pages).onDidCommit(sync);
   sync();
   return createDisposable(() => {
-    for (const unsubscribe of subscriptions) unsubscribe();
+    subscription.dispose();
     ownedBreadcrumbs?.dispose();
   });
 };

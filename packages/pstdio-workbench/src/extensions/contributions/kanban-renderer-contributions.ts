@@ -3,15 +3,12 @@ import { renderBadgeListDisplay } from "@pstdio/ui/kanban-renderer";
 import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
-import type {
-  AttributeDescriptor,
-  Disposable,
-  KanbanRendererContribution,
-  KanbanRendererCreateSubmission,
-  KanbanRendererQueryState,
-  ResourceRef,
-} from "../../core";
+import type { Disposable, KanbanRendererCreateSubmission, KanbanRendererQueryState, ResourceRef } from "../../core";
 import { WorkbenchIcon } from "../../react";
+import type {
+  ReactAttributeDescriptor as AttributeDescriptor,
+  ReactKanbanRendererContribution as KanbanRendererContribution,
+} from "../../react/renderers/kanban/kanban-presentation";
 import { toWorkbenchNavigationTargetResult } from "../host/extension-navigation-target";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import {

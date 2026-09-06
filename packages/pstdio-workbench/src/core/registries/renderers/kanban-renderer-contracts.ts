@@ -1,5 +1,4 @@
 import type { KanbanRendererAttributeDisplay } from "@pstdio/sdk/extensions";
-import type { ComponentType, ReactNode } from "react";
 
 /**
  * Core-owned contracts for kanban renderer contributions. @pstdio/ui's
@@ -46,7 +45,7 @@ export type AttributeKind = AttributeType["kind"];
 
 export type AttributeDisplayDescriptor = KanbanRendererAttributeDisplay;
 
-export interface AttributeDescriptor {
+export interface AttributeDescriptor<TNode = unknown> {
   id: string;
   label: string;
   type: AttributeType;
@@ -56,7 +55,7 @@ export interface AttributeDescriptor {
   displayable?: boolean;
   editable?: boolean;
   display?: AttributeDisplayDescriptor;
-  render?: (value: unknown, row: KanbanRendererRow) => ReactNode;
+  render?: (value: unknown, row: KanbanRendererRow) => TNode;
   compare?: (a: unknown, b: unknown) => number;
 }
 
@@ -64,9 +63,9 @@ export interface AttributeDescriptor {
  * Reactive source for an entire attribute schema. Lets a contribution
  * add/remove/edit attributes at runtime without re-registering.
  */
-export interface AttributesSource {
+export interface AttributesSource<TNode = unknown> {
   subscribe: (listener: () => void) => () => void;
-  getSnapshot: () => AttributeDescriptor[];
+  getSnapshot: () => AttributeDescriptor<TNode>[];
 }
 
 export interface KanbanRendererRow {
@@ -153,29 +152,29 @@ export interface KanbanRendererCreateSubmission {
   files: File[];
 }
 
-export interface BoardColumnAction {
+export interface BoardColumnAction<TIcon = unknown> {
   id: string;
   label: string;
-  icon: ComponentType<{ size?: number | string }>;
+  icon: TIcon;
 }
 
 /** Board-column behavior and menu configuration for a resolved column group. */
-export interface BoardColumnConfig {
+export interface BoardColumnConfig<TIcon = unknown> {
   /** Color palette token used for the column header and group badges. */
   color?: string;
   canDragIn?: boolean;
   canDragOut?: boolean;
   canCreate?: boolean;
-  actions?: BoardColumnAction[];
+  actions?: BoardColumnAction<TIcon>[];
 }
 
 /** Row-level context menu action surfaced by the renderer. */
-export interface ResourceContextAction {
+export interface ResourceContextAction<TNode = unknown> {
   key: string;
   label: string;
   onClick: () => Promise<void> | void;
   isDisabled?: boolean;
-  icon?: ReactNode;
-  endContent?: ReactNode;
+  icon?: TNode;
+  endContent?: TNode;
   separatorBefore?: boolean;
 }

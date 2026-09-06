@@ -7,31 +7,25 @@ const ticketPlacement = (projectId: string): WorkbenchPanelInstance => ({
   panelId: "pstdio-planner.tickets",
   closable: false,
   resource: {
-    kind: "dashboard-view",
-    uri: "pstdio://extension-resource/dashboard-view/pstdio-planner.tickets",
+    type: "dashboard-view",
     id: "pstdio-planner.tickets",
     metadata: { favoriteScope: { scope: "project", projectId } },
   },
 });
-
 describe("resolveKanbanRendererStorageKey", () => {
   test("separates persisted board state for project-scoped resources", () => {
     const firstProjectKey = resolveKanbanRendererStorageKey("pstdio-planner.tickets", ticketPlacement("project-1"));
     const secondProjectKey = resolveKanbanRendererStorageKey("pstdio-planner.tickets", ticketPlacement("project-2"));
-
     expect(firstProjectKey).not.toBe(secondProjectKey);
   });
-
   test("separates a placement-free panel using the workbench project scope", () => {
     const placement = {
       instanceId: "pstdio-planner.tickets",
       panelId: "pstdio-planner.tickets",
       closable: false,
     } satisfies WorkbenchPanelInstance;
-
     const firstProjectKey = resolveKanbanRendererStorageKey("pstdio-planner.tickets", placement, "project-1");
     const secondProjectKey = resolveKanbanRendererStorageKey("pstdio-planner.tickets", placement, "project-2");
-
     expect(firstProjectKey).not.toBe(secondProjectKey);
   });
 });

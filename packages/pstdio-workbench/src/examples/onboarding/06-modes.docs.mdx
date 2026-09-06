@@ -44,7 +44,7 @@ The outer setup prepares the workbench:
   session tree lists only the current session. `getChildren` returns an empty list because each tree is flat.
 - `workbench.modePlacements.registerPlacement(...)` places the tree. `id` is the registration identity. `ref` is the
   public placement reference. `modeId` names the owning mode, so the placement appears only while that mode is active
-  and is removed when the mode changes. `item.kind: "view"` with `item.viewId` renders one static View.
+  and is removed when the mode changes. `item.kind: "view"` with `item.view` renders one static View.
   `item.presence: "fixed"` keeps it open while the mode is active; the user cannot close it. `region: "sidenav"` and
   `movableTo: ["sidenav"]` keep it in the Sidenav.
 
@@ -57,11 +57,8 @@ The outer setup prepares the workbench:
 - `workbench.pages.registerPage(...)` registers the page. `id` is the registration identity. `ref` is the public page
   reference that navigation targets use. `title` is the page name. `path` is the URL path segment. `modeId` names the
   owning mode, so opening the page also activates that mode.
-- `slots` declares the placements the page owns. The primary slot has `role: "primary"` in `region: "main"` with the
-  `viewId` of the page content. It is always present while the page is open. The auxiliary slot has
-  `role: "auxiliary"` in `region: "sidenav"` with its own `viewId` and `presence: "open"`. Presence uses the same
-  values as placements: `"open"` starts open and the user may close it, and a saved user choice wins on the next
-  visit.
+- `main: { kind: "view", view, cardinality: "one" }` renders the page content.
+- `slots` contains the page Sidenav panel with `item: { kind: "view", view, presence: "open" }`. It starts open and the user may close it. Saved user choices apply on the next visit.
 
 Mode placements are removed when the mode changes. Page slots are removed when the page changes. In the additive
 Sidenav, mode placements appear before page placements. User layout changes may reorder content inside one ownership

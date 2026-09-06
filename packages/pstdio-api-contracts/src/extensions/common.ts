@@ -1,6 +1,11 @@
 import { z } from "zod";
+import type { JsonObject } from "../extension-kernel/types/json";
 
 export const jsonObjectSchema = z.record(z.string(), z.unknown());
+export const serializableJsonObjectSchema: z.ZodType<JsonObject> = z.record(z.string(), z.json()).meta({
+  type: "object",
+  additionalProperties: true,
+});
 export const localizedStringSchema = z.object({ $l10n: z.string(), default: z.string().optional() });
 export const localizableStringSchema = z.union([z.string(), localizedStringSchema]);
 

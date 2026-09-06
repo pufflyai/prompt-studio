@@ -6,7 +6,8 @@
     "url": "https://github.com/pufflyai/prompt-studio"
   },
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "directory": ".publish"
   },
   "files": [
     "dist"
@@ -39,7 +40,7 @@
     }
   },
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && bun ../../scripts/release/stage-package.ts .",
     "typecheck": "tsc --noEmit",
     "lint": "bun run typecheck && biome check .",
     "format": "biome check --write .",
@@ -64,6 +65,7 @@
     "@tanstack/react-hotkeys": "0.10.0",
     "lucide-react": "^0.556.0",
     "rimless": "0.8.2",
+    "zod": "^4.1.12",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

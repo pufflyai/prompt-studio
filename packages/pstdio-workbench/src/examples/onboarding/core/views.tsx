@@ -1,6 +1,5 @@
 import { Code, Stack, Text } from "@chakra-ui/react";
 import { createWorkbench } from "../../../core";
-
 export const createViewsWorkbench = () => {
   const workbench = createWorkbench();
   workbench.registerModule({
@@ -24,7 +23,6 @@ export const createViewsWorkbench = () => {
           ),
         },
       });
-
       // One View can back many placements. Each visible instance gets its own
       // render input describing where it is mounted.
       ctx.views.registerView({
@@ -45,21 +43,41 @@ export const createViewsWorkbench = () => {
           ),
         },
       });
-
       // Placements decide where a View appears and how it may open and close.
       ctx.shellPlacements.registerPlacement({
         id: "host.guide",
-        item: { kind: "view", viewId: "host.guide", presence: "fixed" },
+        item: {
+          kind: "view",
+          presence: "fixed",
+          view: {
+            kind: "view",
+            id: "host.guide",
+          },
+        },
         region: "main",
       });
       ctx.shellPlacements.registerPlacement({
         id: "host.instance-info.side",
-        item: { kind: "view", viewId: "host.instance-info", presence: "open" },
+        item: {
+          kind: "view",
+          presence: "open",
+          view: {
+            kind: "view",
+            id: "host.instance-info",
+          },
+        },
         region: "side",
       });
       ctx.shellPlacements.registerPlacement({
         id: "host.instance-info.secondary",
-        item: { kind: "view", viewId: "host.instance-info", presence: "closed" },
+        item: {
+          kind: "view",
+          presence: "closed",
+          view: {
+            kind: "view",
+            id: "host.instance-info",
+          },
+        },
         region: "secondary",
       });
     },

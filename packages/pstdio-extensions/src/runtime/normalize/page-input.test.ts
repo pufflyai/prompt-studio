@@ -25,16 +25,13 @@ const source = (definition: LoadedExtensionSource["definition"]): LoadedExtensio
   },
   definition,
 });
-
 const pageView = defineView({
   id: "page",
   title: "Page",
   body: { kind: "webview", entry: packageAsset("./page.tsx", "file:///fake/lab/") },
 });
-
 const diagnosticsFor = (definition: LoadedExtensionSource["definition"]) =>
   normalizeExtensionSources([source(definition)]).diagnostics;
-
 describe("page input validation", () => {
   test("rejects malformed mode theme and chrome references", () => {
     for (const extra of [
@@ -52,7 +49,6 @@ describe("page input validation", () => {
       expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("invalid_mode");
     }
   });
-
   test("rejects a mode without declared regions", () => {
     const definition = defineExtension({
       modes: [
@@ -63,13 +59,10 @@ describe("page input validation", () => {
         },
       ] as never,
     });
-
     const runtime = normalizeExtensionSources([source(definition)]);
-
     expect(runtime.modes).toEqual([]);
     expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("invalid_mode");
   });
-
   test("requires declared regions on extension modes used by pages", () => {
     const mode = defineMode({ id: "review", label: "Review", regions: ["main"] });
     const page = definePage({
@@ -77,31 +70,42 @@ describe("page input validation", () => {
       title: "Review",
       path: "review",
       mode: mode.ref,
+      main: {
+        kind: "view",
+        view: pageView.ref,
+        cardinality: "one",
+      },
       slots: [
-        { id: "content", role: "primary", region: "main", view: pageView.ref },
-        { id: "tools", role: "auxiliary", region: "side", view: pageView.ref, presence: "open" },
+        {
+          id: "tools",
+          region: "side",
+          item: {
+            kind: "view",
+            view: pageView.ref,
+            presence: "open",
+          },
+        },
       ],
     });
-
     const diagnostics = diagnosticsFor(defineExtension({ modes: [mode], views: [pageView], pages: [page] }));
-
     expect(diagnostics.filter((diagnostic) => diagnostic.code === "extension_page_region_invalid")).toHaveLength(1);
   });
-
   test("rejects invalid slot ids with the shared contribution id grammar", () => {
     const page = definePage({
       id: "bad-slot-id",
       title: "Bad slot id",
       path: "bad-slot-id",
       mode: workbenchModes.project,
-      slots: [{ id: "Bad Slot", role: "primary", region: "main", view: pageView.ref }],
+      main: {
+        kind: "view",
+        view: pageView.ref,
+        cardinality: "one",
+      },
+      slots: [{ id: "badSlotId", region: "side", item: { kind: "view", view: pageView.ref, presence: "open" } }],
     });
-
     const diagnostics = diagnosticsFor(defineExtension({ views: [pageView], pages: [page] }));
-
     expect(diagnostics.filter((diagnostic) => diagnostic.code === "extension_page_slot_id_invalid")).toHaveLength(1);
   });
-
   test("reports a malformed page instead of throwing during normalization", () => {
     const definition = defineExtension({
       pages: [
@@ -116,10 +120,8 @@ describe("page input validation", () => {
         },
       ] as never,
     });
-
     expect(diagnosticsFor(definition).map((diagnostic) => diagnostic.code)).toContain("invalid_page");
   });
-
   test("reports malformed page fields instead of throwing during normalization", () => {
     const definition = defineExtension({
       pages: [
@@ -129,18 +131,20 @@ describe("page input validation", () => {
           title: "Broken mode",
           path: "broken-mode",
           mode: null,
-          slots: [{ id: "content", role: "primary", region: "main", view: pageView.ref }],
           panels: {},
+          main: {
+            kind: "view",
+            view: pageView.ref,
+            cardinality: "one",
+          },
+          slots: [],
         },
       ] as never,
     });
-
     const runtime = normalizeExtensionSources([source(definition)]);
-
     expect(runtime.pages).toEqual([]);
     expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("invalid_page");
   });
-
   test("reports a malformed page slot instead of throwing during normalization", () => {
     const definition = defineExtension({
       pages: [
@@ -150,15 +154,14 @@ describe("page input validation", () => {
           title: "Broken slot",
           path: "broken-slot",
           mode: workbenchModes.project,
+          main: { kind: "panels", empty: pageView.ref },
           slots: [null],
           panels: {},
         },
       ] as never,
     });
-
     expect(diagnosticsFor(definition).map((diagnostic) => diagnostic.code)).toContain("invalid_page_slot");
   });
-
   test("rejects invalid page slot field values", () => {
     const definition = defineExtension({
       pages: [
@@ -168,16 +171,15 @@ describe("page input validation", () => {
           title: "Broken slot fields",
           path: "broken-slot-fields",
           mode: workbenchModes.project,
-          slots: [{ id: "content", role: "other", region: "main", view: pageView.ref }],
+          main: { kind: "panels", empty: pageView.ref },
+          slots: [{ id: "content", region: "other", item: { kind: "view", view: pageView.ref, presence: "open" } }],
           panels: {},
         },
       ] as never,
     });
-
     expect(diagnosticsFor(definition).map((diagnostic) => diagnostic.code)).toContain("invalid_page_slot");
   });
-
-  test("rejects a page slot with a non-callable tab query", () => {
+  test("rejects a Main view with a non-callable tab query", () => {
     const definition = defineExtension({
       views: [pageView],
       pages: [
@@ -187,20 +189,17 @@ describe("page input validation", () => {
           title: "Broken tab",
           path: "broken-tab",
           mode: workbenchModes.project,
-          slots: [
-            {
-              id: "content",
-              role: "primary",
-              region: "main",
-              view: pageView.ref,
-              tab: { query: "not-a-function" },
-            },
-          ],
           panels: {},
+          main: {
+            kind: "view",
+            view: pageView.ref,
+            cardinality: "one",
+            tab: { query: "not-a-function" },
+          },
+          slots: [],
         },
       ] as never,
     });
-
-    expect(diagnosticsFor(definition).map((diagnostic) => diagnostic.code)).toContain("invalid_page_slot");
+    expect(diagnosticsFor(definition).map((diagnostic) => diagnostic.code)).toContain("invalid_page");
   });
 });

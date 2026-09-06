@@ -31,7 +31,6 @@ const nextStatuses: Record<IssueStatus, IssueStatus> = {
   "In progress": "Done",
   Done: "Backlog",
 };
-
 interface ZiplineBoardRow extends KanbanRendererRow {
   attributes: {
     id: string;
@@ -41,7 +40,6 @@ interface ZiplineBoardRow extends KanbanRendererRow {
     assignee: string;
   };
 }
-
 const boardAttributes: AttributeDescriptor[] = [
   { id: "id", label: "ID", type: { kind: "string" }, displayable: true },
   {
@@ -95,7 +93,6 @@ const boardAttributes: AttributeDescriptor[] = [
     displayable: true,
   },
 ];
-
 const boardSettings = {
   viewMode: "board",
   columnGrouping: "status",
@@ -103,7 +100,6 @@ const boardSettings = {
   ordering: { attributeId: MANUAL_ORDERING, direction: "asc" },
   displayProperties: ["id", "priority", "team", "assignee"],
 } satisfies Partial<KanbanRendererSettings>;
-
 const getBoardRows = () => {
   const { statuses } = store.getState();
   return ziplineIssues.map((issue) => ({
@@ -118,21 +114,17 @@ const getBoardRows = () => {
     },
   })) satisfies ZiplineBoardRow[];
 };
-
 const isIssueStatus = (value: unknown): value is IssueStatus =>
   value === "Backlog" || value === "In progress" || value === "Done";
-
 const updateBoardAttribute = (rowId: string, attributeId: string, value: unknown) => {
   if (attributeId !== "status" || !isIssueStatus(value)) return;
   store.setState((state) => ({ ...state, statuses: { ...state.statuses, [rowId]: value } }));
 };
-
 const getBoardColumnConfig = (groupKey: string) => ({
   color: isIssueStatus(groupKey) ? statusColors[groupKey] : "gray",
   canDragIn: true,
   canDragOut: true,
 });
-
 const IssueInspector = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const state = useShowcaseStore(store);
@@ -217,7 +209,6 @@ const IssueInspector = (props: { input: WorkbenchPanelRenderInput }) => {
     </Stack>
   );
 };
-
 const IssueCount = () => {
   const state = useShowcaseStore(store);
   const open = Object.values(state.statuses).filter((status) => status !== "Done").length;
@@ -228,7 +219,6 @@ const IssueCount = () => {
     </HStack>
   );
 };
-
 export const createZiplineWorkbench = () => {
   const workbench = createWorkbench({ startPage: homePage, initialSidePanelMode: "floating" });
   workbench.themes.register([ziplineTheme]);
@@ -289,7 +279,15 @@ export const createZiplineWorkbench = () => {
     title: "My issues",
     path: "zipline/issues",
     modeId: "zipline",
-    slots: [{ id: "issues", role: "primary", region: "main", viewId: "zipline.board" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "zipline.board",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pages.registerPage({
     id: "zipline.resource",
@@ -298,19 +296,43 @@ export const createZiplineWorkbench = () => {
     path: "zipline/issues/resource",
     modeId: "zipline",
     parentId: "zipline.home",
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "zipline.issue",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "zipline.board",
+      },
+      cardinality: "one",
+    },
     slots: [
       {
-        id: "issues",
-        role: "primary",
-        region: "main",
-        binding: { resourceKinds: ["zipline.issue"], viewId: "zipline.board", cardinality: "one" },
-      },
-      {
         id: "inspector",
-        role: "auxiliary",
         region: "side",
-        binding: { resourceKinds: ["zipline.issue"], viewId: "zipline.inspector", cardinality: "one" },
         openOn: "page-resource",
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [
+              {
+                kind: "resource-kind",
+                id: "zipline.issue",
+              },
+            ],
+            view: {
+              kind: "view",
+              id: "zipline.inspector",
+            },
+            cardinality: "one",
+          },
+        },
       },
     ],
   });

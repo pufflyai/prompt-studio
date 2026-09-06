@@ -55,7 +55,7 @@ export const tagSettingsCommandIds = {
 export type TagSettingsCommandId = (typeof tagSettingsCommandIds)[keyof typeof tagSettingsCommandIds];
 export type RunTagSettingsCommand = (
   commandId: TagSettingsCommandId,
-  params: Record<string, unknown>,
+  params: TagDraftPayload,
 ) => Promise<unknown> | unknown;
 
 export type SaveTagDraftOperation = () => Promise<unknown> | unknown;

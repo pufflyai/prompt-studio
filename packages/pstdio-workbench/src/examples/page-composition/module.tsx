@@ -6,7 +6,6 @@ import { useState } from "react";
 
 const sessionPage: PageRef = { extensionId: "pstdio.storybook", kind: "page", id: "session" };
 const labPage: PageRef = { extensionId: "pstdio.storybook", kind: "page", id: "lab" };
-
 interface PageExample {
   id: string;
   ref: PageRef;
@@ -16,12 +15,18 @@ interface PageExample {
   description: string;
   details: readonly string[];
   layout: string;
-  sidenav: { title: string; detail: string };
-  auxiliary: { region: "side" | "secondary"; title: string; detail: string };
+  sidenav: {
+    title: string;
+    detail: string;
+  };
+  auxiliary: {
+    region: "side" | "secondary";
+    title: string;
+    detail: string;
+  };
   target: PageRef;
   targetLabel: string;
 }
-
 const pages: readonly PageExample[] = [
   {
     id: "session",
@@ -31,7 +36,7 @@ const pages: readonly PageExample[] = [
     path: "sessions/S-104",
     description: "Codex is updating the workbench onboarding examples for PS-336.",
     details: ["Task: PS-336", "7 files changed", "Validation: pending"],
-    layout: "Main + Sidenav + Side panel",
+    layout: "Main + Side + Secondary",
     sidenav: { title: "Session files", detail: "mode-page.tsx · module.tsx · breadcrumbs.tsx" },
     auxiliary: {
       region: "side",
@@ -48,8 +53,8 @@ const pages: readonly PageExample[] = [
     modeId: "lab",
     path: "extension-lab",
     description: "Inspect the installed Planner extension and its workbench contributions.",
-    details: ["Extension: pstdio-planner", "API: 1.0.0-alpha.9", "State: enabled"],
-    layout: "Main + Sidenav + Secondary panel",
+    details: ["Extension: pstdio-planner", "API: 1.0.0-alpha.10", "State: enabled"],
+    layout: "Main + Side + Secondary",
     sidenav: { title: "Contributions", detail: "2 pages · 4 views · 6 commands" },
     auxiliary: {
       region: "secondary",
@@ -60,7 +65,6 @@ const pages: readonly PageExample[] = [
     targetLabel: "Return to Session S-104",
   },
 ];
-
 const PageContent = (props: { input: WorkbenchPanelRenderInput; page: PageExample; showNavigation: boolean }) => {
   const { input, page, showNavigation } = props;
   return (
@@ -93,7 +97,6 @@ const PageContent = (props: { input: WorkbenchPanelRenderInput; page: PageExampl
     </Box>
   );
 };
-
 const AuxiliaryContent = (props: { detail: string; owner: string; title: string }) => {
   const { detail, owner, title } = props;
   return (
@@ -106,12 +109,10 @@ const AuxiliaryContent = (props: { detail: string; owner: string; title: string 
     </Stack>
   );
 };
-
 const registerPage = (workbench: WorkbenchCore, page: PageExample, showNavigation: boolean) => {
   const mainViewId = `storybook.${page.id}.main`;
   const sidenavViewId = `storybook.${page.id}.sidenav`;
   const auxiliaryViewId = `storybook.${page.id}.${page.auxiliary.region}`;
-
   workbench.views.registerView({
     id: mainViewId,
     title: page.title,
@@ -142,43 +143,56 @@ const registerPage = (workbench: WorkbenchCore, page: PageExample, showNavigatio
     title: page.title,
     path: page.path,
     modeId: page.modeId,
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: mainViewId,
+      },
+      cardinality: "one",
+    },
     slots: [
-      { id: "content", role: "primary", region: "main", viewId: mainViewId },
       {
         id: "context",
-        role: "auxiliary",
-        region: "sidenav",
-        viewId: sidenavViewId,
-        presence: "fixed",
+        region: page.auxiliary.region === "side" ? "secondary" : "side",
+        item: {
+          kind: "view",
+          view: {
+            kind: "view",
+            id: sidenavViewId,
+          },
+          presence: "fixed",
+        },
       },
       {
         id: page.auxiliary.region === "side" ? "inspector" : "output",
-        role: "auxiliary",
         region: page.auxiliary.region,
-        viewId: auxiliaryViewId,
-        presence: "open",
+        item: {
+          kind: "view",
+          view: {
+            kind: "view",
+            id: auxiliaryViewId,
+          },
+          presence: "open",
+        },
       },
     ],
   });
 };
-
 interface PageCompositionWorkbenchOptions {
   projectId?: string;
   showNavigation?: boolean;
   startPage?: PageRef;
 }
-
 export const createPageCompositionWorkbench = (options: PageCompositionWorkbenchOptions = {}) => {
   const { projectId = "storybook", showNavigation = true, startPage = sessionPage } = options;
   const workbench = createWorkbench({ startPage });
   workbench.modes.registerMode({ id: "session", label: "Session", activate: () => undefined });
   workbench.modes.registerMode({ id: "lab", label: "Extension Lab", activate: () => undefined });
   for (const page of pages) registerPage(workbench, page, showNavigation);
-
   workbench.pageLocations.switchProject(projectId);
   return workbench;
 };
-
 const WorkbenchExampleFrame = (props: { workbench: WorkbenchCore }) => {
   const { workbench } = props;
   return (
@@ -187,7 +201,6 @@ const WorkbenchExampleFrame = (props: { workbench: WorkbenchCore }) => {
     </Box>
   );
 };
-
 export const PageCompositionExample = () => {
   const [sessionWorkbench] = useState(() =>
     createPageCompositionWorkbench({
@@ -203,7 +216,6 @@ export const PageCompositionExample = () => {
       startPage: labPage,
     }),
   );
-
   return (
     <WorkbenchThemeProvider>
       <Stack gap="xl">
@@ -219,10 +231,8 @@ export const PageCompositionExample = () => {
     </WorkbenchThemeProvider>
   );
 };
-
 export const PageReplacementExample = () => {
   const [workbench] = useState(() => createPageCompositionWorkbench());
-
   return (
     <WorkbenchThemeProvider>
       <WorkbenchExampleFrame workbench={workbench} />

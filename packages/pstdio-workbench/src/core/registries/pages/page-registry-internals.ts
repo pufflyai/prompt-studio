@@ -1,5 +1,6 @@
 import type { PageLocation, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { Disposable } from "../../shared/disposable";
+import type { createPagePreparation } from "./page-preparation";
 import type {
   WorkbenchPageOpenInput,
   WorkbenchPageRegistry,
@@ -30,6 +31,9 @@ export type WorkbenchPageCloseResolution =
 
 export interface WorkbenchPageRegistryInternals<Value> {
   resources: WorkbenchPageResourceCodec;
+  prepare: ReturnType<typeof createPagePreparation<Value>>;
+  publish(state: WorkbenchPageRegistryStoreState<Value>, action: string): void;
+  onDidCommit(listener: () => void): Disposable;
   getPublishingState(): WorkbenchPageRegistryStoreState<Value>;
   connectRuntime(apply: (state: WorkbenchPageRegistryStoreState<Value>) => void): Disposable;
   activateLocation(input: WorkbenchPageLocationCommitInput): void;

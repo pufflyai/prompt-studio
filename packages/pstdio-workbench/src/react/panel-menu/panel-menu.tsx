@@ -73,7 +73,7 @@ const useWorkbenchPanelMenu = (
   const registeredWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
   const currentRegionState = layout.regions[region];
   const activeSubPanel = getActiveWorkbenchSubPanel(layout, panel, locationResource, {
-    ignoreOwnerResourceUri: panel === "side",
+    ignoreOwnerResourceKey: panel === "side",
   });
   const activeLocationPanel = getActiveWorkbenchLocationPanel(layout);
   const regionState = {

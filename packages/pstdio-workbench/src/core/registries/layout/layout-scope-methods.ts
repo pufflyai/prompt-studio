@@ -1,3 +1,4 @@
+import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { LayoutModel, LayoutPersistenceAdapter, LayoutScope } from "./layout-model-types";
 import {
   carryPinnedWorkbenchChrome,
@@ -22,16 +23,24 @@ export const createLayoutScopeMethods = (input: CreateLayoutScopeMethodsInput) =
   // the scope becomes current. Reading persistence live would be wrong: entering a mode
   // restores and persists panels before the mode seeds, so a new scope would look like
   // a returning one and never get its defaults.
-  let enteredWithLayout = input.persistence?.getLayout(undefined) !== undefined;
+  let enteredWithLayout =
+    runWorkbenchEffect("layout cache read for unscoped", () => input.persistence?.getLayout(undefined)) !== undefined;
   const willChangeScope = createScopeEvent<LayoutScope | undefined>();
   const didChangeScope = createScopeEvent<LayoutScope | undefined>();
 
+  const persistLayout = () =>
+    runWorkbenchEffect(`layout cache for ${currentScope ?? "unscoped"}`, () =>
+      input.persistence?.setLayout(input.getLayout(), currentScope),
+    );
+
   const setPersistenceScope: LayoutModel["setPersistenceScope"] = (nextScope, scopeInput = {}) => {
     if (currentScope === nextScope) return;
-    input.persistence?.setLayout(input.getLayout(), currentScope);
+    persistLayout();
     willChangeScope.notify(nextScope);
     currentScope = nextScope;
-    const incoming = input.persistence?.getLayout(currentScope);
+    const incoming = runWorkbenchEffect(`layout cache read for ${currentScope ?? "unscoped"}`, () =>
+      input.persistence?.getLayout(currentScope),
+    );
     enteredWithLayout = incoming !== undefined;
     const scopedLayout = resolveScopedLayout(input.defaultRegionVisibility, incoming);
     // Module-owned chrome is global workbench structure. Project scopes replace
@@ -49,11 +58,14 @@ export const createLayoutScopeMethods = (input: CreateLayoutScopeMethodsInput) =
   return {
     getPersistenceScope: () => currentScope,
     // Live: whether anything is stored for the active scope right now.
-    hasPersistedLayout: () => input.persistence?.getLayout(currentScope) !== undefined,
+    hasPersistedLayout: () =>
+      runWorkbenchEffect(`layout cache read for ${currentScope ?? "unscoped"}`, () =>
+        input.persistence?.getLayout(currentScope),
+      ) !== undefined,
     enteredWithPersistedLayout: () => enteredWithLayout,
     onDidChangePersistenceScope: didChangeScope.subscribe,
     onWillChangePersistenceScope: willChangeScope.subscribe,
-    persistLayout: () => input.persistence?.setLayout(input.getLayout(), currentScope),
+    persistLayout,
     setPersistenceScope,
   };
 };

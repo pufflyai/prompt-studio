@@ -1,5 +1,7 @@
 import type { PageOpenIntent, PlacementIdentity } from "@pstdio/sdk/extensions";
 import { createDisposable, type Disposable } from "../../shared/disposable";
+import { notifyWorkbenchChange } from "../../shared/store/workbench-batch";
+import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import { createPlacement } from "../layout/layout-operations";
 import type {
   RegisteredWidgetContribution,
@@ -18,60 +20,67 @@ import {
   closeOwnedPlacementInstance,
   createOwnedPlacementState,
   isStaticPlacementOpen,
-  openResourcePlacement,
-  openStaticPlacement,
+  placementItemViewId,
   staticPlacementClosable,
   updateResourcePlacementInstance,
   validateOwnedPlacementItem,
   type WorkbenchOwnedPlacementItem,
 } from "./owned-placement-lifecycle";
-
+import {
+  type OwnedPlacementLocationContext,
+  type OwnedPlacementPreparation,
+  prepareOwnedPlacement,
+  setOwnedPlacementPreparation,
+} from "./owned-placement-preparation";
+import { restoreOwnedPlacementState } from "./owned-placement-restoration";
 export interface WorkbenchShellPlacementContribution extends WorkbenchPlacementPresentation {
   readonly id: string;
   readonly item: WorkbenchOwnedPlacementItem;
   readonly region: WorkbenchRegion;
   readonly order?: number;
 }
-
 export interface OpenWorkbenchShellPlacementInput {
   placementId: string;
   resource?: ResourceRef;
   open?: PageOpenIntent;
   title?: string;
 }
-
 export interface WorkbenchShellPlacementRegistry {
   registerPlacement(placement: WorkbenchShellPlacementContribution): Disposable;
   getPlacement(placementId: string): WorkbenchShellPlacementContribution | undefined;
   listPlacements(): WorkbenchShellPlacementContribution[];
   openPlacement(input: OpenWorkbenchShellPlacementInput): PlacementIdentity;
-  updatePlacement(identity: PlacementIdentity, input: { resource?: ResourceRef; title?: string }): void;
+  updatePlacement(
+    identity: PlacementIdentity,
+    input: {
+      resource?: ResourceRef;
+      title?: string;
+      open?: PageOpenIntent;
+    },
+  ): void;
   closePlacement(identity: PlacementIdentity): void;
-  resolvePlacements(): readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[];
+  resolvePlacements(
+    context?: OwnedPlacementLocationContext,
+  ): readonly ResolvedOwnedPlacement<WorkbenchWidgetPlacement>[];
   onDidChange(listener: () => void): Disposable;
 }
-
 export const shellPlacementContributionId = (placementId: string) =>
   `workbench.shell-placement.${encodeURIComponent(placementId)}`;
-
 const identityFor = (placementId: string, instanceKey: string): PlacementIdentity => ({
   kind: "shell",
   placementId,
   instanceKey,
 });
-
 const roleForRegion = (region: WorkbenchRegion): WorkbenchWidgetRole => {
   if (region === "main") return "location";
   if (region === "secondary" || region === "side") return "sub-panel";
   return "content";
 };
-
 const tabState = (open: PageOpenIntent | undefined) => {
   if (open === "pin") return { pinned: true, tabRetention: "persistent" as const };
   if (open === "preview") return { pinned: false, tabRetention: "preview" as const };
   return {};
 };
-
 export const createWorkbenchShellPlacementRegistry = (input: {
   views: WorkbenchViewRegistry;
   viewMenus?: WorkbenchViewMenuRegistry;
@@ -79,18 +88,22 @@ export const createWorkbenchShellPlacementRegistry = (input: {
   registerPanel: Parameters<typeof registerWorkbenchViewPlacement>[0];
   activatePanel(instanceId: string): unknown;
   getLayout(): WorkbenchLayout;
+  getScope?(): string | undefined;
+  resolveScope?(context: OwnedPlacementLocationContext): string | undefined;
+  loadLayout?(context: OwnedPlacementLocationContext): WorkbenchLayout | undefined;
   enteredWithPersistedLayout(): boolean;
   onDidChangePersistenceScope(listener: () => void): Disposable;
 }): WorkbenchShellPlacementRegistry => {
   const placements = new Map<string, WorkbenchShellPlacementContribution>();
-  const state = createOwnedPlacementState();
+  let state = createOwnedPlacementState();
   const listeners = new Set<() => void>();
   const label = "Shell placement";
-
+  let runtime: (() => void) | undefined;
   const emitChange = () => {
-    for (const listener of listeners) listener();
+    runtime?.();
+    for (const listener of listeners)
+      notifyWorkbenchChange(listener, () => runWorkbenchEffect("shell placement subscriber", listener));
   };
-
   // A restored layout snapshot is the user's saved choice: placements present in
   // it are open, optional placements missing from it are closed. A scope without
   // a snapshot starts from each placement's declared presence.
@@ -99,41 +112,17 @@ export const createWorkbenchShellPlacementRegistry = (input: {
       clearOwnedPlacementState(state, placement.id);
       return;
     }
-    const saved = Object.values(input.getLayout().regions)
-      .flatMap((region) => region.widgets)
-      .filter(
-        (candidate) =>
-          candidate.placementIdentity?.kind === "shell" && candidate.placementIdentity.placementId === placement.id,
-      );
-    if (placement.item.kind === "view") {
-      if (placement.item.presence === "fixed") return;
-      state.staticOverrides.set(
-        placement.id,
-        saved.some((candidate) => candidate.placementIdentity?.instanceKey === "default") ? "open" : "closed",
-      );
-      return;
-    }
-    state.resourceInstances.set(
-      placement.id,
-      saved.flatMap((candidate) => {
-        if (!candidate.resource) return [];
-        return [
-          {
-            instanceKey: candidate.resource.uri,
-            resource: candidate.resource,
-            title: candidate.title,
-            open: candidate.tabRetention === "preview" ? ("preview" as const) : ("pin" as const),
-          },
-        ];
-      }),
-    );
+    state = restoreOwnedPlacementState({
+      state,
+      declarations: [placement],
+      saved: Object.values(input.getLayout().regions).flatMap((region) => region.widgets),
+      owns: (identity) => identity.kind === "shell",
+    });
   };
-
   input.onDidChangePersistenceScope(() => {
     for (const placement of placements.values()) restorePlacement(placement);
-    emitChange();
+    notifyWorkbenchChange(placements, emitChange);
   });
-
   const resolve = (
     placement: WorkbenchShellPlacementContribution,
     instanceKey: string,
@@ -152,7 +141,7 @@ export const createWorkbenchShellPlacementRegistry = (input: {
         `workbench.shell.${encodeURIComponent(placement.id)}.${encodeURIComponent(instanceKey)}`,
         panel,
         {
-          viewId: placement.item.viewId,
+          viewId: placementItemViewId(placement.item),
           role: roleForRegion(placement.region),
           closable: staticPlacementClosable(placement.item),
           ...(resource ? { resource } : {}),
@@ -162,12 +151,68 @@ export const createWorkbenchShellPlacementRegistry = (input: {
       ),
     };
   };
-
-  return {
+  const preparation: OwnedPlacementPreparation = {
+    connectRuntime(listener) {
+      runtime = listener;
+      return createDisposable(() => {
+        if (runtime === listener) runtime = undefined;
+      });
+    },
+    getState: () => state,
+    restore(context, current = state, previousContext) {
+      if (!input.resolveScope) return current;
+      const scope = input.resolveScope(context);
+      const previousScope = previousContext ? input.resolveScope(previousContext) : input.getScope?.();
+      if (scope === previousScope) return current;
+      if (scope === input.getScope?.()) return state;
+      const layout = input.loadLayout?.(context);
+      if (!layout) return createOwnedPlacementState();
+      return restoreOwnedPlacementState({
+        state: createOwnedPlacementState(),
+        declarations: [...placements.values()],
+        saved: Object.values(layout.regions).flatMap((region) => region.widgets),
+        owns: (identity) => identity.kind === "shell",
+      });
+    },
+    adopt(_modeId, saved, current = state) {
+      return restoreOwnedPlacementState({
+        state: current,
+        declarations: [...placements.values()],
+        saved,
+        owns: (identity) => identity.kind === "shell",
+      });
+    },
+    open(target, current = state) {
+      const placement = placements.get(target.placementId);
+      if (!placement) throw new Error(`Unknown shell placement: ${target.placementId}`);
+      return prepareOwnedPlacement({
+        label,
+        target,
+        item: placement.item,
+        current,
+        identityFor: (instanceKey) => identityFor(placement.id, instanceKey),
+      });
+    },
+    apply: (next) => {
+      state = next;
+    },
+    publish: emitChange,
+    resolve(_modeId, current = state) {
+      return [...placements.values()].flatMap((placement) => {
+        if (placement.item.kind === "view") {
+          return isStaticPlacementOpen(placement.item, current, placement.id) ? [resolve(placement, "default")] : [];
+        }
+        return (current.resourceInstances.get(placement.id) ?? []).map((instance) =>
+          resolve(placement, instance.instanceKey, instance.resource, instance.open, instance.title),
+        );
+      });
+    },
+  };
+  const registry: WorkbenchShellPlacementRegistry = {
     registerPlacement(placement) {
       if (placements.has(placement.id)) throw new Error(`Shell placement already registered: ${placement.id}`);
-      if (!input.views.getView(placement.item.viewId)) {
-        throw new Error(`Workbench shell placement view is not registered: ${placement.item.viewId}`);
+      if (!input.views.getView(placementItemViewId(placement.item))) {
+        throw new Error(`Workbench shell placement view is not registered: ${placementItemViewId(placement.item)}`);
       }
       validateOwnedPlacementItem(label, placement.id, placement.item);
       const registered = { ...placement, item: { ...placement.item } };
@@ -177,9 +222,9 @@ export const createWorkbenchShellPlacementRegistry = (input: {
         {
           ...registered,
           id: shellPlacementContributionId(registered.id),
-          viewId: registered.item.viewId,
+          viewId: placementItemViewId(registered.item),
           role: roleForRegion(registered.region),
-          singleton: registered.item.kind === "view" || registered.item.cardinality === "one",
+          singleton: registered.item.kind === "view" || registered.item.binding.cardinality === "one",
           closable: staticPlacementClosable(registered.item),
         },
         input.viewMenus,
@@ -195,24 +240,16 @@ export const createWorkbenchShellPlacementRegistry = (input: {
         emitChange();
       });
     },
-
     getPlacement: (placementId) => placements.get(placementId),
-
     listPlacements: () => [...placements.values()].sort((left, right) => left.id.localeCompare(right.id)),
-
     openPlacement(target) {
-      const placement = placements.get(target.placementId);
-      if (!placement) throw new Error(`Unknown shell placement: ${target.placementId}`);
-      if (placement.item.kind === "view") {
-        openStaticPlacement({ label, id: placement.id, item: placement.item, state, ...target });
-        emitChange();
-        input.activatePanel(`workbench.shell.${encodeURIComponent(placement.id)}.default`);
-        return identityFor(placement.id, "default");
-      }
-      const instanceKey = openResourcePlacement({ label, id: placement.id, item: placement.item, state, ...target });
-      emitChange();
-      input.activatePanel(`workbench.shell.${encodeURIComponent(placement.id)}.${encodeURIComponent(instanceKey)}`);
-      return identityFor(placement.id, instanceKey);
+      const prepared = preparation.open(target);
+      preparation.apply(prepared.state);
+      preparation.publish();
+      input.activatePanel(
+        `workbench.shell.${encodeURIComponent(target.placementId)}.${encodeURIComponent(prepared.identity.instanceKey)}`,
+      );
+      return prepared.identity;
     },
 
     closePlacement(identity) {
@@ -228,7 +265,6 @@ export const createWorkbenchShellPlacementRegistry = (input: {
       });
       if (changed) emitChange();
     },
-
     updatePlacement(identity, update) {
       if (identity.kind !== "shell") throw new Error("Shell placement registry updates only shell-owned placements");
       const placement = placements.get(identity.placementId);
@@ -243,21 +279,12 @@ export const createWorkbenchShellPlacementRegistry = (input: {
       });
       emitChange();
     },
-
-    resolvePlacements() {
-      return [...placements.values()].flatMap((placement) => {
-        if (placement.item.kind === "view") {
-          return isStaticPlacementOpen(placement.item, state, placement.id) ? [resolve(placement, "default")] : [];
-        }
-        return (state.resourceInstances.get(placement.id) ?? []).map((instance) =>
-          resolve(placement, instance.instanceKey, instance.resource, instance.open, instance.title),
-        );
-      });
-    },
-
+    resolvePlacements: (context) => preparation.resolve(undefined, context ? preparation.restore!(context) : state),
     onDidChange(listener) {
       listeners.add(listener);
       return createDisposable(() => listeners.delete(listener));
     },
   };
+  setOwnedPlacementPreparation(registry, preparation);
+  return registry;
 };

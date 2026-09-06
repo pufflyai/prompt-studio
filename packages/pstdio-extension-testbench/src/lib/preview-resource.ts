@@ -6,8 +6,7 @@ const resourceKindFromMetadata = (metadata: WorkbenchExtensionMetadata) => resou
 
 const ticketPreviewResource = () =>
   ({
-    kind: "ticket",
-    uri: "bench://ticket/PS-16",
+    type: "ticket",
     id: "PS-16",
     label: "PS-16 Tree renderer preview",
     icon: "FileText",
@@ -19,8 +18,7 @@ export const createPreviewResource = (metadata: WorkbenchExtensionMetadata): Res
 
   if (resourceKind) {
     return {
-      kind: resourceKind,
-      uri: `bench://${resourceKind}/preview`,
+      type: resourceKind,
       id: "preview",
       label: `${resourceKind} preview`,
       icon: "FileText",
@@ -28,8 +26,7 @@ export const createPreviewResource = (metadata: WorkbenchExtensionMetadata): Res
   }
 
   return {
-    kind: "extension-preview",
-    uri: "bench://extension-preview/default",
+    type: "extension-preview",
     id: "preview",
     label: "Extension preview",
     icon: "FileText",

@@ -1,144 +1,43 @@
-# Extension Workbench Composition
+# Extension workbench composition
 
-This page defines the architecture for extension-owned workbench UI. PS-255 proposed it. PS-266 through PS-270 implemented it.
+The SDK and workbench share page, view, mode, placement, and resource contracts. The contract layer owns serializable definitions. SDK helpers add inference and generated references; metadata normalization validates declarations before registering callbacks. Diagnostics identify the extension, contribution, field path, and expected contract.
 
-The architecture separates stable UI capability from contextual layout. A resource defines what it is. A panel defines what it can render. A mode defines how compatible resources and panels are arranged. User layout state records choices inside that valid composition.
+## Owners
 
-## Goals
+A view supplies renderer content. A page owns the route, optional routed resource constraint, Main presentation, and page panels. A mode owns shared panels, region policy, and chrome. The shell provides host defaults.
 
-- Keep mode, resource, panel, placement, and persisted layout responsibilities separate.
-- Let one resource use different layouts in different modes.
-- Let an extension add an optional panel to a resource kind owned by another extension.
-- Keep required panels available without reopening optional panels the user closed.
-- Let panel menus follow the panel's actual placement.
-- Keep resource identity free of renderer and layout data.
+A page's `resource: { kinds }` is independent of `main`. Main either presents a view with explicit cardinality or a collection of peer Main panels with an empty view. Additional slots use the same static-view or resource-binding item as mode placements. A binding has `kinds`, `view`, `cardinality`, and optional `add` navigation. Page slots expose generated panel refs.
 
-## Ownership Model
+There are three panel regions: Main, Side, and Secondary. Presence, mounting, and tab presentation keep the same meanings across owners. Shared mode panels retain their identity across pages and dispose when their owner is removed.
 
-| Part | Owns | Does not own |
-| ---- | ---- | ------------ |
-| Panel | Renderer, title, and default placement policy for resources or modes owned by its extension. | Current resolved placement or user layout. |
-| Resource kind | Resource identity rules, hierarchy behavior, surface, and semantic panel slots. | Final workbench regions or mode selection. |
-| Resource-panel contribution | A panel's ability to consume another extension's resource kind through one slot. | Required state or final region. |
-| Mode | Accepted resource kinds and contextual placement overrides. | Resource identity or renderer implementation. |
-| Resource instance | URI, kind, label, parent, metadata, and domain identity. | Panel definitions or layout state. |
-| Persisted layout | User choices for one project, mode, and resource location. | Extension capability definitions. |
+Default host navigation is composed for every active mode that keeps its chrome. A declared replacement view or `false` overrides that default. A mode is selected by navigating to one of its pages.
 
-## Composition Direction
+## Data flow
 
-The host resolves the workbench in one direction:
+Public APIs pass `ResourceRef` with `type`, `id`, and optional presentation and ownership fields. The route owns page context and breadcrumbs. Selecting or opening an auxiliary panel does not change that resource. A workspace collection routes to a workspace while its Main panels contain files.
 
-```text
-active mode
-  + active resource kind
-  + panel placement declarations
-  + cross-extension resource-panel contributions
-  + persisted user choices
-  = effective placements
-```
+The SDK's `resourceKey` provides identity comparisons. URI conversion stays in routing and persistence adapters. Labels and metadata do not determine identity. Provider contract modules use `qualifyRef` to export references with stable extension ownership; providers register their local definitions.
 
-No panel, resource, or dashboard adapter may reverse this flow by inferring a mode from a resource or treating a panel's default region as its permanent owner.
+## Navigation transaction
 
-## Panels
+Compound navigation contains only page and panel targets. Preparation resolves every dependent target against proposed page and placement state. It does not mutate live registries, layout, history, or selection.
 
-A panel is a reusable renderer. It declares a stable namespaced id and one or more default placements through `show`. A placement may name a resource kind owned by the extension, or omit `for` to place the panel in the extension's modes.
+Commit applies final placement and page state as one batch, resolves the final location, and creates at most one browser history entry. Observers read the committed state. Failure during preparation leaves all observable navigation and composition state unchanged. Commands and external links remain separate because their external effects are outside the workbench transaction.
 
-Each placement declares a default region and the regions a mode may move it to. The resolver combines that declaration with the active mode, active resource, and valid persisted user placement.
+The page-location controller owns URL encoding, browser history, location persistence, and breadcrumbs. The page registry owns page instances. Mode and shell registries own their placements. Layout reconciles those declared instances into regions and selection. No second checkpoint or rollback state is maintained.
 
-Panel menus are relative to a panel instance. When the instance moves within `allowedRegions`, its menus move with it.
+## Closing and lifecycle
 
-## Resource Kinds and Slots
+Native tabs and webview `placement.close` use the same placement close controller. The host supplies the calling webview identity. Fixed placements cannot close. Closing the last routed resource view follows the page's declared parent; closing an auxiliary panel leaves the route intact.
 
-A resource kind declares its surface and semantic slots. Common slots include:
+Native renderer callbacks cross a validated serializable boundary. Controls use a discriminated union and typed groups. UI-only React nodes and browser `File` objects remain outside that contract. `GuestHost.call` takes declared capability names and mapped parameters/results, with runtime validation at the host bridge.
 
-- `primary`: the resource's main location;
-- `navigation`: resource navigation or hierarchy;
-- `inspector`: supporting details and properties;
-- `auxiliary`: additional resource-aware tools.
+## Delivery and persistence
 
-Each slot declares cardinality and whether another extension may contribute to it. The primary slot is closed to external replacement. Other slots may be open extension points.
+The SDK bundles private contract declarations into public declaration entries. Both workspace development and installed consumers load built SDK files. One package staging script assembles runtime files and resolves public workspace dependencies while excluding development-only dependencies. Verification and release use that same artifact.
 
-An external extension registers a resource-panel edge that names a resource kind, panel, and open slot. The registration composes with the resource definition; it does not mutate or replace it. An extension does not create resource-panel edges for its own resource kinds. External panels are optional unless a mode explicitly promotes a known contribution.
+This revision retains version 1 page locations and valid resource data. Layout cache version 4 changes the interpretation of Main panels and identity indexes. Only incompatible layout entries are invalidated; independent preferences remain valid. No database migration is needed.
 
-## Modes and Placement Recipes
+Page caches use the existing location keys for page-owned instances. Shared mode instances are excluded from those entries and persist once per project and mode. Restoration resolves the destination project's mode state before the final layout is published. Cache failures are reported host effects and do not undo committed navigation.
 
-A mode is a task and layout context. It declares:
-
-- accepted resource kinds;
-- a placement recipe for each accepted resource kind;
-- placement overrides for slots or known panels.
-
-Required and default are resolved placement policies, not registration properties. A panel may declare the default `required` value and a mode may override it. A required placement cannot be closed and is reconciled whenever its context activates. An optional placement is seeded for a new layout but remains user-managed.
-
-Two modes may accept the same resource kind and arrange it differently. They retain one resource while restoring distinct tools, inspectors, sizes, and tab state.
-
-## Chrome and Docked Placement
-
-Docked regions and chrome surfaces are different contracts.
-
-Extension panels use `main`, `secondary`, and `side`. Mode recipes place panels into those regions, and layout persistence stores their placements. The Sidenav is host-owned chrome with one composed navigation tree; extensions add mode- or page-owned navigation sections instead of panels.
-
-Chrome surfaces are host-owned fixed slots: nav actions, the activity bar, the status bar, and overlays. Extensions contribute typed items to chrome targets, as menus and activity items do today. A chrome item may show or hide by active mode through a `when` expression, but no mode recipe positions it, and no chrome state lives in persisted panel layout.
-
-This split exists in the kernel: mode layout targets cover only docked areas, while menus, trees, and settings attach to typed workbench targets. The contract has no single region union, so a panel cannot claim a chrome region.
-
-A panel body that also supports overlay presentation declares that capability explicitly. An overlay opens from an action; it is never a resolved layout placement.
-
-## Effective Layout Resolution
-
-The workbench resolves one layout for the active project, mode, and resource:
-
-1. Confirm that the mode accepts the resource kind.
-2. Collect panel declarations and valid cross-extension resource-panel contributions.
-3. Apply the mode's placement recipe.
-4. Reject mode overrides outside the panel placement's allowed regions.
-5. Restore valid user placements and tab order.
-6. Restore missing required placements.
-7. Seed default placements only for a new layout.
-8. Expose remaining valid panels through Add Panel.
-
-Invalid or removed optional contributions are omitted and reported without preventing unrelated panels from rendering. A missing required placement produces a visible diagnostic and a safe location fallback.
-Add Panel reads these resolved options from the active mode. It does not infer availability from a panel's global registration, because one panel may participate in several modes and resource slots.
-
-## Layout Persistence
-
-Layout state is scoped by project, mode, and resource URI. This lets the same resource retain different layouts in different modes.
-
-The persistence format has an internal schema revision. Layouts saved under the old alpha contract are not read under this contract. The host keeps saved state only when its meaning does not depend on the removed panel roles and bindings.
-
-## Resource Hierarchy
-
-Browse roots are resources. For example, Tickets is a stable collection resource and a ticket detail names Tickets or another ticket as its parent.
-
-Breadcrumbs follow the acyclic resource hierarchy. They do not infer parents from panel regions or renderer placement.
-
-A tree contribution may use `group: null` to appear at the root without a heading. An undefined group keeps the default grouping behavior.
-
-## Package Boundaries
-
-| Package | Responsibility |
-| ------- | -------------- |
-| `@pstdio/sdk` and API contracts | Public authoring types and static diagnostics. |
-| `pstdio-extensions` | Normalize panels, resource kinds, slots, resource-panel edges, modes, and recipes. |
-| `@pstdio/workbench` | Resolve placements, enforce required state, own menus, history, and layout persistence. |
-| `pstdio-dashboard` | Adapt project resources and call the atomic navigation service. |
-| Core extensions | Declare their resources, panels, modes, and open extension slots. |
-
-## Invariants
-
-- Opening a resource never infers or changes mode.
-- A primary resource context has exactly one primary location placement.
-- A mode cannot place a panel outside the panel and mode region intersection.
-- External extensions cannot replace the primary resource panel.
-- External resource panels are optional unless the active mode names them.
-- Required placements cannot be closed.
-- Reconciliation restores required structure without resetting valid optional user state.
-- Resource instances and history never store renderer definitions.
-- The alpha extension contract was replaced in place, without a major version or a parallel compatibility engine.
-
-## Related Product Requirements
-
-- [Contextual Workbench Composition](../extensions/contextual-workbench-composition.md)
-- [Extension Navigation and Layout State](../extensions/navigation-and-layout-state.md)
-- [Renderer Edit and Refresh Lifecycle](../extensions/renderer-edit-refresh-lifecycle.md)
-- [Extension Conformance and Regression Coverage](../extensions/conformance.md)
+See the [SDK cookbook](../extensions/cookbook.md) for authoring and the [workbench guide](../../../packages/pstdio-workbench/README.md) for host integration.

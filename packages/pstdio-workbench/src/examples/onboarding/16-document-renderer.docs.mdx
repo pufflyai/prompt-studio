@@ -65,7 +65,7 @@ The module registers the schema and a panel that uses it:
 - `ctx.views.registerView(...)` defines the demo panel. `body.kind: "react"` lets host code render React, and
   `render` receives the render input for one visible placement.
 - `ctx.shellPlacements.registerPlacement(...)` places the View. `item.kind: "view"` places one static View,
-  `item.viewId` names it, `item.presence: "fixed"` keeps it open without a close button, and `region: "main"` picks
+  `item.view` names it, `item.presence: "fixed"` keeps it open without a close button, and `region: "main"` picks
   the region.
 
 The panel reads and writes values through the preference registry:

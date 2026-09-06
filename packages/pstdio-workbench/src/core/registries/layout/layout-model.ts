@@ -122,8 +122,8 @@ const createLocationEstablisher = (input: CreateLocationEstablisherInput) => (in
         widgets: region.widgets.map((candidate) => {
           if (candidate.widgetId === instanceId) return placement;
           if (!ownedPanelMenuIds.has(candidate.contributionId)) return candidate;
-          if (candidate.resourceUri !== placement.resourceUri) return candidate;
-          return { ...candidate, ownerResourceUri: placement.resourceUri };
+          if (candidate.resourceKey !== placement.resourceKey) return candidate;
+          return { ...candidate, ownerResourceKey: placement.resourceKey };
         }),
       },
     ]),
@@ -136,26 +136,6 @@ const createLocationEstablisher = (input: CreateLocationEstablisherInput) => (in
     "main",
     placement,
   );
-  // A sub-panels-only Location presents no content of its own: hand the active
-  // slot to its first Sub Panel as soon as one exists. A restored selection has
-  // already been applied above and remains the active Sub Panel when valid.
-  if (input.getWidget(placement.contributionId)?.subPanelsOnly) {
-    const main = input.getLayout().regions.main;
-    const activeSubPanel = main.widgets.find(
-      (candidate) =>
-        candidate.widgetId === main.activeWidgetId &&
-        candidate.role === "sub-panel" &&
-        (!candidate.ownerResourceUri || candidate.ownerResourceUri === placement.resourceUri),
-    );
-    if (activeSubPanel) return input.panelMethods.getActivePanel("main")!;
-
-    const subPanel = main.widgets.find(
-      (candidate) =>
-        candidate.role === "sub-panel" &&
-        (!candidate.ownerResourceUri || candidate.ownerResourceUri === placement.resourceUri),
-    );
-    if (subPanel) return input.panelMethods.activatePanel(subPanel.widgetId);
-  }
   return input.panelMethods.getActivePanel("main")!;
 };
 
@@ -350,7 +330,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
       };
       let next =
         activeWidgetId && layout.activeWidgetId === activeWidgetId
-          ? { ...cleared, activeWidgetId: undefined, activeResourceUri: undefined }
+          ? { ...cleared, activeWidgetId: undefined, activeResourceKey: undefined }
           : cleared;
 
       if (regionId !== "side" && workbenchPanelRegions.includes(regionId as WorkbenchPanelRegion)) {
@@ -377,7 +357,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
         locationSubPanelSelections: {},
         activeWidgetId: undefined,
         activeLocationWidgetId: undefined,
-        activeResourceUri: undefined,
+        activeResourceKey: undefined,
       });
       persistLayout();
     },

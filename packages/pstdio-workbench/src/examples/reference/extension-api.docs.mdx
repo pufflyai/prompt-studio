@@ -13,7 +13,7 @@ workbench authoring API available to first-party and third-party extensions.
 | --- | --- |
 | Audience | Extension developers and agents that build extensions |
 | Package | `@pstdio/sdk/extensions` |
-| API version | `1.0.0-alpha.9` |
+| API version | `1.0.0-alpha.10` |
 | Code location | An extension package |
 | UI runtime | Native host renderer or isolated webview |
 | Host access | Validated contributions and declared capabilities |
@@ -59,71 +59,32 @@ Extensions cannot supply React or register a renderer directly.
 
 ## Pages and slots
 
-`definePage(...)` defines one replaceable location. Its `slots` are the complete set of page-owned placements.
+`definePage(...)` owns a route and its page panels. `resource: { kinds }` constrains an optional routed resource. Main presentation is separate.
 
-| Field | Required | Meaning |
-| --- | --- | --- |
-| `id` | Yes | Stable id inside the extension. The SDK creates `page.ref` from it. |
-| `title` | Yes | User-facing page title. |
-| `path` | Yes | Stable URL segment for this page type, without a resource id. |
-| `mode` | Yes | Mode that owns the page, such as `workbenchModes.project`. |
-| `parent` | No | Parent page type used to validate and build nested locations. Required when the primary slot has only a binding; closing its last tab navigates to the parent. |
-| `slots` | Yes | Every View placement that belongs to this page. |
+| Field | Meaning |
+| --- | --- |
+| `main: { kind: "view", view, cardinality }` | Renders routed content. Multiple instances require a resource-bound page. |
+| `main: { kind: "panels", empty }` | Renders peer Main panels and shows the empty view when none are open. |
+| `slots` | Additional panels with stable local ids and generated refs such as `page.panels.inspector`. |
+| `parent` | Parent page for breadcrumbs and closing the last routed resource view. |
 
-Every slot declares `id`, `role` (`primary` or `auxiliary`), and `region` (`main`, `secondary`, or `side`), plus
-optional `order` and `mountStrategy`. The role and content fields select one of three slot shapes:
+Page slots and mode placements share `item`. Static items use `kind: "view"`, `view`, and `presence`. Resource items use `kind: "binding"` and `binding: { kinds, view, cardinality, add? }`.
 
-| Slot shape | Content fields | Behavior |
-| --- | --- | --- |
-| Primary | `view` and/or `binding` | The page's routed content. Always present while the page is open; the user cannot close the slot itself. With a binding, each opened resource becomes an instance, and the static view (when declared) shows while no resource is open. |
-| Static auxiliary | `view` and `presence` | An optional page-owned panel. `presence` sets its initial state. |
-| Bound auxiliary | `binding` and optional `openOn: "page-resource"` | No initial visibility. An instance opens only when an action supplies a resource. `openOn: "page-resource"` also opens it for the page's own resource when the kind matches the binding. |
+`presence` is `fixed`, `open`, or `closed`. Saved user choices win over the initial open or closed state. Fixed panels cannot close. `cardinality: "one"` rebinds one instance; `"many"` retains separate resource instances. A binding opens when given a resource, or on matching page navigation with `openOn: "page-resource"`.
 
-`presence` is required on a static auxiliary slot and has no default:
-
-- `fixed`: always open while the page is open. The user cannot close it.
-- `open`: starts open. The user may close it.
-- `closed`: starts closed until the user or an action opens it.
-
-A saved user choice wins over `open` and `closed` on the next visit.
-
-A `binding` inside any slot accepts these fields:
-
-| Field | Required | Meaning |
-| --- | --- | --- |
-| `kind` | Yes | Resource kind, or an array of kinds, the binding accepts. |
-| `view` | Yes | View rendered for each bound resource. |
-| `cardinality` | Yes | `one` keeps a single instance and rebinds it when another resource opens. `many` creates one instance per resource URI and selects the existing tab on reopen. |
-| `add` | No | Navigation target the Add panel runs to create or select a resource before the slot can open. |
-
-Cardinality does not control initial visibility or closability. Bound slots start empty, and resource tabs are always
-closable.
-
-Presentation fields such as `headerBorderBottom`, `floatingPanels`, and `tab` have the same meaning on page slots and
-mode placements. The Core reference lists those shared fields. Region size and collapsibility are not slot fields; they
-live in `regionSettings` on the mode contribution or on the host.
+Use `ResourceRef` with `type`, `id`, and optional `label`. URI conversion belongs to routing and persistence adapters. Panel navigation preserves the page resource, URL, and breadcrumbs. Compound targets prepare page and panel steps before committing; commands and links remain standalone actions.
 
 ## Mode placements
 
-`definePlacement(...)` adds a View to a mode independently of any page.
+`definePlacement(...)` attaches a view or resource binding to a mode independently of its pages. It declares `id`, `mode`, `item`, and `region`. Region choices are Main, Side, and Secondary. Page changes within a mode retain shared placement identity. `mountStrategy: "keep-mounted"` preserves local state until the owner leaves.
 
-| Field | Required | Meaning |
-| --- | --- | --- |
-| `id` | Yes | Stable placement id inside the extension. |
-| `mode` | Yes | Mode that owns the placement. Leaving the mode removes it. |
-| `item` | Yes | A static View or a resource binding. |
-| `region` | Yes | `main`, `secondary`, or `side`. |
-| `movableTo` | No | Regions the user may move it to; the list must include its initial region. |
-| `order` | No | Initial order among placements owned by the same mode. |
+Modes own `regionSettings` for size, collapsibility, and tab policy. A lone closable panel shows its tab by default. `alwaysShowTabs` explicitly overrides that single-tab policy.
 
-For a static item, use `{ kind: "view", view: someView.ref, presence }`. `presence` is required and has the same
-`fixed`, `open`, and `closed` values as a static page slot. For a resource item, use
-`{ kind: "binding", resourceKind, view, cardinality, add? }` with the same required `cardinality` and optional `add`
-target as a page slot binding.
+Omitted `chrome` entries retain the host content. Every custom mode gets default host navigation. A view ref replaces that chrome entry; `false` hides it.
 
-Region layout policy lives on the mode: `defineMode` accepts `regionSettings` with `size`, `collapsible`, and `alwaysShowTabs` per
-declared region. A placement cannot set region size or collapsibility.
-Panels hide a single tab by default. Set `alwaysShowTabs: true` for a region to keep its single tab visible.
+Export `qualifyRef(owner, ref)` from a provider contract module for cross-extension use. Local contribution definitions stay local. The helper preserves command types and qualifies nested page-panel refs.
+
+Webviews declare `placement.close` to close themselves with `host.call("placement.close", {})`. The host supplies the calling placement identity and uses the native tab close controller.
 
 ## Keybindings
 
@@ -157,7 +118,7 @@ Panels hide a single tab by default. Set `alwaysShowTabs: true` for a region to 
 | Helper | What it defines |
 | --- | --- |
 | `defineView` | A webview or a native tree, file, controls, Kanban, or data table view |
-| `definePage` | A replaceable location made from primary and auxiliary view slots |
+| `definePage` | A route, optional resource, Main presentation, and additional panels |
 | `defineMode` | A long-lived context with supported workbench regions and region settings |
 | `definePlacement` | A mode-owned view or resource binding |
 | `defineNavigationItem` | A page, panel, command, link, or compound navigation action |

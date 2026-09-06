@@ -4,6 +4,7 @@ export * from "./check";
 export * from "./commands";
 export * from "./common";
 export * from "./connections";
+export * from "./control-declarations";
 export * from "./controls-renderer";
 export * from "./data-table-renderer";
 export * from "./execute";

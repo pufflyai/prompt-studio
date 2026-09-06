@@ -15,7 +15,6 @@ const placement = (
   region: ResolvedOwnedPlacement<string>["region"],
   value: string,
 ): ResolvedOwnedPlacement<string> => ({ identity, region, order: 0, value });
-
 const createRegistry = () =>
   createWorkbenchPageRegistry<string>({
     resolveShellPlacements: () => [
@@ -33,16 +32,13 @@ const createRegistry = () =>
     },
     valuesEqual: (left, right) => left === right,
   });
-
 type PageInput = Omit<WorkbenchPageContribution, "ref" | "path">;
-
 const registerPage = (registry: WorkbenchPageRegistry<string>, page: PageInput) =>
   registry.registerPage({
     ...page,
     ref: { extensionId: "pstdio.test", kind: "page", id: page.id },
     path: page.id,
   });
-
 const activatePage = (registry: WorkbenchPageRegistry<string>, target: WorkbenchPageOpenInput) => {
   const page = registry.getPage(target.pageId);
   if (!page) throw new Error(`Unknown test page: ${target.pageId}`);
@@ -57,92 +53,122 @@ const activatePage = (registry: WorkbenchPageRegistry<string>, target: Workbench
     action: "testActivatePage",
   });
 };
-
 const registerPages = (registry: WorkbenchPageRegistry<string>) => {
   registerPage(registry, {
     id: "tickets",
     modeId: "project",
-    slots: [{ id: "content", role: "primary", region: "main", viewId: "tickets-view" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "tickets-view",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   registerPage(registry, {
     id: "ticket",
     modeId: "project",
     parentId: "tickets",
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "ticket",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "detail",
+      },
+      cardinality: "many",
+    },
     slots: [
       {
-        id: "content",
-        role: "primary",
-        region: "main",
-        binding: { resourceKinds: ["ticket"], viewId: "detail", cardinality: "many" },
+        id: "emoji",
+        region: "side",
+        item: {
+          kind: "view",
+          view: {
+            kind: "view",
+            id: "shared",
+          },
+          presence: "open",
+        },
       },
-      { id: "emoji", role: "auxiliary", region: "side", viewId: "shared", presence: "open" },
     ],
   });
   registerPage(registry, {
     id: "sessions",
     modeId: "sessions",
-    slots: [{ id: "content", role: "primary", region: "main", viewId: "sessions-view" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "sessions-view",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
 };
-
 const identityKey = (identity: PlacementIdentity) => {
   if (identity.kind === "shell") return `shell:${identity.placementId}:${identity.instanceKey}`;
   if (identity.kind === "mode") return `mode:${identity.modeId}:${identity.placementId}:${identity.instanceKey}`;
   return `page:${identity.pageId}:${identity.slotId}:${identity.instanceKey}`;
 };
-
 describe("createWorkbenchPageRegistry transitions", () => {
   test("starts with shell placements before any page is active", () => {
     const registry = createRegistry();
-
     expect(registry.store.getState().placements.map((candidate) => identityKey(candidate.identity))).toEqual([
       "shell:project-navigation:default",
     ]);
   });
-
   test("composes shell, mode, and page owners additively without sharing view instances", () => {
     const registry = createRegistry();
     registerPages(registry);
-
     activatePage(registry, { pageId: "ticket", resource: { type: "ticket", id: "PS-326" } });
-
     const state = registry.store.getState();
     expect(state.activeModeId).toBe("project");
     expect(state.activePageId).toBe("ticket");
     expect(state.placements.map((candidate) => identityKey(candidate.identity))).toEqual([
       "shell:project-navigation:default",
-      "page:ticket:content:ticket:PS-326",
+      "page:ticket:$main:ticket:PS-326",
       "mode:project:shared:default",
       "page:ticket:emoji:default",
     ]);
     expect(state.placements.filter((candidate) => candidate.value.startsWith("shared"))).toHaveLength(2);
   });
-
   test("keeps mode placements when only the page changes", () => {
     const registry = createRegistry();
     registerPages(registry);
     activatePage(registry, { pageId: "ticket", resource: { type: "ticket", id: "PS-326" } });
-
     activatePage(registry, { pageId: "tickets" });
-
     const reconciliation = registry.store.getState().reconciliation;
     expect(reconciliation.retain.map((candidate) => identityKey(candidate.identity))).toContain(
       "mode:project:shared:default",
     );
     expect(reconciliation.remove.map((candidate) => identityKey(candidate.identity))).toEqual([
-      "page:ticket:content:ticket:PS-326",
+      "page:ticket:$main:ticket:PS-326",
       "page:ticket:emoji:default",
     ]);
     expect(reconciliation.add.map((candidate) => identityKey(candidate.identity))).toEqual([
-      "page:tickets:content:default",
+      "page:tickets:$main:default",
     ]);
   });
-
   test("publishes a mode and page change as one complete store transition", () => {
     const registry = createRegistry();
     registerPages(registry);
     activatePage(registry, { pageId: "ticket", resource: { type: "ticket", id: "PS-326" } });
-    const observed: Array<{ modeId?: string; pageId?: string; owners: string[] }> = [];
+    const observed: Array<{
+      modeId?: string;
+      pageId?: string;
+      owners: string[];
+    }> = [];
     const unsubscribe = registry.store.subscribe((state) => {
       observed.push({
         modeId: state.activeModeId,
@@ -150,10 +176,8 @@ describe("createWorkbenchPageRegistry transitions", () => {
         owners: state.placements.map((candidate) => candidate.identity.kind),
       });
     });
-
     activatePage(registry, { pageId: "sessions" });
     unsubscribe();
-
     expect(observed).toEqual([
       {
         modeId: "sessions",
@@ -163,9 +187,8 @@ describe("createWorkbenchPageRegistry transitions", () => {
     ]);
     expect(
       registry.store.getState().reconciliation.activate.map((candidate) => identityKey(candidate.identity)),
-    ).toEqual(["page:sessions:content:default"]);
+    ).toEqual(["page:sessions:$main:default"]);
   });
-
   test("rejects mode placements owned by a different mode before changing state", () => {
     const registry = createWorkbenchPageRegistry<string>({
       resolveShellPlacements: () => [],
@@ -183,9 +206,16 @@ describe("createWorkbenchPageRegistry transitions", () => {
     registerPage(registry, {
       id: "tickets",
       modeId: "project",
-      slots: [{ id: "content", role: "primary", region: "main", viewId: "tickets" }],
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "tickets",
+        },
+        cardinality: "one",
+      },
+      slots: [],
     });
-
     expect(() => activatePage(registry, { pageId: "tickets" })).toThrow(/does not match active mode/);
     const state = registry.store.getState();
     expect(state.activeModeId).toBeUndefined();

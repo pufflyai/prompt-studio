@@ -24,7 +24,6 @@ export interface RegisterWorkbenchViewPlacementInput extends WorkbenchPlacementP
   role: WorkbenchWidgetRole;
   singleton: boolean;
   closable: boolean;
-  subPanelsOnly?: boolean;
 }
 
 export const registerWorkbenchViewPlacement = (

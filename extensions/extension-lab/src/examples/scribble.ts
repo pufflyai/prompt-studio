@@ -6,7 +6,7 @@ const views = [
   webview("scribble-pages", "Pages"),
   webview("scribble-status", "Sync status"),
 ];
-const example = defineExample({
+export const example = defineExample({
   name: "scribble",
   label: "Scribble",
   icon: "Feather",

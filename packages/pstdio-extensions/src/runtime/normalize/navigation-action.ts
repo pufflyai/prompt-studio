@@ -5,7 +5,10 @@ import { normalizeContributionRef } from "./references";
 
 type NavigationTargetItem = Exclude<NavigationTarget, { kind: "compound" }>;
 
-const normalizeItem = (ext: NormalizedExtension, action: NavigationTargetItem): NavigationTargetItem => {
+type NavigationOperation = Extract<NavigationTargetItem, { kind: "page" | "panel" }>;
+function normalizeItem(ext: NormalizedExtension, action: NavigationOperation): NavigationOperation;
+function normalizeItem(ext: NormalizedExtension, action: NavigationTargetItem): NavigationTargetItem;
+function normalizeItem(ext: NormalizedExtension, action: NavigationTargetItem): NavigationTargetItem {
   if (action.kind === "page") {
     const normalizePageTarget = (target: typeof action): typeof action => ({
       ...target,
@@ -30,7 +33,7 @@ const normalizeItem = (ext: NormalizedExtension, action: NavigationTargetItem): 
     };
   }
   return action;
-};
+}
 
 /** Resolves every contribution ref inside a navigation action to an absolute id. */
 export const normalizeNavigationAction = (ext: NormalizedExtension, action: NavigationTarget): NavigationTarget =>

@@ -11,7 +11,15 @@ const activateHostPage = (workbench: ReturnType<typeof createWorkbench>) => {
     ref: { extensionId: "pstdio", kind: "page", id: "host" },
     modeId: "project",
     path: "",
-    slots: [{ id: "content", role: "primary", region: "main", viewId: "host" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "host",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pageLocations.setProject("project-1");
   workbench.pageLocations.navigate({
@@ -19,12 +27,10 @@ const activateHostPage = (workbench: ReturnType<typeof createWorkbench>) => {
     page: { extensionId: "pstdio", kind: "page", id: "host" },
   });
 };
-
 describe("installWorkbenchTreeRenderer", () => {
   test("passes the host param field renderer to tree action dialogs", () => {
     const workbench = createWorkbench();
     const renderParamField: CommandParamFieldRenderer = () => undefined;
-
     installWorkbenchTreeRenderer(workbench, { renderParamField });
     workbench.views.registerView({
       id: "project.tree",
@@ -33,11 +39,17 @@ describe("installWorkbenchTreeRenderer", () => {
     });
     workbench.shellPlacements.registerPlacement({
       id: "project.tree",
-      item: { kind: "view", viewId: "project.tree", presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: "project.tree",
+        },
+      },
       region: "main",
     });
     activateHostPage(workbench);
-
     const renderer = getWorkbenchRenderers(workbench).getRenderer("project.tree");
     const instance = workbench.layout
       .listPanelInstances("main")
@@ -49,15 +61,16 @@ describe("installWorkbenchTreeRenderer", () => {
       panel,
       instance,
       refresh: () => undefined,
-    }) as { props?: { renderParamField?: CommandParamFieldRenderer } };
-
+    }) as {
+      props?: {
+        renderParamField?: CommandParamFieldRenderer;
+      };
+    };
     expect(rendered.props?.renderParamField).toBe(renderParamField);
   });
-
   test("uses the live placement region instead of the view default", () => {
     const workbench = createWorkbench();
     const onSidenavContextActionsChange = () => undefined;
-
     installWorkbenchTreeRenderer(workbench, { onSidenavContextActionsChange });
     workbench.views.registerView({
       id: "project.navigation",
@@ -66,7 +79,14 @@ describe("installWorkbenchTreeRenderer", () => {
     });
     workbench.shellPlacements.registerPlacement({
       id: "project.navigation",
-      item: { kind: "view", viewId: "project.navigation", presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: "project.navigation",
+        },
+      },
       region: "sidenav",
     });
     activateHostPage(workbench);
@@ -75,7 +95,6 @@ describe("installWorkbenchTreeRenderer", () => {
       .find((candidate) => candidate.viewId === "project.navigation")!;
     const panel = workbench.layout.getPanel(instance.panelId);
     if (!panel) throw new Error("Project navigation view was not registered");
-
     const rendered = getWorkbenchRenderers(workbench)
       .getRenderer("project.navigation")
       ?.render({
@@ -83,8 +102,11 @@ describe("installWorkbenchTreeRenderer", () => {
         panel,
         instance,
         refresh: () => undefined,
-      }) as { props?: { onSidenavContextActionsChange?: () => void } };
-
+      }) as {
+      props?: {
+        onSidenavContextActionsChange?: () => void;
+      };
+    };
     expect(rendered.props?.onSidenavContextActionsChange).toBe(onSidenavContextActionsChange);
   });
 });

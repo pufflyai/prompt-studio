@@ -1,12 +1,18 @@
-import { defineExtension, definePage, defineView, type JsonValue, workbenchModes } from "@pstdio/sdk/extensions";
+import {
+  type ControlGroup,
+  type ControlValueMap,
+  defineExtension,
+  definePage,
+  defineView,
+  workbenchModes,
+} from "@pstdio/sdk/extensions";
 
-let values: Record<string, JsonValue> = {
+let values: ControlValueMap = {
   environment: "staging",
   replicas: 2,
   releaseNotes: "Check the worker queue after deployment.",
 };
-
-const deploymentGroups: JsonValue[] = [
+const deploymentGroups: ControlGroup[] = [
   {
     id: "deployment",
     title: "Deployment",
@@ -16,17 +22,17 @@ const deploymentGroups: JsonValue[] = [
         id: "environment",
         name: "Environment",
         type: "selection",
+        defaultValue: "staging",
         options: [
           { id: "staging", name: "Staging" },
           { id: "production", name: "Production" },
         ],
       },
-      { id: "replicas", name: "Replicas", type: "number", min: 1, max: 10, step: 1 },
-      { id: "releaseNotes", name: "Release notes", type: "text", singleLine: false },
+      { id: "replicas", name: "Replicas", type: "number", defaultValue: 2, min: 1, max: 10, step: 1 },
+      { id: "releaseNotes", name: "Release notes", type: "text", defaultValue: "", singleLine: false },
     ],
   },
 ];
-
 const deploymentSettings = defineView({
   id: "deployment-settings",
   title: "Deployment settings",
@@ -41,15 +47,18 @@ const deploymentSettings = defineView({
     },
   },
 });
-
 export const deploymentSettingsPage = definePage({
   id: "deployment-settings",
   title: "Deployment settings",
   path: "deployment-settings",
   mode: workbenchModes.project,
-  slots: [{ id: "content", role: "primary", region: "main", view: deploymentSettings.ref }],
+  main: {
+    kind: "view",
+    view: deploymentSettings.ref,
+    cardinality: "one",
+  },
+  slots: [],
 });
-
 export default defineExtension({
   views: [deploymentSettings],
   pages: [deploymentSettingsPage],

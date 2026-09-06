@@ -33,7 +33,7 @@ interface RenderedOwnedPlacement {
 }
 
 const bindsToLocation = (placement: WorkbenchOwnedWidgetPlacement) =>
-  placement.value.role === "sub-panel" && (placement.identity.kind === "page" || Boolean(placement.value.resourceUri));
+  placement.value.role === "sub-panel" && (placement.identity.kind === "page" || Boolean(placement.value.resourceKey));
 
 const indexCurrentOwnedPlacements = (layout: WorkbenchLayout) => {
   const indexed = new Map<string, { region: WorkbenchRegion; placement: WorkbenchWidgetPlacement }>();
@@ -116,11 +116,11 @@ const renderDesiredPlacements = (
     }
     if (desiredWidgetIds.has(widgetId)) throw new Error(`Duplicate desired widget ID: ${widgetId}`);
     desiredWidgetIds.add(widgetId);
-    const ownerResourceUri = bindsToLocation(desired)
-      ? (desired.value.ownerResourceUri ??
-        exact?.placement.ownerResourceUri ??
-        transfer?.[1].placement.ownerResourceUri)
-      : desired.value.ownerResourceUri;
+    const ownerResourceKey = bindsToLocation(desired)
+      ? (desired.value.ownerResourceKey ??
+        exact?.placement.ownerResourceKey ??
+        transfer?.[1].placement.ownerResourceKey)
+      : desired.value.ownerResourceKey;
     rendered.push({
       identity: desired.identity,
       region: desired.region,
@@ -128,7 +128,7 @@ const renderDesiredPlacements = (
         ...desired.value,
         widgetId,
         placementIdentity: desired.identity,
-        ...(ownerResourceUri ? { ownerResourceUri } : {}),
+        ...(ownerResourceKey ? { ownerResourceKey } : {}),
       },
       ...(transferredFromKey ? { transferredFromKey } : {}),
     });
@@ -216,13 +216,13 @@ const normalizeRemovedState = (input: {
     ...layout,
     activeWidgetId: active?.widgetId ?? fallbackActive?.widgetId,
     activeLocationWidgetId,
-    activeResourceUri: active?.resourceUri ?? fallbackActive?.resourceUri,
+    activeResourceKey: active?.resourceKey ?? fallbackActive?.resourceKey,
   };
 };
 
 const bindOwnedSubPanelsToLocation = (layout: WorkbenchLayout, desired: readonly RenderedOwnedPlacement[]) => {
-  const ownerResourceUri = getActiveLocationPlacement(layout)?.resourceUri;
-  if (!ownerResourceUri) return layout;
+  const ownerResourceKey = getActiveLocationPlacement(layout)?.resourceKey;
+  if (!ownerResourceKey) return layout;
   const desiredByKey = new Map(desired.map((entry) => [placementIdentityKey(entry.identity), entry]));
   const regions = Object.fromEntries(
     Object.entries(layout.regions).map(([regionId, region]) => [
@@ -233,8 +233,8 @@ const bindOwnedSubPanelsToLocation = (layout: WorkbenchLayout, desired: readonly
           if (placement.role !== "sub-panel" || !placement.placementIdentity) return placement;
           const desiredPlacement = desiredByKey.get(placementIdentityKey(placement.placementIdentity));
           if (!desiredPlacement) return placement;
-          if (desiredPlacement.identity.kind !== "page" && !desiredPlacement.placement.resourceUri) return placement;
-          return { ...placement, ownerResourceUri };
+          if (desiredPlacement.identity.kind !== "page" && !desiredPlacement.placement.resourceKey) return placement;
+          return { ...placement, ownerResourceKey };
         }),
       },
     ]),

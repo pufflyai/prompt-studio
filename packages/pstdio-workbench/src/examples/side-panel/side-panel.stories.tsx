@@ -9,7 +9,6 @@ interface SidePanelStoryProps {
   detachable?: boolean;
   bubbleIcon?: ReactNode;
 }
-
 const SidePanelStory = (props: SidePanelStoryProps) => {
   const { detachable, bubbleIcon } = props;
   const [workbench] = useState(() => {
@@ -40,39 +39,48 @@ const SidePanelStory = (props: SidePanelStoryProps) => {
     });
     instance.shellPlacements.registerPlacement({
       id: "side-panel.canvas",
-      item: { kind: "view", viewId: "side-panel.canvas", presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: "side-panel.canvas",
+        },
+      },
       region: "main",
     });
     instance.shellPlacements.registerPlacement({
       id: "side-panel.inspector",
-      item: { kind: "view", viewId: "side-panel.inspector", presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: "side-panel.inspector",
+        },
+      },
       region: "side",
     });
     return instance;
   });
   return <WorkbenchStory workbench={workbench} sidePanelBubbleIcon={bubbleIcon} />;
 };
-
 const meta = {
   title: "pstdio-workbench/Reference/Core API/Side Panel",
   parameters: { layout: "fullscreen" },
   tags: ["autodocs"],
 } satisfies Meta;
-
 export default meta;
 type Story = StoryObj<typeof meta>;
-
 export const AttachedOnly: Story = {
   parameters: {
     docs: { description: { story: "An attached-only panel opens from the navigation bar and has no bubble." } },
   },
   render: () => <SidePanelStory detachable={false} />,
 };
-
 export const DefaultBubble: Story = {
   render: () => <SidePanelStory />,
 };
-
 export const CustomBubbleIcon: Story = {
   parameters: {
     docs: { description: { story: "Pass sidePanelBubbleIcon to Workbench to replace the default chat icon." } },

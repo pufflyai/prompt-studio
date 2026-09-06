@@ -71,3 +71,5 @@ layer-map change.
 - `@pstdio/ui` may not import or declare router or React Query dependencies.
 - E2E tests use package exports and declare every workspace dependency they
   import.
+
+The database uses the contract-layer `ResourceRef` type for persisted resource values. The UI library imports the SDK's public serializable control types and adds separate React-node and browser-file variants. These are type dependencies; the UI library still owns no routing, query, or extension-host policy. The SDK declaration rollup includes the private contract types, so installed UI declarations resolve through public packages.

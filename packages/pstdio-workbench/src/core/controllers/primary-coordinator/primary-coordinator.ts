@@ -1,10 +1,10 @@
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { LayoutModel } from "../../registries/layout/layout-model";
 import { getActivePlacement } from "../../registries/layout/layout-operations";
 import { resolveAnchorRegion } from "../../registries/layout/surface-map";
 import { reconcileAnchors } from "../../registries/layout/surface-reconcile";
 import type { ResourceRef, ResourceRegistry } from "../../registries/resources/resource-registry";
 import { createDisposable, type Disposable } from "../../shared/disposable";
-
 // Default scope predicate derived from the scoped resource providers. A detached
 // resource stays in scope while a provider for its kind still lists it under the active
 // primary; kinds with no provider can't be scoped, so they are kept. This makes the
@@ -15,11 +15,10 @@ import { createDisposable, type Disposable } from "../../shared/disposable";
 // from the registry's own `getPrimary` closure (which already reflects the live primary),
 // so the candidate list and this predicate cannot drift to different primaries.
 export const createScopedIsInScope = (resources: ResourceRegistry) => (resource: ResourceRef) => {
-  const hasProvider = resources.listProviders().some((provider) => provider.kind === resource.kind);
+  const hasProvider = resources.listProviders().some((provider) => provider.kind === resource.type);
   if (!hasProvider) return true;
-  return resources.listResources("").some((entry) => entry.resource.uri === resource.uri);
+  return resources.listResources("").some((entry) => resourceKey(entry.resource) === resourceKey(resource));
 };
-
 export interface CreatePrimaryCoordinatorInput {
   layout: LayoutModel;
   // Whether a detached anchor's current resource still belongs to the new primary's
@@ -27,7 +26,6 @@ export interface CreatePrimaryCoordinatorInput {
   // default keeps detached anchors (() => true) until scoped providers land.
   isInScope: (resource: ResourceRef, primary: ResourceRef | undefined) => boolean;
 }
-
 // Keeps the secondary resource anchors consistent with the primary (main) resource.
 // On a primary change, derived anchors clear (they re-scope to the new primary) and
 // detached anchors disconnect once they fall outside the new primary's scope. The
@@ -43,8 +41,8 @@ export const createPrimaryCoordinator = ({ layout, isInScope }: CreatePrimaryCoo
   });
   const unsubscribe = layout.store.subscribe((state, previous) => {
     const primary = getActivePlacement(state.layout.regions[resolveAnchorRegion("primary")])?.resource;
-    const previousPrimaryUri = getActivePlacement(previous.layout.regions[resolveAnchorRegion("primary")])?.resourceUri;
-    if (primary?.uri === previousPrimaryUri || changingPersistenceScope) return;
+    const previousPrimaryKey = getActivePlacement(previous.layout.regions[resolveAnchorRegion("primary")])?.resourceKey;
+    if (resourceKey(primary) === previousPrimaryKey || changingPersistenceScope) return;
     // Reconcile only placements that belonged to the Location that is leaving.
     // Another listener may synchronously populate the new Location before this
     // callback runs; clearing the live region would delete that new content too.
@@ -55,7 +53,6 @@ export const createPrimaryCoordinator = ({ layout, isInScope }: CreatePrimaryCoo
       }
     }
   });
-
   return createDisposable(() => {
     unsubscribe();
     willChangeScope.dispose();

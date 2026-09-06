@@ -45,11 +45,15 @@ export const resolveModePlacementSet = <Value>(input: {
   current: WorkbenchPageRegistryStoreState<Value>;
   modeId: string | undefined;
   desired: readonly ResolvedOwnedPlacement<Value>[] | undefined;
+  location?: WorkbenchPageRegistryStoreState<Value>["location"];
+  projectId?: string;
+  pageId?: string;
   resolveModePlacements: CreateWorkbenchPageRegistryInput<Value>["resolveModePlacements"];
 }) => {
   if (!input.modeId) return undefined;
   if (input.desired) return input.desired;
-  if (input.modeId !== input.current.activeModeId) return input.resolveModePlacements(input.modeId);
+  if (input.modeId !== input.current.activeModeId || input.projectId !== input.current.projectId)
+    return input.resolveModePlacements(input.modeId, input.location, input.projectId, input.pageId);
   return input.current.placements.filter(
     (placement) => placement.identity.kind === "mode" && placement.identity.modeId === input.modeId,
   );

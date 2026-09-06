@@ -44,6 +44,7 @@ export {
   WEBVIEW_DECLARABLE_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITY_VERSION,
+  WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
   workbenchModeDefinitions,
   workbenchModes,
   workbenchPageDefinitions,
@@ -99,7 +100,9 @@ export {
   type WebviewFilesClient,
 } from "./define-extension-view";
 export { params } from "./params";
+export { type QualifiedRef, qualifyRef } from "./qualify-ref";
 export { commandEvent, commandRef, eventRef } from "./refs";
+export { resourceKey } from "./resource-key";
 export {
   createTerminalSessionBridge,
   type TerminalSessionAdapter,

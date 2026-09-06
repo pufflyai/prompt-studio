@@ -24,6 +24,14 @@ const webviewBrowsers: { launchOptions?: LaunchOptions; name: string; type: Brow
   { name: "WebKit (Safari engine)", type: webkit },
 ];
 
+const findLabWebview = (metadata: WorkbenchExtensionMetadata) => {
+  const labPage = metadata.pages.find((page) => page.path === "lab");
+  if (labPage?.main.kind !== "view") return undefined;
+  const ref = labPage.main.view;
+  const view = metadata.views.find((view) => view.localId === ref.id && view.extensionId === ref.extensionId);
+  return view?.body.kind === "webview" ? view.body : undefined;
+};
+
 beforeAll(() => {
   if (!process.env.PSTDIO_PACKAGED_BINARY_PATH) buildBinary();
 }, BUILD_TIMEOUT);
@@ -64,12 +72,7 @@ describe("packaged extension webviews", () => {
             });
             expect(metadataRes.status).toBe(200);
             const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
-            const labPage = metadata.pages.find((page) => page.path === "lab");
-            const labViewRef = labPage?.slots.find((slot) => slot.role === "primary")?.view;
-            const labView = metadata.views.find(
-              (view) => view.localId === labViewRef?.id && view.extensionId === labViewRef.extensionId,
-            );
-            labWebview = labView?.body.kind === "webview" ? labView.body : undefined;
+            labWebview = findLabWebview(metadata);
             if (labWebview?.webview.moduleUrl) {
               const moduleRes = await fetch(`${started.baseUrl}${labWebview.webview.moduleUrl}`, {
                 headers: runtimeAuthorization(started.descriptor),

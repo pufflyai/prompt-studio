@@ -13,7 +13,7 @@ The Secondary panel starts with three tabs from two resource placements:
 - **Alpha.md** and **Beta.md** belong to a `cardinality: "many"` placement. Alpha is pinned and Beta is the preview.
   Press **Preview Gamma**. Gamma replaces the Beta preview while Alpha stays open.
 
-Press **Pin Beta** and then preview Gamma. All three documents stay available because each pinned resource URI owns a
+Press **Pin Beta** and then preview Gamma. All three documents stay available because each pinned resource identity owns a
 tab. Reopening any open resource selects its existing tab instead of making a duplicate.
 
 <Canvas of={OnboardingStories.ResourceReuse} sourceState="none" />
@@ -26,9 +26,9 @@ tab. Reopening any open resource selects its existing tab instead of making a du
 
 The branches and documents are plain resource values:
 
-- each document is a `ResourceRef`: `{ kind, uri, id, label }`.
-- `kind` groups resources of one type. The resource placement below accepts this kind.
-- `uri` is the resource's stable identity. Tabs are matched by this value.
+- each document is a `ResourceRef`: `{ type, id, label }`.
+- `type` groups resources of one type. The resource placement below accepts this kind.
+- `type` and `id`, together with any extension and project owner, identify the resource.
 - `label` is the user-facing name. The launcher passes it as the tab title.
 
 `inspectBranch` and `openDocument` open resources through `shellPlacements.openPlacement(...)`:
@@ -44,27 +44,27 @@ The branches and documents are plain resource values:
 The first View and placement build the launcher:
 
 - `views.registerView({ id: "guide.documents", ... })` renders the buttons with a `body.kind: "react"` body.
-- `shellPlacements.registerPlacement(...)` places it with `item: { kind: "view", viewId, presence: "fixed" }` in
+- `shellPlacements.registerPlacement(...)` places it with `item: { kind: "view", view: { kind: "view", id: viewId }, presence: "fixed" }` in
   `region: "main"`. `presence: "fixed"` keeps the launcher always open with no close button.
 
 The document View and placement demonstrate `cardinality: "many"`:
 
 - `views.registerView({ id: "guide.document-view", ... })` renders one document. `instance.resource` carries the
   resource bound to that instance.
-- `item.kind: "resource"` makes the placement resource-bound: one instance per opened resource. Resource placements
+- `item.kind: "binding"` makes the placement resource-bound: one instance per opened resource. Resource placements
   start empty; nothing shows until a caller opens a resource.
-- `item.resourceKinds: ["document"]` limits which resource kinds the placement accepts.
-- `item.cardinality: "many"` creates one tab per pinned resource URI and at most one unpinned preview tab. Reopening a
-  URI selects its existing tab.
+- `item.binding.kinds: [{ kind: "resource-kind", id: "document" }]` limits which resource kinds the placement accepts.
+- `item.binding.cardinality: "many"` creates one tab per pinned resource identity and at most one unpinned preview tab. Reopening a
+  resource selects its existing tab.
 - cardinality controls the instance count only. It does not control initial visibility, and it does not control
   closability: resource tabs are always closable.
 - `region: "secondary"` puts the document tabs in the Secondary panel.
 
 The branch View and placement demonstrate `cardinality: "one"`:
 
-- `resourceKinds: ["branch"]` keeps branch resources separate from documents even though both placements use the same
+- `binding.kinds: [{ kind: "resource-kind", id: "branch" }]` keeps branch resources separate from documents even though both placements use the same
   region.
-- `item.cardinality: "one"` keeps one inspector instance. Opening a different branch changes that instance's resource
+- `item.binding.cardinality: "one"` keeps one inspector instance. Opening a different branch changes that instance's resource
   and title.
 - preview and pin do not apply because this placement can never have a second tab.
 

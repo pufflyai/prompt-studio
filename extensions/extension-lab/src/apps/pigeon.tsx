@@ -159,6 +159,14 @@ export const ReadingPane = (props: { input: ExampleViewInput }) => {
     <Stack h="full" overflowY="auto" gap="lg" p="lg">
       <HStack justify="space-between">
         <HStack>
+          <IconButton
+            aria-label="Close message"
+            size="sm"
+            variant="ghost"
+            onClick={() => input.host.bridge.call("placement.close", {})}
+          >
+            <ExampleIcon name="X" />
+          </IconButton>
           <IconButton aria-label="Archive thread" size="sm" variant="ghost" onClick={archive}>
             <ExampleIcon name="Archive" />
           </IconButton>

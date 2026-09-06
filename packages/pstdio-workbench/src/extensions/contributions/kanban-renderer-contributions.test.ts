@@ -425,7 +425,7 @@ describe("registerWorkbenchExtensionKanbanRenderers actions", () => {
       context: { type: "longtext", label: "Additional context" },
     });
     expect(request?.args).toEqual({ rowId: "ticket-1" });
-    expect(request?.context?.resource).toMatchObject({ kind: "ticket", id: "ticket-1" });
+    expect(request?.context?.resource).toMatchObject({ type: "ticket", id: "ticket-1" });
   });
 
   test("awaits mutation commands and refreshes after board move mutations", async () => {

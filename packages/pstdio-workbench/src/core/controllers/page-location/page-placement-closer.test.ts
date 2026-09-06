@@ -12,7 +12,15 @@ test("closing the last resource returns to its declared home page", () => {
     ref: home,
     path: "sessions",
     modeId: "sessions",
-    slots: [{ id: "content", role: "primary", region: "main", viewId: "session" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "session",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pages.registerPage({
     id: "session",
@@ -20,15 +28,23 @@ test("closing the last resource returns to its declared home page", () => {
     ref: page,
     path: "session",
     modeId: "sessions",
-    slots: [
-      {
-        id: "content",
-        role: "primary",
-        region: "main",
-
-        binding: { resourceKinds: ["session"], viewId: "session", cardinality: "one" },
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "session",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "session",
       },
-    ],
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pageLocations.setProject("project");
   expect(workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "session", id: "one" } }).ok).toBe(

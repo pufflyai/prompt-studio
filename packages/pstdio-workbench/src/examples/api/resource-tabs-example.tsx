@@ -1,22 +1,40 @@
 import { Box, Button, Code, HStack, Stack, Text } from "@chakra-ui/react";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench, type ResourceRef, type WorkbenchCore } from "@pstdio/workbench";
 import { Workbench, WorkbenchThemeProvider } from "@pstdio/workbench/react";
 import { useState } from "react";
 
 const documentPlacementId = "guide.document";
 const inspectorPlacementId = "guide.branch-inspector";
-
 const documents = {
-  alpha: { kind: "document", uri: "document:alpha", id: "alpha", label: "Alpha.md" },
-  beta: { kind: "document", uri: "document:beta", id: "beta", label: "Beta.md" },
-  gamma: { kind: "document", uri: "document:gamma", id: "gamma", label: "Gamma.md" },
+  alpha: {
+    type: "document",
+    id: "alpha",
+    label: "Alpha.md",
+  },
+  beta: {
+    type: "document",
+    id: "beta",
+    label: "Beta.md",
+  },
+  gamma: {
+    type: "document",
+    id: "gamma",
+    label: "Gamma.md",
+  },
 } as const satisfies Record<string, ResourceRef>;
-
 const branches = {
-  main: { kind: "branch", uri: "branch:main", id: "main", label: "main" },
-  release: { kind: "branch", uri: "branch:release", id: "release", label: "release/v0.31" },
+  main: {
+    type: "branch",
+    id: "main",
+    label: "main",
+  },
+  release: {
+    type: "branch",
+    id: "release",
+    label: "release/v0.31",
+  },
 } as const satisfies Record<string, ResourceRef>;
-
 const openDocument = (workbench: WorkbenchCore, resource: ResourceRef, open: "pin" | "preview") => {
   const identity = workbench.shellPlacements.openPlacement({
     placementId: documentPlacementId,
@@ -26,7 +44,6 @@ const openDocument = (workbench: WorkbenchCore, resource: ResourceRef, open: "pi
   });
   return identity;
 };
-
 const inspectBranch = (workbench: WorkbenchCore, resource: ResourceRef) => {
   workbench.shellPlacements.openPlacement({
     placementId: inspectorPlacementId,
@@ -34,10 +51,8 @@ const inspectBranch = (workbench: WorkbenchCore, resource: ResourceRef) => {
     title: `Inspect ${resource.label}`,
   });
 };
-
 const DocumentLauncher = (props: { showCardinalityComparison: boolean; workbench: WorkbenchCore }) => {
   const { showCardinalityComparison, workbench } = props;
-
   return (
     <Stack gap="md" p="lg">
       <Stack gap="xs">
@@ -88,10 +103,8 @@ const DocumentLauncher = (props: { showCardinalityComparison: boolean; workbench
     </Stack>
   );
 };
-
 export const createResourceTabsWorkbench = (showCardinalityComparison = false) => {
   const workbench = createWorkbench({ regionSettings: { secondary: { alwaysShowTabs: true } } });
-
   workbench.views.registerView({
     id: "guide.documents",
     title: "Documents",
@@ -104,7 +117,14 @@ export const createResourceTabsWorkbench = (showCardinalityComparison = false) =
   });
   workbench.shellPlacements.registerPlacement({
     id: "guide.documents",
-    item: { kind: "view", viewId: "guide.documents", presence: "fixed" },
+    item: {
+      kind: "view",
+      presence: "fixed",
+      view: {
+        kind: "view",
+        id: "guide.documents",
+      },
+    },
     region: "main",
   });
   workbench.views.registerView({
@@ -115,7 +135,7 @@ export const createResourceTabsWorkbench = (showCardinalityComparison = false) =
       render: ({ instance }) => (
         <Stack gap="sm" p="lg">
           <Text textStyle="heading/M">{instance.resource?.label}</Text>
-          <Text color="fg.muted">{instance.resource?.uri}</Text>
+          <Text color="fg.muted">{resourceKey(instance.resource)}</Text>
         </Stack>
       ),
     },
@@ -123,14 +143,23 @@ export const createResourceTabsWorkbench = (showCardinalityComparison = false) =
   workbench.shellPlacements.registerPlacement({
     id: documentPlacementId,
     item: {
-      kind: "resource",
-      viewId: "guide.document-view",
-      resourceKinds: ["document"],
-      cardinality: "many",
+      kind: "binding",
+      binding: {
+        kinds: [
+          {
+            kind: "resource-kind",
+            id: "document",
+          },
+        ],
+        view: {
+          kind: "view",
+          id: "guide.document-view",
+        },
+        cardinality: "many",
+      },
     },
     region: "secondary",
   });
-
   if (showCardinalityComparison) {
     workbench.views.registerView({
       id: "guide.branch-inspector",
@@ -141,7 +170,7 @@ export const createResourceTabsWorkbench = (showCardinalityComparison = false) =
           <Stack gap="sm" p="lg">
             <Text textStyle="heading/M">{instance.resource?.label}</Text>
             <Text color="fg.muted">This same tab rebinds when you inspect another branch.</Text>
-            <Code alignSelf="flex-start">{instance.resource?.uri}</Code>
+            <Code alignSelf="flex-start">{resourceKey(instance.resource)}</Code>
           </Stack>
         ),
       },
@@ -149,10 +178,20 @@ export const createResourceTabsWorkbench = (showCardinalityComparison = false) =
     workbench.shellPlacements.registerPlacement({
       id: inspectorPlacementId,
       item: {
-        kind: "resource",
-        viewId: "guide.branch-inspector",
-        resourceKinds: ["branch"],
-        cardinality: "one",
+        kind: "binding",
+        binding: {
+          kinds: [
+            {
+              kind: "resource-kind",
+              id: "branch",
+            },
+          ],
+          view: {
+            kind: "view",
+            id: "guide.branch-inspector",
+          },
+          cardinality: "one",
+        },
       },
       region: "secondary",
     });
@@ -160,14 +199,11 @@ export const createResourceTabsWorkbench = (showCardinalityComparison = false) =
     openDocument(workbench, documents.alpha, "pin");
     openDocument(workbench, documents.beta, "preview");
   }
-
   return workbench;
 };
-
 export const ResourceTabsExample = (props: { showCardinalityComparison?: boolean }) => {
   const { showCardinalityComparison = false } = props;
   const [workbench] = useState(() => createResourceTabsWorkbench(showCardinalityComparison));
-
   return (
     <WorkbenchThemeProvider>
       <Box h="480px" minH="360px" borderWidth="1px" borderColor="border.subtle" overflow="hidden">

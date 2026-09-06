@@ -12,7 +12,7 @@ import type {
   WorkbenchPageContribution,
   WorkbenchPageRegistryStoreState,
 } from "./page-registry-types";
-import { emptyPageState } from "./page-slot-lifecycle";
+import { removePageStates } from "./page-state-key";
 
 const emptyReconciliation = <Value>(): OwnedPlacementReconciliation<Value> => ({
   add: [],
@@ -58,7 +58,6 @@ export const registerWorkbenchPage = <Value>(input: {
     {
       ...current,
       pages: { ...current.pages, [page.id]: registered },
-      pageStates: { ...current.pageStates, [page.id]: emptyPageState(registered) },
       reconciliation: emptyReconciliation(),
     },
     false,
@@ -68,7 +67,7 @@ export const registerWorkbenchPage = <Value>(input: {
     const snapshot = store.getState();
     if (snapshot.pages[page.id] !== registered) return;
     const { [page.id]: _page, ...pages } = snapshot.pages;
-    const { [page.id]: _pageState, ...pageStates } = snapshot.pageStates;
+    const pageStates = removePageStates(snapshot.pageStates, page.id);
     if (snapshot.activePageId === page.id) {
       const placements = composeOwnedPlacements({ shell: input.registryInput.resolveShellPlacements() }).placements;
       input.publishState(

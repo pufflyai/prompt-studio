@@ -14,7 +14,7 @@ describe("file renderer refresh events", () => {
     getWorkbenchRenderers(workbench).onDidRefreshFileRenderer((event) => received.push(event));
 
     getWorkbenchRenderers(workbench).refreshFileRenderer("planner.ticketContent", {
-      resourceUri: "pstdio://extension-resource/ticket/ticket-1",
+      resourceKey: "pstdio://extension-resource/ticket/ticket-1",
       origin: {
         rendererId: "planner.ticketContent",
         instanceId: "planner.ticketEditor:1",
@@ -26,7 +26,7 @@ describe("file renderer refresh events", () => {
     expect(received).toEqual([
       {
         fileRendererId: "planner.ticketContent",
-        resourceUri: "pstdio://extension-resource/ticket/ticket-1",
+        resourceKey: "pstdio://extension-resource/ticket/ticket-1",
         origin: {
           rendererId: "planner.ticketContent",
           instanceId: "planner.ticketEditor:1",

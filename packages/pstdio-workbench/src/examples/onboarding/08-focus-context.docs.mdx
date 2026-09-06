@@ -50,9 +50,7 @@ The button calls `input.workbench.pageLocations.navigate(...)`:
 - `title` is the page label.
 - `path` is the page's stable URL segment.
 - `modeId` names the mode that owns the page. Opening the page activates this mode.
-- `slots` is the complete page layout. Both pages have a primary Main slot and a fixed auxiliary Sidenav slot. Session
-  adds an open `side` slot. Extension Lab adds an open `secondary` slot. The transition removes all three placements
-  owned by the old page before it applies the new page's placements.
+- `main` renders the Main view. `slots` declares the fixed Sidenav panel and an open panel in Side for Session or Secondary for Extension Lab. Navigation replaces the old page's owned placements together.
 
 `pageLocations.switchProject("storybook")` starts page navigation for one project. It restores that project's saved
 location, or opens the start page when nothing is saved.

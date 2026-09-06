@@ -1,5 +1,5 @@
 import { Box } from "@chakra-ui/react";
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbench, type WorkbenchCore, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
@@ -37,8 +37,7 @@ const ticketsView = {
   icon: "square-kanban",
 };
 const parentTicketResource = {
-  kind: "ticket",
-  uri: "pstdio://extension-resource/ticket/PS-163",
+  type: "ticket",
   id: "PS-163",
   label: "PS-163 Workbench navigation",
   icon: "FileText",
@@ -46,8 +45,6 @@ const parentTicketResource = {
 };
 const ticketResource = {
   type: "ticket",
-  kind: "ticket",
-  uri: "pstdio://extension-resource/ticket/PS-164",
   id: "PS-164",
   label: "PS-164 Sidenav resource sections",
   icon: "FileText",
@@ -62,8 +59,7 @@ const ticketResource = {
   },
 };
 const linkedWorkspaceResource = {
-  kind: "workspace",
-  uri: "pstdio://extension-resource/workspace/PS-164_A1",
+  type: "workspace",
   id: "PS-164_A1",
   label: "PS-164_A1",
   icon: "GitBranch",
@@ -79,7 +75,6 @@ const linkedWorkspaceResource = {
     },
   },
 };
-
 const createTicketsNavigationModule = () => ({
   id: "story.tickets-navigation",
   activate(ctx: WorkbenchModuleContext) {
@@ -92,7 +87,7 @@ const createTicketsNavigationModule = () => ({
     });
     ctx.resources.registerHierarchyProvider({
       id: "story.ticket-hierarchy",
-      canResolve: (resource) => resource.kind === "ticket",
+      canResolve: (resource) => resource.type === "ticket",
       getParent: (resource) =>
         dashboardResourceParent(ctx, resource, PROJECT_ID) ?? { type: "view", viewId: ticketsView.id },
     });
@@ -103,14 +98,24 @@ const createTicketsNavigationModule = () => ({
       icon: ticketsView.icon,
       path: "ticket",
       modeId: "project",
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          binding: { resourceKinds: ["ticket"], viewId: ticketsView.id, cardinality: "one" },
+      parentId: workbenchPages.start.id,
+      resource: {
+        kinds: [
+          {
+            kind: "resource-kind",
+            id: "ticket",
+          },
+        ],
+      },
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: ticketsView.id,
         },
-      ],
+        cardinality: "one",
+      },
+      slots: [],
     });
     ctx.navigationTrees.registerContribution({
       id: "story.tickets-navigation.project",
@@ -137,7 +142,7 @@ const createTicketsNavigationModule = () => ({
       sourceExtensionId: "story",
       declarationIndex: 1,
       getSections: (input) =>
-        input.resource?.kind === "ticket"
+        input.resource?.type === "ticket"
           ? [
               {
                 id: "ticket",
@@ -155,7 +160,7 @@ const createTicketsNavigationModule = () => ({
                 collapsible: true,
                 nodes: [
                   {
-                    id: linkedWorkspaceResource.uri,
+                    id: resourceKey(linkedWorkspaceResource),
                     label: linkedWorkspaceResource.label,
                     icon: "GitBranch",
                     resource: linkedWorkspaceResource,
@@ -163,7 +168,7 @@ const createTicketsNavigationModule = () => ({
                       kind: "page",
                       page: workbenchPages.workspace,
                       resource: {
-                        type: linkedWorkspaceResource.kind,
+                        type: linkedWorkspaceResource.type,
                         id: linkedWorkspaceResource.id,
                         label: linkedWorkspaceResource.label,
                         metadata: linkedWorkspaceResource.metadata,
@@ -181,7 +186,6 @@ const createTicketsNavigationModule = () => ({
     return [];
   },
 });
-
 const seedSessions = () => {
   getWriter("sessions")?.truncateAndWrite([
     sessionRow("session-today-1", "Refactor sidenav", "completed", "2026-06-24T09:00:00Z", "workspace-1"),
@@ -231,7 +235,6 @@ const seedSessions = () => {
     },
   ]);
 };
-
 const sessionRow = (id: string, title: string, status: string, updatedAt: string, workspaceId?: string) => ({
   id,
   project_id: PROJECT_ID,
@@ -247,20 +250,16 @@ const sessionRow = (id: string, title: string, status: string, updatedAt: string
   deleted_at: null,
   ...(workspaceId ? { workspace_id: workspaceId } : {}),
 });
-
 const linkSessionsToWorkspace = () => {
   getWriter("workspace_sessions")?.truncateAndWrite([
     { id: "link-1", workspace_id: "workspace-1", session_id: "session-today-1" },
     { id: "link-2", workspace_id: "workspace-1", session_id: "session-yesterday" },
   ]);
 };
-
 const bootstrapWorkbench = () => {
   seedSessions();
   linkSessionsToWorkspace();
-
   const workbench = createWorkbench();
-
   for (const module of [
     createSidenavModule(),
     createCommandPaletteModule(),
@@ -277,24 +276,19 @@ const bootstrapWorkbench = () => {
   ]) {
     workbench.registerModule(module);
   }
-
   workbench.keybindings.registerKeybinding({
     action: { kind: "command", commandId: dashboardCommandIds.openWorkspaces },
     keybinding: WORKSPACES_KEYBINDING,
   });
-
   selectDashboardProject(workbench, { id: PROJECT_ID, name: "Prompt Studio" });
   workbench.pageLocations.setProject(PROJECT_ID);
   return workbench;
 };
-
 const openTicketPage = (workbench: WorkbenchCore) => {
   void workbench.navigation.openTarget({ kind: "page", page: STORY_TICKET_PAGE_REF, resource: ticketResource });
 };
-
 const openStartPage = (workbench: WorkbenchCore) =>
   void workbench.navigation.openTarget({ kind: "page", page: workbenchPages.start });
-
 const meta = {
   title: "Dashboard/Sidenav",
   parameters: { layout: "fullscreen" },
@@ -306,25 +300,20 @@ const meta = {
     ),
   ],
 } satisfies Meta;
-
 export default meta;
-
 type Story = StoryObj;
-
 const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
   const [workbench] = useState(() => {
     const next = bootstrapWorkbench();
     props.open(next);
     return next;
   });
-
   return (
     <Box h="100dvh" w="full">
       <Workbench workbench={workbench} />
     </Box>
   );
 };
-
 // F15: global collections stay fixed while the resource region is empty.
 export const ProjectMode: Story = {
   render: () => <SidenavStory open={openStartPage} />,
@@ -332,7 +321,6 @@ export const ProjectMode: Story = {
     await expect(canvasElement.querySelector('[data-workbench-panel-header="sidenav"]')).toBeNull();
   },
 };
-
 export const OverflowWithPinnedChrome: Story = {
   name: "Overflow with pinned header and footer",
   render: () => (
@@ -382,36 +370,30 @@ export const OverflowWithPinnedChrome: Story = {
     await expect(settings.getBoundingClientRect().bottom).toBe(settingsBottom);
   },
 };
-
 // Aggregate collection: Workspaces is not duplicated in the resource region.
 export const WorkspacesView: Story = {
   render: () => <SidenavStory open={(workbench) => void openWorkspacesPage(workbench)} />,
 };
-
 export const WorkspacesViewHover: Story = {
   render: () => <SidenavStory open={(workbench) => void openWorkspacesPage(workbench)} />,
   play: async ({ canvasElement }) => {
     canvasElement.querySelector('[data-tree-list-focus-id="workspaces"]')?.setAttribute("data-hover", "");
   },
 };
-
 // F17: a separator marks the boundary before the ticket's resource tree.
 export const TicketMode: Story = {
   name: "Ticket page navigation",
   render: () => <SidenavStory open={openTicketPage} />,
 };
-
 // F22: the linked resource keeps the ticket ancestry and Back restores the selected ticket.
 export const TicketWorkspaceBackJourney: Story = {
   name: "Ticket linked workspace and back",
   render: () => <SidenavStory open={openTicketPage} />,
 };
-
 // Session mode: global collections stay fixed above an expanded Sessions group with inline creation.
 export const SessionMode: Story = {
   render: () => <SidenavStory open={(workbench) => void openSessionsPage(workbench)} />,
 };
-
 // Workspace resource: global collections stay fixed above the expanded, workspace-scoped Sessions group.
 export const WorkspaceResource: Story = {
   render: () => (
@@ -419,7 +401,7 @@ export const WorkspaceResource: Story = {
       open={(workbench) => {
         const workspace = workbench.resources
           .listResources("")
-          .find((entry) => entry.resource.kind === "workspace")?.resource;
+          .find((entry) => entry.resource.type === "workspace")?.resource;
         if (workspace) openWorkspacesPage(workbench, workspace);
       }}
     />

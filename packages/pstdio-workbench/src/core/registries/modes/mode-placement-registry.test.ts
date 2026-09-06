@@ -27,7 +27,14 @@ describe("mode placement registry", () => {
     });
     workbench.shellPlacements.registerPlacement({
       id: "activity",
-      item: { kind: "view", viewId: "activity", presence: "closed" },
+      item: {
+        kind: "view",
+        presence: "closed",
+        view: {
+          kind: "view",
+          id: "activity",
+        },
+      },
       region: "activity",
     });
     workbench.modes.registerMode({ id: "lab", activate: () => undefined });
@@ -41,23 +48,36 @@ describe("mode placement registry", () => {
       ref: { extensionId: "test", kind: "page", id: "lab" },
       modeId: "lab",
       path: "lab",
-      slots: [{ id: "content", role: "primary", region: "main", viewId: "overview" }],
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "overview",
+        },
+        cardinality: "one",
+      },
+      slots: [],
     });
     workbench.modePlacements.registerPlacement({
       id: "lab.artifacts",
       ref: { extensionId: "test", kind: "placement", id: "artifacts" },
       modeId: "lab",
-      item: { kind: "view", viewId: "artifacts", presence: "open" },
+      item: {
+        kind: "view",
+        presence: "open",
+        view: {
+          kind: "view",
+          id: "artifacts",
+        },
+      },
       region: "main",
     });
     workbench.modes.onDidChangeActive(() => {
       if (workbench.modes.getActiveModeId() !== "lab") return;
       void workbench.navigation.openPanel({ panel: { kind: "shell-placement", id: "activity" } });
     });
-
     workbench.pageLocations.setProject("project-1");
     workbench.pageLocations.navigate({ kind: "page", page: { extensionId: "test", kind: "page", id: "lab" } });
-
     const layout = workbench.layout.getLayout();
     expect(layout.regions.main.activeWidgetId).toBe(layout.activeLocationWidgetId);
     expect(
@@ -70,7 +90,6 @@ describe("mode placement registry", () => {
       }),
     ]);
   });
-
   test("updates a resource placement without replacing its mounted instance", () => {
     const workbench = createWorkbench();
     workbench.views.registerView({
@@ -89,17 +108,39 @@ describe("mode placement registry", () => {
       ref: { extensionId: "pstdio", kind: "page", id: "start" },
       modeId: "project",
       path: "",
-      slots: [{ id: "content", role: "primary", region: "main", viewId: "start" }],
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "start",
+        },
+        cardinality: "one",
+      },
+      slots: [],
     });
     workbench.modePlacements.registerPlacement({
       id: "project.session",
       ref: { extensionId: "pstdio", kind: "placement", id: "session" },
       modeId: "project",
       item: {
-        kind: "resource",
-        viewId: "session",
-        resourceKinds: ["session", "session-draft"],
-        cardinality: "many",
+        kind: "binding",
+        binding: {
+          kinds: [
+            {
+              kind: "resource-kind",
+              id: "session",
+            },
+            {
+              kind: "resource-kind",
+              id: "session-draft",
+            },
+          ],
+          view: {
+            kind: "view",
+            id: "session",
+          },
+          cardinality: "many",
+        },
       },
       region: "side",
     });
@@ -110,20 +151,26 @@ describe("mode placement registry", () => {
     });
     const identity = workbench.modePlacements.openPlacement({
       panel: { extensionId: "pstdio", kind: "placement", id: "session" },
-      resource: { kind: "session-draft", uri: "pstdio://session-draft/new", label: "New session" },
+      resource: {
+        type: "session-draft",
+        label: "New session",
+        id: "pstdio://session-draft/new",
+      },
       open: "pin",
     });
     const before = workbench.layout.getLayout().regions.side.widgets[0];
-
     workbench.modePlacements.updatePlacement(identity, {
-      resource: { kind: "session", uri: "pstdio://session/SESSION-1", label: "First session" },
+      resource: {
+        type: "session",
+        label: "First session",
+        id: "pstdio://session/SESSION-1",
+      },
       title: "First session",
     });
-
     const after = workbench.layout.getLayout().regions.side.widgets[0];
     expect(after?.widgetId).toBe(before?.widgetId);
-    expect(after?.resource?.kind).toBe("session");
-    expect(after?.resourceUri).toBe("pstdio://session/SESSION-1");
+    expect(after?.resource?.type).toBe("session");
+    expect(after?.resource?.id).toBe("pstdio://session/SESSION-1");
     expect(after?.title).toBe("First session");
   });
 });

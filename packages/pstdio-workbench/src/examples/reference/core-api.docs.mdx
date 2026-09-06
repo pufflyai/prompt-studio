@@ -100,14 +100,14 @@ A placement references a View and gives it a lifetime and location. Register pla
 | Field | Required | Meaning |
 | --- | --- | --- |
 | `id` | Yes | Stable identity within the shell, mode, or page that owns the placement. |
-| `item` | Shell and mode | Either one static View or a resource binding that creates View instances. |
-| `item.kind: "view"` | Static item | Places one instance of `viewId`. |
+| `item` | All owners | Either one static View or a resource binding that creates View instances. |
+| `item.kind: "view"` | Static item | Places one instance of `view`. |
 | `item.presence` | Static item | Initial state of the static instance: `fixed`, `open`, or `closed`. Required, with no default. |
-| `item.kind: "resource"` | Resource item | Places instances of `viewId` for accepted `resourceKinds`. |
-| `item.viewId` | Yes | Id of the View rendered by this placement. |
-| `item.resourceKinds` | Resource item | Resource kinds this placement accepts. |
-| `item.cardinality` | Resource item | Required. `one` keeps a single instance and rebinds it when another resource opens. `many` creates one instance per resource URI and selects the existing tab on reopen. |
-| `item.add` | Resource item | Optional navigation target the Add panel runs to create or select a resource before the placement can open. |
+| `item.kind: "binding"` | Resource item | Places instances from a shared `binding`. |
+| `item.view` or `item.binding.view` | Yes | Ref of the view rendered by this placement. |
+| `item.binding.kinds` | Resource item | Resource kinds this placement accepts. |
+| `item.binding.cardinality` | Resource item | Required. `one` keeps a single instance and rebinds it when another resource opens. `many` creates one instance per resource identity and selects the existing tab on reopen. |
+| `item.binding.add` | Resource item | Optional navigation target the Add panel runs to create or select a resource before the placement can open. |
 | `modeId` | Mode placement | Mode that owns the placement. The placement disappears when that mode is inactive. |
 | `ref` | Mode placement | Typed identity used by navigation targets. |
 
@@ -120,9 +120,7 @@ The `presence` values mean:
 A saved user choice wins over `open` and `closed` on the next visit. Cardinality does not control initial visibility
 or closability: resource placements start empty, and resource tabs are always closable.
 
-A page's primary slot declares `viewId`, a `binding`, or both, and is always present while the page is open. Auxiliary
-page slots use `viewId` plus `presence` for static content or a `binding` with `cardinality` for resource content. The
-page owns every slot and removes the complete slot set when navigation leaves that page.
+A page declares its optional `resource` separately from `main`. Main renders a view or peer panels with an empty view. Page slots and mode placements share the same static-view or resource-binding `item` contract. Leaving a page removes its panels and preserves the active mode's shared panels.
 
 ### Location and visibility
 
@@ -143,7 +141,7 @@ content leaves with its page, and mode content leaves with its mode.
 | `mountStrategy` | `active` | `active` mounts only the selected tab. `keep-mounted` retains inactive instances until their owner leaves. |
 | `headerBorderBottom` | Region default | Whether the region header draws its bottom divider. |
 | `floatingPanels` | `visible` | Whether attached panel instances may be shown in the floating Side Panel presentation. |
-| `tab` | View title and icon | Supplies a dynamic label, icon, status indicator, grouped menu rows, and refresh events. A status indicator replaces the ordinary icon. |
+| `tab` | Resource label, then view title | Supplies a dynamic label, icon, status indicator, grouped menu rows, and refresh events. A status indicator replaces the ordinary icon. |
 | `config` | None | View-specific serializable input carried to the rendered instance. |
 
 Region-level layout policy is not a placement concern. It lives in `regionSettings`, keyed by region id with `size`
@@ -151,7 +149,7 @@ Region-level layout policy is not a placement concern. It lives in `regionSettin
 defaults to `createWorkbench({ regionSettings })`. The active mode's settings win over the host's. A placement cannot
 set region size or collapsibility.
 
-Main, secondary, and side panels hide tabs when only one item is visible. To keep a single tab visible, set
+Main, Secondary, and Side show a lone closable tab by default. To keep every single tab visible, set
 `regionSettings: { secondary: { alwaysShowTabs: true } }` on the host or mode. The setting applies to each region
 separately. Headers still show available actions when tabs are hidden.
 
@@ -161,7 +159,7 @@ while their page is active. Registering a View alone never creates a panel.
 ## Navigation
 
 `navigation` executes navigation targets. A target opens a page, opens a panel, runs a command, opens a link, or groups
-several of those in a compound target. Navigation items, keybindings, tab menu rows, and Add panel actions all use the
+page and panel operations in a compound target. Navigation items, keybindings, tab menu rows, and Add panel actions all use the
 same target values.
 
 | Method | Meaning |
@@ -170,8 +168,9 @@ same target values.
 | `navigation.openPanel({ panel, resource?, open? })` | Opens or activates a declared placement. `panel` is a mode placement ref, a page slot ref, or the Core-only `{ kind: "shell-placement", id }`. |
 | `navigation.openTarget(target)` | Shared executor for any navigation target. `openPage` and `openPanel` delegate to it. |
 
-A compound target executes its items in order as one atomic step. When an item fails, the executor rolls workbench
-navigation state back to the checkpoint taken before the first item.
+A compound target prepares its page and panel operations against proposed state, then commits once. If preparation
+fails, live state and browser history remain unchanged. Commands and external links are standalone actions because
+their external effects cannot be undone. A command can finish its work before requesting page or panel navigation.
 
 Keybindings use the same targets. `keybindings.registerKeybinding({ action, keybinding, when? })` binds a chord to any
 navigation target, so a page or panel can be bound directly without a wrapper command.

@@ -22,7 +22,15 @@ const setupPage = () => {
     ref: ticketsRef,
     path: "tickets",
     modeId: "project",
-    slots: [{ id: "content", role: "primary", region: "main", viewId: "tickets" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "tickets",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pages.registerPage({
     id: "ticket",
@@ -30,29 +38,42 @@ const setupPage = () => {
     path: "ticket",
     modeId: "project",
     parentId: "tickets",
-    slots: [
-      {
-        id: "content",
-        role: "primary",
-        region: "main",
-        binding: { resourceKinds: ["ticket"], viewId: "ticket-detail", cardinality: "one" },
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "ticket",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "ticket-detail",
       },
-    ],
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pageLocations.setProject("project-1");
   workbench.pageLocations.navigate({
     kind: "page",
     page: ticketRef,
-    resource: { type: "ticket", id: "ticket-1", label: "PS-1 Ticket" },
+    resource: {
+      type: "ticket",
+      id: "ticket-1",
+      label: "PS-1 Ticket",
+      extensionId: "acme.planner",
+      projectId: "project-1",
+    },
   });
   return workbench;
 };
-
 describe("executeWorkbenchExtensionCommand", () => {
-  test("closes an active page resource through its declared page parent", async () => {
+  test("closes a scoped page resource through a breadcrumb delete action", async () => {
     const workbench = setupPage();
     const activeTicket = workbench.getPrimaryResource()!;
-
     await executeWorkbenchExtensionCommand(
       {
         executeCommand: () => ({
@@ -64,12 +85,11 @@ describe("executeWorkbenchExtensionCommand", () => {
         workbench,
       },
       "pstdio.planner.command.delete-ticket",
-      { resource: activeTicket },
+      { resource: workbench.breadcrumbs.getItems()?.at(-1)?.resource },
     );
-
     expect(workbench.pages.store.getState().activePageId).toBe("tickets");
     expect(workbench.layout.getLayout().regions.main.widgets).toEqual([
-      expect.objectContaining({ contributionId: "workbench.page-placement.tickets.content" }),
+      expect.objectContaining({ contributionId: "workbench.page-placement.tickets.%24main" }),
     ]);
   });
 });

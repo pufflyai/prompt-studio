@@ -9,7 +9,6 @@ const DEMO_PROJECT_ID = "demo-project";
 const LAUNCHER_WIDGET_ID = "onboarding.settings.launcher";
 const LAB_SETTINGS_VIEW_ID = "onboarding.settings.lab";
 const SNIPPET_SETTINGS_VIEW_ID = "onboarding.settings.snippet";
-
 // Shows how a module adds settings entries: declare a preference schema + sections,
 // then register panels (schema, custom, collection). The unified surface module
 // renders the tree + dispatching panel + presenter — no per-page wiring.
@@ -17,10 +16,8 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
   id: "onboarding.settings",
   activate(ctx) {
     ctx.preferences.registerSchema(demoPreferenceSchema);
-
     ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 10 });
     ctx.settings.registerSection({ id: "extensions", title: "Extensions", order: 20 });
-
     ctx.views.registerView({
       id: LAB_SETTINGS_VIEW_ID,
       title: "Lab settings",
@@ -42,7 +39,6 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
         },
       },
     });
-
     // Schema page (global, live save) — controls auto-generated from the schema.
     ctx.settings.registerPanel({
       kind: "schema",
@@ -58,7 +54,6 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
         { name: "demo.appearance.badges", label: "Sidenav badges" },
       ],
     });
-
     // Schema page (project-scoped, explicit Save/Discard).
     ctx.settings.registerPanel({
       kind: "schema",
@@ -75,7 +70,6 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
         { name: "demo.editor.rulers", label: "Rulers" },
       ],
     });
-
     // Custom page — the contributor renders its own component.
     ctx.settings.registerPanel({
       kind: "view",
@@ -86,7 +80,6 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
       icon: "FlaskConical",
       viewId: LAB_SETTINGS_VIEW_ID,
     });
-
     // Collection — per-item nodes grouped by category, each opening an item editor.
     ctx.settings.registerPanel({
       kind: "collection",
@@ -112,13 +105,11 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
         },
       ],
     });
-
     // The unified surface renders everything above. Project entries appear because we
     // resolve a project scope id here.
     const surface = createWorkbenchSettingsModule({
       resolveScopeId: (scope) => (scope === "project" ? DEMO_PROJECT_ID : undefined),
     }).activate(ctx);
-
     // The surface is a modal overlay; closing it would leave the lesson blank. A main-region
     // landing widget keeps a way back in by re-running the built-in open command.
     ctx.views.registerView({
@@ -128,13 +119,18 @@ export const createSettingsModule = (): WorkbenchModuleContribution => ({
     });
     ctx.shellPlacements.registerPlacement({
       id: LAUNCHER_WIDGET_ID,
-      item: { kind: "view", viewId: LAUNCHER_WIDGET_ID, presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: LAUNCHER_WIDGET_ID,
+        },
+      },
       region: "main",
     });
-
     // Open the overlay so the lesson shows the surface immediately.
     void ctx.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: "appearance" });
-
     return surface;
   },
 });

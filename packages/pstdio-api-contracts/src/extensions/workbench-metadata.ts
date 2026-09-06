@@ -20,12 +20,9 @@ import { extensionCommandPaletteResourceRecordSchema, extensionKanbanRendererRec
 import { extensionKeybindingRecordSchema } from "./keybindings";
 import { navigationTargetSchema } from "./navigation-target-metadata";
 import { workbenchExtensionPageRecordSchema } from "./page-metadata";
-import {
-  placementPresenceSchema,
-  regionSettingsSchema,
-  workbenchPlacementPresentationSchema,
-} from "./placement-metadata";
+import { regionSettingsSchema, workbenchPlacementPresentationSchema } from "./placement-metadata";
 import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } from "./renderers";
+import { placementItemSchema } from "./resource-binding-metadata";
 import { extensionSettingDefinitionRecordSchema, extensionSettingsSectionRecordSchema } from "./settings";
 
 const contributionRefSchema = <Kind extends string>(kind: Kind) =>
@@ -144,16 +141,7 @@ const workbenchExtensionPlacementRecordSchema = workbenchPlacementPresentationSc
   localId: z.string(),
   extensionId: z.string(),
   mode: modeRefSchema,
-  item: z.discriminatedUnion("kind", [
-    z.object({ kind: z.literal("view"), view: viewRefSchema, presence: placementPresenceSchema }),
-    z.object({
-      kind: z.literal("binding"),
-      resourceKind: z.union([resourceKindRefSchema, z.array(resourceKindRefSchema)]),
-      view: viewRefSchema,
-      cardinality: z.enum(["one", "many"]),
-      add: navigationTargetSchema.optional(),
-    }),
-  ]),
+  item: placementItemSchema,
   region: z.enum(extensionPanelRegions),
   order: z.number().optional(),
   movableTo: z.array(z.enum(extensionPanelRegions)).optional(),

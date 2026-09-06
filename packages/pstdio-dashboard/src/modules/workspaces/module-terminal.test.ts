@@ -121,7 +121,7 @@ describe("createWorkspacesModule terminal integration", () => {
       expect.objectContaining({
         viewId: WORKBENCH_TERMINAL_WIDGET_ID,
         resource: expect.objectContaining({
-          kind: "terminal",
+          type: "terminal",
           metadata: expect.objectContaining({ workspacePath: "/repo/.pstdio/workspaces/PS-307_A1" }),
         }),
         title: "Terminal 1",
@@ -154,7 +154,7 @@ describe("createWorkspacesModule terminal integration", () => {
       expect.objectContaining({
         viewId: WORKBENCH_TERMINAL_WIDGET_ID,
         resource: expect.objectContaining({
-          kind: "terminal",
+          type: "terminal",
           metadata: expect.objectContaining({ workspacePath: "/repo/.pstdio/workspaces/PS-307_A1" }),
         }),
         title: "Terminal 1",

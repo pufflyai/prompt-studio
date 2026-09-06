@@ -1,7 +1,6 @@
 import { createWorkbenchCompositionController } from "./controllers/composition/composition-controller";
 import { createOwnedAddablePanels } from "./controllers/composition/owned-addable-panels";
 import { createPrimaryCoordinator, createScopedIsInScope } from "./controllers/primary-coordinator/primary-coordinator";
-import { getActiveLocationPlacement } from "./registries/layout/layout-operations";
 import { workbenchViewIdContextKey } from "./registries/views/view-registry";
 import { registerWorkbenchBuiltIns } from "./workbench-built-ins";
 import type { createWorkbenchInput, WorkbenchCore } from "./workbench-core-types";
@@ -59,5 +58,4 @@ export const activeWorkbenchResource = (core: WorkbenchCore) => {
   return undefined;
 };
 
-export const primaryWorkbenchResource = (core: WorkbenchCore) =>
-  getActiveLocationPlacement(core.layout.getLayout())?.resource;
+export const primaryWorkbenchResource = (core: WorkbenchCore) => core.pages.store.getState().location?.resource;

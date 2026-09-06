@@ -1,83 +1,35 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type { NavigationTarget as ExtensionNavigationTarget, ResourceKindRef } from "@pstdio/sdk/extensions";
-import type { WorkbenchPageSlot, WorkbenchPageSlotBinding } from "../../core";
-import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
+import type { WorkbenchPageMain, WorkbenchPageSlot } from "../../core";
 import type { InternalWorkbenchExtensionMetadata } from "./internal-workbench-extension-metadata";
 import { metadataRefId } from "./workbench-extension-metadata-ref";
 import type { WorkbenchExtensionTabMetadata } from "./workbench-extension-tab-presentation";
 
-type MetadataPageSlot = WorkbenchExtensionMetadata["pages"][number]["slots"][number];
-
-interface PageSlotInput {
+type MetadataPage = WorkbenchExtensionMetadata["pages"][number];
+interface PagePresentationInput {
   extensionId: string;
-  pageId: string;
+  placementId: string;
   createTab?(metadata: WorkbenchExtensionTabMetadata): WorkbenchPageSlot["tab"];
 }
-
-const slotBinding = (
-  binding: NonNullable<Extract<MetadataPageSlot, { binding: unknown }>["binding"]>,
-  input: PageSlotInput,
-): WorkbenchPageSlotBinding => ({
-  resourceKinds: (Array.isArray(binding.kind) ? binding.kind : [binding.kind as ResourceKindRef]).map(
-    (kind) => kind.id,
-  ),
-  viewId: metadataRefId(binding.view),
-  cardinality: binding.cardinality,
-  ...(binding.add
-    ? { add: toWorkbenchNavigationTarget(binding.add as ExtensionNavigationTarget, { extensionId: input.extensionId }) }
-    : {}),
+const pageSlot = (slot: MetadataPage["slots"][number], input: PagePresentationInput): WorkbenchPageSlot => ({
+  ...slot,
+  tab:
+    slot.tab && input.createTab
+      ? input.createTab({ ...slot.tab, extensionId: input.extensionId, placementId: input.placementId })
+      : undefined,
 });
-
-const slotPresentation = (slot: MetadataPageSlot, input: PageSlotInput) => ({
-  ...(slot.order === undefined ? {} : { order: slot.order }),
-  ...(slot.mountStrategy ? { mountStrategy: slot.mountStrategy } : {}),
-  ...(slot.hiddenByDefault === undefined ? {} : { hiddenByDefault: slot.hiddenByDefault }),
-  ...(slot.headerBorderBottom === undefined ? {} : { headerBorderBottom: slot.headerBorderBottom }),
-  ...(slot.tab && input.createTab
-    ? {
-        tab: input.createTab({
-          ...slot.tab,
-          extensionId: input.extensionId,
-          placementId: `${input.pageId}.${slot.id}`,
-        }),
-      }
-    : {}),
-});
-
-const pageSlot = (slot: MetadataPageSlot, input: PageSlotInput): WorkbenchPageSlot => {
-  if (slot.role === "primary") {
-    return {
-      id: slot.id,
-      role: "primary",
-      region: "main",
-      ...(slot.subPanelsOnly === undefined ? {} : { subPanelsOnly: slot.subPanelsOnly }),
-      ...("binding" in slot ? { binding: slotBinding(slot.binding, input) } : { viewId: metadataRefId(slot.view) }),
-      ...slotPresentation(slot, input),
-    };
-  }
-  if ("binding" in slot) {
-    return {
-      id: slot.id,
-      role: "auxiliary",
-      region: slot.region,
-      binding: slotBinding(slot.binding, input),
-      ...("openOn" in slot && slot.openOn ? { openOn: slot.openOn } : {}),
-      ...slotPresentation(slot, input),
-    };
-  }
+const pageMain = (main: MetadataPage["main"], input: PagePresentationInput): WorkbenchPageMain => {
+  if (main.kind === "panels") return main;
   return {
-    id: slot.id,
-    role: "auxiliary",
-    region: slot.region,
-    viewId: metadataRefId(slot.view),
-    presence: slot.presence,
-    ...slotPresentation(slot, input),
+    ...main,
+    tab:
+      main.tab && input.createTab
+        ? input.createTab({ ...main.tab, extensionId: input.extensionId, placementId: input.placementId })
+        : undefined,
   };
 };
-
 export const toInternalWorkbenchPages = (
   metadata: WorkbenchExtensionMetadata,
-  createTab?: (metadata: WorkbenchExtensionTabMetadata) => WorkbenchPageSlot["tab"],
+  createTab?: PagePresentationInput["createTab"],
 ): InternalWorkbenchExtensionMetadata["pages"] =>
   metadata.pages.map((page) => ({
     id: page.id,
@@ -85,7 +37,11 @@ export const toInternalWorkbenchPages = (
     title: page.title,
     path: page.path,
     modeId: metadataRefId(page.mode),
-    slots: page.slots.map((slot) => pageSlot(slot, { extensionId: page.extensionId, pageId: page.id, createTab })),
+    resource: page.resource,
+    main: pageMain(page.main, { extensionId: page.extensionId, placementId: `${page.id}.$main`, createTab }),
+    slots: page.slots.map((slot) =>
+      pageSlot(slot, { extensionId: page.extensionId, placementId: `${page.id}.${slot.id}`, createTab }),
+    ),
     ...(page.icon ? { icon: page.icon } : {}),
     ...(page.parent ? { parentId: metadataRefId(page.parent) } : {}),
   }));

@@ -5,7 +5,6 @@ import { useState } from "react";
 
 const createTabPresentationWorkbench = () => {
   const workbench = createWorkbench();
-
   workbench.views.registerView({
     id: "guide.session",
     title: "Session",
@@ -24,7 +23,14 @@ const createTabPresentationWorkbench = () => {
   });
   workbench.shellPlacements.registerPlacement({
     id: "guide.session",
-    item: { kind: "view", viewId: "guide.session", presence: "fixed" },
+    item: {
+      kind: "view",
+      presence: "fixed",
+      view: {
+        kind: "view",
+        id: "guide.session",
+      },
+    },
     region: "main",
     tab: {
       getSnapshot: () => ({
@@ -32,13 +38,10 @@ const createTabPresentationWorkbench = () => {
       }),
     },
   });
-
   return workbench;
 };
-
 export const TabPresentationExample = () => {
   const [workbench] = useState(createTabPresentationWorkbench);
-
   return (
     <WorkbenchThemeProvider>
       <Box h="320px" minH="240px" borderWidth="1px" borderColor="border.subtle" overflow="hidden">

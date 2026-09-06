@@ -1,86 +1,71 @@
-# pstdio-workbench
+# @pstdio/workbench
 
-`pstdio-workbench` is the composition layer for Prompt Studio. It provides the headless workbench model and the React shell that renders it.
+The headless composition model and React shell for Prompt Studio hosts. Extension authors use the [SDK cookbook](https://github.com/pufflyai/prompt-studio/blob/main/.pstdio/docs/extensions/cookbook.md). This guide covers host integration.
 
-## Architecture
+## Entry points
 
-The workbench has one location owner: `pageLocations`. A page transition changes the URL, browser history, active page, mode, primary resource, layout, and breadcrumbs as one operation.
+| Entry point | Purpose |
+| --- | --- |
+| `@pstdio/workbench` | Core, registries, controllers, and host contribution types |
+| `@pstdio/workbench/react` | Shell, region components, and native renderers |
+| `@pstdio/workbench/storage` | Browser persistence adapters |
+| `@pstdio/workbench/extensions` | Checked extension metadata registration and host adapters |
+| `@pstdio/workbench/webview-runtime` | Guest runtime for webview assets |
 
-- A **page** owns one primary slot and may own auxiliary slots.
-- A **mode** contributes shared chrome and panels used by all pages in that mode.
-- A **panel target** opens content inside the current page or mode. It does not change the page.
-- A **command target** runs an action. It does not imply navigation.
-- A **resource** is data passed to a page or panel. A resource does not decide where it appears.
+Install the declared React, React DOM, Chakra, and Emotion peers when using the React integration. Public declaration files include the private contracts they need. Package verification installs built entries outside the repository with full declaration checking.
 
-The public navigation targets are `page`, `panel`, `command`, `href`, and `compound`. There is no generic resource target, view target, presenter, or direct mode switch.
+The root, storage, and webview-runtime entries load without React. The React and extensions entries require the declared UI peers. Core Kanban contracts parameterize presentation values without choosing a UI framework. React host authors use `ReactAttributeDescriptor`, `ReactBoardColumnConfig`, and `ReactKanbanRendererContribution` from the React entry for checked cell and icon callbacks.
 
-## Public entry points
+## Ownership
 
-- `@pstdio/workbench` exports the headless core, contribution types, registries, and controllers.
-- `@pstdio/workbench/react` exports the React shell and renderer hosts.
-- `@pstdio/workbench/storage` exports browser persistence for page location, layout, trees, and panel state.
-- `@pstdio/workbench/extensions` maps checked extension metadata into workbench contributions.
-- `@pstdio/workbench/webview-runtime` exports the runtime used inside extension webviews.
+`pageLocations` owns durable navigation. A page transition resolves the page, resource, contextual parent, and mode before publishing location, composition, breadcrumbs, and browser history.
 
-## Pages and modes
+A page declares an optional resource constraint separately from Main presentation. `main.kind: "view"` presents its routed resource, with one or many instances. `main.kind: "panels"` presents peer Main panels and an empty view when none remain. `slots` holds page panels. The route continues to own context when a file or auxiliary inspector becomes active.
 
-Pages are the only durable navigation unit. Register a page with its mode, path, slots, and optional parent. Open it through `pageLocations.navigate()` or a `page` navigation target.
+Page slots and mode placements share a static-view or resource-binding item. Static views declare `presence`; bindings declare `kinds`, `view`, `cardinality`, and optional `add`. Main, Side, and Secondary have the same meaning for both owners.
 
-Modes are shared page context. Their contributions become active before the page slots are composed. Do not activate modes from navigation UI. Moving to another mode means opening a page that declares that mode.
+Modes supply shared placements, chrome, and region policy. Page navigation selects a mode. The host composes its default navigation whenever the active mode keeps that chrome. A replacement view or `false` overrides the default. Shared placements retain their identity across pages in the same mode.
 
-The `PageComposition` Storybook story demonstrates a Session page changing to a Lab page. The assertion verifies that the Session primary slot is removed rather than left beside the Lab page.
+Register host React views through the core view registry. Register checked extension metadata through the public extension adapter. Dispose the returned registrations when the owner is removed so its views, placements, and mounted content are released.
 
-## Panels
+## Navigation and closing
 
-A page auxiliary slot or mode placement exposes a panel reference. Use a `panel` target to open it. The target is valid only while its owner is active:
+Page targets change location. Panel targets open a page slot or mode placement while preserving the route. Its owner must be active. A compound target may contain page and panel steps only; resolve dependent targets against proposed state, then commit once. A failed preparation publishes no location, history, layout, selection, breadcrumb, or placement changes.
 
-- A page-slot panel belongs to the active page.
-- A mode-placement panel belongs to the active mode.
+Commands and external links are standalone actions. A command that performs work and navigates must finish that work before requesting a target. The workbench cannot undo external effects.
 
-This ownership rule prevents panels from leaking between pages or modes.
+Use `core.closePlacement(identity)` for owned tab closing. Native tabs and the `placement.close` webview capability use this controller. The host supplies the webview's actual placement identity. Fixed placements reject closing. Closing the last routed resource view follows the page's declared parent. Closing an auxiliary panel preserves location.
 
-Use `shell.setRegionOpen("side" | "secondary" | "sidenav", open)` to hide or reopen a whole region. Read it with `shell.getRegionState(region).open`. Docked visibility is stored in the layout snapshot. The side-panel controller owns its `attached`, `floating`, or `closed` presentation. Hiding a region preserves its placements. Docked content stays mounted through hide and reopen.
+## Resource identity
 
-Modes own `floatingPanels` and `regionSettings`. Host inputs provide defaults; a mode overrides only the properties it declares. `collapsible` allows dragging closed. `alwaysShowTabs` controls a lone tab. Neither setting restricts explicit visibility. Custom navigation keeps the host's panel controls.
+Use the SDK's `ResourceRef` throughout host and extension APIs. Its required fields are `type` and `id`; `label` is presentation. Preserve optional extension and project ownership when forwarding a reference.
 
-`sidePanel.canFloat()` reads the active policy. `shell.setSidePanelPresentation("floating")` attaches the panel when floating is disabled. Entering such a mode also attaches an already floating panel and preserves a closed panel.
+Use `resourceKey(resource)` for identity comparisons and layout indexes. Labels and metadata do not change identity. URI conversion belongs in location and persistence adapters. The default page codec preserves existing type/id locations and includes ownership when supplied.
 
-Per-view menu instances use `panelMenuState`, with `openByMenuId` and `panelMenuStatePersistence`. They do not duplicate docked region visibility.
+`core.getPrimaryResource()` and resource providers receive the routed page resource. A workspace collection therefore retains workspace context while its active Main panel edits a file. Selection identifies the file separately.
 
-### Updating callers
+Tab labels resolve from explicit tab presentation, then resource label, then view title. The close action uses the same label.
 
-Move placement `floatingPanels` to its mode. Replace host `sidePanelDetachable: false` with `floatingPanels: "hidden"`, and replace reads of `sidePanel.detachable` with `sidePanel.canFloat()`. Region callers previously using `panels` now use `shell`. Menu-instance callers use `panelMenuState`.
+## Regions and mounting
 
-Layout snapshots and side-panel presentation keep their existing formats. Per-view menu preferences now use the `panel-menus` storage key and `openByMenuId` map. Old menu preferences are not imported; those menus start open.
+Use `shell.setRegionOpen("side" | "secondary" | "sidenav", open)` to hide or show a region. Hiding retains its instances. Mode `regionSettings` owns size, collapsibility, headers, and tab visibility. `mountStrategy: "keep-mounted"` keeps an inactive tab's content mounted; removing its owner disposes it.
 
-## Resources
-
-Resources identify product data. Resource kinds provide labels and icons. Providers make resources searchable. Every searchable result that can be opened supplies an explicit activation callback.
-
-Resources never choose a surface or presenter. The page or panel target supplies placement, while the resource supplies data.
-
-## Renderers
-
-A renderer supplies UI for a registered panel. Specialized registries cover trees, data tables, Kanban boards, files, controls, and settings.
-
-Tree nodes may carry resource metadata for selection and context actions. Navigation requires an explicit target. A bare resource on a node is not a navigation instruction.
-
-## Settings
-
-Settings remains a command-owned overlay. Open it with `WORKBENCH_SETTINGS_OPEN_COMMAND_ID` and optional `{ panelId, itemId }` arguments. It does not use the page location or a generic resource presenter.
+The side-panel controller owns attached, floating, or closed presentation. `floatingPanels: "hidden"` prevents floating and reattaches an already floating panel. Per-view menu preferences belong to `panelMenuState`; they do not duplicate region visibility.
 
 ## Persistence
 
-Page location owns browser history and durable restoration. Layout persistence stores the current page composition. There is no second workbench history stack and no last-resource restoration path.
+The browser owns Back/Forward history. Page locations remain version 1. Existing resource locations and stored product data stay valid.
 
-## Documentation
+Layout cache version 4 records resource identity keys and the new Main collection model. Old layout entries are ignored. This revision does not invalidate tree state, menu preferences, side-panel presentation, or page locations. Collection page state uses the existing location key to separate workspaces.
 
-Workbench Storybook separates learning material from API facts:
+Shared mode placements have one cache entry per project and mode. Page cache entries exclude them. Closing a shared panel therefore remains closed when another page is restored; switching projects does not restore another project's mode panels.
 
-- `Guides/Core onboarding` builds a host workbench from an empty shell.
-- `Guides/Extension onboarding` builds extensions with `@pstdio/sdk/extensions`.
-- Other guides explain one feature at a time and state whether it belongs to Core or the Extension API.
-- `Reference/Core API` documents host-only registries, controllers, renderers, and React surfaces.
-- `Reference/Extension API` documents the public extension contract.
+## Validation
 
-Each guide includes the source used by its live example. Start Storybook and copy a guide's source into the stated package context to reproduce it.
+Storybook's core guides describe host integration; extension guides use public SDK declarations. Use the repository's Docker workflow and Playwright for dashboard behavior. The release gates are `bun run validate` and `bun run --cwd scripts verify:packages`.
+
+### Commit and host effects
+
+Page and panel compound targets resolve against proposed state before live state changes. The browser adapter must implement atomic `push` and `replace`: if it throws, its history must remain unchanged. Browser serialization and writing happen before workbench owners publish the final state. A rejected navigation leaves the workbench unchanged.
+
+Cache writes, mode lifecycle hooks, and subscribers are host effects after this boundary. Their exceptions are reported with the owner in the console and do not reject a committed navigation or stop other observers. A full cache can prevent restoration on the next launch, while the current location and panels remain usable. Fix the reported host effect at its source. A hook must clean up its own external effects if it fails before returning its disposables.

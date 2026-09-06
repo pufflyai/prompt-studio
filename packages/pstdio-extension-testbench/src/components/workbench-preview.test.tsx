@@ -112,7 +112,7 @@ describe("createPreviewWorkbench", () => {
     expect(workbench.views.getView("workbench.terminal")).toMatchObject({ id: "workbench.terminal" });
     expect(workbench.shellPlacements.getPlacement("workbench.terminal")).toMatchObject({
       region: "secondary",
-      item: { kind: "resource", viewId: "workbench.terminal", cardinality: "many" },
+      item: { kind: "binding", binding: { view: { kind: "view", id: "workbench.terminal" }, cardinality: "many" } },
       mountStrategy: "keep-mounted",
     });
   });
@@ -151,8 +151,7 @@ describe("createPreviewWorkbench", () => {
       resources: [
         {
           resource: {
-            kind: "ticket",
-            uri: "pstdio://extension-resource/ticket/PS-16",
+            type: "ticket",
             id: "PS-16",
             label: "PS-16 Tree renderer preview",
             icon: "component",
@@ -165,8 +164,7 @@ describe("createPreviewWorkbench", () => {
     expect(workbench.resources.listResources("PS-16")).toEqual([
       {
         resource: {
-          kind: "ticket",
-          uri: "pstdio://extension-resource/ticket/PS-16",
+          type: "ticket",
           id: "PS-16",
           label: "PS-16 Tree renderer preview",
           icon: "component",
@@ -278,7 +276,7 @@ describe("ContributionExplorer", () => {
               ],
             },
           }}
-          resource={{ kind: "ticket", uri: "pstdio://ticket/PS-18", id: "PS-18", label: "PS-18" }}
+          resource={{ type: "ticket", id: "PS-18", label: "PS-18" }}
           workbench={workbench}
         />
       </ChakraProvider>,

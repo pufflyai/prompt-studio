@@ -143,9 +143,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     useWorkbenchStore(getWorkbenchRenderers(workbench).treeStore, (state) => state.statesByTreeId[treeViewId]) ??
     EMPTY_TREE_STATE;
   const projectId = useWorkbenchStore(workbench.pages.store, (state) => state.projectId);
-  const activePage = useWorkbenchStore(workbench.pages.store, (state) =>
-    state.location?.resource ? undefined : state.location?.page,
-  );
+  const activeLocation = useWorkbenchStore(workbench.pages.store, (state) => state.location);
   const activeResource = useWorkbenchStore(workbench.layout.store, (state) => resolveTreeActiveResource(state.layout));
   const { body, childrenByNodeId, error, footer, header, loading, setChildrenByNodeId } = useTreeData(
     workbench,
@@ -231,7 +229,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     sections: [...header, ...body, ...footer],
     childrenByNodeId,
     activeNodeId,
-    activePage,
+    activeLocation,
     activeResource,
     selectedNodeId: treeState.selectedNodeId,
   });

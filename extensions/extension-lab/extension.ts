@@ -22,7 +22,12 @@ const faultyPage = definePage({
   icon: "flask-conical-off",
   path: "lab-faulty",
   mode: workbenchModes.project,
-  slots: [{ id: "content", role: "primary", region: "main", view: faulty.ref }],
+  main: {
+    kind: "view",
+    view: faulty.ref,
+    cardinality: "one",
+  },
+  slots: [],
 });
 export default defineExtension({
   defaultLocale: "en",

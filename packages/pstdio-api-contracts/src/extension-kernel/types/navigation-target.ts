@@ -39,7 +39,7 @@ export type NavigationTargetItem =
 
 export interface NavigationTargetCompound {
   kind: "compound";
-  targets: readonly NavigationTargetItem[];
+  targets: readonly (NavigationTargetPage | NavigationTargetPanel)[];
 }
 
 export type NavigationTarget = NavigationTargetItem | NavigationTargetCompound;

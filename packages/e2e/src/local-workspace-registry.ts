@@ -1,13 +1,13 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
-import { basename, dirname, join } from "node:path";
+import { join, resolve } from "node:path";
 
 type PackageManifest = {
-  files?: string[];
   name: string;
   version: string;
+  publishConfig?: { directory?: string };
   [key: string]: unknown;
 };
 
@@ -20,18 +20,14 @@ type PackedWorkspacePackage = {
 const safePackageName = (name: string) => name.replaceAll("@", "").replaceAll("/", "-");
 
 const packWorkspacePackage = (packagePath: string, outputRoot: string): PackedWorkspacePackage => {
-  const manifest = JSON.parse(readFileSync(join(packagePath, "package.json"), "utf8")) as PackageManifest;
-  const packageRoot = join(outputRoot, safePackageName(manifest.name), "package");
-  mkdirSync(packageRoot, { recursive: true });
-  cpSync(join(packagePath, "package.json"), join(packageRoot, "package.json"));
-
-  for (const file of manifest.files ?? []) {
-    cpSync(join(packagePath, file), join(packageRoot, file), { recursive: true });
-  }
+  const sourceManifest = JSON.parse(readFileSync(join(packagePath, "package.json"), "utf8")) as PackageManifest;
+  const packageRoot = resolve(packagePath, sourceManifest.publishConfig?.directory ?? ".");
+  const manifest = JSON.parse(readFileSync(join(packageRoot, "package.json"), "utf8")) as PackageManifest;
 
   const tarballName = `${safePackageName(manifest.name)}-${manifest.version}.tgz`;
   const tarballPath = join(outputRoot, tarballName);
-  const packed = spawnSync("tar", ["-czf", tarballPath, "-C", dirname(packageRoot), basename(packageRoot)], {
+  const packed = spawnSync("bun", ["pm", "pack", "--destination", outputRoot], {
+    cwd: packageRoot,
     encoding: "utf8",
   });
   if (packed.status !== 0) {

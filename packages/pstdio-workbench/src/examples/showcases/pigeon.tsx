@@ -105,7 +105,6 @@ const Inbox = (props: { input: WorkbenchPanelRenderInput }) => {
     </Stack>
   );
 };
-
 const ReadingPane = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const state = useShowcaseStore(pigeonStore);
@@ -182,7 +181,6 @@ const ReadingPane = (props: { input: WorkbenchPanelRenderInput }) => {
     </Stack>
   );
 };
-
 const Composer = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const state = useShowcaseStore(pigeonStore);
@@ -247,7 +245,6 @@ const Composer = (props: { input: WorkbenchPanelRenderInput }) => {
     </Stack>
   );
 };
-
 export const createPigeonWorkbench = () => {
   const workbench = createWorkbench({ startPage: homePage, initialSidePanelMode: "floating" });
   workbench.themes.register([pigeonTheme]);
@@ -294,7 +291,15 @@ export const createPigeonWorkbench = () => {
     title: "Inbox",
     path: "pigeon/inbox",
     modeId: "pigeon",
-    slots: [{ id: "inbox", role: "primary", region: "main", viewId: "pigeon.inbox" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "pigeon.inbox",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pages.registerPage({
     id: "pigeon.resource",
@@ -303,19 +308,43 @@ export const createPigeonWorkbench = () => {
     path: "pigeon/inbox/resource",
     modeId: "pigeon",
     parentId: "pigeon.home",
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "pigeon.thread",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "pigeon.inbox",
+      },
+      cardinality: "one",
+    },
     slots: [
       {
-        id: "inbox",
-        role: "primary",
-        region: "main",
-        binding: { resourceKinds: ["pigeon.thread"], viewId: "pigeon.inbox", cardinality: "one" },
-      },
-      {
         id: "reader",
-        role: "auxiliary",
         region: "side",
-        binding: { resourceKinds: ["pigeon.thread"], viewId: "pigeon.reader", cardinality: "one" },
         openOn: "page-resource",
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [
+              {
+                kind: "resource-kind",
+                id: "pigeon.thread",
+              },
+            ],
+            view: {
+              kind: "view",
+              id: "pigeon.reader",
+            },
+            cardinality: "one",
+          },
+        },
       },
     ],
   });

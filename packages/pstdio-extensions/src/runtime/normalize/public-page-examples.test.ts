@@ -46,8 +46,8 @@ for (const name of ["scribble", "boombox", "zipline", "pigeon", "kiln"]) {
     expect(metadata.resourceKinds).toHaveLength(1);
     const home = metadata.pages.find((page) => page.localId === name)!;
     const detail = metadata.pages.find((page) => page.localId === `${name}-resource`)!;
-    expect(home.slots.find((slot) => slot.role === "primary")).toMatchObject({ view: expect.any(Object) });
-    expect(detail.slots.find((slot) => slot.role === "primary")).toMatchObject({ binding: expect.any(Object) });
+    expect(home.main).toMatchObject({ view: expect.any(Object) });
+    expect(detail.resource).toMatchObject({ kinds: expect.any(Array) });
     expect(detail.parent).toEqual({ extensionId: "pstdio.extension-lab", kind: "page", id: name });
     expect(metadata.views.length).toBeGreaterThanOrEqual(2);
     expect(metadata.navigationItems[0].action).toMatchObject({

@@ -11,13 +11,11 @@ import {
   type WorkbenchPageLocationBrowser,
   type WorkbenchPageLocationPersistence,
 } from "./page-location-controller";
-
 export const pageRef = (extensionId: string, id: string): PageRef => ({ extensionId, kind: "page", id });
 export const startRef = pageRef("pstdio", "start");
 export const ticketsRef = pageRef("acme.planner", "tickets");
 export const ticketRef = pageRef("acme.planner", "ticket");
 export const workspaceRef = pageRef("pstdio", "workspaces");
-
 const resources: WorkbenchPageResourceCodec = {
   normalize: (resource) => ({ ...resource, id: resource.id.replace(/^ticket:/, "").toUpperCase() }),
   toUri: (resource) => `pstdio://${resource.type}/${encodeURIComponent(resource.id)}`,
@@ -32,14 +30,12 @@ const resources: WorkbenchPageResourceCodec = {
     }
   },
 };
-
 const placement = (identity: PlacementIdentity, value: string): ResolvedOwnedPlacement<string> => ({
   identity,
   region: identity.kind === "shell" ? "sidenav" : "side",
   order: 0,
   value,
 });
-
 const createRegistry = () => {
   const registry = createWorkbenchPageRegistry({
     resolveShellPlacements: () => [
@@ -59,7 +55,15 @@ const createRegistry = () => {
     title: "Start",
     path: "",
     modeId: "project",
-    slots: [{ id: "content", role: "primary", region: "main", viewId: "start" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "start",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   registry.registerPage({
     id: "tickets",
@@ -68,7 +72,15 @@ const createRegistry = () => {
     path: "tickets",
     modeId: "project",
     parentId: "start",
-    slots: [{ id: "content", role: "primary", region: "main", viewId: "tickets" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "tickets",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   registry.registerPage({
     id: "ticket",
@@ -77,14 +89,23 @@ const createRegistry = () => {
     path: "ticket",
     modeId: "project",
     parentId: "tickets",
-    slots: [
-      {
-        id: "content",
-        role: "primary",
-        region: "main",
-        binding: { resourceKinds: ["ticket"], viewId: "ticket", cardinality: "many" },
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "ticket",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "ticket",
       },
-    ],
+      cardinality: "many",
+    },
+    slots: [],
   });
   registry.registerPage({
     id: "workspaces",
@@ -93,18 +114,26 @@ const createRegistry = () => {
     path: "workspaces",
     modeId: "project",
     parentId: "start",
-    slots: [
-      {
-        id: "content",
-        role: "primary",
-        region: "main",
-        binding: { resourceKinds: ["workspace"], viewId: "workspace", cardinality: "many" },
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "workspace",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "workspace",
       },
-    ],
+      cardinality: "many",
+    },
+    slots: [],
   });
   return registry;
 };
-
 const createBrowser = (initialUrl: string) => {
   let current: WorkbenchPageBrowserEntry = { url: initialUrl };
   const pushes: WorkbenchPageBrowserEntry[] = [];
@@ -138,7 +167,6 @@ const createBrowser = (initialUrl: string) => {
     },
   };
 };
-
 const createPersistence = () => {
   const values = new Map<string, PageLocation>();
   const persistence: WorkbenchPageLocationPersistence = {
@@ -147,7 +175,6 @@ const createPersistence = () => {
   };
   return { persistence, values };
 };
-
 export const createPageLocationHarness = (url = "/projects/p1") => {
   const registry = createRegistry();
   const browser = createBrowser(url);
@@ -162,7 +189,6 @@ export const createPageLocationHarness = (url = "/projects/p1") => {
   });
   return { registry, browser, persistence, diagnostics, controller };
 };
-
 export const ticketTarget = (id = "ticket:ps-326"): NavigationTargetPage => ({
   kind: "page",
   page: ticketRef,

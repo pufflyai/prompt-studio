@@ -22,7 +22,10 @@ describe("createDashboardWorkbench", () => {
     expect(workbench.getPrimaryResource()).toBeUndefined();
     const sessionBubble = workbench.modePlacements.getPlacement(workbenchPanels.projectSession);
     expect(sessionBubble?.region).toBe("side");
-    expect(sessionBubble?.item).toMatchObject({ kind: "resource", viewId: dashboardWidgetIds.sessionBubble });
+    expect(sessionBubble?.item).toMatchObject({
+      kind: "binding",
+      binding: { view: { id: dashboardWidgetIds.sessionBubble } },
+    });
     const addableViews = workbench.composition
       .panelsFor("side")
       .addable.map((panel) => workbench.layout.getPanel(panel.panelId)?.rendererId);
@@ -42,7 +45,7 @@ describe("createDashboardWorkbench", () => {
     expect(workbench.shellPlacements.getPlacement(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({
       region: "secondary",
       mountStrategy: "keep-mounted",
-      item: { kind: "resource", viewId: WORKBENCH_TERMINAL_WIDGET_ID, cardinality: "many" },
+      item: { kind: "binding", binding: { view: { id: WORKBENCH_TERMINAL_WIDGET_ID }, cardinality: "many" } },
     });
     expect(workbench.terminal.isAvailable()).toBe(true);
   });

@@ -1,10 +1,12 @@
 import { expect, test } from "bun:test";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "../../workbench-core";
+import { registerResourcePage } from "./page-runtime-test-support";
 
 test("applies a shell Sub Panel opened after a scoped page becomes active", async () => {
   const workbench = createWorkbench({
     resolvePagePersistenceScope: ({ projectId, resource }) => ({
-      scope: projectId && resource ? `${projectId}/${resource.uri}` : undefined,
+      scope: projectId && resource ? `${projectId}/${resourceKey(resource)}` : undefined,
     }),
   });
   const pageRef = { extensionId: "pstdio.test", kind: "page" as const, id: "workspace" };
@@ -26,29 +28,67 @@ test("applies a shell Sub Panel opened after a scoped page becomes active", asyn
   });
   workbench.shellPlacements.registerPlacement({
     id: "terminal",
-    item: { kind: "resource", viewId: "terminal", resourceKinds: ["terminal"], cardinality: "many" },
+    item: {
+      kind: "binding",
+      binding: {
+        kinds: [
+          {
+            kind: "resource-kind",
+            id: "terminal",
+          },
+        ],
+        view: {
+          kind: "view",
+          id: "terminal",
+        },
+        cardinality: "many",
+      },
+    },
     region: "secondary",
   });
-  workbench.pages.registerPage({
+  registerResourcePage(workbench, {
     id: "workspace",
     ref: pageRef,
     title: "Workspace",
     path: "workspace",
     modeId: "project",
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "workspace",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "workspace",
+      },
+      cardinality: "many",
+    },
     slots: [
       {
-        id: "content",
-        role: "primary",
-        region: "main",
-
-        binding: { resourceKinds: ["workspace"], viewId: "workspace", cardinality: "many" },
-      },
-      {
         id: "files",
-        role: "auxiliary",
         region: "main",
-        binding: { resourceKinds: ["workspace"], viewId: "files", cardinality: "one" },
         openOn: "page-resource",
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [
+              {
+                kind: "resource-kind",
+                id: "workspace",
+              },
+            ],
+            view: {
+              kind: "view",
+              id: "files",
+            },
+            cardinality: "one",
+          },
+        },
       },
     ],
   });
@@ -59,21 +99,22 @@ test("applies a shell Sub Panel opened after a scoped page becomes active", asyn
     opened = true;
     workbench.shellPlacements.openPlacement({
       placementId: "terminal",
-      resource: { kind: "terminal", uri: "terminal://workspace-1" },
+      resource: {
+        type: "terminal",
+        id: "terminal://workspace-1",
+      },
       open: "pin",
     });
   });
-
   await workbench.navigation.openTarget({
     kind: "page",
     page: pageRef,
     resource: { type: "workspace", id: "workspace-1" },
   });
-
   expect(workbench.layout.getLayout().regions.secondary.widgets).toEqual([
     expect.objectContaining({
-      resourceUri: "terminal://workspace-1",
-      ownerResourceUri: "pstdio://extension-resource/workspace/workspace-1",
+      resource: { type: "terminal", id: "terminal://workspace-1" },
+      ownerResourceKey: resourceKey({ type: "workspace", id: "workspace-1" }),
     }),
   ]);
 });

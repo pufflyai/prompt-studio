@@ -35,14 +35,12 @@ describe("createExtensionTestbenchApi", () => {
 
       expect(bench.resources).toContainEqual({
         resource: {
-          kind: "fixture-item",
-          uri: "pstdio://extension-resource/fixture-item/pstdio.renderer-context-fixture.view.items",
+          type: "fixture-item",
           id: "pstdio.renderer-context-fixture.view.items",
           label: "extension-testbench",
         },
         group: "Items",
-        searchText:
-          "extension-testbench pstdio.renderer-context-fixture.view.items pstdio://extension-resource/fixture-item/pstdio.renderer-context-fixture.view.items",
+        searchText: "extension-testbench pstdio.renderer-context-fixture.view.items fixture-item",
       });
     } finally {
       api.cleanup();
@@ -62,9 +60,9 @@ describe("createExtensionTestbenchApi", () => {
 
       expect(bench.resources).toContainEqual({
         resource: {
-          kind: "ticket",
-          uri: "pstdio://extension-resource/ticket/PS-16",
+          type: "ticket",
           id: "PS-16",
+          projectId: "extension-testbench",
           label: "PS-16 Tree renderer preview",
           icon: "component",
           metadata: {
@@ -84,7 +82,7 @@ describe("createExtensionTestbenchApi", () => {
           },
         },
         group: "Tickets",
-        searchText: "PS-16 Tree renderer preview PS-16 pstdio://extension-resource/ticket/PS-16",
+        searchText: "PS-16 Tree renderer preview PS-16 ticket",
       });
     } finally {
       api.cleanup();

@@ -13,11 +13,9 @@ const createRegistry = (input: { persistence?: PersistedTreeRendererStates } = {
   }
   return { rendererRegistry, trees: createTreeRendererRegistry({ rendererRegistry }) };
 };
-
 describe("createTreeRendererRegistry", () => {
   test("registers tree renderers and delegates header/body/footer/children loading to the contribution", async () => {
     const { trees } = createRegistry();
-
     trees.registerTreeRenderer({
       id: "sessions.tree",
       title: "Sessions",
@@ -28,7 +26,10 @@ describe("createTreeRendererRegistry", () => {
             {
               id: "s1",
               label: "Session 1",
-              resource: { kind: "session", uri: "pstdio://session/s1" },
+              resource: {
+                type: "session",
+                id: "pstdio://session/s1",
+              },
               collapsible: true,
             },
           ],
@@ -38,7 +39,6 @@ describe("createTreeRendererRegistry", () => {
       getFooter: async () => [{ id: "help", nodes: [{ id: "help-link", label: "Help" }] }],
       getChildren: async (node) => [{ id: `${node.id}:log`, label: "Log" }],
     });
-
     await expect(trees.getBody("sessions.tree")).resolves.toMatchObject([
       { id: "active", nodes: [{ id: "s1", label: "Session 1" }] },
     ]);
@@ -52,108 +52,88 @@ describe("createTreeRendererRegistry", () => {
       { id: "s1:log", label: "Log" },
     ]);
   });
-
   test("returns empty pinned slots when their loaders are not provided", async () => {
     const { trees } = createRegistry();
-
     trees.registerTreeRenderer({
       id: "settings.tree",
       title: "Settings",
       getBody: () => [{ id: "general", nodes: [] }],
       getChildren: () => [],
     });
-
     await expect(trees.getHeader("settings.tree")).resolves.toEqual([]);
     await expect(trees.getFooter("settings.tree")).resolves.toEqual([]);
   });
-
   test("auto-registers a widget renderer with the same id", () => {
     const { rendererRegistry, trees } = createRegistry();
-
     trees.registerTreeRenderer({
       id: "sessions.tree",
       title: "Sessions",
       getBody: () => [],
       getChildren: () => [],
     });
-
     expect(rendererRegistry.getRenderer("sessions.tree")).toBeDefined();
   });
-
   test("invokes the tree renderer implementation when the widget renderer renders", () => {
     const { rendererRegistry, trees } = createRegistry();
-    const calls: { treeId: string }[] = [];
+    const calls: {
+      treeId: string;
+    }[] = [];
     trees.setTreeRendererImplementation((input) => {
       calls.push({ treeId: input.treeId });
       return null;
     });
-
     trees.registerTreeRenderer({
       id: "sessions.tree",
       title: "Sessions",
       getBody: () => [],
       getChildren: () => [],
     });
-
     const renderer = rendererRegistry.getRenderer("sessions.tree");
     if (!renderer) throw new Error("expected renderer");
     renderer.render({} as Parameters<typeof renderer.render>[0]);
-
     expect(calls).toEqual([{ treeId: "sessions.tree" }]);
   });
-
   test("unregisters the tree renderer and its auto-registered widget renderer together", () => {
     const { rendererRegistry, trees } = createRegistry();
-
     const disposable = trees.registerTreeRenderer({
       id: "sessions.tree",
       title: "Sessions",
       getBody: () => [],
       getChildren: () => [],
     });
-
     expect(rendererRegistry.getRenderer("sessions.tree")).toBeDefined();
     disposable.dispose();
     expect(rendererRegistry.getRenderer("sessions.tree")).toBeUndefined();
     expect(trees.getTreeRenderer("sessions.tree")).toBeUndefined();
   });
-
   test("tracks expansion and selection state and emits refresh events", () => {
     const { trees } = createRegistry();
     const refreshEvents: string[] = [];
-
     trees.registerTreeRenderer({
       id: "sessions.tree",
       title: "Sessions",
       getBody: () => [],
       getChildren: () => [],
     });
-
     const disposable = trees.onDidRefresh((event) => {
       refreshEvents.push(event.treeId);
     });
-
     trees.setNodeExpanded("sessions.tree", "s1", true);
     trees.setSectionExpanded("sessions.tree", "active", true);
     trees.setSelectedNode("sessions.tree", "s1");
     trees.refresh("sessions.tree");
-
     expect(trees.getTreeState("sessions.tree")).toEqual({
       expandedNodeIds: ["s1"],
       expandedSectionIds: ["active"],
       selectedNodeId: "s1",
     });
     expect(refreshEvents).toEqual(["sessions.tree"]);
-
     disposable.dispose();
     trees.refresh("sessions.tree");
-
     expect(refreshEvents).toEqual(["sessions.tree"]);
   });
-
   test("does not expand sections unless defaults or state opt in", () => {
     const { trees } = createRegistry();
-
     trees.registerTreeRenderer({
       id: "settings.tree",
       title: "Settings",
@@ -161,41 +141,32 @@ describe("createTreeRendererRegistry", () => {
       getBody: () => [],
       getChildren: () => [],
     });
-
     expect(trees.getTreeState("settings.tree").expandedSectionIds).toEqual(["general"]);
     expect(trees.treeStore.getState().statesByTreeId["settings.tree"]?.expandedSectionIds).toEqual(["general"]);
-
     trees.setSectionExpanded("settings.tree", "general", false);
     trees.setSectionExpanded("settings.tree", "templates", true);
-
     expect(trees.getTreeState("settings.tree").expandedSectionIds).toEqual(["templates"]);
   });
-
   test("exposes store state and notifies subscribers as state mutates", () => {
     const { trees } = createRegistry();
     const events: number[] = [];
-
     trees.registerTreeRenderer({
       id: "settings.tree",
       title: "Settings",
       getBody: () => [],
       getChildren: () => [],
     });
-
     const unsubscribe = trees.treeStore.subscribeSelector(
       (state) => state.statesByTreeId["settings.tree"]?.expandedSectionIds.length ?? 0,
       (value) => events.push(value),
     );
-
     trees.setSectionExpanded("settings.tree", "general", true);
     trees.setSectionExpanded("settings.tree", "templates", true);
     trees.setSectionExpanded("settings.tree", "general", false);
-
     expect(events).toEqual([1, 2, 1]);
     unsubscribe();
   });
 });
-
 describe("createTreeRendererRegistry persistence", () => {
   test("tracks module-controlled loading state without persisting it", () => {
     const stored: PersistedTreeRendererStates[] = [];
@@ -207,27 +178,21 @@ describe("createTreeRendererRegistry persistence", () => {
     };
     const rendererRegistry = createWorkbenchRendererRegistry();
     const trees = createTreeRendererRegistry({ rendererRegistry, persistence });
-
     trees.registerTreeRenderer({
       id: "sessions.tree",
       title: "Sessions",
       getBody: () => [],
       getChildren: () => [],
     });
-
     expect(trees.getTreeState("sessions.tree").loading).toBeUndefined();
-
     trees.setLoading("sessions.tree", true);
     expect(trees.getTreeState("sessions.tree").loading).toBe(true);
-
     trees.setLoading("sessions.tree", false);
     expect(trees.getTreeState("sessions.tree").loading).toBe(false);
-
     for (const snapshot of stored) {
       expect(snapshot.statesByTreeId["sessions.tree"]?.loading).toBeUndefined();
     }
   });
-
   test("hydrates from persisted state and writes through to the adapter", () => {
     const stored: PersistedTreeRendererStates[] = [
       {
@@ -240,7 +205,6 @@ describe("createTreeRendererRegistry persistence", () => {
         },
       },
     ];
-
     const persistence = {
       getTreeStates: () => stored.at(-1),
       setTreeStates: (next: PersistedTreeRendererStates) => {
@@ -249,7 +213,6 @@ describe("createTreeRendererRegistry persistence", () => {
     };
     const rendererRegistry = createWorkbenchRendererRegistry();
     const trees = createTreeRendererRegistry({ rendererRegistry, persistence });
-
     trees.registerTreeRenderer({
       id: "settings.tree",
       title: "Settings",
@@ -257,25 +220,20 @@ describe("createTreeRendererRegistry persistence", () => {
       getBody: () => [],
       getChildren: () => [],
     });
-
     expect(trees.getTreeState("settings.tree")).toEqual({
       expandedNodeIds: ["repositories"],
       expandedSectionIds: ["templates", "general"],
       selectedNodeId: "repositories",
     });
-
     trees.setSectionExpanded("settings.tree", "general", false);
-
     expect(stored.at(-1)?.statesByTreeId["settings.tree"]?.expandedSectionIds).toEqual(["templates"]);
   });
-
   test("re-applies default expanded sections over stale persisted state", () => {
     const { trees } = createRegistry({
       persistence: {
         statesByTreeId: { "settings.tree": { expandedNodeIds: [], expandedSectionIds: ["general"] } },
       },
     });
-
     trees.registerTreeRenderer({
       id: "settings.tree",
       title: "Settings",
@@ -283,13 +241,10 @@ describe("createTreeRendererRegistry persistence", () => {
       getBody: () => [],
       getChildren: () => [],
     });
-
     expect(trees.getTreeState("settings.tree").expandedSectionIds).toEqual(["general", "templates"]);
   });
-
   test("uses defaults when persisted state lacks an entry", () => {
     const { trees } = createRegistry({ persistence: { statesByTreeId: {} } });
-
     trees.registerTreeRenderer({
       id: "settings.tree",
       title: "Settings",
@@ -297,7 +252,6 @@ describe("createTreeRendererRegistry persistence", () => {
       getBody: () => [],
       getChildren: () => [],
     });
-
     expect(trees.getTreeState("settings.tree")).toEqual({
       expandedNodeIds: [],
       expandedSectionIds: ["general"],

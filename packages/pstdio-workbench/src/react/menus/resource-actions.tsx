@@ -15,19 +15,16 @@ const toResourceContextAction = (item: TreeListActionMenuItem): ResourceContextA
   separatorBefore: item.separatorBefore,
   onClick: () => item.onAction?.(),
 });
-
 export const createWorkbenchResourceActions = (workbench: WorkbenchCoreContributionContext, resource: ResourceRef) =>
   createTreeContextMenuItems({
-    menuPath: resourceContextMenuPath(resource.kind),
+    menuPath: resourceContextMenuPath(resource.type),
     workbench,
     context: { resource },
     onRequestParams: ({ request }) => workbench.commandPalette.requestParams(request),
   }).map(toResourceContextAction);
-
 export const useWorkbenchResourceActionResolver = (workbench: WorkbenchCoreContributionContext) => {
   useWorkbenchStore(workbench.commands.store, (state) => state.commands);
   useWorkbenchStore(workbench.context.store, (state) => state.values);
   useWorkbenchStore(workbench.layout.menuStore, (state) => state.itemsByPath);
-
   return (resource: ResourceRef) => createWorkbenchResourceActions(workbench, resource);
 };

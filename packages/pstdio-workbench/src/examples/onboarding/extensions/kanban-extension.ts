@@ -11,7 +11,6 @@ const workflow = defineStatuses({
     ],
   }),
 });
-
 const tickets = defineView({
   id: "tickets",
   title: "Tickets",
@@ -42,15 +41,18 @@ const tickets = defineView({
     }),
   },
 });
-
 export const ticketsPage = definePage({
   id: "tickets",
   title: "Tickets",
   path: "tickets",
   mode: workbenchModes.project,
-  slots: [{ id: "content", role: "primary", region: "main", view: tickets.ref }],
+  main: {
+    kind: "view",
+    view: tickets.ref,
+    cardinality: "one",
+  },
+  slots: [],
 });
-
 export default defineExtension({
   statuses: [workflow],
   views: [tickets],

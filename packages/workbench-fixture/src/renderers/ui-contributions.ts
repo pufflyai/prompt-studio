@@ -17,30 +17,25 @@ import {
 } from "@pstdio/sdk/extensions";
 import { createGlassLabArtifactCommand } from "../commands/glass-lab-artifacts-command";
 import { createLabViews } from "./lab-views";
-
 export const labMode = defineMode({
   id: "lab",
   label: l10n("modes.lab.label", "Lab"),
   icon: "flask-conical",
   regions: ["main", "side"],
+  chrome: { sidenav: false },
 });
-
 export const labModes = [labMode];
-
 export const glassLabArtifactKind = defineResourceKind({
   id: "glass-lab-artifact",
   label: l10n("resourceKinds.glassLabArtifact.label", "Artifact"),
   icon: "package-search",
 });
-
 export const labResourceKinds = [glassLabArtifactKind];
-
 export const labSettingsSection = defineSettingsSection({
   id: "lab",
   title: l10n("settingsSections.lab.title", "Lab"),
   order: 30,
 });
-
 const createLabPage = (labPage: ViewRef) =>
   definePage({
     id: "lab",
@@ -48,16 +43,13 @@ const createLabPage = (labPage: ViewRef) =>
     icon: "flask-conical",
     path: "lab",
     mode: workbenchModes.project,
-    slots: [
-      {
-        id: "content",
-        role: "primary",
-        region: "main",
-        view: labPage,
-      },
-    ],
+    main: {
+      kind: "view",
+      view: labPage,
+      cardinality: "one",
+    },
+    slots: [],
   });
-
 const createLabModePage = (overview: ViewRef, artifactDetail: ViewRef) =>
   definePage({
     id: "lab-mode",
@@ -65,17 +57,26 @@ const createLabModePage = (overview: ViewRef, artifactDetail: ViewRef) =>
     icon: "panels-top-left",
     path: "lab-mode",
     mode: labMode.ref,
+    main: {
+      kind: "view",
+      view: overview,
+      cardinality: "one",
+    },
     slots: [
-      { id: "content", role: "primary", region: "main", view: overview },
       {
         id: "artifact",
-        role: "auxiliary",
         region: "side",
-        binding: { kind: glassLabArtifactKind.ref, view: artifactDetail, cardinality: "many" },
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [glassLabArtifactKind.ref],
+            view: artifactDetail,
+            cardinality: "many",
+          },
+        },
       },
     ],
   });
-
 const createFaultyPage = (view: ViewRef) =>
   definePage({
     id: "faulty",
@@ -83,9 +84,9 @@ const createFaultyPage = (view: ViewRef) =>
     icon: "flask-conical-off",
     path: "lab-faulty",
     mode: workbenchModes.project,
-    slots: [{ id: "content", role: "primary", region: "main", view }],
+    main: { kind: "view", view, cardinality: "one" },
+    slots: [],
   });
-
 export const createLabUi = (baseUrl: string) => {
   const {
     artifactCreate,
@@ -101,11 +102,9 @@ export const createLabUi = (baseUrl: string) => {
     status,
     workflow,
   } = createLabViews(baseUrl);
-
   const labPageContribution = createLabPage(labPage.ref);
   const labModePageContribution = createLabModePage(overview.ref, artifactDetail.ref);
   const faultyPageContribution = createFaultyPage(faultyPage.ref);
-
   const placements = [
     definePlacement({
       id: "artifacts.lab",
@@ -126,7 +125,6 @@ export const createLabUi = (baseUrl: string) => {
       region: "main",
     }),
   ];
-
   return {
     views: [
       overview,
@@ -219,7 +217,6 @@ export const createLabUi = (baseUrl: string) => {
     ],
   };
 };
-
 export const labActivityItems = [
   defineActivityItem({
     id: "create-artifact",

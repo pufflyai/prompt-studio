@@ -10,8 +10,8 @@ describe("dashboard persistence scope", () => {
         pageId: "workspaces",
         projectId: "project-1",
         resource: {
-          kind: "workspace",
-          uri: "pstdio://extension-resource/workspace/workspace-1",
+          type: "workspace",
+          id: "workspace-1",
         },
       }),
     ).toEqual({
@@ -28,7 +28,6 @@ describe("dashboard persistence scope", () => {
       ],
     });
   });
-
   test("uses the page for aggregate layouts and does not carry another project's chrome", () => {
     expect(
       resolveDashboardPersistenceScope({
@@ -42,7 +41,6 @@ describe("dashboard persistence scope", () => {
       carryRegions: [],
     });
   });
-
   test("restores the incoming mode's inspector instead of carrying another mode's side panel", () => {
     for (const currentScope of ["project/project-1", "project/project-1/mode/project/page/start"]) {
       const result = resolveDashboardPersistenceScope({
@@ -56,7 +54,6 @@ describe("dashboard persistence scope", () => {
       expect(result.carryRegions).not.toContain("side-header");
     }
   });
-
   test("retains project session panels when restoring a project page from its root scope", () => {
     const result = resolveDashboardPersistenceScope({
       currentScope: "project/project-1",

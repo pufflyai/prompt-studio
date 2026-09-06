@@ -72,7 +72,7 @@ export interface LayoutModel {
   closePanel(instanceId: string): WorkbenchPanelInstance | undefined;
   updateWidgetPlacement(widgetId: string, input: OpenWidgetInput): WorkbenchWidgetPlacement;
   reorderWidget(widgetId: string, position: WorkbenchTabPosition): void;
-  expirePreviewTabs(ownerResourceUri?: string): void;
+  expirePreviewTabs(ownerResourceKey?: string): void;
   activateWidget(widgetId: string): WorkbenchWidgetPlacement;
   setRegionActiveWidget(regionId: WorkbenchRegion, widgetId: string | undefined): void;
   closeWidget(widgetId: string): WorkbenchWidgetPlacement | undefined;

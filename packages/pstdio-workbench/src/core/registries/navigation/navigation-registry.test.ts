@@ -23,17 +23,17 @@ describe("createNavigationRegistry", () => {
     expect(calls).toEqual([{ kind: "page", page }]);
   });
 
-  test("rolls back a compound target when a later item fails", async () => {
+  test("leaves live dispatch untouched when preparation fails", async () => {
     const calls: string[] = [];
     const navigation = createNavigationRegistry({
       resolveDispatcher: () => ({
         canOpenPanel: () => true,
-        canExecuteCommand: () => true,
-        createCheckpoint: () => () => calls.splice(0),
+        prepareNavigation: () => {
+          throw new Error("Invalid proposed state");
+        },
         openPanelTarget: () => calls.push("panel"),
         executeCommand: () => {
           calls.push("command");
-          throw new Error("boom");
         },
       }),
     });
@@ -43,10 +43,10 @@ describe("createNavigationRegistry", () => {
         kind: "compound",
         targets: [
           { kind: "panel", panel },
-          { kind: "command", commandId: "boom" },
+          { kind: "page", page },
         ],
       }),
-    ).rejects.toThrow("boom");
+    ).rejects.toThrow("Invalid proposed state");
     expect(calls).toEqual([]);
   });
 

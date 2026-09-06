@@ -5,8 +5,11 @@
   "description": "Five complete example tools built with public extension pages, resources, modes, and themes.",
   "publisher": "pstdio",
   "main": "./extension.ts",
+  "exports": {
+    "./contracts": "./src/contracts.ts"
+  },
   "engines": {
-    "pstdio": "1.0.0-alpha.9"
+    "pstdio": "1.0.0-alpha.10"
   },
   "private": true,
   "type": "module",

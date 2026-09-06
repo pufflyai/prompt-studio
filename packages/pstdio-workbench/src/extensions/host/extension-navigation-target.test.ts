@@ -65,7 +65,7 @@ describe("isExtensionNavigationTarget", () => {
     ).toBe(true);
   });
 
-  test("rejects a page after another compound action", () => {
+  test("accepts page and panel actions in any order", () => {
     expect(
       isExtensionNavigationTarget({
         kind: "compound",
@@ -74,6 +74,6 @@ describe("isExtensionNavigationTarget", () => {
           { kind: "page", page: { kind: "page", id: "ticket" } },
         ],
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 });

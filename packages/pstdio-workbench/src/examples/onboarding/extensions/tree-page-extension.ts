@@ -1,5 +1,4 @@
 import { defineExtension, defineNavigationItem, definePage, defineView, workbenchModes } from "@pstdio/sdk/extensions";
-
 export const guideTree = defineView({
   id: "guide-tree",
   title: "Guide",
@@ -19,15 +18,18 @@ export const guideTree = defineView({
     ],
   },
 });
-
 export const guidePage = definePage({
   id: "guide",
   title: "Guide",
   path: "guide",
   mode: workbenchModes.project,
-  slots: [{ id: "content", role: "primary", region: "main", view: guideTree.ref }],
+  main: {
+    kind: "view",
+    view: guideTree.ref,
+    cardinality: "one",
+  },
+  slots: [],
 });
-
 const guideNavigation = defineNavigationItem({
   id: "guide",
   owner: workbenchModes.project,
@@ -37,7 +39,6 @@ const guideNavigation = defineNavigationItem({
   icon: "BookOpen",
   action: { kind: "page", page: guidePage.ref },
 });
-
 export default defineExtension({
   views: [guideTree],
   pages: [guidePage],

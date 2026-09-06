@@ -33,13 +33,11 @@ import { ticketResourceKind } from "./resource-kinds";
 import { ticketStatuses } from "./ticket-status-provider";
 
 export { ticketResourceKind } from "./resource-kinds";
-
 export const plannerSettingsSection = defineSettingsSection({
   id: "planner",
   title: l10n("settingsSections.planner.title", "Planner"),
   order: 40,
 });
-
 const createPlannerSettingsViews = (baseUrl: string) => ({
   tagSettings: defineView({
     id: "ticket-tags-settings",
@@ -52,7 +50,6 @@ const createPlannerSettingsViews = (baseUrl: string) => ({
     },
   }),
 });
-
 const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
   const ticketsPage = definePage({
     id: "tickets",
@@ -60,14 +57,12 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
     icon: "square-kanban",
     path: "tickets",
     mode: workbenchModes.project,
-    slots: [
-      {
-        id: "content",
-        role: "primary",
-        region: "main",
-        view: tickets,
-      },
-    ],
+    main: {
+      kind: "view",
+      view: tickets,
+      cardinality: "one",
+    },
+    slots: [],
   });
   const ticketDetailPage = definePage({
     id: "ticket",
@@ -76,18 +71,18 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
     path: "ticket",
     mode: workbenchModes.project,
     parent: ticketsPage.ref,
-    slots: [
-      {
-        id: "content",
-        role: "primary",
-        region: "main",
-        binding: { kind: ticketResourceKind.ref, view: editor, cardinality: "one" },
-      },
-    ],
+    resource: {
+      kinds: [ticketResourceKind.ref],
+    },
+    main: {
+      kind: "view",
+      view: editor,
+      cardinality: "one",
+    },
+    slots: [],
   });
   return { ticketDetailPage, ticketsPage };
 };
-
 export const createPlannerUi = (baseUrl: string) => {
   const { tagSettings } = createPlannerSettingsViews(baseUrl);
   const tickets = defineView({

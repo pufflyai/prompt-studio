@@ -42,17 +42,17 @@ const LabStatusBar = () => {
     loadedTickRef.current = tick;
     void (async () => {
       const [artifacts, cam] = await Promise.all([
-        host.call<{ outcome: { value?: unknown } }>("commands.execute", {
+        host.call("commands.execute", {
           commandId: "pstdio.workbench-fixture.command.glass-lab-artifacts.query",
           params: {},
         }),
-        host.call<{ outcome: { value?: unknown } }>("commands.execute", {
+        host.call("commands.execute", {
           commandId: "pstdio.workbench-fixture.command.cams.current",
           params: {},
         }),
       ]);
-      setArtifactCount(rowCountFromValue(artifacts.outcome.value));
-      setCamLabel(camLabelFromValue(cam.outcome.value));
+      if (artifacts.outcome.status === "success") setArtifactCount(rowCountFromValue(artifacts.outcome.value));
+      if (cam.outcome.status === "success") setCamLabel(camLabelFromValue(cam.outcome.value));
     })();
   }, [host, lastCommand]);
 

@@ -1,209 +1,39 @@
 # @pstdio/sdk
 
-TypeScript SDK for Prompt Studio.
+The public TypeScript SDK for Prompt Studio. It provides extension contracts, the HTTP client, and prompt helpers. The package is ESM-only; import a declared subpath.
 
-This package is the public integration surface for:
-
-- calling the Prompt Studio HTTP API
-- importing shared request and resource types
-- rendering prompt templates
-- authoring Prompt Studio extensions
-
-The package is ESM-only and is published through subpath exports. Import from the entrypoint you need, not from `@pstdio/sdk` directly.
-
-## Install
-
-```bash
+```sh
 bun add @pstdio/sdk
 ```
 
-## Entry Points
+| Entry point | Purpose |
+| --- | --- |
+| `@pstdio/sdk/extensions` | Contributions, typed refs, commands, storage contracts, and webview clients |
+| `@pstdio/sdk/extensions/react` | React query and mutation hooks for webviews |
+| `@pstdio/sdk/client` | HTTP client |
+| `@pstdio/sdk/api` | API request and response types |
+| `@pstdio/sdk/resources` | Product resource types |
+| `@pstdio/sdk/prompts` | Prompt rendering |
+| `@pstdio/sdk/hooks` | Hook API contracts |
 
-| Import path              | Purpose                               |
-| ------------------------ | ------------------------------------- |
-| `@pstdio/sdk/client`     | Runtime HTTP client for Prompt Studio |
-| `@pstdio/sdk/api`        | Request and response payload types    |
-| `@pstdio/sdk/resources`  | Shared resource/entity types          |
-| `@pstdio/sdk/prompts`    | Prompt rendering helpers              |
-| `@pstdio/sdk/extensions` | Extension authoring types             |
-| `@pstdio/sdk/hooks`      | Hook context and client types         |
+Native extension entries work without React. The React entry requires its declared React and TanStack Query peers. Public declarations include their private contract dependencies and support `skipLibCheck: false` outside the repository.
 
-Example:
+## Build an extension
 
-```ts
-import { createClient, PstdioApiError } from "@pstdio/sdk/client";
-import type { CreateTicketInput } from "@pstdio/sdk/api";
-import type { TicketDetail } from "@pstdio/sdk/resources";
-import { renderPrompt } from "@pstdio/sdk/prompts";
-import type { ExtensionDefinition } from "@pstdio/sdk/extensions";
-import type { WorktreeCreateContext } from "@pstdio/sdk/hooks";
-```
+Start with the [workbench cookbook](https://github.com/pufflyai/prompt-studio/blob/main/.pstdio/docs/extensions/cookbook.md) and [Extension Lab](https://github.com/pufflyai/prompt-studio/blob/main/extensions/extension-lab/README.md). Existing examples cover saved edits, inspectors, shared panels, custom modes, provider refs, and webview cleanup.
 
-## HTTP Client
+Keep package identity in `package.json`. Export `defineExtension(...)` from the manifest's `main`. Install through `pst extensions dev <path>` from a linked project. The same workflow watches native TypeScript, contribution declarations, and webview assets.
 
-Create a client with `createClient()`:
+A view supplies content. A page owns its route, routed resource, and page panels. A mode supplies shared panels and chrome. Use `ResourceRef` with `type`, `id`, and optional `label` across these contracts. Main, Side, and Secondary are the panel regions.
 
-```ts
-import { createClient } from "@pstdio/sdk/client";
+A page declares `resource: { kinds }` separately from `main`. Main can show a view or a collection of peer panels with an empty view. Additional slots expose generated refs such as `page.panels.inspector`. Slots and mode placements share the same static-view or resource-binding item union.
 
-const client = createClient({
-  baseUrl: process.env.PSTDIO_API_URL,
-  token: process.env.PSTDIO_API_TOKEN,
-});
+Page targets change location. Panel targets preserve it. Compound targets contain only page and panel steps, prepared before one commit. Commands and external links remain standalone actions. Omitted mode chrome retains host navigation for custom modes too.
 
-const projects = await client.projects.list();
-```
+Use `qualifyRef(owner, ref)` in provider contract modules. Keep definitions local and pass qualified refs between extensions. For webviews, declare capabilities and call the typed `GuestHost`; `placement.close` closes the calling placement through the normal tab controller.
 
-### Client options
+## Package delivery
 
-- `baseUrl`: API base URL. Defaults to `process.env.PSTDIO_API_URL ?? "http://localhost:19840"`.
-- `token`: Optional bearer token. Sent as `Authorization: Bearer <token>`.
-- `fetch`: Optional `fetch` implementation override for tests or custom runtimes.
+Development and installed consumers both load built SDK entries. Repository development builds this package before starting the source CLI. Builds stage release files under `.publish` through the shared release script. Package verification installs those same staged artifacts into a temporary directory outside the monorepo and checks every entry point.
 
-The client expects a runtime with `fetch` available, or an explicit `fetch` passed in through options.
-
-### Error handling
-
-The request layer throws `PstdioApiError` for non-2xx responses.
-
-- `error.message`: API error message
-- `error.status`: HTTP status code
-
-```ts
-import { PstdioApiError, createClient } from "@pstdio/sdk/client";
-
-const client = createClient();
-
-try {
-  await client.workspaces.updateAttemptStatus("ws_123", {
-    status: "review-ready",
-  });
-} catch (error) {
-  if (error instanceof PstdioApiError) {
-    console.error(error.status, error.message);
-  }
-  throw error;
-}
-```
-
-### Client groups
-
-`createClient()` returns a grouped client with these domains:
-
-| Group        | Methods                                                                                                                                            |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `projects`   | `list`, `get`, `create`, `delete`, `listRepos`, `registerRepo`, `removeRepo`                                                                       |
-| `tickets`    | `list`, `get`, `create`, `update`, `delete`, `createAttempt`, `updateWhenAttemptStatus`, `listFiles`, `getFileContent`, `uploadFile`, `deleteFile` |
-| `workspaces` | `list`, `getByShorthand`, `create`, `updateAttemptStatus`, `removeWorktree`, `delete`                                                              |
-| `sessions`   | `list`, `get`, `create`, `archive`, `followUp`, `approve`, `getConversation`, `resolveSessionId`, `updateStatus`, `uploadAttachment`, `deleteAttachment` |
-| `statuses`   | `list`, `create`, `update`, `setDefault`, `delete`, `listAttemptStatuses`, `createAttemptStatus`, `updateAttemptStatus`, `deleteAttemptStatus`     |
-| `tags`       | `list`, `create`, `update`, `delete`, `createOption`, `updateOption`, `deleteOption`                                                               |
-| `templates`  | `list`, `get`, `create`, `update`, `delete`                                                                                                        |
-| `skills`     | `list`, `get`, `update`                                                                                                                            |
-| `agents`     | `list`, `info`, `models`, `setup`, `setupAvailable`, `update`, `delete`                                                                            |
-
-Notes:
-
-- `tickets.list(projectId, filters)` supports `status`, `tag`, `archived`, `draft`, `parent_id`, `shorthand`, and `search`.
-- `tickets.getFileContent(ticketId, fileId)` returns `Uint8Array`, not JSON.
-- `createRequest()` is also exported if you want the lower-level request function without the grouped client.
-
-## API Types
-
-`@pstdio/sdk/api` re-exports the public request and response types used by the HTTP client.
-
-```ts
-import type {
-  CreateSessionInput,
-  SessionAttachment,
-  SessionAttachmentRef,
-  CreateTicketInput,
-  UpdateTicketInput,
-} from "@pstdio/sdk/api";
-```
-
-Most of these types come from `pstdio-api-contracts`. Use `import type` for this entrypoint. It does not expose runtime helpers.
-
-## Resource Types
-
-`@pstdio/sdk/resources` re-exports the shared Prompt Studio entities used across the API and extension system.
-
-Common exports include `Project`, `Repo`, `Ticket`, `TicketDetail`, `TicketListItem`, `TicketFile`, `Workspace`,
-`WorkspaceListItem`, `Session`, `SessionStatus`, `Status`, `AttemptStatus`, `Tag`, `TagOption`, `Template`,
-`TemplateWithContent`, `TemplateType`, `Skill`, `SkillWithContent`, `AgentConfig`, `AgentInfo`, `AgentModel`,
-`AgentAvailabilityType`, and `FileRecord`.
-
-```ts
-import type {
-  Session,
-  TicketDetail,
-  WorkspaceListItem,
-} from "@pstdio/sdk/resources";
-```
-
-## Prompt Rendering
-
-`@pstdio/sdk/prompts` exposes `renderPrompt(template, data)`, a small wrapper around Mustache.
-
-```ts
-import { renderPrompt } from "@pstdio/sdk/prompts";
-
-const prompt = renderPrompt("Implement ticket {{ticket}}", {
-  ticket: "PS-42",
-});
-```
-
-## Extensions
-
-Prompt Studio extensions are packaged integrations that can contribute commands, middleware, lifecycle event handlers, menu entries, and webviews. Use `@pstdio/sdk/extensions` for the extension authoring types.
-
-```ts
-import type { ExtensionDefinition } from "@pstdio/sdk/extensions";
-
-const extension: ExtensionDefinition = {
-  manifest: {
-    id: "example-extension",
-    name: "Example extension",
-    version: "0.0.0",
-  },
-  activate(ctx) {
-    ctx.commands.register({
-      id: "example-extension.say-hello",
-      title: "Say hello",
-      handler: () => ({ ok: true }),
-    });
-  },
-};
-
-export default extension;
-```
-
-## Hook Types
-
-`@pstdio/sdk/hooks` exposes the shared context types used by hook runtimes and hook handlers.
-
-```ts
-import type {
-  CommitContext,
-  RebaseContext,
-  WorktreeRemoveContext,
-} from "@pstdio/sdk/hooks";
-```
-
-## Package Development
-
-From the repo root:
-
-```bash
-bun run --cwd packages/sdk build
-bun run --cwd packages/sdk lint
-bun run --cwd packages/sdk test
-```
-
-From `packages/sdk`:
-
-```bash
-bun run build
-bun run lint
-bun run test
-```
+Host authors should use the [workbench guide](https://github.com/pufflyai/prompt-studio/blob/main/packages/pstdio-workbench/README.md). Extension authors should use this SDK and public UI packages.

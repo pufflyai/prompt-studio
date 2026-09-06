@@ -1,4 +1,5 @@
 import { Stack } from "@chakra-ui/react";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { EmptyState } from "@pstdio/ui";
 import {
   DataTable,
@@ -30,16 +31,12 @@ interface WorkbenchDataTableViewProps {
   contribution: RegisteredDataTableRendererContribution;
   placement: WorkbenchPanelInstance;
 }
-
 const initialResult: DataTableRendererQueryResult = { rows: [] };
-
 // Tabs unmount when they deactivate, so without a cache every revisit flashes a
 // loading state. The last result renders instantly while the fresh query runs.
 const lastResults = new Map<string, DataTableRendererQueryResult>();
-
 const resultCacheKey = (contributionId: string, placement: WorkbenchPanelInstance) =>
-  `${contributionId} ${placement.resource?.uri ?? ""}`;
-
+  `${contributionId} ${resourceKey(placement.resource) ?? ""}`;
 export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const { workbench, contribution, placement } = props;
   const resolveResourceActions = useWorkbenchResourceActionResolver(workbench);
@@ -47,7 +44,6 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
   const [result, setResult] = useState(() => lastResults.get(cacheKey) ?? initialResult);
   const [loading, setLoading] = useState(() => !lastResults.has(cacheKey));
   const requestRef = useRef(0);
-
   useEffect(() => {
     let cancelled = false;
     const runQuery = () => {
@@ -74,7 +70,6 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
       refreshSubscription.dispose();
     };
   }, [cacheKey, contribution, placement.resource, workbench]);
-
   const columns = resolveDataTableRendererColumns(result, contribution.columns);
   const model = useMemo(() => buildDataTableRendererData(result.rows, columns), [columns, result.rows]);
   const labels = Object.fromEntries(
@@ -112,7 +107,6 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
     if (!row) return;
     if (contribution.onRowActivate) void Promise.resolve(contribution.onRowActivate(row)).catch(() => undefined);
   };
-
   if (loading) {
     // The table chrome renders instantly: declared columns become real headers
     // and only the row values shimmer until the first query resolves.
@@ -125,13 +119,11 @@ export const WorkbenchDataTableView = (props: WorkbenchDataTableViewProps) => {
       </Stack>
     );
   }
-
   if (result.rows.length === 0) {
     return (
       <EmptyState h="full" title={contribution.emptyTitle ?? "No rows"} description={contribution.emptyDescription} />
     );
   }
-
   return (
     <Stack h="full" minH="0" minW="0" gap="0" bg="bg" overflow="hidden">
       <DataTable

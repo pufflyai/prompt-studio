@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { DataTableRendererRow } from "../../../core";
 import {
   buildDataTableRendererData,
@@ -17,16 +18,13 @@ describe("data table renderer view model", () => {
     expect(resolveDataTableRendererColumns({ rows }, [{ id: "name" }])).toEqual([{ id: "name" }]);
     expect(resolveDataTableRendererColumns({ rows })).toEqual([{ id: "name" }, { id: "score" }]);
   });
-
   test("keeps row metadata outside visible values and preserves descriptor order", () => {
     const row = { id: "one", values: { score: 92, name: "API", ignored: true } };
     const model = buildDataTableRendererData([row], [{ id: "name" }, { id: "score" }]);
-
     expect(Object.keys(model.data[0]!)).toEqual(["name", "score"]);
     expect(model.data[0]).toEqual({ name: "API", score: 92 });
     expect(model.rowByData.get(model.data[0]!)).toBe(row);
   });
-
   test("maps selected table data back to the original renderer rows", () => {
     const rows = [
       { id: "one", values: { name: "API" } },
@@ -47,28 +45,27 @@ describe("data table renderer view model", () => {
       ],
       model.rowByData,
     );
-
     actions[0]?.onSelect([model.data[1]!, { name: "Stale" }, model.data[0]!]);
-
     expect(actions[0]).toMatchObject({ label: "Restart", destructive: true });
     expect(calls).toEqual([[rows[1], rows[0]]]);
   });
-
   test("maps resource actions for the row under a data table cell", () => {
     const row = {
       id: "one",
       values: { name: "API" },
-      resource: { kind: "service", uri: "pstdio://service/one" },
+      resource: {
+        type: "service",
+        id: "pstdio://service/one",
+      },
     };
     const model = buildDataTableRendererData([row], [{ id: "name" }]);
     const calls: string[] = [];
-
     const actions = resolveDataTableRendererResourceActions(model.data[0]!, model.rowByData, (resource) => [
       {
         key: "open",
         label: "Open",
         onClick: () => {
-          calls.push(resource.uri);
+          calls.push(resource.id);
         },
       },
       {
@@ -80,17 +77,15 @@ describe("data table renderer view model", () => {
         },
       },
     ]);
-
     expect(actions.map((action) => action.label)).toEqual(["Open"]);
     actions[0]?.onSelect({ row: model.data[0]!, rowId: "one", columnId: "name", value: "API" });
     expect(calls).toEqual(["pstdio://service/one"]);
-
     const rowActions = resolveDataTableRendererResourceActions(model.data[0]!, model.rowByData, (resource) => [
       {
         key: "archive",
         label: "Archive",
         onClick: () => {
-          calls.push(resource.uri);
+          calls.push(resource.id);
         },
       },
     ]);
@@ -98,15 +93,17 @@ describe("data table renderer view model", () => {
     rowActions[0]?.onSelect(model.data[0]!);
     expect(calls).toEqual(["pstdio://service/one", "pstdio://service/one"]);
   });
-
   test("scopes persisted controls to the renderer, placement, and resource", () => {
     expect(
       resolveDataTableRendererStorageKey("health", {
         instanceId: "health:1",
         panelId: "health.view",
         closable: false,
-        resource: { kind: "project", uri: "pstdio://project/one", id: "one" },
+        resource: {
+          type: "project",
+          id: "one",
+        },
       }),
-    ).toBe("pstdio:workbench:dataTableRenderer:health:health:1:pstdio://project/one");
+    ).toBe(`pstdio:workbench:dataTableRenderer:health:health:1:${resourceKey({ type: "project", id: "one" })}`);
   });
 });

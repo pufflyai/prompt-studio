@@ -1,6 +1,8 @@
 import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbenchBreadcrumbController } from "./controllers/breadcrumbs/breadcrumb-registry";
 import { createWorkbenchCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
+import { createPlacementCloseController } from "./controllers/composition/placement-close-controller";
+import { createPlacementPinController } from "./controllers/composition/placement-pin-controller";
 import { createWorkbenchFocusController } from "./controllers/focus/focus-controller";
 import { connectWorkbenchPageBreadcrumbs } from "./controllers/page-location/page-breadcrumbs";
 import { createWorkbenchPageLocationController } from "./controllers/page-location/page-location-controller";
@@ -8,11 +10,13 @@ import {
   createMemoryWorkbenchPageLocationBrowser,
   createMemoryWorkbenchPageLocationPersistence,
 } from "./controllers/page-location/page-location-memory";
+import { defaultPageResourceCodec } from "./controllers/page-location/page-resource-codec";
+import { createLiveWorkbenchPageRegistry } from "./controllers/page-runtime/page-runtime";
 import {
-  createLiveWorkbenchPageRegistry,
-  defaultPageResourceCodec,
-  toWorkbenchPageResource,
-} from "./controllers/page-runtime/page-runtime";
+  createPageStateRestorer,
+  loadWorkbenchLocationLayout,
+} from "./controllers/page-runtime/page-state-restoration";
+import { createWorkbenchLayoutCache } from "./controllers/page-runtime/workbench-layout-cache";
 import { createWorkbenchPanelMenuStateController } from "./controllers/panel-menus/panel-menu-state-controller";
 import { createWorkbenchShellController } from "./controllers/shell/shell-controller";
 import { createWorkbenchSidePanelController } from "./controllers/side-panel/side-panel-controller";
@@ -21,7 +25,6 @@ import { createCommandPaletteResourceRegistry } from "./registries/command-palet
 import { createCommandRegistry } from "./registries/commands/command-registry";
 import { createKeybindingRegistry } from "./registries/keybindings/keybinding-registry";
 import { createLayoutModel } from "./registries/layout/layout-model";
-import { getActiveLocationPlacement } from "./registries/layout/layout-operations";
 import type { WorkbenchWidgetPlacement } from "./registries/layout/layout-types";
 import { createMenuRegistry } from "./registries/menus/menu-registry";
 import { createWorkbenchModePlacementRegistry } from "./registries/modes/mode-placement-registry";
@@ -29,7 +32,7 @@ import { createWorkbenchModeRegistry } from "./registries/modes/mode-registry";
 import { createNavigationTreeRegistry } from "./registries/navigation/navigation-tree-registry";
 import { createNotificationRegistry } from "./registries/notifications/notification-registry";
 import { createWorkbenchOverlayRegistry } from "./registries/overlays/overlay-registry";
-import type { WorkbenchPageRegistryStoreState, WorkbenchPageResourceCodec } from "./registries/pages/page-registry";
+import type { WorkbenchPageRegistryStoreState } from "./registries/pages/page-registry";
 import { createWorkbenchPlaceholderRegistry } from "./registries/placeholders/placeholder-registry";
 import { createWorkbenchShellPlacementRegistry } from "./registries/placements/shell-placement-registry";
 import { createPreferenceRegistry } from "./registries/preferences/preference-registry";
@@ -43,7 +46,6 @@ import { createWorkbenchViewMenuRegistry } from "./registries/view-menus/view-me
 import { createWorkbenchViewBodyRegistration } from "./registries/views/view-body-registration";
 import { createViewRegistry } from "./registries/views/view-registry";
 import { createContextKeyService } from "./shared/context/context-key-service";
-import type { Disposable } from "./shared/disposable";
 import { createDisposable } from "./shared/disposable";
 import {
   activeWorkbenchResource,
@@ -54,7 +56,7 @@ import {
 import { createCoreNavigationRegistry, revealPanelRegion } from "./workbench-core-navigation";
 import { createCoreRenderers } from "./workbench-core-renderers";
 import type { createWorkbenchInput, WorkbenchCore } from "./workbench-core-types";
-import { createModuleContext, disposeDisposables, toDisposables } from "./workbench-module-context";
+import { createWorkbenchModuleRegistry } from "./workbench-module-registry";
 import { setWorkbenchRenderers } from "./workbench-renderers";
 
 export * from "./workbench-core-types";
@@ -63,7 +65,6 @@ const createPagePersistenceScopeHandler = (
   input: createWorkbenchInput,
   layout: Pick<ReturnType<typeof createLayoutModel>, "getPersistenceScope" | "setPersistenceScope">,
   panelMenuState: ReturnType<typeof createWorkbenchPanelMenuStateController>,
-  pageResources: WorkbenchPageResourceCodec,
 ) => {
   const resolveScope = input.resolvePagePersistenceScope;
   if (!resolveScope) return undefined;
@@ -73,7 +74,7 @@ const createPagePersistenceScopeHandler = (
       modeId: state.activeModeId,
       pageId: state.activePageId,
       projectId: state.projectId,
-      resource: state.location?.resource ? toWorkbenchPageResource(state.location.resource, pageResources) : undefined,
+      resource: state.location?.resource,
     });
     panelMenuState.setPersistenceScope(resolved.scope);
     layout.setPersistenceScope(resolved.scope, { carryRegionState: resolved.carryRegions });
@@ -83,9 +84,9 @@ const createPagePersistenceScopeHandler = (
 export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const context = createContextKeyService();
   const commands = createCommandRegistry({ context });
-  const moduleRecords = new Map<string, { disposable: Disposable }>();
   const renderers = createCoreRenderers(input);
 
+  const layoutCache = createWorkbenchLayoutCache(input);
   const locationAwareLayout = createLayoutModel({
     defaultRegionVisibility: input.defaultPanelOpenByRegionId,
     // The active mode owns region policy; the host input is the fallback. Resolved
@@ -95,14 +96,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
       const activeMode = activeModeId ? core?.modes.getMode(activeModeId) : undefined;
       return { ...input.regionSettings?.[regionId], ...activeMode?.regionSettings?.[regionId] };
     },
-    persistence: input.persistence
-      ? {
-          getLayout: (scope) => input.persistence?.getSnapshot(scope)?.layout,
-          setLayout: (nextLayout, scope) => input.persistence?.setSnapshot({ layout: nextLayout }, scope),
-          flush: input.persistence.flush,
-          dispose: input.persistence.dispose,
-        }
-      : input.layoutPersistence,
+    persistence: layoutCache.layout,
   });
 
   const { establishLocation, ...layoutModel } = locationAwareLayout;
@@ -122,6 +116,8 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const pageResources = input.pageResources ?? defaultPageResourceCodec;
 
   const modePlacements = createWorkbenchModePlacementRegistry({
+    loadLayout: (context) => layoutCache.readMode(context.projectId, context.modeId),
+    getProjectId: () => core?.pages.store.getState().projectId,
     views,
     viewMenus,
     getPanel: layout.getWidget,
@@ -135,6 +131,16 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     registerPanel: layout,
     activatePanel: layout.activatePanel,
     getLayout: layout.getLayout,
+    getScope: layout.getPersistenceScope,
+    resolveScope: input.resolvePagePersistenceScope
+      ? (context) =>
+          input.resolvePagePersistenceScope!({
+            ...context,
+            currentScope: layout.getPersistenceScope(),
+            resource: context.location?.resource,
+          }).scope
+      : undefined,
+    loadLayout: (context) => loadWorkbenchLocationLayout(input, { ...context, resource: context.location?.resource }),
     enteredWithPersistedLayout: layout.enteredWithPersistedLayout,
     onDidChangePersistenceScope: layout.onDidChangePersistenceScope,
   });
@@ -159,7 +165,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const resources = createResourceRegistry({
-    getPrimary: () => getActiveLocationPlacement(layout.getLayout())?.resource,
+    getPrimary: () => core.getPrimaryResource(),
     resolveView: views.getView,
   });
 
@@ -185,7 +191,9 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const shell = createWorkbenchShellController({ layout, sidePanel });
 
   const pages = createLiveWorkbenchPageRegistry({
-    beforeApply: createPagePersistenceScopeHandler(input, layout, panelMenuState, pageResources),
+    beforeApply: createPagePersistenceScopeHandler(input, layout, panelMenuState),
+    restorePageState: createPageStateRestorer(input),
+
     revealRegion: (region) => revealPanelRegion(core, region),
     layout,
     modePlacements,
@@ -204,9 +212,11 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const composition = createCoreCompositionController(() => core);
-  const navigation = createCoreNavigationRegistry(() => core, pageResources);
+  const navigation = createCoreNavigationRegistry(() => core);
 
   core = {
+    closePlacement: createPlacementCloseController(() => core),
+    pinPlacement: createPlacementPinController(() => core),
     breadcrumbs,
     commandPalette: createWorkbenchCommandPaletteController(),
     commands,
@@ -260,7 +270,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     onDidChangeActiveResource(listener) {
       return createDisposable(
         core.layout.store.subscribeSelector(
-          (state) => state.layout.activeResourceUri,
+          (state) => state.layout.activeResourceKey,
           () => listener(core.getActiveResource()),
         ),
       );
@@ -272,8 +282,8 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
 
     onDidChangePrimaryResource(listener) {
       return createDisposable(
-        core.layout.store.subscribeSelector(
-          (state) => getActiveLocationPlacement(state.layout)?.resourceUri,
+        core.pages.store.subscribeSelector(
+          (state) => state.location?.resource,
           () => listener(core.getPrimaryResource()),
         ),
       );
@@ -283,45 +293,14 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
       return core.registerModule(module);
     },
 
-    registerModule(module) {
-      if (moduleRecords.has(module.id)) throw new Error(`Workbench module already registered: ${module.id}`);
-
-      const disposables: Disposable[] = [];
-      let registration: Disposable;
-
-      registration = createDisposable(() => {
-        if (moduleRecords.get(module.id)?.disposable !== registration) return;
-        moduleRecords.delete(module.id);
-        disposeDisposables(disposables);
-      });
-
-      const record = { disposable: registration };
-
-      moduleRecords.set(module.id, record);
-
-      try {
-        const context = createModuleContext(core, {
-          ownerId: module.ownerId ?? module.id,
-          source: module.source ?? "module",
-          track: (disposable) => {
-            disposables.push(disposable);
-          },
-        });
-        disposables.push(...toDisposables(module.activate(context)));
-      } catch (error) {
-        record.disposable.dispose();
-        throw error;
-      }
-
-      return record.disposable;
-    },
-
-    unregisterModule(moduleId) {
-      moduleRecords.get(moduleId)?.disposable.dispose();
-    },
+    ...createWorkbenchModuleRegistry(() => core),
   };
 
   setWorkbenchRenderers(core, renderers);
+  layout.store.subscribe(() => {
+    const state = pages.store.getState();
+    if (state.activeModeId) layoutCache.saveMode(state.projectId, state.activeModeId, layout.getLayout());
+  });
   connectWorkbenchPageBreadcrumbs({ breadcrumbs, locations: pageLocations, pages, resources: pageResources });
   connectWorkbenchCoreState(core, input);
 

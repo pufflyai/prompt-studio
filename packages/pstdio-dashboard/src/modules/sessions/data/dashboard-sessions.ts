@@ -10,7 +10,6 @@ import {
 } from "@/shared/sync/dashboard-rows";
 import { type DashboardResourceAnchor, listResourceAnchors } from "@/shared/sync/resource-anchors";
 import { getDashboardWorkspaceDiffSummary } from "@/shared/workspaces/workspace-diff-summary-data";
-
 export interface DashboardSession {
   id: string;
   title: string;
@@ -25,7 +24,6 @@ export interface DashboardSession {
   anchors: DashboardResourceAnchor[];
   resource: ResourceRef;
 }
-
 export interface DashboardSessionView {
   id: string;
   draftKey: string;
@@ -40,19 +38,16 @@ export interface DashboardSessionView {
   deletions: number;
   messages: SessionMessage[];
 }
-
 const latestTimestamp = (...values: unknown[]) =>
   values
     .filter((value): value is string => typeof value === "string" && value.length > 0)
     .sort((a, b) => b.localeCompare(a))[0] ?? "";
-
 const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): DashboardSession => {
   const title = (session.title as string | null) ?? "Session";
   const projectId = (session.project_id as string | null | undefined) ?? (workspace?.project_id as string | undefined);
   const updatedAt = (session.updated_at as string) ?? (session.created_at as string) ?? "";
   const anchors = [...listResourceAnchors(session), ...(workspace ? listResourceAnchors(workspace) : [])];
   const parent = anchors[0];
-
   return {
     id: session.id,
     title,
@@ -71,34 +66,32 @@ const createSession = (session: SyncedRow, workspace: SyncedRow | undefined): Da
     }),
   };
 };
-
-export const buildDashboardSessionsFromRows = (rows: DashboardRows, options: { projectId?: string } = {}) => {
+export const buildDashboardSessionsFromRows = (
+  rows: DashboardRows,
+  options: {
+    projectId?: string;
+  } = {},
+) => {
   const workspaceById = new Map(
     rows.workspaces
       .filter((workspace) => isVisibleDashboardRow(workspace) && isDashboardProjectRow(workspace, options.projectId))
       .map((workspace) => [workspace.id, workspace]),
   );
   const workspaceBySessionId = new Map<string, SyncedRow>();
-
   for (const link of rows.workspaceSessions) {
     const workspace = workspaceById.get(link.workspace_id as string);
     if (workspace) workspaceBySessionId.set(link.session_id as string, workspace);
   }
-
   return rows.sessions
     .filter((session) => isVisibleDashboardRow(session) && isDashboardProjectRow(session, options.projectId))
     .map((session) => createSession(session, workspaceBySessionId.get(session.id)))
     .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt));
 };
-
 export const createDashboardSessions = (projectId?: string) =>
   buildDashboardSessionsFromRows(readDashboardRows(), { projectId });
-
 export const findDashboardSession = (sessionId: string | undefined) =>
   createDashboardSessions().find((session) => session.id === sessionId);
-
 export const draftSessionViewId = "draft";
-
 const draftSessionView: DashboardSessionView = {
   id: draftSessionViewId,
   draftKey: draftSessionViewId,
@@ -113,43 +106,35 @@ const draftSessionView: DashboardSessionView = {
   deletions: 0,
   messages: [],
 };
-
 const metadataString = (resource: ResourceRef | undefined, key: string) => {
   const value = resource?.metadata?.[key];
   return typeof value === "string" ? value : undefined;
 };
-
 const createDraftSessionView = (resource: ResourceRef | undefined): DashboardSessionView => ({
   ...draftSessionView,
-  draftKey: resource?.id ?? resource?.uri ?? draftSessionViewId,
+  draftKey: resource?.id ?? draftSessionViewId,
   workspaceTitle: metadataString(resource, "workspaceTitle") ?? "",
   workspaceId: metadataString(resource, "workspaceId") ?? null,
   workspaceBranch: metadataString(resource, "workspaceBranch") ?? null,
   workspaceShorthand: metadataString(resource, "workspaceShorthand") ?? "",
 });
-
 const createUnsyncedSessionView = (sessionId: string): DashboardSessionView => ({
   ...draftSessionView,
   id: sessionId,
   draftKey: sessionId,
   sessionId,
 });
-
 const findWorkspaceRow = (rows: DashboardRows, workspaceId: string | null | undefined) => {
   if (!workspaceId) return undefined;
   return rows.workspaces.find((workspace) => isVisibleDashboardRow(workspace) && workspace.id === workspaceId);
 };
-
 export const resolveDashboardSessionView = (sessionId: string | undefined): DashboardSessionView => {
   if (!sessionId) return draftSessionView;
-
   const session = findDashboardSession(sessionId);
   if (!session) return createUnsyncedSessionView(sessionId);
-
   const rows = readDashboardRows();
   const workspace = findWorkspaceRow(rows, session.workspaceId);
   const summary = session.workspaceId ? getDashboardWorkspaceDiffSummary(session.workspaceId) : undefined;
-
   return {
     id: session.id,
     draftKey: session.id,
@@ -165,24 +150,9 @@ export const resolveDashboardSessionView = (sessionId: string | undefined): Dash
     messages: [],
   };
 };
-
-const sessionResourceUriPrefix = "pstdio://extension-resource/session/";
-
-const getSessionIdFromResourceUri = (resourceUri: string | undefined) => {
-  if (!resourceUri?.startsWith(sessionResourceUriPrefix)) return undefined;
-  return resourceUri.slice(sessionResourceUriPrefix.length);
-};
-
-const resolveDashboardSessionPlacementId = (placement: Pick<WorkbenchPanelInstance, "resource" | "resourceUri">) => {
-  if (placement.resource?.kind === "session") return placement.resource.id;
-  return getSessionIdFromResourceUri(placement.resourceUri);
-};
-
-export const resolveDashboardSessionViewForPlacement = (
-  placement: Pick<WorkbenchPanelInstance, "resource" | "resourceUri">,
-) => {
-  const sessionId = resolveDashboardSessionPlacementId(placement);
+export const resolveDashboardSessionViewForPlacement = (placement: Pick<WorkbenchPanelInstance, "resource">) => {
+  const sessionId = placement.resource?.type === "session" ? placement.resource.id : undefined;
   if (sessionId) return resolveDashboardSessionView(sessionId);
-  if (placement.resource?.kind === "session-draft") return createDraftSessionView(placement.resource);
+  if (placement.resource?.type === "session-draft") return createDraftSessionView(placement.resource);
   return draftSessionView;
 };

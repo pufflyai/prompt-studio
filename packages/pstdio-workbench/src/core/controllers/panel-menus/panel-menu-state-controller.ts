@@ -1,5 +1,6 @@
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import { runWorkbenchEffect } from "../../shared/workbench-effect";
 
 export interface WorkbenchPanelMenuState {
   openByMenuId: Record<string, boolean>;
@@ -34,7 +35,9 @@ export const createWorkbenchPanelMenuStateController = (
   input: CreateWorkbenchPanelMenuStateControllerInput = {},
 ): WorkbenchPanelMenuStateController => {
   let currentScope: string | undefined;
-  const persisted = input.persistence?.getMenuStates(currentScope);
+  const persisted = runWorkbenchEffect(`panel menu cache read for ${currentScope ?? "unscoped"}`, () =>
+    input.persistence?.getMenuStates(currentScope),
+  );
   const resolveOpenByMenuId = (state: PersistedWorkbenchPanelMenuState | undefined) => ({
     ...state?.openByMenuId,
   });
@@ -46,7 +49,9 @@ export const createWorkbenchPanelMenuStateController = (
 
   const persistState = () => {
     if (!input.persistence) return;
-    input.persistence.setMenuStates({ openByMenuId: store.getState().openByMenuId }, currentScope);
+    runWorkbenchEffect(`panel menu cache write for ${currentScope ?? "unscoped"}`, () =>
+      input.persistence?.setMenuStates({ openByMenuId: store.getState().openByMenuId }, currentScope),
+    );
   };
 
   const isOpen = (menuId: string) => store.getState().openByMenuId[menuId] ?? true;
@@ -77,7 +82,9 @@ export const createWorkbenchPanelMenuStateController = (
       if (scope === currentScope) return;
       persistState();
       currentScope = scope;
-      const incoming = input.persistence?.getMenuStates(currentScope);
+      const incoming = runWorkbenchEffect(`panel menu cache read for ${currentScope ?? "unscoped"}`, () =>
+        input.persistence?.getMenuStates(currentScope),
+      );
       store.setState({ openByMenuId: resolveOpenByMenuId(incoming) }, false, "setPersistenceScope");
     },
 

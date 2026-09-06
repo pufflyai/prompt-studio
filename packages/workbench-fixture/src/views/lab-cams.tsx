@@ -23,11 +23,11 @@ const LabCams = () => {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const response = await host.call<{ outcome: { status: string; value?: unknown } }>("commands.execute", {
+      const response = await host.call("commands.execute", {
         commandId: "pstdio.workbench-fixture.command.cams.current",
         params: {},
       });
-      const current = camIdFromValue(response.outcome.value);
+      const current = response.outcome.status === "success" ? camIdFromValue(response.outcome.value) : undefined;
       if (!cancelled && current) setCamId(current);
     })();
     return () => {

@@ -7,7 +7,6 @@ describe("createWorkbenchWebviewHostCapabilities", () => {
     const workbench = createWorkbench();
     const keyboardEvents: unknown[] = [];
     const page = { extensionId: "pstdio.lab", kind: "page" as const, id: "tickets" };
-
     workbench.commands.registerCommand(
       { id: "lab.hello", label: "Hello" },
       { execute: (params) => ({ params, status: "ok" }) },
@@ -24,7 +23,15 @@ describe("createWorkbenchWebviewHostCapabilities", () => {
       title: "Tickets",
       path: "tickets",
       modeId: "project",
-      slots: [{ id: "content", role: "primary", region: "main", viewId: "tickets" }],
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "tickets",
+        },
+        cardinality: "one",
+      },
+      slots: [],
     });
     workbench.pageLocations.setProject("project-1");
     workbench.preferences.registerSchema({
@@ -36,12 +43,10 @@ describe("createWorkbenchWebviewHostCapabilities", () => {
         },
       },
     });
-
     const capabilities = createWorkbenchWebviewHostCapabilities({
       dispatchKeyboardEvent: (event) => keyboardEvents.push(event),
       workbench,
     });
-
     await expect(
       capabilities["commands.execute"]?.({ commandId: "lab.hello", params: { name: "Ada" } }),
     ).resolves.toEqual({
@@ -53,12 +58,10 @@ describe("createWorkbenchWebviewHostCapabilities", () => {
         target: { kind: "page", page },
       }),
     ).resolves.toEqual([expect.objectContaining({ location: { page } })]);
-
     capabilities["notification.show"]?.({ level: "info", title: "Bridge ready" });
     capabilities["preferences.set"]?.({ name: "lab.theme", scope: { scope: "user" }, value: "dark" });
     const preference = capabilities["preferences.get"]?.({ name: "lab.theme", scope: { scope: "user" } });
     capabilities["host.dispatchKeyboardEvent"]?.({ code: "KeyP", ctrlKey: true, key: "p" });
-
     expect(preference).toBe("dark");
     expect(workbench.pages.store.getState().activePageId).toBe("pstdio.lab.page.tickets");
     expect(workbench.notifications.listNotifications()).toMatchObject([{ title: "Bridge ready" }]);

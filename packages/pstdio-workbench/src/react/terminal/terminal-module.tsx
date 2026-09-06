@@ -2,15 +2,12 @@ import type { ResourceRef, WorkbenchCoreContributionContext, WorkbenchModuleCont
 import { toPanelInstance } from "../../core/registries/layout/panel-api";
 import { terminalPlacementBindingId } from "./terminal-placement-binding";
 import { WorkbenchTerminalPanel } from "./workbench-terminal-panel";
-
 // The host-owned terminal panel in the workbench `secondary` (bottom) region.
 // Exported so hosts can open or assert it directly.
 export const WORKBENCH_TERMINAL_WIDGET_ID = "workbench.terminal";
-
 // Built-in command to open (or focus) the terminal panel. Registered by the
 // surface module so it is available in the command palette without host wiring.
 export const WORKBENCH_TERMINAL_OPEN_COMMAND_ID = "workbench.terminal.open";
-
 /** Suggested secondary-region size for hosts that mount the terminal (createWorkbench regionSettings). */
 export const WORKBENCH_TERMINAL_PANEL_SIZE = { defaultPx: 240, minPx: 128 };
 interface OpenWorkbenchTerminalOptions {
@@ -18,7 +15,6 @@ interface OpenWorkbenchTerminalOptions {
   reveal?: boolean;
 }
 type TerminalResource = OpenWorkbenchTerminalOptions["resource"];
-
 const terminalInstanceIds = (ctx: WorkbenchCoreContributionContext) =>
   new Set(
     ctx.layout
@@ -26,7 +22,6 @@ const terminalInstanceIds = (ctx: WorkbenchCoreContributionContext) =>
       .filter((placement) => placement.viewId === WORKBENCH_TERMINAL_WIDGET_ID)
       .map((placement) => placement.instanceId),
   );
-
 const watchClosedTerminalPlacements = (ctx: WorkbenchCoreContributionContext) => {
   // A scope rotation temporarily removes every placement. Only an explicit tab
   // close should end the PTY bound to that placement.
@@ -52,7 +47,6 @@ const watchClosedTerminalPlacements = (ctx: WorkbenchCoreContributionContext) =>
       if (!currentIds.has(instanceId)) void ctx.terminal.killBinding(terminalPlacementBindingId(scope, instanceId));
     }
   });
-
   return {
     dispose() {
       unsubscribeLayout();
@@ -65,10 +59,8 @@ const watchClosedTerminalPlacements = (ctx: WorkbenchCoreContributionContext) =>
     },
   };
 };
-
 const terminalTitlePattern = /^Terminal (\d+)$/;
 const nextTerminalIndexes = new WeakMap<WorkbenchCoreContributionContext["layout"]["store"], number>();
-
 const getInitialTerminalIndex = (ctx: WorkbenchCoreContributionContext) => {
   const terminalPlacements = ctx.layout
     .getLayout()
@@ -79,16 +71,13 @@ const getInitialTerminalIndex = (ctx: WorkbenchCoreContributionContext) => {
     .map((index) => Number.parseInt(index, 10));
   return Math.max(terminalPlacements.length, ...titleIndexes) + 1;
 };
-
 const getNextTerminalTitle = (ctx: WorkbenchCoreContributionContext) => {
   const nextIndex = Math.max(nextTerminalIndexes.get(ctx.layout.store) ?? 1, getInitialTerminalIndex(ctx));
   nextTerminalIndexes.set(ctx.layout.store, nextIndex + 1);
   return `Terminal ${nextIndex}`;
 };
-
 const hasWorkspacePath = (resource: TerminalResource) =>
   typeof resource?.metadata?.workspacePath === "string" && resource.metadata.workspacePath.length > 0;
-
 const getTerminalResource = (ctx: WorkbenchCoreContributionContext, resource: TerminalResource) => {
   const activeResource = ctx.getActiveResource();
   const primaryResource = ctx.getPrimaryResource();
@@ -100,7 +89,6 @@ const getTerminalResource = (ctx: WorkbenchCoreContributionContext, resource: Te
     primaryResource
   );
 };
-
 // Opens a new terminal placement, revealing the bottom region if it is collapsed.
 export const openWorkbenchTerminal = (
   ctx: WorkbenchCoreContributionContext,
@@ -112,8 +100,7 @@ export const openWorkbenchTerminal = (
   const index = Number.parseInt(terminalTitlePattern.exec(title)?.[1] ?? "1", 10);
   const id = `${String(index).padStart(8, "0")}-${globalThis.crypto.randomUUID()}`;
   const resource: ResourceRef = {
-    kind: "terminal",
-    uri: `pstdio://terminal/${encodeURIComponent(id)}`,
+    type: "terminal",
     id,
     label: title,
     icon: "SquareTerminal",
@@ -140,7 +127,6 @@ export const openWorkbenchTerminal = (
   if (!placement) throw new Error(`Terminal placement did not open: ${identity.instanceKey}`);
   return toPanelInstance(placement);
 };
-
 /**
  * Host-owned terminal surface: tabbed placements in the `secondary` region whose
  * chrome, focus, lifecycle, and styling belong to the workbench. Sessions are
@@ -164,11 +150,21 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
       ctx.shellPlacements.registerPlacement({
         id: WORKBENCH_TERMINAL_WIDGET_ID,
         item: {
-          kind: "resource",
-          viewId: WORKBENCH_TERMINAL_WIDGET_ID,
-          resourceKinds: ["terminal"],
-          cardinality: "many",
-          add: { kind: "command", commandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID },
+          kind: "binding",
+          binding: {
+            kinds: [
+              {
+                kind: "resource-kind",
+                id: "terminal",
+              },
+            ],
+            view: {
+              kind: "view",
+              id: WORKBENCH_TERMINAL_WIDGET_ID,
+            },
+            cardinality: "many",
+            add: { kind: "command", target: { command: { kind: "command", id: WORKBENCH_TERMINAL_OPEN_COMMAND_ID } } },
+          },
         },
         region: "secondary",
         mountStrategy: "keep-mounted",

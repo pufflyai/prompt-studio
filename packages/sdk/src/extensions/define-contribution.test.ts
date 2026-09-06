@@ -33,9 +33,21 @@ describe("extension contribution definitions", () => {
       title: "Tickets",
       path: "tickets",
       mode: workbenchModes.project,
+      main: {
+        kind: "view",
+        view: view.ref,
+        cardinality: "one",
+      },
       slots: [
-        { id: "list", role: "primary", region: "main", view: view.ref },
-        { id: "details", role: "auxiliary", region: "side", view: view.ref, presence: "open" },
+        {
+          id: "details",
+          region: "side",
+          item: {
+            kind: "view",
+            view: view.ref,
+            presence: "open",
+          },
+        },
       ],
     });
     const navigationItem = defineNavigationItem({
@@ -57,7 +69,6 @@ describe("extension contribution definitions", () => {
       id: "ticket",
       menuSlots: [{ id: "headerOverflow", placement: "header-overflow", access: "public" }],
     });
-
     expect(view.ref).toEqual({ kind: "view", id: "tickets" });
     expect(placement.ref).toEqual({ kind: "placement", id: "tickets.main" });
     expect(page.ref).toEqual({ kind: "page", id: "tickets" });
@@ -77,7 +88,6 @@ describe("extension contribution definitions", () => {
     });
     expect(workbenchPages.start).toEqual({ extensionId: "pstdio", kind: "page", id: "start" });
   });
-
   test("keeps contribution registries as arrays and dictionaries as records", () => {
     const command = defineCommand({ id: "tickets.open", title: "Open ticket", run: async () => undefined });
     const extension = defineExtension({
@@ -88,7 +98,6 @@ describe("extension contribution definitions", () => {
         },
       },
     });
-
     expect(extension.commands).toEqual([command]);
     expect(extension.settings?.properties["tickets.enabled"]).toMatchObject({ type: "boolean" });
   });

@@ -1,23 +1,15 @@
 import type { WorkbenchExtensionControlsRendererRecord } from "pstdio-api-contracts";
+import { controlsQueryResultSchema } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
-import type { ControlsQueryResult, Disposable, ResourceRef } from "../../core";
+import type { Disposable, ResourceRef } from "../../core";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
-import {
-  createExtensionSlot,
-  executeWorkbenchExtensionCommand,
-  toExtensionCommandResource,
-} from "../host/workbench-extension-command";
+import { createExtensionSlot, executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
 
 const localize = (value: unknown, fallback = "") => text(value as Parameters<typeof text>[0], fallback);
-
-const isQueryResult = (value: unknown): value is ControlsQueryResult =>
-  Boolean(value) && typeof value === "object" && !Array.isArray(value);
-
 export interface WorkbenchExtensionControlsAdapter {
   /** Supply a fallback resource when the widget placement carries none. */
   resolveResource?: (record: WorkbenchExtensionControlsRendererRecord) => ResourceRef | undefined;
 }
-
 const registerControlsRenderer = (
   context: WorkbenchExtensionCommandContext,
   record: WorkbenchExtensionControlsRendererRecord,
@@ -36,7 +28,7 @@ const registerControlsRenderer = (
             renderer: {
               rendererId: record.id,
               projectId: context.projectId,
-              ...(resource ? { resource: toExtensionCommandResource(resource) } : {}),
+              ...(resource ? { resource: resource } : {}),
               invocation: { placement: "visible" },
             },
             ...params,
@@ -46,7 +38,6 @@ const registerControlsRenderer = (
           metadata: { controlsRendererId: record.id },
         })
       : Promise.resolve(undefined);
-
   return context.workbench.views.registerView({
     id: record.id,
     title: localize(record.title, record.id),
@@ -58,7 +49,16 @@ const registerControlsRenderer = (
       defaultValues: record.defaultValues,
       executeQuery: async (resource) => {
         const value = await run(record.queryHandlerId, {}, resource ?? adapter.resolveResource?.(record));
-        return isQueryResult(value) ? value : {};
+        const result = controlsQueryResultSchema.safeParse(value);
+        if (!result.success) {
+          const fields = result.error.issues
+            .map((issue) => `body.query.${issue.path.join(".")}: ${issue.message}`)
+            .join("; ");
+          throw new Error(
+            `Extension "${record.extensionId}" view "${record.id}" has invalid controls. Expected serializable control declarations. ${fields}`,
+          );
+        }
+        return result.data;
       },
       updateValue: record.valueChangeHandlerId
         ? ({ controlId, value, values, resource }) =>
@@ -73,7 +73,6 @@ const registerControlsRenderer = (
     },
   });
 };
-
 // Bridges serializable controls renderer metadata into live workbench controls renderers
 // (wiring each query/update/apply/reset command id to command execution), and registers a
 // panel widget for every panel that places one.
@@ -83,7 +82,6 @@ export const registerWorkbenchExtensionControlsRenderers = (
   adapter: WorkbenchExtensionControlsAdapter = {},
 ): Disposable => {
   const disposables: Disposable[] = [];
-
   for (const record of records) disposables.push(registerControlsRenderer(context, record, adapter));
   return {
     dispose() {

@@ -82,6 +82,8 @@ export type WorkbenchTreeViews = Pick<
 >;
 
 export interface WorkbenchCoreContributionContext {
+  pinPlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity): void;
+  closePlacement(identity: import("@pstdio/sdk/extensions").PlacementIdentity): void;
   breadcrumbs: WorkbenchBreadcrumbController;
   commandPalette: WorkbenchCommandPaletteController;
   commandPaletteResources: CommandPaletteResourceRegistry;

@@ -1,666 +1,86 @@
-# Extension Cookbook
+# Workbench cookbook
 
-This cookbook gives short recipes for the implemented extension API.
+Build on the public `@pstdio/sdk/extensions` API. Install the SDK with Bun and keep `engines.pstdio` on the extension API version shipped with your host. This revision uses `1.0.0-alpha.10`.
 
-The [Extension Lab](../../../extensions/extension-lab/README.md) contains complete public extension versions of Scribble, Boombox, Zipline, Pigeon, and Kiln. Each includes sample resources, state commands, a page, a mode, views, and a theme. Start with [Scribble](../../../extensions/extension-lab/src/examples/scribble.ts) or the [state commands](../../../extensions/extension-lab/src/state-commands.ts).
+Start with [Extension Lab](../../../extensions/extension-lab/README.md). It contains working tools with saved data, navigation, and custom modes. Copy the extension directory when trying it outside this repository; individual example modules import its shared files. Rename the package and publisher before installing your own copy.
 
-## Create A Package
-
-```txt
-~/.pstdio/extensions/planner/
-  package.json
-  extension.ts
-  templates/
-  skills/
-  webviews/
-```
-
-`package.json` owns identity:
-
-```json
-{
-  "name": "planner",
-  "version": "0.1.0",
-  "publisher": "pstdio",
-  "main": "./extension.ts",
-  "engines": {
-    "pstdio": "1.0.0-alpha.9"
-  },
-  "type": "module",
-  "dependencies": {
-    "@pstdio/sdk": "latest"
-  }
-}
-```
-
-## Add A CLI Command
-
-```ts
-import { defineCommand } from "@pstdio/sdk/extensions";
-import { defineExtension, params } from "@pstdio/sdk/extensions";
-
-export default defineExtension({
-  commands: [
-    defineCommand({
-      id: "tickets.create",
-      title: "Create ticket",
-      cli: {
-        path: ["tickets", "create"],
-        examples: ['pst planner tickets create --title "Add review status"'],
-      },
-      params: {
-        title: params.text({ label: "Title", required: true }),
-      },
-      async run(_ctx, commandParams) {
-        return { title: commandParams.title };
-      },
-    }),
-  ],
-});
-```
-
-## Add A Resource Header Action
-
-```ts
-import {
-  defineCommand,
-  defineExtension,
-  defineResourceKind,
-  params,
-  resourceMenuSlotRef,
-} from "@pstdio/sdk/extensions";
-
-const ticket = defineResourceKind({
-  id: "ticket",
-  menuSlots: [{ id: "header-actions", placement: "header-primary", access: "owner" }],
-});
-
-const runAttempt = defineCommand({
-  id: "run-attempt",
-  title: "Run attempt",
-  menus: [
-    {
-      slot: resourceMenuSlotRef(ticket.ref, "header-actions"),
-      label: "Run attempt",
-      icon: "play",
-      presentation: "button",
-    },
-  ],
-  params: {
-    ticketId: params.text({ resolvedFrom: "resource" }),
-  },
-  async run(ctx) {
-    return { ticket: ctx.resource?.id };
-  },
-});
-
-export default defineExtension({
-  resourceKinds: [ticket],
-  commands: [runAttempt],
-});
-```
-
-`resolvedFrom: "resource"` tells the host not to show that parameter in a command form. The command reads the active resource from `ctx.resource`.
-
-## Add Middleware
-
-Middleware runs before a command. Use it when the extension needs to validate, reject, or rewrite command invocation.
-
-```ts
-import { defineCommand, defineExtension, defineMiddleware, params } from "@pstdio/sdk/extensions";
-
-const publishWorkspace = defineCommand({
-  id: "publish-workspace",
-  title: "Publish workspace",
-  params: { workspaceId: params.text({ required: true }) },
-  async run(_ctx, commandParams) {
-    return { published: commandParams.workspaceId };
-  },
-});
-
-const requirePassingChecks = defineMiddleware<{ workspaceId: string }>({
-  id: "require-passing-checks",
-  command: publishWorkspace.ref,
-  async run(ctx, commandParams) {
-    const workspace = await ctx.workspaces.get(commandParams.workspaceId);
-    if (!workspace?.worktree_path) return ctx.commands.continue();
-    const result = await ctx.process.run({ command: ["bun", "run", "test"], cwd: workspace.worktree_path });
-    if (result.exitCode === 0) return ctx.commands.continue();
-    return ctx.commands.reject({ code: "checks_failed", reason: "Tests must pass before publishing." });
-  },
-});
-
-export default defineExtension({ commands: [publishWorkspace], middlewares: [requirePassingChecks] });
-```
-
-Middleware can return:
-
-- `ctx.commands.continue()`
-- `ctx.commands.patchParams({ ... })`
-- `ctx.commands.replaceParams({ ... })`
-- `ctx.commands.replaceInvocation({ ... })`
-- `ctx.commands.reject({ code, reason })`
-- nothing, which is treated as continue
-
-## Add A Hook
-
-Hooks observe emitted events. They do not veto the event or mutate the operation that emitted it.
-
-```ts
-import { defineHook } from "@pstdio/sdk/extensions";
-import { defineExtension, sessionEvents } from "@pstdio/sdk/extensions";
-
-export default defineExtension({
-  hooks: [
-    defineHook({
-      id: "record-started-session",
-      event: sessionEvents.started,
-      async run(ctx, event) {
-        await ctx.storage.set(`session:${event.sessionId}:started`, new Date().toISOString());
-      },
-    }),
-  ],
-});
-```
-
-Use hooks for follow-up automation such as worktree cleanup, session creation,
-notifications, and activity records. Planner ticket workflow automation should
-run through planner commands/storage rather than removed core ticket events.
-
-## Observe Command Lifecycle
-
-Use `commandEvent()` when a hook should react to a command outcome:
-
-```ts
-import { defineCommand, defineHook } from "@pstdio/sdk/extensions";
-import { commandEvent, commandRef, defineExtension } from "@pstdio/sdk/extensions";
-
-const plannerCommand = commandRef.forExtension({ publisher: "pstdio", name: "planner" });
-const publishCommand = plannerCommand<{ version: string }, { published: boolean }>("publish");
-
-export default defineExtension({
-  commands: [
-    defineCommand({
-      id: "publish",
-      title: "Publish",
-      async run(_ctx, _commandParams) {
-        return { published: true };
-      },
-    }),
-  ],
-  hooks: [
-    defineHook({
-      id: "record-publish-failure",
-      event: commandEvent(publishCommand, "failed"),
-      async run(ctx, event) {
-        await ctx.activity.record({
-          message: `Publish failed: ${event.reason}`,
-        });
-      },
-    }),
-  ],
-});
-```
-
-## Add A Page And Navigation Item
-
-```ts
-import {
-  defineExtension,
-  defineNavigationItem,
-  definePage,
-  defineView,
-  packageAsset,
-  workbenchModes,
-} from "@pstdio/sdk/extensions";
-
-const planner = defineView({
-  id: "planner",
-  title: "Planner",
-  body: {
-    kind: "webview",
-    entry: packageAsset("./webviews/planner.tsx", import.meta.url),
-    capabilities: ["commands.execute", "notification.show"],
-  },
-});
-
-const plannerPage = definePage({
-  id: "planner",
-  title: "Planner",
-  path: "planner",
-  mode: workbenchModes.project,
-  slots: [{ id: "content", role: "primary", region: "main", view: planner.ref }],
-});
-
-export default defineExtension({
-  views: [planner],
-  pages: [plannerPage],
-  navigationItems: [
-    defineNavigationItem({
-      id: "planner",
-      owner: workbenchModes.project,
-      slot: "content",
-      label: "Planner",
-      icon: "calendar-check",
-      action: { kind: "page", page: plannerPage.ref },
-    }),
-  ],
-});
-```
-
-The page owns the deep link and chooses its declared mode. The navigation item opens the page directly.
-
-## Call Commands From A Webview
-
-Export the commands record and the settings contribution, then build a typed client in
-the view. Type-only imports keep server code out of the webview bundle.
-
-```ts
-// src/commands/index.ts
-import { defineCommand, params } from "@pstdio/sdk/extensions";
-
-export const commands = {
-  "ticket-status.read": defineCommand({
-    id: "ticket-status.read",
-    title: "Read ticket statuses",
-    async run(_ctx, _commandParams) {
-      return { statuses: [] as { id: string; name: string }[] };
-    },
-  }),
-  "ticket-status.create": defineCommand({
-    id: "ticket-status.create",
-    title: "Create ticket status",
-    params: { label: params.text({ required: true }) },
-    async run(_ctx, commandParams) {
-      return { id: commandParams.label };
-    },
-  }),
-};
-```
-
-```tsx
-// src/webviews/statuses.tsx
-import { createWebviewClient, defineExtensionView } from "@pstdio/sdk/extensions";
-import { useCommandMutation, useCommandQuery } from "@pstdio/sdk/extensions/react";
-import type { commands } from "../commands";
-
-export default defineExtensionView({
-  render({ mount, host }) {
-    const client = createWebviewClient<typeof commands>(host);
-
-    const StatusList = () => {
-      const statuses = useCommandQuery({
-        queryKey: ["ticket-statuses"],
-        command: client.commands["ticket-status.read"],
-      });
-      const createStatus = useCommandMutation({
-        command: client.commands["ticket-status.create"],
-        invalidate: [["ticket-statuses"]],
-      });
-
-      // render statuses.data and call createStatus.mutate({ label: "Todo" })
-      return null;
-    };
-
-    // mount the React root with <StatusList /> under a QueryClientProvider
-  },
-});
-```
-
-Wrong param shapes, wrong result uses, and unknown command keys fail to compile. Pass
-the settings contribution type as the second type argument for typed `client.settings`.
-
-## Store files from a webview
-
-Declare the file operations on the webview body. `pick` stays inside the browser, but
-upload, list, and delete call the host and each needs its own declaration.
-
-```ts
-const imports = defineView({
-  id: "imports",
-  title: "Imports",
-  body: {
-    kind: "webview",
-    entry: packageAsset("./webviews/imports.ts", import.meta.url),
-    capabilities: ["files.upload", "files.list", "files.delete"],
-  },
-});
-```
-
-Use the `files` helper passed to `defineExtensionView`:
-
-```ts
-// src/webviews/imports.ts
-import { defineExtensionView } from "@pstdio/sdk/extensions";
-
-export default defineExtensionView({
-  render({ files, mount }) {
-    const button = document.createElement("button");
-    button.textContent = "Import CSV";
-    button.addEventListener("click", async () => {
-      const [selected] = await files.pick({ accept: ".csv,text/csv" });
-      if (!selected) return;
-
-      const uploaded = await files.upload({
-        name: selected.name,
-        data: await selected.arrayBuffer(),
-        mimeType: selected.type || "text/csv",
-      });
-      const stored = await files.list();
-      button.textContent = `Stored ${uploaded.name}; ${stored.length} project files`;
-    });
-    mount.append(button);
-    return () => button.remove();
-  },
-});
-```
-
-The default scope is the active project. Pass the same scope to upload and list when a
-file belongs to a repository, resource, or extension-defined group:
-
-```ts
-const scope = { type: "resource", id: "PS-260" };
-const uploaded = await files.upload({ name, data, mimeType, scope });
-const resourceFiles = await files.list({ scope });
-await files.delete(uploaded.id);
-```
-
-The host fixes ownership to the active project extension instance. The webview cannot
-name a different owner. Project routes, panels, resource views, and project settings
-views can use host-backed files. Global settings views cannot because they have no
-project extension instance. Uploads larger than 25 MiB fail.
-
-A command sees files from the same default project scope through `ctx.storage.files`:
-
-```ts
-const bytes = await ctx.storage.files.getBytes(params.fileId);
-const text = new TextDecoder().decode(bytes);
-```
-
-Command scopes use runtime objects instead of the webview `{ type, id }` shape:
-
-```ts
-const repoFiles = ctx.storage.scope({ type: "repo", repoId }).files;
-const resourceFiles = ctx.storage.scope({ type: "resource", resource }).files;
-const importFiles = ctx.storage.scope({ type: "import", id: importId }).files;
-```
-
-`resource` must be the full resource reference with at least `type` and `id`, not only
-the resource id. Extension-defined command scopes require an id. Read from the same
-scope that the webview used for upload and list.
-
-## Navigate from a webview
-
-Declare `navigation.open`, then pass an explicit page or panel target to the host.
-
-```ts
-const results = defineView({
-  id: "results",
-  title: "Results",
-  body: {
-    kind: "webview",
-    entry: packageAsset("./webviews/results.ts", import.meta.url),
-    capabilities: ["navigation.open"],
-  },
-});
-```
-
-```ts
-await host.call("navigation.open", {
-  target: {
-    kind: "page",
-    page: { kind: "page", id: "ticket" },
-    resource: {
-      type: "ticket",
-      id: "PS-260",
-      label: "Dashboard webview capabilities",
-      metadata: { status: "in-review" },
-    },
-  },
-});
-```
-
-The page target chooses the screen and its declared mode. The resource carries identity and input only.
-
-## Read Artifacts From A Webview
-
-Declare an artifact mount and grant the webview read access to it. Each `artifactsRead` declaration grants
-one mount; there is no wildcard. The mount's `path` is relative to the extension's package-name root in the repo's
-extension storage directory: for package `fds-playground`, the mount below resolves to
-`<repo>/.pstdio/extension-storage/fds-playground/runs/`.
-The `id` only names the mount in refs and grants; it never changes the disk path.
-
-```ts
-import { artifactsRead, defineArtifactMount, defineExtension, defineView, packageAsset } from "@pstdio/sdk/extensions";
-
-const runArtifacts = defineArtifactMount({ id: "runs", path: "runs", label: "Runs" });
-
-const report = defineView({
-  id: "report",
-  title: "Run report",
-  body: {
-    kind: "webview",
-    entry: packageAsset("./webviews/report.tsx", import.meta.url),
-    capabilities: [artifactsRead(runArtifacts)],
-  },
-});
-
-export default defineExtension({ artifactMounts: [runArtifacts], views: [report] });
-```
-
-In the webview, the typed client reads metadata, text, and images without any custom command:
-
-```ts
-const files = await client.artifacts.list("runs", "2026-08-28-a/");
-const summary = JSON.parse(await client.artifacts.readText("runs", "2026-08-28-a/summary.json"));
-const chartUrl = await client.artifacts.imageUrl("runs", "2026-08-28-a/chart.png");
-// <img src={chartUrl} /> — the URL is short-lived; request a fresh one when it expires.
-```
-
-The host enforces every limit: reads stay inside the declared mount (traversal and symlink escapes are
-rejected), text reads over 5 MB and images over 20 MB return limit errors, and image URLs are minted only
-for png, jpeg, webp, and gif. `pst extensions check` fails a webview that declares `artifacts.read` on a
-mount its extension does not define.
-
-## Compose A Resource Page With Navigation
-
-Declare a page for the routed editor. Add a page-owned tree to the shared Sidenav with `navigationTrees`.
-
-```ts
-import {
-  defineExtension,
-  defineNavigationTree,
-  definePage,
-  defineResourceKind,
-  defineView,
-  packageAsset,
-  workbenchModes,
-  workbenchPages,
-} from "@pstdio/sdk/extensions";
-
-const ticket = defineResourceKind({ id: "ticket", label: "Ticket" });
-const editor = defineView({
-  id: "ticket-editor",
-  title: "Ticket",
-  body: { kind: "webview", entry: packageAsset("./webviews/ticket-editor.tsx", import.meta.url) },
-});
-const files = defineView({
-  id: "ticket-files",
-  title: "Files",
-  body: { kind: "tree", body: async () => [] },
-});
-const ticketPage = definePage({
-  id: "ticket",
-  title: "Ticket",
-  path: "ticket",
-  mode: workbenchModes.project,
-  parent: workbenchPages.start,
-  slots: [
-    {
-      id: "content",
-      role: "primary",
-      region: "main",
-      binding: { kind: ticket.ref, view: editor.ref, cardinality: "one" },
-    },
-  ],
-});
-
-export default defineExtension({
-  resourceKinds: [ticket],
-  views: [editor, files],
-  pages: [ticketPage],
-  navigationTrees: [defineNavigationTree({ id: "files", owner: ticketPage.ref, slot: "content", view: files.ref })],
-});
-```
-
-Every binding declares `cardinality`: `one` keeps a single instance and rebinds it, `many` opens one
-instance per resource. A page whose primary slot declares a binding must declare `parent`; closing its
-last tab navigates there.
-
-Use `parent` on a navigation target for contextual breadcrumbs. Name the parent page and resource
-explicitly. The host does not infer a page from a resource kind, view, or resource metadata. Without
-a target parent, it uses the page's declared hierarchy.
-
-Closing the last resource primary follows the page's declared `parent`, even if the breadcrumb
-has a contextual parent.
-
-`openOn: "page-resource"` opens an auxiliary instance when navigation supplies a matching resource.
-Closing that instance keeps it closed until another navigation opens it. Leaving the page removes its panels
-from the active layout.
-
-The tree appears after the active mode's content while Ticket is active. Leaving the page removes only the
-page-owned tree; mode navigation remains.
-
-## Keep file source intact in file views
-
-File view bodies with `body.kind: "file"` open Markdown in the rich Markdown editor by default. The editor
-keeps the loaded source and changes only the Markdown syntax the user edits. Untouched escapes, table spacing,
-reference definitions, line endings, and tokens such as `{{token_with_underscores}}` keep their original source.
-
-Markdown files therefore need no safety setting, even when another tool reads them:
-
-```ts
-const spec = defineView({
-  id: "spec",
-  title: "Spec",
-  body: {
-    kind: "file",
-    load: async (ctx, input) => ({
-      fileName: "spec.md",
-      content: await readSpec(ctx, input.renderer.resource),
-    }),
-    save: (ctx, input) => writeSpec(ctx, input.content),
-  },
-});
-```
-
-Return `textRenderer: "monaco"` only when the user should edit raw Markdown in the code editor instead of the
-rendered rich editor.
-
-## Add Packaged Assets
-
-```ts
-import { defineTemplate, defineSkill } from "@pstdio/sdk/extensions";
-import { defineExtension, packageAsset } from "@pstdio/sdk/extensions";
-
-export default defineExtension({
-  templates: [
-    defineTemplate({
-      id: "review-prompt",
-      title: "Review prompt",
-      type: "ticket",
-      source: packageAsset("./templates/review.md", import.meta.url),
-    }),
-  ],
-  skills: [
-    defineSkill({ id: "reviewer", title: "Reviewer", source: packageAsset("./skills/reviewer", import.meta.url) }),
-  ],
-});
-```
-
-## Read Files Packaged With The Extension
-
-`ctx.packageFiles` is read-only and scoped to the installed extension package. Paths cannot leave that package.
-
-```ts
-const guide = await ctx.packageFiles.readText("docs/guide.md");
-const examples = await ctx.packageFiles.list("examples/**/*.json");
-```
-
-Files excluded from the installed package by its `.gitignore` are not available. Keep every runtime asset out of ignored paths.
-
-## Store Private Repo Files
-
-Declare `pstdio.repoFiles.tracked` in `package.json`, then use the extension-scoped mount:
-
-```json
-{ "pstdio": { "repoFiles": { "tracked": false } } }
-```
-
-```ts
-await ctx.extensionFiles?.writeText("cache/index.json", JSON.stringify(index));
-```
-
-The host allocates `.pstdio/ext/<publisher>.<name>/` and keeps it out of git when `tracked` is false.
-
-## Store Extension Data
-
-Use `ctx.storage` for private structured data and blobs. Use a declared artifact mount for files users should see in the project repository.
-
-```ts
-const preferences = ctx.storage.collection<{ id: string; enabled: boolean }>("preferences");
-await preferences.put("defaults", { id: "defaults", enabled: true });
-
-const reports = ctx.artifacts.mount("reports");
-await reports.writeText("latest/summary.md", "# Summary\n");
-```
-
-Artifact directories are created on the first write. Before then, `exists()` is false, `list()` is empty, and direct reads fail. Mounts stay under `.pstdio/<extension-name>/` and reject path escapes.
-
-## Work With Repositories And Workspaces
-
-- `ctx.repoFiles` reads and writes the invocation repository. It is absent when no repository is in scope.
-- `ctx.workspaceFiles` reads and writes the active workspace. It is absent when no local workspace is in scope.
-- `ctx.workspaces.removeWorktree(id)` removes a workspace worktree and branch without deleting the workspace record.
-- `ctx.workspaces.delete(id)` deletes the workspace and performs its full provider cleanup.
-
-Use `removeWorktree` for cleanup commands that must preserve workspace history:
-
-```ts
-const result = await ctx.workspaces.removeWorktree(workspaceId);
-return { removed: result.removed };
-```
-
-## Validate An Extension
-
-After updating the SDK across a breaking API change, update `pstdio-skills` from the same release
-and run `pst agents install-skills <agent-id>` in the linked repository. This replaces managed
-skill copies in the agent's skill directory. Restart the agent session so it reads the new guide.
-For source development, first load `extensions/pstdio-skills` with `pst extensions dev <path>`.
-
-```bash
+```sh
+bun install
+bun run typecheck
+pst extensions dev /absolute/path/to/your-extension
 pst extensions check
-bun run --cwd extensions/<name> typecheck
 ```
 
-Inspect what the host actually loaded before clicking through the UI. The extension's contributions tab in
-project settings lists every declared contribution and its diagnostics, even while the extension is
-disabled. For scripted checks, the same data is served by
-`GET /v1/projects/{projectId}/extensions/{instanceId}/contributions`.
+Run `pst extensions dev` from a linked project. Keep it running while editing. It installs package dependencies and watches source changes. Native contributions load from TypeScript; webviews use the host's asset build. Changes to definitions, callbacks, and assets go through this same loop. Stop the watcher before a production installation with `pst extensions add --force <path>`.
 
-If the dashboard layout looks stale after contribution changes, run the extension's layout reset command
-from the command palette. It appears in the `Extensions` group as `Reset <extension> layout`
-(command id `dashboard.extensions.resetLayout.<extension-id>`) and clears the persisted layout for that
-extension only.
+## Ownership in one minute
 
-For repo validation after non-documentation changes, run:
+A view supplies content. A page owns a route and its panels. A mode owns shared panels, region policy, and chrome. `ResourceRef` identifies data with `type`, `id`, and an optional `label`. Keep that reference intact when passing it between callbacks. An extension or project identity can distinguish data with the same type and id.
 
-```bash
-bun run validate
-```
+A page declares its routed resource separately with `resource: { kinds }`. Its `main` chooses either a view with `cardinality: "one" | "many"`, or peer panels with `kind: "panels"` and an `empty` view. Multiple routed view instances require a resource-bound page. That page declares a parent for closing its last resource tab.
 
-When bundled runtime artifacts change, also run:
+Page `slots` and mode placements both use `item`. A static item declares `kind: "view"`, `view`, and `presence`. A resource item declares `kind: "binding"` with `binding: { kinds, view, cardinality, add? }`. Both use Main, Side, or Secondary. `page.panels.inspector` is the generated reference for a slot named `inspector`.
 
-```bash
-bun run --cwd scripts verify:packages
-```
+Choose extension-specific page IDs. Host page IDs such as `workspace`, `session`, `sessions`, and `start` are reserved; use the exported `workbenchPages` refs to target them.
+
+Use a page target to change location. Use a panel target to open a panel and preserve location. A compound target contains only page and panel steps. The host prepares every step before publishing any state, then creates at most one history entry. Complete commands before requesting navigation; commands and external links are standalone actions.
+
+## Editable resource pages
+
+[Scribble's declaration](../../../extensions/extension-lab/src/examples/scribble.ts) selects the document view and a custom mode. [Its shared page definitions](../../../extensions/extension-lab/src/definition.ts) show `resource`, `main`, and the parent page. [Its editor](../../../extensions/extension-lab/src/apps/scribble.tsx) edits Markdown through the public UI package.
+
+For a native editor, choose a view body with `kind: "file"`. Its `load` callback returns `fileName` and `content`; `save` receives the same renderer resource and the edited content. For a form, choose `kind: "controls"`. Return typed `params` or `groups` and values from `query`; use `onValueChange` to save. Control values are serializable. React nodes and browser files belong in UI components, outside declarations.
+
+The [compiled controls example](../../../extensions/pstdio-skills/skills/create-pstdio-extension/references/examples/controls.ts) shows every required text and read-only field. Use `params.text(...)` for command parameters; renderer controls use their serializable control types.
+
+Use `ctx.storage` for extension-owned data. The [Lab state commands](../../../extensions/extension-lab/src/state-commands.ts) save changes, emit the declared `examplesChanged` event, and return the saved result. The [native Zipline board](../../../extensions/extension-lab/src/examples/zipline-board.ts) declares `refreshEvents` and queries that same saved data. Native renderers refresh after saves and matching events; the author does not maintain a second host-side store.
+
+Open resource pages with `open: "preview"` for replaceable tabs or `open: "pin"` for retained tabs. Reopening the same resource reuses its instance. The default tab title is the resource label, falling back to the view title. A tab query can supply an explicit label, icon, or indicator.
+
+For a callback that refers to a page defined later, give the callback its public handler type. The [compiled table navigation example](../../../extensions/pstdio-skills/skills/create-pstdio-extension/references/examples/table-navigation.ts) uses `DataTableRendererRowActivationHandler` to avoid a TypeScript inference cycle.
+
+`ctx.commands.execute(ref, { params })` returns a `CommandOutcome`. Check its `status` before reading `value`. A command with no parameters still takes `{}` as its invocation argument.
+
+## Inspectors
+
+[Zipline](../../../extensions/extension-lab/src/examples/zipline.ts) declares a Side inspector. Its slot uses the same resource binding as a mode placement. `cardinality: "one"` rebinds one instance; `"many"` retains independent resource instances.
+
+Set `openOn: "page-resource"` when the inspector should open on matching page navigation. To inspect a row while keeping the route, return a panel target naming the page's generated panel reference and the row's resource. A panel target is valid while its page or mode owns the active location. To enter that owner and open its inspector together, use a compound page-and-panel target.
+
+Explicit tab presentation wins over the resource label. Accessible close actions use that same label. Closing one inspector leaves other instances intact.
+
+## Shared mode panels and navigation
+
+[Boombox](../../../extensions/extension-lab/src/examples/boombox.ts) keeps its player in a mode placement. [Kiln](../../../extensions/extension-lab/src/examples/kiln.ts) does the same for its timeline. Page changes within the mode preserve the shared placement's identity. `mountStrategy: "keep-mounted"` preserves local view state while another tab is active. Removing the owning contribution disposes its instances.
+
+`presence: "fixed"` keeps a static panel open and protects it from closing. `"open"` and `"closed"` set its first-visit state; saved user choices win on later visits. Hiding a whole region preserves its panels.
+
+Omitted mode chrome keeps host navigation, including navigation items owned by your custom mode. Set `chrome.sidenav` to a view ref to replace it, or to `false` to hide it. Do not duplicate navigation in a webview to obtain the default sidebar. Region sizes, tab visibility, and collapsibility belong to the mode's `regionSettings`.
+
+## Editor collections
+
+Use `main: { kind: "panels", empty: emptyView.ref }` for a workspace-style editor. Put resource-bound editor slots in Main and tools in Side or Secondary. The empty view appears only while no Main panels are open.
+
+The page may still declare a routed resource such as a workspace. Its location and breadcrumbs continue to refer to that workspace while files open, close, or change selection. A panel target opens a file without changing the route. Page state uses the existing location key, so different workspaces keep separate editor collections. This requires no hidden content panel.
+
+## Cross-extension navigation
+
+[Lab's public contracts](../../../extensions/extension-lab/src/contracts.ts) export refs using `qualifyRef(owner, ref)`. The helper qualifies contribution refs and nested page-panel refs while preserving command parameter and result types. Register local definitions inside the provider. Export qualified refs from its contract module.
+
+A consumer imports `scribblePage` or `pigeonReader` from `extension-lab/contracts` and puts it in a page or panel target. Install the provider and consumer in the same project. Importing a provider's contract package does not enable its extension contributions. Let missing providers produce a navigation error; do not rewrite their ownership to the consumer.
+
+Use a type-only import of the provider's commands record when creating a typed webview command client. That keeps command implementations out of the webview bundle.
+
+## Webview lifecycle
+
+[View mounting](../../../extensions/extension-lab/src/create-view.tsx) uses `defineExtensionView`, the supplied mount, and a cleanup function. Subscribe to the supplied props store when a mounted view needs updated resource or page context. Dispose subscriptions and the React root on unmount.
+
+[Pigeon](../../../extensions/extension-lab/src/examples/pigeon.ts) declares `placement.close` for its reader. [The reader](../../../extensions/extension-lab/src/apps/pigeon.tsx) calls `host.call("placement.close", {})`. The host supplies the calling placement's identity. A webview cannot name a different tab. Fixed panels remain protected; closing the last routed resource returns to the page's declared parent.
+
+Declare every capability before calling it. `GuestHost.call` checks names, parameters, and results through its capability maps. Runtime validation checks the same boundary for JavaScript callers. Use `createWebviewClient<typeof commands>(host)` for command-specific results rather than casting bridge responses.
+
+## Check an authoring change
+
+Typecheck with `skipLibCheck: false`. Fix the field named by `pst extensions check`; declaration errors identify the extension, contribution, field path, and expected value. Test edits, another resource, revisit, reload, Back/Forward, independent closing, and mode navigation through the normal dev installation.
+
+These examples are repository TypeScript sources included in Extension Lab's typecheck and runtime checks. Host integration belongs in the [workbench guide](../../../packages/pstdio-workbench/README.md).

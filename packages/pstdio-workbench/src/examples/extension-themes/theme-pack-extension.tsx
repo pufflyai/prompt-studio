@@ -6,7 +6,6 @@ import { type ExtensionColorTheme, extensionColorThemes } from "./themes";
 
 const THEME_PACK_WIDGET_ID = "extension.theme-pack.panel";
 const CHANGE_THEME_COMMAND_ID = "workbench.action.changeTheme";
-
 // VS Code tokens worth previewing as swatches — they map onto the workbench
 // surfaces a user notices first when a theme is applied.
 const swatchTokens = [
@@ -16,10 +15,8 @@ const swatchTokens = [
   "button.hoverBackground",
   "focusBorder",
 ] as const;
-
 const ThemeSwatches = (props: { colors: Record<string, string> }) => {
   const { colors } = props;
-
   return (
     <HStack gap="0" borderWidth="1px" borderColor="border.subtle" borderRadius="sm" overflow="hidden" w="fit-content">
       {swatchTokens.map((token) => (
@@ -28,16 +25,13 @@ const ThemeSwatches = (props: { colors: Record<string, string> }) => {
     </HStack>
   );
 };
-
 interface ThemeCardProps {
   theme: ExtensionColorTheme;
   active: boolean;
   onApply: () => void;
 }
-
 const ThemeCard = (props: ThemeCardProps) => {
   const { theme, active, onApply } = props;
-
   return (
     <Stack gap="sm" p="md" borderWidth="1px" borderColor={active ? "border.accent" : "border.subtle"} borderRadius="md">
       <HStack justify="space-between">
@@ -52,11 +46,9 @@ const ThemeCard = (props: ThemeCardProps) => {
     </Stack>
   );
 };
-
 const ThemePackPanel = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
   const { themePreference, setThemePreference } = useThemePreference();
-
   return (
     <ScrollArea
       h="full"
@@ -104,7 +96,6 @@ const ThemePackPanel = (props: { input: WorkbenchPanelRenderInput }) => {
     </ScrollArea>
   );
 };
-
 // The primary extension: a "Theme Pack" that contributes a gallery panel into
 // the editor region. Disabling it disposes both the widget and its renderer.
 export const createThemePackExtension = (): WorkbenchModuleContribution => ({
@@ -117,7 +108,14 @@ export const createThemePackExtension = (): WorkbenchModuleContribution => ({
     });
     ctx.shellPlacements.registerPlacement({
       id: THEME_PACK_WIDGET_ID,
-      item: { kind: "view", viewId: THEME_PACK_WIDGET_ID, presence: "fixed" },
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: THEME_PACK_WIDGET_ID,
+        },
+      },
       region: "main",
     });
   },

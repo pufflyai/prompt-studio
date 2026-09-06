@@ -153,7 +153,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
         layout,
         getWorkbenchPanelForMenuRegion(region as WorkbenchPanelMenuRegion),
         locationResource,
-        { ignoreOwnerResourceUri: sidePanelRegionIds.has(region) },
+        { ignoreOwnerResourceKey: sidePanelRegionIds.has(region) },
       )
     : undefined;
   const activeLocationPanel = getActiveWorkbenchLocationPanel(layout);

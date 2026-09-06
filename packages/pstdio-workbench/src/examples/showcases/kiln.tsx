@@ -7,7 +7,6 @@ import { KilnViewport } from "./kiln-viewport";
 import { kilnTheme } from "./themes";
 
 const homePage = { ...kilnPage, id: "kiln" };
-
 export const createKilnWorkbench = () => {
   const workbench = createWorkbench({
     startPage: homePage,
@@ -22,7 +21,7 @@ export const createKilnWorkbench = () => {
     chrome: { nav: "kiln.nav", sidenav: false, activity: false, status: "kiln.status" },
     resourceKinds: ["kiln.object"],
     regionSettings: {
-      side: { size: { defaultPx: 340, minPx: 300, maxPx: 440 }, collapsible: false },
+      side: { size: { defaultPx: 340, minPx: 300, maxPx: 440 }, collapsible: false, alwaysShowTabs: false },
       secondary: { size: { defaultPx: 188, minPx: 188, maxPx: 188 }, collapsible: false },
     },
     activate: () => undefined,
@@ -57,7 +56,14 @@ export const createKilnWorkbench = () => {
     ref: { extensionId: "storybook.showcases", kind: "placement", id: "kiln.timeline" },
     modeId: "kiln",
     region: "secondary",
-    item: { kind: "view", viewId: "kiln.timeline", presence: "fixed" },
+    item: {
+      kind: "view",
+      presence: "fixed",
+      view: {
+        kind: "view",
+        id: "kiln.timeline",
+      },
+    },
   });
   workbench.pages.registerPage({
     id: "kiln.home",
@@ -65,7 +71,15 @@ export const createKilnWorkbench = () => {
     title: "Clay Study",
     path: "kiln/clay-study",
     modeId: "kiln",
-    slots: [{ id: "viewport", role: "primary", region: "main", viewId: "kiln.viewport" }],
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "kiln.viewport",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
   workbench.pages.registerPage({
     id: "kiln.resource",
@@ -74,19 +88,43 @@ export const createKilnWorkbench = () => {
     path: "kiln/clay-study/resource",
     modeId: "kiln",
     parentId: "kiln.home",
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "kiln.object",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "kiln.viewport",
+      },
+      cardinality: "one",
+    },
     slots: [
       {
-        id: "viewport",
-        role: "primary",
-        region: "main",
-        binding: { resourceKinds: ["kiln.object"], viewId: "kiln.viewport", cardinality: "one" },
-      },
-      {
         id: "inspector",
-        role: "auxiliary",
         region: "side",
-        binding: { resourceKinds: ["kiln.object"], viewId: "kiln.inspector", cardinality: "one" },
         openOn: "page-resource",
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [
+              {
+                kind: "resource-kind",
+                id: "kiln.object",
+              },
+            ],
+            view: {
+              kind: "view",
+              id: "kiln.inspector",
+            },
+            cardinality: "one",
+          },
+        },
       },
     ],
   });

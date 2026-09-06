@@ -1,10 +1,11 @@
 import type {
   CommandDefinition,
+  JsonObject,
   ParamObjectSchema,
   ParamsOf,
   WebviewArtifactFile,
 } from "pstdio-api-contracts/extension-kernel";
-import { type CommandResponse, unwrapCommandOutcome } from "./command-outcome";
+import { unwrapCommandOutcome } from "./command-outcome";
 import type { SettingsMap } from "./define-extension";
 import type { GuestHost } from "./define-extension-view";
 import { type ArtifactMountKey, artifactMountId } from "./webview-capabilities";
@@ -82,8 +83,8 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
     throw new Error("The host bridge did not provide an extension id. Pass { extensionId } to createWebviewClient.");
   }
 
-  const runCommand = async (commandKey: string, params?: unknown) => {
-    const response = await host.call<CommandResponse<unknown>>("commands.execute", {
+  const runCommand = async (commandKey: string, params?: JsonObject) => {
+    const response = await host.call("commands.execute", {
       commandId: `${extensionId}.command.${commandKey}`,
       params,
     });
@@ -96,13 +97,13 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
     {
       get: (_target, commandKey) => {
         if (typeof commandKey !== "string") return undefined;
-        return (params?: unknown) => runCommand(commandKey, params);
+        return (params?: JsonObject) => runCommand(commandKey, params);
       },
     },
   );
 
   const settings = {
-    all: async () => (await host.call<Record<string, unknown>>("extension.settings.all", {})) ?? {},
+    all: async () => (await host.call("extension.settings.all", {})) ?? {},
     get: (key: string) => host.call("extension.settings.get", { key }),
     set: async (key: string, value: unknown) => {
       await host.call("extension.settings.set", { key, value });
@@ -111,15 +112,13 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
 
   const artifacts: WebviewArtifactsClient = {
     list: (mount, prefix) =>
-      host.call<WebviewArtifactFile[]>("artifacts.read", {
+      host.call("artifacts.read", {
         op: "list",
         mount: artifactMountId(mount),
         ...(prefix === undefined ? {} : { prefix }),
       }),
-    readText: (mount, path) =>
-      host.call<string>("artifacts.read", { op: "readText", mount: artifactMountId(mount), path }),
-    imageUrl: (mount, path) =>
-      host.call<string>("artifacts.read", { op: "imageUrl", mount: artifactMountId(mount), path }),
+    readText: (mount, path) => host.call("artifacts.read", { op: "readText", mount: artifactMountId(mount), path }),
+    imageUrl: (mount, path) => host.call("artifacts.read", { op: "imageUrl", mount: artifactMountId(mount), path }),
   };
 
   return { artifacts, commands, settings } as WebviewClient<TCommands, TSettings>;

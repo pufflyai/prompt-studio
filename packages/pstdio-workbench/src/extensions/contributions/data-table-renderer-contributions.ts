@@ -11,41 +11,42 @@ import type {
 import { WorkbenchIcon } from "../../react";
 import { toWorkbenchNavigationTargetResult } from "../host/extension-navigation-target";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
-import {
-  createExtensionSlot,
-  executeWorkbenchExtensionCommand,
-  toExtensionCommandResource,
-  toWorkbenchResource,
-} from "../host/workbench-extension-command";
+import { createExtensionSlot, executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
 
 const localize = (value: unknown, fallback = "") => text(value as Parameters<typeof text>[0], fallback);
-
 type WireColumn = NonNullable<WorkbenchExtensionDataTableRendererRecord["columns"]>[number];
-
 const toColumn = (column: WireColumn): DataTableRendererColumn => ({
   ...column,
   label: localize(column.label, column.id),
   description: column.description ? localize(column.description) : undefined,
   icon: column.icon ? createElement(WorkbenchIcon, { name: column.icon, size: 14 }) : undefined,
 });
-
 const isQueryResult = (
   value: unknown,
 ): value is {
-  rows: Array<{ id: string; values: Record<string, unknown>; resource?: Parameters<typeof toWorkbenchResource>[0] }>;
+  rows: Array<{
+    id: string;
+    values: Record<string, unknown>;
+    resource?: ResourceRef;
+  }>;
   columns?: WorkbenchExtensionDataTableRendererRecord["columns"];
-} => Boolean(value && typeof value === "object" && Array.isArray((value as { rows?: unknown }).rows));
-
-const toRow = (row: {
-  id: string;
-  values: Record<string, unknown>;
-  resource?: Parameters<typeof toWorkbenchResource>[0];
-}): DataTableRendererRow => ({
+} =>
+  Boolean(
+    value &&
+      typeof value === "object" &&
+      Array.isArray(
+        (
+          value as {
+            rows?: unknown;
+          }
+        ).rows,
+      ),
+  );
+const toRow = (row: { id: string; values: Record<string, unknown>; resource?: ResourceRef }): DataTableRendererRow => ({
   id: row.id,
   values: row.values,
-  resource: row.resource ? toWorkbenchResource(row.resource) : undefined,
+  resource: row.resource ? row.resource : undefined,
 });
-
 const registerRenderer = (
   context: WorkbenchExtensionCommandContext,
   record: WorkbenchExtensionDataTableRendererRecord,
@@ -64,7 +65,7 @@ const registerRenderer = (
           rendererId: record.id,
           projectId: context.projectId,
           ...(modeId ? { modeId } : {}),
-          ...(resource ? { resource: toExtensionCommandResource(resource) } : {}),
+          ...(resource ? { resource: resource } : {}),
           invocation: { placement: "visible" },
         },
         ...params,
@@ -73,7 +74,6 @@ const registerRenderer = (
       slot,
       metadata: { dataTableRendererId: record.id },
     });
-
   return context.workbench.views.registerView({
     id: record.id,
     title: localize(record.title, record.id),
@@ -131,7 +131,6 @@ const registerRenderer = (
     },
   });
 };
-
 export const registerWorkbenchExtensionDataTableRenderers = (
   context: WorkbenchExtensionCommandContext,
   records: WorkbenchExtensionDataTableRendererRecord[],

@@ -1,4 +1,4 @@
-import type { ModeContribution, PageBoundSlot, ViewRef } from "@pstdio/sdk/extensions";
+import type { ModeContribution, PageSlot, ViewRef, WebviewCapabilityDeclaration } from "@pstdio/sdk/extensions";
 import {
   defineMode,
   defineNavigationItem,
@@ -13,14 +13,14 @@ import {
 import { type ExampleName, exampleResources } from "./state-defaults";
 
 const baseUrl = new URL("../extension.ts", import.meta.url).href;
-export const webview = (id: string, title: string) =>
+export const webview = (id: string, title: string, capabilities: WebviewCapabilityDeclaration[] = []) =>
   defineView({
     id,
     title: l10n(`views.${id}`, title),
     body: {
       kind: "webview",
       entry: packageAsset(`./src/views/${id}.tsx`, baseUrl),
-      capabilities: ["commands.execute", "navigation.open"],
+      capabilities: ["commands.execute", "navigation.open", ...capabilities],
     },
   });
 interface ExampleDefinition {
@@ -31,7 +31,7 @@ interface ExampleDefinition {
   chrome?: ModeContribution["chrome"];
   floatingPanels?: ModeContribution["floatingPanels"];
   regionSettings?: ModeContribution["regionSettings"];
-  slots?: PageBoundSlot[];
+  slots?: PageSlot[];
   initialResource?: boolean;
 }
 export const defineExample = (input: ExampleDefinition) => {
@@ -64,7 +64,12 @@ export const defineExample = (input: ExampleDefinition) => {
     icon,
     path: name,
     mode: mode.ref,
-    slots: [{ id: "content", role: "primary", region: "main", view: input.primary }],
+    main: {
+      kind: "view",
+      view: input.primary,
+      cardinality: "one",
+    },
+    slots: [],
   });
   const page = definePage({
     id: `${name}-resource`,
@@ -73,15 +78,15 @@ export const defineExample = (input: ExampleDefinition) => {
     path: `${name}/resource`,
     mode: mode.ref,
     parent: homePage.ref,
-    slots: [
-      {
-        id: "content",
-        role: "primary",
-        region: "main",
-        binding: { kind: resourceKind.ref, view: input.primary, cardinality: "one" },
-      },
-      ...(input.slots ?? []),
-    ],
+    resource: {
+      kinds: [resourceKind.ref],
+    },
+    main: {
+      kind: "view",
+      view: input.primary,
+      cardinality: "one",
+    },
+    slots: [...(input.slots ?? [])],
   });
   const navigation = defineNavigationItem({
     id: name,

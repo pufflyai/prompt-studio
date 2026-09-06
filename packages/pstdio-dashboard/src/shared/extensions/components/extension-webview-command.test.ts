@@ -12,7 +12,6 @@ describe("executeWebviewCommand", () => {
         execute: (params, context) => ({ context, params, source: "workbench" }),
       },
     );
-
     const result = await executeWebviewCommand({
       commandId: "workbench.test.open",
       params: { modeId: "lab" },
@@ -22,15 +21,13 @@ describe("executeWebviewCommand", () => {
         extensionCalls.push(input);
       },
     });
-
     expect(result).toEqual({
       context: {
         resource: {
           id: "PS-1",
-          kind: "ticket",
+          type: "ticket",
           label: "Ticket",
           metadata: { status: "open" },
-          uri: "pstdio://extension-resource/ticket/PS-1",
         },
       },
       params: { modeId: "lab" },
@@ -38,11 +35,9 @@ describe("executeWebviewCommand", () => {
     });
     expect(extensionCalls).toEqual([]);
   });
-
   test("sends extension commands to the project API", async () => {
     const workbench = createWorkbench();
     const extensionCalls: unknown[] = [];
-
     await executeWebviewCommand({
       commandId: "extension-lab.counter.bump",
       metadata: { sourcePanel: "lab" },
@@ -53,7 +48,6 @@ describe("executeWebviewCommand", () => {
         extensionCalls.push(input);
       },
     });
-
     expect(extensionCalls).toEqual([
       {
         commandId: "extension-lab.counter.bump",
@@ -63,7 +57,6 @@ describe("executeWebviewCommand", () => {
       },
     ]);
   });
-
   test("keeps the command outcome envelope for extension commands registered in the workbench", async () => {
     const workbench = createWorkbench();
     const extensionCalls: unknown[] = [];
@@ -76,7 +69,6 @@ describe("executeWebviewCommand", () => {
       { id: response.commandId, label: "Read counter" },
       { execute: () => response.outcome.value },
     );
-
     const result = await executeWebviewCommand({
       commandId: response.commandId,
       workbench,
@@ -85,7 +77,6 @@ describe("executeWebviewCommand", () => {
         return response;
       },
     });
-
     expect(result).toEqual(response);
     expect(extensionCalls).toEqual([{ commandId: response.commandId }]);
   });
