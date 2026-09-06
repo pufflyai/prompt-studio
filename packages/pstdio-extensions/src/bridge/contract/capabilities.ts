@@ -1,45 +1,23 @@
+import {
+  ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
+  WEBVIEW_HOST_CAPABILITIES,
+  WEBVIEW_HOST_CAPABILITY_VERSION,
+  WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
+  type WebviewHostCapability,
+  type WebviewScopedDeclarableCapability,
+} from "@pstdio/sdk/extensions";
 import type { HostCapabilityRequest } from "./index";
 
-export const WEBVIEW_HOST_CAPABILITY_VERSION = 1;
-
-// Capabilities a webview must declare in its manifest before the bridge will route them.
-export const WEBVIEW_DECLARABLE_CAPABILITIES = [
-  "commands.execute",
-  "resource.open",
-  "notification.show",
-  "notification.action",
-  "notification.resolve",
-  "notification.dismiss",
-  "preferences.get",
-  "preferences.set",
-  "extension.settings.all",
-  "extension.settings.get",
-  "extension.settings.set",
-  "extension.settings.delete",
-  "terminal.session",
-  "files.upload",
-  "files.list",
-  "files.delete",
-] as const;
-
-// Capabilities that must be declared with a scope suffix (`name:scope`). Each
-// declaration grants one scope; a bare declaration is invalid. For artifacts.read
-// the scope is the local id of an artifact mount the extension defines.
-export const WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES = ["artifacts.read"] as const;
-
-// Runtime plumbing the guest invokes on its own (e.g. keyboard forwarding). These are
-// enabled whenever the host implements them, with no manifest declaration required.
-export const ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES = ["host.dispatchKeyboardEvent"] as const;
-
-export const WEBVIEW_HOST_CAPABILITIES = [
-  ...WEBVIEW_DECLARABLE_CAPABILITIES,
-  ...WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
-  ...ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
-] as const;
-
-export type WebviewHostCapability = (typeof WEBVIEW_HOST_CAPABILITIES)[number];
-export type WebviewDeclarableCapability = (typeof WEBVIEW_DECLARABLE_CAPABILITIES)[number];
-export type WebviewScopedDeclarableCapability = (typeof WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES)[number];
+export {
+  ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,
+  WEBVIEW_DECLARABLE_CAPABILITIES,
+  WEBVIEW_HOST_CAPABILITIES,
+  WEBVIEW_HOST_CAPABILITY_VERSION,
+  WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
+  type WebviewDeclarableCapability,
+  type WebviewHostCapability,
+  type WebviewScopedDeclarableCapability,
+} from "@pstdio/sdk/extensions";
 
 export type WebviewCapabilityDiagnosticCode =
   | "undeclared_webview_capability"

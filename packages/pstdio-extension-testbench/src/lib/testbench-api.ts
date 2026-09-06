@@ -7,7 +7,8 @@ import type {
   JsonObject,
   WorkbenchAttachmentInvocationContext,
 } from "@pstdio/sdk/extensions";
-import type { ResourceBrowseEntry, ResourceRef } from "@pstdio/workbench";
+import type { ResourceBrowseEntry } from "@pstdio/workbench";
+import { extensionResourceRefSchema } from "pstdio-api-contracts";
 import {
   createCommandRunner,
   type ExtensionRuntime,
@@ -89,19 +90,9 @@ const createBenchContributionInventory = (runtime: ExtensionRuntime) => ({
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-const toWorkbenchResource = (resource: Record<string, unknown>): ResourceRef | null => {
-  const type = resource.type;
-  const id = resource.id;
-  if (typeof type !== "string" || typeof id !== "string") return null;
-
-  return {
-    kind: type,
-    uri: `pstdio://extension-resource/${encodeURIComponent(type)}/${encodeURIComponent(id)}`,
-    id,
-    label: typeof resource.label === "string" ? resource.label : undefined,
-    icon: typeof resource.icon === "string" ? resource.icon : undefined,
-    metadata: isRecord(resource.metadata) ? resource.metadata : undefined,
-  };
+const toWorkbenchResource = (resource: unknown) => {
+  const parsed = extensionResourceRefSchema.safeParse(resource);
+  return parsed.success ? parsed.data : null;
 };
 
 const rowsFromQueryValue = (value: unknown) => {
@@ -150,7 +141,7 @@ const collectBenchResources = async (input: {
       resources.push({
         resource,
         group: text(view.title, view.id),
-        searchText: [resource.label, resource.id, resource.uri].filter(Boolean).join(" "),
+        searchText: [resource.label, resource.id, resource.type].filter(Boolean).join(" "),
       });
     }
   }

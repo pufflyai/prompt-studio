@@ -1,11 +1,11 @@
 import { Box, Flex, Text } from "@chakra-ui/react";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { ResizableSplitLayout } from "@pstdio/ui";
 import type { PreferenceScope, SettingsRegistry, WorkbenchPanelRenderInput } from "../../core";
 import { WorkbenchTreeView } from "../renderers/tree/tree-view";
 import { WorkbenchIcon } from "../shared/icon";
 import { SettingsSurfacePanel } from "./settings-surface-panel";
 import { useSettingsRevision } from "./use-settings-revision";
-
 export interface SettingsOverlayProps {
   input: WorkbenchPanelRenderInput;
   settings: SettingsRegistry;
@@ -13,34 +13,30 @@ export interface SettingsOverlayProps {
   title: string;
   resolveScopeId?: (scope: PreferenceScope) => string | undefined;
 }
-
 // The settings surface rendered inside the overlay dialog: a titled header bar,
 // then a full-height resizable nav on the left and the dispatching panel on the
-// right. Nav clicks route through openResource, which re-opens this singleton
+// right. Nav clicks execute the settings command, which re-opens this singleton
 // overlay with the new resource — selection stays resource-driven and the dialog
 // never closes mid-navigation.
 export const SettingsOverlay = (props: SettingsOverlayProps) => {
   const { input, settings, navTreeId, title, resolveScopeId } = props;
   useSettingsRevision(settings);
   const resource = input.instance.resource;
-
   const nav = (
     <Box h="full" minH="0" minW="0" w="full" bg="bg.subtle">
       <WorkbenchTreeView
         workbench={input.workbench}
         treeViewId={navTreeId}
         resource={resource}
-        activeNodeId={resource?.uri}
+        activeNodeId={resourceKey(resource)}
       />
     </Box>
   );
-
   const content = (
     <Box flex="1" h="full" minH="0" minW="0">
       <SettingsSurfacePanel input={input} settings={settings} resolveScopeId={resolveScopeId} />
     </Box>
   );
-
   return (
     <Flex direction="column" position="absolute" inset="0" minH="0" minW="0" overflow="hidden">
       <Flex

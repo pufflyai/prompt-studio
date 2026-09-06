@@ -7,12 +7,14 @@ import {
   type TreeAction,
   type TreeNode,
   type TreeViewSection,
+  workbenchPages,
 } from "@pstdio/sdk/extensions";
 
 import { statusesCollection, ticketsCollection } from "../data/collections";
 import { selectedDocumentFromResource } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
+import { ticketPageTarget } from "../data/ticket-page-target";
 import {
   linkedResourceParentMetadata,
   type TicketResourceReference,
@@ -90,10 +92,12 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMet
     id: `workspace-${workspace.id}`,
     label,
     icon: "GitBranch",
-    // Native resource target so the host opens a normal workspace tab instead of
-    // running extension-owned navigation. Its canonical parent edge keeps the workspace
-    // nested beneath the owning ticket in Nav Chrome.
-    target: { kind: "resource", resource: { type: "workspace", id: workspace.id, label, metadata: workspaceMetadata } },
+    target: {
+      kind: "page",
+      page: workbenchPages.workspace,
+      resource: { type: "workspace", id: workspace.id, label, metadata: workspaceMetadata },
+      parent: ticketPageTarget(ticket.resourceParent),
+    },
   };
 };
 
@@ -268,14 +272,10 @@ export const listTicketFilesTree = async (
   // in the workbench and lets every renderer callback receive the same selection.
   const ticketResource = ticketResourceReference(ticket, parentLookup);
   const selectTarget = (documentId: string) =>
-    ({
-      kind: "resource" as const,
-      resource: {
-        ...ticketResource,
-        metadata: { ...ticketResource.metadata, documentId },
-      },
-      input: { strategy: "replace-active" as const },
-    }) satisfies TreeNode["target"];
+    ticketPageTarget({
+      ...ticketResource,
+      metadata: { ...ticketResource.metadata, documentId },
+    });
 
   const ticketSection: TreeViewSection = {
     id: "ticket",

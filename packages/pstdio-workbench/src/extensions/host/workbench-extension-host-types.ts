@@ -4,9 +4,9 @@ import type {
   Disposable,
   MenuItem,
   MenuPath,
-  ResourceRef,
   WorkbenchCommandExecutionContext,
   WorkbenchModuleContext,
+  WorkbenchPanelRenderInput,
 } from "../../core";
 import type {
   CreateBridgeWebviewHostCapabilities,
@@ -23,7 +23,6 @@ import type {
   WorkbenchExtensionMenuWhenBuilder,
 } from "../contributions/extension-contributions";
 import type { WorkbenchExtensionKanbanRendererAdapter } from "../contributions/kanban-renderer-contributions";
-import type { WorkbenchExtensionViewInputResolver } from "../contributions/panel-contributions";
 import type { RegisterWorkbenchExtensionTreeRenderersInput } from "../contributions/tree-renderer-contributions";
 import type { InternalWorkbenchExtensionMetadata } from "./internal-workbench-extension-metadata";
 import type { WorkbenchExtensionRefreshEvent } from "./workbench-extension-refresh";
@@ -36,6 +35,9 @@ export interface WorkbenchExtensionHostMenuRegistration
 export interface RegisterWorkbenchExtensionContributionsInput {
   createKeybindingWhenExpression?: (when: ExtensionKeybindingRecord["when"]) => string | undefined;
   createMenuWhenExpression?: WorkbenchExtensionMenuWhenBuilder;
+  createNavigationWhenExpression?: (
+    when: WorkbenchExtensionMetadata["navigationItems"][number]["when"],
+  ) => string | undefined;
   createWebviewHostCapabilities?: CreateBridgeWebviewHostCapabilities;
   createWebviewHostCapabilityOverrides?: CreateBridgeWebviewHostCapabilities;
   createWebviewProps?: CreateBridgeWebviewProps;
@@ -53,10 +55,9 @@ export interface RegisterWorkbenchExtensionContributionsInput {
     context?: WorkbenchCommandExecutionContext,
     onArgsChange?: (args: unknown) => void,
   ): Promise<unknown> | unknown;
-  prepareResource?: (resource: ResourceRef) => void;
   projectId: string;
-  resolveViewInput?: WorkbenchExtensionViewInputResolver;
   resolveTreeNodeResource?: RegisterWorkbenchExtensionTreeRenderersInput["resolveNodeResource"];
+  renderWebview?(input: WorkbenchPanelRenderInput): unknown;
   settingsSectionId?: string;
   settingsSectionTitle?: string;
   subscribeRefreshEvents?: (listener: (event: WorkbenchExtensionRefreshEvent) => void) => Disposable;

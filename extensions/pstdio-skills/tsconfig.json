@@ -12,5 +12,5 @@
     "verbatimModuleSyntax": true,
     "types": ["bun"]
   },
-  "include": ["extension.ts"]
+  "include": ["extension.ts", "skills/create-pstdio-extension/references/examples/**/*.ts"]
 }

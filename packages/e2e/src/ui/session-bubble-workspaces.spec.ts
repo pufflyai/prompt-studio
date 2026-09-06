@@ -9,8 +9,8 @@ const apiBase = `http://localhost:${apiPort}`;
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
   }, projectId);
 };
 
@@ -72,9 +72,11 @@ test.describe("Session bubble workspace selection", () => {
       content: "Choose a session workspace",
     });
 
-    await page.goto(`/projects/${projectId}/tickets`);
+    await page.goto(`/projects/${projectId}`);
     await page.getByRole("option", { name: "Tickets", exact: true }).click();
     await page.getByText(ticket.content, { exact: true }).click();
+    await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-planner\/ticket\?resource=/);
+    const ticketUrl = page.url();
 
     const nav = page.locator('[data-workbench-region="nav"]');
     await nav.getByRole("button", { name: "Show Side Panel" }).click();
@@ -85,7 +87,7 @@ test.describe("Session bubble workspace selection", () => {
     await sidePanel.getByRole("button", { name: "Select workspace" }).click();
     await page.locator("[data-testid='session-workspace-options']").getByText(workspace.workspace_shorthand).click();
 
-    await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/tickets$`));
+    await expect(page).toHaveURL(ticketUrl);
     await expect(page.getByRole("navigation", { name: "breadcrumb" })).not.toContainText(workspace.workspace_shorthand);
     await expect(sidePanel.getByRole("button", { name: "Select workspace" })).toContainText(
       workspace.workspace_shorthand,

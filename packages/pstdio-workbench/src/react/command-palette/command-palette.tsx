@@ -22,7 +22,6 @@ import {
   CommandParamsDialog,
   type CommandParamsRequest,
 } from "./command-params-dialog";
-import { createWorkbenchModePaletteEntries, getModeEntryIndex } from "./mode-palette";
 import {
   COMMAND_MODE_ID,
   getPaletteInitialActiveIndex,
@@ -81,7 +80,7 @@ const getCommandSearchText = (command: Command, label: string) =>
 
 const createShortcutByCommandId = (workbench: WorkbenchCore) =>
   new Map(
-    workbench.keybindings.listActiveKeybindings().map((keybinding) => [keybinding.commandId, keybinding.keybinding]),
+    workbench.keybindings.listCommandKeybindings().map((keybinding) => [keybinding.commandId, keybinding.keybinding]),
   );
 
 const getShortcut = (binding: KeybindingSequence | undefined): ReactNode =>
@@ -242,7 +241,6 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
     setThemePreference,
     onClose: commitThemePreview,
   });
-  const modeEntries = createWorkbenchModePaletteEntries({ workbench, onClose });
   const panelWidgetEntries = createWorkbenchPanelWidgetPaletteEntries({
     workbench,
     onClose,
@@ -254,15 +252,12 @@ export const WorkbenchCommandPalette = (props: WorkbenchCommandPaletteProps) => 
     ...commandEntries,
     ...panelWidgetEntries,
     ...themeEntries,
-    ...modeEntries,
   ];
   const themeInitialActiveIndex = getThemePreferenceEntryIndex(themePreference, themePreferences);
-  const modeInitialActiveIndex = getModeEntryIndex(workbench.modes.getActiveModeId(), workbench.modes.listModes());
   const isThemeView = isThemePaletteView(view);
   const initialActiveIndex = getPaletteInitialActiveIndex({
     view,
     themeInitialActiveIndex,
-    modeInitialActiveIndex,
   });
   const activeViewMode = getPaletteViewMode(view);
   const activeViewModes = getPaletteViewModes(view);

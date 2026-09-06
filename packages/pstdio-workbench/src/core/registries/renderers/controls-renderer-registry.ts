@@ -1,3 +1,7 @@
+import type { ControlsQueryResult, ControlValue, ControlValueMap } from "@pstdio/sdk/extensions";
+
+export type { ControlsQueryResult } from "@pstdio/sdk/extensions";
+
 import type { ContributionMetadata, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import { byContributionPriority, normalizeContributionMetadata } from "../../shared/contributions/metadata";
 import { createDisposable, type Disposable } from "../../shared/disposable";
@@ -14,25 +18,15 @@ export interface ControlsRendererLayout {
   maxPx?: number;
 }
 
-// The control declarations + current values a controls renderer resolves. `params`
-// and `groups` are @pstdio/ui ParamEditor shapes; kept structural here so the core
-// registry stays free of a UI dependency (the React view casts them).
-export interface ControlsQueryResult {
-  params?: unknown[];
-  groups?: unknown[];
-  values?: Record<string, unknown>;
-  readOnly?: boolean;
-}
-
 export interface ControlsUpdateValueInput {
   controlId: string;
-  value: unknown;
-  values: Record<string, unknown>;
+  value: ControlValue;
+  values: ControlValueMap;
   resource?: ResourceRef;
 }
 
 export interface ControlsApplyInput {
-  values: Record<string, unknown>;
+  values: ControlValueMap;
   resource?: ResourceRef;
 }
 
@@ -48,7 +42,7 @@ export interface ControlsRendererContribution {
   emptyTitle?: string;
   emptyDescription?: string;
   layout?: ControlsRendererLayout;
-  defaultValues?: Record<string, unknown>;
+  defaultValues?: ControlValueMap;
 
   /** Load the control declarations + current values for the active resource. */
   executeQuery(resource?: ResourceRef): Promise<ControlsQueryResult> | ControlsQueryResult;

@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbench } from "@pstdio/workbench";
 import { registerDashboardActivityRail } from "./extension-activity-rail";
 import { metadataWithLabMode } from "./module-test-fixtures";
 
 describe("registerDashboardActivityRail", () => {
-  test("clears the host sidenav when the active mode owns activity navigation", () => {
-    const workbench = createWorkbenchCore();
+  test("keeps activity navigation after the active page applies its layout", () => {
+    const workbench = createWorkbench();
     const modeId = "pstdio.extension-lab.mode.lab";
     const metadata = {
       ...metadataWithLabMode,
@@ -16,25 +16,61 @@ describe("registerDashboardActivityRail", () => {
           title: "Home",
           icon: "house",
           modes: [{ extensionId: "pstdio.extension-lab", kind: "mode" as const, id: "lab" }],
-          command: { extensionId: "pstdio", kind: "command" as const, id: "workbench.action.switchMode" },
+          command: { extensionId: "pstdio.extension-lab", kind: "command" as const, id: "go-home" },
         },
       ],
     };
-
     workbench.modes.registerMode({ id: modeId, label: "Lab", activate: () => undefined });
-    workbench.renderers.registerRenderer({ id: "host.sidenav", render: () => null });
-    workbench.layout.registerPanel({
-      id: "host.sidenav",
-      title: "Sidenav",
-      region: "sidenav",
-      rendererId: "host.sidenav",
+    workbench.views.registerView({
+      id: "lab-view",
+      title: "Lab",
+      body: { kind: "react", render: () => null },
     });
-    workbench.layout.openPanel("host.sidenav");
+    workbench.views.registerView({
+      id: "artifacts-view",
+      title: "Artifacts",
+      body: { kind: "react", render: () => null },
+    });
+    workbench.modePlacements.registerPlacement({
+      id: "lab-artifacts",
+      ref: { extensionId: "pstdio.extension-lab", kind: "placement", id: "lab-artifacts" },
+      modeId,
+      item: {
+        kind: "view",
+        presence: "open",
+        view: {
+          kind: "view",
+          id: "artifacts-view",
+        },
+      },
+      region: "main",
+    });
+    const labPage = { extensionId: "pstdio.extension-lab", kind: "page" as const, id: "lab-mode" };
+    workbench.pages.registerPage({
+      id: "pstdio.extension-lab.page.lab-mode",
+      ref: labPage,
+      title: "Lab mode",
+      path: "lab-mode",
+      modeId,
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "lab-view",
+        },
+        cardinality: "one",
+      },
+      slots: [],
+    });
     const activityRail = registerDashboardActivityRail(workbench, () => metadata);
-
-    workbench.modes.setActiveMode(modeId);
-    activityRail.sync();
-
+    workbench.pageLocations.setProject("project-1");
+    workbench.pageLocations.navigate({ kind: "page", page: labPage });
     expect(workbench.layout.getLayout().regions.sidenav.widgets).toEqual([]);
+    expect(workbench.layout.getLayout().regions.activity.widgets).toEqual([
+      expect.objectContaining({ viewId: "dashboard-workbench.activity-rail" }),
+    ]);
+    expect(workbench.layout.getActivePanel("main")?.viewId).toBe("lab-view");
+    expect(workbench.getPrimaryResource()).toBeUndefined();
+    activityRail.dispose();
   });
 });

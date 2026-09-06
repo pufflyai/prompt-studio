@@ -42,15 +42,36 @@ export const applyTreeListOrder = (
   const reorderedSections = reorderBy(sections, sectionOrder);
   if (reorderedSections !== sections) changed = true;
 
+  const nodesById = new Map(sections.flatMap((section) => section.nodes.map((node) => [node.id, node] as const)));
+  const assignedNodeIds = new Set(
+    Object.entries(nodeOrderBySection)
+      .filter(([sectionId]) => sections.some((section) => section.id === sectionId))
+      .flatMap(([, nodeIds]) => nodeIds.filter((nodeId) => nodesById.has(nodeId))),
+  );
+
   const next: TreeListSection[] = [];
   for (const section of reorderedSections) {
     const nodeOrder = nodeOrderBySection[section.id];
-    if (!nodeOrder || nodeOrder.length === 0) {
-      next.push(section);
+    if (!(section.id in nodeOrderBySection)) {
+      const remainingNodes = section.nodes.filter((node) => !assignedNodeIds.has(node.id));
+      if (remainingNodes.length === section.nodes.length) next.push(section);
+      else {
+        changed = true;
+        next.push({ ...section, nodes: remainingNodes });
+      }
       continue;
     }
-    const reorderedNodes = reorderBy(section.nodes, nodeOrder);
-    if (reorderedNodes !== section.nodes) {
+
+    const orderedNodes = (nodeOrder ?? []).flatMap((nodeId) => {
+      const node = nodesById.get(nodeId);
+      return node ? [node] : [];
+    });
+    const remainingNodes = section.nodes.filter((node) => !assignedNodeIds.has(node.id));
+    const reorderedNodes = [...orderedNodes, ...remainingNodes];
+    if (
+      reorderedNodes.length !== section.nodes.length ||
+      reorderedNodes.some((node, index) => node !== section.nodes[index])
+    ) {
       changed = true;
       next.push({ ...section, nodes: reorderedNodes });
     } else {

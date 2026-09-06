@@ -3,7 +3,6 @@ import {
   type WorkbenchModuleContext,
   type WorkbenchModuleContribution,
   workbenchCommandPaletteMenuPath,
-  workbenchRegions,
 } from "@pstdio/workbench";
 import { dashboardCommandIds, type SelectProjectInput } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
@@ -16,7 +15,6 @@ import {
   clearSelectedProject,
   type DashboardProjectSelectionContext,
   registerPersistedProjectSelection,
-  registerProjectWorkbenchScope,
   registerSelectedProjectDeletionSync,
   registerSingleProjectSelectionSync,
   selectProject,
@@ -26,79 +24,49 @@ interface CreateProjectsModuleInput {
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
 }
 
-const projectSelectionOverlayWidgetIds = new Set<string>([
-  dashboardWidgetIds.projectPicker,
-  dashboardWidgetIds.createProject,
-]);
-
-const openRequiredProjectPicker = (layout: WorkbenchModuleContext["layout"]) =>
-  layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects", closable: false });
-
-const restoreProjectHeader = (layout: WorkbenchModuleContext["layout"]) => {
-  if (layout.getPanel(dashboardWidgetIds.projectHeader)) {
-    layout.openPanel(dashboardWidgetIds.projectHeader, { pinned: true });
-  }
-};
-
-const seedProjectSelectionLayout = (layout: WorkbenchModuleContext["layout"]) => {
-  for (const region of workbenchRegions) layout.clearRegion(region);
-  restoreProjectHeader(layout);
-  openRequiredProjectPicker(layout);
-};
-
-const reconcileProjectSelectionLayout = (layout: WorkbenchModuleContext["layout"]) => {
-  for (const region of workbenchRegions) {
-    if (region !== "overlay") layout.clearRegion(region);
-  }
-  restoreProjectHeader(layout);
-
-  const overlay = layout.getLayout().regions.overlay;
-  const activeCreateProject = overlay.widgets.find(
-    (placement) =>
-      placement.widgetId === overlay.activeWidgetId && placement.contributionId === dashboardWidgetIds.createProject,
-  );
-  for (const placement of overlay.widgets) {
-    if (!projectSelectionOverlayWidgetIds.has(placement.contributionId)) {
-      layout.removeWidgetPlacement(placement.widgetId);
-    }
-  }
-
-  openRequiredProjectPicker(layout);
-  if (activeCreateProject) layout.activateWidget(activeCreateProject.widgetId);
-};
+const requiredProjectPickerOverlay = "dashboard-workbench.required-project-picker";
 
 const registerProjectWidgets = (ctx: WorkbenchModuleContext) => {
-  ctx.layout.registerPanel({
+  ctx.views.registerView({
     id: dashboardWidgetIds.projectPicker,
     title: "Projects",
-    region: "overlay",
-    singleton: true,
-    rendererId: dashboardWidgetIds.projectPicker,
-    // Center the close trigger within the 3rem search header instead of the default top offset.
-    config: {
-      size: "lg",
-      placement: "center",
-      scrollBehavior: "inside",
-      closeOnInteractOutside: false,
-      closeTriggerTop: "3.5",
+    body: {
+      kind: "react",
+      render: (input) => <ProjectPickerWidget input={input} />,
     },
   });
-  ctx.renderers.registerRenderer({
+  const projectPickerConfig = {
+    size: "lg",
+    placement: "center",
+    scrollBehavior: "inside",
+    closeOnInteractOutside: false,
+    // Center the close trigger within the 3rem search header instead of the default top offset.
+    closeTriggerTop: "3.5",
+  };
+  ctx.overlays.registerOverlay({
     id: dashboardWidgetIds.projectPicker,
-    render: (input) => <ProjectPickerWidget input={input} />,
+    viewId: dashboardWidgetIds.projectPicker,
+    config: projectPickerConfig,
+  });
+  ctx.overlays.registerOverlay({
+    id: requiredProjectPickerOverlay,
+    viewId: dashboardWidgetIds.projectPicker,
+    closable: false,
+    config: projectPickerConfig,
   });
 
-  ctx.layout.registerPanel({
+  ctx.views.registerView({
     id: dashboardWidgetIds.createProject,
     title: "Create project",
-    region: "overlay",
-    singleton: true,
-    rendererId: dashboardWidgetIds.createProject,
-    config: { size: "lg", placement: "center", scrollBehavior: "inside", closeOnInteractOutside: false },
+    body: {
+      kind: "react",
+      render: (input) => <CreateProjectWidget input={input} />,
+    },
   });
-  ctx.renderers.registerRenderer({
+  ctx.overlays.registerOverlay({
     id: dashboardWidgetIds.createProject,
-    render: (input) => <CreateProjectWidget input={input} />,
+    viewId: dashboardWidgetIds.createProject,
+    config: { size: "lg", placement: "center", scrollBehavior: "inside", closeOnInteractOutside: false },
   });
 };
 
@@ -106,10 +74,13 @@ const registerProjectSelectionMode = (ctx: WorkbenchModuleContext) => {
   ctx.modes.registerMode({
     id: "project-selection",
     label: "Projects",
+    chrome: { sidenav: false },
     panels: [],
     activate: () => undefined,
-    seed: (modeCtx) => seedProjectSelectionLayout(modeCtx.layout),
-    reconcile: (modeCtx) => reconcileProjectSelectionLayout(modeCtx.layout),
+    enter: (modeCtx) => {
+      const instanceId = modeCtx.overlays.openOverlay(requiredProjectPickerOverlay, { title: "Projects" });
+      return { dispose: () => modeCtx.overlays.closeOverlay(instanceId) };
+    },
   });
 };
 
@@ -175,19 +146,19 @@ const registerProjectCommands = (
     {
       execute: () => {
         if (!getDashboardSelectedProjectId(ctx)) {
-          ctx.navigator.commitContext({ modeId: "project-selection", resource: null });
+          ctx.pageLocations.clearProject();
+          ctx.modes.setActiveMode("project-selection");
           return undefined;
         }
 
-        return ctx.layout.openPanel(dashboardWidgetIds.projectPicker, { title: "Projects", closable: true });
+        return ctx.overlays.openOverlay(dashboardWidgetIds.projectPicker, { title: "Projects" });
       },
     },
   );
   ctx.commands.registerCommand(
     { id: dashboardCommandIds.createProject, label: "Create project", category: "Dashboard", icon: "Plus" },
     {
-      execute: () =>
-        ctx.layout.openPanel(dashboardWidgetIds.createProject, { title: "Create project", closable: true }),
+      execute: () => ctx.overlays.openOverlay(dashboardWidgetIds.createProject, { title: "Create project" }),
     },
   );
   ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
@@ -211,7 +182,6 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
       registerProjectSelectionMode(ctx);
       registerProjects(ctx);
       registerProjectCommands(ctx, selectedProjectContext, input.projectSelectionPersistence);
-      const projectWorkbenchScope = registerProjectWorkbenchScope(ctx);
       const persistedProjectSelection = registerPersistedProjectSelection(
         ctx,
         selectedProjectContext,
@@ -228,7 +198,6 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
 
       return [
         ...(persistedProjectSelection ? [persistedProjectSelection] : []),
-        projectWorkbenchScope,
         ...(singleProjectSelection ? [singleProjectSelection] : []),
         selectedProjectDeletionSync,
       ];

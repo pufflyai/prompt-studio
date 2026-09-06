@@ -1,82 +1,11 @@
-# Contextual Workbench Composition
+# Workbench composition
 
-Extension API alpha.4 composes the Workbench from references. It replaces the previous
-model where panel records mixed body, resource eligibility, and geometry.
+A view supplies content. A page owns its route, routed resource, Main presentation, and extra panels. A mode owns shared panels, chrome, and region policy. A resource identifies data; it does not choose a route or panel.
 
-## Ownership
+Pages declare `resource: { kinds }` separately from `main`. A Main view renders routed content; a Main collection renders peer panels and an empty view. Page `slots` and mode placements use the same static-view or resource-binding item contract. Presence, mounting, and tab presentation have the same meaning for both.
 
-| Fact | Owner |
-| --- | --- |
-| Body and display identity | `ViewContribution` |
-| Resource semantics | `ResourceKindDefinition` and `ResourceViewContribution` |
-| Mode and docked region | `PlacementContribution` |
-| Menu lifetime | `ViewMenuContribution.owner` |
-| Navigation behavior | `NavigationItemContribution.action` |
-| Workflow states | `StatusContribution` |
+Main, Side, and Secondary are the three panel regions. Page and mode owners can contribute to the same region. A panel target opens one instance without changing the page location. A compound page-and-panel target enters an owner before opening its dependent panel and commits only when all steps resolve.
 
-No contribution duplicates another contribution's fact. In particular, a view has no
-resource kind or region. A resource-view binding has no region. A placement has no UI
-body.
+Omitted mode chrome retains host navigation, including custom-mode navigation items. A declared view replaces the chrome; `false` hides it. Mode placements keep their identity across pages in the same mode and dispose when their owner is removed.
 
-## Identity
-
-Every array contribution has a local `id` and a typed `ref`. The runtime derives the
-canonical id:
-
-```txt
-${extensionId}.${contributionKind}.${localId}
-```
-
-Refs may target the declaring extension, another extension, or a built-in host ref. The
-host normalizes refs before validation and reports missing targets without changing
-unrelated contributions.
-
-## Resource Composition
-
-A resource kind declares semantic slots with cardinality and access. Its owner binds
-views with `resourceViews`. Another extension can bind to a public slot. The active
-mode's placements choose where those slots appear.
-
-```ts
-const ticket = defineResourceKind({
-  id: "ticket",
-  surface: "primary",
-  slots: [
-    { id: "primary", cardinality: "one", access: "owner" },
-    { id: "inspector", cardinality: "many", access: "public" },
-  ],
-});
-
-const primary = resourceSlotRef(ticket.ref, "primary");
-
-defineResourceView({
-  id: "editor",
-  resourceKind: ticket.ref,
-  slot: primary,
-  view: editor.ref,
-});
-
-definePlacement({
-  id: "ticket-primary",
-  mode: workbenchModes.project,
-  item: { kind: "resource-slot", slot: primary },
-  region: "main",
-  required: true,
-});
-```
-
-The primary slot is owner-only. External bindings to owner-only or missing slots are
-rejected. A cardinality-one slot may have one required placement. Cardinality-many
-slots remain optional collections.
-
-## Host Adapters
-
-The runtime keeps alpha.4 ownership intact. A host adapter may translate normalized
-views and placements into private renderer and dock metadata, but those records are not
-extension authoring APIs. Renderer callbacks also stay private to the host transport.
-
-## Persistence
-
-Saved state contains canonical view ids and dock choices only. It never stores view
-bodies, resource definitions, navigation items, settings panels, or status-bar items.
-Required placements are reconciled from current contributions whenever a layout opens.
+Read the [cookbook](cookbook.md), [navigation and layout state](navigation-and-layout-state.md), and [composition architecture](../architecture/extension-workbench-composition.md).

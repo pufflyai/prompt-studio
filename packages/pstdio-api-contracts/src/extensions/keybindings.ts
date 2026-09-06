@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { extensionWhenExpressionSchema, jsonObjectSchema } from "./common";
+import { extensionWhenExpressionSchema } from "./common";
+import { navigationTargetSchema } from "./navigation-target-metadata";
 
 const parsedKeybindingChordSchema = z.object({
   key: z.string(),
@@ -13,7 +14,7 @@ const parsedKeybindingChordSchema = z.object({
 export const extensionKeybindingRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
-  commandId: z.string(),
+  action: navigationTargetSchema,
   /** Original chord string as authored, e.g. "mod+shift+p". */
   key: z.string(),
   /**
@@ -33,7 +34,6 @@ export const extensionKeybindingRecordSchema = z.object({
     })
     .optional(),
   when: extensionWhenExpressionSchema.optional(),
-  args: jsonObjectSchema.optional(),
 });
 
 export type ExtensionKeybindingRecord = z.infer<typeof extensionKeybindingRecordSchema>;

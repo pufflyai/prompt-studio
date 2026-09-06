@@ -8,6 +8,7 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { readRecentHarnessSelection } from "@/shared/command-params/recent-harness-param";
+import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import {
   createDashboardWorkspaceOptionResource,
   createDashboardWorkspaceOptions,
@@ -77,17 +78,14 @@ export const openReviewWorkspace = (
   const resource = createSessionWorkspaceResource(view, getDashboardSelectedProjectId(input.workbench), workspaces);
   if (!resource) return undefined;
 
-  return input.workbench.resources.openResource(resource, { replaceActive: true });
+  return openWorkspacesPage(input.workbench, resource);
 };
 
 export const openSelectedWorkspace = (
   input: Pick<WorkbenchPanelRenderInput, "workbench">,
   workspace: DashboardWorkspaceOption,
   projectId: string | undefined,
-) =>
-  input.workbench.resources.openResource(createDashboardWorkspaceOptionResource(workspace, projectId), {
-    replaceActive: true,
-  });
+) => openWorkspacesPage(input.workbench, createDashboardWorkspaceOptionResource(workspace, projectId));
 
 const nonEmptyHarnessParams = (params: HarnessParamValues) => (Object.keys(params).length > 0 ? params : undefined);
 

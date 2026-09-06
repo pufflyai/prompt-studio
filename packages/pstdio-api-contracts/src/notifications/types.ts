@@ -1,5 +1,6 @@
 import type { CommandSource } from "../extension-kernel/types/commands";
 import type { JsonObject } from "../extension-kernel/types/json";
+import type { NavigationTarget } from "../extension-kernel/types/navigation-target";
 import type { ResourceRef } from "../extension-kernel/types/resources";
 
 export type NotificationKind = "needs_review" | "ready_to_merge" | "blocked" | "approval_required" | "failed" | "info";
@@ -16,8 +17,8 @@ export type NotificationAction =
   | {
       id: string;
       label: string;
-      kind: "open-resource";
-      resource: ResourceRef;
+      kind: "navigate";
+      target: NavigationTarget;
       primary?: boolean;
     }
   | {
@@ -36,11 +37,6 @@ export type NotificationAction =
       href: string;
       primary?: boolean;
     };
-
-export type NotificationActionResult =
-  | { kind: "open-resource"; resource: ResourceRef }
-  | { kind: "command"; commandId: string; outcome: JsonObject }
-  | { kind: "url"; href: string };
 
 export interface Notification {
   id: string;

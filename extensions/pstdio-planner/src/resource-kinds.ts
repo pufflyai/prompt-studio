@@ -2,13 +2,8 @@ import { defineResourceKind, l10n, resourceMenuSlotRef } from "@pstdio/sdk/exten
 
 export const ticketResourceKind = defineResourceKind({
   id: "ticket",
-  surface: "primary",
   label: l10n("resourceKinds.ticket.label", "Ticket"),
   icon: "component",
-  slots: [
-    { id: "primary", cardinality: "one", access: "owner" },
-    { id: "navigation", cardinality: "one", access: "public" },
-  ],
   menuSlots: [
     {
       id: "header-overflow",
@@ -18,6 +13,8 @@ export const ticketResourceKind = defineResourceKind({
     },
   ],
 });
+
+export const ticketPageRef = { kind: "page" as const, id: "ticket" };
 
 export const ticketMenuSlots = {
   headerOverflow: resourceMenuSlotRef(ticketResourceKind.ref, "header-overflow"),

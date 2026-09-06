@@ -20,22 +20,22 @@ describe("createDesktopWorkbenchStorage", () => {
   test("hydrates a synchronous storage adapter and forwards later changes", async () => {
     const changes: Array<[string, string | null]> = [];
     const storage = await createDesktopWorkbenchStorage({
-      getWorkbenchState: async () => ({ lastResources: {}, selectedProjectId: "project-one" }),
-      setLastResource: async (projectId, value) => {
-        changes.push([`last-resource:${projectId}`, value]);
+      getWorkbenchState: async () => ({ pageLocations: {}, selectedProjectId: "project-one" }),
+      setPageLocation: async (projectId, value) => {
+        changes.push([`page-location:${projectId}`, value]);
       },
       setSelectedProjectId: async (value) => {
         changes.push(["selected-project", value]);
       },
     });
 
-    expect(storage?.getItem("dashboard-wb:selected-project:global")).toBe("project-one");
-    storage?.setItem("dashboard-wb:last-resource:project-one", "workspace-one");
-    storage?.removeItem?.("dashboard-wb:selected-project:global");
+    expect(storage?.getItem("dashboard-wb2:selected-project:global")).toBe("project-one");
+    storage?.setItem("dashboard-wb2:page-location:project-one", "workspace-one");
+    storage?.removeItem?.("dashboard-wb2:selected-project:global");
 
-    expect(storage?.getItem("dashboard-wb:selected-project:global")).toBeNull();
+    expect(storage?.getItem("dashboard-wb2:selected-project:global")).toBeNull();
     expect(changes).toEqual([
-      ["last-resource:project-one", "workspace-one"],
+      ["page-location:project-one", "workspace-one"],
       ["selected-project", null],
     ]);
   });
@@ -49,9 +49,9 @@ describe("createDesktopWorkbenchStorage", () => {
     const browserStorage = createStorage();
     const storage = await createDesktopWorkbenchStorage(
       {
-        getWorkbenchState: async () => ({ lastResources: {} }),
-        setLastResource: async (projectId, value) => {
-          changes.push([`last-resource:${projectId}`, value]);
+        getWorkbenchState: async () => ({ pageLocations: {} }),
+        setPageLocation: async (projectId, value) => {
+          changes.push([`page-location:${projectId}`, value]);
         },
         setSelectedProjectId: async (value) => {
           changes.push(["selected-project", value]);
@@ -60,9 +60,9 @@ describe("createDesktopWorkbenchStorage", () => {
       browserStorage,
     );
 
-    storage?.setItem("dashboard-wb:session-drafts:project-one", '{"session-one":"private draft"}');
+    storage?.setItem("dashboard-wb2:session-drafts:project-one", '{"session-one":"private draft"}');
 
-    expect(browserStorage.getItem("dashboard-wb:session-drafts:project-one")).toBe('{"session-one":"private draft"}');
+    expect(browserStorage.getItem("dashboard-wb2:session-drafts:project-one")).toBe('{"session-one":"private draft"}');
     expect(changes).toEqual([]);
   });
 });

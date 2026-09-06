@@ -19,10 +19,12 @@ describe("DesktopWorkbenchStateStore", () => {
 
     const first = new DesktopWorkbenchStateStore(path);
     first.setSelectedProjectId("project-one");
-    first.setLastResource("project-one", '{"kind":"workspace","uri":"workspace://one"}');
+    first.setPageLocation("project-one", '{"version":1,"location":{"page":{"kind":"page","id":"workspaces"}}}');
 
     expect(new DesktopWorkbenchStateStore(path).getState()).toEqual({
-      lastResources: { "project-one": '{"kind":"workspace","uri":"workspace://one"}' },
+      pageLocations: {
+        "project-one": '{"version":1,"location":{"page":{"kind":"page","id":"workspaces"}}}',
+      },
       selectedProjectId: "project-one",
     });
   });
@@ -35,7 +37,7 @@ describe("DesktopWorkbenchStateStore", () => {
     store.setSelectedProjectId("project-one");
     store.setSelectedProjectId(null);
 
-    expect(store.getState()).toEqual({ lastResources: {} });
+    expect(store.getState()).toEqual({ pageLocations: {} });
   });
 
   test("does not load or persist session drafts", () => {
@@ -46,13 +48,13 @@ describe("DesktopWorkbenchStateStore", () => {
       path,
       JSON.stringify({
         selectedProjectId: "project-one",
-        lastResources: {},
+        pageLocations: {},
         sessionDrafts: { "session-one": "private draft" },
       }),
     );
 
     const store = new DesktopWorkbenchStateStore(path);
 
-    expect(store.getState()).toEqual({ lastResources: {}, selectedProjectId: "project-one" });
+    expect(store.getState()).toEqual({ pageLocations: {}, selectedProjectId: "project-one" });
   });
 });

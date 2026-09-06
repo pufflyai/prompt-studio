@@ -1,15 +1,6 @@
 import { z } from "zod";
-import { jsonObjectSchema } from "./common";
 import { extensionResourceRefSchema } from "./execute";
-import { pageRefSchema, panelRefSchema } from "./page-metadata";
-
-const contributionRefSchema = <Kind extends string>(kind: Kind) =>
-  z.object({ extensionId: z.string(), kind: z.literal(kind), id: z.string() });
-
-const commandTargetSchema = z.object({
-  command: contributionRefSchema("command"),
-  params: jsonObjectSchema.optional(),
-});
+import { commandTargetSchema, pageRefSchema, panelRefSchema } from "./workbench-refs-metadata";
 
 const sectionSchema = z.object({
   anchors: z.array(
@@ -17,7 +8,7 @@ const sectionSchema = z.object({
   ),
 });
 
-interface MetadataPageTarget {
+export interface MetadataPageTarget {
   kind: "page";
   page: z.infer<typeof pageRefSchema>;
   resource?: z.infer<typeof extensionResourceRefSchema>;
@@ -39,7 +30,7 @@ const pageTargetSchema: z.ZodType<MetadataPageTarget> = z
   )
   .meta({ id: "WorkbenchMetadataPageTarget" });
 
-const navigationTargetItemSchema = z.union([
+const navigationOperationSchema = z.union([
   pageTargetSchema,
   z.object({
     kind: z.literal("panel"),
@@ -47,24 +38,11 @@ const navigationTargetItemSchema = z.union([
     resource: extensionResourceRefSchema.optional(),
     open: z.enum(["preview", "pin"]).optional(),
   }),
-  z.object({
-    kind: z.literal("view"),
-    view: contributionRefSchema("view"),
-    input: z
-      .object({ strategy: z.enum(["persistent", "preview", "replace-active", "replace-invoking"]).optional() })
-      .optional(),
-  }),
-  z.object({
-    kind: z.literal("resource"),
-    resource: extensionResourceRefSchema,
-    input: z.object({ strategy: z.enum(["persistent", "replace-active"]).optional() }).optional(),
-    section: sectionSchema.optional(),
-  }),
-  z.object({ kind: z.literal("command"), target: commandTargetSchema }),
-  z.object({ kind: z.literal("href"), href: z.string() }),
 ]);
 
 export const navigationTargetSchema = z.union([
-  navigationTargetItemSchema,
-  z.object({ kind: z.literal("compound"), targets: z.array(navigationTargetItemSchema).min(1) }),
+  navigationOperationSchema,
+  z.object({ kind: z.literal("command"), target: commandTargetSchema }),
+  z.object({ kind: z.literal("href"), href: z.string() }),
+  z.object({ kind: z.literal("compound"), targets: z.array(navigationOperationSchema).min(1) }),
 ]);

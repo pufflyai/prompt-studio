@@ -19,6 +19,7 @@ import {
   readDashboardRows,
   subscribeDashboardData,
 } from "@/shared/sync/dashboard-rows";
+import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 
 export interface StartSession {
   id: string;
@@ -215,10 +216,10 @@ export const StartWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   );
   const data = createStartData(projectId, dashboardDataVersion);
   const openSession = (session: StartSession) => {
-    void input.workbench.resources.openResource(session.resource, { replaceActive: true });
+    openSessionsPage(input.workbench, session.resource);
   };
   const openWorkspace = (resource: ResourceRef) => {
-    void input.workbench.resources.openResource(resource, { replaceActive: true });
+    openWorkspacesPage(input.workbench, resource);
   };
 
   return (

@@ -1,18 +1,12 @@
+import type { WorkbenchShellOpenRegion } from "./controllers/shell/shell-controller";
 import type { KeybindingSequence } from "./registries/keybindings/keybinding-registry";
-import type { WorkbenchRegion } from "./registries/layout/layout-model";
 import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
-import type { NavigationTarget } from "./registries/navigation/navigation-registry";
 import type { WorkbenchCore } from "./workbench-core";
 
 const SIDENAV_PANEL_ID = "sidenav";
 
-const setPanelOpen = (workbench: WorkbenchCore, panelId: WorkbenchRegion, open: boolean) => {
-  workbench.panels.setOpen(panelId, open);
-  workbench.layout.setRegionVisible(panelId, open);
-};
-
-const togglePanel = (workbench: WorkbenchCore, panelId: WorkbenchRegion) => {
-  setPanelOpen(workbench, panelId, !workbench.panels.isOpen(panelId));
+const togglePanel = (workbench: WorkbenchCore, region: WorkbenchShellOpenRegion) => {
+  workbench.shell.setRegionOpen(region, !workbench.shell.getRegionState(region).open);
 };
 
 interface BuiltinCommand {
@@ -54,7 +48,7 @@ const builtinCommands: BuiltinCommand[] = [
     icon: "ArrowLeft",
     keybinding: "Alt+Shift+ArrowLeft",
     execute: (workbench: WorkbenchCore) => {
-      workbench.history.goBack();
+      workbench.pageLocations.goBack();
     },
   },
   {
@@ -63,7 +57,7 @@ const builtinCommands: BuiltinCommand[] = [
     icon: "ArrowRight",
     keybinding: "Alt+Shift+ArrowRight",
     execute: (workbench: WorkbenchCore) => {
-      workbench.history.goForward();
+      workbench.pageLocations.goForward();
     },
   },
   {
@@ -74,20 +68,6 @@ const builtinCommands: BuiltinCommand[] = [
     execute: (workbench: WorkbenchCore) => togglePanel(workbench, SIDENAV_PANEL_ID),
   },
 ];
-
-interface WorkbenchSwitchModeCommandArgs {
-  modeId: string;
-}
-
-export const workbenchSwitchModeCommandId = "workbench.action.switchMode";
-
-export const getSwitchModeNavigationTargetModeId = (target: NavigationTarget) => {
-  if (target.kind !== "command" || target.commandId !== workbenchSwitchModeCommandId) return;
-  if (!target.args || typeof target.args !== "object") return;
-
-  const modeId = "modeId" in target.args ? target.args.modeId : undefined;
-  return typeof modeId === "string" && modeId.trim().length > 0 ? modeId : undefined;
-};
 
 export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
   for (const command of builtinCommands) {
@@ -102,7 +82,7 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       { execute: () => command.execute(workbench) },
     );
     workbench.keybindings.registerKeybinding({
-      commandId: command.id,
+      action: { kind: "command", commandId: command.id },
       keybinding: command.keybinding,
       when: "!inputFocus",
     });
@@ -111,36 +91,4 @@ export const registerWorkbenchBuiltIns = (workbench: WorkbenchCore) => {
       group: "Workbench",
     });
   }
-
-  workbench.commands.registerCommand(
-    {
-      id: workbenchSwitchModeCommandId,
-      label: "Switch Mode",
-      category: "Workbench",
-      icon: "PanelTop",
-      when: "!inputFocus",
-    },
-    {
-      execute: async (args?: WorkbenchSwitchModeCommandArgs) => {
-        if (!args?.modeId) {
-          workbench.commandPalette.open({ view: "mode" });
-          return;
-        }
-        // Mode switches run through the atomic navigator so the resource, layout
-        // scope, and breadcrumb commit together with the mode.
-        const result = await workbench.navigator.open({ modeId: args.modeId });
-        if (!result.ok && result.code === "navigation_mode_missing") {
-          workbench.notifications.show({
-            level: "error",
-            title: "Mode unavailable",
-            message: result.message,
-          });
-        }
-      },
-    },
-  );
-  workbench.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
-    commandId: workbenchSwitchModeCommandId,
-    group: "Workbench",
-  });
 };

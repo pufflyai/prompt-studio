@@ -33,7 +33,7 @@ const selectProjectAndDisplayTicketProperties = async (
 ) => {
   await page.addInitScript(
     ({ projectId }) => {
-      window.localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+      window.localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
       window.localStorage.setItem(
         `pstdio-project-settings/projects/${projectId}/values`,
         JSON.stringify({

@@ -16,13 +16,13 @@ export const prepareDashboard = async (page: Page, projectId: string, repoId: st
   await page.addInitScript(
     ({ selectedProjectId, selectedRepoId }) => {
       localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-      localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+      localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
+      localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
       localStorage.setItem(
         `pstdio-project-settings/projects/${selectedProjectId}/values`,
         JSON.stringify({
           state: {
-            lastSelectedAgent: "pstdio.extension-lab.harness.fake",
+            lastSelectedAgent: "pstdio.workbench-fixture.harness.fake",
             lastSelectedModels: [],
             lastSelectedRepo: selectedRepoId,
             lastSelectedBranches: [],

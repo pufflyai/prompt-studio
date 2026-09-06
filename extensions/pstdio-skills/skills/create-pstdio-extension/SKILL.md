@@ -2,7 +2,7 @@
 name: create-pstdio-extension
 description: "Create or edit a Prompt Studio extension. Use for extension commands, hooks, schedules, templates, skills, pages, native editors, file trees, settings, themes, artifact storage, workspaces, agent harnesses, and validation."
 metadata:
-  version: 0.0.2
+  version: 0.0.3
 ---
 
 # Create a Prompt Studio extension
@@ -16,18 +16,21 @@ metadata:
    - Use [references/scope.md](references/scope.md) to choose repo-local vs user scope before scaffolding new files.
    - Inspect the target `package.json`, `extension.ts`, tests, and nearby extension patterns before editing.
 2. Choose the contribution type.
+   - Read [references/pages.md](references/pages.md) for page ownership, close behavior, contextual navigation, and refreshing installed guidance.
+   - Start with the complete public SDK modules in [references/examples.md](references/examples.md). Scribble covers documents and a navigation tree; Zipline covers a board and inspector; Pigeon covers a list and reader.
    - Use commands for user-triggered operations from the CLI, dashboard menus, command palette, schedules, or other commands.
    - Use middlewares to validate, reject, or rewrite command invocations before a command runs.
    - Use hooks to react to project, ticket, workspace, worktree, git, session, attempt-status, or command lifecycle events.
    - Use schedules for cron-triggered command execution.
    - Use templates, skills, themes, file icon themes, and template types for packaged static catalog assets.
    - Use `views` for webview, Kanban, data table, file, tree, and controls bodies. A view never owns geometry or a resource kind.
-   - Use `resourceKinds` for domain resource slots and `resourceViews` to bind views to those slots. `access: "public"` slots accept bindings from other extensions.
-   - Use `placements` to put direct views or semantic resource slots in docked regions for a typed mode ref.
-   - Use `navigationItems` for typed view, resource, command, href, or compound navigation actions.
+   - Use `resourceKinds` for domain resource identity and resource menus.
+   - Use `pages` for routed screens. A page declares its routed resource separately from Main presentation and may own extra slots. Main may show one view or peer panels with an empty view.
+   - Use `placements` for mode-wide views or resource bindings outside a page.
+   - Use `navigationItems` for explicit navigation. Compound targets contain page and panel steps only; commands and links are standalone actions.
    - Use `viewMenus` to attach one view to another. Use `settingsPanels` and `statusBarItems` to place existing view refs in host chrome.
    - Use `statuses` for workflow status providers shared by Kanban views and the host settings editor.
-   - Use built-in refs from `workbenchModes` and `workbenchSlots` when targeting host modes and slots.
+   - Use built-in refs from `workbenchModes`, `workbenchPages`, `workbenchPanels`, and `workbenchSlots` when targeting host-owned contributions.
    - Use artifact mounts for files under `.pstdio/<extension-package-name>/`.
    - Use Harnesses and workspace types only when adding a new execution or workspace provider.
 3. Implement the smallest useful extension change.
@@ -35,7 +38,7 @@ metadata:
    - Export a single default `defineExtension({ ... })` value from `extension.ts`.
    - Use `packageAsset()` for every shipped file or directory asset.
    - Keep package asset paths relative and inside the extension package.
-   - Use refs returned by `define*` helpers inside one extension. Import public refs from the provider for cross-extension calls. A provider may use `commandRef.forExtension()` once in its public contract module.
+   - Use refs returned by `define*` helpers inside one extension. Import public refs from the provider for cross-extension calls. A provider uses `qualifyRef(owner, ref)` in its public contract module, including for nested page-panel refs.
 4. Test the change following the repo's testing conventions.
    - For behavior changes, add or update the tests that cover the new behavior.
    - Put tests next to the behavior they cover.

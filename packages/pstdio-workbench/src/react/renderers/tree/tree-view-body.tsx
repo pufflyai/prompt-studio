@@ -1,5 +1,11 @@
 import { Skeleton, Stack } from "@chakra-ui/react";
-import { EmptyState, type ResourceContextAction, TreeList, type TreeListSection } from "@pstdio/ui";
+import {
+  EmptyState,
+  type ResourceContextAction,
+  TreeList,
+  type TreeListMovePolicy,
+  type TreeListSection,
+} from "@pstdio/ui";
 import type { RefObject } from "react";
 import { canVirtualizeTreeSections } from "./tree-list-adapter";
 
@@ -29,6 +35,7 @@ interface TreeViewBodyProps {
   onToggleNode: (nodeId: string) => void;
   onReorderSections?: (nextSectionIds: string[]) => void;
   onReorderNodes?: (sectionId: string, nextNodeIds: string[]) => void;
+  canMove?: TreeListMovePolicy;
   onMoveNode?: (sourceNodeId: string, targetNodeId?: string) => void;
   onNavigate: (event: Parameters<NonNullable<Parameters<typeof TreeList>[0]["onNavigate"]>>[0]) => void;
 }
@@ -50,6 +57,7 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
     onToggleNode,
     onReorderSections,
     onReorderNodes,
+    canMove,
     onMoveNode,
     onNavigate,
   } = props;
@@ -81,6 +89,7 @@ export const TreeViewBody = (props: TreeViewBodyProps) => {
       onToggleNode={onToggleNode}
       onReorderSections={onReorderSections}
       onReorderNodes={onReorderNodes}
+      canMove={canMove}
       onMoveNode={onMoveNode}
       onNavigate={onNavigate}
     />

@@ -1,17 +1,15 @@
 import type { Localizable } from "../l10n";
-import type { DockedWorkbenchRegion } from "./composition";
-import type {
-  ContributionDefinition,
-  ModeRef,
-  NavigationSlotRef,
-  ResourceSlotRef,
-  ViewRef,
-} from "./contribution-identity";
+import type { ExtensionPanelRegion } from "./composition";
+import type { RendererCallback } from "./context";
+import type { ContributionDefinition, ModeRef, PageRef, ViewRef } from "./contribution-identity";
 import type { KanbanRendererContribution, WebviewContribution, WhenExpression } from "./contributions";
 import type { ControlsRendererContribution } from "./controls";
 import type { DataTableRendererContribution } from "./data-table-renderer";
 import type { FileRendererContribution } from "./file-renderer";
+import type { JsonObject, Struct } from "./json";
 import type { NavigationTarget } from "./navigation-target";
+import type { RendererEventReference } from "./renderer-base";
+import type { ResourceBinding } from "./resource-binding";
 import type { TreeRendererContribution } from "./tree-renderer";
 
 type NativeViewBody<Kind extends string, Definition> = { readonly kind: Kind } & Omit<
@@ -37,32 +35,87 @@ export type ViewBody =
 export interface ViewContribution extends ContributionDefinition<"view"> {
   readonly title: Localizable<string>;
   readonly icon?: string;
-  readonly path?: string;
   readonly body: ViewBody;
 }
 
+export type NavigationOwnerRef = ModeRef | PageRef;
+export type NavigationTreeSlot = "header" | "content" | "footer";
+
 export interface NavigationItemContribution extends ContributionDefinition<"navigation-item"> {
-  readonly slot: NavigationSlotRef;
+  readonly owner: NavigationOwnerRef;
+  readonly slot?: NavigationTreeSlot;
   readonly label: Localizable<string>;
   readonly icon?: string;
   readonly group?: string;
-  readonly order?: number;
   readonly when?: WhenExpression;
   readonly action: NavigationTarget;
 }
 
-export type PlacementItem =
-  | { readonly kind: "view"; readonly view: ViewRef }
-  | { readonly kind: "resource-slot"; readonly slot: ResourceSlotRef };
+export interface NavigationTreeContribution extends ContributionDefinition<"navigation-tree"> {
+  readonly owner: NavigationOwnerRef;
+  readonly slot?: NavigationTreeSlot;
+  readonly view: ViewRef;
+}
 
-export interface PlacementContribution extends ContributionDefinition<"placement"> {
+/**
+ * Initial presence of a static placement inside its owner scope.
+ * - "fixed": always open while the owner is active; the user cannot close it.
+ * - "open": open when the owner has no saved state; the user may close it.
+ * - "closed": closed until the user opens it (for example through the Add panel).
+ * A saved user choice wins over "open" and "closed" on the next visit.
+ */
+export type PlacementPresence = "fixed" | "open" | "closed";
+
+export type PlacementItem =
+  | { readonly kind: "view"; readonly view: ViewRef; readonly presence: PlacementPresence }
+  | { readonly kind: "binding"; readonly binding: ResourceBinding };
+
+export type PlacementMountStrategy = "active" | "keep-mounted";
+
+export interface PlacementTabMenuRow {
+  readonly id: string;
+  readonly label: Localizable<string>;
+  readonly icon?: string;
+  readonly iconColor?: string;
+  readonly selected?: boolean;
+  readonly disabled?: boolean;
+  readonly action?: NavigationTarget;
+}
+
+export interface PlacementTabMenuGroup {
+  readonly id: string;
+  readonly rows: readonly PlacementTabMenuRow[];
+}
+
+export interface PlacementTabSnapshot extends Struct {
+  readonly label?: Localizable<string>;
+  readonly icon?: string;
+  readonly indicator?: {
+    readonly icon: string;
+    readonly color?: string;
+    readonly label?: Localizable<string>;
+  };
+  readonly menu?: readonly PlacementTabMenuGroup[];
+}
+
+export interface PlacementTabPresentation {
+  readonly query: RendererCallback<JsonObject, PlacementTabSnapshot>;
+  readonly refreshEvents?: readonly RendererEventReference[];
+}
+
+export interface PlacementPresentation {
+  readonly mountStrategy?: PlacementMountStrategy;
+  readonly hiddenByDefault?: boolean;
+  readonly headerBorderBottom?: boolean;
+  readonly tab?: PlacementTabPresentation;
+}
+
+export interface PlacementContribution extends ContributionDefinition<"placement">, PlacementPresentation {
   readonly mode: ModeRef;
   readonly item: PlacementItem;
-  readonly region: DockedWorkbenchRegion;
+  readonly region: ExtensionPanelRegion;
   readonly order?: number;
-  readonly defaultOpen?: boolean;
-  readonly required?: boolean;
-  readonly movableTo?: readonly DockedWorkbenchRegion[];
+  readonly movableTo?: readonly ExtensionPanelRegion[];
 }
 
 export interface ViewMenuContribution extends ContributionDefinition<"view-menu"> {

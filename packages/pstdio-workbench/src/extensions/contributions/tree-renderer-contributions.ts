@@ -10,11 +10,9 @@ import type {
   TreeViewSection,
   WorkbenchModuleContext,
 } from "../../core";
-import { FILE_SECTION_NAVIGATION_METADATA_KEY } from "../../core/registries/renderers/file-section-navigation";
 import { unwrapCommandValue } from "../host/command-response";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
-import { panelMenuDeclarationOffsets, type WorkbenchExtensionViewInputResolver } from "./panel-contributions";
 import { localizeParamSchema } from "./param-schema-localization";
 import type {
   ExtensionTreeAction,
@@ -31,8 +29,6 @@ import {
   resolveHostTreeHeaderNodes,
   treeViewsFor,
 } from "./tree-renderer-host-defaults";
-import { registerTreeViewWidget } from "./tree-renderer-panels";
-
 export interface RegisterWorkbenchExtensionTreeRenderersInput {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
   getHostTreeFooterNodes?: HostTreeDefaultNodesResolver;
@@ -46,37 +42,8 @@ export interface RegisterWorkbenchExtensionTreeRenderersInput {
    * gets a second identity when opened from a tree.
    */
   resolveNodeResource?: (resource: ExtensionTreeResource) => ResourceRef;
-  resolveViewInput?: WorkbenchExtensionViewInputResolver;
   workbench: WorkbenchModuleContext;
 }
-
-const toExtensionResource = (resource: ResourceRef | undefined): ExtensionTreeResource | undefined => {
-  if (!resource) return undefined;
-  return {
-    type: resource.kind,
-    id: resource.id ?? resource.uri,
-    label: resource.label,
-    metadata: resource.metadata,
-  };
-};
-
-const toWorkbenchResource = (
-  resource: ExtensionTreeResource,
-  sectionNavigation?: {
-    treeId: string;
-    targetNodeId: string;
-    anchors: Array<{ id: string; heading: string; occurrence?: number }>;
-  },
-): ResourceRef => ({
-  kind: resource.type,
-  uri: `pstdio://extension-resource/${encodeURIComponent(resource.type)}/${encodeURIComponent(resource.id)}`,
-  id: resource.id,
-  label: resource.label,
-  metadata: sectionNavigation
-    ? { ...resource.metadata, [FILE_SECTION_NAVIGATION_METADATA_KEY]: sectionNavigation }
-    : resource.metadata,
-});
-
 const slotContext = (input: {
   modeId?: string;
   projectId: string;
@@ -92,14 +59,13 @@ const slotContext = (input: {
     ...(input.resource ? { resourceType: input.resource.type, resourceId: input.resource.id } : {}),
   },
 });
-
 const createQueryParams = (
   input: RegisterWorkbenchExtensionTreeRenderersInput,
   record: ExtensionTreeRendererRecord,
   ctx: TreeContext,
   node?: ExtensionTreeNode,
 ) => {
-  const resource = toExtensionResource(ctx.resource);
+  const resource = ctx.resource;
   const modeId = input.workbench.modes.getActiveModeId();
   return {
     renderer: {
@@ -109,19 +75,23 @@ const createQueryParams = (
       ...(resource ? { resource } : {}),
       invocation: { placement: "visible" },
     },
-    state: input.workbench.renderers.getTreeState(record.id),
+    state: ctx.state,
     ...(ctx.filter ? { filter: ctx.filter } : {}),
     ...(node ? { node } : {}),
   };
 };
-
 const executeCallback = async (
   input: RegisterWorkbenchExtensionTreeRenderersInput,
   record: ExtensionTreeRendererRecord,
   commandId: string,
   params: Record<string, unknown>,
 ) => {
-  const renderer = params.renderer as { modeId?: string; resource?: ExtensionTreeResource } | undefined;
+  const renderer = params.renderer as
+    | {
+        modeId?: string;
+        resource?: ExtensionTreeResource;
+      }
+    | undefined;
   const resource = renderer?.resource;
   const result = await input.executeCommand(commandId, {
     projectId: input.projectId,
@@ -137,7 +107,6 @@ const executeCallback = async (
   });
   return unwrapCommandValue(result);
 };
-
 const executeTreeActionCommand = async (
   input: RegisterWorkbenchExtensionTreeRenderersInput,
   record: ExtensionTreeRendererRecord,
@@ -166,29 +135,19 @@ const executeTreeActionCommand = async (
   });
   return unwrapCommandValue(result);
 };
-
 const toActionParams = (params: unknown, fallback: Record<string, unknown> | undefined) => {
   if (params && typeof params === "object" && !Array.isArray(params)) return params as Record<string, unknown>;
   return fallback;
 };
-
 const toRecordParams = (params: object | undefined) =>
   params && !Array.isArray(params) ? (params as Record<string, unknown>) : undefined;
-
 const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, record: ExtensionTreeRendererRecord) => {
   const originalNodes = new WeakMap<TreeNode, ExtensionTreeNode>();
   const runnerCommandId = `workbench.extensionTreeRenderer.${record.id}.command`;
-
-  const resolveResource: typeof toWorkbenchResource = (resource, sectionNavigation) => {
+  const resolveResource: (resource: ExtensionTreeResource) => ResourceRef = (resource) => {
     const resolved = input.resolveNodeResource?.(resource);
-    if (!resolved) return toWorkbenchResource(resource, sectionNavigation);
-    if (!sectionNavigation) return resolved;
-    return {
-      ...resolved,
-      metadata: { ...resolved.metadata, [FILE_SECTION_NAVIGATION_METADATA_KEY]: sectionNavigation },
-    };
+    return resolved ?? resource;
   };
-
   const mapEmptyState = (section: ExtensionTreeSection): TreeViewSection["emptyState"] => {
     if (!section.emptyState) return undefined;
     return {
@@ -197,37 +156,35 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       icon: section.emptyState.icon,
     };
   };
-
   const mapTarget = (
     target: ExtensionTreeTarget | undefined,
     node: ExtensionTreeNode,
     ctx: TreeContext,
   ): NavigationTarget | undefined => {
     if (!target) return undefined;
-    const commandTargetOf = (commandTarget: Extract<ExtensionTreeTarget, { kind: "command" }>) => ({
+    const commandTargetOf = (
+      commandTarget: Extract<
+        ExtensionTreeTarget,
+        {
+          kind: "command";
+        }
+      >,
+    ) => ({
       kind: "command" as const,
       commandId: runnerCommandId,
       args: {
         commandId: `${commandTarget.target.command.extensionId ?? record.extensionId}.command.${commandTarget.target.command.id}`,
         nodeId: node.id,
         params: commandTarget.target.params,
-        resource: node.resource ?? toExtensionResource(ctx.resource),
+        resource: node.resource ?? ctx.resource,
         treeId: record.id,
       } satisfies TargetCommandArgs,
     });
     return toWorkbenchNavigationTarget(target, {
       commandTargetOf,
       extensionId: record.extensionId,
-      resourceOf: (resource, resourceTarget) =>
-        resolveResource(
-          resource,
-          resourceTarget.section
-            ? { treeId: record.id, targetNodeId: node.id, anchors: resourceTarget.section.anchors }
-            : undefined,
-        ),
     });
   };
-
   const mapAction = (
     action: ExtensionTreeAction,
     node: ExtensionTreeNode | undefined,
@@ -254,14 +211,13 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
               record,
               commandId,
               toActionParams(params, toRecordParams(action.params)),
-              node?.resource ?? toExtensionResource(ctx.resource),
+              node?.resource ?? ctx.resource,
             );
-            input.workbench.renderers.refresh(record.id);
+            ctx.refresh();
           }
         : undefined,
     };
   };
-
   const mapNode = (node: ExtensionTreeNode, ctx: TreeContext): TreeNode => {
     const mapped: TreeNode = {
       id: node.id,
@@ -285,7 +241,6 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     originalNodes.set(mapped, node);
     return mapped;
   };
-
   const mapSections = (sections: ExtensionTreeSection[], ctx: TreeContext): TreeViewSection[] =>
     sections.map((section) => ({
       id: section.id,
@@ -297,19 +252,16 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       hiddenByDefault: section.hiddenByDefault,
       canHide: section.canHide,
     }));
-
   const mapNodes = (nodes: ExtensionTreeNode[], ctx: TreeContext): TreeNode[] =>
     nodes.map((node) => mapNode(node, ctx));
-
   return { mapNodes, mapSections, originalNodes, runnerCommandId };
 };
-
 const isTreeSectionArray = (value: unknown): value is ExtensionTreeSection[] =>
   Array.isArray(value) && value.every((section) => section && typeof section === "object" && "nodes" in section);
-
 const isTreeNodeArray = (value: unknown): value is ExtensionTreeNode[] =>
   Array.isArray(value) && value.every((node) => node && typeof node === "object" && "id" in node);
-
+const hostNodeSection = (id: string, nodes: TreeNode[]): TreeViewSection[] =>
+  nodes.length > 0 ? [{ id, nodes, canReorder: false }] : [];
 // The node a command marks with `selected: true` (e.g. the open document in a
 // files tree) becomes the tree's highlighted selection.
 const selectedNodeIdFromNodes = (nodes: ExtensionTreeNode[]): string | undefined => {
@@ -320,7 +272,6 @@ const selectedNodeIdFromNodes = (nodes: ExtensionTreeNode[]): string | undefined
   }
   return undefined;
 };
-
 export const selectedNodeIdFromSections = (sections: ExtensionTreeSection[]): string | undefined => {
   for (const section of sections) {
     const selectedNodeId = selectedNodeIdFromNodes(section.nodes);
@@ -328,7 +279,6 @@ export const selectedNodeIdFromSections = (sections: ExtensionTreeSection[]): st
   }
   return undefined;
 };
-
 const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, record: ExtensionTreeRendererRecord) => {
   const mapper = createTreeMapper(input, record);
   const treeViews = treeViewsFor(input.metadata, record);
@@ -337,63 +287,84 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
     {
       execute: async (rawArgs) => {
         const args = rawArgs as TargetCommandArgs;
-        if (args.nodeId) input.workbench.renderers.setSelectedNode(record.id, args.nodeId);
         const result = await executeTreeActionCommand(input, record, args.commandId, args.params, args.resource);
-        for (const renderer of input.workbench.renderers.listFileRenderers()) {
-          input.workbench.renderers.refreshFileRenderer(renderer.id);
+        for (const view of input.workbench.views.listViews()) {
+          if (view.body.kind === "file") input.workbench.views.refreshView(view.id);
         }
         return result;
       },
     },
   );
-
-  const treeDisposable = input.workbench.renderers.registerTreeRenderer({
+  const treeDisposable = input.workbench.views.registerView({
     id: record.id,
     title: text(record.title, record.id),
     icon: record.icon,
-    searchable: record.searchable,
-    searchPlaceholder: text(record.searchPlaceholder, "Search files"),
-    defaultExpandedNodeIds: record.defaultExpandedNodeIds,
-    defaultExpandedSectionIds: record.defaultExpandedSectionIds,
-    getHeader: (ctx) =>
-      resolveHostTreeHeaderNodes({ ctx, getHostTreeHeaderNodes: input.getHostTreeHeaderNodes, record, treeViews }),
-    getBody: async (ctx) => {
-      const result = await executeCallback(input, record, record.bodyHandlerId, createQueryParams(input, record, ctx));
-      if (!isTreeSectionArray(result)) return [];
-      const selectedNodeId = selectedNodeIdFromSections(result);
-      if (selectedNodeId) input.workbench.renderers.setSelectedNode(record.id, selectedNodeId);
-      return mapper.mapSections(result, ctx);
-    },
-    getFooter: async (ctx) => {
-      const hostFooter = await resolveHostTreeFooterNodes({
-        ctx,
-        getHostTreeFooterNodes: input.getHostTreeFooterNodes,
-        record,
-        treeViews,
-      });
-      if (!record.footerHandlerId) return hostFooter;
-      const result = await executeCallback(
-        input,
-        record,
-        record.footerHandlerId,
-        createQueryParams(input, record, ctx),
-      );
-      const extensionFooter = isTreeNodeArray(result) ? mapper.mapNodes(result, ctx) : [];
-      return [...extensionFooter, ...hostFooter];
-    },
-    getChildren: async (node, ctx) => {
-      if (!record.childrenHandlerId) return node.children ?? [];
-      const originalNode = mapper.originalNodes.get(node) ?? (node as unknown as ExtensionTreeNode);
-      const result = await executeCallback(
-        input,
-        record,
-        record.childrenHandlerId,
-        createQueryParams(input, record, ctx, originalNode),
-      );
-      return isTreeNodeArray(result) ? mapper.mapNodes(result, ctx) : [];
+    body: {
+      kind: "tree",
+      searchable: record.searchable,
+      searchPlaceholder: text(record.searchPlaceholder, "Search files"),
+      defaultExpandedNodeIds: record.defaultExpandedNodeIds,
+      defaultExpandedSectionIds: record.defaultExpandedSectionIds,
+      getHeader: async (ctx) => {
+        const hostHeader = await resolveHostTreeHeaderNodes({
+          ctx,
+          getHostTreeHeaderNodes: input.getHostTreeHeaderNodes,
+          record,
+          treeViews,
+        });
+        if (!record.headerHandlerId) return hostNodeSection(`${record.id}:host-header`, hostHeader);
+        const result = await executeCallback(
+          input,
+          record,
+          record.headerHandlerId,
+          createQueryParams(input, record, ctx),
+        );
+        const extensionHeader = isTreeSectionArray(result) ? mapper.mapSections(result, ctx) : [];
+        return [...hostNodeSection(`${record.id}:host-header`, hostHeader), ...extensionHeader];
+      },
+      getBody: async (ctx) => {
+        const result = await executeCallback(
+          input,
+          record,
+          record.bodyHandlerId,
+          createQueryParams(input, record, ctx),
+        );
+        if (!isTreeSectionArray(result)) return [];
+        const selectedNodeId = selectedNodeIdFromSections(result);
+        if (selectedNodeId) ctx.setSelectedNode(selectedNodeId);
+        return mapper.mapSections(result, ctx);
+      },
+      getFooter: async (ctx) => {
+        const hostFooter = await resolveHostTreeFooterNodes({
+          ctx,
+          getHostTreeFooterNodes: input.getHostTreeFooterNodes,
+          record,
+          treeViews,
+        });
+        if (!record.footerHandlerId) return hostNodeSection(`${record.id}:host-footer`, hostFooter);
+        const result = await executeCallback(
+          input,
+          record,
+          record.footerHandlerId,
+          createQueryParams(input, record, ctx),
+        );
+        const extensionFooter = isTreeSectionArray(result) ? mapper.mapSections(result, ctx) : [];
+        return [...extensionFooter, ...hostNodeSection(`${record.id}:host-footer`, hostFooter)];
+      },
+      getChildren: async (node, ctx) => {
+        if (!record.childrenHandlerId) return node.children ?? [];
+        const originalNode = mapper.originalNodes.get(node);
+        if (!originalNode) return node.children ?? [];
+        const result = await executeCallback(
+          input,
+          record,
+          record.childrenHandlerId,
+          createQueryParams(input, record, ctx, originalNode),
+        );
+        return isTreeNodeArray(result) ? mapper.mapNodes(result, ctx) : [];
+      },
     },
   });
-
   return {
     dispose() {
       treeDisposable.dispose();
@@ -401,29 +372,11 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
     },
   };
 };
-
 export const registerWorkbenchExtensionTreeRenderers = (input: RegisterWorkbenchExtensionTreeRenderersInput) => {
   const disposables: Disposable[] = [];
-
   for (const record of input.metadata.treeRenderers ?? []) {
     disposables.push(registerTree(input, record));
   }
-
-  const menuOffsets = panelMenuDeclarationOffsets(input.metadata.panels);
-  input.metadata.panels.forEach((panel, index) => {
-    const disposable = registerTreeViewWidget(
-      {
-        workbench: input.workbench,
-        resourcePanels: input.metadata.resourcePanels,
-        resolveViewInput: input.resolveViewInput,
-      },
-      panel,
-      index,
-      menuOffsets[index]!,
-    );
-    if (disposable) disposables.push(disposable);
-  });
-
   return {
     dispose() {
       for (let index = disposables.length - 1; index >= 0; index -= 1) disposables[index]?.dispose();

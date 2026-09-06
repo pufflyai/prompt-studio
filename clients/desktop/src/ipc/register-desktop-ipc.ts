@@ -20,7 +20,7 @@ type DesktopIpcOptions = {
   quitApp: () => Promise<void>;
   retryRuntime: () => Promise<void>;
   runtimeOrigin: () => string | null;
-  setLastResource: (projectId: string, value: string | null) => void;
+  setPageLocation: (projectId: string, value: string | null) => void;
   setSelectedProjectId: (projectId: string | null) => void;
   window: BrowserWindow;
 };
@@ -64,11 +64,11 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
   handle(DESKTOP_CHANNELS.checkForUpdates, options.checkForUpdates);
   handle(DESKTOP_CHANNELS.quitApp, options.quitApp);
   handle(DESKTOP_CHANNELS.getWorkbenchState, options.getWorkbenchState);
-  handle(DESKTOP_CHANNELS.setLastResource, (projectId, value) => {
+  handle(DESKTOP_CHANNELS.setPageLocation, (projectId, value) => {
     if (typeof projectId !== "string" || !projectId || (typeof value !== "string" && value !== null)) {
-      throw new Error("Invalid desktop last resource update");
+      throw new Error("Invalid desktop page location update");
     }
-    options.setLastResource(projectId, value);
+    options.setPageLocation(projectId, value);
   });
   handle(DESKTOP_CHANNELS.setSelectedProjectId, (projectId) => {
     if (typeof projectId !== "string" && projectId !== null) {

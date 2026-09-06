@@ -22,7 +22,7 @@ export interface FileEditControllerState {
 }
 
 export interface FileEditControllerInput {
-  binding: Omit<FileRendererRefreshOrigin, "operationId"> & { resourceUri?: string };
+  binding: Omit<FileRendererRefreshOrigin, "operationId"> & { resourceKey?: string };
   debounceMs: number;
   load: (event?: FileRendererRefreshEnvelope) => void;
   save: (value: string, origin: FileRendererRefreshOrigin) => Promise<FileRendererSaveResult | undefined>;
@@ -85,10 +85,10 @@ export const createFileEditController = (input: FileEditControllerInput) => {
     deferredRevision = undefined;
     genericRefreshDeferred = false;
     if (revision && (!savedRevision || revision.localeCompare(savedRevision) > 0)) {
-      input.load({ resourceUri: input.binding.resourceUri, revision });
+      input.load({ resourceKey: input.binding.resourceKey, revision });
       return;
     }
-    if (generic) input.load({ resourceUri: input.binding.resourceUri });
+    if (generic) input.load({ resourceKey: input.binding.resourceKey });
   };
 
   const runSave = () => {
@@ -178,7 +178,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
       notify();
     },
     handleRefreshEvent(event: FileRendererRefreshEnvelope = {}) {
-      if (event.resourceUri && event.resourceUri !== input.binding.resourceUri) return;
+      if (event.resourceKey && event.resourceKey !== input.binding.resourceKey) return;
       if (isSelfRefresh(event)) return;
       if (event.revision && seenRefreshRevisions.has(event.revision)) return;
       if (event.revision) seenRefreshRevisions.add(event.revision);
@@ -196,7 +196,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
       runSave();
     },
     retryLoad() {
-      input.load({ resourceUri: input.binding.resourceUri });
+      input.load({ resourceKey: input.binding.resourceKey });
     },
     flush() {
       clearTimer();

@@ -1,6 +1,7 @@
 import { Box, Container, HStack, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
+import { expect, within } from "storybook/test";
 import { ParamEditor } from "./param-editor";
 import type { ParamValueMap } from "./param-editor.types";
 import { type ParamEditorInputFixture, paramEditorInputFixtures } from "./param-editor-control-fixtures";
@@ -61,7 +62,13 @@ const inputStory = (fixture: ParamEditorInputFixture): Story => ({
 
 export const InputBoolean = inputStory(paramEditorInputFixtures.boolean);
 export const InputNumber = inputStory(paramEditorInputFixtures.number);
-export const InputText = inputStory(paramEditorInputFixtures.text);
+export const InputText: Story = {
+  ...inputStory(paramEditorInputFixtures.text),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getAllByRole("textbox", { name: paramEditorInputFixtures.text.param.name })).toHaveLength(2);
+  },
+};
 export const InputMarkdown = inputStory(paramEditorInputFixtures.markdown);
 export const InputSelection = inputStory(paramEditorInputFixtures.selection);
 export const InputDate = inputStory(paramEditorInputFixtures.date);

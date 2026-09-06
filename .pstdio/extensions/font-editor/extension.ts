@@ -2,13 +2,12 @@ import {
   defineArtifactMount,
   defineExtension,
   defineNavigationItem,
-  definePlacement,
+  definePage,
   defineSkill,
   defineView,
   l10n,
   packageAsset,
   workbenchModes,
-  workbenchSlots,
 } from "@pstdio/sdk/extensions";
 import { fontCommands } from "./src/commands/font-commands";
 
@@ -21,27 +20,32 @@ const fontEditor = defineView({
     capabilities: ["commands.execute", "notification.show"],
   },
 });
-
+const fontEditorPage = definePage({
+  id: "font-editor",
+  title: l10n("panels.fontEditor.title", "Font editor"),
+  path: "font-editor",
+  mode: workbenchModes.project,
+  main: {
+    kind: "view",
+    view: fontEditor.ref,
+    cardinality: "one",
+  },
+  slots: [],
+});
 const extension = defineExtension({
   commands: fontCommands,
   views: [fontEditor],
-  placements: [
-    definePlacement({
-      id: "font-editor.project",
-      mode: workbenchModes.project,
-      item: { kind: "view", view: fontEditor.ref },
-      region: "main",
-    }),
-  ],
+  pages: [fontEditorPage],
   navigationItems: [
     defineNavigationItem({
       id: "font-editor",
-      slot: workbenchSlots.projectNavigation,
+      owner: workbenchModes.project,
+      slot: "content",
       group: "Tools",
       label: l10n("treeItems.fontEditor.label", "Font editor"),
       icon: "case-upper",
       when: { mode: workbenchModes.project },
-      action: { kind: "view", view: fontEditor.ref },
+      action: { kind: "page", page: fontEditorPage.ref },
     }),
   ],
   artifactMounts: [
@@ -60,5 +64,4 @@ const extension = defineExtension({
     }),
   ],
 });
-
 export default extension;

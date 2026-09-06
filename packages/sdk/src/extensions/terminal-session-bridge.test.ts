@@ -3,7 +3,7 @@ import type { TerminalHostEvent, TerminalSessionOperation } from "../api/termina
 import type { GuestHost } from "./define-extension-view";
 import { createTerminalSessionBridge } from "./terminal-session-bridge";
 
-const createFakeHost = () => {
+const createFakeHost = (rejectWrites = false) => {
   const calls: TerminalSessionOperation[] = [];
   const listeners = new Map<string, Set<(payload: unknown) => void>>();
 
@@ -12,6 +12,8 @@ const createFakeHost = () => {
       if (method !== "terminal.session") throw new Error(`Unexpected capability: ${method}`);
       const operation = params as TerminalSessionOperation;
       calls.push(operation);
+      if (rejectWrites && (operation.operation === "write" || operation.operation === "resize"))
+        throw new Error(`session gone: ${operation.operation}`);
       if (operation.operation === "open") return { operation: "open", sessionId: "session-1" } as TResult;
       return { operation: operation.operation, accepted: true } as TResult;
     },
@@ -97,18 +99,8 @@ describe("createTerminalSessionBridge", () => {
   });
 
   test("write and resize rejections surface through onError handlers", async () => {
-    const fake = createFakeHost();
-    const failingHost: GuestHost = {
-      ...fake.host,
-      call: async <TResult>(method: string, params?: unknown) => {
-        const operation = params as TerminalSessionOperation;
-        if (operation.operation === "write" || operation.operation === "resize") {
-          throw new Error(`session gone: ${operation.operation}`);
-        }
-        return fake.host.call<TResult>(method, params);
-      },
-    };
-    const session = await createTerminalSessionBridge(failingHost).openSession({ cols: 80, rows: 24 });
+    const fake = createFakeHost(true);
+    const session = await createTerminalSessionBridge(fake.host).openSession({ cols: 80, rows: 24 });
 
     const errors: { message: string }[] = [];
     session.onError((error) => errors.push(error));

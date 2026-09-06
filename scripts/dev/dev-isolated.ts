@@ -7,7 +7,8 @@ import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
-import { join, resolve } from "node:path";
+import { join, posix, resolve } from "node:path";
+import { resolveWorkingTreeDefaultExtensions } from "./working-tree-extensions";
 
 const COMPOSE_FILE = "infra/local/compose.yaml";
 const PROJECT_PREFIX = "pstdio-cmp";
@@ -16,15 +17,6 @@ const CONTAINER_DASHBOARD_PORT = 5173;
 const CONTAINER_API_PORT = 19841;
 const SEEDED_PROJECT_NAME = "project";
 const ISOLATED_BROWSER_HOST = "127.0.0.1";
-const SEEDED_RELEASE_EXTENSIONS = [
-  "harness-claude-code",
-  "harness-codex",
-  "harness-open-code",
-  "pstdio-base-themes",
-  "pstdio-planner",
-  "pstdio-planner-loops",
-  "pstdio-skills",
-];
 const WINDOWS_CONTAINER_WORKTREE = "/workspace/prompt-studio";
 const WINDOWS_CONTAINER_GIT_COMMON_DIR = "/workspace/git-common";
 
@@ -89,23 +81,12 @@ export const resolveIsolatedDashboardUrl = (port: number) => `http://${ISOLATED_
 export const resolveIsolatedDefaultExtensions = (
   repoRoot: string,
   env: Record<string, string | undefined> = process.env,
+  platform: NodeJS.Platform = process.platform,
 ) =>
   env.PSTDIO_DEFAULT_EXTENSIONS ??
-  JSON.stringify({
-    defaultExtensions: [
-      ...SEEDED_RELEASE_EXTENSIONS,
-      {
-        source: resolve(repoRoot, "extensions/extension-lab"),
-        installName: "extension-lab",
-        skipInstall: true,
-      },
-      {
-        source: resolve(repoRoot, "infra/local/extensions/local-example"),
-        installName: "local-example",
-        skipInstall: true,
-      },
-    ],
-  });
+  JSON.stringify(
+    resolveWorkingTreeDefaultExtensions(platform === "win32" ? WINDOWS_CONTAINER_WORKTREE : repoRoot, posix.resolve),
+  );
 
 export const resolveIsolatedExtensionReleaseRef = (
   repoRoot: string,

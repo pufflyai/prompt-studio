@@ -41,8 +41,8 @@ test("PS-173 derives ticket ancestry within the interaction budget", async ({ pa
 
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
+    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     document.addEventListener(
       "click",
       (event) => {

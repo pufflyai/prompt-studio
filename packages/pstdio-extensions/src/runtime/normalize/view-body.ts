@@ -41,6 +41,7 @@ export const normalizeViewBody = (input: {
   if (body.kind === "tree") {
     return {
       ...body,
+      headerHandlerId: handler({ ...input, kind: "tree", operation: "header", value: body.header }),
       bodyHandlerId: handler({ ...input, kind: "tree", operation: "body", value: body.body }),
       childrenHandlerId: handler({ ...input, kind: "tree", operation: "children", value: body.children }),
       footerHandlerId: handler({ ...input, kind: "tree", operation: "footer", value: body.footer }),

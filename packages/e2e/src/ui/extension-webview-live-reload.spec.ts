@@ -6,7 +6,7 @@ import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
-const extensionLabPath = join(import.meta.dirname, "../../../../extensions/extension-lab");
+const extensionLabPath = join(import.meta.dirname, "../../../../packages/workbench-fixture");
 const missingDependencyName = "pstdio-live-reload-dep";
 const recoveredHeading = "Recovered webview";
 
@@ -37,14 +37,15 @@ const installMissingWebviewDependency = (extensionRoot: string) => {
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript(
     ({ currentProjectId }) => {
+      if (window.parent !== window) return;
       localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-      localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
+      localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
+      localStorage.setItem("dashboard-wb2:selected-project:global", currentProjectId);
       localStorage.setItem(
         `pstdio-project-settings/projects/${currentProjectId}/values`,
         JSON.stringify({
           state: {
-            lastSelectedAgent: "pstdio.extension-lab.harness.fake",
+            lastSelectedAgent: "pstdio.workbench-fixture.harness.fake",
             lastSelectedBranches: [],
             lastSelectedModels: [],
             lastSelectedRepo: "",
@@ -80,7 +81,7 @@ const disableDefaultExtensionLab = async (request: import("@playwright/test").AP
   expect(response.ok()).toBe(true);
   const body = (await response.json()) as { extensions: Array<{ id: string; installName: string }> };
 
-  for (const extension of body.extensions.filter((entry) => entry.installName === "extension-lab")) {
+  for (const extension of body.extensions.filter((entry) => entry.installName === "workbench-fixture")) {
     const disabled = await request.patch(`${apiBase}/v1/projects/${projectId}/extensions/${extension.id}`, {
       data: { enabled: false },
     });
@@ -92,16 +93,16 @@ const enableExtension = async (
   request: import("@playwright/test").APIRequestContext,
   projectId: string,
   sourcePath: string,
-  installName = "extension-lab-live-reload",
+  installName = "workbench-fixture-live-reload",
 ) => {
   const response = await request.post(
     `${apiBase}/v1/projects/${projectId}/extensions/installed/${installName}/enable`,
     {
       data: {
         displayName: "Extension Lab",
-        extensionId: "pstdio.extension-lab",
-        manifest: { id: "pstdio.extension-lab", name: "extension-lab" },
-        name: "extension-lab",
+        extensionId: "pstdio.workbench-fixture",
+        manifest: { id: "pstdio.workbench-fixture", name: "workbench-fixture" },
+        name: "workbench-fixture",
         sourceHash: `${installName}-e2e`,
         sourceKind: "local_path",
         sourcePath,
@@ -111,6 +112,13 @@ const enableExtension = async (
     },
   );
   expect(response.ok()).toBe(true);
+  const { instanceId } = (await response.json()) as { instanceId: string };
+  return async () => {
+    const removed = await request.delete(
+      `${apiBase}/v1/projects/${projectId}/extensions/${instanceId}?deleteUserData=true`,
+    );
+    expect(removed.ok()).toBe(true);
+  };
 };
 
 const getExtensionLoadState = async (
@@ -131,10 +139,32 @@ const getExtensionLoadState = async (
   return { lastError: extension?.lastError ?? null, status: extension?.status };
 };
 
-const expectWebviewAtPath = (metadata: WorkbenchExtensionMetadata, path: string) => {
-  const view = metadata.views.find((candidate) => candidate.path === path);
+const expectWebview = (metadata: WorkbenchExtensionMetadata, localId: string) => {
+  const view = metadata.views.find((candidate) => candidate.localId === localId);
   expect(view?.body.kind).toBe("webview");
 };
+
+const getWebviewModuleUrl = async (
+  request: import("@playwright/test").APIRequestContext,
+  projectId: string,
+  localId: string,
+) => {
+  const response = await request.get(`${apiBase}/v1/projects/${projectId}/extensions/ui`);
+  expect(response.ok()).toBe(true);
+  const metadata = (await response.json()) as WorkbenchExtensionMetadata;
+  const view = metadata.views.find((candidate) => candidate.localId === localId);
+  return view?.body.kind === "webview" ? view.body.webview.moduleUrl : undefined;
+};
+
+const getActivePageId = (page: import("@playwright/test").Page) =>
+  page.evaluate(() => {
+    const dashboardWindow = window as unknown as {
+      __pstdioDashboardWorkbench?: {
+        pages: { store: { getState(): { activePageId?: string } } };
+      };
+    };
+    return dashboardWindow.__pstdioDashboardWorkbench?.pages.store.getState().activePageId;
+  });
 
 test.describe("Extension webview live reload", () => {
   test.beforeEach(async ({ request }) => {
@@ -142,29 +172,36 @@ test.describe("Extension webview live reload", () => {
   });
 
   test("updates an open dashboard webview after editing its source", async ({ page, request }, testInfo) => {
-    const extensionRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-lab-live-reload-"));
+    const extensionRoot = mkdtempSync(join(tmpdir(), "pstdio-workbench-fixture-live-reload-"));
     cpSync(extensionLabPath, extensionRoot, { recursive: true });
+    let uninstall: Awaited<ReturnType<typeof enableExtension>> | undefined;
 
     try {
       const project = await createProject(request);
       await disableDefaultExtensionLab(request, project.id);
-      await enableExtension(request, project.id, extensionRoot);
+      uninstall = await enableExtension(request, project.id, extensionRoot);
       const metadataResponse = await request.get(`${apiBase}/v1/projects/${project.id}/extensions/ui`);
       expect(metadataResponse.ok()).toBe(true);
       const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
-      expectWebviewAtPath(metadata, "lab");
+      expectWebview(metadata, "lab-page");
+      const initialModuleUrl = await getWebviewModuleUrl(request, project.id, "lab-page");
       await bypassOnboarding(page, project.id);
 
-      await page.goto(`/projects/${project.id}/lab`);
+      await page.goto(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
       const frame = page.frameLocator('iframe[title="Lab"]');
       await expect(frame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
 
       const nextHeading = `Sandbox webview ${Date.now()}`;
       const viewFile = join(extensionRoot, "src/views/lab-page.tsx");
       const current = readFileSync(viewFile, "utf8");
-      writeFileSync(viewFile, current.replace('"Sandbox webview"', `"${nextHeading}"`));
+      writeFileSync(
+        viewFile,
+        current.replace('t("webview.labPage.heading", "Sandbox webview")', JSON.stringify(nextHeading)),
+      );
 
       const startedAt = Date.now();
+      await expect.poll(() => getWebviewModuleUrl(request, project.id, "lab-page")).not.toBe(initialModuleUrl);
+      await expect.poll(() => getActivePageId(page)).toBe("pstdio.workbench-fixture.page.lab");
       await expect(frame.getByRole("heading", { name: nextHeading })).toBeVisible({ timeout: 5_000 });
       const elapsedMs = Date.now() - startedAt;
 
@@ -175,26 +212,28 @@ test.describe("Extension webview live reload", () => {
       console.info(`webview live reload elapsed: ${elapsedMs}ms`);
       expect(elapsedMs).toBeLessThan(5_000);
     } finally {
+      await uninstall?.();
       rmSync(extensionRoot, { recursive: true, force: true });
     }
   });
 
   test("recovers an open webview after its missing dependency is installed", async ({ page, request }) => {
     const extensionRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-dependency-recovery-"));
-    const installName = "extension-lab-dependency-recovery";
+    const installName = "workbench-fixture-dependency-recovery";
     cpSync(extensionLabPath, extensionRoot, { recursive: true });
+    let uninstall: Awaited<ReturnType<typeof enableExtension>> | undefined;
 
     try {
       const project = await createProject(request);
       await disableDefaultExtensionLab(request, project.id);
-      await enableExtension(request, project.id, extensionRoot, installName);
+      uninstall = await enableExtension(request, project.id, extensionRoot, installName);
 
       const metadataResponse = await request.get(`${apiBase}/v1/projects/${project.id}/extensions/ui`);
       expect(metadataResponse.ok()).toBe(true);
       const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
-      expectWebviewAtPath(metadata, "lab");
+      expectWebview(metadata, "lab-page");
       await bypassOnboarding(page, project.id);
-      await page.goto(`/projects/${project.id}/lab`);
+      await page.goto(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
 
       const frame = page.frameLocator('iframe[title="Lab"]');
       await expect(frame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
@@ -212,8 +251,10 @@ test.describe("Extension webview live reload", () => {
           lastError: null,
           status: "loaded",
         });
+      await expect.poll(() => getActivePageId(page)).toBe("pstdio.workbench-fixture.page.lab");
       await expect(frame.getByRole("heading", { name: recoveredHeading })).toBeVisible({ timeout: 5_000 });
     } finally {
+      await uninstall?.();
       rmSync(extensionRoot, { recursive: true, force: true });
     }
   });

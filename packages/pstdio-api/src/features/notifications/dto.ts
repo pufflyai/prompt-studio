@@ -1,4 +1,5 @@
 import { z } from "@hono/zod-openapi";
+import { navigationTargetSchema } from "pstdio-api-contracts";
 
 export const notificationKindSchema = z.enum([
   "needs_review",
@@ -28,8 +29,8 @@ export const notificationActionSchema = z.discriminatedUnion("kind", [
     .object({
       id: z.string(),
       label: z.string(),
-      kind: z.literal("open-resource"),
-      resource: resourceRefSchema,
+      kind: z.literal("navigate"),
+      target: navigationTargetSchema,
       primary: z.boolean().optional(),
     })
     .strict(),

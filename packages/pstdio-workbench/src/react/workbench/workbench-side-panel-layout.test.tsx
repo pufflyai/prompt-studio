@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "../../core";
+import { createWorkbench } from "../../core";
 import { WorkbenchSidePanelRegionPortal } from "./workbench-side-panel-layout";
 
-const workbench = createWorkbenchCore();
+const workbench = createWorkbench();
 
 const renderSidePanelPortal = (mounted: boolean) => {
   return WorkbenchSidePanelRegionPortal({

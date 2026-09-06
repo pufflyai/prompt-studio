@@ -1,5 +1,6 @@
-import type { CreateNotificationInput, ResourceAnchor } from "@pstdio/sdk/extensions";
+import { type CreateNotificationInput, type ResourceAnchor, workbenchPanels } from "@pstdio/sdk/extensions";
 import type { StoredTicket } from "./data/types";
+import { ticketPageRef } from "./resource-kinds";
 
 type PlannerNotificationInput = Omit<CreateNotificationInput, "projectId">;
 
@@ -41,6 +42,7 @@ export const ticketAnchor = (ctx: PlannerContext, ticket: StoredTicket) =>
 
 export const notifyProposalRefined = (ctx: NotifyActionContext, ticket: StoredTicket) => {
   const target = ticketAnchor(ctx, ticket);
+  const ticketPage = { ...ticketPageRef, extensionId: ctx.extensionId };
   return notifyAction(ctx, {
     title: `Review proposal: ${ticket.shorthand}`,
     body: `${ticket.title} is ready for approval.`,
@@ -49,7 +51,13 @@ export const notifyProposalRefined = (ctx: NotifyActionContext, ticket: StoredTi
     target,
     dedupeKey: ticketNotificationDedupeKey(ticket, "proposal-refined"),
     actions: [
-      { id: "review-proposal", label: "Review proposal", kind: "open-resource", resource: target, primary: true },
+      {
+        id: "review-proposal",
+        label: "Review proposal",
+        kind: "navigate",
+        target: { kind: "page", page: ticketPage, resource: target },
+        primary: true,
+      },
       {
         id: "approve-proposal",
         label: "Approve",
@@ -64,6 +72,7 @@ export const notifyProposalRefined = (ctx: NotifyActionContext, ticket: StoredTi
 
 export const notifyBlocked = (ctx: NotifyActionContext, ticket: StoredTicket, sessionId?: string) => {
   const target = ticketAnchor(ctx, ticket);
+  const ticketPage = { ...ticketPageRef, extensionId: ctx.extensionId };
   const related = sessionId
     ? [{ type: "session", id: sessionId, projectId: ctx.projectId, extensionId: ctx.extensionId }]
     : [];
@@ -76,8 +85,24 @@ export const notifyBlocked = (ctx: NotifyActionContext, ticket: StoredTicket, se
     related,
     dedupeKey: ticketNotificationDedupeKey(ticket, "blocked"),
     actions: sessionId
-      ? [{ id: "reply-to-agent", label: "Reply to agent", kind: "open-resource", resource: related[0], primary: true }]
-      : [{ id: "open-ticket", label: "Open ticket", kind: "open-resource", resource: target, primary: true }],
+      ? [
+          {
+            id: "reply-to-agent",
+            label: "Reply to agent",
+            kind: "navigate",
+            target: { kind: "panel", panel: workbenchPanels.projectSession, resource: related[0] },
+            primary: true,
+          },
+        ]
+      : [
+          {
+            id: "open-ticket",
+            label: "Open ticket",
+            kind: "navigate",
+            target: { kind: "page", page: ticketPage, resource: target },
+            primary: true,
+          },
+        ],
     metadata: { ticketId: ticket.id, ticketShorthand: ticket.shorthand, ...(sessionId ? { sessionId } : {}) },
   });
 };

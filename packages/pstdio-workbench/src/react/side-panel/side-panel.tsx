@@ -5,6 +5,8 @@ import type { ReactNode } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
+import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 
 interface WorkbenchSidePanelProps {
@@ -12,6 +14,7 @@ interface WorkbenchSidePanelProps {
   contentSlotRef: (node: HTMLDivElement | null) => void;
   bottomOffset?: string;
   header?: ReactNode;
+  bubbleIcon?: ReactNode;
 }
 
 const floatingPanelBottom = (bottomOffset: string | undefined) =>
@@ -39,6 +42,8 @@ const WorkbenchSidePanelHeader = (props: WorkbenchSidePanelHeaderProps) => {
 
 export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
   const { workbench, contentSlotRef, header } = props;
+  const settings = useWorkbenchModeRegionSettings(workbench, "side");
+  const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
 
   return (
     <WorkbenchFocusRegion workbench={workbench} region="side" h="full" minH="0" minW="0" w="full">
@@ -50,20 +55,24 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
         minWidth="0"
         bg={workbenchBackgrounds.widget}
         header={
-          <Header data-workbench-panel-header="side" variant="main" flexShrink={0} gap="sm">
-            <WorkbenchSidePanelHeader header={header} />
-            <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
-            <Tooltip content="Float Side Panel">
-              <IconButton
-                size={PANEL_HEADER_CONTROL_SIZE}
-                variant="ghost"
-                aria-label="Float Side Panel"
-                onClick={() => workbench.sidePanel.setMode("floating")}
-              >
-                <Minimize2 size={16} />
-              </IconButton>
-            </Tooltip>
-          </Header>
+          settings?.showHeader !== false && (header || canFloat) ? (
+            <Header data-workbench-panel-header="side" variant="main" flexShrink={0} gap="sm">
+              <WorkbenchSidePanelHeader header={header} />
+              <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
+              {canFloat ? (
+                <Tooltip content="Float Side Panel">
+                  <IconButton
+                    size={PANEL_HEADER_CONTROL_SIZE}
+                    variant="ghost"
+                    aria-label="Float Side Panel"
+                    onClick={() => workbench.sidePanel.setMode("floating")}
+                  >
+                    <Minimize2 size={16} />
+                  </IconButton>
+                </Tooltip>
+              ) : null}
+            </Header>
+          ) : undefined
         }
       >
         <WorkbenchPanelMenuLayout workbench={workbench} panel="side">
@@ -75,10 +84,10 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
 };
 
 export const WorkbenchFloatingSidePanel = (props: WorkbenchSidePanelProps) => {
-  const { workbench, contentSlotRef, bottomOffset, header } = props;
+  const { workbench, contentSlotRef, bottomOffset, header, bubbleIcon } = props;
   const mode = workbench.sidePanel.getMode();
 
-  if (mode === "attached") return null;
+  if (!workbench.sidePanel.canFloat() || mode === "attached") return null;
 
   if (mode === "closed") {
     return (
@@ -88,7 +97,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchSidePanelProps) => {
         tooltip="Open Side Panel"
         onClick={() => workbench.sidePanel.setMode("floating")}
       >
-        <MessageCircle size={20} strokeWidth={2} />
+        {bubbleIcon ?? <MessageCircle size={20} strokeWidth={2} />}
       </BubbleButton>
     );
   }

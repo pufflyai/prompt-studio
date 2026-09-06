@@ -313,3 +313,22 @@ describe("Markdown source document", () => {
     expect(result).toBe(markdown.replace("Before", "After"));
   });
 });
+
+test("maps edits within their block while preserving neighboring tokens and line endings", () => {
+  const markdown = ["Before {{keep_one}} 😀.", "Target __emphasis__ {{keep_two}}.", "After {{keep_three}}."].join(
+    "\r\n\r\n",
+  );
+  const result = sourceRoundTrip(markdown, (editor) => {
+    editor.update(
+      () => {
+        const target = $getRoot()
+          .getAllTextNodes()
+          .find((node) => node.getTextContent().startsWith("Target"));
+        target?.setTextContent(target.getTextContent().replace("Target", "Changed"));
+      },
+      { discrete: true },
+    );
+  });
+
+  expect(result).toBe(markdown.replace("Target", "Changed"));
+});

@@ -9,7 +9,6 @@ export const workbenchTreeTargets = [
 export const workbenchRegions = [
   "nav",
   "activity",
-  "sidenav-header",
   "sidenav",
   "main-header",
   "main",

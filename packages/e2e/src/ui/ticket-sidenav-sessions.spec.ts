@@ -21,7 +21,7 @@ const bypassOnboarding = async (page: Page, projectId: string) => {
   await page.addInitScript((currentProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem("selected-agent", "pstdio.harness-open-code.harness.opencode");
-    localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
+    localStorage.setItem("dashboard-wb2:selected-project:global", currentProjectId);
     localStorage.setItem(
       `pstdio-project-settings/projects/${currentProjectId}/values`,
       JSON.stringify({
@@ -81,7 +81,7 @@ test.describe("Ticket sidenav sessions", () => {
       apiBase,
       projectId,
       "refine-ticket",
-      { agent: { harnessId: "pstdio.extension-lab.harness.fake" } },
+      { agent: { harnessId: "pstdio.workbench-fixture.harness.fake" } },
       {
         resource: {
           type: "ticket",
@@ -99,13 +99,12 @@ test.describe("Ticket sidenav sessions", () => {
     const sessionRow = sidenav.getByText(`Refine ticket: ${ticket.shorthand}`);
     await expect(sessionRow).toBeVisible();
 
-    // Clicking it opens the session in the floating panel and keeps the ticket in view (the ticket
+    // Clicking it opens the session in the Side Panel and keeps the ticket in view (the ticket
     // stays in its own sidenav — we did not navigate away to sessions mode).
     await sessionRow.click();
-    const floatingPanel = page.getByRole("dialog", { name: "Side Panel" });
-    await expect(
-      floatingPanel.getByRole("tab", { name: new RegExp(`Refine ticket: ${ticket.shorthand}`) }),
-    ).toHaveAttribute("aria-selected", "true");
+    const sidePanel = page.getByTestId("workbench-side-panel-attached");
+    await expect(sidePanel).toBeVisible();
+    await expect(sidePanel.locator("[data-testid='content-editable'][contenteditable='true']")).toBeVisible();
     await expect(sidenav.getByRole("option", { name: `${ticket.shorthand} Sidenav session proof` })).toBeVisible();
   });
 });

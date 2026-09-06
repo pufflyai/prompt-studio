@@ -39,27 +39,42 @@ describe("isolated development paths", () => {
     expect(resolveIsolatedDashboardUrl(43001)).toBe("http://127.0.0.1:43001/");
   });
 
-  test("seeds a repo-local extension beside the release extensions", () => {
+  test("seeds every first-party extension from the working tree", () => {
     const config = JSON.parse(resolveIsolatedDefaultExtensions("/repo", {})) as {
       defaultExtensions: Array<string | { installName: string; skipInstall: boolean; source: string }>;
     };
 
-    expect(config.defaultExtensions).toContain("pstdio-planner");
-    expect(config.defaultExtensions).toContain("pstdio-planner-loops");
-    expect(config.defaultExtensions).toContainEqual({
-      installName: "extension-lab",
-      skipInstall: true,
-      source: resolve("/repo/extensions/extension-lab"),
-    });
-    expect(config.defaultExtensions).toContainEqual({
-      installName: "local-example",
-      skipInstall: true,
-      source: resolve("/repo/infra/local/extensions/local-example"),
-    });
+    expect(config.defaultExtensions).toEqual(
+      [
+        ["harness-claude-code", "extensions/harness-claude-code"],
+        ["harness-codex", "extensions/harness-codex"],
+        ["harness-open-code", "extensions/harness-open-code"],
+        ["pstdio-base-themes", "extensions/pstdio-base-themes"],
+        ["pstdio-planner", "extensions/pstdio-planner"],
+        ["pstdio-planner-loops", ".pstdio/extensions/pstdio-planner-loops"],
+        ["pstdio-reports", "extensions/pstdio-reports"],
+        ["pstdio-skills", "extensions/pstdio-skills"],
+        ["extension-lab", "extensions/extension-lab"],
+        ["local-example", "infra/local/extensions/local-example"],
+      ].map(([installName, source]) => ({
+        force: true,
+        installName,
+        skipInstall: true,
+        source: resolve("/repo", source!),
+      })),
+    );
   });
 
   test("keeps an explicit default extension configuration", () => {
     expect(resolveIsolatedDefaultExtensions("/repo", { PSTDIO_DEFAULT_EXTENSIONS: '["custom"]' })).toBe('["custom"]');
+  });
+
+  test("seeds Windows checkouts using Linux container extension paths", () => {
+    const config = JSON.parse(resolveIsolatedDefaultExtensions("C:\\repo", {}, "win32"));
+
+    expect(
+      config.defaultExtensions.find((extension: { installName: string }) => extension.installName === "extension-lab"),
+    ).toMatchObject({ source: "/workspace/prompt-studio/extensions/extension-lab" });
   });
 
   test("uses the Prompt Studio package release for marketplace installs", () => {

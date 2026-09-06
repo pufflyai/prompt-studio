@@ -1,0 +1,31 @@
+{
+  "name": "boombox",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#0d0f0e",
+    "editor.foreground": "#f5f7f5",
+    "editorWidget.background": "#171a18",
+    "activityBar.background": "#090b0a",
+    "sideBar.background": "#111412",
+    "panel.background": "#171a18",
+    "statusBar.background": "#090b0a",
+    "input.background": "#242825",
+    "input.foreground": "#f5f7f5",
+    "input.border": "#343a35",
+    "menu.background": "#171a18",
+    "menu.foreground": "#f5f7f5",
+    "menu.selectionBackground": "#283029",
+    "list.hoverBackground": "#222824",
+    "list.activeSelectionBackground": "#2c382f",
+    "button.background": "#4dd879",
+    "button.hoverBackground": "#70e18f",
+    "button.foreground": "#07130a",
+    "badge.background": "#253329",
+    "badge.foreground": "#8be6a6",
+    "focusBorder": "#4dd879",
+    "foreground": "#f5f7f5",
+    "descriptionForeground": "#a2aaa4",
+    "disabledForeground": "#656c67",
+    "border": "#292e2a"
+  }
+}

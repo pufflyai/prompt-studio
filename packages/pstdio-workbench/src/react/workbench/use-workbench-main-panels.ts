@@ -2,7 +2,7 @@ import type { WorkbenchCore } from "../../core";
 import { useWorkbenchPanelHeaderVisible } from "../region/region-tabs";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useWorkbenchRegionContent } from "./use-workbench-region-content";
-import { resolvePanelCollapsible, setWorkbenchPanelOpen } from "./workbench-panel-state";
+import { resolvePanelCollapsible } from "./workbench-panel-state";
 
 // The collapse/reveal state of one panel around the main editor region, bundled so
 // WorkbenchBody receives one object per panel instead of six flat props.
@@ -26,15 +26,15 @@ const useSecondaryPanelView = (workbench: WorkbenchCore) => {
   const collapsible = useWorkbenchStore(workbench.layout.store, () =>
     resolvePanelCollapsible(workbench, "secondary-header", "secondary"),
   );
-  const open = useWorkbenchStore(workbench.panels.store, (state) => state.openByRegionId.secondary ?? true);
+  const open = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.secondary.visible);
 
   return {
     has: hasContent || hasHeader || hasPanelHeader,
     hasHeader,
     collapsible,
-    collapsed: !open && collapsible,
+    collapsed: !open,
     onCollapsedChange: (collapsed: boolean) => {
-      if (!collapsed || collapsible) setWorkbenchPanelOpen(workbench, "secondary", !collapsed);
+      if (!collapsed || collapsible) workbench.shell.setRegionOpen("secondary", !collapsed);
     },
   };
 };

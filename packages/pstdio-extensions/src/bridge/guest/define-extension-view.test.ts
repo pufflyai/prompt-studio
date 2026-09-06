@@ -4,11 +4,13 @@ import { createGuestHost } from "./define-extension-view";
 describe("createGuestHost", () => {
   test("returns host call results unchanged", async () => {
     const host = createGuestHost(
-      async () => ({ ok: true }),
+      async () => [{ path: "result.json", size: 12, mediaType: "application/json" }],
       () => () => {},
     );
 
-    await expect(host.call("artifacts.read", { op: "list", mount: "runs" })).resolves.toEqual({ ok: true });
+    await expect(host.call("artifacts.read", { op: "list", mount: "runs" })).resolves.toEqual([
+      { path: "result.json", size: 12, mediaType: "application/json" },
+    ]);
   });
 
   test("rethrows serialized bridge rejections as real errors", async () => {
@@ -31,6 +33,6 @@ describe("createGuestHost", () => {
       () => () => {},
     );
 
-    await expect(host.call("commands.execute", {})).rejects.toBe(original);
+    await expect(host.call("commands.execute", { commandId: "test" })).rejects.toBe(original);
   });
 });

@@ -1,15 +1,12 @@
+import { resourceKey } from "@pstdio/sdk/extensions";
 import {
   type ResourceRef,
   resourceContextMenuPath,
   type WorkbenchModuleContext,
-  workbenchResourceKindContextKey,
   workbenchResourceMetadataContextKey,
+  workbenchResourceTypeContextKey,
 } from "@pstdio/workbench";
-import {
-  openWorkbenchTerminal,
-  WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
-  WORKBENCH_TERMINAL_WIDGET_ID,
-} from "@pstdio/workbench/react";
+import { openWorkbenchTerminal, WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -20,7 +17,6 @@ import {
 } from "@/shared/workspaces/workspace-options";
 
 const autoOpenedWorkspaceTerminalUris = new WeakMap<WorkbenchModuleContext, Set<string>>();
-
 const getAutoOpenedWorkspaceTerminalUris = (ctx: WorkbenchModuleContext) => {
   let uris = autoOpenedWorkspaceTerminalUris.get(ctx);
   if (!uris) {
@@ -29,27 +25,22 @@ const getAutoOpenedWorkspaceTerminalUris = (ctx: WorkbenchModuleContext) => {
   }
   return uris;
 };
-
 const workspaceLabel = (resource: ResourceRef) => {
   const shorthand = resource.metadata?.workspaceShorthand;
   return typeof shorthand === "string" ? shorthand : (resource.label ?? resource.id ?? "workspace");
 };
-
 const isLocalReadyWorkspace = (resource: ResourceRef) =>
   resource.metadata?.workspaceExecutionKind === "local" &&
   resource.metadata.workspaceProviderState === "ready" &&
   typeof resource.metadata.workspacePath === "string" &&
   resource.metadata.workspacePath.length > 0;
-
 const resolveWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (typeof resource.metadata?.workspacePath === "string" && resource.metadata.workspacePath.length > 0) {
     return resource;
   }
-
   const projectId = getDashboardSelectedProjectId(ctx);
   const workspace = createDashboardWorkspaceOptions(projectId).find((option) => option.id === resource.id);
   if (!workspace?.workspacePath) return resource;
-
   const canonical = createDashboardWorkspaceOptionResource(workspace, projectId);
   return {
     ...resource,
@@ -60,13 +51,11 @@ const resolveWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource:
     },
   };
 };
-
 // The table, selected-resource breadcrumb, and tree resource menus all run the same
 // action, so a workspace behaves identically wherever it is surfaced. These views
 // listen to synced rows, so the action only needs to fire the write.
 export const archiveWorkspaceResource = async (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
-
   try {
     await archiveDashboardWorkspace(resource.id);
     ctx.notifications.show({ level: "success", title: `Archived workspace ${workspaceLabel(resource)}` });
@@ -78,10 +67,8 @@ export const archiveWorkspaceResource = async (ctx: WorkbenchModuleContext, reso
     });
   }
 };
-
 export const deleteWorkspaceResource = async (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
-
   try {
     await deleteDashboardWorkspace(resource.id);
     ctx.notifications.show({ level: "success", title: `Deleted workspace ${workspaceLabel(resource)}` });
@@ -93,26 +80,20 @@ export const deleteWorkspaceResource = async (ctx: WorkbenchModuleContext, resou
     });
   }
 };
-
 export const openRenameWorkspaceResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
-
-  ctx.layout.openPanel(dashboardWidgetIds.renameWorkspace, { title: "Rename workspace", resource, closable: true });
+  ctx.overlays.openOverlay(dashboardWidgetIds.renameWorkspace, { title: "Rename workspace", resource });
 };
-
 export const openWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
-  if (!ctx.layout.getPanel(WORKBENCH_TERMINAL_WIDGET_ID)) return;
+  if (!ctx.shellPlacements.getPlacement(WORKBENCH_TERMINAL_WIDGET_ID)) return;
   const terminalResource = resolveWorkspaceTerminalResource(ctx, resource);
   if (!isLocalReadyWorkspace(terminalResource)) return;
-
   return openWorkbenchTerminal(ctx, { resource: terminalResource });
 };
-
 export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
   if (!resource.id) return;
-  if (!ctx.layout.getPanel(WORKBENCH_TERMINAL_WIDGET_ID)) return;
-
+  if (!ctx.shellPlacements.getPlacement(WORKBENCH_TERMINAL_WIDGET_ID)) return;
   const terminalResource = resolveWorkspaceTerminalResource(ctx, resource);
   if (!isLocalReadyWorkspace(terminalResource)) return;
   const autoOpenedUris = getAutoOpenedWorkspaceTerminalUris(ctx);
@@ -120,35 +101,59 @@ export const ensureWorkspaceTerminalResource = (ctx: WorkbenchModuleContext, res
     .getLayout()
     .regions.secondary.widgets.find(
       (placement) =>
-        placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID && placement.resourceUri === resource.uri,
+        placement.placementIdentity?.kind === "shell" &&
+        placement.placementIdentity.placementId === WORKBENCH_TERMINAL_WIDGET_ID &&
+        placement.resource?.type === "terminal" &&
+        placement.resource.metadata?.workspaceId === resource.id,
     );
-  if (!existing && autoOpenedUris.has(resource.uri)) {
-    return ctx.layout.openPanel(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, {
-      hiddenByDefault: true,
-      pinned: true,
-      title: "Terminal",
-    });
-  }
-
   if (existing) {
     if (existing.resource?.metadata?.workspacePath === terminalResource.metadata?.workspacePath) return existing;
-    return ctx.layout.updatePanel(existing.widgetId, {
-      resource: terminalResource,
+    const identity = existing.placementIdentity;
+    if (!identity || identity.kind !== "shell") return;
+    const updatedTerminal = existing.resource
+      ? { ...existing.resource, metadata: { ...existing.resource.metadata, ...terminalResource.metadata } }
+      : undefined;
+    return ctx.shellPlacements.updatePlacement(identity, {
+      resource: updatedTerminal,
       title: existing.title,
     });
   }
-
-  autoOpenedUris.add(resource.uri);
+  const owned = ctx.shellPlacements
+    .resolvePlacements()
+    .find(
+      (placement) =>
+        placement.identity.kind === "shell" &&
+        placement.identity.placementId === WORKBENCH_TERMINAL_WIDGET_ID &&
+        placement.value.resource?.type === "terminal" &&
+        placement.value.resource.metadata?.workspaceId === resource.id,
+    );
+  if (owned?.identity.kind === "shell") {
+    const updatedTerminal = owned.value.resource
+      ? { ...owned.value.resource, metadata: { ...owned.value.resource.metadata, ...terminalResource.metadata } }
+      : terminalResource;
+    ctx.shellPlacements.updatePlacement(owned.identity, {
+      resource: updatedTerminal,
+      title: owned.value.title,
+    });
+    return ctx.layout
+      .getLayout()
+      .regions.secondary.widgets.find(
+        (placement) =>
+          placement.placementIdentity?.kind === "shell" &&
+          placement.placementIdentity.placementId === WORKBENCH_TERMINAL_WIDGET_ID &&
+          placement.resource?.metadata?.workspaceId === resource.id,
+      );
+  }
+  if (autoOpenedUris.has(resourceKey(resource))) return;
+  autoOpenedUris.add(resourceKey(resource));
   return openWorkbenchTerminal(ctx, { resource: terminalResource, reveal: false });
 };
-
 // The default workspace (root repo) is permanent: hide every action when the active or
 // right-clicked resource is the default workspace.
-const mutableWorkspaceWhen = `${workbenchResourceKindContextKey} == "workspace" && !${workbenchResourceMetadataContextKey("workspaceIsDefault")}`;
-const workspaceTerminalActionWhen = `${workbenchResourceKindContextKey} == "workspace" && ${workbenchResourceMetadataContextKey("workspaceExecutionKind")} == "local" && ${workbenchResourceMetadataContextKey("workspaceProviderState")} == "ready"`;
+const mutableWorkspaceWhen = `${workbenchResourceTypeContextKey} == "workspace" && !${workbenchResourceMetadataContextKey("workspaceIsDefault")}`;
+const workspaceTerminalActionWhen = `${workbenchResourceTypeContextKey} == "workspace" && ${workbenchResourceMetadataContextKey("workspaceExecutionKind")} == "local" && ${workbenchResourceMetadataContextKey("workspaceProviderState")} == "ready"`;
 const workspaceArchiveActionWhen = `${mutableWorkspaceWhen} && ${workbenchResourceMetadataContextKey("workspaceSupportsArchive")}`;
 const workspaceDeleteActionWhen = `${mutableWorkspaceWhen} && ${workbenchResourceMetadataContextKey("workspaceSupportsDelete")}`;
-
 const workspaceActions = [
   {
     commandId: dashboardCommandIds.renameWorkspace,
@@ -180,7 +185,6 @@ const workspaceTerminalAction = {
   when: workspaceTerminalActionWhen,
 } as const;
 const workspaceActionGroup = "kernel";
-
 export const registerWorkspaceResourceActions = (ctx: WorkbenchModuleContext) => {
   ctx.commands.registerCommand(
     {
@@ -203,7 +207,6 @@ export const registerWorkspaceResourceActions = (ctx: WorkbenchModuleContext) =>
     { id: dashboardCommandIds.deleteWorkspace, label: "Delete workspace", category: "Workspace", icon: "Trash2" },
     { execute: (_args, context) => context?.resource && deleteWorkspaceResource(ctx, context.resource) },
   );
-
   for (const action of [workspaceTerminalAction, ...workspaceActions]) {
     ctx.layout.registerMenuItem(resourceContextMenuPath("workspace"), {
       commandId: action.commandId,

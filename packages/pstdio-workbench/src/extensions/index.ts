@@ -1,13 +1,11 @@
-export {
-  BRIDGE_WEBVIEW_RENDERER_ID,
-  type BridgeWebviewConfig,
-  type BridgeWebviewRenderContext,
-  type CreateBridgeWebviewHostCapabilities,
-  type CreateBridgeWebviewProps,
-  type CreateBridgeWebviewTheme,
-  createBridgeWebviewRenderer,
-  renderBridgeWebviewFrame,
+export type {
+  BridgeWebviewConfig,
+  BridgeWebviewRenderContext,
+  CreateBridgeWebviewHostCapabilities,
+  CreateBridgeWebviewProps,
+  CreateBridgeWebviewTheme,
 } from "./bridge/bridge-webview-renderer";
+export { getBridgeWebviewHostEventPublisher, renderBridgeWebviewFrame } from "./bridge/bridge-webview-renderer";
 export { createTerminalSessionCapability } from "./bridge/terminal-session-capability";
 export type {
   ExtensionWebviewArtifactCapabilities,
@@ -15,14 +13,6 @@ export type {
 } from "./bridge/webview-command-capabilities";
 export { createWorkbenchWebviewHostCapabilities } from "./bridge/webview-host-capabilities";
 export { registerWorkbenchExtensionCommandPaletteResources } from "./contributions/command-palette-resource-contributions";
-export {
-  compositionRequiredNotificationId,
-  createWorkbenchCompositionRegistry,
-  listCompositionAddablePanels,
-  reconcileCompositionLayout,
-  toPanelPlacements,
-  type WorkbenchCompositionRegistry,
-} from "./contributions/composition-contributions";
 export {
   registerWorkbenchExtensionControlsRenderers,
   type WorkbenchExtensionControlsAdapter,
@@ -47,12 +37,6 @@ export {
   registerWorkbenchExtensionKanbanRenderers,
   type WorkbenchExtensionKanbanRendererAdapter,
 } from "./contributions/kanban-renderer-contributions";
-export {
-  panelMenuDeclarationOffsets,
-  type RegisterWorkbenchExtensionPanelInput,
-  registerWorkbenchExtensionPanel,
-  toWorkbenchCompositionPanelContribution,
-} from "./contributions/panel-contributions";
 export {
   type RegisterWorkbenchExtensionTreeRenderersInput,
   registerWorkbenchExtensionTreeRenderers,

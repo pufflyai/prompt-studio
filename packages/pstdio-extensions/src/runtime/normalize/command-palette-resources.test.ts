@@ -22,8 +22,6 @@ describe("normalizeExtensionSources command palette resources", () => {
   test("registers a typed private query provider", () => {
     const ticket = defineResourceKind({
       id: "ticket",
-      surface: "primary",
-      slots: [{ id: "primary", cardinality: "one", access: "owner" }],
     });
     const provider = defineCommandPaletteResource({
       id: "tickets",

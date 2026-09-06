@@ -1,18 +1,15 @@
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { FileUploadValue } from "@pstdio/ui";
 import type { CommandParamDescriptor, CommandParamSchema, WorkbenchCommandExecutionContext } from "../../core";
-
 export interface CommandFilesParamValue {
   refs: string[];
   uploads: FileUploadValue[];
 }
-
 export type CommandParamValue = string | boolean | string[] | CommandFilesParamValue | undefined;
-
 export interface CommandParamEntry extends CommandParamDescriptor {
   key: string;
   label: string;
 }
-
 const humanize = (value: string) => {
   const spaced = value
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
@@ -20,27 +17,22 @@ const humanize = (value: string) => {
     .trim();
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 };
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
-
 export const isFileUploadValue = (value: unknown): value is FileUploadValue => {
   if (!isRecord(value) || !isRecord(value.file)) return false;
   return typeof value.id === "string" && typeof value.file.name === "string" && typeof value.status === "string";
 };
-
 export const isCommandFilesParamValue = (value: unknown): value is CommandFilesParamValue =>
   isRecord(value) &&
   Array.isArray(value.refs) &&
   value.refs.every((ref) => typeof ref === "string") &&
   Array.isArray(value.uploads) &&
   value.uploads.every(isFileUploadValue);
-
 export const createCommandFilesParamValue = (input: Partial<CommandFilesParamValue> = {}): CommandFilesParamValue => ({
   refs: [...(input.refs ?? [])],
   uploads: [...(input.uploads ?? [])],
 });
-
 const commandFilesParamValue = (raw: unknown, multiple: boolean | undefined) => {
   const value = isCommandFilesParamValue(raw)
     ? createCommandFilesParamValue(raw)
@@ -48,50 +40,42 @@ const commandFilesParamValue = (raw: unknown, multiple: boolean | undefined) => 
         refs: Array.isArray(raw) ? raw.filter((item): item is string => typeof item === "string") : [],
         uploads: Array.isArray(raw) ? raw.filter(isFileUploadValue) : [],
       });
-
   if (multiple !== false) return value;
   if (value.uploads[0]) return createCommandFilesParamValue({ uploads: [value.uploads[0]] });
   return createCommandFilesParamValue({ refs: value.refs.slice(0, 1) });
 };
-
 const stringifyEditableValue = (value: unknown) => {
   if (value === undefined || value === null) return "";
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   return JSON.stringify(value);
 };
-
 const toIdentifierPrefix = (value: string) =>
   value
     .replace(/[^a-zA-Z0-9]+([a-zA-Z0-9])/g, (_match, char: string) => char.toUpperCase())
     .replace(/^[A-Z]/, (char) => char.toLowerCase());
-
 const metadataString = (metadata: Record<string, unknown> | undefined, key: string) => {
   const value = metadata?.[key];
   if (typeof value === "string") return value;
   if (typeof value === "number") return String(value);
   return undefined;
 };
-
 const resourceContextValue = (entry: CommandParamEntry, context: WorkbenchCommandExecutionContext | undefined) => {
   const resource = context?.resource;
   if (!resource) return undefined;
-
   const metadataValue = metadataString(resource.metadata, entry.key);
   if (metadataValue !== undefined) return metadataValue;
-
-  if (entry.key === `${toIdentifierPrefix(resource.kind)}Id`) return resource.id ?? resource.uri;
-  if (entry.type === "resource" && (!entry.resourceType || entry.resourceType === resource.kind)) {
+  if (entry.key === `${toIdentifierPrefix(resource.type)}Id`) return resource.id ?? resourceKey(resource);
+  if (entry.type === "resource" && (!entry.resourceType || entry.resourceType === resource.type)) {
     return {
-      type: resource.kind,
-      id: resource.id ?? resource.uri,
+      type: resource.type,
+      id: resource.id ?? resourceKey(resource),
       ...(resource.label ? { label: resource.label } : {}),
       ...(resource.metadata ? { metadata: resource.metadata } : {}),
     };
   }
   return undefined;
 };
-
 const dedupeOptions = (options: CommandParamDescriptor["options"]) => {
   if (!options) return options;
   const seen = new Set<string>();
@@ -101,10 +85,8 @@ const dedupeOptions = (options: CommandParamDescriptor["options"]) => {
     return true;
   });
 };
-
 export const hasCommandParameters = (params: CommandParamSchema | undefined) =>
   listCommandParamEntries(params).length > 0;
-
 export const listCommandParamEntries = (params: CommandParamSchema | undefined): CommandParamEntry[] =>
   Object.entries(params ?? {}).flatMap(([key, param]) =>
     param.resolvedFrom === "resource"
@@ -118,7 +100,6 @@ export const listCommandParamEntries = (params: CommandParamSchema | undefined):
           },
         ],
   );
-
 export const buildCommandParamInitialValues = (
   params: CommandParamSchema | undefined,
   baseArgs?: unknown,
@@ -126,7 +107,6 @@ export const buildCommandParamInitialValues = (
 ): Record<string, CommandParamValue> => {
   const base = isRecord(baseArgs) ? baseArgs : {};
   const values: Record<string, CommandParamValue> = {};
-
   for (const entry of listCommandParamEntries(params)) {
     const raw = Object.hasOwn(base, entry.key)
       ? base[entry.key]
@@ -145,15 +125,12 @@ export const buildCommandParamInitialValues = (
     }
     values[entry.key] = stringifyEditableValue(raw);
   }
-
   return values;
 };
-
 const isEmptyValue = (value: CommandParamValue) => {
   if (isCommandFilesParamValue(value)) return value.refs.length === 0 && value.uploads.length === 0;
   return value === undefined || value === "" || (Array.isArray(value) && value.length === 0);
 };
-
 const parseJsonValue = (entry: CommandParamEntry, value: CommandParamValue) => {
   if (typeof value !== "string") return value;
   try {
@@ -162,7 +139,6 @@ const parseJsonValue = (entry: CommandParamEntry, value: CommandParamValue) => {
     throw new Error(`Invalid JSON for ${entry.label}`);
   }
 };
-
 const normalizeValue = (entry: CommandParamEntry, value: CommandParamValue) => {
   if (entry.type === "number") {
     const numberValue = Number(value);
@@ -177,13 +153,11 @@ const normalizeValue = (entry: CommandParamEntry, value: CommandParamValue) => {
   if (entry.type === "multi-select") return Array.isArray(value) ? value : String(value).split(",").filter(Boolean);
   return String(value ?? "");
 };
-
 export const normalizeCommandParamValues = (
   params: CommandParamSchema | undefined,
   values: Record<string, CommandParamValue>,
 ) => {
   const normalized: Record<string, unknown> = {};
-
   for (const entry of listCommandParamEntries(params)) {
     const value = values[entry.key];
     if (isEmptyValue(value)) {
@@ -192,10 +166,8 @@ export const normalizeCommandParamValues = (
     }
     normalized[entry.key] = normalizeValue(entry, value);
   }
-
   return normalized;
 };
-
 export const mergeCommandParamArgs = (baseArgs: unknown, params: Record<string, unknown>) => ({
   ...(isRecord(baseArgs) ? baseArgs : {}),
   ...params,

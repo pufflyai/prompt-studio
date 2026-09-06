@@ -1,26 +1,56 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import source from "../page-composition/module.tsx?raw";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="9. Page replacement" />
 
-<Meta of={OnboardingStories} name="8. Focus and context" parameters={{ layout: "padded" }} />
+# 9. Replace one page with another
 
-# 8. Hide Commands When They Don't Apply
+Press **Open Extension Lab**. The Session page's Main, Sidenav, and full-height Side panel disappear. The Extension Lab
+page replaces them with Main, Sidenav, and a bottom Secondary panel. Page navigation replaces content and panel
+geometry instead of leaving the old page's panels behind.
 
-Add a `when` expression to a command or menu item to hide it unless workbench
-state matches. Two common sources for `when` values:
+All callers use the same page-location controller. The controller owns cleanup, mode activation, page composition,
+breadcrumbs, and the browser location.
 
-- **Focus** — the shell automatically publishes `mainFocus`, `sidenavFocus`,
-  `secondaryFocus`, and `sideFocus` as the user moves around. Use these to gate region-specific commands
-  ("Run on file" should only appear when focus is in `main`).
-- **Module-set keys** — `ctx.context.set("docs.selectedGuide", value)` lets
-  you publish your own keys and reference them: `when: "docs.selectedGuide"`
-  or `when: "docs.selectedGuide && mainFocus"`.
+<Canvas of={OnboardingStories.PageReplacement} sourceState="none" />
 
-<Canvas of={OnboardingStories.FocusAndContext} sourceState="shown" />
+## Complete example
 
-The story labels each action with the `when` clause that controls it. Toggle
-focus and guide selection — commands appear and disappear in the palette and
-header without re-registering anything.
+<Source code={source} language="tsx" />
+
+## What each field means
+
+The setup creates the workbench and two modes:
+
+- `createWorkbench({ startPage })` creates one workbench service container. `startPage` names the page to open when a
+  project loads without a saved location.
+- `sessionPage` and `labPage` are `PageRef` values: `{ extensionId, kind: "page", id }`. A `PageRef` is the typed
+  reference that navigation targets use to name a page.
+- `modes.registerMode({ id, activate })` declares a mode. `activate` runs when the mode becomes active. These modes need
+  no extra setup, so it returns `undefined`.
+
+`views.registerView(...)` defines the page content:
+
+- `id` is the stable View identity. Page slots refer to this value.
+- `title` is the default user-facing label.
+- `body.kind: "react"` allows trusted host code to return React from `render`.
+- `render` receives one render input. `input.workbench` exposes the running workbench services to the content.
+
+The button calls `input.workbench.pageLocations.navigate(...)`:
+
+- the argument is a page navigation target: `{ kind: "page", page }`.
+- `navigate` selects the target page's mode, replaces the previous page's placements with the target page's slots,
+  commits one canonical location, and updates the URL and history once.
+
+`pages.registerPage(...)` declares each page:
+
+- `id` is the page's stable identity inside the host.
+- `ref` is the typed `PageRef` other code uses to open the page.
+- `title` is the page label.
+- `path` is the page's stable URL segment.
+- `modeId` names the mode that owns the page. Opening the page activates this mode.
+- `main` renders the Main view. `slots` declares the fixed Sidenav panel and an open panel in Side for Session or Secondary for Extension Lab. Navigation replaces the old page's owned placements together.
+
+`pageLocations.switchProject("storybook")` starts page navigation for one project. It restores that project's saved
+location, or opens the start page when nothing is saved.

@@ -124,7 +124,7 @@ const createSessionViaApi = async (
       project_id: projectId,
       title: prompt,
       prompt,
-      agent: "pstdio.extension-lab.harness.fake",
+      agent: "pstdio.workbench-fixture.harness.fake",
     },
   });
   expect(res.ok()).toBe(true);

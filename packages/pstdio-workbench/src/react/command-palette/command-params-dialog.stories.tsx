@@ -1,8 +1,10 @@
-import { Box } from "@chakra-ui/react";
+import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { type ComponentProps, useState } from "react";
 import type { Command, RegisteredCommand } from "../../core";
 import { WorkbenchThemeProvider } from "../theme/workbench-theme-provider";
 import { CommandParamsDialog } from "./command-params-dialog";
+import { commandParamsSources } from "./command-params-dialog-source";
 
 const registerCommand = (command: Command) =>
   ({
@@ -88,10 +90,48 @@ const filesCommand = registerCommand({
   },
 });
 
+const commandSourceParameters = (code: string) => ({
+  docs: { source: { code, language: "tsx", type: "code" } },
+});
+
+const CommandParameterExample = (props: ComponentProps<typeof CommandParamsDialog>) => {
+  const { onClose, request } = props;
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Stack align="flex-start" gap="sm" p="lg">
+      <Stack gap="xs">
+        <Text textStyle="heading/S/semibold">{request?.label}</Text>
+        <Text color="fg.muted">The workbench builds the form from the command's parameter schema.</Text>
+      </Stack>
+      <Button size="sm" onClick={() => setOpen(true)}>
+        Open parameter form
+      </Button>
+      <CommandParamsDialog
+        {...props}
+        request={open ? request : null}
+        onClose={() => {
+          setOpen(false);
+          onClose();
+        }}
+      />
+    </Stack>
+  );
+};
+
 const meta = {
-  title: "pstdio-workbench/CommandParamsDialog",
+  title: "pstdio-workbench/Guides/Command parameters",
   component: CommandParamsDialog,
-  parameters: { layout: "fullscreen" },
+  tags: ["!dev"],
+  parameters: {
+    layout: "padded",
+    docs: {
+      description: {
+        component:
+          "Command parameter schemas in @pstdio/sdk/extensions describe input fields. The host renders the form, validates it, and passes normalized values to the command.",
+      },
+    },
+  },
   args: {
     onClose: () => {},
     onRun: async () => {},
@@ -99,7 +139,7 @@ const meta = {
   decorators: [
     (Story) => (
       <WorkbenchThemeProvider>
-        <Box minH="100dvh">
+        <Box minH="180px">
           <Story />
         </Box>
       </WorkbenchThemeProvider>
@@ -112,6 +152,8 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const NumberParameter: Story = {
+  parameters: commandSourceParameters(commandParamsSources.number),
+  render: (args) => <CommandParameterExample {...args} />,
   args: {
     request: {
       label: "Bump lab counter",
@@ -121,6 +163,8 @@ export const NumberParameter: Story = {
 };
 
 export const RefineTicket: Story = {
+  parameters: commandSourceParameters(commandParamsSources.refineTicket),
+  render: (args) => <CommandParameterExample {...args} />,
   args: {
     request: {
       label: "Refine ticket",
@@ -130,6 +174,8 @@ export const RefineTicket: Story = {
 };
 
 export const EveryControl: Story = {
+  parameters: commandSourceParameters(commandParamsSources.everyControl),
+  render: (args) => <CommandParameterExample {...args} />,
   args: {
     request: {
       label: "Run with every param type",
@@ -139,6 +185,8 @@ export const EveryControl: Story = {
 };
 
 export const FilesParameter: Story = {
+  parameters: commandSourceParameters(commandParamsSources.files),
+  render: (args) => <CommandParameterExample {...args} />,
   args: {
     request: {
       label: "Import data files",

@@ -10,7 +10,7 @@ const placement = (overrides: Partial<WorkbenchWidgetPlacement>): WorkbenchWidge
 
 describe("resolveRegionPlacementRenderState", () => {
   test("keeps inactive keep-mounted placements measurable", () => {
-    expect(resolveRegionPlacementRenderState(placement({ widgetId: "terminal" }), "active")).toEqual({
+    expect(resolveRegionPlacementRenderState(placement({ widgetId: "terminal" }), "active", "main")).toEqual({
       active: false,
       display: "flex",
       pointerEvents: "none",
@@ -20,8 +20,20 @@ describe("resolveRegionPlacementRenderState", () => {
   });
 
   test("renders the active placement in flow", () => {
-    expect(resolveRegionPlacementRenderState(placement({ widgetId: "active" }), "active")).toEqual({
+    expect(resolveRegionPlacementRenderState(placement({ widgetId: "active" }), "active", "main")).toEqual({
       active: true,
+      display: "flex",
+      pointerEvents: "auto",
+      position: "relative",
+      visibility: "visible",
+    });
+  });
+
+  test("keeps inactive Sidenav sections visible and interactive", () => {
+    expect(
+      resolveRegionPlacementRenderState(placement({ widgetId: "mode-sessions" }), "page-tools", "sidenav"),
+    ).toEqual({
+      active: false,
       display: "flex",
       pointerEvents: "auto",
       position: "relative",

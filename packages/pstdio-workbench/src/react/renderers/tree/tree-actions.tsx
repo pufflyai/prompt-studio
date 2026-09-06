@@ -154,7 +154,7 @@ const isKernelMenuAction = (group: string | undefined) => group === "kernel";
 const createTreeMenuItemGroups = (input: CreateTreeMenuItemsInput) => {
   const { context, menuPath, onCommandError, onRequestParams, workbench } = input;
   const contextValues = commandContextValues(workbench, context);
-  const shortcuts = new Map(workbench.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]));
+  const shortcuts = new Map(workbench.keybindings.listCommandKeybindings().map((k) => [k.commandId, k.keybinding]));
   const regularItems: TreeListActionMenuItem[] = [];
   const kernelItems: TreeListActionMenuItem[] = [];
 
@@ -231,7 +231,7 @@ export const createTreeMenuItems = (input: CreateTreeMenuItemsInput) => {
 const createTreeActionMenuItems = (input: CreateTreeContextMenuItemsInput) => {
   const { actions = [], context, onCommandError, onRequestParams, workbench } = input;
   const contextValues = commandContextValues(workbench, context);
-  const shortcuts = new Map(workbench.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]));
+  const shortcuts = new Map(workbench.keybindings.listCommandKeybindings().map((k) => [k.commandId, k.keybinding]));
   const items: TreeListActionMenuItem[] = [];
 
   for (const action of actions) {
@@ -292,7 +292,7 @@ export const createTreeContextMenuItems = (input: CreateTreeContextMenuItemsInpu
 export const createTreeActionItems = (input: CreateTreeActionItemsInput) => {
   const { actions = [], context, onCommandError, onRequestParams, workbench } = input;
   const contextValues = commandContextValues(workbench, context);
-  const shortcuts = new Map(workbench.keybindings.listActiveKeybindings().map((k) => [k.commandId, k.keybinding]));
+  const shortcuts = new Map(workbench.keybindings.listCommandKeybindings().map((k) => [k.commandId, k.keybinding]));
   const items: TreeListAction[] = [];
 
   for (const action of actions) {

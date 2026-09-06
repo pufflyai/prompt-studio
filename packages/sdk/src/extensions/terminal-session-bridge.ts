@@ -35,8 +35,9 @@ export interface TerminalSessionBridge {
  */
 export const createTerminalSessionBridge = (host: GuestHost): TerminalSessionBridge => ({
   async openSession(request) {
-    const call = (operation: TerminalSessionOperation) => host.call(TERMINAL_SESSION_CAPABILITY, operation);
-    const opened = (await call({ operation: "open", request })) as { sessionId: string };
+    const call = <const Operation extends TerminalSessionOperation>(operation: Operation) =>
+      host.call(TERMINAL_SESSION_CAPABILITY, operation);
+    const opened = await call({ operation: "open", request });
     const sessionId = opened.sessionId;
 
     const dataHandlers = new Set<(chunk: Uint8Array) => void>();

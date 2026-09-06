@@ -3,10 +3,6 @@ import type { ContributionKind } from "./types/contribution-identity";
 
 const hostRef = <Kind extends ContributionKind>(kind: Kind, id: string) => ({ extensionId: "pstdio", kind, id });
 
-export const workbenchCommands = {
-  switchMode: hostRef("command", "workbench.action.switchMode"),
-};
-
 export const workbenchModes = {
   project: hostRef("mode", "project"),
   sessions: hostRef("mode", "sessions"),
@@ -26,7 +22,6 @@ const hostResourceKind = (
 ): ResourceKindDefinition => ({
   id,
   ref: hostRef("resource-kind", id),
-  surface: "primary",
   label,
   menuSlots,
 });
@@ -51,7 +46,9 @@ export const workbenchResourceKinds = {
 export const workbenchPages = {
   start: hostRef("page", "start"),
   sessions: hostRef("page", "sessions"),
+  session: hostRef("page", "session"),
   workspaces: hostRef("page", "workspaces"),
+  workspace: hostRef("page", "workspace"),
 };
 
 export const workbenchPageDefinitions = {
@@ -65,12 +62,24 @@ export const workbenchPageDefinitions = {
     ref: workbenchPages.sessions,
     mode: workbenchModes.sessions,
     path: "sessions",
-    primary: { cardinality: "many", resourceKinds: ["session", "session-draft"] },
+    primary: { cardinality: "one", resourceKinds: [] },
+  },
+  session: {
+    ref: workbenchPages.session,
+    mode: workbenchModes.sessions,
+    path: "session",
+    primary: { cardinality: "one", resourceKinds: ["session", "session-draft"] },
   },
   workspaces: {
     ref: workbenchPages.workspaces,
     mode: workbenchModes.project,
     path: "workspaces",
+    primary: { cardinality: "one", resourceKinds: [] },
+  },
+  workspace: {
+    ref: workbenchPages.workspace,
+    mode: workbenchModes.project,
+    path: "workspace",
     primary: { cardinality: "many", resourceKinds: ["workspace"] },
   },
 } as const;
@@ -89,7 +98,6 @@ export const workbenchPanelDefinitions = {
 } as const;
 
 export const workbenchSlots = {
-  projectNavigation: hostRef("navigation-item", "project.navigation"),
   projectSettings: hostRef("settings-panel", "project.settings"),
   statusBarLeading: hostRef("status-bar-item", "status-bar.leading"),
   statusBarTrailing: hostRef("status-bar-item", "status-bar.trailing"),

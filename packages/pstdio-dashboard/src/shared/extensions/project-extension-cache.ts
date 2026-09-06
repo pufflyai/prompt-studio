@@ -85,12 +85,25 @@ export const createProjectExtensionCache = (queryClient: QueryClient, projectId:
 
   const storeAutomation = async (instanceId: string, automation: WorkbenchExtensionAutomationRecord) => {
     await cancelProjectReads();
-    queryClient.setQueryData<DashboardExtensionMetadata>(projectExtensionMetadataQueryKey(projectId), (current) =>
+    const contributionKey = ["extension-contributions", projectId, instanceId];
+    const contributions = queryClient.getQueryData<DashboardExtensionMetadata>(contributionKey);
+    queryClient.setQueryData<DashboardExtensionMetadata>(projectExtensionMetadataQueryKey(projectId), (current) => {
+      // The detail query knows all of this extension's automations even while
+      // the project metadata still reflects its previous disabled state.
+      const complete =
+        current && contributions?.automations
+          ? {
+              ...current,
+              automations: [
+                ...(current.automations ?? []).filter((entry) => entry.extensionInstanceId !== instanceId),
+                ...contributions.automations,
+              ],
+            }
+          : current;
+      return replaceAutomation(complete, automation, instanceId);
+    });
+    queryClient.setQueryData<DashboardExtensionMetadata>(contributionKey, (current) =>
       replaceAutomation(current, automation, instanceId),
-    );
-    queryClient.setQueryData<DashboardExtensionMetadata>(
-      ["extension-contributions", projectId, instanceId],
-      (current) => replaceAutomation(current, automation, instanceId),
     );
     refresh();
   };

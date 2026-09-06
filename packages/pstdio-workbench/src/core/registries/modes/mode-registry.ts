@@ -1,14 +1,24 @@
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
+import { runWorkbenchEffect } from "../../shared/workbench-effect";
 import type { WorkbenchCoreContributionContext } from "../../workbench-core";
-import {
-  type WorkbenchLayout,
-  type WorkbenchPanelRegion,
-  type WorkbenchRegion,
-  type WorkbenchWidgetPlacement,
-  workbenchPanelRegions,
+import type {
+  WorkbenchLayout,
+  WorkbenchPanelRegion,
+  WorkbenchRegion,
+  WorkbenchRegionSettings,
 } from "../layout/layout-model";
 import type { ResourceRef } from "../resources/resource-registry";
+import {
+  applyModePanelAvailability,
+  disposeReverse,
+  panelsForMode,
+  restoreModeLayout,
+  restoreUnscopedModeLayout,
+} from "./mode-layout";
+import { setWorkbenchModeRegistryInternals } from "./mode-registry-internals";
+
+export { getWorkbenchModePanelForRegion, isWorkbenchModePanelAvailable } from "./mode-layout";
 
 export type WorkbenchModeActivationContext = WorkbenchCoreContributionContext;
 
@@ -29,7 +39,12 @@ export interface WorkbenchModeAddablePanelContext {
 export interface WorkbenchModeContribution {
   id: string;
   label?: string;
+  defaultTheme?: string;
+  floatingPanels?: "visible" | "hidden";
+  chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", string | false>>;
   panels?: readonly WorkbenchPanelRegion[];
+  /** Region-level layout policy while this mode is active. */
+  regionSettings?: Partial<Record<WorkbenchRegion, WorkbenchRegionSettings>>;
   // Resource kinds this mode accepts. The atomic navigator validates targets
   // against this list; a mode without kinds navigates with a cleared resource.
   resourceKinds?: readonly string[];
@@ -74,143 +89,9 @@ const toDisposables = (result: WorkbenchModeActivationResult) => {
   return Array.isArray(result) ? [...result] : [result as Disposable];
 };
 
-const modePanelRegions = {
-  main: ["main-header", "main-left-menu", "main", "main-right-menu"],
-  secondary: ["secondary-header", "secondary-left-menu", "secondary", "secondary-right-menu"],
-  side: ["side-header", "side-left-menu", "side", "side-right-menu"],
-} as const satisfies Record<WorkbenchPanelRegion, readonly WorkbenchRegion[]>;
-
-const allModeRegions = Object.values(modePanelRegions).flat();
-const panelsForMode = (mode: WorkbenchModeContribution) => mode.panels ?? workbenchPanelRegions;
-
-export const getWorkbenchModePanelForRegion = (region: WorkbenchRegion) =>
-  (Object.keys(modePanelRegions) as WorkbenchPanelRegion[]).find((panel) =>
-    modePanelRegions[panel].some((candidate) => candidate === region),
-  );
-
-export const isWorkbenchModePanelAvailable = (
-  mode: WorkbenchModeContribution | undefined,
-  panel: WorkbenchPanelRegion,
-) => !mode || panelsForMode(mode).includes(panel);
-
-const placementById = (layout: WorkbenchLayout, widgetId: string | undefined) => {
-  if (!widgetId) return undefined;
-  return Object.values(layout.regions)
-    .flatMap((region) => region.widgets)
-    .find((placement) => placement.widgetId === widgetId);
-};
-
-const withActivePlacement = (
-  layout: WorkbenchLayout,
-  candidates: readonly (WorkbenchWidgetPlacement | undefined)[],
-) => {
-  const active = candidates.find((placement) => placement && placementById(layout, placement.widgetId));
-  return {
-    ...layout,
-    activeWidgetId: active?.widgetId,
-    activeResourceUri: active?.resourceUri,
-  };
-};
-
-const clearRegions = (layout: WorkbenchLayout, regionIds: readonly WorkbenchRegion[]) => {
-  if (regionIds.length === 0) return layout;
-  const clearedPanels = new Set(
-    (Object.keys(modePanelRegions) as WorkbenchPanelRegion[]).filter((panel) =>
-      modePanelRegions[panel].some((region) => regionIds.includes(region)),
-    ),
-  );
-  const regionsNeedClearing = regionIds.some((regionId) => {
-    const region = layout.regions[regionId];
-    return region.widgets.length > 0 || region.activeWidgetId !== undefined || region.visible;
-  });
-  const selectionsNeedClearing = Object.values(layout.locationSubPanelSelections ?? {}).some((selections) =>
-    Object.keys(selections).some((panel) => clearedPanels.has(panel as WorkbenchPanelRegion)),
-  );
-  if (!regionsNeedClearing && !selectionsNeedClearing) return layout;
-
-  const regions = { ...layout.regions };
-  for (const regionId of regionIds) {
-    regions[regionId] = { ...regions[regionId], widgets: [], activeWidgetId: undefined, visible: false };
-  }
-  const locationSubPanelSelections = Object.fromEntries(
-    Object.entries(layout.locationSubPanelSelections ?? {}).map(([resourceUri, selections]) => [
-      resourceUri,
-      Object.fromEntries(
-        Object.entries(selections).filter(([panel]) => !clearedPanels.has(panel as WorkbenchPanelRegion)),
-      ),
-    ]),
-  );
-  const next = { ...layout, regions };
-  return {
-    ...withActivePlacement(next, [placementById(next, layout.activeWidgetId)]),
-    activeLocationWidgetId: placementById(next, layout.activeLocationWidgetId)?.widgetId,
-    locationSubPanelSelections,
-  };
-};
-
-const applyModePanelAvailability = (layout: WorkbenchLayout, panels: readonly WorkbenchPanelRegion[]) => {
-  const available = new Set(panels);
-  const unavailableRegions = (Object.keys(modePanelRegions) as WorkbenchPanelRegion[])
-    .filter((panel) => !available.has(panel))
-    .flatMap((panel) => modePanelRegions[panel]);
-  return clearRegions(layout, unavailableRegions);
-};
-
-const restoreUnscopedModeLayout = (
-  current: WorkbenchLayout,
-  saved: WorkbenchLayout | undefined,
-  panels: readonly WorkbenchPanelRegion[],
-) => {
-  if (!saved) {
-    const regions = { ...current.regions };
-    for (const regionId of allModeRegions) {
-      const region = regions[regionId];
-      const widgets = region.widgets.filter((placement) => placement.role !== "content");
-      regions[regionId] = {
-        ...region,
-        widgets,
-        activeWidgetId: widgets.some((placement) => placement.widgetId === region.activeWidgetId)
-          ? region.activeWidgetId
-          : undefined,
-      };
-    }
-    const withoutModeContent = { ...current, regions };
-    return applyModePanelAvailability(
-      {
-        ...withActivePlacement(withoutModeContent, [placementById(withoutModeContent, current.activeWidgetId)]),
-        activeLocationWidgetId: placementById(withoutModeContent, current.activeLocationWidgetId)?.widgetId,
-      },
-      panels,
-    );
-  }
-
-  const regions = { ...current.regions };
-  for (const regionId of allModeRegions) regions[regionId] = saved.regions[regionId];
-  const merged = applyModePanelAvailability({ ...current, regions }, panels);
-  const savedActive = placementById(merged, saved.activeWidgetId);
-  const currentActive = placementById(merged, current.activeWidgetId);
-  return {
-    ...withActivePlacement(merged, [savedActive, currentActive]),
-    activeLocationWidgetId:
-      placementById(merged, saved.activeLocationWidgetId)?.widgetId ??
-      placementById(merged, current.activeLocationWidgetId)?.widgetId,
-    locationSubPanelSelections: saved.locationSubPanelSelections,
-  };
-};
-
-const disposeReverse = (disposables: readonly Disposable[]) => {
-  for (let index = disposables.length - 1; index >= 0; index -= 1) {
-    disposables[index]?.dispose();
-  }
-};
-
-const restoreModeLayout = (context: WorkbenchModeActivationContext, layout: WorkbenchLayout) => {
-  if (layout !== context.layout.getLayout()) context.layout.restoreLayout(layout);
-  for (const panel of workbenchPanelRegions) context.panels.setOpen(panel, layout.regions[panel].visible);
-};
-
 export interface CreateWorkbenchModeRegistryInput {
   establishLocation?(instanceId: string): void;
+  layout: Pick<WorkbenchCoreContributionContext["layout"], "onDidChangePersistenceScope">;
   resolveContext(): WorkbenchModeActivationContext;
 }
 
@@ -230,7 +111,9 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
 
   const initializeMode = (mode: WorkbenchModeContribution) => {
     if (initializedModes.has(mode.id)) return;
-    const disposables = toDisposables(mode.activate(input.resolveContext()));
+    const disposables = toDisposables(
+      runWorkbenchEffect(`mode ${mode.id}.activate`, () => mode.activate(input.resolveContext())),
+    );
     initializedModes.set(mode.id, disposables);
   };
 
@@ -257,7 +140,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
       establishSeededLocation,
     );
     try {
-      mode.seed?.(context);
+      runWorkbenchEffect(`mode ${mode.id}.seed`, () => mode.seed?.(context));
       establishSeededLocation();
     } finally {
       unsubscribeMainPanel();
@@ -285,7 +168,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
   // rerun activate or enter.
   const reconcileScope = (mode: WorkbenchModeContribution) => {
     prepareScope(mode);
-    mode.reconcile?.(input.resolveContext());
+    runWorkbenchEffect(`mode ${mode.id}.reconcile`, () => mode.reconcile?.(input.resolveContext()));
   };
 
   // Switching modes stashes the outgoing unscoped layout, disposes the active mode,
@@ -314,6 +197,29 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     activate(id, { seed: deferredSeedModeId !== id });
   };
 
+  const activatePageMode = (id: string | undefined, applyLayout: () => void) => {
+    if (id && !store.getState().modes[id]) throw new Error(`Workbench mode not registered: ${id}`);
+    if (id === store.getState().activeModeId) {
+      applyLayout();
+      return;
+    }
+    // Publish the page's mode before its layout. Layout listeners may open panels
+    // owned by that mode as soon as the new primary resource appears.
+    transitioning = true;
+    deferredSeedModeId = undefined;
+    try {
+      disposeActive();
+      if (id === undefined) {
+        store.setState({ ...store.getState(), activeModeId: undefined }, false, "deactivatePageMode");
+        applyLayout();
+        return;
+      }
+      activate(id, { seed: false, afterPublish: applyLayout });
+    } finally {
+      transitioning = false;
+    }
+  };
+
   const disposeActive = () => {
     disposeReverse(activeDisposables);
     activeDisposables = [];
@@ -321,7 +227,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     activeModeContext = undefined;
   };
 
-  const activate = (id: string, options: { seed: boolean }) => {
+  const activate = (id: string, options: { seed: boolean; afterPublish?: () => void }) => {
     const context = input.resolveContext();
     const mode = store.getState().modes[id];
     if (!mode) throw new Error(`Workbench mode not registered: ${id}`);
@@ -333,9 +239,10 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     try {
       initializeMode(mode);
       store.setState({ ...store.getState(), activeModeId: id }, false, "activateMode");
+      options.afterPublish?.();
       if (options.seed) prepareScope(mode);
-      activeDisposables = toDisposables(mode.enter?.(context));
-      if (options.seed) mode.reconcile?.(input.resolveContext());
+      activeDisposables = toDisposables(runWorkbenchEffect(`mode ${mode.id}.enter`, () => mode.enter?.(context)));
+      if (options.seed) runWorkbenchEffect(`mode ${mode.id}.reconcile`, () => mode.reconcile?.(input.resolveContext()));
     } catch (error) {
       disposeActive();
       store.setState({ ...store.getState(), activeModeId: undefined }, false, "deactivateMode");
@@ -343,7 +250,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     }
   };
 
-  const scopeSubscription = input.resolveContext().layout.onDidChangePersistenceScope(() => {
+  const scopeSubscription = input.layout.onDidChangePersistenceScope(() => {
     const activeModeId = store.getState().activeModeId;
     if (activeModeId === deferredSeedModeId) return;
     const mode = activeModeId ? store.getState().modes[activeModeId] : undefined;
@@ -359,7 +266,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
     store.setState({ modes: {}, activeModeId: undefined }, false, "disposeModes");
   });
 
-  return {
+  const registry: WorkbenchModeRegistry = {
     store,
 
     dispose() {
@@ -446,4 +353,7 @@ export const createWorkbenchModeRegistry = (input: CreateWorkbenchModeRegistryIn
       return createDisposable(unsubscribe);
     },
   };
+
+  setWorkbenchModeRegistryInternals(registry, { activatePageMode });
+  return registry;
 };

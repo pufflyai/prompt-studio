@@ -1,7 +1,7 @@
 import { Center, Dialog, Portal } from "@chakra-ui/react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import type { WorkbenchCore, WorkbenchWidgetPlacement } from "../../core";
+import { getWorkbenchRenderers, type WorkbenchCore, type WorkbenchWidgetPlacement } from "../../core";
 import { toPanelContribution, toPanelInstance } from "../../core/registries/layout/panel-api";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -120,7 +120,8 @@ interface WorkbenchOverlayLayerProps {
 export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const { workbench } = props;
   const overlayRegion = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.overlay);
-  const renderers = useWorkbenchStore(workbench.renderers.store, (state) => state.renderers);
+  const renderers = useWorkbenchStore(getWorkbenchRenderers(workbench).store, (state) => state.renderers);
+  useWorkbenchStore(getWorkbenchRenderers(workbench).store, (state) => state.refreshKeys);
   const [exitingPlacement, setExitingPlacement] = useState<WorkbenchWidgetPlacement | undefined>();
 
   const activePlacement = resolveActivePlacement(overlayRegion.widgets, overlayRegion.activeWidgetId);
@@ -147,15 +148,6 @@ export const WorkbenchOverlayLayer = (props: WorkbenchOverlayLayerProps) => {
   const renderer = widget ? renderers[widget.rendererId] : undefined;
   const canCloseOverlay = open && placement.closable === true;
   const closeLabel = placement.title ?? widget?.title ?? "overlay";
-
-  // Overlay widgets are full-screen dialogs — keep-alive doesn't apply here.
-  // Reject keep-alive renderers explicitly so the misconfiguration surfaces
-  // instead of silently rendering nothing into the dialog.
-  if (widget && renderer?.keepAlive) {
-    throw new Error(
-      `Widget ${widget.id} uses keep-alive renderer ${renderer.id} in the overlay region; overlay widgets cannot reuse keep-alive hosts.`,
-    );
-  }
 
   const body =
     widget && renderer ? (

@@ -1,90 +1,95 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, type ResourceRef } from "../../core";
+import { createWorkbench } from "../../core";
 import { executeWorkbenchExtensionCommand } from "./workbench-extension-command";
 
-const ticket: ResourceRef = {
-  kind: "ticket",
-  uri: "pstdio://ticket/ticket-1",
-  id: "ticket-1",
-  label: "PS-1 Ticket",
-};
-
-const setup = async () => {
-  const workbench = createWorkbenchCore();
-  workbench.resources.registerKind({ kind: "ticket", label: "Ticket", surface: "primary" });
-  workbench.layout.registerPanel({
+const setupPage = () => {
+  const workbench = createWorkbench();
+  const ticketsRef = { extensionId: "acme.planner", kind: "page" as const, id: "tickets" };
+  const ticketRef = { extensionId: "acme.planner", kind: "page" as const, id: "ticket" };
+  workbench.modes.registerMode({ id: "project", activate: () => undefined });
+  workbench.views.registerView({
+    id: "tickets",
+    title: "Tickets",
+    body: { kind: "react", render: () => null },
+  });
+  workbench.views.registerView({
     id: "ticket-detail",
     title: "Ticket detail",
-    region: "main",
-    rendererId: "ticket-detail",
-    resourceKinds: ["ticket"],
+    body: { kind: "react", render: () => null },
   });
-  workbench.layout.registerPanel({
-    id: "tickets-panel",
-    title: "Tickets",
-    region: "main",
-    rendererId: "tickets",
+  workbench.pages.registerPage({
+    id: "tickets",
+    ref: ticketsRef,
+    path: "tickets",
+    modeId: "project",
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "tickets",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
-  workbench.views.registerView({ id: "tickets", panelId: "tickets-panel", title: "Tickets" });
-  workbench.resources.registerPresenter({
-    id: "ticket-detail",
-    canOpen: (resource) => resource.kind === "ticket",
-    open: (resource) => workbench.layout.openPanel("ticket-detail", { resource }),
+  workbench.pages.registerPage({
+    id: "ticket",
+    ref: ticketRef,
+    path: "ticket",
+    modeId: "project",
+    parentId: "tickets",
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "ticket",
+        },
+      ],
+    },
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: "ticket-detail",
+      },
+      cardinality: "one",
+    },
+    slots: [],
   });
-  workbench.resources.registerHierarchyProvider({
-    id: "ticket-hierarchy",
-    canResolve: (resource) => resource.kind === "ticket",
-    getParent: () => ({ type: "view", viewId: "tickets" }),
+  workbench.pageLocations.setProject("project-1");
+  workbench.pageLocations.navigate({
+    kind: "page",
+    page: ticketRef,
+    resource: {
+      type: "ticket",
+      id: "ticket-1",
+      label: "PS-1 Ticket",
+      extensionId: "acme.planner",
+      projectId: "project-1",
+    },
   });
-  await workbench.resources.openResource(ticket);
   return workbench;
 };
-
 describe("executeWorkbenchExtensionCommand", () => {
-  test("opens the declared parent when a command deletes the active resource", async () => {
-    const workbench = await setup();
-    const openedViews: string[] = [];
-    workbench.views.onDidOpenView(({ viewId }) => openedViews.push(viewId));
-
+  test("closes a scoped page resource through a breadcrumb delete action", async () => {
+    const workbench = setupPage();
+    const activeTicket = workbench.getPrimaryResource()!;
     await executeWorkbenchExtensionCommand(
       {
         executeCommand: () => ({
           commandId: "pstdio.planner.command.delete-ticket",
           extensionId: "pstdio.planner",
-          outcome: { ok: true, status: "success", value: { id: ticket.id, deleted: true } },
+          outcome: { ok: true, status: "success", value: { id: activeTicket.id, deleted: true } },
         }),
         projectId: "project-1",
         workbench,
       },
       "pstdio.planner.command.delete-ticket",
-      { resource: ticket },
+      { resource: workbench.breadcrumbs.getItems()?.at(-1)?.resource },
     );
-
-    expect(openedViews).toEqual(["tickets"]);
-    expect(workbench.getPrimaryResource()).toBeUndefined();
-  });
-
-  test("does not leave the current page when a command deletes another resource", async () => {
-    const workbench = await setup();
-    const otherTicket = { ...ticket, id: "ticket-2", uri: "pstdio://ticket/ticket-2" };
-    const openedViews: string[] = [];
-    workbench.views.onDidOpenView(({ viewId }) => openedViews.push(viewId));
-
-    await executeWorkbenchExtensionCommand(
-      {
-        executeCommand: () => ({
-          commandId: "pstdio.planner.command.delete-ticket",
-          extensionId: "pstdio.planner",
-          outcome: { ok: true, status: "success", value: { id: otherTicket.id, deleted: true } },
-        }),
-        projectId: "project-1",
-        workbench,
-      },
-      "pstdio.planner.command.delete-ticket",
-      { resource: otherTicket },
-    );
-
-    expect(openedViews).toEqual([]);
-    expect(workbench.getPrimaryResource()).toEqual(ticket);
+    expect(workbench.pages.store.getState().activePageId).toBe("tickets");
+    expect(workbench.layout.getLayout().regions.main.widgets).toEqual([
+      expect.objectContaining({ contributionId: "workbench.page-placement.tickets.%24main" }),
+    ]);
   });
 });

@@ -39,6 +39,45 @@ describe("getInitialThemePreference", () => {
 });
 
 describe("ThemePreferenceProvider", () => {
+  test("uses a mode default without replacing the global preference", () => {
+    installWindow();
+    const storage = installMockLocalStorage();
+    storage.setItem("theme-preference", "pstdio-dark");
+    const markup = renderToStaticMarkup(
+      <ThemePreferenceProvider
+        preferenceScope="scribble"
+        defaultPreference="paper"
+        themePreferences={[
+          { id: "paper", mode: "light" },
+          { id: "ink", mode: "dark" },
+          { id: "pstdio-dark", mode: "dark" },
+        ]}
+      >
+        <ActiveTheme />
+      </ThemePreferenceProvider>,
+    );
+    expect(markup).toBe("<span>paper</span>");
+    expect(storage.getItem("theme-preference")).toBe("pstdio-dark");
+  });
+
+  test("restores an explicit mode preference before its declared default", () => {
+    installWindow();
+    installMockLocalStorage().setItem("theme-preference:scribble", "ink");
+    const markup = renderToStaticMarkup(
+      <ThemePreferenceProvider
+        preferenceScope="scribble"
+        defaultPreference="paper"
+        themePreferences={[
+          { id: "paper", mode: "light" },
+          { id: "ink", mode: "dark" },
+        ]}
+      >
+        <ActiveTheme />
+      </ThemePreferenceProvider>,
+    );
+    expect(markup).toBe("<span>ink</span>");
+  });
+
   test("renders the default theme while waiting for a stored extension theme to register", () => {
     installWindow();
     installMockLocalStorage().setItem("theme-preference", "lab.monokai");

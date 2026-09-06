@@ -3,7 +3,7 @@ import { createControlsRendererRegistry } from "./controls-renderer-registry";
 import { createWorkbenchRendererRegistry } from "./renderer-registry";
 
 const createRegistry = () => {
-  const rendererRegistry = createWorkbenchRendererRegistry({ createHost: () => ({}) as HTMLElement });
+  const rendererRegistry = createWorkbenchRendererRegistry();
   const controls = createControlsRendererRegistry({ rendererRegistry });
   return { rendererRegistry, controls };
 };
@@ -37,7 +37,7 @@ describe("createControlsRendererRegistry", () => {
     });
 
     const renderer = rendererRegistry.getRenderer("ticketControls");
-    if (!renderer || renderer.keepAlive) throw new Error("expected non-keep-alive renderer");
+    if (!renderer) throw new Error("expected renderer");
     renderer.render({} as Parameters<typeof renderer.render>[0]);
 
     expect(calls).toEqual([{ controlsRendererId: "ticketControls" }]);

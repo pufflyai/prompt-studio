@@ -115,7 +115,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       "quitApp",
       "retryRuntime",
       "revealInFinder",
-      "setLastResource",
+      "setPageLocation",
       "setSelectedProjectId",
     ]);
     expect(

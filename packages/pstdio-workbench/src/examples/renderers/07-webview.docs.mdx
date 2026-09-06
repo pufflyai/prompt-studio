@@ -1,0 +1,27 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as RendererStories from "./renderers.stories";
+
+<Meta of={RendererStories} name="7. Webview" />
+
+# Webview renderer
+
+`body.kind: "webview"` loads packaged UI in an isolated frame. The extension declares every host capability it needs.
+The bridge rejects calls outside that list, and the frame receives the active resource and workbench theme.
+
+Use it for charts, maps, diagrams, rich editors, media tools, or other interaction the native renderers cannot
+describe. A webview costs more to build because the extension owns its full UI, accessibility, loading, and error
+states.
+
+<Canvas of={RendererStories.Webview} sourceState="shown" />
+
+## How it works
+
+| Field | Meaning |
+| --- | --- |
+| `entry` | Packaged module created with `packageAsset(path, import.meta.url)`. |
+| `capabilities` | Host operations this view may call, such as commands, notifications, or artifact reads. |
+| `defineExtensionView` | Defines the guest module and its render function. |
+| `createWebviewClient` | Creates the typed bridge client inside the guest. |
+
+Grant only the operations the view calls. Put domain work in extension commands, then let the webview call those
+commands through `commands.execute`. This keeps storage and permissions outside the guest UI.

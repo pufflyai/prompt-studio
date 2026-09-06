@@ -1,36 +1,36 @@
 import type { Localizable } from "../l10n";
-import type { DockedWorkbenchRegion } from "./composition";
-import type {
-  ContributionDefinition,
-  ModeRef,
-  PageRef,
-  PlacementRef,
-  ResourceKindRef,
-  ViewRef,
-} from "./contribution-identity";
+import type { ExtensionPanelRegion } from "./composition";
+import type { ContributionDefinition, ModeRef, PageRef, PlacementRef, ViewRef } from "./contribution-identity";
 import type { FileRendererSectionTarget } from "./file-renderer";
+import type { ResourceConstraint } from "./resource-binding";
 import type { ResourceRef } from "./resources";
+import type { PlacementItem, PlacementPresentation } from "./views";
 
 export type PageSlotRole = "primary" | "auxiliary";
 export type PageSlotCardinality = "one" | "many";
 export type PageOpenIntent = "preview" | "pin";
+export type PageSlotRegion = ExtensionPanelRegion;
 
-export interface PageSlotBinding {
-  readonly kind: ResourceKindRef;
+export interface PageMainView extends PlacementPresentation {
+  readonly kind: "view";
   readonly view: ViewRef;
+  readonly cardinality: PageSlotCardinality;
 }
 
-export interface PageSlot {
+export interface PageMainPanels {
+  readonly kind: "panels";
+  readonly empty: ViewRef;
+}
+
+export type PageMain = PageMainView | PageMainPanels;
+
+/** A page-owned panel. Main presentation and routed context belong to the page. */
+export interface PageSlot extends PlacementPresentation {
   readonly id: string;
-  readonly role: PageSlotRole;
-  readonly region: DockedWorkbenchRegion;
-  readonly view?: ViewRef;
-  readonly binding?: PageSlotBinding;
-  readonly cardinality?: PageSlotCardinality;
-  readonly closable?: boolean;
-  readonly defaultOpen?: boolean;
-  readonly defaultResource?: ResourceRef;
+  readonly region: PageSlotRegion;
   readonly order?: number;
+  readonly item: PlacementItem;
+  readonly openOn?: "page-resource";
 }
 
 export interface PageSlotRef {
@@ -47,6 +47,8 @@ export interface PageContribution extends ContributionDefinition<"page"> {
   readonly path: string;
   readonly mode: ModeRef;
   readonly parent?: PageRef;
+  readonly resource?: ResourceConstraint;
+  readonly main: PageMain;
   readonly slots: readonly PageSlot[];
   readonly panels: Readonly<Record<string, PageSlotRef>>;
 }

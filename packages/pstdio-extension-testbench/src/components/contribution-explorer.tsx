@@ -1,12 +1,17 @@
 import { Box, Button } from "@chakra-ui/react";
 import type { ResourceRef, WorkbenchCore } from "@pstdio/workbench";
-import { settingsPanelResource } from "@pstdio/workbench/react";
+import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { formatForDisplay } from "@tanstack/hotkeys";
 import { text } from "pstdio-extensions/workbench";
 import type { ExtensionBenchLoadResponse } from "../lib/api-contract";
 import { isViewForResourceKind } from "../lib/resource-bindings";
-import { contentContributionWidgetId } from "./content-contribution-panel";
 import { MenuSelect } from "./menu-select";
+import {
+  navigateContentPreview,
+  navigateExtensionPage,
+  navigateResourcePreview,
+  navigateViewPreview,
+} from "./preview-surfaces";
 
 type Platform = "mac" | "windows" | "linux";
 
@@ -23,10 +28,6 @@ interface ContributionExplorerProps {
   resource: ResourceRef;
   workbench: WorkbenchCore;
 }
-
-const openResource = (workbench: WorkbenchCore, resource: ResourceRef) => {
-  void workbench.resources.openResource(resource).catch(() => undefined);
-};
 
 interface ContributionMenuItem {
   id: string;
@@ -78,12 +79,6 @@ const ContributionButton = (props: { label: string; onClick(): void }) => {
   );
 };
 
-const clearResourcePanels = (workbench: WorkbenchCore) => {
-  workbench.layout.clearRegion("main");
-  workbench.layout.clearRegion("main-left-menu");
-  workbench.layout.clearRegion("main-right-menu");
-};
-
 const viewItems = (props: ContributionExplorerProps) => {
   const { bench, resource, workbench } = props;
 
@@ -91,13 +86,13 @@ const viewItems = (props: ContributionExplorerProps) => {
     id: view.id,
     label: text(view.title, view.id),
     description: view.id,
-    onActivate: () => {
-      void workbench.views.openView(view.id, {
-        pinned: true,
-        resource: isViewForResourceKind(bench.metadata, view.localId, resource.kind) ? resource : undefined,
-        title: text(view.title, view.id),
-      });
-    },
+    onActivate: () =>
+      void navigateViewPreview(
+        workbench,
+        bench,
+        view.localId,
+        isViewForResourceKind(bench.metadata, view.localId, resource.type) ? resource : undefined,
+      ),
   }));
 };
 
@@ -111,11 +106,7 @@ const dataItems = (props: ContributionExplorerProps) => {
       label: text(view.title, view.id),
       description: view.id,
       onActivate: () => {
-        clearResourcePanels(workbench);
-        void workbench.views.openView(view.id, {
-          pinned: true,
-          title: text(view.title, view.id),
-        });
+        void navigateViewPreview(workbench, bench, view.localId);
       },
     }));
 };
@@ -130,7 +121,8 @@ const settingsItems = (props: ContributionExplorerProps) => {
       id: panel.id,
       label: title,
       description: panel.id,
-      onActivate: () => openResource(workbench, settingsPanelResource({ id: panel.id, title })),
+      onActivate: () =>
+        void workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId: panel.id }),
     };
   });
 };
@@ -138,24 +130,11 @@ const settingsItems = (props: ContributionExplorerProps) => {
 const routeItems = (props: ContributionExplorerProps) => {
   const { bench, workbench } = props;
 
-  return bench.metadata.views
-    .filter((view) => view.path)
-    .map((view) => ({
-      id: view.id,
-      label: text(view.title, view.id),
-      description: view.path,
-      onActivate: () => void workbench.views.openView(view.id, { pinned: true }),
-    }));
-};
-
-const modeItems = (props: ContributionExplorerProps) => {
-  const { bench, workbench } = props;
-
-  return bench.metadata.modes.map((mode) => ({
-    id: mode.id,
-    label: text(mode.label, mode.id),
-    description: mode.id,
-    onActivate: () => workbench.modes.setActiveMode(mode.id),
+  return bench.metadata.pages.map((page) => ({
+    id: page.id,
+    label: text(page.title, page.id),
+    description: page.path,
+    onActivate: () => void navigateExtensionPage(workbench, bench, page, props.resource),
   }));
 };
 
@@ -177,7 +156,7 @@ const keybindingItems = (props: ContributionExplorerProps) => {
 
     return {
       id: binding.id,
-      label: `${primary} → ${binding.commandId}`,
+      label: `${primary} → ${binding.action.kind === "command" ? binding.action.target.command.id : binding.action.kind}`,
       description: secondary,
       onActivate: () => undefined,
     };
@@ -217,19 +196,22 @@ const treeViewItems = (props: ContributionExplorerProps) => {
       label: text(view.title, view.id),
       description: view.id,
       onActivate: () =>
-        void workbench.views.openView(view.id, {
-          pinned: true,
-          resource: isViewForResourceKind(bench.metadata, view.localId, resource.kind) ? resource : undefined,
-          title: text(view.title, view.id),
-        }),
+        void navigateViewPreview(
+          workbench,
+          bench,
+          view.localId,
+          isViewForResourceKind(bench.metadata, view.localId, resource.type) ? resource : undefined,
+        ),
     }));
 };
 
 const detail = (...parts: Array<string | undefined>) => parts.filter(Boolean).join(" · ");
 
+type ContentContributionKind = "template" | "skill" | "theme" | "fileIconTheme";
+
 const contentItems = <T extends { id: string; title: Parameters<typeof text>[0] }>(
   props: ContributionExplorerProps,
-  kind: Parameters<typeof contentContributionWidgetId>[0],
+  kind: ContentContributionKind,
   entries: readonly T[],
   describe: (entry: T) => string,
 ) => {
@@ -240,11 +222,7 @@ const contentItems = <T extends { id: string; title: Parameters<typeof text>[0] 
     label: text(entry.title, entry.id),
     description: describe(entry),
     onActivate: () => {
-      clearResourcePanels(workbench);
-      workbench.layout.openPanel(contentContributionWidgetId(kind, entry.id), {
-        pinned: true,
-        title: text(entry.title, entry.id),
-      });
+      void navigateContentPreview(workbench, props.bench, kind, entry.id);
     },
   }));
 };
@@ -281,8 +259,7 @@ const contributionMenus = (props: ContributionExplorerProps) => {
     { label: "Themes", items: themeItems(props) },
     { label: "Icons", items: fileIconThemeItems(props) },
     { label: "Settings", items: settingsItems(props) },
-    { label: "Paths", items: routeItems(props) },
-    { label: "Modes", items: modeItems(props) },
+    { label: "Pages", items: routeItems(props) },
     { label: "Diagnostics", items: diagnosticItems(props) },
   ];
 
@@ -310,7 +287,10 @@ export const ContributionExplorer = (props: ContributionExplorerProps) => {
         <ContributionSelect key={menu.label} count={menu.items.length} items={menu.items} label={menu.label} />
       ))}
       <Box flex="1" minW="3" />
-      <ContributionButton label={resource.id ?? resource.uri} onClick={() => openResource(workbench, resource)} />
+      <ContributionButton
+        label={resource.id}
+        onClick={() => void navigateResourcePreview(workbench, props.bench, resource)}
+      />
     </Box>
   );
 };

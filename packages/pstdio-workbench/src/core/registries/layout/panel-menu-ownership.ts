@@ -69,9 +69,9 @@ const resolveMenuPlacements = (
     }
 
     const bound =
-      placement.ownerResourceUri === found.placement.resourceUri
+      placement.ownerResourceKey === found.placement.resourceKey
         ? placement
-        : { ...placement, ownerResourceUri: found.placement.resourceUri };
+        : { ...placement, ownerResourceKey: found.placement.resourceKey };
     if (bound !== placement) changed = true;
 
     const target = workbenchPanelMenuRegions[found.region as WorkbenchPanelRegion][menuSide(region)];

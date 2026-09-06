@@ -9,13 +9,12 @@ import type {
   WidgetContribution,
   WorkbenchLayout,
   WorkbenchLayoutStoreState,
-  WorkbenchLocationContribution,
   WorkbenchPanelContribution,
   WorkbenchPanelInstance,
   WorkbenchPanelMenuContribution,
   WorkbenchRegion,
+  WorkbenchRegionSettings,
   WorkbenchRegionSize,
-  WorkbenchSubPanelContribution,
   WorkbenchTabPosition,
   WorkbenchWidgetPlacement,
 } from "./layout-types";
@@ -40,6 +39,8 @@ export interface LayoutPersistenceAdapter {
 export interface CreateLayoutModelInput {
   defaultRegionVisibility?: Partial<Record<WorkbenchRegion, boolean>>;
   persistence?: LayoutPersistenceAdapter;
+  /** Region policy for the active context; the layout asks on every query. */
+  getRegionSettings?(regionId: WorkbenchRegion): WorkbenchRegionSettings | undefined;
 }
 
 export interface LayoutModel {
@@ -47,14 +48,13 @@ export interface LayoutModel {
   registerPlaceholder(placeholder: PlaceholderContribution, metadata?: ContributionMetadata): { dispose(): void };
   registerPanel(panel: WorkbenchPanelContribution, metadata?: ContributionMetadata): { dispose(): void };
   registerWidget(widget: WidgetContribution, metadata?: ContributionMetadata): { dispose(): void };
-  registerLocation(location: WorkbenchLocationContribution, metadata?: ContributionMetadata): { dispose(): void };
-  registerSubPanel(subPanel: WorkbenchSubPanelContribution, metadata?: ContributionMetadata): { dispose(): void };
   registerPanelMenu(panelMenu: WorkbenchPanelMenuContribution, metadata?: ContributionMetadata): { dispose(): void };
   unregisterWidget(id: string, options?: { removePlacements?: boolean; persist?: boolean }): void;
   getPlaceholder(regionId: WorkbenchRegion): RegisteredPlaceholderContribution | undefined;
   getWidget(id: string): RegisteredWidgetContribution | undefined;
   getPanel(id: string): WorkbenchPanelContribution | undefined;
   getRegionSize(regionId: WorkbenchRegion): WorkbenchRegionSize | undefined;
+  getRegionSettings(regionId: WorkbenchRegion): WorkbenchRegionSettings | undefined;
   getRegionCollapsible(regionId: WorkbenchRegion): boolean;
   getRegionHeaderBorderBottom(regionId: WorkbenchRegion): boolean;
   setRegionVisible(regionId: WorkbenchRegion, visible: boolean): void;
@@ -72,7 +72,7 @@ export interface LayoutModel {
   closePanel(instanceId: string): WorkbenchPanelInstance | undefined;
   updateWidgetPlacement(widgetId: string, input: OpenWidgetInput): WorkbenchWidgetPlacement;
   reorderWidget(widgetId: string, position: WorkbenchTabPosition): void;
-  expirePreviewTabs(ownerResourceUri?: string): void;
+  expirePreviewTabs(ownerResourceKey?: string): void;
   activateWidget(widgetId: string): WorkbenchWidgetPlacement;
   setRegionActiveWidget(regionId: WorkbenchRegion, widgetId: string | undefined): void;
   closeWidget(widgetId: string): WorkbenchWidgetPlacement | undefined;

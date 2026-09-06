@@ -80,7 +80,7 @@ export const createSessionViaApi = async (ctx: HookTestContext, projectId: strin
       project_id: projectId,
       title: "test",
       prompt: "test",
-      agent: "pstdio.extension-lab.harness.fake",
+      agent: "pstdio.workbench-fixture.harness.fake",
     }),
   });
   return { res, session: (await res.json()) as { id: string } };

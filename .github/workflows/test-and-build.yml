@@ -171,3 +171,7 @@ jobs:
 
       - name: Build ${{ matrix.image }} image
         run: docker build -t ${{ matrix.image }}:${{ github.sha }} -f ${{ matrix.dockerfile }} .
+
+      - name: Verify API runtime imports
+        if: matrix.image == 'pstdio/api'
+        run: docker run --rm --entrypoint bun pstdio/api:${{ github.sha }} -e 'await import("./src/app.ts");'

@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "../../core";
+import { createWorkbench } from "../../core";
 import { createWorkbenchPanelWidgetPaletteEntries } from "./panel-widget-palette";
 
 describe("createWorkbenchPanelWidgetPaletteEntries", () => {
   test("shares Panel eligibility with the header add menu", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.layout.registerPanel({
       id: "files",
       title: "Files",

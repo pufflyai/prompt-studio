@@ -8,12 +8,13 @@ import {
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createWorkbenchStore, type WorkbenchStore } from "../../shared/store/workbench-store";
 import type { CommandRegistry } from "../commands/command-registry";
+import type { NavigationTarget } from "../navigation/navigation-registry";
 
 export interface Keybinding {
-  commandId: string;
+  /** Action the chord executes through the shared navigation executor. */
+  action: NavigationTarget;
   keybinding: KeybindingSequence;
   when?: string;
-  args?: unknown;
 }
 
 export type KeybindingSequence = string | string[];
@@ -34,6 +35,8 @@ export interface KeybindingRegistry {
   registerKeybinding(keybinding: Keybinding, metadata?: ContributionMetadata): Disposable;
   listKeybindings(): RegisteredKeybinding[];
   listActiveKeybindings(): RegisteredKeybinding[];
+  /** Chords bound to plain command actions, for rendering shortcut hints beside commands. */
+  listCommandKeybindings(): { commandId: string; keybinding: KeybindingSequence }[];
 }
 
 export const getKeybindingSteps = (keybinding: KeybindingSequence) => {
@@ -57,8 +60,9 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
     store,
 
     registerKeybinding(keybinding, metadata) {
-      if (!deps.commands.getCommand(keybinding.commandId))
-        throw new Error(`Keybinding command not registered: ${keybinding.commandId}`);
+      if (keybinding.action.kind === "command" && !deps.commands.getCommand(keybinding.action.commandId)) {
+        throw new Error(`Keybinding command not registered: ${keybinding.action.commandId}`);
+      }
 
       const record: RegisteredKeybinding = {
         ...normalizeContributionMetadata(metadata),
@@ -86,6 +90,16 @@ export const createKeybindingRegistry = (deps: KeybindingRegistryDeps): Keybindi
         .getState()
         .keybindings.filter((keybinding) => deps.context.matches(keybinding.when))
         .sort(byContributionPriority);
+    },
+
+    listCommandKeybindings() {
+      return [...store.getState().keybindings]
+        .sort(byContributionPriority)
+        .flatMap((record) =>
+          record.action.kind === "command"
+            ? [{ commandId: record.action.commandId, keybinding: record.keybinding }]
+            : [],
+        );
     },
   };
 };

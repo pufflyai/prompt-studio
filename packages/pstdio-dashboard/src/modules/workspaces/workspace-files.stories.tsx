@@ -1,12 +1,14 @@
 import { Box } from "@chakra-ui/react";
-import { createWorkbenchCore, type ResourceRef } from "@pstdio/workbench";
+import { createWorkbench, type ResourceRef } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { dashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import {
   workspaceDiffFileQueryKey,
   workspaceDiffFilesQueryKey,
@@ -16,21 +18,17 @@ import {
 import { createWorkspacesModule } from "./module";
 
 const WORKSPACE_ID = "PS-118_A5";
-
 type WorkspaceStoryState = "diffs" | "files" | "text" | "image" | "default" | "collapsed" | "remote";
-
 const selectedPathForStory = (state: WorkspaceStoryState) => {
   if (state === "text" || state === "default" || state === "collapsed") return "README.md";
   if (state === "image") return "assets/logo.png";
   return undefined;
 };
-
 const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
   const selectedPath = selectedPathForStory(state);
   return {
-    kind: "workspace",
+    type: "workspace",
     id: WORKSPACE_ID,
-    uri: `dashboard-workbench://workspace/${WORKSPACE_ID}`,
     label: WORKSPACE_ID,
     icon: "GitBranch",
     metadata: {
@@ -50,7 +48,6 @@ const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
     },
   };
 };
-
 const seedWorkspaceQueries = () => {
   dashboardQueryClient.clear();
   dashboardQueryClient.setQueryDefaults(["workspace-files", WORKSPACE_ID], { staleTime: Number.POSITIVE_INFINITY });
@@ -116,23 +113,21 @@ const seedWorkspaceQueries = () => {
     });
   }
 };
-
 const createStoryWorkbench = (state: WorkspaceStoryState) => {
   seedWorkspaceQueries();
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
   workbench.registerModule(createWorkspacesModule());
   selectDashboardProject(workbench, { id: "prompt-studio", name: "Prompt Studio" });
-  void workbench.resources.openResource(workspaceResource(state), { replaceActive: true }).then(() => {
-    workbench.panels.setOpen("sidenav", false);
-    if (state !== "collapsed") return;
+  openWorkspacesPage(workbench, workspaceResource(state));
+  workbench.shell.setRegionOpen("sidenav", false);
+  if (state === "collapsed") {
     const fileMenu = workbench.layout
       .listPanelInstances("main-left-menu")
       .find((panel) => panel.panelId === dashboardWidgetIds.workspaceFileTree);
-    if (fileMenu) workbench.panels.setOpen(`panel-menu:${fileMenu.instanceId}`, false);
-  });
+    if (fileMenu) workbench.panelMenuState.setOpen(`panel-menu:${fileMenu.instanceId}`, false);
+  }
   return workbench;
 };
-
 const WorkspaceFilesStory = (props: { state: WorkspaceStoryState }) => {
   const { state } = props;
   const [workbench] = useState(() => createStoryWorkbench(state));
@@ -144,27 +139,29 @@ const WorkspaceFilesStory = (props: { state: WorkspaceStoryState }) => {
     </QueryClientProvider>
   );
 };
-
 const meta = {
   title: "Modules/Workspaces/Files and Changes",
   component: WorkspaceFilesStory,
   parameters: { layout: "fullscreen" },
 } satisfies Meta<typeof WorkspaceFilesStory>;
-
 export default meta;
-
 type Story = StoryObj<typeof meta>;
-
 export const ChangesSelected: Story = { args: { state: "diffs" } };
-
+export const ClosePanelsIndependently: Story = {
+  args: { state: "diffs" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Close Changes" }));
+    await expect(canvas.getByRole("tab", { name: "Files" })).toBeVisible();
+    await expect(canvas.getByRole("tab", { name: "Files" })).toHaveAttribute("aria-selected", "true");
+    await userEvent.click(canvas.getByRole("button", { name: "Close Files" }));
+    await expect(canvas.getByText("No open panels")).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Add panel" })).toBeVisible();
+  },
+};
 export const FilesNoSelection: Story = { args: { state: "files" } };
-
 export const MonacoTextFile: Story = { args: { state: "text" } };
-
 export const ImagePreview: Story = { args: { state: "image" } };
-
 export const DefaultWorkspace: Story = { args: { state: "default" } };
-
 export const CollapsedFilesMenu: Story = { args: { state: "collapsed" } };
-
 export const RemoteWithoutFileViews: Story = { args: { state: "remote" } };

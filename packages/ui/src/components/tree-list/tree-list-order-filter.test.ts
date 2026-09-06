@@ -41,6 +41,15 @@ describe("applyTreeListOrder", () => {
     expect(alpha?.nodes.map((node) => node.id)).toEqual(["a.2", "a.1"]);
   });
 
+  test("moves nodes between sections when both saved memberships are present", () => {
+    const result = applyTreeListOrder(baseSections, [], {
+      alpha: ["a.2"],
+      beta: ["a.1", "b.1"],
+    });
+    expect(result.find((section) => section.id === "alpha")?.nodes.map((node) => node.id)).toEqual(["a.2"]);
+    expect(result.find((section) => section.id === "beta")?.nodes.map((node) => node.id)).toEqual(["a.1", "b.1"]);
+  });
+
   test("returns input ref when nothing in the order changes the result", () => {
     // sectionOrder identical to current order; node order matches existing.
     const noOpOrder = ["alpha", "beta", "gamma"];

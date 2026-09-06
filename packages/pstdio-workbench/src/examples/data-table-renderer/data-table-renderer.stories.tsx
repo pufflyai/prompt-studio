@@ -1,24 +1,14 @@
-import { Description, Primary, Title } from "@storybook/addon-docs/blocks";
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
-import { createWorkbenchCore } from "../../core";
-import { dataTableRendererSource } from "../onboarding/data-table-renderer-source";
+import { createWorkbench } from "../../core";
 import { WorkbenchStory } from "../workbench-story";
 import { createDataTableRendererStoryModule } from "./module";
+import source from "./module.tsx?raw";
 
-const workbench = createWorkbenchCore();
+const workbench = createWorkbench();
 workbench.registerModule(createDataTableRendererStoryModule());
 
-const DataTableRendererDocs = () => (
-  <>
-    <Title />
-    <Description />
-    <Primary />
-  </>
-);
-
 const meta = {
-  title: "pstdio-workbench/Onboarding/21. Data table renderer",
+  title: "pstdio-workbench/Reference/Core API/Native data table",
   component: WorkbenchStory,
   tags: ["autodocs"],
   args: { workbench },
@@ -30,9 +20,8 @@ const meta = {
     docs: {
       description: {
         component:
-          "Register a DataTable renderer with multiple-row selection and actions that receive the original selected rows. Select services and run the contribution's bulk restart action from the selection toolbar.",
+          "The Core API registration used by the host adapter for the native data table. Extension authors declare the dataTable view body shown in Extension onboarding.",
       },
-      page: DataTableRendererDocs,
     },
     layout: "fullscreen",
   },
@@ -49,23 +38,7 @@ export const MultipleSelection: Story = {
       description: {
         story: "Select services and run the contribution's bulk restart action from the selection toolbar.",
       },
-      canvas: { sourceState: "shown" },
-      source: {
-        code: dataTableRendererSource,
-        language: "tsx",
-        type: "code",
-      },
+      source: { code: source, language: "tsx", type: "code" },
     },
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const rowSelectors = canvas.getAllByLabelText("Select row");
-
-    await userEvent.click(rowSelectors[0]!);
-    await expect(canvas.getByText("1 rows selected")).toBeInTheDocument();
-    await userEvent.click(rowSelectors[1]!);
-
-    await expect(canvas.getByText("2 rows selected")).toBeInTheDocument();
-    await expect(canvas.getByRole("button", { name: "Restart selected" })).toBeInTheDocument();
   },
 };

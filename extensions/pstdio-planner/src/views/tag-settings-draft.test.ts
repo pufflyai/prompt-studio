@@ -122,7 +122,8 @@ describe("tag settings draft", () => {
   });
 
   test("saves the whole draft in a single applyDraft command", async () => {
-    const calls: Array<{ commandId: TagSettingsCommandId; params: Record<string, unknown> }> = [];
+    const calls: Array<{ commandId: TagSettingsCommandId; params: Parameters<Parameters<typeof saveTagDraft>[0]>[1] }> =
+      [];
     const draft: TagSettingsDraft = {
       ...unchangedDraft(),
       type: "multi_select",

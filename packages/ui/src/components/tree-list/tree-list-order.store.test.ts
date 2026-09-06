@@ -13,6 +13,7 @@ describe("createTreeListOrderStore", () => {
     const store = createTreeListOrderStore({ storageKey: STORAGE_KEY });
     expect(store.getState().sectionOrder).toEqual([]);
     expect(store.getState().nodeOrderBySection).toEqual({});
+    expect(store.getState().sectionSlotById).toEqual({});
   });
 
   test("setSectionOrder dedupes input", () => {
@@ -26,6 +27,12 @@ describe("createTreeListOrderStore", () => {
     store.getState().setNodeOrder("sec-1", ["x", "y", "x"]);
     store.getState().setNodeOrder("sec-2", ["z"]);
     expect(store.getState().nodeOrderBySection).toEqual({ "sec-1": ["x", "y"], "sec-2": ["z"] });
+  });
+
+  test("stores a section's selected pinned or scrolling slot", () => {
+    const store = createTreeListOrderStore({ storageKey: STORAGE_KEY });
+    store.getState().setSectionSlot("tickets", "footer");
+    expect(store.getState().sectionSlotById).toEqual({ tickets: "footer" });
   });
 
   test("resetSectionOrder + resetNodeOrder clear targeted state", () => {
@@ -49,9 +56,11 @@ describe("createTreeListOrderStore", () => {
     const first = createTreeListOrderStore({ storageKey: STORAGE_KEY });
     first.getState().setSectionOrder(["b", "a"]);
     first.getState().setNodeOrder("sec-1", ["y", "x"]);
+    first.getState().setSectionSlot("sec-1", "header");
 
     const second = createTreeListOrderStore({ storageKey: STORAGE_KEY });
     expect(second.getState().sectionOrder).toEqual(["b", "a"]);
     expect(second.getState().nodeOrderBySection).toEqual({ "sec-1": ["y", "x"] });
+    expect(second.getState().sectionSlotById).toEqual({ "sec-1": "header" });
   });
 });

@@ -25,6 +25,9 @@ interface ThemePreferenceContextValue {
 interface ThemePreferenceProviderProps {
   children: ReactNode;
   initialPreference?: ThemePreference;
+  /** A default used only when the user has not chosen a theme in this scope. */
+  defaultPreference?: ThemePreference;
+  preferenceScope?: string;
   themePreferences?: readonly ThemePreferenceOption[];
 }
 
@@ -33,16 +36,16 @@ const getDefaultThemePreference = (themePreferences: readonly ThemePreferenceOpt
   themePreferences[0]?.id ??
   defaultThemePreferences[0].id;
 
-const getStoredThemePreference = () => {
+const getStoredThemePreference = (storageKey = STORAGE_KEY) => {
   if (typeof window === "undefined") return null;
 
-  return createBrowserStorage().getItem(STORAGE_KEY);
+  return createBrowserStorage().getItem(storageKey);
 };
 
-const storeThemePreference = (preference: ThemePreference) => {
+const storeThemePreference = (preference: ThemePreference, storageKey = STORAGE_KEY) => {
   if (typeof window === "undefined") return;
 
-  createBrowserStorage().setItem(STORAGE_KEY, preference);
+  createBrowserStorage().setItem(storageKey, preference);
 };
 
 // Contributed themes register asynchronously. Keep their stored preference until
@@ -65,10 +68,15 @@ export const getInitialThemePreference = (
 
 export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => {
   const { children, themePreferences = defaultThemePreferences } = props;
-  const initialPreference = props.initialPreference ?? getInitialThemePreference(themePreferences);
-  const canRestoreStoredPreference = props.initialPreference === undefined;
-  const [themePreference, setThemePreferenceState] = useState<ThemePreference>(initialPreference);
-  const storedPreference = canRestoreStoredPreference ? getStoredThemePreference() : null;
+  const storageKey = props.preferenceScope ? `${STORAGE_KEY}:${props.preferenceScope}` : STORAGE_KEY;
+  const storedPreference = props.initialPreference === undefined ? getStoredThemePreference(storageKey) : null;
+  const initialPreference =
+    props.initialPreference ??
+    storedPreference ??
+    props.defaultPreference ??
+    getInitialThemePreference(themePreferences);
+  const [selection, setSelection] = useState({ storageKey, preference: initialPreference });
+  const themePreference = selection.storageKey === storageKey ? selection.preference : initialPreference;
   const resolvedThemePreference = isThemePreference(themePreference, themePreferences)
     ? themePreference
     : getDefaultThemePreference(themePreferences, getThemePreferenceMode(themePreference, themePreferences));
@@ -79,12 +87,12 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
       storedPreference !== themePreference &&
       isThemePreference(storedPreference, themePreferences)
     ) {
-      setThemePreferenceState(storedPreference);
+      setSelection({ storageKey, preference: storedPreference });
       return;
     }
 
     if (!isThemePreference(themePreference, themePreferences)) {
-      setThemePreferenceState(resolvedThemePreference);
+      if (!props.defaultPreference) setSelection({ storageKey, preference: resolvedThemePreference });
       return;
     }
 
@@ -94,12 +102,19 @@ export const ThemePreferenceProvider = (props: ThemePreferenceProviderProps) => 
       storedPreference !== themePreference &&
       looksLikeContributedThemePreference(storedPreference) &&
       !isThemePreference(storedPreference, themePreferences);
-    if (!hasPendingStoredTheme) storeThemePreference(themePreference);
-  }, [resolvedThemePreference, storedPreference, themePreference, themePreferences]);
+    if (!hasPendingStoredTheme && !props.defaultPreference) storeThemePreference(themePreference, storageKey);
+  }, [
+    resolvedThemePreference,
+    storedPreference,
+    themePreference,
+    themePreferences,
+    storageKey,
+    props.defaultPreference,
+  ]);
 
   const setThemePreference = (preference: ThemePreference) => {
-    storeThemePreference(preference);
-    setThemePreferenceState(preference);
+    storeThemePreference(preference, storageKey);
+    setSelection({ storageKey, preference });
   };
 
   const toggleThemePreference = () => {

@@ -1,34 +1,27 @@
-import type { WorkbenchCoreContributionContext, WorkbenchModuleContribution } from "../../core";
+import type { ResourceRef, WorkbenchCoreContributionContext, WorkbenchModuleContribution } from "../../core";
+import { toPanelInstance } from "../../core/registries/layout/panel-api";
 import { terminalPlacementBindingId } from "./terminal-placement-binding";
 import { WorkbenchTerminalPanel } from "./workbench-terminal-panel";
-
 // The host-owned terminal panel in the workbench `secondary` (bottom) region.
 // Exported so hosts can open or assert it directly.
 export const WORKBENCH_TERMINAL_WIDGET_ID = "workbench.terminal";
-
 // Built-in command to open (or focus) the terminal panel. Registered by the
 // surface module so it is available in the command palette without host wiring.
 export const WORKBENCH_TERMINAL_OPEN_COMMAND_ID = "workbench.terminal.open";
-
-const RENDERER_ID = "workbench.terminal.renderer";
-const LAUNCHER_RENDERER_ID = "workbench.terminal.launcher.renderer";
-const TERMINAL_PANEL_SIZE = { defaultPx: 240, minPx: 128 };
-type OpenWorkbenchTerminalInput = NonNullable<Parameters<WorkbenchCoreContributionContext["layout"]["openWidget"]>[1]>;
-type OpenWorkbenchTerminalOptions = OpenWorkbenchTerminalInput & {
+/** Suggested secondary-region size for hosts that mount the terminal (createWorkbench regionSettings). */
+export const WORKBENCH_TERMINAL_PANEL_SIZE = { defaultPx: 240, minPx: 128 };
+interface OpenWorkbenchTerminalOptions {
+  resource?: ResourceRef;
   reveal?: boolean;
-};
+}
 type TerminalResource = OpenWorkbenchTerminalOptions["resource"];
-
-export const WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID = "workbench.terminal.launcher";
-
 const terminalInstanceIds = (ctx: WorkbenchCoreContributionContext) =>
   new Set(
     ctx.layout
       .listPanelInstances("secondary")
-      .filter((placement) => placement.panelId === WORKBENCH_TERMINAL_WIDGET_ID)
+      .filter((placement) => placement.viewId === WORKBENCH_TERMINAL_WIDGET_ID)
       .map((placement) => placement.instanceId),
   );
-
 const watchClosedTerminalPlacements = (ctx: WorkbenchCoreContributionContext) => {
   // A scope rotation temporarily removes every placement. Only an explicit tab
   // close should end the PTY bound to that placement.
@@ -43,18 +36,17 @@ const watchClosedTerminalPlacements = (ctx: WorkbenchCoreContributionContext) =>
     if (changingScope) return;
     const currentIds = new Set(
       state.layout.regions.secondary.widgets
-        .filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID)
+        .filter((placement) => placement.viewId === WORKBENCH_TERMINAL_WIDGET_ID)
         .map((placement) => placement.widgetId),
     );
     const previousIds = previousState.layout.regions.secondary.widgets
-      .filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID)
+      .filter((placement) => placement.viewId === WORKBENCH_TERMINAL_WIDGET_ID)
       .map((placement) => placement.widgetId);
     const scope = ctx.layout.getPersistenceScope();
     for (const instanceId of previousIds) {
       if (!currentIds.has(instanceId)) void ctx.terminal.killBinding(terminalPlacementBindingId(scope, instanceId));
     }
   });
-
   return {
     dispose() {
       unsubscribeLayout();
@@ -67,58 +59,25 @@ const watchClosedTerminalPlacements = (ctx: WorkbenchCoreContributionContext) =>
     },
   };
 };
-
-const restoreTerminalSelectionFromLauncher = (ctx: WorkbenchCoreContributionContext, launcherInstanceId: string) => {
-  const secondary = ctx.layout.getLayout().regions.secondary;
-  if (secondary.activeWidgetId !== launcherInstanceId) return;
-
-  const fallback = [...secondary.widgets]
-    .reverse()
-    .find((placement) => placement.contributionId !== WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID);
-  if (fallback) ctx.layout.setRegionActiveWidget("secondary", fallback.widgetId);
-};
-
-const ensureTerminalLauncher = (ctx: WorkbenchCoreContributionContext) => {
-  const existing = ctx.layout
-    .getLayout()
-    .regions.secondary.widgets.find((placement) => placement.contributionId === WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID);
-  if (existing) {
-    restoreTerminalSelectionFromLauncher(ctx, existing.widgetId);
-    return existing;
-  }
-
-  const launcher = ctx.layout.openPanel(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, {
-    hiddenByDefault: true,
-    pinned: true,
-    title: "Terminal",
-  });
-  restoreTerminalSelectionFromLauncher(ctx, launcher.instanceId);
-  return launcher;
-};
-
 const terminalTitlePattern = /^Terminal (\d+)$/;
 const nextTerminalIndexes = new WeakMap<WorkbenchCoreContributionContext["layout"]["store"], number>();
-
 const getInitialTerminalIndex = (ctx: WorkbenchCoreContributionContext) => {
   const terminalPlacements = ctx.layout
     .getLayout()
-    .regions.secondary.widgets.filter((placement) => placement.contributionId === WORKBENCH_TERMINAL_WIDGET_ID);
+    .regions.secondary.widgets.filter((placement) => placement.viewId === WORKBENCH_TERMINAL_WIDGET_ID);
   const titleIndexes = terminalPlacements
     .map((placement) => terminalTitlePattern.exec(placement.title ?? "")?.[1])
     .filter((index): index is string => index !== undefined)
     .map((index) => Number.parseInt(index, 10));
   return Math.max(terminalPlacements.length, ...titleIndexes) + 1;
 };
-
 const getNextTerminalTitle = (ctx: WorkbenchCoreContributionContext) => {
   const nextIndex = Math.max(nextTerminalIndexes.get(ctx.layout.store) ?? 1, getInitialTerminalIndex(ctx));
   nextTerminalIndexes.set(ctx.layout.store, nextIndex + 1);
   return `Terminal ${nextIndex}`;
 };
-
 const hasWorkspacePath = (resource: TerminalResource) =>
   typeof resource?.metadata?.workspacePath === "string" && resource.metadata.workspacePath.length > 0;
-
 const getTerminalResource = (ctx: WorkbenchCoreContributionContext, resource: TerminalResource) => {
   const activeResource = ctx.getActiveResource();
   const primaryResource = ctx.getPrimaryResource();
@@ -130,30 +89,44 @@ const getTerminalResource = (ctx: WorkbenchCoreContributionContext, resource: Te
     primaryResource
   );
 };
-
 // Opens a new terminal placement, revealing the bottom region if it is collapsed.
 export const openWorkbenchTerminal = (
   ctx: WorkbenchCoreContributionContext,
   input: OpenWorkbenchTerminalOptions = {},
 ) => {
-  const { reveal = true, ...openInput } = input;
-  const resource = getTerminalResource(ctx, openInput.resource);
-  ensureTerminalLauncher(ctx);
-  const placement = ctx.layout.openPanel(WORKBENCH_TERMINAL_WIDGET_ID, {
-    ...openInput,
+  const { reveal = true } = input;
+  const workspace = getTerminalResource(ctx, input.resource);
+  const title = getNextTerminalTitle(ctx);
+  const index = Number.parseInt(terminalTitlePattern.exec(title)?.[1] ?? "1", 10);
+  const id = `${String(index).padStart(8, "0")}-${globalThis.crypto.randomUUID()}`;
+  const resource: ResourceRef = {
+    type: "terminal",
+    id,
+    label: title,
+    icon: "SquareTerminal",
+    metadata: workspace?.metadata,
+  };
+  const identity = ctx.shellPlacements.openPlacement({
+    placementId: WORKBENCH_TERMINAL_WIDGET_ID,
     resource,
-    title: openInput.title ?? getNextTerminalTitle(ctx),
-    closable: true,
-    // Every terminal keeps its own live session, so each open is a real tab.
-    strategy: { kind: "persistent" },
+    open: "pin",
+    title,
   });
+  if (identity.kind !== "shell") throw new Error("Terminal placement must be shell-owned");
   if (reveal) {
-    ctx.layout.setRegionVisible("secondary", true);
-    ctx.panels.setOpen("secondary", true);
+    ctx.shell.setRegionOpen("secondary", true);
   }
-  return placement;
+  const placement = ctx.layout
+    .getLayout()
+    .regions.secondary.widgets.find(
+      (candidate) =>
+        candidate.placementIdentity?.kind === "shell" &&
+        candidate.placementIdentity.placementId === identity.placementId &&
+        candidate.placementIdentity.instanceKey === identity.instanceKey,
+    );
+  if (!placement) throw new Error(`Terminal placement did not open: ${identity.instanceKey}`);
+  return toPanelInstance(placement);
 };
-
 /**
  * Host-owned terminal surface: tabbed placements in the `secondary` region whose
  * chrome, focus, lifecycle, and styling belong to the workbench. Sessions are
@@ -166,33 +139,39 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
   id: "workbench.terminal.surface",
   activate(ctx) {
     const disposables = [
-      ctx.layout.registerPanel({
+      ctx.views.registerView({
         id: WORKBENCH_TERMINAL_WIDGET_ID,
         title: "Terminal",
+        body: {
+          kind: "react",
+          render: (input) => <WorkbenchTerminalPanel placement={input.instance} workbench={input.workbench} />,
+        },
+      }),
+      ctx.shellPlacements.registerPlacement({
+        id: WORKBENCH_TERMINAL_WIDGET_ID,
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [
+              {
+                kind: "resource-kind",
+                id: "terminal",
+              },
+            ],
+            view: {
+              kind: "view",
+              id: WORKBENCH_TERMINAL_WIDGET_ID,
+            },
+            cardinality: "many",
+            add: { kind: "command", target: { command: { kind: "command", id: WORKBENCH_TERMINAL_OPEN_COMMAND_ID } } },
+          },
+        },
         region: "secondary",
-        singleton: false,
-        reuse: "none",
         mountStrategy: "keep-mounted",
-        rendererId: RENDERER_ID,
-        openCommandId: WORKBENCH_TERMINAL_OPEN_COMMAND_ID,
-        eligibleLocations: {},
-        regionSize: TERMINAL_PANEL_SIZE,
-      }),
-      ctx.renderers.registerRenderer({
-        id: RENDERER_ID,
-        render: (input) => <WorkbenchTerminalPanel placement={input.instance} workbench={input.workbench} />,
-      }),
-      ctx.renderers.registerRenderer({ id: LAUNCHER_RENDERER_ID, render: () => null }),
-      ctx.layout.registerPanel({
-        id: WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
-        title: "Terminal",
-        region: "secondary",
-        singleton: true,
+        // Background flows mint terminals without user intent; a closed Secondary
+        // Panel must stay closed until an explicit open reveals it.
         hiddenByDefault: true,
-        rendererId: LAUNCHER_RENDERER_ID,
-        regionSize: TERMINAL_PANEL_SIZE,
       }),
-      ctx.layout.onDidChangePersistenceScope(() => ensureTerminalLauncher(ctx)),
       watchClosedTerminalPlacements(ctx),
       ctx.commands.registerCommand(
         {
@@ -204,8 +183,6 @@ export const createWorkbenchTerminalModule = (): WorkbenchModuleContribution => 
         { execute: (_args, context) => openWorkbenchTerminal(ctx, { resource: context?.resource }) },
       ),
     ];
-
-    ensureTerminalLauncher(ctx);
     return disposables;
   },
 });

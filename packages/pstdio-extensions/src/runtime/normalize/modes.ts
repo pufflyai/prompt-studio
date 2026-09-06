@@ -1,10 +1,10 @@
-import { dockedWorkbenchRegions, type ModeContribution } from "@pstdio/sdk/extensions";
+import type { ModeContribution } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension } from "../../types/runtime";
-import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
-import { type Accumulator, isRecord } from "./accumulator";
+import type { Accumulator } from "./accumulator";
+import { modeDeclarationSchema } from "./composition-declarations";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
-import { isLocalizableString } from "./localizable";
+import { validateDeclaration } from "./declaration-diagnostic";
 import { normalizeContributionRef } from "./references";
 
 export const registerModes = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
@@ -17,30 +17,24 @@ export const registerModes = (ext: NormalizedExtension, source: LoadedExtensionS
   });
   for (const mode of modes) {
     const localId = mode.id;
-    const hasValidRegions =
-      Array.isArray(mode.regions) &&
-      mode.regions.every(
-        (region) =>
-          typeof region === "string" &&
-          dockedWorkbenchRegions.includes(region as (typeof dockedWorkbenchRegions)[number]),
-      );
-    if (!isRecord(mode) || !isLocalizableString(mode.label) || !hasValidRegions) {
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "invalid_mode",
-          message: `Mode "${localId}" must declare a label and valid workbench regions`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-          metadata: { contributionId: localId, fieldPath: `modes.${localId}.regions` },
-        }),
-      );
+    if (!validateDeclaration({ ext, source, runtime, kind: "mode", contribution: mode, schema: modeDeclarationSchema }))
       continue;
-    }
     runtime.modes.push({
       ...contributionRecordBase(ext, source, "mode", localId),
       contribution: {
         ...mode,
         ref: normalizeContributionRef(ext, mode.ref),
+        ...(mode.defaultTheme ? { defaultTheme: normalizeContributionRef(ext, mode.defaultTheme) } : {}),
+        ...(mode.chrome
+          ? {
+              chrome: Object.fromEntries(
+                Object.entries(mode.chrome).map(([region, view]) => [
+                  region,
+                  view === false ? false : normalizeContributionRef(ext, view),
+                ]),
+              ),
+            }
+          : {}),
       } as ModeContribution,
     });
   }

@@ -4,18 +4,18 @@ import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
-const extensionLabPath = join(import.meta.dirname, "../../../../extensions/extension-lab");
+const extensionLabPath = join(import.meta.dirname, "../../../../packages/workbench-fixture");
 
 const bypassOnboarding = async (
   page: import("@playwright/test").Page,
   projectId: string,
-  agentId = "pstdio.extension-lab.harness.fake",
+  agentId = "pstdio.workbench-fixture.harness.fake",
 ) => {
   await page.addInitScript(
     ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", currentAgentId);
-      localStorage.setItem("dashboard-wb:selected-project:global", currentProjectId);
+      localStorage.setItem("dashboard-wb2:selected-project:global", currentProjectId);
       localStorage.setItem(
         `pstdio-project-settings/projects/${currentProjectId}/values`,
         JSON.stringify({
@@ -87,7 +87,7 @@ const disableDefaultExtensionLab = async (request: import("@playwright/test").AP
   expect(response.ok()).toBe(true);
   const body = (await response.json()) as { extensions: Array<{ id: string; installName: string }> };
 
-  for (const extension of body.extensions.filter((entry) => entry.installName === "extension-lab")) {
+  for (const extension of body.extensions.filter((entry) => entry.installName === "workbench-fixture")) {
     const disabled = await request.patch(`${apiBase}/v1/projects/${projectId}/extensions/${extension.id}`, {
       data: { enabled: false },
     });
@@ -101,14 +101,14 @@ const fetchMetadata = async (request: import("@playwright/test").APIRequestConte
   return (await response.json()) as WorkbenchExtensionMetadata;
 };
 
-const webviewAtPath = (metadata: WorkbenchExtensionMetadata, path: string) => {
-  const view = metadata.views.find((candidate) => candidate.path === path);
-  if (!view || view.body.kind !== "webview") throw new Error(`Missing webview at path: ${path}`);
+const webview = (metadata: WorkbenchExtensionMetadata, localId: string) => {
+  const view = metadata.views.find((candidate) => candidate.localId === localId);
+  if (!view || view.body.kind !== "webview") throw new Error(`Missing webview: ${localId}`);
   return view.body.webview;
 };
 
 const openExtensionLab = async (page: import("@playwright/test").Page, projectId: string) => {
-  await page.goto(`/projects/${projectId}/lab`);
+  await page.goto(`/projects/${projectId}/extensions/pstdio.workbench-fixture/lab`);
 };
 
 test.describe("Extension webviews", () => {
@@ -121,15 +121,15 @@ test.describe("Extension webviews", () => {
     await disableDefaultExtensionLab(request, project.id);
     await enableExtension(request, project.id, {
       displayName: "Extension Lab",
-      extensionId: "pstdio.extension-lab",
-      installName: "extension-lab-webviews",
-      name: "extension-lab",
+      extensionId: "pstdio.workbench-fixture",
+      installName: "workbench-fixture-webviews",
+      name: "workbench-fixture",
       sourcePath: extensionLabPath,
       version: "0.1.0",
     });
 
     const metadata = await fetchMetadata(request, project.id);
-    const labWebview = webviewAtPath(metadata, "lab");
+    const labWebview = webview(metadata, "lab-page");
     expect(labWebview.moduleUrl).toBeTruthy();
 
     await expect
@@ -181,11 +181,6 @@ test.describe("Extension webviews", () => {
 
     await labFrame.getByRole("button", { name: "Test file capabilities" }).click();
     await expect(labFrame.getByText("Upload, read, list, and delete passed.")).toBeVisible();
-
-    await labFrame.getByRole("button", { name: "Open file capability resource" }).click();
-    await expect(
-      page.getByRole("navigation", { name: "breadcrumb" }).getByText("File capability project", { exact: true }),
-    ).toBeVisible();
   });
 
   test("creates an inbox notification from Extension Lab and opens it from the notifications modal", async ({
@@ -197,15 +192,15 @@ test.describe("Extension webviews", () => {
     await disableDefaultExtensionLab(request, project.id);
     await enableExtension(request, project.id, {
       displayName: "Extension Lab",
-      extensionId: "pstdio.extension-lab",
-      installName: "extension-lab-webviews",
-      name: "extension-lab",
+      extensionId: "pstdio.workbench-fixture",
+      installName: "workbench-fixture-webviews",
+      name: "workbench-fixture",
       sourcePath: extensionLabPath,
       version: "0.1.0",
     });
 
     const metadata = await fetchMetadata(request, project.id);
-    webviewAtPath(metadata, "lab");
+    webview(metadata, "lab-page");
     await bypassOnboarding(page, project.id);
 
     await openExtensionLab(page, project.id);
@@ -245,15 +240,15 @@ test.describe("Extension webviews", () => {
     await disableDefaultExtensionLab(request, project.id);
     await enableExtension(request, project.id, {
       displayName: "Extension Lab",
-      extensionId: "pstdio.extension-lab",
-      installName: "extension-lab-host-terminal",
-      name: "extension-lab",
+      extensionId: "pstdio.workbench-fixture",
+      installName: "workbench-fixture-host-terminal",
+      name: "workbench-fixture",
       sourcePath: extensionLabPath,
       version: "0.1.0",
     });
 
     const metadata = await fetchMetadata(request, project.id);
-    expect(metadata.views.find((view) => view.path === "lab-terminal")).toBeUndefined();
+    expect(metadata.views.find((view) => view.localId === "lab-terminal")).toBeUndefined();
 
     await bypassOnboarding(page, project.id);
     await page.goto(`/projects/${project.id}`);
@@ -269,14 +264,12 @@ test.describe("Extension webviews", () => {
     };
 
     await addTerminal();
-    await expect(terminalTabs).toHaveCount(1);
-    await expect(terminalTabs.first()).toHaveAttribute("aria-selected", "true");
-    await expect(terminalTabs.first()).toHaveAttribute("title", /^(bash|zsh|dash|sh)$/);
     await expectVisibleTerminalOutput();
 
     await addTerminal();
     await expect(terminalTabs).toHaveCount(2);
     await expect(terminalTabs.nth(1)).toHaveAttribute("aria-selected", "true");
+    await expect(terminalTabs.nth(1)).toHaveAttribute("title", /^(bash|zsh|dash|sh)$/);
     await expectVisibleTerminalOutput();
 
     await terminalTabs.first().click();
@@ -288,17 +281,13 @@ test.describe("Extension webviews", () => {
     await page.getByRole("button", { name: "Show Secondary Panel" }).click();
     await expectVisibleTerminalOutput();
 
-    // Close both terminals via the active tab's close button, then reopen one.
-    await terminalTabs
-      .first()
-      .getByRole("button", { name: /^Close/ })
-      .click();
+    // Close the active terminal, then add another alongside the remaining content.
     await terminalTabs
       .first()
       .getByRole("button", { name: /^Close/ })
       .click();
     await addTerminal();
-    await expect(terminalTabs).toHaveCount(1);
+    await expect(terminalTabs).toHaveCount(2);
     await expectVisibleTerminalOutput();
   });
 });

@@ -7,6 +7,7 @@ export interface ResourceRef {
   id: string;
   projectId?: string;
   label?: string;
+  icon?: string;
   extensionId?: string;
   metadata?: JsonObject;
 }

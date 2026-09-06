@@ -1,7 +1,8 @@
 import { Center, Text } from "@chakra-ui/react";
-import { toaster, useThemePreference } from "@pstdio/ui";
-import type { WorkbenchCore, WorkbenchTerminalController } from "@pstdio/workbench";
-import { createTerminalSessionCapability } from "@pstdio/workbench/extensions";
+import type { ResourceRef } from "@pstdio/sdk/extensions";
+import { getThemePreferenceMode, toaster, useThemePreference } from "@pstdio/ui";
+import type { WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "@pstdio/workbench";
+import { createTerminalSessionCapability, createWorkbenchWebviewHostCapabilities } from "@pstdio/workbench/extensions";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
 import { useEffect, useState } from "react";
 import i18n from "@/i18n";
@@ -29,23 +30,30 @@ interface ExtensionWebviewFrameProps {
   extensionInstanceId?: string;
   installName?: string;
   projectId: string | undefined;
-  resource?: { id: string; label?: string; metadata?: Record<string, unknown> };
+  resource?: ResourceRef;
+  placement?: WorkbenchPanelInstance;
   terminal?: WorkbenchTerminalController;
   title?: string;
   webview?: WebviewDescriptor;
   webviewId: string;
   workbench?: WorkbenchCore;
 }
-const isDarkPreference = (preference: string) => /dark/i.test(preference);
 
 const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
 
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const { extensionId, extensionInstanceId, installName, projectId, resource, terminal, title, webview, webviewId } =
     props;
-  const { themePreference, setThemePreference } = useThemePreference();
+  const { themePreference, themePreferences, setThemePreference } = useThemePreference();
   const executeCommand = useExecuteExtensionCommand(projectId);
   const [hostEvents] = useState(createHostEventPublisher);
+  const [pageLocation, setPageLocation] = useState(() => props.workbench?.pages.store.getState().location);
+  useEffect(() => {
+    const store = props.workbench?.pages.store;
+    if (!store) return;
+    setPageLocation(store.getState().location);
+    return store.subscribe(() => setPageLocation(store.getState().location));
+  }, [props.workbench]);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
   const [locale, setLocale] = useState(currentLocale);
 
@@ -58,7 +66,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
 
   if (!webview) return null;
 
-  const colorScheme = isDarkPreference(themePreference) ? "dark" : "light";
+  const colorScheme = getThemePreferenceMode(themePreference, themePreferences);
   const frameTitle = webview.title ? resolveLocalizableString(webview.title, extensionId) : (title ?? "Extension view");
   const translations = getExtensionTranslationContext(extensionId, locale);
 
@@ -119,6 +127,9 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   };
 
   const baseCapabilities = {
+    ...(props.workbench
+      ? createWorkbenchWebviewHostCapabilities({ workbench: props.workbench, placement: props.placement, hostEvents })
+      : {}),
     "commands.execute": async (params: unknown) => {
       const commandInput = params as Parameters<typeof executeWebviewCommand>[0];
       return executeWebviewCommand({
@@ -174,13 +185,13 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       const { key } = params as { key: string };
       return readSettingValue(key);
     },
-    "extension.settings.set": (params: unknown) => {
+    "extension.settings.set": async (params: unknown) => {
       const { key, value } = params as { key: string; value: unknown };
-      return updateSettingValue(key, value);
+      await updateSettingValue(key, value);
     },
-    "extension.settings.delete": (params: unknown) => {
+    "extension.settings.delete": async (params: unknown) => {
       const { key } = params as { key: string };
-      return deleteSettingValue(key);
+      await deleteSettingValue(key);
     },
     "host.dispatchKeyboardEvent": (params: unknown) => {
       const event = new KeyboardEvent("keydown", {
@@ -194,6 +205,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   };
   const capabilities = createDashboardExtensionWebviewCapabilities({
     base: baseCapabilities,
+    extensionId,
     extensionInstanceId,
     projectId,
     webviewId,
@@ -228,7 +240,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     <BridgedWebviewSurface
       key={view.id}
       view={view}
-      extensionProps={{ projectId, themePreference, locale, lastCommand, resource, translations }}
+      extensionProps={{ projectId, themePreference, locale, lastCommand, resource, pageLocation, translations }}
       theme={colorScheme}
       capabilities={capabilities}
       hostEvents={hostEvents}

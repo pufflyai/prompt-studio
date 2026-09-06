@@ -66,8 +66,8 @@ describe("hashExtensionSource", () => {
 });
 
 describe("first-party extension loading", () => {
-  test("loads Extension Lab with alpha.4 views and typed middleware", async () => {
-    const sourcePath = resolve(import.meta.dir, "../../../../../extensions/extension-lab");
+  test("loads the workbench fixture with alpha.4 views and typed middleware", async () => {
+    const sourcePath = resolve(import.meta.dir, "../../../../../packages/workbench-fixture");
     const loaded = await loadExtensionSource(sourcePath);
     const result = await checkExtensionSource(sourcePath, resolve(sourcePath, ".."));
 
@@ -75,8 +75,8 @@ describe("first-party extension loading", () => {
     expect(result.check.errorCount).toBe(0);
     expect(result.check.middlewares).toContainEqual(
       expect.objectContaining({
-        commandId: "pstdio.extension-lab.command.awaken",
-        id: "pstdio.extension-lab.middleware.reject-sentient-awakening",
+        commandId: "pstdio.workbench-fixture.command.awaken",
+        id: "pstdio.workbench-fixture.middleware.reject-sentient-awakening",
       }),
     );
     expect(result.check.views.some((view) => view.body.kind === "webview")).toBe(true);
@@ -99,9 +99,9 @@ describe("checkExtensionSource alpha.4", () => {
       export default {
         commands: [preview],
         keybindings: [
-          { id: "preview", ref: { kind: "keybinding", id: "preview" }, key: "mod+shift+p", win: "ctrl+shift+p", command: preview.ref },
-          { id: "duplicate", ref: { kind: "keybinding", id: "duplicate" }, key: "cmd+shift+p", command: preview.ref },
-          { id: "modifier-only", ref: { kind: "keybinding", id: "modifier-only" }, key: "ctrl", command: preview.ref },
+          { id: "preview", ref: { kind: "keybinding", id: "preview" }, key: "mod+shift+p", win: "ctrl+shift+p", action: { kind: "command", target: { command: preview.ref } } },
+          { id: "duplicate", ref: { kind: "keybinding", id: "duplicate" }, key: "cmd+shift+p", action: { kind: "command", target: { command: preview.ref } } },
+          { id: "modifier-only", ref: { kind: "keybinding", id: "modifier-only" }, key: "ctrl", action: { kind: "command", target: { command: preview.ref } } },
         ],
       };`,
     );
@@ -111,7 +111,10 @@ describe("checkExtensionSource alpha.4", () => {
       expect(result.check.keybindings).toEqual([
         expect.objectContaining({
           id: "pstdio.keybinding-check.keybinding.preview",
-          commandId: "pstdio.keybinding-check.command.preview",
+          action: {
+            kind: "command",
+            target: { command: { extensionId: "pstdio.keybinding-check", kind: "command", id: "preview" } },
+          },
           canonicalChord: "Mod+Shift+P",
         }),
       ]);
@@ -140,7 +143,7 @@ describe("checkExtensionSource alpha.4", () => {
         `const preview = { id: "preview", ref: { kind: "command", id: "preview" }, title: "Preview", run: async () => null };
         export default {
           commands: [preview],
-          keybindings: [{ id: "preview", ref: { kind: "keybinding", id: "preview" }, key: ${JSON.stringify(key)}, command: preview.ref }],
+          keybindings: [{ id: "preview", ref: { kind: "keybinding", id: "preview" }, key: ${JSON.stringify(key)}, action: { kind: "command", target: { command: preview.ref } } }],
         };`,
       );
     }

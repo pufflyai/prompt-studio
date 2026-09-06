@@ -1,17 +1,15 @@
 import {
   defineExtension,
+  definePage,
   defineResourceKind,
-  defineResourceView,
   defineView,
-  resourceSlotRef,
+  workbenchModes,
+  workbenchPages,
 } from "@pstdio/sdk/extensions";
 
 const fixtureItem = defineResourceKind({
   id: "fixture-item",
-  surface: "primary",
-  slots: [{ id: "primary", cardinality: "one", access: "owner" }],
 });
-const primary = resourceSlotRef(fixtureItem.ref, "primary");
 const items = defineView({
   id: "items",
   title: "Items",
@@ -34,9 +32,24 @@ const items = defineView({
     }),
   },
 });
-
+const itemPage = definePage({
+  id: "items",
+  title: "Items",
+  path: "items",
+  mode: workbenchModes.project,
+  parent: workbenchPages.start,
+  resource: {
+    kinds: [fixtureItem.ref],
+  },
+  main: {
+    kind: "view",
+    view: items.ref,
+    cardinality: "one",
+  },
+  slots: [],
+});
 export default defineExtension({
   resourceKinds: [fixtureItem],
   views: [items],
-  resourceViews: [defineResourceView({ id: "items", resourceKind: fixtureItem.ref, slot: primary, view: items.ref })],
+  pages: [itemPage],
 });

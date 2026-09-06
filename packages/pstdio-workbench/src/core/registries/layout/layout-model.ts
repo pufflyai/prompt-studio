@@ -49,10 +49,9 @@ export type {
   WidgetContribution,
   WidgetMountStrategy,
   WidgetReusePolicy,
-  WorkbenchFloatingPanelVisibility,
+  WorkbenchCommandTarget,
   WorkbenchLayout,
   WorkbenchLayoutStoreState,
-  WorkbenchLocationContribution,
   WorkbenchLocationEligibility,
   WorkbenchPanelContribution,
   WorkbenchPanelInstance,
@@ -67,11 +66,15 @@ export type {
   WorkbenchPanelReusePolicy,
   WorkbenchPanelTab,
   WorkbenchRegion,
+  WorkbenchRegionSettings,
   WorkbenchRegionSize,
   WorkbenchRegionState,
-  WorkbenchSubPanelContribution,
+  WorkbenchTabAction,
+  WorkbenchTabMenuGroup,
+  WorkbenchTabMenuRow,
   WorkbenchTabPosition,
   WorkbenchTabRetention,
+  WorkbenchTabSnapshot,
   WorkbenchWidgetPlacement,
   WorkbenchWidgetRole,
   WorkbenchWidgetTab,
@@ -119,8 +122,8 @@ const createLocationEstablisher = (input: CreateLocationEstablisherInput) => (in
         widgets: region.widgets.map((candidate) => {
           if (candidate.widgetId === instanceId) return placement;
           if (!ownedPanelMenuIds.has(candidate.contributionId)) return candidate;
-          if (candidate.resourceUri !== placement.resourceUri) return candidate;
-          return { ...candidate, ownerResourceUri: placement.resourceUri };
+          if (candidate.resourceKey !== placement.resourceKey) return candidate;
+          return { ...candidate, ownerResourceKey: placement.resourceKey };
         }),
       },
     ]),
@@ -133,26 +136,6 @@ const createLocationEstablisher = (input: CreateLocationEstablisherInput) => (in
     "main",
     placement,
   );
-  // A sub-panels-only Location presents no content of its own: hand the active
-  // slot to its first Sub Panel as soon as one exists. A restored selection has
-  // already been applied above and remains the active Sub Panel when valid.
-  if (input.getWidget(placement.contributionId)?.subPanelsOnly) {
-    const main = input.getLayout().regions.main;
-    const activeSubPanel = main.widgets.find(
-      (candidate) =>
-        candidate.widgetId === main.activeWidgetId &&
-        candidate.role === "sub-panel" &&
-        (!candidate.ownerResourceUri || candidate.ownerResourceUri === placement.resourceUri),
-    );
-    if (activeSubPanel) return input.panelMethods.getActivePanel("main")!;
-
-    const subPanel = main.widgets.find(
-      (candidate) =>
-        candidate.role === "sub-panel" &&
-        (!candidate.ownerResourceUri || candidate.ownerResourceUri === placement.resourceUri),
-    );
-    if (subPanel) return input.panelMethods.activatePanel(subPanel.widgetId);
-  }
   return input.panelMethods.getActivePanel("main")!;
 };
 
@@ -178,7 +161,12 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
   const getPlaceholders = () => store.getState().placeholders;
   const getWidgets = () => store.getState().widgets;
   const getPlaceholder = (regionId: WorkbenchRegion) => getPlaceholders()[regionId];
-  const regionQueries = createRegionQueries({ getLayout, getWidgets, getPlaceholder });
+  const regionQueries = createRegionQueries({
+    getLayout,
+    getWidgets,
+    getPlaceholder,
+    getRegionSettings: input.getRegionSettings,
+  });
   const contributionLists = createContributionLists({ getPlaceholders, getWidgets });
 
   const scopeMethods = createLayoutScopeMethods({
@@ -283,6 +271,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
     getPlaceholder,
 
     getRegionSize: regionQueries.getRegionSize,
+    getRegionSettings: (regionId) => input.getRegionSettings?.(regionId),
     getRegionCollapsible: regionQueries.getRegionCollapsible,
     getRegionHeaderBorderBottom: regionQueries.getRegionHeaderBorderBottom,
 
@@ -341,7 +330,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
       };
       let next =
         activeWidgetId && layout.activeWidgetId === activeWidgetId
-          ? { ...cleared, activeWidgetId: undefined, activeResourceUri: undefined }
+          ? { ...cleared, activeWidgetId: undefined, activeResourceKey: undefined }
           : cleared;
 
       if (regionId !== "side" && workbenchPanelRegions.includes(regionId as WorkbenchPanelRegion)) {
@@ -368,7 +357,7 @@ export const createLayoutModel = (input: CreateLayoutModelInput = {}): LocationA
         locationSubPanelSelections: {},
         activeWidgetId: undefined,
         activeLocationWidgetId: undefined,
-        activeResourceUri: undefined,
+        activeResourceKey: undefined,
       });
       persistLayout();
     },

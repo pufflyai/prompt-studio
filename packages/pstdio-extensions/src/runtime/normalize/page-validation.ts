@@ -1,6 +1,6 @@
-import type { ContributionRef, PageSlot } from "@pstdio/sdk/extensions";
+import type { ContributionRef } from "@pstdio/sdk/extensions";
 import { isValidLocalContributionId, workbenchModeDefinitions, workbenchPageDefinitions } from "@pstdio/sdk/extensions";
-import type { RuntimePageRecord } from "../../types/runtime";
+import type { RuntimePageRecord, RuntimePageSlot } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { Accumulator } from "./accumulator";
 
@@ -56,54 +56,15 @@ const ownRefMissing = (
   });
 };
 
-const validateSlotContent = (runtime: Accumulator, record: RuntimePageRecord, slot: PageSlot, index: number) => {
-  const fieldPath = `pages.${record.localId}.slots.${index}`;
-  const hasView = Boolean(slot.view);
-  const hasBinding = Boolean(slot.binding);
-  if (slot.role === "primary" && !hasView && !hasBinding) {
-    addPageDiagnostic(runtime, {
-      code: "extension_page_slot_invalid",
-      fieldPath,
-      message: `Primary slot "${slot.id}" must define a view, a binding, or both`,
-      record,
+const validateSlotContent = (runtime: Accumulator, record: RuntimePageRecord, slot: RuntimePageSlot, index: number) => {
+  const fieldPath = `pages.${record.localId}.slots.${index}.item`;
+  const item = slot.item;
+  if (item.kind === "view") ownRefMissing(runtime, record, item.view, `${fieldPath}.view`);
+  else {
+    item.binding.kinds.forEach((kind, kindIndex) => {
+      ownRefMissing(runtime, record, kind, `${fieldPath}.binding.kinds.${kindIndex}`);
     });
-  }
-  if (slot.role === "auxiliary" && hasView === hasBinding) {
-    addPageDiagnostic(runtime, {
-      code: "extension_page_slot_invalid",
-      fieldPath,
-      message: `Auxiliary slot "${slot.id}" must define exactly one view or binding`,
-      record,
-    });
-  }
-  if (slot.view) ownRefMissing(runtime, record, slot.view, `${fieldPath}.view`);
-  if (slot.binding) {
-    ownRefMissing(runtime, record, slot.binding.kind, `${fieldPath}.binding.kind`);
-    ownRefMissing(runtime, record, slot.binding.view, `${fieldPath}.binding.view`);
-  }
-  if (slot.defaultResource && !slot.binding) {
-    addPageDiagnostic(runtime, {
-      code: "extension_page_slot_invalid",
-      fieldPath: `${fieldPath}.defaultResource`,
-      message: `Slot "${slot.id}" has a default resource but no binding`,
-      record,
-    });
-  }
-  if (slot.defaultResource && slot.binding && slot.defaultResource.type !== slot.binding.kind.id) {
-    addPageDiagnostic(runtime, {
-      code: "extension_page_slot_invalid",
-      fieldPath: `${fieldPath}.defaultResource`,
-      message: `Default resource kind "${slot.defaultResource.type}" does not match "${slot.binding.kind.id}"`,
-      record,
-    });
-  }
-  if (slot.role === "auxiliary" && slot.defaultOpen && slot.binding && !slot.defaultResource) {
-    addPageDiagnostic(runtime, {
-      code: "extension_page_slot_invalid",
-      fieldPath: `${fieldPath}.defaultOpen`,
-      message: `Bound auxiliary slot "${slot.id}" needs a default resource before it can open by default`,
-      record,
-    });
+    ownRefMissing(runtime, record, item.binding.view, `${fieldPath}.binding.view`);
   }
 };
 
@@ -145,32 +106,49 @@ const validateModeAndRegions = (runtime: Accumulator, record: RuntimePageRecord)
 };
 
 const validatePageStructure = (runtime: Accumulator, record: RuntimePageRecord) => {
-  const primary = record.contribution.slots.filter((slot) => slot.role === "primary");
-  if (primary.length !== 1 || primary[0]?.region !== "main") {
+  const page = record.contribution;
+  const main = page.main;
+  ownRefMissing(
+    runtime,
+    record,
+    main.kind === "view" ? main.view : main.empty,
+    `pages.${record.localId}.main.${main.kind === "view" ? "view" : "empty"}`,
+  );
+  page.resource?.kinds.forEach((kind, index) => {
+    ownRefMissing(runtime, record, kind, `pages.${record.localId}.resource.kinds.${index}`);
+  });
+  if (main.kind === "view" && main.cardinality === "many" && !page.resource) {
     addPageDiagnostic(runtime, {
-      code: "extension_page_primary_invalid",
-      fieldPath: `pages.${record.localId}.slots`,
-      message: `Page "${record.localId}" must declare exactly one primary slot in main`,
+      code: "extension_page_main_invalid",
+      fieldPath: `pages.${record.localId}.resource`,
+      message: "A Main view with many instances requires a routed resource constraint",
       record,
     });
   }
-  if (primary[0]?.view && !primary[0].binding && primary[0].closable === true) {
+  if (main.kind === "view" && page.resource && !page.parent) {
     addPageDiagnostic(runtime, {
-      code: "extension_page_primary_invalid",
-      fieldPath: `pages.${record.localId}.slots.${record.contribution.slots.indexOf(primary[0])}.closable`,
-      message: `Static primary slot "${primary[0].id}" cannot be closable`,
-      record,
-    });
-  }
-  if (primary[0]?.binding && !primary[0].view && primary[0].closable === true && !record.contribution.parent) {
-    addPageDiagnostic(runtime, {
-      code: "extension_page_primary_invalid",
+      code: "extension_page_main_invalid",
       fieldPath: `pages.${record.localId}.parent`,
-      message: `Closable bound-only page "${record.localId}" must declare a parent`,
+      message: "A resource view page requires a parent to return to when its last tab closes",
       record,
     });
   }
-
+  for (const [index, slot] of page.slots.entries()) {
+    if (slot.openOn !== "page-resource") continue;
+    if (
+      slot.item.kind === "binding" &&
+      slot.item.binding.kinds.some((kind) =>
+        page.resource?.kinds.some((routed) => routed.id === kind.id && routed.extensionId === kind.extensionId),
+      )
+    )
+      continue;
+    addPageDiagnostic(runtime, {
+      code: "extension_page_slot_invalid",
+      fieldPath: `pages.${record.localId}.slots.${index}.openOn`,
+      message: "A panel following the page resource must accept its resource kind",
+      record,
+    });
+  }
   const seen = new Set<string>();
   for (const [index, slot] of record.contribution.slots.entries()) {
     if (!isValidLocalContributionId(slot.id)) {

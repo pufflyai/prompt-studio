@@ -1,14 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, resourceContextMenuPath, workbenchTopHeaderTrailingMenuPath } from "@pstdio/workbench";
+import { createWorkbench, resourceContextMenuPath, workbenchTopHeaderTrailingMenuPath } from "@pstdio/workbench";
 import {
   createWorkbenchTerminalModule,
   listWorkbenchMenuItems,
-  WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
   WORKBENCH_TERMINAL_WIDGET_ID,
 } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "../../shared/app/commands";
 import { createDashboardResource } from "../../shared/app/resources";
-import { registerWorkspaceResourceActions } from "./workspace-resource-actions";
+import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
 
 const workspaceActionCommandIds = new Set<string>([
   dashboardCommandIds.openWorkspaceTerminal,
@@ -19,7 +18,7 @@ const workspaceActionCommandIds = new Set<string>([
 
 describe("registerWorkspaceResourceActions", () => {
   test("registers workspace actions only beside workspace resources", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.registerModule({
       id: "test.workspace-actions",
@@ -45,7 +44,7 @@ describe("registerWorkspaceResourceActions", () => {
   });
 
   test("opens a workspace terminal in the Secondary Panel", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
       workspaceExecutionKind: "local",
@@ -63,34 +62,33 @@ describe("registerWorkspaceResourceActions", () => {
         return undefined;
       },
     });
-    workbench.panels.setOpen("secondary", false);
+    workbench.shell.setRegionOpen("secondary", false);
 
     await workbench.commands.executeCommand(dashboardCommandIds.openWorkspaceTerminal, undefined, {
       resource: workspace,
     });
 
     const secondaryRegion = workbench.layout.getLayout().regions.secondary;
-    expect(secondaryRegion.activeWidgetId).toBe(WORKBENCH_TERMINAL_WIDGET_ID);
+    expect(
+      secondaryRegion.widgets.find((placement) => placement.widgetId === secondaryRegion.activeWidgetId)?.viewId,
+    ).toBe(WORKBENCH_TERMINAL_WIDGET_ID);
     const terminals = workbench.layout
       .listPanelInstances("secondary")
-      .filter((panel) => panel.panelId === WORKBENCH_TERMINAL_WIDGET_ID);
-    expect(secondaryRegion.widgets.map((placement) => placement.contributionId)).toEqual([
-      WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID,
-      WORKBENCH_TERMINAL_WIDGET_ID,
-    ]);
+      .filter((panel) => panel.viewId === WORKBENCH_TERMINAL_WIDGET_ID);
+    expect(secondaryRegion.widgets).toHaveLength(1);
     expect(terminals).toEqual([
       expect.objectContaining({
-        panelId: WORKBENCH_TERMINAL_WIDGET_ID,
+        viewId: WORKBENCH_TERMINAL_WIDGET_ID,
         mountStrategy: "keep-mounted",
-        resource: workspace,
+        resource: expect.objectContaining({ type: "terminal", metadata: workspace.metadata }),
         title: "Terminal 1",
       }),
     ]);
-    expect(workbench.panels.isOpen("secondary")).toBe(true);
+    expect(workbench.shell.getRegionState("secondary").open).toBe(true);
   });
 
   test("leaves the workspace terminal action inert when the host terminal widget is unavailable", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
       workspaceExecutionKind: "local",
@@ -115,8 +113,31 @@ describe("registerWorkspaceResourceActions", () => {
     expect(workbench.layout.getLayout().regions.secondary.widgets).toEqual([]);
   });
 
+  test("restores an owned workspace terminal missing from the rendered layout", () => {
+    const workbench = createWorkbench();
+    const workspace = createDashboardResource("workspace", "workspace-1", "WS-1", "GitBranch", "project-1", {
+      workspaceId: "workspace-1",
+      workspaceExecutionKind: "local",
+      workspacePath: "/repo/.pstdio/workspaces/WS-1",
+      workspaceProviderState: "ready",
+    });
+    workbench.registerModule(createWorkbenchTerminalModule());
+    ensureWorkspaceTerminalResource(workbench, workspace);
+    const terminal = workbench.layout.listPanelInstances("secondary")[0];
+    workbench.layout.removeWidgetPlacement(terminal.instanceId);
+
+    ensureWorkspaceTerminalResource(workbench, workspace);
+
+    expect(workbench.layout.listPanelInstances("secondary")).toEqual([
+      expect.objectContaining({
+        viewId: WORKBENCH_TERMINAL_WIDGET_ID,
+        resource: expect.objectContaining({ metadata: expect.objectContaining({ workspaceId: "workspace-1" }) }),
+      }),
+    ]);
+  });
+
   test("keeps terminal action visible for default and worktree workspace resources", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const defaultWorkspace = createDashboardResource("workspace", "default", "project", "GitBranch", "project-1", {
       workspaceId: "default",
       workspaceExecutionKind: "local",

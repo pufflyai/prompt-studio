@@ -1,3 +1,4 @@
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { DataTableRendererRow, ResourceRef } from "@pstdio/workbench";
 import type { SyncedRow } from "@/lib/sync/collections";
 import { createDashboardResource } from "@/shared/app/resources";
@@ -15,7 +16,6 @@ import {
   getDashboardWorkspaceDiffSummaries,
 } from "@/shared/workspaces/workspace-diff-summary-data";
 import { createDashboardWorkspaceCapabilityMetadata } from "@/shared/workspaces/workspace-options";
-
 export interface DashboardWorkspace {
   id: string;
   title: string;
@@ -37,21 +37,17 @@ export interface DashboardWorkspace {
   providerState: string;
   resource: ResourceRef;
 }
-
 export interface DashboardWorkspaceRow extends DataTableRendererRow {
   resource: ResourceRef;
 }
-
 interface DashboardWorkspaceOptions {
   projectId?: string;
   includeArchived?: boolean;
   diffSummariesByWorkspaceId?: Map<string, DashboardWorkspaceDiffSummary>;
 }
-
 const anchorMetadataFromWorkspace = (workspace: SyncedRow) => {
   const anchor = listResourceAnchors(workspace)[0];
   if (!anchor) return {};
-
   return {
     resourceParent: {
       type: anchor.type,
@@ -61,7 +57,6 @@ const anchorMetadataFromWorkspace = (workspace: SyncedRow) => {
     },
   };
 };
-
 const createWorkspaceResourceMetadata = (input: {
   workspace: SyncedRow;
   workspacePath: string | null;
@@ -70,9 +65,19 @@ const createWorkspaceResourceMetadata = (input: {
   const branch = input.workspace.branch as string | null;
   const executionKind = input.workspace.execution_kind === "remote" ? "remote" : "local";
   const providerState = (input.workspace.provider_state as string | undefined) ?? "ready";
-  const providerError = input.workspace.provider_error_json as { message?: string } | null | undefined;
+  const providerError = input.workspace.provider_error_json as
+    | {
+        message?: string;
+      }
+    | null
+    | undefined;
   const providerCapabilities = input.workspace.provider_capabilities_json as
-    | { archive?: boolean; delete?: boolean; diff?: boolean; files?: "none" | "read" | "write" }
+    | {
+        archive?: boolean;
+        delete?: boolean;
+        diff?: boolean;
+        files?: "none" | "read" | "write";
+      }
     | undefined;
   const metadata: Record<string, unknown> = {
     workspaceId: input.workspace.id,
@@ -97,20 +102,16 @@ const createWorkspaceResourceMetadata = (input: {
     // Sessions created from a workspace inherit this so the composer stays locked to the workspace branch.
     ...(branch ? { workspaceBranch: branch } : {}),
   };
-
   if (input.summary) {
     metadata.diffOverview = formatDashboardWorkspaceDiffOverview(input.summary);
     metadata.diffAdditions = input.summary.additions;
     metadata.diffDeletions = input.summary.deletions;
     metadata.diffFileCount = input.summary.fileCount;
   }
-
   return metadata;
 };
-
 export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: DashboardWorkspaceOptions = {}) => {
   const repoPathByProjectId = indexFirstProjectRepoPaths(rows.projectRepos, rows.repos);
-
   return rows.workspaces
     .filter(
       (workspace) =>
@@ -128,8 +129,12 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
           : ((workspace.worktree_path as string | null) ??
             repoPathByProjectId.get(workspace.project_id as string) ??
             null);
-      const providerError = workspace.provider_error_json as { message?: string } | null | undefined;
-
+      const providerError = workspace.provider_error_json as
+        | {
+            message?: string;
+          }
+        | null
+        | undefined;
       return {
         id: workspace.id,
         title,
@@ -161,8 +166,12 @@ export const buildDashboardWorkspacesFromRows = (rows: DashboardRows, options: D
     })
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 };
-
-export const createDashboardWorkspaces = (projectId?: string, options: { includeArchived?: boolean } = {}) => {
+export const createDashboardWorkspaces = (
+  projectId?: string,
+  options: {
+    includeArchived?: boolean;
+  } = {},
+) => {
   const rows = readDashboardRows();
   return buildDashboardWorkspacesFromRows(rows, {
     projectId,
@@ -172,15 +181,13 @@ export const createDashboardWorkspaces = (projectId?: string, options: { include
     ),
   });
 };
-
 const formatWorkspaceState = (workspace: DashboardWorkspace) => {
   const state = workspace.archived ? "archived" : workspace.providerState;
   const label = state.replaceAll("_", " ");
   return `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
 };
-
 export const toWorkspaceDataTableRow = (workspace: DashboardWorkspace): DashboardWorkspaceRow => ({
-  id: workspace.resource.uri,
+  id: resourceKey(workspace.resource),
   resource: workspace.resource,
   values: {
     attempt: workspace.shorthand,

@@ -51,7 +51,7 @@ const WorkflowStatusSection = (props: WorkflowStatusSectionProps) => {
       valueNeedsUpdate={statusNeedsUpdate}
       readOnly={!statusSet.save}
       title={statusSet.title}
-      description={statusSet.save ? "Configure this workflow's states." : "This status set is read-only."}
+      description={statusSet.save ? undefined : "This status set is read-only."}
       actionOptions={statusSet.actions?.map((action) => ({
         value: action.id,
         label: action.label,

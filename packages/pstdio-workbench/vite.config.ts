@@ -28,7 +28,6 @@ export default defineConfig({
         react: path.resolve(import.meta.dirname, "src/react/index.ts"),
         storage: path.resolve(import.meta.dirname, "src/storage/index.ts"),
         extensions: path.resolve(import.meta.dirname, "src/extensions/index.ts"),
-        testing: path.resolve(import.meta.dirname, "src/testing/index.ts"),
         "webview-runtime": path.resolve(import.meta.dirname, "src/webview-runtime/index.ts"),
       },
       formats: ["es"],
@@ -54,7 +53,8 @@ export default defineConfig({
       },
     }),
     dts({
-      tsconfigPath: "./tsconfig.json",
+      tsconfigPath: "./tsconfig.build.json",
+      entryRoot: "..",
       rollupTypes: true,
       exclude: [
         "src/**/*.test.ts",

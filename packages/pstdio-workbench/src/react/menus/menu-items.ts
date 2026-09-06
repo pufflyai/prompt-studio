@@ -10,8 +10,8 @@ import {
   createWorkbenchResourceContextValues,
   matchesContextExpression,
   workbenchResourceIdContextKey,
-  workbenchResourceKindContextKey,
   workbenchResourceMetadataContextKey,
+  workbenchResourceTypeContextKey,
 } from "../../core";
 import { byContributionPriority } from "../../core/shared/contributions/metadata";
 
@@ -45,7 +45,7 @@ interface WorkbenchMenuItemContext {
 const workbenchResourceMetadataContextKeyPrefix = workbenchResourceMetadataContextKey("");
 
 const isWorkbenchResourceContextKey = (key: string) =>
-  key === workbenchResourceKindContextKey ||
+  key === workbenchResourceTypeContextKey ||
   key === workbenchResourceIdContextKey ||
   key.startsWith(workbenchResourceMetadataContextKeyPrefix);
 

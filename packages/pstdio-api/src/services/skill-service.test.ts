@@ -37,11 +37,11 @@ const emptyRuntime = {
   modes: [],
   pages: [],
   navigationItems: [],
+  navigationTrees: [],
   placements: [],
   privateHandlers: [],
   resourceHierarchyProviders: [],
   resourceKinds: [],
-  resourceViews: [],
   schedules: [],
   settings: [],
   settingsPanels: [],
@@ -135,29 +135,35 @@ describe("SkillService", () => {
   });
 
   test("list reads extension skills from the runtime snapshot without re-importing", async () => {
-    const { close, importCountPath, project, service, tempRoot } = await setupServiceWithExtension();
-    expect(await service.list(project.id)).toHaveLength(1);
-    expect(await service.list(project.id)).toHaveLength(1);
-    expect(await Bun.file(importCountPath).text()).toBe("1");
-
-    await close();
-    rmSync(tempRoot, { recursive: true, force: true });
+    const { catalog, close, importCountPath, project, service, tempRoot } = await setupServiceWithExtension();
+    try {
+      expect(await service.list(project.id)).toHaveLength(1);
+      expect(await service.list(project.id)).toHaveLength(1);
+      expect(await Bun.file(importCountPath).text()).toBe("1");
+      expect((await catalog.get(project.id)).runtime.diagnostics).toEqual([]);
+    } finally {
+      await close();
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
   });
 
   test("concurrent list reads share one module import per source", async () => {
-    const { close, importCountPath, project, service, tempRoot } = await setupServiceWithExtension();
-    const [first, second, third] = await Promise.all([
-      service.list(project.id),
-      service.list(project.id),
-      service.list(project.id),
-    ]);
-    expect(first).toHaveLength(1);
-    expect(second).toHaveLength(1);
-    expect(third).toHaveLength(1);
-    expect(await Bun.file(importCountPath).text()).toBe("1");
-
-    await close();
-    rmSync(tempRoot, { recursive: true, force: true });
+    const { catalog, close, importCountPath, project, service, tempRoot } = await setupServiceWithExtension();
+    try {
+      const [first, second, third] = await Promise.all([
+        service.list(project.id),
+        service.list(project.id),
+        service.list(project.id),
+      ]);
+      expect(first).toHaveLength(1);
+      expect(second).toHaveLength(1);
+      expect(third).toHaveLength(1);
+      expect(await Bun.file(importCountPath).text()).toBe("1");
+      expect((await catalog.get(project.id)).runtime.diagnostics).toEqual([]);
+    } finally {
+      await close();
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
   });
 });
 

@@ -6,7 +6,7 @@
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.7"
+    "pstdio": "1.0.0-alpha.10"
   },
   "pstdio": {
     "scope": "user"
@@ -14,7 +14,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "bun test",
+    "test": "bun run typecheck && bun test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

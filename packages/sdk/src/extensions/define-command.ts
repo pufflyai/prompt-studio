@@ -29,10 +29,10 @@ type CommandInput<TSchema extends ParamObjectSchema | undefined, TResult> = Omit
  *     },
  *   });
  */
-export function defineCommand<const TSchema extends ParamObjectSchema | undefined, TResult>(
+export function defineCommand<const TSchema extends ParamObjectSchema | undefined = undefined, TResult = unknown>(
   definition: CommandInput<TSchema, TResult>,
 ): CommandContribution<TSchema, TResult>;
-export function defineCommand<const TSchema extends ParamObjectSchema | undefined, TResult>(
+export function defineCommand<const TSchema extends ParamObjectSchema | undefined = undefined, TResult = unknown>(
   definition: CommandInput<TSchema, TResult>,
 ) {
   return { ...definition, ref: { kind: "command" as const, id: definition.id } };

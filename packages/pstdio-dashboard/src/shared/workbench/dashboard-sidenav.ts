@@ -1,111 +1,123 @@
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
-import { getDashboardSelectedResource } from "@/shared/app/navigation-state";
 import { subscribeDashboardSelectedProject } from "@/shared/app/project-context";
+import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import {
-  getSidenavContributionDefaultExpandedSectionIds,
-  getSidenavContributionFooterNodes,
-  getSidenavContributionHeaderNodes,
-  getSidenavContributionSections,
-  subscribeSidenavContributions,
-} from "@/shared/workbench/contributions/sidenav-tree-contributions";
-import { modeOwnsNavigation } from "@/shared/workbench/mode-navigation-ownership";
 
+const activeModeOwner = (ctx: WorkbenchModuleContext, modeId: string) =>
+  ctx.navigationTrees.resolveOwner("mode", modeId) ?? { kind: "mode" as const, id: modeId, extensionId: "pstdio" };
+const activePageOwner = (ctx: WorkbenchModuleContext) => {
+  const state = ctx.pages.store.getState();
+  const page = state.activePageId ? state.pages[state.activePageId] : undefined;
+  if (!page) return undefined;
+  return { kind: "page" as const, id: page.id, extensionId: page.ref.extensionId ?? "pstdio" };
+};
+const sidenavModeOwners = (ctx: WorkbenchModuleContext, modeId: string) => {
+  if (modeId !== "sessions") return [activeModeOwner(ctx, modeId)];
+  return [activeModeOwner(ctx, "project"), activeModeOwner(ctx, modeId)];
+};
+const withoutSessionsLink = (sections: Awaited<ReturnType<WorkbenchModuleContext["navigationTrees"]["getSections"]>>) =>
+  sections
+    .map((section) => ({
+      ...section,
+      nodes: section.nodes.filter((node) => node.id !== dashboardViews.sessions.id),
+    }))
+    .filter((section) => section.nodes.length > 0);
 // The unified sidenav composes its body/footer from mode-gated contributions. The active
 // mode is the gate, so dashboard-owned modes (project/sessions) and extension-declared
 // modes (e.g. ticket) reshape the same widget without opening a different one.
-const composeSidenavBody = async (ctx: WorkbenchModuleContext) => {
+const composeSidenavSlot = async (ctx: WorkbenchModuleContext, slot: "header" | "content" | "footer") => {
   const mode = ctx.modes.getActiveModeId();
-  const resource = getDashboardSelectedResource(ctx);
+  const resource = ctx.getPrimaryResource();
   if (!mode) return [];
-  return await getSidenavContributionSections(ctx, mode, resource ? { resource } : {});
+  const context = resource ? { resource } : {};
+  const modeSections = (
+    await Promise.all(
+      sidenavModeOwners(ctx, mode).map(async (owner) => {
+        const sections = await ctx.navigationTrees.getSections(owner, slot, context);
+        return mode === "sessions" && owner.id === "project" ? withoutSessionsLink(sections) : sections;
+      }),
+    )
+  ).flat();
+  const pageOwner = activePageOwner(ctx);
+  if (!pageOwner) return modeSections;
+  const pageSections = await ctx.navigationTrees.getSections(pageOwner, slot, context);
+  return [...modeSections, ...pageSections];
 };
-
-const composeSidenavHeader = (ctx: WorkbenchModuleContext) => {
-  const mode = ctx.modes.getActiveModeId();
-  if (!mode) return [];
-  return getSidenavContributionHeaderNodes(ctx, mode);
-};
-
-const composeSidenavFooter = (ctx: WorkbenchModuleContext) => {
-  const mode = ctx.modes.getActiveModeId();
-  if (!mode) return [];
-  return getSidenavContributionFooterNodes(ctx, mode);
-};
-
-// Opens the single sidenav widget and recomposes it. Project selection owns the Sidenav
-// itself, so the sidenav stays hidden there.
-export const showDashboardSidenav = (ctx: WorkbenchModuleContext, options: { selectedNode?: string | null } = {}) => {
-  if (!ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) return;
-
-  ctx.layout.openPanel(dashboardWidgetIds.dashboardSidenav, { pinned: true });
+// Mode and page contributions share one host navigation view.
+export const updateDashboardSidenav = (
+  ctx: WorkbenchModuleContext,
+  options: {
+    selectedNode?: string | null;
+  } = {},
+) => {
+  if (!ctx.views.getView(dashboardWidgetIds.dashboardSidenav)) return;
   if ("selectedNode" in options) {
-    ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, options.selectedNode ?? undefined);
+    ctx.treeViews.setSelectedNode(dashboardWidgetIds.dashboardSidenav, options.selectedNode ?? undefined);
   }
   const mode = ctx.modes.getActiveModeId();
   if (mode) {
-    for (const sectionId of getSidenavContributionDefaultExpandedSectionIds(ctx, mode)) {
-      ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
+    for (const owner of sidenavModeOwners(ctx, mode)) {
+      for (const sectionId of ctx.navigationTrees.getDefaultExpandedSectionIds(owner)) {
+        ctx.treeViews.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
+      }
     }
   }
-  ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
-  // Route and mode changes own sidenav content, not the user's open/collapsed
-  // preference. Keep layout visibility aligned with the persisted panel state.
-  if (ctx.panels.isOpen("sidenav")) ctx.layout.setRegionVisible("sidenav", true);
+  const pageOwner = activePageOwner(ctx);
+  if (pageOwner) {
+    for (const sectionId of ctx.navigationTrees.getDefaultExpandedSectionIds(pageOwner)) {
+      ctx.treeViews.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
+    }
+  }
+  ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
 };
-
 // Selecting a node is best-effort: routes call this before the sidenav widget is guaranteed to
 // exist (e.g. in unit tests that register a single module), so it no-ops when it is absent.
 export const setDashboardSidenavSelection = (ctx: WorkbenchModuleContext, nodeId: string | undefined) => {
-  if (!ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) return;
-  ctx.renderers.setSelectedNode(dashboardWidgetIds.dashboardSidenav, nodeId);
+  if (!ctx.views.getView(dashboardWidgetIds.dashboardSidenav)) return;
+  ctx.treeViews.setSelectedNode(dashboardWidgetIds.dashboardSidenav, nodeId);
 };
-
 const syncSidenavForActiveMode = (ctx: WorkbenchModuleContext) => {
   const mode = ctx.modes.getActiveModeId();
-  if (!mode || mode === "project-selection" || modeOwnsNavigation(mode)) return;
-  showDashboardSidenav(ctx);
+  if (!mode) return;
+  updateDashboardSidenav(ctx);
 };
-
-const DASHBOARD_SIDENAV_REGION_SIZE = { defaultPx: 250, minPx: 200, maxPx: 360 };
-
+export const DASHBOARD_SIDENAV_REGION_SIZE = { defaultPx: 250, minPx: 200, maxPx: 360 };
 const registerSidenavWidget = (ctx: WorkbenchModuleContext) => {
-  ctx.renderers.registerTreeRenderer({
-    id: dashboardWidgetIds.dashboardSidenav,
-    title: "Sidenav",
-    defaultExpandedNodeIds: ["workspace-sessions"],
-    defaultExpandedSectionIds: ["sessions-wrap"],
-    getHeader: () => composeSidenavHeader(ctx),
-    getBody: () => composeSidenavBody(ctx),
-    getFooter: () => composeSidenavFooter(ctx),
-    getChildren: () => [],
-  });
-  ctx.layout.registerPanel(
+  ctx.views.registerView(
     {
       id: dashboardWidgetIds.dashboardSidenav,
       title: "Sidenav",
-      region: "sidenav",
-      rendererId: dashboardWidgetIds.dashboardSidenav,
-      singleton: true,
-      regionSize: DASHBOARD_SIDENAV_REGION_SIZE,
+      body: {
+        kind: "tree",
+        defaultExpandedNodeIds: ["workspace-sessions"],
+        defaultExpandedSectionIds: ["sessions-wrap"],
+        canMove: ({ source, destination }) => source.moveScope === destination.moveScope,
+        getHeader: () => composeSidenavSlot(ctx, "header"),
+        getBody: () => composeSidenavSlot(ctx, "content"),
+        getFooter: () => composeSidenavSlot(ctx, "footer"),
+        getChildren: (node, context) => ctx.navigationTrees.getChildren(node, context),
+      },
     },
     { priority: 80 },
   );
+  ctx.shellPlacements.registerPlacement({
+    id: "dashboard.sidenav",
+    item: {
+      kind: "view",
+      presence: "fixed",
+      view: { kind: "view", id: dashboardWidgetIds.dashboardSidenav },
+    },
+    region: "sidenav",
+  });
 };
-
-// Registers the dashboard sidenav as a singleton chrome widget: created once, opened on mode
-// entry, and refreshed when the active mode or its data changes. It is never opened per-mode,
-// so the "Sessions" group collapse state carries across modes.
+// Explicit mode chrome replaces or hides the host navigation at the region boundary.
 export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   registerSidenavWidget(ctx);
-
   const refresh = () => {
-    if (ctx.renderers.getTreeRenderer(dashboardWidgetIds.dashboardSidenav)) {
-      ctx.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
-    }
+    if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav))
+      ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
   };
-
   const modeSubscription = ctx.modes.onDidChangeActive(() => syncSidenavForActiveMode(ctx));
   // Resource-scoped contributions read the primary resource (e.g. the sessions list scopes to the
   // open workspace), but the tree only recomputes on refresh. A workspace→workspace switch
@@ -113,17 +125,21 @@ export const registerDashboardSidenav = (ctx: WorkbenchModuleContext) => {
   // primary's scope (or none, showing every session). The primary change fires after placement,
   // unlike the beforeOpen refresh that runs before it.
   const primaryResourceSubscription = ctx.onDidChangePrimaryResource(refresh);
+  const pageSubscription = ctx.pages.store.subscribeSelector(
+    (state) => state.activePageId,
+    () => updateDashboardSidenav(ctx),
+  );
   const unsubscribeDashboardData = subscribeDashboardData(refresh);
   const unsubscribeProject = subscribeDashboardSelectedProject(ctx, refresh);
-  const unsubscribeSidenavContributions = subscribeSidenavContributions(ctx, () => syncSidenavForActiveMode(ctx));
-
+  const navigationContributionSubscription = ctx.navigationTrees.onDidChange(() => syncSidenavForActiveMode(ctx));
   return {
     dispose: () => {
       modeSubscription.dispose();
       primaryResourceSubscription.dispose();
+      pageSubscription();
       unsubscribeDashboardData();
       unsubscribeProject();
-      unsubscribeSidenavContributions();
+      navigationContributionSubscription.dispose();
     },
   };
 };

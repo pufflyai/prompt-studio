@@ -1,26 +1,63 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
-import * as OnboardingStories from "./onboarding.stories";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
+import * as ResourceMenuStories from "../resource-menu-slots/resource-menu-slots.stories";
+import diagramSource from "../resource-menu-slots/module.tsx?raw";
+import { onboardingSources } from "./onboarding-sources";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={ResourceMenuStories} name="Guide" />
 
-<Meta of={OnboardingStories} name="18. Palette resources" parameters={{ layout: "padded" }} />
+# Add actions to resource menus
 
-# 18. Add Dynamic Palette Results
+Resource menus expose commands for one resource kind. The primary slot holds common actions. The context slot holds the
+full right-click menu. Both invoke registered commands with the active resource context.
 
-Commands are static. Resource providers let the palette query live data while
-the user types, then activate a result by opening a resource or running provider
-logic.
+This guide uses the Extension API from `@pstdio/sdk/extensions`. The diagram below shows how two resource kinds resolve
+their declared menu slots. An unresolved slot remains visible as a host diagnostic.
 
-<Canvas of={OnboardingStories.PaletteResources} sourceState="shown" />
+<Canvas of={ResourceMenuStories.TwoResourceKinds} sourceState="none" />
 
-Register providers with `ctx.commandPaletteResources.registerProvider(...)`.
-Each provider receives `{ query, limit }` and returns result records:
+## Extension code
 
-- `label`, `description`, `icon`, and `keywords` feed palette display/search.
-- `activate()` owns the behavior for that result.
-- `commandPaletteResources.refresh()` asks open palettes to re-query providers.
+<Source code={onboardingSources.resourceMenuSlots} language="tsx" />
 
-Use providers for searchable domain data: tickets, files, workspaces, extension
-objects, or remote entities that should not become permanent commands.
+Contribute command ids, not React buttons. This keeps visibility rules, keybindings, and command execution consistent.
+
+## Story source
+
+The canvas uses this host-side diagnostic view to show resolved and unresolved slots.
+
+<Source code={diagramSource} language="tsx" />
+
+## What each field means
+
+`defineResourceKind(...)` declares one kind of domain object:
+
+- `id` is the stable kind identity inside the extension.
+- `label` is the user-facing name.
+- `menuSlots` lists the menu areas this kind owns. Each slot is a named place where commands can appear.
+
+Each menu slot entry:
+
+- `id` names the slot. Commands target the slot by this name.
+- `placement` picks the built-in menu area: `"header-primary"` for common header actions, `"header-overflow"` for the
+  header's overflow menu, or `"context-menu"` for the right-click menu.
+- `access` controls who may contribute. `"owner"` accepts commands only from the extension that declares the kind.
+  `"public"` also accepts commands from other extensions.
+
+`defineCommand(...)` declares the action:
+
+- `id` is the stable command identity.
+- `title` is the command's user-facing name, shown in surfaces such as the command palette.
+- `menus` lists where the command appears. Each entry targets one slot.
+- `run(ctx)` executes the command. `ctx.resource` carries the resource the menu was opened on, so the handler knows
+  which ticket to act on.
+
+Each menu entry:
+
+- `slot` is the target, built with `resourceMenuSlotRef(kindRef, slotId)`. The helper pairs a resource kind reference
+  with one of its slot ids.
+- `label` is the text shown in the menu.
+- `presentation` picks how the entry renders: a `"button"`, an `"icon-button"`, or a `"menu-item"` row.
+
+`defineExtension({ resourceKinds, commands })` packages the contributions. The host resolves each menu entry against
+the declared slots. An entry that targets an unknown slot stays visible as an unresolved diagnostic instead of failing
+silently.

@@ -1,6 +1,6 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef, CommandSource } from "./commands";
-import type { DockedWorkbenchRegion } from "./composition";
+import type { DockedWorkbenchRegion, ExtensionPanelRegion, RegionSize } from "./composition";
 import type { RendererCallback } from "./context";
 import type {
   ContributionDefinition,
@@ -8,6 +8,7 @@ import type {
   ResourceKindRef,
   SettingsSectionRef,
   SettingsSlotRef,
+  ThemeRef,
   ViewRef,
 } from "./contribution-identity";
 import type { JsonObject, JsonValue, Struct } from "./json";
@@ -68,10 +69,28 @@ export interface ActivityItemContribution<TParams extends Struct = Struct>
   params?: Partial<TParams>;
 }
 
+export interface ModeRegionSettings {
+  /** Hide the panel header when the mode supplies its own controls. */
+  readonly showHeader?: boolean;
+  readonly size?: RegionSize;
+  /** Allow dragging this region closed. Explicit hide/show is always available. */
+  readonly collapsible?: boolean;
+  /** Keep a tab visible when this region has only one visible item. */
+  readonly alwaysShowTabs?: boolean;
+}
+
 export interface ModeContribution extends ContributionDefinition<"mode"> {
   label: Localizable<string>;
   icon?: string;
-  regions: readonly DockedWorkbenchRegion[];
+  regions: readonly ExtensionPanelRegion[];
+  /** Default theme for this mode. An explicit user choice for the mode takes precedence. */
+  defaultTheme?: ThemeRef;
+  /** Whether side panels may float while this mode is active. Defaults to visible. */
+  floatingPanels?: "visible" | "hidden";
+  /** Replace host chrome with a view, or hide it with false, while the mode is active. */
+  chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", ViewRef | false>>;
+  /** Region-level layout policy. The mode owns it; placements cannot set it. */
+  regionSettings?: Readonly<Partial<Record<DockedWorkbenchRegion, ModeRegionSettings>>>;
 }
 
 export interface WebviewContribution {
@@ -215,7 +234,7 @@ export interface FileIconThemeContribution extends ContributionDefinition<"file-
  */
 export type KeybindingChord = string;
 
-export interface KeybindingContribution<TParams extends Struct = Struct> extends ContributionDefinition<"keybinding"> {
+export interface KeybindingContribution extends ContributionDefinition<"keybinding"> {
   /** Default chord. Used on every platform unless an override is provided. */
   key: KeybindingChord;
   /** macOS override. */
@@ -224,10 +243,8 @@ export interface KeybindingContribution<TParams extends Struct = Struct> extends
   linux?: KeybindingChord;
   /** Windows override. */
   win?: KeybindingChord;
-  /** Command this chord executes. */
-  command: CommandRef<TParams, unknown>;
-  /** Optional command params. */
-  params?: Partial<TParams>;
+  /** Action this chord executes through the shared navigation executor. */
+  action: NavigationTarget;
   /** Optional gating predicate. The host evaluates it at dispatch time. */
   when?: WhenExpression;
 }

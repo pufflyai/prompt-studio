@@ -54,6 +54,7 @@ const toNativeViewBody = (
       ...common,
       searchable: body.searchable,
       searchPlaceholder: body.searchPlaceholder,
+      headerHandlerId: handlers.headerHandlerId as string | undefined,
       bodyHandlerId: String(handlers.bodyHandlerId),
       childrenHandlerId: handlers.childrenHandlerId as string | undefined,
       footerHandlerId: handlers.footerHandlerId as string | undefined,
@@ -143,7 +144,6 @@ export const toViewRecord = (
     extensionId: view.extensionId,
     title: view.contribution.title,
     icon: view.contribution.icon,
-    path: view.contribution.path,
     body: webview ? { kind: "webview", webview } : toNativeViewBody(view),
   };
 };

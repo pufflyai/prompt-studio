@@ -63,7 +63,6 @@ export const surfaceMap: Record<WorkbenchRegion, SurfaceDescriptor> = {
   // reads both anchors — it is a projection, not inert chrome.
   nav: projection(["primary", "attached"]),
   activity: chrome,
-  "sidenav-header": projection(["primary"]),
   sidenav: projection(["primary"], true),
   "main-header": projection(["primary"]),
   "main-left-menu": projection(["primary"]),

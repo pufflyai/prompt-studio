@@ -1,21 +1,45 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import source from "./core/placeholder.tsx?raw";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="1. Placeholder" />
 
-<Meta of={OnboardingStories} name="1. Placeholder" parameters={{ layout: "padded" }} />
+# 1. Give an empty region a useful state
 
-# 1. Show Something In An Empty Region
+This is a Core API feature for the host shell. Extensions cannot register placeholders.
 
-A placeholder fills an region when no widget is open in it. Use it for empty
-states — "open a guide to get started" — not for real content.
+A placeholder is shown only while its region has no open panel. Use it for guidance, not for page content. The shell
+removes it automatically as soon as a real panel opens in the same region.
 
-<Canvas of={OnboardingStories.Placeholder} sourceState="shown" />
+<Canvas of={OnboardingStories.Placeholder} sourceState="none" />
 
-You need a renderer (the React content) and a `layout.registerPlaceholder`
-that points at it by id. Open the source on the right to see both calls.
+## Complete example
 
-The next story opens an actual widget in `main`; the placeholder disappears
-automatically when it does.
+<Source code={source} language="tsx" />
+
+## What each field means
+
+The outer setup creates and owns the module:
+
+- `createWorkbench()` creates one workbench service container.
+- `registerModule(...)` groups registrations under one owner so the workbench can remove them together.
+- the module `id` is that owner's stable identity.
+- `activate(ctx)` runs once when the host installs the module. `ctx` exposes the Core contribution APIs.
+
+`ctx.views.registerView(...)` defines the placeholder content:
+
+- `id` is the stable View identity. The placeholder refers to this value.
+- `title` is the default user-facing label.
+- `body.kind: "react"` allows trusted host code to return React.
+- `render` creates the content each time the placeholder becomes visible.
+
+`ctx.placeholders.registerPlaceholder(...)` shows that View while a region is empty:
+
+- `id` is the stable identity of this placeholder registration.
+- `viewId` names the registered View to render.
+- `region` selects the region to watch. The placeholder renders only while `main` has no open panel.
+
+`Stack` and `Text` come from the UI component library. They style the React body and are not part of the placeholder
+API.
+
+The View and the placeholder share the id `host.empty-state` here for clarity. They remain separate registrations.

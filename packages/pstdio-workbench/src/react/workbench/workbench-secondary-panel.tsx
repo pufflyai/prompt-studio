@@ -5,6 +5,7 @@ import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
 import { WorkbenchRegion } from "../region/region";
 import { useWorkbenchPanelHeaderVisible, WorkbenchRegionTabs } from "../region/region-tabs";
+import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
 
@@ -16,6 +17,7 @@ interface WorkbenchSecondaryPanelProps {
 export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => {
   const { workbench, hasSecondaryHeader } = props;
   const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "secondary");
+  const settings = useWorkbenchModeRegionSettings(workbench, "secondary");
 
   return (
     <WorkbenchFocusRegion
@@ -34,7 +36,7 @@ export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => 
       flexDirection="column"
       w="full"
     >
-      {hasSecondaryHeader || hasPanelHeader ? (
+      {settings?.showHeader !== false && (hasSecondaryHeader || hasPanelHeader) ? (
         <Header
           data-workbench-panel-header="secondary"
           variant="main"

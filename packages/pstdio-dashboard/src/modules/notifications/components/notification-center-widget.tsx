@@ -1,6 +1,7 @@
 import { Text } from "@chakra-ui/react";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import { NotificationCenter, type NotificationCenterAction, type NotificationCenterItem } from "@pstdio/ui";
+import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import type { Notification, NotificationAction } from "pstdio-api-contracts";
@@ -113,19 +114,14 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
     try {
       await markRead(notification);
       if (!action) {
-        if (notification.target) {
-          await input.workbench.resources.openResource(toWorkbenchResource(notification.target, projectId), {
-            replaceActive: true,
-          });
-        }
         close();
         return;
       }
 
-      if (action.kind === "open-resource") {
-        await input.workbench.resources.openResource(toWorkbenchResource(action.resource, projectId), {
-          replaceActive: true,
-        });
+      if (action.kind === "navigate") {
+        await input.workbench.navigation.openTarget(
+          toWorkbenchNavigationTarget(action.target, { extensionId: notification.sourceExtensionId ?? undefined }),
+        );
       } else if (action.kind === "url") {
         globalThis.open(action.href, "_blank", "noopener,noreferrer");
       } else if (input.workbench.commands.getCommand(action.command)) {

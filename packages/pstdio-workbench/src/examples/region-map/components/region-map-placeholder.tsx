@@ -61,11 +61,7 @@ export const RegionMapPlaceholder = (props: RegionMapPlaceholderProps) => {
   }
 
   const isHeaderRegion =
-    region === "nav" ||
-    region === "main-header" ||
-    region === "sidenav-header" ||
-    region === "secondary-header" ||
-    region === "side-header";
+    region === "nav" || region === "main-header" || region === "secondary-header" || region === "side-header";
 
   if (isHeaderRegion) {
     return <RegionMapPlaceholderStrip name={name} role={role} />;

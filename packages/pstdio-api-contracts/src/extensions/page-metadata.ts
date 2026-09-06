@@ -1,38 +1,30 @@
 import { z } from "zod";
-import { dockedWorkbenchRegions } from "../extension-kernel/types/composition";
 import { localizableStringSchema } from "./common";
-import { extensionResourceRefSchema } from "./execute";
+import { workbenchPlacementPresentationSchema } from "./placement-metadata";
+import { placementItemSchema, resourceConstraintSchema } from "./resource-binding-metadata";
+import { modeRefSchema, pageRefSchema, viewRefSchema } from "./workbench-refs-metadata";
 
-export const pageRefSchema = z.object({ extensionId: z.string(), kind: z.literal("page"), id: z.string() });
-export const placementRefSchema = z.object({ extensionId: z.string(), kind: z.literal("placement"), id: z.string() });
-export const pageSlotRefSchema = z.object({
-  kind: z.literal("page-slot"),
-  page: pageRefSchema,
-  id: z.string(),
-});
-export const panelRefSchema = z.union([placementRefSchema, pageSlotRefSchema]);
+export { pageRefSchema, pageSlotRefSchema, panelRefSchema, placementRefSchema } from "./workbench-refs-metadata";
 
-const modeRefSchema = z.object({ extensionId: z.string(), kind: z.literal("mode"), id: z.string() });
-const viewRefSchema = z.object({ extensionId: z.string(), kind: z.literal("view"), id: z.string() });
-const resourceKindRefSchema = z.object({
-  extensionId: z.string(),
-  kind: z.literal("resource-kind"),
-  id: z.string(),
-});
-
-const bindingSchema = z.object({ kind: resourceKindRefSchema, view: viewRefSchema });
-const slotSchema = z.object({
-  id: z.string(),
-  role: z.enum(["primary", "auxiliary"]),
-  region: z.enum(dockedWorkbenchRegions),
-  view: viewRefSchema.optional(),
-  binding: bindingSchema.optional(),
-  cardinality: z.enum(["one", "many"]).optional(),
-  closable: z.boolean().optional(),
-  defaultOpen: z.boolean().optional(),
-  defaultResource: extensionResourceRefSchema.optional(),
-  order: z.number().optional(),
-});
+const mainSchema = z.discriminatedUnion("kind", [
+  workbenchPlacementPresentationSchema
+    .extend({
+      kind: z.literal("view"),
+      view: viewRefSchema,
+      cardinality: z.enum(["one", "many"]),
+    })
+    .strict(),
+  z.object({ kind: z.literal("panels"), empty: viewRefSchema }).strict(),
+]);
+const slotSchema = workbenchPlacementPresentationSchema
+  .extend({
+    id: z.string(),
+    region: z.enum(["main", "secondary", "side"]),
+    order: z.number().optional(),
+    item: placementItemSchema,
+    openOn: z.literal("page-resource").optional(),
+  })
+  .strict();
 
 export const workbenchExtensionPageRecordSchema = z.object({
   id: z.string(),
@@ -43,5 +35,7 @@ export const workbenchExtensionPageRecordSchema = z.object({
   path: z.string(),
   mode: modeRefSchema,
   parent: pageRefSchema.optional(),
+  resource: resourceConstraintSchema.optional(),
+  main: mainSchema,
   slots: z.array(slotSchema),
 });

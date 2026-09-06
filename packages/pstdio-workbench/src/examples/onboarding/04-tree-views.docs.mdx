@@ -1,30 +1,70 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import source from "./core/tree-renderer.tsx?raw";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="5. Tree navigation" />
 
-<Meta of={OnboardingStories} name="4. Tree views" parameters={{ layout: "padded" }} />
+# 5. Add structured navigation
 
-# 4. Add A Side-Panel Tree
+This story registers the tree through the Core API. Extensions declare the same data through a `tree` view body.
 
-A tree renderer is a renderer kind specialised for sidenav hierarchies. You
-contribute the data; the workbench renders the tree, handles expand/collapse,
-selection, and scrolling.
+The tree renderer owns hierarchy, expansion, selection, customization, and drag-and-drop. Extensions contribute tree
+data instead of rebuilding those interactions.
 
-<Canvas of={OnboardingStories.TreeViews} sourceState="shown" />
+Press Sessions, Tickets, or Settings. Each row navigates to a registered page and replaces Main. After visiting two
+pages, use the workbench Back and Forward buttons to move through the same page history.
 
-Three callbacks shape the tree:
+<Canvas of={OnboardingStories.TreeRenderer} sourceState="none" />
 
-- `getBody(ctx)` — sections shown in the scrollable body. Required.
-- `getFooter(ctx)` — flat list shown as a compact sticky footer. Optional;
-  use it for "Settings" / "Help" entries that should stay below scroll.
-- `getChildren(node, ctx)` — lazy children when a node expands. Return `[]`
-  if your tree is flat.
+## Complete example
 
-`registerTreeRenderer` auto-creates a widget renderer with the same id, so you
-place it with the same `layout.registerPanel` + `layout.openPanel` pair from
-story 2.
+<Source code={source} language="tsx" />
 
-Clicking nodes doesn't do anything yet — the next story makes them open tabs.
+## What each field means
+
+The outer setup prepares the workbench:
+
+- `createWorkbench({ startPage })` creates the service container and names the page to open first.
+- `workbench.modes.registerMode(...)` declares the `project` mode. `id` is the mode identity, `label` is its
+  user-facing name, and `activate` runs when the mode becomes active. This example needs no activation work.
+- `workbench.pageLocations.switchProject(...)` selects the active project. Navigation needs an active project before
+  it can commit a page location.
+- `pageRef` and `pageTarget` are local helpers. `pageRef` builds the public page reference
+  `{ extensionId, kind: "page", id }`. `pageTarget` wraps it in the page NavigationTarget `{ kind: "page", page }`.
+
+`workbench.pages.registerPage(...)` registers one page per navigation row:
+
+- `id` is the stable identity of this page registration.
+- `ref` is the public page reference. Navigation targets address the page through this value.
+- `title` is the user-facing page name.
+- `path` is the URL path segment for the page location.
+- `modeId` names the mode that owns the page. Opening the page activates that mode.
+- `main: { kind: "view", view, cardinality: "one" }` renders the page content. `slots` contains additional panels.
+
+The tree `body` inside `ctx.views.registerView(...)` supplies the tree data:
+
+- `body.kind: "tree"` asks the built-in tree renderer to draw this View.
+- `defaultExpandedSectionIds` lists the section ids that start expanded.
+- `getHeader`, `getBody`, and `getFooter` each return a list of section groups. Header and footer sections stay
+  pinned. Body sections use the available scrolling area. A tree may return more than one group in any of the three
+  slots.
+- each section has an `id`, an optional `label`, and its `nodes`.
+- each node has an `id`, a `label`, an optional `icon` name, and a `target`.
+- `target` is a NavigationTarget. Every row here uses a page target. The workbench owns navigation and history, so
+  the tree does not need a custom navigation command.
+- `getChildren` returns the nested rows under a node. This tree is flat, so it returns an empty list.
+
+`workbench.modePlacements.registerPlacement(...)` places the tree in the Sidenav:
+
+- `id` is the stable identity of this placement registration.
+- `ref` is the public placement reference. Navigation targets and keybindings can address the placement through it.
+- `modeId` names the mode that owns the placement. The placement appears only while that mode is active.
+- `item.kind: "view"` says this is one static View rather than a resource-bound set of instances.
+- `item.view` names the registered View to render.
+- `item.presence: "fixed"` keeps the tree open while the mode is active. The user cannot close it and the Add panel
+  does not offer it.
+- `region` puts the placement in the `sidenav` region.
+- `movableTo` lists the regions the user may move the placement to. `["sidenav"]` keeps it where it is.
+
+Owners can restrict drop targets in their tree data. The renderer applies that policy; it does not hard-code
+extension or mode ownership rules.

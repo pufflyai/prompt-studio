@@ -48,17 +48,7 @@ PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions check
 
 Treat warnings as actionable. They do not block loading, but they describe behavior an author should confirm.
 
-Composition diagnostics to expect:
-
-- `extension_panel_contract_invalid`: a panel's `show` value must be one valid placement or a non-empty list of valid placements.
-- `extension_resource_kind_missing`: a resource panel, mode, or hierarchy provider references an unknown resource kind.
-- `extension_resource_slot_missing`: a resource panel or mode references an unknown slot.
-- `extension_resource_slot_closed`: an external extension contributes to a closed slot.
-- `extension_panel_missing`: a resource panel or mode references an unknown panel.
-- `extension_panel_placement_unresolvable`: a mode moves a panel outside the regions allowed by its declaration.
-- `extension_mode_resource_unsupported`: a recipe references a resource kind the mode does not accept, or a panel not registered for it.
-- `extension_placement_required_invalid`: `required` is set on a cardinality-many slot placement without naming a panel.
-- `extension_resource_primary_invalid`: a primary resource has zero or several primary location placements.
+Composition diagnostics name the extension, contribution, field path, and expected contract. Fix the named field first. A page declares Main separately from its resource constraint. Every binding needs kinds, view, and cardinality. A page with multiple routed view instances requires a resource; a routed view page requires a parent. A slot's region must be available in its mode. Missing resource kinds, views, owners, and capabilities are reported during extension checking.
 
 Convention diagnostics to expect:
 
@@ -91,11 +81,6 @@ Inspect what the host actually loaded before clicking through the UI:
   contribution and its diagnostics, even while the extension is disabled.
 - For scripted checks, the same data is served by
   `GET /v1/projects/{projectId}/extensions/{instanceId}/contributions`.
-
-If the dashboard layout looks stale after contribution changes, run the extension's layout reset command
-from the command palette. It appears in the `Extensions` group as `Reset <extension> layout`
-(command id `dashboard.extensions.resetLayout.<extension-id>`) and clears the persisted layout for that
-extension only.
 
 ## Packaged artifacts
 

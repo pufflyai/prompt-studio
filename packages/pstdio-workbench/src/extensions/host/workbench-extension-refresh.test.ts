@@ -1,6 +1,6 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { createWorkbenchCore, type WorkbenchModuleContribution } from "../../core";
+import { createWorkbench, type WorkbenchModuleContribution } from "../../core";
 import {
   registerWorkbenchExtensionRendererRefreshEvents,
   type WorkbenchExtensionRefreshEvent,
@@ -29,8 +29,8 @@ const metadata = {
   viewMenus: [],
   placements: [],
   resourceKinds: [],
-  resourceViews: [],
   navigationItems: [],
+  navigationTrees: [],
   statusBarItems: [],
   statuses: [],
   settingsPanels: [],
@@ -39,17 +39,16 @@ const metadata = {
 
 describe("registerWorkbenchExtensionRendererRefreshEvents", () => {
   test("refreshes the native renderer owned by an alpha.4 view", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     let listener: ((event: WorkbenchExtensionRefreshEvent) => void) | undefined;
-    const refresh = spyOn(workbench.renderers, "refresh");
+    const refresh = spyOn(workbench.views, "refreshView");
     const module: WorkbenchModuleContribution = {
       id: "test.extension-refresh",
       activate(ctx) {
-        ctx.renderers.registerTreeRenderer({
+        ctx.views.registerView({
           id: "pstdio.lab.view.outline",
           title: "Outline",
-          getBody: () => [],
-          getChildren: () => [],
+          body: { kind: "tree", getBody: () => [], getChildren: () => [] },
         });
         return registerWorkbenchExtensionRendererRefreshEvents({
           metadata,
@@ -65,6 +64,6 @@ describe("registerWorkbenchExtensionRendererRefreshEvents", () => {
     workbench.registerModule(module);
     listener?.({ id: "pstdio.lab.event.outline.changed" });
 
-    expect(refresh).toHaveBeenCalledWith("pstdio.lab.view.outline");
+    expect(refresh).toHaveBeenCalledWith("pstdio.lab.view.outline", undefined);
   });
 });

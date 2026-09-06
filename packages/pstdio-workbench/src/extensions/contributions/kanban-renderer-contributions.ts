@@ -1,22 +1,16 @@
-import type { CommandExecuteRequest } from "@pstdio/sdk/api";
 import type { KanbanRendererBoardColumnConfig as WireBoardColumnConfig } from "@pstdio/sdk/extensions";
 import { renderBadgeListDisplay } from "@pstdio/ui/kanban-renderer";
 import type { WorkbenchExtensionKanbanRendererRecord } from "pstdio-api-contracts";
 import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
-import type {
-  AttributeDescriptor,
-  Disposable,
-  KanbanRendererContribution,
-  KanbanRendererCreateSubmission,
-  KanbanRendererQueryState,
-  ResourceRef,
-} from "../../core";
+import type { Disposable, KanbanRendererCreateSubmission, KanbanRendererQueryState, ResourceRef } from "../../core";
 import { WorkbenchIcon } from "../../react";
+import type {
+  ReactAttributeDescriptor as AttributeDescriptor,
+  ReactKanbanRendererContribution as KanbanRendererContribution,
+} from "../../react/renderers/kanban/kanban-presentation";
 import { toWorkbenchNavigationTargetResult } from "../host/extension-navigation-target";
-import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
-import { toWorkbenchResource } from "../host/workbench-extension-command";
 import {
   createMutableAttributeSource,
   defaultResolveRowActionResource,
@@ -33,21 +27,11 @@ import {
   toCreateFields,
   toWorkbenchRow,
 } from "./kanban-renderer-contribution-helpers";
-import {
-  panelMenuDeclarationOffsets,
-  panelRendererId,
-  registerWorkbenchExtensionPanel,
-  resolveWorkbenchExtensionViewInput,
-  toWorkbenchCompositionPanelContribution,
-  type WorkbenchExtensionViewInputResolver,
-} from "./panel-contributions";
 
 type BoardColumnConfig = ReturnType<NonNullable<KanbanRendererContribution["getBoardColumnConfig"]>>;
 type ColumnConfigRecord = Record<string, WireBoardColumnConfig>;
 
 export interface WorkbenchExtensionKanbanRendererAdapter {
-  /** Add host navigation state changes that must run before a panel view opens. */
-  resolveViewInput?: WorkbenchExtensionViewInputResolver;
   /** Override label resolution. Defaults to workbench's `text(value, fallback)`. */
   resolveLabel?: Localizer;
   /** Post-process an attribute descriptor (after localization). Defaults to identity. */
@@ -86,20 +70,13 @@ export interface WorkbenchExtensionKanbanRendererAdapter {
     runDefault: () => Promise<void>;
   }) => void | Promise<void>;
   /**
-   * Override the row click handler. When unset the panel layer falls back to
-   * opening the row's resource via `ctx.resources.openResource` — set this to
-   * intercept the click (e.g. swallow rejections when no presenter exists yet).
+   * Handle a row click when the renderer has no declared activation handler.
    */
   onRowClick?: (input: {
     record: WorkbenchExtensionKanbanRendererRecord;
     row: KanbanRendererRow;
     resource: ResourceRef | undefined;
   }) => void;
-  /** Translate extension navigation resource targets into host resources. */
-  resolveNavigationResource?: (
-    record: WorkbenchExtensionKanbanRendererRecord,
-    resource: NonNullable<CommandExecuteRequest["resource"]>,
-  ) => ResourceRef;
   /** Called after a successful renderer-owned create form submission. */
   onAfterCreate?: (input: {
     record: WorkbenchExtensionKanbanRendererRecord;
@@ -110,7 +87,7 @@ export interface WorkbenchExtensionKanbanRendererAdapter {
    * Called after any mutation (attribute change, reorder, column action, default
    * create) resolves successfully. Hosts that drive refresh via the outer command
    * pipeline (testbench / workbench) leave this unset; dashboard supplies
-   * `ctx.renderers.refreshKanbanRenderer(id)`.
+   * `ctx.views.refreshView(id)`.
    */
   onAfterMutation?: (record: WorkbenchExtensionKanbanRendererRecord) => void;
 }
@@ -222,12 +199,7 @@ const toRowClick = (
         { row: toActivatedRow(row) },
         resource,
       );
-      const target = toWorkbenchNavigationTargetResult(result, {
-        extensionId: record.extensionId,
-        resourceOf: adapter.resolveNavigationResource
-          ? (resource) => adapter.resolveNavigationResource!(record, resource)
-          : undefined,
-      });
+      const target = toWorkbenchNavigationTargetResult(result, { extensionId: record.extensionId });
       if (target) await context.workbench.navigation.openTarget(target);
     };
   }
@@ -243,6 +215,7 @@ const toCreateRowHandler = (
     commandId: string,
     params: Record<string, unknown>,
   ) => Promise<unknown>,
+  activateCreatedRow: ((row: KanbanRendererRow) => Promise<void> | void) | undefined,
 ) => {
   const contribution = record.createRow;
   if (!contribution) return undefined;
@@ -254,6 +227,10 @@ const toCreateRowHandler = (
     );
     const created = await runMutation(record, contribution.commandId, params);
     await adapter.onAfterCreate?.({ record, created, submission });
+    if (!activateCreatedRow || typeof created !== "object" || created === null) return;
+    const row = created as Partial<KanbanRendererRow>;
+    if (typeof row.id !== "string" || typeof row.title !== "string") return;
+    await activateCreatedRow({ ...row, id: row.id, title: row.title, attributes: row.attributes ?? {} });
   };
 };
 
@@ -290,8 +267,6 @@ export const registerWorkbenchExtensionKanbanRenderers = (
   context: WorkbenchExtensionCommandContext,
   records: readonly WorkbenchExtensionKanbanRendererRecord[],
   adapter: WorkbenchExtensionKanbanRendererAdapter = {},
-  panels: WorkbenchExtensionMetadata["panels"] = [],
-  resourcePanels: WorkbenchExtensionMetadata["resourcePanels"] = [],
 ) => {
   const disposables: Disposable[] = [];
   const localize: Localizer =
@@ -301,14 +276,7 @@ export const registerWorkbenchExtensionKanbanRenderers = (
       attribute.display?.kind === "badge-list"
         ? {
             ...attribute,
-            render: (value: unknown, row: KanbanRendererRow) =>
-              renderBadgeListDisplay(
-                attribute,
-                value,
-                row,
-                (resource) =>
-                  void context.workbench.resources.openResource(toWorkbenchResource(resource), { replaceActive: true }),
-              ),
+            render: (value: unknown, row: KanbanRendererRow) => renderBadgeListDisplay(attribute, value, row),
           }
         : attribute;
     return adapter.decorateAttribute?.(record, withBuiltInDisplay) ?? withBuiltInDisplay;
@@ -351,102 +319,97 @@ export const registerWorkbenchExtensionKanbanRenderers = (
     let latestQueryId = 0;
     const rowResource = (row: KanbanRendererRow) => resolveRowResource(record, row);
     const toActivatedRow = (row: KanbanRendererRow) => originalRows.get(row) ?? row;
+    const onRowActivate = toRowClick(context, record, adapter, resolveRowResource, toActivatedRow);
 
     disposables.push(...registerRowActionCommands(context, record, localize));
     disposables.push(
-      context.workbench.renderers.registerKanbanRenderer({
+      context.workbench.views.registerView({
         id: record.id,
         title: localize(record.title, record.id),
-        resourceKind: record.resourceKind,
-        storageScope: context.projectId,
-        attributes: attributes.source,
-        defaultSettings: record.defaultSettings,
-        defaultFilters: record.defaultFilters,
-        defaultViews: record.defaultViews?.map((view) => ({
-          ...view,
-          title: localize(view.title, view.id),
-        })),
-        defaultActiveViewId: record.defaultActiveViewId,
-        emptyTitle: localize(record.emptyTitle, ""),
-        emptyDescription: localize(record.emptyDescription, ""),
-        hideToolbar: record.hideToolbar,
-        createRow: toCreateRowConfig(record, localize),
-        getBoardColumnConfig: (groupKey) =>
-          toWorkbenchBoardColumnConfig(
-            columnConfigs?.[groupKey] ?? statusColorConfig(context, record, wireAttributes, columnGrouping, groupKey),
-            localize,
-          ),
-        onRowActivate: toRowClick(context, record, adapter, resolveRowResource, toActivatedRow),
-        executeQuery: async (state: KanbanRendererQueryState) => {
-          latestQueryId += 1;
-          const queryId = latestQueryId;
-          const value = await executeKanbanRendererCommand(context, record, record.queryHandlerId, {
-            settings: state.settings,
-            filters: state.filters,
-          });
-          const mapRows = (rows: unknown[]) =>
-            rows.map((row) => {
-              const mapped = toWorkbenchRow(row, rowResource);
-              originalRows.set(mapped, row as KanbanRendererRow);
-              return mapped;
+        icon: record.icon,
+        body: {
+          kind: "kanban",
+          resourceKind: record.resourceKind,
+          storageScope: context.projectId,
+          attributes: attributes.source,
+          defaultSettings: record.defaultSettings,
+          defaultFilters: record.defaultFilters,
+          defaultViews: record.defaultViews?.map((view) => ({
+            ...view,
+            title: localize(view.title, view.id),
+          })),
+          defaultActiveViewId: record.defaultActiveViewId,
+          emptyTitle: localize(record.emptyTitle, ""),
+          emptyDescription: localize(record.emptyDescription, ""),
+          hideToolbar: record.hideToolbar,
+          createRow: toCreateRowConfig(record, localize),
+          getBoardColumnConfig: (groupKey) =>
+            toWorkbenchBoardColumnConfig(
+              columnConfigs?.[groupKey] ?? statusColorConfig(context, record, wireAttributes, columnGrouping, groupKey),
+              localize,
+            ),
+          onRowActivate,
+          executeQuery: async (state: KanbanRendererQueryState) => {
+            latestQueryId += 1;
+            const queryId = latestQueryId;
+            const value = await executeKanbanRendererCommand(context, record, record.queryHandlerId, {
+              settings: state.settings,
+              filters: state.filters,
             });
-          if (queryId !== latestQueryId) {
-            if (Array.isArray(value)) return mapRows(value);
-            return isQueryResult(value) ? mapRows(value.rows ?? []) : [];
-          }
-
-          columnGrouping = state.settings.columnGrouping;
-          if (Array.isArray(value)) return mapRows(value);
-          if (!isQueryResult(value)) return [];
-          const nextAttributes = value.attributes ?? wireAttributes;
-          wireAttributes = nextAttributes;
-          attributes.set(nextAttributes);
-          columnConfigs = value.boardColumnConfigs;
-          return mapRows(value.rows ?? []);
-        },
-        onAttributeChange: record.attributeChangeHandlerId
-          ? (rowId, attributeId, value) =>
-              runMutation(record, record.attributeChangeHandlerId!, {
-                rowId,
-                attributeId,
-                value,
-              }).then(() => undefined)
-          : undefined,
-        onReorder: record.reorderHandlerId
-          ? (rowId, beforeRowId) =>
-              runMutation(record, record.reorderHandlerId!, { rowId, beforeRowId }).then(() => undefined)
-          : undefined,
-        onCreateRow: toCreateRowHandler(record, adapter, runMutation),
-        onColumnAction: record.columnActionHandlerId
-          ? async (columnId, actionId) => {
-              await runMutation(record, record.columnActionHandlerId!, { columnId, actionId });
+            const mapRows = (rows: unknown[]) =>
+              rows.map((row) => {
+                const mapped = toWorkbenchRow(row, rowResource);
+                originalRows.set(mapped, row as KanbanRendererRow);
+                return mapped;
+              });
+            if (queryId !== latestQueryId) {
+              if (Array.isArray(value)) return mapRows(value);
+              return isQueryResult(value) ? mapRows(value.rows ?? []) : [];
             }
-          : undefined,
-        getRowContextMenuActions: toRowContextMenuActions(context, record, adapter, localize, resolveRowActionResource),
+
+            columnGrouping = state.settings.columnGrouping;
+            if (Array.isArray(value)) return mapRows(value);
+            if (!isQueryResult(value)) return [];
+            const nextAttributes = value.attributes ?? wireAttributes;
+            wireAttributes = nextAttributes;
+            attributes.set(nextAttributes);
+            columnConfigs = value.boardColumnConfigs;
+            return mapRows(value.rows ?? []);
+          },
+          onAttributeChange: record.attributeChangeHandlerId
+            ? (rowId, attributeId, value) =>
+                runMutation(record, record.attributeChangeHandlerId!, {
+                  rowId,
+                  attributeId,
+                  value,
+                }).then(() => undefined)
+            : undefined,
+          onReorder: record.reorderHandlerId
+            ? (rowId, beforeRowId) =>
+                runMutation(record, record.reorderHandlerId!, { rowId, beforeRowId }).then(() => undefined)
+            : undefined,
+          onCreateRow: toCreateRowHandler(
+            record,
+            adapter,
+            runMutation,
+            record.rowActivationHandlerId ? onRowActivate : undefined,
+          ),
+          onColumnAction: record.columnActionHandlerId
+            ? async (columnId, actionId) => {
+                await runMutation(record, record.columnActionHandlerId!, { columnId, actionId });
+              }
+            : undefined,
+          getRowContextMenuActions: toRowContextMenuActions(
+            context,
+            record,
+            adapter,
+            localize,
+            resolveRowActionResource,
+          ),
+        },
       }),
     );
   }
-
-  const menuOffsets = panelMenuDeclarationOffsets(panels);
-  panels.forEach((panel, index) => {
-    const rendererId = panelRendererId(panel, "kanban");
-    if (!rendererId) return;
-    disposables.push(
-      registerWorkbenchExtensionPanel({
-        workbench: context.workbench,
-        path: panel.path,
-        aliases: panel.aliases,
-        resolveInput: resolveWorkbenchExtensionViewInput(adapter.resolveViewInput, panel),
-        contribution: toWorkbenchCompositionPanelContribution({
-          panel,
-          rendererId,
-          declarationIndex: index,
-          menuDeclarationOffset: menuOffsets[index]!,
-          resourcePanels,
-        }),
-      }),
-    );
-  });
 
   return {
     dispose() {

@@ -1,26 +1,25 @@
 import { expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { resourceKey } from "@pstdio/sdk/extensions";
+import { createWorkbench } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { createDashboardResource, dashboardViews } from "@/shared/app/resources";
+import { createDashboardResource } from "@/shared/app/resources";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "./module";
 
 test("opens the Workspaces view and workspace resources with stable identities", async () => {
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
   workbench.registerModule(createWorkspacesModule());
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-
-  await workbench.views.openView(dashboardViews.workspaces.id);
-
+  openWorkspacesPage(workbench);
   expect(workbench.modes.getActiveModeId()).toBe("project");
-  expect(workbench.layout.getLayout().regions.main.widgets[0]?.viewId).toBe(dashboardViews.workspaces.id);
+  expect(workbench.layout.getLayout().regions.main.widgets[0]?.viewId).toBe(dashboardWidgetIds.workspaces);
   expect(workbench.getPrimaryResource()).toBeUndefined();
-
   const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
     workspaceId: "workspace-1",
     workspaceShorthand: "PS-307_A1",
   });
-  await workbench.resources.openResource(workspace, { replaceActive: true });
-
+  openWorkspacesPage(workbench, workspace);
   expect(workbench.modes.getActiveModeId()).toBe("project");
-  expect(workbench.getPrimaryResource()?.uri).toBe(workspace.uri);
+  expect(resourceKey(workbench.getPrimaryResource())).toBe(resourceKey(workspace));
 });

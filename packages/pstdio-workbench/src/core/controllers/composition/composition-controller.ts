@@ -1,3 +1,4 @@
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type {
   RegisteredWidgetContribution,
   WorkbenchLayout,
@@ -12,28 +13,30 @@ import {
   type WorkbenchModeContribution,
 } from "../../registries/modes/mode-registry";
 import type { ResourceRef } from "../../registries/resources/resource-registry";
-
 export interface WorkbenchCompositionAddablePanel extends WorkbenchModeAddablePanel {
   contribution: RegisteredWidgetContribution;
+  open?(resource?: ResourceRef): void;
 }
-
 export interface WorkbenchCompositionRegionPanels {
   open: readonly WorkbenchWidgetPlacement[];
   addable: readonly WorkbenchCompositionAddablePanel[];
   closable: readonly string[];
 }
-
 export interface WorkbenchCompositionController {
   panelsFor(region: WorkbenchPanelRegion): WorkbenchCompositionRegionPanels;
 }
-
 interface CreateWorkbenchCompositionControllerInput {
   getActiveMode(): WorkbenchModeContribution | undefined;
   getLayout(): WorkbenchLayout;
   getResource(): ResourceRef | undefined;
   listWidgets(): RegisteredWidgetContribution[];
+  listOwnedAddablePanels?(input: {
+    layout: WorkbenchLayout;
+    mode: WorkbenchModeContribution | undefined;
+    region: WorkbenchPanelRegion;
+    resource: ResourceRef | undefined;
+  }): readonly WorkbenchCompositionAddablePanel[];
 }
-
 const isOpenSingleton = (
   widget: RegisteredWidgetContribution,
   placements: readonly WorkbenchWidgetPlacement[],
@@ -42,11 +45,10 @@ const isOpenSingleton = (
   if (!widget.singleton) return false;
   return placements.some((placement) => {
     if (placement.contributionId !== widget.id) return false;
-    const scopedResourceUri = placement.role === "location" ? placement.resourceUri : placement.ownerResourceUri;
-    return !scopedResourceUri || scopedResourceUri === resource?.uri;
+    const scopedResourceKey = placement.role === "location" ? placement.resourceKey : placement.ownerResourceKey;
+    return !scopedResourceKey || scopedResourceKey === resourceKey(resource);
   });
 };
-
 const addModePanels = (input: {
   addable: Map<string, WorkbenchCompositionAddablePanel>;
   mode: WorkbenchModeContribution | undefined;
@@ -63,7 +65,6 @@ const addModePanels = (input: {
     input.addable.set(panel.panelId, { ...panel, contribution });
   }
 };
-
 const addRegisteredPanels = (input: {
   addable: Map<string, WorkbenchCompositionAddablePanel>;
   modeId: string | undefined;
@@ -86,7 +87,6 @@ const addRegisteredPanels = (input: {
     input.addable.set(contribution.id, { panelId: contribution.id, region: input.region, contribution });
   }
 };
-
 export const createWorkbenchCompositionController = (
   input: CreateWorkbenchCompositionControllerInput,
 ): WorkbenchCompositionController => ({
@@ -97,14 +97,14 @@ export const createWorkbenchCompositionController = (
     const location = getActiveLocationPlacement(layout);
     const mode = input.getActiveMode();
     if (!isWorkbenchModePanelAvailable(mode, region)) return { open, addable: [], closable: [] };
-
     const placements = Object.values(layout.regions).flatMap((candidate) => candidate.widgets);
     const widgets = input.listWidgets();
     const addable = new Map<string, WorkbenchCompositionAddablePanel>();
-
+    for (const panel of input.listOwnedAddablePanels?.({ layout, mode, region, resource }) ?? []) {
+      addable.set(panel.panelId, panel);
+    }
     addModePanels({ addable, layout, mode, placements, region, resource, widgets });
     addRegisteredPanels({ addable, location, modeId: mode?.id, placements, region, resource, widgets });
-
     return {
       open,
       addable: [...addable.values()],

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { dockedWorkbenchRegions } from "../extension-kernel/types/composition";
+import { dockedWorkbenchRegions, extensionPanelRegions } from "../extension-kernel/types/composition";
 import {
   extensionCommandPaletteContributionSchema,
   extensionCommandRecordSchema,
@@ -20,7 +20,9 @@ import { extensionCommandPaletteResourceRecordSchema, extensionKanbanRendererRec
 import { extensionKeybindingRecordSchema } from "./keybindings";
 import { navigationTargetSchema } from "./navigation-target-metadata";
 import { workbenchExtensionPageRecordSchema } from "./page-metadata";
+import { regionSettingsSchema, workbenchPlacementPresentationSchema } from "./placement-metadata";
 import { extensionFileRendererRecordSchema, extensionTreeRendererRecordSchema } from "./renderers";
+import { placementItemSchema } from "./resource-binding-metadata";
 import { extensionSettingDefinitionRecordSchema, extensionSettingsSectionRecordSchema } from "./settings";
 
 const contributionRefSchema = <Kind extends string>(kind: Kind) =>
@@ -28,7 +30,7 @@ const contributionRefSchema = <Kind extends string>(kind: Kind) =>
 
 const commandRefSchema = contributionRefSchema("command");
 const modeRefSchema = contributionRefSchema("mode");
-const navigationSlotRefSchema = contributionRefSchema("navigation-item");
+const pageRefSchema = contributionRefSchema("page");
 const resourceKindRefSchema = contributionRefSchema("resource-kind");
 const settingsSectionRefSchema = contributionRefSchema("settings-section");
 const statusRefSchema = contributionRefSchema("status");
@@ -116,7 +118,6 @@ export const workbenchExtensionViewRecordSchema = z.object({
   extensionId: z.string(),
   title: localizableStringSchema,
   icon: z.string().optional(),
-  path: z.string().optional(),
   body: workbenchExtensionViewBodySchema,
 });
 
@@ -126,26 +127,24 @@ const workbenchExtensionModeRecordSchema = z.object({
   extensionId: z.string(),
   label: localizableStringSchema,
   icon: z.string().optional(),
-  regions: z.array(z.enum(dockedWorkbenchRegions)),
+  regions: z.array(z.enum(extensionPanelRegions)),
+  floatingPanels: z.enum(["visible", "hidden"]).optional(),
+  regionSettings: z.partialRecord(z.enum(dockedWorkbenchRegions), regionSettingsSchema).optional(),
+  defaultTheme: contributionRefSchema("theme").optional(),
+  chrome: z
+    .partialRecord(z.enum(["nav", "sidenav", "activity", "status"]), z.union([viewRefSchema, z.literal(false)]))
+    .optional(),
 });
 
-const workbenchExtensionPlacementRecordSchema = z.object({
+const workbenchExtensionPlacementRecordSchema = workbenchPlacementPresentationSchema.extend({
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),
   mode: modeRefSchema,
-  item: z.discriminatedUnion("kind", [
-    z.object({ kind: z.literal("view"), view: viewRefSchema }),
-    z.object({
-      kind: z.literal("resource-slot"),
-      slot: z.object({ resourceKind: resourceKindRefSchema, id: z.string() }),
-    }),
-  ]),
-  region: z.enum(dockedWorkbenchRegions),
+  item: placementItemSchema,
+  region: z.enum(extensionPanelRegions),
   order: z.number().optional(),
-  defaultOpen: z.boolean().optional(),
-  required: z.boolean().optional(),
-  movableTo: z.array(z.enum(dockedWorkbenchRegions)).optional(),
+  movableTo: z.array(z.enum(extensionPanelRegions)).optional(),
 });
 
 const workbenchExtensionViewMenuRecordSchema = z.object({
@@ -163,25 +162,29 @@ const workbenchExtensionViewMenuRecordSchema = z.object({
 const workbenchExtensionNavigationItemRecordSchema = z.object({
   id: z.string(),
   extensionId: z.string(),
-  slot: navigationSlotRefSchema,
+  owner: z.union([modeRefSchema, pageRefSchema]),
+  slot: z.enum(["header", "content", "footer"]),
   label: localizableStringSchema,
   icon: z.string().optional(),
   group: z.string().optional(),
-  order: z.number().optional(),
   when: normalizedWhenSchema.optional(),
   action: navigationTargetSchema,
+});
+
+const workbenchExtensionNavigationTreeRecordSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+  owner: z.union([modeRefSchema, pageRefSchema]),
+  slot: z.enum(["header", "content", "footer"]),
+  view: viewRefSchema,
 });
 
 const workbenchExtensionResourceKindRecordSchema = z.object({
   id: z.string(),
   localId: z.string(),
   extensionId: z.string(),
-  surface: z.enum(["primary", "secondary", "attached"]),
   label: localizableStringSchema.optional(),
   icon: z.string().optional(),
-  slots: z
-    .array(z.object({ id: z.string(), cardinality: z.enum(["one", "many"]), access: z.enum(["owner", "public"]) }))
-    .optional(),
   menuSlots: z
     .array(
       z.object({
@@ -193,15 +196,6 @@ const workbenchExtensionResourceKindRecordSchema = z.object({
       }),
     )
     .optional(),
-});
-
-const workbenchExtensionResourceViewRecordSchema = z.object({
-  id: z.string(),
-  extensionId: z.string(),
-  resourceKind: resourceKindRefSchema,
-  slot: z.object({ resourceKind: resourceKindRefSchema, id: z.string() }),
-  view: viewRefSchema,
-  order: z.number().optional(),
 });
 
 const workbenchExtensionSettingsPanelRecordSchema = z.object({
@@ -244,11 +238,11 @@ export const workbenchExtensionMetadataSchema = z.object({
   viewMenus: z.array(workbenchExtensionViewMenuRecordSchema),
   placements: z.array(workbenchExtensionPlacementRecordSchema),
   resourceKinds: z.array(workbenchExtensionResourceKindRecordSchema),
-  resourceViews: z.array(workbenchExtensionResourceViewRecordSchema),
   resourceHierarchyProviders: z
     .array(z.object({ id: z.string(), extensionId: z.string(), resourceKind: resourceKindRefSchema }))
     .optional(),
   navigationItems: z.array(workbenchExtensionNavigationItemRecordSchema),
+  navigationTrees: z.array(workbenchExtensionNavigationTreeRecordSchema),
   statusBarItems: z.array(workbenchExtensionStatusBarItemRecordSchema),
   statuses: z.array(workbenchExtensionStatusRecordSchema),
   activityItems: z

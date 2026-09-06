@@ -28,20 +28,17 @@ const rows = {
   projectRepos: [{ id: "project-repo-1", project_id: "project-1", repo_id: "repo-1" }],
   repos: [{ id: "repo-1", path: "/repo/prompt-studio" }],
 };
-
 describe("dashboard project data selectors", () => {
   test("maps synced project rows into selectable workbench project resources", () => {
     const projects = buildDashboardProjectsFromRows(rows);
-
     expect(projects.map((project) => project.id)).toEqual(["project-2", "project-1"]);
     expect(projects[1]).toMatchObject({
       id: "project-1",
       name: "Prompt Studio",
       repoPath: "/repo/prompt-studio",
       resource: {
-        kind: "project",
+        type: "project",
         id: "project-1",
-        uri: "dashboard-workbench://project/project-1",
         label: "Prompt Studio",
         icon: "folder-root",
         metadata: { favoriteScope: { scope: "project", projectId: "project-1" } },

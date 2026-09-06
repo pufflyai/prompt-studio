@@ -86,6 +86,7 @@ export const TextInput = (props: TextInputProps) => {
         <Flex alignItems="center" justifyContent="space-between" minHeight="2rem" gap="xs">
           {!hideLabel && <ParamEditorLabel name={name} description={description} />}
           <Input
+            aria-label={name}
             className="nodrag"
             readOnly={readOnly}
             flex="1"
@@ -112,6 +113,7 @@ export const TextInput = (props: TextInputProps) => {
           )}
           {singleLine ? (
             <Input
+              aria-label={name}
               className="nodrag"
               readOnly={readOnly}
               width="100%"
@@ -129,6 +131,7 @@ export const TextInput = (props: TextInputProps) => {
             />
           ) : (
             <Textarea
+              aria-label={name}
               className="nodrag"
               readOnly={readOnly}
               width="100%"

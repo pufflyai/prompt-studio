@@ -53,7 +53,7 @@ The dashboard UI model uses host-owned typed slots. Extensions attach menus, nav
 
 Targets describe the dashboard surface. Optional `when` expressions restrict visibility by active mode, command source, active resource type, or active resource metadata.
 
-Views own content. Placements own mode, region, default-open state, required state, order, and allowed movement. Use `resourceViews` to bind a view to a semantic resource slot. A placement can then place that slot without either contribution copying geometry.
+Views own content. Pages own routed screens. Placements own mode-wide content. Page slots and placements bind resource kinds directly to views without copying geometry.
 
 ## Lifecycle
 

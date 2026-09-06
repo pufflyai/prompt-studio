@@ -1,88 +1,52 @@
 import {
-  defineCommandPaletteResource,
   defineExtension,
-  defineKeybinding,
-  defineSkill,
-  defineTemplate,
+  defineNavigationItem,
+  definePage,
   l10n,
-  packageAsset,
+  type ViewContribution,
+  workbenchModes,
 } from "@pstdio/sdk/extensions";
-import { labCommands, labSchedules } from "./src/commands";
-import { queryLabResources } from "./src/commands/lab-resources-command";
-import { sayHelloCommand } from "./src/commands/say-hello-command";
-import { labSettings } from "./src/data/lab-settings";
-import { labHarnesses } from "./src/harnesses";
-import { labHooks } from "./src/hooks";
-import { labMiddlewares } from "./src/middlewares";
-import { labWorkflowStatuses } from "./src/renderers/lab-workflow-statuses";
-import {
-  createLabUi,
-  labActivityItems,
-  labModes,
-  labResourceKinds,
-  labSettingsSection,
-} from "./src/renderers/ui-contributions";
+import { webview } from "./src/definition";
+import boombox from "./src/examples/boombox";
+import kiln from "./src/examples/kiln";
+import pigeon from "./src/examples/pigeon";
+import scribble from "./src/examples/scribble";
+import zipline from "./src/examples/zipline";
+import { commands } from "./src/state-commands";
 
-const labUi = createLabUi(import.meta.url);
-
-const extension = defineExtension({
-  defaultLocale: "en",
-  translations: {
-    fr: packageAsset("./l10n/fr.json", import.meta.url),
+const examples = [scribble, boombox, zipline, pigeon, kiln];
+const faulty = webview("faulty-main", "Lab (faulty)");
+const faultyPage = definePage({
+  id: "faulty",
+  title: l10n("pages.faulty", "Lab (faulty)"),
+  icon: "flask-conical-off",
+  path: "lab-faulty",
+  mode: workbenchModes.project,
+  main: {
+    kind: "view",
+    view: faulty.ref,
+    cardinality: "one",
   },
-
-  settings: labSettings,
-
-  commands: labCommands,
-  middlewares: labMiddlewares,
-  hooks: labHooks,
-  schedules: labSchedules,
-  harnesses: labHarnesses,
-
-  modes: labModes,
-  resourceKinds: labResourceKinds,
-  views: labUi.views,
-  resourceViews: labUi.resourceViews,
-  viewMenus: labUi.viewMenus,
-  placements: labUi.placements,
-  navigationItems: labUi.navigationItems,
-  statusBarItems: labUi.statusBarItems,
-  statuses: [labWorkflowStatuses],
-  activityItems: labActivityItems,
-  commandPaletteResources: [
-    defineCommandPaletteResource({
-      id: "slides",
-      title: l10n("commandPaletteResources.slides.title", "Lab slides"),
-      query: queryLabResources,
-    }),
-  ],
-  settingsPanels: labUi.settingsPanels,
-  settingsSections: [labSettingsSection],
-
-  keybindings: [
-    defineKeybinding({
-      id: "say-hello",
-      key: "mod+shift+h",
-      command: sayHelloCommand.ref,
-    }),
-  ],
-
-  templates: [
-    defineTemplate({
-      id: "lab-resource",
-      title: l10n("templates.labResource.title", "Glass Lab artifact"),
-      type: "glass-lab-artifact",
-      source: packageAsset("./templates/lab-ticket.md", import.meta.url),
-    }),
-  ],
-
-  skills: [
-    defineSkill({
-      id: "lab-resource",
-      title: l10n("skills.labResource.title", "Glass Lab Curator"),
-      source: packageAsset("./skills/lab-resource", import.meta.url),
+  slots: [],
+});
+export default defineExtension({
+  defaultLocale: "en",
+  commands: Object.values(commands),
+  modes: examples.flatMap((example) => example.modes),
+  placements: [...boombox.placements, ...kiln.placements],
+  themes: examples.flatMap((example) => example.themes),
+  resourceKinds: examples.flatMap((example) => example.resourceKinds),
+  views: [...examples.flatMap<ViewContribution>((example) => example.views), faulty],
+  pages: [...examples.flatMap((example) => example.pages), faultyPage],
+  navigationItems: [
+    ...examples.flatMap((example) => example.navigationItems),
+    defineNavigationItem({
+      id: "faulty",
+      label: l10n("navigation.faulty", "Lab (faulty)"),
+      icon: "flask-conical-off",
+      owner: workbenchModes.project,
+      group: "Examples",
+      action: { kind: "page", page: faultyPage.ref },
     }),
   ],
 });
-
-export default extension;

@@ -39,6 +39,8 @@ export default defineConfig({
   plugins: [
     createDashboardRuntimeConfigPlugin({ terminalWebSocketUrl }),
     react({
+      // Workspace dist entries have already passed through the React compiler.
+      exclude: ["**/node_modules/**", "**/dist/**"],
       babel: {
         plugins: [["babel-plugin-react-compiler"]],
       },

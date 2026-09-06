@@ -23,8 +23,8 @@ describe("settings registry — sections", () => {
 });
 
 describe("settings registry — panels", () => {
-  test("registers schema, custom, and collection panels and preserves their shape", () => {
-    const registry = createSettingsRegistry();
+  test("registers schema, View, and collection panels and resolves collection items", async () => {
+    const registry = createSettingsRegistry({ hasView: () => true });
 
     registry.registerPanel({
       kind: "schema",
@@ -35,7 +35,7 @@ describe("settings registry — panels", () => {
       preferences: ["app.theme", { name: "app.density", label: "Density" }],
       save: "apply",
     });
-    registry.registerPanel({ kind: "custom", id: "about", title: "About", scope: "global", render: () => "about" });
+    registry.registerPanel({ kind: "view", id: "about", title: "About", scope: "global", viewId: "about.view" });
     registry.registerPanel({
       kind: "collection",
       id: "widgets",
@@ -45,7 +45,7 @@ describe("settings registry — panels", () => {
       items: () => [{ id: "w1", name: "One" }],
       itemId: (item) => item.id,
       itemLabel: (item) => item.name,
-      renderItem: (item) => `editor:${item.id}`,
+      viewId: "widget.editor",
       actions: [{ id: "create", label: "Create widget", run: () => {} }],
     });
 
@@ -55,23 +55,25 @@ describe("settings registry — panels", () => {
 
     const widgets = registry.getPanel("widgets");
     expect(widgets?.kind).toBe("collection");
-    expect(widgets?.kind === "collection" && widgets.renderItem({ id: "w1" }, {} as never)).toBe("editor:w1");
+    expect(widgets?.kind === "collection" && widgets.viewId).toBe("widget.editor");
+    expect(await registry.resolveCollectionItem("widgets", "w1")).toEqual({ id: "w1", name: "One" });
+    expect(registry.getCollectionItem("widgets", "w1")).toEqual({ id: "w1", name: "One" });
     expect(widgets?.kind === "collection" && widgets.actions?.[0]?.label).toBe("Create widget");
 
     expect(registry.listPanels().map((panel) => panel.id)).toEqual(["appearance", "about", "widgets"]);
   });
 
   test("orders panels by explicit order then registration, and disposes", () => {
-    const registry = createSettingsRegistry();
-    registry.registerPanel({ kind: "custom", id: "b", title: "B", order: 20, render: () => null });
-    const a = registry.registerPanel({ kind: "custom", id: "a", title: "A", order: 10, render: () => null });
-    registry.registerPanel({ kind: "custom", id: "c", title: "C", render: () => null });
+    const registry = createSettingsRegistry({ hasView: () => true });
+    registry.registerPanel({ kind: "view", id: "b", title: "B", order: 20, viewId: "b.view" });
+    const a = registry.registerPanel({ kind: "view", id: "a", title: "A", order: 10, viewId: "a.view" });
+    registry.registerPanel({ kind: "view", id: "c", title: "C", viewId: "c.view" });
 
     expect(registry.listPanels().map((panel) => panel.id)).toEqual(["c", "a", "b"]);
 
     a.dispose();
     expect(registry.getPanel("a")).toBeUndefined();
-    expect(() => registry.registerPanel({ kind: "custom", id: "b", title: "Dup", render: () => null })).toThrow(
+    expect(() => registry.registerPanel({ kind: "view", id: "b", title: "Dup", viewId: "b.view" })).toThrow(
       /already registered/i,
     );
   });

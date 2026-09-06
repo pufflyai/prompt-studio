@@ -2,6 +2,7 @@ import type { DataTableRendererColumn, WorkbenchModuleContext } from "@pstdio/wo
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
+import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import {
   requestDashboardWorkspaceDiffSummaries,
   subscribeDashboardWorkspaceDiffSummaries,
@@ -46,28 +47,24 @@ const executeWorkspaceQuery = (ctx: WorkbenchModuleContext) => {
   return { rows: workspaces.map(toWorkspaceDataTableRow) };
 };
 
-export const registerWorkspaceDataTableRenderer = (ctx: WorkbenchModuleContext) => {
-  ctx.renderers.registerDataTableRenderer({
-    id: dashboardWidgetIds.workspaces,
-    title: "Workspaces",
-    resourceKind: "workspace",
-    columns: workspaceColumns,
-    emptyTitle: "No workspaces yet",
-    emptyDescription: "Create a workspace to start an isolated attempt for this project.",
-    subscribe: (listener) => subscribeWorkspaceData(ctx, listener),
-    executeQuery: () => executeWorkspaceQuery(ctx),
-    onRowActivate: (row) => {
-      if (!row.resource) return;
-      void ctx.resources.openResource(row.resource, { replaceActive: true });
-    },
-  });
-  ctx.layout.registerPanel(
+export const registerWorkspaceDataTableView = (ctx: WorkbenchModuleContext) => {
+  ctx.views.registerView(
     {
       id: dashboardWidgetIds.workspaces,
       title: "Workspaces",
-      region: "main",
-      rendererId: dashboardWidgetIds.workspaces,
-      singleton: true,
+      body: {
+        kind: "dataTable",
+        resourceKind: "workspace",
+        columns: workspaceColumns,
+        emptyTitle: "No workspaces yet",
+        emptyDescription: "Create a workspace to start an isolated attempt for this project.",
+        subscribe: (listener) => subscribeWorkspaceData(ctx, listener),
+        executeQuery: () => executeWorkspaceQuery(ctx),
+        onRowActivate: (row) => {
+          if (!row.resource) return;
+          openWorkspacesPage(ctx, row.resource);
+        },
+      },
     },
     { priority: 85 },
   );

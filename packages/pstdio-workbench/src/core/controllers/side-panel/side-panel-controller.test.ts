@@ -2,6 +2,43 @@ import { describe, expect, test } from "bun:test";
 import { createWorkbenchSidePanelController } from "./side-panel-controller";
 
 describe("createWorkbenchSidePanelController", () => {
+  test("starts attached when detachment is disabled", () => {
+    const controller = createWorkbenchSidePanelController({ getFloatingPanels: () => "hidden" });
+
+    expect(controller.canFloat()).toBe(false);
+    expect(controller.getMode()).toBe("attached");
+  });
+
+  test("restores a floating panel as attached when detachment is disabled", () => {
+    const controller = createWorkbenchSidePanelController({
+      getFloatingPanels: () => "hidden",
+      initialMode: "closed",
+      persistence: { getMode: () => "floating", setMode: () => undefined },
+    });
+
+    expect(controller.getMode()).toBe("attached");
+  });
+
+  test("keeps a non-detachable panel closed until it is opened attached", () => {
+    const written: string[] = [];
+    const events: string[] = [];
+    const controller = createWorkbenchSidePanelController({
+      getFloatingPanels: () => "hidden",
+      persistence: { getMode: () => "closed", setMode: (mode) => void written.push(mode) },
+    });
+    controller.onDidChange((mode) => events.push(mode));
+
+    expect(controller.getMode()).toBe("closed");
+    controller.setMode("floating");
+    expect(controller.getMode()).toBe("attached");
+    controller.setMode("floating");
+    controller.setMode("closed");
+
+    expect(controller.getMode()).toBe("closed");
+    expect(events).toEqual(["attached", "closed"]);
+    expect(written).toEqual(events);
+  });
+
   test("starts floating by default and exposes generic Side Panel state", () => {
     const controller = createWorkbenchSidePanelController();
 

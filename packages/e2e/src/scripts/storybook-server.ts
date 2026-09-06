@@ -1,6 +1,8 @@
 import { type ChildProcess, spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { createServer } from "node:net";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { chromium } from "@playwright/test";
 import { stopChildProcess } from "./child-process";
 
@@ -21,7 +23,7 @@ const sharedStorybooks = [
   },
   {
     packageName: "pstdio-workbench",
-    probeStoryId: "pstdio-workbench-examples--dashboard-workbench",
+    probeStoryId: "pstdio-workbench-reference-core-api-visual-states--page-composition",
     urlEnvironmentVariable: "E2E_STORYBOOK_WORKBENCH_URL",
   },
 ] as const satisfies ReadonlyArray<{
@@ -94,15 +96,17 @@ const warmStorybook = async (baseUrl: string, probeStoryId: string) => {
 };
 
 export const startStorybookServer = async (probeStoryId: string, packageName: StorybookPackageName = "ui") => {
+  console.log(`Starting ${packageName} Storybook (${probeStoryId})`);
   const port = await getFreePort();
   const repoRoot = resolve(import.meta.dirname, "../../..", "..");
   const packageRoot = resolve(repoRoot, "packages", packageName);
   const baseUrl = `http://127.0.0.1:${port}`;
+  const manifestPath = createRequire(import.meta.url).resolve("storybook/package.json", { paths: [packageRoot] });
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as { bin: string };
   const storybook = spawn(
-    "bun",
+    "node",
     [
-      "x",
-      "storybook",
+      resolve(dirname(manifestPath), manifest.bin),
       "dev",
       "--config-dir",
       resolve(packageRoot, ".storybook"),
@@ -126,8 +130,11 @@ export const startStorybookServer = async (probeStoryId: string, packageName: St
 
   try {
     await waitForStorybook(baseUrl, storybook, probeStoryId);
+    console.log(`Loading ${packageName} story at ${baseUrl}`);
     await warmStorybook(baseUrl, probeStoryId);
+    console.log(`${packageName} Storybook is ready`);
   } catch (error) {
+    console.error(`Failed to start ${packageName} Storybook`, error);
     await stopChildProcess(storybook);
     throw error;
   }

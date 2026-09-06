@@ -7,7 +7,6 @@ import {
   renameSync,
   rmSync,
   statSync,
-  symlinkSync,
   unlinkSync,
 } from "node:fs";
 import { homedir as osHomedir, tmpdir } from "node:os";
@@ -23,14 +22,12 @@ import {
   readExtensionSourceMetadata,
 } from "./extension-runtime";
 import { prepareNamedSource } from "./extension-source-checkout";
-import { hashExtensionDependencyInputs } from "./hash-extension-dependency-inputs";
-import { installDependencies, shouldInstallDependencies } from "./install-extension-dependencies";
-import { linkUsableNodeModules } from "./install-extension-source-node-modules";
 import type {
   ExtensionEnableInput,
   InstallExtensionSourceInput,
   InstalledExtensionSource,
 } from "./install-extension-source-types";
+import { prepareInstallDependencies } from "./prepare-extension-dependencies";
 
 export {
   createSharedNamedSourceCheckout,
@@ -158,45 +155,6 @@ const promotePreparedSource = (
     if (existsSync(backupPath)) renameSync(backupPath, targetPath);
     throw error;
   }
-};
-
-const linkInstalledDependencies = (sourcePath: string, targetPath: string, installPath: string) => {
-  if (!existsSync(targetPath)) return false;
-  if (hashExtensionDependencyInputs(sourcePath) !== hashExtensionDependencyInputs(targetPath)) return false;
-  const installedNodeModules = join(targetPath, "node_modules");
-  const stagedNodeModules = join(installPath, "node_modules");
-  if (!existsSync(installedNodeModules) || existsSync(stagedNodeModules)) return false;
-  symlinkSync(installedNodeModules, stagedNodeModules, "junction");
-  return true;
-};
-
-type PreparedExtensionSource =
-  | { kind: "local"; path: string; ref?: string }
-  | { kind: "named"; name: string; path: string; ref: string };
-
-const prepareInstallDependencies = async (input: {
-  installInput: InstallExtensionSourceInput;
-  installPath: string;
-  source: PreparedExtensionSource;
-  targetPath: string;
-}) => {
-  const { installInput, installPath, source, targetPath } = input;
-  let linkedInstalledDependencies = installInput.reuseInstalledDependencies
-    ? linkInstalledDependencies(source.path, targetPath, installPath)
-    : false;
-
-  if (installInput.skipInstall && source.kind === "local") {
-    linkUsableNodeModules(source.path, installPath);
-  }
-
-  if (installInput.skipInstall || !shouldInstallDependencies(installPath)) return linkedInstalledDependencies;
-
-  if (linkedInstalledDependencies) {
-    unlinkSync(join(installPath, "node_modules"));
-    linkedInstalledDependencies = false;
-  }
-  await installDependencies(installPath, installInput);
-  return linkedInstalledDependencies;
 };
 
 export const isLocalExtensionSource = (source: string) => isLocalSource(source);

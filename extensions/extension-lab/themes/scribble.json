@@ -1,0 +1,31 @@
+{
+  "name": "scribble",
+  "type": "light",
+  "colors": {
+    "editor.background": "#fbf8f2",
+    "editor.foreground": "#332f2a",
+    "editorWidget.background": "#fffdf8",
+    "activityBar.background": "#eee7db",
+    "sideBar.background": "#f2ede3",
+    "panel.background": "#fffdf8",
+    "statusBar.background": "#eee7db",
+    "input.background": "#e9e2d6",
+    "input.foreground": "#332f2a",
+    "input.border": "#d8cfbf",
+    "menu.background": "#fffdf8",
+    "menu.foreground": "#332f2a",
+    "menu.selectionBackground": "#e9e2d6",
+    "list.hoverBackground": "#e9e2d6",
+    "list.activeSelectionBackground": "#dfd5c5",
+    "button.background": "#b85c38",
+    "button.hoverBackground": "#98492c",
+    "button.foreground": "#ffffff",
+    "badge.background": "#e8ddcf",
+    "badge.foreground": "#66594b",
+    "focusBorder": "#b85c38",
+    "foreground": "#332f2a",
+    "descriptionForeground": "#746b61",
+    "disabledForeground": "#aaa095",
+    "border": "#ded6ca"
+  }
+}

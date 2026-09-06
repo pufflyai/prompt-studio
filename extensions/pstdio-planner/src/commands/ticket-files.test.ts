@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { createMemoryStorage } from "../data/memory-storage";
 import type { StoredTicketAttachment } from "../data/types";
@@ -31,7 +32,12 @@ const ticketRendererParams = (ticket: { id: string; shorthand: string }, documen
 });
 
 const ticketDocumentTarget = (ticket: { id: string; shorthand: string; title?: string }, documentId: string) => ({
-  kind: "resource" as const,
+  kind: "page" as const,
+  page: { kind: "page" as const, id: "ticket", extensionId: "pstdio.pstdio-planner" },
+  parent: {
+    kind: "page" as const,
+    page: { kind: "page" as const, id: "tickets", extensionId: "pstdio.pstdio-planner" },
+  },
   resource: {
     type: "ticket",
     id: ticket.id,
@@ -42,7 +48,6 @@ const ticketDocumentTarget = (ticket: { id: string; shorthand: string; title?: s
       resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
     },
   },
-  input: { strategy: "replace-active" as const },
 });
 
 describe("ticket files tree commands", () => {
@@ -249,8 +254,22 @@ describe("ticket files tree workspace commands", () => {
           label: "WS-1",
           icon: "GitBranch",
           target: {
-            kind: "resource",
-            // The canonical parent edge nests this workspace beneath the ticket.
+            kind: "page",
+            page: workbenchPages.workspace,
+            parent: {
+              kind: "page",
+              page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
+              resource: {
+                type: "ticket",
+                id: ticket.id,
+                label: `${ticket.shorthand} ${ticket.title}`,
+                metadata: {
+                  shorthand: ticket.shorthand,
+                  resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+                },
+              },
+              parent: { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.pstdio-planner" } },
+            },
             resource: {
               type: "workspace",
               id: "ws-1",

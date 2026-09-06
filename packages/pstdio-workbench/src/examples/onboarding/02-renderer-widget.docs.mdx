@@ -1,23 +1,65 @@
 import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import source from "./core/views.tsx?raw";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="2. Views" />
 
-<Meta of={OnboardingStories} name="2. Renderer and Panel" parameters={{ layout: "padded" }} />
+# 2. Define and place Views
 
-# 2. Add Your First Panel
+A View defines reusable content. Registering one has no layout side effect: nothing opens until a placement or an
+action shows it. A placement decides where a View appears, who owns it, and how it opens and closes.
 
-A Panel is content you can open in a region. Two pieces are needed: a renderer
-(the React content) and a `layout.registerPanel` call (the panel's id,
-title, and region).
+This example registers two Views and three placements:
 
-<Canvas of={OnboardingStories.RendererAndWidget} sourceState="shown" />
+1. The **Guide** View fills the Main region. Its placement is `presence: "fixed"`, so it always shows and has no close
+   button.
+2. The **Instance details** View is registered once and placed twice. The Side Panel placement is `presence: "open"`;
+   close it and reopen it from the region's add menu. The Secondary Panel placement is `presence: "closed"`, so it
+   waits in the add menu until you open it.
 
-<Source of={OnboardingStories.RendererAndWidget} />
+Each visible placement gets its own render input, so the two Instance details panels show different placement
+identities even though they share one View.
 
-`registerPanel` only declares the Panel — it doesn't appear until something
-opens it. This story calls `layout.openPanel("guide")` at module activation
-so it shows up on first render. The next story replaces that with a header
-button.
+<Canvas of={OnboardingStories.Views} sourceState="none" />
+
+## Complete example
+
+<Source code={source} language="tsx" />
+
+## What each field means
+
+The outer setup creates and owns the module:
+
+- `createWorkbench()` creates one workbench service container.
+- `registerModule(...)` groups registrations under one owner so the workbench can remove them together.
+- the module `id` is that owner's stable identity.
+- `activate(ctx)` runs once when the host installs the module. `ctx` exposes the Core contribution APIs and tracks
+  every registration made through them.
+
+`ctx.views.registerView(...)` defines the content:
+
+- `id` is the stable View identity. Placements refer to this value.
+- `title` is the default user-facing label. A placement instance may supply a more specific title.
+- `body` selects how the workbench renders the View.
+- `body.kind: "react"` allows trusted host code to return React. Extensions instead declare native renderer bodies
+  such as `tree`, `file`, `kanban`, `dataTable`, and `controls`, or an isolated `webview`.
+- `render` creates the content for one visible placement instance.
+- `instance` describes that use of the View: the resolved title, resource, placement identity, and instance identity.
+  One View rendered in two placements receives two different instances.
+
+`ctx.shellPlacements.registerPlacement(...)` places the content:
+
+- `id` is the stable identity of this shell-owned placement. It is separate from the View id; two placements here
+  reuse one View.
+- `item.kind: "view"` says this is one static View rather than a resource-bound set of instances.
+- `item.view` names the registered View to render.
+- `item.presence` sets the initial state: `"fixed"` always shows and cannot close, `"open"` starts open and the user
+  may close it, `"closed"` stays hidden until the user or an action opens it. A saved user choice wins over `"open"`
+  and `"closed"` on the next visit.
+- `region` puts the placement in `main`, `side`, `secondary`, or another shell region.
+
+`Stack`, `Text`, `Code`, `gap`, `p`, and `bg` come from the UI component library. They style the React body and are
+not part of the View or placement API.
+
+Keep domain identity in a resource when the same View opens tickets, files, sessions, or other objects. The next guide
+shows that form.

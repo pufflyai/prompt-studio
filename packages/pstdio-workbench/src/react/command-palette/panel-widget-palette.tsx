@@ -27,7 +27,7 @@ export const createWorkbenchPanelWidgetPaletteEntries = (input: {
         icon: widget.icon ? <WorkbenchIcon name={widget.icon} /> : undefined,
         onActivate: () => {
           onClose();
-          openPanelWidget({ workbench, widget, region, resource, pinned: panel.pinned });
+          openPanelWidget({ workbench, widget, region, resource, pinned: panel.pinned, open: panel.open });
         },
       };
     }),

@@ -1,42 +1,48 @@
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import type { WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { setDashboardSidenavSelection } from "@/shared/workbench/dashboard-sidenav";
-import { registerDashboardViewRoute } from "@/shared/workbench/route-helper";
 import { StartWidget } from "./components/start-widget";
 
 const registerStartWidget = (ctx: WorkbenchModuleContext) => {
-  ctx.layout.registerPanel(
+  ctx.views.registerView(
     {
       id: dashboardWidgetIds.start,
       title: "Start",
-      region: "main",
-      rendererId: dashboardWidgetIds.start,
-      singleton: true,
+      body: { kind: "react", render: (input) => <StartWidget input={input} /> },
     },
     { priority: 90 },
   );
-  ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.start,
-    render: (input) => <StartWidget input={input} />,
-  });
 };
-
 export const createStartModule = () =>
   ({
     id: "dashboard.start",
     activate(ctx) {
       registerStartWidget(ctx);
-      registerDashboardViewRoute(ctx, {
+      ctx.pages.registerPage({
         id: dashboardViews.start.id,
-        mode: "project",
-        panelId: dashboardWidgetIds.start,
+        ref: workbenchPages.start,
         title: dashboardViews.start.label,
         icon: dashboardViews.start.icon,
-        beforeOpen: () => {
-          ctx.breadcrumbs.clearItems();
-          setDashboardSidenavSelection(ctx, undefined);
+        path: "",
+        modeId: "project",
+        main: {
+          kind: "view",
+          view: {
+            kind: "view",
+            id: dashboardWidgetIds.start,
+          },
+          cardinality: "one",
         },
+        slots: [],
       });
+      const unsubscribe = ctx.pages.store.subscribeSelector(
+        (state) => state.activePageId,
+        (pageId) => {
+          if (pageId === dashboardViews.start.id) setDashboardSidenavSelection(ctx, undefined);
+        },
+      );
+      return { dispose: unsubscribe };
     },
   }) satisfies WorkbenchModuleContribution;

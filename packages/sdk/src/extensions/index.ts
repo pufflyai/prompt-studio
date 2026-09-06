@@ -4,7 +4,6 @@ export type {
   ListNotificationsResponse,
   Notification,
   NotificationAction,
-  NotificationActionResult,
   NotificationActorType,
   NotificationKind,
   NotificationOrigin,
@@ -28,6 +27,7 @@ export {
   defineSlot,
   dockedWorkbenchRegions,
   EXTENSION_API_VERSION,
+  extensionPanelRegions,
   gitEvents,
   isLocalizedString,
   isValidLocalContributionId,
@@ -44,7 +44,7 @@ export {
   WEBVIEW_DECLARABLE_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITIES,
   WEBVIEW_HOST_CAPABILITY_VERSION,
-  workbenchCommands,
+  WEBVIEW_SCOPED_DECLARABLE_CAPABILITIES,
   workbenchModeDefinitions,
   workbenchModes,
   workbenchPageDefinitions,
@@ -70,11 +70,11 @@ export {
   defineKeybinding,
   defineMode,
   defineNavigationItem,
+  defineNavigationTree,
   definePage,
   definePlacement,
   defineResourceHierarchyProvider,
   defineResourceKind,
-  defineResourceView,
   defineSchedule,
   defineSettingsPanel,
   defineSettingsSection,
@@ -88,7 +88,6 @@ export {
   defineViewMenu,
   defineWorkspaceType,
   resourceMenuSlotRef,
-  resourceSlotRef,
 } from "./define-contribution";
 export { defineExtension } from "./define-extension";
 export {
@@ -101,7 +100,9 @@ export {
   type WebviewFilesClient,
 } from "./define-extension-view";
 export { params } from "./params";
+export { type QualifiedRef, qualifyRef } from "./qualify-ref";
 export { commandEvent, commandRef, eventRef } from "./refs";
+export { resourceKey } from "./resource-key";
 export {
   createTerminalSessionBridge,
   type TerminalSessionAdapter,

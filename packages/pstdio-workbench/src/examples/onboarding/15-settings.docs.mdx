@@ -1,48 +1,70 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import source from "../settings/module.tsx?raw";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="13. Settings" />
 
-<Meta of={OnboardingStories} name="15. Settings" parameters={{ layout: "padded" }} />
+# 13. Add host settings
 
-# 15. Add Settings Entries From a Module
+This Core API example adds settings owned by the host application. A section groups related entries. A panel supplies
+either a preference schema, a custom editor, or a collection-backed editor. The example registers all three panel
+kinds, then opens the settings overlay on the Appearance panel.
 
-Settings are a first-class contribution. A module declares **what** it wants in
-settings via `ctx.settings`, and the workbench renders the unified Settings region —
-a grouped sidenav plus a dispatching panel. There is no per-page wiring: no tree,
-widget, or presenter to assemble yourself.
+Choose global or project scope based on who owns the value. The host resolves the active scope; the extension should
+not copy project identity into its settings UI.
 
-The framework stays domain-agnostic: it knows nothing about your data or editors.
-You supply them through generic hooks.
+<Canvas of={OnboardingStories.Settings} sourceState="none" />
 
-<Canvas of={OnboardingStories.Settings} sourceState="shown" />
+## Complete example
 
-A module registers **sections** and three kinds of **panel**:
+<Source code={source} language="tsx" />
 
-- **Schema** — declare typed, scoped preferences with `preferences.registerSchema(...)`
-  and list the names. The workbench auto-generates a **param editor** (enums →
-  selects, numbers → steppers, booleans → toggles) and writes back with
-  `preferences.setValue(...)`. Choose `save: "live"` (default) or `"apply"` for
-  staged Save/Discard.
-- **Custom** — provide a `render(input)`; the workbench mounts your component
-  verbatim. You own the layout and controls.
-- **Collection** — a data-driven list. Provide `items()`, `itemId`/`itemLabel`,
-  an optional `groupBy`, and `renderItem(item, input)`. The workbench expands it
-  into per-item nodes (optionally grouped) and routes each selection to your
-  editor. Attach a `"+ create"` action and call `ctx.settings.refresh()` after the
-  data changes.
+## What each field means
 
-Scope gates visibility: `scope: "global"` entries always show; `scope: "project"`
-entries appear only when the host resolves a project scope id
-(`createWorkbenchSettingsModule({ resolveScopeId })`). This reproduces the
-projectless behavior where only global pages are reachable.
+The module declares the data the settings surface renders:
 
-Selecting any node — schema page, custom page, or collection item — swaps the
-singleton panel in place, so the sidenav and the panel stay in sync.
+- `ctx.preferences.registerSchema(...)` registers the named preferences the schema panels edit. Each schema entry
+  declares the value type, allowed choices, default, and scope.
+- `ctx.settings.registerSection({ id, title, order })` adds one group in the settings tree. `order` sorts sections;
+  lower values sort first. Panels join a section through their `section` field.
 
-The surface opens as a modal overlay, so closing it leaves the main region blank.
-The lesson keeps a way back in with a small main-region widget whose button re-runs
-the built-in `workbench.settings.open` command — no need to know the overlay
-widget id.
+`ctx.settings.registerPanel(...)` adds one settings page. The `kind` field selects how it renders:
+
+- `kind: "schema"` auto-generates controls from registered preferences. `preferences` lists each entry as a
+  preference `name` plus a user-facing `label`.
+- `kind: "view"` renders a registered View instead of generated controls. `viewId` names that View. Use it only when
+  the shared controls cannot represent the setting.
+- `kind: "collection"` renders one tree node per item and opens an item editor View when the user selects a node.
+
+Fields shared by every panel kind:
+
+- `id` is the stable panel identity inside the settings surface.
+- `title` is the label shown in the settings tree.
+- `section` places the panel under a registered section.
+- `scope` says who owns the values: `"global"` values follow the user, `"project"` values belong to one project.
+- `icon` names the icon shown next to the panel title.
+- `description` is short helper text shown on the panel.
+- `save: "apply"` stages edits behind an explicit Save action. Without it, edits save live.
+
+Fields specific to the collection panel:
+
+- `viewId` names the View that edits one selected item.
+- `items` returns the current items.
+- `itemId` and `itemLabel` derive each tree node's identity and label from an item.
+- `groupBy` groups nodes: `key` picks the group for an item, `order` sorts the groups, and `label` names them.
+- `actions` adds toolbar actions such as Create. Each action has an `id`, `label`, `icon`, and `run` callback.
+- `ctx.settings.refresh()` tells the surface to re-read `items` after data changes.
+
+The item editor View reads its subject from the render input:
+
+- `input.instance.resource?.metadata` carries the `panelId` and `itemId` of the selected collection node.
+- `input.workbench.settings.getCollectionItem(panelId, itemId)` returns the matching item.
+
+The host wiring around the panels:
+
+- `createWorkbenchSettingsModule({ resolveScopeId })` activates the unified settings surface: the tree, the
+  dispatching panel, and the presenter. `resolveScopeId` maps a scope to a storage key, so project entries appear
+  only when a project scope id resolves.
+- `ctx.shellPlacements.registerPlacement(...)` with `presence: "fixed"` keeps a launcher View in the `main` region.
+  The settings surface is a modal overlay, so the launcher gives the user a way back in after closing it.
+- `ctx.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, { panelId })` opens the overlay on one panel.

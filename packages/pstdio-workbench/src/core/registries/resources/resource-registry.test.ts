@@ -1,95 +1,101 @@
 import { describe, expect, test } from "bun:test";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { createResourceRegistry, type ResourceHierarchyCycle } from "./resource-registry";
-
-const panelInstance = (id: string) => ({ instanceId: id, panelId: "test-panel", closable: false });
 
 describe("createResourceRegistry scoped candidates", () => {
   test("passes the active primary resource to providers so candidates can be scoped", () => {
-    const workspaceA = { kind: "workspace", uri: "pstdio://workspace/a" };
+    const workspaceA = {
+      type: "workspace",
+      id: "pstdio://workspace/a",
+    };
     let primary = workspaceA;
     const resources = createResourceRegistry({ getPrimary: () => primary });
-
     resources.registerProvider({
       id: "sessions",
       kind: "session",
       // Only list sessions belonging to the primary workspace.
       list: (_query, context) =>
-        context.primary?.uri === "pstdio://workspace/a"
-          ? [{ resource: { kind: "session", uri: "pstdio://session/a1" } }]
+        resourceKey(context.primary) === resourceKey(workspaceA)
+          ? [
+              {
+                resource: {
+                  type: "session",
+                  id: "pstdio://session/a1",
+                },
+              },
+            ]
           : [],
     });
-
-    expect(resources.listResources("").map((entry) => entry.resource.uri)).toEqual(["pstdio://session/a1"]);
-
-    primary = { kind: "workspace", uri: "pstdio://workspace/b" };
+    expect(resources.listResources("").map((entry) => entry.resource.id)).toEqual(["pstdio://session/a1"]);
+    primary = {
+      type: "workspace",
+      id: "pstdio://workspace/b",
+    };
     expect(resources.listResources("")).toEqual([]);
   });
 });
-
-describe("createResourceRegistry surface routing", () => {
-  test("reports the anchor a resource routes to via its kind", () => {
-    const resources = createResourceRegistry();
-    resources.registerKind({ kind: "session", label: "Session", surface: "attached" });
-    resources.registerKind({ kind: "terminal", label: "Terminal", surface: "secondary" });
-    resources.registerKind({ kind: "workspace", label: "Workspace", surface: "primary" });
-    resources.registerKind({ kind: "note", label: "Note" });
-
-    expect(resources.getSurface({ kind: "session", uri: "pstdio://session/a" })).toBe("attached");
-    expect(resources.getSurface({ kind: "terminal", uri: "pstdio://terminal/a" })).toBe("secondary");
-    expect(resources.getSurface({ kind: "workspace", uri: "pstdio://workspace/a" })).toBe("primary");
-    expect(resources.getSurface({ kind: "note", uri: "pstdio://note/a" })).toBeUndefined();
-  });
-});
-
 describe("createResourceRegistry hierarchy", () => {
   test("uses an explicit view as the terminal root without fabricating a resource", () => {
     const resources = createResourceRegistry({
       resolveView: (viewId) =>
         viewId === "pstdio-planner.tickets" ? { label: "Tickets", icon: "square-kanban" } : undefined,
     });
-    const parent = { kind: "ticket", uri: "pstdio://ticket/parent", label: "PS-1 Parent" };
-    const child = { kind: "ticket", uri: "pstdio://ticket/child", label: "PS-2 Child" };
-
+    const parent = {
+      type: "ticket",
+      label: "PS-1 Parent",
+      id: "pstdio://ticket/parent",
+    };
+    const child = {
+      type: "ticket",
+      label: "PS-2 Child",
+      id: "pstdio://ticket/child",
+    };
     resources.registerHierarchyProvider({
       id: "tickets",
-      canResolve: (resource) => resource.kind === "ticket",
+      canResolve: (resource) => resource.type === "ticket",
       getParent: (resource) =>
-        resource.uri === parent.uri ? { type: "view", viewId: "pstdio-planner.tickets" } : parent,
+        resourceKey(resource) === resourceKey(parent) ? { type: "view", viewId: "pstdio-planner.tickets" } : parent,
     });
-
     expect(resources.walkHierarchy(child)).toEqual([
       { type: "view", viewId: "pstdio-planner.tickets", label: "Tickets", icon: "square-kanban" },
       parent,
       child,
     ]);
   });
-
   test("walks canonical parent edges into a root-to-leaf resource path", () => {
     const resources = createResourceRegistry();
-    const tickets = { kind: "dashboard-view", uri: "pstdio://tickets", label: "Tickets" };
-    const parent = { kind: "ticket", uri: "pstdio://ticket/parent", label: "PS-1 Parent" };
-    const child = { kind: "ticket", uri: "pstdio://ticket/child", label: "PS-2 Child" };
+    const tickets = {
+      type: "dashboard-view",
+      label: "Tickets",
+      id: "pstdio://tickets",
+    };
+    const parent = {
+      type: "ticket",
+      label: "PS-1 Parent",
+      id: "pstdio://ticket/parent",
+    };
+    const child = {
+      type: "ticket",
+      label: "PS-2 Child",
+      id: "pstdio://ticket/child",
+    };
     const parents = new Map([
-      [parent.uri, tickets],
-      [child.uri, parent],
+      [resourceKey(parent), tickets],
+      [resourceKey(child), parent],
     ]);
-
     resources.registerHierarchyProvider({
       id: "tickets",
-      canResolve: (resource) => resource.kind === "ticket",
-      getParent: (resource) => parents.get(resource.uri),
+      canResolve: (resource) => resource.type === "ticket",
+      getParent: (resource) => parents.get(resourceKey(resource)),
     });
     const cycles: ResourceHierarchyCycle[] = [];
     resources.onDidDetectHierarchyCycle((cycle) => cycles.push(cycle));
-
     expect(resources.walkHierarchy(child)).toEqual([tickets, parent, child]);
     expect(cycles).toEqual([]);
   });
-
   test("does not resolve hierarchy providers for a null selection", () => {
     const resources = createResourceRegistry();
     let reads = 0;
-
     resources.registerHierarchyProvider({
       id: "tickets",
       canResolve: () => true,
@@ -98,39 +104,42 @@ describe("createResourceRegistry hierarchy", () => {
         return undefined;
       },
     });
-
     expect(resources.walkHierarchy(undefined)).toEqual([]);
     expect(reads).toBe(0);
   });
-
   test("stops at a repeated resource edge with the acyclic prefix and reports the cycle", () => {
     const resources = createResourceRegistry();
-    const parent = { kind: "ticket", uri: "pstdio://ticket/parent" };
-    const child = { kind: "ticket", uri: "pstdio://ticket/child" };
+    const parent = {
+      type: "ticket",
+      id: "pstdio://ticket/parent",
+    };
+    const child = {
+      type: "ticket",
+      id: "pstdio://ticket/child",
+    };
     const cycles: ResourceHierarchyCycle[] = [];
-
     resources.registerHierarchyProvider({
       id: "tickets",
       canResolve: () => true,
-      getParent: (resource) => (resource.uri === child.uri ? parent : child),
+      getParent: (resource) => (resourceKey(resource) === resourceKey(child) ? parent : child),
     });
     resources.onDidDetectHierarchyCycle((cycle) => cycles.push(cycle));
-
     expect(resources.walkHierarchy(child)).toEqual([parent, child]);
     expect(cycles).toEqual([
       {
         code: "resource_hierarchy_cycle",
         path: [parent, child],
-        repeatedUri: child.uri,
+        repeatedUri: resourceKey(child),
       },
     ]);
   });
-
   test("stops listening for cycles after the subscription is disposed", () => {
     const resources = createResourceRegistry();
-    const ticket = { kind: "ticket", uri: "pstdio://ticket/self" };
+    const ticket = {
+      type: "ticket",
+      id: "pstdio://ticket/self",
+    };
     const cycles: ResourceHierarchyCycle[] = [];
-
     resources.registerHierarchyProvider({
       id: "tickets",
       canResolve: () => true,
@@ -138,38 +147,41 @@ describe("createResourceRegistry hierarchy", () => {
     });
     const subscription = resources.onDidDetectHierarchyCycle((cycle) => cycles.push(cycle));
     subscription.dispose();
-
     expect(resources.walkHierarchy(ticket)).toEqual([ticket]);
     expect(cycles).toEqual([]);
   });
-
   test("uses the highest priority hierarchy provider that can resolve a resource", () => {
     const resources = createResourceRegistry();
-    const ticket = { kind: "ticket", uri: "pstdio://ticket/child" };
-    const fallback = { kind: "dashboard-view", uri: "pstdio://fallback" };
-    const tickets = { kind: "dashboard-view", uri: "pstdio://tickets" };
-
+    const ticket = {
+      type: "ticket",
+      id: "pstdio://ticket/child",
+    };
+    const fallback = {
+      type: "dashboard-view",
+      id: "pstdio://fallback",
+    };
+    const tickets = {
+      type: "dashboard-view",
+      id: "pstdio://tickets",
+    };
     resources.registerHierarchyProvider({
       id: "fallback",
       priority: 1,
-      canResolve: (resource) => resource.kind === "ticket",
+      canResolve: (resource) => resource.type === "ticket",
       getParent: () => fallback,
     });
     resources.registerHierarchyProvider({
       id: "tickets",
       priority: 100,
-      canResolve: (resource) => resource.kind === "ticket",
+      canResolve: (resource) => resource.type === "ticket",
       getParent: () => tickets,
     });
-
     expect(resources.walkHierarchy(ticket)).toEqual([tickets, ticket]);
   });
 });
-
 describe("createResourceRegistry", () => {
   test("registers resource kinds with contribution metadata", () => {
     const resources = createResourceRegistry();
-
     resources.registerKind(
       {
         kind: "session",
@@ -178,7 +190,6 @@ describe("createResourceRegistry", () => {
       },
       { source: "module", ownerId: "pstdio.sessions", priority: 20 },
     );
-
     expect(resources.getKind("session")).toMatchObject({
       kind: "session",
       label: "Session",
@@ -186,107 +197,44 @@ describe("createResourceRegistry", () => {
       ownerId: "pstdio.sessions",
     });
   });
-
-  test("opens resources with the highest priority matching presenter", async () => {
-    const resources = createResourceRegistry();
-    const resource = { kind: "session", uri: "pstdio://session/s1", label: "Session 1" };
-
-    resources.registerKind({ kind: "session", label: "Session" });
-    resources.registerPresenter({
-      id: "fallback",
-      priority: 1,
-      canOpen: () => true,
-      open: () => panelInstance("fallback"),
-    });
-    resources.registerPresenter({
-      id: "session-chat",
-      priority: 50,
-      canOpen: ({ kind }) => kind === "session",
-      open: ({ uri }) => panelInstance(`opened:${uri}`),
-    });
-
-    await expect(resources.openResource(resource)).resolves.toEqual(panelInstance("opened:pstdio://session/s1"));
-  });
-
-  test("passes open options to the selected presenter", async () => {
-    const resources = createResourceRegistry();
-    const resource = { kind: "session", uri: "pstdio://session/s1", label: "Session 1" };
-
-    resources.registerKind({ kind: "session", label: "Session" });
-    resources.registerPresenter({
-      id: "session-chat",
-      canOpen: ({ kind }) => kind === "session",
-      open: (_resource, options) => panelInstance(String(options.replaceActive)),
-    });
-
-    await expect(resources.openResource(resource, { replaceActive: true })).resolves.toEqual(panelInstance("true"));
-  });
-
-  test("runs presenter completion after establishing the Location and before ending the open transaction", async () => {
-    const events: string[] = [];
-    const resources = createResourceRegistry({
-      establishLocation: (instance) => {
-        events.push(`establish:${instance.instanceId}`);
-        return { ...instance, title: "Established" };
-      },
-    });
-    const resource = { kind: "workspace", uri: "pstdio://workspace/a" };
-
-    resources.registerKind({ kind: "workspace", label: "Workspace" });
-    resources.registerPresenter({
-      id: "workspace",
-      canOpen: ({ kind }) => kind === "workspace",
-      open: () => {
-        events.push(`open:${resources.isOpeningResource()}`);
-        return panelInstance("workspace");
-      },
-      afterOpen: (_resource, instance) => {
-        events.push(`after:${instance.title}:${resources.isOpeningResource()}`);
-      },
-    });
-    resources.onDidOpenResource(() => events.push(`listener:${resources.isOpeningResource()}`));
-
-    await resources.openResource(resource);
-
-    expect(events).toEqual(["open:true", "establish:workspace", "after:Established:true", "listener:false"]);
-  });
-
-  test("fails clearly when no presenter can handle a known resource", async () => {
-    const resources = createResourceRegistry();
-
-    resources.registerKind({ kind: "template", label: "Template" });
-
-    await expect(resources.openResource({ kind: "template", uri: "pstdio://template/t1" })).rejects.toThrow(
-      "No presenter registered for resource kind: template",
-    );
-  });
-
   test("aggregates browse entries from registered providers", () => {
     const resources = createResourceRegistry();
     resources.registerKind({ kind: "ticket", label: "Ticket" });
     resources.registerKind({ kind: "session", label: "Session" });
-
     resources.registerProvider({
       id: "tickets",
       kind: "ticket",
-      list: () => [{ resource: { kind: "ticket", uri: "pstdio://ticket/PS-1", label: "PS-1 Ship it" } }],
+      list: () => [
+        {
+          resource: {
+            type: "ticket",
+            label: "PS-1 Ship it",
+            id: "pstdio://ticket/PS-1",
+          },
+        },
+      ],
     });
     resources.registerProvider({
       id: "sessions",
       kind: "session",
-      list: () => [{ resource: { kind: "session", uri: "pstdio://session/s1", label: "Session 1" } }],
+      list: () => [
+        {
+          resource: {
+            type: "session",
+            label: "Session 1",
+            id: "pstdio://session/s1",
+          },
+        },
+      ],
     });
-
-    expect(resources.listResources("").map((entry) => entry.resource.uri)).toEqual([
+    expect(resources.listResources("").map((entry) => entry.resource.id)).toEqual([
       "pstdio://ticket/PS-1",
       "pstdio://session/s1",
     ]);
   });
-
   test("passes the query to each provider's list function", () => {
     const resources = createResourceRegistry();
     resources.registerKind({ kind: "ticket", label: "Ticket" });
-
     const seenQueries: string[] = [];
     resources.registerProvider({
       id: "tickets",
@@ -296,21 +244,25 @@ describe("createResourceRegistry", () => {
         return [];
       },
     });
-
     resources.listResources("hello");
     expect(seenQueries).toEqual(["hello"]);
   });
-
   test("disposing a provider removes its entries from listResources", () => {
     const resources = createResourceRegistry();
     resources.registerKind({ kind: "ticket", label: "Ticket" });
-
     const handle = resources.registerProvider({
       id: "tickets",
       kind: "ticket",
-      list: () => [{ resource: { kind: "ticket", uri: "pstdio://ticket/PS-1", label: "PS-1" } }],
+      list: () => [
+        {
+          resource: {
+            type: "ticket",
+            label: "PS-1",
+            id: "pstdio://ticket/PS-1",
+          },
+        },
+      ],
     });
-
     expect(resources.listResources("")).toHaveLength(1);
     handle.dispose();
     expect(resources.listResources("")).toHaveLength(0);

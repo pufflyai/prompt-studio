@@ -1,9 +1,14 @@
 import { Box, Button, Flex, HStack, Input, Spinner, Stack, Text } from "@chakra-ui/react";
-import { defineExtensionView, type GuestHost } from "@pstdio/sdk/extensions";
+import { createWebviewClient, defineExtensionView, type GuestHost } from "@pstdio/sdk/extensions";
 import { AlertMessage, ScrollArea, TagEditorHeading, TagEditorSaveBar } from "@pstdio/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { runCommand } from "../hooks/use-command";
+import type {
+  applyTicketTagDraftCommand,
+  createTicketTagCommand,
+  deleteTicketTagCommand,
+  readTicketTagsCommand,
+} from "../commands/ticket-tags";
 import {
   createTagSettingsDraft,
   hasTagDraftChanges,
@@ -18,16 +23,14 @@ import { renderTicketRoot } from "./view-root";
 
 const TAGS_KEY = ["tags"];
 
-const commandIds = {
-  read: "pstdio.pstdio-planner.command.ticket-tag.read",
-  createTag: "pstdio.pstdio-planner.command.ticket-tag.create",
-  deleteTag: "pstdio.pstdio-planner.command.ticket-tag.delete",
+type TagCommands = {
+  "ticket-tag.read": typeof readTicketTagsCommand;
+  "ticket-tag.create": typeof createTicketTagCommand;
+  "ticket-tag.delete": typeof deleteTicketTagCommand;
+  "ticket-tag.apply-draft": typeof applyTicketTagDraftCommand;
 };
-
-const run = <TResult,>(host: GuestHost, commandId: string, params?: Record<string, unknown>) =>
-  runCommand<TResult>(host, commandId, params, "Ticket tag command failed.");
-
-const readTags = async (host: GuestHost) => (await run<{ tags: TagSettingsTag[] }>(host, commandIds.read)).tags ?? [];
+const tagClient = (host: GuestHost) => createWebviewClient<TagCommands>(host);
+const readTags = async (host: GuestHost) => (await tagClient(host).commands["ticket-tag.read"]()).tags;
 
 const buildDrafts = (tags: TagSettingsTag[]) =>
   Object.fromEntries(tags.map((tag) => [tag.id, createTagSettingsDraft(tag)]));
@@ -55,18 +58,22 @@ const TicketTagsSettingsPanel = (props: { host: GuestHost; t: Translate }) => {
   const changedTags = tags.filter((tag) => drafts[tag.id] && hasTagDraftChanges(tag, drafts[tag.id]));
 
   const createTag = useMutation({
-    mutationFn: (name: string) => run(host, commandIds.createTag, { name, type: "single_select" }),
+    mutationFn: (name: string) => tagClient(host).commands["ticket-tag.create"]({ name, type: "single_select" }),
     onSuccess: invalidateTags,
   });
   const deleteTag = useMutation({
-    mutationFn: (tagId: string) => run(host, commandIds.deleteTag, { tagId }),
+    mutationFn: (tagId: string) => tagClient(host).commands["ticket-tag.delete"]({ tagId }),
     onSuccess: invalidateTags,
   });
   const saveTags = useMutation({
     mutationFn: () =>
       saveTagDraftWithRecovery(async () => {
         for (const tag of changedTags) {
-          await saveTagDraft((commandId, params) => run(host, commandId, params), tag, drafts[tag.id]);
+          await saveTagDraft(
+            (_commandId, params) => tagClient(host).commands["ticket-tag.apply-draft"](params),
+            tag,
+            drafts[tag.id],
+          );
         }
       }, invalidateTags),
     onSuccess: invalidateTags,

@@ -2,19 +2,17 @@ import {
   type NavigationTarget,
   type NavigationTargetPage,
   type NavigationTargetPanel,
-  type PageSlot,
   type ResourceRef,
   workbenchPageDefinitions,
   workbenchPanelDefinitions,
 } from "@pstdio/sdk/extensions";
-import type { RuntimeNavigationItemRecord } from "../../types/runtime";
+import type { RuntimeNavigationItemRecord, RuntimePageSlot } from "../../types/runtime";
 import type { Accumulator } from "./accumulator";
 import { addPageDiagnostic, normalizedRefId } from "./page-validation";
 
 interface Destination {
   bindingKinds: readonly string[];
   cardinality: "one" | "many";
-  staticView: boolean;
 }
 
 const validateResourceInput = (
@@ -46,7 +44,7 @@ const validateResourceInput = (
       message: `Resource kind "${resource.type}" does not match ${destination.bindingKinds.join(", ")}`,
       record,
     });
-  } else if (!resource && destination.bindingKinds.length > 0 && !destination.staticView) {
+  } else if (!resource && destination.bindingKinds.length > 0) {
     addPageDiagnostic(runtime, {
       code,
       fieldPath: `${fieldPath}.resource`,
@@ -66,10 +64,9 @@ const validateResourceInput = (
   }
 };
 
-const slotDestination = (slot: PageSlot): Destination => ({
-  bindingKinds: slot.binding ? [slot.binding.kind.id] : [],
-  cardinality: slot.cardinality ?? "one",
-  staticView: Boolean(slot.view),
+const slotDestination = (slot: RuntimePageSlot): Destination => ({
+  bindingKinds: slot.item.kind === "binding" ? slot.item.binding.kinds.map((kind) => kind.id) : [],
+  cardinality: slot.item.kind === "binding" ? slot.item.binding.cardinality : "one",
 });
 
 const hostPages = new Map(Object.values(workbenchPageDefinitions).map((definition) => [definition.ref.id, definition]));
@@ -96,7 +93,6 @@ const resolvePageDestination = (
     return {
       bindingKinds: definition.primary.resourceKinds,
       cardinality: definition.primary.cardinality,
-      staticView: definition.primary.resourceKinds.length === 0,
     } satisfies Destination;
   }
   if (owner !== record.extensionId) return undefined;
@@ -111,8 +107,10 @@ const resolvePageDestination = (
     });
     return undefined;
   }
-  const primary = page.contribution.slots.find((slot) => slot.role === "primary");
-  return primary ? slotDestination(primary) : undefined;
+  return {
+    bindingKinds: page.contribution.resource?.kinds.map((kind) => kind.id) ?? [],
+    cardinality: page.contribution.main.kind === "view" ? page.contribution.main.cardinality : "one",
+  } satisfies Destination;
 };
 
 const validatePageTarget = (
@@ -163,7 +161,7 @@ const resolvePlacementDestination = (
     if (owner !== record.extensionId) return undefined;
     const page = runtime.pages.find((candidate) => candidate.id === normalizedRefId(panel.page, record.extensionId));
     const slot = page?.contribution.slots.find((candidate) => candidate.id === panel.id);
-    if (!slot || slot.role !== "auxiliary") {
+    if (!slot) {
       addPageDiagnostic(runtime, {
         code: "extension_panel_target_invalid",
         fieldPath: `${fieldPath}.panel`,
@@ -192,7 +190,6 @@ const resolvePlacementDestination = (
     return {
       bindingKinds: definition.resourceKinds,
       cardinality: definition.cardinality,
-      staticView: false,
     } satisfies Destination;
   }
   if (owner !== record.extensionId) return undefined;
@@ -210,17 +207,12 @@ const resolvePlacementDestination = (
     return undefined;
   }
   if (placement.contribution.item.kind === "view") {
-    return { bindingKinds: [], cardinality: "one", staticView: true } satisfies Destination;
+    return { bindingKinds: [], cardinality: "one" } satisfies Destination;
   }
-  const resourceKind = placement.contribution.item.slot.resourceKind;
-  const kind = runtime.resourceKinds.find(
-    (candidate) => candidate.extensionId === resourceKind.extensionId && candidate.localId === resourceKind.id,
-  );
-  const slot = kind?.contribution.slots[placement.contribution.item.slot.id];
+  const resourceKinds = placement.contribution.item.binding.kinds;
   return {
-    bindingKinds: [resourceKind.id],
-    cardinality: slot?.cardinality ?? "one",
-    staticView: false,
+    bindingKinds: resourceKinds.map((kind) => kind.id),
+    cardinality: placement.contribution.item.binding.cardinality ?? "one",
   } satisfies Destination;
 };
 
@@ -251,17 +243,6 @@ const validateTarget = (
   if (target.kind === "panel") validatePanelTarget(runtime, record, target, fieldPath);
   if (target.kind !== "compound") return;
 
-  const pageIndexes = target.targets.flatMap((item, index) => (item.kind === "page" ? [index] : []));
-  const invalidPageSequence =
-    pageIndexes.length === 1 && (pageIndexes[0] !== 0 || target.targets.slice(1).some((item) => item.kind !== "panel"));
-  if (pageIndexes.length > 1 || invalidPageSequence) {
-    addPageDiagnostic(runtime, {
-      code: "extension_navigation_target_invalid",
-      fieldPath,
-      message: "A compound target may contain one page followed by panel targets",
-      record,
-    });
-  }
   for (const [index, item] of target.targets.entries()) {
     if (item.kind === "page") validatePageTarget(runtime, record, item, `${fieldPath}.targets.${index}`, new Set());
     if (item.kind === "panel") validatePanelTarget(runtime, record, item, `${fieldPath}.targets.${index}`);

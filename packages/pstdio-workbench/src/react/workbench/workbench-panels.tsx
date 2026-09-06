@@ -1,25 +1,21 @@
 import { Box } from "@chakra-ui/react";
-import { Header, type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
+import { type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
+import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
 import { WorkbenchRegion } from "../region/region";
-import { useWorkbenchRegionTabsVisible, WorkbenchRegionTabs } from "../region/region-tabs";
 import { WorkbenchWidgetHost } from "../region/widget-host";
 import { useWorkbenchActiveModeId } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
-import { WorkbenchHeaderBorder } from "./header-bottom-border";
 
 interface WorkbenchSidenavProps {
   workbench: WorkbenchCore;
-  hasHeader: boolean;
   contextActions: ResourceContextAction[];
 }
 
 export const WorkbenchSidenav = (props: WorkbenchSidenavProps) => {
-  const { workbench, hasHeader, contextActions } = props;
-  const hasContentTabs = useWorkbenchRegionTabsVisible(workbench, "sidenav");
-  const showHeaderBar = hasHeader || hasContentTabs;
+  const { workbench, contextActions } = props;
 
   return (
     <ResourceContextMenu actions={contextActions} closeOnSelect={false} keepMountedWhenEmpty>
@@ -38,33 +34,6 @@ export const WorkbenchSidenav = (props: WorkbenchSidenavProps) => {
           overflow="hidden"
           w="full"
         >
-          {showHeaderBar ? (
-            <Header
-              data-workbench-panel-header="sidenav"
-              variant="main"
-              bg={workbenchBackgrounds.sidenav}
-              position="relative"
-              flexShrink={0}
-              gap="xs"
-              overflowX="hidden"
-              // Full-bleed: sidenav-header content owns its own padding and fills the header height,
-              // so the container adds none of its own horizontally.
-              px="0"
-              // Size to content so a multi-row sidenav-header (e.g. a stacked action cluster) is not
-              // clipped to the single-row height; single-row headers stay at the variant height.
-              h="auto"
-              minH="2.5rem"
-              alignItems="stretch"
-            >
-              <WorkbenchRegionTabs workbench={workbench} region="sidenav" />
-              {hasHeader ? (
-                <Box flex="1" minW="0" overflowX="hidden">
-                  <WorkbenchRegion workbench={workbench} region="sidenav-header" title="Sidenav header" />
-                </Box>
-              ) : null}
-              <WorkbenchHeaderBorder workbench={workbench} region="sidenav-header" />
-            </Header>
-          ) : null}
           <Box flex="1" minH="0" minW="0" overflow="hidden">
             <WorkbenchRegion workbench={workbench} region="sidenav" title="Sidenav" />
           </Box>
@@ -92,16 +61,15 @@ const WorkbenchStatusBarItems = (props: WorkbenchStatusBarItemsProps) => {
 
   return items.map((item) => {
     const view = workbench.views.getView(item.viewId);
-    const widget = view ? workbench.layout.getWidget(view.panelId) : undefined;
-    if (!view || !widget) return null;
+    if (!view) return null;
     return (
-      <Box key={item.id} minW="0" h="full">
+      <Box key={item.id} display="flex" alignItems="center" minW="0" h="full">
         <WorkbenchWidgetHost
           workbench={workbench}
-          widget={widget}
+          region="status"
           placement={{
             widgetId: item.id,
-            contributionId: view.panelId,
+            contributionId: view.id,
             viewId: view.id,
             title: view.title,
             closable: false,
@@ -138,6 +106,7 @@ export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
 export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
   const { workbench } = props;
   useWorkbenchStore(workbench.statusBar.store, (state) => state.items);
+  const chrome = useModeChrome(workbench, "status");
 
   return (
     <WorkbenchFocusRegion
@@ -154,14 +123,18 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
       minW="0"
       overflow="hidden"
     >
-      <Box display="flex" alignItems="stretch" justifyContent="space-between" h="full" minW="0" w="full">
-        <Box display="flex" alignItems="stretch" minW="0" h="full">
-          <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
+      {chrome ? (
+        <ModeChromeView workbench={workbench} region="status" viewId={chrome} />
+      ) : (
+        <Box display="flex" alignItems="stretch" justifyContent="space-between" h="full" minW="0" w="full">
+          <Box display="flex" alignItems="stretch" minW="0" h="full">
+            <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
+          </Box>
+          <Box display="flex" alignItems="stretch" minW="0" h="full">
+            <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
+          </Box>
         </Box>
-        <Box display="flex" alignItems="stretch" minW="0" h="full">
-          <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
-        </Box>
-      </Box>
+      )}
     </WorkbenchFocusRegion>
   );
 };

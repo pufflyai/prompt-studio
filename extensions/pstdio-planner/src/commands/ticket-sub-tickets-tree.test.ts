@@ -38,7 +38,22 @@ describe("ticket files tree sub-ticket section", () => {
           iconColor: "gray.fg",
           iconTooltip: "Backlog",
           target: {
-            kind: "resource",
+            kind: "page",
+            page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
+            parent: {
+              kind: "page",
+              page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
+              resource: {
+                type: "ticket",
+                id: parent.id,
+                label: `${parent.shorthand} ${parent.title}`,
+                metadata: {
+                  shorthand: parent.shorthand,
+                  resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
+                },
+              },
+              parent: { kind: "page", page: { kind: "page", id: "tickets", extensionId: "pstdio.pstdio-planner" } },
+            },
             resource: {
               type: "ticket",
               id: child.id,

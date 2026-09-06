@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { ResourceContextAction } from "@pstdio/ui";
-import { mergeKanbanViewRowActions } from "./kanban-view";
+import { isKanbanRowResource, mergeKanbanViewRowActions } from "./kanban-view";
+
+test("Kanban row resource actions recognize public resource references", () => {
+  expect(isKanbanRowResource({ type: "note", id: "field", label: "Field notes" })).toBe(true);
+  expect(isKanbanRowResource({ type: "note" })).toBe(false);
+  expect(isKanbanRowResource(null)).toBe(false);
+});
 
 const action = (key: string, label: string, commandId?: string): ResourceContextAction => ({
   key,

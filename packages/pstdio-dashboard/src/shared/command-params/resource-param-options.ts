@@ -1,5 +1,5 @@
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { ResourceBrowseEntry, ResourceRef } from "@pstdio/workbench";
-
 export interface ResourceParamOption {
   id: string;
   name: string;
@@ -7,14 +7,12 @@ export interface ResourceParamOption {
   icon?: string;
   value: string;
 }
-
 const toExtensionResource = (resource: ResourceRef) => ({
-  type: resource.kind,
-  id: resource.id ?? resource.uri,
+  type: resource.type,
+  id: resource.id ?? resourceKey(resource),
   ...(resource.label ? { label: resource.label } : {}),
   ...(resource.metadata ? { metadata: resource.metadata } : {}),
 });
-
 export const buildResourceParamOptions = (
   entries: readonly ResourceBrowseEntry[],
   resourceType: string | undefined,
@@ -22,12 +20,12 @@ export const buildResourceParamOptions = (
   const seen = new Set<string>();
   return entries.flatMap((entry): ResourceParamOption[] => {
     const { resource } = entry;
-    if ((resourceType && resource.kind !== resourceType) || seen.has(resource.uri)) return [];
-    seen.add(resource.uri);
+    if ((resourceType && resource.type !== resourceType) || seen.has(resourceKey(resource))) return [];
+    seen.add(resourceKey(resource));
     return [
       {
-        id: resource.uri,
-        name: resource.label ?? resource.id ?? resource.uri,
+        id: resourceKey(resource),
+        name: resource.label ?? resource.id ?? resourceKey(resource),
         description: entry.description,
         icon: resource.icon,
         value: JSON.stringify(toExtensionResource(resource)),

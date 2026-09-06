@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { WorkbenchStorageLike } from "@pstdio/workbench/storage";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { createDashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
+import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { flushMicrotasks } from "./modules/extensions/module-test-fixtures";
 import { createDashboardWorkbench, dashboardWorkbenchStorageNamespace } from "./workbench";
 
@@ -18,14 +21,11 @@ const createStorage = (): WorkbenchStorageLike => {
     },
   };
 };
-
 const sessionResource = {
-  kind: "session",
-  uri: "dashboard-workbench://session/session-1",
+  type: "session",
   id: "session-1",
   label: "Session one",
 };
-
 const seedSyncedRows = () => {
   getWriter("projects")?.truncateAndWrite([
     { id: "project-1", name: "Project one", created_at: "2026-01-01T00:00:00.000Z" },
@@ -50,18 +50,15 @@ const seedSyncedRows = () => {
   getWriter("workspace_sessions")?.truncateAndWrite([]);
   markInitialCollectionsSyncComplete();
 };
-
 const sidePanelSessionUris = (workbench: ReturnType<typeof createDashboardWorkbench>) =>
   workbench.layout
     .listPanelInstances("side")
-    .filter((panel) => panel.resource?.kind === "session")
-    .map((panel) => panel.resource?.uri);
-
+    .filter((panel) => panel.resource?.type === "session")
+    .map((panel) => resourceKey(panel.resource));
 const selectProject = (workbench: ReturnType<typeof createDashboardWorkbench>) =>
   workbench.commands.executeCommand(dashboardCommandIds.selectProject, {
     project: { id: "project-1", name: "Project one" },
   });
-
 // Synced rows are process-wide; leave the tables empty so other suites start clean.
 afterEach(() => {
   getWriter("projects")?.truncateAndWrite([]);
@@ -69,87 +66,66 @@ afterEach(() => {
   getWriter("workspaces")?.truncateAndWrite([]);
   getWriter("workspace_sessions")?.truncateAndWrite([]);
 });
-
 describe("createDashboardWorkbench restoration", () => {
   test("restores the Side Panel presentation, its session, and the unsent chat draft", async () => {
     const storage = createStorage();
     seedSyncedRows();
-
     const first = createDashboardWorkbench({ storage });
     await selectProject(first);
     await flushMicrotasks();
     await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
     first.sidePanel.setMode("attached");
-
     const drafts = createDashboardSessionDraftPersistence({
       namespace: dashboardWorkbenchStorageNamespace,
       storage,
       projectSelection: { getSelectedProjectId: () => "project-1" },
     });
     drafts.setDraft("session-1", "unsent reply");
-
     const second = createDashboardWorkbench({ storage });
     await flushMicrotasks();
-
     expect(second.sidePanel.getMode()).toBe("attached");
-    expect(sidePanelSessionUris(second)).toEqual([sessionResource.uri]);
+    expect(sidePanelSessionUris(second)).toEqual([resourceKey(sessionResource)]);
     expect(second.layout.listPanelInstances("side")[0]?.tabRetention).toBe("preview");
     expect(drafts.getDraft("session-1")).toBe("unsent reply");
   });
-
   test("ignores a persisted session that no longer exists", async () => {
     const storage = createStorage();
     seedSyncedRows();
-
     const first = createDashboardWorkbench({ storage });
     await selectProject(first);
     await flushMicrotasks();
     await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
-
     getWriter("sessions")?.truncateAndWrite([]);
-
     const second = createDashboardWorkbench({ storage });
     await flushMicrotasks();
-
     expect(sidePanelSessionUris(second)).toEqual([]);
   });
-
   test("restores a persisted primary view before its Side Panel session", async () => {
     const storage = createStorage();
     seedSyncedRows();
-
     const first = createDashboardWorkbench({ storage });
     await selectProject(first);
     await flushMicrotasks();
-    await first.views.openView("workspaces", { strategy: { kind: "replace-active" } });
+    openWorkspacesPage(first);
     await flushMicrotasks();
     await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
-    first.history.flush();
-    expect(first.lastResource.get()).toBeUndefined();
-
     const second = createDashboardWorkbench({ storage });
     await flushMicrotasks();
-
-    expect(second.layout.getLayout().regions.main.widgets[0]?.viewId).toBe("workspaces");
-    expect(second.lastResource.get()).toBeUndefined();
-    expect(sidePanelSessionUris(second)).toEqual([sessionResource.uri]);
+    expect(second.layout.getLayout().regions.main.widgets[0]?.viewId).toBe(dashboardWidgetIds.workspaces);
+    expect(sidePanelSessionUris(second)).toEqual([resourceKey(sessionResource)]);
   });
-
   test("does not duplicate a primary session into the Side Panel after refresh", async () => {
     const storage = createStorage();
     seedSyncedRows();
-
     const first = createDashboardWorkbench({ storage });
     await selectProject(first);
     await flushMicrotasks();
     await first.commands.executeCommand("dashboard.openSessionPanel", { resource: sessionResource });
-    await first.resources.openResource(sessionResource, { replaceActive: true });
+    openSessionsPage(first, sessionResource);
     expect(first.layout.listPanelInstances("side")).toEqual([]);
-
     const second = createDashboardWorkbench({ storage });
     await flushMicrotasks();
-
-    expect(second.getPrimaryResource()?.uri).toBe(sessionResource.uri);
+    expect(resourceKey(second.getPrimaryResource())).toBe(resourceKey(sessionResource));
     expect(sidePanelSessionUris(second)).toEqual([]);
   });
 });

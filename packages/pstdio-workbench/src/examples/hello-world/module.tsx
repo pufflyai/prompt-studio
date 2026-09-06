@@ -1,13 +1,11 @@
 import { headerTrailingMenuPath, type WorkbenchModuleContribution } from "../../core";
 
-const emptyMainRendererId = "hello-world.empty-main";
+const emptyMainViewId = "hello-world.empty-main";
 const welcomeWidgetId = "hello-world.welcome";
 const openWelcomeCommandId = "hello-world.openWelcome";
 const mainHeaderTrailingMenuPath = headerTrailingMenuPath("main");
-
 const ExamplePanel = (props: { title: string; description: string }) => {
   const { title, description } = props;
-
   return (
     <div style={{ padding: 24 }}>
       <h1 style={{ marginTop: 0 }}>{title}</h1>
@@ -15,36 +13,44 @@ const ExamplePanel = (props: { title: string; description: string }) => {
     </div>
   );
 };
-
 export const createHelloWorldModule = (): WorkbenchModuleContribution => ({
   id: "hello-world",
   activate(ctx) {
-    ctx.layout.registerPlaceholder({
-      id: emptyMainRendererId,
-      title: "Empty main",
-      region: "main",
-      rendererId: emptyMainRendererId,
-    });
-
-    ctx.layout.registerPanel({
+    ctx.views.registerView({
       id: welcomeWidgetId,
       title: "Welcome",
-      region: "main",
-      rendererId: welcomeWidgetId,
+      body: {
+        kind: "react",
+        render: () => (
+          <ExamplePanel title="Hello world" description="A workbench module rendered into the main region." />
+        ),
+      },
     });
-
-    ctx.renderers.registerRenderer({
-      id: emptyMainRendererId,
-      render: () => <ExamplePanel title="Nothing open" description="Open a widget to get started." />,
-    });
-
-    ctx.renderers.registerRenderer({
+    ctx.shellPlacements.registerPlacement({
       id: welcomeWidgetId,
-      render: () => (
-        <ExamplePanel title="Hello world" description="A workbench module rendered into the main region." />
-      ),
+      item: {
+        kind: "view",
+        presence: "closed",
+        view: {
+          kind: "view",
+          id: welcomeWidgetId,
+        },
+      },
+      region: "main",
     });
-
+    ctx.views.registerView({
+      id: emptyMainViewId,
+      title: "Empty main",
+      body: {
+        kind: "react",
+        render: () => <ExamplePanel title="Nothing open" description="Open a widget to get started." />,
+      },
+    });
+    ctx.placeholders.registerPlaceholder({
+      id: emptyMainViewId,
+      viewId: emptyMainViewId,
+      region: "main",
+    });
     ctx.commands.registerCommand(
       {
         id: openWelcomeCommandId,
@@ -53,10 +59,9 @@ export const createHelloWorldModule = (): WorkbenchModuleContribution => ({
         icon: "plus",
       },
       {
-        execute: () => ctx.layout.openPanel(welcomeWidgetId),
+        execute: () => ctx.navigation.openPanel({ panel: { kind: "shell-placement", id: welcomeWidgetId } }),
       },
     );
-
     ctx.layout.registerMenuItem(mainHeaderTrailingMenuPath, {
       commandId: openWelcomeCommandId,
       group: "primary",

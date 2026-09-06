@@ -1,6 +1,7 @@
 import type { CommandPaletteResourceContribution } from "@pstdio/sdk/extensions";
 import { TICKET_RESOURCE_ICON } from "../data/mappers";
 import { runTicketsQuery } from "../data/query";
+import { ticketPageTarget } from "../data/ticket-page-target";
 import { getTicketCommand } from "./get-ticket";
 
 const matchesQuery = (haystack: string, query: string) => {
@@ -20,7 +21,7 @@ export const queryTicketResources: CommandPaletteResourceContribution["query"] =
       label: row.title,
       icon: TICKET_RESOURCE_ICON,
       target: row.resource
-        ? { kind: "resource" as const, resource: row.resource }
+        ? ticketPageTarget(row.resource)
         : { kind: "command" as const, target: { command: getTicketCommand.ref, params: { id: row.id } } },
     }));
 

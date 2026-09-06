@@ -73,7 +73,7 @@ const useWorkbenchPanelMenu = (
   const registeredWidgets = useWorkbenchStore(workbench.layout.store, (state) => state.widgets);
   const currentRegionState = layout.regions[region];
   const activeSubPanel = getActiveWorkbenchSubPanel(layout, panel, locationResource, {
-    ignoreOwnerResourceUri: panel === "side",
+    ignoreOwnerResourceKey: panel === "side",
   });
   const activeLocationPanel = getActiveWorkbenchLocationPanel(layout);
   const regionState = {
@@ -99,7 +99,7 @@ const useWorkbenchPanelMenu = (
   const widget = activePlacement ? registeredWidgets[activePlacement.contributionId] : undefined;
   const collapsible = useWorkbenchStore(workbench.layout.store, () => resolvePanelCollapsible(workbench, region));
   const panelStateKey = activePlacement ? `panel-menu:${activePlacement.widgetId}` : region;
-  const open = useWorkbenchStore(workbench.panels.store, (state) => state.openByRegionId[panelStateKey] ?? true);
+  const open = useWorkbenchStore(workbench.panelMenuState.store, (state) => state.openByMenuId[panelStateKey] ?? true);
 
   return {
     region,
@@ -112,9 +112,9 @@ const useWorkbenchPanelMenu = (
     responsiveCollapsed,
     collapsible,
     size: resolveRegionSize(workbench.layout.getRegionSize(region)),
-    onOpen: () => workbench.panels.setOpen(panelStateKey, true),
+    onOpen: () => workbench.panelMenuState.setOpen(panelStateKey, true),
     onCollapsedChange: (collapsed) => {
-      if (!collapsed || collapsible) workbench.panels.setOpen(panelStateKey, !collapsed);
+      if (!collapsed || collapsible) workbench.panelMenuState.setOpen(panelStateKey, !collapsed);
     },
   };
 };

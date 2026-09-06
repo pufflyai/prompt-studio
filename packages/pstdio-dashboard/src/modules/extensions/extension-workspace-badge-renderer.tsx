@@ -1,5 +1,5 @@
 import { Box, Icon, Menu } from "@chakra-ui/react";
-import type { KanbanRendererResourceRef } from "@pstdio/sdk/extensions";
+import type { KanbanRendererResourceRef, NavigationTargetPage, ResourceRef } from "@pstdio/sdk/extensions";
 import {
   ListRow,
   type SessionCompletionStatus,
@@ -9,14 +9,11 @@ import {
 } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
 import type { KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
-import type { ResourceRef } from "@pstdio/workbench";
+import { isExtensionNavigationTarget } from "@pstdio/workbench/extensions";
 import { GitBranch } from "lucide-react";
 import { createElement, useEffect, useState } from "react";
 import { createDashboardResource } from "@/shared/app/resources";
-import {
-  type ExtensionResourceReference,
-  normalizeExtensionResourceReference,
-} from "@/shared/workbench/resource-hierarchy";
+import { normalizeExtensionResourceReference } from "@/shared/workbench/resource-hierarchy";
 import {
   getDashboardWorkspaceDiffSummary,
   requestDashboardWorkspaceDiffSummaries,
@@ -33,8 +30,9 @@ export interface ExtensionWorkspaceBadgeItem {
   label: string;
   icon?: string;
   resource?: KanbanRendererResourceRef;
+  target?: NavigationTargetPage;
   createdAt?: string;
-  resourceParent?: ExtensionResourceReference;
+  resourceParent?: ResourceRef;
   session?: ExtensionWorkspaceBadgeSession;
 }
 
@@ -66,6 +64,9 @@ const badgeSessionFrom = (value: unknown): ExtensionWorkspaceBadgeSession | unde
 const hasBadgeSession = (item: ExtensionWorkspaceBadgeItem): item is ExtensionWorkspaceBadgeSessionItem =>
   Boolean(item.session);
 
+const pageTargetFrom = (value: unknown) =>
+  isExtensionNavigationTarget(value) && value.kind === "page" ? value : undefined;
+
 export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspaceBadgeItem[] => {
   if (!Array.isArray(value)) return [];
 
@@ -79,6 +80,7 @@ export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspace
     const createdAt = textValue(item.createdAt);
     const resourceParent = normalizeExtensionResourceReference(item.resourceParent);
     const session = badgeSessionFrom(item.session);
+    const target = pageTargetFrom(item.target);
     return [
       {
         id,
@@ -88,6 +90,7 @@ export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspace
         ...(createdAt ? { createdAt } : {}),
         ...(resourceParent ? { resourceParent } : {}),
         ...(session ? { session } : {}),
+        ...(target ? { target } : {}),
       },
     ];
   });
@@ -107,15 +110,12 @@ export const createWorkspaceBadgeResource = (item: ExtensionWorkspaceBadgeItem, 
     },
   );
 
-// `sessionSurface: "side"` keeps the board in place and opens the session in the Side Panel.
-// The label is only a fallback — the sessions module resolves the live title by session id.
+// The caller chooses the session panel with an explicit navigation target. The
+// resource carries identity and display data only.
 export const createWorkspaceBadgeSessionResource = (
   item: ExtensionWorkspaceBadgeSessionItem,
   projectId: string,
-): ResourceRef =>
-  createDashboardResource("session", item.session.id, item.label, "MessageCircle", projectId, {
-    sessionSurface: "side",
-  });
+): ResourceRef => createDashboardResource("session", item.session.id, item.label, "MessageCircle", projectId);
 
 const WorkspaceDiffTotals = (props: { workspaceId: string }) => {
   const { workspaceId } = props;
@@ -143,11 +143,11 @@ interface ExtensionWorkspaceBadgeDisplayProps {
   items: ExtensionWorkspaceBadgeItem[];
   projectId: string;
   value: unknown;
-  openResource: (resource: ResourceRef) => void;
+  navigate: (resource: ResourceRef, target?: NavigationTargetPage) => void;
 }
 
 const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayProps) => {
-  const { items, projectId, value, openResource } = props;
+  const { items, projectId, value, navigate } = props;
   const [, setDiffVersion] = useState(0);
   const selectedId = typeof value === "string" ? value : undefined;
   const selectedItem = items.find((item) => item.id === selectedId) ?? items[0];
@@ -174,7 +174,7 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
   if (!selectedItem) return null;
 
   const openItem = (item: ExtensionWorkspaceBadgeItem) => {
-    openResource(createWorkspaceBadgeResource(item, projectId));
+    navigate(createWorkspaceBadgeResource(item, projectId), item.target);
   };
 
   const badge = (
@@ -190,7 +190,7 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
       // without also opening the workspace or the ticket card behind it.
       onSessionIndicatorClick={
         hasBadgeSession(selectedItem)
-          ? () => openResource(createWorkspaceBadgeSessionResource(selectedItem, projectId))
+          ? () => navigate(createWorkspaceBadgeSessionResource(selectedItem, projectId))
           : undefined
       }
     />
@@ -238,7 +238,11 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
 };
 
 export const createBadgeListRenderer =
-  (input: { itemsAttributeId: string; projectId: string; openResource: (resource: ResourceRef) => void }) =>
+  (input: {
+    itemsAttributeId: string;
+    projectId: string;
+    navigate: (resource: ResourceRef, target?: NavigationTargetPage) => void;
+  }) =>
   (value: unknown, row: KanbanRendererRow) => {
     const items = normalizeWorkspaceBadgeItems(row.attributes[input.itemsAttributeId]);
     if (items.length === 0) return null;
@@ -246,6 +250,6 @@ export const createBadgeListRenderer =
       items,
       projectId: input.projectId,
       value,
-      openResource: input.openResource,
+      navigate: input.navigate,
     });
   };

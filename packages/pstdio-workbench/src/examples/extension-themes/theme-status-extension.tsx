@@ -4,7 +4,6 @@ import type { WorkbenchModuleContribution } from "../../core";
 import { WorkbenchIcon } from "../../react";
 
 const STATUS_WIDGET_ID = "extension.theme-status.item";
-const STATUS_RENDERER_ID = "extension.theme-status.renderer";
 
 const ThemeStatusItem = () => {
   const { themePreference, themePreferences } = useThemePreference();
@@ -25,17 +24,11 @@ const ThemeStatusItem = () => {
 export const createThemeStatusExtension = (): WorkbenchModuleContribution => ({
   id: "extension.theme-status",
   activate(ctx) {
-    ctx.layout.registerPanel({
+    ctx.views.registerView({
       id: STATUS_WIDGET_ID,
       title: "Theme status",
-      region: "status",
-      singleton: true,
-      rendererId: STATUS_RENDERER_ID,
+      body: { kind: "react", render: () => <ThemeStatusItem /> },
     });
-    ctx.renderers.registerRenderer({
-      id: STATUS_RENDERER_ID,
-      render: () => <ThemeStatusItem />,
-    });
-    ctx.layout.openPanel(STATUS_WIDGET_ID);
+    ctx.statusBar.registerItem({ id: STATUS_WIDGET_ID, viewId: STATUS_WIDGET_ID, slot: "trailing" });
   },
 });

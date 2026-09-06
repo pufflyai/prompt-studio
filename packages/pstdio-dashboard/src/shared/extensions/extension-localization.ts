@@ -1,15 +1,18 @@
 import type { ListExtensionAppearanceResponse, LocalizableString, WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
+import type { JsonValue } from "@pstdio/sdk/extensions";
 import i18n from "@/i18n";
 
 type LocalizedStringToken = Extract<LocalizableString, { $l10n: string }>;
 
-export type ResolvedLocalizable<T> = T extends LocalizedStringToken
-  ? string
-  : T extends Array<infer TItem>
-    ? ResolvedLocalizable<TItem>[]
-    : T extends object
-      ? { [TKey in keyof T]: ResolvedLocalizable<T[TKey]> }
-      : T;
+export type ResolvedLocalizable<T> = JsonValue extends T
+  ? T
+  : T extends LocalizedStringToken
+    ? string
+    : T extends readonly unknown[]
+      ? { [Index in keyof T]: ResolvedLocalizable<T[Index]> }
+      : T extends object
+        ? { [TKey in keyof T]: ResolvedLocalizable<T[TKey]> }
+        : T;
 
 export type ResolvedWorkbenchExtensionMetadata = ResolvedLocalizable<WorkbenchExtensionMetadata>;
 export type ResolvedWorkbenchExtensionAppearance = ResolvedLocalizable<ListExtensionAppearanceResponse>;

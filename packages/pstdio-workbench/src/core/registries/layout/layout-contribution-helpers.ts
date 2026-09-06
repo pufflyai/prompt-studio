@@ -14,12 +14,14 @@ import type {
   WorkbenchLayout,
   WorkbenchLayoutStoreState,
   WorkbenchRegion,
+  WorkbenchRegionSettings,
 } from "./layout-types";
 
 interface CreateRegionQueriesInput {
   getLayout(): WorkbenchLayout;
   getWidgets(): WorkbenchLayoutStoreState["widgets"];
   getPlaceholder(regionId: WorkbenchRegion): RegisteredPlaceholderContribution | undefined;
+  getRegionSettings?(regionId: WorkbenchRegion): WorkbenchRegionSettings | undefined;
 }
 
 export const createRegionQueries = (input: CreateRegionQueriesInput) => {
@@ -32,14 +34,20 @@ export const createRegionQueries = (input: CreateRegionQueriesInput) => {
       const contributionSize = placement
         ? getWidgets()[placement.contributionId]?.regionSize
         : getPlaceholder(regionId)?.regionSize;
-      if (persistedSize === undefined) return contributionSize;
-      return { ...contributionSize, defaultPx: persistedSize };
+      const size = contributionSize ?? input.getRegionSettings?.(regionId)?.size;
+      if (persistedSize === undefined) return size;
+      return { ...size, defaultPx: persistedSize };
     },
 
     getRegionCollapsible(regionId: WorkbenchRegion) {
       const placement = getActivePlacement(getLayout().regions[regionId]);
-      if (!placement) return getPlaceholder(regionId)?.regionCollapsible ?? true;
-      return getWidgets()[placement.contributionId]?.regionCollapsible ?? true;
+      if (!placement)
+        return getPlaceholder(regionId)?.regionCollapsible ?? input.getRegionSettings?.(regionId)?.collapsible ?? true;
+      return (
+        getWidgets()[placement.contributionId]?.regionCollapsible ??
+        input.getRegionSettings?.(regionId)?.collapsible ??
+        true
+      );
     },
 
     getRegionHeaderBorderBottom(regionId: WorkbenchRegion) {

@@ -1,0 +1,26 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as RendererStories from "./renderers.stories";
+
+<Meta of={RendererStories} name="6. File" />
+
+# File renderer
+
+`body.kind: "file"` loads a file name and its content. Prompt Studio selects the native Markdown, code, text, or image
+view from that name. When the extension supplies `save`, supported text formats become editable and use the shared
+dirty-state flow.
+
+Use it for ticket Markdown, generated reports, source files, logs, configuration, and image artifacts.
+
+<Canvas of={RendererStories.File} sourceState="shown" />
+
+## How it works
+
+| Field | Meaning |
+| --- | --- |
+| `load` | Returns `fileName`, `content`, and optional media metadata for the active resource. |
+| `save` | Receives changed text. Omit it for a read-only preview. |
+| `refreshEvents` | Reloads the active file after named extension events. |
+| `emptyTitle`, `emptyDescription` | Explain why the extension returned no file. |
+
+Keep storage and transport in `load` and `save`. The extension should not choose an editor, track unsaved text, or
+implement another save prompt.

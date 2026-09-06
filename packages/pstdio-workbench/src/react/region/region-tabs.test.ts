@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore, workbenchRegionTabLeadingMenuPath } from "../../core";
+import { createWorkbench, workbenchRegionTabLeadingMenuPath } from "../../core";
 import { listWorkbenchMenuItems } from "../menus/menu-items";
 import { shouldShowPanelHeader } from "./region-tabs";
 
 describe("WorkbenchRegionTabs leading actions", () => {
   test("resolves leading actions from the region tab menu path", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     workbench.commands.registerCommand(
       { id: "workbench.terminal.open", label: "Open terminal", icon: "Plus" },
       { execute: () => undefined },

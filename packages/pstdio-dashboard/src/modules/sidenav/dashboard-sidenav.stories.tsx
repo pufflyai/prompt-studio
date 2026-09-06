@@ -1,18 +1,17 @@
 import { Box } from "@chakra-ui/react";
-import { createWorkbenchCore, type WorkbenchCore, type WorkbenchModuleContext } from "@pstdio/workbench";
+import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
+import { createWorkbench, type WorkbenchCore, type WorkbenchModuleContext } from "@pstdio/workbench";
 import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { expect, userEvent, within } from "storybook/test";
+import { useState } from "react";
+import { expect, within } from "storybook/test";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
-import { selectDashboardNavigationResource } from "@/shared/app/navigation-state";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
-import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
 import { createCommandPaletteModule } from "../command-palette/module";
 import { createHeadersModule } from "../headers/module";
 import { createHelpModule } from "../help/module";
@@ -27,7 +26,8 @@ import { createSidenavModule } from "./module";
 
 const PROJECT_ID = "demo-project";
 const WORKSPACES_KEYBINDING = "mod+shift+w";
-const STORY_TICKET_WIDGET_ID = "story.ticket-location";
+const STORY_TICKET_PAGE_ID = "story.page.ticket";
+const STORY_TICKET_PAGE_REF = { extensionId: "story", kind: "page" as const, id: "ticket" };
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: false } },
 });
@@ -37,16 +37,14 @@ const ticketsView = {
   icon: "square-kanban",
 };
 const parentTicketResource = {
-  kind: "ticket",
-  uri: "dashboard-workbench://ticket/PS-163",
+  type: "ticket",
   id: "PS-163",
   label: "PS-163 Workbench navigation",
   icon: "FileText",
   metadata: { projectId: PROJECT_ID },
 };
 const ticketResource = {
-  kind: "ticket",
-  uri: "dashboard-workbench://ticket/PS-164",
+  type: "ticket",
   id: "PS-164",
   label: "PS-164 Sidenav resource sections",
   icon: "FileText",
@@ -61,8 +59,7 @@ const ticketResource = {
   },
 };
 const linkedWorkspaceResource = {
-  kind: "workspace",
-  uri: "dashboard-workbench://workspace/PS-164_A1",
+  type: "workspace",
   id: "PS-164_A1",
   label: "PS-164_A1",
   icon: "GitBranch",
@@ -78,72 +75,74 @@ const linkedWorkspaceResource = {
     },
   },
 };
-
 const createTicketsNavigationModule = () => ({
   id: "story.tickets-navigation",
   activate(ctx: WorkbenchModuleContext) {
     ctx.resources.registerKind({ kind: "ticket", label: "Ticket", icon: "FileText" });
-    ctx.layout.registerPanel({
-      id: STORY_TICKET_WIDGET_ID,
-      title: "Ticket",
-      region: "main",
-      rendererId: STORY_TICKET_WIDGET_ID,
-      singleton: true,
-      resourceKinds: ["ticket"],
-    });
-    ctx.renderers.registerRenderer({
-      id: STORY_TICKET_WIDGET_ID,
-      render: (input) => <Box p="lg">{input.instance.resource?.label}</Box>,
+    ctx.views.registerView({
+      id: ticketsView.id,
+      title: ticketsView.label,
+      icon: ticketsView.icon,
+      body: { kind: "react", render: (input) => <Box p="lg">{input.instance.resource?.label}</Box> },
     });
     ctx.resources.registerHierarchyProvider({
       id: "story.ticket-hierarchy",
-      canResolve: (resource) => resource.kind === "ticket",
+      canResolve: (resource) => resource.type === "ticket",
       getParent: (resource) =>
         dashboardResourceParent(ctx, resource, PROJECT_ID) ?? { type: "view", viewId: ticketsView.id },
     });
-    ctx.resources.registerPresenter({
-      id: "story.ticket-presenter",
-      canOpen: (resource) => resource.kind === "ticket",
-      open: (resource, openInput) => {
-        selectDashboardNavigationResource(ctx, resource, { modeId: "pstdio-planner.ticket" });
-        setResourceBreadcrumb(ctx, resource);
-        return ctx.layout.openPanel(STORY_TICKET_WIDGET_ID, {
-          strategy: openInput.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
-          resource,
-          title: resource.label,
-        });
-      },
-    });
-    ctx.modes.registerMode({ id: "pstdio-planner.ticket", label: "Ticket", activate: () => undefined });
-    ctx.views.registerView({
-      id: ticketsView.id,
-      panelId: STORY_TICKET_WIDGET_ID,
+    ctx.pages.registerPage({
+      id: STORY_TICKET_PAGE_ID,
+      ref: STORY_TICKET_PAGE_REF,
       title: ticketsView.label,
       icon: ticketsView.icon,
-      resolveInput: (input) => {
-        ctx.navigator.commitContext({ modeId: "pstdio-planner.ticket", resource: null });
-        return input;
+      path: "ticket",
+      modeId: "project",
+      parentId: workbenchPages.start.id,
+      resource: {
+        kinds: [
+          {
+            kind: "resource-kind",
+            id: "ticket",
+          },
+        ],
       },
-    });
-    registerSidenavContribution(ctx, {
-      id: "story.tickets-navigation",
-      modes: ["*"],
-      region: "header",
-      order: 40,
-      getHeaderNodes: () => [
-        {
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
           id: ticketsView.id,
-          label: ticketsView.label,
-          icon: ticketsView.icon,
-          target: { kind: "view", viewId: ticketsView.id },
+        },
+        cardinality: "one",
+      },
+      slots: [],
+    });
+    ctx.navigationTrees.registerContribution({
+      id: "story.tickets-navigation.project",
+      owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+      sourceExtensionId: "story",
+      declarationIndex: 0,
+      getSections: () => [
+        {
+          id: "navigation.root",
+          nodes: [
+            {
+              id: ticketsView.id,
+              label: ticketsView.label,
+              icon: ticketsView.icon,
+              target: { kind: "page", page: STORY_TICKET_PAGE_REF, resource: ticketResource },
+            },
+          ],
         },
       ],
     });
-    registerSidenavContribution(ctx, {
+    ctx.navigationTrees.registerContribution({
       id: "story.ticket-resource",
-      modes: ["pstdio-planner.ticket"],
-      getSections: (_workbench, input) =>
-        input.resource?.kind === "ticket"
+      owner: { kind: "page", id: STORY_TICKET_PAGE_ID, extensionId: "story" },
+      sourceExtensionId: "story",
+      declarationIndex: 1,
+      getSections: (input) =>
+        input.resource?.type === "ticket"
           ? [
               {
                 id: "ticket",
@@ -161,10 +160,20 @@ const createTicketsNavigationModule = () => ({
                 collapsible: true,
                 nodes: [
                   {
-                    id: linkedWorkspaceResource.uri,
+                    id: resourceKey(linkedWorkspaceResource),
                     label: linkedWorkspaceResource.label,
                     icon: "GitBranch",
                     resource: linkedWorkspaceResource,
+                    target: {
+                      kind: "page",
+                      page: workbenchPages.workspace,
+                      resource: {
+                        type: linkedWorkspaceResource.type,
+                        id: linkedWorkspaceResource.id,
+                        label: linkedWorkspaceResource.label,
+                        metadata: linkedWorkspaceResource.metadata,
+                      },
+                    },
                   },
                 ],
               },
@@ -172,12 +181,11 @@ const createTicketsNavigationModule = () => ({
           : [],
     });
     for (const sectionId of ["files", "workspaces"]) {
-      ctx.renderers.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
+      ctx.treeViews.setSectionExpanded(dashboardWidgetIds.dashboardSidenav, sectionId, true);
     }
     return [];
   },
 });
-
 const seedSessions = () => {
   getWriter("sessions")?.truncateAndWrite([
     sessionRow("session-today-1", "Refactor sidenav", "completed", "2026-06-24T09:00:00Z", "workspace-1"),
@@ -227,7 +235,6 @@ const seedSessions = () => {
     },
   ]);
 };
-
 const sessionRow = (id: string, title: string, status: string, updatedAt: string, workspaceId?: string) => ({
   id,
   project_id: PROJECT_ID,
@@ -243,20 +250,16 @@ const sessionRow = (id: string, title: string, status: string, updatedAt: string
   deleted_at: null,
   ...(workspaceId ? { workspace_id: workspaceId } : {}),
 });
-
 const linkSessionsToWorkspace = () => {
   getWriter("workspace_sessions")?.truncateAndWrite([
     { id: "link-1", workspace_id: "workspace-1", session_id: "session-today-1" },
     { id: "link-2", workspace_id: "workspace-1", session_id: "session-yesterday" },
   ]);
 };
-
 const bootstrapWorkbench = () => {
   seedSessions();
   linkSessionsToWorkspace();
-
-  const workbench = createWorkbenchCore();
-
+  const workbench = createWorkbench();
   for (const module of [
     createSidenavModule(),
     createCommandPaletteModule(),
@@ -273,27 +276,19 @@ const bootstrapWorkbench = () => {
   ]) {
     workbench.registerModule(module);
   }
-
   workbench.keybindings.registerKeybinding({
-    commandId: dashboardCommandIds.openWorkspaces,
+    action: { kind: "command", commandId: dashboardCommandIds.openWorkspaces },
     keybinding: WORKSPACES_KEYBINDING,
   });
-
   selectDashboardProject(workbench, { id: PROJECT_ID, name: "Prompt Studio" });
+  workbench.pageLocations.setProject(PROJECT_ID);
   return workbench;
 };
-
-const openResource = (
-  workbench: WorkbenchCore,
-  resource: Parameters<WorkbenchCore["resources"]["openResource"]>[0],
-) => {
-  void workbench.resources.openResource(resource, { replaceActive: true });
+const openTicketPage = (workbench: WorkbenchCore) => {
+  void workbench.navigation.openTarget({ kind: "page", page: STORY_TICKET_PAGE_REF, resource: ticketResource });
 };
-
-const openView = (workbench: WorkbenchCore, viewId: string) => {
-  void workbench.views.openView(viewId, { strategy: { kind: "replace-active" } });
-};
-
+const openStartPage = (workbench: WorkbenchCore) =>
+  void workbench.navigation.openTarget({ kind: "page", page: workbenchPages.start });
 const meta = {
   title: "Dashboard/Sidenav",
   parameters: { layout: "fullscreen" },
@@ -305,66 +300,100 @@ const meta = {
     ),
   ],
 } satisfies Meta;
-
 export default meta;
-
 type Story = StoryObj;
-
 const SidenavStory = (props: { open: (workbench: WorkbenchCore) => void }) => {
-  const workbench = bootstrapWorkbench();
-  props.open(workbench);
-
+  const [workbench] = useState(() => {
+    const next = bootstrapWorkbench();
+    props.open(next);
+    return next;
+  });
   return (
     <Box h="100dvh" w="full">
       <Workbench workbench={workbench} />
     </Box>
   );
 };
-
-// F15: the project selector and global collections stay fixed while the resource region is empty.
+// F15: global collections stay fixed while the resource region is empty.
 export const ProjectMode: Story = {
-  render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.start.id)} />,
+  render: () => <SidenavStory open={openStartPage} />,
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('[data-workbench-panel-header="sidenav"]')).toBeNull();
+  },
 };
-
-// Aggregate collection: the same header stays mounted and Workspaces is not duplicated in the resource region.
+export const OverflowWithPinnedChrome: Story = {
+  name: "Overflow with pinned header and footer",
+  render: () => (
+    <SidenavStory
+      open={(workbench) => {
+        workbench.navigationTrees.registerContribution({
+          id: "story.overflow.header",
+          owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+          sourceExtensionId: "story.overflow",
+          declarationIndex: 0,
+          slot: "header",
+          getSections: () => [
+            {
+              id: "overflow-header",
+              nodes: [{ id: "overflow-header-item", label: "Pinned header" }],
+            },
+          ],
+        });
+        workbench.navigationTrees.registerContribution({
+          id: "story.overflow.project",
+          owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+          sourceExtensionId: "story.overflow",
+          declarationIndex: 0,
+          getSections: () =>
+            Array.from({ length: 24 }, (_, index) => ({
+              id: `overflow-${index}`,
+              label: `Overflow group ${index + 1}`,
+              nodes: [{ id: `overflow-item-${index}`, label: `Overflow item ${index + 1}` }],
+            })),
+        });
+        openStartPage(workbench);
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const header = await canvas.findByRole("option", { name: "Pinned header" });
+    const settings = await canvas.findByRole("option", { name: /^Settings$/ });
+    const viewport = canvasElement.querySelector<HTMLElement>(
+      '[data-workbench-region="sidenav"] [data-scope="scroll-area"][data-part="viewport"]',
+    );
+    await expect(viewport).not.toBeNull();
+    const headerTop = header.getBoundingClientRect().top;
+    const settingsBottom = settings.getBoundingClientRect().bottom;
+    viewport!.scrollTop = viewport!.scrollHeight;
+    await expect(header.getBoundingClientRect().top).toBe(headerTop);
+    await expect(settings.getBoundingClientRect().bottom).toBe(settingsBottom);
+  },
+};
+// Aggregate collection: Workspaces is not duplicated in the resource region.
 export const WorkspacesView: Story = {
-  render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.workspaces.id)} />,
+  render: () => <SidenavStory open={(workbench) => void openWorkspacesPage(workbench)} />,
 };
-
 export const WorkspacesViewHover: Story = {
-  render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.workspaces.id)} />,
+  render: () => <SidenavStory open={(workbench) => void openWorkspacesPage(workbench)} />,
   play: async ({ canvasElement }) => {
     canvasElement.querySelector('[data-tree-list-focus-id="workspaces"]')?.setAttribute("data-hover", "");
   },
 };
-
 // F17: a separator marks the boundary before the ticket's resource tree.
 export const TicketMode: Story = {
-  name: "Ticket resource separator",
-  render: () => <SidenavStory open={(workbench) => openResource(workbench, ticketResource)} />,
+  name: "Ticket page navigation",
+  render: () => <SidenavStory open={openTicketPage} />,
 };
-
 // F22: the linked resource keeps the ticket ancestry and Back restores the selected ticket.
 export const TicketWorkspaceBackJourney: Story = {
   name: "Ticket linked workspace and back",
-  render: () => <SidenavStory open={(workbench) => openResource(workbench, ticketResource)} />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("option", { name: "PS-164_A1" }));
-    const breadcrumb = canvas.getByRole("navigation", { name: "breadcrumb" });
-    await expect(breadcrumb).toHaveTextContent("PS-163 Workbench navigation");
-    await expect(breadcrumb).toHaveTextContent("PS-164 Sidenav resource sections");
-    await expect(breadcrumb).toHaveTextContent("PS-164_A1");
-    await userEvent.click(canvas.getByRole("button", { name: "Navigate back" }));
-    await expect(breadcrumb).not.toHaveTextContent("PS-164_A1");
-  },
+  render: () => <SidenavStory open={openTicketPage} />,
 };
-
 // Session mode: global collections stay fixed above an expanded Sessions group with inline creation.
 export const SessionMode: Story = {
-  render: () => <SidenavStory open={(workbench) => openView(workbench, dashboardViews.sessions.id)} />,
+  render: () => <SidenavStory open={(workbench) => void openSessionsPage(workbench)} />,
 };
-
 // Workspace resource: global collections stay fixed above the expanded, workspace-scoped Sessions group.
 export const WorkspaceResource: Story = {
   render: () => (
@@ -372,8 +401,8 @@ export const WorkspaceResource: Story = {
       open={(workbench) => {
         const workspace = workbench.resources
           .listResources("")
-          .find((entry) => entry.resource.kind === "workspace")?.resource;
-        if (workspace) openResource(workbench, workspace);
+          .find((entry) => entry.resource.type === "workspace")?.resource;
+        if (workspace) openWorkspacesPage(workbench, workspace);
       }}
     />
   ),

@@ -6,10 +6,8 @@ import {
   defineExtension,
   definePage,
   defineResourceKind,
-  defineResourceView,
   defineSettingsSection,
   defineView,
-  resourceSlotRef,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -18,14 +16,12 @@ import { checkExtensionHostCompatibility, dashboardExtensionHostCapabilities } f
 import { normalizeExtensionSources } from "./normalize";
 
 const tempDirs: string[] = [];
-
 const createTempHome = () => {
   const dir = mkdtempSync(join(tmpdir(), "pstdio-ext-check-"));
   tempDirs.push(dir);
   mkdirSync(join(dir, "extensions"), { recursive: true });
   return dir;
 };
-
 const writeExtension = (homeRoot: string, name: string, source: string) => {
   const extDir = join(homeRoot, "extensions", name);
   mkdirSync(extDir, { recursive: true });
@@ -47,12 +43,10 @@ const writeExtension = (homeRoot: string, name: string, source: string) => {
   writeFileSync(join(extDir, "extension.ts"), source);
   return join(extDir, "extension.ts");
 };
-
 afterEach(() => {
   for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
   tempDirs.length = 0;
 });
-
 const validExtensionSource = `export default {
   commands: [
     { id: "say-hello", ref: { kind: "command", id: "say-hello" }, title: "Say hello", cli: true, run: async () => undefined },
@@ -87,27 +81,22 @@ const validExtensionSource = `export default {
     { id: "tickets", ref: { kind: "artifact-mount", id: "tickets" }, path: "tickets", label: "Tickets" },
   ],
 };`;
-
 describe("checkExtensions", () => {
   test("returns empty success when extensions root is missing", async () => {
     const home = createTempHome();
     rmSync(join(home, "extensions"), { recursive: true });
-
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
     expect(result.extensionsRootExists).toBe(false);
     expect(result.runtime.extensions).toEqual([]);
     expect(result.errorCount).toBe(0);
     expect(result.warningCount).toBe(0);
-
     const report = formatCheckReport(result);
     expect(report).toContain("Installed extensions: 0");
     expect(report).toContain("No extensions found in");
   });
-
   test("loads installed extensions and reports their registrations", async () => {
     const home = createTempHome();
     writeExtension(home, "extension-lab", validExtensionSource);
-
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
     expect(result.errorCount).toBe(0);
     expect(result.runtime.extensions).toHaveLength(1);
@@ -116,7 +105,6 @@ describe("checkExtensions", () => {
     expect(result.runtime.hooks).toHaveLength(1);
     expect(result.runtime.schedules).toHaveLength(1);
     expect(result.runtime.artifactMounts).toHaveLength(1);
-
     const report = formatCheckReport(result);
     expect(report).toContain("Extension Lab");
     expect(report).toContain("id:        pstdio.extension-lab");
@@ -126,16 +114,13 @@ describe("checkExtensions", () => {
     expect(report).toContain("CLI: pstdio extension-lab counter-bump");
     expect(report).toContain("tickets -> .pstdio/extension-storage/extension-lab/tickets");
   });
-
   test("flags invalid default exports", async () => {
     const home = createTempHome();
     writeExtension(home, "broken", `export default "nope";`);
-
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
     expect(result.errorCount).toBeGreaterThan(0);
     expect(result.runtime.diagnostics.map((d) => d.code)).toContain("invalid_default_export");
   });
-
   test("flags duplicate extension ids, command ids, and CLI paths", async () => {
     const home = createTempHome();
     const make = () => `export default {
@@ -155,23 +140,19 @@ describe("checkExtensions", () => {
         engines: { pstdio: EXTENSION_API_VERSION },
       }),
     );
-
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
     const codes = result.runtime.diagnostics.map((d) => d.code);
     expect(codes).toContain("duplicate_extension_id");
     expect(codes).toContain("duplicate_command_id");
     expect(codes).toContain("duplicate_cli_path");
   });
-
   test("loads distinct package names without namespace collision", async () => {
     const home = createTempHome();
     writeExtension(home, "ns-a", `export default {};`);
     writeExtension(home, "ns-b", `export default {};`);
-
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
     expect(result.runtime.extensions.map((ext) => ext.name)).toEqual(["ns-a", "ns-b"]);
   });
-
   test("flags unsafe artifact mount paths", async () => {
     const home = createTempHome();
     writeExtension(
@@ -183,11 +164,9 @@ describe("checkExtensions", () => {
         ],
       };`,
     );
-
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
     expect(result.runtime.diagnostics.map((d) => d.code)).toContain("unsafe_artifact_mount_path");
   });
-
   test("flags webview artifact grants on mounts the extension does not define", async () => {
     const home = createTempHome();
     writeExtension(
@@ -211,14 +190,12 @@ describe("checkExtensions", () => {
         ],
       };`,
     );
-
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
     const diagnostics = result.runtime.diagnostics.filter((d) => d.code === "webview_artifact_mount_missing");
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]?.message).toContain("artifacts.read:secrets");
     expect(diagnostics[0]?.message).toContain('"secrets"');
   });
-
   test("flags invalid middleware command refs", async () => {
     const home = createTempHome();
     writeExtension(
@@ -230,11 +207,9 @@ describe("checkExtensions", () => {
         ],
       };`,
     );
-
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
     expect(result.runtime.diagnostics.map((d) => d.code)).toContain("invalid_middleware_command");
   });
-
   test("flags invalid schedule command refs", async () => {
     const home = createTempHome();
     writeExtension(
@@ -246,29 +221,22 @@ describe("checkExtensions", () => {
         ],
       };`,
     );
-
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false });
     expect(result.runtime.diagnostics.map((d) => d.code)).toContain("invalid_schedule_command");
   });
-
   test("reports unverified host compatibility when no descriptor is available", async () => {
     const home = createTempHome();
     writeExtension(home, "extension-lab", validExtensionSource);
-
     const result = await checkExtensions({ homeRoot: home, includeUserRoot: false, hostCapabilities: null });
-
     expect(result.hostCompatibility.status).toBe("unverified");
     expect(result.warningCount).toBe(1);
     expect(formatCheckReport(result)).toContain("Host compatibility: unverified");
   });
 });
-
 describe("checkExtensionHostCompatibility", () => {
   test("flags registered dashboard surfaces when the host does not advertise their bridges", () => {
     const ticket = defineResourceKind({
       id: "ticket",
-      surface: "primary",
-      slots: [{ id: "inspector", cardinality: "many", access: "public" }],
     });
     const rows = defineView({
       id: "rows",
@@ -296,18 +264,15 @@ describe("checkExtensionHostCompatibility", () => {
               title: "Tickets",
               path: "tickets",
               mode: workbenchModes.project,
-              slots: [{ id: "content", role: "primary", region: "main", view: rows.ref }],
+              main: {
+                kind: "view",
+                view: rows.ref,
+                cardinality: "one",
+              },
+              slots: [],
             }),
           ],
           resourceKinds: [ticket],
-          resourceViews: [
-            defineResourceView({
-              id: "rows-for-ticket",
-              resourceKind: ticket.ref,
-              slot: resourceSlotRef(ticket.ref, "inspector"),
-              view: rows.ref,
-            }),
-          ],
           settingsSections: [defineSettingsSection({ id: "lab", title: "Lab" })],
         }),
       },
@@ -317,19 +282,15 @@ describe("checkExtensionHostCompatibility", () => {
       hostVersion: "0.25.1",
       capabilities: Object.fromEntries(
         Object.entries(dashboardExtensionHostCapabilities.capabilities).filter(
-          ([name]) => name !== "view.data-table.v1" && name !== "settings.section.v1" && name !== "resource-view.v1",
+          ([name]) => name !== "view.data-table.v1" && name !== "settings.section.v1",
         ),
       ),
     };
-
     const result = checkExtensionHostCompatibility(runtime, host);
-
     expect(result.status).toBe("verified");
     expect(result.diagnostics.map((diagnostic) => diagnostic.metadata?.missingCapability)).toEqual([
-      "page.v1",
       "view.data-table.v1",
       "settings.section.v1",
-      "resource-view.v1",
     ]);
   });
 });

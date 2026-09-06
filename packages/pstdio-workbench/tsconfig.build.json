@@ -1,0 +1,20 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@pstdio/workbench": ["./src/index.ts"],
+      "@pstdio/workbench/react": ["./src/react/index.ts"],
+      "pstdio-api-contracts": ["../pstdio-api-contracts/src/index.ts"],
+      "pstdio-api-contracts/*": ["../pstdio-api-contracts/src/*"],
+      "pstdio-extensions/bridge/contract": ["../pstdio-extensions/src/bridge/contract/index.ts"],
+      "pstdio-extensions/bridge/host": ["../pstdio-extensions/src/bridge/host/index.ts"],
+      "pstdio-extensions/bridge/webview-runtime-html": [
+        "../pstdio-extensions/src/bridge/webview-runtime/runtime-html.ts"
+      ]
+    }
+  },
+  "include": ["src", "../pstdio-api-contracts/src", "../pstdio-extensions/src/bridge"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/*.stories.tsx", "src/examples"]
+}

@@ -79,6 +79,7 @@ const assertExistingProjectSourceRefresh = async (tempRoot: string) => {
     source,
     installName: "extension-lab",
     env: { ...process.env, PSTDIO_HOME: pstdioHome },
+    skipInstall: true,
   });
   expect(existsSync(join(installed, "node_modules/@pstdio/sdk/package.json"))).toBe(true);
 
@@ -90,7 +91,9 @@ const assertExistingProjectSourceRefresh = async (tempRoot: string) => {
 
   writeFileSync(join(installed, "README.md"), "stale extension lab");
   process.env.PSTDIO_DISABLE_EMBED_MANIFEST = "1";
-  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([{ source, installName: "extension-lab", force: true }]);
+  process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify([
+    { source, installName: "extension-lab", force: true, skipInstall: true },
+  ]);
 
   const restarted = await createTestApp({ databasePath, storageRoot });
   try {

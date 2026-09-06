@@ -4,21 +4,22 @@ import type {
   CommandPaletteResourceContribution,
   ContributionDefinition,
   ContributionKind,
+  EventRef,
   ExtensionConnectionContribution,
   FileIconThemeContribution,
   HarnessProvider,
   KeybindingContribution,
   ModeContribution,
   NavigationItemContribution,
+  NavigationTreeContribution,
   PageContribution,
+  PageRef,
   PageSlot,
   PageSlotRef,
   PlacementContribution,
   ResourceHierarchyProvider,
   ResourceKindDefinition,
   ResourceKindRef,
-  ResourceSlotRef,
-  ResourceViewContribution,
   ScheduleContribution,
   SettingsPanelContribution,
   SettingsSectionContribution,
@@ -41,67 +42,107 @@ const defineContribution =
     ref: { kind: _kind, id: definition.id },
   });
 
-export const defineView = defineContribution("view") as <Definition extends Omit<ViewContribution, "ref">>(
-  definition: Definition,
+type ExactOptions<Definition, Contract> = unknown extends Contract
+  ? Definition
+  : [Contract] extends [Definition]
+    ? Definition
+    : Contract extends unknown
+      ? Definition extends Contract
+        ? Contract extends EventRef
+          ? Definition
+          : Definition extends (...args: never[]) => unknown
+            ? Definition
+            : Definition extends readonly unknown[]
+              ? Contract extends readonly (infer Item)[]
+                ? { [Index in keyof Definition]: ExactOptions<Definition[Index], Item> }
+                : never
+              : Definition extends object
+                ? {
+                    [Key in keyof Definition]: Key extends keyof Contract
+                      ? ExactOptions<Definition[Key], Contract[Key]>
+                      : never;
+                  }
+                : Definition
+        : never
+      : never;
+type NoExtraFields<Definition, Contract> = Definition & ExactOptions<Definition, Contract>;
+
+type ViewDefinition = Omit<ViewContribution, "ref">;
+
+export const defineView = defineContribution("view") as <const Definition extends ViewDefinition>(
+  definition: NoExtraFields<Definition, ViewDefinition>,
 ) => Definition & ContributionDefinition<"view">;
 
-export const defineViewMenu = defineContribution("view-menu") as <Definition extends Omit<ViewMenuContribution, "ref">>(
-  definition: Definition,
+type ViewMenuDefinition = Omit<ViewMenuContribution, "ref">;
+export const defineViewMenu = defineContribution("view-menu") as <const Definition extends ViewMenuDefinition>(
+  definition: NoExtraFields<Definition, ViewMenuDefinition>,
 ) => Definition & ContributionDefinition<"view-menu">;
 
-export const definePlacement = defineContribution("placement") as <
-  Definition extends Omit<PlacementContribution, "ref">,
->(
-  definition: Definition,
+type PlacementDefinition = Omit<PlacementContribution, "ref">;
+export const definePlacement = defineContribution("placement") as <const Definition extends PlacementDefinition>(
+  definition: NoExtraFields<Definition, PlacementDefinition>,
 ) => Definition & ContributionDefinition<"placement">;
 
+type ResourceKindDefinitionInput = Omit<ResourceKindDefinition, "ref">;
 export const defineResourceKind = defineContribution("resource-kind") as <
-  Definition extends Omit<ResourceKindDefinition, "ref">,
+  const Definition extends ResourceKindDefinitionInput,
 >(
-  definition: Definition,
+  definition: NoExtraFields<Definition, ResourceKindDefinitionInput>,
 ) => Definition & ContributionDefinition<"resource-kind">;
-
-export const resourceSlotRef = (resourceKind: ResourceKindRef, id: string): ResourceSlotRef => ({
-  resourceKind,
-  id,
-});
 
 export const resourceMenuSlotRef = (resourceKind: ResourceKindRef, id: string) =>
   defineSlot(`${resourceKind.id}.${id}`, { kind: "menu" });
 
-export const defineResourceView = defineContribution("resource-view") as <
-  Definition extends Omit<ResourceViewContribution, "ref">,
->(
-  definition: Definition,
-) => Definition & ContributionDefinition<"resource-view">;
-
+type NavigationItemDefinition = Omit<NavigationItemContribution, "ref">;
 export const defineNavigationItem = defineContribution("navigation-item") as <
-  Definition extends Omit<NavigationItemContribution, "ref">,
+  const Definition extends NavigationItemDefinition,
 >(
-  definition: Definition,
+  definition: NoExtraFields<Definition, NavigationItemDefinition>,
 ) => Definition & ContributionDefinition<"navigation-item">;
 
-export const defineMode = defineContribution("mode") as <const Definition extends Omit<ModeContribution, "ref">>(
-  definition: Definition,
+type NavigationTreeDefinition = Omit<NavigationTreeContribution, "ref">;
+export const defineNavigationTree = defineContribution("navigation-tree") as <
+  const Definition extends NavigationTreeDefinition,
+>(
+  definition: NoExtraFields<Definition, NavigationTreeDefinition>,
+) => Definition & ContributionDefinition<"navigation-tree">;
+
+type ModeDefinition = Omit<ModeContribution, "ref">;
+export const defineMode = defineContribution("mode") as <const Definition extends ModeDefinition>(
+  definition: NoExtraFields<Definition, ModeDefinition>,
 ) => Definition & ContributionDefinition<"mode">;
 
-type AuxiliarySlotIds<Slots extends readonly PageSlot[]> = Extract<Slots[number], { role: "auxiliary" }>["id"];
-
 type PagePanelRefs<Slots extends readonly PageSlot[]> = {
-  readonly [Id in AuxiliarySlotIds<Slots>]: PageSlotRef;
+  readonly [Id in Slots[number]["id"]]: PageSlotRef;
 };
 
-export const definePage = <const Definition extends Omit<PageContribution, "ref" | "panels">>(
-  definition: Definition,
-): Definition & ContributionDefinition<"page"> & { readonly panels: PagePanelRefs<Definition["slots"]> } => {
+type PageDefinition = Omit<PageContribution, "ref" | "panels">;
+type RequiredPageParent<Definition extends PageDefinition> = Definition extends {
+  resource: unknown;
+  main: { kind: "view" };
+}
+  ? { readonly parent: PageRef }
+  : unknown;
+
+type RequiredPageResource<Definition extends PageDefinition> = Definition extends {
+  main: { kind: "view"; cardinality: "many" };
+}
+  ? { readonly resource: NonNullable<PageDefinition["resource"]> }
+  : unknown;
+
+const createPage = (definition: PageDefinition) => {
   const ref = { kind: "page" as const, id: definition.id };
   const panels = Object.fromEntries(
-    definition.slots
-      .filter((slot) => slot.role === "auxiliary")
-      .map((slot) => [slot.id, { kind: "page-slot" as const, page: ref, id: slot.id }]),
-  ) as PagePanelRefs<Definition["slots"]>;
+    definition.slots.map((slot) => [slot.id, { kind: "page-slot" as const, page: ref, id: slot.id }]),
+  );
   return { ...definition, ref, panels };
 };
+
+export const definePage = createPage as <const Definition extends PageDefinition>(
+  definition: NoExtraFields<Definition, PageDefinition> &
+    RequiredPageParent<Definition> &
+    RequiredPageResource<Definition>,
+) => Definition & ContributionDefinition<"page"> & { readonly panels: PagePanelRefs<Definition["slots"]> };
 
 export const defineStatusBarItem = defineContribution("status-bar-item") as <
   Definition extends Omit<StatusBarItemContribution, "ref">,

@@ -7,6 +7,21 @@ import {
 } from "./extension-workspace-badge-renderer";
 
 describe("extension workspace badge renderer", () => {
+  test("preserves the owning tool's explicit workspace destination", () => {
+    const target = {
+      kind: "page",
+      page: { kind: "page", id: "workspaces", extensionId: "pstdio.workbench" },
+      resource: { type: "workspace", id: "workspace-1" },
+      parent: {
+        kind: "page",
+        page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },
+        resource: { type: "ticket", id: "ticket-1" },
+      },
+    };
+    expect(normalizeWorkspaceBadgeItems([{ id: "workspace-1", label: "Workspace", target }])[0]).toMatchObject({
+      target,
+    });
+  });
   test("suppresses parent row activation when a workspace badge is activated", () => {
     const calls: string[] = [];
     const props = createWorkspaceBadgeInteractionProps(() => calls.push("open-workspace"));
@@ -84,7 +99,7 @@ describe("extension workspace badge renderer", () => {
     expect(item).not.toHaveProperty("session");
   });
 
-  test("resolves the badge session to a side-panel session resource", () => {
+  test("creates a session resource from the badge session", () => {
     const resource = createWorkspaceBadgeSessionResource(
       {
         id: "workspace-2",
@@ -95,10 +110,9 @@ describe("extension workspace badge renderer", () => {
     );
 
     expect(resource).toMatchObject({
-      kind: "session",
+      type: "session",
       id: "session-2",
       label: "T-1_A2",
-      metadata: { sessionSurface: "side" },
     });
   });
 
@@ -136,7 +150,7 @@ describe("extension workspace badge renderer", () => {
     );
 
     expect(resource).toMatchObject({
-      kind: "workspace",
+      type: "workspace",
       id: "workspace-2",
       label: "Latest attempt",
       icon: "GitCommit",
@@ -178,8 +192,8 @@ describe("extension workspace badge renderer", () => {
     );
 
     expect(resource).toMatchObject({
+      type: "workspace",
       id: "workspace-42",
-      uri: "dashboard-workbench://workspace/workspace-42",
       metadata: { workspaceId: "workspace-42" },
     });
   });

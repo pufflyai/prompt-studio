@@ -1,3 +1,4 @@
+import { resourceKey } from "@pstdio/sdk/extensions";
 import {
   buildUpdatedPlacement,
   createPlacement,
@@ -25,7 +26,6 @@ interface CreateWidgetOpenersInput {
     placement: WorkbenchWidgetPlacement,
   ): WorkbenchWidgetPlacement;
 }
-
 const openOwnedPanelMenus = (input: {
   openWidget(id: string, openInput?: OpenWidgetInput): WorkbenchWidgetPlacement;
   placement: WorkbenchWidgetPlacement;
@@ -37,12 +37,12 @@ const openOwnedPanelMenus = (input: {
     input.openWidget(panelMenuId, {
       pinned: true,
       role: "panel-menu",
+      viewId: panelMenu.rendererId,
       resource: input.placement.resource,
       title: panelMenu.region === "main-left-menu" ? input.placement.resource?.label : panelMenu.title,
     });
   }
 };
-
 const findReusablePlacement = (
   widget: RegisteredWidgetContribution,
   layout: WorkbenchLayout,
@@ -50,7 +50,7 @@ const findReusablePlacement = (
 ) => {
   if (!widget.singleton && widget.reuse === "none") return undefined;
   if (openInput.role === "sub-panel" || openInput.role === "panel-menu") {
-    const ownerResourceUri = getActiveLocationPlacement(layout)?.resourceUri;
+    const ownerResourceKey = getActiveLocationPlacement(layout)?.resourceKey;
     for (const region of Object.values(layout.regions)) {
       const index = region.widgets.findIndex(
         (candidate) =>
@@ -58,32 +58,29 @@ const findReusablePlacement = (
           // Pinned placements are structural chrome, not per-location content, so they are
           // reused across location switches instead of accumulating one instance per owner.
           (candidate.pinned === true ||
-            (widget.singleton && candidate.ownerResourceUri === undefined) ||
-            candidate.ownerResourceUri === ownerResourceUri) &&
+            (widget.singleton && candidate.ownerResourceKey === undefined) ||
+            candidate.ownerResourceKey === ownerResourceKey) &&
           (!openInput.resource ||
-            (widget.singleton && candidate.resourceUri === undefined) ||
-            candidate.resourceUri === openInput.resource.uri),
+            (widget.singleton && candidate.resourceKey === undefined) ||
+            candidate.resourceKey === resourceKey(openInput.resource)),
       );
       if (index >= 0) return { regionId: region.id, index, placement: region.widgets[index] };
     }
     return undefined;
   }
   if (widget.singleton) return findPlacement(layout, widget.id);
-  if (openInput.resource) return findResourcePlacement(layout, widget.id, openInput.resource.uri);
+  if (openInput.resource) return findResourcePlacement(layout, widget.id, resourceKey(openInput.resource));
   return findPlacement(layout, widget.id);
 };
-
 const withPlacementRole = (widget: RegisteredWidgetContribution, openInput: OpenWidgetInput): OpenWidgetInput => {
   if (openInput.role) return openInput;
   if (widget.panelMenuOwner) return { ...openInput, role: "panel-menu" };
   if (widget.eligibleLocations !== undefined) return { ...openInput, role: "sub-panel" };
   return openInput;
 };
-
 const findReplacementIndex = (layout: WorkbenchLayout, regionId: WorkbenchRegion, openInput: OpenWidgetInput) => {
   const region = layout.regions[regionId];
   const activeWidgetId = openInput.role === "location" ? layout.activeLocationWidgetId : region.activeWidgetId;
-
   if (openInput.replaceWidgetId) {
     return region.widgets.findIndex((placement) => placement.widgetId === openInput.replaceWidgetId);
   }
@@ -97,7 +94,6 @@ const findReplacementIndex = (layout: WorkbenchLayout, regionId: WorkbenchRegion
       : activeWidgetId;
   return region.widgets.findIndex((placement) => placement.widgetId === replacementWidgetId && !placement.pinned);
 };
-
 const defaultTabPosition = (
   widgets: WorkbenchWidgetPlacement[],
   widget: RegisteredWidgetContribution,
@@ -112,15 +108,12 @@ const defaultTabPosition = (
   });
   return before ? ({ beforeWidgetId: before.widgetId } as const) : undefined;
 };
-
 export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
   const { getLayout, requireWidget, applyAndActivate } = input;
-
   const bindToActiveLocation = (placement: WorkbenchWidgetPlacement, layout: WorkbenchLayout) => {
     if (placement.role !== "sub-panel" && placement.role !== "panel-menu") return placement;
-    return { ...placement, ownerResourceUri: getActiveLocationPlacement(layout)?.resourceUri };
+    return { ...placement, ownerResourceKey: getActiveLocationPlacement(layout)?.resourceKey };
   };
-
   const updateSingleton = (
     widget: RegisteredWidgetContribution,
     existing: NonNullable<ReturnType<typeof findPlacement>>,
@@ -141,7 +134,6 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     });
     return applyAndActivate(layout, existing.regionId, nextPlacement);
   };
-
   const replaceActive = (
     widget: RegisteredWidgetContribution,
     regionId: WorkbenchRegion,
@@ -157,7 +149,6 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     });
     return applyAndActivate(layout, regionId, nextPlacement);
   };
-
   const reuseExistingPlacement = (
     widget: RegisteredWidgetContribution,
     existing: NonNullable<ReturnType<typeof findPlacement>>,
@@ -168,7 +159,6 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     if (openInput.tabRetention === "preview" && existing.placement.tabRetention !== "preview") {
       return applyAndActivate(getLayout(), existing.regionId, existing.placement);
     }
-
     if (existing.regionId !== regionId) {
       const nextPlacement = bindToActiveLocation(
         buildUpdatedPlacement(existing.placement, widget, openInput),
@@ -188,11 +178,9 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
       });
       return applyAndActivate(layout, regionId, nextPlacement);
     }
-
     if (replacementIndex < 0 || existing.index === replacementIndex) {
       return updateSingleton(widget, existing, openInput);
     }
-
     const nextPlacement = bindToActiveLocation(
       buildUpdatedPlacement(existing.placement, widget, openInput),
       getLayout(),
@@ -208,7 +196,6 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     );
     return applyAndActivate(layout, regionId, nextPlacement);
   };
-
   const insertWidget = (
     widget: RegisteredWidgetContribution,
     regionId: WorkbenchRegion,
@@ -231,7 +218,6 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     });
     return applyAndActivate(layout, regionId, placement);
   };
-
   const openWidget = (id: string, openInput: OpenWidgetInput = {}): WorkbenchWidgetPlacement => {
     const widget = requireWidget(id);
     const placementInput = withPlacementRole(widget, openInput);
@@ -242,11 +228,10 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     const replacement = replacementIndex >= 0 ? region.widgets[replacementIndex] : undefined;
     const previewContent =
       !placementInput.replaceWidgetId && placementInput.tabRetention === "preview" && placementInput.resource
-        ? findResourcePlacement(layout, widget.id, placementInput.resource.uri)
+        ? findResourcePlacement(layout, widget.id, resourceKey(placementInput.resource))
         : undefined;
     const existing =
       placementInput.replaceWidgetId && replacement ? undefined : findReusablePlacement(widget, layout, placementInput);
-
     let placement: WorkbenchWidgetPlacement;
     if (previewContent) {
       placement = applyAndActivate(layout, previewContent.regionId, previewContent.placement);
@@ -257,10 +242,8 @@ export const createWidgetOpeners = (input: CreateWidgetOpenersInput) => {
     } else {
       placement = insertWidget(widget, regionId, replacementIndex, placementInput);
     }
-
     openOwnedPanelMenus({ openWidget, placement, requireWidget, widget });
     return applyAndActivate(getLayout(), previewContent?.regionId ?? regionId, placement);
   };
-
   return { openWidget };
 };

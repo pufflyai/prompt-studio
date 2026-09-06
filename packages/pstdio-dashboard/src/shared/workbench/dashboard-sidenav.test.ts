@@ -1,81 +1,145 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
-import { selectDashboardNavigationResource, selectDashboardNavigationView } from "@/shared/app/navigation-state";
+import { resourceKey } from "@pstdio/sdk/extensions";
+import { createWorkbench, type WorkbenchCore } from "@pstdio/workbench";
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { registerSidenavContribution } from "./contributions/sidenav-tree-contributions";
 import { registerDashboardSidenav } from "./dashboard-sidenav";
-import { registerNavigationOwningMode } from "./mode-navigation-ownership";
+import { treeViewSections } from "./workbench-view-test-helpers";
 
+const registerModePage = (workbench: WorkbenchCore, modeId: string, pageId: string, resourceKind?: string) => {
+  const viewId = `test.${pageId}.view`;
+  const page = { extensionId: "test", kind: "page" as const, id: pageId };
+  workbench.views.registerView({
+    id: viewId,
+    title: pageId,
+    body: { kind: "react", render: () => null },
+  });
+  workbench.pages.registerPage({
+    id: `test.page.${pageId}`,
+    ref: page,
+    title: pageId,
+    path: pageId,
+    modeId,
+    ...(resourceKind
+      ? {
+          resource: { kinds: [{ kind: "resource-kind" as const, id: resourceKind }] },
+        }
+      : {}),
+    main: { kind: "panels", empty: { kind: "view", id: viewId } },
+    slots: [],
+  });
+  return page;
+};
 describe("registerDashboardSidenav", () => {
-  test("keeps the sidenav hidden while a navigation-owning mode is active", () => {
-    const workbench = createWorkbenchCore();
-
-    workbench.modes.registerMode({ id: "lab", label: "Lab", activate: () => undefined });
-    workbench.modes.registerMode({ id: "other", label: "Other", activate: () => undefined });
-    const ownership = registerNavigationOwningMode("lab");
+  test("supplies the same host navigation in every mode that retains host chrome", () => {
+    const workbench = createWorkbench();
+    const modes = ["project", "sessions", "acme.notes.mode.review"];
+    const pages = modes.map((modeId) => {
+      workbench.modes.registerMode({ id: modeId, activate: () => undefined });
+      return registerModePage(workbench, modeId, modeId);
+    });
     registerDashboardSidenav(workbench);
-
-    try {
-      workbench.modes.setActiveMode("lab");
-      expect(workbench.layout.getLayout().regions.sidenav.widgets).toEqual([]);
-
-      workbench.modes.setActiveMode("other");
-      expect(workbench.layout.getLayout().regions.sidenav.widgets.map((widget) => widget.contributionId)).toEqual([
-        dashboardWidgetIds.dashboardSidenav,
+    workbench.pageLocations.setProject("project-1");
+    for (const page of pages) {
+      workbench.pageLocations.navigate({ kind: "page", page });
+      expect(workbench.layout.getLayout().regions.sidenav.widgets).toEqual([
+        expect.objectContaining({
+          viewId: dashboardWidgetIds.dashboardSidenav,
+          placementIdentity: {
+            kind: "shell",
+            placementId: "dashboard.sidenav",
+            instanceKey: "default",
+          },
+        }),
       ]);
-    } finally {
-      ownership.dispose();
     }
   });
-
   test("defaults the Sessions group to expanded", () => {
-    const workbench = createWorkbenchCore();
-
+    const workbench = createWorkbench();
     registerDashboardSidenav(workbench);
-
-    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav)).toMatchObject({
+    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav)).toMatchObject({
       expandedNodeIds: ["workspace-sessions"],
       expandedSectionIds: ["sessions-wrap"],
     });
   });
-
   test("applies section defaults from contributions registered after the sidenav", () => {
-    const workbench = createWorkbenchCore();
-
+    const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    const page = registerModePage(workbench, "project", "late-sections");
     registerDashboardSidenav(workbench);
-    workbench.modes.setActiveMode("project");
-
-    registerSidenavContribution(workbench, {
+    workbench.pageLocations.setProject("project-1");
+    workbench.pageLocations.navigate({ kind: "page", page });
+    workbench.navigationTrees.registerContribution({
       id: "test.late-sections",
-      modes: ["project"],
+      owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+      sourceExtensionId: "pstdio",
+      declarationIndex: 0,
       defaultExpandedSectionIds: ["files", "sessions"],
+      getSections: () => [],
     });
-
-    expect(workbench.renderers.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedSectionIds).toEqual([
+    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedSectionIds).toEqual([
       "sessions-wrap",
       "files",
       "sessions",
     ]);
   });
-
-  test("reads mode sections without a concrete resource and passes one when selected", async () => {
-    const workbench = createWorkbenchCore();
-    const resourceReads: Array<string | undefined> = [];
-
+  test("applies page navigation defaults when the page becomes active", async () => {
+    const workbench = createWorkbench();
+    const pageRef = { extensionId: "test", kind: "page" as const, id: "ticket" };
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    registerSidenavContribution(workbench, {
+    workbench.views.registerView({
+      id: "ticket",
+      title: "Ticket",
+      body: { kind: "react", render: () => null },
+    });
+    workbench.pages.registerPage({
+      id: "test.page.ticket",
+      ref: pageRef,
+      title: "Ticket",
+      path: "ticket",
+      modeId: "project",
+      main: {
+        kind: "view",
+        view: {
+          kind: "view",
+          id: "ticket",
+        },
+        cardinality: "one",
+      },
+      slots: [],
+    });
+    workbench.navigationTrees.registerContribution({
+      id: "test.ticket-files",
+      owner: { kind: "page", id: "test.page.ticket", extensionId: "test" },
+      sourceExtensionId: "test",
+      declarationIndex: 0,
+      defaultExpandedSectionIds: ["files"],
+      getSections: () => [{ id: "files", label: "Files", nodes: [] }],
+    });
+    registerDashboardSidenav(workbench);
+    workbench.pageLocations.setProject("project-1");
+    await workbench.navigation.openTarget({ kind: "page", page: pageRef });
+    expect(workbench.treeViews.getTreeState(dashboardWidgetIds.dashboardSidenav).expandedSectionIds).toContain("files");
+  });
+  test("reads mode sections without a concrete resource and passes one when selected", async () => {
+    const workbench = createWorkbench();
+    const resourceReads: Array<string | undefined> = [];
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    const home = registerModePage(workbench, "project", "resources");
+    const page = registerModePage(workbench, "project", "workspace", "workspace");
+    workbench.navigationTrees.registerContribution({
       id: "test.resource-sections",
-      modes: ["project"],
-      getSections: (_ctx, input) => {
-        resourceReads.push(input.resource?.uri);
+      owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+      sourceExtensionId: "pstdio",
+      declarationIndex: 0,
+      getSections: (input) => {
+        resourceReads.push(resourceKey(input.resource));
         return [
           {
             id: "resource",
             nodes: [
               {
-                id: input.resource?.uri ?? "aggregate",
+                id: resourceKey(input.resource) ?? "aggregate",
                 label: input.resource?.label ?? "Aggregate",
               },
             ],
@@ -84,31 +148,71 @@ describe("registerDashboardSidenav", () => {
       },
     });
     registerDashboardSidenav(workbench);
-    workbench.modes.setActiveMode("project");
-
-    expect(await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav)).toEqual([
+    workbench.pageLocations.setProject("project-1");
+    workbench.pageLocations.navigate({ kind: "page", page: home });
+    expect(await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav)).toMatchObject([
       { id: "resource", nodes: [{ id: "aggregate", label: "Aggregate" }] },
     ]);
     expect(resourceReads).toEqual([undefined]);
-
     const workspace = {
-      kind: "workspace",
-      uri: "dashboard-workbench://workspace/workspace-1",
+      type: "workspace",
       id: "workspace-1",
       label: "Workspace 1",
     };
-    selectDashboardNavigationResource(workbench, workspace);
-
-    expect(await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav)).toEqual([
-      { id: "resource", nodes: [{ id: workspace.uri, label: workspace.label }] },
+    workbench.pageLocations.navigate({
+      kind: "page",
+      page,
+      resource: { type: "workspace", id: "workspace-1", label: "Workspace 1" },
+    });
+    expect(await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav)).toMatchObject([
+      { id: "resource", nodes: [{ id: resourceKey(workspace), label: workspace.label }] },
     ]);
-    expect(resourceReads).toEqual([undefined, workspace.uri]);
-
-    selectDashboardNavigationView(workbench, dashboardViews.workspaces.id);
-
-    expect(await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav)).toEqual([
+    expect(resourceReads).toEqual([undefined, resourceKey(workspace)]);
+    workbench.pageLocations.navigate({ kind: "page", page: home });
+    expect(await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav)).toMatchObject([
       { id: "resource", nodes: [{ id: "aggregate", label: "Aggregate" }] },
     ]);
-    expect(resourceReads).toEqual([undefined, workspace.uri, undefined]);
+    expect(resourceReads).toEqual([undefined, resourceKey(workspace), undefined]);
+  });
+});
+describe("dashboard sidenav mode composition", () => {
+  test("uses project navigation in Sessions mode without the project Sessions link", async () => {
+    const workbench = createWorkbench();
+    workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
+    workbench.modes.registerMode({ id: "sessions", label: "Sessions", activate: () => undefined });
+    workbench.navigationTrees.registerContribution({
+      id: "test.project-navigation",
+      owner: { kind: "mode", id: "project", extensionId: "pstdio" },
+      sourceExtensionId: "pstdio",
+      declarationIndex: 0,
+      getSections: () => [
+        {
+          id: "navigation.root",
+          nodes: [
+            { id: "search", label: "Search" },
+            { id: dashboardViews.sessions.id, label: dashboardViews.sessions.label },
+            { id: "tickets", label: "Tickets" },
+          ],
+        },
+      ],
+    });
+    workbench.navigationTrees.registerContribution({
+      id: "test.session-list",
+      owner: { kind: "mode", id: "sessions", extensionId: "pstdio" },
+      sourceExtensionId: "pstdio",
+      declarationIndex: 0,
+      getSections: () => [
+        {
+          id: "sessions-wrap",
+          nodes: [{ id: "workspace-sessions", label: "Sessions" }],
+        },
+      ],
+    });
+    registerDashboardSidenav(workbench);
+    workbench.modes.setActiveMode("sessions");
+    const ids = (await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav))
+      .flatMap((section) => section.nodes)
+      .map((node) => node.id);
+    expect(ids).toEqual(["search", "tickets", "workspace-sessions"]);
   });
 });

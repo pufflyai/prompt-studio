@@ -1,15 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { resourceKey } from "@pstdio/sdk/extensions";
+import { createWorkbench } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { treeViewSections } from "@/shared/workbench/workbench-view-test-helpers";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionBubbleModule } from "./bubble/module";
 import { createSessionsModule } from "./module";
 
 const createWorkspaceSessionWorkbench = () => {
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
   workbench.registerModule(createSidenavModule());
   workbench.registerModule(createSessionBubbleModule());
   workbench.registerModule(createWorkspacesModule());
@@ -17,7 +20,6 @@ const createWorkspaceSessionWorkbench = () => {
   selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
   return workbench;
 };
-
 describe("createSessionsModule workspace session scoping", () => {
   test("scopes the project-mode session list to the open workspace resource", async () => {
     getWriter("workspaces")?.truncateAndWrite([
@@ -64,25 +66,20 @@ describe("createSessionsModule workspace session scoping", () => {
     getWriter("workspace_sessions")?.truncateAndWrite([
       { id: "link-1", workspace_id: "workspace-1", session_id: "session-linked" },
     ]);
-
     const workbench = createWorkspaceSessionWorkbench();
     const workspace = workbench.resources
       .listResources("")
-      .find((entry) => entry.resource.kind === "workspace")?.resource;
-    await workbench.resources.openResource(workspace!, { replaceActive: true });
-
+      .find((entry) => entry.resource.type === "workspace")?.resource;
+    openWorkspacesPage(workbench, workspace!);
     expect(workbench.modes.getActiveModeId()).toBe("project");
-
-    const sessionsGroup = (await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav, {}))
+    const sessionsGroup = (await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav))
       .flatMap((section) => section.nodes)
       .find((node) => node.id === "workspace-sessions");
     const sessionRowIds = (sessionsGroup?.children ?? [])
       .filter((node) => node.resource || node.target)
       .map((node) => node.id);
-
-    expect(sessionRowIds).toEqual(["dashboard-workbench://session/session-linked"]);
+    expect(sessionRowIds).toEqual([resourceKey({ type: "session", id: "session-linked" })]);
   });
-
   test("rescopes the session list when switching between workspaces", async () => {
     getWriter("workspaces")?.truncateAndWrite([
       {
@@ -142,34 +139,22 @@ describe("createSessionsModule workspace session scoping", () => {
       { id: "link-1", workspace_id: "workspace-1", session_id: "session-one" },
       { id: "link-2", workspace_id: "workspace-2", session_id: "session-two" },
     ]);
-
     const workbench = createWorkspaceSessionWorkbench();
-    let displayed: Awaited<ReturnType<typeof workbench.renderers.getBody>> = [];
+    let displayed = await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav);
     const renderSidenav = async () => {
-      displayed = await workbench.renderers.getBody(dashboardWidgetIds.dashboardSidenav, {});
+      displayed = await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav);
     };
-    const refreshSubscription = workbench.renderers.onDidRefresh((event) => {
-      if (event.treeId === dashboardWidgetIds.dashboardSidenav) void renderSidenav();
-    });
-    await renderSidenav();
-
-    const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
     const displayedSessionRowIds = () =>
       (displayed.flatMap((section) => section.nodes).find((node) => node.id === "workspace-sessions")?.children ?? [])
         .filter((node) => node.resource || node.target)
         .map((node) => node.id);
     const workspaceResource = (id: string) =>
       workbench.resources.listResources("").find((entry) => entry.resource.id === id)?.resource;
-
-    await workbench.resources.openResource(workspaceResource("workspace-1")!, { replaceActive: true });
-    workbench.renderers.refresh(dashboardWidgetIds.dashboardSidenav);
-    await flush();
-    expect(displayedSessionRowIds()).toEqual(["dashboard-workbench://session/session-one"]);
-
-    await workbench.resources.openResource(workspaceResource("workspace-2")!, { replaceActive: true });
-    await flush();
-    expect(displayedSessionRowIds()).toEqual(["dashboard-workbench://session/session-two"]);
-
-    refreshSubscription.dispose();
+    openWorkspacesPage(workbench, workspaceResource("workspace-1")!);
+    await renderSidenav();
+    expect(displayedSessionRowIds()).toEqual([resourceKey({ type: "session", id: "session-one" })]);
+    openWorkspacesPage(workbench, workspaceResource("workspace-2")!);
+    await renderSidenav();
+    expect(displayedSessionRowIds()).toEqual([resourceKey({ type: "session", id: "session-two" })]);
   });
 });

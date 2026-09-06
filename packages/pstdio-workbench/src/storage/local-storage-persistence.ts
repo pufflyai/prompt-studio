@@ -1,12 +1,10 @@
+import type { PageLocation } from "@pstdio/sdk/extensions";
 import type {
-  LastResourcePersistenceAdapter,
   PersistedTreeRendererStates,
-  PersistedWorkbenchHistory,
-  PersistedWorkbenchPanels,
-  ResourceRef,
+  PersistedWorkbenchPanelMenuState,
   TreeRendererPersistenceAdapter,
-  WorkbenchHistoryPersistence,
-  WorkbenchPanelsPersistenceAdapter,
+  WorkbenchPageLocationPersistence,
+  WorkbenchPanelMenuStatePersistenceAdapter,
   WorkbenchPersistenceAdapter,
   WorkbenchSidePanelMode,
   WorkbenchSidePanelPersistenceAdapter,
@@ -25,7 +23,7 @@ export type {
 } from "./local-storage-persistence-helpers";
 export { createLocalStorageLayoutPersistence, workbenchStoragePersistenceKey };
 
-export interface CreateLocalStoragePanelsPersistenceInput extends CreateWorkbenchStoragePersistenceInput {
+export interface CreateLocalStoragePanelMenuStatePersistenceInput extends CreateWorkbenchStoragePersistenceInput {
   scope: string;
 }
 
@@ -37,31 +35,49 @@ export interface CreateLocalStorageWorkbenchPersistenceInput extends CreateWorkb
   scope?: string;
 }
 
-export const createLocalStorageHistoryPersistence = (
+interface PersistedWorkbenchPageLocation {
+  version: 1;
+  location: PageLocation;
+}
+
+const WORKBENCH_PAGE_LOCATION_VERSION = 1 as const;
+
+export const createLocalStoragePageLocationPersistence = (
   input: CreateWorkbenchStoragePersistenceInput,
-): WorkbenchHistoryPersistence => {
+): WorkbenchPageLocationPersistence => {
   const storage = resolveStorage(input.storage);
   return {
-    getHistory: (scope) =>
-      readJson<PersistedWorkbenchHistory>(storage, workbenchStoragePersistenceKey(input.namespace, "history", scope)),
-    setHistory: (history, scope) => {
-      storage.setItem(workbenchStoragePersistenceKey(input.namespace, "history", scope), JSON.stringify(history));
+    load: (projectId) => {
+      const persisted = readJson<PersistedWorkbenchPageLocation>(
+        storage,
+        workbenchStoragePersistenceKey(input.namespace, "page-location", projectId),
+      );
+      return persisted?.version === WORKBENCH_PAGE_LOCATION_VERSION ? persisted.location : undefined;
+    },
+    save: (projectId, location) => {
+      const persisted: PersistedWorkbenchPageLocation = {
+        version: WORKBENCH_PAGE_LOCATION_VERSION,
+        location,
+      };
+      storage.setItem(
+        workbenchStoragePersistenceKey(input.namespace, "page-location", projectId),
+        JSON.stringify(persisted),
+      );
     },
   };
 };
-
-export const createLocalStoragePanelsPersistence = (
-  input: CreateLocalStoragePanelsPersistenceInput,
-): WorkbenchPanelsPersistenceAdapter => {
+export const createLocalStoragePanelMenuStatePersistence = (
+  input: CreateLocalStoragePanelMenuStatePersistenceInput,
+): WorkbenchPanelMenuStatePersistenceAdapter => {
   const storage = resolveStorage(input.storage);
   return {
-    getPanelStates: (scope) =>
-      readJson<PersistedWorkbenchPanels>(
+    getMenuStates: (scope) =>
+      readJson<PersistedWorkbenchPanelMenuState>(
         storage,
-        workbenchStoragePersistenceKey(input.namespace, "panels", scope ?? input.scope),
+        workbenchStoragePersistenceKey(input.namespace, "panel-menus", scope ?? input.scope),
       ),
-    setPanelStates: (state, scope) => {
-      const key = workbenchStoragePersistenceKey(input.namespace, "panels", scope ?? input.scope);
+    setMenuStates: (state, scope) => {
+      const key = workbenchStoragePersistenceKey(input.namespace, "panel-menus", scope ?? input.scope);
       storage.setItem(key, JSON.stringify(state));
     },
   };
@@ -76,33 +92,6 @@ export const createLocalStorageTreePersistence = (
     getTreeStates: () => readJson<PersistedTreeRendererStates>(storage, key),
     setTreeStates: (state) => {
       storage.setItem(key, JSON.stringify(state));
-    },
-  };
-};
-
-export interface CreateLocalStorageLastResourcePersistenceInput extends CreateWorkbenchStoragePersistenceInput {
-  scope?: string;
-}
-
-const isResourceRef = (value: unknown): value is ResourceRef =>
-  Boolean(value) && typeof (value as ResourceRef).kind === "string" && typeof (value as ResourceRef).uri === "string";
-
-export const createLocalStorageLastResourcePersistence = (
-  input: CreateLocalStorageLastResourcePersistenceInput,
-): LastResourcePersistenceAdapter => {
-  const storage = resolveStorage(input.storage);
-  const key = workbenchStoragePersistenceKey(input.namespace, "last-resource", input.scope);
-  return {
-    getLastResource: () => {
-      const parsed = readJson<unknown>(storage, key);
-      return isResourceRef(parsed) ? parsed : undefined;
-    },
-    setLastResource: (resource) => {
-      if (!resource) {
-        storage.removeItem?.(key);
-        return;
-      }
-      storage.setItem(key, JSON.stringify(resource));
     },
   };
 };
@@ -157,19 +146,14 @@ export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorage
 
   return {
     snapshotPersistence,
-    historyPersistence: createLocalStorageHistoryPersistence({ namespace: input.namespace, storage }),
     layoutPersistence,
-    panelsPersistence: createLocalStoragePanelsPersistence({
+    panelMenuStatePersistence: createLocalStoragePanelMenuStatePersistence({
       namespace: input.namespace,
       scope: input.scope ?? "global",
       storage,
     }),
+    pageLocationPersistence: createLocalStoragePageLocationPersistence({ namespace: input.namespace, storage }),
     treePersistence: createLocalStorageTreePersistence({ namespace: input.namespace, scope: input.scope, storage }),
-    lastResourcePersistence: createLocalStorageLastResourcePersistence({
-      namespace: input.namespace,
-      scope: input.scope,
-      storage,
-    }),
     sidePanelPersistence: createLocalStorageSidePanelPersistence({
       namespace: input.namespace,
       scope: input.scope,

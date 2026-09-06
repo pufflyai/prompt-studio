@@ -19,12 +19,12 @@ export const filterVisibleTabs = <T extends TabVisibilityPlacement>(
   let changed = false;
   const next: T[] = [];
   for (const placement of placements) {
-    if (placement.pinned === true && placement.hiddenByDefault === true) {
-      changed = true;
-      continue;
-    }
     if (placement.closable === true) {
       next.push(placement);
+      continue;
+    }
+    if (placement.pinned === true && placement.hiddenByDefault === true) {
+      changed = true;
       continue;
     }
     const effective = resolveVisibility(tabOverrides[getKey(placement)], placement.hiddenByDefault);

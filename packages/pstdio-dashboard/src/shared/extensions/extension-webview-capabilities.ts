@@ -1,18 +1,19 @@
 import type { WorkbenchCore } from "@pstdio/workbench";
+import { toWorkbenchNavigationTarget } from "@pstdio/workbench/extensions";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import type {
+  NavigationTarget,
   WebviewFilesDeleteParams,
   WebviewFilesListParams,
   WebviewFilesUploadParams,
-  WebviewResourceOpenParams,
 } from "pstdio-api-contracts/extension-kernel";
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import { createArtifactsReadCapability } from "./artifact-read-capability";
-import { openWebviewResource } from "./components/extension-webview-command";
 import { createExtensionFileCapabilities } from "./extension-file-capabilities";
 
 interface CreateDashboardExtensionWebviewCapabilitiesInput {
   base: HostCapabilityRegistry;
+  extensionId: string;
   extensionInstanceId?: string;
   projectId?: string;
   webviewId: string;
@@ -63,7 +64,13 @@ export const createDashboardExtensionWebviewCapabilities = (
     ...input.base,
     ...(workbench
       ? {
-          "resource.open": (params: unknown) => openWebviewResource(workbench, params as WebviewResourceOpenParams),
+          "navigation.open": (params: unknown) => {
+            const request = params as { target?: NavigationTarget };
+            if (!request.target) throw new Error("navigation.open requires a target.");
+            return workbench.navigation.openTarget(
+              toWorkbenchNavigationTarget(request.target, { extensionId: input.extensionId }),
+            );
+          },
         }
       : {}),
     ...(owner && files

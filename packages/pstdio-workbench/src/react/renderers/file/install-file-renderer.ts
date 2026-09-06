@@ -1,6 +1,6 @@
 import { preloadCodeEditor } from "@pstdio/ui/diff";
 import { createElement, lazy, Suspense } from "react";
-import type { WorkbenchCore } from "../../../core";
+import { getWorkbenchRenderers, type WorkbenchCore } from "../../../core";
 
 const loadWorkbenchFileRendererView = () =>
   import("./file-renderer-view").then((module) => ({
@@ -19,8 +19,8 @@ export const createWorkbenchFileRendererInstaller = (preloadView: () => void) =>
     if (installed.has(workbench)) return;
     installed.add(workbench);
     preloadView();
-    workbench.renderers.setFileRendererImplementation(({ workbench: scope, instance, fileRendererId }) => {
-      const contribution = scope.renderers.getFileRenderer(fileRendererId);
+    getWorkbenchRenderers(workbench).setFileRendererImplementation(({ workbench: scope, instance, fileRendererId }) => {
+      const contribution = getWorkbenchRenderers(scope).getFileRenderer(fileRendererId);
       if (!contribution) return null;
       return createElement(
         Suspense,

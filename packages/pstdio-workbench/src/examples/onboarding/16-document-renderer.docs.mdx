@@ -1,62 +1,76 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import source from "../preferences/module.tsx?raw";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="14. Preference schemas" />
 
-<Meta of={OnboardingStories} name="16. Document renderer" parameters={{ layout: "padded" }} />
+# 14. Declare settings that features can read
 
-# 16. Add A Document Renderer
+A preference is a named setting. A feature reads the setting by name instead of owning a separate settings store.
 
-Use a **file renderer** when a module wants to load document-like content into
-the workbench shell and let the React layer choose the right editor or preview.
+The schema declares four facts in one place:
 
-This example has no selectable Location content of its own, so it registers a
-Main Panel placeholder rather than a null Location. Only the real document Sub
-Panels appear in the tab strip.
+- the preference name
+- the value type and allowed choices
+- the default value
+- where the selected value is saved
 
-<Canvas of={OnboardingStories.DocumentRenderer} sourceState="shown" />
+The settings UI uses that schema to build controls. Feature code reads the selected value from the preference registry.
+Both use the same definition, so they cannot disagree about the name, default, or scope.
 
-The renderer contribution provides:
+Try the example in this order:
 
-- A **`load(resource)`** function that returns the file name, content, MIME type,
-  or data URL for the active resource.
-- An optional **`save(resource, content)`** function. When present, markdown and
-  code documents are editable and autosave through that callback.
-- A normal widget placement using the same id as the registered file renderer.
+1. Change **Editor density**. The spacing in **Editor preview** changes.
+2. Change **Default open region**. The selected region changes under **New resources open in**.
+3. Compare the scope badges. Density follows the user everywhere. The open region belongs only to this project.
 
-Markdown and text files open in the prose editor, recognized code files open in
-Monaco, and images render as read-only previews.
+<Canvas of={OnboardingStories.PreferenceSchemas} sourceState="none" />
 
-## Link a Tree Outline to Markdown Headings
+## When to use this
 
-A tree resource target can include a typed `section` outline. Each anchor uses
-the stable tree node id and the plain heading text. Use `occurrence` when the
-same heading text appears more than once.
+Use a preference for a choice that must survive after the current panel closes, such as density, a default location, or
+a feature option. Component state is still the right place for temporary UI state.
 
-```ts
-const anchors = [
-  { id: "guide-intro", heading: "Introduction" },
-  { id: "guide-details-1", heading: "Details", occurrence: 0 },
-  { id: "guide-details-2", heading: "Details", occurrence: 1 },
-];
+This is the Core API used by an application that embeds the workbench. An extension declares the same kind of setting
+under `settings` in `defineExtension`. The host converts that extension definition into a preference schema.
 
-const detailsNode = {
-  id: "guide-details-2",
-  label: "Details",
-  target: {
-    kind: "resource",
-    resource: { type: "guide", id: "guide.md" },
-    section: { anchors },
-  },
-};
-```
+## Complete example
 
-Opening the node scrolls the native Markdown renderer to that heading. Manual
-scrolling updates the tree so only the visible section is selected. A renderer
-refresh keeps the same section selected. If the target id or heading is stale,
-the document stays open, section selection clears, and the host logs a warning.
+<Source code={source} language="tsx" />
 
-Do not encode section ids in resource URL fragments. The file resource id stays
-stable for load, save, tab reuse, and navigation history.
+Use a custom settings panel only when the shared boolean, number, string, choice, array, and object controls cannot
+represent the setting.
+
+## What each field means
+
+The schema declares the contract for each preference:
+
+- `properties` maps each preference name to its schema entry. The name is the stable identity feature code reads.
+- `type` is the value type, here `"string"`.
+- `enum` lists the allowed choices.
+- `default` is the value used before anyone picks one.
+- `scope` says where a choice is saved: `"user"` values follow the user everywhere, while `"project"` values belong to
+  one Prompt Studio project.
+- `description` explains the preference to readers of the schema and to settings UI.
+
+Scope references select which saved value an operation targets:
+
+- `{ scope: "user" }` targets the user's own value.
+- `{ scope: "project", scopeId }` targets one project's value. `scopeId` names that project.
+
+The module registers the schema and a panel that uses it:
+
+- `ctx.preferences.registerSchema(...)` publishes the schema so the settings UI and feature code share one
+  definition.
+- `ctx.views.registerView(...)` defines the demo panel. `body.kind: "react"` lets host code render React, and
+  `render` receives the render input for one visible placement.
+- `ctx.shellPlacements.registerPlacement(...)` places the View. `item.kind: "view"` places one static View,
+  `item.view` names it, `item.presence: "fixed"` keeps it open without a close button, and `region: "main"` picks
+  the region.
+
+The panel reads and writes values through the preference registry:
+
+- `input.workbench.preferences.getValue(name, scope)` returns the value saved for that scope, or the schema default.
+- `input.workbench.preferences.setValue(name, value, scope)` saves a new value for that scope.
+- `useWorkbenchStore(input.workbench.preferences.store, selector)` subscribes to registry state. The example selects
+  `state.schemas` to list the registered entries.

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "../../core";
+import { createWorkbench } from "../../core";
 import { createExtensionHost, type ExtensionDefinition } from "./extension-host";
 import { extensionThemePreferences } from "./themes";
 
@@ -17,7 +17,11 @@ const createCountingDefinition = (id: string) => {
       return {
         id: `module.${id}`,
         activate(ctx) {
-          ctx.renderers.registerRenderer({ id: `renderer.${id}`, render: () => null });
+          ctx.views.registerView({
+            id: `view.${id}`,
+            title: id,
+            body: { kind: "react", render: () => null },
+          });
         },
       };
     },
@@ -28,7 +32,7 @@ const createCountingDefinition = (id: string) => {
 
 describe("createExtensionHost", () => {
   test("enabling registers the extension's contributions; disabling disposes them", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const themePack = createCountingDefinition("theme-pack");
     const host = createExtensionHost(workbench, [themePack.definition]);
 
@@ -36,15 +40,15 @@ describe("createExtensionHost", () => {
 
     host.setEnabled("theme-pack", true);
     expect(host.isEnabled("theme-pack")).toBe(true);
-    expect(workbench.renderers.getRenderer("renderer.theme-pack")).toBeDefined();
+    expect(workbench.views.getView("view.theme-pack")).toBeDefined();
 
     host.setEnabled("theme-pack", false);
     expect(host.isEnabled("theme-pack")).toBe(false);
-    expect(workbench.renderers.getRenderer("renderer.theme-pack")).toBeUndefined();
+    expect(workbench.views.getView("view.theme-pack")).toBeUndefined();
   });
 
   test("re-enabling builds a fresh module instance", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const themePack = createCountingDefinition("theme-pack");
     const host = createExtensionHost(workbench, [themePack.definition]);
 
@@ -56,7 +60,7 @@ describe("createExtensionHost", () => {
   });
 
   test("registers a definition's themes into the workbench while the extension is enabled", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const themePack: ExtensionDefinition = {
       id: "theme-pack",
       name: "Theme Pack",
@@ -78,7 +82,7 @@ describe("createExtensionHost", () => {
   });
 
   test("notifies subscribers only on real changes", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const themePack = createCountingDefinition("theme-pack");
     const host = createExtensionHost(workbench, [themePack.definition]);
 

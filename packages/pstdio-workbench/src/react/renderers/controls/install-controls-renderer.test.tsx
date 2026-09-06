@@ -1,20 +1,20 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "../../../core";
+import { createWorkbench, getWorkbenchRenderers } from "../../../core";
 import { WorkbenchControlsView } from "./controls-view";
 import { installWorkbenchControlsRenderer } from "./install-controls-renderer";
 
 describe("installWorkbenchControlsRenderer", () => {
   test("renders the registered controls contribution", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     installWorkbenchControlsRenderer(workbench);
-    workbench.renderers.registerControlsRenderer({
+    getWorkbenchRenderers(workbench).registerControlsRenderer({
       id: "ticket.controls",
       title: "Ticket controls",
       executeQuery: () => ({ params: [] }),
     });
 
-    const renderer = workbench.renderers.getRenderer("ticket.controls");
+    const renderer = getWorkbenchRenderers(workbench).getRenderer("ticket.controls");
     const rendered = renderer?.render({
       workbench,
       panel: workbench.layout.registerPanel({

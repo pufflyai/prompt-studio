@@ -54,6 +54,11 @@ const waitForReady = async (descriptorPath: string, child: ChildProcess, timeout
 
 export const startPackagedServe = async (tempRoot: string, env: Record<string, string> = {}) => {
   const descriptorPath = join(tempRoot, "runtime.json");
+  const {
+    PSTDIO_EXTENSION_SOURCE_ROOT: _sourceRoot,
+    PSTDIO_EXTENSION_RELEASE_REF: _releaseRef,
+    ...runtimeEnv
+  } = process.env;
   const child = spawn(
     PACKAGED_BINARY_PATH,
     ["serve", "--foreground", "--owner", "persistent", "--host", "127.0.0.1", "--port", "0"],
@@ -61,7 +66,7 @@ export const startPackagedServe = async (tempRoot: string, env: Record<string, s
       // Run outside the repo root so runtime file access cannot rely on local workspace paths.
       cwd: tempRoot,
       env: {
-        ...process.env,
+        ...runtimeEnv,
         HOME: tempRoot,
         PSTDIO_HOME: tempRoot,
         PSTDIO_DB_PATH: join(tempRoot, "db.sqlite"),

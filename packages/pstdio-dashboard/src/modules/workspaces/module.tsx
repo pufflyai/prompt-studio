@@ -1,35 +1,35 @@
-import type { ResourceRef, TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
+import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
+import { EmptyState } from "@pstdio/ui";
+import type { TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
-import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
-import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
-import { setDashboardSidenavSelection, showDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
+import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
+import { updateDashboardSidenav } from "@/shared/workbench/dashboard-sidenav";
+import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
-import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
-import { registerDashboardViewRoute, registerResourceRoute } from "@/shared/workbench/route-helper";
-import { registerWorkspaceDataTableRenderer } from "./collections/workspace-data-table-renderer";
+import { registerWorkspaceDataTableView } from "./collections/workspace-data-table-renderer";
 import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
 import { DeleteWorkspaceEntryWidget } from "./components/delete-workspace-entry-widget";
 import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
 import { WorkspaceDiffsPanel } from "./components/workspace-widget";
 import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
-import { resourceMetadataBoolean, resourceMetadataString } from "./resource-metadata";
+import { resourceMetadataString } from "./resource-metadata";
 import { registerWorkspaceFileContributions } from "./workspace-file-contributions";
 import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
+import { watchOpenWorkspaceResource } from "./workspace-resource-sync";
 
 const openCreateWorkspace = (ctx: WorkbenchModuleContext) => {
   const projectId = getDashboardSelectedProjectId(ctx);
   if (!projectId) {
-    ctx.navigator.commitContext({ modeId: "project-selection", resource: null });
+    ctx.pageLocations.clearProject();
+    ctx.modes.setActiveMode("project-selection");
     return;
   }
-
-  return ctx.layout.openPanel(dashboardWidgetIds.createWorkspace, { title: "Create workspace", closable: true });
+  return ctx.overlays.openOverlay(dashboardWidgetIds.createWorkspace, { title: "Create workspace" });
 };
-
 const workspaceNavigationNode = (): TreeNode => ({
   id: dashboardViews.workspaces.id,
   label: "Workspaces",
@@ -37,7 +37,7 @@ const workspaceNavigationNode = (): TreeNode => ({
   canHide: true,
   hiddenByDefault: true,
   commandId: dashboardCommandIds.openWorkspaces,
-  target: { kind: "view", viewId: dashboardViews.workspaces.id },
+  target: { kind: "page", page: workbenchPages.workspaces },
   actions: [
     {
       id: "new-workspace",
@@ -47,182 +47,182 @@ const workspaceNavigationNode = (): TreeNode => ({
     },
   ],
 });
-
 const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContext) => {
-  registerSidenavContribution(ctx, {
+  registerDashboardNavigationContribution(ctx, {
     id: "dashboard.workspaces.project-nav",
-    modes: ["*"],
-    region: "header",
-    order: 30,
-    getHeaderNodes: () => [workspaceNavigationNode()],
+    modes: ["project"],
+    getSections: () => [{ id: "navigation.root", nodes: [workspaceNavigationNode()] }],
   });
 };
-
-// A rename streams back through the synced rows, but the breadcrumb was built from the
-// resource captured when the workspace opened. Re-apply it whenever the open workspace's
-// synced name changes so the new name shows in the breadcrumb trail too.
-const watchOpenWorkspaceRename = (ctx: WorkbenchModuleContext) => {
-  let shownLabel: string | undefined;
-
-  const sync = () => {
-    const primary = ctx.getPrimaryResource();
-    if (primary?.kind !== "workspace" || !primary.id) {
-      shownLabel = undefined;
-      return;
-    }
-
-    const current = createDashboardWorkspaces(getDashboardSelectedProjectId(ctx)).find(
-      (workspace) => workspace.id === primary.id,
-    );
-    const label = current?.resource.label;
-    if (!current || label === undefined) return;
-
-    // Baseline against the label shown when the workspace opened; only react to later renames.
-    shownLabel ??= primary.label;
-    if (label === shownLabel) return;
-
-    shownLabel = label;
-    setResourceBreadcrumb(ctx, current.resource);
-  };
-
-  subscribeDashboardData(sync);
-  ctx.onDidChangePrimaryResource(() => {
-    shownLabel = undefined;
-    sync();
-  });
-};
-
 const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
   registerWorkspaceFileContributions(ctx);
-  ctx.layout.registerPanel({
+  ctx.views.registerView({
+    id: dashboardWidgetIds.workspace,
+    title: "Workspace",
+    body: {
+      kind: "react",
+      render: () => <EmptyState title="No open panels" description="Use Add panel to open Files or Changes." />,
+    },
+  });
+  ctx.views.registerView({
     id: dashboardWidgetIds.createWorkspace,
     title: "Create workspace",
-    region: "overlay",
-    singleton: true,
-    rendererId: dashboardWidgetIds.createWorkspace,
+    body: {
+      kind: "react",
+      render: (input) => <CreateWorkspaceWidget input={input} />,
+    },
+  });
+  ctx.overlays.registerOverlay({
+    id: dashboardWidgetIds.createWorkspace,
+    viewId: dashboardWidgetIds.createWorkspace,
     config: { size: "sm", placement: "center", scrollBehavior: "inside", closeOnInteractOutside: false },
   });
-  ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.createWorkspace,
-    render: (input) => <CreateWorkspaceWidget input={input} />,
-  });
-
-  ctx.layout.registerPanel({
+  ctx.views.registerView({
     id: dashboardWidgetIds.renameWorkspace,
     title: "Rename workspace",
-    region: "overlay",
-    singleton: true,
-    rendererId: dashboardWidgetIds.renameWorkspace,
+    body: {
+      kind: "react",
+      render: (input) => <RenameWorkspaceWidget input={input} />,
+    },
+  });
+  ctx.overlays.registerOverlay({
+    id: dashboardWidgetIds.renameWorkspace,
+    viewId: dashboardWidgetIds.renameWorkspace,
     config: { size: "sm", placement: "center", scrollBehavior: "inside", closeOnInteractOutside: false },
   });
-  ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.renameWorkspace,
-    render: (input) => <RenameWorkspaceWidget input={input} />,
-  });
-
-  ctx.layout.registerPanel({
+  ctx.views.registerView({
     id: dashboardWidgetIds.deleteWorkspaceEntry,
     title: "Delete entry",
-    region: "overlay",
-    singleton: true,
-    rendererId: dashboardWidgetIds.deleteWorkspaceEntry,
+    body: {
+      kind: "react",
+      render: (input) => <DeleteWorkspaceEntryWidget input={input} />,
+    },
+  });
+  ctx.overlays.registerOverlay({
+    id: dashboardWidgetIds.deleteWorkspaceEntry,
+    viewId: dashboardWidgetIds.deleteWorkspaceEntry,
     config: { size: "sm", placement: "center", scrollBehavior: "inside", closeOnInteractOutside: false },
   });
-  ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.deleteWorkspaceEntry,
-    render: (input) => <DeleteWorkspaceEntryWidget input={input} />,
+  ctx.viewMenus.registerViewMenu({
+    id: dashboardWidgetIds.workspaceFileTree,
+    ownerViewId: dashboardWidgetIds.workspaceFiles,
+    viewId: dashboardWidgetIds.workspaceFileTree,
+    side: "left",
   });
-
-  ctx.layout.registerPanel(
-    {
-      id: dashboardWidgetIds.workspace,
-      title: "Workspace",
-      region: "main",
-      rendererId: dashboardWidgetIds.workspace,
-      singleton: true,
-      resourceKinds: ["workspace"],
-      subPanelsOnly: true,
-    },
-    { priority: 70 },
-  );
-  ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.workspace,
-    render: () => null,
-  });
-
-  ctx.layout.registerPanel(
-    {
-      id: dashboardWidgetIds.workspaceFiles,
-      title: "Files",
-      icon: "Files",
-      region: "main",
-      rendererId: dashboardWidgetIds.workspaceFileRenderer,
-      singleton: true,
-      eligibleLocations: { resourceKinds: ["workspace"] },
-      panelMenus: [
-        {
-          id: dashboardWidgetIds.workspaceFileTree,
-          title: "Files",
-          icon: "Files",
-          side: "left",
-          rendererId: dashboardWidgetIds.workspaceFileTree,
-        },
-      ],
-    },
-    { priority: 80 },
-  );
-  ctx.layout.registerPanel(
+  ctx.views.registerView(
     {
       id: dashboardWidgetIds.workspaceDiffs,
       title: "Changes",
       icon: "FileDiff",
-      region: "main",
-      rendererId: dashboardWidgetIds.workspaceDiffs,
-      singleton: true,
-      eligibleLocations: { resourceKinds: ["workspace"] },
+      body: { kind: "react", render: (input) => <WorkspaceDiffsPanel input={input} /> },
     },
     { priority: 70 },
   );
-  ctx.renderers.registerRenderer({
-    id: dashboardWidgetIds.workspaceDiffs,
-    render: (input) => <WorkspaceDiffsPanel input={input} />,
+};
+const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
+  ctx.pages.registerPage({
+    id: dashboardViews.workspaces.id,
+    ref: workbenchPages.workspaces,
+    title: dashboardViews.workspaces.label,
+    icon: dashboardViews.workspaces.icon,
+    path: "workspaces",
+    modeId: "project",
+    main: {
+      kind: "view",
+      view: {
+        kind: "view",
+        id: dashboardWidgetIds.workspaces,
+      },
+      cardinality: "one",
+    },
+    slots: [],
+  });
+  return ctx.pages.registerPage({
+    id: workbenchPages.workspace.id,
+    ref: workbenchPages.workspace,
+    title: "Workspace",
+    icon: dashboardViews.workspaces.icon,
+    path: "workspace",
+    modeId: "project",
+    parentId: dashboardViews.workspaces.id,
+    resource: {
+      kinds: [
+        {
+          kind: "resource-kind",
+          id: "workspace",
+        },
+      ],
+    },
+    main: {
+      kind: "panels",
+      empty: {
+        kind: "view",
+        id: dashboardWidgetIds.workspace,
+      },
+    },
+    slots: [
+      {
+        id: "changes",
+        region: "main",
+        tab: { getSnapshot: () => ({ label: "Changes" }) },
+        order: 1,
+        openOn: "page-resource",
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [
+              {
+                kind: "resource-kind",
+                id: "workspace",
+              },
+            ],
+            view: {
+              kind: "view",
+              id: dashboardWidgetIds.workspaceDiffs,
+            },
+            cardinality: "one",
+          },
+        },
+      },
+      {
+        id: "files",
+        region: "main",
+        tab: { getSnapshot: () => ({ label: "Files" }) },
+        order: 2,
+        openOn: "page-resource",
+        item: {
+          kind: "binding",
+          binding: {
+            kinds: [
+              {
+                kind: "resource-kind",
+                id: "workspace",
+              },
+            ],
+            view: {
+              kind: "view",
+              id: dashboardWidgetIds.workspaceFiles,
+            },
+            cardinality: "one",
+          },
+        },
+      },
+    ],
   });
 };
-
-const openWorkspaceSubPanels = (ctx: WorkbenchModuleContext, resource: ResourceRef) => {
-  const isRemote = resourceMetadataString(resource, "workspaceExecutionKind") === "remote";
-  const supportsFiles = resourceMetadataBoolean(resource, "workspaceSupportsFiles") ?? !isRemote;
-  const supportsDiff = resourceMetadataBoolean(resource, "workspaceSupportsDiff") ?? !isRemote;
-  const ownedPanels = () =>
-    ctx.layout.listPanelInstances("main").filter((panel) => panel.ownerResourceUri === resource.uri);
-  let files = ownedPanels().find((panel) => panel.panelId === dashboardWidgetIds.workspaceFiles);
-  let diffs = ownedPanels().find((panel) => panel.panelId === dashboardWidgetIds.workspaceDiffs);
-  const firstOpen = !files && !diffs;
-
-  if (supportsFiles) {
-    files ??= ctx.layout.openPanel(dashboardWidgetIds.workspaceFiles, {
-      closable: false,
-      resource,
-      strategy: { kind: "persistent" },
-      title: "Files",
-    });
-  }
-  if (supportsDiff) {
-    diffs ??= ctx.layout.openPanel(dashboardWidgetIds.workspaceDiffs, {
-      closable: false,
-      resource,
-      strategy: { kind: "persistent" },
-      title: "Changes",
-    });
-  }
-
-  const requestedView = resourceMetadataString(resource, "workspaceView");
-  if (requestedView === "files" && files) ctx.layout.activatePanel(files.instanceId);
-  else if (requestedView === "diffs" && diffs) ctx.layout.activatePanel(diffs.instanceId);
-  else if (firstOpen && diffs) ctx.layout.activatePanel(diffs.instanceId);
-  else if (firstOpen && files) ctx.layout.activatePanel(files.instanceId);
+const syncActiveWorkspacePage = (ctx: WorkbenchModuleContext) => {
+  const state = ctx.pages.store.getState();
+  if (state.activePageId !== workbenchPages.workspace.id || state.location?.resource?.type !== "workspace") return;
+  const resource = ctx.getPrimaryResource();
+  if (!resource) return;
+  ensureWorkspaceTerminalResource(ctx, resource);
+  updateDashboardSidenav(ctx, { selectedNode: null });
+  if (resourceMetadataString(resource, "workspaceView") !== "files") return;
+  const files = ctx.layout
+    .listPanelInstances("main")
+    .find((panel) => panel.viewId === dashboardWidgetIds.workspaceFiles && panel.resourceKey === resourceKey(resource));
+  if (files) ctx.layout.activatePanel(files.instanceId);
 };
-
 // The workspaces slice owns the project navigation shell, the workspaces board,
 // and the workspace panels used when a workspace resource opens.
 export const createWorkspacesModule = () =>
@@ -233,9 +233,7 @@ export const createWorkspacesModule = () =>
         kind: "workspace",
         label: "Workspace",
         icon: "GitBranch",
-        paletteOpenInput: { replaceActive: true },
       });
-
       ctx.resources.registerProvider({
         id: "dashboard-workbench.workspaces",
         kind: "workspace",
@@ -244,12 +242,13 @@ export const createWorkspacesModule = () =>
             resource: workspace.resource,
             searchText: [workspace.title, workspace.shorthand, workspace.branch].filter(Boolean).join(" "),
             group: "Workspaces",
+            activate: () => openWorkspacesPage(ctx, workspace.resource),
           })),
       });
       ctx.resources.registerHierarchyProvider({
         id: "dashboard-workbench.workspace-hierarchy",
         priority: 100,
-        canResolve: (resource) => resource.kind === "workspace",
+        canResolve: (resource) => resource.type === "workspace",
         getParent: (resource) => {
           const projectId = resourceMetadataString(resource, "projectId") ?? getDashboardSelectedProjectId(ctx);
           if (!projectId) return { type: "view", viewId: dashboardViews.workspaces.id };
@@ -261,21 +260,22 @@ export const createWorkspacesModule = () =>
           );
         },
       });
-
       registerWorkspaceResourceActions(ctx);
-      registerWorkspaceDataTableRenderer(ctx);
+      registerWorkspaceDataTableView(ctx);
       registerWorkspaceDetailWidgets(ctx);
-      watchOpenWorkspaceRename(ctx);
-
+      registerWorkspacesPage(ctx);
+      const workspaceResourceSubscription = watchOpenWorkspaceResource(ctx);
       registerWorkspaceSidenavContributions(ctx);
-
       ctx.modes.registerMode({
         id: "project",
         label: "Project",
         panels: ["main", "secondary", "side"],
+        regionSettings: {
+          side: { alwaysShowTabs: true },
+          secondary: { alwaysShowTabs: true },
+        },
         activate: () => undefined,
       });
-
       ctx.commands.registerCommand(
         {
           id: dashboardCommandIds.openWorkspaces,
@@ -284,46 +284,26 @@ export const createWorkspacesModule = () =>
           icon: dashboardViews.workspaces.icon,
         },
         {
-          execute: () => ctx.views.openView(dashboardViews.workspaces.id, { strategy: { kind: "replace-active" } }),
+          execute: () => openWorkspacesPage(ctx),
         },
       );
-
       ctx.commands.registerCommand(
         { id: dashboardCommandIds.createWorkspace, label: "New workspace", category: "Dashboard", icon: "Plus" },
         { execute: () => openCreateWorkspace(ctx) },
       );
-
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
         commandId: dashboardCommandIds.openWorkspaces,
         order: 10,
       });
-
-      registerDashboardViewRoute(ctx, {
-        id: dashboardViews.workspaces.id,
-        mode: "project",
-        panelId: dashboardWidgetIds.workspaces,
-        path: "workspaces",
-        title: dashboardViews.workspaces.label,
-        icon: dashboardViews.workspaces.icon,
-        beforeOpen: () => {
-          ctx.breadcrumbs.setItems([{ title: dashboardViews.workspaces.label, icon: dashboardViews.workspaces.icon }]);
-          setDashboardSidenavSelection(ctx, dashboardViews.workspaces.id);
+      const unsubscribePage = ctx.pages.store.subscribeSelector(
+        (state) => state.location,
+        () => syncActiveWorkspacePage(ctx),
+      );
+      return {
+        dispose: () => {
+          workspaceResourceSubscription.dispose();
+          unsubscribePage();
         },
-      });
-      registerResourceRoute(ctx, {
-        id: "dashboard.workspace.presenter",
-        match: (resource) => resource.kind === "workspace",
-        mode: "project",
-        panelId: dashboardWidgetIds.workspace,
-        title: (resource) => resource.label ?? "Workspace",
-        beforeOpen: ({ resource }) => {
-          setResourceBreadcrumb(ctx, resource);
-          showDashboardSidenav(ctx, { selectedNode: null });
-        },
-        afterOpen: ({ resource }) => {
-          ensureWorkspaceTerminalResource(ctx, resource);
-          openWorkspaceSubPanels(ctx, resource);
-        },
-      });
+      };
     },
   }) satisfies WorkbenchModuleContribution;

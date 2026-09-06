@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID, WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/workbench/react";
+import { workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
+import { WORKBENCH_TERMINAL_WIDGET_ID } from "@pstdio/workbench/react";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardViews } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createDashboardWorkbench } from "./workbench";
 
@@ -12,43 +12,40 @@ describe("createDashboardWorkbench", () => {
     expect(workbench.sidePanel.getMode()).toBe("closed");
   });
 
-  test("offers the session panel on project home", async () => {
+  test("offers the session panel on project home", () => {
     const workbench = createDashboardWorkbench();
 
     selectDashboardProject(workbench, { id: "project-1", name: "Project" });
-    await workbench.views.openView(dashboardViews.start.id);
+    workbench.pageLocations.setProject("project-1");
+    workbench.pageLocations.navigate({ kind: "page", page: workbenchPages.start });
 
     expect(workbench.getPrimaryResource()).toBeUndefined();
-    const sessionBubble = workbench.layout.getPanel(dashboardWidgetIds.sessionBubble);
+    const sessionBubble = workbench.modePlacements.getPlacement(workbenchPanels.projectSession);
     expect(sessionBubble?.region).toBe("side");
-    expect(typeof sessionBubble?.eligibleLocations?.canOpenLocation).toBe("function");
-    expect(workbench.composition.panelsFor("side").addable.map((panel) => panel.panelId)).toContain(
-      dashboardWidgetIds.sessionBubble,
-    );
+    expect(sessionBubble?.item).toMatchObject({
+      kind: "binding",
+      binding: { view: { id: dashboardWidgetIds.sessionBubble } },
+    });
+    const addableViews = workbench.composition
+      .panelsFor("side")
+      .addable.map((panel) => workbench.layout.getPanel(panel.panelId)?.rendererId);
+    expect(addableViews).toContain(dashboardWidgetIds.sessionBubble);
   });
 
   test("starts the Secondary Panel closed", () => {
     const workbench = createDashboardWorkbench();
 
-    expect(workbench.panels.isOpen("secondary")).toBe(false);
+    expect(workbench.shell.getRegionState("secondary").open).toBe(false);
     expect(workbench.layout.getLayout().regions.secondary.visible).toBe(false);
   });
 
   test("registers the host terminal surface and API session presenter", () => {
     const workbench = createDashboardWorkbench();
 
-    expect(workbench.layout.getPanel(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({
+    expect(workbench.shellPlacements.getPlacement(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({
       region: "secondary",
-      title: "Terminal",
       mountStrategy: "keep-mounted",
-      reuse: "none",
-      singleton: false,
-    });
-    expect(workbench.layout.getPanel(WORKBENCH_TERMINAL_WIDGET_ID)).not.toHaveProperty("closable");
-    expect(workbench.layout.getPanel(WORKBENCH_TERMINAL_LAUNCHER_WIDGET_ID)).toMatchObject({
-      region: "secondary",
-      hiddenByDefault: true,
-      title: "Terminal",
+      item: { kind: "binding", binding: { view: { id: WORKBENCH_TERMINAL_WIDGET_ID }, cardinality: "many" } },
     });
     expect(workbench.terminal.isAvailable()).toBe(true);
   });

@@ -23,7 +23,6 @@ export const workbenchBackgrounds = {
 const workbenchRegionBackgrounds = {
   nav: workbenchBackgrounds.main,
   activity: workbenchBackgrounds.activityBar,
-  "sidenav-header": workbenchBackgrounds.sidenav,
   sidenav: workbenchBackgrounds.sidenav,
   "main-header": workbenchBackgrounds.main,
   "main-left-menu": workbenchBackgrounds.panel,

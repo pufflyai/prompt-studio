@@ -1,27 +1,113 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbench } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { clearCachedDashboardExtensionMetadata } from "@/shared/extensions/workbench-extension-contributions";
+import {
+  clearCachedDashboardExtensionMetadata,
+  dashboardEditableTemplatesContextKey,
+} from "@/shared/extensions/workbench-extension-contributions";
 import { createExtensionsModule } from "./module";
-import { emptyAppearance, flushMicrotasks, metadata, metadataWithResourceExtension } from "./module-test-fixtures";
+import { emptyAppearance, flushMicrotasks, metadata } from "./module-test-fixtures";
 
 const projectId = "extension-registration-failure";
-const extensionId = metadata.extensions[0]!.id;
 const commandId = metadata.commands[0]!.id;
 const viewId = metadata.views[0]!.id;
-const resetLayoutCommandId = `dashboard.extensions.resetLayout.${extensionId}`;
 
 afterEach(() => clearCachedDashboardExtensionMetadata(projectId));
 
 describe("extension contribution registration failures", () => {
+  test("does not publish editable templates when template assets belong to another extension", async () => {
+    const workbench = createWorkbench();
+    selectDashboardProject(workbench, { id: projectId, name: "Editable templates" });
+    const metadataWithEditableTemplates = {
+      ...metadata,
+      templates: [
+        {
+          id: "pstdio.extension-lab.template.example",
+          localId: "example",
+          extensionId: "pstdio.extension-lab",
+          title: "Example",
+        },
+      ],
+      templateTypes: [
+        {
+          id: "pstdio.pstdio-planner.template-type.prompt",
+          localId: "prompt",
+          extensionId: "pstdio.pstdio-planner",
+          label: "Prompt",
+          commands: {
+            list: "pstdio.pstdio-planner.command.templates-list",
+            read: "pstdio.pstdio-planner.command.templates-read",
+            save: "pstdio.pstdio-planner.command.templates-save",
+            delete: "pstdio.pstdio-planner.command.templates-delete",
+          },
+        },
+      ],
+    };
+
+    const registration = workbench.registerModule(
+      createExtensionsModule({
+        loadAppearance: async () => emptyAppearance,
+        loadMetadata: async () => metadataWithEditableTemplates,
+      }),
+    );
+    await flushMicrotasks();
+    await flushMicrotasks();
+
+    expect(workbench.context.get(dashboardEditableTemplatesContextKey)).toBe(false);
+
+    registration.dispose();
+  });
+
+  test("publishes editable templates when the same extension contributes assets and a provider", async () => {
+    const workbench = createWorkbench();
+    selectDashboardProject(workbench, { id: projectId, name: "Editable templates" });
+    const metadataWithEditableTemplates = {
+      ...metadata,
+      templates: [
+        {
+          id: "pstdio.pstdio-planner.template.implement-ticket",
+          localId: "implement-ticket",
+          extensionId: "pstdio.pstdio-planner",
+          title: "Implement ticket",
+        },
+      ],
+      templateTypes: [
+        {
+          id: "pstdio.pstdio-planner.template-type.prompt",
+          localId: "prompt",
+          extensionId: "pstdio.pstdio-planner",
+          label: "Prompt",
+          commands: {
+            list: "pstdio.pstdio-planner.command.templates-list",
+            read: "pstdio.pstdio-planner.command.templates-read",
+            save: "pstdio.pstdio-planner.command.templates-save",
+            delete: "pstdio.pstdio-planner.command.templates-delete",
+          },
+        },
+      ],
+    };
+
+    const registration = workbench.registerModule(
+      createExtensionsModule({
+        loadAppearance: async () => emptyAppearance,
+        loadMetadata: async () => metadataWithEditableTemplates,
+      }),
+    );
+    await flushMicrotasks();
+    await flushMicrotasks();
+
+    expect(workbench.context.get(dashboardEditableTemplatesContextKey)).toBe(true);
+
+    registration.dispose();
+  });
+
   test("rolls back the whole refresh when one contribution conflicts", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     selectDashboardProject(workbench, { id: projectId, name: "Registration failure" });
-    const conflict = workbench.layout.registerPanel({
+    const conflict = workbench.views.registerView({
       id: viewId,
       title: "Existing view",
-      region: "main",
-      rendererId: "existing",
+      body: { kind: "react", render: () => null },
     });
 
     const registration = workbench.registerModule(
@@ -34,35 +120,7 @@ describe("extension contribution registration failures", () => {
     await flushMicrotasks();
 
     expect(workbench.commands.getCommand(commandId)).toBeUndefined();
-    expect(workbench.commands.getCommand(resetLayoutCommandId)).toBeUndefined();
-
-    registration.dispose();
-    conflict.dispose();
-  });
-
-  test("rolls back extension and layout commands when a later layout command conflicts", async () => {
-    const workbench = createWorkbenchCore();
-    selectDashboardProject(workbench, { id: projectId, name: "Registration failure" });
-    const laterExtensionId = metadataWithResourceExtension.extensions[1]!.id;
-    const conflictingResetCommandId = `dashboard.extensions.resetLayout.${laterExtensionId}`;
-    const conflict = workbench.commands.registerCommand(
-      { id: conflictingResetCommandId, label: "Existing reset" },
-      { execute: () => undefined },
-    );
-
-    const registration = workbench.registerModule(
-      createExtensionsModule({
-        loadAppearance: async () => emptyAppearance,
-        loadMetadata: async () => metadataWithResourceExtension,
-      }),
-    );
-    await flushMicrotasks();
-    await flushMicrotasks();
-
-    expect(workbench.commands.getCommand(commandId)).toBeUndefined();
-    expect(workbench.layout.getWidget(viewId)).toBeUndefined();
-    expect(workbench.commands.getCommand(resetLayoutCommandId)).toBeUndefined();
-    expect(workbench.commands.getCommand(conflictingResetCommandId)).toBeDefined();
+    expect(workbench.context.get(dashboardEditableTemplatesContextKey)).toBe(false);
 
     registration.dispose();
     conflict.dispose();

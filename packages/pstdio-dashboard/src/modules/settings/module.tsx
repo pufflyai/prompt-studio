@@ -4,33 +4,30 @@ import {
   type WorkbenchModuleContribution,
   workbenchCommandPaletteMenuPath,
 } from "@pstdio/workbench";
-import {
-  createWorkbenchSettingsModule,
-  settingsPanelResource,
-  WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
-} from "@pstdio/workbench/react";
+import { createWorkbenchSettingsModule, WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
-import { registerSidenavContribution } from "@/shared/workbench/contributions/sidenav-tree-contributions";
+import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
 import { toDisposables } from "@/shared/workbench/disposable";
 import { dashboardSettingsDefaultPanel, registerDashboardSettingsContributions } from "./settings-contributions";
 
-const settingsRootResource = settingsPanelResource(dashboardSettingsDefaultPanel);
-
 const createSettingsFooterNode = () => ({
-  id: settingsRootResource.uri,
+  id: "dashboard.settings",
   label: "Settings",
   icon: standardResourceIcons.settings,
   canHide: true,
-  resource: settingsRootResource,
+  target: {
+    kind: "command" as const,
+    commandId: WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
+    args: { panelId: dashboardSettingsDefaultPanel.id },
+  },
 });
 
 const registerSettingsSidenavs = (ctx: WorkbenchModuleContext) => {
-  registerSidenavContribution(ctx, {
+  registerDashboardNavigationContribution(ctx, {
     id: "dashboard.settings.footer",
-    modes: ["*"],
-    order: 40,
-    region: "footer",
-    getFooterNodes: () => [createSettingsFooterNode()],
+    modes: ["project"],
+    slot: "footer",
+    getSections: () => [{ id: "navigation.footer", nodes: [createSettingsFooterNode()] }],
   });
 };
 

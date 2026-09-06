@@ -11,28 +11,28 @@ export const createKeyboardShortcutsModule = () =>
   ({
     id: "dashboard.keyboard-shortcuts",
     activate(ctx) {
-      ctx.layout.registerPanel({
+      ctx.views.registerView({
         id: dashboardWidgetIds.shortcutHelp,
         title: "Keyboard shortcuts",
-        region: "overlay",
-        singleton: true,
-        rendererId: dashboardWidgetIds.shortcutHelp,
-        config: { size: "md", placement: "center", scrollBehavior: "inside" },
+        body: {
+          kind: "react",
+          render: (input) => <KeyboardShortcutsWidget input={input} />,
+        },
       });
-      ctx.renderers.registerRenderer({
+      ctx.overlays.registerOverlay({
         id: dashboardWidgetIds.shortcutHelp,
-        render: (input) => <KeyboardShortcutsWidget input={input} />,
+        viewId: dashboardWidgetIds.shortcutHelp,
+        config: { size: "md", placement: "center", scrollBehavior: "inside" },
       });
 
       ctx.commands.registerCommand(
         { id: dashboardCommandIds.openShortcuts, label: "Keyboard shortcuts", category: "Help", icon: "CircleHelp" },
         {
-          execute: () =>
-            ctx.layout.openPanel(dashboardWidgetIds.shortcutHelp, { title: "Keyboard shortcuts", closable: true }),
+          execute: () => ctx.overlays.openOverlay(dashboardWidgetIds.shortcutHelp, { title: "Keyboard shortcuts" }),
         },
       );
       ctx.keybindings.registerKeybinding({
-        commandId: dashboardCommandIds.openShortcuts,
+        action: { kind: "command", commandId: dashboardCommandIds.openShortcuts },
         keybinding: DASHBOARD_HELP_SHORTCUT_KEYBINDING,
         when: "!inputFocus",
       });

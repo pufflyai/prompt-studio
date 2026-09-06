@@ -1,19 +1,22 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbench } from "@pstdio/workbench";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createHeadersModule } from "./module";
 
 describe("createHeadersModule", () => {
-  test("pins the project selector in the global navigation header", () => {
-    const workbench = createWorkbenchCore();
+  test("places the project selector in Nav Chrome without adding it to the Sidenav", async () => {
+    const workbench = createWorkbench();
 
     workbench.registerModule(createHeadersModule());
 
     expect(workbench.layout.listPanelInstances("nav")).toContainEqual(
       expect.objectContaining({
-        panelId: dashboardWidgetIds.projectHeader,
-        pinned: true,
+        viewId: dashboardWidgetIds.projectHeader,
+        closable: false,
       }),
     );
+    expect(
+      await workbench.navigationTrees.getSections({ kind: "mode", id: "project", extensionId: "pstdio" }, "header"),
+    ).toEqual([]);
   });
 });

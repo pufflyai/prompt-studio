@@ -22,11 +22,11 @@ import type {
   RuntimeKeybindingRecord,
   RuntimeModeRecord,
   RuntimeNavigationItemRecord,
+  RuntimeNavigationTreeRecord,
   RuntimePageRecord,
   RuntimePlacementRecord,
   RuntimeResourceHierarchyProviderRecord,
   RuntimeResourceKindRecord,
-  RuntimeResourceViewRecord,
   RuntimeSettingsPanelRecord,
   RuntimeSettingsSectionRecord,
   RuntimeSkillRecord,
@@ -107,7 +107,7 @@ export interface RuntimePrivateHandlerRecord {
   name: string;
   sourcePath: string;
   rendererId: string;
-  rendererKind: "commandPaletteResource" | "controls" | "dataTable" | "file" | "kanban" | "status" | "tree";
+  rendererKind: "commandPaletteResource" | "controls" | "dataTable" | "file" | "kanban" | "status" | "tab" | "tree";
   operation: string;
   // biome-ignore lint/suspicious/noExplicitAny: handler invoked with renderer-specific input
   handler: RendererCallback<any, any>;
@@ -216,11 +216,11 @@ export interface ExtensionRuntime {
   viewMenus: RuntimeViewMenuRecord[];
   placements: RuntimePlacementRecord[];
   navigationItems: RuntimeNavigationItemRecord[];
+  navigationTrees: RuntimeNavigationTreeRecord[];
   pages: RuntimePageRecord[];
   statusBarItems: RuntimeStatusBarItemRecord[];
   statuses: RuntimeStatusRecord[];
   resourceKinds: RuntimeResourceKindRecord[];
-  resourceViews: RuntimeResourceViewRecord[];
   resourceHierarchyProviders: RuntimeResourceHierarchyProviderRecord[];
   activityItems: RuntimeActivityItemRecord[];
   settingsSections: RuntimeSettingsSectionRecord[];

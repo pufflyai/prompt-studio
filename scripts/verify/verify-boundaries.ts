@@ -12,6 +12,7 @@
  */
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import { sourceImports } from "./source-imports";
 
 const ROOT = path.resolve(import.meta.dir, "../..");
 
@@ -22,7 +23,7 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
   "pstdio-file-types": [],
   "pstdio-paths": [],
   "pstdio-logging": ["pstdio-paths"],
-  "pstdio-db": ["pstdio-paths"],
+  "pstdio-db": ["pstdio-api-contracts", "pstdio-paths"],
   "pstdio-scheduler": [],
   "pstdio-wt": ["pstdio-file-types"],
   "pstdio-storage": ["pstdio-api-contracts", "pstdio-db", "pstdio-paths"],
@@ -50,10 +51,16 @@ const ALLOWED_WORKSPACE_DEPS: Record<string, string[]> = {
     "pstdio-paths",
     "pstdio-wt",
   ],
-  "@pstdio/ui": ["pstdio-file-types"],
+  "@pstdio/ui": ["@pstdio/sdk", "pstdio-file-types"],
   "@pstdio/workbench": ["@pstdio/sdk", "@pstdio/ui", "pstdio-api-contracts", "pstdio-extensions"],
   "pstdio-dashboard": ["@pstdio/sdk", "@pstdio/ui", "pstdio-api-contracts", "pstdio-extensions", "@pstdio/workbench"],
-  "pstdio-extension-testbench": ["@pstdio/sdk", "@pstdio/ui", "pstdio-extensions", "@pstdio/workbench"],
+  "pstdio-extension-testbench": [
+    "@pstdio/sdk",
+    "@pstdio/ui",
+    "pstdio-api-contracts",
+    "pstdio-extensions",
+    "@pstdio/workbench",
+  ],
   e2e: ["pstdio", "pstdio-api-contracts", "pstdio-db", "pstdio-extensions", "pstdio-wt"],
   "pstdio-scripts": ["pstdio-api-contracts", "pstdio-extensions"],
   "@pstdio/desktop": ["@pstdio/ui", "pstdio", "pstdio-logging", "pstdio-paths"],
@@ -70,13 +77,6 @@ const FORBIDDEN_SPECIFIERS: Record<string, string[]> = {
 
 // Generated packaging glue that intentionally reaches across package roots.
 const RELATIVE_ESCAPE_ALLOWLIST = ["packages/pstdio/src/_embed-manifest.generated.ts"];
-
-// Files whose template literals embed extension source code; the import scanner
-// cannot tell those strings from real imports.
-const FIXTURE_SOURCE_FILES = [
-  "packages/e2e/src/packaged/extension-fixtures.ts",
-  "packages/pstdio-api/src/features/extensions/install-extension-source-deps.test.ts",
-];
 
 const SKIP_DIRS = new Set(["node_modules", "dist", ".cache", "__test-tmp__", "_reference", "storybook-static"]);
 
@@ -143,18 +143,7 @@ const collectSourceFiles = (dir: string) => {
   return files;
 };
 
-const IMPORT_PATTERN =
-  /(?:import|export)\s[^"'`]*?from\s*["']([^"']+)["']|import\s*\(\s*["']([^"']+)["']|import\s+["']([^"']+)["']/g;
-
-const collectSpecifiers = (file: string) => {
-  const source = readFileSync(file, "utf8");
-  const specifiers: string[] = [];
-  for (const match of source.matchAll(IMPORT_PATTERN)) {
-    const specifier = match[1] ?? match[2] ?? match[3];
-    if (specifier) specifiers.push(specifier);
-  }
-  return specifiers;
-};
+const collectSpecifiers = (file: string) => sourceImports(readFileSync(file, "utf8"));
 
 const packageNameOf = (specifier: string, workspaceNames: Set<string>) => {
   const parts = specifier.split("/");
@@ -242,7 +231,6 @@ const checkSourceImports = (pkg: WorkspacePackage, workspaceNames: Set<string>, 
   const pkgRoot = path.join(ROOT, pkg.dir);
   for (const file of collectSourceFiles(pkgRoot)) {
     const relativeFile = path.relative(ROOT, file).replaceAll("\\", "/");
-    if (FIXTURE_SOURCE_FILES.includes(relativeFile)) continue;
     for (const specifier of collectSpecifiers(file)) {
       checkSpecifier(specifier, { pkg, pkgRoot, file, relativeFile, workspaceNames }, errors);
     }

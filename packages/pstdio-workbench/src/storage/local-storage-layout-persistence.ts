@@ -6,17 +6,16 @@ import {
   workbenchStoragePersistenceKey,
 } from "./local-storage-persistence-helpers";
 
-interface PersistedWorkbenchLayoutV3 {
-  version: 3;
+interface PersistedWorkbenchLayoutV4 {
+  version: 4;
   layout: WorkbenchLayout;
 }
 
-type PersistedWorkbenchLayout = PersistedWorkbenchLayoutV3;
+type PersistedWorkbenchLayout = PersistedWorkbenchLayoutV4;
 
-// Version 3 is the composition-resolver layout model (PS-267). Layouts persisted by
-// earlier versions carry replaced panel roles and bindings, so they are discarded
-// rather than interpreted.
-const WORKBENCH_LAYOUT_VERSION = 3 as const;
+// Version 4 stores ResourceRef identity keys and page Main collections. Only the
+// layout cache changes; routed locations and independent preferences stay valid.
+const WORKBENCH_LAYOUT_VERSION = 4 as const;
 const WORKBENCH_LAYOUT_INDEX_VERSION = 1 as const;
 const WORKBENCH_LAYOUT_RESOURCE_LIMIT = 50;
 
@@ -34,10 +33,7 @@ export const createLocalStorageLayoutPersistence = (
   input: CreateWorkbenchStoragePersistenceInput,
 ): LayoutPersistenceAdapter => {
   const storage = resolveStorage(input.storage);
-  const pending = new Map<
-    string,
-    { generation: number; legacyPanelsKey?: string; raw: string; scope: string | undefined }
-  >();
+  const pending = new Map<string, { generation: number; raw: string; scope: string | undefined }>();
   const debounceMs = input.debounceMs ?? 250;
   const eventTarget =
     input.eventTarget ??
@@ -122,7 +118,7 @@ export const createLocalStorageLayoutPersistence = (
     scopes.push(scope);
     for (const evictedScope of scopes.splice(0, Math.max(0, scopes.length - WORKBENCH_LAYOUT_RESOURCE_LIMIT))) {
       storage.removeItem?.(workbenchStoragePersistenceKey(input.namespace, "layout", evictedScope));
-      storage.removeItem?.(workbenchStoragePersistenceKey(input.namespace, "panels", evictedScope));
+      storage.removeItem?.(workbenchStoragePersistenceKey(input.namespace, "panel-menus", evictedScope));
     }
     writeScopes("layout-resource-index", projectId, scopes);
   };
@@ -138,7 +134,6 @@ export const createLocalStorageLayoutPersistence = (
       storage.setItem(workbenchStoragePersistenceKey(input.namespace, "layout", write.scope), write.raw);
       touchProjectScope(write.scope);
       touchResourceScope(write.scope);
-      if (write.legacyPanelsKey) storage.removeItem?.(write.legacyPanelsKey);
     }
   };
 
@@ -161,13 +156,11 @@ export const createLocalStorageLayoutPersistence = (
       return undefined;
     },
     setLayout: (layout, scope) => {
-      const persisted: PersistedWorkbenchLayoutV3 = { version: WORKBENCH_LAYOUT_VERSION, layout };
+      const persisted: PersistedWorkbenchLayoutV4 = { version: WORKBENCH_LAYOUT_VERSION, layout };
       const key = workbenchStoragePersistenceKey(input.namespace, "layout", scope);
-      const legacyPanelsKey = workbenchStoragePersistenceKey(input.namespace, "panels", scope);
       pending.delete(key);
       pending.set(key, {
         generation: getGeneration(),
-        legacyPanelsKey: storage.getItem(legacyPanelsKey) === null ? undefined : legacyPanelsKey,
         raw: JSON.stringify(persisted),
         scope,
       });
@@ -197,7 +190,7 @@ export const createLocalStorageLayoutPersistence = (
         }
         storage.setItem(
           key,
-          JSON.stringify({ version: WORKBENCH_LAYOUT_VERSION, layout } satisfies PersistedWorkbenchLayoutV3),
+          JSON.stringify({ version: WORKBENCH_LAYOUT_VERSION, layout } satisfies PersistedWorkbenchLayoutV4),
         );
       }
     },

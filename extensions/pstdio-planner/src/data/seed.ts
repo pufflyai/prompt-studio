@@ -171,7 +171,7 @@ export const HUMAN_REQUESTED_TAG: TagSeed = () => ({
   name: "Flags",
   type: "multi_select",
   sortOrder: 3,
-  options: [option("default-human-requested-true", "Human Requested", "purple", 0, "eye")],
+  options: [option("default-human-requested-true", "Review Needed", "gray", 0, "bell")],
 });
 
 // The stable workflow identity is authoritative. Display names may be customized,
@@ -180,9 +180,19 @@ const ensureHumanRequestedTag = async (storage: ExtensionStorageApi, existing: S
   const required = HUMAN_REQUESTED_TAG();
   const current = existing.find((candidate) => candidate.id === required.id);
   if (!current) return [...existing, await putTag(storage, required)];
-  if (current.options.some((candidate) => candidate.id === "default-human-requested-true")) return existing;
+  const defaultOption = required.options[0]!;
+  const currentOption = current.options.find((candidate) => candidate.id === defaultOption.id);
+  if (currentOption && currentOption.name !== "Human Requested") return existing;
 
-  const repaired = { ...current, options: [...current.options, required.options[0]!] };
+  const options = current.options.map((candidate) =>
+    candidate.id === defaultOption.id
+      ? { ...candidate, name: defaultOption.name, color: defaultOption.color, icon: defaultOption.icon }
+      : candidate,
+  );
+  const repaired = {
+    ...current,
+    options: currentOption ? options : [...options, defaultOption],
+  };
   await putTag(storage, repaired);
   return existing.map((candidate) => (candidate.id === repaired.id ? repaired : candidate));
 };

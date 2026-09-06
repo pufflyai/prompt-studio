@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ReactElement, ReactNode } from "react";
-import { createWorkbenchCore } from "../../core";
+import { createWorkbench } from "../../core";
 import { shouldFocusWorkbenchKeyboardFrame, WorkbenchSidePanelBoundary } from "./workbench-side-panel-boundary";
 import { WorkbenchAttachedSidePanelLayout } from "./workbench-side-panel-layout";
 
@@ -9,7 +9,7 @@ interface AttachedLayoutTestProps {
   contentPanel: ReactNode;
 }
 
-const workbench = createWorkbenchCore();
+const workbench = createWorkbench();
 
 const createTarget = (matchesInteractive: boolean) =>
   ({

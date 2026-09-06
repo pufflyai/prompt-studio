@@ -1,5 +1,5 @@
 import type { RendererCallback } from "./context";
-import type { JsonValue } from "./json";
+import type { ControlGroup, ControlParam, ControlValue, ControlValueMap } from "./control-declarations";
 import type { RendererContributionBase } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
 
@@ -12,22 +12,22 @@ export interface ControlsQueryParams {
 // Serializable control declarations returned by the query command. `params` and
 // `groups` mirror @pstdio/ui ParamEditor's shapes but stay JSON-safe on the wire.
 export interface ControlsQueryResult {
-  params?: JsonValue[];
-  groups?: JsonValue[];
-  values?: Record<string, JsonValue>;
+  params?: ControlParam[];
+  groups?: ControlGroup[];
+  values?: ControlValueMap;
   readOnly?: boolean;
 }
 
 export interface ControlsUpdateValueInput {
   renderer: RendererContext;
   controlId: string;
-  value: JsonValue;
-  values: Record<string, JsonValue>;
+  value: ControlValue;
+  values: ControlValueMap;
 }
 
 export interface ControlsApplyInput {
   renderer: RendererContext;
-  values: Record<string, JsonValue>;
+  values: ControlValueMap;
 }
 
 export interface ControlsResetInput {
@@ -35,17 +35,11 @@ export interface ControlsResetInput {
   controlIds?: string[];
 }
 
-/**
- * A reusable native control renderer backed by private callbacks, rendered through the host's
- * ParamEditor. The query callback loads the control declarations + current values; the
- * optional update/apply/reset callbacks persist edits (omitting both makes it read-only).
- * A `panel` places the renderer with `renderer: { kind: "controls", id: "<id>" }`, mirroring
- * `treeRenderer`/`fileRenderer` — the panel owns placement (resourceKind, surface, target).
- */
+/** A native controls view. Its query supplies serializable fields and their current values. */
 export interface ControlsRendererContribution extends RendererContributionBase {
   query: RendererCallback<ControlsQueryParams, ControlsQueryResult>;
   onValueChange?: RendererCallback<ControlsUpdateValueInput, unknown>;
   onApply?: RendererCallback<ControlsApplyInput, unknown>;
   onReset?: RendererCallback<ControlsResetInput, unknown>;
-  defaultValues?: Record<string, JsonValue>;
+  defaultValues?: ControlValueMap;
 }

@@ -24,6 +24,14 @@ const webviewBrowsers: { launchOptions?: LaunchOptions; name: string; type: Brow
   { name: "WebKit (Safari engine)", type: webkit },
 ];
 
+const findLabWebview = (metadata: WorkbenchExtensionMetadata) => {
+  const labPage = metadata.pages.find((page) => page.path === "lab");
+  if (labPage?.main.kind !== "view") return undefined;
+  const ref = labPage.main.view;
+  const view = metadata.views.find((view) => view.localId === ref.id && view.extensionId === ref.extensionId);
+  return view?.body.kind === "webview" ? view.body : undefined;
+};
+
 beforeAll(() => {
   if (!process.env.PSTDIO_PACKAGED_BINARY_PATH) buildBinary();
 }, BUILD_TIMEOUT);
@@ -43,7 +51,7 @@ describe("packaged extension webviews", () => {
         try {
           expect(browserAvailable).toBe(true);
           const started = await startPackagedServe(tempRoot, {
-            PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("extension-lab"),
+            PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture"),
             PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
           });
           child = started.child;
@@ -64,8 +72,7 @@ describe("packaged extension webviews", () => {
             });
             expect(metadataRes.status).toBe(200);
             const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
-            const labView = metadata.views.find((view) => view.path === "lab");
-            labWebview = labView?.body.kind === "webview" ? labView.body : undefined;
+            labWebview = findLabWebview(metadata);
             if (labWebview?.webview.moduleUrl) {
               const moduleRes = await fetch(`${started.baseUrl}${labWebview.webview.moduleUrl}`, {
                 headers: runtimeAuthorization(started.descriptor),
@@ -87,12 +94,14 @@ describe("packaged extension webviews", () => {
           await page.addInitScript(
             ({ projectId }) => {
               localStorage.setItem("onboarding-complete", "true");
-              localStorage.setItem("dashboard-wb:selected-project:global", projectId);
+              localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
             },
             { projectId: project.id },
           );
 
-          await page.goto(`${started.baseUrl}/projects/${project.id}/lab`, { waitUntil: "domcontentloaded" });
+          await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`, {
+            waitUntil: "domcontentloaded",
+          });
           const iframe = page.locator('iframe[title="Lab"]');
           await iframe.waitFor({ state: "visible", timeout: 30_000 });
           expect(await iframe.getAttribute("sandbox")).not.toContain("allow-same-origin");

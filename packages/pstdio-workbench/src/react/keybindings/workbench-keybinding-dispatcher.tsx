@@ -3,7 +3,7 @@ import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useTanStackWorkbenchHotkeys } from "./tanstack-hotkey-adapter";
 
 export interface WorkbenchHotkeyRegistration {
-  commandId: string;
+  id: string;
   hotkey: KeybindingSequence;
   enabled: boolean;
   ignoreInputs: boolean;
@@ -55,23 +55,34 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
   const { workbench, disabled = false, commandIds } = input;
   const allowedCommandIds = commandIds ? new Set(commandIds) : undefined;
 
-  return workbench.keybindings.listActiveKeybindings().flatMap((keybinding) => {
-    if (allowedCommandIds && !allowedCommandIds.has(keybinding.commandId)) return [];
-    const record = workbench.commands.getCommand(keybinding.commandId);
-    if (!record) return [];
-
-    const enabled =
-      !disabled &&
-      workbench.commands.isCommandVisible(record.command.id, keybinding.args) &&
-      workbench.commands.isCommandEnabled(record.command.id, keybinding.args);
-
+  return workbench.keybindings.listActiveKeybindings().flatMap((keybinding, index) => {
+    const action = keybinding.action;
+    if (action.kind === "command") {
+      if (allowedCommandIds && !allowedCommandIds.has(action.commandId)) return [];
+      const record = workbench.commands.getCommand(action.commandId);
+      if (!record) return [];
+      const enabled =
+        !disabled &&
+        workbench.commands.isCommandVisible(record.command.id, action.args) &&
+        workbench.commands.isCommandEnabled(record.command.id, action.args);
+      return [
+        {
+          id: record.command.id,
+          hotkey: normalizeWorkbenchKeybinding(keybinding.keybinding),
+          enabled,
+          ignoreInputs: true,
+          execute: () => workbench.navigation.openTarget(action),
+        } satisfies WorkbenchHotkeyRegistration,
+      ];
+    }
+    if (allowedCommandIds) return [];
     return [
       {
-        commandId: record.command.id,
+        id: `workbench.keybinding.${index}`,
         hotkey: normalizeWorkbenchKeybinding(keybinding.keybinding),
-        enabled,
+        enabled: !disabled,
         ignoreInputs: true,
-        execute: () => workbench.commands.executeCommand(record.command.id, keybinding.args),
+        execute: () => workbench.navigation.openTarget(action),
       } satisfies WorkbenchHotkeyRegistration,
     ];
   });

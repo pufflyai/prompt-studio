@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Struct } from "../extension-kernel";
-import { commandSourceSchema, extensionSlotKindSchema, jsonObjectSchema } from "./common";
+import { commandSourceSchema, extensionSlotKindSchema, jsonObjectSchema, serializableJsonObjectSchema } from "./common";
 import { workbenchAttachmentTargetSchema } from "./targets";
 
 export const extensionResourceRefSchema = z.object({
@@ -8,8 +8,9 @@ export const extensionResourceRefSchema = z.object({
   id: z.string(),
   projectId: z.string().optional(),
   label: z.string().optional(),
+  icon: z.string().optional(),
   extensionId: z.string().optional(),
-  metadata: jsonObjectSchema.optional(),
+  metadata: serializableJsonObjectSchema.optional(),
 });
 
 export const extensionRepoContextSchema = z.object({

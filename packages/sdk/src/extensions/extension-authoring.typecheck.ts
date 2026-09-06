@@ -17,14 +17,13 @@ import {
   definePlacement,
   defineResourceHierarchyProvider,
   defineResourceKind,
-  defineResourceView,
   defineView,
   eventRef,
   packageAsset,
   params,
   projectSlots,
-  resourceSlotRef,
-  workbenchSlots,
+  workbenchModes,
+  workbenchPages,
   workspaceSlots,
 } from "./index";
 
@@ -59,7 +58,12 @@ const extension = defineExtension({
       },
       async run(ctx, commandParams) {
         const ticket: string = commandParams.ticket;
-        const harness: { harnessId: string; model?: string } | undefined = commandParams.harness;
+        const harness:
+          | {
+              harnessId: string;
+              model?: string;
+            }
+          | undefined = commandParams.harness;
         const enabled: unknown = await ctx.settings.get("counter.enabled");
         const tone: unknown = await ctx.settings.get("greeting.tone");
         const session = await ctx.sessions.create({ title: "Inspect ticket", prompt: ticket });
@@ -73,14 +77,13 @@ const extension = defineExtension({
         void sessionType;
         void sessionTitle;
         void sessionStatus;
-
         // @ts-expect-error optional params must be checked before use
-        const requiredHarness: { harnessId: string } = commandParams.harness;
+        const requiredHarness: {
+          harnessId: string;
+        } = commandParams.harness;
         void requiredHarness;
-
         // @ts-expect-error command params are not stored on the context
         void ctx.params;
-
         // @ts-expect-error command params are passed only as the second handler argument
         void ctx.invocation.params;
       },
@@ -102,7 +105,6 @@ const extension = defineExtension({
         void shorthandWorktreePath;
         void removed;
         void packagedGuide;
-
         if (ctx.extensionFiles) await ctx.extensionFiles.writeText("cache/index.json", "{}");
         // @ts-expect-error packaged extension files are read-only
         await ctx.packageFiles.writeText("guide.md", "changed");
@@ -110,17 +112,21 @@ const extension = defineExtension({
     }),
   ],
 });
-
 void extension;
-
+// @ts-expect-error extension modes do not own the composed Sidenav panel
+defineMode({ id: "invalid-sidenav", label: "Invalid", regions: ["sidenav"] });
+definePlacement({
+  id: "invalid-sidenav",
+  mode: workbenchModes.project,
+  item: { kind: "view", view: { kind: "view", id: "invalid" }, presence: "open" },
+  // @ts-expect-error extension placements cannot create another Sidenav panel
+  region: "sidenav",
+});
 // @ts-expect-error alpha.4 contributions use arrays with explicit local ids
 defineExtension({ commands: { legacy: { title: "Legacy", run: async () => undefined } } });
-
 // @ts-expect-error alpha.4 middleware has no commandId alias
 defineExtension({ middlewares: [{ id: "legacy", commandId: "legacy.command", handler: async () => undefined }] });
-
 const invalidBooleanEnum = [true, "false"];
-
 const invalidSettingDeclarations = defineExtension({
   settings: {
     properties: {
@@ -139,20 +145,14 @@ const invalidSettingDeclarations = defineExtension({
     },
   },
 });
-
 void invalidSettingDeclarations;
-
-// @ts-expect-error legacy navigation slots are no longer exposed
+// @ts-expect-error removed navigation slots are not exposed
 void projectSlots.sidenavNav;
-
 // @ts-expect-error command palette contributions use command.palette
 void projectSlots.commandPanel;
-
-// @ts-expect-error legacy navigation slots are no longer exposed
+// @ts-expect-error removed navigation slots are not exposed
 void workspaceSlots.tabs;
-
 const sharedRendererResource: ResourceRef = { type: "ticket", id: "PS-1", projectId: "project-1" };
-
 const dataTableQueryParams: DataTableRendererQueryParams = {
   renderer: {
     rendererId: "lab.table",
@@ -176,22 +176,14 @@ const kanbanQueryParams: KanbanRendererQueryParams = {
 const treeQueryParams: TreeRendererQueryParams = { renderer: dataTableQueryParams.renderer };
 const fileLoadParams: FileRendererLoadParams = { renderer: dataTableQueryParams.renderer };
 const controlsQueryParams: ControlsQueryParams = { renderer: dataTableQueryParams.renderer };
-
 void dataTableQueryParams;
 void kanbanQueryParams;
 void treeQueryParams;
 void fileLoadParams;
 void controlsQueryParams;
-
 const ticketKind = defineResourceKind({
   id: "ticket",
-  surface: "primary",
-  slots: [
-    { id: "primary", cardinality: "one", access: "owner" },
-    { id: "inspector", cardinality: "many", access: "public" },
-  ],
 });
-const ticketPrimary = resourceSlotRef(ticketKind.ref, "primary");
 const ticketEditor = defineView({
   id: "editor",
   title: "Ticket editor",
@@ -214,46 +206,58 @@ const ticketsPage = definePage({
   title: "Tickets",
   path: "tickets",
   mode: reviewMode.ref,
+  parent: workbenchPages.start,
+  resource: {
+    kinds: [ticketKind.ref],
+  },
+  main: {
+    kind: "view",
+    view: ticketEditor.ref,
+    cardinality: "many",
+  },
   slots: [
-    { id: "ticket", role: "primary", region: "main", binding: { kind: ticketKind.ref, view: ticketEditor.ref } },
-    { id: "insights", role: "auxiliary", region: "side", view: ticketInsights.ref },
+    {
+      id: "insights",
+      region: "side",
+      item: {
+        kind: "view",
+        view: ticketInsights.ref,
+        presence: "open",
+      },
+    },
   ],
 });
-
 const insightsPanelTarget: NavigationTarget = { kind: "panel", panel: ticketsPage.panels.insights };
 void insightsPanelTarget;
-
 // @ts-expect-error primary page slots are not addressable panel targets
 void ticketsPage.panels.ticket;
-
 const compositionExtension = defineExtension({
   resourceKinds: [ticketKind],
   views: [ticketEditor, ticketInsights],
-  resourceViews: [
-    defineResourceView({
-      id: "editor",
-      resourceKind: ticketKind.ref,
-      slot: ticketPrimary,
-      view: ticketEditor.ref,
-    }),
-  ],
   modes: [reviewMode],
   pages: [ticketsPage],
   placements: [
     definePlacement({
       id: "editor",
       mode: reviewMode.ref,
-      item: { kind: "resource-slot", slot: ticketPrimary },
+      item: {
+        kind: "binding",
+        binding: {
+          kinds: [ticketKind.ref],
+          view: ticketEditor.ref,
+          cardinality: "one",
+        },
+      },
       region: "main",
-      required: true,
     }),
   ],
   navigationItems: [
     defineNavigationItem({
       id: "tickets-root",
-      slot: workbenchSlots.projectNavigation,
+      owner: workbenchModes.project,
+      slot: "content",
       label: "Tickets",
-      action: { kind: "resource", resource: { type: "ticket", id: "root" } },
+      action: { kind: "page", page: ticketsPage.ref, resource: { type: "ticket", id: "root" } },
     }),
   ],
   resourceHierarchyProviders: [
@@ -264,24 +268,40 @@ const compositionExtension = defineExtension({
     }),
   ],
 });
-
 void compositionExtension;
-
 const navigationTarget: NavigationTarget = {
   kind: "page",
   page: ticketsPage.ref,
   resource: { type: "ticket", id: "PS-1" },
 };
 void navigationTarget;
-
 definePlacement({
   id: "invalid",
   mode: reviewMode.ref,
-  item: { kind: "view", view: ticketEditor.ref },
+  item: { kind: "view", view: ticketEditor.ref, presence: "open" },
   // @ts-expect-error mode recipes accept only declared docked regions
   region: "overlay",
 });
-
+definePlacement({
+  id: "invalid-presence",
+  mode: reviewMode.ref,
+  // @ts-expect-error static placement items must declare a presence
+  item: { kind: "view", view: ticketEditor.ref },
+  region: "main",
+});
+definePlacement({
+  id: "invalid-cardinality",
+  mode: reviewMode.ref,
+  item: {
+    kind: "binding",
+    // @ts-expect-error resource bindings must declare a cardinality
+    binding: {
+      kinds: [ticketKind.ref],
+      view: ticketEditor.ref,
+    },
+  },
+  region: "main",
+});
 // @ts-expect-error local events use typed refs; raw strings must be namespaced
 const invalidLocalEventReference: RendererEventReference = "changed";
 void invalidLocalEventReference;

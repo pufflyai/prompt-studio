@@ -3,6 +3,7 @@ import { Header, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { workbenchTopHeaderLeadingMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import { WorkbenchBreadcrumbView } from "../breadcrumb/breadcrumb-view";
+import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
 import { WorkbenchRegion } from "../region/region";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -49,9 +50,7 @@ interface WorkbenchNavigationControlsProps {
 
 const WorkbenchNavigationControls = (props: WorkbenchNavigationControlsProps) => {
   const { workbench, regionControls } = props;
-  const history = useWorkbenchStore(workbench.history.store, (state) => state);
-  const canNavigateBack = !history.hydrating && history.cursor > 0;
-  const canNavigateForward = !history.hydrating && history.cursor >= 0 && history.cursor < history.entries.length - 1;
+  const history = useWorkbenchStore(workbench.pageLocations.historyStore, (state) => state);
 
   return (
     <HStack gap="2xs" flexShrink={0}>
@@ -63,8 +62,8 @@ const WorkbenchNavigationControls = (props: WorkbenchNavigationControlsProps) =>
           size="xs"
           variant="ghost"
           aria-label="Navigate back"
-          disabled={!canNavigateBack}
-          onClick={() => workbench.history.goBack()}
+          disabled={!history.canGoBack}
+          onClick={() => workbench.pageLocations.goBack()}
         >
           <WorkbenchIcon name="ArrowLeft" size={14} />
         </IconButton>
@@ -74,8 +73,8 @@ const WorkbenchNavigationControls = (props: WorkbenchNavigationControlsProps) =>
           size="xs"
           variant="ghost"
           aria-label="Navigate forward"
-          disabled={!canNavigateForward}
-          onClick={() => workbench.history.goForward()}
+          disabled={!history.canGoForward}
+          onClick={() => workbench.pageLocations.goForward()}
         >
           <WorkbenchIcon name="ArrowRight" size={14} />
         </IconButton>
@@ -98,8 +97,20 @@ const WorkbenchRegionControls = (props: { controls: WorkbenchNavRegionControl[] 
 
 export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
   const { workbench, hasNav, regionControls } = props;
+  const chrome = useModeChrome(workbench, "nav");
   const sidenavControls = regionControls.filter((control) => control.id === "sidenav");
   const trailingRegionControls = regionControls.filter((control) => control.id !== "sidenav");
+
+  if (chrome === false) return null;
+  if (chrome)
+    return (
+      <Header data-workbench-region="nav" variant="main" padding="0" flexShrink={0}>
+        <Box flex="1" minW="0" h="full" overflow="hidden">
+          <ModeChromeView workbench={workbench} viewId={chrome} region="nav" />
+        </Box>
+        <WorkbenchRegionControls controls={regionControls} />
+      </Header>
+    );
 
   return (
     <Header

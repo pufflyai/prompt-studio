@@ -4,8 +4,8 @@ import {
   type MenuPath,
   resourceContextMenuPath,
   workbenchCommandPaletteMenuPath,
-  workbenchResourceKindContextKey,
   workbenchResourceMetadataContextKey,
+  workbenchResourceTypeContextKey,
   workbenchTopHeaderTrailingMenuPath,
   workbenchViewIdContextKey,
 } from "@pstdio/workbench";
@@ -22,6 +22,7 @@ export const projectCommandPanelSlotId = "project.commandPanel";
 export const dashboardActiveResourceKindContextKey = "dashboard.activeResource.kind";
 export const dashboardActiveResourceIdContextKey = "dashboard.activeResource.id";
 export const dashboardActiveResourceMetadataContextKey = (key: string) => `dashboard.activeResource.metadata.${key}`;
+export const dashboardEditableTemplatesContextKey = "dashboard.templates.editable";
 
 export type DashboardExtensionMetadata = ResolvedWorkbenchExtensionMetadata;
 type ExtensionMenuContribution = DashboardExtensionMetadata["menuContributions"][number];
@@ -130,7 +131,7 @@ export const buildDashboardWorkbenchWhenExpression = (when: ExtensionMenuContrib
   if (!when) return undefined;
 
   const resourceTypeTerms =
-    when.resourceType?.map((resourceType) => `${workbenchResourceKindContextKey} == ${contextValue(resourceType)}`) ??
+    when.resourceType?.map((resourceType) => `${workbenchResourceTypeContextKey} == ${contextValue(resourceType)}`) ??
     [];
   const metadataTerms = Object.entries(when.metadata ?? {})
     .filter((entry): entry is [string, string | number | boolean] => isContextPrimitive(entry[1]))
@@ -188,7 +189,7 @@ export const buildDashboardExtensionMenuRegistrations = (metadata: DashboardExte
       const resourceKind = contribution.target ? undefined : resourceKindsBySlotId.get(contribution.slotId);
       const defaultWhen =
         resourceKind && resourceKind !== "project"
-          ? `${workbenchResourceKindContextKey} == ${contextValue(resourceKind)}`
+          ? `${workbenchResourceTypeContextKey} == ${contextValue(resourceKind)}`
           : undefined;
       const contributionWhen = buildDashboardWorkbenchWhenExpression(contribution.when);
       return [defaultWhen, contributionWhen].filter(Boolean).join(" && ") || undefined;

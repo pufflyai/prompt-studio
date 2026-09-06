@@ -1,0 +1,55 @@
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
+import * as CommandParameterStories from "./command-params-dialog.stories";
+import { commandParamsSources } from "./command-params-dialog-source";
+
+<Meta of={CommandParameterStories} name="Guide" />
+
+# Command parameters
+
+Command parameter schemas describe values that must be collected before a command runs. The workbench renders one
+shared dialog from the schema, applies defaults, validates required values, and passes normalized arguments to the
+command handler.
+
+Each example now lives on this guide page. Press **Open parameter form** to try it, then compare the schema with the
+form the workbench created.
+
+## One number
+
+Use a number parameter when a command needs a count or limit.
+
+<Canvas of={CommandParameterStories.NumberParameter} sourceState="none" />
+
+<Source code={commandParamsSources.number} language="tsx" />
+
+## A real command form
+
+This example combines a template picker with optional long text. The command receives both values in its parameter
+object.
+
+<Canvas of={CommandParameterStories.RefineTicket} sourceState="none" />
+
+<Source code={commandParamsSources.refineTicket} language="tsx" />
+
+## Shared control types
+
+Text, selection, multiple selection, number, boolean, and long text fields all come from the same parameter schema.
+
+<Canvas of={CommandParameterStories.EveryControl} sourceState="none" />
+
+<Source code={commandParamsSources.everyControl} language="tsx" />
+
+## Files
+
+The files parameter lets the host upload selected files before the command runs. The command receives file references,
+not browser file objects.
+
+<Canvas of={CommandParameterStories.FilesParameter} sourceState="none" />
+
+<Source code={commandParamsSources.files} language="tsx" />
+
+## Rules
+
+Define parameters on the command. Do not build another form beside the command surface.
+
+Parameters with `resolvedFrom: "resource"` are supplied by the active resource and are not shown to the user. Use host
+field renderers only for structured parameter types that the shared editor cannot render.

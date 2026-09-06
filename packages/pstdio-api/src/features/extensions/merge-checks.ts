@@ -78,7 +78,6 @@ const mergeKeybindings = (target: ExtensionsCheckResponse, source: ExtensionsChe
       addDiagnostic(target, {
         code: "duplicate_keybinding_chord",
         extensionId: binding.extensionId,
-        commandId: binding.commandId,
         message: `Keybinding "${binding.id}" duplicates "${duplicate.existing.id}" on ${duplicate.platform} (canonical chord "${duplicate.canonicalChord}")`,
         severity: "warning",
         metadata: {
@@ -114,9 +113,9 @@ export const mergeCheck = (target: ExtensionsCheckResponse, source: ExtensionsCh
   target.viewMenus.push(...source.viewMenus);
   target.placements.push(...source.placements);
   target.resourceKinds.push(...source.resourceKinds);
-  target.resourceViews.push(...source.resourceViews);
   target.resourceHierarchyProviders?.push(...(source.resourceHierarchyProviders ?? []));
   target.navigationItems.push(...source.navigationItems);
+  target.navigationTrees.push(...source.navigationTrees);
   target.statusBarItems.push(...source.statusBarItems);
   target.statuses.push(...source.statuses);
   target.activityItems?.push(...(source.activityItems ?? []));

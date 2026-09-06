@@ -23,7 +23,13 @@ describe("normalizeExtensionSources keybindings", () => {
     const command = defineCommand({ id: "hello", title: "Hello", async run() {} });
     const definition = defineExtension({
       commands: [command],
-      keybindings: [defineKeybinding({ id: "hello", key: "mod+shift+h", command: command.ref })],
+      keybindings: [
+        defineKeybinding({
+          id: "hello",
+          key: "mod+shift+h",
+          action: { kind: "command", target: { command: command.ref } },
+        }),
+      ],
     });
 
     const runtime = normalizeExtensionSources([source(definition)]);
@@ -31,7 +37,10 @@ describe("normalizeExtensionSources keybindings", () => {
     expect(runtime.diagnostics).toEqual([]);
     expect(runtime.keybindings[0]).toMatchObject({
       id: "pstdio.lab.keybinding.hello",
-      commandId: "pstdio.lab.command.hello",
+      action: {
+        kind: "command",
+        target: { command: { extensionId: "pstdio.lab", kind: "command", id: "hello" } },
+      },
       canonicalChord: "Mod+Shift+H",
     });
   });
@@ -41,8 +50,8 @@ describe("normalizeExtensionSources keybindings", () => {
     const definition = defineExtension({
       commands: [command],
       keybindings: [
-        defineKeybinding({ id: "first", key: "cmd+P", command: command.ref }),
-        defineKeybinding({ id: "second", key: "mod+P", command: command.ref }),
+        defineKeybinding({ id: "first", key: "cmd+P", action: { kind: "command", target: { command: command.ref } } }),
+        defineKeybinding({ id: "second", key: "mod+P", action: { kind: "command", target: { command: command.ref } } }),
       ],
     });
 

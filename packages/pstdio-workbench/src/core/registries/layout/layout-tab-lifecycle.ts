@@ -76,15 +76,15 @@ const removePlacements = (layout: WorkbenchLayout, shouldRemove: (placement: Wor
         .find((placement) => placement.widgetId === nextLayout.activeWidgetId)
     : undefined;
   if (!activePlacement) {
-    nextLayout = { ...nextLayout, activeWidgetId: undefined, activeResourceUri: undefined };
+    nextLayout = { ...nextLayout, activeWidgetId: undefined, activeResourceKey: undefined };
   }
   return nextLayout;
 };
 
-export const expirePreviewTabsInLayout = (layout: WorkbenchLayout, ownerResourceUri?: string) =>
+export const expirePreviewTabsInLayout = (layout: WorkbenchLayout, ownerResourceKey?: string) =>
   removePlacements(
     layout,
     (placement) =>
       placement.tabRetention === "preview" &&
-      (ownerResourceUri === undefined || placement.ownerResourceUri !== ownerResourceUri),
+      (ownerResourceKey === undefined || placement.ownerResourceKey !== ownerResourceKey),
   );

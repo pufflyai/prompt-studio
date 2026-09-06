@@ -59,10 +59,9 @@ const deleteEntryAction = (
   label: type === "directory" ? "Delete folder" : "Delete file",
   icon: "Trash2",
   run: () => {
-    ctx.layout.openPanel(dashboardWidgetIds.deleteWorkspaceEntry, {
+    ctx.overlays.openOverlay(dashboardWidgetIds.deleteWorkspaceEntry, {
       title: type === "directory" ? "Delete folder" : "Delete file",
       resource: workspaceDeleteResource(resource, path, type),
-      closable: true,
     });
   },
 });
@@ -237,7 +236,7 @@ export const loadWorkspaceFileEntries = async (
   const nodes = response.entries.map((entry) =>
     fileNode(ctx, resource, entry, actions, { change: changeByPath.get(entry.path), revealInFinder }),
   );
-  if (pendingCreation?.workspaceId === workspaceId && pendingCreation.parentPath === path) {
+  if (pendingCreation && pendingCreation.workspaceId === workspaceId && pendingCreation.parentPath === path) {
     nodes.unshift(inlineCreateNode(resource, path, pendingCreation.type, actions));
   }
   if (response.truncated) {

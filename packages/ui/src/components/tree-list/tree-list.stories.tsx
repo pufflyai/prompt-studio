@@ -405,9 +405,9 @@ const customizationSections: TreeListSection[] = [
 ];
 
 const customizationMenuItems = {
-  headerNodes: customizationHeaderNodes,
+  headerSections: [{ id: "header", nodes: customizationHeaderNodes }],
   sections: customizationSections,
-  footerNodes: customizationFooterNodes,
+  footerSections: [{ id: "footer", nodes: customizationFooterNodes }],
 };
 const customizationMenuIcons = { visibleIcon: <Check size={14} />, hiddenIcon: <Check size={14} /> };
 

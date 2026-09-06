@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { resourceKey } from "@pstdio/sdk/extensions";
 import { publishExtensionCommandEvent, subscribeToExtensionEventFeed } from "./extension-webview-broadcast";
 
 describe("extension event feed", () => {
@@ -37,7 +38,7 @@ describe("extension event feed", () => {
         outcome: { ok: true, status: "success" },
       },
       {
-        resourceUri: "dashboard-workbench://ticket/ticket-1",
+        resourceKey: resourceKey({ type: "ticket", id: "ticket-1" }),
         origin: {
           rendererId: "planner.ticketContent",
           instanceId: "planner.ticketEditor:1",
@@ -50,7 +51,7 @@ describe("extension event feed", () => {
     expect(received).toEqual([
       {
         id: "tickets.changed",
-        resourceUri: "dashboard-workbench://ticket/ticket-1",
+        resourceKey: resourceKey({ type: "ticket", id: "ticket-1" }),
         origin: {
           rendererId: "planner.ticketContent",
           instanceId: "planner.ticketEditor:1",

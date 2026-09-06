@@ -49,8 +49,8 @@ const afterTwoFrames = (page: import("@playwright/test").Page) =>
 const preparePage = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
     window.__ps168InteractionStarts = {};
     const recordStart = (event: Event) => {
       const element = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-ps168-action]") : null;

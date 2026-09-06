@@ -3,7 +3,6 @@ import { headerTrailingMenuPath, type WorkbenchModuleContext, type WorkbenchModu
 import { AttributeEditor } from "./attribute-editor";
 import {
   kanbanRendererStoryEditorWidgetId,
-  kanbanRendererStoryRendererId,
   kanbanRendererStoryViewKind,
   kanbanRendererStoryWidgetId,
   type StoryRow,
@@ -12,7 +11,6 @@ import {
 } from "./mock-data";
 
 const configureAttributesCommandId = "kanban-renderer.story.configureAttributes";
-
 const defaultSettings = {
   viewMode: "board",
   columnGrouping: "status",
@@ -20,7 +18,6 @@ const defaultSettings = {
   ordering: { attributeId: "updated", direction: "desc" },
   displayProperties: ["status", "assignee", "priority"],
 } satisfies Partial<KanbanRendererSettings>;
-
 const resolveBoardColumnConfig = (groupKey: string) => {
   const status = storySchemaStore.getAttributes().find((attribute) => attribute.id === "status");
   if (!status || status.type.kind !== "enum") {
@@ -31,25 +28,20 @@ const resolveBoardColumnConfig = (groupKey: string) => {
   if (!option) return { color: "gray", canDragIn: true, canDragOut: true, canCreate: true };
   return { color: option.color, canDragIn: true, canDragOut: true, canCreate: true };
 };
-
 const reorderRows = (items: StoryRow[], rowId: string, beforeRowId?: string) => {
   const moving = items.find((row) => row.id === rowId);
   if (!moving) return items;
-
   const remaining = items.filter((row) => row.id !== rowId);
   const beforeIndex = beforeRowId ? remaining.findIndex((row) => row.id === beforeRowId) : -1;
   const insertIndex = beforeIndex === -1 ? remaining.length : beforeIndex;
-
   return [...remaining.slice(0, insertIndex), moving, ...remaining.slice(insertIndex)];
 };
-
 const createStoryRowsStore = () => {
   let rows = storyRows;
   const listeners = new Set<() => void>();
   const notify = () => {
     for (const listener of listeners) listener();
   };
-
   return {
     getRows: () => rows,
     updateAttribute: (rowId: string, attributeId: string, value: unknown) => {
@@ -70,21 +62,20 @@ const createStoryRowsStore = () => {
     },
   };
 };
-
 const registerSchemaEditor = (ctx: WorkbenchModuleContext) => {
-  ctx.layout.registerPanel({
+  ctx.views.registerView({
     id: kanbanRendererStoryEditorWidgetId,
     title: "Configure attributes",
-    region: "overlay",
-    singleton: true,
-    rendererId: kanbanRendererStoryEditorWidgetId,
+    body: {
+      kind: "react",
+      render: () => <AttributeEditor />,
+    },
+  });
+  ctx.overlays.registerOverlay({
+    id: kanbanRendererStoryEditorWidgetId,
+    viewId: kanbanRendererStoryEditorWidgetId,
     config: { size: "lg", placement: "center", scrollBehavior: "inside" },
   });
-  ctx.renderers.registerRenderer({
-    id: kanbanRendererStoryEditorWidgetId,
-    render: () => <AttributeEditor />,
-  });
-
   ctx.commands.registerCommand(
     {
       id: configureAttributesCommandId,
@@ -93,7 +84,7 @@ const registerSchemaEditor = (ctx: WorkbenchModuleContext) => {
       icon: "settings",
     },
     {
-      execute: () => ctx.layout.openPanel(kanbanRendererStoryEditorWidgetId),
+      execute: () => ctx.overlays.openOverlay(kanbanRendererStoryEditorWidgetId),
     },
   );
   ctx.layout.registerMenuItem(headerTrailingMenuPath("main"), {
@@ -102,34 +93,37 @@ const registerSchemaEditor = (ctx: WorkbenchModuleContext) => {
     order: 10,
   });
 };
-
 export const createKanbanRendererStoryModule = (): WorkbenchModuleContribution => ({
   id: "kanban-renderer.story",
   activate(ctx) {
     const rowsStore = createStoryRowsStore();
-
-    ctx.renderers.registerKanbanRenderer({
-      id: kanbanRendererStoryRendererId,
-      title: "Rows",
-      resourceKind: kanbanRendererStoryViewKind,
-      attributes: storySchemaStore.source,
-      defaultSettings,
-      getBoardColumnConfig: resolveBoardColumnConfig,
-      executeQuery: () => rowsStore.getRows(),
-      subscribe: rowsStore.subscribe,
-      onAttributeChange: rowsStore.updateAttribute,
-      onReorder: rowsStore.reorder,
-    });
-
-    registerSchemaEditor(ctx);
-
-    ctx.layout.registerPanel({
+    ctx.views.registerView({
       id: kanbanRendererStoryWidgetId,
       title: "Rows",
-      region: "main",
-      rendererId: kanbanRendererStoryRendererId,
-      singleton: true,
+      body: {
+        kind: "kanban",
+        resourceKind: kanbanRendererStoryViewKind,
+        attributes: storySchemaStore.source,
+        defaultSettings,
+        getBoardColumnConfig: resolveBoardColumnConfig,
+        executeQuery: () => rowsStore.getRows(),
+        subscribe: rowsStore.subscribe,
+        onAttributeChange: rowsStore.updateAttribute,
+        onReorder: rowsStore.reorder,
+      },
     });
-    ctx.layout.openPanel(kanbanRendererStoryWidgetId, { title: "Rows" });
+    registerSchemaEditor(ctx);
+    ctx.shellPlacements.registerPlacement({
+      id: kanbanRendererStoryWidgetId,
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: kanbanRendererStoryWidgetId,
+        },
+      },
+      region: "main",
+    });
   },
 });

@@ -92,10 +92,10 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
       .poll(() => first?.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState()))
       .toMatchObject({ selectedProjectId: projectId });
     const firstState = await first.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState());
-    const lastResource = firstState.lastResources[projectId];
-    expect(JSON.parse(lastResource ?? "null")).toMatchObject({
-      id: "workspaces",
-      kind: "dashboard-view",
+    const pageLocation = firstState.pageLocations[projectId];
+    expect(JSON.parse(pageLocation ?? "null")).toMatchObject({
+      version: 1,
+      location: { page: { id: "workspaces", kind: "page" } },
     });
 
     const originalPid = first.runtime.pid;
@@ -121,7 +121,7 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     expect(second.runtime.pid).toBe(originalPid);
     expect(second.runtime.ownerType).toBe("persistent");
     expect(await second.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState())).toMatchObject({
-      lastResources: { [projectId]: lastResource },
+      pageLocations: { [projectId]: pageLocation },
       selectedProjectId: projectId,
     });
     expect(

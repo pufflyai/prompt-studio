@@ -4,11 +4,12 @@ import {
   defineExtension,
   defineMode,
   defineNavigationItem,
+  defineNavigationTree,
+  definePage,
   definePlacement,
   defineView,
   packageAsset,
   workbenchModes,
-  workbenchSlots,
 } from "@pstdio/sdk/extensions";
 import { collectConventionDiagnostics } from "./conventions";
 import type { LoadedExtensionSource } from "./loader";
@@ -24,11 +25,10 @@ const wrap = (name: string, definition: LoadedExtensionSource["definition"]): Lo
     version: "1.0.0",
     publisher: "pstdio",
     main: "./extension.ts",
-    enginesPstdio: "1.0.0-alpha.7",
+    enginesPstdio: "1.0.0-alpha.8",
   },
   definition,
 });
-
 describe("extension convention diagnostics", () => {
   test("flags unknown icon names", () => {
     const runtime = normalizeExtensionSources([
@@ -43,12 +43,10 @@ describe("extension convention diagnostics", () => {
         }),
       ),
     ]);
-
     const diagnostics = collectConventionDiagnostics(runtime).filter((item) => item.code === "extension_icon_unknown");
     expect(diagnostics).toHaveLength(1);
     expect(diagnostics[0]?.metadata).toMatchObject({ icon: "definitely-not-an-icon" });
   });
-
   test("accepts dotted kebab-case local ids", () => {
     const runtime = normalizeExtensionSources([
       wrap(
@@ -61,13 +59,11 @@ describe("extension convention diagnostics", () => {
         }),
       ),
     ]);
-
     const diagnostics = collectConventionDiagnostics(runtime).filter(
       (item) => item.code === "extension_contribution_id_invalid",
     );
     expect(diagnostics).toEqual([]);
   });
-
   test("rejects camelCase and snake_case local ids with the grammar", () => {
     const runtime = normalizeExtensionSources([
       wrap(
@@ -80,7 +76,6 @@ describe("extension convention diagnostics", () => {
         }),
       ),
     ]);
-
     const diagnostics = collectConventionDiagnostics(runtime).filter(
       (item) => item.code === "extension_contribution_id_invalid",
     );
@@ -88,7 +83,6 @@ describe("extension convention diagnostics", () => {
     expect(diagnostics.map((item) => item.metadata?.invalidId).sort()).toEqual(["ticketStatus.create", "use_reports"]);
     expect(diagnostics[0]?.message).toContain("kebab-case");
   });
-
   test("flags dangling typed command and view references", () => {
     const view = defineView({
       id: "existing",
@@ -103,7 +97,8 @@ describe("extension convention diagnostics", () => {
           navigationItems: [
             defineNavigationItem({
               id: "dangling-command",
-              slot: workbenchSlots.projectNavigation,
+              owner: workbenchModes.project,
+              slot: "content",
               label: "Dangling command",
               action: { kind: "command", target: { command: { kind: "command", id: "missing" } } },
             }),
@@ -112,14 +107,13 @@ describe("extension convention diagnostics", () => {
             definePlacement({
               id: "dangling-view",
               mode: workbenchModes.project,
-              item: { kind: "view", view: { kind: "view", id: "missing" } },
+              item: { kind: "view", view: { kind: "view", id: "missing" }, presence: "open" },
               region: "main",
             }),
           ],
         }),
       ),
     ]);
-
     expect(collectConventionDiagnostics(runtime)).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -129,6 +123,61 @@ describe("extension convention diagnostics", () => {
         expect.objectContaining({
           code: "extension_view_reference_missing",
           metadata: expect.objectContaining({ failedReference: "pstdio.lab.view.missing" }),
+        }),
+      ]),
+    );
+  });
+  test("flags missing navigation owners and non-tree navigation views", () => {
+    const pageView = defineView({
+      id: "page",
+      title: "Page",
+      body: { kind: "webview", entry: packageAsset("./page.tsx", "file:///fake/lab/") },
+    });
+    const page = definePage({
+      id: "existing",
+      title: "Existing",
+      path: "existing",
+      mode: workbenchModes.project,
+      main: {
+        kind: "view",
+        view: pageView.ref,
+        cardinality: "one",
+      },
+      slots: [],
+    });
+    const runtime = normalizeExtensionSources([
+      wrap(
+        "lab",
+        defineExtension({
+          views: [pageView],
+          pages: [page],
+          navigationItems: [
+            defineNavigationItem({
+              id: "missing-owner",
+              owner: { kind: "page", id: "missing" },
+              label: "Missing owner",
+              action: { kind: "page", page: page.ref },
+            }),
+          ],
+          navigationTrees: [
+            defineNavigationTree({
+              id: "wrong-view-kind",
+              owner: page.ref,
+              view: pageView.ref,
+            }),
+          ],
+        }),
+      ),
+    ]);
+    expect(collectConventionDiagnostics(runtime)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "extension_navigation_owner_missing",
+          metadata: expect.objectContaining({ failedReference: "pstdio.lab.page.missing" }),
+        }),
+        expect.objectContaining({
+          code: "extension_navigation_tree_view_invalid",
+          metadata: expect.objectContaining({ failedReference: "pstdio.lab.view.page" }),
         }),
       ]),
     );

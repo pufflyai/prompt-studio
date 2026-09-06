@@ -26,7 +26,7 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
 
 const createProjectViaApi = async (request: import("@playwright/test").APIRequestContext, name: string) => {
   const res = await request.post(`${apiBase}/v1/projects`, {
-    data: { name, agents: ["pstdio.extension-lab.harness.fake"] },
+    data: { name, agents: ["pstdio.workbench-fixture.harness.fake"] },
   });
   expect(res.ok()).toBe(true);
   return (await res.json()) as { id: string; name: string };
@@ -35,11 +35,11 @@ const createProjectViaApi = async (request: import("@playwright/test").APIReques
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("dashboard-wb:selected-project:global", selectedProjectId);
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
+    localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
     localStorage.setItem(
       `pstdio-dashboard:command-params:recent-harness:${selectedProjectId}`,
-      JSON.stringify({ harnessId: "pstdio.extension-lab.harness.fake" }),
+      JSON.stringify({ harnessId: "pstdio.workbench-fixture.harness.fake" }),
     );
   }, projectId);
 };

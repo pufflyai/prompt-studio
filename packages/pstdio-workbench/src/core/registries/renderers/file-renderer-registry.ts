@@ -37,7 +37,7 @@ export interface FileRendererRefreshOrigin {
 }
 
 export interface FileRendererRefreshEnvelope {
-  resourceUri?: string;
+  resourceKey?: string;
   origin?: FileRendererRefreshOrigin;
   revision?: string;
 }

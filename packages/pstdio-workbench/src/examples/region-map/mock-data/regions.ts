@@ -1,12 +1,9 @@
 import { getSurface, type ResourceRef, type WorkbenchRegion } from "../../../core";
-
 export const regionResourceKind = "workbench-region";
 export const regionMapRendererId = "region-map.placeholder";
-
 export const regionLabels = {
   nav: "Nav (top chrome)",
   activity: "Activity bar",
-  "sidenav-header": "Sidenav header",
   sidenav: "Sidenav",
   "main-header": "Main header region",
   "main-left-menu": "Main left menu",
@@ -23,24 +20,19 @@ export const regionLabels = {
   side: "Side Panel",
   "side-right-menu": "Side right menu",
 } as const satisfies Record<WorkbenchRegion, string>;
-
 interface RegionResourceInput {
   id?: string;
   uri?: string;
   label?: string;
 }
-
 export const createRegionResource = (region: WorkbenchRegion, input: RegionResourceInput = {}): ResourceRef => ({
-  kind: regionResourceKind,
+  type: regionResourceKind,
   id: input.id ?? region,
-  uri: input.uri ?? `pstdio://region-map/${region}`,
   label: input.label ?? regionLabels[region],
   icon: "SquareDashed",
   metadata: { region },
 });
-
 export const regionWidgetId = (region: WorkbenchRegion) => `region-map.${region}`;
-
 // Describes a surface by its role in the resource-projected model, so the map reads as
 // anchors / projections / chrome / transient rather than a flat list of regions. The
 // per-panel header strips are shown as the header region of their content region.

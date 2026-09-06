@@ -8,9 +8,7 @@ const webview = (path: string, id: string) => ({
   runtimeUrl: "/v1/extensions/runtime",
   moduleUrl: `/v1/extensions/installed/extension-lab/webviews/${id}/module.js`,
 });
-
 export const emptyAppearance = { themes: [], fileIconThemes: [], translations: [], diagnostics: [] };
-
 export const metadata = {
   extensions: [{ id: labExtensionId, name: "extension-lab", displayName: "Extension Lab", sourcePath: "" }],
   commands: [
@@ -21,13 +19,27 @@ export const metadata = {
   menuContributions: [],
   commandPaletteContributions: [],
   modes: [],
-  pages: [],
+  pages: [
+    {
+      id: `${labExtensionId}.page.labPage`,
+      localId: "labPage",
+      extensionId: labExtensionId,
+      title: "Lab",
+      path: "lab",
+      mode: ref("pstdio", "mode", "project"),
+      main: {
+        kind: "view",
+        view: ref(labExtensionId, "view", "labPage"),
+        cardinality: "one",
+      },
+      slots: [],
+    },
+  ],
   views: [
     {
       id: `${labExtensionId}.view.labPage`,
       localId: "labPage",
       extensionId: labExtensionId,
-      path: "lab",
       title: "Lab",
       body: { kind: "webview", webview: webview("./src/main.tsx", "labPage") },
     },
@@ -35,19 +47,20 @@ export const metadata = {
   viewMenus: [],
   placements: [],
   resourceKinds: [],
-  resourceViews: [],
   resourceHierarchyProviders: [],
   navigationItems: [
     {
       id: `${labExtensionId}.navigation-item.labPage`,
       extensionId: labExtensionId,
-      slot: ref("pstdio", "navigation-item", "project.navigation"),
+      owner: ref("pstdio", "mode", "project"),
+      slot: "content",
       group: "Lab",
       label: "Lab",
       icon: "flask-conical",
-      action: { kind: "view", view: ref(labExtensionId, "view", "labPage") },
+      action: { kind: "page", page: ref(labExtensionId, "page", "labPage") },
     },
   ],
+  navigationTrees: [],
   statusBarItems: [],
   statuses: [],
   activityItems: [],
@@ -57,13 +70,11 @@ export const metadata = {
   keybindings: [],
   settingsDefinitions: [],
 } satisfies DashboardExtensionMetadata;
-
 export const response = {
   commandId: `${labExtensionId}.command.say-hello`,
   extensionId: labExtensionId,
   outcome: { ok: true, status: "success", value: { message: "hello" } },
 } satisfies CommandExecuteResponse;
-
 export const metadataWithLabMode = {
   ...metadata,
   modes: [
@@ -73,18 +84,11 @@ export const metadataWithLabMode = {
       extensionId: labExtensionId,
       label: "Lab",
       icon: "flask-conical",
-      regions: ["sidenav", "main", "side"],
+      regions: ["main", "side"],
     },
   ],
   views: [
     ...metadata.views,
-    {
-      id: `${labExtensionId}.view.labSidenav`,
-      localId: "labSidenav",
-      extensionId: labExtensionId,
-      title: "Lab",
-      body: { kind: "webview" as const, webview: webview("./src/lab-sidenav.tsx", "labSidenav") },
-    },
     {
       id: `${labExtensionId}.view.labOverview`,
       localId: "labOverview",
@@ -95,26 +99,15 @@ export const metadataWithLabMode = {
   ],
   placements: [
     {
-      id: `${labExtensionId}.placement.lab-sidenav`,
-      localId: "lab-sidenav",
-      extensionId: labExtensionId,
-      mode: ref(labExtensionId, "mode", "lab"),
-      item: { kind: "view" as const, view: ref(labExtensionId, "view", "labSidenav") },
-      region: "sidenav" as const,
-      required: true,
-    },
-    {
       id: `${labExtensionId}.placement.lab-overview`,
       localId: "lab-overview",
       extensionId: labExtensionId,
       mode: ref(labExtensionId, "mode", "lab"),
-      item: { kind: "view" as const, view: ref(labExtensionId, "view", "labOverview") },
+      item: { kind: "view" as const, view: ref(labExtensionId, "view", "labOverview"), presence: "fixed" as const },
       region: "main" as const,
-      required: true,
     },
   ],
 } satisfies DashboardExtensionMetadata;
-
 export const metadataWithResourceExtension = {
   ...metadata,
   extensions: [
@@ -142,31 +135,31 @@ export const metadataWithResourceExtension = {
       },
     },
   ],
+  pages: [
+    ...metadata.pages,
+    {
+      id: `${issuesExtensionId}.page.issue`,
+      localId: "issue",
+      extensionId: issuesExtensionId,
+      title: "Issue",
+      path: "issue",
+      mode: ref("pstdio", "mode", "project"),
+      parent: ref(labExtensionId, "page", "labPage"),
+      resource: { kinds: [ref(issuesExtensionId, "resource-kind", "issue")] },
+      main: { kind: "view", view: ref(issuesExtensionId, "view", "issueFiles"), cardinality: "one" },
+      slots: [],
+    },
+  ],
   resourceKinds: [
     {
       id: "issue",
       localId: "issue",
       extensionId: issuesExtensionId,
-      surface: "primary" as const,
       label: "Issue",
       icon: "component",
-      slots: [
-        { id: "primary", cardinality: "one" as const, access: "owner" as const },
-        { id: "files", cardinality: "one" as const, access: "owner" as const },
-      ],
-    },
-  ],
-  resourceViews: [
-    {
-      id: `${issuesExtensionId}.resource-view.issue-files`,
-      extensionId: issuesExtensionId,
-      resourceKind: ref(issuesExtensionId, "resource-kind", "issue"),
-      slot: { resourceKind: ref(issuesExtensionId, "resource-kind", "issue"), id: "files" },
-      view: ref(issuesExtensionId, "view", "issueFiles"),
     },
   ],
 } satisfies DashboardExtensionMetadata;
-
 export const flushMicrotasks = async () => {
   await Promise.resolve();
   await Promise.resolve();

@@ -1,7 +1,5 @@
 import { type ResourceRef, standardResourceIcons } from "@pstdio/workbench";
-
 export const dashboardCollectionsProjectId = "dashboard-project";
-
 export const createDashboardResource = (
   kind: string,
   id: string,
@@ -11,14 +9,12 @@ export const createDashboardResource = (
   metadata: Record<string, unknown> = {},
 ) =>
   ({
-    kind,
-    uri: `dashboard-workbench://${kind}/${id}`,
+    type: kind,
     id,
     label,
     icon,
     metadata: { ...metadata, favoriteScope: { scope: "project", projectId } },
   }) satisfies ResourceRef;
-
 export const dashboardViews = {
   start: { id: "start", label: "Start", icon: "House" },
   workspaces: { id: "workspaces", label: "Workspaces", icon: standardResourceIcons.workspace },

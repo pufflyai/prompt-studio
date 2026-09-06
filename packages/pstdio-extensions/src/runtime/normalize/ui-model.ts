@@ -3,7 +3,7 @@ import type {
   ContributionKind,
   ContributionRef,
   NavigationItemContribution,
-  PlacementContribution,
+  NavigationTreeContribution,
   SettingsPanelContribution,
   SettingsSectionContribution,
   StatusBarItemContribution,
@@ -15,21 +15,24 @@ import type {
   NormalizedExtension,
   RuntimeActivityItemRecord,
   RuntimeNavigationItemRecord,
-  RuntimePlacementRecord,
+  RuntimeNavigationTreeRecord,
   RuntimeSettingsPanelRecord,
   RuntimeSettingsSectionRecord,
   RuntimeStatusBarItemRecord,
   RuntimeStatusRecord,
   RuntimeViewRecord,
 } from "../../types/runtime";
-import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
-import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
+import type { Accumulator, RegistryIndex } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
-import { isLocalizableString } from "./localizable";
+import { validateDeclaration } from "./declaration-diagnostic";
+import { normalizeNavigationAction } from "./navigation-action";
+import { navigationItemDeclarationSchema } from "./navigation-declaration";
+import { registerPlacements } from "./placements";
 import { registerPrivateHandler } from "./private-handlers";
 import { normalizeContributionRef } from "./references";
 import { normalizeViewBody } from "./view-body";
+import { viewDeclarationSchema } from "./view-declaration";
 
 const recordBase = contributionRecordBase;
 
@@ -51,18 +54,8 @@ const registerViews = (
   });
   for (const contribution of contributions) {
     const base = recordBase(ext, source, "view", contribution.id);
-    if (!isLocalizableString(contribution.title) || !isRecord(contribution.body)) {
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "invalid_view",
-          message: `View "${base.id}" must define title and body`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-          metadata: { contributionId: base.id },
-        }),
-      );
+    if (!validateDeclaration({ ext, source, runtime, kind: "view", contribution, schema: viewDeclarationSchema }))
       continue;
-    }
     const record: RuntimeViewRecord = {
       ...base,
       contribution: {
@@ -98,77 +91,6 @@ const registerViewMenus = (ext: NormalizedExtension, source: LoadedExtensionSour
   }
 };
 
-const normalizePlacement = (ext: NormalizedExtension, contribution: PlacementContribution) => ({
-  ...contribution,
-  ref: normalizeRef(ext, contribution.ref),
-  mode: normalizeRef(ext, contribution.mode),
-  item:
-    contribution.item.kind === "view"
-      ? { ...contribution.item, view: normalizeRef(ext, contribution.item.view) }
-      : {
-          ...contribution.item,
-          slot: {
-            ...contribution.item.slot,
-            resourceKind: normalizeRef(ext, contribution.item.slot.resourceKind),
-          },
-        },
-});
-
-const registerPlacements = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
-  const contributions = uniqueContributions({
-    ext,
-    source,
-    runtime,
-    kind: "placement",
-    contributions: contributionArray<PlacementContribution>(source.definition.placements),
-  });
-  const directPlacements = new Set<string>();
-  for (const contribution of contributions) {
-    const base = recordBase(ext, source, "placement", contribution.id);
-    if (contribution.required && contribution.defaultOpen === false) {
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "invalid_placement",
-          message: `Required placement "${base.id}" cannot set defaultOpen to false`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-        }),
-      );
-      continue;
-    }
-    if (contribution.movableTo && !contribution.movableTo.includes(contribution.region)) {
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "invalid_placement",
-          message: `Placement "${base.id}" must include its initial region in movableTo`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-        }),
-      );
-      continue;
-    }
-    const normalized = normalizePlacement(ext, contribution);
-    const itemId =
-      normalized.item.kind === "view"
-        ? `${normalized.item.view.extensionId}.${normalized.item.view.id}`
-        : `${normalized.item.slot.resourceKind.extensionId}.${normalized.item.slot.resourceKind.id}.${normalized.item.slot.id}`;
-    const key = `${normalized.mode.extensionId}.${normalized.mode.id}:${itemId}`;
-    if (directPlacements.has(key)) {
-      runtime.diagnostics.push(
-        createDiagnostic({
-          code: "duplicate_view_placement",
-          message: `Mode "${normalized.mode.id}" places item "${itemId}" more than once`,
-          extensionId: ext.id,
-          sourcePath: source.sourcePath,
-        }),
-      );
-      continue;
-    }
-    directPlacements.add(key);
-    runtime.placements.push({ ...base, contribution: normalized } as RuntimePlacementRecord);
-  }
-};
-
 const registerNavigationItems = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   const contributions = uniqueContributions({
     ext,
@@ -179,47 +101,51 @@ const registerNavigationItems = (ext: NormalizedExtension, source: LoadedExtensi
   });
   for (const contribution of contributions) {
     const base = recordBase(ext, source, "navigation-item", contribution.id);
-    const normalizeItem = (
-      action: Exclude<NavigationItemContribution["action"], { kind: "compound" }>,
-    ): Exclude<NavigationItemContribution["action"], { kind: "compound" }> => {
-      if (action.kind === "view") return { ...action, view: normalizeRef(ext, action.view) };
-      if (action.kind === "page") {
-        const normalizePageTarget = (target: typeof action): typeof action => ({
-          ...target,
-          page: normalizeRef(ext, target.page),
-          ...(target.parent ? { parent: normalizePageTarget(target.parent) } : {}),
-        });
-        return normalizePageTarget(action);
-      }
-      if (action.kind === "panel") {
-        return {
-          ...action,
-          panel:
-            action.panel.kind === "page-slot"
-              ? { ...action.panel, page: normalizeRef(ext, action.panel.page) }
-              : normalizeRef(ext, action.panel),
-        };
-      }
-      if (action.kind === "command" && isRecord(action.target.command) && action.target.command.kind === "command") {
-        return {
-          ...action,
-          target: { ...action.target, command: normalizeRef(ext, action.target.command as never) },
-        };
-      }
-      return action;
-    };
-    const normalizeAction = (action: NavigationItemContribution["action"]): NavigationItemContribution["action"] =>
-      action.kind === "compound" ? { ...action, targets: action.targets.map(normalizeItem) } : normalizeItem(action);
-    const action = normalizeAction(contribution.action);
+    if (
+      !validateDeclaration({
+        ext,
+        source,
+        runtime,
+        kind: "navigation-item",
+        contribution,
+        schema: navigationItemDeclarationSchema,
+      })
+    )
+      continue;
+    const action = normalizeNavigationAction(ext, contribution.action);
     runtime.navigationItems.push({
       ...base,
       contribution: {
         ...contribution,
         ref: normalizeRef(ext, contribution.ref),
-        slot: normalizeRef(ext, contribution.slot),
+        owner: normalizeRef(ext, contribution.owner),
+        slot: contribution.slot ?? "content",
         action,
       },
     } as RuntimeNavigationItemRecord);
+  }
+};
+
+const registerNavigationTrees = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
+  const contributions = uniqueContributions({
+    ext,
+    source,
+    runtime,
+    kind: "navigation-tree",
+    contributions: contributionArray<NavigationTreeContribution>(source.definition.navigationTrees),
+  });
+  for (const contribution of contributions) {
+    const base = recordBase(ext, source, "navigation-tree", contribution.id);
+    runtime.navigationTrees.push({
+      ...base,
+      contribution: {
+        ...contribution,
+        ref: normalizeRef(ext, contribution.ref),
+        owner: normalizeRef(ext, contribution.owner),
+        slot: contribution.slot ?? "content",
+        view: normalizeRef(ext, contribution.view),
+      },
+    } as RuntimeNavigationTreeRecord);
   }
 };
 
@@ -366,8 +292,9 @@ export const registerUiModel = (
 ) => {
   registerViews(ext, source, runtime, index);
   registerViewMenus(ext, source, runtime);
-  registerPlacements(ext, source, runtime);
+  registerPlacements(ext, source, runtime, index);
   registerNavigationItems(ext, source, runtime);
+  registerNavigationTrees(ext, source, runtime);
   registerStatusBarItems(ext, source, runtime);
   registerStatuses(ext, source, runtime, index);
   registerActivityItems(ext, source, runtime);

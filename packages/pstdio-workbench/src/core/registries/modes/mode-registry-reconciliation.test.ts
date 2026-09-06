@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchPanelsController } from "../../controllers/panels/panels-controller";
 import { createContextKeyService } from "../../shared/context/context-key-service";
 import { createLayoutModel } from "../layout/layout-model";
 import { createWorkbenchModeRegistry, type WorkbenchModeActivationContext } from "./mode-registry";
@@ -12,10 +11,9 @@ describe("mode layout reconciliation", () => {
     const context = {
       context: createContextKeyService(),
       layout,
-      panels: createWorkbenchPanelsController(),
     } as unknown as WorkbenchModeActivationContext;
     const log: string[] = [];
-    const registry = createWorkbenchModeRegistry({ resolveContext: () => context });
+    const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => context });
 
     registry.registerMode({
       id: "lab",
@@ -45,10 +43,9 @@ describe("mode layout reconciliation", () => {
     const context = {
       context: createContextKeyService(),
       layout,
-      panels: createWorkbenchPanelsController(),
     } as unknown as WorkbenchModeActivationContext;
     const log: string[] = [];
-    const registry = createWorkbenchModeRegistry({ resolveContext: () => context });
+    const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => context });
 
     registry.registerMode({
       id: "lab",
@@ -86,15 +83,14 @@ describe("mode seeding", () => {
     const context = {
       context: createContextKeyService(),
       layout,
-      panels: createWorkbenchPanelsController(),
     } as unknown as WorkbenchModeActivationContext;
-    const registry = createWorkbenchModeRegistry({ resolveContext: () => context });
+    const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => context });
 
     layout.registerWidget({ id: "picker", title: "Picker", region: "overlay", rendererId: "noop" });
     registry.registerMode({
       id: "project-selection",
       activate: () => undefined,
-      seed: (modeCtx) => modeCtx.layout.openPanel("picker", { title: "Projects" }),
+      seed: () => layout.openPanel("picker", { title: "Projects" }),
     });
 
     // The navigator splits the transition so the persistence scope rotates between

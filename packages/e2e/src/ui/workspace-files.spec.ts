@@ -16,7 +16,7 @@ import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-a
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 
-test("PS-118 browses and edits workspace files, then refreshes the lazy diff", async ({ page, request, context }) => {
+test("browses and edits workspace files, then refreshes the lazy diff", async ({ page, request, context }) => {
   test.slow();
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
@@ -25,6 +25,7 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
   expect(projectResponse.ok()).toBe(true);
   const project = (await projectResponse.json()) as { id: string };
   const repoRoot = createGitRepo("pstdio-ps-118-", "Workspace files e2e");
+  let workspaceId: string | undefined;
 
   try {
     mkdirSync(join(repoRoot, "assets"));
@@ -49,6 +50,7 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
       mode: "worktree",
       startSession: false,
     });
+    workspaceId = attempt.workspace.id;
     const worktreePath = attempt.workspace.worktree_path;
     writeFileSync(join(worktreePath, "changed.ts"), "export const before = true;\n");
     execSync("git add changed.ts", { cwd: worktreePath, stdio: "pipe" });
@@ -108,6 +110,7 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
     await expect(nestedLogo).toBeVisible();
 
     await search.fill("README");
+    await expect(filesTree.getByRole("option")).toHaveCount(1);
     await page.getByRole("option", { name: "README.md" }).click();
     const editor = page.locator(".monaco-editor");
     await expect(editor).toBeVisible();
@@ -158,11 +161,15 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
     );
     expect(unsafe.status()).toBe(400);
   } finally {
-    rmSync(repoRoot, { recursive: true, force: true });
+    try {
+      if (workspaceId) expect((await request.delete(`${apiBase}/v1/workspaces/${workspaceId}`)).ok()).toBe(true);
+    } finally {
+      rmSync(repoRoot, { recursive: true, force: true });
+    }
   }
 });
 
-test("PS-118 browses and edits files in the default workspace", async ({ page, request }) => {
+test("browses and edits files in the default workspace", async ({ page, request }) => {
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
     data: { name: "PS-118 Default Workspace Files" },
   });
@@ -192,6 +199,7 @@ test("PS-118 browses and edits files in the default workspace", async ({ page, r
     await page.getByRole("tab", { name: "Files" }).click();
     const search = page.getByRole("textbox", { name: "Search files" });
     await search.fill("README");
+    await expect(page.getByRole("region", { name: "Files", exact: true }).getByRole("option")).toHaveCount(1);
     await page.getByRole("option", { name: "README.md" }).click();
     const editor = page.locator(".monaco-editor");
     await expect(editor).toBeVisible();

@@ -5,8 +5,13 @@
     "declaration": true,
     "emitDeclarationOnly": true,
     "outDir": "./dist",
-    "rootDir": "./src"
+    "rootDir": "..",
+    "paths": {
+      "@/*": ["./src/*"],
+      "pstdio-api-contracts": ["../pstdio-api-contracts/src/index.ts"],
+      "pstdio-api-contracts/*": ["../pstdio-api-contracts/src/*"]
+    }
   },
-  "include": ["src"],
-  "exclude": ["src/**/*.test.ts", "src/**/*.typecheck.ts"]
+  "include": ["src", "../pstdio-api-contracts/src"],
+  "exclude": ["**/*.test.ts", "**/*.typecheck.ts", "../pstdio-api-contracts/src/**/*.test.ts"]
 }

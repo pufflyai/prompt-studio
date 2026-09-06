@@ -14,9 +14,9 @@ const baseMetadata = {
   viewMenus: [],
   placements: [],
   resourceKinds: [],
-  resourceViews: [],
   resourceHierarchyProviders: [],
   navigationItems: [],
+  navigationTrees: [],
   statusBarItems: [],
   statuses: [],
   activityItems: [],
@@ -28,7 +28,7 @@ const baseMetadata = {
 } satisfies WorkbenchExtensionMetadata;
 
 describe("createPreviewResource", () => {
-  test("keeps preview data separate from a path-only extension view", () => {
+  test("uses a neutral preview resource when the extension has no resource kind", () => {
     const resource = createPreviewResource({
       ...baseMetadata,
       views: [
@@ -37,7 +37,6 @@ describe("createPreviewResource", () => {
           localId: "lab-page",
           extensionId: "pstdio.extension-lab",
           title: "Lab",
-          path: "lab",
           body: {
             kind: "webview",
             webview: {
@@ -51,8 +50,7 @@ describe("createPreviewResource", () => {
     });
 
     expect(resource).toEqual({
-      kind: "extension-preview",
-      uri: "bench://extension-preview/default",
+      type: "extension-preview",
       id: "preview",
       label: "Extension preview",
       icon: "FileText",
@@ -67,41 +65,15 @@ describe("createPreviewResource", () => {
           id: "tickets.ticket",
           localId: "ticket",
           extensionId: "pstdio.tickets",
-          surface: "primary",
-          slots: [{ id: "primary", cardinality: "one", access: "owner" }],
+          menuSlots: [],
         },
       ],
     });
 
     expect(resource).toEqual({
-      kind: "ticket",
-      uri: "bench://ticket/PS-16",
+      type: "ticket",
       id: "PS-16",
       label: "PS-16 Tree renderer preview",
-      icon: "FileText",
-    });
-  });
-
-  test("derives the kind from a resource-view edge when no resource kind is declared", () => {
-    const noteKind = { extensionId: "pstdio.planner", kind: "resource-kind" as const, id: "note" };
-    const resource = createPreviewResource({
-      ...baseMetadata,
-      resourceViews: [
-        {
-          id: "acme.insights.resource-view.note",
-          extensionId: "acme.insights",
-          resourceKind: noteKind,
-          slot: { resourceKind: noteKind, id: "inspector" },
-          view: { extensionId: "acme.insights", kind: "view", id: "insights" },
-        },
-      ],
-    });
-
-    expect(resource).toEqual({
-      kind: "note",
-      uri: "bench://note/preview",
-      id: "preview",
-      label: "note preview",
       icon: "FileText",
     });
   });

@@ -21,10 +21,10 @@ describe("createWorkbenchCommandPaletteController", () => {
   test("opens a specific view and resets it when closed", () => {
     const controller = createWorkbenchCommandPaletteController();
 
-    controller.open({ view: "mode", initialQuery: "> " });
+    controller.open({ view: "theme", initialQuery: "> " });
 
     expect(controller.isOpen()).toBe(true);
-    expect(controller.getView()).toBe("mode");
+    expect(controller.getView()).toBe("theme");
     expect(controller.getInitialQuery()).toBe("> ");
 
     controller.close();
@@ -47,7 +47,7 @@ describe("createWorkbenchCommandPaletteController", () => {
     const events: boolean[] = [];
     const storeEvents: boolean[] = [];
 
-    const legacy = controller.onDidChange((value) => events.push(value));
+    const listener = controller.onDidChange((value) => events.push(value));
     const fromStore = controller.store.subscribeSelector(
       (state) => state.open,
       (value) => storeEvents.push(value),
@@ -61,7 +61,7 @@ describe("createWorkbenchCommandPaletteController", () => {
     expect(events).toEqual([true, false, true]);
     expect(storeEvents).toEqual([true, false, true]);
 
-    legacy.dispose();
+    listener.dispose();
     fromStore();
   });
 

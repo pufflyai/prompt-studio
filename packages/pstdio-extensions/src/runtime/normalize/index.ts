@@ -97,7 +97,7 @@ export const normalizeExtensionSources = (
     registerArtifactMounts(ext, source, runtime, index);
     registerModes(ext, source, runtime);
     registerUiModel(ext, source, runtime, index);
-    registerPages(ext, source, runtime);
+    registerPages(ext, source, runtime, index);
     registerCommandPaletteResources(ext, source, runtime, index);
     registerContent(ext, source, runtime);
     registerAppearance(ext, source, runtime, index);

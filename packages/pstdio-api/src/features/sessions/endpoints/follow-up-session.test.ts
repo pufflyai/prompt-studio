@@ -64,6 +64,7 @@ const createOpencodeRecord = (options?: { failOnResume?: boolean }): RuntimeHarn
 };
 
 let app: OpenAPIHono<AppBindings>;
+let closeApp: () => Promise<void>;
 let tempRoot: string;
 
 const waitForSessionStatus = async (sessionId: string, expectedStatus: string) => {
@@ -104,14 +105,15 @@ const createSession = async (
 beforeAll(async () => {
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-followup-test-"));
 
-  ({ app } = await createTestApp({
+  ({ app, close: closeApp } = await createTestApp({
     databasePath: ":memory:",
     storageRoot: join(tempRoot, "storage"),
     harnessRegistry: createTestHarnessRegistry([createOpencodeRecord()]),
   }));
 });
 
-afterAll(() => {
+afterAll(async () => {
+  await closeApp();
   rmSync(tempRoot, { recursive: true, force: true });
 });
 
@@ -269,57 +271,60 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
 
   test("follow-up marks session as failed when opencode harness returns an error", async () => {
     const failTempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-followup-fail-"));
-    const { app: failApp } = await createTestApp({
+    const { app: failApp, close: closeFailApp } = await createTestApp({
       databasePath: ":memory:",
       storageRoot: join(failTempRoot, "storage"),
       harnessRegistry: createTestHarnessRegistry([createOpencodeRecord({ failOnResume: true })]),
     });
 
-    const projectRes = await failApp.request("/v1/projects", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Fail Project" }),
-    });
-    const project = await projectRes.json();
+    try {
+      const projectRes = await failApp.request("/v1/projects", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: "Fail Project" }),
+      });
+      const project = await projectRes.json();
 
-    const createRes = await failApp.request("/v1/sessions", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        project_id: project.id,
-        title: "Will fail on follow-up",
-        prompt: "initial prompt",
-        agent: OPENCODE_ID,
-      }),
-    });
-    expect(createRes.status).toBe(201);
-    const created = await createRes.json();
+      const createRes = await failApp.request("/v1/sessions", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          project_id: project.id,
+          title: "Will fail on follow-up",
+          prompt: "initial prompt",
+          agent: OPENCODE_ID,
+        }),
+      });
+      expect(createRes.status).toBe(201);
+      const created = await createRes.json();
 
-    // Wait for initial session to complete
-    const waitForStatus = async (sessionId: string, status: string) => {
-      for (let attempt = 0; attempt < 50; attempt += 1) {
-        const res = await failApp.request(`/v1/sessions/${sessionId}`);
-        const body = await res.json();
-        if (body.status === status) return body;
-        await Bun.sleep(50);
-      }
-      throw new Error(`Session ${sessionId} did not reach ${status}`);
-    };
+      // Wait for initial session to complete
+      const waitForStatus = async (sessionId: string, status: string) => {
+        for (let attempt = 0; attempt < 50; attempt += 1) {
+          const res = await failApp.request(`/v1/sessions/${sessionId}`);
+          const body = await res.json();
+          if (body.status === status) return body;
+          await Bun.sleep(50);
+        }
+        throw new Error(`Session ${sessionId} did not reach ${status}`);
+      };
 
-    await waitForStatus(created.id, "completed");
+      await waitForStatus(created.id, "completed");
 
-    // Send follow-up that will fail
-    const followUpRes = await failApp.request(`/v1/sessions/${created.id}/follow-up`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ prompt: "this will fail" }),
-    });
-    expect(followUpRes.status).toBe(200);
+      // Send follow-up that will fail
+      const followUpRes = await failApp.request(`/v1/sessions/${created.id}/follow-up`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ prompt: "this will fail" }),
+      });
+      expect(followUpRes.status).toBe(200);
 
-    // Session should transition to failed
-    const failedSession = await waitForStatus(created.id, "failed");
-    expect(failedSession.status).toBe("failed");
-
-    rmSync(failTempRoot, { recursive: true, force: true });
+      // Session should transition to failed
+      const failedSession = await waitForStatus(created.id, "failed");
+      expect(failedSession.status).toBe("failed");
+    } finally {
+      await closeFailApp();
+      rmSync(failTempRoot, { recursive: true, force: true });
+    }
   });
 });

@@ -1,11 +1,12 @@
+import type { FileRendererSectionTarget, ModeRegionSettings, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { ContributionSource, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
+import type { NavigationTarget } from "../navigation/navigation-registry";
 import type { ResourceRef } from "../resources/resource-registry";
 import { resolveUniqueWidgetId } from "./widget-id";
 
 export const workbenchRegions = [
   "nav",
   "activity",
-  "sidenav-header",
   "sidenav",
   "main-header",
   "main-left-menu",
@@ -56,6 +57,9 @@ export interface WorkbenchRegionSize {
   maxPx?: number;
 }
 
+/** Region-level layout policy owned by the active mode or the host, never by a placement. */
+export type WorkbenchRegionSettings = ModeRegionSettings;
+
 export type WidgetReusePolicy = "resource" | "none";
 
 export type WidgetMountStrategy = "active" | "keep-mounted";
@@ -63,8 +67,6 @@ export type WidgetMountStrategy = "active" | "keep-mounted";
 export type WorkbenchPanelReusePolicy = WidgetReusePolicy;
 
 export type WorkbenchPanelMountStrategy = WidgetMountStrategy;
-
-export type WorkbenchFloatingPanelVisibility = "visible" | "hidden";
 
 export type WorkbenchWidgetRole = "content" | "location" | "sub-panel" | "panel-menu";
 
@@ -84,10 +86,41 @@ export type WorkbenchPanelMenuOwner =
   | { level: "panel"; contributionId?: string }
   | { level: "sub-panel"; contributionId: string };
 
+export interface WorkbenchCommandTarget {
+  commandId: string;
+  args?: unknown;
+}
+
+export type WorkbenchTabAction =
+  | ({ kind: "command" } & WorkbenchCommandTarget)
+  | { kind: "navigation"; target: NavigationTarget };
+
+export interface WorkbenchTabMenuRow {
+  id: string;
+  label: string;
+  icon?: string;
+  iconColor?: string;
+  selected?: boolean;
+  disabled?: boolean;
+  action?: WorkbenchTabAction;
+}
+
+export interface WorkbenchTabMenuGroup {
+  id: string;
+  rows: readonly WorkbenchTabMenuRow[];
+}
+
+export interface WorkbenchTabSnapshot {
+  label?: string;
+  icon?: string;
+  indicator?: { icon: string; color?: string; label?: string };
+  menu?: readonly WorkbenchTabMenuGroup[];
+}
+
 export interface WorkbenchWidgetTab {
-  contentRendererId?: string;
-  /** Custom actions shown when the user activates an already-active tab. */
-  customMenuRendererId?: string;
+  getSnapshot(instance: WorkbenchPanelInstance): WorkbenchTabSnapshot;
+  subscribe?(listener: () => void): { dispose(): void } | (() => void);
+  refreshEvents?: readonly string[];
 }
 
 export type WorkbenchPanelTab = WorkbenchWidgetTab;
@@ -105,17 +138,13 @@ export interface WidgetContribution {
   // Non-closeable widgets opt into the tab visibility menu; closeable widgets
   // ignore this and use the X button for dismissal.
   hiddenByDefault?: boolean;
-  // A Location that presents only its Sub Panels: it renders no tab and no
-  // content of its own — establishing it activates its first Sub Panel.
-  subPanelsOnly?: boolean;
   regionSize?: WorkbenchRegionSize;
   regionCollapsible?: boolean;
   headerBorderBottom?: boolean;
-  floatingPanels?: WorkbenchFloatingPanelVisibility;
   resourceKinds?: string[];
   priority?: number;
   rendererId: string;
-  openCommandId?: string;
+  openCommand?: WorkbenchCommandTarget;
   eligibleLocations?: WorkbenchLocationEligibility;
   panelMenuOwner?: WorkbenchPanelMenuOwner;
   tab?: WorkbenchWidgetTab;
@@ -140,10 +169,6 @@ export interface WorkbenchPanelMenuDefinition {
   config?: unknown;
 }
 
-interface WorkbenchPanelMenusContribution {
-  panelMenus?: readonly WorkbenchPanelMenuDefinition[];
-}
-
 export interface WorkbenchPanelContribution {
   id: string;
   title: string;
@@ -154,16 +179,15 @@ export interface WorkbenchPanelContribution {
   singleton?: boolean;
   reuse?: WorkbenchPanelReusePolicy;
   mountStrategy?: WorkbenchPanelMountStrategy;
+  closable?: boolean;
   hiddenByDefault?: boolean;
-  subPanelsOnly?: boolean;
   regionSize?: WorkbenchRegionSize;
   regionCollapsible?: boolean;
   headerBorderBottom?: boolean;
-  floatingPanels?: WorkbenchFloatingPanelVisibility;
   resourceKinds?: string[];
   eligibleLocations?: WorkbenchLocationEligibility;
   priority?: number;
-  openCommandId?: string;
+  openCommand?: WorkbenchCommandTarget;
   tab?: WorkbenchPanelTab;
   config?: unknown;
   canOpen?(resource: ResourceRef): boolean;
@@ -171,13 +195,6 @@ export interface WorkbenchPanelContribution {
   source?: ContributionSource;
   panelMenus?: readonly WorkbenchPanelMenuDefinition[];
 }
-
-export type WorkbenchLocationContribution = WidgetContribution & WorkbenchPanelMenusContribution;
-
-export type WorkbenchSubPanelContribution = Omit<WidgetContribution, "region" | "fallbackRegion"> & {
-  region: WorkbenchPanelRegion;
-  fallbackRegion?: WorkbenchPanelRegion;
-} & WorkbenchPanelMenusContribution;
 
 export type WorkbenchPanelMenuContribution = Omit<WidgetContribution, "region" | "fallbackRegion"> & {
   region: WorkbenchPanelMenuRegion;
@@ -207,12 +224,16 @@ export type RegisteredPlaceholderContribution = Omit<PlaceholderContribution, "p
 export interface WorkbenchWidgetPlacement {
   widgetId: string;
   contributionId: string;
+  // Owner-scoped composition uses this canonical identity. Widget IDs remain renderer keys
+  // and must never be parsed to recover placement ownership.
+  placementIdentity?: PlacementIdentity;
   viewId?: string;
   ownerId?: string;
   source?: ContributionSource;
   resource?: ResourceRef;
-  resourceUri?: string;
-  ownerResourceUri?: string;
+  section?: FileRendererSectionTarget;
+  resourceKey?: string;
+  ownerResourceKey?: string;
   title?: string;
   pinned?: boolean;
   closable?: boolean;
@@ -226,12 +247,14 @@ export interface WorkbenchWidgetPlacement {
 export interface WorkbenchPanelInstance {
   instanceId: string;
   panelId: string;
+  placementIdentity?: PlacementIdentity;
   viewId?: string;
   ownerId?: string;
   source?: ContributionSource;
   resource?: ResourceRef;
-  resourceUri?: string;
-  ownerResourceUri?: string;
+  section?: FileRendererSectionTarget;
+  resourceKey?: string;
+  ownerResourceKey?: string;
   title?: string;
   pinned?: boolean;
   closable: boolean;
@@ -254,7 +277,7 @@ export interface WorkbenchLayout {
   locationSubPanelSelections?: Record<string, Partial<Record<WorkbenchPanelRegion, string>>>;
   activeWidgetId?: string;
   activeLocationWidgetId?: string;
-  activeResourceUri?: string;
+  activeResourceKey?: string;
 }
 
 export interface WorkbenchLayoutStoreState {
@@ -268,9 +291,8 @@ export interface OpenWidgetInput {
   resource?: ResourceRef | null;
   title?: string;
   region?: WorkbenchRegion;
-  // The role this placement takes, when the caller knows it better than the widget
-  // does. A panel is a Location in main and a Sub Panel elsewhere, so a placement made
-  // by the composition resolver carries the role its region implies.
+  // The role this placement takes when the caller knows it better than the widget.
+  // A panel is a Location in main and a Sub Panel elsewhere.
   role?: WorkbenchWidgetRole;
   ownerId?: string;
   source?: ContributionSource;
@@ -322,7 +344,6 @@ export const createDefaultWorkbenchLayout = (
     regions: {
       nav: createRegion("nav"),
       activity: createRegion("activity"),
-      "sidenav-header": createRegion("sidenav-header"),
       sidenav: createRegion("sidenav"),
       "main-header": createRegion("main-header"),
       "main-left-menu": createRegion("main-left-menu"),
@@ -353,7 +374,7 @@ const normalizeWidgetIds = (layout: WorkbenchLayout) => {
   const widgetIds = new Set<string>();
   const regions = {} as WorkbenchLayout["regions"];
   let activeWidgetId = layout.activeWidgetId;
-  let activeResourceUri = layout.activeResourceUri;
+  let activeResourceKey = layout.activeResourceKey;
 
   for (const [id, region] of Object.entries(layout.regions) as [WorkbenchRegion, WorkbenchRegionState][]) {
     const originalActiveWidgetId = region.activeWidgetId;
@@ -368,11 +389,11 @@ const normalizeWidgetIds = (layout: WorkbenchLayout) => {
 
     if (originalActiveWidgetId && layout.activeWidgetId === originalActiveWidgetId && activeIndex >= 0) {
       activeWidgetId = normalizedActiveWidgetId;
-      activeResourceUri = widgets[activeIndex]?.resourceUri;
+      activeResourceKey = widgets[activeIndex]?.resourceKey;
     }
   }
 
-  return { ...layout, regions, activeWidgetId, activeResourceUri };
+  return { ...layout, regions, activeWidgetId, activeResourceKey };
 };
 
 export const mergeWithDefaultRegions = (
@@ -380,8 +401,11 @@ export const mergeWithDefaultRegions = (
   regionVisibility: Partial<Record<WorkbenchRegion, boolean>> = {},
 ): WorkbenchLayout => {
   const defaults = createDefaultWorkbenchLayout(regionVisibility);
+  const persistedRegions = Object.fromEntries(
+    workbenchRegions.flatMap((region) => (persisted.regions[region] ? [[region, persisted.regions[region]]] : [])),
+  ) as Partial<WorkbenchLayout["regions"]>;
   return normalizeWidgetIds({
     ...persisted,
-    regions: { ...defaults.regions, ...persisted.regions },
+    regions: { ...defaults.regions, ...persistedRegions },
   });
 };

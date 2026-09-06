@@ -12,7 +12,7 @@ interface ShortcutEntry {
 
 export const buildShortcutEntries = (workbench: WorkbenchCore): ShortcutEntry[] => {
   return workbench.keybindings
-    .listKeybindings()
+    .listCommandKeybindings()
     .map((keybinding, index) => {
       const record = workbench.commands.getCommand(keybinding.commandId);
       if (!record) return null;

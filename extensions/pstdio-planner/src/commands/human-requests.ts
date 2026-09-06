@@ -25,7 +25,7 @@ const addHumanRequestedFlag = async (ctx: Pick<CommandContext, "storage">, ticke
   const flag = tags
     .find((tag) => tag.id === "default-human-requested")
     ?.options.find((option) => option.id === HUMAN_REQUESTED_OPTION_ID);
-  if (!flag) throw new Error("The required Human Requested workflow flag is unavailable.");
+  if (!flag) throw new Error("The required Review Needed workflow flag is unavailable.");
   const ticket = await ticketsCollection(ctx.storage).get(ticketId);
   if (!ticket) throw new Error(`Unknown ticket "${ticketId}"`);
   if ((ticket.tagIds ?? []).includes(flag.id)) return ticket;

@@ -18,9 +18,13 @@ export type SettingsMap<TSettings> = TSettings extends {
   ? { [K in keyof TProperties & string]: SettingValue<TProperties[K]> }
   : Record<string, never>;
 
+type NoExtraFields<Definition, Contract> = Definition & Record<Exclude<keyof Definition, keyof Contract>, never>;
+
 /**
  * Type an extension's contribution arrays. Package identity stays in package.json.
  * Use the contribution helpers so every independently addressable item has a local
  * id and typed ref before it reaches this boundary.
  */
-export const defineExtension = <const TDefinition extends ExtensionDefinition>(extension: TDefinition) => extension;
+export const defineExtension = <const TDefinition extends ExtensionDefinition>(
+  extension: NoExtraFields<TDefinition, ExtensionDefinition>,
+) => extension;

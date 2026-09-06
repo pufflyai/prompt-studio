@@ -83,8 +83,8 @@ const metadata = {
   viewMenus: [],
   placements: [],
   resourceKinds: [],
-  resourceViews: [],
   navigationItems: [],
+  navigationTrees: [],
   statusBarItems: [],
   statuses: [],
   settingsPanels: [],
@@ -196,7 +196,7 @@ export const IncompatibleApi: Story = {
       lastError: {
         code: "extension_manifest_unsupported_api_version",
         message:
-          'Extension "pstdio-planner" was built for extension API 1.0.0-alpha.3, but this host provides 1.0.0-alpha.7. Update the extension with `pst extensions update pstdio-planner`, or reinstall it with `pst extensions add`.',
+          'Extension "pstdio-planner" was built for extension API 1.0.0-alpha.3, but this host provides 1.0.0-alpha.8. Update the extension with `pst extensions update pstdio-planner`, or reinstall it with `pst extensions add`.',
       },
     },
   },

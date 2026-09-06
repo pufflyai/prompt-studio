@@ -12,6 +12,8 @@ import { createContext, type ReactNode, useContext } from "react";
 interface WorkbenchThemeProviderProps {
   children: ReactNode;
   initialThemePreference?: ThemePreference;
+  defaultThemePreference?: ThemePreference;
+  preferenceScope?: string;
   themePreferences?: readonly ThemePreferenceOption[];
   fileIconThemePreferences?: readonly FileIconThemePreferenceOption[];
 }
@@ -26,7 +28,12 @@ export const WorkbenchThemeProvider = (props: WorkbenchThemeProviderProps) => {
 
   return (
     <WorkbenchThemeProviderContext value>
-      <ThemePreferenceProvider initialPreference={initialThemePreference} themePreferences={themePreferences}>
+      <ThemePreferenceProvider
+        initialPreference={initialThemePreference}
+        defaultPreference={props.defaultThemePreference}
+        preferenceScope={props.preferenceScope}
+        themePreferences={themePreferences}
+      >
         <FileIconThemePreferenceProvider themePreferences={fileIconThemePreferences}>
           <ChakraProvider value={psTheme}>{children}</ChakraProvider>
         </FileIconThemePreferenceProvider>

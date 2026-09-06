@@ -138,7 +138,9 @@ const formatExtensionSection = (ext: NormalizedExtension, runtime: ExtensionRunt
     ...renderSubsection({
       title: "Keybindings",
       items: runtime.keybindings.filter((k) => k.extensionId === ext.id),
-      renderItem: (k) => [`    ${k.id} (${k.canonicalChord}) -> ${k.commandId}`],
+      renderItem: (k) => [
+        `    ${k.id} (${k.canonicalChord}) -> ${k.action.kind === "command" ? k.action.target.command.id : k.action.kind}`,
+      ],
     }),
     ...renderSubsection({
       title: "Templates",

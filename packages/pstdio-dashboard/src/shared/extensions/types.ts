@@ -1,5 +1,5 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import type { WorkbenchAttachmentInvocationContext } from "@pstdio/sdk/extensions";
+import type { ResourceRef, WorkbenchAttachmentInvocationContext } from "@pstdio/sdk/extensions";
 
 export type DashboardExtensionMetadata = WorkbenchExtensionMetadata;
 
@@ -13,14 +13,7 @@ export type ExtensionRepoContext = {
   role?: "default" | "selected" | "workspace";
 };
 
-export type ExtensionResourceContext = {
-  type: string;
-  id: string;
-  projectId?: string;
-  label?: string;
-  extensionId?: string;
-  metadata?: Record<string, unknown>;
-};
+export type ExtensionResourceContext = ResourceRef;
 
 export type ExtensionAttachmentContext = {
   target: WorkbenchAttachmentInvocationContext["target"];

@@ -1,28 +1,33 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { createWorkbench } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionBubbleModule } from "./module";
 
 describe("createSessionBubbleModule workspace resolution", () => {
-  test("contributes New session through explicit Sub Panel registration", () => {
-    const workbench = createWorkbenchCore();
-
+  test("registers the New session side panel", () => {
+    const workbench = createWorkbench();
     workbench.registerModule(createSessionBubbleModule());
-
-    expect(workbench.layout.getPanel(dashboardWidgetIds.sessionBubble)).toMatchObject({
+    expect(workbench.modePlacements.listPlacements("project")[0]).toMatchObject({
       region: "side",
-      openCommandId: dashboardCommandIds.createSession,
+      item: {
+        kind: "binding",
+        binding: expect.objectContaining({
+          add: {
+            kind: "command",
+            target: { command: { kind: "command", extensionId: "pstdio", id: dashboardCommandIds.createSession } },
+          },
+        }),
+      },
     });
-    expect(workbench.layout.getPanel(dashboardWidgetIds.sessionBubble)).not.toHaveProperty("closable");
+    expect(workbench.views.getView(dashboardWidgetIds.sessionBubble)).toBeDefined();
   });
-
   test("opens an unscoped session draft on the project default workspace", async () => {
-    const workbench = createWorkbenchCore();
-
+    const workbench = createWorkbench();
     getWriter("project_repos")?.truncateAndWrite([
       { id: "project-repo-1", project_id: "project-default-workspace", repo_id: "repo-1" },
     ]);
@@ -54,16 +59,15 @@ describe("createSessionBubbleModule workspace resolution", () => {
       },
     ]);
     selectDashboardProject(workbench, { id: "project-default-workspace", name: "Prompt Studio" });
+    workbench.registerModule(createWorkspacesModule());
     workbench.registerModule(createSessionBubbleModule());
-
     try {
+      openWorkspacesPage(workbench);
       await workbench.commands.executeCommand(dashboardCommandIds.createSession);
-
       const placement = workbench.layout
         .getLayout()
-        .regions.side.widgets.find((widget) => widget.resource?.kind === "session-draft");
-
-      expect(placement?.resource?.kind).toBe("session-draft");
+        .regions.side.widgets.find((widget) => widget.resource?.type === "session-draft");
+      expect(placement?.resource?.type).toBe("session-draft");
       expect(placement?.resource?.metadata).toMatchObject({
         workspaceId: "workspace-default",
         workspaceTitle: "Root repo",
@@ -77,10 +81,8 @@ describe("createSessionBubbleModule workspace resolution", () => {
       getWriter("workspaces")?.truncateAndWrite([]);
     }
   });
-
   test("opens an unscoped session draft on the primary workspace resource", async () => {
-    const workbench = createWorkbenchCore();
-
+    const workbench = createWorkbench();
     getWriter("workspaces")?.truncateAndWrite([
       {
         id: "workspace-default",
@@ -111,22 +113,18 @@ describe("createSessionBubbleModule workspace resolution", () => {
     selectDashboardProject(workbench, { id: "project-workspace-resource", name: "Prompt Studio" });
     workbench.registerModule(createSessionBubbleModule());
     workbench.registerModule(createWorkspacesModule());
-
     try {
       const activeWorkspace = workbench.resources
         .listResources("")
         .find((entry) => entry.resource.id === "workspace-active")?.resource;
-
-      await workbench.resources.openResource(activeWorkspace!, { replaceActive: true });
+      openWorkspacesPage(workbench, activeWorkspace!);
       await workbench.commands.executeCommand(dashboardCommandIds.createSession);
-
       const placement = workbench.layout
         .getLayout()
-        .regions.side.widgets.find((widget) => widget.resource?.kind === "session-draft");
-
+        .regions.side.widgets.find((widget) => widget.resource?.type === "session-draft");
       expect(workbench.modes.getActiveModeId()).toBe("project");
       expect(workbench.getPrimaryResource()?.id).toBe("workspace-active");
-      expect(placement?.resource?.kind).toBe("session-draft");
+      expect(placement?.resource?.type).toBe("session-draft");
       expect(placement?.resource?.metadata).toMatchObject({
         workspaceId: "workspace-active",
         workspaceTitle: "Active workspace",

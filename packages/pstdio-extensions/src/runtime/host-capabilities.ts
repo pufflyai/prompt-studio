@@ -11,6 +11,7 @@ export const dashboardExtensionHostCapabilities = {
     "menu.v1": { version: 1, since: "0.1.0" },
     "command-palette.v1": { version: 1, since: "0.1.0" },
     "mode.v1": { version: 1, since: "0.25.0" },
+    "page.v1": { version: 1, since: "0.27.0" },
     "view.webview.v1": { version: 1, since: "0.26.0" },
     "view.tree.v1": { version: 1, since: "0.26.0" },
     "view.file.v1": { version: 1, since: "0.26.0" },
@@ -19,6 +20,7 @@ export const dashboardExtensionHostCapabilities = {
     "view.data-table.v1": { version: 1, since: "0.26.0" },
     "placement.v1": { version: 1, since: "0.26.0" },
     "navigation-item.v1": { version: 1, since: "0.26.0" },
+    "navigation-tree.v1": { version: 1, since: "0.28.0" },
     "status-bar-item.v1": { version: 1, since: "0.26.0" },
     "status.v1": { version: 1, since: "0.26.0" },
     "settings.section.v1": { version: 1, since: "0.25.2" },
@@ -27,7 +29,6 @@ export const dashboardExtensionHostCapabilities = {
     "renderer.command-palette-resource.v1": { version: 1, since: "0.25.0" },
     "keybinding.v1": { version: 1, since: "0.24.0" },
     "resource-hierarchy.v1": { version: 1, since: "0.23.0" },
-    "resource-view.v1": { version: 1, since: "0.23.0" },
   },
 } satisfies ExtensionHostCapabilities;
 
@@ -72,6 +73,7 @@ const runtimeRequirements = (runtime: ExtensionRuntime) => [
   ),
   ...runtime.placements.map((record) => requirement(record, record.id, "placement", "placement.v1")),
   ...runtime.navigationItems.map((record) => requirement(record, record.id, "navigationItem", "navigation-item.v1")),
+  ...runtime.navigationTrees.map((record) => requirement(record, record.id, "navigationTree", "navigation-tree.v1")),
   ...runtime.statusBarItems.map((record) => requirement(record, record.id, "statusBarItem", "status-bar-item.v1")),
   ...runtime.statuses.map((record) => requirement(record, record.id, "status", "status.v1")),
   ...runtime.settingsSections.map((record) => requirement(record, record.id, "settingsSection", "settings.section.v1")),
@@ -81,7 +83,6 @@ const runtimeRequirements = (runtime: ExtensionRuntime) => [
     requirement(record, record.id, "commandPaletteResource", "renderer.command-palette-resource.v1"),
   ),
   ...runtime.keybindings.map((record) => requirement(record, record.id, "keybinding", "keybinding.v1")),
-  ...runtime.resourceViews.map((record) => requirement(record, record.id, "resourceView", "resource-view.v1")),
 ];
 
 const missingCapabilityDiagnostic = (

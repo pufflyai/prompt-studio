@@ -1,0 +1,29 @@
+import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import * as RendererStories from "./renderers.stories";
+
+<Meta of={RendererStories} name="4. Data table" />
+
+# Data table renderer
+
+`body.kind: "dataTable"` renders rows against declared columns. The extension owns the query and domain actions.
+Prompt Studio owns column layout, sorting, paging, row selection, loading, and empty states.
+
+Use it for service health, inventories, audit records, build lists, or any dense set of records people need to scan
+and compare.
+
+<Canvas of={RendererStories.DataTable} sourceState="shown" />
+
+## How it works
+
+| Field | Meaning |
+| --- | --- |
+| `columns` | Declares stable column ids, labels, descriptions, and optional value renderers. |
+| `query` | Returns rows and optional paging details. |
+| `selectionMode` | Use `multiple` when actions can operate on several rows. The default is no selection. |
+| `selectionActions` | Commands for the current selected row ids. |
+| `rowActions` | Commands available for one row. |
+| `onRowActivate` | Returns a target to open when the user activates a row. |
+| `initialPageSize`, `pageSizeOptions` | Sets the first page size and the choices shown by the workbench. |
+
+Choose a column renderer only when the value needs more than plain text. For example, categorical color works for
+health or severity and a color scale works for latency or cost.

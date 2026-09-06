@@ -25,6 +25,10 @@ Shows attempt count and latest diff totals. Clicking opens the latest workspace 
 
 The workspace stays the selected resource. The Main Panel has two resource-owned sub-panels:
 
+Files and Changes are auxiliary slots of the workspace page. Closing either keeps the workspace
+route and the other panel open. Closing both shows an empty state with Add panel available to
+reopen either view. The workspace page declares its routed resource separately and uses `main: { kind: "panels", empty }`. Closing all Main panels shows the empty view while retaining the workspace route.
+
 - `Files` — a searchable file tree in the left Panel menu and a shared file renderer in the body
 - `Diffs` — changed-file metadata and an on-demand diff body
 

@@ -85,6 +85,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
     title,
   } = props;
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const loadedFrameRef = useRef<HTMLIFrameElement | null>(null);
   const remoteRef = useRef<GuestRemote | null>(null);
   const initializedRef = useRef(false);
   const connectedKeyRef = useRef<string | null>(null);
@@ -121,13 +122,13 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
 
     // Moving the iframe in the DOM (e.g. the Side Panel switching between attached and
     // floating hosts) reloads it to about:blank because the src attribute is empty. A
-    // load event after a completed boot therefore means the runtime document is gone;
-    // bumping the epoch remounts a fresh iframe and re-runs this effect. The listener
+    // second load means the runtime document is gone, even if guest initialization
+    // has not finished. Remount a fresh iframe and connection. The listener
     // attaches before the connected guard so StrictMode's dev-only remount cannot
     // leave the iframe without one.
     const onFrameLoad = () => {
-      if (!initializedRef.current) return;
-      setFrameEpoch((epoch) => epoch + 1);
+      if (loadedFrameRef.current === iframe) setFrameEpoch((epoch) => epoch + 1);
+      else loadedFrameRef.current = iframe;
     };
     iframe.addEventListener("load", onFrameLoad);
     const removeLoadListener = () => iframe.removeEventListener("load", onFrameLoad);
@@ -179,6 +180,7 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
 
       connection
         .then(async (conn) => {
+          if (iframeRef.current !== iframe) return;
           const remote = conn.remote as GuestRemote;
           remoteRef.current = remote;
           hostEventsRef.current?.bind((message) => remote.hostEvent?.(message));
@@ -191,11 +193,13 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
             themeVariables: collectChakraThemeVariables(),
             extensionId: view.extensionId,
           });
+          if (iframeRef.current !== iframe) return;
           initializedRef.current = true;
           setRuntimeError(null);
           onReadyRef.current?.();
         })
         .catch((error) => {
+          if (iframeRef.current !== iframe) return;
           const normalized = normalizeRuntimeError(error);
           setRuntimeError(normalized.message);
           onErrorRef.current?.(normalized);
@@ -281,13 +285,6 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         // Match the host theme so the empty/loading iframe paints the right canvas
         // instead of flashing the default light background while the guest connects.
         style={{ ...iframeStyle, colorScheme: theme }}
-        // Moving the iframe in the DOM (e.g. the Side Panel switching between attached
-        // and floating hosts) reloads it to about:blank because the src attribute is
-        // empty. A load event after a completed boot therefore means the runtime
-        // document is gone; bumping the epoch remounts a fresh iframe and reconnects.
-        onLoad={() => {
-          if (initializedRef.current) setFrameEpoch((epoch) => epoch + 1);
-        }}
         onError={() => {
           const message = `Failed to load extension runtime at ${view.webview.runtimeUrl}`;
           setRuntimeError(message);

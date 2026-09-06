@@ -7,8 +7,12 @@ import {
 import { extensionArtifactMountSchema } from "./artifacts";
 import { extensionHookRecordSchema, extensionMiddlewareRecordSchema, extensionScheduleRecordSchema } from "./commands";
 import { extensionHostCompatibilitySchema } from "./host-capabilities";
-import { extensionViewLikeSchema } from "./panels";
 import { workbenchExtensionMetadataSchema } from "./workbench-metadata";
+
+const extensionViewLikeSchema = z.object({
+  id: z.string(),
+  extensionId: z.string(),
+});
 
 export type { WorkbenchExtensionMetadata, WorkbenchExtensionViewRecord } from "./workbench-metadata";
 export { workbenchExtensionMetadataSchema } from "./workbench-metadata";
@@ -24,9 +28,9 @@ const checkWorkbenchMetadataSchema = workbenchExtensionMetadataSchema.pick({
   viewMenus: true,
   placements: true,
   resourceKinds: true,
-  resourceViews: true,
   resourceHierarchyProviders: true,
   navigationItems: true,
+  navigationTrees: true,
   statusBarItems: true,
   statuses: true,
   activityItems: true,

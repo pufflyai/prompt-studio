@@ -1,26 +1,57 @@
-import { Canvas, Meta } from "@storybook/addon-docs/blocks";
+import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
+import source from "./core/command-menu.tsx?raw";
 
-export const parameters = {
-  layout: "padded",
-};
+<Meta of={OnboardingStories} name="4. Command and menu" />
 
-<Meta of={OnboardingStories} name="3. Command surface" parameters={{ layout: "padded" }} />
+# 4. Let the user open the panel
 
-# 3. Open Your Widget From A Button
+Commands own behavior. The placeholder button, the header menu item, and the command palette all expose the same
+commands without copying their handlers. This story uses Core API commands and a host menu; extension commands use
+`defineCommand` instead.
 
-To put a button in the main header, register a command with the open-widget
-logic, then add a menu item that references the command id. Adding the same
-command id to the command palette path makes it searchable too — no extra
-handler.
+Try it in the story:
 
-<Canvas of={OnboardingStories.CommandAndMenu} sourceState="shown" />
+1. Press **Open command panel** inside the placeholder. The command opens a real panel through the navigation executor
+   and the placeholder disappears.
+2. Press **Close command panel** in the header to close the panel and reveal the placeholder again. The close command
+   is disabled while there is no panel to close.
+3. Open the command palette (`Mod+P`, then type `>`), search for "Open command panel" or "Close command panel", and
+   run the same commands from there.
 
-This is the pattern for almost every user-triggered action in the workbench:
-**register a command, attach it to as many surfaces as you need by id.** Don't
-call your handler directly from button `onClick`s — that breaks keybindings,
-context-key gating, and the palette later on.
+<Canvas of={OnboardingStories.CommandAndMenu} sourceState="none" />
 
-The story starts on the placeholder so you can see the header button open the
-widget. Press ⌘P / Ctrl+P to open the palette and try the same command from
-there.
+## Complete example
+
+<Source code={source} language="tsx" />
+
+## What each field means
+
+`ctx.commands.registerCommand(definition, handler)` declares the behavior:
+
+- `id` is the stable command identity. Menus, keybindings, and navigation actions refer to this value.
+- `label` is the user-facing name. The command palette matches against it.
+- `category` groups related commands. The palette shows it as a prefix, so "Onboarding: Open command panel" is
+  searchable by either part.
+- `icon` names the glyph menus and palette rows display.
+- `execute` runs the behavior. Opening a placement goes through `ctx.navigation.openPanel(...)`, the same executor
+  every other caller uses.
+- `isEnabled` gates the command. A disabled command renders greyed out in menus and the palette and cannot run.
+
+`ctx.layout.registerMenuItem(path, item)` exposes a command in one surface:
+
+- `workbenchTopHeaderTrailingMenuPath` places the item in the header's trailing menu.
+- `workbenchCommandPaletteMenuPath` places the item in the command palette. The palette is a menu path like any other
+  menu: registering an item there makes the command searchable by label and category. Commands never appear in the
+  palette automatically.
+- `commandId` names the command the item runs.
+- `order` sorts items inside one menu group; `group` selects the group.
+
+The context key wiring keeps the close command honest:
+
+- `ctx.layout.store.subscribeSelector(...)` watches whether the panel is open.
+- `ctx.context.set(panelOpenContextKey, open)` publishes that state as a context key.
+- `isEnabled` reads the key, so both the header item and the palette row disable together.
+
+A keybinding can run the same command by declaring `action: { kind: "command", commandId }`. Keybindings, menu items,
+palette rows, and buttons stay thin: the command is the single owner of the behavior.

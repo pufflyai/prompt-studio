@@ -1,12 +1,12 @@
 import { describe, expect, mock, test } from "bun:test";
-import { createWorkbenchCore, type MenuPath } from "../../../core";
+import { createWorkbench, type MenuPath } from "../../../core";
 import { createTreeContextMenuItems, createTreeMenuItems } from "./tree-actions";
 
 const menuPath = ["workbench", "tree", "resource"] as const satisfies MenuPath;
 
 describe("createTreeContextMenuItems", () => {
   test("resolves tree actions and menu path actions for right-click context menus", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const archive = mock();
 
     workbench.commands.registerCommand(
@@ -33,7 +33,7 @@ describe("createTreeContextMenuItems", () => {
   });
 
   test("places kernel resource actions after extension actions with a separator", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.commands.registerCommand(
       { id: "workspace.review", label: "Run review", icon: "ClipboardCheck" },
@@ -66,7 +66,7 @@ describe("createTreeContextMenuItems", () => {
   });
 
   test("resolves menu action metadata for read-only informational rows", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.commands.registerCommand(
       { id: "app.info", label: "Prompt Studio", description: "v1.2.3" },
@@ -92,7 +92,7 @@ describe("createTreeContextMenuItems", () => {
   });
 
   test("requests params before running context menu actions with params", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const run = mock();
     const requestParams = mock();
 
@@ -137,7 +137,7 @@ describe("createTreeContextMenuItems", () => {
   });
 
   test("uses menu action params for prompted command actions", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
     const requestParams = mock();
 
     workbench.commands.registerCommand({ id: "files.rename", label: "Rename file" }, { execute: () => undefined });
@@ -175,7 +175,7 @@ describe("createTreeContextMenuItems", () => {
   });
 
   test("adds trailing content to external menu links", () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
     workbench.commands.registerCommand({ id: "app.docs", label: "Documentation" }, { execute: () => undefined });
     workbench.layout.registerMenuItem(menuPath, { commandId: "app.docs", external: true });

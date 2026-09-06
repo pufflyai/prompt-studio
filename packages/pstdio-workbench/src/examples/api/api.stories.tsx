@@ -1,13 +1,26 @@
 import type { Meta, StoryObj } from "@storybook/react";
-import { expect, userEvent, within } from "storybook/test";
-import { apiSources } from "./api-sources";
-import { CompositionQueryExample, compositionPanelIds } from "./composition-query-example";
-import { ExtensionPlacementExample } from "./extension-placement-example";
-import { DuplicateTabsExample, ResourceTabsExample, SingletonPanelExample } from "./panel-tabs-examples";
+import { PageReplacementExample } from "../page-composition/module";
+import pageCompositionSource from "../page-composition/module.tsx?raw";
+import { ResourceRebindExample } from "./resource-rebind-example";
+import resourceRebindSource from "./resource-rebind-example.tsx?raw";
+import { ResourceTabsExample } from "./resource-tabs-example";
+import resourceTabsSource from "./resource-tabs-example.tsx?raw";
+import { StaticPlacementExample } from "./static-placement-example";
+import staticPlacementSource from "./static-placement-example.tsx?raw";
+import { TabPresentationExample } from "./tab-presentation-example";
+import tabPresentationSource from "./tab-presentation-example.tsx?raw";
 
 const meta = {
-  title: "pstdio-workbench/API",
-  parameters: { layout: "padded" },
+  title: "pstdio-workbench/Guides/Panels and pages",
+  tags: ["!dev"],
+  parameters: {
+    layout: "padded",
+    docs: {
+      description: {
+        component: "This Core API guide explains static and resource placements, then shows complete page replacement.",
+      },
+    },
+  },
 } satisfies Meta;
 
 export default meta;
@@ -24,70 +37,32 @@ const sourceParameters = (code: string) => ({
   },
 });
 
-export const CompositionPanelQuery: Story = {
-  name: "Composition panel query",
-  parameters: sourceParameters(apiSources.compositionQuery),
-  render: () => <CompositionQueryExample />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getByTestId("main-open")).toHaveTextContent(compositionPanelIds.overview);
-    await expect(canvas.getByTestId("main-addable")).toHaveTextContent(compositionPanelIds.artifacts);
-    await expect(canvas.getByTestId("side-closable")).toHaveTextContent(compositionPanelIds.inspector);
-  },
-};
-
-export const SingletonPanel: Story = {
-  name: "Singleton panel",
-  parameters: sourceParameters(apiSources.singletonPanel),
-  render: () => <SingletonPanelExample />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const firstInstanceId = canvas.getByTestId("singleton-returned-id").textContent;
-
-    await userEvent.click(canvas.getByRole("button", { name: "Open singleton again" }));
-
-    await expect(canvas.getByTestId("singleton-count")).toHaveTextContent("1");
-    await expect(canvas.getByTestId("singleton-returned-id")).toHaveTextContent(firstInstanceId ?? "");
-    await expect(canvas.queryByRole("button", { name: "Add panel" })).not.toBeInTheDocument();
-  },
+export const StaticPlacement: Story = {
+  name: "Static placement",
+  parameters: sourceParameters(staticPlacementSource),
+  render: () => <StaticPlacementExample />,
 };
 
 export const ResourceTabs: Story = {
-  name: "Multiple tabs by resource",
-  parameters: sourceParameters(apiSources.resourceTabs),
+  name: "Resource placement (many)",
+  parameters: sourceParameters(resourceTabsSource),
   render: () => <ResourceTabsExample />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-
-    await expect(canvas.getByTestId("resource-count")).toHaveTextContent("2");
-    await userEvent.click(canvas.getByRole("button", { name: "Reopen Alpha" }));
-    await expect(canvas.getByTestId("resource-count")).toHaveTextContent("2");
-    await expect(canvas.getByRole("tab", { name: "Alpha.md" })).toHaveAttribute("aria-selected", "true");
-  },
 };
 
-export const DuplicateTabs: Story = {
-  name: "Multiple tabs without reuse",
-  parameters: sourceParameters(apiSources.duplicateTabs),
-  render: () => <DuplicateTabsExample />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-
-    await expect(canvas.getByTestId("duplicate-count")).toHaveTextContent("2");
-    await userEvent.click(canvas.getByRole("button", { name: "New scratch tab" }));
-    await expect(canvas.getByTestId("duplicate-count")).toHaveTextContent("3");
-    await expect(canvas.getByRole("tab", { name: "Scratch 3" })).toHaveAttribute("aria-selected", "true");
-  },
+export const ResourceRebind: Story = {
+  name: "Resource placement (one)",
+  parameters: sourceParameters(resourceRebindSource),
+  render: () => <ResourceRebindExample />,
 };
 
-export const ExtensionPanelPlacement: Story = {
-  name: "Extension panel placement",
-  parameters: sourceParameters(apiSources.extensionPlacement),
-  render: () => <ExtensionPlacementExample />,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(canvas.getByTestId("placement-region")).toHaveTextContent("main");
-    await userEvent.click(canvas.getByRole("button", { name: "Move to sidenav" }));
-    await expect(canvas.getByTestId("placement-region")).toHaveTextContent("sidenav");
-  },
+export const TabPresentation: Story = {
+  name: "Tab presentation",
+  parameters: sourceParameters(tabPresentationSource),
+  render: () => <TabPresentationExample />,
+};
+
+export const PageReplacement: Story = {
+  name: "Page replacement",
+  parameters: sourceParameters(pageCompositionSource),
+  render: () => <PageReplacementExample />,
 };

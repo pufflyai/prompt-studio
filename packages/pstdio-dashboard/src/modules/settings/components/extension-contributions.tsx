@@ -147,6 +147,13 @@ export const buildContributionGroups = (metadata: DashboardExtensionMetadata | u
       ),
     },
     {
+      key: "navigationTrees",
+      icon: ListTree,
+      rows: forExtension(metadata?.navigationTrees, extensionId).map((record) =>
+        row(String(record.id), String(record.id)),
+      ),
+    },
+    {
       key: "commandPaletteResources",
       icon: Command,
       rows: forExtension(metadata?.commandPaletteResources, extensionId).map((record) =>

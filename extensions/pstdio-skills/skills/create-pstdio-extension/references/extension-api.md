@@ -13,7 +13,7 @@ Every extension package needs a `package.json` next to its entry file:
   "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
-    "pstdio": "1.0.0-alpha.7"
+    "pstdio": "1.0.0-alpha.10"
   },
   "private": true,
   "type": "module",
@@ -37,18 +37,14 @@ artifact roots, themes, and CLI paths.
 `extension.ts` should only export contributions:
 
 ```ts
-import {
-  defineCommand,
-  defineExtension,
-  packageAsset,
-  params,
-} from "@pstdio/sdk/extensions";
+import { defineTemplate } from "@pstdio/sdk/extensions";
+import { defineCommand, defineExtension, packageAsset, params } from "@pstdio/sdk/extensions";
 
 const createTicket = defineCommand({
   id: "tickets.create",
   title: "Create ticket",
   cli: true,
-  palette: { label: "Create ticket" },
+  palette: [{ label: "Create ticket" }],
   params: { title: params.text({ label: "Title", required: true }) },
   async run(_ctx, commandParams) {
     return { title: commandParams.title };
@@ -57,21 +53,19 @@ const createTicket = defineCommand({
 
 export default defineExtension({
   settings: {
-    defaultStatus: params.text({
-      label: "Default status",
-      defaultValue: "backlog",
-    }),
+    properties: { defaultStatus: { type: "string", title: "Default status", scope: "project", default: "backlog" } },
   },
 
   commands: [createTicket],
 
-  templates: {
-    ticket: {
+  templates: [
+    defineTemplate({
+      id: "ticket",
       title: "Ticket",
       type: "ticket",
       source: packageAsset("./templates/ticket.md", import.meta.url),
-    },
-  },
+    }),
+  ],
 });
 ```
 
@@ -83,7 +77,8 @@ For package name `planner`:
 
 ```txt
 extension id     pstdio.planner
-command id       planner.tickets.create
+local command id tickets.create
+runtime id       pstdio.planner.command.tickets.create
 CLI path         pst planner tickets create
 artifact root    <repo>/.pstdio/extension-storage/planner/
 template id      planner.ticket
@@ -108,12 +103,13 @@ rejected by `pst extensions check`.
 | `templates`, `skills`, `themes`, `fileIconThemes` | Packaged catalog assets.                                                          |
 | `templateTypes`                                   | Add a custom template category.                                                   |
 | `views`, `viewMenus`                              | Reusable UI bodies and menus owned by a view.                                      |
-| `placements`, `navigationItems`                   | Mode geometry and typed navigation actions.                                       |
-| `resourceKinds`, `resourceViews`                  | Domain resource slots and typed view-to-slot bindings.                            |
+| `pages`, `navigationItems`, `navigationTrees`     | Routed screens and explicit navigation.                                           |
+| `placements`                                      | Mode-wide views and resource bindings outside pages.                              |
+| `resourceKinds`                                   | Domain resource identity, labels, icons, and menus.                               |
 | `modes`                                           | Typed Workbench modes referenced by placements.                                   |
 | `statusBarItems`                                  | View references rendered outside docked layout.                                   |
 | `statuses`                                        | Workflow status providers shared by boards and settings.                          |
-| `resourceHierarchyProviders`                      | Parent lookup for resources, used for breadcrumbs and hierarchy.                  |
+| `resourceHierarchyProviders`                      | Domain parent lookup for resources. Page targets supply breadcrumb destinations.                  |
 | `settingsPanels`                                  | References from host settings slots to views.                                     |
 | `activityItems`                                   | Activity-rail entries that select a Workbench mode.                               |
 | `artifactMounts`                                  | Safe file access under `.pstdio/extension-storage/<package-name>/`.                                 |
@@ -143,8 +139,10 @@ Current dashboard capability names:
 | `view.controls.v1` | Controls bodies and menus. |
 | `view.kanban.v1` | Kanban bodies. |
 | `view.data-table.v1` | Data table bodies. |
-| `placement.v1` | Docked view and resource-slot placements. |
+| `page.v1` | Routed pages with owned view and resource-bound slots. |
+| `placement.v1` | Mode-wide docked view and resource bindings. |
 | `navigation-item.v1` | Fixed host navigation items. |
+| `navigation-tree.v1` | Page- or mode-owned tree sections. |
 | `status-bar-item.v1` | Views placed in the status bar. |
 | `status.v1` | Workflow status providers. |
 | `settings.section.v1` | Settings navigation sections. |
@@ -153,7 +151,6 @@ Current dashboard capability names:
 | `renderer.command-palette-resource.v1` | Command palette resource providers. |
 | `keybinding.v1` | Dashboard keybindings. |
 | `resource-hierarchy.v1` | Resource hierarchy from native renderers. |
-| `resource-view.v1` | Resource detail views. |
 
 ## Commands and params
 
@@ -213,7 +210,7 @@ inside the extension package. Skill assets may point at a directory containing `
 ## Webviews
 
 A view with `body.kind: "webview"` points at an entry with `packageAsset()`. Declare only the capabilities the
-webview needs, such as `commands.execute`, `resource.open`, `notification.show`, `preferences.get`, and
+webview needs, such as `commands.execute`, `navigation.open`, `notification.show`, `preferences.get`, and
 `preferences.set`. Settings panels and status-bar items reference that view instead of declaring another body.
 
 Webview modules export `defineExtensionView({ render })` from `@pstdio/sdk/extensions`.
@@ -289,33 +286,32 @@ Extension-defined command scopes require an id. The host fixes the project and e
 instance owner. Global settings webviews do not get host-backed file methods because
 they have no project owner. The upload limit is 25 MiB.
 
-Declare `resource.open` to open an SDK resource in the workbench:
+Declare `navigation.open` to open an explicit page or panel target:
 
 ```ts
-await host.call("resource.open", {
-  resource: { type: "ticket", id: "PS-260", label: "Dashboard webview capabilities" },
-  input: { strategy: "replace-active" },
+await host.call("navigation.open", {
+  target: {
+    kind: "page",
+    page: ticketPage.ref,
+    resource: { type: "ticket", id: "PS-260", label: "Dashboard webview capabilities" },
+  },
 });
 ```
 
-The default strategy is `persistent`. Guests pass `{ type, id, label?, metadata? }` and
-leave URI creation to the host. The resource kind and a presenter for it must already
-be registered.
+The target chooses the screen. The host never guesses a page or panel from the resource kind.
+
+## Pages and navigation
+
+A page owns its route and declares an optional resource constraint separately from Main presentation. Main shows a view or peer panels with an empty view. Extra slots and mode placements share the same static-view or resource-binding item.
+
+Use the compiled [Scribble](examples/scribble.ts), [Zipline](examples/zipline.ts), and [Pigeon](examples/pigeon.ts) modules for declarations. Read [pages and panels](pages.md) for cardinality, shared mode panels, resource identity, and closing.
+
+Navigation items and trees belong to a mode or page. Omitted mode chrome keeps the host sidebar in custom modes. A replacement view or false overrides it. Page navigation owns browser history; panel navigation preserves location. Compounds accept only page and panel steps.
 
 ## Native resource views
 
-Use native view bodies when the host should own the editor or tree chrome instead of loading a custom webview. A native
-resource detail screen usually has:
-
-- a `resourceKinds` contribution that declares the resource's surface and semantic slots
-- `views` with `file`, `tree`, `controls`, `dataTable`, or `kanban` bodies
-- `resourceViews` that bind each view to one semantic slot
-- `placements` that assign those slots to docked regions for a typed mode ref
-
-View bodies never own geometry or a resource kind. `resourceViews` owns the semantic
-binding. `placements` owns `region`, `movableTo`, `required`, and `defaultOpen`.
-Use `defineResourceKind`, `resourceSlotRef`, `defineView`, `defineResourceView`, and
-`definePlacement`, then pass the returned contributions as arrays to `defineExtension`.
+Use native view bodies when the host should own the editor or tree chrome instead of loading a custom
+webview. Views own their body only. A page declares its routed resource and Main presentation separately. Extra page slots and mode placements use the same resource binding for their own instances.
 
 File view bodies need a `load` callback; an optional `save` callback makes text content editable.
 Load callbacks return `{ content }` for markdown/code text, `{ dataUrl }` for images, plus optional `fileName`,
@@ -339,9 +335,10 @@ string id for an event owned by another extension. Emit the event only after the
 only renderer callbacks that declared that event; it does not refresh renderers after unrelated commands.
 
 ```ts
+import { defineCommand } from "@pstdio/sdk/extensions";
 import { defineExtension, defineView, eventRef } from "@pstdio/sdk/extensions";
 
-const ticketsChanged = eventRef<{ ticketId: string }>("example.tickets.changed");
+const ticketsChanged = eventRef<{ ticketId: string }>({ extensionId: "example.tickets", id: "changed" });
 
 const tickets = defineView({
   id: "tickets",
@@ -355,53 +352,30 @@ const tickets = defineView({
 
 export default defineExtension({
   views: [tickets],
-  commands: {
-    updateTicket: {
+  commands: [
+    defineCommand({
+      id: "update-ticket",
       title: "Update ticket",
       async run(ctx, _commandParams) {
         // Persist the update first.
         await ctx.events.emit(ticketsChanged, { ticketId: "ticket-1" });
       },
-    },
-  },
+    }),
+  ],
 });
 ```
 
 ## Project navigation UI
 
 For a Planner-style list or board, define a view with `body.kind: "kanban"` and a
-`query` callback. Add a `navigationItems` contribution whose typed action targets the
-view ref. A webview page uses the same model with `body.kind: "webview"`. An optional
-view `path` is only its deep-link path.
-
-To navigate to a Workbench mode instead of a view, use a `kind: "command"` action with the typed
-`workbenchCommands.switchMode` ref from `@pstdio/sdk/extensions`:
-
-```ts
-import { defineNavigationItem, workbenchCommands, workbenchSlots } from "@pstdio/sdk/extensions";
-
-defineNavigationItem({
-  id: "lab",
-  slot: workbenchSlots.projectNavigation,
-  label: "Lab",
-  icon: "flask-conical",
-  action: {
-    kind: "command",
-    target: { command: workbenchCommands.switchMode, params: { modeId: "project" } },
-  },
-});
-```
-
-`modeId` is the full Workbench mode id: `"project"` or `"settings"` for host modes, or the normalized id of
-an extension mode. Copy an extension mode's normalized id from `pst extensions check` output or from the
-extension's contributions tab in project settings. Never hand-build `pstdio.<extension>.mode.<id>` strings,
-and never hand-type the raw `workbench.action.switchMode` command id; always use the typed ref. Activity
-items use the same command with `command` and `params` as sibling fields instead of a nested `target`.
+`query` callback. Use the view as the page's Main presentation. Add a `navigationItems`
+contribution whose action targets that page. Paths belong to pages, never views. The page selects its
+declared mode; navigation never switches a mode as a separate step.
 
 For an editable inspector, define a `controls` view with a `query` callback plus optional
 `onValueChange`, `onApply`, and `onReset` callbacks. Attach it to an owner with
 `defineViewMenu({ owner: owner.ref, view: inspector.ref, side: "right" })`. Bind resource
-views through semantic slots, and keep all region choices in `placements`. Omitting both
+views through page slots, and keep mode-wide region choices in `placements`. Omitting both
 `onValueChange` and `onApply` makes controls read-only. Callback payloads must be JSON.
 Commit file metadata or data URLs, never live `File` objects.
 
@@ -413,10 +387,18 @@ transitions are keyed off the returned `HarnessSession`. Ids are namespaced as
 `${publisher}.${package-name}.${provider.id}` (for example `pstdio.harness-claude-code.harness.claude-code`).
 
 ```ts
-import { defineExtension, l10n } from "@pstdio/sdk/extensions";
+import { defineExtension, defineHarness, l10n } from "@pstdio/sdk/extensions";
 import type { HarnessProvider, HarnessSession } from "@pstdio/sdk/extensions";
 
-const myAgent: HarnessProvider = {
+// Implement these process adapters for your agent. See harness-codex for a complete provider.
+declare const runAgent: (
+  ctx: Parameters<HarnessProvider["start"]>[0],
+  input: Parameters<HarnessProvider["start"]>[1],
+) => HarnessSession["done"];
+declare const abort: () => void;
+declare const resumeAgent: NonNullable<HarnessProvider["resume"]>;
+
+const myAgent = defineHarness({
   id: "my-agent",
   label: l10n("harness.myAgent", "My Agent"),
   capabilities: () => ["ContextUsage"],
@@ -430,9 +412,9 @@ const myAgent: HarnessProvider = {
     return { agentSessionId: input.sessionId, done: runAgent(ctx, input), stop: () => abort() };
   },
   resume: (ctx, input) => resumeAgent(ctx, input),
-};
+});
 
-export default defineExtension({ harnesses: { myAgent } });
+export default defineExtension({ harnesses: [myAgent] });
 ```
 
 - `start`/`resume` push `SessionMessage` JSON patches into `input.events` and return a `HarnessSession` whose `done`

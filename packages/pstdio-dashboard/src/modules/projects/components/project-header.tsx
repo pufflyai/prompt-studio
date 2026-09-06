@@ -1,4 +1,5 @@
 import { Avatar, Button, HStack, IconButton, Text } from "@chakra-ui/react";
+import { workbenchPages } from "@pstdio/sdk/extensions";
 import { Tooltip } from "@pstdio/ui";
 import { useWorkbenchStore, WorkbenchBreadcrumbView, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { ChevronsUpDown } from "lucide-react";
@@ -8,7 +9,6 @@ import {
   dashboardSelectedProjectIdContextKey,
   dashboardSelectedProjectNameContextKey,
 } from "@/shared/app/project-context";
-import { dashboardViews } from "@/shared/app/resources";
 import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { findDashboardProject } from "../data/project-data";
 
@@ -52,9 +52,7 @@ export const ProjectHeader = (props: { input: WorkbenchPanelRenderInput }) => {
             minW="0"
             justifyContent="flex-start"
             onClick={() => {
-              void input.workbench.views.openView(dashboardViews.start.id, {
-                strategy: { kind: "replace-active" },
-              });
+              void input.workbench.navigation.openTarget({ kind: "page", page: workbenchPages.start });
             }}
             {...projectButtonInteraction}
           >

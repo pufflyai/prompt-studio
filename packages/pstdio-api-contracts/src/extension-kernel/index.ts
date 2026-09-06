@@ -9,7 +9,6 @@
  */
 
 export {
-  workbenchCommands,
   workbenchModeDefinitions,
   workbenchModes,
   workbenchPageDefinitions,
@@ -50,7 +49,7 @@ export { packageAsset } from "./package-asset";
 export { commandRef, eventRef } from "./refs";
 export { defineSlot } from "./slots";
 export type * from "./types";
-export { dockedWorkbenchRegions } from "./types/composition";
+export { dockedWorkbenchRegions, extensionPanelRegions } from "./types/composition";
 export { EXTENSION_API_VERSION } from "./types/extension";
 export {
   ALWAYS_AVAILABLE_WEBVIEW_CAPABILITIES,

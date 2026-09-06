@@ -19,6 +19,7 @@ import {
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchRegionBackground } from "../theme/workbench-theme-background";
+import { ModeChromeView, useModeChrome } from "./mode-chrome";
 import { WorkbenchWidgetHost } from "./widget-host";
 
 interface WorkbenchRegionProps {
@@ -33,7 +34,6 @@ interface WorkbenchRegionProps {
 // scroll on the X axis; every other region scrolls vertically.
 const horizontalScrollRegions = new Set<WorkbenchRegionId>([
   "nav",
-  "sidenav-header",
   "main-header",
   "secondary-header",
   "side-header",
@@ -65,7 +65,9 @@ const getActivePlacement = (widgets: WorkbenchWidgetPlacement[], activeWidgetId?
 export const resolveRenderedRegionPlacements = (
   widgets: WorkbenchWidgetPlacement[],
   activeWidgetId?: string,
+  region?: WorkbenchRegionId,
 ): WorkbenchWidgetPlacement[] => {
+  if (region === "sidenav") return widgets;
   const activePlacement = getActivePlacement(widgets, activeWidgetId);
   if (!activePlacement) return [];
   return widgets.filter(
@@ -76,14 +78,16 @@ export const resolveRenderedRegionPlacements = (
 export const resolveRegionPlacementRenderState = (
   placement: WorkbenchWidgetPlacement,
   activeWidgetId: string | undefined,
+  region?: WorkbenchRegionId,
 ) => {
   const active = placement.widgetId === activeWidgetId;
+  const additive = region === "sidenav";
   return {
     active,
     display: "flex",
-    pointerEvents: active ? "auto" : "none",
-    position: active ? "relative" : "absolute",
-    visibility: active ? "visible" : "hidden",
+    pointerEvents: active || additive ? "auto" : "none",
+    position: active || additive ? "relative" : "absolute",
+    visibility: active || additive ? "visible" : "hidden",
   } as const;
 };
 
@@ -94,8 +98,51 @@ const createPlaceholderPlacement = (placeholder: RegisteredPlaceholderContributi
   closable: false,
 });
 
+interface WorkbenchRegionPlacementProps {
+  workbench: WorkbenchCore;
+  placement: WorkbenchWidgetPlacement;
+  activeWidgetId?: string;
+  globalActiveWidgetId?: string;
+  region: WorkbenchRegionId;
+}
+
+const WorkbenchRegionPlacement = (props: WorkbenchRegionPlacementProps) => {
+  const { workbench, placement, activeWidgetId, globalActiveWidgetId, region } = props;
+  const renderState = resolveRegionPlacementRenderState(placement, activeWidgetId, region);
+  const additive = region === "sidenav";
+  const overlaysActivePlacement = !renderState.active && !additive;
+  let flex: string | undefined;
+  if (additive) flex = "1 1 0";
+  else if (renderState.active) flex = "1 0 auto";
+
+  const activatePlacement = () => {
+    if (placement.widgetId !== globalActiveWidgetId) workbench.layout.activatePanel(placement.widgetId);
+  };
+
+  return (
+    <Box
+      display={renderState.display}
+      flex={flex}
+      h={overlaysActivePlacement ? "full" : undefined}
+      inset={overlaysActivePlacement ? "0" : undefined}
+      minH="0"
+      minW="0"
+      onPointerDown={additive ? activatePlacement : undefined}
+      onFocusCapture={additive ? activatePlacement : undefined}
+      overflow="hidden"
+      pointerEvents={renderState.pointerEvents}
+      position={renderState.position}
+      visibility={renderState.visibility}
+      w="full"
+    >
+      <WorkbenchWidgetHost workbench={workbench} placement={placement} />
+    </Box>
+  );
+};
+
 export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   const { workbench, region, title, pointerEvents = "auto", transparent = false } = props;
+  const chrome = useModeChrome(workbench, region);
   const locationResource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
@@ -106,7 +153,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
         layout,
         getWorkbenchPanelForMenuRegion(region as WorkbenchPanelMenuRegion),
         locationResource,
-        { ignoreOwnerResourceUri: sidePanelRegionIds.has(region) },
+        { ignoreOwnerResourceKey: sidePanelRegionIds.has(region) },
       )
     : undefined;
   const activeLocationPanel = getActiveWorkbenchLocationPanel(layout);
@@ -132,9 +179,11 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   const placeholder = activePlacement ? undefined : workbench.layout.getPlaceholder(region);
   const placement = activePlacement ?? (placeholder ? createPlaceholderPlacement(placeholder) : undefined);
   const renderedPlacements = activePlacement
-    ? resolveRenderedRegionPlacements(regionState.widgets, activePlacement.widgetId)
+    ? resolveRenderedRegionPlacements(regionState.widgets, activePlacement.widgetId, region)
     : [];
 
+  if (chrome === false) return null;
+  if (chrome) return <ModeChromeView workbench={workbench} region={region} viewId={chrome} />;
   if (!placement) return null;
 
   const scrollsHorizontally = horizontalScrollRegions.has(region);
@@ -143,11 +192,12 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   // into the Side Panel session sets it global-active) without touching the primary anchor,
   // which only follows `main`. Placeholders are not real widgets, so only activate a real
   // placement that is not already active.
-  const activateOnInteract = () => {
-    if (activePlacement && activePlacement.widgetId !== globalActiveWidgetId) {
-      workbench.layout.activatePanel(activePlacement.widgetId);
+  const activatePlacement = (target: WorkbenchWidgetPlacement | undefined) => {
+    if (target && target.widgetId !== globalActiveWidgetId) {
+      workbench.layout.activatePanel(target.widgetId);
     }
   };
+  const additive = region === "sidenav";
 
   return (
     <Flex
@@ -161,8 +211,8 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
       overflow="hidden"
       pointerEvents={pointerEvents}
       aria-label={title ?? region}
-      onPointerDown={activateOnInteract}
-      onFocusCapture={activateOnInteract}
+      onPointerDown={additive ? undefined : () => activatePlacement(activePlacement)}
+      onFocusCapture={additive ? undefined : () => activatePlacement(activePlacement)}
     >
       {/* The region owns scrolling: overflowing widget content scrolls here
           with the same narrow overlay scrollbar used across the workbench. */}
@@ -184,28 +234,16 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
         {placeholder ? (
           <WorkbenchWidgetHost workbench={workbench} placement={placement} widget={placeholder} />
         ) : (
-          renderedPlacements.map((renderedPlacement) => {
-            const renderState = resolveRegionPlacementRenderState(renderedPlacement, activePlacement?.widgetId);
-
-            return (
-              <Box
-                key={renderedPlacement.widgetId}
-                display={renderState.display}
-                flex={renderState.active ? "1 0 auto" : undefined}
-                h={renderState.active ? undefined : "full"}
-                inset={renderState.active ? undefined : "0"}
-                minH="0"
-                minW="0"
-                overflow="hidden"
-                pointerEvents={renderState.pointerEvents}
-                position={renderState.position}
-                visibility={renderState.visibility}
-                w="full"
-              >
-                <WorkbenchWidgetHost workbench={workbench} placement={renderedPlacement} />
-              </Box>
-            );
-          })
+          renderedPlacements.map((renderedPlacement) => (
+            <WorkbenchRegionPlacement
+              key={renderedPlacement.widgetId}
+              workbench={workbench}
+              placement={renderedPlacement}
+              activeWidgetId={activePlacement?.widgetId}
+              globalActiveWidgetId={globalActiveWidgetId}
+              region={region}
+            />
+          ))
         )}
       </ScrollArea>
     </Flex>

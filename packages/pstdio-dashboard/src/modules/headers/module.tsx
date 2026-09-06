@@ -3,22 +3,24 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { ProjectHeader } from "../projects/components/project-header";
 
 const registerHeaders = (ctx: WorkbenchModuleContext) => {
-  ctx.layout.registerPanel({
+  ctx.views.registerView({
     id: dashboardWidgetIds.projectHeader,
     title: "Project selector",
-    region: "nav",
-    singleton: true,
-    rendererId: dashboardWidgetIds.projectHeader,
+    body: { kind: "react", render: (input) => <ProjectHeader input={input} /> },
   });
-
-  ctx.renderers.registerRenderer({
+  ctx.shellPlacements.registerPlacement({
     id: dashboardWidgetIds.projectHeader,
-    render: (input) => <ProjectHeader input={input} />,
+    item: {
+      kind: "view",
+      presence: "fixed",
+      view: {
+        kind: "view",
+        id: dashboardWidgetIds.projectHeader,
+      },
+    },
+    region: "nav",
   });
-
-  ctx.layout.openPanel(dashboardWidgetIds.projectHeader, { pinned: true });
 };
-
 export const createHeadersModule = () =>
   ({
     id: "dashboard.headers",

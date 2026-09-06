@@ -1,7 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchCore } from "@pstdio/workbench";
+import { workbenchPages } from "@pstdio/sdk/extensions";
+import { createWorkbench } from "@pstdio/workbench";
 import { selectDashboardProject } from "@/shared/app/project-context";
-import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { createWorkspacesModule } from "../../workspaces/module";
 import type { DashboardSessionView } from "../data/dashboard-sessions";
 import { openReviewWorkspace, openSelectedWorkspace } from "./session-chat-panel";
 
@@ -37,49 +38,27 @@ const sessionView = {
   messages: [],
 } satisfies DashboardSessionView;
 
-const registerWorkspaceOpener = (workbench: ReturnType<typeof createWorkbenchCore>) => {
-  workbench.resources.registerKind({ kind: "workspace", label: "Workspace", icon: "GitBranch" });
-  workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-  workbench.layout.registerPanel({
-    id: dashboardWidgetIds.workspace,
-    title: "Workspace",
-    region: "main",
-    rendererId: dashboardWidgetIds.workspace,
-    singleton: true,
-  });
-  workbench.resources.registerPresenter({
-    id: "test.workspace.presenter",
-    priority: 1000,
-    canOpen: (resource) => resource.kind === "workspace",
-    open: (resource, input) => {
-      workbench.modes.setActiveMode("project");
-      return workbench.layout.openPanel(dashboardWidgetIds.workspace, {
-        strategy: input.replaceActive ? { kind: "replace-active" } : { kind: "persistent" },
-        resource,
-        title: resource.label,
-      });
-    },
-  });
-};
-
 describe("openReviewWorkspace", () => {
   test("opens the linked workspace resource for review changes", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
-    registerWorkspaceOpener(workbench);
+    workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
     await openReviewWorkspace({ workbench }, sessionView, [localWorkspace]);
 
-    const mainPlacement = workbench.layout.getLayout().regions.main.widgets.find((placement) => {
-      return placement.contributionId === dashboardWidgetIds.workspace;
-    });
-
     expect(workbench.commandPalette.isOpen()).toBe(false);
     expect(workbench.modes.getActiveModeId()).toBe("project");
-    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
-    expect(mainPlacement?.resource).toMatchObject({
-      kind: "workspace",
+    expect(workbench.pages.store.getState().location).toMatchObject({
+      page: workbenchPages.workspace,
+      resource: {
+        type: "workspace",
+        id: "workspace-1",
+        label: "Dashboard workbench datalayer",
+      },
+    });
+    expect(workbench.getPrimaryResource()).toMatchObject({
+      type: "workspace",
       id: "workspace-1",
       label: "Dashboard workbench datalayer",
       metadata: {
@@ -93,9 +72,9 @@ describe("openReviewWorkspace", () => {
 
 describe("openSelectedWorkspace", () => {
   test("opens the selected workspace dropdown option", async () => {
-    const workbench = createWorkbenchCore();
+    const workbench = createWorkbench();
 
-    registerWorkspaceOpener(workbench);
+    workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
 
     await openSelectedWorkspace(
@@ -119,14 +98,17 @@ describe("openSelectedWorkspace", () => {
       "project-1",
     );
 
-    const mainPlacement = workbench.layout.getLayout().regions.main.widgets.find((placement) => {
-      return placement.contributionId === dashboardWidgetIds.workspace;
-    });
-
     expect(workbench.modes.getActiveModeId()).toBe("project");
-    expect(workbench.layout.getLayout().regions.main.activeWidgetId).toBe(dashboardWidgetIds.workspace);
-    expect(mainPlacement?.resource).toMatchObject({
-      kind: "workspace",
+    expect(workbench.pages.store.getState().location).toMatchObject({
+      page: workbenchPages.workspace,
+      resource: {
+        type: "workspace",
+        id: "workspace-2",
+        label: "Second attempt",
+      },
+    });
+    expect(workbench.getPrimaryResource()).toMatchObject({
+      type: "workspace",
       id: "workspace-2",
       label: "Second attempt",
       metadata: {

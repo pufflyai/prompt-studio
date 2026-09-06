@@ -53,11 +53,11 @@ export default defineExtension({
 
   commands: plannerCommands,
   views: plannerUi.views,
+  pages: plannerUi.pages,
   viewMenus: plannerUi.viewMenus,
-  placements: plannerUi.placements,
   resourceKinds: [ticketResourceKind],
-  resourceViews: plannerUi.resourceViews,
   navigationItems: plannerUi.navigationItems,
+  navigationTrees: plannerUi.navigationTrees,
   settingsPanels: plannerUi.settingsPanels,
   statuses: [ticketStatuses],
 

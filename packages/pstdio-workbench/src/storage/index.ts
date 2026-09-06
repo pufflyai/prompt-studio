@@ -1,16 +1,14 @@
 export type {
-  CreateLocalStorageLastResourcePersistenceInput,
-  CreateLocalStoragePanelsPersistenceInput,
+  CreateLocalStoragePanelMenuStatePersistenceInput,
   CreateLocalStorageTreePersistenceInput,
   CreateLocalStorageWorkbenchPersistenceInput,
   WorkbenchStorageLike,
   WorkbenchStoragePersistenceKind,
 } from "./local-storage-persistence";
 export {
-  createLocalStorageHistoryPersistence,
-  createLocalStorageLastResourcePersistence,
   createLocalStorageLayoutPersistence,
-  createLocalStoragePanelsPersistence,
+  createLocalStoragePageLocationPersistence,
+  createLocalStoragePanelMenuStatePersistence,
   createLocalStorageTreePersistence,
   createLocalStorageWorkbenchPersistence,
   workbenchStoragePersistenceKey,

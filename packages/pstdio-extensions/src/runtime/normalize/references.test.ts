@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { workbenchCommands, workbenchModes, workbenchResourceKinds } from "@pstdio/sdk/extensions";
+import { workbenchModes, workbenchResourceKinds } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension } from "../../types/runtime";
 import { resolveCommandRef, resolveContributionRefId, serializeWhenExpression } from "./references";
 
@@ -16,7 +16,6 @@ describe("contribution ref resolution", () => {
   });
 
   test("resolves host-published refs to the host's registered id for every kind", () => {
-    expect(resolveContributionRefId(ext.id, workbenchCommands.switchMode)).toBe("workbench.action.switchMode");
     expect(resolveContributionRefId(ext.id, workbenchModes.project)).toBe("project");
     expect(resolveContributionRefId(ext.id, { extensionId: "pstdio", kind: "view", id: "workspaces" })).toBe(
       "workspaces",

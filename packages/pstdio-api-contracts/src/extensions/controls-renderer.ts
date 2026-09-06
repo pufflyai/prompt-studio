@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { controlValuesSchema } from "./control-declarations";
 import { extensionRendererRecordBaseSchema } from "./renderers";
 
 export const extensionControlsRendererRecordSchema = extensionRendererRecordBaseSchema.extend({
@@ -6,7 +7,7 @@ export const extensionControlsRendererRecordSchema = extensionRendererRecordBase
   valueChangeHandlerId: z.string().optional(),
   applyHandlerId: z.string().optional(),
   resetHandlerId: z.string().optional(),
-  defaultValues: z.record(z.string(), z.unknown()).optional(),
+  defaultValues: controlValuesSchema.optional(),
 });
 
 export type ExtensionControlsRendererRecord = z.infer<typeof extensionControlsRendererRecordSchema>;

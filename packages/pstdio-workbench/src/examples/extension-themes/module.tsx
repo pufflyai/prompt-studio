@@ -1,7 +1,7 @@
 import { HStack, Stack, Text } from "@chakra-ui/react";
 import { ScrollArea, Switch } from "@pstdio/ui";
 import { useEffect, useState } from "react";
-import { createWorkbenchCore, type WorkbenchModuleContribution } from "../../core";
+import { createWorkbench, type WorkbenchModuleContribution } from "../../core";
 import { WorkbenchIcon } from "../../react";
 import { createExtensionHost, type ExtensionDefinition, type ExtensionHost } from "./extension-host";
 import { createThemePackExtension } from "./theme-pack-extension";
@@ -9,10 +9,8 @@ import { createThemeStatusExtension } from "./theme-status-extension";
 import { extensionThemePreferences } from "./themes";
 
 const MANAGER_WIDGET_ID = "extension.manager.panel";
-const MANAGER_RENDERER_ID = "extension.manager.renderer";
 const EMPTY_MAIN_ID = "extension.manager.empty-main";
 const EMPTY_MAIN_RENDERER_ID = "extension.manager.empty-main.renderer";
-
 const extensionDefinitions: ExtensionDefinition[] = [
   {
     id: "theme-pack",
@@ -32,27 +30,21 @@ const extensionDefinitions: ExtensionDefinition[] = [
     createModule: createThemeStatusExtension,
   },
 ];
-
 const useEnabledExtensionIds = (host: ExtensionHost) => {
   const [enabledIds, setEnabledIds] = useState(host.getEnabledIds());
-
   useEffect(() => {
     const subscription = host.subscribe(() => setEnabledIds(host.getEnabledIds()));
     return () => subscription.dispose();
   }, [host]);
-
   return enabledIds;
 };
-
 interface ExtensionRowProps {
   definition: ExtensionDefinition;
   enabled: boolean;
   onToggle: (enabled: boolean) => void;
 }
-
 const ExtensionRow = (props: ExtensionRowProps) => {
   const { definition, enabled, onToggle } = props;
-
   return (
     <Stack gap="2xs" p="sm" borderWidth="1px" borderColor="border.subtle" borderRadius="md">
       <HStack justify="space-between" align="start" gap="sm">
@@ -81,11 +73,9 @@ const ExtensionRow = (props: ExtensionRowProps) => {
     </Stack>
   );
 };
-
 const ExtensionManagerPanel = (props: { host: ExtensionHost }) => {
   const { host } = props;
   const enabledIds = useEnabledExtensionIds(host);
-
   return (
     <ScrollArea
       h="full"
@@ -111,7 +101,6 @@ const ExtensionManagerPanel = (props: { host: ExtensionHost }) => {
     </ScrollArea>
   );
 };
-
 const EmptyMainPanel = () => (
   <Stack h="full" minH="0" align="center" justify="center" gap="xs" bg="bg" color="fg" p="lg">
     <WorkbenchIcon name="Puzzle" size={20} color="fg.muted" />
@@ -123,39 +112,42 @@ const EmptyMainPanel = () => (
     </Text>
   </Stack>
 );
-
 // The extension manager is always present — it owns the enable/disable UI, so it
 // must not be one of the extensions it can dispose.
 const createExtensionManagerModule = (host: ExtensionHost): WorkbenchModuleContribution => ({
   id: "extension.manager",
   activate(ctx) {
-    ctx.layout.registerPanel({
+    ctx.views.registerView({
       id: MANAGER_WIDGET_ID,
       title: "Extensions",
-      region: "sidenav",
-      regionSize: { defaultPx: 280, minPx: 240 },
-      rendererId: MANAGER_RENDERER_ID,
+      body: { kind: "react", render: () => <ExtensionManagerPanel host={host} /> },
     });
-    ctx.renderers.registerRenderer({
-      id: MANAGER_RENDERER_ID,
-      render: () => <ExtensionManagerPanel host={host} />,
+    ctx.shellPlacements.registerPlacement({
+      id: MANAGER_WIDGET_ID,
+      item: {
+        kind: "view",
+        presence: "fixed",
+        view: {
+          kind: "view",
+          id: MANAGER_WIDGET_ID,
+        },
+      },
+      region: "side",
     });
-    ctx.layout.registerPlaceholder({
-      id: EMPTY_MAIN_ID,
-      title: "No extension views",
-      region: "main",
-      rendererId: EMPTY_MAIN_RENDERER_ID,
-    });
-    ctx.renderers.registerRenderer({
+    ctx.views.registerView({
       id: EMPTY_MAIN_RENDERER_ID,
-      render: () => <EmptyMainPanel />,
+      title: "No extension views",
+      body: { kind: "react", render: () => <EmptyMainPanel /> },
     });
-    ctx.layout.openPanel(MANAGER_WIDGET_ID);
+    ctx.placeholders.registerPlaceholder({
+      id: EMPTY_MAIN_ID,
+      viewId: EMPTY_MAIN_RENDERER_ID,
+      region: "main",
+    });
   },
 });
-
 export const createExtensionThemesWorkbench = () => {
-  const workbench = createWorkbenchCore();
+  const workbench = createWorkbench();
   const host = createExtensionHost(workbench, extensionDefinitions);
   workbench.registerModule(createExtensionManagerModule(host));
   for (const definition of extensionDefinitions) {
