@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.14 AS deps
+FROM oven/bun:1.3.14 AS source
 
 WORKDIR /app
 
@@ -15,7 +15,15 @@ COPY .pstdio/extensions/pstdio-dev/package.json .pstdio/extensions/pstdio-dev/pa
 COPY .pstdio/extensions/pstdio-planner-loops/package.json .pstdio/extensions/pstdio-planner-loops/package.json
 COPY scripts scripts
 
+FROM source AS sdk
+
+RUN bun install --frozen-lockfile --ignore-scripts
+RUN bun run --cwd packages/sdk build:js
+
+FROM source AS deps
+
 RUN bun install --frozen-lockfile --ignore-scripts --production
+COPY --from=sdk /app/packages/sdk/dist /app/packages/sdk/dist
 
 
 FROM oven/bun:1.3.14-slim AS runner
