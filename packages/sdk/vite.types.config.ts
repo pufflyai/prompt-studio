@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { isAbsolute, resolve } from "node:path";
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
 
@@ -13,7 +13,7 @@ export default defineConfig({
       ),
       formats: ["es"],
     },
-    rollupOptions: { external: (id) => !id.startsWith(".") && !id.startsWith("/") },
+    rollupOptions: { external: (id) => !id.startsWith(".") && !isAbsolute(id) },
   },
   plugins: [
     dts({
