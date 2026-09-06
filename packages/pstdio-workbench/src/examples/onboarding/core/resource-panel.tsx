@@ -26,7 +26,18 @@ export const createResourceWorkbench = () => {
   workbench.registerModule({
     id: "host.resource-guide",
     activate(ctx) {
-      let nextGuideIndex = 1;
+      const nextGuide = () => {
+        const openGuides = new Set(
+          Object.values(ctx.layout.getLayout().regions)
+            .flatMap((region) => region.widgets)
+            .filter(
+              (widget) =>
+                widget.placementIdentity?.kind === "shell" && widget.placementIdentity.placementId === guidePlacementId,
+            )
+            .map((widget) => resourceKey(widget.resource)),
+        );
+        return guides.find((guide) => !openGuides.has(resourceKey(guide)));
+      };
       const openGuide = (resource: ResourceRef) =>
         ctx.shellPlacements.openPlacement({
           placementId: guidePlacementId,
@@ -56,7 +67,7 @@ export const createResourceWorkbench = () => {
                 ))}
               </HStack>
               <Text color="fg.muted" textStyle="paragraph/XS/regular">
-                The + menu in this tab bar runs the same open action.
+                The + button opens the next closed guide. It disappears when all three guides are open.
               </Text>
             </Stack>
           ),
@@ -70,10 +81,10 @@ export const createResourceWorkbench = () => {
           icon: "BookOpen",
         },
         {
+          isEnabled: () => Boolean(nextGuide()),
           execute: () => {
-            const guide = guides[nextGuideIndex % guides.length]!;
-            nextGuideIndex += 1;
-            return openGuide(guide);
+            const guide = nextGuide();
+            if (guide) return openGuide(guide);
           },
         },
       );

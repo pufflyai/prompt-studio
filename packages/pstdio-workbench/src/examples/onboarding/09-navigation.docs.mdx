@@ -16,6 +16,9 @@ The Secondary panel starts with three tabs from two resource placements:
 Press **Pin Beta** and then preview Gamma. All three documents stay available because each pinned resource identity owns a
 tab. Reopening any open resource selects its existing tab instead of making a duplicate.
 
+Press **New document** or the **+** button in Secondary to create another pinned document. Each press creates a new
+resource identity, so you can keep adding tabs beyond the three named examples.
+
 <Canvas of={OnboardingStories.ResourceReuse} sourceState="none" />
 
 ## Complete example
@@ -56,6 +59,8 @@ The document View and placement demonstrate `cardinality: "many"`:
 - `item.binding.kinds: [{ kind: "resource-kind", id: "document" }]` limits which resource kinds the placement accepts.
 - `item.binding.cardinality: "many"` creates one tab per pinned resource identity and at most one unpinned preview tab. Reopening a
   resource selects its existing tab.
+- `item.binding.add` points to the New document command. The launcher and tab bar run the same command, which creates
+  a fresh resource and opens it with `open: "pin"`.
 - cardinality controls the instance count only. It does not control initial visibility, and it does not control
   closability: resource tabs are always closable.
 - `region: "secondary"` puts the document tabs in the Secondary panel.

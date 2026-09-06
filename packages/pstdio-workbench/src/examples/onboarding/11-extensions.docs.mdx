@@ -1,13 +1,13 @@
 import { Canvas, Meta, Source } from "@storybook/addon-docs/blocks";
 import * as OnboardingStories from "./onboarding.stories";
-import source from "./extensions/tree-page-extension.ts?raw";
+import source from "./extensions/page-extension.ts?raw";
 
 <Meta of={OnboardingStories} name="3. First extension page" />
 
 # 3. Build the first extension page
 
-This is the smallest useful workbench extension in the guide. It declares a native tree view, places that view on a
-page, and adds a navigation entry that opens the page.
+This extension declares three native file views, places each on a page, and adds sidebar links to open them.
+Choose **Pages** or **Views** in the sidebar. The content in Main changes, and the back button returns to the previous page.
 
 <Canvas of={OnboardingStories.FirstExtensionPage} sourceState="shown" />
 
@@ -21,21 +21,19 @@ The story runs this extension definition. It uses only the public Extension API 
 
 `defineView(...)` creates reusable content:
 
-- `id` is the View's stable local identity. The returned `guideTree.ref` is the typed reference other definitions use.
+- `id` is the View's stable local identity. Its `ref` is the typed reference other definitions use.
 - `title` is its default user-facing label.
-- `body.kind: "tree"` asks the host to render the shared native tree UI.
-- `defaultExpandedSectionIds` opens the named section on first use.
-- the inner `body` function loads the tree sections and nodes. Section and node ids remain stable across refreshes;
-  labels and icons are visible to the user.
-- `selected: true` marks the node the host highlights as the current selection.
+- `body.kind: "file"` asks the host to render a native file view.
+- `load` returns the file name and content. A `.md` name selects the Markdown renderer.
+- Omitting `save` makes the content read-only.
 
 `definePage(...)` creates the location that owns the View placement:
 
-- `id` creates `guidePage.ref`.
+- `id` creates the page's typed `ref`.
 - `title` is the page label.
 - `path` is the page's stable URL segment.
 - `mode: workbenchModes.project` makes the page available in Project mode.
-- `main: { kind: "view", view: guideTree.ref, cardinality: "one" }` renders the tree in Main.
+- `main: { kind: "view", view: view.ref, cardinality: "one" }` renders the matching document in Main.
 
 `defineNavigationItem(...)` creates the action visible inside the workbench:
 
@@ -43,9 +41,12 @@ The story runs this extension definition. It uses only the public Extension API 
 - `slot: "content"` places it in the scrolling middle area, below pinned header content and above pinned footer content.
 - `group: "Learn"` places it under a visible Learn section.
 - `label` and `icon` describe the row.
-- `action` is a navigation target. `{ kind: "page", page: guidePage.ref }` opens the Guide page. Page navigation
+- `action` is a navigation target. `{ kind: "page", page: page.ref }` opens that page. Page navigation
   replaces the previous page placements instead of appending to them.
 
-Finally, `defineExtension(...)` exports all four definitions as one installable unit. The host loads, validates, and
+Finally, `defineExtension(...)` exports the views, pages, and navigation items as one installable unit. The host loads, validates, and
 removes them together. Registering the View alone would show nothing; the page places it, and the navigation item gives
 the user a way to reach it.
+
+The Storybook preview supplies a host sidebar that renders Project mode's navigation items. An installed extension uses
+the dashboard's sidebar. The sidebar is separate from each page's Main content.

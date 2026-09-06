@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react";
+import { expect, userEvent, within } from "storybook/test";
 import { createWorkbench, type WorkbenchModuleContribution } from "../../core";
 import { ResourceTabsExample } from "../api/resource-tabs-example";
 import { createHostTerminalWorkbench } from "../host-terminal-story";
@@ -16,8 +17,8 @@ import { createResourceWorkbench } from "./core/resource-panel";
 import { createTreeWorkbench } from "./core/tree-renderer";
 import { createViewsWorkbench } from "./core/views";
 import { createExtensionPreview } from "./extension-preview";
-import treePageExtension, { guidePage } from "./extensions/tree-page-extension";
-import firstExtensionSource from "./extensions/tree-page-extension.ts?raw";
+import pageExtension, { guidePage } from "./extensions/page-extension";
+import firstExtensionSource from "./extensions/page-extension.ts?raw";
 import { OnboardingFrame } from "./onboarding-frame";
 
 const meta = {
@@ -65,7 +66,17 @@ export const FirstExtensionPage: Story = {
       source: { code: firstExtensionSource, language: "tsx", type: "code" },
     },
   },
-  render: () => <OnboardingFrame createWorkbench={() => createExtensionPreview(treePageExtension, guidePage.id)} />,
+  render: () => <OnboardingFrame createWorkbench={() => createExtensionPreview(pageExtension, guidePage.id)} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("heading", { name: "Getting started" })).toBeVisible();
+    await userEvent.click(await canvas.findByRole("option", { name: "Pages" }));
+    await expect(await canvas.findByRole("heading", { name: "Pages" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("option", { name: "Views" }));
+    await expect(await canvas.findByRole("heading", { name: "Views" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Navigate back" }));
+    await expect(await canvas.findByRole("heading", { name: "Pages" })).toBeVisible();
+  },
 };
 
 export const CommandAndMenu: Story = {
@@ -84,6 +95,17 @@ export const ResourceBackedPanel: Story = {
   name: "6. Resource-backed panel",
   parameters: storyDescription("Open several guides through one resource placement, including its Add-panel action."),
   render: () => <OnboardingFrame createWorkbench={createResourceWorkbench} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Add panel" }));
+    await userEvent.click(canvas.getByRole("button", { name: "Add panel" }));
+    await expect(canvas.queryByRole("button", { name: "Add panel" })).toBeNull();
+    await expect(canvas.getAllByRole("tab")).toHaveLength(3);
+    await userEvent.click(canvas.getByRole("button", { name: "Close Resource identity" }));
+    await userEvent.click(await canvas.findByRole("button", { name: "Add panel" }));
+    await expect(canvas.getAllByRole("tab")).toHaveLength(3);
+    await expect(canvas.queryByRole("button", { name: "Add panel" })).toBeNull();
+  },
 };
 
 export const ModeContribution: Story = {
@@ -108,6 +130,16 @@ export const ResourceReuse: Story = {
   name: "10. Resource cardinality: one and many",
   parameters: storyDescription("Compare one replaceable inspector with several pinned and preview document tabs."),
   render: () => <ResourceTabsExample showCardinalityComparison />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "New document" }));
+    for (let index = 0; index < 4; index++) {
+      await userEvent.click(canvas.getByRole("button", { name: "Add panel" }));
+    }
+    await expect(canvas.getAllByRole("tab")).toHaveLength(8);
+    await userEvent.click(canvas.getByRole("button", { name: "Inspect release/v0.31" }));
+    await expect(canvas.getAllByRole("tab")).toHaveLength(8);
+  },
 };
 
 export const Breadcrumbs: Story = {

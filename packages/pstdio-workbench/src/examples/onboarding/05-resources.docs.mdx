@@ -13,7 +13,8 @@ placement lets the View load the right data and lets the workbench reuse the rig
 activates, it opens the Getting started guide as a pinned tab in Main.
 
 Press any **Open** button to add or select a guide tab. The + menu in the Main tab bar now has an **Open another guide**
-action. It opens the next guide through the same resource placement.
+action. It opens the next closed guide through the same resource placement. The + button disappears when all three
+guides are open. Close one tab and the button returns.
 
 <Canvas of={OnboardingStories.ResourceBackedPanel} sourceState="none" />
 
@@ -25,7 +26,7 @@ action. It opens the next guide through the same resource placement.
 
 Each entry in `guides` is a `ResourceRef`, the value that identifies one domain object:
 
-- `kind` groups objects of the same type. The placement accepts only `guide` resources.
+- `type` groups objects of the same kind. The placement accepts only `guide` resources.
 - `type` and `id`, together with any extension and project owner, identify this object. Instance reuse follows that identity.
 - `id` is the short identity inside the kind.
 - `label` is the user-facing name of the object.
@@ -36,7 +37,7 @@ contribution APIs.
 
 `ctx.resources.registerKind(...)` declares the resource kind:
 
-- `kind` is the kind identity. It must match the `kind` on the resources that open here.
+- `kind` is the kind identity. It must match the `type` on the resources that open here.
 - `label` is the user-facing name of the kind.
 - `icon` is the icon name shown for objects of this kind.
 
@@ -53,7 +54,9 @@ contribution APIs.
 `ctx.commands.registerCommand(...)` gives the placement's + menu a real action:
 
 - `openNextGuideCommandId` identifies the action.
-- the handler advances through `guides` and calls `openGuide(...)`.
+- `nextGuide()` reads the open instances from the layout and finds the first guide that is closed.
+- the handler calls `openGuide(...)` with that guide. `isEnabled` returns false when none remain.
+- the + menu offers command targets only while their commands are visible and enabled.
 - `item.binding.add` links the resource placement to that command. Without an Add action or an accepted active resource, a
   resource placement has nothing to open from the + menu.
 

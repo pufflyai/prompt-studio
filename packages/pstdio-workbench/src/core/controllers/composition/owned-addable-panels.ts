@@ -1,7 +1,6 @@
 import type { NavigationTarget, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { WorkbenchLayout, WorkbenchPanelRegion } from "../../registries/layout/layout-model";
 import { placementIdentityKey } from "../../registries/layout/placement-reconciliation";
-import type { WorkbenchPageSlot } from "../../registries/pages/page-registry";
 import type { WorkbenchOwnedPlacementItem } from "../../registries/placements/owned-placement-lifecycle";
 import { shellPlacementContributionId } from "../../registries/placements/shell-placement-registry";
 import type { ResourceRef } from "../../registries/resources/resource-registry";
@@ -40,10 +39,18 @@ const openPlacementAddTarget = (core: WorkbenchCore, target: NavigationTarget) =
   }
   void core.navigation.openTarget(target);
 };
-const acceptsItemResource = (item: WorkbenchOwnedPlacementItem, resource: ResourceRef | undefined) =>
-  item.kind !== "binding" ||
-  Boolean(item.binding.add) ||
-  Boolean(resource && resourceMatchesConstraint(item.binding, resource));
+const canAddItem = (core: WorkbenchCore, item: WorkbenchOwnedPlacementItem, resource: ResourceRef | undefined) => {
+  if (item.kind !== "binding") return true;
+  const target = item.binding.add;
+  if (!target) return Boolean(resource && resourceMatchesConstraint(item.binding, resource));
+  if (target.kind !== "command") return true;
+  const id = contributionRefId(target.target.command);
+  return Boolean(
+    core.commands.getCommand(id) &&
+      core.commands.isCommandVisible(id, target.target.params) &&
+      core.commands.isCommandEnabled(id, target.target.params),
+  );
+};
 const addShellPanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPanel) => {
   for (const placement of core.shellPlacements.listPlacements()) {
     if (placement.region !== input.region) continue;
@@ -53,7 +60,7 @@ const addShellPanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddP
       input.layout,
       (identity) => identity.kind === "shell" && identity.placementId === placement.id,
     );
-    if ((!multiple && isOpen) || !acceptsItemResource(placement.item, input.resource)) continue;
+    if ((!multiple && isOpen) || !canAddItem(core, placement.item, input.resource)) continue;
     add(shellPlacementContributionId(placement.id), (resource) => {
       if (placement.item.kind === "binding" && placement.item.binding.add) {
         openPlacementAddTarget(core, placement.item.binding.add);
@@ -75,7 +82,7 @@ const addModePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPa
       input.layout,
       (identity) => identity.kind === "mode" && identity.placementId === placement.id,
     );
-    if ((!multiple && isOpen) || !acceptsItemResource(placement.item, input.resource)) continue;
+    if ((!multiple && isOpen) || !canAddItem(core, placement.item, input.resource)) continue;
     add(modePlacementContributionId(placement.id), (resource) => {
       if (placement.item.kind === "binding" && placement.item.binding.add) {
         openPlacementAddTarget(core, placement.item.binding.add);
@@ -89,8 +96,6 @@ const addModePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPa
     });
   }
 };
-const acceptsPageSlotResource = (slot: WorkbenchPageSlot, resource: ResourceRef | undefined) =>
-  acceptsItemResource(slot.item, resource);
 const addPagePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPanel) => {
   const pageState = core.pages.store.getState();
   const page = pageState.activePageId ? core.pages.getPage(pageState.activePageId) : undefined;
@@ -103,7 +108,7 @@ const addPagePanels = (core: WorkbenchCore, input: AddablePanelInput, add: AddPa
       input.layout,
       (identity) => identity.kind === "page" && identity.pageId === page.id && identity.slotId === slot.id,
     );
-    if ((!multiple && isOpen) || !acceptsPageSlotResource(slot, input.resource)) continue;
+    if ((!multiple && isOpen) || !canAddItem(core, slot.item, input.resource)) continue;
     add(pagePlacementContributionId(page.id, slot.id), (resource) => {
       if (slot.item.kind === "binding" && slot.item.binding.add) {
         openPlacementAddTarget(core, slot.item.binding.add);

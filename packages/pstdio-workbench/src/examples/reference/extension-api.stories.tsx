@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react";
 import { createExtensionPreview } from "../onboarding/extension-preview";
-import treePageExtension, { guidePage } from "../onboarding/extensions/tree-page-extension";
-import source from "../onboarding/extensions/tree-page-extension.ts?raw";
+import pageExtension, { guidePage } from "../onboarding/extensions/page-extension";
+import source from "../onboarding/extensions/page-extension.ts?raw";
 import { OnboardingFrame } from "../onboarding/onboarding-frame";
 
 const meta = {
@@ -17,9 +17,9 @@ export const RunnableExample: Story = {
   name: "Runnable example",
   parameters: {
     docs: {
-      description: { story: "An extension declares a native tree View, a page, and its navigation item." },
+      description: { story: "An extension declares native file views, pages, and sidebar navigation items." },
       source: { code: source, language: "tsx", type: "code" },
     },
   },
-  render: () => <OnboardingFrame createWorkbench={() => createExtensionPreview(treePageExtension, guidePage.id)} />,
+  render: () => <OnboardingFrame createWorkbench={() => createExtensionPreview(pageExtension, guidePage.id)} />,
 };

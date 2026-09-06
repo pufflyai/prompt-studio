@@ -3,6 +3,7 @@ import type { ExtensionDefinition, RendererCallback, ViewBody } from "@pstdio/sd
 import { createWorkbench } from "../../core";
 import { emptyWorkbenchExtensionMetadata, registerWorkbenchExtensionContributions } from "../../extensions";
 import { previewNavigationTarget, previewPage } from "./extension-preview-composition";
+import { registerPreviewNavigation } from "./extension-preview-navigation";
 
 const extensionId = "storybook.guide";
 const contributionId = (kind: string, id: string) => `${extensionId}.${kind}.${id}`;
@@ -171,5 +172,6 @@ export const createExtensionPreview = (definition: ExtensionDefinition, pageId: 
 
   workbench.pageLocations.setProject("storybook");
   workbench.pageLocations.navigate({ kind: "page", page });
+  if (definition.navigationItems?.length) registerPreviewNavigation(workbench);
   return workbench;
 };

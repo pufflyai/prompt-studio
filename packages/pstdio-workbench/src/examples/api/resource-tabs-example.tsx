@@ -6,6 +6,7 @@ import { useState } from "react";
 
 const documentPlacementId = "guide.document";
 const inspectorPlacementId = "guide.branch-inspector";
+const newDocumentCommandId = "guide.new-document";
 const documents = {
   alpha: {
     type: "document",
@@ -83,6 +84,9 @@ const DocumentLauncher = (props: { showCardinalityComparison: boolean; workbench
           <Text color="fg.muted">Pinned documents stay open. The unpinned preview is reused.</Text>
         </HStack>
         <HStack gap="sm" flexWrap="wrap">
+          <Button size="sm" onClick={() => void workbench.commands.executeCommand(newDocumentCommandId)}>
+            New document
+          </Button>
           <Button size="sm" onClick={() => openDocument(workbench, documents.alpha, "preview")}>
             Preview Alpha
           </Button>
@@ -105,6 +109,20 @@ const DocumentLauncher = (props: { showCardinalityComparison: boolean; workbench
 };
 export const createResourceTabsWorkbench = (showCardinalityComparison = false) => {
   const workbench = createWorkbench({ regionSettings: { secondary: { alwaysShowTabs: true } } });
+  let nextDocumentNumber = 1;
+  workbench.commands.registerCommand(
+    { id: newDocumentCommandId, label: "New document" },
+    {
+      execute: () => {
+        const number = nextDocumentNumber++;
+        return openDocument(
+          workbench,
+          { type: "document", id: `new-${number}`, label: `Document ${number}.md` },
+          "pin",
+        );
+      },
+    },
+  );
   workbench.views.registerView({
     id: "guide.documents",
     title: "Documents",
@@ -156,6 +174,7 @@ export const createResourceTabsWorkbench = (showCardinalityComparison = false) =
           id: "guide.document-view",
         },
         cardinality: "many",
+        add: { kind: "command", target: { command: { kind: "command", id: newDocumentCommandId } } },
       },
     },
     region: "secondary",
