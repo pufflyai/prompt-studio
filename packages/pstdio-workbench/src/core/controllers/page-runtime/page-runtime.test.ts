@@ -186,7 +186,7 @@ describe("workbench page runtime", () => {
 
     const expectedScope = "project/project-1/resource/pstdio://extension-resource/workspace/workspace-1";
     expect(workbench.layout.getPersistenceScope()).toBe(expectedScope);
-    expect(workbench.panels.getPersistenceScope()).toBe(expectedScope);
+    expect(workbench.panelMenuState.getPersistenceScope()).toBe(expectedScope);
     expect(workbench.getPrimaryResource()?.uri).toBe("pstdio://extension-resource/workspace/workspace-1");
   });
 

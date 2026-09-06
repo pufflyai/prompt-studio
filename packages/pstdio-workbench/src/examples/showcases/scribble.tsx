@@ -184,6 +184,7 @@ export const createScribbleWorkbench = () => {
   workbench.modes.registerMode({
     id: "scribble",
     label: "Scribble",
+    chrome: { sidenav: "scribble.tree", activity: false, status: "scribble.sync" },
     resourceKinds: ["scribble.document"],
     regionSettings: {
       sidenav: { size: { defaultPx: 240, minPx: 200, maxPx: 320 }, collapsible: false },
@@ -212,14 +213,6 @@ export const createScribbleWorkbench = () => {
         </HStack>
       ),
     },
-  });
-  workbench.statusBar.registerItem({ id: "scribble.sync", viewId: "scribble.sync", slot: "trailing" });
-  workbench.modePlacements.registerPlacement({
-    id: "scribble.pages",
-    ref: { extensionId: "storybook.showcases", kind: "placement", id: "scribble.pages" },
-    modeId: "scribble",
-    region: "sidenav",
-    item: { kind: "view", viewId: "scribble.tree", presence: "fixed" },
   });
   workbench.pages.registerPage({
     id: "scribble.home",

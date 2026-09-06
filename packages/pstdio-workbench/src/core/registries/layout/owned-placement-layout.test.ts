@@ -8,6 +8,14 @@ import {
   type WorkbenchOwnedWidgetPlacement,
 } from "./owned-placement-layout";
 
+test("reconciliation preserves visibility for chrome regions without placements", () => {
+  for (const visible of [true, false]) {
+    const layout = createDefaultWorkbenchLayout({ sidenav: visible });
+    const next = reconcileOwnedWidgetLayout({ layout, placements: [owned(modeIdentity("body"), "main", 0, "body")] });
+    expect(next.regions.sidenav.visible).toBe(visible);
+  }
+});
+
 const owned = (
   identity: PlacementIdentity,
   region: WorkbenchOwnedWidgetPlacement["region"],
@@ -284,7 +292,7 @@ describe("owned placement layout reconciliation lifecycle", () => {
     expect(next.activeWidgetId).toBe("lab-content");
   });
 
-  test("collapses a docked region only after its final placement disappears", () => {
+  test("keeps the region visibility preference when its final placement disappears", () => {
     const mode = owned(modeIdentity("sessions"), "side", 20, "project-sessions");
     const page = owned(pageIdentity("ticket", "emoji"), "side", 10, "ticket-emoji");
     const populated = reconcileOwnedWidgetLayout({ layout: createDefaultWorkbenchLayout(), placements: [mode, page] });
@@ -294,7 +302,7 @@ describe("owned placement layout reconciliation lifecycle", () => {
 
     expect(modeOnly.regions.side.visible).toBe(true);
     expect(empty.regions.side.widgets).toEqual([]);
-    expect(empty.regions.side.visible).toBe(false);
+    expect(empty.regions.side.visible).toBe(true);
   });
 
   test("does not reopen a user-collapsed region for an existing hidden foreign widget", () => {

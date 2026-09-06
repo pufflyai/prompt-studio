@@ -31,7 +31,6 @@ const slotRecord = (slot: RuntimePageSlot, extensionId: string): MetadataPageSlo
     mountStrategy: slot.mountStrategy,
     hiddenByDefault: slot.hiddenByDefault,
     headerBorderBottom: slot.headerBorderBottom,
-    floatingPanels: slot.floatingPanels,
     tab: tabRecord(slot.tab, extensionId),
   };
   if (slot.role === "primary") {
@@ -104,6 +103,5 @@ export const toPlacementRecords = (runtime: ExtensionRuntime): WorkbenchExtensio
     mountStrategy: placement.contribution.mountStrategy,
     hiddenByDefault: placement.contribution.hiddenByDefault,
     headerBorderBottom: placement.contribution.headerBorderBottom,
-    floatingPanels: placement.contribution.floatingPanels,
     tab: tabRecord(placement.contribution.tab, placement.extensionId),
   }));

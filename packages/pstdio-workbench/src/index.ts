@@ -136,7 +136,6 @@ export type {
   WorkbenchCommandPaletteOpenInput,
   WorkbenchCommandTarget,
   WorkbenchCore,
-  WorkbenchFloatingPanelVisibility,
   WorkbenchFocusController,
   WorkbenchFocusRegionId,
   WorkbenchHierarchyNode,

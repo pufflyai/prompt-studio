@@ -2,7 +2,6 @@ import type { Disposable } from "../../shared/disposable";
 import type { LayoutModel } from "../layout/layout-model";
 import type {
   WidgetMountStrategy,
-  WorkbenchFloatingPanelVisibility,
   WorkbenchPanelTab,
   WorkbenchRegion,
   WorkbenchWidgetRole,
@@ -14,7 +13,6 @@ export interface WorkbenchPlacementPresentation {
   mountStrategy?: WidgetMountStrategy;
   hiddenByDefault?: boolean;
   headerBorderBottom?: boolean;
-  floatingPanels?: WorkbenchFloatingPanelVisibility;
   tab?: WorkbenchPanelTab;
   config?: unknown;
 }

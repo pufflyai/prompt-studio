@@ -45,14 +45,14 @@ export {
   workbenchPageLocationsEqual,
 } from "../controllers/page-location/page-location-normalization";
 export type {
-  CreateWorkbenchPanelsControllerInput,
-  PersistedWorkbenchPanels,
-  WorkbenchPanelsChangeListener,
-  WorkbenchPanelsController,
-  WorkbenchPanelsPersistenceAdapter,
-  WorkbenchPanelsState,
-} from "../controllers/panels/panels-controller";
-export { createWorkbenchPanelsController } from "../controllers/panels/panels-controller";
+  CreateWorkbenchPanelMenuStateControllerInput,
+  PersistedWorkbenchPanelMenuState,
+  WorkbenchPanelMenuState,
+  WorkbenchPanelMenuStateChangeListener,
+  WorkbenchPanelMenuStateController,
+  WorkbenchPanelMenuStatePersistenceAdapter,
+} from "../controllers/panel-menus/panel-menu-state-controller";
+export { createWorkbenchPanelMenuStateController } from "../controllers/panel-menus/panel-menu-state-controller";
 export type {
   WorkbenchShellController,
   WorkbenchShellOpenRegion,

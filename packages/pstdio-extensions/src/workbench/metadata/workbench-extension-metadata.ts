@@ -153,6 +153,7 @@ export const createWorkbenchExtensionMetadata = (
     icon: mode.contribution.icon,
     regions: [...mode.contribution.regions],
     regionSettings: mode.contribution.regionSettings,
+    floatingPanels: mode.contribution.floatingPanels,
     defaultTheme: mode.contribution.defaultTheme
       ? normalizedRef(mode.contribution.defaultTheme, mode.extensionId)
       : undefined,

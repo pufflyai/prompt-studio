@@ -9,6 +9,28 @@ const openExample = async (page: Page, name: string, resource?: string) => {
   await expect(page.locator("html")).toHaveAttribute("data-theme", `pstdio.extension-lab.theme.${name}`);
 };
 const view = (page: Page, title: string) => page.frameLocator(`iframe[title="${title}"]`);
+const hideAndReopen = async (page: Page, panel: "Side" | "Secondary", title: string) => {
+  const frame = page.locator(`iframe[title="${title}"]`);
+  const original = await frame.elementHandle();
+  const url = page.url();
+  await page.getByRole("button", { name: `Hide ${panel} Panel`, exact: true }).click();
+  await expect(frame).toBeHidden();
+  await page.getByRole("button", { name: `Show ${panel} Panel`, exact: true }).click();
+  await expect(frame).toBeVisible();
+  expect(await original!.evaluate((node) => node.isConnected)).toBe(true);
+  await expect(page).toHaveURL(url);
+};
+const floatAndReattach = async (page: Page) => {
+  await page.getByRole("button", { name: "Float Side Panel", exact: true }).click();
+  await expect(page.getByTestId("workbench-side-panel-floating")).toBeVisible();
+  await page
+    .locator('[data-workbench-region="nav"]')
+    .getByRole("button", { name: "Hide Side Panel", exact: true })
+    .click();
+  await expect(page.getByTestId("workbench-side-panel-floating")).toHaveCount(0);
+  await page.getByRole("button", { name: "Show Side Panel", exact: true }).click();
+  await expect(page.getByTestId("workbench-side-panel-attached")).toBeVisible();
+};
 const waitForExampleSave = (page: Page, name: string, content: string) =>
   page.waitForResponse(
     (response) =>
@@ -74,6 +96,8 @@ test("Boombox keeps its player mounted across home, resource, and browser histor
   expect(await playerFrame!.evaluate((frame) => frame.isConnected)).toBe(true);
   await view(page, "Player").getByRole("button", { name: "Pause", exact: true }).click();
   await expect(view(page, "Player").getByRole("button", { name: "Play", exact: true })).toBeVisible();
+  await hideAndReopen(page, "Secondary", "Player");
+  await expect(view(page, "Player").getByRole("button", { name: "Play", exact: true })).toBeVisible();
   await page.goBack();
   await expect(page).toHaveURL(homeUrl);
   expect(await playerFrame!.evaluate((frame) => frame.isConnected)).toBe(true);
@@ -93,6 +117,8 @@ test("Zipline opens its inspector and persists a status change", async ({ page }
   await page.getByText("ZIP-142", { exact: true }).click();
   const inspector = view(page, "Issue");
   await expect(inspector.getByText("ZIP-142", { exact: true })).toBeVisible();
+  await hideAndReopen(page, "Side", "Issue");
+  await floatAndReattach(page);
   const saved = waitForExampleSave(page, "zipline", "Done");
   await inspector.getByRole("button", { name: "Change status from In progress to Done", exact: true }).click();
   await expect(
@@ -111,6 +137,8 @@ test("Pigeon sends a local message and keeps it in Sent", async ({ page }) => {
   const inbox = view(page, "Inbox");
   await expect(folders.getByRole("button", { name: "Inbox 2", exact: true })).toBeVisible();
   await inbox.getByText("Launch notes for Friday", { exact: true }).click();
+  await hideAndReopen(page, "Side", "Message");
+  await floatAndReattach(page);
   await expect(folders.getByRole("button", { name: "Inbox 1", exact: true })).toBeVisible();
   await folders.getByRole("button", { name: "Compose", exact: true }).click();
   await inbox.getByRole("textbox", { name: "To", exact: true }).fill("alex@example.com");
@@ -131,6 +159,11 @@ test("Kiln docks the inspector and persists object changes", async ({ page }) =>
   await openExample(page, "kiln", "kiln.object/cube");
   const inspector = view(page, "Scene and properties");
   await expect(view(page, "3D viewport").locator("canvas")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Float Side Panel", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("tab")).toHaveCount(0);
+  await expect(page.locator('[data-workbench-panel-header="secondary"]')).toHaveCount(0);
+  await hideAndReopen(page, "Side", "Scene and properties");
+  await hideAndReopen(page, "Secondary", "Timeline");
   await inspector.getByRole("button", { name: "Hide Cube", exact: true }).click();
   await expect(inspector.getByRole("button", { name: "Show Cube", exact: true })).toBeVisible();
   const timeline = view(page, "Timeline");

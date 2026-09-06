@@ -40,7 +40,6 @@ export type {
   WidgetMountStrategy,
   WidgetReusePolicy,
   WorkbenchCommandTarget,
-  WorkbenchFloatingPanelVisibility,
   WorkbenchLayout,
   WorkbenchLayoutStoreState,
   WorkbenchLocationEligibility,
@@ -78,7 +77,6 @@ export {
   workbenchRegions,
 } from "../registries/layout/layout-model";
 export {
-  allowsWorkbenchFloatingPanels,
   getActiveWorkbenchLocationPanel,
   getActiveWorkbenchSubPanel,
   isWorkbenchPanelPlacementVisible,

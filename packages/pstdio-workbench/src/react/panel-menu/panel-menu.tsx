@@ -99,7 +99,7 @@ const useWorkbenchPanelMenu = (
   const widget = activePlacement ? registeredWidgets[activePlacement.contributionId] : undefined;
   const collapsible = useWorkbenchStore(workbench.layout.store, () => resolvePanelCollapsible(workbench, region));
   const panelStateKey = activePlacement ? `panel-menu:${activePlacement.widgetId}` : region;
-  const open = useWorkbenchStore(workbench.panels.store, (state) => state.openByRegionId[panelStateKey] ?? true);
+  const open = useWorkbenchStore(workbench.panelMenuState.store, (state) => state.openByMenuId[panelStateKey] ?? true);
 
   return {
     region,
@@ -112,9 +112,9 @@ const useWorkbenchPanelMenu = (
     responsiveCollapsed,
     collapsible,
     size: resolveRegionSize(workbench.layout.getRegionSize(region)),
-    onOpen: () => workbench.panels.setOpen(panelStateKey, true),
+    onOpen: () => workbench.panelMenuState.setOpen(panelStateKey, true),
     onCollapsedChange: (collapsed) => {
-      if (!collapsed || collapsible) workbench.panels.setOpen(panelStateKey, !collapsed);
+      if (!collapsed || collapsible) workbench.panelMenuState.setOpen(panelStateKey, !collapsed);
     },
   };
 };

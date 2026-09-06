@@ -1,10 +1,10 @@
 import type { PageLocation } from "@pstdio/sdk/extensions";
 import type {
   PersistedTreeRendererStates,
-  PersistedWorkbenchPanels,
+  PersistedWorkbenchPanelMenuState,
   TreeRendererPersistenceAdapter,
   WorkbenchPageLocationPersistence,
-  WorkbenchPanelsPersistenceAdapter,
+  WorkbenchPanelMenuStatePersistenceAdapter,
   WorkbenchPersistenceAdapter,
   WorkbenchSidePanelMode,
   WorkbenchSidePanelPersistenceAdapter,
@@ -23,7 +23,7 @@ export type {
 } from "./local-storage-persistence-helpers";
 export { createLocalStorageLayoutPersistence, workbenchStoragePersistenceKey };
 
-export interface CreateLocalStoragePanelsPersistenceInput extends CreateWorkbenchStoragePersistenceInput {
+export interface CreateLocalStoragePanelMenuStatePersistenceInput extends CreateWorkbenchStoragePersistenceInput {
   scope: string;
 }
 
@@ -66,18 +66,18 @@ export const createLocalStoragePageLocationPersistence = (
     },
   };
 };
-export const createLocalStoragePanelsPersistence = (
-  input: CreateLocalStoragePanelsPersistenceInput,
-): WorkbenchPanelsPersistenceAdapter => {
+export const createLocalStoragePanelMenuStatePersistence = (
+  input: CreateLocalStoragePanelMenuStatePersistenceInput,
+): WorkbenchPanelMenuStatePersistenceAdapter => {
   const storage = resolveStorage(input.storage);
   return {
-    getPanelStates: (scope) =>
-      readJson<PersistedWorkbenchPanels>(
+    getMenuStates: (scope) =>
+      readJson<PersistedWorkbenchPanelMenuState>(
         storage,
-        workbenchStoragePersistenceKey(input.namespace, "panels", scope ?? input.scope),
+        workbenchStoragePersistenceKey(input.namespace, "panel-menus", scope ?? input.scope),
       ),
-    setPanelStates: (state, scope) => {
-      const key = workbenchStoragePersistenceKey(input.namespace, "panels", scope ?? input.scope);
+    setMenuStates: (state, scope) => {
+      const key = workbenchStoragePersistenceKey(input.namespace, "panel-menus", scope ?? input.scope);
       storage.setItem(key, JSON.stringify(state));
     },
   };
@@ -147,7 +147,7 @@ export const createLocalStorageWorkbenchPersistence = (input: CreateLocalStorage
   return {
     snapshotPersistence,
     layoutPersistence,
-    panelsPersistence: createLocalStoragePanelsPersistence({
+    panelMenuStatePersistence: createLocalStoragePanelMenuStatePersistence({
       namespace: input.namespace,
       scope: input.scope ?? "global",
       storage,

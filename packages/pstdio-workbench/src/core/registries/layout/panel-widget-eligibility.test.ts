@@ -1,11 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ResourceRef } from "../resources/resource-registry";
-import { createDefaultWorkbenchLayout, type RegisteredWidgetContribution } from "./layout-types";
-import {
-  allowsWorkbenchFloatingPanels,
-  isWorkbenchPanelPlacementVisible,
-  matchesWorkbenchPanelMenuOwner,
-} from "./panel-widget-eligibility";
+import type { RegisteredWidgetContribution } from "./layout-types";
+import { isWorkbenchPanelPlacementVisible, matchesWorkbenchPanelMenuOwner } from "./panel-widget-eligibility";
 
 const resource: ResourceRef = {
   kind: "workspace",
@@ -78,22 +74,6 @@ describe("Location Panel presentation", () => {
         ignoreResourceLocation: true,
       }),
     ).toBe(true);
-  });
-
-  test("lets the selected Location or Sub Panel keep floating panels off its content", () => {
-    const layout = createDefaultWorkbenchLayout();
-    layout.regions.main.widgets.push(
-      { widgetId: "location", contributionId: "location", role: "location" },
-      { widgetId: "notes", contributionId: "notes", role: "sub-panel" },
-    );
-    layout.activeLocationWidgetId = "location";
-    layout.regions.main.activeWidgetId = "location";
-    const widgets = [widget({ id: "location", floatingPanels: "hidden" }), widget({ id: "notes" })];
-
-    expect(allowsWorkbenchFloatingPanels(layout, widgets)).toBe(false);
-
-    layout.regions.main.activeWidgetId = "notes";
-    expect(allowsWorkbenchFloatingPanels(layout, widgets)).toBe(true);
   });
 });
 

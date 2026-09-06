@@ -108,7 +108,7 @@ describe("createWorkspacesModule terminal integration", () => {
     workbench.registerModule(createWorkbenchTerminalModule());
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
-    workbench.panels.setOpen("secondary", false);
+    workbench.shell.setRegionOpen("secondary", false);
 
     openWorkspacesPage(workbench, workspace);
     openWorkspacesPage(workbench, workspace);
@@ -127,7 +127,7 @@ describe("createWorkspacesModule terminal integration", () => {
         title: "Terminal 1",
       }),
     ]);
-    expect(workbench.panels.isOpen("secondary")).toBe(false);
+    expect(workbench.shell.getRegionState("secondary").open).toBe(false);
   });
 
   test("keeps the workspace terminal after navigating from the workspaces board", async () => {

@@ -1,17 +1,12 @@
+import type { WorkbenchShellOpenRegion } from "./controllers/shell/shell-controller";
 import type { KeybindingSequence } from "./registries/keybindings/keybinding-registry";
-import type { WorkbenchRegion } from "./registries/layout/layout-model";
 import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
 import type { WorkbenchCore } from "./workbench-core";
 
 const SIDENAV_PANEL_ID = "sidenav";
 
-const setPanelOpen = (workbench: WorkbenchCore, panelId: WorkbenchRegion, open: boolean) => {
-  workbench.panels.setOpen(panelId, open);
-  workbench.layout.setRegionVisible(panelId, open);
-};
-
-const togglePanel = (workbench: WorkbenchCore, panelId: WorkbenchRegion) => {
-  setPanelOpen(workbench, panelId, !workbench.panels.isOpen(panelId));
+const togglePanel = (workbench: WorkbenchCore, region: WorkbenchShellOpenRegion) => {
+  workbench.shell.setRegionOpen(region, !workbench.shell.getRegionState(region).open);
 };
 
 interface BuiltinCommand {

@@ -39,6 +39,7 @@ export interface WorkbenchModeContribution {
   id: string;
   label?: string;
   defaultTheme?: string;
+  floatingPanels?: "visible" | "hidden";
   chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", string | false>>;
   panels?: readonly WorkbenchPanelRegion[];
   /** Region-level layout policy while this mode is active. */

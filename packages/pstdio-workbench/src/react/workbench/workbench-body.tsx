@@ -138,7 +138,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       resizableSide="bottom"
       contentPanel={mainContent}
       resizablePanel={<WorkbenchSecondaryPanel workbench={workbench} hasSecondaryHeader={secondaryPanel.hasHeader} />}
-      collapsed={secondaryPanel.collapsed && secondaryPanel.collapsible}
+      collapsed={secondaryPanel.collapsed}
       collapsible={secondaryPanel.collapsible}
       defaultSizePx={secondaryPanelSize.defaultPx}
       minSizePx={secondaryPanelSize.minPx}

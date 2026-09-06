@@ -2,7 +2,6 @@ import { workbenchPages } from "@pstdio/sdk/extensions";
 import { EmptyState } from "@pstdio/ui";
 import type { TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
-import { WORKBENCH_TERMINAL_PANEL_SIZE } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardViews } from "@/shared/app/resources";
@@ -241,7 +240,7 @@ export const createWorkspacesModule = () =>
         panels: ["main", "secondary", "side"],
         regionSettings: {
           side: { alwaysShowTabs: true },
-          secondary: { size: WORKBENCH_TERMINAL_PANEL_SIZE, alwaysShowTabs: true },
+          secondary: { alwaysShowTabs: true },
         },
         activate: () => undefined,
       });

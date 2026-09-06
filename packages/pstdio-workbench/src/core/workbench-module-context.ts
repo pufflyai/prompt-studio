@@ -151,9 +151,9 @@ export const createModuleContext = (
       ...core.pages,
       registerPage: (page) => track(core.pages.registerPage(page)),
     },
-    panels: {
-      ...core.panels,
-      onDidChange: (listener) => track(core.panels.onDidChange(listener)),
+    panelMenuState: {
+      ...core.panelMenuState,
+      onDidChange: (listener) => track(core.panelMenuState.onDidChange(listener)),
     },
     preferences: {
       ...core.preferences,

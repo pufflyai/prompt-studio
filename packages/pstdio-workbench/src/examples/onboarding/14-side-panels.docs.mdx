@@ -27,19 +27,23 @@ Core API → Region map**.
 
 ## Side Panel presentation
 
-The Side Panel supports attached, floating, and closed presentations. Hosts can disable detachment when floating
-content does not suit the application, such as Kiln's inspector:
+The Side Panel supports attached, floating, and closed presentations. Modes declare their floating policy. A host
+can supply the default:
 
 ```tsx
 const workbench = createWorkbench({
   initialSidePanelMode: "attached",
-  sidePanelDetachable: false,
+  floatingPanels: "hidden",
 });
 ```
 
-`sidePanelDetachable` defaults to `true`. Setting it to `false` removes the Float Side Panel button and the bubble
-launcher. The navigation bar still closes and reopens the attached panel. Saved floating state and calls to
-`workbench.sidePanel.setMode("floating")` resolve to `"attached"`.
+`floatingPanels` defaults to `"visible"`. The active mode can override the host default with the same field. Kiln
+declares `floatingPanels: "hidden"` on its mode. The controller enforces this setting on transitions, saved state,
+and requests. The Float button and bubble launcher use `workbench.sidePanel.canFloat()`.
+
+Use `workbench.shell.setRegionOpen("side", open)` to hide or reopen the panel. Use
+`workbench.shell.setSidePanelPresentation("floating")` to float it when allowed. A forbidden floating request
+resolves to `"attached"`. `collapsible: false` prevents dragging closed and still permits explicit hide/show.
 
 Pass `sidePanelBubbleIcon` to the React host to choose a bubble icon. This accepts a React node and defaults to the
 chat icon. It changes the icon while keeping the launcher's tooltip, accessible label, and click behavior:

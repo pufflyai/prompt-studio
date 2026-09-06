@@ -32,7 +32,7 @@ describe("createDashboardWorkbench", () => {
   test("starts the Secondary Panel closed", () => {
     const workbench = createDashboardWorkbench();
 
-    expect(workbench.panels.isOpen("secondary")).toBe(false);
+    expect(workbench.shell.getRegionState("secondary").open).toBe(false);
     expect(workbench.layout.getLayout().regions.secondary.visible).toBe(false);
   });
 

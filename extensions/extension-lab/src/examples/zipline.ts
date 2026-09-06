@@ -25,7 +25,6 @@ const example = defineExample({
       region: "side",
       binding: { kind: { kind: "resource-kind", id: "zipline.issue" }, view: views[0].ref, cardinality: "one" },
       openOn: "page-resource",
-      floatingPanels: "visible",
     },
   ],
   initialResource: false,

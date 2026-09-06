@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { WorkbenchStory } from "../workbench-story";
 import { createBoomboxWorkbench } from "./boombox";
 import { createKilnWorkbench } from "./kiln";
@@ -50,15 +50,50 @@ const KilnStory = () => {
   return <WorkbenchStory workbench={workbench} initialThemePreference={kilnTheme.id} />;
 };
 
-export const Scribble: Story = { render: ScribbleStory };
-export const Boombox: Story = { render: BoomboxStory };
-export const Zipline: Story = { render: ZiplineStory };
-export const Pigeon: Story = { render: PigeonStory };
+export const Scribble: Story = {
+  render: ScribbleStory,
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('[data-workbench-region="sidenav"]')).toBeVisible();
+  },
+};
+export const Boombox: Story = {
+  render: BoomboxStory,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const player = canvasElement.querySelector('[data-workbench-region="secondary"]');
+    await userEvent.click(await canvas.findByRole("button", { name: "Hide Secondary Panel" }));
+    await expect(player).not.toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Show Secondary Panel" }));
+    await expect(player).toBeVisible();
+    await expect(canvasElement.querySelector('[data-workbench-region="secondary"]')).toBe(player);
+  },
+};
+export const Zipline: Story = {
+  render: ZiplineStory,
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('[data-workbench-region="sidenav"]')).toBeVisible();
+  },
+};
+export const Pigeon: Story = {
+  render: PigeonStory,
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('[data-workbench-region="sidenav"]')).toBeVisible();
+  },
+};
 export const Kiln: Story = {
   render: KilnStory,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(await canvas.findByRole("spinbutton", { name: "Cube position X" })).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "Float Side Panel" })).toBeNull();
+    const position = canvas.getByRole("spinbutton", { name: "Cube position X" });
+    await userEvent.clear(position);
+    await userEvent.type(position, "2.5");
+    for (const panel of ["Side", "Secondary"]) {
+      await userEvent.click(canvas.getByRole("button", { name: `Hide ${panel} Panel` }));
+      await userEvent.click(canvas.getByRole("button", { name: `Show ${panel} Panel` }));
+    }
+    await expect(canvas.getByRole("spinbutton", { name: "Cube position X" })).toHaveValue(2.5);
     await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
     for (const region of ["side", "secondary"]) {
       await expect(canvasElement.querySelector(`[data-workbench-panel-header="${region}"]`)).toBeNull();

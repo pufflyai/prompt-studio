@@ -10,6 +10,7 @@ const views = [
 ];
 const example = defineExample({
   name: "kiln",
+  floatingPanels: "hidden",
   label: "Kiln",
   icon: "Box",
   primary: views[0].ref,
@@ -25,7 +26,6 @@ const example = defineExample({
       region: "side",
       binding: { kind: { kind: "resource-kind", id: "kiln.object" }, view: views[1].ref, cardinality: "one" },
       openOn: "page-resource",
-      floatingPanels: "hidden",
     },
   ],
   initialResource: true,

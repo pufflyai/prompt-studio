@@ -13,7 +13,7 @@ import {
   defaultPageResourceCodec,
   toWorkbenchPageResource,
 } from "./controllers/page-runtime/page-runtime";
-import { createWorkbenchPanelsController } from "./controllers/panels/panels-controller";
+import { createWorkbenchPanelMenuStateController } from "./controllers/panel-menus/panel-menu-state-controller";
 import { createWorkbenchShellController } from "./controllers/shell/shell-controller";
 import { createWorkbenchSidePanelController } from "./controllers/side-panel/side-panel-controller";
 import { createWorkbenchTerminalController } from "./controllers/terminal/terminal-controller";
@@ -62,7 +62,7 @@ export * from "./workbench-core-types";
 const createPagePersistenceScopeHandler = (
   input: createWorkbenchInput,
   layout: Pick<ReturnType<typeof createLayoutModel>, "getPersistenceScope" | "setPersistenceScope">,
-  panels: ReturnType<typeof createWorkbenchPanelsController>,
+  panelMenuState: ReturnType<typeof createWorkbenchPanelMenuStateController>,
   pageResources: WorkbenchPageResourceCodec,
 ) => {
   const resolveScope = input.resolvePagePersistenceScope;
@@ -75,7 +75,7 @@ const createPagePersistenceScopeHandler = (
       projectId: state.projectId,
       resource: state.location?.resource ? toWorkbenchPageResource(state.location.resource, pageResources) : undefined,
     });
-    panels.setPersistenceScope(resolved.scope);
+    panelMenuState.setPersistenceScope(resolved.scope);
     layout.setPersistenceScope(resolved.scope, { carryRegionState: resolved.carryRegions });
   };
 };
@@ -93,7 +93,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     getRegionSettings: (regionId) => {
       const activeModeId = core?.modes.getActiveModeId();
       const activeMode = activeModeId ? core?.modes.getMode(activeModeId) : undefined;
-      return activeMode?.regionSettings?.[regionId] ?? input.regionSettings?.[regionId];
+      return { ...input.regionSettings?.[regionId], ...activeMode?.regionSettings?.[regionId] };
     },
     persistence: input.persistence
       ? {
@@ -117,13 +117,6 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     isRegionFocusable: (region) => layout.getLayout().regions[region].visible,
   });
 
-  const sidePanel = createWorkbenchSidePanelController({
-    detachable: input.sidePanelDetachable,
-    initialMode: input.initialSidePanelMode,
-    persistence: input.sidePanelPersistence,
-  });
-
-  const shell = createWorkbenchShellController({ layout, sidePanel });
   const views = createViewRegistry({ registerBody: createWorkbenchViewBodyRegistration(renderers) });
   const viewMenus = createWorkbenchViewMenuRegistry({ views });
   const pageResources = input.pageResources ?? defaultPageResourceCodec;
@@ -161,9 +154,8 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const overlays = createWorkbenchOverlayRegistry({ layout, views, viewMenus });
   const placeholders = createWorkbenchPlaceholderRegistry({ layout, views });
   const breadcrumbs = createWorkbenchBreadcrumbController();
-  const panels = createWorkbenchPanelsController({
-    defaultOpenByRegionId: input.defaultPanelOpenByRegionId,
-    persistence: input.panelsPersistence,
+  const panelMenuState = createWorkbenchPanelMenuStateController({
+    persistence: input.panelMenuStatePersistence,
   });
 
   const resources = createResourceRegistry({
@@ -179,8 +171,21 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     resolveContext: () => core,
   });
 
+  const sidePanel = createWorkbenchSidePanelController({
+    getFloatingPanels: () => {
+      const activeModeId = modes.getActiveModeId();
+      return (
+        (activeModeId ? modes.getMode(activeModeId)?.floatingPanels : undefined) ?? input.floatingPanels ?? "visible"
+      );
+    },
+    onDidChangePolicy: modes.onDidChangeActive,
+    initialMode: input.initialSidePanelMode,
+    persistence: input.sidePanelPersistence,
+  });
+  const shell = createWorkbenchShellController({ layout, sidePanel });
+
   const pages = createLiveWorkbenchPageRegistry({
-    beforeApply: createPagePersistenceScopeHandler(input, layout, panels, pageResources),
+    beforeApply: createPagePersistenceScopeHandler(input, layout, panelMenuState, pageResources),
     revealRegion: (region) => revealPanelRegion(core, region),
     layout,
     modePlacements,
@@ -227,7 +232,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
     pages,
     navigation,
     navigationTrees,
-    panels,
+    panelMenuState,
     preferences: createPreferenceRegistry({ persistence: input.preferencePersistence }),
     treeViews: {
       getTreeState: renderers.getTreeState,

@@ -24,7 +24,6 @@ const example = defineExample({
       region: "side",
       binding: { kind: { kind: "resource-kind", id: "pigeon.thread" }, view: views[1].ref, cardinality: "one" },
       openOn: "page-resource",
-      floatingPanels: "visible",
     },
   ],
   initialResource: false,

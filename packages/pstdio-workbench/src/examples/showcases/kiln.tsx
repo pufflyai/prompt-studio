@@ -12,13 +12,14 @@ export const createKilnWorkbench = () => {
   const workbench = createWorkbench({
     startPage: homePage,
     initialSidePanelMode: "attached",
-    sidePanelDetachable: false,
     defaultPanelOpenByRegionId: { secondary: true },
   });
   workbench.themes.register([kilnTheme]);
   workbench.modes.registerMode({
     id: "kiln",
     label: "Kiln",
+    floatingPanels: "hidden",
+    chrome: { nav: "kiln.nav", sidenav: false, activity: false, status: "kiln.status" },
     resourceKinds: ["kiln.object"],
     regionSettings: {
       side: { size: { defaultPx: 340, minPx: 300, maxPx: 440 }, collapsible: false },
@@ -51,12 +52,6 @@ export const createKilnWorkbench = () => {
     title: "Scene status",
     body: { kind: "react", render: (input) => <KilnStatus workbench={input.workbench} /> },
   });
-  workbench.shellPlacements.registerPlacement({
-    id: "kiln.nav",
-    item: { kind: "view", viewId: "kiln.nav", presence: "fixed" },
-    region: "nav",
-  });
-  workbench.statusBar.registerItem({ id: "kiln.status", viewId: "kiln.status", slot: "leading" });
   workbench.modePlacements.registerPlacement({
     id: "kiln.timeline",
     ref: { extensionId: "storybook.showcases", kind: "placement", id: "kiln.timeline" },
@@ -92,7 +87,6 @@ export const createKilnWorkbench = () => {
         region: "side",
         binding: { resourceKinds: ["kiln.object"], viewId: "kiln.inspector", cardinality: "one" },
         openOn: "page-resource",
-        floatingPanels: "hidden",
       },
     ],
   });

@@ -111,7 +111,7 @@ describe("createWorkbenchTerminalModule", () => {
 
   test("the open command reveals the terminal panel in the secondary region", async () => {
     const workbench = setup();
-    workbench.panels.setOpen("secondary", false);
+    workbench.shell.setRegionOpen("secondary", false);
 
     await workbench.commands.executeCommand(WORKBENCH_TERMINAL_OPEN_COMMAND_ID);
 
@@ -123,7 +123,7 @@ describe("createWorkbenchTerminalModule", () => {
       mountStrategy: "keep-mounted",
       title: "Terminal 1",
     });
-    expect(workbench.panels.isOpen("secondary")).toBe(true);
+    expect(workbench.shell.getRegionState("secondary").open).toBe(true);
   });
 
   test("opening the terminal again creates another workbench tab", async () => {

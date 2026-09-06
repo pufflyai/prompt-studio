@@ -50,7 +50,6 @@ export type {
   WidgetMountStrategy,
   WidgetReusePolicy,
   WorkbenchCommandTarget,
-  WorkbenchFloatingPanelVisibility,
   WorkbenchLayout,
   WorkbenchLayoutStoreState,
   WorkbenchLocationEligibility,

@@ -182,9 +182,7 @@ const reconcileRegions = (
       ...region,
       widgets,
       activeWidgetId,
-      ...(docked.has(regionId)
-        ? { visible: widgets.length > 0 && (region.visible || opensPreviouslyEmptyRegion) }
-        : {}),
+      ...(docked.has(regionId) ? { visible: region.visible || opensPreviouslyEmptyRegion } : {}),
     };
   }
   return { ...layout, regions };

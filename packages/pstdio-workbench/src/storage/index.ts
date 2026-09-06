@@ -1,5 +1,5 @@
 export type {
-  CreateLocalStoragePanelsPersistenceInput,
+  CreateLocalStoragePanelMenuStatePersistenceInput,
   CreateLocalStorageTreePersistenceInput,
   CreateLocalStorageWorkbenchPersistenceInput,
   WorkbenchStorageLike,
@@ -8,7 +8,7 @@ export type {
 export {
   createLocalStorageLayoutPersistence,
   createLocalStoragePageLocationPersistence,
-  createLocalStoragePanelsPersistence,
+  createLocalStoragePanelMenuStatePersistence,
   createLocalStorageTreePersistence,
   createLocalStorageWorkbenchPersistence,
   workbenchStoragePersistenceKey,

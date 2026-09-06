@@ -62,7 +62,7 @@ describe("registerWorkspaceResourceActions", () => {
         return undefined;
       },
     });
-    workbench.panels.setOpen("secondary", false);
+    workbench.shell.setRegionOpen("secondary", false);
 
     await workbench.commands.executeCommand(dashboardCommandIds.openWorkspaceTerminal, undefined, {
       resource: workspace,
@@ -84,7 +84,7 @@ describe("registerWorkspaceResourceActions", () => {
         title: "Terminal 1",
       }),
     ]);
-    expect(workbench.panels.isOpen("secondary")).toBe(true);
+    expect(workbench.shell.getRegionState("secondary").open).toBe(true);
   });
 
   test("leaves the workspace terminal action inert when the host terminal widget is unavailable", async () => {

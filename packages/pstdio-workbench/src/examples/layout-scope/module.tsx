@@ -7,7 +7,6 @@ import {
   type WorkbenchCore,
   type WorkbenchLayout,
   type WorkbenchModuleContribution,
-  type WorkbenchPanelsPersistenceAdapter,
 } from "../../core";
 import { useWorkbenchStore } from "../../react";
 
@@ -31,13 +30,11 @@ const SCOPES: Array<{ id: LayoutScope; label: string }> = [
 ];
 
 const setSecondaryOpen = (workbench: WorkbenchCore, open: boolean) => {
-  workbench.panels.setOpen("secondary", open);
-  workbench.layout.setRegionVisible("secondary", open);
+  workbench.shell.setRegionOpen("secondary", open);
 };
 
 const createInMemoryAdapter = () => {
   const layouts = new Map<string, WorkbenchLayout>();
-  const panels = new Map<string, Parameters<WorkbenchPanelsPersistenceAdapter["setPanelStates"]>[0]>();
   return {
     layout: {
       getLayout: (scope) => layouts.get(scope ?? "__global__"),
@@ -45,12 +42,6 @@ const createInMemoryAdapter = () => {
         layouts.set(scope ?? "__global__", structuredClone(layout));
       },
     } satisfies LayoutPersistenceAdapter,
-    panels: {
-      getPanelStates: (scope) => panels.get(scope ?? "__global__"),
-      setPanelStates: (state, scope) => {
-        panels.set(scope ?? "__global__", structuredClone(state));
-      },
-    } satisfies WorkbenchPanelsPersistenceAdapter,
   };
 };
 
@@ -61,13 +52,12 @@ interface SwitcherPanelProps {
 const SwitcherPanel = (props: SwitcherPanelProps) => {
   const { workbench } = props;
   const secondarySize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.secondary.size);
-  const secondaryOpen = useWorkbenchStore(workbench.panels.store, (state) => state.openByRegionId.secondary ?? true);
+  const secondaryOpen = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.secondary.visible);
   // `getPersistenceScope` lives outside the store; mirror it in local state so
   // the button highlight reflects switches even when scoped layouts coincide.
   const [activeScope, setActiveScope] = useState<LayoutScope | undefined>(() => workbench.layout.getPersistenceScope());
 
   const switchTo = (scope: LayoutScope) => {
-    workbench.panels.setPersistenceScope(scope);
     workbench.layout.setPersistenceScope(scope, {
       carryRegionState: ["sidenav"],
     });
@@ -170,12 +160,10 @@ export const createLayoutScopeExampleWorkbench = () => {
   const persistence = createInMemoryAdapter();
   const workbench = createWorkbench({
     layoutPersistence: persistence.layout,
-    panelsPersistence: persistence.panels,
   });
   workbench.registerModule(createLayoutScopeExampleModule());
 
   const seedScope = (scope: LayoutScope, secondarySize: number, secondaryOpen: boolean) => {
-    workbench.panels.setPersistenceScope(scope);
     workbench.layout.setPersistenceScope(scope);
     workbench.layout.setRegionSize("secondary", secondarySize);
     setSecondaryOpen(workbench, secondaryOpen);

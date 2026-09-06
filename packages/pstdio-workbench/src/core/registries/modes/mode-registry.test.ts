@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchPanelsController } from "../../controllers/panels/panels-controller";
 import { createContextKeyService } from "../../shared/context/context-key-service";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import { createLayoutModel, type LayoutModel } from "../layout/layout-model";
@@ -13,7 +12,7 @@ const createContext = (layout: LayoutModel) =>
   ({
     context: createContextKeyService(),
     layout,
-    panels: createWorkbenchPanelsController(),
+
     views: {
       registerView: () => createDisposable(() => undefined),
     },
@@ -114,10 +113,9 @@ describe("createWorkbenchModeRegistry", () => {
   test("publishes active mode context keys", () => {
     const layout = createLayoutModel();
     const context = createContextKeyService();
-    const panels = createWorkbenchPanelsController();
     const registry = createWorkbenchModeRegistry({
       layout,
-      resolveContext: () => ({ context, layout, panels }) as unknown as WorkbenchModeActivationContext,
+      resolveContext: () => ({ context, layout }) as unknown as WorkbenchModeActivationContext,
     });
 
     registry.registerMode({ id: "project", panels: ["main"], activate: () => undefined });

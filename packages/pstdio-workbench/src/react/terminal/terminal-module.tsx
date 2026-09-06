@@ -127,8 +127,7 @@ export const openWorkbenchTerminal = (
   });
   if (identity.kind !== "shell") throw new Error("Terminal placement must be shell-owned");
   if (reveal) {
-    ctx.layout.setRegionVisible("secondary", true);
-    ctx.panels.setOpen("secondary", true);
+    ctx.shell.setRegionOpen("secondary", true);
   }
   const placement = ctx.layout
     .getLayout()

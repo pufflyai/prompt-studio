@@ -315,12 +315,12 @@ describe("createWorkspacesModule sidenav state", () => {
     workbench.registerModule(createWorkspacesModule());
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     openWorkspacesPage(workbench);
-    workbench.panels.setOpen("sidenav", false);
+    workbench.shell.setRegionOpen("sidenav", false);
     workbench.layout.setRegionVisible("sidenav", false);
 
     openWorkspacesPage(workbench, workspace);
 
-    expect(workbench.panels.isOpen("sidenav")).toBe(false);
+    expect(workbench.shell.getRegionState("sidenav").open).toBe(false);
     expect(workbench.layout.getLayout().regions.sidenav.visible).toBe(false);
   });
 });

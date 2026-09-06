@@ -27,8 +27,7 @@ const canOpenCorePanel = (core: WorkbenchCore, target: NavigationTargetPanel) =>
 
 export const revealPanelRegion = (core: WorkbenchCore, region: WorkbenchRegion) => {
   if (region === "secondary") {
-    core.panels.setOpen("secondary", true);
-    core.layout.setRegionVisible("secondary", true);
+    core.shell.setRegionOpen("secondary", true);
   }
   if (region === "side" && core.sidePanel.getMode() === "closed") core.sidePanel.setMode("attached");
 };

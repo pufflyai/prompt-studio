@@ -39,6 +39,20 @@ A page auxiliary slot or mode placement exposes a panel reference. Use a `panel`
 
 This ownership rule prevents panels from leaking between pages or modes.
 
+Use `shell.setRegionOpen("side" | "secondary" | "sidenav", open)` to hide or reopen a whole region. Read it with `shell.getRegionState(region).open`. Docked visibility is stored in the layout snapshot. The side-panel controller owns its `attached`, `floating`, or `closed` presentation. Hiding a region preserves its placements. Docked content stays mounted through hide and reopen.
+
+Modes own `floatingPanels` and `regionSettings`. Host inputs provide defaults; a mode overrides only the properties it declares. `collapsible` allows dragging closed. `alwaysShowTabs` controls a lone tab. Neither setting restricts explicit visibility. Custom navigation keeps the host's panel controls.
+
+`sidePanel.canFloat()` reads the active policy. `shell.setSidePanelPresentation("floating")` attaches the panel when floating is disabled. Entering such a mode also attaches an already floating panel and preserves a closed panel.
+
+Per-view menu instances use `panelMenuState`, with `openByMenuId` and `panelMenuStatePersistence`. They do not duplicate docked region visibility.
+
+### Updating callers
+
+Move placement `floatingPanels` to its mode. Replace host `sidePanelDetachable: false` with `floatingPanels: "hidden"`, and replace reads of `sidePanel.detachable` with `sidePanel.canFloat()`. Region callers previously using `panels` now use `shell`. Menu-instance callers use `panelMenuState`.
+
+Layout snapshots and side-panel presentation keep their existing formats. Per-view menu preferences now use the `panel-menus` storage key and `openByMenuId` map. Old menu preferences are not imported; those menus start open.
+
 ## Resources
 
 Resources identify product data. Resource kinds provide labels and icons. Providers make resources searchable. Every searchable result that can be opened supplies an explicit activation callback.

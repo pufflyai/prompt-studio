@@ -10,7 +10,7 @@ export interface WorkbenchSidePanelState {
 }
 
 export interface WorkbenchSidePanelController {
-  readonly detachable: boolean;
+  canFloat(): boolean;
   store: WorkbenchStore<WorkbenchSidePanelState>;
   getMode(): WorkbenchSidePanelMode;
   setMode(mode: WorkbenchSidePanelMode): void;
@@ -23,32 +23,36 @@ export interface WorkbenchSidePanelPersistenceAdapter {
 }
 
 export interface CreateWorkbenchSidePanelControllerInput {
-  detachable?: boolean;
+  getFloatingPanels?(): "visible" | "hidden";
+  onDidChangePolicy?(listener: () => void): Disposable;
   initialMode?: WorkbenchSidePanelMode;
   persistence?: WorkbenchSidePanelPersistenceAdapter;
 }
 
 export const createWorkbenchSidePanelController = (input: CreateWorkbenchSidePanelControllerInput = {}) => {
-  const detachable = input.detachable ?? true;
-  const resolveMode = (mode: WorkbenchSidePanelMode) => (!detachable && mode === "floating" ? "attached" : mode);
+  const canFloat = () => input.getFloatingPanels?.() !== "hidden";
+  const resolveMode = (mode: WorkbenchSidePanelMode) => (!canFloat() && mode === "floating" ? "attached" : mode);
   const internal = createWorkbenchStore<WorkbenchSidePanelState>({
     name: "workbench.sidePanel",
     // What the user last chose outranks the app's opening default.
     initialState: { mode: resolveMode(input.persistence?.getMode() ?? input.initialMode ?? "floating") },
   });
 
+  const setMode = (mode: WorkbenchSidePanelMode) => {
+    const next = resolveMode(mode);
+    if (internal.getState().mode === next) return;
+    internal.setState({ mode: next }, false, "setMode");
+    input.persistence?.setMode(next);
+  };
+  input.onDidChangePolicy?.(() => setMode(internal.getState().mode));
+
   return {
-    detachable,
+    canFloat,
     store: internal,
     getMode() {
       return internal.getState().mode;
     },
-    setMode(mode: WorkbenchSidePanelMode) {
-      const next = resolveMode(mode);
-      if (internal.getState().mode === next) return;
-      internal.setState({ mode: next }, false, "setMode");
-      input.persistence?.setMode(next);
-    },
+    setMode,
     onDidChange(listener: WorkbenchSidePanelChangeListener) {
       const unsubscribe = internal.subscribeSelector(
         (state) => state.mode,

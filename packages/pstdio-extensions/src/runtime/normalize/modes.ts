@@ -1,4 +1,5 @@
 import { extensionPanelRegions, type ModeContribution } from "@pstdio/sdk/extensions";
+import { regionSettingsSchema } from "pstdio-api-contracts";
 import type { NormalizedExtension } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
 import type { LoadedExtensionSource } from "../loader";
@@ -42,14 +43,17 @@ export const registerModes = (ext: NormalizedExtension, source: LoadedExtensionS
       mode.regionSettings === undefined ||
       (hasValidRegions &&
         isRecord(mode.regionSettings) &&
-        Object.keys(mode.regionSettings).every(
-          (region) => region === "sidenav" || (mode.regions as readonly string[]).includes(region),
+        Object.entries(mode.regionSettings).every(
+          ([region, settings]) =>
+            (region === "sidenav" || (mode.regions as readonly string[]).includes(region)) &&
+            regionSettingsSchema.safeParse(settings).success,
         ));
     if (
       !isRecord(mode) ||
       !isLocalizableString(mode.label) ||
       !hasValidRegions ||
       !hasValidRegionSettings ||
+      (mode.floatingPanels !== undefined && mode.floatingPanels !== "visible" && mode.floatingPanels !== "hidden") ||
       (mode.defaultTheme !== undefined && !isRef(mode.defaultTheme, "theme")) ||
       !validChrome(mode.chrome)
     ) {

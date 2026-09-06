@@ -180,6 +180,7 @@ const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtension
     icon: mode.icon,
     panelRegions: mode.regions,
     regionSettings: mode.regionSettings,
+    floatingPanels: mode.floatingPanels,
     ...(mode.defaultTheme ? { defaultTheme: metadataRefId(mode.defaultTheme) } : {}),
     ...(mode.chrome
       ? {
@@ -235,7 +236,6 @@ export const toInternalWorkbenchExtensionMetadata = (
       mountStrategy: placement.mountStrategy,
       hiddenByDefault: placement.hiddenByDefault,
       headerBorderBottom: placement.headerBorderBottom,
-      floatingPanels: placement.floatingPanels,
       tab:
         placement.tab && input.createTab
           ? input.createTab({

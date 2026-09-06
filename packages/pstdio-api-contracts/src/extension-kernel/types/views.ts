@@ -117,7 +117,6 @@ export interface PlacementPresentation {
   readonly mountStrategy?: PlacementMountStrategy;
   readonly hiddenByDefault?: boolean;
   readonly headerBorderBottom?: boolean;
-  readonly floatingPanels?: "visible" | "hidden";
   readonly tab?: PlacementTabPresentation;
 }
 

@@ -141,5 +141,4 @@ export const disposeReverse = (disposables: readonly Disposable[]) => {
 
 export const restoreModeLayout = (context: WorkbenchModeActivationContext, layout: WorkbenchLayout) => {
   if (layout !== context.layout.getLayout()) context.layout.restoreLayout(layout);
-  for (const panel of workbenchPanelRegions) context.panels.setOpen(panel, layout.regions[panel].visible);
 };

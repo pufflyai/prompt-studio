@@ -235,6 +235,7 @@ export const createZiplineWorkbench = () => {
   workbench.modes.registerMode({
     id: "zipline",
     label: "Zipline",
+    chrome: { sidenav: "zipline.workspace", activity: "zipline.rail", status: "zipline.count" },
     resourceKinds: ["zipline.issue"],
     regionSettings: {
       sidenav: { size: { defaultPx: 225, minPx: 200, maxPx: 300 }, collapsible: false },
@@ -282,19 +283,6 @@ export const createZiplineWorkbench = () => {
     title: "Issue count",
     body: { kind: "react", render: () => <IssueCount /> },
   });
-  workbench.shellPlacements.registerPlacement({
-    id: "zipline.rail",
-    item: { kind: "view", viewId: "zipline.rail", presence: "fixed" },
-    region: "activity",
-  });
-  workbench.statusBar.registerItem({ id: "zipline.count", viewId: "zipline.count", slot: "leading" });
-  workbench.modePlacements.registerPlacement({
-    id: "zipline.workspace",
-    ref: { extensionId: "storybook.showcases", kind: "placement", id: "zipline.workspace" },
-    modeId: "zipline",
-    region: "sidenav",
-    item: { kind: "view", viewId: "zipline.workspace", presence: "fixed" },
-  });
   workbench.pages.registerPage({
     id: "zipline.home",
     ref: homePage,
@@ -323,7 +311,6 @@ export const createZiplineWorkbench = () => {
         region: "side",
         binding: { resourceKinds: ["zipline.issue"], viewId: "zipline.inspector", cardinality: "one" },
         openOn: "page-resource",
-        floatingPanels: "visible",
       },
     ],
   });

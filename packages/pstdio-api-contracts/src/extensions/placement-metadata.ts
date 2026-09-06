@@ -4,7 +4,6 @@ export const workbenchPlacementPresentationSchema = z.object({
   mountStrategy: z.enum(["active", "keep-mounted"]).optional(),
   hiddenByDefault: z.boolean().optional(),
   headerBorderBottom: z.boolean().optional(),
-  floatingPanels: z.enum(["visible", "hidden"]).optional(),
   tab: z
     .object({
       queryHandlerId: z.string(),

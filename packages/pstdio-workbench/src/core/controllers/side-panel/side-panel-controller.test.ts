@@ -3,15 +3,15 @@ import { createWorkbenchSidePanelController } from "./side-panel-controller";
 
 describe("createWorkbenchSidePanelController", () => {
   test("starts attached when detachment is disabled", () => {
-    const controller = createWorkbenchSidePanelController({ detachable: false });
+    const controller = createWorkbenchSidePanelController({ getFloatingPanels: () => "hidden" });
 
-    expect(controller.detachable).toBe(false);
+    expect(controller.canFloat()).toBe(false);
     expect(controller.getMode()).toBe("attached");
   });
 
   test("restores a floating panel as attached when detachment is disabled", () => {
     const controller = createWorkbenchSidePanelController({
-      detachable: false,
+      getFloatingPanels: () => "hidden",
       initialMode: "closed",
       persistence: { getMode: () => "floating", setMode: () => undefined },
     });
@@ -23,7 +23,7 @@ describe("createWorkbenchSidePanelController", () => {
     const written: string[] = [];
     const events: string[] = [];
     const controller = createWorkbenchSidePanelController({
-      detachable: false,
+      getFloatingPanels: () => "hidden",
       persistence: { getMode: () => "closed", setMode: (mode) => void written.push(mode) },
     });
     controller.onDidChange((mode) => events.push(mode));

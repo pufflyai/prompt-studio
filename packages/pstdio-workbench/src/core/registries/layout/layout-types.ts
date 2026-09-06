@@ -1,4 +1,4 @@
-import type { FileRendererSectionTarget, PlacementIdentity } from "@pstdio/sdk/extensions";
+import type { FileRendererSectionTarget, ModeRegionSettings, PlacementIdentity } from "@pstdio/sdk/extensions";
 import type { ContributionSource, RegisteredContributionMetadata } from "../../shared/contributions/metadata";
 import type { NavigationTarget } from "../navigation/navigation-registry";
 import type { ResourceRef } from "../resources/resource-registry";
@@ -58,13 +58,7 @@ export interface WorkbenchRegionSize {
 }
 
 /** Region-level layout policy owned by the active mode or the host, never by a placement. */
-export interface WorkbenchRegionSettings {
-  showHeader?: boolean;
-  size?: WorkbenchRegionSize;
-  collapsible?: boolean;
-  /** Show a tab for a single item. By default, tabs need at least two visible items. */
-  alwaysShowTabs?: boolean;
-}
+export type WorkbenchRegionSettings = ModeRegionSettings;
 
 export type WidgetReusePolicy = "resource" | "none";
 
@@ -73,8 +67,6 @@ export type WidgetMountStrategy = "active" | "keep-mounted";
 export type WorkbenchPanelReusePolicy = WidgetReusePolicy;
 
 export type WorkbenchPanelMountStrategy = WidgetMountStrategy;
-
-export type WorkbenchFloatingPanelVisibility = "visible" | "hidden";
 
 export type WorkbenchWidgetRole = "content" | "location" | "sub-panel" | "panel-menu";
 
@@ -152,7 +144,6 @@ export interface WidgetContribution {
   regionSize?: WorkbenchRegionSize;
   regionCollapsible?: boolean;
   headerBorderBottom?: boolean;
-  floatingPanels?: WorkbenchFloatingPanelVisibility;
   resourceKinds?: string[];
   priority?: number;
   rendererId: string;
@@ -197,7 +188,6 @@ export interface WorkbenchPanelContribution {
   regionSize?: WorkbenchRegionSize;
   regionCollapsible?: boolean;
   headerBorderBottom?: boolean;
-  floatingPanels?: WorkbenchFloatingPanelVisibility;
   resourceKinds?: string[];
   eligibleLocations?: WorkbenchLocationEligibility;
   priority?: number;

@@ -8,7 +8,7 @@ describe("workbench built-ins", () => {
     const workbench = createWorkbench();
 
     await workbench.commands.executeCommand("workbench.toggleSideBar");
-    expect(workbench.panels.isOpen("sidenav")).toBe(false);
+    expect(workbench.shell.getRegionState("sidenav").open).toBe(false);
     expect(workbench.layout.getLayout().regions.sidenav.visible).toBe(false);
 
     await workbench.commands.executeCommand("workbench.toggleCommandPalette");

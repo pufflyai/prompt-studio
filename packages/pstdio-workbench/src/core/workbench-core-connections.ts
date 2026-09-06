@@ -1,7 +1,6 @@
 import { createWorkbenchCompositionController } from "./controllers/composition/composition-controller";
 import { createOwnedAddablePanels } from "./controllers/composition/owned-addable-panels";
 import { createPrimaryCoordinator, createScopedIsInScope } from "./controllers/primary-coordinator/primary-coordinator";
-import { isWorkbenchShellOpenRegion } from "./controllers/shell/shell-controller";
 import { getActiveLocationPlacement } from "./registries/layout/layout-operations";
 import { workbenchViewIdContextKey } from "./registries/views/view-registry";
 import { registerWorkbenchBuiltIns } from "./workbench-built-ins";
@@ -24,18 +23,10 @@ export const createCoreCompositionController = (resolveCore: () => WorkbenchCore
   });
 
 export const connectWorkbenchCoreState = (core: WorkbenchCore, input: createWorkbenchInput) => {
-  const syncPanelChrome = () => {
-    for (const region of Object.values(core.layout.getLayout().regions)) {
-      if (isWorkbenchShellOpenRegion(region.id)) core.panels.setOpen(region.id, region.visible);
-    }
-  };
-
   core.layout.store.subscribe((state) => {
     const activeRegion = core.focus.getActiveRegion();
     if (activeRegion && !state.layout.regions[activeRegion].visible) core.focus.clearFocus();
-    syncPanelChrome();
   });
-  syncPanelChrome();
   core.layout.store.subscribeSelector(
     (state) => {
       const activeId = state.layout.activeWidgetId;

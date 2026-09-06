@@ -3,7 +3,7 @@ import { createWorkbench, type WorkbenchModuleContribution } from "./workbench-c
 
 describe("workbench modules", () => {
   it("enforces the host detachment option through the shell API", () => {
-    const workbench = createWorkbench({ sidePanelDetachable: false, initialSidePanelMode: "floating" });
+    const workbench = createWorkbench({ floatingPanels: "hidden", initialSidePanelMode: "floating" });
 
     expect(workbench.sidePanel.getMode()).toBe("attached");
     workbench.shell.setSidePanelPresentation("closed");
@@ -18,7 +18,7 @@ describe("workbench modules", () => {
       ...layout,
       regions: { ...layout.regions, sidenav: { ...layout.regions.sidenav, visible: false } },
     });
-    expect(workbench.panels.isOpen("sidenav")).toBe(false);
+    expect(workbench.shell.getRegionState("sidenav").open).toBe(false);
   });
 
   it("does not retain focus in a closed region", () => {

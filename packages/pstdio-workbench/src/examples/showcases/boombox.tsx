@@ -266,6 +266,7 @@ export const createBoomboxWorkbench = () => {
   workbench.modes.registerMode({
     id: "boombox",
     label: "Boombox",
+    chrome: { nav: "boombox.nav", sidenav: false, activity: "boombox.rail" },
     resourceKinds: ["boombox.track"],
     regionSettings: {
       secondary: { size: { defaultPx: 88, minPx: 88, maxPx: 88 }, collapsible: false, showHeader: false },
@@ -291,16 +292,6 @@ export const createBoomboxWorkbench = () => {
     id: "boombox.player",
     title: "Player",
     body: { kind: "react", render: (input) => <Player workbench={input.workbench} /> },
-  });
-  workbench.shellPlacements.registerPlacement({
-    id: "boombox.nav",
-    item: { kind: "view", viewId: "boombox.nav", presence: "fixed" },
-    region: "nav",
-  });
-  workbench.shellPlacements.registerPlacement({
-    id: "boombox.rail",
-    item: { kind: "view", viewId: "boombox.rail", presence: "fixed" },
-    region: "activity",
   });
   workbench.modePlacements.registerPlacement({
     id: "boombox.player",

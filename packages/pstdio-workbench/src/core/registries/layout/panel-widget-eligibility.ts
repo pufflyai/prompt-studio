@@ -79,18 +79,6 @@ export const isWorkbenchPanelPlacementVisible = (
   return matchesLocationEligibility(widget, resource, modeId, placement, options.location);
 };
 
-export const allowsWorkbenchFloatingPanels = (
-  layout: WorkbenchLayout,
-  widgets: readonly RegisteredWidgetContribution[],
-) => {
-  const activeMainPanel =
-    layout.regions.main.widgets.find((placement) => placement.widgetId === layout.regions.main.activeWidgetId) ??
-    getActiveLocationPlacement(layout);
-  if (!activeMainPanel) return true;
-
-  return widgets.find((widget) => widget.id === activeMainPanel.contributionId)?.floatingPanels !== "hidden";
-};
-
 export const matchesWorkbenchPanelMenuOwner = (
   widget: RegisteredWidgetContribution,
   context: {

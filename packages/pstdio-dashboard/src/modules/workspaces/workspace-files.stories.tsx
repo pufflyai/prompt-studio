@@ -125,12 +125,12 @@ const createStoryWorkbench = (state: WorkspaceStoryState) => {
   workbench.registerModule(createWorkspacesModule());
   selectDashboardProject(workbench, { id: "prompt-studio", name: "Prompt Studio" });
   openWorkspacesPage(workbench, workspaceResource(state));
-  workbench.panels.setOpen("sidenav", false);
+  workbench.shell.setRegionOpen("sidenav", false);
   if (state === "collapsed") {
     const fileMenu = workbench.layout
       .listPanelInstances("main-left-menu")
       .find((panel) => panel.panelId === dashboardWidgetIds.workspaceFileTree);
-    if (fileMenu) workbench.panels.setOpen(`panel-menu:${fileMenu.instanceId}`, false);
+    if (fileMenu) workbench.panelMenuState.setOpen(`panel-menu:${fileMenu.instanceId}`, false);
   }
   return workbench;
 };

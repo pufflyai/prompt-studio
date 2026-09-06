@@ -13,7 +13,10 @@ interface SidePanelStoryProps {
 const SidePanelStory = (props: SidePanelStoryProps) => {
   const { detachable, bubbleIcon } = props;
   const [workbench] = useState(() => {
-    const instance = createWorkbench({ sidePanelDetachable: detachable, initialSidePanelMode: "closed" });
+    const instance = createWorkbench({
+      floatingPanels: detachable === false ? "hidden" : "visible",
+      initialSidePanelMode: "closed",
+    });
     instance.views.registerView({
       id: "side-panel.canvas",
       title: "Canvas",

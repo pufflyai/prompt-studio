@@ -36,8 +36,26 @@ const mode = defineMode({
 });
 ```
 
-`chrome` replaces the whole `nav`, `sidenav`, `activity`, or `status` region with a declared view while the mode is active. Use `false` to hide a region. Omit a key to retain its normal host content. These views share the normal webview capability boundary and receive the active `pageLocation` in their props. Include navigation back to the project when replacing host navigation.
+`chrome` replaces the content of `nav`, `sidenav`, `activity`, or `status` with a declared view while the mode is active. Custom `nav` keeps the shared panel visibility buttons beside the view. Use `false` to hide a chrome region. Omit a key to retain its normal host content. These views share the normal webview capability boundary and receive the active `pageLocation` in their props. Include navigation back to the project when replacing host navigation.
 
-`regionSettings.sidenav` controls a custom sidebar even without a placement. Page-owned content still belongs in `slots`. A side slot with `floatingPanels: "hidden"` displays in the attached host; side sizing and collapsibility follow the mode.
+`regionSettings.sidenav` controls a custom sidebar even without a placement. Page-owned content still belongs in `slots`. Region settings inherit the host defaults per property. For example, setting `alwaysShowTabs` preserves the host's size unless the mode supplies its own `size`.
 
 Set `regionSettings.secondary.showHeader: false` for a player or timeline that supplies its own controls. This removes the docked panel's tab and Add header without changing its content. Main and attached Side panels support the same setting. Floating panels retain their window controls.
+
+## Panel policy
+
+Declare `floatingPanels: "hidden"` on the mode to prevent floating side panels. The controller attaches an open floating panel when entering the mode and leaves a closed panel closed. Floating requests and restored state obey the same policy. The default is `"visible"`. Placements and page slots do not control floating.
+
+`regionSettings[region].collapsible: false` prevents dragging the region closed. The shared navigation buttons can still hide and reopen it. Hiding preserves its placements. Docked content stays mounted through hide and reopen. It does not close a tab or change the page.
+
+`alwaysShowTabs: true` keeps a lone tab visible. Otherwise, a tab strip needs at least two visible items. Tab visibility does not affect panel visibility or floating permission.
+
+| Mode | Panel policy |
+| --- | --- |
+| Project | Session and terminal regions keep single tabs. Side panels may float. |
+| Kiln | Floating disabled. Inspector and timeline cannot be dragged closed. Both have navigation visibility buttons and hide single tabs. |
+| Boombox | Fixed-height transport cannot be dragged closed. Its navigation visibility button preserves the player. |
+| Pigeon, Zipline | Side panels may float, attach, hide, and reopen. Sidebar sizes belong to the mode. |
+| Scribble | Custom sidebar keeps its mode size and disables drag collapse. |
+
+Core callers and SDK extensions use these same settings. Storybook may register modes directly with the workbench; the SDK metadata adapter feeds that same registry and controller.

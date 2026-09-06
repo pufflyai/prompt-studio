@@ -12,7 +12,7 @@ export type WorkbenchStoragePersistenceKind =
   | "layout-generation"
   | "layout-resource-index"
   | "layout-scope-index"
-  | "panels"
+  | "panel-menus"
   | "page-location"
   | "side-panel"
   | "tree";

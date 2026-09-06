@@ -73,6 +73,7 @@ export interface ModeRegionSettings {
   /** Hide the panel header when the mode supplies its own controls. */
   readonly showHeader?: boolean;
   readonly size?: RegionSize;
+  /** Allow dragging this region closed. Explicit hide/show is always available. */
   readonly collapsible?: boolean;
   /** Keep a tab visible when this region has only one visible item. */
   readonly alwaysShowTabs?: boolean;
@@ -84,6 +85,8 @@ export interface ModeContribution extends ContributionDefinition<"mode"> {
   regions: readonly ExtensionPanelRegion[];
   /** Default theme for this mode. An explicit user choice for the mode takes precedence. */
   defaultTheme?: ThemeRef;
+  /** Whether side panels may float while this mode is active. Defaults to visible. */
+  floatingPanels?: "visible" | "hidden";
   /** Replace host chrome with a view, or hide it with false, while the mode is active. */
   chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", ViewRef | false>>;
   /** Region-level layout policy. The mode owns it; placements cannot set it. */

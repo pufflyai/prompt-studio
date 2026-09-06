@@ -1,25 +1,11 @@
 import type { LayoutModel } from "../../registries/layout/layout-model";
-import type { WorkbenchPanelMenuRegion, WorkbenchRegion } from "../../registries/layout/layout-types";
+import type { WorkbenchRegion } from "../../registries/layout/layout-types";
 import { createDisposable, type Disposable } from "../../shared/disposable";
 import type { WorkbenchSidePanelController, WorkbenchSidePanelMode } from "../side-panel/side-panel-controller";
 
 export type WorkbenchSidePanelPresentation = WorkbenchSidePanelMode;
 
-export type WorkbenchShellOpenRegion = "sidenav" | "secondary" | WorkbenchPanelMenuRegion;
-
-const shellOpenRegions = new Set<WorkbenchRegion>([
-  "sidenav",
-  "secondary",
-  "main-left-menu",
-  "main-right-menu",
-  "secondary-left-menu",
-  "secondary-right-menu",
-  "side-left-menu",
-  "side-right-menu",
-]);
-
-export const isWorkbenchShellOpenRegion = (region: WorkbenchRegion): region is WorkbenchShellOpenRegion =>
-  shellOpenRegions.has(region);
+export type WorkbenchShellOpenRegion = "sidenav" | "secondary" | "side";
 
 export interface WorkbenchShellRegionState {
   open: boolean;
@@ -41,10 +27,15 @@ export const createWorkbenchShellController = (input: {
 }): WorkbenchShellController => ({
   getRegionState(region) {
     const state = input.layout.getLayout().regions[region];
-    return { open: state.visible, size: state.size };
+    return { open: region === "side" ? input.sidePanel.getMode() !== "closed" : state.visible, size: state.size };
   },
 
   setRegionOpen(region, open) {
+    if (region === "side") {
+      if (!open) input.sidePanel.setMode("closed");
+      else if (input.sidePanel.getMode() === "closed") input.sidePanel.setMode("attached");
+      return;
+    }
     input.layout.setRegionVisible(region, open);
   },
 

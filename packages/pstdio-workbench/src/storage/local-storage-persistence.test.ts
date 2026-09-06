@@ -1,9 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { PageLocation } from "@pstdio/sdk/extensions";
-import { createDefaultWorkbenchLayout, type PersistedTreeRendererStates, type PersistedWorkbenchPanels } from "../core";
+import {
+  createDefaultWorkbenchLayout,
+  type PersistedTreeRendererStates,
+  type PersistedWorkbenchPanelMenuState,
+} from "../core";
 import {
   createLocalStorageLayoutPersistence,
-  createLocalStoragePanelsPersistence,
+  createLocalStoragePanelMenuStatePersistence,
   createLocalStorageTreePersistence,
   createLocalStorageWorkbenchPersistence,
   type WorkbenchStorageLike,
@@ -62,19 +66,19 @@ describe("local storage workbench persistence", () => {
 
   test("persists panel state by namespace and scope", () => {
     const storage = createStore();
-    const persistence = createLocalStoragePanelsPersistence({
+    const persistence = createLocalStoragePanelMenuStatePersistence({
       namespace: "demo",
       scope: "project:one",
       storage,
     });
-    const panels: PersistedWorkbenchPanels = { openByRegionId: { sidenav: false, status: true } };
+    const panels: PersistedWorkbenchPanelMenuState = { openByMenuId: { sidenav: false, status: true } };
 
-    persistence.setPanelStates(panels);
+    persistence.setMenuStates(panels);
 
-    expect(storage.getItem(workbenchStoragePersistenceKey("demo", "panels", "project:one"))).toBe(
+    expect(storage.getItem(workbenchStoragePersistenceKey("demo", "panel-menus", "project:one"))).toBe(
       JSON.stringify(panels),
     );
-    expect(persistence.getPanelStates()).toEqual(panels);
+    expect(persistence.getMenuStates()).toEqual(panels);
   });
 
   test("persists tree state by namespace and scope", () => {
@@ -131,7 +135,7 @@ describe("local storage workbench persistence", () => {
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "layout", "project:one"))).toBe(
       JSON.stringify({ version: 3, layout }),
     );
-    expect(storage.getItem(workbenchStoragePersistenceKey("demo", "panels", "project:one"))).toBeNull();
+    expect(storage.getItem(workbenchStoragePersistenceKey("demo", "panel-menus", "project:one"))).toBeNull();
     expect(storage.getItem(workbenchStoragePersistenceKey("demo", "tree", "project:one"))).toBe(JSON.stringify(trees));
     expect(persistence.snapshotPersistence.getSnapshot("project:one")).toEqual({ layout });
     expect(persistence.treePersistence.getTreeStates()).toEqual(trees);

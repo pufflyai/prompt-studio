@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { createWorkbenchPanelsController } from "../../controllers/panels/panels-controller";
 import { createContextKeyService } from "../../shared/context/context-key-service";
 import { createLayoutModel } from "../layout/layout-model";
 import { createWorkbenchModeRegistry, type WorkbenchModeActivationContext } from "./mode-registry";
@@ -12,7 +11,6 @@ describe("mode layout reconciliation", () => {
     const context = {
       context: createContextKeyService(),
       layout,
-      panels: createWorkbenchPanelsController(),
     } as unknown as WorkbenchModeActivationContext;
     const log: string[] = [];
     const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => context });
@@ -45,7 +43,6 @@ describe("mode layout reconciliation", () => {
     const context = {
       context: createContextKeyService(),
       layout,
-      panels: createWorkbenchPanelsController(),
     } as unknown as WorkbenchModeActivationContext;
     const log: string[] = [];
     const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => context });
@@ -86,7 +83,6 @@ describe("mode seeding", () => {
     const context = {
       context: createContextKeyService(),
       layout,
-      panels: createWorkbenchPanelsController(),
     } as unknown as WorkbenchModeActivationContext;
     const registry = createWorkbenchModeRegistry({ layout, resolveContext: () => context });
 

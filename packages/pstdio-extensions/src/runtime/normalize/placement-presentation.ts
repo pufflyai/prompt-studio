@@ -14,7 +14,6 @@ export const isPlacementPresentation = (value: unknown) => {
     (value.mountStrategy === undefined || value.mountStrategy === "active" || value.mountStrategy === "keep-mounted") &&
     isOptionalBoolean(value.hiddenByDefault) &&
     isOptionalBoolean(value.headerBorderBottom) &&
-    (value.floatingPanels === undefined || value.floatingPanels === "visible" || value.floatingPanels === "hidden") &&
     isTab(value.tab)
   );
 };

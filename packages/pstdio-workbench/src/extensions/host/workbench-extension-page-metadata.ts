@@ -33,7 +33,6 @@ const slotPresentation = (slot: MetadataPageSlot, input: PageSlotInput) => ({
   ...(slot.mountStrategy ? { mountStrategy: slot.mountStrategy } : {}),
   ...(slot.hiddenByDefault === undefined ? {} : { hiddenByDefault: slot.hiddenByDefault }),
   ...(slot.headerBorderBottom === undefined ? {} : { headerBorderBottom: slot.headerBorderBottom }),
-  ...(slot.floatingPanels ? { floatingPanels: slot.floatingPanels } : {}),
   ...(slot.tab && input.createTab
     ? {
         tab: input.createTab({

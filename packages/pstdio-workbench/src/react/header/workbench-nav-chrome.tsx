@@ -105,7 +105,10 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
   if (chrome)
     return (
       <Header data-workbench-region="nav" variant="main" padding="0" flexShrink={0}>
-        <ModeChromeView workbench={workbench} viewId={chrome} region="nav" />
+        <Box flex="1" minW="0" h="full" overflow="hidden">
+          <ModeChromeView workbench={workbench} viewId={chrome} region="nav" />
+        </Box>
+        <WorkbenchRegionControls controls={regionControls} />
       </Header>
     );
 

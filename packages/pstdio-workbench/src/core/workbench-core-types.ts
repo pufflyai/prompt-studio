@@ -9,9 +9,9 @@ import type {
   WorkbenchPageLocationPersistence,
 } from "./controllers/page-location/page-location-controller";
 import type {
-  WorkbenchPanelsController,
-  WorkbenchPanelsPersistenceAdapter,
-} from "./controllers/panels/panels-controller";
+  WorkbenchPanelMenuStateController,
+  WorkbenchPanelMenuStatePersistenceAdapter,
+} from "./controllers/panel-menus/panel-menu-state-controller";
 import type { WorkbenchShellController } from "./controllers/shell/shell-controller";
 import type {
   WorkbenchSidePanelController,
@@ -101,7 +101,7 @@ export interface WorkbenchCoreContributionContext {
   placeholders: WorkbenchPlaceholderRegistry;
   pageLocations: WorkbenchPageLocationController;
   pages: WorkbenchPageRegistry<WorkbenchWidgetPlacement>;
-  panels: WorkbenchPanelsController;
+  panelMenuState: WorkbenchPanelMenuStateController;
   preferences: PreferenceRegistry;
   treeViews: WorkbenchTreeViews;
   resources: ResourceRegistry;
@@ -173,13 +173,13 @@ export interface createWorkbenchInput {
   persistence?: WorkbenchPersistenceAdapter;
   preferencePersistence?: PreferencePersistenceAdapter;
   treePersistence?: TreeRendererPersistenceAdapter;
-  panelsPersistence?: WorkbenchPanelsPersistenceAdapter;
+  panelMenuStatePersistence?: WorkbenchPanelMenuStatePersistenceAdapter;
   defaultPanelOpenByRegionId?: Partial<Record<WorkbenchRegion, boolean>>;
   /** Host-level region layout policy. The active mode's regionSettings win over it. */
   regionSettings?: Partial<Record<WorkbenchRegion, WorkbenchRegionSettings>>;
   sidePanelPersistence?: WorkbenchSidePanelPersistenceAdapter;
-  /** Whether the Side Panel can float or show a bubble launcher. Defaults to true. */
-  sidePanelDetachable?: boolean;
+  /** Default floating policy. The active mode may override it. */
+  floatingPanels?: "visible" | "hidden";
   initialSidePanelMode?: WorkbenchSidePanelMode;
   startPage?: PageRef;
 }

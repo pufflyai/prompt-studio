@@ -6,6 +6,7 @@ import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
 import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 
 interface WorkbenchSidePanelProps {
@@ -42,6 +43,7 @@ const WorkbenchSidePanelHeader = (props: WorkbenchSidePanelHeaderProps) => {
 export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
   const { workbench, contentSlotRef, header } = props;
   const settings = useWorkbenchModeRegionSettings(workbench, "side");
+  const canFloat = useWorkbenchStore(workbench.modes.store, () => workbench.sidePanel.canFloat());
 
   return (
     <WorkbenchFocusRegion workbench={workbench} region="side" h="full" minH="0" minW="0" w="full">
@@ -53,11 +55,11 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
         minWidth="0"
         bg={workbenchBackgrounds.widget}
         header={
-          settings?.showHeader !== false && (header || workbench.sidePanel.detachable) ? (
+          settings?.showHeader !== false && (header || canFloat) ? (
             <Header data-workbench-panel-header="side" variant="main" flexShrink={0} gap="sm">
               <WorkbenchSidePanelHeader header={header} />
               <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
-              {workbench.sidePanel.detachable ? (
+              {canFloat ? (
                 <Tooltip content="Float Side Panel">
                   <IconButton
                     size={PANEL_HEADER_CONTROL_SIZE}
@@ -85,7 +87,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchSidePanelProps) => {
   const { workbench, contentSlotRef, bottomOffset, header, bubbleIcon } = props;
   const mode = workbench.sidePanel.getMode();
 
-  if (!workbench.sidePanel.detachable || mode === "attached") return null;
+  if (!workbench.sidePanel.canFloat() || mode === "attached") return null;
 
   if (mode === "closed") {
     return (

@@ -29,6 +29,7 @@ interface ExampleDefinition {
   icon: string;
   primary: ViewRef;
   chrome?: ModeContribution["chrome"];
+  floatingPanels?: ModeContribution["floatingPanels"];
   regionSettings?: ModeContribution["regionSettings"];
   slots?: PageBoundSlot[];
   initialResource?: boolean;
@@ -54,6 +55,7 @@ export const defineExample = (input: ExampleDefinition) => {
     regions: ["main", "side", "secondary"],
     defaultTheme: theme.ref,
     chrome: input.chrome,
+    floatingPanels: input.floatingPanels,
     regionSettings: { main: { alwaysShowTabs: false }, ...input.regionSettings },
   });
   const homePage = definePage({

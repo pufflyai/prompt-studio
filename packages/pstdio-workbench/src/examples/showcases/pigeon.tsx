@@ -254,6 +254,7 @@ export const createPigeonWorkbench = () => {
   workbench.modes.registerMode({
     id: "pigeon",
     label: "Pigeon",
+    chrome: { nav: "pigeon.nav", sidenav: "pigeon.folders", activity: false },
     resourceKinds: ["pigeon.thread"],
     regionSettings: {
       sidenav: { size: { defaultPx: 220, minPx: 200, maxPx: 280 }, collapsible: false },
@@ -286,19 +287,7 @@ export const createPigeonWorkbench = () => {
     title: "New message",
     body: { kind: "react", render: (input) => <Composer input={input} /> },
   });
-  workbench.shellPlacements.registerPlacement({
-    id: "pigeon.nav",
-    item: { kind: "view", viewId: "pigeon.nav", presence: "fixed" },
-    region: "nav",
-  });
   workbench.overlays.registerOverlay({ id: "pigeon.compose", viewId: "pigeon.composer", closable: true });
-  workbench.modePlacements.registerPlacement({
-    id: "pigeon.folders",
-    ref: { extensionId: "storybook.showcases", kind: "placement", id: "pigeon.folders" },
-    modeId: "pigeon",
-    region: "sidenav",
-    item: { kind: "view", viewId: "pigeon.folders", presence: "fixed" },
-  });
   workbench.pages.registerPage({
     id: "pigeon.home",
     ref: homePage,
@@ -320,7 +309,6 @@ export const createPigeonWorkbench = () => {
         role: "primary",
         region: "main",
         binding: { resourceKinds: ["pigeon.thread"], viewId: "pigeon.inbox", cardinality: "one" },
-        floatingPanels: "visible",
       },
       {
         id: "reader",
@@ -328,7 +316,6 @@ export const createPigeonWorkbench = () => {
         region: "side",
         binding: { resourceKinds: ["pigeon.thread"], viewId: "pigeon.reader", cardinality: "one" },
         openOn: "page-resource",
-        floatingPanels: "visible",
       },
     ],
   });
