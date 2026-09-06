@@ -154,7 +154,11 @@ test("PS-326 opens ticket action sessions and hides the lone Sessions page tab",
       sessionId = outcome.value.id;
       const sidePanel = page.getByTestId("workbench-side-panel-attached");
       await expect(sidePanel).toBeVisible();
-      await expect(sidePanel.getByRole("tab")).toHaveCount(0);
+      await expect(sidePanel.getByRole("tab")).toHaveCount(1);
+      await expect(sidePanel.getByRole("tab", { name: outcome.value.title, exact: true })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
       await expect(sidePanel.locator('[data-testid="content-editable"][contenteditable="true"]')).toBeVisible();
       await expect(page).toHaveURL(ticketUrl);
     }

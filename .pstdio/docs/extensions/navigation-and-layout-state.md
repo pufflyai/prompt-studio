@@ -47,10 +47,14 @@ A static page declares a primary `view`. A resource page declares a primary `bin
 resource when opened. Use separate pages for a list and its details, with the list as the detail page's
 `parent`. Both pages can share a mode. Put panels that must stay mounted across them in that mode.
 
- Every panel hides its tab strip when only one tab is open,
+By default, every panel hides its tab strip when only one tab is open,
 including closable auxiliary panels. Set `alwaysShowTabs` to keep a lone tab and its Close button
 visible. Header actions and detach controls remain available without tabs. An attached Side Panel
 omits its header when it has no tabs, custom header, menus, or controls, like the Secondary Panel.
+
+The dashboard's project mode sets `alwaysShowTabs: true` for its Side Panel and Secondary Panel.
+A single session or terminal keeps its tab and tab menu visible. Main pages and other modes use
+their own settings. Kiln continues to hide single tabs.
 
 Navigation trees follow the refresh events declared by their source views. A file creation or other
 change can refresh a contributed navigation tree without reloading the page. Dashboard commands
