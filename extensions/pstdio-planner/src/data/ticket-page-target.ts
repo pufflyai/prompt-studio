@@ -1,4 +1,5 @@
 import type { NavigationTargetPage, ResourceRef } from "@pstdio/sdk/extensions";
+import type { TicketResourceReference } from "./ticket-resource-hierarchy";
 
 const plannerPage = (id: string) => ({ kind: "page" as const, id, extensionId: "pstdio.pstdio-planner" });
 
@@ -11,6 +12,8 @@ export const ticketPageTarget = (resource: ResourceRef): NavigationTargetPage =>
     kind: "page",
     page: plannerPage("ticket"),
     resource,
-    parent: ticketParent ? ticketPageTarget(parent as ResourceRef) : { kind: "page", page: plannerPage("tickets") },
+    parent: ticketParent
+      ? ticketPageTarget(parent as TicketResourceReference)
+      : { kind: "page", page: plannerPage("tickets") },
   };
 };

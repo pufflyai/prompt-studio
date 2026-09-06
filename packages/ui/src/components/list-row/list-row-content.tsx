@@ -92,8 +92,8 @@ const RowDescription = (props: {
   );
 };
 
-const RowContent = (props: RowContentProps) => {
-  const { item, isExpanded, showChevron, isDisabled, variant, tone } = props;
+const RowContent = (props: RowContentProps & { labelId: string }) => {
+  const { item, isExpanded, showChevron, isDisabled, variant, tone, labelId } = props;
   const isEmptyStateVariant = variant === "empty-state";
   const isDenseVariant =
     variant === "compact" ||
@@ -116,7 +116,7 @@ const RowContent = (props: RowContentProps) => {
   const descriptionColor = tone === "danger" ? "red.400" : "fg.menu-item.secondary";
 
   return (
-    <HStack gap="2" minW="0" flex="1" overflow="hidden" alignItems="center">
+    <HStack id={labelId} gap="2" minW="0" flex="1" overflow="hidden" alignItems="center">
       {showChevron ? (
         <Box color="fg.muted" flexShrink={0} display="flex" alignItems="center">
           <Icon
@@ -165,6 +165,7 @@ const RowContent = (props: RowContentProps) => {
 };
 
 export const ListRowContent = (props: {
+  labelId: string;
   item: ListRowItem;
   isExpanded: boolean;
   showChevron: boolean;
@@ -174,6 +175,7 @@ export const ListRowContent = (props: {
   showContextMenuTrigger: boolean;
 }) => {
   const {
+    labelId,
     item,
     isDisabled,
     isExpanded,
@@ -187,6 +189,7 @@ export const ListRowContent = (props: {
   return (
     <>
       <RowContent
+        labelId={labelId}
         item={item}
         isExpanded={isExpanded}
         showChevron={showChevron}
@@ -195,7 +198,7 @@ export const ListRowContent = (props: {
         variant={variant}
       />
       {item.endContent ? (
-        <Box flexShrink={0} color="fg.muted" display="flex" alignItems="center">
+        <Box id={`${labelId}-end`} flexShrink={0} color="fg.muted" display="flex" alignItems="center">
           {item.endContent}
         </Box>
       ) : null}

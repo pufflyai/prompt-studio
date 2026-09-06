@@ -26,7 +26,9 @@ export const WorkbenchFocusRegion = (props: WorkbenchFocusRegionProps) => {
       ref={ref}
       tabIndex={-1}
       outline="none"
-      onFocusCapture={() => workbench.focus.setActiveRegion(region)}
+      onFocusCapture={(event) => {
+        if (event.currentTarget.contains(event.target)) workbench.focus.setActiveRegion(region);
+      }}
       {...boxProps}
     >
       {children}

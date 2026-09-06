@@ -2,7 +2,7 @@ import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { setResourceBreadcrumb } from "@/shared/workbench/resource-sync";
-import { createDashboardWorkspaces } from "./data/dashboard-workspaces";
+import { createDashboardWorkspaces } from "@/shared/workspaces/dashboard-workspaces";
 
 export const watchOpenWorkspaceResource = (ctx: WorkbenchModuleContext) => {
   const sync = () => {

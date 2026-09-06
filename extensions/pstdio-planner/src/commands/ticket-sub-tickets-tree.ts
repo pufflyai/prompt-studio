@@ -19,6 +19,12 @@ const subTicketNode = (
 ): TreeNode => {
   const status = subTicketStatus(ticket, statusesById);
   const label = ticketDisplayTitle(ticket);
+  const resource = {
+    type: "ticket",
+    id: ticket.id,
+    label,
+    metadata: ticketResourceHierarchyMetadata(ticket, ticketsById),
+  };
 
   return {
     id: `ticket-${ticket.id}`,
@@ -26,12 +32,8 @@ const subTicketNode = (
     icon: "Component",
     iconColor: status?.color ? `${status.color}.fg` : "fg.muted",
     iconTooltip: status?.name,
-    target: ticketPageTarget({
-      type: "ticket",
-      id: ticket.id,
-      label,
-      metadata: ticketResourceHierarchyMetadata(ticket, ticketsById),
-    }),
+    resource,
+    target: ticketPageTarget(resource),
   };
 };
 

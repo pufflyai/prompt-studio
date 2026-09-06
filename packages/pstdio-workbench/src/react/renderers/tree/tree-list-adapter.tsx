@@ -19,7 +19,6 @@ interface TreeNodeRenderContext {
   workbench: WorkbenchCore;
   onCommandError?: (error: unknown) => void;
   onRequestParams?: (request: TreeActionParamsRequest) => void;
-  suppressContextMenus?: boolean;
 }
 
 export const resolveTreeListActiveNodeId = (activeNodeId: string | null | undefined, selectedNodeId?: string) => {
@@ -116,6 +115,16 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
   let selectedResourceUri: string | undefined;
   if (selectedNodeId) {
     const selectedNode = findSectionNode(sections, selectedNodeId, childrenByNodeId);
+    const target = selectedNode?.target;
+    if (
+      target?.kind === "page" &&
+      target.resource &&
+      activeResource &&
+      target.resource.type === activeResource.kind &&
+      target.resource.id === activeResource.id
+    ) {
+      return selectedNodeId;
+    }
     selectedResourceUri = selectedNode ? resolveTreeNodeResourceUri(selectedNode) : undefined;
     if (selectedResourceUri && activeResourceUris.includes(selectedResourceUri)) return selectedNodeId;
   }
@@ -287,7 +296,7 @@ const toTreeListNode = (
     }),
     endContent: resolveTreeNodeEndContent(node, resource, binding),
     menuItems,
-    contextMenuItems: !context.suppressContextMenus && contextMenuItems.length > 0 ? contextMenuItems : undefined,
+    contextMenuItems: contextMenuItems.length > 0 ? contextMenuItems : undefined,
     ...(node.menuPlacement ? { menuPlacement: node.menuPlacement } : {}),
     isContainer: node.collapsible,
     isNavigable: Boolean(navigationIntent),

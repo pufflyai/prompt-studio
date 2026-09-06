@@ -106,7 +106,10 @@ test("PS-326 refreshes ticket files and allows archiving and deleting linked wor
     await expect(page.getByTestId("content-editable").first()).toBeVisible();
 
     for (const [index, workspace] of workspaces.entries()) {
-      await page.getByRole("option", { name: workspace.workspace_shorthand, exact: true }).click();
+      const workspaceRow = page
+        .getByRole("option")
+        .filter({ has: page.getByText(workspace.workspace_shorthand, { exact: true }) });
+      await workspaceRow.click();
       await expect(page).toHaveURL(/\/workspace\?resource=/);
       await expect(page.getByRole("tab", { name: "Changes", exact: true })).toBeVisible();
       await expect(page.getByRole("tab", { name: "Workspaces", exact: true })).toHaveCount(0);
@@ -122,7 +125,7 @@ test("PS-326 refreshes ticket files and allows archiving and deleting linked wor
       await page.getByRole("menuitem", { name: action, exact: true }).click();
       expect((await response).ok()).toBe(true);
       await page.getByRole("button", { name: `${fixture.ticket.shorthand} Ticket workflow`, exact: true }).click();
-      await expect(page.getByRole("option", { name: workspace.workspace_shorthand, exact: true })).toHaveCount(0);
+      await expect(workspaceRow).toHaveCount(0);
     }
   } finally {
     await request.delete(`${apiBase}/v1/projects/${fixture.project.id}`);
