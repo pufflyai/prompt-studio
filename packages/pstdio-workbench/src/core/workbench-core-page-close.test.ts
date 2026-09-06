@@ -5,7 +5,7 @@ const page = { extensionId: "example.mail", kind: "page" as const, id: "inbox" }
 
 const home = { ...page, id: "home" };
 
-const createInbox = () => {
+const createInbox = (cardinality: "one" | "many" = "one") => {
   const workbench = createWorkbench({ startPage: home });
   workbench.modes.registerMode({ id: "mail", activate: () => undefined });
   for (const id of ["inbox", "reader", "tools"]) {
@@ -30,7 +30,7 @@ const createInbox = () => {
         role: "primary",
         region: "main",
 
-        binding: { resourceKinds: ["thread"], viewId: "inbox", cardinality: "one" },
+        binding: { resourceKinds: ["thread"], viewId: "inbox", cardinality },
       },
       {
         id: "reader",
@@ -48,6 +48,46 @@ const createInbox = () => {
 };
 
 describe("closing page resource panels", () => {
+  test("closing an inactive pinned resource keeps a manually closed reader closed", () => {
+    const workbench = createInbox("many");
+    for (const id of ["one", "two"]) {
+      expect(
+        workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "thread", id }, open: "pin" }).ok,
+      ).toBe(true);
+    }
+    const placements = workbench.pages.store.getState().placements;
+    const reader = placements.find((item) => item.identity.kind === "page" && item.identity.slotId === "reader")!;
+    const inactive = placements.find(
+      (item) => item.identity.kind === "page" && item.identity.slotId === "inbox" && item.value.resource?.id === "one",
+    )!;
+
+    expect(workbench.pageLocations.closePlacement(reader.identity).ok).toBe(true);
+    expect(workbench.pageLocations.closePlacement(inactive.identity).ok).toBe(true);
+    expect(workbench.pages.store.getState().location?.resource?.id).toBe("two");
+    expect(workbench.layout.getLayout().regions.side.widgets.some((item) => item.viewId === "reader")).toBe(false);
+  });
+
+  test("closing the selected pinned resource updates its reader to the remaining resource", () => {
+    const workbench = createInbox("many");
+    for (const id of ["one", "two"]) {
+      expect(
+        workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "thread", id }, open: "pin" }).ok,
+      ).toBe(true);
+    }
+    const selected = workbench.pages.store
+      .getState()
+      .placements.find(
+        (item) =>
+          item.identity.kind === "page" && item.identity.slotId === "inbox" && item.value.resource?.id === "two",
+      )!;
+
+    expect(workbench.pageLocations.closePlacement(selected.identity).ok).toBe(true);
+    expect(workbench.pages.store.getState().location?.resource?.id).toBe("one");
+    expect(
+      workbench.layout.getLayout().regions.side.widgets.find((item) => item.viewId === "reader")?.resource?.id,
+    ).toBe("one");
+  });
+
   test("removes resource page panels when navigating to the home page", () => {
     const workbench = createInbox();
     expect(workbench.pageLocations.navigate({ kind: "page", page: home }).ok).toBe(true);

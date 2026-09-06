@@ -7,4 +7,4 @@
 "pstdio-skills": patch
 ---
 
-Replace hybrid pages with separate static and resource pages and explicit parent navigation.
+Replace hybrid pages with separate static and resource pages, explicit parents, and panels that follow the selected resource when closing tabs.

@@ -1,7 +1,7 @@
 import { createDisposable } from "../../shared/disposable";
 import { composeOwnedPlacements, reconcileOwnedPlacements } from "../layout/placement-reconciliation";
 import { resolvePagePlacementClose } from "./page-placement-close";
-import { pagePlacementIdentity, resolvePagePlacements } from "./page-placement-resolver";
+import { pageFollowerIdentities, pagePlacementIdentity, resolvePagePlacements } from "./page-placement-resolver";
 import { registerWorkbenchPage } from "./page-registration";
 import { setWorkbenchPageRegistryInternals, type WorkbenchPageLocationCommitInput } from "./page-registry-internals";
 import {
@@ -21,7 +21,6 @@ import {
   emptyPageState,
   openPageResourceBindings,
   openResourceSlot,
-  pageResourceBindingSlots,
   primarySlot,
   requirePageSlot,
   selectPrimaryTarget,
@@ -121,7 +120,8 @@ export const createWorkbenchPageRegistry = <Value>(
   };
 
   const activatePageWithStates = (target: WorkbenchPageLocationCommitInput) => {
-    const pageStates = target.pageStates ?? store.getState().pageStates;
+    const current = store.getState();
+    const pageStates = target.pageStates ?? current.pageStates;
     const page = requirePage(target.pageId);
     const normalizedTarget = {
       ...target,
@@ -134,24 +134,23 @@ export const createWorkbenchPageRegistry = <Value>(
       target: normalizedTarget,
       resourceKey,
     });
-    // A close supplies resolved owner state. Replaying automatic opens would undo that close.
-    const pageState = target.pageStates
-      ? primaryState
-      : openPageResourceBindings({
+    // Closing an auxiliary panel keeps it closed. Selecting a different primary must update its followers.
+    const openFollowers =
+      !target.pageStates ||
+      current.activePageId !== page.id ||
+      current.pageStates[page.id]?.activePrimaryInstanceKey !== primaryState.activePrimaryInstanceKey;
+    const pageState = openFollowers
+      ? openPageResourceBindings({
           page,
           state: primaryState,
           target: normalizedTarget,
           resourceKey,
-        });
+        })
+      : primaryState;
     const primary = primarySlot(page);
     const instanceKey = pageState.activePrimaryInstanceKey;
     if (!instanceKey) throw new Error(`Page "${page.id}" did not resolve a primary instance`);
-    const followers = target.pageStates
-      ? []
-      : pageResourceBindingSlots(page, normalizedTarget.resource)
-          .filter((slot) => slot.region !== primary.region)
-          .filter((slot, index, slots) => slots.findIndex((candidate) => candidate.region === slot.region) === index)
-          .map((slot) => pagePlacementIdentity(page.id, slot.id, resourceKey(normalizedTarget.resource!)));
+    const followers = openFollowers ? pageFollowerIdentities(page, normalizedTarget.resource, resourceKey) : [];
     commit({
       pageStates: { ...pageStates, [page.id]: pageState },
       projectId: target.projectId,

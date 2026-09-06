@@ -9,13 +9,16 @@ const openExample = async (page: Page, name: string, resource?: string) => {
   await expect(page.locator("html")).toHaveAttribute("data-theme", `pstdio.extension-lab.theme.${name}`);
 };
 const view = (page: Page, title: string) => page.frameLocator(`iframe[title="${title}"]`);
-const editDocument = async (page: Page, content: string) => {
-  const saved = page.waitForResponse(
+const waitForExampleSave = (page: Page, name: string, content: string) =>
+  page.waitForResponse(
     (response) =>
       response.url().includes("pstdio.extension-lab.command.state.update/execute") &&
+      (response.request().postData()?.includes(JSON.stringify(name)) ?? false) &&
       (response.request().postData()?.includes(content) ?? false) &&
       response.ok(),
   );
+const editDocument = async (page: Page, content: string) => {
+  const saved = waitForExampleSave(page, "scribble", content);
   await view(page, "Document").locator('[contenteditable="true"]').first().fill(content);
   await saved;
   await expect(view(page, "Document").getByText("Saved locally", { exact: true })).toBeVisible();
@@ -90,10 +93,12 @@ test("Zipline opens its inspector and persists a status change", async ({ page }
   await page.getByText("ZIP-142", { exact: true }).click();
   const inspector = view(page, "Issue");
   await expect(inspector.getByText("ZIP-142", { exact: true })).toBeVisible();
+  const saved = waitForExampleSave(page, "zipline", "Done");
   await inspector.getByRole("button", { name: "Change status from In progress to Done", exact: true }).click();
   await expect(
     inspector.getByRole("button", { name: "Change status from Done to Backlog", exact: true }),
   ).toBeVisible();
+  await saved;
   await page.reload();
   await expect(
     inspector.getByRole("button", { name: "Change status from Done to Backlog", exact: true }),
@@ -111,9 +116,11 @@ test("Pigeon sends a local message and keeps it in Sent", async ({ page }) => {
   await inbox.getByRole("textbox", { name: "To", exact: true }).fill("alex@example.com");
   await inbox.getByRole("textbox", { name: "Subject", exact: true }).fill("Showcase review");
   await inbox.getByRole("textbox", { name: "Message body", exact: true }).fill("The examples are ready.");
+  const saved = waitForExampleSave(page, "pigeon", "Showcase review");
   await inbox.getByRole("button", { name: "Send", exact: true }).click();
   await folders.getByRole("button", { name: "Sent", exact: true }).click();
   await expect(inbox.getByText("Showcase review", { exact: true })).toBeVisible();
+  await saved;
   await page.reload();
   await expect(inbox.getByText("Showcase review", { exact: true })).toBeVisible();
   await inbox.getByText("Showcase review", { exact: true }).click();
@@ -132,7 +139,9 @@ test("Kiln docks the inspector and persists object changes", async ({ page }) =>
   await timeline.getByRole("button", { name: "Play animation", exact: true }).click();
   await expect(timeline.getByRole("slider", { name: "Animation frame" })).not.toHaveValue("1");
   await timeline.getByRole("button", { name: "Pause animation", exact: true }).click();
+  const saved = waitForExampleSave(page, "kiln", "2.5");
   await inspector.getByRole("spinbutton", { name: "Cube position X", exact: true }).fill("2.5");
+  await saved;
   await page.reload();
   await expect(inspector.getByRole("spinbutton", { name: "Cube position X", exact: true })).toHaveValue("2.5");
   await expect(inspector.getByRole("button", { name: "Show Cube", exact: true })).toBeVisible();

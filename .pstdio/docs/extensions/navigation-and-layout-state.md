@@ -37,6 +37,8 @@ Page and mode placements have separate owner identities. Switching pages removes
 
 Use an explicit `parent` page target when a navigation is contextually below the current page. Breadcrumbs project that parent chain and store a target on every clickable crumb.
 
+Closing the selected pinned resource activates a remaining resource and updates its `openOn: "page-resource"` panels. Closing an inactive resource or an auxiliary panel keeps the current resource and any manually closed panels unchanged.
+
 Without an explicit parent, navigation uses the page's declared hierarchy. The host never chooses a
 parent page by resource kind or view. Closing the last resource primary instance always follows
 the declared parent.
