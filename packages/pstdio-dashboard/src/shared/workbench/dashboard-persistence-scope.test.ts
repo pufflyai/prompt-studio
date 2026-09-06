@@ -42,4 +42,28 @@ describe("dashboard persistence scope", () => {
       carryRegions: [],
     });
   });
+
+  test("restores the incoming mode's inspector instead of carrying another mode's side panel", () => {
+    for (const currentScope of ["project/project-1", "project/project-1/mode/project/page/start"]) {
+      const result = resolveDashboardPersistenceScope({
+        currentScope,
+        modeId: "kiln",
+        pageId: "kiln",
+        projectId: "project-1",
+      });
+      expect(result.carryRegions).toContain("sidenav");
+      expect(result.carryRegions).not.toContain("side");
+      expect(result.carryRegions).not.toContain("side-header");
+    }
+  });
+
+  test("retains project session panels when restoring a project page from its root scope", () => {
+    const result = resolveDashboardPersistenceScope({
+      currentScope: "project/project-1",
+      modeId: "project",
+      pageId: "tickets",
+      projectId: "project-1",
+    });
+    expect(result.carryRegions).toContain("side");
+  });
 });

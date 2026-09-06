@@ -12,6 +12,10 @@ const projectOwnedRegions = [
 ] as const;
 
 const projectIdFromScope = (scope: string | undefined) => scope?.match(/^project\/([^/]+)(?:\/|$)/)?.[1];
+const modeIdFromScope = (scope: string | undefined) => {
+  if (!projectIdFromScope(scope)) return undefined;
+  return scope?.match(/\/mode\/([^/]+)/)?.[1] ?? "project";
+};
 
 export const resolveDashboardPersistenceScope = (input: WorkbenchPagePersistenceScopeInput) => {
   const { currentScope, modeId, pageId, projectId, resource } = input;
@@ -21,6 +25,10 @@ export const resolveDashboardPersistenceScope = (input: WorkbenchPagePersistence
     modeId && pageId
       ? `project/${projectId}/mode/${modeId}/${resource ? `resource/${resource.uri}` : `page/${pageId}`}`
       : `project/${projectId}`;
-  const carryRegions = projectIdFromScope(currentScope) === projectId ? projectOwnedRegions : [];
+  const sameMode = modeIdFromScope(currentScope) === modeId;
+  const carryRegions =
+    projectIdFromScope(currentScope) === projectId
+      ? projectOwnedRegions.filter((region) => sameMode || !/^side(?:-|$)/.test(region))
+      : [];
   return { scope, carryRegions };
 };

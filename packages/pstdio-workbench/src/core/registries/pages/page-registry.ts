@@ -21,6 +21,7 @@ import {
   emptyPageState,
   openPageResourceBindings,
   openResourceSlot,
+  pageResourceBindingSlots,
   primarySlot,
   requirePageSlot,
   selectPrimaryTarget,
@@ -145,13 +146,19 @@ export const createWorkbenchPageRegistry = <Value>(
     const primary = primarySlot(page);
     const instanceKey = pageState.activePrimaryInstanceKey;
     if (!instanceKey) throw new Error(`Page "${page.id}" did not resolve a primary instance`);
+    const followers = target.pageStates
+      ? []
+      : pageResourceBindingSlots(page, normalizedTarget.resource)
+          .filter((slot) => slot.region !== primary.region)
+          .filter((slot, index, slots) => slots.findIndex((candidate) => candidate.region === slot.region) === index)
+          .map((slot) => pagePlacementIdentity(page.id, slot.id, resourceKey(normalizedTarget.resource!)));
     commit({
       pageStates: { ...pageStates, [page.id]: pageState },
       projectId: target.projectId,
       location: target.location,
       activePageId: page.id,
       activeModeId: page.modeId,
-      activate: [pagePlacementIdentity(page.id, primary.id, instanceKey)],
+      activate: [pagePlacementIdentity(page.id, primary.id, instanceKey), ...followers],
       action: target.action,
     });
   };

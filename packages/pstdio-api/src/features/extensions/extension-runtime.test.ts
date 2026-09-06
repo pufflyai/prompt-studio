@@ -66,8 +66,8 @@ describe("hashExtensionSource", () => {
 });
 
 describe("first-party extension loading", () => {
-  test("loads Extension Lab with alpha.4 views and typed middleware", async () => {
-    const sourcePath = resolve(import.meta.dir, "../../../../../extensions/extension-lab");
+  test("loads the workbench fixture with alpha.4 views and typed middleware", async () => {
+    const sourcePath = resolve(import.meta.dir, "../../../../../packages/workbench-fixture");
     const loaded = await loadExtensionSource(sourcePath);
     const result = await checkExtensionSource(sourcePath, resolve(sourcePath, ".."));
 
@@ -75,8 +75,8 @@ describe("first-party extension loading", () => {
     expect(result.check.errorCount).toBe(0);
     expect(result.check.middlewares).toContainEqual(
       expect.objectContaining({
-        commandId: "pstdio.extension-lab.command.awaken",
-        id: "pstdio.extension-lab.middleware.reject-sentient-awakening",
+        commandId: "pstdio.workbench-fixture.command.awaken",
+        id: "pstdio.workbench-fixture.middleware.reject-sentient-awakening",
       }),
     );
     expect(result.check.views.some((view) => view.body.kind === "webview")).toBe(true);

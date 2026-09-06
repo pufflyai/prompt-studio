@@ -59,6 +59,7 @@ export interface WorkbenchRegionSize {
 
 /** Region-level layout policy owned by the active mode or the host, never by a placement. */
 export interface WorkbenchRegionSettings {
+  showHeader?: boolean;
   size?: WorkbenchRegionSize;
   collapsible?: boolean;
   /** Show a tab for a single item. By default, tabs need at least two visible items. */

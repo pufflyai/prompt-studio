@@ -7,4 +7,5 @@ test("preserves an explicit single-tab policy in region settings", () => {
   expect(regionSettingsSchema.parse(settings)).toEqual(settings);
   expect(regionSettingsSchema.parse({ alwaysShowTabs: false })).toEqual({ alwaysShowTabs: false });
   expect(regionSettingsSchema.parse({})).toEqual({});
+  expect(regionSettingsSchema.parse({ showHeader: false })).toEqual({ showHeader: false });
 });

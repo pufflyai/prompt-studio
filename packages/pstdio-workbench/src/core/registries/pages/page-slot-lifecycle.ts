@@ -105,17 +105,19 @@ export const selectPrimaryTarget = (input: {
     if (!slot.binding) throw new Error(`Page slot "${slot.id}" does not accept a resource`);
     return openResourceSlot({ ...input, slot });
   }
-  if (slot.binding && !slot.viewId) throw new Error(`Page slot "${slot.id}" requires a resource`);
+  if (slot.binding) throw new Error(`Page slot "${slot.id}" requires a resource`);
   if (input.target.open) throw new Error(`Page slot "${slot.id}" accepts open intent only with a resource`);
-  if (slot.binding?.cardinality !== "one") {
-    return { ...input.state, activePrimaryInstanceKey: "default" };
-  }
-  return {
-    ...input.state,
-    activePrimaryInstanceKey: "default",
-    resourceInstances: { ...input.state.resourceInstances, [slot.id]: [] },
-  };
+  return { ...input.state, activePrimaryInstanceKey: "default" };
 };
+
+export const pageResourceBindingSlots = (page: WorkbenchPageContribution, resource: ResourceRef | undefined) =>
+  page.slots.filter(
+    (slot) =>
+      slot.role === "auxiliary" &&
+      slot.binding !== undefined &&
+      slot.openOn === "page-resource" &&
+      slot.binding?.resourceKinds.includes(resource?.type ?? ""),
+  );
 
 /** Opens bound auxiliary slots that declare `openOn: "page-resource"` for the page's own resource. */
 export const openPageResourceBindings = (input: {
@@ -125,13 +127,7 @@ export const openPageResourceBindings = (input: {
   resourceKey(resource: ResourceRef): string;
 }) => {
   if (!input.target.resource) return input.state;
-  return input.page.slots.reduce((state, slot) => {
-    const followsPageResource =
-      slot.role === "auxiliary" &&
-      slot.binding !== undefined &&
-      slot.openOn === "page-resource" &&
-      slot.binding.resourceKinds.includes(input.target.resource?.type ?? "");
-    if (!followsPageResource) return state;
+  return pageResourceBindingSlots(input.page, input.target.resource).reduce((state, slot) => {
     return openResourceSlot({
       slot,
       state,
@@ -184,9 +180,6 @@ export const closePageSlot = (input: {
       previousActive && previousActive !== instanceKey ? previousActive : remaining.at(-1)?.instanceKey;
     return { kind: "stay", state: { ...state, activePrimaryInstanceKey: activateInstanceKey }, activateInstanceKey };
   }
-  if (slot.viewId) {
-    return { kind: "stay", state: { ...state, activePrimaryInstanceKey: "default" }, activateInstanceKey: "default" };
-  }
-  if (!page.parentId) throw new Error(`Bound-only page has no parent: ${page.id}`);
+  if (!page.parentId) throw new Error(`Resource page has no parent: ${page.id}`);
   return { kind: "parent", state, parentId: page.parentId };
 };

@@ -72,7 +72,7 @@ const createSessionNode = (session: DashboardSession, target: SessionNodeTarget)
     ? {
         target: {
           kind: "page",
-          page: workbenchPages.sessions,
+          page: workbenchPages.session,
           resource: toPageResource(session.resource),
         } as const,
       }

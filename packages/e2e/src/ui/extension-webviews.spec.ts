@@ -4,12 +4,12 @@ import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
-const extensionLabPath = join(import.meta.dirname, "../../../../extensions/extension-lab");
+const extensionLabPath = join(import.meta.dirname, "../../../../packages/workbench-fixture");
 
 const bypassOnboarding = async (
   page: import("@playwright/test").Page,
   projectId: string,
-  agentId = "pstdio.extension-lab.harness.fake",
+  agentId = "pstdio.workbench-fixture.harness.fake",
 ) => {
   await page.addInitScript(
     ({ currentProjectId, currentAgentId }: { currentProjectId: string; currentAgentId: string }) => {
@@ -87,7 +87,7 @@ const disableDefaultExtensionLab = async (request: import("@playwright/test").AP
   expect(response.ok()).toBe(true);
   const body = (await response.json()) as { extensions: Array<{ id: string; installName: string }> };
 
-  for (const extension of body.extensions.filter((entry) => entry.installName === "extension-lab")) {
+  for (const extension of body.extensions.filter((entry) => entry.installName === "workbench-fixture")) {
     const disabled = await request.patch(`${apiBase}/v1/projects/${projectId}/extensions/${extension.id}`, {
       data: { enabled: false },
     });
@@ -108,7 +108,7 @@ const webview = (metadata: WorkbenchExtensionMetadata, localId: string) => {
 };
 
 const openExtensionLab = async (page: import("@playwright/test").Page, projectId: string) => {
-  await page.goto(`/projects/${projectId}/extensions/pstdio.extension-lab/lab`);
+  await page.goto(`/projects/${projectId}/extensions/pstdio.workbench-fixture/lab`);
 };
 
 test.describe("Extension webviews", () => {
@@ -121,9 +121,9 @@ test.describe("Extension webviews", () => {
     await disableDefaultExtensionLab(request, project.id);
     await enableExtension(request, project.id, {
       displayName: "Extension Lab",
-      extensionId: "pstdio.extension-lab",
-      installName: "extension-lab-webviews",
-      name: "extension-lab",
+      extensionId: "pstdio.workbench-fixture",
+      installName: "workbench-fixture-webviews",
+      name: "workbench-fixture",
       sourcePath: extensionLabPath,
       version: "0.1.0",
     });
@@ -192,9 +192,9 @@ test.describe("Extension webviews", () => {
     await disableDefaultExtensionLab(request, project.id);
     await enableExtension(request, project.id, {
       displayName: "Extension Lab",
-      extensionId: "pstdio.extension-lab",
-      installName: "extension-lab-webviews",
-      name: "extension-lab",
+      extensionId: "pstdio.workbench-fixture",
+      installName: "workbench-fixture-webviews",
+      name: "workbench-fixture",
       sourcePath: extensionLabPath,
       version: "0.1.0",
     });
@@ -240,9 +240,9 @@ test.describe("Extension webviews", () => {
     await disableDefaultExtensionLab(request, project.id);
     await enableExtension(request, project.id, {
       displayName: "Extension Lab",
-      extensionId: "pstdio.extension-lab",
-      installName: "extension-lab-host-terminal",
-      name: "extension-lab",
+      extensionId: "pstdio.workbench-fixture",
+      installName: "workbench-fixture-host-terminal",
+      name: "workbench-fixture",
       sourcePath: extensionLabPath,
       version: "0.1.0",
     });

@@ -1,92 +1,26 @@
-import {
-  defineExtension,
-  defineNavigationItem,
-  defineNavigationTree,
-  definePage,
-  defineResourceKind,
-  defineView,
-  workbenchModes,
-  workbenchPages,
-} from "@pstdio/sdk/extensions";
+import { defineExtension } from "@pstdio/sdk/extensions";
+import { defineExample, webview } from "../definition";
 
-const note = defineResourceKind({ id: "scribble-note", label: "Note" });
-const documents = [
-  { id: "welcome", label: "Welcome note", content: "# Welcome\n\nWrite something here.\n" },
-  { id: "ideas", label: "Ideas note", content: "# Ideas\n\nKeep your ideas here.\n" },
+const views = [
+  webview("scribble-document", "Document"),
+  webview("scribble-pages", "Pages"),
+  webview("scribble-status", "Sync status"),
 ];
-const editor = defineView({
-  id: "scribble-editor",
-  title: "Note",
-  body: {
-    kind: "file",
-    load: async (ctx, { renderer }) => ({
-      fileName: `${renderer.resource!.id}.md`,
-      content:
-        (await ctx.storage.get<string>(`scribble:${renderer.resource!.id}`)) ??
-        documents.find((document) => document.id === renderer.resource!.id)?.content ??
-        "",
-    }),
-    save: async (ctx, { renderer, content }) => {
-      await ctx.storage.set(`scribble:${renderer.resource!.id}`, content);
-    },
-  },
-});
-export const scribblePage = definePage({
-  id: "scribble",
-  title: "Scribble",
-  path: "scribble",
-  mode: workbenchModes.project,
-  parent: workbenchPages.start,
-  slots: [
-    {
-      id: "document",
-      role: "primary",
-      region: "main",
-      binding: { kind: note.ref, view: editor.ref, cardinality: "many" },
-    },
-  ],
-});
-const openNote = (document: (typeof documents)[number]) => ({
-  kind: "page" as const,
-  page: scribblePage.ref,
-  resource: { type: note.id, id: document.id, label: document.label },
-  open: "pin" as const,
-});
-const files = defineView({
-  id: "scribble-files",
-  title: "Notes",
-  body: {
-    kind: "tree",
-    body: async () => [
-      {
-        id: "notes",
-        label: "Notes",
-        collapsible: false,
-        nodes: documents.map((document) => ({
-          id: document.id,
-          label: document.label,
-          icon: "FileText",
-          target: openNote(document),
-        })),
-      },
-    ],
-  },
+const example = defineExample({
+  name: "scribble",
+  label: "Scribble",
+  icon: "Feather",
+  primary: views[0].ref,
+  chrome: { sidenav: views[1].ref, activity: false, status: views[2].ref },
+  regionSettings: { sidenav: { size: { defaultPx: 240, minPx: 200, maxPx: 320 }, collapsible: false } },
+  slots: [],
+  initialResource: true,
 });
 export default defineExtension({
-  resourceKinds: [note],
-  views: [editor, files],
-  pages: [scribblePage],
-  navigationItems: [
-    defineNavigationItem({
-      id: "scribble",
-      label: "Scribble",
-      icon: "Notebook",
-      owner: workbenchModes.project,
-      slot: "content",
-      action: openNote(documents[0]),
-    }),
-  ],
-  navigationTrees: [
-    defineNavigationTree({ id: "scribble-files", owner: scribblePage.ref, slot: "content", view: files.ref }),
-  ],
+  modes: [example.mode],
+  themes: [example.theme],
+  resourceKinds: [example.resourceKind],
+  pages: [example.homePage, example.page],
+  views: [...views],
+  navigationItems: [example.navigation],
 });

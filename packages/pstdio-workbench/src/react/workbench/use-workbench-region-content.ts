@@ -7,6 +7,7 @@ import {
   type WorkbenchCore,
   type WorkbenchRegion,
 } from "../../core";
+import { useModeChrome } from "../region/mode-chrome";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 
@@ -19,6 +20,7 @@ export const useWorkbenchRegionContent = (
   region: WorkbenchRegion,
   options: WorkbenchRegionContentOptions = {},
 ) => {
+  const chrome = useModeChrome(workbench, region);
   const resource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const modePanel = getWorkbenchModePanelForRegion(region);
@@ -26,6 +28,7 @@ export const useWorkbenchRegionContent = (
     !modePanel || isWorkbenchModePanelAvailable(modeId ? workbench.modes.getMode(modeId) : undefined, modePanel);
 
   return useWorkbenchStore(workbench.layout.store, (state) => {
+    if (chrome !== undefined) return chrome !== false;
     if (!panelAvailable) return false;
     if (state.placeholders[region]) return true;
     if (!options.locationScoped) return state.layout.regions[region].widgets.length > 0;

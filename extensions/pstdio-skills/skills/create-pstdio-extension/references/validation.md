@@ -54,7 +54,7 @@ Composition diagnostics to expect:
 - `invalid_page` and `invalid_page_slot`: a page field or slot shape is invalid, or a slot still declares one of the removed fields above (or a slot-level `cardinality`). The message names the replacement field.
 - `invalid_mode`: a mode is missing a label or valid regions, or its `regionSettings` keys are not declared regions.
 - `invalid_keybinding`: a keybinding chord is invalid or the contribution declares no navigation `action`.
-- `extension_page_primary_invalid`: a page does not declare exactly one primary slot in `main`, or a bound-only page has no `parent`.
+- `extension_page_primary_invalid`: a page does not declare exactly one primary slot in `main`, or a resource page has no `parent`.
 - `extension_page_region_invalid`: a page slot targets a region its mode does not expose.
 - `extension_resource_kind_missing` and `extension_view_missing`: a binding or hierarchy provider references an unknown resource kind or view.
 - `extension_resource_menu_slot_closed`: an external command targets a closed resource menu slot.

@@ -97,7 +97,7 @@ type PagePanelRefs<Slots extends readonly PageSlot[]> = {
 
 type PageDefinition = Omit<PageContribution, "ref" | "panels">;
 type RequiredPageParent<Definition extends PageDefinition> =
-  Extract<Definition["slots"][number], { role: "primary"; binding: PageSlotBinding; view?: undefined }> extends never
+  Extract<Definition["slots"][number], { role: "primary"; binding: PageSlotBinding }> extends never
     ? unknown
     : { readonly parent: PageRef };
 

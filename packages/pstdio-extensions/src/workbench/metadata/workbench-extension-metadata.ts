@@ -153,6 +153,17 @@ export const createWorkbenchExtensionMetadata = (
     icon: mode.contribution.icon,
     regions: [...mode.contribution.regions],
     regionSettings: mode.contribution.regionSettings,
+    defaultTheme: mode.contribution.defaultTheme
+      ? normalizedRef(mode.contribution.defaultTheme, mode.extensionId)
+      : undefined,
+    chrome: mode.contribution.chrome
+      ? Object.fromEntries(
+          Object.entries(mode.contribution.chrome).map(([region, view]) => [
+            region,
+            view === false ? false : normalizedRef(view, mode.extensionId),
+          ]),
+        )
+      : undefined,
   })),
   pages: toPageRecords(input.runtime),
   views: compact(input.runtime.views.map((view) => toViewRecord(input, view))),

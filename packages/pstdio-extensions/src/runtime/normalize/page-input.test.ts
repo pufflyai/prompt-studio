@@ -36,6 +36,23 @@ const diagnosticsFor = (definition: LoadedExtensionSource["definition"]) =>
   normalizeExtensionSources([source(definition)]).diagnostics;
 
 describe("page input validation", () => {
+  test("rejects malformed mode theme and chrome references", () => {
+    for (const extra of [
+      { defaultTheme: "paper" },
+      { chrome: { sidenav: true } },
+      { chrome: { main: pageView.ref } },
+    ]) {
+      const runtime = normalizeExtensionSources([
+        source(
+          defineExtension({
+            modes: [{ ...defineMode({ id: "notes", label: "Notes", regions: ["main"] }), ...extra }] as never,
+          }),
+        ),
+      ]);
+      expect(runtime.diagnostics.map((diagnostic) => diagnostic.code)).toContain("invalid_mode");
+    }
+  });
+
   test("rejects a mode without declared regions", () => {
     const definition = defineExtension({
       modes: [

@@ -94,7 +94,7 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMet
     icon: "GitBranch",
     target: {
       kind: "page",
-      page: workbenchPages.workspaces,
+      page: workbenchPages.workspace,
       resource: { type: "workspace", id: workspace.id, label, metadata: workspaceMetadata },
       parent: ticketPageTarget(ticket.resourceParent),
     },

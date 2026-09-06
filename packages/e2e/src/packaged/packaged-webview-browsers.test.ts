@@ -43,7 +43,7 @@ describe("packaged extension webviews", () => {
         try {
           expect(browserAvailable).toBe(true);
           const started = await startPackagedServe(tempRoot, {
-            PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("extension-lab"),
+            PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture"),
             PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1",
           });
           child = started.child;
@@ -96,7 +96,7 @@ describe("packaged extension webviews", () => {
             { projectId: project.id },
           );
 
-          await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.extension-lab/lab`, {
+          await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`, {
             waitUntil: "domcontentloaded",
           });
           const iframe = page.locator('iframe[title="Lab"]');

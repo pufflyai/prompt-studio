@@ -46,7 +46,9 @@ export const workbenchResourceKinds = {
 export const workbenchPages = {
   start: hostRef("page", "start"),
   sessions: hostRef("page", "sessions"),
+  session: hostRef("page", "session"),
   workspaces: hostRef("page", "workspaces"),
+  workspace: hostRef("page", "workspace"),
 };
 
 export const workbenchPageDefinitions = {
@@ -60,12 +62,24 @@ export const workbenchPageDefinitions = {
     ref: workbenchPages.sessions,
     mode: workbenchModes.sessions,
     path: "sessions",
+    primary: { cardinality: "one", resourceKinds: [] },
+  },
+  session: {
+    ref: workbenchPages.session,
+    mode: workbenchModes.sessions,
+    path: "session",
     primary: { cardinality: "one", resourceKinds: ["session", "session-draft"] },
   },
   workspaces: {
     ref: workbenchPages.workspaces,
     mode: workbenchModes.project,
     path: "workspaces",
+    primary: { cardinality: "one", resourceKinds: [] },
+  },
+  workspace: {
+    ref: workbenchPages.workspace,
+    mode: workbenchModes.project,
+    path: "workspace",
     primary: { cardinality: "many", resourceKinds: ["workspace"] },
   },
 } as const;

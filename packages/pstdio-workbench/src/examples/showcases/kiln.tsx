@@ -6,9 +6,11 @@ import { KilnTimeline } from "./kiln-timeline";
 import { KilnViewport } from "./kiln-viewport";
 import { kilnTheme } from "./themes";
 
+const homePage = { ...kilnPage, id: "kiln" };
+
 export const createKilnWorkbench = () => {
   const workbench = createWorkbench({
-    startPage: kilnPage,
+    startPage: homePage,
     initialSidePanelMode: "attached",
     sidePanelDetachable: false,
     defaultPanelOpenByRegionId: { secondary: true },
@@ -55,18 +57,33 @@ export const createKilnWorkbench = () => {
     region: "nav",
   });
   workbench.statusBar.registerItem({ id: "kiln.status", viewId: "kiln.status", slot: "leading" });
+  workbench.modePlacements.registerPlacement({
+    id: "kiln.timeline",
+    ref: { extensionId: "storybook.showcases", kind: "placement", id: "kiln.timeline" },
+    modeId: "kiln",
+    region: "secondary",
+    item: { kind: "view", viewId: "kiln.timeline", presence: "fixed" },
+  });
   workbench.pages.registerPage({
-    id: "kiln.scene",
-    ref: kilnPage,
+    id: "kiln.home",
+    ref: homePage,
     title: "Clay Study",
     path: "kiln/clay-study",
     modeId: "kiln",
+    slots: [{ id: "viewport", role: "primary", region: "main", viewId: "kiln.viewport" }],
+  });
+  workbench.pages.registerPage({
+    id: "kiln.resource",
+    ref: kilnPage,
+    title: "Clay Study",
+    path: "kiln/clay-study/resource",
+    modeId: "kiln",
+    parentId: "kiln.home",
     slots: [
       {
         id: "viewport",
         role: "primary",
         region: "main",
-        viewId: "kiln.viewport",
         binding: { resourceKinds: ["kiln.object"], viewId: "kiln.viewport", cardinality: "one" },
       },
       {
@@ -76,13 +93,6 @@ export const createKilnWorkbench = () => {
         binding: { resourceKinds: ["kiln.object"], viewId: "kiln.inspector", cardinality: "one" },
         openOn: "page-resource",
         floatingPanels: "hidden",
-      },
-      {
-        id: "timeline",
-        role: "auxiliary",
-        region: "secondary",
-        viewId: "kiln.timeline",
-        presence: "fixed",
       },
     ],
   });

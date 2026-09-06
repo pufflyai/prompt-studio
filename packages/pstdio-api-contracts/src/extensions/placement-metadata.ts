@@ -24,6 +24,7 @@ export const regionSizeSchema = z.object({
 });
 
 export const regionSettingsSchema = z.object({
+  showHeader: z.boolean().optional(),
   size: regionSizeSchema.optional(),
   collapsible: z.boolean().optional(),
   alwaysShowTabs: z.boolean().optional(),

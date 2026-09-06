@@ -2,12 +2,7 @@
 
 This cookbook gives short recipes for the implemented extension API.
 
-The complete [command and header-action example](../../../extensions/extension-lab/src/examples/commands.ts)
-is compiled and normalized in the test suite. For page patterns, start with
-[Scribble](../../../extensions/extension-lab/src/examples/scribble.ts),
-[Zipline](../../../extensions/extension-lab/src/examples/zipline.ts), or
-[Pigeon](../../../extensions/extension-lab/src/examples/pigeon.ts). Extension Lab runs these modules
-through the same public API available to other authors.
+The [Extension Lab](../../../extensions/extension-lab/README.md) contains complete public extension versions of Scribble, Boombox, Zipline, Pigeon, and Kiln. Each includes sample resources, state commands, a page, a mode, views, and a theme. Start with [Scribble](../../../extensions/extension-lab/src/examples/scribble.ts) or the [state commands](../../../extensions/extension-lab/src/state-commands.ts).
 
 ## Create A Package
 
@@ -519,19 +514,18 @@ export default defineExtension({
 ```
 
 Every binding declares `cardinality`: `one` keeps a single instance and rebinds it, `many` opens one
-instance per resource. A page whose primary slot has only a binding must declare `parent`; closing its
+instance per resource. A page whose primary slot declares a binding must declare `parent`; closing its
 last tab navigates there.
 
 Use `parent` on a navigation target for contextual breadcrumbs. Name the parent page and resource
 explicitly. The host does not infer a page from a resource kind, view, or resource metadata. Without
 a target parent, it uses the page's declared hierarchy.
 
-Closing the last bound-only primary follows the page's declared `parent`, even if the breadcrumb
-has a contextual parent. Closing a hybrid primary's last resource shows its static view.
+Closing the last resource primary follows the page's declared `parent`, even if the breadcrumb
+has a contextual parent.
 
 `openOn: "page-resource"` opens an auxiliary instance when navigation supplies a matching resource.
-Closing that instance keeps it closed until another navigation opens it. Navigating to the same page
-without a resource keeps previously opened auxiliary instances. Leaving the page removes its panels
+Closing that instance keeps it closed until another navigation opens it. Leaving the page removes its panels
 from the active layout.
 
 The tree appears after the active mode's content while Ticket is active. Leaving the page removes only the

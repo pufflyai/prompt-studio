@@ -50,7 +50,7 @@ describe("openReviewWorkspace", () => {
     expect(workbench.commandPalette.isOpen()).toBe(false);
     expect(workbench.modes.getActiveModeId()).toBe("project");
     expect(workbench.pages.store.getState().location).toMatchObject({
-      page: workbenchPages.workspaces,
+      page: workbenchPages.workspace,
       resource: {
         type: "workspace",
         id: "workspace-1",
@@ -100,7 +100,7 @@ describe("openSelectedWorkspace", () => {
 
     expect(workbench.modes.getActiveModeId()).toBe("project");
     expect(workbench.pages.store.getState().location).toMatchObject({
-      page: workbenchPages.workspaces,
+      page: workbenchPages.workspace,
       resource: {
         type: "workspace",
         id: "workspace-2",

@@ -8,7 +8,8 @@ import { pigeonStore } from "./pigeon-state";
 import { initials, useShowcaseStore } from "./showcase-store";
 import { pigeonTheme } from "./themes";
 
-const page: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "pigeon" };
+const page: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "pigeon-resource" };
+const homePage: PageRef = { ...page, id: "pigeon" };
 const resource = (thread: PigeonThread): ResourceRef => ({
   type: "pigeon.thread",
   id: thread.id,
@@ -112,7 +113,7 @@ const ReadingPane = (props: { input: WorkbenchPanelRenderInput }) => {
   if (!thread) return null;
   const archive = () => {
     pigeonStore.setState({ archivedIds: [...state.archivedIds, thread.id] });
-    input.workbench.pageLocations.navigate({ kind: "page", page });
+    input.workbench.pageLocations.navigate({ kind: "page", page: homePage });
   };
   return (
     <Stack h="full" overflowY="auto" gap="lg" p="lg">
@@ -122,7 +123,7 @@ const ReadingPane = (props: { input: WorkbenchPanelRenderInput }) => {
             aria-label="Back to inbox"
             size="sm"
             variant="ghost"
-            onClick={() => input.workbench.pageLocations.navigate({ kind: "page", page })}
+            onClick={() => input.workbench.pageLocations.navigate({ kind: "page", page: homePage })}
           >
             <WorkbenchIcon name="ArrowLeft" />
           </IconButton>
@@ -248,7 +249,7 @@ const Composer = (props: { input: WorkbenchPanelRenderInput }) => {
 };
 
 export const createPigeonWorkbench = () => {
-  const workbench = createWorkbench({ startPage: page, initialSidePanelMode: "floating" });
+  const workbench = createWorkbench({ startPage: homePage, initialSidePanelMode: "floating" });
   workbench.themes.register([pigeonTheme]);
   workbench.modes.registerMode({
     id: "pigeon",
@@ -291,19 +292,33 @@ export const createPigeonWorkbench = () => {
     region: "nav",
   });
   workbench.overlays.registerOverlay({ id: "pigeon.compose", viewId: "pigeon.composer", closable: true });
+  workbench.modePlacements.registerPlacement({
+    id: "pigeon.folders",
+    ref: { extensionId: "storybook.showcases", kind: "placement", id: "pigeon.folders" },
+    modeId: "pigeon",
+    region: "sidenav",
+    item: { kind: "view", viewId: "pigeon.folders", presence: "fixed" },
+  });
   workbench.pages.registerPage({
-    id: "pigeon.inbox",
-    ref: page,
+    id: "pigeon.home",
+    ref: homePage,
     title: "Inbox",
     path: "pigeon/inbox",
     modeId: "pigeon",
+    slots: [{ id: "inbox", role: "primary", region: "main", viewId: "pigeon.inbox" }],
+  });
+  workbench.pages.registerPage({
+    id: "pigeon.resource",
+    ref: page,
+    title: "Inbox",
+    path: "pigeon/inbox/resource",
+    modeId: "pigeon",
+    parentId: "pigeon.home",
     slots: [
-      { id: "folders", role: "auxiliary", region: "sidenav", viewId: "pigeon.folders", presence: "fixed" },
       {
         id: "inbox",
         role: "primary",
         region: "main",
-        viewId: "pigeon.inbox",
         binding: { resourceKinds: ["pigeon.thread"], viewId: "pigeon.inbox", cardinality: "one" },
         floatingPanels: "visible",
       },
@@ -318,5 +333,6 @@ export const createPigeonWorkbench = () => {
     ],
   });
   workbench.pageLocations.switchProject("storybook-pigeon");
+  workbench.pageLocations.navigate({ kind: "page", page: homePage });
   return workbench;
 };

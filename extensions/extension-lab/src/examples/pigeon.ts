@@ -1,79 +1,39 @@
-import {
-  defineExtension,
-  defineNavigationItem,
-  definePage,
-  defineResourceKind,
-  defineView,
-  workbenchModes,
-} from "@pstdio/sdk/extensions";
+import { defineExtension } from "@pstdio/sdk/extensions";
+import { defineExample, webview } from "../definition";
 
-const message = defineResourceKind({ id: "pigeon-message", label: "Message" });
-const pageRef = { kind: "page" as const, id: "pigeon" };
-const messages = [
-  { id: "hello", subject: "Hello from Pigeon", content: "Your first message." },
-  { id: "meeting", subject: "Friday meeting", content: "Meet at ten on Friday." },
+const views = [
+  webview("pigeon-inbox", "Inbox"),
+  webview("pigeon-reader", "Message"),
+  webview("pigeon-folders", "Folders"),
+  webview("pigeon-nav", "Pigeon"),
 ];
-const inbox = defineView({
-  id: "pigeon-inbox",
-  title: "Inbox",
-  body: {
-    kind: "dataTable",
-    columns: [{ id: "subject", label: "Subject" }],
-    query: async () => ({
-      rows: messages.map((item) => ({
-        id: item.id,
-        values: { subject: item.subject },
-        resource: { type: message.id, id: item.id, label: item.subject },
-      })),
-    }),
-    onRowActivate: async (_ctx, { row }) => ({ kind: "page", page: pageRef, resource: row.resource }),
+const example = defineExample({
+  name: "pigeon",
+  label: "Pigeon",
+  icon: "Mail",
+  primary: views[0].ref,
+  chrome: { nav: views[3].ref, sidenav: views[2].ref, activity: false },
+  regionSettings: {
+    sidenav: { size: { defaultPx: 220, minPx: 200, maxPx: 280 }, collapsible: false },
+    side: { size: { defaultPx: 480, minPx: 360, maxPx: 600 } },
   },
-});
-const reader = defineView({
-  id: "pigeon-reader",
-  title: "Message reader",
-  body: {
-    kind: "file",
-    load: async (_ctx, { renderer }) => ({
-      fileName: "message.md",
-      content: `# ${renderer.resource!.label}\n\n${messages.find((item) => item.id === renderer.resource!.id)?.content ?? ""}`,
-    }),
-  },
-});
-export const pigeonPage = definePage({
-  id: pageRef.id,
-  title: "Pigeon",
-  path: "pigeon",
-  mode: workbenchModes.project,
   slots: [
-    {
-      id: "inbox",
-      role: "primary",
-      region: "main",
-      view: inbox.ref,
-      binding: { kind: message.ref, view: inbox.ref, cardinality: "one" },
-    },
     {
       id: "reader",
       role: "auxiliary",
       region: "side",
+      binding: { kind: { kind: "resource-kind", id: "pigeon.thread" }, view: views[1].ref, cardinality: "one" },
       openOn: "page-resource",
-      binding: { kind: message.ref, view: reader.ref, cardinality: "one" },
+      floatingPanels: "visible",
     },
   ],
+  initialResource: false,
 });
 export default defineExtension({
-  resourceKinds: [message],
-  views: [inbox, reader],
-  pages: [pigeonPage],
-  navigationItems: [
-    defineNavigationItem({
-      id: "pigeon",
-      label: "Pigeon",
-      icon: "Mail",
-      owner: workbenchModes.project,
-      slot: "content",
-      action: { kind: "page", page: pigeonPage.ref },
-    }),
-  ],
+  modes: [example.mode],
+  themes: [example.theme],
+  resourceKinds: [example.resourceKind],
+  pages: [example.homePage, example.page],
+  views: [...views],
+  navigationItems: [example.navigation],
 });

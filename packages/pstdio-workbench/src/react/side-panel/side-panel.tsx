@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { WorkbenchPanelMenuLayout, WorkbenchPanelMenuOpeners } from "../panel-menu/panel-menu";
+import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 
 interface WorkbenchSidePanelProps {
@@ -40,6 +41,7 @@ const WorkbenchSidePanelHeader = (props: WorkbenchSidePanelHeaderProps) => {
 
 export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
   const { workbench, contentSlotRef, header } = props;
+  const settings = useWorkbenchModeRegionSettings(workbench, "side");
 
   return (
     <WorkbenchFocusRegion workbench={workbench} region="side" h="full" minH="0" minW="0" w="full">
@@ -51,7 +53,7 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
         minWidth="0"
         bg={workbenchBackgrounds.widget}
         header={
-          header || workbench.sidePanel.detachable ? (
+          settings?.showHeader !== false && (header || workbench.sidePanel.detachable) ? (
             <Header data-workbench-panel-header="side" variant="main" flexShrink={0} gap="sm">
               <WorkbenchSidePanelHeader header={header} />
               <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />

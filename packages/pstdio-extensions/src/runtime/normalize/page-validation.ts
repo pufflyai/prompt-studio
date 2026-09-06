@@ -65,19 +65,11 @@ const validateSlotContent = (runtime: Accumulator, record: RuntimePageRecord, sl
   const fieldPath = `pages.${record.localId}.slots.${index}`;
   const hasView = Boolean(slot.view);
   const hasBinding = Boolean(slot.binding);
-  if (slot.role === "primary" && !hasView && !hasBinding) {
+  if (hasView === hasBinding) {
     addPageDiagnostic(runtime, {
       code: "extension_page_slot_invalid",
       fieldPath,
-      message: `Primary slot "${slot.id}" must define a view, a binding, or both`,
-      record,
-    });
-  }
-  if (slot.role === "auxiliary" && hasView === hasBinding) {
-    addPageDiagnostic(runtime, {
-      code: "extension_page_slot_invalid",
-      fieldPath,
-      message: `Auxiliary slot "${slot.id}" must define exactly one view or binding`,
+      message: `Page slot "${slot.id}" must define exactly one view or binding`,
       record,
     });
   }
@@ -137,11 +129,11 @@ const validatePageStructure = (runtime: Accumulator, record: RuntimePageRecord) 
       record,
     });
   }
-  if (primary[0]?.binding && !primary[0].view && !record.contribution.parent) {
+  if (primary[0]?.binding && !record.contribution.parent) {
     addPageDiagnostic(runtime, {
       code: "extension_page_primary_invalid",
       fieldPath: `pages.${record.localId}.parent`,
-      message: `Bound-only page "${record.localId}" must declare a parent to return to when its last tab closes`,
+      message: `Resource page "${record.localId}" must declare a parent to return to when its last tab closes`,
       record,
     });
   }

@@ -7,6 +7,20 @@ import { contributionArray, contributionRecordBase, uniqueContributions } from "
 import { isLocalizableString } from "./localizable";
 import { normalizeContributionRef } from "./references";
 
+const isRef = (value: unknown, kind: string) =>
+  isRecord(value) &&
+  value.kind === kind &&
+  typeof value.id === "string" &&
+  value.id.length > 0 &&
+  (value.extensionId === undefined || typeof value.extensionId === "string");
+const validChrome = (value: unknown) =>
+  value === undefined ||
+  (isRecord(value) &&
+    Object.entries(value).every(
+      ([region, view]) =>
+        ["nav", "sidenav", "activity", "status"].includes(region) && (view === false || isRef(view, "view")),
+    ));
+
 export const registerModes = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
   const modes = uniqueContributions({
     ext,
@@ -26,9 +40,19 @@ export const registerModes = (ext: NormalizedExtension, source: LoadedExtensionS
       );
     const hasValidRegionSettings =
       mode.regionSettings === undefined ||
-      (isRecord(mode.regionSettings) &&
-        Object.keys(mode.regionSettings).every((region) => (mode.regions as readonly string[]).includes(region)));
-    if (!isRecord(mode) || !isLocalizableString(mode.label) || !hasValidRegions || !hasValidRegionSettings) {
+      (hasValidRegions &&
+        isRecord(mode.regionSettings) &&
+        Object.keys(mode.regionSettings).every(
+          (region) => region === "sidenav" || (mode.regions as readonly string[]).includes(region),
+        ));
+    if (
+      !isRecord(mode) ||
+      !isLocalizableString(mode.label) ||
+      !hasValidRegions ||
+      !hasValidRegionSettings ||
+      (mode.defaultTheme !== undefined && !isRef(mode.defaultTheme, "theme")) ||
+      !validChrome(mode.chrome)
+    ) {
       runtime.diagnostics.push(
         createDiagnostic({
           code: "invalid_mode",
@@ -45,6 +69,17 @@ export const registerModes = (ext: NormalizedExtension, source: LoadedExtensionS
       contribution: {
         ...mode,
         ref: normalizeContributionRef(ext, mode.ref),
+        ...(mode.defaultTheme ? { defaultTheme: normalizeContributionRef(ext, mode.defaultTheme) } : {}),
+        ...(mode.chrome
+          ? {
+              chrome: Object.fromEntries(
+                Object.entries(mode.chrome).map(([region, view]) => [
+                  region,
+                  view === false ? false : normalizeContributionRef(ext, view),
+                ]),
+              ),
+            }
+          : {}),
       } as ModeContribution,
     });
   }

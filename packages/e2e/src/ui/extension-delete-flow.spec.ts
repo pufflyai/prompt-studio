@@ -9,7 +9,7 @@ const apiBase = `http://localhost:${apiPort}`;
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
     // Pre-select the project so the shell never opens the project picker when
     // parallel tests have created several projects.
     localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);

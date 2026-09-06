@@ -1,5 +1,5 @@
 import type { ResourceRef as PageResourceRef } from "@pstdio/sdk/extensions";
-import type { LayoutModel } from "../../registries/layout/layout-model";
+import type { LayoutModel, WorkbenchRegion } from "../../registries/layout/layout-model";
 import { createPlacement } from "../../registries/layout/layout-operations";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import {
@@ -26,6 +26,7 @@ import { createDisposable } from "../../shared/disposable";
 
 export interface ConnectWorkbenchPageRuntimeInput {
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
+  revealRegion?(region: WorkbenchRegion): void;
   layout: LayoutModel;
   modes: WorkbenchModeRegistry;
   registry: WorkbenchPageRegistry<WorkbenchWidgetPlacement>;
@@ -103,6 +104,9 @@ const applyPageState = (
     }
     input.layout.restoreLayout(layout);
     syncOwnedPanelMenus(input.layout);
+    if (source === "transition") {
+      for (const placement of activation) input.revealRegion?.(placement.region);
+    }
   });
 };
 
@@ -187,6 +191,7 @@ const toWidgetPlacement = (
 
 export interface CreateLiveWorkbenchPageRegistryInput {
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
+  revealRegion?(region: WorkbenchRegion): void;
   layout: LayoutModel;
   modePlacements: WorkbenchModePlacementRegistry;
   shellPlacements: WorkbenchShellPlacementRegistry;
@@ -228,7 +233,13 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
       });
     },
   });
-  connectWorkbenchPageRuntime({ beforeApply: input.beforeApply, layout: input.layout, modes: input.modes, registry });
+  connectWorkbenchPageRuntime({
+    beforeApply: input.beforeApply,
+    revealRegion: input.revealRegion,
+    layout: input.layout,
+    modes: input.modes,
+    registry,
+  });
   input.modePlacements.onDidChange(() => getWorkbenchPageRegistryInternals(registry).refreshModePlacements());
   input.shellPlacements.onDidChange(() => getWorkbenchPageRegistryInternals(registry).refreshShellPlacements());
   return registry;

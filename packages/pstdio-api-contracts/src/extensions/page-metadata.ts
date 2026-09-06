@@ -19,11 +19,22 @@ const slotBaseSchema = workbenchPlacementPresentationSchema.extend({
   order: z.number().optional(),
 });
 
-const primarySlotSchema = slotBaseSchema.extend({
-  role: z.literal("primary"),
-  view: viewRefSchema.optional(),
-  binding: bindingSchema.optional(),
-});
+const primarySlotSchema = z.union([
+  slotBaseSchema
+    .extend({
+      role: z.literal("primary"),
+      region: z.literal("main"),
+      view: viewRefSchema,
+    })
+    .strict(),
+  slotBaseSchema
+    .extend({
+      role: z.literal("primary"),
+      region: z.literal("main"),
+      binding: bindingSchema,
+    })
+    .strict(),
+]);
 
 const staticSlotSchema = slotBaseSchema.extend({
   role: z.literal("auxiliary"),

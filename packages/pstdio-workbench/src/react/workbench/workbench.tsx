@@ -7,6 +7,7 @@ import type { CommandParamFieldRenderer } from "../command-palette/command-param
 import { WorkbenchNavChrome, type WorkbenchNavRegionControl } from "../header/workbench-nav-chrome";
 import { WorkbenchKeybindingDispatcher } from "../keybindings/workbench-keybinding-dispatcher";
 import { WorkbenchNotificationHost } from "../notifications/notification-host";
+import { useModeChrome } from "../region/mode-chrome";
 import { useWorkbenchPanelHeaderVisible } from "../region/region-tabs";
 import { installWorkbenchControlsRenderer } from "../renderers/controls/install-controls-renderer";
 import { installWorkbenchDataTableRenderer } from "../renderers/data-table/install-data-table-renderer";
@@ -62,6 +63,9 @@ const createSidePanelHost = () => {
   return host;
 };
 
+export const isSidePanelAttached = (mode: "attached" | "floating" | "closed", floatingPanelsAllowed: boolean) =>
+  mode === "attached" || (mode === "floating" && !floatingPanelsAllowed);
+
 export const resolveActiveSidePanelSlot = (input: {
   floatingPanelsAllowed: boolean;
   mounted: boolean;
@@ -75,6 +79,7 @@ export const resolveActiveSidePanelSlot = (input: {
 };
 
 const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
+  const statusChrome = useModeChrome(workbench, "status");
   const statusBarItems = useWorkbenchStore(workbench.statusBar.store, (state) => state.items);
   useWorkbenchStore(workbench.context.store, (state) => state.values);
   const activeModeId = useWorkbenchStore(workbench.modes.store, (state) => state.activeModeId);
@@ -87,9 +92,11 @@ const useWorkbenchLayoutFlags = (workbench: WorkbenchCore) => {
     hasSideHeaderWidgets: useWorkbenchRegionContent(workbench, "side-header"),
     hasSideWidgets: useWorkbenchRegionContent(workbench, "side", { locationScoped: true }),
     hasStatusWidgets:
-      activeModeId === workbench.modes.getActiveModeId() &&
-      Object.keys(statusBarItems).length > 0 &&
-      workbench.statusBar.listVisibleItems().length > 0,
+      statusChrome !== undefined
+        ? statusChrome !== false
+        : activeModeId === workbench.modes.getActiveModeId() &&
+          Object.keys(statusBarItems).length > 0 &&
+          workbench.statusBar.listVisibleItems().length > 0,
   };
 };
 
@@ -192,7 +199,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const showSecondaryPanel = hasSecondaryHeaderWidgets || hasSecondaryWidgets || hasSecondaryPanelHeader;
   const persistedSidenavSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.sidenav.size);
   const sidenavSize = resolveSidenavSize(workbench, persistedSidenavSize);
-  const showAttachedSidePanel = hasSidePanel && sidePanelMode === "attached";
+  const showAttachedSidePanel = hasSidePanel && isSidePanelAttached(sidePanelMode, floatingPanelsAllowed);
   // Closed removes the Side Panel's footprint, not its live region. Keeping the
   // portal in the hidden attached slot preserves provider and renderer state.
   const mountSidePanel = hasSidePanel;
@@ -321,10 +328,18 @@ const WorkbenchContent = (props: WorkbenchProps) => {
 
 export const Workbench = (props: WorkbenchProps) => {
   const themePreferences = useWorkbenchThemePreferences(props.workbench);
+  const mode = useWorkbenchStore(props.workbench.modes.store, (state) =>
+    state.activeModeId ? state.modes[state.activeModeId] : undefined,
+  );
   const fileIconThemePreferences = useWorkbenchFileIconThemePreferences(props.workbench);
 
   return (
-    <WorkbenchThemeProvider themePreferences={themePreferences} fileIconThemePreferences={fileIconThemePreferences}>
+    <WorkbenchThemeProvider
+      themePreferences={themePreferences}
+      fileIconThemePreferences={fileIconThemePreferences}
+      defaultThemePreference={mode?.defaultTheme}
+      preferenceScope={mode?.defaultTheme ? mode.id : undefined}
+    >
       <WorkbenchContent {...props} />
       <Toaster />
     </WorkbenchThemeProvider>

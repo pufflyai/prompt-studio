@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { extensionPanelRegions } from "../extension-kernel/types/composition";
+import { dockedWorkbenchRegions, extensionPanelRegions } from "../extension-kernel/types/composition";
 import {
   extensionCommandPaletteContributionSchema,
   extensionCommandRecordSchema,
@@ -131,7 +131,11 @@ const workbenchExtensionModeRecordSchema = z.object({
   label: localizableStringSchema,
   icon: z.string().optional(),
   regions: z.array(z.enum(extensionPanelRegions)),
-  regionSettings: z.partialRecord(z.enum(extensionPanelRegions), regionSettingsSchema).optional(),
+  regionSettings: z.partialRecord(z.enum(dockedWorkbenchRegions), regionSettingsSchema).optional(),
+  defaultTheme: contributionRefSchema("theme").optional(),
+  chrome: z
+    .partialRecord(z.enum(["nav", "sidenav", "activity", "status"]), z.union([viewRefSchema, z.literal(false)]))
+    .optional(),
 });
 
 const workbenchExtensionPlacementRecordSchema = workbenchPlacementPresentationSchema.extend({

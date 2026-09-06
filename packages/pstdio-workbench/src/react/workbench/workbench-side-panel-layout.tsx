@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchRegion } from "../region/region";
 import { WorkbenchRegionTabs } from "../region/region-tabs";
+import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
+import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { WorkbenchAttachedSidePanel } from "../side-panel/side-panel";
 
 const ATTACHED_PANEL_DEFAULT_SIZE_PX = 420;
@@ -60,6 +62,10 @@ interface WorkbenchAttachedSidePanelLayoutProps {
 
 export const WorkbenchAttachedSidePanelLayout = (props: WorkbenchAttachedSidePanelLayoutProps) => {
   const { workbench, attached, contentPanel, contentMinSizePx, header, onAttachedSlotChange, onCollapse } = props;
+  const persistedSize = useWorkbenchStore(workbench.layout.store, (state) => state.layout.regions.side.size);
+  const modeSettings = useWorkbenchModeRegionSettings(workbench, "side");
+  const size = modeSettings?.size ?? workbench.layout.getRegionSize("side");
+  const collapsible = modeSettings?.collapsible ?? workbench.layout.getRegionCollapsible("side");
 
   return (
     <ResizableSplitLayout
@@ -73,8 +79,11 @@ export const WorkbenchAttachedSidePanelLayout = (props: WorkbenchAttachedSidePan
         <WorkbenchAttachedSidePanel workbench={workbench} contentSlotRef={onAttachedSlotChange} header={header} />
       }
       collapsed={!attached}
-      defaultSizePx={ATTACHED_PANEL_DEFAULT_SIZE_PX}
-      minSizePx={ATTACHED_PANEL_MIN_SIZE_PX}
+      defaultSizePx={persistedSize ?? size?.defaultPx ?? ATTACHED_PANEL_DEFAULT_SIZE_PX}
+      minSizePx={size?.minPx ?? ATTACHED_PANEL_MIN_SIZE_PX}
+      maxSizePx={size?.maxPx}
+      collapsible={collapsible}
+      onSizeChange={(width) => workbench.layout.setRegionSize("side", width)}
       contentMinSizePx={contentMinSizePx}
       resizeLabel="Resize Side Panel"
       showResizeSeparator

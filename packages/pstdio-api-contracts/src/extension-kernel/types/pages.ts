@@ -39,8 +39,7 @@ interface PageSlotBase extends PlacementPresentation {
 /**
  * The page's routed content. Always present while the page is open; the user
  * cannot hide the slot itself. With a binding, each opened resource becomes
- * an instance; the static view (when declared) shows while no resource is
- * open.
+ * an instance. A primary declares either a static view or a resource binding.
  */
 interface PagePrimarySlotBase extends Omit<PageSlotBase, "region"> {
   readonly role: "primary";
@@ -49,7 +48,7 @@ interface PagePrimarySlotBase extends Omit<PageSlotBase, "region"> {
 
 export type PagePrimarySlot = PagePrimarySlotBase &
   (
-    | { readonly view: ViewRef; readonly binding?: PageSlotBinding }
+    | { readonly view: ViewRef; readonly binding?: undefined }
     | { readonly view?: undefined; readonly binding: PageSlotBinding }
   );
 

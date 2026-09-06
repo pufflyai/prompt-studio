@@ -7,7 +7,8 @@ import { BoomboxNav, BoomboxRail } from "./boombox-navigation";
 import { createShowcaseStore, usePrimaryResource, useShowcaseStore } from "./showcase-store";
 import { boomboxTheme } from "./themes";
 
-const page: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "boombox" };
+const page: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "boombox-resource" };
+const homePage: PageRef = { ...page, id: "boombox" };
 const resource = (track: BoomboxTrack): ResourceRef => ({ type: "boombox.track", id: track.id, label: track.title });
 const store = createShowcaseStore({ playing: true, likedIds: ["paper-moon"], queueIds: ["afterimage", "still-life"] });
 
@@ -260,14 +261,14 @@ const Player = (props: { workbench: WorkbenchCore }) => {
 };
 
 export const createBoomboxWorkbench = () => {
-  const workbench = createWorkbench({ startPage: page });
+  const workbench = createWorkbench({ startPage: homePage });
   workbench.themes.register([boomboxTheme]);
   workbench.modes.registerMode({
     id: "boombox",
     label: "Boombox",
     resourceKinds: ["boombox.track"],
     regionSettings: {
-      secondary: { size: { defaultPx: 88, minPx: 88, maxPx: 88 }, collapsible: false },
+      secondary: { size: { defaultPx: 88, minPx: 88, maxPx: 88 }, collapsible: false, showHeader: false },
     },
     activate: () => undefined,
   });
@@ -301,21 +302,35 @@ export const createBoomboxWorkbench = () => {
     item: { kind: "view", viewId: "boombox.rail", presence: "fixed" },
     region: "activity",
   });
+  workbench.modePlacements.registerPlacement({
+    id: "boombox.player",
+    ref: { extensionId: "storybook.showcases", kind: "placement", id: "boombox.player" },
+    modeId: "boombox",
+    region: "secondary",
+    item: { kind: "view", viewId: "boombox.player", presence: "fixed" },
+  });
   workbench.pages.registerPage({
     id: "boombox.home",
-    ref: page,
+    ref: homePage,
     title: "Lazy Sunday",
     path: "boombox",
     modeId: "boombox",
+    slots: [{ id: "playlist", role: "primary", region: "main", viewId: "boombox.playlist" }],
+  });
+  workbench.pages.registerPage({
+    id: "boombox.resource",
+    ref: page,
+    title: "Lazy Sunday",
+    path: "boombox/resource",
+    modeId: "boombox",
+    parentId: "boombox.home",
     slots: [
       {
         id: "playlist",
         role: "primary",
         region: "main",
-        viewId: "boombox.playlist",
         binding: { resourceKinds: ["boombox.track"], viewId: "boombox.playlist", cardinality: "one" },
       },
-      { id: "player", role: "auxiliary", region: "secondary", viewId: "boombox.player", presence: "fixed" },
     ],
   });
   workbench.pageLocations.switchProject("storybook-boombox");

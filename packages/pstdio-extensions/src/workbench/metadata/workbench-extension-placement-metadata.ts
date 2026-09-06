@@ -4,7 +4,7 @@ import type { ExtensionRuntime, RuntimePageSlot, RuntimePlacementTab } from "../
 import { normalizedRef, normalizeTarget, refreshEventIds } from "./workbench-extension-metadata-normalizers";
 
 type MetadataPageSlot = WorkbenchExtensionMetadata["pages"][number]["slots"][number];
-type MetadataSlotBinding = NonNullable<Extract<MetadataPageSlot, { role: "primary" }>["binding"]>;
+type MetadataSlotBinding = NonNullable<Extract<MetadataPageSlot, { binding: unknown }>["binding"]>;
 
 const bindingRecord = (binding: NonNullable<RuntimePageSlot["binding"]>, extensionId: string): MetadataSlotBinding => ({
   kind: Array.isArray(binding.kind)
@@ -38,8 +38,10 @@ const slotRecord = (slot: RuntimePageSlot, extensionId: string): MetadataPageSlo
     return {
       ...base,
       role: "primary",
-      view: slot.view ? normalizedRef(slot.view, extensionId) : undefined,
-      binding: slot.binding ? bindingRecord(slot.binding, extensionId) : undefined,
+      region: "main",
+      ...(slot.binding
+        ? { binding: bindingRecord(slot.binding, extensionId) }
+        : { view: normalizedRef(slot.view!, extensionId) }),
     };
   }
   if (slot.view) {

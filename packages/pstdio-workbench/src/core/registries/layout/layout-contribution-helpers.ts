@@ -41,7 +41,8 @@ export const createRegionQueries = (input: CreateRegionQueriesInput) => {
 
     getRegionCollapsible(regionId: WorkbenchRegion) {
       const placement = getActivePlacement(getLayout().regions[regionId]);
-      if (!placement) return getPlaceholder(regionId)?.regionCollapsible ?? true;
+      if (!placement)
+        return getPlaceholder(regionId)?.regionCollapsible ?? input.getRegionSettings?.(regionId)?.collapsible ?? true;
       return (
         getWidgets()[placement.contributionId]?.regionCollapsible ??
         input.getRegionSettings?.(regionId)?.collapsible ??

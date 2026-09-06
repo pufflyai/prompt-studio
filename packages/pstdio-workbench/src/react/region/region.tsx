@@ -19,6 +19,7 @@ import {
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchRegionBackground } from "../theme/workbench-theme-background";
+import { ModeChromeView, useModeChrome } from "./mode-chrome";
 import { WorkbenchWidgetHost } from "./widget-host";
 
 interface WorkbenchRegionProps {
@@ -141,6 +142,7 @@ const WorkbenchRegionPlacement = (props: WorkbenchRegionPlacementProps) => {
 
 export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   const { workbench, region, title, pointerEvents = "auto", transparent = false } = props;
+  const chrome = useModeChrome(workbench, region);
   const locationResource = useWorkbenchLocationResource(workbench);
   const modeId = useWorkbenchActiveModeId(workbench);
   const layout = useWorkbenchStore(workbench.layout.store, (state) => state.layout);
@@ -180,6 +182,8 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
     ? resolveRenderedRegionPlacements(regionState.widgets, activePlacement.widgetId, region)
     : [];
 
+  if (chrome === false) return null;
+  if (chrome) return <ModeChromeView workbench={workbench} region={region} viewId={chrome} />;
   if (!placement) return null;
 
   const scrollsHorizontally = horizontalScrollRegions.has(region);

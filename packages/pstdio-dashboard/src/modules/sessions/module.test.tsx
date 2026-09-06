@@ -80,10 +80,10 @@ describe("createSessionsModule", () => {
 
     openSessionsPage(workbench, session);
 
-    expect(workbench.pages.store.getState().activePageId).toBe(dashboardViews.sessions.id);
+    expect(workbench.pages.store.getState().activePageId).toBe(workbenchPages.session.id);
     expect(workbench.layout.getLayout().regions.main.widgets[0]?.placementIdentity).toMatchObject({
       kind: "page",
-      pageId: dashboardViews.sessions.id,
+      pageId: workbenchPages.session.id,
     });
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Sessions", "My session"]);
   });

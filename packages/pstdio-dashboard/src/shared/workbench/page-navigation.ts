@@ -46,7 +46,10 @@ export const navigateDashboardPage = (ctx: WorkbenchModuleContext, input: Naviga
 };
 
 export const openSessionsPage = (ctx: WorkbenchModuleContext, resource?: ResourceRef) =>
-  navigateDashboardPage(ctx, { page: workbenchPages.sessions, ...(resource ? { resource } : {}) });
+  navigateDashboardPage(ctx, {
+    page: resource ? workbenchPages.session : workbenchPages.sessions,
+    ...(resource ? { resource } : {}),
+  });
 
 export const openWorkspacesPage = (
   ctx: WorkbenchModuleContext,
@@ -54,7 +57,7 @@ export const openWorkspacesPage = (
   parent?: NavigationTargetPage,
 ) =>
   navigateDashboardPage(ctx, {
-    page: workbenchPages.workspaces,
+    page: resource ? workbenchPages.workspace : workbenchPages.workspaces,
     ...(resource ? { resource } : {}),
     ...(parent ? { parent } : {}),
   });

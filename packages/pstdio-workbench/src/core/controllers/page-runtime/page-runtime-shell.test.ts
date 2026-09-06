@@ -40,7 +40,7 @@ test("applies a shell Sub Panel opened after a scoped page becomes active", asyn
         id: "content",
         role: "primary",
         region: "main",
-        viewId: "workspace",
+
         binding: { resourceKinds: ["workspace"], viewId: "workspace", cardinality: "many" },
       },
       {

@@ -1,6 +1,6 @@
 import type { Localizable } from "../l10n";
 import type { CommandRef, CommandSource } from "./commands";
-import type { ExtensionPanelRegion, RegionSize } from "./composition";
+import type { DockedWorkbenchRegion, ExtensionPanelRegion, RegionSize } from "./composition";
 import type { RendererCallback } from "./context";
 import type {
   ContributionDefinition,
@@ -8,6 +8,7 @@ import type {
   ResourceKindRef,
   SettingsSectionRef,
   SettingsSlotRef,
+  ThemeRef,
   ViewRef,
 } from "./contribution-identity";
 import type { JsonObject, JsonValue, Struct } from "./json";
@@ -69,6 +70,8 @@ export interface ActivityItemContribution<TParams extends Struct = Struct>
 }
 
 export interface ModeRegionSettings {
+  /** Hide the panel header when the mode supplies its own controls. */
+  readonly showHeader?: boolean;
   readonly size?: RegionSize;
   readonly collapsible?: boolean;
   /** Keep a tab visible when this region has only one visible item. */
@@ -79,8 +82,12 @@ export interface ModeContribution extends ContributionDefinition<"mode"> {
   label: Localizable<string>;
   icon?: string;
   regions: readonly ExtensionPanelRegion[];
+  /** Default theme for this mode. An explicit user choice for the mode takes precedence. */
+  defaultTheme?: ThemeRef;
+  /** Replace host chrome with a view, or hide it with false, while the mode is active. */
+  chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", ViewRef | false>>;
   /** Region-level layout policy. The mode owns it; placements cannot set it. */
-  regionSettings?: Readonly<Partial<Record<ExtensionPanelRegion, ModeRegionSettings>>>;
+  regionSettings?: Readonly<Partial<Record<DockedWorkbenchRegion, ModeRegionSettings>>>;
 }
 
 export interface WebviewContribution {

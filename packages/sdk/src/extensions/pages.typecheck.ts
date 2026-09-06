@@ -1,4 +1,11 @@
-import { definePage, defineResourceKind, defineView, workbenchModes, workbenchPages } from "./index";
+import {
+  definePage,
+  defineResourceKind,
+  defineView,
+  type PagePrimarySlot,
+  workbenchModes,
+  workbenchPages,
+} from "./index";
 
 const ticket = defineResourceKind({ id: "ticket" });
 const view = defineView({
@@ -22,7 +29,7 @@ definePage({
     { id: "content", role: "primary", region: "side", view: view.ref },
   ],
 });
-// @ts-expect-error a bound-only page needs a last-tab close destination
+// @ts-expect-error a resource page needs a last-tab close destination
 definePage({
   ...base,
   slots: [
@@ -47,15 +54,12 @@ definePage({
     },
   ],
 });
-definePage({
-  ...base,
-  slots: [
-    {
-      id: "content",
-      role: "primary",
-      region: "main",
-      view: view.ref,
-      binding: { kind: ticket.ref, view: view.ref, cardinality: "one" },
-    },
-  ],
-});
+// @ts-expect-error a primary slot declares exactly one content source
+const ambiguousPrimary: PagePrimarySlot = {
+  id: "content",
+  role: "primary",
+  region: "main",
+  view: view.ref,
+  binding: { kind: ticket.ref, view: view.ref, cardinality: "one" as const },
+};
+void ambiguousPrimary;

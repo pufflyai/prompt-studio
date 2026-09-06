@@ -28,7 +28,8 @@
     "pstdio-scheduler",
     "pstdio-scripts",
     "pstdio-storage",
-    "pstdio-wt"
+    "pstdio-wt",
+    "workbench-fixture"
   ],
   "privatePackages": {
     "version": true,

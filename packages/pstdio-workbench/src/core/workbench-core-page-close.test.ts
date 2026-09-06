@@ -3,14 +3,24 @@ import { createWorkbench } from "./workbench-core";
 
 const page = { extensionId: "example.mail", kind: "page" as const, id: "inbox" };
 
+const home = { ...page, id: "home" };
+
 const createInbox = () => {
-  const workbench = createWorkbench({ startPage: page });
+  const workbench = createWorkbench({ startPage: home });
   workbench.modes.registerMode({ id: "mail", activate: () => undefined });
   for (const id of ["inbox", "reader", "tools"]) {
     workbench.views.registerView({ id, title: id, body: { kind: "react", render: () => null } });
   }
   workbench.pages.registerPage({
+    id: "home",
+    ref: home,
+    path: "home",
+    modeId: "mail",
+    slots: [{ id: "inbox", role: "primary", region: "main", viewId: "inbox" }],
+  });
+  workbench.pages.registerPage({
     id: "inbox",
+    parentId: "home",
     ref: page,
     path: "inbox",
     modeId: "mail",
@@ -19,7 +29,7 @@ const createInbox = () => {
         id: "inbox",
         role: "primary",
         region: "main",
-        viewId: "inbox",
+
         binding: { resourceKinds: ["thread"], viewId: "inbox", cardinality: "one" },
       },
       {
@@ -38,13 +48,11 @@ const createInbox = () => {
 };
 
 describe("closing page resource panels", () => {
-  test("keeps the last auxiliary instance when navigating to the resource-free page", () => {
+  test("removes resource page panels when navigating to the home page", () => {
     const workbench = createInbox();
-    expect(workbench.pageLocations.navigate({ kind: "page", page }).ok).toBe(true);
+    expect(workbench.pageLocations.navigate({ kind: "page", page: home }).ok).toBe(true);
     expect(workbench.pages.store.getState().location?.resource).toBeUndefined();
-    expect(workbench.layout.getLayout().regions.side.widgets).toEqual(
-      expect.arrayContaining([expect.objectContaining({ resource: expect.objectContaining({ id: "one" }) })]),
-    );
+    expect(workbench.layout.getLayout().regions.side.widgets).toEqual([]);
   });
   test("closes the reader without changing the route or reopening it when another panel closes", () => {
     const workbench = createInbox();

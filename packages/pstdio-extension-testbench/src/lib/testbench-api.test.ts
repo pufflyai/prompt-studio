@@ -137,14 +137,14 @@ describe("createExtensionTestbenchApi", () => {
 
     try {
       const bench = await readJson<ExtensionBenchLoadResponse>(
-        await api.handleRequest(new Request(`http://bench${apiPrefix}/load?source=./extensions/extension-lab`)),
+        await api.handleRequest(new Request(`http://bench${apiPrefix}/load?source=./packages/workbench-fixture`)),
       );
 
       const response = await readJson<ExtensionBenchCommandResponse>(
         await api.handleRequest(
           jsonRequest(`http://bench${apiPrefix}/command`, {
             benchId: bench.benchId,
-            commandId: "pstdio.extension-lab.command.awaken",
+            commandId: "pstdio.workbench-fixture.command.awaken",
             request: {
               params: { title: "Gain consciousness" },
               projectId: bench.projectId,

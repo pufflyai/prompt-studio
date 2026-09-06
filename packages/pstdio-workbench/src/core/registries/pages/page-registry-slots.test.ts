@@ -73,7 +73,7 @@ const activePagePlacements = (registry: ReturnType<typeof createRegistry>, slotI
     .placements.filter((candidate) => candidate.identity.kind === "page" && candidate.identity.slotId === slotId);
 
 describe("page primary slot lifecycle", () => {
-  test("resolves static-only, bound-only, and hybrid primary targets explicitly", () => {
+  test("resolves static and resource pages explicitly", () => {
     const registry = createRegistry();
     registerPage(registry, {
       id: "static",
@@ -93,44 +93,31 @@ describe("page primary slot lifecycle", () => {
         },
       ],
     });
-    registerPage(registry, {
-      id: "hybrid",
-      modeId: "project",
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          viewId: "list",
-          binding: { resourceKinds: ["ticket"], viewId: "detail", cardinality: "many" },
-        },
-      ],
-    });
 
     expect(() => activatePage(registry, { pageId: "static", resource: { type: "ticket", id: "one" } })).toThrow(
       /does not accept a resource/,
     );
     expect(() => activatePage(registry, { pageId: "bound" })).toThrow(/requires a resource/);
 
-    activatePage(registry, { pageId: "hybrid" });
+    activatePage(registry, { pageId: "static" });
     expect(activePagePlacements(registry, "content")[0]?.identity.instanceKey).toBe("default");
     expect(activePagePlacements(registry, "content")[0]?.value.identity).toEqual(
-      pageIdentity("hybrid", "content", "default"),
+      pageIdentity("static", "content", "default"),
     );
-    activatePage(registry, { pageId: "hybrid", resource: { type: "ticket", id: "one" } });
+    activatePage(registry, { pageId: "bound", resource: { type: "ticket", id: "one" } });
     expect(activePagePlacements(registry, "content").map((candidate) => candidate.identity.instanceKey)).toEqual([
       "ticket:one",
     ]);
     expect(registry.store.getState().reconciliation.activate[0]?.identity).toEqual(
-      pageIdentity("hybrid", "content", "ticket:one"),
+      pageIdentity("bound", "content", "ticket:one"),
     );
-    activatePage(registry, { pageId: "hybrid" });
+    activatePage(registry, { pageId: "static" });
     expect(registry.store.getState().reconciliation.activate[0]?.identity).toEqual(
-      pageIdentity("hybrid", "content", "default"),
+      pageIdentity("static", "content", "default"),
     );
   });
 
-  test("rebinds a one-cardinality hybrid primary instead of opening another tab", () => {
+  test("replaces the primary resource of a one-cardinality page", () => {
     const registry = createRegistry();
     registerPage(registry, {
       id: "sessions",
@@ -140,23 +127,17 @@ describe("page primary slot lifecycle", () => {
           id: "content",
           role: "primary",
           region: "main",
-          viewId: "sessions",
+
           binding: { resourceKinds: ["session"], viewId: "session", cardinality: "one" },
         },
       ],
     });
-
-    activatePage(registry, { pageId: "sessions" });
-    expect(activePagePlacements(registry, "content").map((item) => item.identity.instanceKey)).toEqual(["default"]);
 
     activatePage(registry, { pageId: "sessions", resource: { type: "session", id: "one" } });
     expect(activePagePlacements(registry, "content").map((item) => item.identity.instanceKey)).toEqual(["session:one"]);
 
     activatePage(registry, { pageId: "sessions", resource: { type: "session", id: "two" } });
     expect(activePagePlacements(registry, "content").map((item) => item.identity.instanceKey)).toEqual(["session:two"]);
-
-    activatePage(registry, { pageId: "sessions" });
-    expect(activePagePlacements(registry, "content").map((item) => item.identity.instanceKey)).toEqual(["default"]);
   });
 
   test("owns preview replacement and pinning inside one many slot", () => {
@@ -278,6 +259,7 @@ describe("page primary slot lifecycle", () => {
     ]);
     expect(registry.store.getState().reconciliation.activate.map((candidate) => candidate.identity)).toEqual([
       pageIdentity("ticket", "content", "ticket:PS-326"),
+      pageIdentity("ticket", "files", "ticket:PS-326"),
     ]);
   });
 });
@@ -308,25 +290,12 @@ describe("page placement close lifecycle", () => {
     ]);
   });
 
-  test("falls back to the hybrid default and moves a bound-only last close to its parent", () => {
+  test("moves the last resource close to its declared parent in one update", () => {
     const registry = createRegistry();
     registerPage(registry, {
       id: "list",
       modeId: "project",
       slots: [{ id: "content", role: "primary", region: "main", viewId: "list" }],
-    });
-    registerPage(registry, {
-      id: "hybrid",
-      modeId: "project",
-      slots: [
-        {
-          id: "content",
-          role: "primary",
-          region: "main",
-          viewId: "list",
-          binding: { resourceKinds: ["ticket"], viewId: "detail", cardinality: "many" },
-        },
-      ],
     });
     registerPage(registry, {
       id: "detail",
@@ -341,11 +310,6 @@ describe("page placement close lifecycle", () => {
         },
       ],
     });
-
-    activatePage(registry, { pageId: "hybrid", resource: { type: "ticket", id: "one" } });
-    closePlacement(registry, pageIdentity("hybrid", "content", "ticket:one"));
-    expect(registry.store.getState().activePageId).toBe("hybrid");
-    expect(activePagePlacements(registry, "content")[0]?.identity.instanceKey).toBe("default");
 
     activatePage(registry, { pageId: "detail", resource: { type: "ticket", id: "two" } });
     const observed: string[] = [];

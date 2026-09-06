@@ -187,6 +187,8 @@ const registerModes = (input: InternalRegisterWorkbenchExtensionContributionsInp
       label: text(mode.label, mode.modeId),
       panels: mode.panelRegions,
       regionSettings: mode.regionSettings,
+      defaultTheme: mode.defaultTheme,
+      chrome: mode.chrome,
       activate: () => undefined,
     }),
   );

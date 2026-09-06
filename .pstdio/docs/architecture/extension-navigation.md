@@ -37,8 +37,7 @@ The visible layout combines shell, mode, and page placements. Leaving a page rem
 leaving a mode removes that mode and its active page. Ownership is independent of region.
 
 A close action commits the resolved remaining instances. It does not replay automatic auxiliary
-opens. Closing the last primary instance of a bound-only page navigates to its declared parent.
-A hybrid primary returns to its static view.
+opens. Closing the last primary instance of a resource page navigates to its declared parent.
 
 `openOn: "page-resource"` opens matching auxiliary bindings when navigation supplies a resource.
 Navigation without a resource retains existing auxiliary instances. The Side Panel container's

@@ -231,4 +231,6 @@ export const importMarkdownToLexical = (markdown: string, resolver?: MarkdownUrl
   root.clear();
 
   for (const node of tree.children) appendBlock(root, node, context);
+  // Lexical treats a root-only state as uninitialized and skips its first change notification.
+  if (root.isEmpty()) root.append($createParagraphNode());
 };

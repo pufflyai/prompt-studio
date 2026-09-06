@@ -2,13 +2,12 @@ import { describe, expect, test } from "bun:test";
 import { dirname, join, resolve } from "node:path";
 import { loadExtensionSources, normalizeExtensionSources } from "pstdio-extensions";
 
-// Cross-layer conformance for the shipped composition fixtures: the Planner owns the
-// ticket resource, while the Extension Lab owns only its own resources. A regression
-// in either manifest fails here instead of in a browser.
+// Keep resource ownership valid when the Planner, showcases, and host fixtures are composed.
 
 const repoRoot = resolve(dirname(new URL(import.meta.url).pathname), "../../../..");
 const plannerPath = join(repoRoot, "extensions/pstdio-planner");
 const labPath = join(repoRoot, "extensions/extension-lab");
+const fixturePath = join(repoRoot, "packages/workbench-fixture");
 
 const loadRuntime = async (paths: string[]) => {
   const loaded = await loadExtensionSources({
@@ -19,16 +18,17 @@ const loadRuntime = async (paths: string[]) => {
 
 describe("shipped extension composition", () => {
   test("normalizes the Planner and Extension Lab with no diagnostics", async () => {
-    const runtime = await loadRuntime([plannerPath, labPath]);
+    const runtime = await loadRuntime([plannerPath, labPath, fixturePath]);
 
     expect(runtime.diagnostics).toEqual([]);
     expect(runtime.resourceKinds.map((kind) => [kind.localId, kind.extensionId])).toEqual([
       ["ticket", "pstdio.pstdio-planner"],
-      ["glass-lab-artifact", "pstdio.extension-lab"],
-      ["example-ticket", "pstdio.extension-lab"],
-      ["scribble-note", "pstdio.extension-lab"],
-      ["zipline-task", "pstdio.extension-lab"],
-      ["pigeon-message", "pstdio.extension-lab"],
+      ["scribble.document", "pstdio.extension-lab"],
+      ["boombox.track", "pstdio.extension-lab"],
+      ["zipline.issue", "pstdio.extension-lab"],
+      ["pigeon.thread", "pstdio.extension-lab"],
+      ["kiln.object", "pstdio.extension-lab"],
+      ["glass-lab-artifact", "pstdio.workbench-fixture"],
     ]);
     expect(runtime.placements.filter((placement) => placement.extensionId === "pstdio.pstdio-planner")).toEqual([]);
     expect(runtime.pages.find((page) => page.localId === "tickets")?.contribution).toMatchObject({
@@ -54,8 +54,8 @@ describe("shipped extension composition", () => {
     });
   });
 
-  test("normalizes Extension Lab without Planner or missing contribution diagnostics", async () => {
-    const runtime = await loadRuntime([labPath]);
+  test("normalizes host fixtures without Planner or missing contribution diagnostics", async () => {
+    const runtime = await loadRuntime([fixturePath]);
 
     expect(runtime.diagnostics).toEqual([]);
     const artifactSlot = runtime.pages
@@ -73,8 +73,8 @@ describe("shipped extension composition", () => {
     });
   });
 
-  test("keeps Lab page navigation in the composed Sidenav contract", async () => {
-    const runtime = await loadRuntime([labPath]);
+  test("keeps fixture page navigation in the composed Sidenav contract", async () => {
+    const runtime = await loadRuntime([fixturePath]);
 
     expect(runtime.modes.map((mode) => mode.localId)).toEqual(["lab"]);
     expect(runtime.placements.map((placement) => placement.contribution.region)).not.toContain("sidenav");
@@ -85,8 +85,8 @@ describe("shipped extension composition", () => {
     });
   });
 
-  test("keeps the Lab status bar out of docked layout", async () => {
-    const runtime = await loadRuntime([labPath]);
+  test("keeps the fixture status bar out of docked layout", async () => {
+    const runtime = await loadRuntime([fixturePath]);
 
     expect(runtime.statusBarItems.map((item) => item.localId)).toEqual(["lab"]);
     expect(

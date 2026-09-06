@@ -81,7 +81,7 @@ describe("openCreatedSessionFromDraft", () => {
     expect(opened?.title).toBe("Start the project plan");
   });
 
-  test("replaces a Sessions page draft with the created session", () => {
+  test.each(["home", "draft"])("opens the created session from the %s page", (origin) => {
     const workbench = createWorkbench();
     workbench.views.registerView({
       id: dashboardWidgetIds.session,
@@ -94,6 +94,14 @@ describe("openCreatedSessionFromDraft", () => {
       ref: workbenchPages.sessions,
       modeId: "sessions",
       path: "sessions",
+      slots: [{ id: "content", role: "primary", region: "main", viewId: dashboardWidgetIds.session }],
+    });
+    workbench.pages.registerPage({
+      id: "session",
+      parentId: "sessions",
+      ref: workbenchPages.session,
+      modeId: "sessions",
+      path: "session",
       slots: [
         {
           id: "content",
@@ -110,8 +118,9 @@ describe("openCreatedSessionFromDraft", () => {
     workbench.pageLocations.setProject("project-1");
     workbench.pageLocations.navigate({
       kind: "page",
-      page: workbenchPages.sessions,
-      resource: { type: "session-draft", id: "new", label: "New session" },
+      ...(origin === "draft"
+        ? { page: workbenchPages.session, resource: { type: "session-draft", id: "new", label: "New session" } }
+        : { page: workbenchPages.sessions }),
     });
     const placement = workbench.layout.listPanelInstances("main")[0]!;
 
@@ -127,6 +136,7 @@ describe("openCreatedSessionFromDraft", () => {
       projectId: "project-1",
     });
 
+    expect(workbench.pages.store.getState().location?.page).toEqual(workbenchPages.session);
     expect(workbench.pages.store.getState().location?.resource).toMatchObject({
       type: "session",
       id: "session-created-from-page-draft",

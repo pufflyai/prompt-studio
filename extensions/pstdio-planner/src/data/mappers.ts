@@ -142,7 +142,7 @@ const ticketWorkspaceValues = (
       ? {
           target: {
             kind: "page" as const,
-            page: workbenchPages.workspaces,
+            page: workbenchPages.workspace,
             resource: item.resource,
             parent: ticketPageTarget(resourceReference),
           },

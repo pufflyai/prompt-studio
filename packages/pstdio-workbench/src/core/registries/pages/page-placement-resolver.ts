@@ -28,6 +28,9 @@ export const validateWorkbenchPage = (page: WorkbenchPageContribution) => {
   }
   const slotIds = new Set<string>();
   for (const slot of page.slots) {
+    if (Boolean(slot.viewId) === Boolean(slot.binding)) {
+      throw new Error(`Page slot "${slot.id}" must define exactly one view or binding`);
+    }
     if (slotIds.has(slot.id)) throw new Error(`Page "${page.id}" declares duplicate slot "${slot.id}"`);
     slotIds.add(slot.id);
   }
@@ -79,9 +82,8 @@ export const resolvePagePlacements = <Value>(input: {
   const placements: ResolvedOwnedPlacement<Value>[] = [];
   for (const slot of input.page.slots) {
     const resources = input.state.resourceInstances[slot.id] ?? [];
-    const showPrimaryDefault =
-      slot.role === "primary" && Boolean(slot.viewId) && input.state.activePrimaryInstanceKey === "default";
-    if (showPrimaryDefault || staticSlotOpen(slot, input.state)) {
+    const showPrimary = slot.role === "primary" && Boolean(slot.viewId);
+    if (showPrimary || staticSlotOpen(slot, input.state)) {
       placements.push(
         placementFor({
           page: input.page,

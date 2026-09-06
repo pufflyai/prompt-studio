@@ -1,4 +1,4 @@
-import { Center, Text } from "@chakra-ui/react";
+import { Box, Center, Text } from "@chakra-ui/react";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { ExtensionWebviewFrame } from "@/shared/extensions/components/extension-webview-frame";
@@ -49,25 +49,29 @@ export const ExtensionViewWidget = (props: { input: WorkbenchPanelRenderInput })
   const { extensionInstanceId, installName, projectId, view, webview } = derived;
 
   return (
-    <ExtensionWebviewFrame
-      extensionId={view.extensionId}
-      extensionInstanceId={extensionInstanceId}
-      installName={installName}
-      projectId={projectId}
-      resource={
-        placementResource?.id
-          ? {
-              id: placementResource.id,
-              label: placementResource.label,
-              metadata: placementResource.metadata,
-            }
-          : undefined
-      }
-      terminal={input.workbench.terminal}
-      title={resolveLocalizableString(view.title, view.extensionId)}
-      webview={webview}
-      webviewId={view.id}
-      workbench={input.workbench}
-    />
+    <Box position="relative" w="full" h="full" minH="0">
+      <Box position="absolute" inset="0">
+        <ExtensionWebviewFrame
+          extensionId={view.extensionId}
+          extensionInstanceId={extensionInstanceId}
+          installName={installName}
+          projectId={projectId}
+          resource={
+            placementResource?.id
+              ? {
+                  id: placementResource.id,
+                  label: placementResource.label,
+                  metadata: placementResource.metadata,
+                }
+              : undefined
+          }
+          terminal={input.workbench.terminal}
+          title={resolveLocalizableString(view.title, view.extensionId)}
+          webview={webview}
+          webviewId={view.id}
+          workbench={input.workbench}
+        />
+      </Box>
+    </Box>
   );
 };

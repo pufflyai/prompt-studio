@@ -15,7 +15,7 @@ interface PageSlotInput {
 }
 
 const slotBinding = (
-  binding: NonNullable<Extract<MetadataPageSlot, { role: "primary" }>["binding"]>,
+  binding: NonNullable<Extract<MetadataPageSlot, { binding: unknown }>["binding"]>,
   input: PageSlotInput,
 ): WorkbenchPageSlotBinding => ({
   resourceKinds: (Array.isArray(binding.kind) ? binding.kind : [binding.kind as ResourceKindRef]).map(
@@ -50,13 +50,12 @@ const pageSlot = (slot: MetadataPageSlot, input: PageSlotInput): WorkbenchPageSl
     return {
       id: slot.id,
       role: "primary",
-      region: slot.region,
-      ...(slot.view ? { viewId: metadataRefId(slot.view) } : {}),
-      ...(slot.binding ? { binding: slotBinding(slot.binding, input) } : {}),
+      region: "main",
+      ...("binding" in slot ? { binding: slotBinding(slot.binding, input) } : { viewId: metadataRefId(slot.view) }),
       ...slotPresentation(slot, input),
     };
   }
-  if ("binding" in slot && slot.binding) {
+  if ("binding" in slot) {
     return {
       id: slot.id,
       role: "auxiliary",
@@ -66,7 +65,6 @@ const pageSlot = (slot: MetadataPageSlot, input: PageSlotInput): WorkbenchPageSl
       ...slotPresentation(slot, input),
     };
   }
-  if (!("view" in slot)) throw new Error(`Page slot "${slot.id}" declares neither a view nor a binding`);
   return {
     id: slot.id,
     role: "auxiliary",

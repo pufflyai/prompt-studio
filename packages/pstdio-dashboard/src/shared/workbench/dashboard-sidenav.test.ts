@@ -25,8 +25,9 @@ const registerModePage = (workbench: WorkbenchCore, modeId: string, pageId: stri
         id: "content",
         role: "primary",
         region: "main",
-        viewId,
-        ...(resourceKind ? { binding: { resourceKinds: [resourceKind], viewId, cardinality: "one" as const } } : {}),
+        ...(resourceKind
+          ? { binding: { resourceKinds: [resourceKind], viewId, cardinality: "one" as const } }
+          : { viewId }),
       },
     ],
   });
@@ -192,7 +193,8 @@ describe("registerDashboardSidenav", () => {
     const resourceReads: Array<string | undefined> = [];
 
     workbench.modes.registerMode({ id: "project", label: "Project", activate: () => undefined });
-    const page = registerModePage(workbench, "project", "resources", "workspace");
+    const home = registerModePage(workbench, "project", "resources");
+    const page = registerModePage(workbench, "project", "workspace", "workspace");
     workbench.navigationTrees.registerContribution({
       id: "test.resource-sections",
       owner: { kind: "mode", id: "project", extensionId: "pstdio" },
@@ -215,7 +217,7 @@ describe("registerDashboardSidenav", () => {
     });
     registerDashboardSidenav(workbench);
     workbench.pageLocations.setProject("project-1");
-    workbench.pageLocations.navigate({ kind: "page", page });
+    workbench.pageLocations.navigate({ kind: "page", page: home });
 
     expect(await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav)).toMatchObject([
       { id: "resource", nodes: [{ id: "aggregate", label: "Aggregate" }] },
@@ -239,7 +241,7 @@ describe("registerDashboardSidenav", () => {
     ]);
     expect(resourceReads).toEqual([undefined, workspace.uri]);
 
-    workbench.pageLocations.navigate({ kind: "page", page });
+    workbench.pageLocations.navigate({ kind: "page", page: home });
 
     expect(await treeViewSections(workbench, dashboardWidgetIds.dashboardSidenav)).toMatchObject([
       { id: "resource", nodes: [{ id: "aggregate", label: "Aggregate" }] },

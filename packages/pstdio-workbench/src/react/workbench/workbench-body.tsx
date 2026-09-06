@@ -10,6 +10,7 @@ import {
   useWorkbenchRegionTabsVisible,
   WorkbenchRegionTabs,
 } from "../region/region-tabs";
+import { useWorkbenchModeRegionSettings } from "../shared/use-workbench-mode-region-settings";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { workbenchBackgrounds } from "../theme/workbench-theme-background";
 import { WorkbenchHeaderBorder } from "./header-bottom-border";
@@ -44,8 +45,9 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
   const { workbench, hasMainHeader } = props;
   const hasMainContentTabs = useWorkbenchRegionTabsVisible(workbench, "main");
   const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "main");
+  const settings = useWorkbenchModeRegionSettings(workbench, "main");
 
-  if (!hasMainHeader && !hasPanelHeader) return null;
+  if (settings?.showHeader === false || (!hasMainHeader && !hasPanelHeader)) return null;
 
   return (
     <Header
@@ -77,6 +79,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench } = props;
+  const modeSettings = useWorkbenchModeRegionSettings(workbench, "secondary");
   const panels = useWorkbenchMainPanels(workbench);
   const { hasMainHeader, secondaryPanel } = panels;
   const persistedSecondarySize = useWorkbenchStore(
@@ -84,7 +87,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
     (state) => state.layout.regions.secondary.size,
   );
   const secondaryPanelSize = resolveRegionSize(
-    workbench.layout.getRegionSize("secondary"),
+    modeSettings?.size ?? workbench.layout.getRegionSize("secondary"),
     persistedSecondarySize,
     SECONDARY_PANEL_SIZE,
   );

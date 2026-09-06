@@ -17,7 +17,7 @@ describe("non-blocking startup tasks", () => {
   test(
     "server accepts requests immediately after start",
     async () => {
-      api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("extension-lab") } });
+      api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture") } });
 
       // API responds to healthz right away
       const healthRes = await fetch(`${api.url}/healthz`);
@@ -33,7 +33,7 @@ describe("non-blocking startup tasks", () => {
   test(
     "shutdown completes cleanly after startup",
     async () => {
-      api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("extension-lab") } });
+      api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture") } });
 
       // Create a session so startup tasks have work if server restarts
       const project = await createProjectViaApi(api.url, "shutdown-test");
@@ -44,7 +44,7 @@ describe("non-blocking startup tasks", () => {
           project_id: project.id,
           title: "test session",
           prompt: "hello",
-          agent: "pstdio.extension-lab.harness.fake",
+          agent: "pstdio.workbench-fixture.harness.fake",
         }),
       });
       expect(sessionRes.ok).toBe(true);

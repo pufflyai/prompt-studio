@@ -165,7 +165,7 @@ import {
 } from "@pstdio/sdk/extensions";
 
 const task = defineResourceKind({ id: "zipline-task", label: "Task" });
-const pageRef = { kind: "page" as const, id: "zipline" };
+const pageRef = { kind: "page" as const, id: "zipline-task" };
 const tasks = [
   { id: "design", title: "Design the board", status: "todo" },
   { id: "ship", title: "Ship the board", status: "done" },
@@ -212,16 +212,23 @@ const inspector = defineView({
   },
 });
 export const ziplinePage = definePage({
-  id: pageRef.id,
+  id: "zipline",
   title: "Zipline",
   path: "zipline",
   mode: workbenchModes.project,
+  slots: [{ id: "content", role: "primary", region: "main", view: board.ref }],
+});
+const ziplineDetailPage = definePage({
+  id: pageRef.id,
+  title: "Task",
+  path: "zipline/task",
+  mode: workbenchModes.project,
+  parent: ziplinePage.ref,
   slots: [
     {
       id: "board",
       role: "primary",
       region: "main",
-      view: board.ref,
       binding: { kind: task.ref, view: board.ref, cardinality: "one" },
     },
     {
@@ -236,7 +243,7 @@ export const ziplinePage = definePage({
 export default defineExtension({
   resourceKinds: [task],
   views: [board, inspector],
-  pages: [ziplinePage],
+  pages: [ziplinePage, ziplineDetailPage],
   navigationItems: [
     defineNavigationItem({
       id: "zipline",
@@ -265,7 +272,7 @@ import {
 } from "@pstdio/sdk/extensions";
 
 const message = defineResourceKind({ id: "pigeon-message", label: "Message" });
-const pageRef = { kind: "page" as const, id: "pigeon" };
+const pageRef = { kind: "page" as const, id: "pigeon-message" };
 const messages = [
   { id: "hello", subject: "Hello from Pigeon", content: "Your first message." },
   { id: "meeting", subject: "Friday meeting", content: "Meet at ten on Friday." },
@@ -298,16 +305,23 @@ const reader = defineView({
   },
 });
 export const pigeonPage = definePage({
-  id: pageRef.id,
+  id: "pigeon",
   title: "Pigeon",
   path: "pigeon",
   mode: workbenchModes.project,
+  slots: [{ id: "content", role: "primary", region: "main", view: inbox.ref }],
+});
+const pigeonDetailPage = definePage({
+  id: pageRef.id,
+  title: "Message",
+  path: "pigeon/message",
+  mode: workbenchModes.project,
+  parent: pigeonPage.ref,
   slots: [
     {
       id: "inbox",
       role: "primary",
       region: "main",
-      view: inbox.ref,
       binding: { kind: message.ref, view: inbox.ref, cardinality: "one" },
     },
     {
@@ -322,7 +336,7 @@ export const pigeonPage = definePage({
 export default defineExtension({
   resourceKinds: [message],
   views: [inbox, reader],
-  pages: [pigeonPage],
+  pages: [pigeonPage, pigeonDetailPage],
   navigationItems: [
     defineNavigationItem({
       id: "pigeon",
@@ -340,8 +354,7 @@ export default defineExtension({
 
 Use `parent` on a page target for contextual breadcrumbs. Name each destination page explicitly; resource metadata does not choose pages. Without a target parent, the declared page hierarchy applies.
 
-Closing the last primary instance of a bound-only page follows its declared `parent`, even when the current breadcrumb has a contextual parent. A hybrid primary returns to its static view.
-
+Closing the last primary instance of a resource page follows its declared `parent`, even when the current breadcrumb has a contextual parent.
 `openOn: "page-resource"` opens the auxiliary binding when navigation supplies a matching page resource. Closing it keeps it closed until another navigation opens it. Navigating without a resource does not clear previously opened auxiliary instances. Leaving the page removes its panels from the active layout.
 
 Use `navigationTrees` or `navigationItems` for the shared Sidenav. Page slots accept `main`, `side`, or `secondary`; the primary slot must use `main`.

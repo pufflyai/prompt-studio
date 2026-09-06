@@ -1,0 +1,31 @@
+{
+  "name": "pigeon",
+  "type": "light",
+  "colors": {
+    "editor.background": "#f8fbff",
+    "editor.foreground": "#202632",
+    "editorWidget.background": "#ffffff",
+    "activityBar.background": "#e7f0fc",
+    "sideBar.background": "#eef5ff",
+    "panel.background": "#ffffff",
+    "statusBar.background": "#e7f0fc",
+    "input.background": "#e4edf9",
+    "input.foreground": "#202632",
+    "input.border": "#cbd8e8",
+    "menu.background": "#ffffff",
+    "menu.foreground": "#202632",
+    "menu.selectionBackground": "#dfeafe",
+    "list.hoverBackground": "#edf4ff",
+    "list.activeSelectionBackground": "#dbe8fb",
+    "button.background": "#356fd1",
+    "button.hoverBackground": "#285db8",
+    "button.foreground": "#ffffff",
+    "badge.background": "#dfeafe",
+    "badge.foreground": "#315f9d",
+    "focusBorder": "#356fd1",
+    "foreground": "#202632",
+    "descriptionForeground": "#687486",
+    "disabledForeground": "#9ca8b7",
+    "border": "#d7e0ec"
+  }
+}

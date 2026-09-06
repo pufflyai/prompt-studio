@@ -41,6 +41,7 @@ const alpha4Definition = () => {
   });
   const resourceKind = defineResourceKind({ id: "ticket" });
   const page = definePage({
+    parent: { extensionId: "pstdio", kind: "page", id: "start" },
     id: "tickets",
     title: "Tickets",
     path: "tickets",
@@ -50,7 +51,7 @@ const alpha4Definition = () => {
         id: "content",
         role: "primary",
         region: "main",
-        view: view.ref,
+
         binding: { kind: resourceKind.ref, view: view.ref, cardinality: "one" },
       },
     ],
@@ -80,7 +81,7 @@ const alpha4Definition = () => {
         owner: workbenchModes.project,
         slot: "content",
         label: "Tickets",
-        action: { kind: "page", page: page.ref },
+        action: { kind: "page", page: page.ref, resource: { type: "ticket", id: "PS-326" } },
       }),
     ],
   });
@@ -104,6 +105,7 @@ describe("alpha.4 UI normalization", () => {
     expect(runtime.navigationItems[0]?.contribution.action).toEqual({
       kind: "page",
       page: { extensionId: "pstdio.lab", kind: "page", id: "tickets" },
+      resource: { type: "ticket", id: "PS-326" },
     });
   });
 

@@ -31,7 +31,7 @@ const createSession = async (
       project_id: projectId,
       title,
       prompt: title,
-      agent: "pstdio.extension-lab.harness.fake",
+      agent: "pstdio.workbench-fixture.harness.fake",
     },
   });
   expect(response.ok()).toBe(true);
@@ -58,7 +58,7 @@ const waitForTicketsExtension = async (request: import("@playwright/test").APIRe
 const prepareDashboard = async (page: Page, projectId: string) => {
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
     localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
   }, projectId);
   await page.setViewportSize({ width: 1280, height: 720 });

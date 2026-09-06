@@ -2,8 +2,12 @@ import { resolve } from "node:path";
 
 const repoRoot = resolve(import.meta.dirname, "../../..");
 
+const extensionSource = (name: string) => {
+  if (name === "workbench-fixture") return "packages/workbench-fixture";
+  return name.includes("/") ? name : `extensions/${name}`;
+};
 const e2eExtension = (name: string) => ({
-  source: resolve(repoRoot, name.includes("/") ? name : `extensions/${name}`),
+  source: resolve(repoRoot, extensionSource(name)),
   installName: name.split("/").at(-1) as string,
   skipInstall: !name.startsWith(".pstdio/extensions/"),
 });
@@ -16,6 +20,7 @@ const e2eDefaultExtensions = [
   e2eExtension("harness-claude-code"),
   e2eExtension("harness-codex"),
   e2eExtension("harness-open-code"),
+  e2eExtension("workbench-fixture"),
   e2eExtension("extension-lab"),
 ];
 

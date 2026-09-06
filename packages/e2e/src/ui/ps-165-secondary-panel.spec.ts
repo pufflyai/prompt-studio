@@ -20,7 +20,7 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((currentProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
     localStorage.setItem("dashboard-wb2:selected-project:global", currentProjectId);
   }, projectId);
 };

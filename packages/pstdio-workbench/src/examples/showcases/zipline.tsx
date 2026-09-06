@@ -14,7 +14,8 @@ import { ziplineTheme } from "./themes";
 import { type IssueStatus, type ZiplineIssue, ziplineIssues } from "./zipline-data";
 import { WorkspaceNav, ZiplineRail } from "./zipline-navigation";
 
-const page: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "zipline" };
+const page: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "zipline-resource" };
+const homePage: PageRef = { ...page, id: "zipline" };
 const resource = (issue: ZiplineIssue): ResourceRef => ({ type: "zipline.issue", id: issue.id, label: issue.title });
 const store = createShowcaseStore({
   statuses: Object.fromEntries(ziplineIssues.map((issue) => [issue.id, issue.status])) as Record<string, IssueStatus>,
@@ -152,7 +153,7 @@ const IssueInspector = (props: { input: WorkbenchPanelRenderInput }) => {
           aria-label="Close issue inspector"
           size="xs"
           variant="ghost"
-          onClick={() => input.workbench.pageLocations.navigate({ kind: "page", page })}
+          onClick={() => input.workbench.pageLocations.navigate({ kind: "page", page: homePage })}
         >
           <WorkbenchIcon name="X" />
         </IconButton>
@@ -229,7 +230,7 @@ const IssueCount = () => {
 };
 
 export const createZiplineWorkbench = () => {
-  const workbench = createWorkbench({ startPage: page, initialSidePanelMode: "floating" });
+  const workbench = createWorkbench({ startPage: homePage, initialSidePanelMode: "floating" });
   workbench.themes.register([ziplineTheme]);
   workbench.modes.registerMode({
     id: "zipline",
@@ -287,19 +288,33 @@ export const createZiplineWorkbench = () => {
     region: "activity",
   });
   workbench.statusBar.registerItem({ id: "zipline.count", viewId: "zipline.count", slot: "leading" });
+  workbench.modePlacements.registerPlacement({
+    id: "zipline.workspace",
+    ref: { extensionId: "storybook.showcases", kind: "placement", id: "zipline.workspace" },
+    modeId: "zipline",
+    region: "sidenav",
+    item: { kind: "view", viewId: "zipline.workspace", presence: "fixed" },
+  });
   workbench.pages.registerPage({
-    id: "zipline.issues",
-    ref: page,
+    id: "zipline.home",
+    ref: homePage,
     title: "My issues",
     path: "zipline/issues",
     modeId: "zipline",
+    slots: [{ id: "issues", role: "primary", region: "main", viewId: "zipline.board" }],
+  });
+  workbench.pages.registerPage({
+    id: "zipline.resource",
+    ref: page,
+    title: "My issues",
+    path: "zipline/issues/resource",
+    modeId: "zipline",
+    parentId: "zipline.home",
     slots: [
-      { id: "workspace", role: "auxiliary", region: "sidenav", viewId: "zipline.workspace", presence: "fixed" },
       {
         id: "issues",
         role: "primary",
         region: "main",
-        viewId: "zipline.board",
         binding: { resourceKinds: ["zipline.issue"], viewId: "zipline.board", cardinality: "one" },
       },
       {

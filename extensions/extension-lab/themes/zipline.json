@@ -1,0 +1,31 @@
+{
+  "name": "zipline",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#11101a",
+    "editor.foreground": "#f3f1ff",
+    "editorWidget.background": "#181625",
+    "activityBar.background": "#0c0b13",
+    "sideBar.background": "#151321",
+    "panel.background": "#181625",
+    "statusBar.background": "#0c0b13",
+    "input.background": "#242136",
+    "input.foreground": "#f3f1ff",
+    "input.border": "#353149",
+    "menu.background": "#181625",
+    "menu.foreground": "#f3f1ff",
+    "menu.selectionBackground": "#2a2640",
+    "list.hoverBackground": "#211e31",
+    "list.activeSelectionBackground": "#2f294a",
+    "button.background": "#7867e6",
+    "button.hoverBackground": "#9284ed",
+    "button.foreground": "#ffffff",
+    "badge.background": "#292440",
+    "badge.foreground": "#c6bcff",
+    "focusBorder": "#8f7df0",
+    "foreground": "#f3f1ff",
+    "descriptionForeground": "#aaa5c2",
+    "disabledForeground": "#67627b",
+    "border": "#302d40"
+  }
+}

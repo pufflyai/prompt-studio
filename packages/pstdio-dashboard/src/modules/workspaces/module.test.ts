@@ -103,11 +103,12 @@ describe("createWorkspacesModule", () => {
     selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
     openWorkspacesPage(workbench, workspace);
 
-    expect(workbench.pages.store.getState().activePageId).toBe(dashboardViews.workspaces.id);
-    expect(workbench.pages.getPage(dashboardViews.workspaces.id)).toMatchObject({
-      ref: workbenchPages.workspaces,
+    expect(workbench.pages.store.getState().activePageId).toBe(workbenchPages.workspace.id);
+    expect(workbench.pages.getPage(workbenchPages.workspace.id)).toMatchObject({
+      ref: workbenchPages.workspace,
       modeId: "project",
-      path: "workspaces",
+      path: "workspace",
+      parentId: dashboardViews.workspaces.id,
     });
     expect(workbench.modes.getActiveModeId()).toBe("project");
     expect(workbench.modes.getMode("workspace")).toBeUndefined();

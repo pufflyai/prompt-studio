@@ -57,6 +57,8 @@ export interface InternalWorkbenchExtensionMetadata {
     modeId: string;
     label: WorkbenchExtensionMetadata["modes"][number]["label"];
     icon?: string;
+    defaultTheme?: string;
+    chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", string | false>>;
     panelRegions: WorkbenchExtensionMetadata["modes"][number]["regions"];
     regionSettings?: WorkbenchExtensionMetadata["modes"][number]["regionSettings"];
   }>;

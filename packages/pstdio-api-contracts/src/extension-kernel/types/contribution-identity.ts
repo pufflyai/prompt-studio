@@ -44,6 +44,7 @@ export type ContributionInput<Kind extends ContributionKind> = Omit<Contribution
 
 export type ConnectionRef = ContributionRef<"connection">;
 
+export type ThemeRef = ContributionRef<"theme">;
 export type ModeRef = ContributionRef<"mode">;
 export type PageRef = ContributionRef<"page">;
 export type PlacementRef = ContributionRef<"placement">;

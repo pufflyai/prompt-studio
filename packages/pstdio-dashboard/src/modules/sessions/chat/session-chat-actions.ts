@@ -101,11 +101,9 @@ export const openCreatedSessionFromDraft = (args: {
     return identity;
   }
   if (identity?.kind === "page") {
-    const page = args.input.workbench.pages.getPage(identity.pageId);
-    if (!page) throw new Error(`Session page is not registered: ${identity.pageId}`);
     const result = args.input.workbench.pageLocations.navigate({
       kind: "page",
-      page: page.ref,
+      page: workbenchPages.session,
       resource: { type: resource.kind, id: resource.id ?? resource.uri, label: resource.label },
     });
     if (!result.ok) throw new Error(result.diagnostic.message);
@@ -288,3 +286,5 @@ export const submitSessionMessage = (input: {
     onQuestionResponseError: input.onQuestionResponseError,
   });
 };
+
+import { workbenchPages } from "@pstdio/sdk/extensions";

@@ -37,7 +37,7 @@ beforeAll(async () => {
   plannerLoopsManifest.dependencies["@pstdio/sdk"] = `file:${sdkTarballPath}`;
   writeFileSync(plannerLoopsManifestPath, `${JSON.stringify(plannerLoopsManifest, null, 2)}\n`);
 
-  const defaultExtensions = JSON.parse(e2eExtensions("pstdio-planner", "extension-lab")) as {
+  const defaultExtensions = JSON.parse(e2eExtensions("pstdio-planner", "workbench-fixture")) as {
     defaultExtensions: Array<Record<string, unknown>>;
   };
   defaultExtensions.defaultExtensions.push({
@@ -148,7 +148,7 @@ describe("planner automations", () => {
       const result = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.run-attempt", {
         source: "api",
         params: {
-          agent: { harnessId: "pstdio.extension-lab.harness.fake" },
+          agent: { harnessId: "pstdio.workbench-fixture.harness.fake" },
           mode: "current_branch",
         },
         resource: {

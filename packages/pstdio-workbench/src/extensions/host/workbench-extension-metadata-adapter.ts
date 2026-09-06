@@ -180,6 +180,14 @@ const modes = (metadata: WorkbenchExtensionMetadata): InternalWorkbenchExtension
     icon: mode.icon,
     panelRegions: mode.regions,
     regionSettings: mode.regionSettings,
+    ...(mode.defaultTheme ? { defaultTheme: metadataRefId(mode.defaultTheme) } : {}),
+    ...(mode.chrome
+      ? {
+          chrome: Object.fromEntries(
+            Object.entries(mode.chrome).map(([region, view]) => [region, view === false ? false : metadataRefId(view)]),
+          ),
+        }
+      : {}),
   }));
 
 export const toInternalWorkbenchExtensionMetadata = (

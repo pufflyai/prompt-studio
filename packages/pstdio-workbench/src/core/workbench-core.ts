@@ -51,7 +51,7 @@ import {
   createCoreCompositionController,
   primaryWorkbenchResource,
 } from "./workbench-core-connections";
-import { createCoreNavigationRegistry } from "./workbench-core-navigation";
+import { createCoreNavigationRegistry, revealPanelRegion } from "./workbench-core-navigation";
 import { createCoreRenderers } from "./workbench-core-renderers";
 import type { createWorkbenchInput, WorkbenchCore } from "./workbench-core-types";
 import { createModuleContext, disposeDisposables, toDisposables } from "./workbench-module-context";
@@ -181,6 +181,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
 
   const pages = createLiveWorkbenchPageRegistry({
     beforeApply: createPagePersistenceScopeHandler(input, layout, panels, pageResources),
+    revealRegion: (region) => revealPanelRegion(core, region),
     layout,
     modePlacements,
     modes,

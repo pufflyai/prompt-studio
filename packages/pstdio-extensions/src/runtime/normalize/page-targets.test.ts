@@ -95,14 +95,14 @@ describe("page target validation", () => {
         owner: workbenchModes.project,
         slot: "content",
         label: "Workspace",
-        action: { kind: "page", page: workbenchPages.workspaces, resource: { type: "workspace", id: "ws-1" } },
+        action: { kind: "page", page: workbenchPages.workspace, resource: { type: "workspace", id: "ws-1" } },
       }),
       defineNavigationItem({
         id: "bad-workspace",
         owner: workbenchModes.project,
         slot: "content",
         label: "Bad workspace",
-        action: { kind: "page", page: workbenchPages.workspaces, resource: { type: "ticket", id: "PS-1" } },
+        action: { kind: "page", page: workbenchPages.workspace, resource: { type: "ticket", id: "PS-1" } },
       }),
     ];
 

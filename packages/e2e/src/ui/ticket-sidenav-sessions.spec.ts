@@ -81,7 +81,7 @@ test.describe("Ticket sidenav sessions", () => {
       apiBase,
       projectId,
       "refine-ticket",
-      { agent: { harnessId: "pstdio.extension-lab.harness.fake" } },
+      { agent: { harnessId: "pstdio.workbench-fixture.harness.fake" } },
       {
         resource: {
           type: "ticket",

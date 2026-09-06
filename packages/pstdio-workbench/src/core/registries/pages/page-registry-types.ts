@@ -29,11 +29,10 @@ interface WorkbenchPageSlotBase extends WorkbenchPlacementPresentation {
   order?: number;
 }
 
-export interface WorkbenchPagePrimarySlot extends WorkbenchPageSlotBase {
-  role: "primary";
-  viewId?: string;
-  binding?: WorkbenchPageSlotBinding;
-}
+export type WorkbenchPagePrimarySlot = WorkbenchPageSlotBase & { role: "primary"; region: "main" } & (
+    | { viewId: string; binding?: undefined }
+    | { viewId?: undefined; binding: WorkbenchPageSlotBinding }
+  );
 
 export interface WorkbenchPageStaticSlot extends WorkbenchPageSlotBase {
   role: "auxiliary";

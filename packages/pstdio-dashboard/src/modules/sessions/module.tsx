@@ -62,19 +62,28 @@ const createSessionsNavigationNode = () => ({
 });
 
 const registerSessionsPage = (ctx: WorkbenchModuleContext) => {
-  return ctx.pages.registerPage({
+  ctx.pages.registerPage({
     id: dashboardViews.sessions.id,
     ref: workbenchPages.sessions,
     title: dashboardViews.sessions.label,
     icon: dashboardViews.sessions.icon,
     path: "sessions",
     modeId: "sessions",
+    slots: [{ id: "content", role: "primary", region: "main", viewId: dashboardWidgetIds.session }],
+  });
+  return ctx.pages.registerPage({
+    id: workbenchPages.session.id,
+    ref: workbenchPages.session,
+    title: "Session",
+    icon: dashboardViews.sessions.icon,
+    path: "session",
+    modeId: "sessions",
+    parentId: dashboardViews.sessions.id,
     slots: [
       {
         id: "content",
         role: "primary",
         region: "main",
-        viewId: dashboardWidgetIds.session,
         binding: {
           resourceKinds: ["session", "session-draft"],
           viewId: dashboardWidgetIds.session,
@@ -90,7 +99,7 @@ const pageResourceUri = (type: string, id: string) =>
 
 const syncSessionsPageSelection = (ctx: WorkbenchModuleContext) => {
   const state = ctx.pages.store.getState();
-  if (state.activePageId !== dashboardViews.sessions.id) return;
+  if (state.activePageId !== dashboardViews.sessions.id && state.activePageId !== workbenchPages.session.id) return;
   const resource = state.location?.resource;
   if (resource?.type !== "session") {
     forgetDashboardSession(ctx);

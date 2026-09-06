@@ -2,7 +2,12 @@ import { Box, Text } from "@chakra-ui/react";
 import type { PageRef } from "@pstdio/sdk/extensions";
 import type { Meta, StoryObj } from "@storybook/react";
 import { expect, userEvent, within } from "storybook/test";
-import { createWorkbench, workbenchPanelRegions, workbenchRegionTabLeadingMenuPath } from "../../core";
+import {
+  createWorkbench,
+  type WorkbenchPageSlot,
+  workbenchPanelRegions,
+  workbenchRegionTabLeadingMenuPath,
+} from "../../core";
 import { WorkbenchStory } from "../../examples/workbench-story";
 
 const createPanelWorkbench = (
@@ -49,42 +54,58 @@ const createPanelWorkbench = (
       workbench.layout.registerMenuItem(workbenchRegionTabLeadingMenuPath(region), { commandId: id });
     }
   }
+  const slots: WorkbenchPageSlot[] = workbenchPanelRegions.flatMap<WorkbenchPageSlot>((region) => [
+    region === "main"
+      ? { id: "main.first", role: "primary", region: "main", viewId: "main.first" }
+      : {
+          id: `${region}.first`,
+          role: "auxiliary",
+          region,
+          viewId: `${region}.first`,
+          presence: options.closable ? "open" : "fixed",
+        },
+    ...(options.multiple
+      ? [
+          {
+            id: `${region}.second`,
+            role: "auxiliary" as const,
+            region,
+            viewId: `${region}.second`,
+            presence: "open" as const,
+          },
+        ]
+      : []),
+  ]);
   workbench.pages.registerPage({
     id: "panel-tabs",
     ref: page,
     title: "Panel tabs",
     path: "panel-tabs",
     modeId: "panel-tabs",
-    slots: workbenchPanelRegions.flatMap((region) => [
-      {
-        id: `${region}.first`,
-        region,
-        viewId: `${region}.first`,
-        ...(region === "main"
-          ? {
-              role: "primary" as const,
-              ...(options.resource
-                ? { binding: { resourceKinds: ["document"], viewId: `${region}.first`, cardinality: "one" as const } }
-                : {}),
-            }
-          : { role: "auxiliary" as const, presence: options.closable ? ("open" as const) : ("fixed" as const) }),
-      },
-      ...(options.multiple
-        ? [
-            {
-              id: `${region}.second`,
-              role: "auxiliary" as const,
-              region,
-              viewId: `${region}.second`,
-              presence: "open" as const,
-            },
-          ]
-        : []),
-    ]),
+    slots,
+  });
+  const resourcePage = { ...page, id: "document" };
+  workbench.pages.registerPage({
+    id: "document",
+    ref: resourcePage,
+    title: "Document",
+    path: "document",
+    modeId: "panel-tabs",
+    parentId: "panel-tabs",
+    slots: slots.map((slot) =>
+      slot.role === "primary"
+        ? {
+            id: slot.id,
+            role: "primary",
+            region: "main",
+            binding: { resourceKinds: ["document"], viewId: "main.first", cardinality: "one" },
+          }
+        : slot,
+    ),
   });
   workbench.pageLocations.switchProject("storybook-panel-tabs");
   if (options.resource) {
-    workbench.pageLocations.navigate({ kind: "page", page, resource: { type: "document", id: "one" } });
+    workbench.pageLocations.navigate({ kind: "page", page: resourcePage, resource: { type: "document", id: "one" } });
   }
   return workbench;
 };

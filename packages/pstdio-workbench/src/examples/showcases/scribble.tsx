@@ -7,7 +7,8 @@ import { scribbleDocuments } from "./scribble-data";
 import { createShowcaseStore, usePrimaryResource, useShowcaseStore } from "./showcase-store";
 import { scribbleTheme } from "./themes";
 
-const page: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "scribble" };
+const page: PageRef = { extensionId: "storybook.showcases", kind: "page", id: "scribble-resource" };
+const homePage: PageRef = { ...page, id: "scribble" };
 const resource = (id: string): ResourceRef => ({
   type: "scribble.document",
   id,
@@ -178,7 +179,7 @@ const DocumentCanvas = (props: { input: WorkbenchPanelRenderInput }) => {
 };
 
 export const createScribbleWorkbench = () => {
-  const workbench = createWorkbench({ startPage: page });
+  const workbench = createWorkbench({ startPage: homePage });
   workbench.themes.register([scribbleTheme]);
   workbench.modes.registerMode({
     id: "scribble",
@@ -213,19 +214,33 @@ export const createScribbleWorkbench = () => {
     },
   });
   workbench.statusBar.registerItem({ id: "scribble.sync", viewId: "scribble.sync", slot: "trailing" });
+  workbench.modePlacements.registerPlacement({
+    id: "scribble.pages",
+    ref: { extensionId: "storybook.showcases", kind: "placement", id: "scribble.pages" },
+    modeId: "scribble",
+    region: "sidenav",
+    item: { kind: "view", viewId: "scribble.tree", presence: "fixed" },
+  });
   workbench.pages.registerPage({
     id: "scribble.home",
-    ref: page,
+    ref: homePage,
     title: "Scribble",
     path: "scribble",
     modeId: "scribble",
+    slots: [{ id: "document", role: "primary", region: "main", viewId: "scribble.document" }],
+  });
+  workbench.pages.registerPage({
+    id: "scribble.resource",
+    ref: page,
+    title: "Scribble",
+    path: "scribble/resource",
+    modeId: "scribble",
+    parentId: "scribble.home",
     slots: [
-      { id: "pages", role: "auxiliary", region: "sidenav", viewId: "scribble.tree", presence: "fixed" },
       {
         id: "document",
         role: "primary",
         region: "main",
-        viewId: "scribble.document",
         binding: { resourceKinds: ["scribble.document"], viewId: "scribble.document", cardinality: "one" },
       },
     ],

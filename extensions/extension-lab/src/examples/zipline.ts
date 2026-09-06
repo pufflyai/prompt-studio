@@ -1,93 +1,40 @@
-import {
-  defineExtension,
-  defineNavigationItem,
-  definePage,
-  defineResourceKind,
-  defineView,
-  workbenchModes,
-} from "@pstdio/sdk/extensions";
+import { defineExtension } from "@pstdio/sdk/extensions";
+import { defineExample, webview } from "../definition";
+import { board } from "./zipline-board";
 
-const task = defineResourceKind({ id: "zipline-task", label: "Task" });
-const pageRef = { kind: "page" as const, id: "zipline" };
-const tasks = [
-  { id: "design", title: "Design the board", status: "todo" },
-  { id: "ship", title: "Ship the board", status: "done" },
+const views = [
+  webview("zipline-inspector", "Issue"),
+  webview("zipline-workspace", "Workspace"),
+  webview("zipline-rail", "Zipline"),
 ];
-const board = defineView({
-  id: "zipline-board",
-  title: "Zipline board",
-  body: {
-    kind: "kanban",
-    attributes: [
-      {
-        id: "status",
-        label: "Status",
-        type: {
-          kind: "enum",
-          options: [
-            { value: "todo", label: "To do" },
-            { value: "done", label: "Done" },
-          ],
-        },
-      },
-    ],
-    defaultSettings: { viewMode: "board", columnGrouping: "status", rowGrouping: "none", displayProperties: [] },
-    query: async () => ({
-      rows: tasks.map((item) => ({
-        id: item.id,
-        title: item.title,
-        attributes: { status: item.status },
-        resource: { type: task.id, id: item.id, label: item.title },
-      })),
-    }),
-    onRowActivate: async (_ctx, { row }) => ({ kind: "page", page: pageRef, resource: row.resource }),
+views.push(webview("zipline-status", "Issue count"));
+const example = defineExample({
+  name: "zipline",
+  label: "Zipline",
+  icon: "Columns3",
+  primary: board.ref,
+  chrome: { status: views.at(-1)!.ref, sidenav: views[1].ref, activity: views[2].ref },
+  regionSettings: {
+    sidenav: { size: { defaultPx: 225, minPx: 200, maxPx: 300 }, collapsible: false },
+    side: { size: { defaultPx: 360, minPx: 310, maxPx: 440 } },
   },
-});
-const inspector = defineView({
-  id: "zipline-inspector",
-  title: "Task inspector",
-  body: {
-    kind: "file",
-    load: async (_ctx, { renderer }) => ({
-      fileName: "task.md",
-      content: `# ${renderer.resource!.label}\n\nInspect ${renderer.resource!.id}.`,
-    }),
-  },
-});
-export const ziplinePage = definePage({
-  id: pageRef.id,
-  title: "Zipline",
-  path: "zipline",
-  mode: workbenchModes.project,
   slots: [
-    {
-      id: "board",
-      role: "primary",
-      region: "main",
-      view: board.ref,
-      binding: { kind: task.ref, view: board.ref, cardinality: "one" },
-    },
     {
       id: "inspector",
       role: "auxiliary",
       region: "side",
+      binding: { kind: { kind: "resource-kind", id: "zipline.issue" }, view: views[0].ref, cardinality: "one" },
       openOn: "page-resource",
-      binding: { kind: task.ref, view: inspector.ref, cardinality: "one" },
+      floatingPanels: "visible",
     },
   ],
+  initialResource: false,
 });
 export default defineExtension({
-  resourceKinds: [task],
-  views: [board, inspector],
-  pages: [ziplinePage],
-  navigationItems: [
-    defineNavigationItem({
-      id: "zipline",
-      label: "Zipline",
-      icon: "Columns3",
-      owner: workbenchModes.project,
-      slot: "content",
-      action: { kind: "page", page: ziplinePage.ref },
-    }),
-  ],
+  modes: [example.mode],
+  themes: [example.theme],
+  resourceKinds: [example.resourceKind],
+  pages: [example.homePage, example.page],
+  views: [board, ...views],
+  navigationItems: [example.navigation],
 });

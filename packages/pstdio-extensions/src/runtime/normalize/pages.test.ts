@@ -46,6 +46,7 @@ const diagnosticsFor = (definition: LoadedExtensionSource["definition"]) =>
 describe("page slot validation", () => {
   test("accepts one routed primary and independently addressed auxiliary panels", () => {
     const page = definePage({
+      parent: { extensionId: "pstdio", kind: "page", id: "start" },
       id: "tickets",
       title: "Tickets",
       path: "tickets",
@@ -55,7 +56,7 @@ describe("page slot validation", () => {
           id: "ticket",
           role: "primary",
           region: "main",
-          view: pageView.ref,
+
           binding: { kind: ticketKind.ref, view: resourceView.ref, cardinality: "many" },
         },
         { id: "files", role: "auxiliary", region: "side", view: pageView.ref, presence: "open" },
@@ -236,7 +237,7 @@ describe("page slot validation", () => {
     ).toEqual([]);
   });
 
-  test("requires a parent on a bound-only page", () => {
+  test("requires a parent on a resource page", () => {
     // @ts-expect-error validate JavaScript callers too
     const page = definePage({
       id: "orphan",

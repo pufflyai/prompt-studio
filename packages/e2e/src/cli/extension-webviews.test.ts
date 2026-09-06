@@ -21,7 +21,7 @@ afterEach(() => {
   cleanupDirs(dirs);
 });
 
-const extensionLabPath = join(import.meta.dirname, "../../../../extensions/extension-lab");
+const extensionLabPath = join(import.meta.dirname, "../../../../packages/workbench-fixture");
 
 const run = (args: string, cwd: string) =>
   runPstdio(args, cwd, { PSTDIO_API_URL: api.url, PSTDIO_DEFAULT_EXTENSIONS: "[]" });
@@ -32,15 +32,15 @@ const readProjectId = (repo: string) => {
 };
 
 const enableExtensionLab = async (projectId: string) => {
-  const response = await fetch(`${api.url}/v1/projects/${projectId}/extensions/installed/extension-lab/enable`, {
+  const response = await fetch(`${api.url}/v1/projects/${projectId}/extensions/installed/workbench-fixture/enable`, {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
       displayName: "Extension Lab",
-      extensionId: "pstdio.extension-lab",
-      manifest: { id: "pstdio.extension-lab", name: "extension-lab" },
-      name: "extension-lab",
-      sourceHash: "e2e-extension-lab",
+      extensionId: "pstdio.workbench-fixture",
+      manifest: { id: "pstdio.workbench-fixture", name: "workbench-fixture" },
+      name: "workbench-fixture",
+      sourceHash: "e2e-workbench-fixture",
       sourceKind: "local_path",
       sourcePath: extensionLabPath,
       sourceRef: null,
@@ -93,10 +93,10 @@ describe("extension webview setup", () => {
       if (labView?.body.kind !== "webview") throw new Error("Extension Lab view is not a webview.");
 
       expect(labView.body.webview.runtimeUrl).toMatch(
-        /^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/extension-lab\/pstdio\.extension-lab\.view\.lab-page\/runtime$/,
+        /^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/workbench-fixture\/pstdio\.workbench-fixture\.view\.lab-page\/runtime$/,
       );
       expect(labView.body.webview.moduleUrl).toMatch(
-        /^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/extension-lab\/pstdio\.extension-lab\.view\.lab-page\/assets\/module\.js\?h=.+$/,
+        /^\/v1\/extensions\/webviews\/[A-Za-z0-9_-]+\/workbench-fixture\/pstdio\.workbench-fixture\.view\.lab-page\/assets\/module\.js\?h=.+$/,
       );
 
       const module = await waitForOk(`${api.url}${labView.body.webview.moduleUrl}`);

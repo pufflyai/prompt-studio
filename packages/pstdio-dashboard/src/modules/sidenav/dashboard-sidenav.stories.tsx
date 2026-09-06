@@ -161,7 +161,7 @@ const createTicketsNavigationModule = () => ({
                     resource: linkedWorkspaceResource,
                     target: {
                       kind: "page",
-                      page: workbenchPages.workspaces,
+                      page: workbenchPages.workspace,
                       resource: {
                         type: linkedWorkspaceResource.kind,
                         id: linkedWorkspaceResource.id,

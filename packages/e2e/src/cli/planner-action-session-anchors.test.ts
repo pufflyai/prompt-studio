@@ -9,7 +9,7 @@ let api: ApiInstance;
 const ctx: HookTestContext = { api: null!, dirs: [] };
 
 beforeAll(async () => {
-  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "extension-lab") } });
+  api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("pstdio-planner", "workbench-fixture") } });
   ctx.api = api;
 }, SETUP_TIMEOUT);
 
@@ -56,7 +56,7 @@ describe("planner action session anchors", () => {
 
       const result = await executePlannerCommand(projectId, "pstdio.pstdio-planner.command.refine-ticket", {
         source: "api",
-        params: { agent: { harnessId: "pstdio.extension-lab.harness.fake" } },
+        params: { agent: { harnessId: "pstdio.workbench-fixture.harness.fake" } },
         resource: {
           type: "ticket",
           id: ticket.id,

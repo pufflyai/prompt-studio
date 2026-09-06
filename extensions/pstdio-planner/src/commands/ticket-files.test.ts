@@ -255,7 +255,7 @@ describe("ticket files tree workspace commands", () => {
           icon: "GitBranch",
           target: {
             kind: "page",
-            page: workbenchPages.workspaces,
+            page: workbenchPages.workspace,
             parent: {
               kind: "page",
               page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },

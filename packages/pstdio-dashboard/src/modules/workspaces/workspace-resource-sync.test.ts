@@ -25,7 +25,7 @@ test("workspace links resolve current capabilities and retain their navigation m
   workbench.pageLocations.setProject(row.project_id);
   workbench.pageLocations.navigate({
     kind: "page",
-    page: workbenchPages.workspaces,
+    page: workbenchPages.workspace,
     resource: { type: "workspace", id: row.id, label: row.name, metadata: { workspaceView: "files" } },
   });
   const resource = workbench.getPrimaryResource()!;

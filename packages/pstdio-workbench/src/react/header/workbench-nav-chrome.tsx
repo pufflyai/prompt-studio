@@ -3,6 +3,7 @@ import { Header, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { workbenchTopHeaderLeadingMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import { WorkbenchBreadcrumbView } from "../breadcrumb/breadcrumb-view";
+import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
 import { WorkbenchRegion } from "../region/region";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -96,8 +97,17 @@ const WorkbenchRegionControls = (props: { controls: WorkbenchNavRegionControl[] 
 
 export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
   const { workbench, hasNav, regionControls } = props;
+  const chrome = useModeChrome(workbench, "nav");
   const sidenavControls = regionControls.filter((control) => control.id === "sidenav");
   const trailingRegionControls = regionControls.filter((control) => control.id !== "sidenav");
+
+  if (chrome === false) return null;
+  if (chrome)
+    return (
+      <Header data-workbench-region="nav" variant="main" padding="0" flexShrink={0}>
+        <ModeChromeView workbench={workbench} viewId={chrome} region="nav" />
+      </Header>
+    );
 
   return (
     <Header

@@ -2,6 +2,7 @@ import { Box } from "@chakra-ui/react";
 import { type ResourceContextAction, ResourceContextMenu } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
+import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
 import { WorkbenchRegion } from "../region/region";
 import { WorkbenchWidgetHost } from "../region/widget-host";
 import { useWorkbenchActiveModeId } from "../shared/use-workbench-location-resource";
@@ -105,6 +106,7 @@ export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
 export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
   const { workbench } = props;
   useWorkbenchStore(workbench.statusBar.store, (state) => state.items);
+  const chrome = useModeChrome(workbench, "status");
 
   return (
     <WorkbenchFocusRegion
@@ -121,14 +123,18 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
       minW="0"
       overflow="hidden"
     >
-      <Box display="flex" alignItems="stretch" justifyContent="space-between" h="full" minW="0" w="full">
-        <Box display="flex" alignItems="stretch" minW="0" h="full">
-          <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
+      {chrome ? (
+        <ModeChromeView workbench={workbench} region="status" viewId={chrome} />
+      ) : (
+        <Box display="flex" alignItems="stretch" justifyContent="space-between" h="full" minW="0" w="full">
+          <Box display="flex" alignItems="stretch" minW="0" h="full">
+            <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
+          </Box>
+          <Box display="flex" alignItems="stretch" minW="0" h="full">
+            <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
+          </Box>
         </Box>
-        <Box display="flex" alignItems="stretch" minW="0" h="full">
-          <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
-        </Box>
-      </Box>
+      )}
     </WorkbenchFocusRegion>
   );
 };

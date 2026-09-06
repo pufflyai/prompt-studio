@@ -195,7 +195,7 @@ describe("page location project and owner lifecycle", () => {
     expect(harness.diagnostics[0]).toMatch(/missing.*page/i);
   });
 
-  test("replaces history when closing the active bound-only primary to its parent", () => {
+  test("replaces history when closing the active resource primary to its parent", () => {
     const harness = createHarness();
     harness.controller.boot("p1");
     harness.controller.navigate(ticketTarget());

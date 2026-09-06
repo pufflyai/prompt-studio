@@ -14,7 +14,6 @@ import { addPageDiagnostic, normalizedRefId } from "./page-validation";
 interface Destination {
   bindingKinds: readonly string[];
   cardinality: "one" | "many";
-  staticView: boolean;
 }
 
 const validateResourceInput = (
@@ -46,7 +45,7 @@ const validateResourceInput = (
       message: `Resource kind "${resource.type}" does not match ${destination.bindingKinds.join(", ")}`,
       record,
     });
-  } else if (!resource && destination.bindingKinds.length > 0 && !destination.staticView) {
+  } else if (!resource && destination.bindingKinds.length > 0) {
     addPageDiagnostic(runtime, {
       code,
       fieldPath: `${fieldPath}.resource`,
@@ -73,7 +72,6 @@ const slotDestination = (slot: RuntimePageSlot): Destination => ({
       )
     : [],
   cardinality: slot.binding?.cardinality ?? "one",
-  staticView: Boolean(slot.view),
 });
 
 const hostPages = new Map(Object.values(workbenchPageDefinitions).map((definition) => [definition.ref.id, definition]));
@@ -100,7 +98,6 @@ const resolvePageDestination = (
     return {
       bindingKinds: definition.primary.resourceKinds,
       cardinality: definition.primary.cardinality,
-      staticView: definition.primary.resourceKinds.length === 0,
     } satisfies Destination;
   }
   if (owner !== record.extensionId) return undefined;
@@ -196,7 +193,6 @@ const resolvePlacementDestination = (
     return {
       bindingKinds: definition.resourceKinds,
       cardinality: definition.cardinality,
-      staticView: false,
     } satisfies Destination;
   }
   if (owner !== record.extensionId) return undefined;
@@ -214,7 +210,7 @@ const resolvePlacementDestination = (
     return undefined;
   }
   if (placement.contribution.item.kind === "view") {
-    return { bindingKinds: [], cardinality: "one", staticView: true } satisfies Destination;
+    return { bindingKinds: [], cardinality: "one" } satisfies Destination;
   }
   const resourceKinds = Array.isArray(placement.contribution.item.resourceKind)
     ? placement.contribution.item.resourceKind
@@ -222,7 +218,6 @@ const resolvePlacementDestination = (
   return {
     bindingKinds: resourceKinds.map((kind) => kind.id),
     cardinality: placement.contribution.item.cardinality ?? "one",
-    staticView: false,
   } satisfies Destination;
 };
 

@@ -1,5 +1,5 @@
 import { Center, Text } from "@chakra-ui/react";
-import { toaster, useThemePreference } from "@pstdio/ui";
+import { getThemePreferenceMode, toaster, useThemePreference } from "@pstdio/ui";
 import type { WorkbenchCore, WorkbenchTerminalController } from "@pstdio/workbench";
 import { createTerminalSessionCapability } from "@pstdio/workbench/extensions";
 import { createHostEventPublisher } from "pstdio-extensions/bridge/host";
@@ -36,16 +36,22 @@ interface ExtensionWebviewFrameProps {
   webviewId: string;
   workbench?: WorkbenchCore;
 }
-const isDarkPreference = (preference: string) => /dark/i.test(preference);
 
 const currentLocale = () => i18n.resolvedLanguage ?? i18n.language ?? "en";
 
 export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const { extensionId, extensionInstanceId, installName, projectId, resource, terminal, title, webview, webviewId } =
     props;
-  const { themePreference, setThemePreference } = useThemePreference();
+  const { themePreference, themePreferences, setThemePreference } = useThemePreference();
   const executeCommand = useExecuteExtensionCommand(projectId);
   const [hostEvents] = useState(createHostEventPublisher);
+  const [pageLocation, setPageLocation] = useState(() => props.workbench?.pages.store.getState().location);
+  useEffect(() => {
+    const store = props.workbench?.pages.store;
+    if (!store) return;
+    setPageLocation(store.getState().location);
+    return store.subscribe(() => setPageLocation(store.getState().location));
+  }, [props.workbench]);
   const [lastCommand, setLastCommand] = useState<ExtensionCommandEvent | null>(null);
   const [locale, setLocale] = useState(currentLocale);
 
@@ -58,7 +64,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
 
   if (!webview) return null;
 
-  const colorScheme = isDarkPreference(themePreference) ? "dark" : "light";
+  const colorScheme = getThemePreferenceMode(themePreference, themePreferences);
   const frameTitle = webview.title ? resolveLocalizableString(webview.title, extensionId) : (title ?? "Extension view");
   const translations = getExtensionTranslationContext(extensionId, locale);
 
@@ -229,7 +235,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
     <BridgedWebviewSurface
       key={view.id}
       view={view}
-      extensionProps={{ projectId, themePreference, locale, lastCommand, resource, translations }}
+      extensionProps={{ projectId, themePreference, locale, lastCommand, resource, pageLocation, translations }}
       theme={colorScheme}
       capabilities={capabilities}
       hostEvents={hostEvents}

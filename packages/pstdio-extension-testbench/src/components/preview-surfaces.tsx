@@ -86,7 +86,7 @@ export const navigateViewPreview = (
   bench: ExtensionBenchLoadResponse,
   localId: string,
   resource?: ResourceRef,
-) => navigate(workbench, bench.projectId, viewPreviewPageRef(localId), resource);
+) => navigate(workbench, bench.projectId, viewPreviewPageRef(resource ? `${localId}.resource` : localId), resource);
 
 export const navigateContentPreview = (
   workbench: WorkbenchCore,
@@ -105,7 +105,7 @@ export const navigateResourcePreview = (
   );
   return page
     ? navigateExtensionPage(workbench, bench, page, resource)
-    : navigate(workbench, bench.projectId, previewPageRef("overview"), resource);
+    : navigate(workbench, bench.projectId, previewPageRef("overview.resource"), resource);
 };
 
 export const registerResourceKinds = (
@@ -131,15 +131,22 @@ const registerPage = (
     title: input.title,
     path: input.path,
     modeId: previewModeId,
+    slots: [{ id: "content", role: "primary", region: "main", viewId: input.viewId }],
+  });
+  if (!input.resourceKind) return;
+  workbench.pages.registerPage({
+    id: `${input.id}.resource`,
+    ref: { ...input.ref, id: `${input.ref.id}.resource` },
+    title: input.title,
+    path: `${input.path}/resource`,
+    modeId: previewModeId,
+    parentId: input.id,
     slots: [
       {
         id: "content",
         role: "primary",
         region: "main",
-        viewId: input.viewId,
-        ...(input.resourceKind
-          ? { binding: { resourceKinds: [input.resourceKind], viewId: input.viewId, cardinality: "one" as const } }
-          : {}),
+        binding: { resourceKinds: [input.resourceKind], viewId: input.viewId, cardinality: "one" },
       },
     ],
   });

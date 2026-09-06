@@ -1,0 +1,31 @@
+{
+  "name": "kiln",
+  "type": "dark",
+  "colors": {
+    "editor.background": "#25272b",
+    "editor.foreground": "#e7e9ec",
+    "editorWidget.background": "#303237",
+    "activityBar.background": "#1b1d20",
+    "sideBar.background": "#292b2f",
+    "panel.background": "#2c2e32",
+    "statusBar.background": "#1b1d20",
+    "input.background": "#202226",
+    "input.foreground": "#e7e9ec",
+    "input.border": "#45484e",
+    "menu.background": "#303237",
+    "menu.foreground": "#e7e9ec",
+    "menu.selectionBackground": "#494c52",
+    "list.hoverBackground": "#383a3f",
+    "list.activeSelectionBackground": "#4b4135",
+    "button.background": "#e98732",
+    "button.hoverBackground": "#f29a4d",
+    "button.foreground": "#1d130b",
+    "badge.background": "#4b4135",
+    "badge.foreground": "#ffc58c",
+    "focusBorder": "#f29a4d",
+    "foreground": "#e7e9ec",
+    "descriptionForeground": "#aeb2b8",
+    "disabledForeground": "#6f7379",
+    "border": "#42454a"
+  }
+}

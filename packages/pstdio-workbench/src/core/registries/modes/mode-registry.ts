@@ -38,6 +38,8 @@ export interface WorkbenchModeAddablePanelContext {
 export interface WorkbenchModeContribution {
   id: string;
   label?: string;
+  defaultTheme?: string;
+  chrome?: Partial<Record<"nav" | "sidenav" | "activity" | "status", string | false>>;
   panels?: readonly WorkbenchPanelRegion[];
   /** Region-level layout policy while this mode is active. */
   regionSettings?: Partial<Record<WorkbenchRegion, WorkbenchRegionSettings>>;

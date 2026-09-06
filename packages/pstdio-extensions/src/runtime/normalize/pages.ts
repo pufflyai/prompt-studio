@@ -31,8 +31,9 @@ const isPresence = (value: unknown) => value === "fixed" || value === "open" || 
 const isSlotContent = (value: Record<string, unknown>) => {
   if (value.role === "primary") {
     return (
-      (value.view === undefined || isRef(value.view, "view")) &&
-      (value.binding === undefined || isPageSlotBinding(value.binding)) &&
+      (value.view !== undefined
+        ? isRef(value.view, "view") && value.binding === undefined
+        : isPageSlotBinding(value.binding)) &&
       value.presence === undefined &&
       value.openOn === undefined
     );

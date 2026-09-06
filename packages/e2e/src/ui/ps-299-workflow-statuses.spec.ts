@@ -15,13 +15,13 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
 const prepareDashboard = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
     localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
     localStorage.setItem(
       `pstdio-project-settings/projects/${selectedProjectId}/values`,
       JSON.stringify({
         state: {
-          lastSelectedAgent: "pstdio.extension-lab.harness.fake",
+          lastSelectedAgent: "pstdio.workbench-fixture.harness.fake",
           lastSelectedModels: [],
           lastSelectedRepo: "",
           lastSelectedBranches: [],
@@ -77,7 +77,7 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
   await settings.getByText("Statuses", { exact: true }).click();
   await expect(settings.getByText("Ticket status", { exact: true })).toBeVisible({ timeout: 30_000 });
   expect(plannerStatusQueries).toBe(1);
-  const labStatuses = settings.getByTestId("workflow-status-set-pstdio.extension-lab.status.workflow");
+  const labStatuses = settings.getByTestId("workflow-status-set-pstdio.workbench-fixture.status.workflow");
   await expect(labStatuses.getByText("Lab workflow", { exact: true })).toBeVisible({ timeout: 30_000 });
 
   // The default-value control under the list also reads "Idea", so target the row.
@@ -105,7 +105,7 @@ test("editing one status set updates only its Kanban board", async ({ page, requ
     (response) =>
       response.request().method() === "POST" &&
       new URL(response.url()).pathname.endsWith(
-        "/extensions/commands/pstdio.extension-lab.view.workflow.kanban.onAttributeChange/execute",
+        "/extensions/commands/pstdio.workbench-fixture.view.workflow.kanban.onAttributeChange/execute",
       ),
   );
   await concept.dragTo(testing);

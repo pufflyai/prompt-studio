@@ -36,7 +36,7 @@ const createSession = async (
       project_id: projectId,
       title,
       prompt: title,
-      agent: "pstdio.extension-lab.harness.fake",
+      agent: "pstdio.workbench-fixture.harness.fake",
     },
   });
   expect(response.ok()).toBe(true);
@@ -61,7 +61,7 @@ test("PS-170 preserves browser Forward history between extension pages after ref
   const project = (await response.json()) as { id: string };
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
   const ticket = await createPlannerTicket(request, apiBase, project.id, {
@@ -107,7 +107,7 @@ test("PS-170 preserves other Session tabs when selecting from New session", asyn
   await createSession(request, project.id, "Second context session");
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);
   await page.goto(`/projects/${project.id}/`);
@@ -175,14 +175,14 @@ test("PS-170 updates a New session Sub Panel in place after the first message", 
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   const updateResponse = await request.patch(`${apiBase}/v1/projects/${project.id}`, {
-    data: { default_agent_id: "pstdio.extension-lab.harness.fake" },
+    data: { default_agent_id: "pstdio.workbench-fixture.harness.fake" },
   });
   expect(updateResponse.ok()).toBe(true);
   await page.addInitScript((projectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
     localStorage.setItem(
       `pstdio-dashboard:command-params:recent-harness:${projectId}`,
-      JSON.stringify({ harnessId: "pstdio.extension-lab.harness.fake" }),
+      JSON.stringify({ harnessId: "pstdio.workbench-fixture.harness.fake" }),
     );
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
   }, project.id);

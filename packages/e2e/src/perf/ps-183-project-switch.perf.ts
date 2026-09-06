@@ -56,7 +56,7 @@ const createSession = async (
 ) => {
   const created = await request.post(`${apiBase}/v1/sessions`, {
     data: {
-      agent: "pstdio.extension-lab.harness.fake",
+      agent: "pstdio.workbench-fixture.harness.fake",
       project_id: projectId,
       prompt: title,
       title,
@@ -192,7 +192,7 @@ test("PS-183 switches projects once and within budget", async ({ page, request }
     await waitForProjectExtensions(request, projectB.id);
     await page.addInitScript((projectId) => {
       localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
+      localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
       document.addEventListener(
         "click",

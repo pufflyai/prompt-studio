@@ -6,7 +6,7 @@ const apiBase = `http://localhost:${apiPort}`;
 const bypassOnboarding = async (page: import("@playwright/test").Page) => {
   await page.addInitScript(() => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
   });
 };
 
@@ -28,7 +28,7 @@ const createSessionViaApi = async (
       project_id: projectId,
       title,
       prompt: title,
-      agent: "pstdio.extension-lab.harness.fake",
+      agent: "pstdio.workbench-fixture.harness.fake",
     },
   });
   expect(res.ok()).toBe(true);

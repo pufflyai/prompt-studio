@@ -12,7 +12,7 @@ test("PS-299 lists every registered keyboard shortcut", async ({ page, request }
 
   await page.addInitScript((selectedProjectId: string) => {
     localStorage.setItem("onboarding-complete", "true");
-    localStorage.setItem("selected-agent", "pstdio.extension-lab.harness.fake");
+    localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
     localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
   }, project.id);
   await page.goto(`/projects/${project.id}/tickets`);

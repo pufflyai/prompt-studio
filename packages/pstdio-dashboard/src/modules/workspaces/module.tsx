@@ -119,19 +119,28 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
 };
 
 const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
-  return ctx.pages.registerPage({
+  ctx.pages.registerPage({
     id: dashboardViews.workspaces.id,
     ref: workbenchPages.workspaces,
     title: dashboardViews.workspaces.label,
     icon: dashboardViews.workspaces.icon,
     path: "workspaces",
     modeId: "project",
+    slots: [{ id: "content", role: "primary", region: "main", viewId: dashboardWidgetIds.workspaces }],
+  });
+  return ctx.pages.registerPage({
+    id: workbenchPages.workspace.id,
+    ref: workbenchPages.workspace,
+    title: "Workspace",
+    icon: dashboardViews.workspaces.icon,
+    path: "workspace",
+    modeId: "project",
+    parentId: dashboardViews.workspaces.id,
     slots: [
       {
         id: "content",
         role: "primary",
         region: "main",
-        viewId: dashboardWidgetIds.workspaces,
         binding: { resourceKinds: ["workspace"], viewId: dashboardWidgetIds.workspaceDiffs, cardinality: "many" },
       },
       {
@@ -147,7 +156,7 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
 
 const syncActiveWorkspacePage = (ctx: WorkbenchModuleContext) => {
   const state = ctx.pages.store.getState();
-  if (state.activePageId !== dashboardViews.workspaces.id || state.location?.resource?.type !== "workspace") return;
+  if (state.activePageId !== workbenchPages.workspace.id || state.location?.resource?.type !== "workspace") return;
   const resource = ctx.getPrimaryResource();
   if (!resource) return;
   ensureWorkspaceTerminalResource(ctx, resource);

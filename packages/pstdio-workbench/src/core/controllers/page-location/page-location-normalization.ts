@@ -104,24 +104,6 @@ const declaredParent = (input: {
   });
 };
 
-const hybridRootParent = (input: {
-  page: WorkbenchPageContribution;
-  pages: readonly WorkbenchPageContribution[];
-  resource: ResourceRef | undefined;
-  resources: WorkbenchPageResourceCodec;
-  seen: Set<string>;
-}) => {
-  if (!input.resource) return undefined;
-  const primary = input.page.slots.find((slot) => slot.role === "primary");
-  if (!primary?.viewId || !primary.binding?.resourceKinds.includes(input.resource.type)) return undefined;
-  return normalizeResolvedLocation({
-    page: input.page,
-    pages: input.pages,
-    resources: input.resources,
-    seen: input.seen,
-  });
-};
-
 const normalizeResolvedLocation = (input: {
   page: WorkbenchPageContribution;
   pages: readonly WorkbenchPageContribution[];
@@ -141,15 +123,7 @@ const normalizeResolvedLocation = (input: {
   if (input.seen.has(routeKey)) throw new Error(`Page location parent cycle reaches ${input.page.id}`);
   const seen = new Set(input.seen).add(routeKey);
   const parent =
-    input.parent ??
-    hybridRootParent({
-      page: input.page,
-      pages: input.pages,
-      resource: candidate.resource,
-      resources: input.resources,
-      seen,
-    }) ??
-    declaredParent({ page: input.page, pages: input.pages, resources: input.resources, seen });
+    input.parent ?? declaredParent({ page: input.page, pages: input.pages, resources: input.resources, seen });
   return createLocation({
     page: input.page,
     resources: input.resources,
