@@ -5,12 +5,8 @@ import { parseMarkdownSource } from "./markdown-ast";
 import { exportLexicalToMarkdown } from "./markdown-export";
 import { importMarkdownToLexical } from "./markdown-import";
 import { collectMarkdownLinkChanges } from "./markdown-source-links";
+import { buildSourceMap, mappedEnd, mappedStart, type SourceMap } from "./markdown-source-map";
 import type { MarkdownUrlResolver } from "./markdown-url";
-
-interface SourceMap {
-  end: number[];
-  start: number[];
-}
 
 interface TextEdit {
   end: number;
@@ -22,54 +18,6 @@ interface TableChanges {
   edits: TextEdit[];
   normalizedCurrent: string;
 }
-
-const buildSourceMap = (canonical: string, source: string) => {
-  const start = Array.from<number>({ length: canonical.length + 1 }).fill(-1);
-  const end = Array.from<number>({ length: canonical.length + 1 }).fill(-1);
-  let canonicalOffset = 0;
-  let sourceOffset = 0;
-  let removedAtBoundary = false;
-
-  start[0] = 0;
-  end[0] = 0;
-
-  for (const change of diffChars(canonical, source)) {
-    const length = change.value.length;
-
-    if (change.added) {
-      end[canonicalOffset] = sourceOffset;
-      sourceOffset += length;
-      start[canonicalOffset] = sourceOffset;
-      if (removedAtBoundary) end[canonicalOffset] = sourceOffset;
-      removedAtBoundary = false;
-      continue;
-    }
-
-    if (change.removed) {
-      for (let index = 0; index <= length; index += 1) {
-        start[canonicalOffset + index] = sourceOffset;
-        end[canonicalOffset + index] = sourceOffset;
-      }
-      canonicalOffset += length;
-      removedAtBoundary = true;
-      continue;
-    }
-
-    for (let index = 0; index <= length; index += 1) {
-      const offset = canonicalOffset + index;
-      start[offset] = sourceOffset + index;
-      // A source-only insertion at this boundary belongs between the
-      // canonical characters. Keep its left edge as the end of the preceding
-      // range so an edit before it does not consume untouched source.
-      if (end[offset] === undefined || end[offset] < 0) end[offset] = sourceOffset + index;
-    }
-    canonicalOffset += length;
-    sourceOffset += length;
-    removedAtBoundary = false;
-  }
-
-  return { end, start } satisfies SourceMap;
-};
 
 const collectEdits = (baseline: string, current: string) => {
   const edits: TextEdit[] = [];
@@ -101,26 +49,6 @@ const collectEdits = (baseline: string, current: string) => {
 
   finishPending();
   return edits;
-};
-
-const nearestMappedOffset = (values: number[], index: number, direction: -1 | 1) => {
-  for (let offset = index; offset >= 0 && offset < values.length; offset += direction) {
-    const value = values[offset];
-    if (value !== undefined && value >= 0) return value;
-  }
-  return direction === -1 ? 0 : (values.at(-1) ?? 0);
-};
-
-const mappedStart = (map: SourceMap, index: number) => {
-  const exact = map.start[index];
-  if (exact !== undefined && exact >= 0) return exact;
-  return nearestMappedOffset(map.start, index, -1);
-};
-
-const mappedEnd = (map: SourceMap, index: number) => {
-  const exact = map.end[index];
-  if (exact !== undefined && exact >= 0) return exact;
-  return nearestMappedOffset(map.end, index, 1);
 };
 
 const sourceLineEnding = (source: string) => (source.includes("\r\n") ? "\r\n" : "\n");
