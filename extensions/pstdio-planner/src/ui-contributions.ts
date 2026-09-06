@@ -72,7 +72,7 @@ const createTicketPages = (tickets: ViewRef, editor: ViewRef) => {
   const ticketDetailPage = definePage({
     id: "ticket",
     title: l10n("panels.ticketEditor.title", "Ticket"),
-    icon: "square-kanban",
+    icon: "component",
     path: "ticket",
     mode: workbenchModes.project,
     parent: ticketsPage.ref,
