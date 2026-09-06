@@ -32,12 +32,12 @@ and must be loaded or mutated through planner extension commands.
 
 ## Overview
 
-The planner extension contributes a `tickets` kanban renderer with
-`resourceKind: "ticket"`. The dashboard workbench renders that contribution and
-passes user actions back to extension commands such as
-`pstdio-planner.query-tickets`, `pstdio-planner.set-ticket-attribute`,
-`pstdio-planner.create-ticket`, `pstdio-planner.create-workspace`, and
-`pstdio-planner.run-attempt`.
+The planner extension declares a `tickets` page whose Main view has `kind: "kanban"`.
+The view queries tickets and updates attributes through native renderer callbacks.
+Row activation returns a target for the resource-bound `ticket` page.
+User actions call public commands such as `pstdio.pstdio-planner.command.create-ticket`,
+`pstdio.pstdio-planner.command.create-workspace`, and `pstdio.pstdio-planner.command.run-attempt`.
+See [the UI declarations](../../src/ui-contributions.ts) for the current callbacks and refs.
 
 ## Requirements
 
@@ -48,8 +48,8 @@ passes user actions back to extension commands such as
    storage itself.
 3. Moving a row between status columns must call the planner update command.
 4. Creating a row must call the planner create command.
-5. Manual workspace creation must call `pstdio-planner.create-workspace`.
-6. Running an implementation attempt must call `pstdio-planner.run-attempt`.
+5. Manual workspace creation must call `pstdio.pstdio-planner.command.create-workspace`.
+6. Running an implementation attempt must call `pstdio.pstdio-planner.command.run-attempt`.
 
 ### UX Requirements
 
@@ -70,8 +70,7 @@ passes user actions back to extension commands such as
 
 1. Load workbench metadata for the project.
 2. Render the planner `tickets` kanban renderer.
-3. Execute kanban renderer queries and mutations through planner extension
-   commands.
+3. Execute kanban queries and mutations through the declared native renderer callbacks.
 4. Execute row actions with the row id supplied by the workbench host.
 5. Refresh planner queries after mutation command outcomes.
 

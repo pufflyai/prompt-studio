@@ -1,124 +1,84 @@
-# SDK Method Reference
+# SDK method reference
 
-This page lists the current runtime APIs and key public types exported by
-`@pstdio/sdk` and its public subpaths.
+Import a declared `@pstdio/sdk` subpath. The package has no root entry point.
+The [package guide](../../../../packages/sdk/README.md) lists all supported entries
+and their dependency requirements.
 
-`@pstdio/sdk/api`, `@pstdio/sdk/resources`, and `@pstdio/sdk/extensions` provide
-shared types. Runtime helpers live on their dedicated subpaths.
-
-Planner tickets, ticket statuses, and ticket tags are extension-owned. They do
-not have core SDK domain clients; use the planner extension commands or the
-`pst tickets` CLI facade.
-
-## `@pstdio/sdk`
-
-The root export is a curated convenience surface.
-
-### `createClient(options?: ClientOptions)`
-
-Re-export of the main SDK client factory from `@pstdio/sdk/client`.
-
-### `new PstdioApiError(message: string, status: number)`
-
-Re-export of the SDK HTTP error class from `@pstdio/sdk/client`.
-
-## `@pstdio/sdk/client`
-
-### `createClient(options?: ClientOptions)`
-
-Creates a fully wired `PstdioClient` with `projects`, `workspaces`, `sessions`,
-`templates`, `skills`, `agents`, `extensions`, `settings`, and `sync`.
-
-### `createRequest(options: ClientOptions)`
-
-Creates the low-level request function used by the domain clients.
-
-### `new PstdioApiError(message: string, status: number)`
-
-Thrown by request helpers and client methods when the API responds with a
-non-2xx status.
-
-### Key Types
-
-- `type ClientOptions`
-- `type PstdioClient`
-- `type RequestFn`
-
-## Client Domains
-
-- `client.projects.list()`
-- `client.projects.get(projectId)`
-- `client.projects.create(input)`
-- `client.projects.delete(projectId)`
-- `client.projects.listActivity(projectId, input?)`
-- `client.projects.listRepos(projectId)`
-- `client.projects.registerRepo(projectId, input)`
-- `client.projects.removeRepo(projectId, repoId)`
-- `client.workspaces.list(projectId)`
-- `client.workspaces.getByShorthand(projectId, shorthand)`
-- `client.workspaces.create(input)`
-- `client.workspaces.rename(workspaceId, input)`
-- `client.workspaces.listActivity(workspaceId, input?)`
-- `client.workspaces.removeWorktree(workspaceId)`
-- `client.workspaces.delete(workspaceId)`
-- `client.sessions.list(projectId, input?)`
-- `client.sessions.get(sessionId)`
-- `client.sessions.create(input)`
-- `client.sessions.archive(sessionId)`
-- `client.sessions.followUp(sessionId, input)`
-- `client.sessions.approve(sessionId, input)`
-- `client.sessions.getConversation(sessionId)`
-- `client.sessions.resolveSessionId(input)`
-- `client.sessions.updateStatus(sessionId, status)`
-- `client.sessions.listActivity(sessionId, input?)`
-- `client.sessions.stream(sessionId, onEvent, options?)`
-- `client.sessions.connectStream(sessionId, handlers, options?)`
-- `client.skills.list(projectId)`
-- `client.skills.get(projectId, skillId)`
-- `client.skills.update(projectId, skillId, input)`
-- `client.agents.list()`
-- `client.agents.info()`
-- `client.agents.models(agentId)`
-- `client.agents.setup(input)`
-- `client.agents.setupAvailable(agentId)`
-- `client.agents.update(agentId, input)`
-- `client.agents.delete(agentId)`
-- `client.extensions.enableInstalled(projectId, installName, input)`
-- `client.extensions.updateInstalledTemplate(installName, templateKey, input)`
-- `client.extensions.listAppearance(projectId)`
-- `client.extensions.listCommands(projectId)`
-- `client.extensions.execute(commandId, input)`
-- `client.settings.get()`
-- `client.settings.update(input)`
-- `client.sync.connect(input)`
-
-## Planner Command Access
-
-Use `client.extensions.execute(...)` when programmatic callers need planner
-ticket results:
+## HTTP client
 
 ```ts
-const result = await client.extensions.execute("pstdio-planner.list-tickets", {
+import { createClient, PstdioApiError } from "@pstdio/sdk/client";
+
+const client = createClient();
+const projects = await client.projects.list();
+```
+
+`createClient(options?: ClientOptions)` accepts `baseUrl`, `token`, and `fetch`.
+Outside the browser, it reads `PSTDIO_API_URL` and `PSTDIO_API_TOKEN` when those
+options are omitted. The fallback URL is `http://127.0.0.1:19840`.
+
+`createRequest(options: ClientOptions)` returns the low-level request function.
+HTTP failures throw `PstdioApiError`, which exposes `message` and `status`.
+See the [request types](../../../../packages/sdk/src/client/request.ts) for request
+headers, cancellation, and other options.
+
+The client exposes these groups. Each link contains the current method signatures
+and request and response types.
+
+| Group | Methods | Contract |
+| --- | --- | --- |
+| `projects` | `list`, `get`, `create`, `delete`, `listActivity`, `listRepos`, `registerRepo`, `removeRepo` | [ProjectClient](../../../../packages/sdk/src/client/projects.ts) |
+| `workspaces` | `list`, `getByShorthand`, `create`, `rename`, `listActivity`, `listFiles`, `createDirectory`, `createFile`, `readFile`, `writeFile`, `moveEntry`, `deleteEntry`, `removeWorktree`, `delete` | [WorkspaceClient](../../../../packages/sdk/src/client/workspaces.ts) |
+| `sessions` | `list`, `get`, `uploadAttachment`, `deleteAttachment`, `create`, `archive`, `followUp`, `approve`, `getConversation`, `resolveSessionId`, `updateStatus`, `listActivity`, `stream`, `connectStream` | [SessionClient](../../../../packages/sdk/src/client/sessions.ts) |
+| `skills` | `list`, `get`, `updatePreferences` | [SkillClient](../../../../packages/sdk/src/client/skills.ts) |
+| `agents` | `info`, `models` | [AgentClient](../../../../packages/sdk/src/client/agents.ts) |
+| `extensions` | `enableInstalled`, `listAppearance`, `listCommands`, `listProject`, `upgradeProject`, `listConnections`, `configureConnection`, `checkConnection`, `deleteConnection`, `execute`, `dispatchEvent` | [ExtensionClient](../../../../packages/sdk/src/client/extensions.ts) |
+| `automation` | `issueToken`, `listTokens`, `revokeToken`, `createRun`, `getRun`, `listRunEvents`, `cancelRun` | [AutomationClient](../../../../packages/sdk/src/client/automation.ts) |
+| `notifications` | `list`, `count`, `get`, `create`, `update`, `markRead`, `dismiss`, `markDone`, `snooze`, `resolveByDedupeKey` | [NotificationsClient](../../../../packages/sdk/src/client/notifications.ts) |
+| `settings` | `get`, `update` | [SettingsClient](../../../../packages/sdk/src/client/settings.ts) |
+| `sync` | `start` | [SyncClient](../../../../packages/sdk/src/client/sync.ts) |
+| `runtime` | `provisionBrowserSession` | [RuntimeClient](../../../../packages/sdk/src/client/runtime.ts) |
+
+See the [client guide](../../product/sdk/client.md) for sessions, file attachments,
+connections, and remote automation examples.
+
+## Planner commands
+
+Tickets, statuses, and tags belong to the Planner extension. Use its commands
+through `client.extensions.execute`, or use the `pst tickets` CLI aliases.
+The installed extension must be enabled in the project.
+
+```ts
+const response = await client.extensions.execute("pstdio.pstdio-planner.command.list-tickets", {
   projectId,
   params: { status: "In Progress" },
 });
+
+if (response.outcome.status === "success") {
+  console.log(response.outcome.value);
+}
 ```
 
-Normal user workflows should prefer the CLI facade:
+Use `client.extensions.listCommands(projectId)` to discover command IDs. IDs include
+the publisher, extension name, contribution kind, and local ID. Do not construct
+them from the package name alone.
 
-```sh
-pst tickets list --status "In Progress"
-pst tickets save --id PS-12
-```
+## Extension authoring
 
-## `@pstdio/sdk/extensions`
+`@pstdio/sdk/extensions` exports contribution helpers, typed references, command
+and renderer contexts, storage contracts, and the webview client. The current host
+extension contract is `1.0.0-alpha.10`; extensions declare that exact value in
+`engines.pstdio`.
 
-Exports extension authoring contracts, including `ExtensionDefinition`,
-lifecycle event payload types, command context types, and extension resource
-APIs.
+Use the [composition cookbook](../../extensions/cookbook.md) for `definePage`,
+shared placement items, resource identity, navigation, controls, `qualifyRef`,
+and typed `GuestHost.call` capabilities. The
+[React entry](../../../../packages/sdk/src/extensions/react/index.ts) provides
+`useCommandQuery` and `useCommandMutation` for webviews.
 
-## `@pstdio/sdk/prompts`
+## Other entries
 
-### `renderPrompt(template: string, data: unknown)`
-
-Renders a Mustache template with the provided data.
+- `@pstdio/sdk/api` exports HTTP request and response types.
+- `@pstdio/sdk/resources` exports [product resource types](../../product/sdk/resources.md).
+- `@pstdio/sdk/prompts` exports `renderPrompt(template, data)` for Mustache rendering.
+- `@pstdio/sdk/hooks` exports hook API contracts.

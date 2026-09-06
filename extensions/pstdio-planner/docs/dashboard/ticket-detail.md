@@ -32,12 +32,17 @@ extension commands and extension-provided views.
 
 ## Overview
 
-The planner extension contributes ticket resource views:
+The planner extension declares a resource-bound `ticket` page with a parent
+`tickets` page. Its native views are:
 
-- `ticketEditor` for the markdown body, editable ticket files, and image
+- `ticket-editor` for the markdown body, editable ticket files, and image
   attachment previews.
-- `ticketFiles` for the native files/workspaces tree.
-- `ticketProperties` for planner-owned ticket properties.
+- `ticket-files` for the native files/workspaces tree.
+- `ticket-properties` for planner-owned ticket properties.
+
+The editor is the page's Main view. The files tree contributes page-owned
+navigation, and the properties view is attached through a view menu. See the
+[UI declarations](../../src/ui-contributions.ts) for their current placement.
 
 The dashboard workbench provides hosting, command execution, resource
 navigation, and synced core host rows. It does not own ticket data.
@@ -46,13 +51,14 @@ navigation, and synced core host rows. It does not own ticket data.
 
 ### Functional Requirements
 
-1. Ticket markdown content must be loaded and saved through planner commands.
+1. Ticket markdown content must be loaded and saved through Planner's native file renderer callbacks.
 2. Ticket files must be created, renamed, edited, and deleted through planner
    commands.
 3. Image attachments must be listed by the planner ticket files tree and
-   previewed through `pstdio-planner.read-ticket-attachment`.
-4. Manual workspace creation must execute `pstdio-planner.create-workspace`.
-5. Implementation attempts must execute `pstdio-planner.run-attempt`.
+   previewed through the editor's content loader. Programmatic callers can use
+   `pstdio.pstdio-planner.command.read-ticket-attachment`.
+4. Manual workspace creation must execute `pstdio.pstdio-planner.command.create-workspace`.
+5. Implementation attempts must execute `pstdio.pstdio-planner.command.run-attempt`.
 
 ### UX Requirements
 
@@ -70,20 +76,20 @@ navigation, and synced core host rows. It does not own ticket data.
 
 ## Behavior
 
-1. Open the planner ticket resource in the workbench.
-2. The planner `ticketEditor` view loads the ticket via
-   `pstdio-planner.get-ticket`.
-3. The planner `ticketFiles` tree lists the ticket body, editable files, image
+1. Navigate to the Planner `ticket` page with its ticket resource.
+2. The `ticket-editor` view loads content through the `getTicketContent` callback.
+   The same operation is exposed as `pstdio.pstdio-planner.command.get-ticket-content`.
+3. The `ticket-files` tree lists the ticket body, editable files, image
    attachments, and linked workspaces.
 4. Selecting an editable file opens it in the planner editor.
-5. Selecting an image attachment fetches bytes through
-   `pstdio-planner.read-ticket-attachment` and renders a read-only preview.
+5. Selecting an image attachment makes the content loader return a data URL
+   and MIME type for a read-only preview.
 
 ### Run Attempt Flow
 
-1. `pstdio-planner.create-workspace` creates a ticket-linked workspace without
+1. `pstdio.pstdio-planner.command.create-workspace` creates a ticket-linked workspace without
    starting a session.
-2. `pstdio-planner.run-attempt` checks dependency readiness, creates a managed
+2. `pstdio.pstdio-planner.command.run-attempt` checks dependency readiness, creates a managed
    attempt at the chosen commit, and starts its implementation session.
 3. Both commands pass the planner ticket shorthand as `shorthand_base` so the
    host workspace shorthand is allocated from the ticket.
@@ -96,20 +102,20 @@ navigation, and synced core host rows. It does not own ticket data.
 
 | Surface              | Purpose                                      |
 | -------------------- | -------------------------------------------- |
-| `ticketEditor` view  | Planner-owned ticket body/file/preview view. |
-| `ticketFiles` tree   | Planner-owned files and linked workspaces.   |
-| `ticketProperties`   | Planner-owned ticket properties.             |
+| `ticket-editor` view | Planner-owned ticket body/file/preview view. |
+| `ticket-files` tree | Planner-owned files and linked workspaces. |
+| `ticket-properties` view | Planner-owned ticket properties. |
 
 ### Header Actions
 
 | Action                 | Planner command                              |
 | ---------------------- | -------------------------------------------- |
-| Create workspace       | `pstdio-planner.create-workspace`            |
-| Run attempt            | `pstdio-planner.run-attempt`                 |
-| Break into sub-tickets | `pstdio-planner.break-into-sub-tickets`      |
-| Refine ticket          | `pstdio-planner.refine-ticket`               |
-| Archive                | `pstdio-planner.archive-ticket`              |
-| Delete                 | `pstdio-planner.delete-ticket`               |
+| Create workspace       | `pstdio.pstdio-planner.command.create-workspace`            |
+| Run attempt            | `pstdio.pstdio-planner.command.run-attempt`                 |
+| Break into sub-tickets | `pstdio.pstdio-planner.command.break-into-sub-tickets`      |
+| Refine ticket          | `pstdio.pstdio-planner.command.refine-ticket`               |
+| Archive                | `pstdio.pstdio-planner.command.archive-ticket`              |
+| Delete                 | `pstdio.pstdio-planner.command.delete-ticket`               |
 
 ## Rules & Constraints
 

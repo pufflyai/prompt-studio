@@ -40,7 +40,7 @@ Required fields:
 
 - `engines.pstdio`: the exact extension API version this extension was built against. While the API
   is in alpha this is a plain version such as `1.0.0-alpha.10`, never a range: `^1.0.0-alpha.10` also
-  matches `1.0.0-alpha.10`, so a range would accept hosts the extension was never tested on. The host
+  admits other prereleases with the same base version, so a range would accept hosts the extension was never tested on. The host
   refuses an extension whose value does not match its own `EXTENSION_API_VERSION`, with a single
   diagnostic instead of per-contribution errors. Expect to update this on most releases while the
   API is unstable.
@@ -262,9 +262,7 @@ local command id tickets.create
 runtime id       pstdio.planner.command.tickets.create
 CLI path         pst planner tickets create
 artifact root    <repo>/.pstdio/extension-storage/planner/
-theme id         planner.<theme-key>
-template id      planner.<template-key>
-skill id         planner.<skill-key>
+theme id         pstdio.planner.theme.<local-id>
 ```
 
 The old `namespace` concept is removed. Use the package `name` anywhere extension-facing code needs a short project scope.
@@ -278,6 +276,10 @@ a ref's `extensionId` carries it. `pst extensions check` rejects ids outside the
 `extension_contribution_id_invalid`. Host-published refs (for example `workbenchPages.start`) resolve to the
 host's registered id without owner prefixing, for every contribution kind; runtime ids such as
 `pstdio.planner.command.tickets.create` are opaque routing values that no code may split back into parts.
+
+This manifest is illustrative. The built-in Planner package is named `pstdio-planner`,
+so its extension ID is `pstdio.pstdio-planner`. Its `list-tickets` command resolves
+to `pstdio.pstdio-planner.command.list-tickets`.
 
 When another extension needs a public command, the provider owns and exports that contract from one module:
 
@@ -436,12 +438,12 @@ Middleware attaches to a command and runs before the command handler. Use it for
 
 ```ts
 import { commandRef, defineExtension, defineMiddleware } from "@pstdio/sdk/extensions";
-const createTicket = commandRef.forExtension({ publisher: "pstdio", name: "planner" })<{ title: string }>(
-  "tickets.create",
+const createTicket = commandRef.forExtension({ publisher: "pstdio", name: "pstdio-planner" })<{ title?: string }>(
+  "create-ticket",
 );
 export default defineExtension({
   middlewares: [
-    defineMiddleware<{ title: string }>({
+    defineMiddleware<{ title?: string }>({
       id: "require-title",
       command: createTicket,
       async run(ctx, commandParams) {
@@ -477,7 +479,9 @@ export default defineExtension({
 ```
 
 Prefer exported event refs such as `sessionEvents.started` and
-`worktreeEvents.created`. Planner ticket automation should use planner commands
+`workspaceEvents.created`, `workspaceEvents.ready`, and `worktreeEvents.removed`.
+The host awaits `workspaceEvents.provision` handlers before marking a local workspace ready.
+Planner ticket automation should use planner commands
 or command lifecycle events, not removed core ticket/attempt-status events. Use
 `commandEvent(providerCommands.someCommand, "completed")` or another command lifecycle phase
 when a hook should react to a command outcome.
@@ -845,22 +849,26 @@ goes through commands.
 
 ## Appearance Contributions
 
-Themes and file icon themes are scoped by package `name`.
+Themes and file icon themes use contribution arrays. Define each theme with a
+local ID and register the returned definition. Use its typed ref for a mode's
+`defaultTheme`.
 
 ```ts
-export default defineExtension({
-  themes: {
-    monokai: {
-      title: "Monokai",
-      format: "vscode-color-theme",
-      mode: "dark",
-      source: packageAsset("./themes/monokai.json", import.meta.url),
-    },
-  },
+import { defineExtension, defineTheme, packageAsset } from "@pstdio/sdk/extensions";
+
+const monokai = defineTheme({
+  id: "monokai",
+  title: "Monokai",
+  format: "vscode-color-theme",
+  mode: "dark",
+  source: packageAsset("./themes/monokai.json", import.meta.url),
 });
+
+export default defineExtension({ themes: [monokai] });
 ```
 
-The theme id is `planner.monokai` for package `planner`.
+The runtime qualifies the ref with the extension owner. For publisher `acme` and
+package `planner`, the theme ID is `acme.planner.theme.monokai`.
 
 ## Diagnostics
 

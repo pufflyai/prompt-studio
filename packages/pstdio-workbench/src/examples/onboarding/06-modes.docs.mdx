@@ -13,9 +13,9 @@ example uses a release project, its tickets, and an active coding session so eac
 
 Try these transitions in the story:
 
-1. Start on Project overview. The Sidenav contains **Northstar project** navigation and a release summary owned by the
-   page.
-2. Open Tickets. Northstar navigation stays, while the release summary becomes the ticket filter.
+1. Start on Project overview. The Sidenav contains **Northstar project** navigation.
+   The page's release summary appears in Secondary.
+2. Open Tickets. Northstar navigation stays, while Secondary shows the ticket filter.
 3. Open the current session. Both project contributions disappear. **Session S-104** navigation and session context
    replace them.
 4. Use Back and Forward. The workbench restores the complete mode and page composition for each location.
@@ -53,13 +53,18 @@ The outer setup prepares the workbench:
 - the main View uses `body.kind: "react"`. Its `render` receives the render input, and `input.workbench` exposes the
   core services. The buttons call `input.workbench.pageLocations.navigate({ kind: "page", page })` to open another
   page and commit one canonical location.
-- the sidenav View is a second React View that renders the page-owned tools.
+- the tools View is a second React View that renders the page-owned content in Secondary.
 - `workbench.pages.registerPage(...)` registers the page. `id` is the registration identity. `ref` is the public page
   reference that navigation targets use. `title` is the page name. `path` is the URL path segment. `modeId` names the
   owning mode, so opening the page also activates that mode.
 - `main: { kind: "view", view, cardinality: "one" }` renders the page content.
-- `slots` contains the page Sidenav panel with `item: { kind: "view", view, presence: "open" }`. It starts open and the user may close it. Saved user choices apply on the next visit.
+- `slots` contains the page's Secondary panel with `region: "secondary"` and
+  `item: { kind: "view", view, presence: "open" }`. It starts open and the user may close it.
+  Saved user choices apply on the next visit.
 
-Mode placements are removed when the mode changes. Page slots are removed when the page changes. In the additive
-Sidenav, mode placements appear before page placements. User layout changes may reorder content inside one ownership
-layer, but cannot move page content ahead of mode content.
+Shared mode placements keep their identity across pages within the mode. Page panels belong to their page location.
+Removing an owning contribution disposes its instances.
+
+This host example registers its Sidenav through the Core API. Extension authors contribute sidebar content through
+`navigationItems` and `navigationTrees`, or replace it with `mode.chrome.sidenav`. Extension page slots and mode
+placements use Main, Side, and Secondary.

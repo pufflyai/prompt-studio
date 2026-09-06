@@ -15,6 +15,10 @@ Use notifications only for actionable items such as review, approval, merge, unb
 `ctx.notify.action(...)` creates or updates a project-scoped inbox item. Provide a stable `dedupeKey` whenever the notification represents a source condition that may be emitted more than once.
 
 ```ts
+import { qualifyRef } from "@pstdio/sdk/extensions";
+
+const ticketPage = qualifyRef("pstdio.pstdio-planner", { kind: "page", id: "ticket" });
+
 await ctx.notify.action({
   title: "Review proposal: PS-42",
   body: "The proposal is ready for approval.",
@@ -23,20 +27,28 @@ await ctx.notify.action({
   target: { type: "ticket", id: "ticket-42", label: "PS-42" },
   dedupeKey: "pstdio-planner:ticket:PS-42:proposal-refined",
   actions: [
-    { id: "review", label: "Review proposal", kind: "open-resource", resource: { type: "ticket", id: "ticket-42" }, primary: true },
-    { id: "approve", label: "Approve", kind: "command", command: "pstdio-planner.approve-proposal", params: { ticket: "PS-42" } },
+    {
+      id: "review",
+      label: "Review proposal",
+      kind: "navigate",
+      target: { kind: "page", page: ticketPage, resource: { type: "ticket", id: "ticket-42" } },
+      primary: true,
+    },
+    { id: "approve", label: "Approve", kind: "command", command: "pstdio.pstdio-planner.command.approve-proposal", params: { ticket: "PS-42" } },
   ],
 });
 ```
 
-Dedupe keys should follow `<extension-id>:<resource-type>:<resource-id>:<reason>`, for example `pstdio-planner:ticket:PS-42:blocked`. Re-emitting the same live key updates the existing row instead of creating duplicates.
+Dedupe keys identify the producer's source condition. Planner uses keys such as
+`pstdio-planner:ticket:PS-42:blocked`. Re-emitting the same live key updates the
+existing row instead of creating duplicates. A dedupe key is not a command ID.
 
 ## Actions
 
 Notification actions are structured so the dashboard and CLI can run them safely:
 
-- `open-resource` opens a ticket, session, workspace, or other resource.
-- `command` runs a command by id with JSON params.
+- `navigate` opens an explicit page or panel target. The resource alone does not choose a destination.
+- `command` runs a command by its fully qualified ID with JSON params.
 - `url` opens an external link.
 
 Mark the preferred action with `primary: true`. For blocked agent flows, make the primary action open the waiting session so the user can reply.

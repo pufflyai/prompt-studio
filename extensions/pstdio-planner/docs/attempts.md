@@ -7,19 +7,19 @@ remain unmanaged.
 
 ## Current Flow
 
-1. `pstdio-planner.attempt-readiness` resolves the full dependency graph and an
+1. `pstdio.pstdio-planner.command.attempt-readiness` resolves the full dependency graph and an
    exact base commit. A safe unmerged dependency stack uses its unique containing
    workspace tip.
-2. `pstdio-planner.run-attempt` acquires an atomic ticket claim, recomputes
+2. `pstdio.pstdio-planner.command.run-attempt` acquires an atomic ticket claim, recomputes
    readiness, creates the workspace from that commit, and starts an implementation
    session with `ticket` and `planner-attempt` anchors.
 3. The implementation agent saves a change request report and calls
-   `pstdio-planner.submit-change-request`. Planner validates the session,
+   `pstdio.pstdio-planner.command.submit-change-request`. Planner validates the session,
    workspace HEAD, report, and expected attempt state before appending a revision.
 4. The repo-local `pstdio-planner-loops` extension starts one review for the
    oldest `review_ready` revision. The review session has `planner-review` and
    `planner-attempt` anchors.
-5. The reviewer calls `pstdio-planner.submit-review` with an explicit verdict and
+5. The reviewer calls `pstdio.pstdio-planner.command.submit-review` with an explicit verdict and
    structured threads. Requested changes return to the same implementation
    session. Approval creates a `Review Needed` handoff and suppresses another
    automatic review of that revision.
@@ -27,7 +27,7 @@ remain unmanaged.
    disconnected review gets one linked review round. A second disconnect blocks
    only that attempt and requests human input.
 
-`pstdio-planner.workspace-activity` returns `{ active, sessions }`. It preserves
+`pstdio.pstdio-planner.command.workspace-activity` returns `{ active, sessions }`. It preserves
 session anchors and derives each managed phase as `implementation`, `review`, or
 `other`. `queued`, `in_progress`, and `awaiting_input` are live statuses.
 

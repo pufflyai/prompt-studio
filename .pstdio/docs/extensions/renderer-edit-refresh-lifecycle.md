@@ -39,7 +39,7 @@ The binding uses:
 
 - the file renderer contribution id;
 - the panel `instanceId`;
-- the resource URI, including document-selection metadata in the renderer load key.
+- the resource type, ID, and document-selection metadata in the renderer load key.
 
 ## Loading
 
@@ -67,7 +67,7 @@ The in-process event feed and file renderer registry preserve this optional enve
 ~~~ts
 interface RendererRefreshEvent {
   id: string;
-  resourceUri?: string;
+  resourceKey?: string;
   origin?: {
     rendererId: string;
     instanceId: string;
@@ -79,7 +79,7 @@ interface RendererRefreshEvent {
 
 Generic extension events remain valid with only `id`.
 
-Each file save receives a host operation origin. The file renderer adapter places the origin and resource URI in command request metadata. They are not added to extension params or extension-owned event payloads. After the command returns, the dashboard attaches that host context to each published refresh event. A save result may return an optional revision.
+Each file save receives a host operation origin. The file renderer adapter places the origin and resource identity key in command request metadata. They are not added to extension params or extension-owned event payloads. After the command returns, the dashboard attaches that host context to each published refresh event. A save result may return an optional revision. Use the SDK's `resourceKey` to compare identities; labels and metadata do not change the key.
 
 ## Refresh Classification
 

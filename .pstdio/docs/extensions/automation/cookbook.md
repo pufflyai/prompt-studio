@@ -1,60 +1,75 @@
-# Extension Automation Cookbook
+# Extension automation cookbook
 
-## Validate Before Handing Work to Review
+Declare middleware and hooks with contribution helpers. Register the returned
+values in the extension's `middlewares` and `hooks` arrays. Callbacks receive
+context as the first argument and parameters or event payload as the second.
 
-Use middleware on the planner command that starts a review:
+## Validate a command before it runs
 
-```ts
-ctx.commands.middleware("pstdio-planner.run-review", async (commandCtx, next) => {
-  const result = await commandCtx.shell.run({
-    command: ["bun", "run", "validate"],
-    cwd: commandCtx.workspace.worktree_path,
-  });
-
-  if (result.exitCode !== 0) {
-    return {
-      status: "rejected",
-      message: result.stderr || result.stdout || "Validation failed",
-    };
-  }
-
-  return next();
-});
-```
-
-## React to Worktree Creation
-
-Use the worktree-created event:
+This example adds a project policy requiring a title on Planner ticket creation.
+The Planner extension must be enabled in the same project.
 
 ```ts
-ctx.events.on("worktree.created", async (event) => {
-  await ctx.worktrees.bootstrap(event.workspaceId);
-});
-```
+import { commandRef, defineExtension, defineMiddleware } from "@pstdio/sdk/extensions";
 
-## React to Session Lifecycle
+const createTicket = commandRef.forExtension({ publisher: "pstdio", name: "pstdio-planner" })<{
+  title?: string;
+}>("create-ticket");
 
-Stored workspace statuses no longer exist; workspace state is derived from live
-sessions (`pstdio-planner.workspace-activity`). React to session lifecycle
-events instead, the way the repo-local `pstdio-planner-loops` extension moves
-tickets to `In Progress` when a session starts:
-
-```ts
-import { defineExtension, sessionEvents } from "@pstdio/sdk/extensions";
-
-export default defineExtension({
-  hooks: {
-    sessionStarted: {
-      event: sessionEvents.started,
-      async handler(ctx, payload) {
-        await ctx.storage.set(`started:${payload.sessionId}`, new Date().toISOString());
-      },
-    },
+const requireTitle = defineMiddleware<{ title?: string }>({
+  id: "require-title",
+  command: createTicket,
+  run(ctx, commandParams) {
+    if (!commandParams.title?.trim()) {
+      return ctx.commands.reject({ code: "missing-title", reason: "Supply a ticket title." });
+    }
+    return ctx.commands.continue();
   },
 });
+
+export default defineExtension({ middlewares: [requireTitle] });
 ```
 
-For recurring planner automation, define an ordinary extension command and bind
-it through `schedules`; keep event-driven behavior in `hooks`. Use extension
-settings for project policy and extension storage only for durable reconciliation
-state.
+Middleware may continue, reject, patch parameters, or replace the invocation.
+It does not call a `next` handler. Prefer a provider's exported command ref when
+one is available so its parameter and result types stay connected to the provider.
+
+## React to lifecycle events
+
+Use exported event refs and `defineHook`. Hooks observe accepted changes and
+cannot reject the operation that emitted an event.
+
+```ts
+import { defineExtension, defineHook, sessionEvents, workspaceEvents } from "@pstdio/sdk/extensions";
+
+const recordWorkspace = defineHook({
+  id: "record-created-workspace",
+  event: workspaceEvents.created,
+  async run(ctx, event) {
+    await ctx.storage.set("lastWorkspaceId", event.workspace.id);
+  },
+});
+
+const recordSession = defineHook({
+  id: "record-started-session",
+  event: sessionEvents.started,
+  async run(ctx, event) {
+    await ctx.storage.set("lastSessionId", event.sessionId);
+  },
+});
+
+export default defineExtension({ hooks: [recordWorkspace, recordSession] });
+```
+
+Use `workspaceEvents.ready` for background setup after a local workspace is ready.
+The host awaits `workspaceEvents.provision` handlers before marking that workspace
+ready; failed provisioning prevents readiness. `worktreeEvents.removed` observes
+local worktree cleanup.
+
+Workspace activity comes from sessions and Planner's managed attempts. For ticket
+workflow automation, use Planner commands or `commandEvent(commandRef, "completed")`.
+Core ticket events and stored workspace review statuses are not part of this API.
+
+For recurring work, bind an extension command through `defineSchedule`. Use
+settings for project policy and storage for data that must survive a restart.
+See the [extension API](../api.md) for command outcomes, schedules, and context APIs.

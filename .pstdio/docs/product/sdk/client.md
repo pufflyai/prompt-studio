@@ -36,10 +36,11 @@ The client is organized by resource type:
 client.projects; // Project CRUD
 client.workspaces; // Workspace CRUD
 client.sessions; // Session CRUD, follow-up, approval, stream
-client.skills; // Skill listing (read-only)
-client.agents; // Agent configuration
+client.skills; // Skill listing and preferences
+client.agents; // Harness availability and models
 client.extensions; // Extension command execution and metadata
 client.automation; // Scoped tokens and durable automation runs
+client.notifications; // Project inbox items and resolution
 client.settings; // Global settings
 client.sync; // SSE sync helpers
 client.runtime; // Browser-session provisioning
@@ -98,7 +99,7 @@ const workspace = await client.workspaces.getByShorthand(projectId, "A0001");
 const created = await client.workspaces.create({
   project_id: projectId,
   repo_id: repoId,
-  type: "worktree",
+  provider_id: "pstdio.worktree",
 });
 await client.workspaces.delete(workspaceId);
 ```
@@ -113,9 +114,8 @@ const skill = await client.skills.get(projectId, skillId);
 ## Agents
 
 ```ts
-const agents = await client.agents.list();
-const info = await client.agents.info();
-await client.agents.setup({ agent_id: "claude-code" });
+const agents = await client.agents.info({ project: projectId });
+const models = await client.agents.models("claude-code");
 ```
 
 ## Extension-Owned Planner Tickets
@@ -132,27 +132,39 @@ Programmatic callers can execute planner commands through the extension command
 API when they need direct command results:
 
 ```ts
-await client.extensions.execute("pstdio-planner.list-tickets", {
+const response = await client.extensions.execute("pstdio.pstdio-planner.command.list-tickets", {
   projectId,
   params: {},
 });
+
+if (response.outcome.status === "success") {
+  console.log(response.outcome.value);
+}
 ```
+
+Discover qualified IDs with `client.extensions.listCommands(projectId)`. HTTP
+success returns a command outcome; inspect its status before reading its value.
 
 ## Connections and remote automation
 
 Runtime-authenticated clients configure named extension connections. The secret is sent only when it is created or replaced and is never returned by list calls.
 
+These examples assume your enabled `acme.remote` extension declares a
+`control-plane` connection and a `launch` command with `automation: true` and a
+`ticketId` parameter. Replace those names with your provider's contract. Planner's
+normal workflow commands do not opt into remote automation automatically.
+
 ```ts
-await client.extensions.configureConnection(projectId, "pstdio.remote", "control-plane", {
+await client.extensions.configureConnection(projectId, "acme.remote", "control-plane", {
   baseUrl: "https://control.example.com",
   secret: process.env.REMOTE_CONTROL_TOKEN,
 });
-const checked = await client.extensions.checkConnection(projectId, "pstdio.remote", "control-plane");
+const checked = await client.extensions.checkConnection(projectId, "acme.remote", "control-plane");
 
 const issued = await client.automation.issueToken({
   name: "notion-trigger",
   projectId,
-  commandScopes: ["pstdio.planner.command.start-attempt"],
+  commandScopes: ["acme.remote.command.launch"],
   expiresInSeconds: 30 * 24 * 60 * 60,
 });
 ```
@@ -164,7 +176,7 @@ const replacement = await client.automation.issueToken({
   name: "notion-trigger-rotated",
   projectId,
   principalId: issued.principalId,
-  commandScopes: ["pstdio.planner.command.start-attempt"],
+  commandScopes: ["acme.remote.command.launch"],
   expiresInSeconds: 30 * 24 * 60 * 60,
 });
 ```
@@ -174,7 +186,7 @@ Create a second client with the returned machine token. That client can call its
 ```ts
 const machine = createClient({ baseUrl, token: issued.token });
 const run = await machine.automation.createRun(projectId, "notion-page-123-revision-7", {
-  commandId: "pstdio.planner.command.start-attempt",
+  commandId: "acme.remote.command.launch",
   input: { params: { ticketId: "PS-294" } },
 });
 ```
@@ -196,14 +208,8 @@ try {
 }
 ```
 
-## Testing
+## Client reference
 
-Use the `fetch` option to mock the HTTP layer:
-
-```ts
-const mockFetch = (url, init) => {
-  return Promise.resolve(new Response(JSON.stringify([]), { status: 200 }));
-};
-
-const client = createClient({ baseUrl: "http://test", fetch: mockFetch });
-```
+The `fetch` option accepts a replacement compatible with the runtime's `typeof fetch`.
+See the [method reference](../../references/sdk/reference.md) for all client groups
+and links to their current request and response types.

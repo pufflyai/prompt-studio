@@ -5,8 +5,9 @@ They organize planner tickets, but they are not core API tables and they are not
 exposed as `/v1/projects/:id/statuses` or `/v1/projects/:id/ticket-tags`
 endpoints.
 
-Core pstdio still owns projects, repos, workspaces, sessions, templates, skills,
-agents, files, and extension runtime state. Planner stores ticket workflow data
+Core pstdio owns projects, repos, workspaces, sessions, skills,
+agents, files, and extension runtime state. Templates are extension contributions.
+Planner stores ticket workflow data
 in extension storage and exposes it through planner commands.
 
 ## Statuses
@@ -19,18 +20,18 @@ Default statuses:
 | Name        | Color | Default | Notes                                  |
 | ----------- | ----- | ------- | -------------------------------------- |
 | Backlog     | gray  | yes     | Default status for new tickets         |
-| Ready       | teal  | no      | Ready to be worked on                  |
+| Todo        | purple | no     | Ready to be worked on                  |
 | In Progress | blue  | no      | Agent/user work is active              |
 | Blocked     | red   | no      | Waiting on an external dependency      |
-| In Review   | amber | no      | Workspace review is active or complete |
+| In Review   | yellow | no     | Workspace review is active or complete |
 | Done        | green | no      | Completed work                         |
 
 Planner automation updates statuses during ticket workflows:
 
-1. Starting an implementation session moves the ticket to `In Progress`.
-2. Marking a workspace `review-ready` starts a review session.
-3. Marking all linked active workspaces `reviewed` moves the ticket to
-   `In Review`.
+Planner derives ticket status from its managed attempts. Active implementation
+moves a ticket to `In Progress`; submitted revisions and review work contribute
+to `In Review`. Workspace records do not store review statuses. See
+[managed attempts](attempts.md) for precedence and the `Review Needed` handoff.
 
 ## Tags
 
@@ -42,28 +43,29 @@ Default tags:
 
 | Tag Name     | Type            | Options                                    |
 | ------------ | --------------- | ------------------------------------------ |
-| `label`      | `single_select` | `bug`, `feature`, `documentation`, `chore` |
-| `complexity` | `single_select` | `low`, `medium`, `high`                    |
-| `priority`   | `single_select` | `P1`, `P2`, `P3`                           |
+| `Type`       | `single_select` | `Bug`, `Feature`, `Chore` |
+| `Complexity` | `single_select` | `Simple`, `Moderate`, `Complex` |
+| `Priority`   | `single_select` | `Low`, `Medium`, `High`, `Urgent` |
+| `Flags`      | `multi_select` | `Review Needed` |
 
 ## Management
 
 The dashboard Project Settings panels for ticket statuses and ticket tags call
 planner extension commands:
 
-- `pstdio-planner.ticket-status.read`
-- `pstdio-planner.ticket-status.create`
-- `pstdio-planner.ticket-status.update`
-- `pstdio-planner.ticket-status.delete`
-- `pstdio-planner.ticket-status.set-default`
-- `pstdio-planner.ticket-status.reorder`
-- `pstdio-planner.ticket-tag.read`
-- `pstdio-planner.ticket-tag.create`
-- `pstdio-planner.ticket-tag.update`
-- `pstdio-planner.ticket-tag.delete`
-- `pstdio-planner.ticket-tag.create-option`
-- `pstdio-planner.ticket-tag.update-option`
-- `pstdio-planner.ticket-tag.delete-option`
+- `pstdio.pstdio-planner.command.ticket-status.read`
+- `pstdio.pstdio-planner.command.ticket-status.create`
+- `pstdio.pstdio-planner.command.ticket-status.update`
+- `pstdio.pstdio-planner.command.ticket-status.delete`
+- `pstdio.pstdio-planner.command.ticket-status.set-default`
+- `pstdio.pstdio-planner.command.ticket-status.reorder`
+- `pstdio.pstdio-planner.command.ticket-tag.read`
+- `pstdio.pstdio-planner.command.ticket-tag.create`
+- `pstdio.pstdio-planner.command.ticket-tag.update`
+- `pstdio.pstdio-planner.command.ticket-tag.delete`
+- `pstdio.pstdio-planner.command.ticket-tag.create-option`
+- `pstdio.pstdio-planner.command.ticket-tag.update-option`
+- `pstdio.pstdio-planner.command.ticket-tag.delete-option`
 
 The CLI aliases for tickets route through the same planner command runtime.
 

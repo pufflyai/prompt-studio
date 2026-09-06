@@ -1,166 +1,51 @@
-# Resource Types
+# Resource types
 
-The SDK exports TypeScript types for core platform entities. These match the API
-response shapes exactly (snake_case field names, same nullability).
-
-Planner tickets, ticket statuses, and ticket tags are extension-owned. Their
-types live with the planner extension command contracts, not in
-`@pstdio/sdk/resources`.
-
-Import from `@pstdio/sdk/resources` or `@pstdio/sdk`.
-
-## Project
+Import product resource types from `@pstdio/sdk/resources`:
 
 ```ts
-type Project = {
-  id: string;
-  name: string;
-  shorthand: string;
-  startup_script: string | null;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-};
+import type { Project, Session, SessionStatus, Workspace } from "@pstdio/sdk/resources";
 ```
 
-## Workspace
+These types come from the API contracts. Use the exported types directly so new
+fields and status values reach callers without maintaining a separate schema.
+The [resource entry](../../../../packages/sdk/src/resources/index.ts) lists every export.
+
+| Data | Public types | Source |
+| --- | --- | --- |
+| Projects | `Project`, `Repo` | [Project](../../../../packages/sdk/src/resources/project.ts) |
+| Workspaces | `Workspace`, `WorkspaceListItem` | [Workspace](../../../../packages/sdk/src/resources/workspace.ts) |
+| Sessions | `Session`, `SessionStatus` | [Session](../../../../packages/sdk/src/resources/session.ts) |
+| Skills | `Skill`, `SkillFile`, `SkillWithContent` | [Skill](../../../../packages/sdk/src/resources/skill.ts) |
+| Agents | `AgentInfo`, `AgentAvailabilityType`, `AgentModel`, `AgentSkillsLayout` | [Agent](../../../../packages/sdk/src/resources/agent.ts) |
+| Files | `FileRecord` | [File](../../../../packages/sdk/src/resources/file.ts) |
+| Settings | `Settings` | [Settings](../../../../packages/sdk/src/resources/settings.ts) |
+
+`harnessLocalId` is the runtime helper exported from this entry. HTTP input and
+response types are available from `@pstdio/sdk/api`.
+
+Planner tickets, tags, and statuses belong to the Planner extension. Templates
+are extension package contributions. They are not core resource types exported
+by this entry.
+
+## Resource references in extensions
+
+Workbench navigation and renderer callbacks use `ResourceRef` from
+`@pstdio/sdk/extensions`. It identifies data with `type`, `id`, and optional
+presentation and ownership fields. Pass the reference intact between callbacks.
 
 ```ts
-type Workspace = {
-  id: string;
-  project_id: string;
-  name: string;
-  branch: string | null;
-  worktree_path: string | null;
-  is_default: boolean;
-  archived: boolean;
-  workspace_shorthand: string;
-  startup_log_file_id: string | null;
-  anchors_json: unknown[];
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-};
+import { resourceKey, type ResourceRef } from "@pstdio/sdk/extensions";
 
-type WorkspaceListItem = Workspace & {
-  ticket_shorthand: string | null;
+const document: ResourceRef = {
+  type: "document",
+  id: "readme",
+  extensionId: "acme.notes",
+  projectId: "project-1",
+  label: "README",
 };
+const identity = resourceKey(document);
 ```
 
-## Session
-
-```ts
-type SessionStatus =
-  | "queued"
-  | "in_progress"
-  | "awaiting_input"
-  | "completed"
-  | "failed"
-  | "cancelled"
-  | "disconnected";
-
-type Session = {
-  id: string;
-  project_id: string | null;
-  title: string;
-  status: SessionStatus;
-  archived: boolean;
-  created: string | null;
-  last_request_started: string | null;
-  last_request_ended: string | null;
-  agent: string | null;
-  agent_session_id: string | null;
-  session_file_id: string | null;
-  original_session_id: string | null;
-  cwd: string | null;
-  created_at: string;
-  updated_at: string;
-};
-```
-
-## Template
-
-```ts
-type TemplateType = "prompt" | "ticket" | "document";
-
-type Template = {
-  id: string;
-  project_id: string | null;
-  name: string;
-  template_type: string;
-  file_id: string;
-  is_default: boolean;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-};
-
-type TemplateWithContent = Template & { content: string };
-```
-
-## Skill
-
-```ts
-type SkillFile = {
-  path: string;
-  content: string;
-  encoding: "utf8";
-};
-
-type Skill = {
-  id: string;
-  project_id: string;
-  name: string;
-  description: string;
-  files: SkillFile[];
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-};
-
-type SkillWithContent = Skill & {
-  bundled_version: string;
-  installed_agents: string[];
-};
-```
-
-Notes:
-
-- `files` is an ordered file-tree payload relative to the skill root.
-- `SKILL.md` is the required entrypoint file for valid skills.
-
-## Agent
-
-```ts
-type AgentConfig = {
-  id: string;
-  agent_id: string;
-  is_default: boolean;
-  config: string;
-  created_at: string;
-  updated_at: string;
-};
-
-type AgentInfo = {
-  id: string;
-  name: string;
-  availability: { type: "INSTALLED" | "NOT_FOUND" };
-};
-```
-
-## File
-
-```ts
-type FileRecord = {
-  id: string;
-  project_id: string;
-  file_name: string;
-  file_kind: string;
-  storage_path: string;
-  mime_type: string | null;
-  size_bytes: number;
-  hash: string | null;
-  created_at: string;
-  updated_at: string;
-};
-```
+`resourceKey` uses extension ID, project ID, type, and ID. Labels and metadata do
+not affect identity. URI conversion belongs to host routing and persistence.
+See the [composition cookbook](../../extensions/cookbook.md) for page and panel targets.

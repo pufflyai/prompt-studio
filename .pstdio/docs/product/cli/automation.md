@@ -2,13 +2,18 @@
 
 Remote tools call only extension commands that opt in with `automation: true`. A machine token is limited to one project, an exact list of command ids, and an expiry time.
 
+These examples assume your enabled `acme.remote` extension provides a `launch`
+command with `automation: true` and a `ticketId` parameter. Replace that command
+ID with your provider's published ID. Planner's normal workflow commands do not
+opt into remote automation automatically.
+
 Issue a token with the normal Prompt Studio runtime credential:
 
 ```sh
 pst auth tokens issue \
   --name notion-ticket-trigger \
   --project project-id \
-  --command pstdio.planner.command.start-attempt \
+  --command acme.remote.command.launch \
   --expires-in 30d
 ```
 
@@ -21,7 +26,7 @@ pst auth tokens issue \
   --name notion-ticket-trigger-rotated \
   --project project-id \
   --principal principal-id \
-  --command pstdio.planner.command.start-attempt \
+  --command acme.remote.command.launch \
   --expires-in 30d
 ```
 
@@ -34,7 +39,7 @@ export PSTDIO_AUTOMATION_TOKEN='pst_at_...'
 
 pst automation run \
   --project project-id \
-  --command pstdio.planner.command.start-attempt \
+  --command acme.remote.command.launch \
   --idempotency-key notion-page-123-revision-7 \
   --input '{"params":{"ticketId":"PS-294"}}'
 ```

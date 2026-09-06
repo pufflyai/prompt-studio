@@ -18,8 +18,9 @@ A placement's `item` decides its lifecycle:
 - A static item (`kind: "view"`) has one instance and declares a `presence`: `"fixed"` placements always show and
   cannot close, `"open"` placements start open and the user may close them, `"closed"` placements stay hidden until an
   action or the Add panel opens them. A saved user choice wins over `"open"` and `"closed"` on the next visit.
-- A resource item (`kind: "resource"`) has one instance per opened resource. It declares a `cardinality` and has no
-  initial visibility: nothing shows until an action supplies a resource.
+- A resource item uses `kind: "binding"` and `binding: { kinds, view, cardinality, add? }`.
+  `cardinality: "one"` rebinds one instance; `"many"` retains independent resource instances.
+  It has no initial visibility: nothing shows until an action supplies a resource.
 
 Opening always goes through the shared navigation executor. `workbench.navigation.openPage(...)` navigates to a page,
 and `workbench.navigation.openPanel(...)` opens or activates a declared placement.

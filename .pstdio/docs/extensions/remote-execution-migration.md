@@ -1,6 +1,7 @@
 # Migrate an extension to remote execution
 
-Use the reference in `examples/remote-execution-extension` as the starting point.
+Start with the [connection, workspace provider, and harness contracts](api.md)
+and the [remote execution architecture](../architecture/remote-execution-and-automation.md).
 
 1. Declare a named connection with exact methods and path prefixes. Add a fixed health-check path when the service supports one.
 2. Move credentials out of extension settings, environment variables, repository files, webviews, and subprocesses. Configure them through the extension's Connections settings.

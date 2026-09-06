@@ -7,7 +7,8 @@ import source from "../region-map/module.tsx?raw";
 # 12. Choose the correct workbench region
 
 The area map shows every supported placement region at once. Use it to choose an API target, not as a product layout.
-Most extensions need only `main`, `sidenav`, `secondary`, or `side`.
+Extension panels use `main`, `secondary`, or `side`. Extensions contribute Sidenav content with navigation items
+and trees, or replace it through mode chrome. Host APIs can address additional regions shown here.
 
 The Activity Bar is the narrow strip at the far left. Panel menus are attached to the left and right edges of Main,
 Secondary, and Side. They collapse into **Open … menu** buttons when a panel is narrow. Drag a visible menu's resize

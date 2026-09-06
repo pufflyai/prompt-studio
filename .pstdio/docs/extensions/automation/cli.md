@@ -20,8 +20,12 @@ Use extension command middleware for operations that may reject a command before
 
 Common lifecycle events include:
 
-- ticket created, updated, archived, and deleted
-- worktree created
-- session started, resumed, completed, failed, or awaiting input
+- project, workspace, and worktree lifecycle events
+- session lifecycle events
+- command lifecycle events, including Planner commands
+
+Ticket and attempt state belong to the Planner extension; there are no core
+ticket lifecycle events. Use typed refs from `@pstdio/sdk/extensions` and
+register handlers with `defineHook`.
 
 See the SDK extension types for the current event and middleware contracts.
