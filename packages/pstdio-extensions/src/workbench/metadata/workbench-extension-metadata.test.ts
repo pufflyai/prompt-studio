@@ -221,7 +221,7 @@ describe("createWorkbenchExtensionMetadata pages", () => {
       path: "tickets",
       mode: workbenchModes.project,
       slots: [
-        { id: "list", role: "primary", region: "main", view: view.ref },
+        { id: "list", role: "primary", region: "main", view: view.ref, subPanelsOnly: true },
         { id: "tools", role: "auxiliary", region: "side", view: view.ref, presence: "open" },
       ],
     });
@@ -255,7 +255,12 @@ describe("createWorkbenchExtensionMetadata pages", () => {
       id: "pstdio.lab.page.tickets",
       mode: { extensionId: "pstdio", kind: "mode", id: "project" },
       slots: [
-        { id: "list", role: "primary", view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" } },
+        {
+          id: "list",
+          role: "primary",
+          view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" },
+          subPanelsOnly: true,
+        },
         { id: "tools", role: "auxiliary", view: { extensionId: "pstdio.lab", kind: "view", id: "tickets" } },
       ],
     });

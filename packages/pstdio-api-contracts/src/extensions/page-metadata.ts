@@ -24,6 +24,7 @@ const primarySlotSchema = z.union([
     .extend({
       role: z.literal("primary"),
       region: z.literal("main"),
+      subPanelsOnly: z.boolean().optional(),
       view: viewRefSchema,
     })
     .strict(),
@@ -31,6 +32,7 @@ const primarySlotSchema = z.union([
     .extend({
       role: z.literal("primary"),
       region: z.literal("main"),
+      subPanelsOnly: z.boolean().optional(),
       binding: bindingSchema,
     })
     .strict(),

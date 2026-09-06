@@ -4,6 +4,7 @@ import { Workbench } from "@pstdio/workbench/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { dashboardQueryClient } from "@/lib/query-client";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -157,6 +158,19 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const ChangesSelected: Story = { args: { state: "diffs" } };
+
+export const ClosePanelsIndependently: Story = {
+  args: { state: "diffs" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(await canvas.findByRole("button", { name: "Close Changes" }));
+    await expect(canvas.getByRole("tab", { name: "Files" })).toBeVisible();
+    await expect(canvas.getByRole("tab", { name: "Files" })).toHaveAttribute("aria-selected", "true");
+    await userEvent.click(canvas.getByRole("button", { name: "Close Files" }));
+    await expect(canvas.getByText("No open panels")).toBeVisible();
+    await expect(canvas.getByRole("button", { name: "Add panel" })).toBeVisible();
+  },
+};
 
 export const FilesNoSelection: Story = { args: { state: "files" } };
 

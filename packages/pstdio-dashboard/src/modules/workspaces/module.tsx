@@ -1,4 +1,5 @@
 import { workbenchPages } from "@pstdio/sdk/extensions";
+import { EmptyState } from "@pstdio/ui";
 import type { TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { WORKBENCH_TERMINAL_PANEL_SIZE } from "@pstdio/workbench/react";
@@ -60,6 +61,14 @@ const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContext) => {
 
 const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
   registerWorkspaceFileContributions(ctx);
+  ctx.views.registerView({
+    id: dashboardWidgetIds.workspace,
+    title: "Workspace",
+    body: {
+      kind: "react",
+      render: () => <EmptyState title="No open panels" description="Use Add panel to open Files or Changes." />,
+    },
+  });
   ctx.views.registerView({
     id: dashboardWidgetIds.createWorkspace,
     title: "Create workspace",
@@ -142,12 +151,22 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
         id: "content",
         role: "primary",
         region: "main",
-        binding: { resourceKinds: ["workspace"], viewId: dashboardWidgetIds.workspaceDiffs, cardinality: "many" },
+        subPanelsOnly: true,
+        binding: { resourceKinds: ["workspace"], viewId: dashboardWidgetIds.workspace, cardinality: "many" },
+      },
+      {
+        id: "changes",
+        role: "auxiliary",
+        region: "main",
+        order: 1,
+        binding: { resourceKinds: ["workspace"], viewId: dashboardWidgetIds.workspaceDiffs, cardinality: "one" },
+        openOn: "page-resource",
       },
       {
         id: "files",
         role: "auxiliary",
         region: "main",
+        order: 2,
         binding: { resourceKinds: ["workspace"], viewId: dashboardWidgetIds.workspaceFiles, cardinality: "one" },
         openOn: "page-resource",
       },

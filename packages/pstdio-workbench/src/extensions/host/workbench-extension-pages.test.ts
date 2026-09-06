@@ -50,6 +50,49 @@ const metadata = {
 } satisfies WorkbenchExtensionMetadata;
 
 describe("extension page registration", () => {
+  test("keeps an extension page open as its Main panels close independently", () => {
+    const workbench = createWorkbench();
+    const registration = registerWorkbenchExtensionContributions({
+      executeCommand: () => undefined,
+      metadata: {
+        ...metadata,
+        pages: [
+          {
+            ...metadata.pages[0],
+            slots: [
+              { ...metadata.pages[0].slots[0], subPanelsOnly: true },
+              ...["files", "changes"].map((id) => ({
+                id,
+                role: "auxiliary" as const,
+                region: "main" as const,
+                view: metadata.pages[0].slots[0].view,
+                presence: "open" as const,
+              })),
+            ],
+          },
+        ],
+      },
+      projectId: "project-1",
+      workbench,
+    });
+    workbench.pageLocations.setProject("project-1");
+    expect(
+      workbench.pageLocations.navigate({ kind: "page", page: { extensionId, kind: "page", id: "review" } }).ok,
+    ).toBe(true);
+    const location = workbench.pages.store.getState().location;
+    for (const slotId of ["changes", "files"]) {
+      const active = workbench.layout.getActivePanel("main")!;
+      const placement = workbench.layout
+        .getLayout()
+        .regions.main.widgets.find((item) => item.widgetId === active.instanceId)!;
+      expect(placement.placementIdentity).toMatchObject({ slotId });
+      expect(workbench.pageLocations.closePlacement(placement.placementIdentity!).ok).toBe(true);
+      expect(workbench.pages.store.getState().location).toEqual(location);
+    }
+    expect(workbench.layout.getLayout().regions.main.widgets).toHaveLength(1);
+    registration.dispose();
+  });
+
   test("registers normalized pages in the shared workbench registry", () => {
     const workbench = createWorkbench();
     const registration = registerWorkbenchExtensionContributions({

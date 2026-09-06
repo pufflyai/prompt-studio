@@ -51,6 +51,7 @@ const pageSlot = (slot: MetadataPageSlot, input: PageSlotInput): WorkbenchPageSl
       id: slot.id,
       role: "primary",
       region: "main",
+      ...(slot.subPanelsOnly === undefined ? {} : { subPanelsOnly: slot.subPanelsOnly }),
       ...("binding" in slot ? { binding: slotBinding(slot.binding, input) } : { viewId: metadataRefId(slot.view) }),
       ...slotPresentation(slot, input),
     };

@@ -1,6 +1,10 @@
 import type { ResourceRef as PageResourceRef } from "@pstdio/sdk/extensions";
 import type { LayoutModel, WorkbenchRegion } from "../../registries/layout/layout-model";
-import { createPlacement } from "../../registries/layout/layout-operations";
+import {
+  activateInLayout,
+  createPlacement,
+  getActiveLocationPlacement,
+} from "../../registries/layout/layout-operations";
 import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import {
   applyOwnedWidgetLayoutReconciliation,
@@ -101,6 +105,19 @@ const applyPageState = (
         ...layoutInput,
         remove: latest.reconciliation.remove.map((placement) => placement.identity),
       });
+    }
+    const location = getActiveLocationPlacement(layout);
+    if (
+      location &&
+      layout.regions.main.activeWidgetId === location.widgetId &&
+      input.layout.getWidget(location.contributionId)?.subPanelsOnly
+    ) {
+      const panel = layout.regions.main.widgets.find(
+        (placement) =>
+          placement.role === "sub-panel" &&
+          (!placement.ownerResourceUri || placement.ownerResourceUri === location.resourceUri),
+      );
+      if (panel) layout = activateInLayout(layout, "main", panel);
     }
     input.layout.restoreLayout(layout);
     syncOwnedPanelMenus(input.layout);

@@ -35,7 +35,8 @@ const isSlotContent = (value: Record<string, unknown>) => {
         ? isRef(value.view, "view") && value.binding === undefined
         : isPageSlotBinding(value.binding)) &&
       value.presence === undefined &&
-      value.openOn === undefined
+      value.openOn === undefined &&
+      (value.subPanelsOnly === undefined || typeof value.subPanelsOnly === "boolean")
     );
   }
   if (value.view !== undefined) {

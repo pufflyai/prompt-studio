@@ -39,6 +39,7 @@ const slotRecord = (slot: RuntimePageSlot, extensionId: string): MetadataPageSlo
       ...base,
       role: "primary",
       region: "main",
+      subPanelsOnly: slot.subPanelsOnly,
       ...(slot.binding
         ? { binding: bindingRecord(slot.binding, extensionId) }
         : { view: normalizedRef(slot.view!, extensionId) }),

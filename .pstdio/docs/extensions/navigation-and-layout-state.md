@@ -47,6 +47,11 @@ A static page declares a primary `view`. A resource page declares a primary `bin
 resource when opened. Use separate pages for a list and its details, with the list as the detail page's
 `parent`. Both pages can share a mode. Put panels that must stay mounted across them in that mode.
 
+A primary slot can set `subPanelsOnly: true` when its page presents independent Main auxiliary panels.
+The primary keeps the routed resource but has no tab. Its view supplies the empty state after all
+Main auxiliary panels close. The workbench activates an available auxiliary panel and keeps its
+tab and Close button visible, including when only one panel remains. Add panel reopens closed panels.
+
 By default, every panel hides its tab strip when only one tab is open,
 including closable auxiliary panels. Set `alwaysShowTabs` to keep a lone tab and its Close button
 visible. Header actions and detach controls remain available without tabs. An attached Side Panel

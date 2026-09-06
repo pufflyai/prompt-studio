@@ -44,6 +44,8 @@ interface PageSlotBase extends PlacementPresentation {
 interface PagePrimarySlotBase extends Omit<PageSlotBase, "region"> {
   readonly role: "primary";
   readonly region: "main";
+  /** Hide the primary tab and show its view only when no Main auxiliary panel is open. */
+  readonly subPanelsOnly?: boolean;
 }
 
 export type PagePrimarySlot = PagePrimarySlotBase &
