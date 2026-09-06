@@ -631,6 +631,47 @@ const result = await ctx.workspaces.removeWorktree(workspaceId);
 return { removed: result.removed };
 ```
 
+## Add resource actions to a tree row
+
+Declare the resource represented by a row separately from the page it opens. The host resolves that resource's
+registered menu actions, so a tree does not need its own copy of ticket or workspace actions.
+
+```ts
+const resource = { type: "ticket", id: ticket.id, label: ticket.title };
+const node: TreeNode = {
+  id: ticket.id,
+  label: ticket.title,
+  resource,
+  target: { kind: "page", page: ticketPage.ref, resource },
+};
+```
+
+Here `TreeNode` is imported from `@pstdio/sdk/extensions`, and `ticketPage` is the extension's declared page.
+Include the page's declared parent in the target when it requires one.
+
+For a file displayed inside a ticket page, the destination and action subject differ. Keep the ticket page
+target and supply commands that receive the specific file IDs:
+
+```ts
+const node: TreeNode = {
+  id: file.id,
+  label: file.name,
+  target: ticketDocumentTarget,
+  contextMenuActions: [
+    {
+      id: "delete",
+      label: "Delete",
+      command: deleteTicketFileCommand.ref,
+      params: { ticketId: ticket.id, fileId: file.id },
+    },
+  ],
+};
+```
+
+`ticketDocumentTarget` opens the ticket page with the selected document. Omitting a ticket resource from this file
+row prevents ticket operations from appearing in its menu. Opening the menu does not navigate. The action still
+uses the clicked file when another document is active. Actions with input fields use the standard parameter dialog.
+
 ## Validate An Extension
 
 After updating the SDK across a breaking API change, update `pstdio-skills` from the same release

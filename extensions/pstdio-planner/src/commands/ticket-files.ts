@@ -1,13 +1,11 @@
 import {
   defineCommand,
   type ExtensionContextBase,
-  type ExtensionWorkspace,
   params,
   type RendererContext,
   type TreeAction,
   type TreeNode,
   type TreeViewSection,
-  workbenchPages,
 } from "@pstdio/sdk/extensions";
 
 import { statusesCollection, ticketsCollection } from "../data/collections";
@@ -15,17 +13,13 @@ import { selectedDocumentFromResource } from "../data/document-selection";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "../data/file-operations";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON, ticketDisplayTitle } from "../data/mappers";
 import { ticketPageTarget } from "../data/ticket-page-target";
-import {
-  linkedResourceParentMetadata,
-  type TicketResourceReference,
-  ticketResourceReference,
-} from "../data/ticket-resource-hierarchy";
+import { linkedResourceParentMetadata, ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import { isWorkspaceLinkedToTicket } from "../data/workspace-ticket-link";
 import { plannerTicketsChanged } from "../events";
 import { isImageAttachment } from "../utils/is-image-attachment";
-import { createWorkspaceCommand } from "./ticket-actions";
 import { buildSessionsSection } from "./ticket-sessions-tree";
 import { buildSubTicketsSection } from "./ticket-sub-tickets-tree";
+import { buildWorkspacesSection } from "./ticket-workspaces-tree";
 
 const ticketResourceKind = { extensionId: "pstdio.pstdio-planner", kind: "resource-kind", id: "ticket" } as const;
 
@@ -66,85 +60,6 @@ const emptyFilesSection = (): TreeViewSection => ({
   label: "Files",
   collapsible: true,
   nodes: [emptyFilesNode()],
-});
-
-// Prefer the (renamable) workspace name so the sidenav reflects renames; the immutable
-// shorthand is only a fallback. The tree re-runs on workspace collection changes, so the
-// label updates as soon as a rename streams back.
-const workspaceLabel = (workspace: ExtensionWorkspace) =>
-  workspace.name ?? workspace.workspace_shorthand ?? workspace.id;
-
-// Canonical edge from a linked workspace to the ticket resource that owns it.
-type LinkedWorkspaceMetadata = {
-  resourceParent: TicketResourceReference;
-};
-
-const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMetadata): TreeNode => {
-  const label = workspaceLabel(workspace);
-  const workspaceMetadata = {
-    workspaceId: workspace.id,
-    ...(workspace.workspace_shorthand ? { workspaceShorthand: workspace.workspace_shorthand } : {}),
-    workspaceType: workspace.worktree_path ? "worktree" : "current_branch",
-    ...ticket,
-  };
-
-  return {
-    id: `workspace-${workspace.id}`,
-    label,
-    icon: "GitBranch",
-    target: {
-      kind: "page",
-      page: workbenchPages.workspace,
-      resource: { type: "workspace", id: workspace.id, label, metadata: workspaceMetadata },
-      parent: ticketPageTarget(ticket.resourceParent),
-    },
-  };
-};
-
-const workspaceActivityAt = (workspace: ExtensionWorkspace) => workspace.updated_at ?? workspace.created_at ?? "";
-
-const createWorkspaceTreeActionParams = {
-  repo: createWorkspaceCommand.params!.repo,
-  mode: createWorkspaceCommand.params!.mode,
-};
-
-const workspaceSectionActions = (ticketId: string): TreeAction[] => [
-  {
-    id: "create-workspace",
-    label: "Create workspace",
-    icon: "Plus",
-    command: createWorkspaceCommand.ref,
-    params: { ticket: ticketId },
-    input: createWorkspaceTreeActionParams,
-  },
-];
-
-const workspaceNodes = (workspaces: ExtensionWorkspace[], ticket: LinkedWorkspaceMetadata) =>
-  [...workspaces]
-    .sort((a, b) => {
-      const activityOrder = workspaceActivityAt(b).localeCompare(workspaceActivityAt(a));
-      return activityOrder !== 0 ? activityOrder : workspaceLabel(a).localeCompare(workspaceLabel(b));
-    })
-    .map((workspace) => workspaceNode(workspace, ticket));
-
-const emptyWorkspacesNode = (): TreeNode => ({
-  id: "workspaces-empty",
-  label: "No workspaces",
-  icon: "GitBranch",
-  disabled: true,
-  rowVariant: "empty-state",
-});
-
-const workspacesSection = (
-  workspaces: ExtensionWorkspace[],
-  ticketId: string,
-  ticket: LinkedWorkspaceMetadata,
-): TreeViewSection => ({
-  id: "workspaces",
-  label: "Workspaces",
-  collapsible: true,
-  actions: workspaceSectionActions(ticketId),
-  nodes: workspaceNodes(workspaces, ticket).concat(workspaces.length === 0 ? [emptyWorkspacesNode()] : []),
 });
 
 const selectedTicketId = (ctx: { resource?: { type?: string; id?: string } }, commandParams: { ticketId?: string }) =>
@@ -285,6 +200,7 @@ export const listTicketFilesTree = async (
         id: TICKET_BODY_ID,
         label: ticketDisplayTitle(ticket),
         icon: TICKET_RESOURCE_ICON,
+        resource: ticketResource,
         target: selectTarget(TICKET_BODY_ID),
         selected: selectedDocument === TICKET_BODY_ID,
       },
@@ -335,7 +251,7 @@ export const listTicketFilesTree = async (
     parentTicketId: ticket.id,
     statusesById,
   });
-  const linkedWorkspacesSection = workspacesSection(linkedWorkspaces, ticket.id, ticketMeta);
+  const linkedWorkspacesSection = buildWorkspacesSection(linkedWorkspaces, ticket.id, ticketMeta);
 
   // Refine / Break into sub-tickets sessions anchor themselves to the ticket; attempts belong
   // to its workspaces. The ticket shows the whole conversation history either way.
