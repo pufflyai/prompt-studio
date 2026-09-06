@@ -34,7 +34,7 @@ const createProject = async (request: import("@playwright/test").APIRequestConte
   return (await response.json()) as { id: string };
 };
 
-test("PS-169 opens the active Session tab's custom menu", async ({ page, request }) => {
+test("opens the active Session tab's custom menu", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProject(request);
   await page.addInitScript((selectedProjectId: string) => {

@@ -32,7 +32,7 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
   }, projectId);
 };
 
-test("PS-299 returns to a resource's parent after deleting the open resource", async ({ page, request }) => {
+test("returns to a resource's parent after deleting the open resource", async ({ page, request }) => {
   const project = await createProject(request);
   await waitForPlanner(request, project.id);
   const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);

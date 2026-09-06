@@ -55,7 +55,7 @@ const dragPanelToRawSize = async (
   await page.mouse.up();
 };
 
-test("PS-165 starts the Secondary Panel closed and preserves that state after refresh", async ({ page, request }) => {
+test("starts the Secondary Panel closed and preserves that state after refresh", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProject(request);
   await bypassOnboarding(page, project.id);
@@ -76,7 +76,7 @@ test("PS-165 starts the Secondary Panel closed and preserves that state after re
   await expect(page.getByRole("region", { name: "Secondary Panel" })).not.toBeVisible();
 });
 
-test("PS-165 resizes, drag-closes, and restores the live Secondary Panel", async ({ page, request }) => {
+test("resizes, drag-closes, and restores the live Secondary Panel", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProject(request);
   await bypassOnboarding(page, project.id);
@@ -146,7 +146,7 @@ test("PS-165 resizes, drag-closes, and restores the live Secondary Panel", async
   expect(await terminalNode!.evaluate((element) => element.isConnected)).toBe(true);
 });
 
-test("PS-165 restores terminal tabs and opens a unique tab after refresh", async ({ page, request }) => {
+test("restores terminal tabs and opens a unique tab after refresh", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProject(request);
   await bypassOnboarding(page, project.id);
@@ -193,7 +193,7 @@ test("PS-165 restores terminal tabs and opens a unique tab after refresh", async
   await expect(terminalTabs.nth(3)).toHaveAttribute("aria-selected", "true");
 });
 
-test("PS-165 accepts input after rapidly opening five terminal sessions", async ({ page, request }) => {
+test("accepts input after rapidly opening five terminal sessions", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProject(request);
   await bypassOnboarding(page, project.id);

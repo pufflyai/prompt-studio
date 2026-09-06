@@ -44,7 +44,7 @@ const setSessionStatus = async (request: APIRequestContext, sessionId: string, s
   expect(res.ok()).toBe(true);
 };
 
-test.describe("PS-24 session status on ticket workspace badges", () => {
+test.describe("session status on ticket workspace badges", () => {
   const repoDirs: string[] = [];
 
   test.afterAll(() => {

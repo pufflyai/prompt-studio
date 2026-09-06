@@ -28,7 +28,7 @@ const runTerminalCommand = async (page: import("@playwright/test").Page, command
   await expect(page.locator(".xterm:visible .xterm-rows")).toContainText(output);
 };
 
-test("PS-232 keeps HTTP same-origin and opens terminals through the runtime WebSocket endpoint", async ({
+test("keeps HTTP same-origin and opens terminals through the runtime WebSocket endpoint", async ({
   baseURL,
   page,
   request,

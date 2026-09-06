@@ -45,7 +45,7 @@ const expectDashboardAttachedBounds = async (page: import("@playwright/test").Pa
   expectNear(sideBox!.x + sideBox!.width, 1280);
 };
 
-test("PS-168 closes and keyboard-restores the same full-height Side Panel", async ({ page, request }) => {
+test("closes and keyboard-restores the same full-height Side Panel", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProject(request);
   const ticket = await createPlannerTicket(request, apiBase, project.id, { content: "Inspect Side Panel geometry" });

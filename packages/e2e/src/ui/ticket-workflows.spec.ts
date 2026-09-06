@@ -75,7 +75,7 @@ const openTicket = async (page: Page, projectId: string) => {
   await expect(page.getByTestId("content-editable").first()).toContainText("Check navigation and actions.");
 };
 
-test("PS-326 refreshes ticket files and allows archiving and deleting linked workspaces", async ({ page, request }) => {
+test("refreshes ticket files and allows archiving and deleting linked workspaces", async ({ page, request }) => {
   const fixture = await createFixture(request, page);
   try {
     const workspaces = [];
@@ -130,7 +130,7 @@ test("PS-326 refreshes ticket files and allows archiving and deleting linked wor
   }
 });
 
-test("PS-326 opens ticket action sessions and hides the lone Sessions page tab", async ({ page, request }) => {
+test("opens ticket action sessions and hides the lone Sessions page tab", async ({ page, request }) => {
   const fixture = await createFixture(request, page);
   try {
     await openTicket(page, fixture.project.id);

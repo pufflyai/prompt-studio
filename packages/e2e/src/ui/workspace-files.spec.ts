@@ -16,7 +16,7 @@ import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-a
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 
-test("PS-118 browses and edits workspace files, then refreshes the lazy diff", async ({ page, request, context }) => {
+test("browses and edits workspace files, then refreshes the lazy diff", async ({ page, request, context }) => {
   test.slow();
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
@@ -162,7 +162,7 @@ test("PS-118 browses and edits workspace files, then refreshes the lazy diff", a
   }
 });
 
-test("PS-118 browses and edits files in the default workspace", async ({ page, request }) => {
+test("browses and edits files in the default workspace", async ({ page, request }) => {
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
     data: { name: "PS-118 Default Workspace Files" },
   });

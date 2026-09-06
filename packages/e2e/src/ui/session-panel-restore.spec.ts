@@ -54,7 +54,7 @@ const openTicketCard = async (page: Page, ticketContent: string) => {
   await card.click();
 };
 
-test("PS-8 reuses a dashboard session tab selected again from a planner ticket", async ({ page, request }) => {
+test("reuses a dashboard session tab selected again from a planner ticket", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "PS-8 Session Tab Reuse");
   const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
@@ -102,7 +102,7 @@ test("PS-8 reuses a dashboard session tab selected again from a planner ticket",
   await expect(sessionTab).toHaveAttribute("aria-selected", "true");
 });
 
-test("PS-8 restores an attached session Side Panel and its session across refresh", async ({ page, request }) => {
+test("restores an attached session Side Panel and its session across refresh", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "PS-8 Session Panel Restore");
   const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
@@ -170,7 +170,7 @@ test("PS-8 restores an attached session Side Panel and its session across refres
   ).toBeVisible();
 });
 
-test("PS-8 keeps a closed Side Panel closed and does not reopen a session after refresh", async ({ page, request }) => {
+test("keeps a closed Side Panel closed and does not reopen a session after refresh", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "PS-8 Session Panel Restore Closed");
   const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);

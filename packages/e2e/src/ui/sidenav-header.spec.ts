@@ -89,10 +89,7 @@ const expectSidenavSections = async (
   await expect(sidenav.getByRole("tablist")).toHaveCount(0);
 };
 
-test("PS-174 removes and restores owner-scoped collections across project and session pages", async ({
-  page,
-  request,
-}) => {
+test("removes and restores owner-scoped collections across project and session pages", async ({ page, request }) => {
   test.setTimeout(45_000);
   const project = await createProject(request);
   await waitForTicketsExtension(request, project.id);
@@ -147,7 +144,7 @@ test("PS-174 removes and restores owner-scoped collections across project and se
   await expectSidenavSections(sidenav);
 });
 
-test("PS-174 customizes the Sidenav from any point and persists section visibility", async ({ page, request }) => {
+test("customizes the Sidenav from any point and persists section visibility", async ({ page, request }) => {
   test.setTimeout(45_000);
   const project = await createProject(request);
   await waitForTicketsExtension(request, project.id);
@@ -203,7 +200,7 @@ test("PS-174 customizes the Sidenav from any point and persists section visibili
   expect(resetTopEdges[0]).toBeLessThan(resetTopEdges[1]);
 });
 
-test("PS-174 renders the ticket tree inside the Sidenav resource section", async ({ page, request }) => {
+test("renders the ticket tree inside the Sidenav resource section", async ({ page, request }) => {
   test.setTimeout(45_000);
   const project = await createProject(request);
   await waitForTicketsExtension(request, project.id);
@@ -232,7 +229,7 @@ test("PS-174 renders the ticket tree inside the Sidenav resource section", async
   await expect(sidenav.getByRole("option", { name: /research/ })).toBeVisible();
 });
 
-test.describe("PS-174 Dashboard Sidenav stories", () => {
+test.describe("Dashboard Sidenav stories", () => {
   test.slow();
 
   let baseUrl: string;

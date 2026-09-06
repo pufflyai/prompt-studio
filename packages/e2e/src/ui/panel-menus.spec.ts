@@ -55,7 +55,7 @@ const _dragMenuClosed = async (page: Page, menu: Locator, separator: Locator, si
   await page.mouse.up();
 };
 
-test("PS-170 preserves browser Forward history between extension pages after refresh", async ({ page, request }) => {
+test("preserves browser Forward history between extension pages after refresh", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 History" } });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
@@ -82,7 +82,7 @@ test("PS-170 preserves browser Forward history between extension pages after ref
   await expect(page.getByText(ticket.content, { exact: true })).toBeVisible();
 });
 
-test("PS-170 keeps the project selector and Session Panel available on project home", async ({ page, request }) => {
+test("keeps the project selector and Session Panel available on project home", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 Project Chrome" } });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
@@ -99,7 +99,7 @@ test("PS-170 keeps the project selector and Session Panel available on project h
   await expect(page.getByRole("button", { name: "Open Side Panel" })).toBeVisible();
 });
 
-test("PS-170 preserves other Session tabs when selecting from New session", async ({ page, request }) => {
+test("preserves other Session tabs when selecting from New session", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 Session Sub Panels" } });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
@@ -170,7 +170,7 @@ test("PS-170 preserves other Session tabs when selecting from New session", asyn
   await expect(page.getByRole("region", { name: "Side Panel" })).toBeVisible();
 });
 
-test("PS-170 updates a New session Sub Panel in place after the first message", async ({ page, request }) => {
+test("updates a New session Sub Panel in place after the first message", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 Draft Session" } });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
@@ -206,7 +206,7 @@ test("PS-170 updates a New session Sub Panel in place after the first message", 
   await expect(page).toHaveURL(new RegExp(`/projects/${project.id}/?$`));
 });
 
-test("PS-170 hides unavailable Side Panel chrome in the Sessions Location", async ({ page, request }) => {
+test("hides unavailable Side Panel chrome in the Sessions Location", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 Empty Sessions" } });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };

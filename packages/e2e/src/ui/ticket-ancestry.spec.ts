@@ -19,7 +19,7 @@ const prepareDashboard = async (page: Page, projectId: string) => {
   }, projectId);
 };
 
-test("PS-194 shows ticket ancestry and filters by immediate parent", async ({ page, request }) => {
+test("shows ticket ancestry and filters by immediate parent", async ({ page, request }) => {
   const project = await createProject(request);
   const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
   const statusId = (statuses.find((status) => status.isDefault) ?? statuses[0])?.id;

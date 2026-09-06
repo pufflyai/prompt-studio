@@ -7,7 +7,7 @@ const workspaceResourceStoryId = "dashboard-sidenav--workspace-resource";
 const sessionModeStoryId = "dashboard-sidenav--session-mode";
 const ticketWorkspaceBackStoryId = "dashboard-sidenav--ticket-workspace-back-journey";
 
-test.describe("PS-172 workspace sessions", () => {
+test.describe("workspace sessions", () => {
   test.slow();
 
   let baseUrl: string;

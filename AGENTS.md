@@ -198,6 +198,7 @@ A pull request may contain only one migration entry. If the tools create more th
 
 ### Testing rules
 
+- Name test files and test or suite titles after the feature or behavior they cover. Do not prefix them with ticket IDs.
 - Put each test **next to the file it tests**.
 - Avoid mocks. Test real behavior when possible.
 - For a bug fix, add a test that reproduces the bug before changing the code.

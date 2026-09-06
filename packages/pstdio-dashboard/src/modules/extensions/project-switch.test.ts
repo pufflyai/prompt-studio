@@ -116,7 +116,7 @@ const createBaselineHarness = () => {
   };
 };
 
-describe("PS-183 project-switch extension refresh", () => {
+describe("project-switch extension refresh", () => {
   for (const order of ["metadata-first", "appearance-first"] as const) {
     test(`applies switched-project contributions once when ${order}`, async () => {
       const harness = createBaselineHarness();

@@ -4,7 +4,7 @@ const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 const questionPrompt = "Question follow-up test __fake_question_prompt__";
 
-test("PS-119 answers a hydrated question tool call from the session composer", async ({ page, request }) => {
+test("answers a hydrated question tool call from the session composer", async ({ page, request }) => {
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
     data: { name: "PS-119 Question Prompt" },
   });

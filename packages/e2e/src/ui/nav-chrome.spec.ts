@@ -40,7 +40,7 @@ const orderedCenters = async (locators: import("@playwright/test").Locator[]) =>
 const backgroundColor = (locator: import("@playwright/test").Locator) =>
   locator.evaluate((element) => getComputedStyle(element).backgroundColor);
 
-test("PS-167 keeps navigation and region controls in one stable Nav Chrome", async ({ page, request }) => {
+test("keeps navigation and region controls in one stable Nav Chrome", async ({ page, request }) => {
   test.setTimeout(45_000);
   await deleteAllProjects(request);
   const project = await createProject(request);
@@ -167,7 +167,7 @@ test("PS-167 keeps navigation and region controls in one stable Nav Chrome", asy
   await expect(sessionLauncher).toHaveCount(0);
 });
 
-test("PS-167 keeps the Secondary Panel closed from Workspaces until requested", async ({ page, request }) => {
+test("keeps the Secondary Panel closed from Workspaces until requested", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProject(request);
   await prepareDashboard(page, project.id);

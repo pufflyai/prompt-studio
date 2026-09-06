@@ -97,7 +97,7 @@ const expectCanonicalFrame = async (
   }
 };
 
-test("PS-166 aligns an attached Side Panel with the active Location Panel", async ({ page, request }) => {
+test("aligns an attached Side Panel with the active Location Panel", async ({ page, request }) => {
   test.setTimeout(30_000);
   await deleteAllProjects(request);
   const project = await createProject(request);
@@ -119,7 +119,7 @@ test("PS-166 aligns an attached Side Panel with the active Location Panel", asyn
   await expectCanonicalFrame(page, { sidenav: "visible", statusBar: "hidden" });
 });
 
-test("PS-166 keeps the Main Panel Header visible while the right menu is open", async ({ page, request }) => {
+test("keeps the Main Panel Header visible while the right menu is open", async ({ page, request }) => {
   test.setTimeout(30_000);
   await deleteAllProjects(request);
   const project = await createProject(request);

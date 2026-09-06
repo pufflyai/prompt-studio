@@ -99,7 +99,7 @@ const prepareDashboard = async (page: Page, projectId: string) => {
   }, projectId);
 };
 
-test("PS-256 uploads file parameters before extension command execution", async ({ page, request }) => {
+test("uploads file parameters before extension command execution", async ({ page, request }) => {
   await deleteAllProjects(request);
   const project = await createProject(request);
   const extensionRoot = createFilesExtension();

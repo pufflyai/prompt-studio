@@ -67,10 +67,7 @@ const persistHiddenLauncherAsActive = async (page: import("@playwright/test").Pa
   expect(updatedKeys.length).toBeGreaterThan(0);
 };
 
-test("PS-43 opens default and worktree terminals in their effective workspace directories", async ({
-  page,
-  request,
-}) => {
+test("opens default and worktree terminals in their effective workspace directories", async ({ page, request }) => {
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
     data: { name: "PS-43 Workspace Terminal" },
   });
@@ -103,7 +100,7 @@ test("PS-43 opens default and worktree terminals in their effective workspace di
   }
 });
 
-test("PS-43 restores the first terminal when the hidden launcher was persisted active", async ({ page, request }) => {
+test("restores the first terminal when the hidden launcher was persisted active", async ({ page, request }) => {
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
     data: { name: "PS-43 Restored Terminal" },
   });
@@ -135,7 +132,7 @@ test("PS-43 restores the first terminal when the hidden launcher was persisted a
   }
 });
 
-test("PS-296 keeps a workspace terminal in its worktree and alive when the workspace is reopened", async ({
+test("keeps a workspace terminal in its worktree and alive when the workspace is reopened", async ({
   page,
   request,
 }) => {

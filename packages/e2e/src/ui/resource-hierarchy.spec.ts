@@ -39,7 +39,7 @@ const prepareDashboard = async (page: Page, projectId: string, repoId: string) =
   );
 };
 
-test("PS-173 navigates ticket ancestry to a linked workspace and back", async ({ page, request }) => {
+test("navigates ticket ancestry to a linked workspace and back", async ({ page, request }) => {
   test.slow();
   const project = await createProject(request);
   const repoRoot = createGitRepo("pstdio-ps-173-", "resource hierarchy e2e");

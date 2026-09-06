@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
 
-test("PS-299 lists every registered keyboard shortcut", async ({ page, request }) => {
+test("lists every registered keyboard shortcut", async ({ page, request }) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: { name: "PS-299 Keyboard Shortcuts" },
   });
