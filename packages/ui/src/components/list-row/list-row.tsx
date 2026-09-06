@@ -1,110 +1,16 @@
 import { chakra } from "@chakra-ui/react";
 import {
-  type ComponentPropsWithoutRef,
   forwardRef,
   type ReactElement,
   type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
+  useId,
   useState,
 } from "react";
 import type { ListRowItem, ListRowProps } from "./list-row.types";
 import { ListRowChrome } from "./list-row-chrome";
 import { ListRowContent } from "./list-row-content";
-
-type ListRowRootProps = ComponentPropsWithoutRef<typeof chakra.div>;
-
-const computePaddingLeft = (depth: number) => {
-  if (depth <= 0) return undefined;
-  return `calc(var(--chakra-spacing-1) + ${depth} * 12px)`;
-};
-
-const isFixedHeightDenseVariant = (variant: ListRowProps["variant"]) =>
-  variant === "compact" || variant === "full-width" || variant === "empty-state";
-
-const resolveListRowSizing = (variant: ListRowProps["variant"], hasDescription: boolean) => {
-  if (variant === "collection" && !hasDescription) {
-    return { rowHeight: "collection-row", minHeight: undefined };
-  }
-
-  if (isFixedHeightDenseVariant(variant) && !hasDescription) {
-    return { rowHeight: "1.75rem", minHeight: undefined };
-  }
-
-  return {
-    rowHeight: "auto",
-    minHeight: variant === "default" ? "2.25rem" : "1.75rem",
-  };
-};
-
-const createRowBackgroundProps = (input: {
-  isSelected: boolean;
-  selectedBg: ListRowProps["selectedBg"];
-  hoverBg: ListRowProps["hoverBg"];
-  tone: NonNullable<ListRowProps["tone"]>;
-  variant: ListRowProps["variant"];
-}) => ({
-  bg: input.isSelected ? input.selectedBg : "transparent",
-  _hover: (() => {
-    if (input.variant === "empty-state") return { bg: "transparent" };
-    if (input.isSelected) return { bg: input.selectedBg };
-    if (input.tone === "danger")
-      return {
-        outline: "1px solid",
-        outlineColor: "red.500",
-        outlineOffset: "-1px",
-      };
-    return { bg: input.hoverBg };
-  })(),
-  _active: input.variant === "empty-state" ? { bg: "transparent" } : { bg: input.selectedBg },
-});
-
-const createListRowRootProps = (input: {
-  rootProps: ListRowRootProps;
-  rowRole: ListRowRootProps["role"];
-  className?: string;
-  isSelected: boolean;
-  isExpanded: boolean;
-  showChevron: boolean;
-  rowHeight: ListRowRootProps["height"];
-  minHeight: ListRowRootProps["minHeight"];
-  verticalPadding: ListRowRootProps["py"];
-  paddingLeft: ListRowRootProps["pl"];
-  selectedBg: ListRowProps["selectedBg"];
-  hoverBg: ListRowProps["hoverBg"];
-  tone: NonNullable<ListRowProps["tone"]>;
-  isDisabled: boolean;
-  variant: ListRowProps["variant"];
-}) => ({
-  ...input.rootProps,
-  role: input.rowRole,
-  "aria-selected": input.rootProps["aria-selected"] ?? (input.rowRole === "option" ? input.isSelected : undefined),
-  "aria-expanded": input.showChevron ? input.isExpanded : undefined,
-  className: input.className ? `group ${input.className}` : "group",
-  width: "full",
-  minWidth: "0",
-  maxWidth: "full",
-  height: input.rowHeight,
-  minHeight: input.minHeight,
-  display: "flex" as const,
-  alignItems: "center" as const,
-  justifyContent: "space-between" as const,
-  gap: "xs" as const,
-  px: "sm",
-  py: input.verticalPadding,
-  pl: input.paddingLeft,
-  borderRadius: input.variant === "full-width" || input.variant === "collection" ? "0" : ("xs" as const),
-  ...createRowBackgroundProps({ ...input }),
-  cursor:
-    input.variant === "empty-state"
-      ? ("default" as const)
-      : input.isDisabled
-        ? ("not-allowed" as const)
-        : ("pointer" as const),
-  overflow: "hidden" as const,
-  textAlign: "left" as const,
-  color: "inherit",
-  textDecoration: "none",
-});
+import { computePaddingLeft, createListRowRootProps, resolveListRowSizing } from "./list-row-root-props";
 
 export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
   const {
@@ -151,6 +57,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     ...rootProps
   } = props;
   const [menuOpen, setMenuOpen] = useState(false);
+  const labelId = useId();
 
   const item: ListRowItem = {
     id,
@@ -189,11 +96,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
       onToggleExpand?.();
       return;
     }
-    if (onActivate) {
-      onActivate();
-      return;
-    }
-    item.onActivate?.();
+    onActivate?.();
   };
 
   const handleClick = (event: ReactMouseEvent<HTMLElement>) => {
@@ -243,6 +146,8 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
 
   const rowProps = createListRowRootProps({
     rootProps,
+    labelId,
+    hasEndContent: Boolean(item.endContent),
     rowRole,
     className,
     isSelected,
@@ -261,6 +166,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
 
   const content = (
     <ListRowContent
+      labelId={labelId}
       item={item}
       isExpanded={isExpanded}
       showChevron={showChevron}

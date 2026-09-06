@@ -20,7 +20,6 @@ interface TreeNodeRenderContext {
   workbench: WorkbenchCore;
   onCommandError?: (error: unknown) => void;
   onRequestParams?: (request: TreeActionParamsRequest) => void;
-  suppressContextMenus?: boolean;
 }
 export const resolveTreeListActiveNodeId = (activeNodeId: string | null | undefined, selectedNodeId?: string) => {
   if (!activeNodeId) return selectedNodeId;
@@ -272,7 +271,7 @@ const toTreeListNode = (
     }),
     endContent: resolveTreeNodeEndContent(node, resource, binding),
     menuItems,
-    contextMenuItems: !context.suppressContextMenus && contextMenuItems.length > 0 ? contextMenuItems : undefined,
+    contextMenuItems: contextMenuItems.length > 0 ? contextMenuItems : undefined,
     ...(node.menuPlacement ? { menuPlacement: node.menuPlacement } : {}),
     isContainer: node.collapsible,
     isNavigable: Boolean(navigationIntent),

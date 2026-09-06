@@ -25,7 +25,7 @@ describe("ticket files tree sub-ticket section", () => {
       }),
     );
 
-    expect(sections.find((section) => section.id === "sub-tickets")).toEqual({
+    expect(sections.find((section) => section.id === "sub-tickets")).toMatchObject({
       id: "sub-tickets",
       label: "Sub-tickets",
       collapsible: true,

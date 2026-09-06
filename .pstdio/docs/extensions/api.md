@@ -537,6 +537,18 @@ documents within one ticket. The declaration stays on the node when trees are co
 and their IDs are scoped. It takes precedence over saved row selection and automatic
 page or resource matching.
 
+Tree rows use `resource` as their action subject and `target` as their normal-click destination. Right-clicking
+a row resolves the registered actions for its resource kind and adds its `contextMenuActions`. The command and
+any parameter dialog keep the clicked resource as their context, even when another resource is open.
+
+Set `resource` explicitly on ticket, workspace, and other resource rows. Reuse the same reference in `target`
+when the destination represents that resource. A ticket file can instead open its parent ticket page and use
+row actions with explicit ticket and file IDs. It must not use the parent ticket as its action subject.
+
+Resource menus work in the Sidenav and standalone trees. A row menu takes precedence over Sidenav customization.
+Right-clicking the background or a plain navigation row still opens the customization menu. Workspace rows use
+current host capability data, including default-workspace restrictions, when resolving their actions.
+
 The owner can be a mode or page ref. Mode sections appear before page sections. The Sidenav renders one tree with
 pinned `header` and `footer` slots and one scrolling `content` slot.
 

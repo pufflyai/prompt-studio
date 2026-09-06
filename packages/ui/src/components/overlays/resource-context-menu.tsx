@@ -1,4 +1,4 @@
-import { Menu, Portal } from "@chakra-ui/react";
+import { chakra, Menu, Portal, useMenu } from "@chakra-ui/react";
 import { type ComponentProps, Fragment, type ReactElement, type ReactNode } from "react";
 import { ListRow } from "@/components/list-row/list-row";
 
@@ -99,21 +99,34 @@ export const ResourceContextMenu = (props: ResourceContextMenuProps) => {
     closeOnSelect,
     keepMountedWhenEmpty = false,
   } = props;
+  const menu = useMenu({ positioning, closeOnSelect });
+  const triggerProps = menu.api.getContextTriggerProps();
 
   if (actions.length === 0 && !keepMountedWhenEmpty) {
     return <>{children}</>;
   }
 
   return (
-    <Menu.Root positioning={positioning} closeOnSelect={closeOnSelect}>
-      <Menu.ContextTrigger asChild>{children}</Menu.ContextTrigger>
-      {actions.length > 0 ? (
-        <ResourceMenuContent
-          actions={actions}
-          contentMinWidth={contentMinWidth}
-          contentBackground={contentBackground}
-        />
-      ) : null}
-    </Menu.Root>
+    <>
+      <chakra.div
+        asChild
+        {...triggerProps}
+        onContextMenu={(event) => {
+          if (!event.defaultPrevented) triggerProps.onContextMenu?.(event);
+        }}
+      >
+        {children}
+      </chakra.div>
+      {/* Descendant resource menus are independent menus, not submenus. */}
+      <Menu.RootProvider value={menu} lazyMount unmountOnExit>
+        {actions.length > 0 ? (
+          <ResourceMenuContent
+            actions={actions}
+            contentMinWidth={contentMinWidth}
+            contentBackground={contentBackground}
+          />
+        ) : null}
+      </Menu.RootProvider>
+    </>
   );
 };

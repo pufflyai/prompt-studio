@@ -16,21 +16,12 @@ import type { ResolvedWorkbenchExtensionMetadata } from "@/shared/extensions/ext
 import { resolveLocalizableString } from "@/shared/extensions/extension-localization";
 import { buildDashboardExtensionMenuRegistrations } from "@/shared/extensions/workbench-extension-contributions";
 import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { createDashboardWorkspaces } from "@/shared/workspaces/dashboard-workspaces";
 import type { ExecuteDashboardExtensionCommand } from "./extension-command-handler";
 import { createBadgeListRenderer } from "./extension-workspace-badge-renderer";
 
 type KanbanRecord = Parameters<NonNullable<WorkbenchExtensionKanbanRendererAdapter["resolveRowResource"]>>[0];
 type MenuRegistration = ReturnType<typeof buildDashboardExtensionMenuRegistrations>["registrations"][number];
-const isWorkbenchResource = (resource: unknown): resource is ResourceRef =>
-  Boolean(
-    resource &&
-      typeof resource === "object" &&
-      typeof (
-        resource as {
-          kind?: unknown;
-        }
-      ).kind === "string",
-  );
 const hasOnlyWorkspaceBadgeResources = (value: unknown) =>
   Array.isArray(value) &&
   value.length > 0 &&
@@ -53,16 +44,21 @@ const hasOnlyWorkspaceBadgeResources = (value: unknown) =>
   });
 export const toDashboardExtensionResource = (resource: unknown, projectId: string): ResourceRef | undefined => {
   if (!resource || typeof resource !== "object") return undefined;
-  if (isWorkbenchResource(resource)) return resource;
   const ref = resource as KanbanRendererResourceRef & {
     icon?: string;
   };
+  const workspace =
+    ref.type === "workspace" ? createDashboardWorkspaces(projectId).find((entry) => entry.id === ref.id) : undefined;
   return {
-    type: ref.type,
-    id: ref.id,
-    label: ref.label ?? ref.id,
-    icon: ref.icon ?? standardResourceIcons.kanbanRenderer,
-    metadata: { ...ref.metadata, projectId: ref.projectId ?? projectId },
+    ...ref,
+    label: workspace?.resource.label ?? ref.label ?? ref.id,
+    icon: workspace?.resource.icon ?? ref.icon ?? standardResourceIcons.kanbanRenderer,
+    metadata: {
+      ...ref.metadata,
+      ...workspace?.resource.metadata,
+      ...(ref.metadata?.resourceParent ? { resourceParent: ref.metadata.resourceParent } : {}),
+      projectId: ref.projectId ?? projectId,
+    },
   };
 };
 const sameMenuPath = (left: MenuPath, right: MenuPath) =>

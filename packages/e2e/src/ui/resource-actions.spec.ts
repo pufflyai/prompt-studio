@@ -1,50 +1,16 @@
 import { rmSync } from "node:fs";
-import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { createPlannerAttempt, createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
+import {
+  createResourceActionsProject as createProject,
+  expectResourceMenuItems as expectMenuItems,
+  prepareResourceActionsDashboard as prepareDashboard,
+} from "./helpers/resource-actions";
 import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
 const apiBase = `http://localhost:${apiPort}`;
-
-const createProject = async (request: APIRequestContext) => {
-  const response = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "Resource Actions" },
-  });
-  expect(response.ok()).toBe(true);
-  return (await response.json()) as { id: string };
-};
-
-const prepareDashboard = async (page: Page, projectId: string, repoId: string) => {
-  await page.addInitScript(
-    ({ selectedProjectId, selectedRepoId }) => {
-      localStorage.setItem("onboarding-complete", "true");
-      localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
-      localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
-      localStorage.setItem(
-        `pstdio-project-settings/projects/${selectedProjectId}/values`,
-        JSON.stringify({
-          state: {
-            lastSelectedAgent: "pstdio.workbench-fixture.harness.fake",
-            lastSelectedModels: [],
-            lastSelectedRepo: selectedRepoId,
-            lastSelectedBranches: [],
-            sessionModalState: "closed",
-            selectedSessionId: null,
-          },
-          version: 0,
-        }),
-      );
-    },
-    { selectedProjectId: projectId, selectedRepoId: repoId },
-  );
-};
-
-const expectMenuItems = async (page: Page, labels: string[]) => {
-  for (const label of labels) {
-    await expect(page.getByRole("menuitem", { name: label, exact: true })).toBeVisible();
-  }
-};
 
 test("shows the same ticket and workspace actions on rows and breadcrumbs", async ({ page, request }) => {
   test.slow();

@@ -158,7 +158,6 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
     workbench,
     onCommandError: onOpenResourceError,
     onRequestParams: setParamsRequest,
-    suppressContextMenus: Boolean(onSidenavContextActionsChange),
   };
   const rawSections = body.map((section) => toTreeListSection(section, childrenByNodeId, adapterContext));
   const rawHeaderSections = header.map((section) => toTreeListSection(section, childrenByNodeId, adapterContext));
