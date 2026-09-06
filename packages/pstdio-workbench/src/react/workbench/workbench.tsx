@@ -40,8 +40,6 @@ interface WorkbenchProps {
   sidePanelBubbleIcon?: ReactNode;
 }
 
-const SIDENAV_PANEL_ID = "sidenav";
-
 const SIDENAV_DEFAULT_SIZE_PX = 250;
 const SIDENAV_MIN_SIZE_PX = 200;
 const CONTENT_MIN_SIZE_PX = 320;
@@ -117,7 +115,7 @@ const createWorkbenchRegionControls = (input: WorkbenchRegionControlsInput) => {
       label: "Show Sidenav",
       icon: "PanelLeft",
       open: false,
-      onToggle: () => input.setPanelOpen(SIDENAV_PANEL_ID, true),
+      onToggle: () => input.setPanelOpen("sidenav", true),
     });
   }
 
@@ -164,10 +162,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
   const sidePanelMode = useWorkbenchStore(workbench.sidePanel.store, (state) => state.mode);
   const paletteOpen = useWorkbenchStore(workbench.commandPalette.store, (state) => state.open);
   const paletteInitialQuery = useWorkbenchStore(workbench.commandPalette.store, (state) => state.initialQuery);
-  const sidenavOpen = useWorkbenchStore(
-    workbench.panels.store,
-    (state) => state.openByRegionId[SIDENAV_PANEL_ID] ?? true,
-  );
+  const sidenavOpen = useWorkbenchStore(workbench.panels.store, (state) => state.openByRegionId.sidenav ?? true);
   const secondaryPanelOpen = useWorkbenchStore(
     workbench.panels.store,
     (state) => state.openByRegionId.secondary ?? true,
@@ -216,7 +211,10 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     setPanelOpen,
   });
 
-  const sideHeader = <WorkbenchSidePanelRegionHeader workbench={workbench} hasSideHeader={hasSideHeaderWidgets} />;
+  const sideHeader =
+    hasSideHeaderWidgets || hasSidePanelHeader ? (
+      <WorkbenchSidePanelRegionHeader workbench={workbench} hasSideHeader={hasSideHeaderWidgets} />
+    ) : undefined;
   const activeSidePanelSlot = resolveActiveSidePanelSlot({
     floatingPanelsAllowed,
     mounted: mountSidePanel,
@@ -261,7 +259,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
       showResizeSeparator
       onSizeChange={(width) => workbench.layout.setRegionSize("sidenav", width)}
       onCollapsedChange={(collapsed) => {
-        if (!collapsed || sidenavCollapsible) setPanelOpen(SIDENAV_PANEL_ID, !collapsed);
+        if (!collapsed || sidenavCollapsible) setPanelOpen("sidenav", !collapsed);
       }}
     />
   ) : (

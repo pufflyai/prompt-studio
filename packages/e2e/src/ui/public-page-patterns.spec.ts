@@ -34,7 +34,7 @@ for (const pattern of [
   { name: "Zipline", first: "Design the board", second: "Ship the board", text: "Inspect ship." },
   { name: "Pigeon", first: "Hello from Pigeon", second: "Friday meeting", text: "Meet at ten on Friday." },
 ]) {
-  test(`${pattern.name} closes its reader and opens it for the next selection`, async ({ page }) => {
+  test(`${pattern.name} updates its reader for the next selection`, async ({ page }) => {
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     await sidenav.getByRole("option", { name: pattern.name, exact: true }).click();
     await page.getByRole("button", { name: "Open Side Panel", exact: true }).click();
@@ -43,10 +43,7 @@ for (const pattern of [
     const side = page.locator('[data-workbench-region="side"]');
     await main.getByText(pattern.first, { exact: true }).click();
     await expect(side.getByRole("heading", { name: pattern.first })).toBeVisible();
-    const location = page.url();
-    await side.getByRole("button", { name: /close/i }).click();
-    await expect(side.getByRole("heading", { name: pattern.first })).toHaveCount(0);
-    await expect(page).toHaveURL(location);
+    await expect(side.getByRole("tab")).toHaveCount(0);
     await main.getByText(pattern.second, { exact: true }).click();
     await expect(side).toContainText(pattern.text);
     await expect(side.getByRole("heading", { name: pattern.first })).toHaveCount(0);

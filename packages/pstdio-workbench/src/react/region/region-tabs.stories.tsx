@@ -98,7 +98,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "A lone page hides its tab. Closable auxiliary panels keep their Close button visible. alwaysShowTabs can show either kind, and header actions remain available.",
+          "A lone panel hides its tab. alwaysShowTabs keeps a single tab and its Close button visible. Header actions remain available without tabs.",
       },
     },
   },
@@ -147,6 +147,16 @@ export const SingleClosablePanel: Story = {
   args: { workbench: createPanelWorkbench({ closable: true }) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
+    for (const region of workbenchPanelRegions) {
+      await expect(await canvas.findByText(`${region}.first content`)).toBeVisible();
+    }
+    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
+  },
+};
+export const AlwaysShowClosablePanel: Story = {
+  args: { workbench: createPanelWorkbench({ closable: true, alwaysShowTabs: true }) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
     const close = await canvas.findByRole("button", { name: "Close side first" });
     await expect(close).toBeVisible();
     await userEvent.click(close);
@@ -154,7 +164,19 @@ export const SingleClosablePanel: Story = {
     await expect(canvas.getByText("main.first content")).toBeVisible();
   },
 };
-export const MultipleItems: Story = { args: { workbench: createPanelWorkbench({ multiple: true }) } };
+export const MultipleItems: Story = {
+  args: { workbench: createPanelWorkbench({ multiple: true, closable: true }) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    for (const region of workbenchPanelRegions) {
+      await userEvent.click(await canvas.findByRole("tab", { name: `${region} second` }));
+      await expect(await canvas.findByText(`${region}.second content`)).toBeVisible();
+      await userEvent.click(canvas.getByRole("button", { name: `Close ${region} second` }));
+      await expect(await canvas.findByText(`${region}.first content`)).toBeVisible();
+      await expect(canvas.queryByRole("tab", { name: `${region} first` })).not.toBeInTheDocument();
+    }
+  },
+};
 export const ActionsWithoutTabs: Story = {
   args: { workbench: createPanelWorkbench({ actions: true }) },
   play: async ({ canvasElement }) => {

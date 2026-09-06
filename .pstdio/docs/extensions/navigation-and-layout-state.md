@@ -42,8 +42,10 @@ parent page by resource kind or view. Closing the last bound-only primary instan
 the declared parent; a hybrid primary shows its static view again.
 
 A hybrid primary shows its default view only while its resource-free location is active. Opening a
-resource replaces that default view. A lone primary page hides its tab strip unless `alwaysShowTabs`
-is enabled. Closable auxiliary panels keep their tabs so their Close buttons stay available.
+resource replaces that default view. Every panel hides its tab strip when only one tab is open,
+including closable auxiliary panels. Set `alwaysShowTabs` to keep a lone tab and its Close button
+visible. Header actions and detach controls remain available without tabs. An attached Side Panel
+omits its header when it has no tabs, custom header, menus, or controls, like the Secondary Panel.
 
 Navigation trees follow the refresh events declared by their source views. A file creation or other
 change can refresh a contributed navigation tree without reloading the page. Dashboard commands

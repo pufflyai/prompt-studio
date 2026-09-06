@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, within } from "storybook/test";
 import { WorkbenchStory } from "../workbench-story";
 import { createBoomboxWorkbench } from "./boombox";
 import { createKilnWorkbench } from "./kiln";
@@ -53,4 +54,14 @@ export const Scribble: Story = { render: ScribbleStory };
 export const Boombox: Story = { render: BoomboxStory };
 export const Zipline: Story = { render: ZiplineStory };
 export const Pigeon: Story = { render: PigeonStory };
-export const Kiln: Story = { render: KilnStory };
+export const Kiln: Story = {
+  render: KilnStory,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(await canvas.findByRole("spinbutton", { name: "Cube position X" })).toBeVisible();
+    await expect(canvas.queryAllByRole("tab")).toHaveLength(0);
+    for (const region of ["side", "secondary"]) {
+      await expect(canvasElement.querySelector(`[data-workbench-panel-header="${region}"]`)).toBeNull();
+    }
+  },
+};

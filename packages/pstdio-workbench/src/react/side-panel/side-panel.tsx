@@ -51,22 +51,24 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
         minWidth="0"
         bg={workbenchBackgrounds.widget}
         header={
-          <Header data-workbench-panel-header="side" variant="main" flexShrink={0} gap="sm">
-            <WorkbenchSidePanelHeader header={header} />
-            <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
-            {workbench.sidePanel.detachable ? (
-              <Tooltip content="Float Side Panel">
-                <IconButton
-                  size={PANEL_HEADER_CONTROL_SIZE}
-                  variant="ghost"
-                  aria-label="Float Side Panel"
-                  onClick={() => workbench.sidePanel.setMode("floating")}
-                >
-                  <Minimize2 size={16} />
-                </IconButton>
-              </Tooltip>
-            ) : null}
-          </Header>
+          header || workbench.sidePanel.detachable ? (
+            <Header data-workbench-panel-header="side" variant="main" flexShrink={0} gap="sm">
+              <WorkbenchSidePanelHeader header={header} />
+              <WorkbenchPanelMenuOpeners workbench={workbench} panel="side" />
+              {workbench.sidePanel.detachable ? (
+                <Tooltip content="Float Side Panel">
+                  <IconButton
+                    size={PANEL_HEADER_CONTROL_SIZE}
+                    variant="ghost"
+                    aria-label="Float Side Panel"
+                    onClick={() => workbench.sidePanel.setMode("floating")}
+                  >
+                    <Minimize2 size={16} />
+                  </IconButton>
+                </Tooltip>
+              ) : null}
+            </Header>
+          ) : undefined
         }
       >
         <WorkbenchPanelMenuLayout workbench={workbench} panel="side">
