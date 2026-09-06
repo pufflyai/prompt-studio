@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { statusesCollection, tagsCollection } from "./collections";
 import { createMemoryStorage } from "./memory-storage";
-import { DEFAULT_STATUSES, DEFAULT_TAGS, seedDefaultStatuses, seedDefaultTags } from "./seed";
+import { DEFAULT_STATUSES, DEFAULT_TAGS, HUMAN_REQUESTED_TAG, seedDefaultStatuses, seedDefaultTags } from "./seed";
 
 describe("seedDefaultStatuses", () => {
   test("creates the default board columns with ids", async () => {
@@ -108,9 +108,42 @@ describe("seedDefaultTags", () => {
 
     const humanRequested = (await tagsCollection(storage).list()).find((tag) => tag.id === "default-human-requested");
     expect(humanRequested).toMatchObject({ name: "Flags", type: "multi_select", sortOrder: 3 });
-    expect(humanRequested?.options).toEqual([
-      expect.objectContaining({ id: "default-human-requested-true", name: "Human Requested", icon: "eye" }),
-    ]);
+    expect(humanRequested?.options).toEqual(HUMAN_REQUESTED_TAG().options);
+  });
+
+  test("refreshes an existing default handoff flag while keeping its identity and metadata", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultTags(storage);
+    const current = HUMAN_REQUESTED_TAG();
+    const expectedOption = { ...current.options[0]!, description: "Review before continuing", sortOrder: 2 };
+    const customOption = { ...expectedOption, id: "custom-flag", name: "Follow up", sortOrder: 1 };
+    await tagsCollection(storage).put(current.id, {
+      ...current,
+      name: "Workflow",
+      options: [customOption, { ...expectedOption, name: "Human Requested", color: "purple", icon: "eye" }],
+    });
+
+    const seeded = await seedDefaultTags(storage);
+    const expected = { ...current, name: "Workflow", options: [customOption, expectedOption] };
+
+    expect(seeded.find((tag) => tag.id === current.id)).toEqual(expected);
+    expect(await tagsCollection(storage).get(current.id)).toEqual(expected);
+    expect(await seedDefaultTags(storage)).toEqual(seeded);
+  });
+
+  test("preserves a customized handoff flag", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultTags(storage);
+    const current = HUMAN_REQUESTED_TAG();
+    const customized = {
+      ...current,
+      options: [{ ...current.options[0]!, name: "Needs a person", color: "blue", icon: "user" }],
+    };
+    await tagsCollection(storage).put(current.id, customized);
+
+    await seedDefaultTags(storage);
+
+    expect(await tagsCollection(storage).get(current.id)).toEqual(customized);
   });
 
   test("backfills human_requested into projects with customized tags", async () => {
@@ -130,7 +163,7 @@ describe("seedDefaultTags", () => {
     expect(seeded.map((tag) => tag.id)).not.toContain("default-priority");
   });
 
-  test("restores the required Human Requested workflow tag after deletion", async () => {
+  test("restores the required Review Needed workflow tag after deletion", async () => {
     const storage = createMemoryStorage();
     await seedDefaultTags(storage);
 

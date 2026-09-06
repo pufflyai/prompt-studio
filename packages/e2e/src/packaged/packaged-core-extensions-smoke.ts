@@ -135,6 +135,30 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
             required: false,
             templateType: "pstdio.pstdio-planner.template-type.ticket",
           });
+          const tagsRes = await fetch(
+            `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.ticket-tag.read/execute`,
+            {
+              method: "POST",
+              headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+              body: JSON.stringify({ source: "api", params: {} }),
+            },
+          );
+          expect(tagsRes.status).toBe(200);
+          expect(await tagsRes.json()).toMatchObject({
+            outcome: {
+              ok: true,
+              value: {
+                tags: expect.arrayContaining([
+                  expect.objectContaining({
+                    id: "default-human-requested",
+                    options: [
+                      expect.objectContaining({ id: "default-human-requested-true", color: "gray", icon: "bell" }),
+                    ],
+                  }),
+                ]),
+              },
+            },
+          });
           const reportType = metadata.templateTypes.find((type) => type.localId === "report");
           expect(reportType?.commands).toEqual(
             expect.objectContaining({

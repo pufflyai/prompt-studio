@@ -21,7 +21,7 @@ remain unmanaged.
    `planner-attempt` anchors.
 5. The reviewer calls `pstdio-planner.submit-review` with an explicit verdict and
    structured threads. Requested changes return to the same implementation
-   session. Approval creates a `Human Requested` handoff and suppresses another
+   session. Approval creates a `Review Needed` handoff and suppresses another
    automatic review of that revision.
 6. Reconciliation resumes a disconnected implementation session once. A
    disconnected review gets one linked review round. A second disconnect blocks
@@ -34,8 +34,12 @@ session anchors and derives each managed phase as `implementation`, `review`, or
 Ticket status is a Planner rollup. Active implementation wins, followed by
 review-ready, reviewing, or approved work. A ticket becomes blocked only when all
 viable managed attempts are blocked. Done remains an external merge or delivery
-decision. The stable `Human Requested` flag pauses this rollup and every scheduled
+decision. The stable `Review Needed` flag pauses this rollup and every scheduled
 loop until its matching handoff is resolved by a human or agent action.
+
+The default flag uses a gray bell. Existing `Human Requested` flags receive this
+label and appearance while keeping their IDs and ticket assignments. Custom flag
+names remain unchanged.
 
 ## Removed Surface
 
