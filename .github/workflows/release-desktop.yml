@@ -135,6 +135,10 @@ jobs:
         if: matrix.platform == 'linux'
         run: xvfb-run -a bun run --cwd clients/desktop test:packaged
 
+      - name: Compare raw and signed runtime startup
+        if: always() && !cancelled() && matrix.platform == 'darwin'
+        run: bun clients/desktop/scripts/profile-runtime-startup.ts
+
       - name: Upload packaged release-readiness evidence
         if: always()
         uses: actions/upload-artifact@v4
