@@ -1,0 +1,11 @@
+{
+  "name": "command-middleware-fixture",
+  "version": "1.0.0",
+  "publisher": "pstdio",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "1.0.0-alpha.10"
+  },
+  "private": true,
+  "type": "module"
+}

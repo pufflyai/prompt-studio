@@ -129,33 +129,48 @@ describe("createExtensionTestbenchApi", () => {
     }
   });
 
-  test("runs extension middleware before lab commands", async () => {
+  test("runs extension middleware before commands and stops rejected requests", async () => {
     const previousHome = process.env.PSTDIO_HOME;
     const api = createExtensionTestbenchApi({ apiPrefix, repoRoot });
 
     try {
       const bench = await readJson<ExtensionBenchLoadResponse>(
-        await api.handleRequest(new Request(`http://bench${apiPrefix}/load?source=./packages/workbench-fixture`)),
-      );
-
-      const response = await readJson<ExtensionBenchCommandResponse>(
         await api.handleRequest(
-          jsonRequest(`http://bench${apiPrefix}/command`, {
-            benchId: bench.benchId,
-            commandId: "pstdio.workbench-fixture.command.awaken",
-            request: {
-              params: { title: "Gain consciousness" },
-              projectId: bench.projectId,
-              source: "dashboard",
-            },
-          }),
+          new Request(
+            `http://bench${apiPrefix}/load?source=./packages/pstdio-extension-testbench/src/lib/fixtures/command-middleware`,
+          ),
         ),
       );
 
-      expect(response.outcome).toMatchObject({
+      const execute = async (title: string) =>
+        readJson<ExtensionBenchCommandResponse>(
+          await api.handleRequest(
+            jsonRequest(`http://bench${apiPrefix}/command`, {
+              benchId: bench.benchId,
+              commandId: "pstdio.command-middleware-fixture.command.execute",
+              request: {
+                params: { title },
+                projectId: bench.projectId,
+                source: "dashboard",
+              },
+            }),
+          ),
+        );
+
+      expect((await execute("first")).outcome).toMatchObject({
+        ok: true,
+        status: "success",
+        value: { title: "first", executions: 1 },
+      });
+      expect((await execute("blocked")).outcome).toMatchObject({
         ok: false,
         status: "rejected",
-        code: "sentience_rejected",
+        code: "title_blocked",
+      });
+      expect((await execute("second")).outcome).toMatchObject({
+        ok: true,
+        status: "success",
+        value: { title: "second", executions: 2 },
       });
     } finally {
       api.cleanup();
