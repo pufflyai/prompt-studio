@@ -47,6 +47,7 @@ export interface TreeNodeInlineInput {
 
 export interface TreeNode {
   id: string;
+  selected?: boolean;
   /** Host-owned customization boundary. Extension callbacks cannot set it. */
   moveScope?: string;
   label: string;

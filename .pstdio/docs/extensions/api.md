@@ -533,8 +533,9 @@ content. Renderer callbacks receive the active project, resource, renderer id, t
 node context.
 
 Set `selected: true` on the current node when several rows share a resource, such as
-documents within one ticket. When that node matches the active page or resource,
-its selection takes precedence over the host's automatic matching of other rows.
+documents within one ticket. The declaration stays on the node when trees are combined
+and their IDs are scoped. It takes precedence over saved row selection and automatic
+page or resource matching.
 
 The owner can be a mode or page ref. Mode sections appear before page sections. The Sidenav renders one tree with
 pinned `header` and `footer` slots and one scrolling `content` slot.

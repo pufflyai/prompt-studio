@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
+import { getWriter } from "@/lib/sync/collections";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
@@ -7,6 +8,7 @@ import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
 import { createWorkspacesModule } from "./module";
 
 test("keeps Files and Changes fixed and bound to the current workspace", () => {
+  getWriter("workspaces")?.truncateAndWrite([]);
   const workbench = createWorkbench();
   workbench.registerModule(createWorkspacesModule());
   selectDashboardProject(workbench, { id: "project-1", name: "Project" });

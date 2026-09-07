@@ -103,6 +103,13 @@ const resolveActivePageNodeIds = (
 export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) => {
   const { sections, childrenByNodeId, activeNodeId, activeLocation, activeResource, selectedNodeId } = input;
   if (activeNodeId) return activeNodeId;
+  // Keep renderer selection on the nodes so it survives composing and scoping trees.
+  const declaredSelection = activeNodeIds(
+    listSectionNodes(sections, childrenByNodeId)
+      .filter((node) => node.selected)
+      .map((node) => node.id),
+  );
+  if (declaredSelection) return declaredSelection;
   const activeResourceKeys = getWorkbenchSelectionResourceKeys(activeResource);
   let selectedResourceKey: string | undefined;
   if (selectedNodeId) {

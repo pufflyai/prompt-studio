@@ -221,6 +221,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
   const mapNode = (node: ExtensionTreeNode, ctx: TreeContext): TreeNode => {
     const mapped: TreeNode = {
       id: node.id,
+      selected: node.selected,
       label: text(node.label),
       icon: node.icon,
       iconColor: node.iconColor,
@@ -262,23 +263,6 @@ const isTreeNodeArray = (value: unknown): value is ExtensionTreeNode[] =>
   Array.isArray(value) && value.every((node) => node && typeof node === "object" && "id" in node);
 const hostNodeSection = (id: string, nodes: TreeNode[]): TreeViewSection[] =>
   nodes.length > 0 ? [{ id, nodes, canReorder: false }] : [];
-// The node a command marks with `selected: true` (e.g. the open document in a
-// files tree) becomes the tree's highlighted selection.
-const selectedNodeIdFromNodes = (nodes: ExtensionTreeNode[]): string | undefined => {
-  for (const node of nodes) {
-    if (node.selected) return node.id;
-    const selectedChild = selectedNodeIdFromNodes(node.children ?? []);
-    if (selectedChild) return selectedChild;
-  }
-  return undefined;
-};
-export const selectedNodeIdFromSections = (sections: ExtensionTreeSection[]): string | undefined => {
-  for (const section of sections) {
-    const selectedNodeId = selectedNodeIdFromNodes(section.nodes);
-    if (selectedNodeId) return selectedNodeId;
-  }
-  return undefined;
-};
 const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, record: ExtensionTreeRendererRecord) => {
   const mapper = createTreeMapper(input, record);
   const treeViews = treeViewsFor(input.metadata, record);
@@ -330,8 +314,6 @@ const registerTree = (input: RegisterWorkbenchExtensionTreeRenderersInput, recor
           createQueryParams(input, record, ctx),
         );
         if (!isTreeSectionArray(result)) return [];
-        const selectedNodeId = selectedNodeIdFromSections(result);
-        if (selectedNodeId) ctx.setSelectedNode(selectedNodeId);
         return mapper.mapSections(result, ctx);
       },
       getFooter: async (ctx) => {
