@@ -1,3 +1,5 @@
+import { mkdirSync, readFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { readRuntimeActivity } from "pstdio/runtime";
 import {
@@ -85,6 +87,40 @@ test("opens, switches, closes, and restores project tabs in one packaged window"
     await expect(app.page.getByRole("dialog").getByText(first.name, { exact: true })).toBeVisible();
     await expect(app.page.getByRole("dialog").getByText(second.name, { exact: true })).toBeVisible();
     expect((await readRuntimeActivity(app.runtime)).terminals).toEqual([terminal]);
+  } finally {
+    await disposePackagedApp(app);
+    removePackagedHome(home);
+  }
+});
+
+test("reports a failed tab write and recovers when the next tab change can be saved", async ({
+  browserName: _browserName,
+}, testInfo) => {
+  const home = createPackagedHome();
+  let app: PackagedApp | null = null;
+  try {
+    app = await launchPackagedApp(home);
+    const first = await createPackagedProject(app.page, "First project");
+    const second = await createPackagedProject(app.page, "Second project");
+    const blockedWrite = join(home, "electron-user-data", "project-tabs.json.tmp");
+    mkdirSync(blockedWrite);
+
+    await openPackagedProject(app.page, first.name);
+    const error = app.page.getByText("Could not save project tabs", { exact: true });
+    await expect(error).toBeVisible();
+    const screenshot = testInfo.outputPath("desktop-project-tabs-save-error.png");
+    await app.page.screenshot({ path: screenshot, animations: "disabled" });
+    await testInfo.attach("desktop-project-tabs-save-error", { path: screenshot, contentType: "image/png" });
+
+    rmSync(blockedWrite, { recursive: true });
+    await openPackagedProject(app.page, second.name);
+    await expect(error).not.toBeVisible();
+    await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveText([
+      first.name,
+      second.name,
+    ]);
+    const saved = JSON.parse(readFileSync(join(home, "electron-user-data", "project-tabs.json"), "utf8"));
+    expect(saved).toEqual({ projectIds: [first.id, second.id] });
   } finally {
     await disposePackagedApp(app);
     removePackagedHome(home);
