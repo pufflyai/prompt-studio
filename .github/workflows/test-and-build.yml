@@ -189,6 +189,7 @@ jobs:
 
       - name: Configure the source Electron sandbox
         run: |
+          (cd clients/desktop && bun -e 'require("electron")')
           sudo chown root:root clients/desktop/node_modules/electron/dist/chrome-sandbox
           sudo chmod 4755 clients/desktop/node_modules/electron/dist/chrome-sandbox
 
