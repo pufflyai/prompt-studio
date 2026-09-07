@@ -11,6 +11,8 @@ Prompt Studio desktop is a private Electron client in `clients/desktop`. Electro
 
 The lifecycle state machine distinguishes discovery, spawn, readiness, workbench, active-work confirmation, closing, recovery, retry, and persistent detach. Electron creates the runtime instance ID before spawn and accepts only a descriptor with that exact ID, so a competing process cannot replace the child during readiness. A runtime control event marks an exit as intentional; a desktop-started child exit without that event opens recovery instead of leaving a blank dashboard.
 
+The 15-second startup budget also cancels pending health requests during discovery and external-runtime verification. A runtime that accepts a connection without answering cannot leave the startup window waiting indefinitely. Cancellation preserves the existing descriptor and does not start a competing runtime.
+
 Active-work confirmation uses a sandboxed `WebContentsView` inside the existing window. The workbench stays mounted underneath, preserving its terminal connections, open resources, and unsaved input. The confirmation receives the backend-authoritative session, terminal, and job labels through the lifecycle state. Its narrow `cancelQuit` and `confirmQuit` preload actions are sender-checked like every other desktop capability. Cancel closes the confirmation and returns focus to the workbench. Confirm asks Electron main to cancel activity, then Electron waits without a timeout for the owned runtime to exit.
 
 Extension processes started through `ctx.process.spawnDetached` are independent
@@ -133,6 +135,7 @@ and browser traces. Trace export removes runtime cookies and bearer
 credentials from every text entry before artifacts are uploaded.
 
 The secured compiled-runtime browser suite runs Chromium, Firefox, and WebKit.
+`bun run --cwd packages/e2e test:packaged` runs the compiled CLI checks with Bun and the browser checks with the Playwright runner.
 It proves opaque iframe command and project-setting persistence across reloads.
 Chromium also sends a terminal sentinel through the runtime's ephemeral,
 cookie-authenticated WebSocket endpoint and closes the terminal. CI requires

@@ -54,7 +54,7 @@ describe("desktop runtime controller", () => {
     let request: Request | undefined;
 
     await expect(
-      verifyExternalRuntime(descriptor, async (input, init) => {
+      verifyExternalRuntime(descriptor, new AbortController().signal, async (input, init) => {
         request = new Request(input, init);
         return Response.json({
           ok: true,
@@ -71,7 +71,7 @@ describe("desktop runtime controller", () => {
 
   test("rejects an external descriptor for a replacement runtime", async () => {
     await expect(
-      verifyExternalRuntime(descriptor, async () =>
+      verifyExternalRuntime(descriptor, new AbortController().signal, async () =>
         Response.json({ ok: true, protocolVersion: 1, instanceId: "replacement", ownerType: "persistent" }),
       ),
     ).rejects.toThrow("External runtime identity did not match");

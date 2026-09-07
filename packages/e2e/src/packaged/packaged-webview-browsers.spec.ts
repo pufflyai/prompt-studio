@@ -1,15 +1,16 @@
-import { beforeAll, describe, expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import {
   type Browser,
   type BrowserType,
   chromium,
-  expect as expectBrowser,
+  expect,
   firefox,
   type LaunchOptions,
+  test,
   webkit,
 } from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
@@ -18,8 +19,6 @@ import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
-const BUILD_TIMEOUT = 180_000;
-const WEBVIEW_SMOKE_TEST_TIMEOUT = 120_000;
 const REQUIRE_WEBVIEW_BROWSERS = process.env.PSTDIO_REQUIRE_WEBVIEW_BROWSERS === "1";
 // Package verification does not install Playwright browsers on every release runner.
 // The required CI job opts out of skips through PSTDIO_REQUIRE_WEBVIEW_BROWSERS.
@@ -41,11 +40,11 @@ const findLabWebview = (metadata: WorkbenchExtensionMetadata) => {
   return view?.body.kind === "webview" ? view.body : undefined;
 };
 
-beforeAll(() => {
+test.beforeAll(() => {
   if (!process.env.PSTDIO_PACKAGED_BINARY_PATH) buildBinary();
-}, BUILD_TIMEOUT);
+});
 
-describe("packaged extension webviews", () => {
+test.describe("packaged extension webviews", () => {
   for (const browserCase of webviewBrowsers) {
     const browserAvailable = existsSync(browserCase.type.executablePath());
     const browserTest = browserAvailable || REQUIRE_WEBVIEW_BROWSERS ? test : test.skip;
@@ -88,7 +87,7 @@ describe("packaged extension webviews", () => {
               });
               if (moduleRes.ok) break;
             }
-            await Bun.sleep(250);
+            await sleep(250);
           }
           expect(labWebview?.webview.moduleUrl).toBeTruthy();
 
@@ -138,7 +137,7 @@ describe("packaged extension webviews", () => {
             outcome: { status: "success", value: { counter: 1 } },
           });
           await page.reload();
-          await expectBrowser(frame.getByText("1", { exact: true })).toBeVisible();
+          await expect(frame.getByText("1", { exact: true })).toBeVisible();
 
           await page.getByText("Settings", { exact: true }).last().click();
           await page.getByRole("dialog").last().getByText("Lab (project)", { exact: true }).click();
@@ -148,17 +147,17 @@ describe("packaged extension webviews", () => {
           );
           await settingsFrame.getByRole("spinbutton").fill("7");
           await settingsFrame.getByRole("button", { name: "Save", exact: true }).click();
-          await expectBrowser(settingsFrame.getByText("Saved", { exact: true })).toBeVisible();
+          await expect(settingsFrame.getByText("Saved", { exact: true })).toBeVisible();
 
           await page.reload();
           await page.getByText("Settings", { exact: true }).last().click();
           await page.getByRole("dialog").last().getByText("Lab (project)", { exact: true }).click();
-          await expectBrowser(settingsFrame.getByRole("spinbutton")).toHaveValue("7");
+          await expect(settingsFrame.getByRole("spinbutton")).toHaveValue("7");
           await page.keyboard.press("Escape");
           await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
-          await expectBrowser(frame.getByText("1", { exact: true })).toBeVisible();
+          await expect(frame.getByText("1", { exact: true })).toBeVisible();
           await frame.getByRole("button", { name: "Increment", exact: true }).click();
-          await expectBrowser(frame.getByText("8", { exact: true })).toBeVisible();
+          await expect(frame.getByText("8", { exact: true })).toBeVisible();
 
           if (browserCase.name === "Chromium") {
             await verifyPackagedTerminal(page, started.baseUrl, project.id, started.descriptor.token);
@@ -175,7 +174,6 @@ describe("packaged extension webviews", () => {
           rmSync(tempRoot, { recursive: true, force: true });
         }
       },
-      WEBVIEW_SMOKE_TEST_TIMEOUT,
     );
   }
 });

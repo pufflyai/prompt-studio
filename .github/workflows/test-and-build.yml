@@ -153,7 +153,7 @@ jobs:
 
       - name: Test packaged e2e
         env:
-          DEBUG: pw:api
+          DEBUG: pw:api,pw:browser
           BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
           E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
           PSTDIO_REQUIRE_WEBVIEW_BROWSERS: "1"
@@ -210,7 +210,7 @@ jobs:
 
       - name: Test packaged Electron
         env:
-          DEBUG: pw:api
+          DEBUG: pw:api,pw:browser
         run: xvfb-run -a bun run --cwd clients/desktop test:packaged
 
       - name: Preserve Electron readiness results and redacted failure traces

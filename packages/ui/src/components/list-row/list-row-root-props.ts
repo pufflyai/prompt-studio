@@ -70,35 +70,34 @@ export const createListRowRootProps = (input: {
   tone: NonNullable<ListRowProps["tone"]>;
   isDisabled: boolean;
   variant: ListRowProps["variant"];
-}) => ({
-  "aria-labelledby": input.rootProps["aria-label"] ? undefined : rowLabelIds(input.labelId, input.hasEndContent),
-  ...input.rootProps,
-  role: input.rowRole,
-  "aria-selected": input.rootProps["aria-selected"] ?? (input.rowRole === "option" ? input.isSelected : undefined),
-  "aria-expanded": input.showChevron ? input.isExpanded : undefined,
-  className: input.className ? `group ${input.className}` : "group",
-  width: "full",
-  minWidth: "0",
-  maxWidth: "full",
-  height: input.rowHeight,
-  minHeight: input.minHeight,
-  display: "flex" as const,
-  alignItems: "center" as const,
-  justifyContent: "space-between" as const,
-  gap: "xs" as const,
-  px: "sm",
-  py: input.verticalPadding,
-  pl: input.paddingLeft,
-  borderRadius: input.variant === "full-width" || input.variant === "collection" ? "0" : ("xs" as const),
-  ...createRowBackgroundProps({ ...input }),
-  cursor:
-    input.variant === "empty-state"
-      ? ("default" as const)
-      : input.isDisabled
-        ? ("not-allowed" as const)
-        : ("pointer" as const),
-  overflow: "hidden" as const,
-  textAlign: "left" as const,
-  color: "inherit",
-  textDecoration: "none",
-});
+}) => {
+  const interactiveCursor = input.isDisabled ? "not-allowed" : "pointer";
+  const props: ListRowRootProps = {
+    "aria-labelledby": input.rootProps["aria-label"] ? undefined : rowLabelIds(input.labelId, input.hasEndContent),
+    ...input.rootProps,
+    role: input.rowRole,
+    "aria-selected": input.rootProps["aria-selected"] ?? (input.rowRole === "option" ? input.isSelected : undefined),
+    "aria-expanded": input.showChevron ? input.isExpanded : undefined,
+    className: input.className ? `group ${input.className}` : "group",
+    width: "full",
+    minWidth: "0",
+    maxWidth: "full",
+    height: input.rowHeight,
+    minHeight: input.minHeight,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "xs",
+    px: "sm",
+    py: input.verticalPadding,
+    pl: input.paddingLeft,
+    borderRadius: input.variant === "full-width" || input.variant === "collection" ? "0" : "xs",
+    ...createRowBackgroundProps({ ...input }),
+    cursor: input.variant === "empty-state" ? "default" : interactiveCursor,
+    overflow: "hidden",
+    textAlign: "left",
+    color: "inherit",
+    textDecoration: "none",
+  };
+  return props;
+};

@@ -1,6 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { setTimeout as sleep } from "node:timers/promises";
 import { PACKAGED_BINARY_PATH } from "./packaged-helpers";
 
 export type RuntimeDescriptor = {
@@ -46,7 +47,7 @@ const waitForReady = async (descriptorPath: string, child: ChildProcess, timeout
       clearTimeout(timeout);
     }
 
-    await Bun.sleep(200);
+    await sleep(200);
   }
 
   throw new Error(`Packaged runtime did not become ready within ${timeoutMs}ms`);

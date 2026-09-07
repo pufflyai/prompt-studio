@@ -14,6 +14,7 @@ import { redactSensitiveText } from "pstdio-logging";
 import {
   classifyRuntimeFailure,
   createSidecarLaunchArguments,
+  DESKTOP_RUNTIME_TIMEOUT_MS,
   reconcileRuntimeOwnership,
   verifyExternalRuntime,
   waitForDesktopRuntime,
@@ -127,17 +128,28 @@ export class DesktopRuntimeManager {
   }
 
   async start() {
+    const signal = AbortSignal.timeout(DESKTOP_RUNTIME_TIMEOUT_MS);
+    try {
+      return await this.#start(signal);
+    } catch (error) {
+      if (signal.aborted) throw new Error("runtime_timeout: Runtime readiness timed out.");
+      throw error;
+    }
+  }
+
+  async #start(signal: AbortSignal) {
     this.#intentional = false;
     this.#eventAbort?.abort();
     this.#options.onPhase("discovery");
     if (this.#options.externalRuntime) {
       const descriptor = this.#deps.readRuntimeDescriptor(this.#options.descriptorPath);
       if (!descriptor) throw new Error("External runtime descriptor is missing or invalid");
-      await this.#deps.verifyExternalRuntime(descriptor);
+      await this.#deps.verifyExternalRuntime(descriptor, signal);
       return this.#attach(descriptor, true);
     }
 
-    const discovery = await this.#deps.discoverRuntime(this.#options.descriptorPath);
+    const discover = (path: string) => this.#deps.discoverRuntime(path, { signal });
+    const discovery = await discover(this.#options.descriptorPath);
     if (discovery.state === "healthy") return this.#attach(discovery.descriptor, false);
     if (discovery.state === "unsafe") {
       throw new Error(`Runtime ownership is unsafe: ${discovery.reason}`);
@@ -180,7 +192,7 @@ export class DesktopRuntimeManager {
     try {
       const descriptor = await Promise.race([
         waitForDesktopRuntime(this.#options.descriptorPath, instanceId, {
-          discover: this.#deps.discoverRuntime,
+          discover,
           now: Date.now,
           sleep: this.#deps.sleep,
         }),

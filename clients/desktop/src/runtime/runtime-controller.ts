@@ -24,9 +24,14 @@ type RuntimeDiscoveryDeps = {
 
 type RuntimeFetcher = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
-export const verifyExternalRuntime = async (descriptor: RuntimeDescriptor, fetcher: RuntimeFetcher = fetch) => {
+export const verifyExternalRuntime = async (
+  descriptor: RuntimeDescriptor,
+  signal: AbortSignal,
+  fetcher: RuntimeFetcher = fetch,
+) => {
   const response = await fetcher(`${descriptor.origin}/runtime/ready`, {
     headers: { authorization: `Bearer ${descriptor.token}` },
+    signal,
   });
   const ready = response.ok ? ((await response.json()) as Record<string, unknown>) : null;
   if (

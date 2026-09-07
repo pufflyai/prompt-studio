@@ -92,12 +92,14 @@ export const launchPackagedApp = async (home: string, runtimeEnvironment: Record
   child.stdout.resume();
   let browser: Browser | null = null;
   try {
-    browser = await chromium.connectOverCDP(await waitForDevTools(child));
+    const endpoint = await waitForDevTools(child);
+    // Keep the debugging connection out of the spawned runtime. See ADR 0020.
+    const runtime = await waitForDescriptor(home);
+    browser = await chromium.connectOverCDP(endpoint);
     const context = browser.contexts()[0];
     const page = context?.pages()[0];
     if (!page || !context) throw new Error("Packaged app did not create a renderer page");
     const finishTrace = await startElectronTrace(context, `packaged-${child.pid}`);
-    const runtime = await waitForDescriptor(home);
     await page.waitForURL(`${runtime.origin}/`);
     await page.locator("#root").waitFor({ state: "visible" });
     return { home, browser, child, page, readyInMs: Date.now() - startedAt, runtime, finishTrace };
