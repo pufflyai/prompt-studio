@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import { readRuntimeActivity } from "pstdio/runtime";
+import { acceptFocusedButton } from "./lifecycle-actions";
 import {
   createPackagedHome,
   disposePackagedApp,
@@ -11,14 +12,6 @@ import {
   runPackagedCli,
   waitForExit,
 } from "./packaged-app-helpers";
-
-const acceptFocusedButton = async (page: Page) => {
-  const closed = page.waitForEvent("close");
-  await page.keyboard.press("Enter").catch((error) => {
-    if (!page.isClosed()) throw error;
-  });
-  await closed;
-};
 
 for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
   test(`protects a running terminal before ${shutdown}`, async () => {

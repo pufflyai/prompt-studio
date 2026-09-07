@@ -7,6 +7,7 @@ import { join, resolve } from "node:path";
 import { _electron as electron, expect, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
 import { startElectronTrace } from "./electron-trace";
+import { acceptFocusedButton } from "./lifecycle-actions";
 
 const require = createRequire(import.meta.url);
 const electronPath = require("electron") as string;
@@ -141,9 +142,8 @@ test("confirms active work in the bundled lifecycle view before stopping its run
   expect(
     await confirmation.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()),
   ).toMatchObject({ kind: "confirming_active_work" });
-  await confirmation.evaluate(() => {
-    void (globalThis as unknown as Window).promptStudioDesktop.cancelQuit();
-  });
+  await expect(confirmation.getByRole("button", { name: "Keep Prompt Studio open" })).toBeFocused();
+  await acceptFocusedButton(confirmation);
   await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
   await expect(window.getByRole("textbox", { name: "Draft" })).toHaveValue("Unsaved work");
   expect(shutdownForces).toEqual([false]);
@@ -155,11 +155,12 @@ test("confirms active work in the bundled lifecycle view before stopping its run
   expect(
     await nextConfirmation.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()),
   ).toMatchObject({ kind: "confirming_active_work" });
+  await expect(nextConfirmation.getByRole("button", { name: "Keep Prompt Studio open" })).toBeFocused();
+  await nextConfirmation.keyboard.press("Tab");
+  await expect(nextConfirmation.getByRole("button", { name: "Cancel work and quit" })).toBeFocused();
   await finishTrace();
   const closed = electronApp.waitForEvent("close");
-  await nextConfirmation.evaluate(() => {
-    void (globalThis as unknown as Window).promptStudioDesktop.confirmQuit();
-  });
+  await acceptFocusedButton(nextConfirmation);
   await closed;
 
   expect(shutdownForces).toEqual([false, false, true]);
