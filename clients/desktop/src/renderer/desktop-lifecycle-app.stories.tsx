@@ -1,3 +1,4 @@
+import { Flex } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { DesktopLifecycleView } from "./desktop-lifecycle-app";
@@ -16,6 +17,13 @@ const meta = {
   title: "Patterns/Desktop/Lifecycle",
   component: DesktopLifecycleView,
   parameters: { layout: "fullscreen" },
+  decorators: [
+    (Story) => (
+      <Flex>
+        <Story />
+      </Flex>
+    ),
+  ],
   args: { actions },
 } satisfies Meta<typeof DesktopLifecycleView>;
 

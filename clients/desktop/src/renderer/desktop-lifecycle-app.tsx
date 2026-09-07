@@ -189,7 +189,7 @@ const ClosingState = () => {
 export const DesktopLifecycleView = (props: DesktopLifecycleViewProps) => {
   const { actions = desktopActions, state, platform = "darwin" } = props;
   return (
-    <Stack as="main" minHeight="100vh" bg="bg" color="fg" gap="0">
+    <Stack as="main" width="full" minHeight="100vh" bg="bg" color="fg" gap="0">
       <WindowTitleBar platform={platform} />
       <Box flex="1" display="grid" placeItems="center" padding="xl">
         <Box width="full" maxWidth="2xl">

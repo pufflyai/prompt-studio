@@ -69,17 +69,19 @@ const waitForDevTools = (child: ChildProcess) =>
     });
   });
 
-export type PackagedApp = {
+export type PackagedWindow = {
   home: string;
   browser: Browser;
   child: ChildProcess;
   page: Page;
-  readyInMs: number;
+  startedAt: number;
   runtime: RuntimeDescriptor;
   finishTrace: () => Promise<void>;
 };
 
-export const launchPackagedApp = async (home: string, runtimeEnvironment: Record<string, string> = {}) => {
+export type PackagedApp = PackagedWindow & { readyInMs: number };
+
+export const launchPackagedWindow = async (home: string, runtimeEnvironment: Record<string, string> = {}) => {
   const startedAt = Date.now();
   const child = spawn(
     packageLayout.executable,
@@ -101,12 +103,22 @@ export const launchPackagedApp = async (home: string, runtimeEnvironment: Record
     const page = context?.pages()[0];
     if (!page || !context) throw new Error("Packaged app did not create a renderer page");
     const finishTrace = await startElectronTrace(context, `packaged-${child.pid}`);
-    await page.waitForURL(`${runtime.origin}/`, { waitUntil: "commit" });
-    const visibleAt = await waitForVisibleElement(page, "#root");
-    return { home, browser, child, page, readyInMs: visibleAt - startedAt, runtime, finishTrace };
+    return { home, browser, child, page, startedAt, runtime, finishTrace };
   } catch (error) {
     await browser?.close().catch(() => {});
     if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+    throw error;
+  }
+};
+
+export const launchPackagedApp = async (home: string, runtimeEnvironment: Record<string, string> = {}) => {
+  const app = await launchPackagedWindow(home, runtimeEnvironment);
+  try {
+    await app.page.waitForURL(`${app.runtime.origin}/`, { waitUntil: "commit" });
+    const visibleAt = await waitForVisibleElement(app.page, "#root");
+    return { ...app, readyInMs: visibleAt - app.startedAt };
+  } catch (error) {
+    await disposePackagedApp(app);
     throw error;
   }
 };
@@ -142,7 +154,7 @@ export const runPackagedCli = (home: string, args: string[]) =>
     child.once("exit", (exitCode) => resolveExit({ exitCode, stderr, stdout }));
   });
 
-export const disposePackagedApp = async (app: PackagedApp | null) => {
+export const disposePackagedApp = async (app: PackagedWindow | null) => {
   if (!app) return;
   await app.finishTrace();
   const logPath = join(app.home, "logs.jsonl");
