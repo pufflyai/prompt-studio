@@ -27,7 +27,7 @@ const resourceParam = (params: WireParam[], id: string) => {
 
 const propertyParam = (params: WireParam[], id: string) => {
   const param = params.find((entry) => entry.id === id);
-  if (!param || param.type !== "property") throw new Error(`Expected property param "${id}"`);
+  if (!param || param.type !== "readOnly") throw new Error(`Expected read-only control "${id}"`);
   return param;
 };
 

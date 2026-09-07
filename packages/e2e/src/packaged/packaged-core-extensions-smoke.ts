@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
+import { expectPlannerProperties } from "./packaged-planner-properties-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 // The macOS Intel release runner can spend over a minute extracting and loading all bundled core extensions.
@@ -164,6 +165,7 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
               },
             },
           });
+          await expectPlannerProperties(started.baseUrl, project.id, runtimeAuthorization(started.descriptor));
           const reportType = metadata.templateTypes.find((type) => type.localId === "report");
           expect(reportType?.commands).toEqual(
             expect.objectContaining({

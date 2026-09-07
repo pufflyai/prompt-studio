@@ -1,5 +1,10 @@
-import { type Localizable, l10n } from "@pstdio/sdk/extensions";
-import type { PropertyParam, ResourceOption, ResourceParam } from "@pstdio/ui";
+import {
+  type Localizable,
+  l10n,
+  type ReadOnlyControl,
+  type ResourceControl,
+  type ResourceOption,
+} from "@pstdio/sdk/extensions";
 import { isSingleSelectTicketTag, ticketTagAttributeId } from "../../data/mappers";
 import type { StoredStatus, StoredTag, StoredTicket } from "../../data/types";
 import { reviewLinkLabel, reviewLinkTooltip } from "../../views/review-link-values";
@@ -20,20 +25,20 @@ export interface TicketPropertiesInput {
 
 // Labels are localized by the host, so the query command emits `l10n()` tokens; the
 // dashboard resolves them before rendering. Value/option text stays as-is (user data).
-type WireProperty = Omit<PropertyParam, "name" | "value"> & { name: Localizable; value: Localizable };
-type WireResource = Omit<ResourceParam, "name" | "emptyText" | "placeholder"> & {
+type WireReadOnly = Omit<ReadOnlyControl, "name" | "value"> & { name: Localizable; value: Localizable };
+type WireResource = Omit<ResourceControl, "name" | "emptyText" | "placeholder"> & {
   name: Localizable;
   emptyText?: Localizable;
   placeholder?: Localizable;
 };
-export type WireParam = WireProperty | WireResource;
+export type WireParam = WireReadOnly | WireResource;
 
 const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
-const property = (id: string, name: Localizable, value: Localizable): WireProperty => ({
+const readOnlyControl = (id: string, name: Localizable, value: Localizable): WireReadOnly => ({
   id,
   name,
-  type: "property",
+  type: "readOnly",
   value,
 });
 
@@ -118,23 +123,23 @@ const ticketRefParam = (
   options: refs.map((ref) => ({ id: ref.id, name: ref.label, icon: "circle", ref: { type: "ticket", id: ref.id } })),
 });
 
-// Maps a ticket into the ParamEditor rows the controls renderer displays: read-only
-// property text, the copyable ID chip, editable status/tag resource dropdowns, and
+// Maps a ticket into the controls renderer's rows: read-only text, the copyable ID
+// chip, editable status/tag resource dropdowns, and
 // panel-only ticket/review resource chips (which open via href or the host).
 export const buildTicketPropertiesControls = (input: TicketPropertiesInput) => {
   const { ticket, statuses, tags, dependencies, parent } = input;
 
   const params: WireParam[] = [
     idParam(ticket),
-    property("created", l10n("ticketDetail.createdAt", "Created at"), formatTicketTimestamp(ticket.createdAt)),
-    property("updated", l10n("ticketDetail.updatedAt", "Updated at"), formatTicketTimestamp(ticket.updatedAt)),
+    readOnlyControl("created", l10n("ticketDetail.createdAt", "Created at"), formatTicketTimestamp(ticket.createdAt)),
+    readOnlyControl("updated", l10n("ticketDetail.updatedAt", "Updated at"), formatTicketTimestamp(ticket.updatedAt)),
     reviewLinksParam(ticket),
     statusParam(ticket, statuses),
     ...(ticket.archived
-      ? [property("archived", l10n("ticketDetail.archived", "Archived"), l10n("ticketDetail.yes", "Yes"))]
+      ? [readOnlyControl("archived", l10n("ticketDetail.archived", "Archived"), l10n("ticketDetail.yes", "Yes"))]
       : []),
     ...(ticket.blockedReason
-      ? [property("blocked-reason", l10n("ticketDetail.blockedReason", "Blocked reason"), ticket.blockedReason)]
+      ? [readOnlyControl("blocked-reason", l10n("ticketDetail.blockedReason", "Blocked reason"), ticket.blockedReason)]
       : []),
     ticketRefParam("depends-on", l10n("ticketDetail.dependsOn", "Depends on"), dependencies, { multiSelect: true }),
     ticketRefParam("parent", l10n("ticketDetail.parent", "Parent"), parent ? [parent] : [], { multiSelect: false }),

@@ -532,6 +532,10 @@ export default defineExtension({
 content. Renderer callbacks receive the active project, resource, renderer id, tree state, filter text, and selected
 node context.
 
+Set `selected: true` on the current node when several rows share a resource, such as
+documents within one ticket. When that node matches the active page or resource,
+its selection takes precedence over the host's automatic matching of other rows.
+
 The owner can be a mode or page ref. Mode sections appear before page sections. The Sidenav renders one tree with
 pinned `header` and `footer` slots and one scrolling `content` slot.
 

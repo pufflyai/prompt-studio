@@ -109,6 +109,10 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
     const selectedNode = findSectionNode(sections, selectedNodeId, childrenByNodeId);
     selectedResourceKey = selectedNode ? resolveTreeNodeResourceKey(selectedNode) : undefined;
     if (selectedResourceKey && activeResourceKeys.includes(selectedResourceKey)) return selectedNodeId;
+    // Keep the selected document when several nodes target the same page and resource.
+    if (activeLocation && targetMatchesPage(selectedNode?.target, activeLocation.page, activeLocation.resource)) {
+      return selectedNodeId;
+    }
   }
   const activeResourceNodeId = resolveActiveResourceNodeIds(sections, childrenByNodeId, activeResourceKeys);
   if (activeResourceNodeId) return activeResourceNodeId;

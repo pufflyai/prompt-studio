@@ -47,6 +47,10 @@ navigation, and the properties view is attached through a view menu. See the
 The dashboard workbench provides hosting, command execution, resource
 navigation, and synced core host rows. It does not own ticket data.
 
+Ticket properties use the SDK's serializable controls. Display-only values such as
+timestamps use `readOnly` controls. The files tree declares its selected document,
+so only that row is highlighted even though the ticket body and files share a ticket resource.
+
 ## Requirements
 
 ### Functional Requirements
