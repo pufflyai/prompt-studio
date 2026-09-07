@@ -191,6 +191,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const shell = createWorkbenchShellController({ layout, sidePanel });
 
   const pages = createLiveWorkbenchPageRegistry({
+    loadModeLayout: layoutCache.readMode,
     beforeApply: createPagePersistenceScopeHandler(input, layout, panelMenuState),
     restorePageState: createPageStateRestorer(input),
 

@@ -1,7 +1,7 @@
 import { resourceKey } from "@pstdio/sdk/extensions";
 import type { LayoutModel, WorkbenchRegion } from "../../registries/layout/layout-model";
 import { createPlacement } from "../../registries/layout/layout-operations";
-import type { WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
+import type { WorkbenchLayout, WorkbenchWidgetPlacement } from "../../registries/layout/layout-types";
 import {
   applyOwnedWidgetLayoutReconciliation,
   reconcileOwnedWidgetLayout,
@@ -30,6 +30,7 @@ import { contributionRefId } from "../../shared/contributions/reference-id";
 import { createDisposable } from "../../shared/disposable";
 import { defaultPageResourceCodec } from "../page-location/page-resource-codec";
 export interface ConnectWorkbenchPageRuntimeInput {
+  loadModeLayout?(projectId: string | undefined, modeId: string): WorkbenchLayout | undefined;
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   revealRegion?(region: WorkbenchRegion): void;
   layout: LayoutModel;
@@ -83,6 +84,7 @@ const applyPageState = (
       latest.reconciliation.activate.length > 0 ? latest.reconciliation.activate : state.reconciliation.activate;
     const layoutInput = {
       layout: input.layout.getLayout(),
+      modeLayout: latest.activeModeId ? input.loadModeLayout?.(latest.projectId, latest.activeModeId) : undefined,
       placements: bindPlacementsToActivePageLocation(latest),
       activate: activation.map((placement) => placement.identity),
     };
@@ -150,6 +152,7 @@ const toWidgetPlacement = (
   };
 };
 export interface CreateLiveWorkbenchPageRegistryInput {
+  loadModeLayout?: ConnectWorkbenchPageRuntimeInput["loadModeLayout"];
   restorePageState?: CreateWorkbenchPageRegistryInput<WorkbenchWidgetPlacement>["restorePageState"];
   beforeApply?(state: WorkbenchPageRegistryStoreState<WorkbenchWidgetPlacement>): void;
   revealRegion?(region: WorkbenchRegion): void;
@@ -199,6 +202,7 @@ export const createLiveWorkbenchPageRegistry = (input: CreateLiveWorkbenchPageRe
     },
   });
   connectWorkbenchPageRuntime({
+    loadModeLayout: input.loadModeLayout,
     beforeApply: (state) => {
       input.beforeApply?.(state);
       const shell = getOwnedPlacementPreparation(input.shellPlacements);

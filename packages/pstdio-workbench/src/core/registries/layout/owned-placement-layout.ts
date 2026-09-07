@@ -17,6 +17,7 @@ export type WorkbenchOwnedWidgetPlacement = ResolvedOwnedPlacement<WorkbenchWidg
 
 export interface ReconcileOwnedWidgetLayoutInput {
   layout: WorkbenchLayout;
+  modeLayout?: WorkbenchLayout;
   placements: readonly WorkbenchOwnedWidgetPlacement[];
   activate?: readonly PlacementIdentity[];
 }
@@ -83,6 +84,23 @@ const indexCurrentWidgetOwners = (layout: WorkbenchLayout) => {
   return owners;
 };
 
+const restoreModeWidgets = (
+  widgets: readonly WorkbenchWidgetPlacement[],
+  saved: readonly WorkbenchWidgetPlacement[],
+  desired: ReadonlyMap<string, RenderedOwnedPlacement>,
+) => {
+  const currentIds = new Set(widgets.map((widget) => widget.widgetId));
+  return [
+    ...widgets,
+    ...saved.filter(
+      (widget) =>
+        !currentIds.has(widget.widgetId) &&
+        widget.placementIdentity &&
+        desired.has(placementIdentityKey(widget.placementIdentity)),
+    ),
+  ];
+};
+
 const renderDesiredPlacements = (
   input: ReconcileOwnedWidgetLayoutInput,
   current: ReturnType<typeof indexCurrentOwnedPlacements>,
@@ -140,6 +158,7 @@ const reconcileRegions = (
   layout: WorkbenchLayout,
   desired: readonly RenderedOwnedPlacement[],
   removedKeys: ReadonlySet<string>,
+  modeLayout?: WorkbenchLayout,
 ) => {
   const docked = new Set<WorkbenchRegion>(dockedWorkbenchRegions);
   const regions = { ...layout.regions };
@@ -156,7 +175,8 @@ const reconcileRegions = (
     const placedKeys = new Set<string>();
     // Keep the visible order while updating existing placements in place. Any
     // desired placement left afterward is a new tab and belongs at the end.
-    const widgets = region.widgets.flatMap((placement) => {
+    const restored = restoreModeWidgets(region.widgets, modeLayout?.regions[regionId].widgets ?? [], desiredByKey);
+    const widgets = restored.flatMap((placement) => {
       if (!placement.placementIdentity) {
         return regionId === "main" && pageOwnsPrimaryLocation && placement.role === "location" ? [] : [placement];
       }
@@ -173,9 +193,11 @@ const reconcileRegions = (
       const key = placementIdentityKey(entry.identity);
       if (entry.region === regionId && !placedKeys.has(key)) widgets.push(entry.placement);
     }
-    const activeWidgetId = widgets.some((placement) => placement.widgetId === region.activeWidgetId)
-      ? region.activeWidgetId
-      : widgets[0]?.widgetId;
+    // Page caches omit mode tabs. Recover their shared selection from the mode's cache.
+    const activeWidgetId =
+      [region.activeWidgetId, modeLayout?.regions[regionId].activeWidgetId].find((id) =>
+        widgets.some((placement) => placement.widgetId === id),
+      ) ?? widgets[0]?.widgetId;
     const opensPreviouslyEmptyRegion =
       region.widgets.length === 0 && widgets.some((placement) => !placement.hiddenByDefault);
     regions[regionId] = {
@@ -252,7 +274,7 @@ const updateOwnedWidgetLayout = (input: ReconcileOwnedWidgetLayoutInput, removed
     current,
     desired,
     removedKeys,
-    layout: reconcileRegions(input.layout, desired, removedKeys),
+    layout: reconcileRegions(input.layout, desired, removedKeys, input.modeLayout),
   });
   const desiredByIdentity = new Map(desired.map((entry) => [placementIdentityKey(entry.identity), entry]));
 

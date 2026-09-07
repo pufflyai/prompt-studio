@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Preserve workspace subpanel visibility and selected tabs through Back and Forward navigation.
+Preserve Side and Secondary panel visibility and selected tabs through Back and Forward navigation.
