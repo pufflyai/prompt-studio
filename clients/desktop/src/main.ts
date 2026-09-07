@@ -121,9 +121,9 @@ const finishQuit = () => {
 
 const startRuntime = async () => {
   setState(initialDesktopState);
-  await windowController?.showLifecycle();
+  const lifecycleReady = windowController?.showLifecycle();
   try {
-    const runtime = await runtimeManager.start();
+    const [runtime] = await Promise.all([runtimeManager.start(), lifecycleReady]);
     setState(
       transitionDesktopState(state, {
         type: "runtime_ready",
@@ -136,6 +136,7 @@ const startRuntime = async () => {
     );
     await windowController?.showWorkbench(runtime.descriptor);
   } catch (error) {
+    await lifecycleReady;
     logger.error(
       { event: "desktop.runtime.start.failed", message: recoveryError(error).message },
       "Runtime start failed",

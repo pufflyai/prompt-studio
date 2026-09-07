@@ -32,8 +32,8 @@ const desktopActions: DesktopLifecycleActions = {
   retryRuntime: () => window.promptStudioDesktop.retryRuntime(),
 };
 
-const useDesktopState = () => {
-  const [state, setState] = useState<DesktopState>({ kind: "starting", phase: "discovery" });
+const useDesktopState = (initialState: DesktopState) => {
+  const [state, setState] = useState(initialState);
   useEffect(() => {
     let active = true;
     const refresh = async () => {
@@ -199,7 +199,8 @@ export const DesktopLifecycleView = (props: DesktopLifecycleViewProps) => {
   );
 };
 
-export const DesktopLifecycleApp = () => {
-  const state = useDesktopState();
+export const DesktopLifecycleApp = (props: { initialState: DesktopState }) => {
+  const { initialState } = props;
+  const state = useDesktopState(initialState);
   return <DesktopLifecycleView state={state} />;
 };
