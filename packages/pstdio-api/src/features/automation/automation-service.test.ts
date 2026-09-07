@@ -225,6 +225,7 @@ describe("automation authentication", () => {
 
 describe("automation service cancellation", () => {
   test("returns after the grace period when a command ignores cancellation", async () => {
+    let abortedAt: number | undefined;
     let storedToken: Record<string, unknown> | null = null;
     let storedRun: Record<string, unknown> = {
       id: "run-1",
@@ -258,7 +259,10 @@ describe("automation service cancellation", () => {
           };
           return storedToken;
         },
-        getToken: async () => storedToken,
+        getToken: async () => {
+          await Bun.sleep(150);
+          return storedToken;
+        },
         markTokenUsed: async () => {},
         listQueuedRuns: async () => [storedRun],
         claimQueuedRun: async () => {
@@ -281,7 +285,16 @@ describe("automation service cancellation", () => {
             }),
           },
         }) as never,
-      executeCommand: async () => new Promise(() => {}),
+      executeCommand: async (_deps, input) =>
+        new Promise(() => {
+          input.signal?.addEventListener(
+            "abort",
+            () => {
+              abortedAt = performance.now();
+            },
+            { once: true },
+          );
+        }),
       shutdownGraceMs: 5,
     });
     const issued = await service.issueToken({
@@ -293,13 +306,14 @@ describe("automation service cancellation", () => {
     await service.recoverQueuedRuns();
     await Bun.sleep(0);
 
-    const startedAt = performance.now();
     await expect(service.cancelRun(issued.token, "project-1", "run-1")).rejects.toMatchObject({
       code: "automation_cancellation_pending",
       status: 409,
     });
 
-    expect(performance.now() - startedAt).toBeLessThan(100);
+    // The grace period begins at cancellation; token verification happens before it.
+    expect(abortedAt).toBeDefined();
+    expect(performance.now() - abortedAt!).toBeLessThan(100);
     expect(storedRun.status).toBe("running");
   });
 });
