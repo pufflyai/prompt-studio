@@ -34,7 +34,28 @@ A persistent runtime is detached. Ownership is rediscovered immediately before q
 
 The workbench uses a dedicated session partition without the `persist:` prefix. Before dashboard load, Electron clears old cookies and calls the bearer-authenticated browser-session endpoint. The response provisions the session-only HttpOnly, same-origin, `SameSite=Strict` cookie; the descriptor token never crosses the preload boundary.
 
-The ephemeral browser session deliberately discards credentials and browser storage between launches. Desktop keeps only the selected project and each project's last resource in Electron's user-data directory. Its typed preload API cannot write arbitrary workbench keys. Layout data, session selection, and unsent chat drafts stay in the ephemeral browser session and do not survive application quit. A normal browser continues to use `localStorage`. Runtime-served dashboard metadata also forces API and sync requests to remain same-origin, even when a source build supplied a different `VITE_API_BASE_URL`.
+The ephemeral browser session deliberately discards credentials and browser storage between launches. Desktop keeps the selected project, each project's last resource, and ordered open project-tab IDs in Electron's user-data directory. Its typed preload API cannot write arbitrary workbench keys. Layout data, session selection, and unsent chat drafts stay in the ephemeral browser session and do not survive application quit. A normal browser continues to use `localStorage`. Runtime-served dashboard metadata also forces API and sync requests to remain same-origin, even when a source build supplied a different `VITE_API_BASE_URL`.
+
+## Native title bar and project tabs
+
+Electron uses a hidden title bar with native controls. macOS traffic lights sit at x=10, y=15 inside the 44-pixel bar. The UI reserves enough space for their native dimensions. Windows and Linux use a 44-pixel native window-controls overlay, and CSS title-bar environment values keep interactive content out of its safe area. The bar is draggable; tabs, close buttons, and the project picker are not. Startup, recovery, confirmation, and closing views reserve the same title-bar space.
+
+The dashboard detects the frozen preload bridge's `getProjectTabs` and `setProjectTabs` methods. This capability enables the desktop tab controller and title bar. Browser sessions keep their existing project selector and automatic single-project selection.
+
+The dashboard controller owns only the ordered open IDs. Selecting a tab and selecting a project in the picker call the existing project-selection command. The selected-project context remains the only active-project state. Project-scoped navigation and history continue through the existing workbench. Closing a tab selects its next neighbor, or the previous neighbor when closing the last item. Closing the only tab opens project selection. It never deletes a project or cancels that project's work.
+
+Electron's `DesktopProjectTabsStore` persists only `{ projectIds: string[] }` in `project-tabs.json`. It validates IDs, serializes atomic writes, and finishes pending writes before quit. Missing or invalid files start with an empty list. The dashboard removes deleted IDs after initial project sync and refreshes tab labels when project data arrives. This persistence does not retain runtime tokens or general browser storage.
+
+`@pstdio/ui` owns the title-bar and tab recipes from Pencil node `Q1dRGx`. `@pstdio/workbench` provides a generic `titleBar` slot above its regions and inside its theme. It has no project or Electron knowledge.
+
+Run the real packaged tab flow with:
+
+```bash
+bun run --cwd clients/desktop package
+bun run --cwd clients/desktop test:packaged --grep 'opens, switches, closes'
+```
+
+The flow opens two projects through the picker, switches tabs, restores project navigation, closes the active tab without stopping its terminal, and restores tab order after relaunch. It checks one renderer page and an unchanged runtime ID and PID, then attaches `desktop-project-tabs.png` while two tabs are visible. Storybook's `Components/Navigation/Window Tabs` covers light and dark themes, overflow, long names, keyboard selection, and close hover/focus.
 
 BrowserWindow enables sandboxing, context isolation, web security, and disables Node integration and webviews. The bundled lifecycle renderer is served from the privileged `pstdio://lifecycle/` protocol, restricted to files under its renderer root. It does not use the broader `file://` protocol. The shell:
 

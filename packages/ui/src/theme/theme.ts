@@ -24,6 +24,7 @@ import { tabsSlotRecipe } from "./recipes/tabs";
 import { textareaRecipe } from "./recipes/textarea";
 import { timelineSlotRecipe } from "./recipes/timeline";
 import { tooltipRecipe } from "./recipes/tooltip";
+import { windowTabsRecipe, windowTitleBarRecipe } from "./recipes/window-title-bar";
 import { shadowlessDefaultConfig } from "./shadowless-default-config";
 import { borders } from "./tokens/borders";
 import { semanticColors } from "./tokens/colors";
@@ -63,6 +64,8 @@ const config = defineConfig({
       borders,
     },
     slotRecipes: {
+      windowTitleBar: windowTitleBarRecipe,
+      windowTabs: windowTabsRecipe,
       alert: alertSlotRecipe,
       colorPicker: colorPickerSlotRecipe,
       drawer: drawerSlotRecipe,

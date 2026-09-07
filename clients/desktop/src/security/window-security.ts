@@ -12,12 +12,14 @@ export const CONTENT_SECURITY_POLICY = [
   "worker-src 'self' blob:",
 ].join("; ");
 
-export const createSecureWindowOptions = (preload: string, partition: string) => ({
+export const createSecureWindowOptions = (preload: string, partition: string, platform: string = process.platform) => ({
   width: 1200,
   height: 800,
   minWidth: 720,
   minHeight: 520,
   show: false,
+  titleBarStyle: "hidden" as const,
+  ...(platform === "darwin" ? { trafficLightPosition: { x: 10, y: 15 } } : { titleBarOverlay: { height: 44 } }),
   webPreferences: {
     sandbox: true,
     contextIsolation: true,

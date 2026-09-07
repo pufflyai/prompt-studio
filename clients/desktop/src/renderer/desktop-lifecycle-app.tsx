@@ -1,5 +1,5 @@
 import { Box, Button, Heading, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import { AlertMessage, SimpleCard, SimpleCardBody, WindowTitleBar } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 
@@ -21,6 +21,7 @@ interface DesktopLifecycleActions {
 interface DesktopLifecycleViewProps {
   actions?: DesktopLifecycleActions;
   state: DesktopState;
+  platform?: string;
 }
 
 const desktopActions: DesktopLifecycleActions = {
@@ -186,21 +187,24 @@ const ClosingState = () => {
 };
 
 export const DesktopLifecycleView = (props: DesktopLifecycleViewProps) => {
-  const { actions = desktopActions, state } = props;
+  const { actions = desktopActions, state, platform = "darwin" } = props;
   return (
-    <Box as="main" minHeight="100vh" bg="bg" color="fg" display="grid" placeItems="center" padding="xl">
-      <Box width="full" maxWidth="2xl">
-        {state.kind === "starting" && <StartingState phase={state.phase} />}
-        {state.kind === "recovery" && <RecoveryState actions={actions} state={state} />}
-        {state.kind === "confirming_active_work" && <ActiveWorkState actions={actions} state={state} />}
-        {state.kind === "closing" && <ClosingState />}
+    <Stack as="main" minHeight="100vh" bg="bg" color="fg" gap="0">
+      <WindowTitleBar platform={platform} />
+      <Box flex="1" display="grid" placeItems="center" padding="xl">
+        <Box width="full" maxWidth="2xl">
+          {state.kind === "starting" && <StartingState phase={state.phase} />}
+          {state.kind === "recovery" && <RecoveryState actions={actions} state={state} />}
+          {state.kind === "confirming_active_work" && <ActiveWorkState actions={actions} state={state} />}
+          {state.kind === "closing" && <ClosingState />}
+        </Box>
       </Box>
-    </Box>
+    </Stack>
   );
 };
 
-export const DesktopLifecycleApp = (props: { initialState: DesktopState }) => {
-  const { initialState } = props;
+export const DesktopLifecycleApp = (props: { initialState: DesktopState; platform: string }) => {
+  const { initialState, platform } = props;
   const state = useDesktopState(initialState);
-  return <DesktopLifecycleView state={state} />;
+  return <DesktopLifecycleView state={state} platform={platform} />;
 };

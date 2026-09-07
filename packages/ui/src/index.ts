@@ -52,6 +52,8 @@ export type { SidenavProps } from "@/components/sidenav/sidenav.types";
 export { getTabVisibilityStore, useTabVisibilityStore } from "@/components/tab-strip/tab-visibility.store";
 export type { TabVisibilityPlacement } from "@/components/tab-strip/tab-visibility-filter";
 export { buildTabVisibilityMenuActions, filterVisibleTabs } from "@/components/tab-strip/tab-visibility-filter";
+export { type WindowTab, WindowTabs, type WindowTabsProps } from "@/components/tab-strip/window-tabs";
+export { WindowTitleBar, type WindowTitleBarProps } from "@/components/tab-strip/window-title-bar";
 export type {
   SaveTagSettingsInput,
   TagEditorAction,

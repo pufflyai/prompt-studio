@@ -13,6 +13,7 @@ import {
   waitForDescriptor,
   waitForExit,
 } from "./packaged-app-helpers";
+import { openPackagedProject } from "./packaged-project-helpers";
 import { waitForVisibleElement } from "./visible-element-timing";
 
 const createProjectThroughBrowser = (app: PackagedApp, name: string) =>
@@ -87,6 +88,7 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     expect(created).toMatchObject({ status: 201 });
     const projectId = created.body.id;
     if (!projectId) throw new Error("Packaged project creation did not return an id");
+    await openPackagedProject(first.page, "Relaunch persistence project");
     await first.page.getByRole("option", { name: "Sessions", exact: true }).click();
     await expect(first.page.getByLabel("Main").getByText("No active conversations", { exact: true })).toBeVisible();
     await expect

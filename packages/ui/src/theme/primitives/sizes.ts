@@ -22,6 +22,8 @@ export const sp = {
 };
 
 export const spacing = {
+  "window-tab-gap": { value: "0.4375rem" },
+  "window-controls-mac": { value: "4.875rem" },
   none: { value: "0" },
   "3xs": { value: sp[25] },
   "2xs": { value: sp[50] },
@@ -41,6 +43,10 @@ export const spacing = {
 };
 
 export const sizes = {
+  "window-title-bar": { value: "2.75rem" },
+  "window-tab": { value: "1.75rem" },
+  "window-tab-close": { value: "0.8125rem" },
+  "window-tab-max": { value: "15rem" },
   "collection-row": { value: "2.125rem" },
   "filter-pill": { value: sp[300] },
   "icon-2xs": { value: sp[150] },
