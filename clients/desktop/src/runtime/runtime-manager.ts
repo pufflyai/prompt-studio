@@ -182,6 +182,8 @@ export class DesktopRuntimeManager {
         markChildTerminated();
         const detail = this.#output || `Runtime exited with ${code === null ? `signal ${signal}` : `code ${code}`}`;
         if (!ready) reject(new Error(detail));
+        // A clean owned-process exit can arrive before its HTTP shutdown event.
+        else if (code === 0) this.#handleIntentionalShutdown();
         else if (!this.#intentional) this.#options.onUnexpectedExit(detail);
       });
       child.once("close", markChildTerminated);
@@ -227,19 +229,17 @@ export class DesktopRuntimeManager {
     this.#eventAbort?.abort();
   }
 
+  #handleIntentionalShutdown() {
+    if (this.#intentional) return;
+    this.#intentional = true;
+    this.#options.onIntentionalShutdown();
+  }
+
   #attach(descriptor: RuntimeDescriptor, external: boolean) {
     this.#runtime = { descriptor, external };
     this.#eventAbort = new AbortController();
     void this.#deps
-      .observeRuntimeShutdown(
-        descriptor,
-        () => {
-          this.#intentional = true;
-          this.#options.onIntentionalShutdown();
-        },
-        fetch,
-        this.#eventAbort.signal,
-      )
+      .observeRuntimeShutdown(descriptor, () => this.#handleIntentionalShutdown(), fetch, this.#eventAbort.signal)
       .catch(() => {});
     return this.#runtime;
   }

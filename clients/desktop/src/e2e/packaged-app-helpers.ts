@@ -96,15 +96,11 @@ export const attachStartupTimings = async (app: PackagedApp) => {
   });
 };
 
-export const launchPackagedWindow = async (
-  home: string,
-  runtimeEnvironment: Record<string, string> = {},
-  startupArguments: string[] = [],
-) => {
+export const launchPackagedWindow = async (home: string, runtimeEnvironment: Record<string, string> = {}) => {
   const startedAt = Date.now();
   const child = spawn(
     packageLayout.executable,
-    [...startupArguments, "--remote-debugging-port=0", `--user-data-dir=${join(home, "electron-user-data")}`],
+    ["--remote-debugging-port=0", `--user-data-dir=${join(home, "electron-user-data")}`],
     {
       cwd: home,
       env: { ...packagedEnvironment(home), ...runtimeEnvironment },
@@ -130,12 +126,8 @@ export const launchPackagedWindow = async (
   }
 };
 
-export const launchPackagedApp = async (
-  home: string,
-  runtimeEnvironment: Record<string, string> = {},
-  startupArguments: string[] = [],
-) => {
-  const app = await launchPackagedWindow(home, runtimeEnvironment, startupArguments);
+export const launchPackagedApp = async (home: string, runtimeEnvironment: Record<string, string> = {}) => {
+  const app = await launchPackagedWindow(home, runtimeEnvironment);
   try {
     const page = await waitForWorkbenchPage(app.lifecyclePage, app.runtime.origin);
     const visibleAt = await waitForVisibleElement(page, "#root");
