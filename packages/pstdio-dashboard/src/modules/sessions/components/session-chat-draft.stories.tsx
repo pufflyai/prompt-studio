@@ -7,6 +7,8 @@ import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
 import { selectDashboardProject } from "@/shared/app/project-context";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
+import { openWorkspacesPage } from "@/shared/workbench/page-navigation";
+import { createWorkspacesModule } from "../../workspaces/module";
 import { createSessionBubbleModule } from "../bubble/module";
 import { openDashboardSidePanel } from "../bubble/open-side-panel";
 import { openSessionBubbleWidgets } from "../bubble/session-bubble";
@@ -28,8 +30,10 @@ const SessionChatDraftStory = (props: { initiallyClosed?: boolean }) => {
   const { initiallyClosed = false } = props;
   const [workbench] = useState(() => {
     const workbench = createWorkbench({ initialSidePanelMode: initiallyClosed ? "closed" : "attached" });
+    workbench.registerModule(createWorkspacesModule());
     workbench.registerModule(createSessionBubbleModule({ sessionDraftPersistence: drafts }));
     selectDashboardProject(workbench, { id: "project-story", name: "Prompt Studio" });
+    openWorkspacesPage(workbench);
     if (!initiallyClosed) openSessionBubbleWidgets(workbench, { resource: draftResource });
     return workbench;
   });
