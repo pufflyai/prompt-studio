@@ -1,5 +1,7 @@
 import { expect } from "bun:test";
 import { controlsQueryResultSchema } from "pstdio-api-contracts";
+import { isLocalizedString } from "pstdio-api-contracts/extension-kernel";
+import { text } from "pstdio-extensions/workbench";
 
 export const expectPlannerProperties = async (
   baseUrl: string,
@@ -26,7 +28,10 @@ export const expectPlannerProperties = async (
     }),
   });
   expect(propertiesRes.status).toBe(200);
-  const properties = (await propertiesRes.json()) as { outcome: { ok: boolean; value: unknown } };
+  // The dashboard resolves localization tokens before validating a controls query.
+  const properties = JSON.parse(await propertiesRes.text(), (_key, value) =>
+    isLocalizedString(value) ? text(value) : value,
+  ) as { outcome: { ok: boolean; value: unknown } };
   expect(properties.outcome.ok).toBe(true);
   const controls = controlsQueryResultSchema.parse(properties.outcome.value);
   expect(controls.params).toEqual(
