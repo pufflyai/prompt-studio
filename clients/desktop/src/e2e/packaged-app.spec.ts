@@ -35,6 +35,10 @@ test("proves cold packaged startup and both authenticated transport paths", asyn
     app = await launchPackagedApp(home);
     testInfo.annotations.push({ type: "cold-start-ms", description: String(app.readyInMs) });
     expect(app.readyInMs).toBeLessThan(8_000);
+    const startupEditors = await app.page.evaluate(() =>
+      performance.getEntriesByType("resource").filter((entry) => entry.name.includes("/monaco-browser-")),
+    );
+    expect(startupEditors).toEqual([]);
     expect(new URL(app.runtime.origin).hostname).toBe("127.0.0.1");
     expect(app.runtime.ownerType).toBe("desktop");
 

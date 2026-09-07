@@ -1,6 +1,6 @@
 import { DiffEditor, Editor } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import type { MonacoThemeData } from "../../theme";
 import { useThemePreference } from "../../utils/theme-preference";
 
@@ -16,6 +16,16 @@ export const createCodeEditorPreloader = (initialize: () => Promise<unknown>) =>
 export const preloadCodeEditor = createCodeEditorPreloader(() =>
   import("./monaco-browser").then((module) => module.initializeMonaco()),
 );
+
+const MonacoEditor = lazy(async () => {
+  await preloadCodeEditor();
+  return { default: Editor };
+});
+
+const MonacoDiffEditor = lazy(async () => {
+  await preloadCodeEditor();
+  return { default: DiffEditor };
+});
 
 export const customTheme = {
   base: "vs-dark" as const,
@@ -119,25 +129,27 @@ export const CodeEditor = (props: CodeEditorProps) => {
   } as const;
 
   return (
-    <Editor
-      width="100%"
-      height="100%"
-      language={language}
-      defaultValue={defaultCode}
-      value={code}
-      theme={EDITOR_THEME_NAME}
-      options={options}
-      onChange={(value) => {
-        onChange?.(value || "");
-      }}
-      beforeMount={(monaco) => {
-        applyEditorTheme(monaco);
-      }}
-      onMount={(editor, monaco) => {
-        applyEditorTheme(monaco);
-        configureCodeEditor(editor, monaco);
-      }}
-    />
+    <Suspense fallback={null}>
+      <MonacoEditor
+        width="100%"
+        height="100%"
+        language={language}
+        defaultValue={defaultCode}
+        value={code}
+        theme={EDITOR_THEME_NAME}
+        options={options}
+        onChange={(value) => {
+          onChange?.(value || "");
+        }}
+        beforeMount={(monaco) => {
+          applyEditorTheme(monaco);
+        }}
+        onMount={(editor, monaco) => {
+          applyEditorTheme(monaco);
+          configureCodeEditor(editor, monaco);
+        }}
+      />
+    </Suspense>
   );
 };
 
@@ -181,20 +193,22 @@ export const CodeDiffEditor = (props: CodeDiffEditorProps) => {
   } as const;
 
   return (
-    <DiffEditor
-      width="100%"
-      height="100%"
-      language={language}
-      original={original}
-      modified={modified}
-      theme={EDITOR_THEME_NAME}
-      options={options}
-      beforeMount={(monaco) => {
-        applyEditorTheme(monaco);
-      }}
-      onMount={(_, monaco) => {
-        applyEditorTheme(monaco);
-      }}
-    />
+    <Suspense fallback={null}>
+      <MonacoDiffEditor
+        width="100%"
+        height="100%"
+        language={language}
+        original={original}
+        modified={modified}
+        theme={EDITOR_THEME_NAME}
+        options={options}
+        beforeMount={(monaco) => {
+          applyEditorTheme(monaco);
+        }}
+        onMount={(_, monaco) => {
+          applyEditorTheme(monaco);
+        }}
+      />
+    </Suspense>
   );
 };

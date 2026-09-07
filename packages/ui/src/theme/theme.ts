@@ -33,6 +33,12 @@ import { textStyles } from "./tokens/text";
 
 const config = defineConfig({
   globalCss,
+  utilities: {
+    WebkitAppRegion: {
+      values: ["drag", "no-drag"],
+      transform: (value) => ({ WebkitAppRegion: value }),
+    },
+  },
   theme: {
     breakpoints: {
       "3xl": "2560px",

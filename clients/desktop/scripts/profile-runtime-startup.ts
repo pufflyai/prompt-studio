@@ -2,6 +2,7 @@ import { type ChildProcess, spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { redactSensitiveText } from "pstdio-logging";
 
 const desktopRoot = resolve(import.meta.dirname, "..");
 const repoRoot = resolve(desktopRoot, "../..");
@@ -14,32 +15,43 @@ const waitForExit = (child: ChildProcess) => new Promise<void>((resolveExit) => 
   else child.once("exit", () => resolveExit());
 });
 const results: unknown[] = [];
-for (const [variant, binary] of Object.entries(binaryPaths)) {
+const cases = [...Object.entries(binaryPaths), ["signed-fixture", binaryPaths.signed]];
+for (const [variant, binary] of cases) {
   if (!existsSync(binary)) { results.push({ variant, skipped: "Build did not produce this binary" }); continue; }
   const home = mkdtempSync(join(tmpdir(), "desktop-runtime-profile-"));
   mkdirSync(join(home, "tmp"));
-  const env = { ...process.env, PSTDIO_HOME: home, TMPDIR: join(home, "tmp") };
+  const profileDir = join(desktopRoot, "test-results", `runtime-cpu-${variant}`);
+  mkdirSync(profileDir, { recursive: true });
+  const env = {
+    ...process.env, PSTDIO_HOME: home, TMPDIR: join(home, "tmp"),
+    BUN_OPTIONS: `--cpu-prof --cpu-prof-md --cpu-prof-dir=${profileDir}`,
+    ...(variant === "signed-fixture" ? { PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({ defaultExtensions: [{ source: join(repoRoot, "packages/workbench-fixture"), installName: "workbench-fixture" }] }) } : {}),
+  };
   const start = performance.now();
   const child = spawn(binary, ["serve", "--foreground", "--owner", "desktop", "--host", "127.0.0.1", "--port", "0"], { cwd: home, env, stdio: ["ignore", "pipe", "pipe"] });
   const milestones: Array<{ milliseconds: number; phase: string }> = [];
+  let output = "";
+  let token = "";
   child.stdout?.on("data", (bytes) => {
     const text = String(bytes);
+    output = `${output}${text}`.slice(-32_000);
     if (text.includes("[createDb] PGlite ready")) milestones.push({ milliseconds: Math.round(performance.now() - start), phase: "database-ready" });
     if (text.includes("[drizzle] extracting 0000_")) milestones.push({ milliseconds: Math.round(performance.now() - start), phase: "extract-migrations" });
   });
-  child.stderr?.resume();
+  child.stderr?.on("data", (bytes) => { output = `${output}${String(bytes)}`.slice(-32_000); });
   let readyMs: number | null = null;
   try {
     while (performance.now() - start < 15_000 && child.exitCode === null && child.signalCode === null) {
       try {
         const descriptor = JSON.parse(readFileSync(join(home, "runtime.json"), "utf8"));
+        token = descriptor.token;
         const ready = await fetch(`${descriptor.origin}/runtime/ready`, { headers: { authorization: `Bearer ${descriptor.token}` }, signal: AbortSignal.timeout(250) });
         if (ready.ok) { readyMs = Math.round(performance.now() - start); break; }
       } catch {}
       await Bun.sleep(25);
     }
     const signature = spawnSync("codesign", ["--display", "--verbose=4", binary], { encoding: "utf8" });
-    results.push({ variant, platform: process.platform, arch: process.arch, readyMs, milestones, signature: signature.stderr });
+    results.push({ variant, platform: process.platform, arch: process.arch, readyMs, milestones, signature: signature.stderr, output: redactSensitiveText(output, token ? [token] : []) });
     if (readyMs !== null) {
       const close = spawn(binary, ["close"], { cwd: home, env, stdio: "ignore" });
       await waitForExit(close);
