@@ -1,45 +1,7 @@
-name: Release Desktop
+name: Validate native desktop candidate
 
 on:
-  workflow_call:
-    inputs:
-      version:
-        required: true
-        type: string
-      tag:
-        required: true
-        type: string
-    secrets:
-      MACOS_CERTIFICATE:
-        required: true
-      MACOS_CERTIFICATE_PASSWORD:
-        required: true
-      MACOS_SIGN_IDENTITY:
-        required: true
-      APPLE_API_KEY:
-        required: true
-      APPLE_API_KEY_ID:
-        required: true
-      APPLE_API_ISSUER:
-        required: true
-      WINDOWS_CERTIFICATE:
-        required: false
-      WINDOWS_CERTIFICATE_PASSWORD:
-        required: false
   workflow_dispatch:
-    inputs:
-      version:
-        description: Existing pstdio package and desktop version
-        required: true
-        type: string
-      tag:
-        description: Existing draft GitHub release tag
-        required: true
-        type: string
-
-concurrency:
-  group: desktop-release-${{ inputs.tag }}
-  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -69,7 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.tag }}
+          ref: ${{ github.sha }}
           fetch-depth: 0
 
       - name: Setup Bun
@@ -85,15 +47,11 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Verify release version
-        env:
-          DESKTOP_RELEASE_VERSION: ${{ inputs.version }}
-          DESKTOP_RELEASE_TAG: ${{ inputs.tag }}
+      - name: Verify candidate component versions
         run: >-
           bun -e 'const desktop = await Bun.file("clients/desktop/package.json").json();
           const runtime = await Bun.file("packages/pstdio/package.json").json();
-          if (desktop.version !== process.env.DESKTOP_RELEASE_VERSION || runtime.version !== desktop.version ||
-          process.env.DESKTOP_RELEASE_TAG !== `pstdio@${desktop.version}`) throw new Error("Desktop release version drift");'
+          if (runtime.version !== desktop.version) throw new Error("Desktop candidate version drift");'
 
       - name: Import macOS signing credentials
         if: matrix.platform == 'darwin'
@@ -181,10 +139,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: release-readiness-${{ matrix.target }}
+          name: candidate-readiness-${{ matrix.target }}
           path: clients/desktop/test-results
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 7
 
       - name: Verify macOS signatures and notarization
         if: matrix.platform == 'darwin'
@@ -220,9 +178,13 @@ jobs:
           test -n "$DEB"
           dpkg-deb --info "$DEB"
 
-      - name: Extract desktop release notes
-        shell: bash
-        run: bun run --cwd scripts release:changelog -- pstdio "${{ inputs.version }}" > "${{ runner.temp }}/desktop-release-notes.md"
+      - name: Describe the unpublished candidate
+        env:
+          CANDIDATE_NOTES: ${{ runner.temp }}/desktop-release-notes.md
+        run: >-
+          bun -e 'await Bun.write(process.env.CANDIDATE_NOTES,
+          "Unpublished validation candidate at " + process.env.GITHUB_SHA +
+          ". This is not a release and must not replace published version assets.");'
 
       - name: Prepare release artifacts
         env:
@@ -234,10 +196,10 @@ jobs:
       - name: Upload verified native artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: desktop-${{ matrix.target }}
+          name: desktop-candidate-${{ matrix.target }}
           path: clients/desktop/out/release/${{ matrix.target }}/*
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 7
 
       - name: Remove macOS signing keychain
         if: always() && matrix.platform == 'darwin'
@@ -245,46 +207,3 @@ jobs:
         env:
           KEYCHAIN_PATH: ${{ runner.temp }}/pstdio-desktop.keychain-db
         run: security delete-keychain "$KEYCHAIN_PATH" || true
-
-  publish:
-    needs: native
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ inputs.tag }}
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.3.13
-
-      - name: Download native artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: desktop-*
-          path: desktop-release
-
-      - name: Verify and flatten release set
-        shell: bash
-        run: |
-          set -euo pipefail
-          bun clients/desktop/scripts/verify-release-set.ts desktop-release
-          mkdir desktop-publish
-          find desktop-release -type f -exec cp '{}' desktop-publish/ \;
-          cd desktop-publish
-          for checksums in checksums-*.sha256; do sha256sum -c "$checksums"; done
-          cat checksums-*.sha256 | sort > "checksums-desktop-${{ inputs.version }}.sha256"
-
-      - name: Publish desktop release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$(gh release view '${{ inputs.tag }}' --json isDraft -q .isDraft)" = "true"
-          gh release upload "${{ inputs.tag }}" desktop-publish/* --clobber
-          gh release edit "${{ inputs.tag }}" --draft=false
