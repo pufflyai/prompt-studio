@@ -72,6 +72,8 @@ const applyPageState = (
   storeBeforeTransition = input.registry.store.getState(),
 ) => {
   activateWorkbenchPageMode(input.modes, state.activeModeId, () => {
+    // Scope listeners must apply the destination mode's panel policy to its saved layout.
+    if (source === "transition") input.beforeApply?.(state);
     // Mode listeners may open or close mode/shell placements after the mode is
     // published. Reconcile the latest registry state so this transition cannot
     // overwrite those declarative changes with the snapshot that began it.
@@ -106,7 +108,6 @@ export const connectWorkbenchPageRuntime = (input: ConnectWorkbenchPageRuntimeIn
     const storeBeforeTransition = input.registry.store.getState();
     applyingTransition = true;
     try {
-      input.beforeApply?.(state);
       applyPageState(input, state, "transition", storeBeforeTransition);
     } finally {
       applyingTransition = false;

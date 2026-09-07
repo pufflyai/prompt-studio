@@ -12,4 +12,6 @@ An explicit target parent supplies contextual breadcrumbs. Without one, navigati
 
 The browser owns history. Page location persistence stays at version 1. Layout cache version 4 stores resource identity keys and Main collections. Incompatible layout cache entries are discarded, while valid locations, resource data, tree state, menu preferences, and side-panel presentation remain intact. Collection state uses the existing location key to separate workspaces.
 
+Opening a subpanel tab keeps the current history entry and preserves Forward navigation. Back and Forward restore each location's tabs, selection, and saved panel visibility. The destination mode becomes active before its layout is restored, so the previous mode cannot change those saved choices.
+
 See the [cookbook](cookbook.md) for executable authoring sources and the [workbench guide](../../../packages/pstdio-workbench/README.md) for host controllers.
