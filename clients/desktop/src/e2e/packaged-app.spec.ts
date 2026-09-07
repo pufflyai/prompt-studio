@@ -13,6 +13,7 @@ import {
   waitForDescriptor,
   waitForExit,
 } from "./packaged-app-helpers";
+import { waitForVisibleElement } from "./visible-element-timing";
 
 const createProjectThroughBrowser = (app: PackagedApp, name: string) =>
   app.page.evaluate(async (projectName) => {
@@ -158,8 +159,12 @@ test("shows recovery promptly after a sidecar crash and retries without relaunch
     const originalInstanceId = app.runtime.instanceId;
     const crashedAt = Date.now();
     process.kill(app.runtime.pid, process.platform === "win32" ? undefined : "SIGKILL");
-    await expect(app.page.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
-    const recoveryInMs = Date.now() - crashedAt;
+    const visibleAt = await waitForVisibleElement(
+      app.page,
+      '[role="alert"] :is(h1, h2, h3)',
+      "Prompt Studio needs attention",
+    );
+    const recoveryInMs = visibleAt - crashedAt;
     testInfo.annotations.push({ type: "recovery-ui-ms", description: String(recoveryInMs) });
     expect(recoveryInMs).toBeLessThan(500);
 

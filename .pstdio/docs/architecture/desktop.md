@@ -134,6 +134,8 @@ Use Node 24, the same version as CI, for Electron Forge packaging.
 
 The source Electron suite starts isolated temporary homes and a real Electron process. It checks authenticated attachment, the sandboxed/frozen preload boundary, ephemeral cookie storage, denied popups and permissions, single-instance focus, persistent-runtime detach, and actionable recovery. The packaged suite launches the produced application itself over the Chromium debugging protocol without enabling Electron's disabled Node inspector. It measures the cold-start, warm-attach, and crash-recovery budgets; creates and lists a project through the HttpOnly browser session and descriptor-bearer CLI; promotes ownership without restarting the runtime; proves persistent detach plus project and workbench-state restoration; exercises intentional `pst close`; and retries an unexpected sidecar exit without relaunching Electron.
 
+Startup and recovery measurements sample element visibility on animation frames and return the timestamp from the renderer. Assertion polling, protocol replies, and trace snapshots must not add time after the UI is visible. The strict limits remain 8 seconds for cold startup, 3 seconds for warm attach, and 500 milliseconds for crash recovery.
+
 Pull-request CI requires both Electron suites on Linux before downstream Docker
 builds can run. It configures the SUID sandbox for the source and packaged
 executables, verifies the packaged fuse policy, and uploads readiness results

@@ -7,6 +7,7 @@ import type { RuntimeDescriptor } from "pstdio/runtime";
 import { redactSensitiveText } from "pstdio-logging";
 import { resolvePackagedLayout } from "../packaging/package-layout";
 import { startElectronTrace } from "./electron-trace";
+import { waitForVisibleElement } from "./visible-element-timing";
 
 const desktopRoot = resolve(import.meta.dirname, "../..");
 
@@ -100,9 +101,9 @@ export const launchPackagedApp = async (home: string, runtimeEnvironment: Record
     const page = context?.pages()[0];
     if (!page || !context) throw new Error("Packaged app did not create a renderer page");
     const finishTrace = await startElectronTrace(context, `packaged-${child.pid}`);
-    await page.waitForURL(`${runtime.origin}/`);
-    await page.locator("#root").waitFor({ state: "visible" });
-    return { home, browser, child, page, readyInMs: Date.now() - startedAt, runtime, finishTrace };
+    await page.waitForURL(`${runtime.origin}/`, { waitUntil: "commit" });
+    const visibleAt = await waitForVisibleElement(page, "#root");
+    return { home, browser, child, page, readyInMs: visibleAt - startedAt, runtime, finishTrace };
   } catch (error) {
     await browser?.close().catch(() => {});
     if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
