@@ -58,10 +58,10 @@ export const writeAutomationExtension = (root: string) => {
           label: "Remote",
           async create(_ctx, input) {
             providerCreateStarted = true;
-            await Promise.race([
-              new Promise((resolve) => input.signal?.addEventListener("abort", resolve, { once: true })),
-              new Promise((resolve) => setTimeout(resolve, 200)),
-            ]);
+            // Provisioning must stay pending until the test requests cancellation.
+            if (!input.signal.aborted) {
+              await new Promise((resolve) => input.signal.addEventListener("abort", resolve, { once: true }));
+            }
             return {
               providerRef: { version: 1, data: { remoteId: input.workspaceId } },
               state: "ready",

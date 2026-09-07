@@ -277,6 +277,7 @@ describe("automation run cancellation and credentials", () => {
     });
     const created = await createdResponse.json();
 
+    let providerCreateStarted = false;
     for (let attempt = 0; attempt < 50; attempt += 1) {
       const inspected = await runtimeRequest(
         `/v1/projects/${projectId}/extensions/commands/${INSPECT_COMMAND_ID}/execute`,
@@ -287,9 +288,11 @@ describe("automation run cancellation and credentials", () => {
         },
       );
       const body = await inspected.json();
-      if (body.outcome?.value?.providerCreateStarted) break;
+      providerCreateStarted = body.outcome?.value?.providerCreateStarted === true;
+      if (providerCreateStarted) break;
       await Bun.sleep(10);
     }
+    expect(providerCreateStarted).toBe(true);
 
     const cancelledResponse = await machineRequest(token, `${path}/${created.id}/cancel`, { method: "POST" });
     expect(cancelledResponse.status).toBe(200);
