@@ -41,11 +41,11 @@ const useDesktopState = (initialState: DesktopState) => {
       const next = await window.promptStudioDesktop.getStartupState();
       if (active) setState(next);
     };
+    const unsubscribe = window.promptStudioDesktop.onStartupState(setState);
     void refresh();
-    const interval = window.setInterval(() => void refresh(), 150);
     return () => {
       active = false;
-      window.clearInterval(interval);
+      unsubscribe();
     };
   }, []);
   return state;

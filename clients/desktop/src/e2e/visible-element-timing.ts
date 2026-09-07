@@ -4,6 +4,7 @@ export const waitForVisibleElement = async (page: Page, selector: string, text?:
   // Timestamp the visible frame before assertion polling and trace capture add latency.
   const visibleAt = await page.waitForFunction(
     ({ selector, text }) => {
+      if (document.visibilityState !== "visible") return false;
       const element = document.querySelector<HTMLElement>(selector);
       if (!element?.checkVisibility({ visibilityProperty: true }) || (text && element.textContent !== text))
         return false;
