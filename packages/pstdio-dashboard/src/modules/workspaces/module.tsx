@@ -1,5 +1,4 @@
 import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
-import { EmptyState } from "@pstdio/ui";
 import type { TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { dashboardCommandIds } from "@/shared/app/commands";
@@ -56,14 +55,6 @@ const registerWorkspaceSidenavContributions = (ctx: WorkbenchModuleContext) => {
 };
 const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
   registerWorkspaceFileContributions(ctx);
-  ctx.views.registerView({
-    id: dashboardWidgetIds.workspace,
-    title: "Workspace",
-    body: {
-      kind: "react",
-      render: () => <EmptyState title="No open panels" description="Use Add panel to open Files or Changes." />,
-    },
-  });
   ctx.views.registerView({
     id: dashboardWidgetIds.createWorkspace,
     title: "Create workspace",
@@ -157,7 +148,7 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
       kind: "panels",
       empty: {
         kind: "view",
-        id: dashboardWidgetIds.workspace,
+        id: dashboardWidgetIds.workspaceDiffs,
       },
     },
     slots: [
@@ -166,22 +157,13 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
         region: "main",
         tab: { getSnapshot: () => ({ label: "Changes" }) },
         order: 1,
-        openOn: "page-resource",
         item: {
-          kind: "binding",
-          binding: {
-            kinds: [
-              {
-                kind: "resource-kind",
-                id: "workspace",
-              },
-            ],
-            view: {
-              kind: "view",
-              id: dashboardWidgetIds.workspaceDiffs,
-            },
-            cardinality: "one",
+          kind: "view",
+          view: {
+            kind: "view",
+            id: dashboardWidgetIds.workspaceDiffs,
           },
+          presence: "fixed",
         },
       },
       {
@@ -189,22 +171,13 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
         region: "main",
         tab: { getSnapshot: () => ({ label: "Files" }) },
         order: 2,
-        openOn: "page-resource",
         item: {
-          kind: "binding",
-          binding: {
-            kinds: [
-              {
-                kind: "resource-kind",
-                id: "workspace",
-              },
-            ],
-            view: {
-              kind: "view",
-              id: dashboardWidgetIds.workspaceFiles,
-            },
-            cardinality: "one",
+          kind: "view",
+          view: {
+            kind: "view",
+            id: dashboardWidgetIds.workspaceFiles,
           },
+          presence: "fixed",
         },
       },
     ],

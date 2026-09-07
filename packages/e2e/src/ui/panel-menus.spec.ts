@@ -114,7 +114,7 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
   await page.getByRole("button", { name: "Open Side Panel" }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
-  await sideHeader.getByRole("button", { name: "Add panel" }).click();
+  await expect(sideHeader.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionTabs = sideHeader.getByRole("tab");
   await expect(sessionTabs).toHaveCount(2);
@@ -190,7 +190,7 @@ test("updates a New session Sub Panel in place after the first message", async (
   await page.getByRole("button", { name: "Open Side Panel" }).click();
   await page.getByRole("dialog", { name: "Side Panel" }).getByRole("button", { name: "Reattach Side Panel" }).click();
   const sideHeader = page.locator('[data-workbench-panel-header="side"]');
-  await sideHeader.getByRole("button", { name: "Add panel" }).click();
+  await expect(sideHeader.getByRole("tab", { name: "New session", exact: true })).toBeVisible();
   await sideHeader.getByRole("button", { name: "Add panel" }).click();
   const sessionTabs = sideHeader.getByRole("tab");
   const activeTab = sideHeader.getByRole("tab", { selected: true });

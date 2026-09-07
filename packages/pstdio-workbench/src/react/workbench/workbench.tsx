@@ -39,6 +39,8 @@ interface WorkbenchProps {
   renderParamField?: CommandParamFieldRenderer;
   /** Icon shown in the closed Side Panel's bubble launcher. */
   sidePanelBubbleIcon?: ReactNode;
+  /** Host action for opening the closed Side Panel from its bubble launcher. */
+  onOpenSidePanel?: () => void;
 }
 
 const SIDENAV_DEFAULT_SIZE_PX = 250;
@@ -144,7 +146,7 @@ const createWorkbenchRegionControls = (input: WorkbenchRegionControlsInput) => {
 };
 
 const WorkbenchContent = (props: WorkbenchProps) => {
-  const { workbench, renderParamField, sidePanelBubbleIcon } = props;
+  const { workbench, renderParamField, sidePanelBubbleIcon, onOpenSidePanel } = props;
   const [sidenavContextActions, setSidenavContextActions] = useState<ResourceContextAction[]>([]);
   installWorkbenchTreeRenderer(workbench, {
     renderParamField,
@@ -284,6 +286,7 @@ const WorkbenchContent = (props: WorkbenchProps) => {
           <WorkbenchFloatingSidePanel
             workbench={workbench}
             bubbleIcon={sidePanelBubbleIcon}
+            onOpen={onOpenSidePanel}
             contentSlotRef={setFloatingSidePanelSlot}
             bottomOffset={hasStatusWidgets ? WORKBENCH_STATUS_BAR_HEIGHT : undefined}
             header={sideHeader}

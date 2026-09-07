@@ -72,6 +72,7 @@ const applyPageState = (
   source: "transition" | "scope-restore",
   storeBeforeTransition = input.registry.store.getState(),
 ) => {
+  const previousScope = input.layout.getPersistenceScope();
   activateWorkbenchPageMode(input.modes, state.activeModeId, () => {
     // Scope listeners must apply the destination mode's panel policy to its saved layout.
     if (source === "transition") input.beforeApply?.(state);
@@ -89,7 +90,8 @@ const applyPageState = (
       activate: activation.map((placement) => placement.identity),
     };
     let layout: ReturnType<typeof reconcileOwnedWidgetLayout>;
-    if (source === "scope-restore") {
+    // A restored cache needs the complete owned set; a delta belongs to the previous scope.
+    if (source === "scope-restore" || input.layout.getPersistenceScope() !== previousScope) {
       layout = reconcileOwnedWidgetLayout(layoutInput);
     } else {
       layout = applyOwnedWidgetLayoutReconciliation({

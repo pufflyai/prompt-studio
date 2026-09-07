@@ -7,6 +7,7 @@ import { createRoot } from "react-dom/client";
 import { createDesktopWorkbenchStorage } from "@/lib/desktop-workbench-storage";
 import { dashboardQueryClient } from "@/lib/query-client";
 import { SyncProvider } from "@/lib/sync/sync-provider";
+import { openDashboardSidePanel } from "@/modules/sessions/bubble/open-side-panel";
 import { createDashboardParamFieldRenderer } from "@/shared/command-params/dashboard-param-field";
 
 import { createDashboardWorkbench } from "./workbench";
@@ -22,7 +23,11 @@ const renderDashboard = async () => {
     <StrictMode>
       <QueryClientProvider client={dashboardQueryClient}>
         <SyncProvider>
-          <Workbench workbench={dashboardWorkbench} renderParamField={renderParamField} />
+          <Workbench
+            workbench={dashboardWorkbench}
+            renderParamField={renderParamField}
+            onOpenSidePanel={() => void openDashboardSidePanel(dashboardWorkbench)}
+          />
         </SyncProvider>
       </QueryClientProvider>
     </StrictMode>,

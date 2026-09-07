@@ -147,16 +147,18 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const ChangesSelected: Story = { args: { state: "diffs" } };
-export const ClosePanelsIndependently: Story = {
+export const FixedWorkspacePanels: Story = {
   args: { state: "diffs" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("button", { name: "Close Changes" }));
+    await expect(await canvas.findByRole("tab", { name: "Changes" })).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "Close Changes" })).not.toBeInTheDocument();
+    await expect(canvas.queryByRole("button", { name: "Close Files" })).not.toBeInTheDocument();
+    await userEvent.click(canvas.getByRole("tab", { name: "Files" }));
     await expect(canvas.getByRole("tab", { name: "Files" })).toBeVisible();
     await expect(canvas.getByRole("tab", { name: "Files" })).toHaveAttribute("aria-selected", "true");
-    await userEvent.click(canvas.getByRole("button", { name: "Close Files" }));
-    await expect(canvas.getByText("No open panels")).toBeVisible();
-    await expect(canvas.getByRole("button", { name: "Add panel" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("tab", { name: "Changes" }));
+    await expect(canvas.getByRole("tab", { name: "Changes" })).toHaveAttribute("aria-selected", "true");
   },
 };
 export const FilesNoSelection: Story = { args: { state: "files" } };

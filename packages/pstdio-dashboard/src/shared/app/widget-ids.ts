@@ -4,7 +4,6 @@ export const dashboardWidgetIds = {
   projectHeader: "dashboard-workbench.project-header",
   start: "dashboard-workbench.start",
   workspaces: "dashboard-workbench.workspaces",
-  workspace: "dashboard-workbench.workspace",
   workspaceFiles: "dashboard-workbench.workspace.files",
   workspaceDiffs: "dashboard-workbench.workspace.diffs",
   workspaceFileTree: "dashboard-workbench.workspace.file-tree",

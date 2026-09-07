@@ -15,6 +15,7 @@ interface WorkbenchSidePanelProps {
   bottomOffset?: string;
   header?: ReactNode;
   bubbleIcon?: ReactNode;
+  onOpen?: () => void;
 }
 
 const floatingPanelBottom = (bottomOffset: string | undefined) =>
@@ -84,7 +85,7 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
 };
 
 export const WorkbenchFloatingSidePanel = (props: WorkbenchSidePanelProps) => {
-  const { workbench, contentSlotRef, bottomOffset, header, bubbleIcon } = props;
+  const { workbench, contentSlotRef, bottomOffset, header, bubbleIcon, onOpen } = props;
   const mode = workbench.sidePanel.getMode();
 
   if (!workbench.sidePanel.canFloat() || mode === "attached") return null;
@@ -95,7 +96,7 @@ export const WorkbenchFloatingSidePanel = (props: WorkbenchSidePanelProps) => {
         aria-label="Open Side Panel"
         containerProps={{ bottom: launcherBottom(bottomOffset) }}
         tooltip="Open Side Panel"
-        onClick={() => workbench.sidePanel.setMode("floating")}
+        onClick={onOpen ?? (() => workbench.sidePanel.setMode("floating"))}
       >
         {bubbleIcon ?? <MessageCircle size={20} strokeWidth={2} />}
       </BubbleButton>
