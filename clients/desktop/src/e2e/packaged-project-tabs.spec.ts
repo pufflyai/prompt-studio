@@ -48,7 +48,7 @@ test("opens, switches, closes, and restores project tabs in one packaged window"
     const screenshot = testInfo.outputPath("desktop-project-tabs.png");
     await app.page.screenshot({ path: screenshot });
     await testInfo.attach("desktop-project-tabs", { path: screenshot, contentType: "image/png" });
-    expect(app.browser.contexts()[0].pages()).toHaveLength(1);
+    expect(app.browser.contexts()[0].pages()).toHaveLength(2);
     expect(readDescriptor(home)).toMatchObject({ instanceId: app.runtime.instanceId, pid: app.runtime.pid });
 
     await app.page.getByRole("button", { name: `Close ${first.name}`, exact: true }).click();
@@ -79,7 +79,7 @@ test("opens, switches, closes, and restores project tabs in one packaged window"
       instanceId: runtimeBeforeRelaunch.instanceId,
       pid: runtimeBeforeRelaunch.pid,
     });
-    expect(app.browser.contexts()[0].pages()).toHaveLength(1);
+    expect(app.browser.contexts()[0].pages()).toHaveLength(2);
 
     await app.page.getByRole("button", { name: `Close ${first.name}`, exact: true }).click();
     await app.page.getByRole("button", { name: `Close ${second.name}`, exact: true }).click();

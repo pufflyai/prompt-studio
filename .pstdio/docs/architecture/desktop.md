@@ -11,13 +11,13 @@ Prompt Studio desktop is a private Electron client in `clients/desktop`. Electro
 
 The lifecycle state machine distinguishes discovery, spawn, readiness, workbench, active-work confirmation, closing, recovery, retry, and persistent detach. Electron creates the runtime instance ID before spawn and accepts only a descriptor with that exact ID, so a competing process cannot replace the child during readiness. A runtime control event marks an exit as intentional; a desktop-started child exit without that event opens recovery instead of leaving a blank dashboard.
 
-Runtime discovery starts while the lifecycle document loads. Workbench navigation waits for both, so startup does not serialize those independent tasks. The lifecycle renderer reads its current state before mounting React. Recovery and confirmation therefore render their current state immediately without first mounting the startup view.
+Runtime discovery starts while the lifecycle document loads. Workbench navigation waits for both, so startup does not serialize those independent tasks. The lifecycle renderer reads its current state before mounting React and subscribes to state changes from main. It stays mounted in the BrowserWindow while a sandboxed WebContentsView displays the workbench. Recovery reveals the existing lifecycle page without restarting its renderer or loading its bundle again.
 
 The 15-second startup budget also cancels pending health requests during discovery and external-runtime verification. A runtime that accepts a connection without answering cannot leave the startup window waiting indefinitely. Cancellation preserves the existing descriptor and does not start a competing runtime.
 
-Active-work confirmation uses a sandboxed `WebContentsView` inside the existing window. The workbench stays mounted underneath, preserving its terminal connections, open resources, and unsaved input. The confirmation receives the backend-authoritative session, terminal, and job labels through the lifecycle state. Its narrow `cancelQuit` and `confirmQuit` preload actions are sender-checked like every other desktop capability. Cancel closes the confirmation and returns focus to the workbench. Confirm asks Electron main to cancel activity, then Electron waits without a timeout for the owned runtime to exit.
+Active-work confirmation hides the workbench view and reveals the lifecycle page in the same window. The workbench stays mounted, preserving its terminal connections, open resources, and unsaved input. The confirmation receives the backend-authoritative session, terminal, and job labels through the lifecycle state. Its narrow `cancelQuit` and `confirmQuit` preload actions are sender-checked like every other desktop capability. Cancel reveals the workbench and returns focus to it. Confirm asks Electron main to cancel activity, then Electron waits without a timeout for the owned runtime to exit.
 
-If the runtime refuses confirmed shutdown, Electron removes the confirmation and shows recovery. A new quit attempt reads current runtime ownership and activity before offering confirmation again. The window owns at most one confirmation view.
+If the runtime refuses confirmed shutdown, the lifecycle page changes from confirmation to recovery. A new quit attempt reads current runtime ownership and activity before offering confirmation again. The window owns one lifecycle renderer and at most one workbench view, which it closes when the window closes.
 
 Extension processes started through `ctx.process.spawnDetached` are independent
 of that managed activity. They survive desktop Quit and API shutdown through
@@ -57,7 +57,7 @@ bun run --cwd clients/desktop package
 bun run --cwd clients/desktop test:packaged --grep 'opens, switches, closes'
 ```
 
-The flow opens two projects through the picker, switches tabs, restores project navigation, closes the active tab without stopping its terminal, and restores tab order after relaunch. It checks one renderer page and an unchanged runtime ID and PID, then attaches `desktop-project-tabs.png` while two tabs are visible. Storybook's `Components/Navigation/Window Tabs` covers light and dark themes, overflow, long names, keyboard selection, and close hover/focus.
+The flow opens two projects through the picker, switches tabs, restores project navigation, closes the active tab without stopping its terminal, and restores tab order after relaunch. It checks the expected lifecycle and workbench renderers and an unchanged runtime ID and PID, then attaches `desktop-project-tabs.png` while two tabs are visible. Source Electron checks also verify that both renderers share one native window. Storybook's `Components/Navigation/Window Tabs` covers light and dark themes, overflow, long names, keyboard selection, and close hover/focus.
 
 BrowserWindow enables sandboxing, context isolation, web security, and disables Node integration and webviews. The bundled lifecycle renderer is served from the privileged `pstdio://lifecycle/` protocol, restricted to files under its renderer root. It does not use the broader `file://` protocol. The shell:
 
@@ -67,7 +67,7 @@ BrowserWindow enables sandboxing, context isolation, web security, and disables 
 - applies a restrictive content security policy;
 - validates the expected WebContents, main frame, and exact renderer origin for every IPC handler.
 
-The confirmation view uses the same hardened web preferences and session as the workbench, but only allows navigation to the lifecycle document. Its WebContents is trusted for IPC only while the view exists. It uses an alert-dialog role, focuses the safe action first, supports keyboard-only choice, and uses the shared destructive button variant for cancellation. Startup and closing progress indicators are omitted when the operating system requests reduced motion.
+The lifecycle and workbench renderers use the same hardened web preferences and memory-only session. The lifecycle renderer allows navigation only to its bundled document. Both owned WebContents are checked for IPC; the state-change subscription exposes the state payload without the Electron event object. Confirmation uses an alert-dialog role, focuses the safe action first, supports keyboard-only choice, and uses the shared destructive button variant for cancellation. Startup and closing progress indicators are omitted when the operating system requests reduced motion.
 
 ## Recovery and diagnostics
 

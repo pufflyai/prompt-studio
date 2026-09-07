@@ -1,11 +1,19 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { DESKTOP_CHANNELS, type DesktopProjectTabsState, type PromptStudioDesktopApi } from "./desktop-api";
+import type { DesktopState } from "./lifecycle/lifecycle-machine";
 
 const desktopApi: PromptStudioDesktopApi = Object.freeze({
   cancelQuit: () => ipcRenderer.invoke(DESKTOP_CHANNELS.cancelQuit),
   confirmQuit: () => ipcRenderer.invoke(DESKTOP_CHANNELS.confirmQuit),
   getAppInfo: () => ipcRenderer.invoke(DESKTOP_CHANNELS.appInfo),
   getStartupState: () => ipcRenderer.invoke(DESKTOP_CHANNELS.startupState),
+  onStartupState: (listener: (state: DesktopState) => void) => {
+    const receive = (_event: Electron.IpcRendererEvent, state: DesktopState) => listener(state);
+    ipcRenderer.on(DESKTOP_CHANNELS.startupStateChanged, receive);
+    return () => {
+      ipcRenderer.removeListener(DESKTOP_CHANNELS.startupStateChanged, receive);
+    };
+  },
   retryRuntime: () => ipcRenderer.invoke(DESKTOP_CHANNELS.retryRuntime),
   openLogs: () => ipcRenderer.invoke(DESKTOP_CHANNELS.openLogs),
   revealInFinder: (path: string) => ipcRenderer.invoke(DESKTOP_CHANNELS.revealInFinder, path),

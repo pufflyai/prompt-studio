@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { waitForWorkbenchPage } from "./desktop-pages";
 import {
   createPackagedHome,
   disposePackagedApp,
@@ -30,35 +31,35 @@ test("recovers from a stalled runtime and retries without replacing its owner", 
     suspendedPid = runtime.pid;
 
     app = await launchPackagedWindow(home);
-    await expect(app.page.getByRole("status")).toContainText("Opening Prompt Studio");
+    await expect(app.lifecyclePage.getByRole("status")).toContainText("Opening Prompt Studio");
     const recoveryAt = await waitForVisibleElement(
-      app.page,
+      app.lifecyclePage,
       '[role="alert"] :is(h1, h2, h3)',
       "Prompt Studio needs attention",
     );
     testInfo.annotations.push({ type: "stalled-runtime-recovery-ms", description: String(recoveryAt - app.startedAt) });
-    expect(await app.page.evaluate(() => window.promptStudioDesktop.getStartupState())).toMatchObject({
+    expect(await app.lifecyclePage.evaluate(() => window.promptStudioDesktop.getStartupState())).toMatchObject({
       kind: "recovery",
       error: { code: "runtime_timeout" },
     });
     expect(readFileSync(descriptorPath, "utf8")).toBe(originalDescriptor);
     expect(app.browser.contexts()[0]?.pages()).toHaveLength(1);
-    expect(await app.page.content()).not.toContain(runtime.token);
+    expect(await app.lifecyclePage.content()).not.toContain(runtime.token);
     await testInfo.attach("desktop-startup-timeout", {
-      body: await app.page.screenshot(),
+      body: await app.lifecyclePage.screenshot(),
       contentType: "image/png",
     });
 
     process.kill(runtime.pid, "SIGCONT");
     suspendedPid = null;
-    await app.page.keyboard.press("Tab");
-    const retry = app.page.getByRole("button", { name: "Retry", exact: true });
+    await app.lifecyclePage.keyboard.press("Tab");
+    const retry = app.lifecyclePage.getByRole("button", { name: "Retry", exact: true });
     await expect(retry).toBeFocused();
-    await app.page.keyboard.press("Enter");
-    await app.page.waitForURL(`${runtime.origin}/`);
-    await expect(app.page.locator("#root")).not.toBeEmpty();
+    await app.lifecyclePage.keyboard.press("Enter");
+    const workbench = await waitForWorkbenchPage(app.lifecyclePage, runtime.origin);
+    await expect(workbench.locator("#root")).not.toBeEmpty();
     expect(readDescriptor(home)).toEqual(runtime);
-    expect(app.browser.contexts()[0]?.pages()).toHaveLength(1);
+    expect(app.browser.contexts()[0]?.pages()).toHaveLength(2);
 
     await app.finishTrace();
     const close = runPackagedCli(home, ["close"]);
@@ -84,8 +85,8 @@ test("keeps an uncertain runtime owner intact until its descriptor is repaired",
     writeFileSync(descriptorPath, mismatchedDescriptor);
 
     app = await launchPackagedWindow(home);
-    await expect(app.page.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
-    expect(await app.page.evaluate(() => window.promptStudioDesktop.getStartupState())).toMatchObject({
+    await expect(app.lifecyclePage.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
+    expect(await app.lifecyclePage.evaluate(() => window.promptStudioDesktop.getStartupState())).toMatchObject({
       kind: "recovery",
       error: { code: "runtime_ownership_uncertain" },
     });
@@ -97,11 +98,11 @@ test("keeps an uncertain runtime owner intact until its descriptor is repaired",
     expect(await readiness.json()).toMatchObject({ instanceId: runtime.instanceId });
 
     writeFileSync(descriptorPath, originalDescriptor);
-    await app.page.getByRole("button", { name: "Retry", exact: true }).click();
-    await app.page.waitForURL(`${runtime.origin}/`);
-    await expect(app.page.locator("#root")).not.toBeEmpty();
+    await app.lifecyclePage.getByRole("button", { name: "Retry", exact: true }).click();
+    const workbench = await waitForWorkbenchPage(app.lifecyclePage, runtime.origin);
+    await expect(workbench.locator("#root")).not.toBeEmpty();
     expect(readDescriptor(home)).toEqual(runtime);
-    expect(app.browser.contexts()[0]?.pages()).toHaveLength(1);
+    expect(app.browser.contexts()[0]?.pages()).toHaveLength(2);
 
     await app.finishTrace();
     const close = runPackagedCli(home, ["close"]);

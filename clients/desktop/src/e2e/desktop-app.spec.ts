@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron as electron, expect, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
+import { waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
 
 const require = createRequire(import.meta.url);
@@ -98,7 +99,8 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
   });
   const finishTrace = await startElectronTrace(electronApp.context(), "attached-runtime");
   try {
-    const window = await electronApp.firstWindow();
+    const lifecycle = await electronApp.firstWindow();
+    const window = await waitForWorkbenchPage(lifecycle, descriptor.origin);
     await expect(window.getByText("Existing Prompt Studio dashboard")).toBeVisible();
     expect(await window.evaluate(() => document.cookie)).toBe("");
     expect(await window.evaluate(() => typeof process)).toBe("undefined");
@@ -114,6 +116,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       "getProjectTabs",
       "getStartupState",
       "getWorkbenchState",
+      "onStartupState",
       "openLogs",
       "quitApp",
       "retryRuntime",
@@ -130,6 +133,12 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     expect(await window.evaluate(() => Object.isFrozen((globalThis as unknown as Window).promptStudioDesktop))).toBe(
       true,
     );
+    expect(
+      await window.evaluate(() => {
+        const unsubscribe = (globalThis as unknown as Window).promptStudioDesktop.onStartupState(() => {});
+        return unsubscribe();
+      }),
+    ).toBeUndefined();
 
     await window.evaluate(() =>
       (globalThis as unknown as Window).promptStudioDesktop.setProjectTabs({ projectIds: ["second", "first"] }),

@@ -159,18 +159,20 @@ test("shows recovery promptly after a sidecar crash and retries without relaunch
   try {
     app = await launchPackagedApp(home);
     const originalInstanceId = app.runtime.instanceId;
+    const lifecycleStartedAt = await app.lifecyclePage.evaluate(() => performance.timeOrigin);
     const crashedAt = Date.now();
     process.kill(app.runtime.pid, process.platform === "win32" ? undefined : "SIGKILL");
     const visibleAt = await waitForVisibleElement(
-      app.page,
+      app.lifecyclePage,
       '[role="alert"] :is(h1, h2, h3)',
       "Prompt Studio needs attention",
     );
     const recoveryInMs = visibleAt - crashedAt;
     testInfo.annotations.push({ type: "recovery-ui-ms", description: String(recoveryInMs) });
     expect(recoveryInMs).toBeLessThan(500);
+    expect(await app.lifecyclePage.evaluate(() => performance.timeOrigin)).toBe(lifecycleStartedAt);
 
-    await app.page.getByRole("button", { name: "Retry" }).click();
+    await app.lifecyclePage.getByRole("button", { name: "Retry" }).click();
     const replacement = await waitForDescriptor(home, (descriptor) => descriptor.instanceId !== originalInstanceId);
     await app.page.waitForURL(`${replacement.origin}/`);
     await expect(app.page.locator("#root")).not.toBeEmpty();
