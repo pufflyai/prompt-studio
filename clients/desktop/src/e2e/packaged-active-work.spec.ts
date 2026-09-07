@@ -50,22 +50,21 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
 
       expect((await runPackagedCli(home, ["close"])).exitCode).toBe(1);
       expect(app.child.exitCode).toBeNull();
-      const confirmationOpened = app.page.context().waitForEvent("page");
       await app.page.evaluate(() => void window.promptStudioDesktop.quitApp());
-      const confirmation = await confirmationOpened;
+      const confirmation = app.lifecyclePage;
       const dialog = confirmation.getByRole("alertdialog", { name: "Active work is still running" });
       await expect(dialog).toBeVisible();
       const keepOpen = dialog.getByRole("button", { name: "Keep Prompt Studio open" });
       await expect(keepOpen).toBeFocused();
       await acceptFocusedButton(confirmation);
+      await expect(dialog).toHaveCount(0);
       await expect(app.page.getByRole("textbox", { name: "Terminal input" })).toBeVisible();
       expect(existsSync(join(home, "runtime.json"))).toBe(true);
       await expect.poll(readTerminals).toEqual([activeTerminal]);
 
       if (shutdown === "desktop confirmation") {
-        const nextConfirmationOpened = app.page.context().waitForEvent("page");
         await app.page.evaluate(() => void window.promptStudioDesktop.quitApp());
-        const nextConfirmation = await nextConfirmationOpened;
+        const nextConfirmation = app.lifecyclePage;
         await expect(nextConfirmation.getByRole("button", { name: "Keep Prompt Studio open" })).toBeFocused();
         await nextConfirmation.keyboard.press("Tab");
         await expect(nextConfirmation.getByRole("button", { name: "Cancel work and quit" })).toBeFocused();

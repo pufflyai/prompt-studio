@@ -2,6 +2,8 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { BrowserWindow, net, type Session, session, shell, WebContentsView } from "electron";
 import type { RuntimeDescriptor } from "pstdio/runtime";
+import { DESKTOP_CHANNELS } from "../desktop-api";
+import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { secureSession, secureWebContents } from "../security/apply-window-security";
 import { provisionRuntimeSession } from "../security/runtime-session";
 import { createSecureWindowOptions } from "../security/window-security";
@@ -11,7 +13,7 @@ const WORKBENCH_PARTITION = "pstdio-workbench";
 
 export class DesktopWindowController {
   #runtimeOrigin: string | null = null;
-  #confirmation: WebContentsView | null = null;
+  #workbench: WebContentsView | null = null;
   readonly lifecycleUrl: string;
   readonly window: BrowserWindow;
 
@@ -24,17 +26,17 @@ export class DesktopWindowController {
     this.window = new BrowserWindow(createSecureWindowOptions(preloadPath, WORKBENCH_PARTITION));
     secureWebContents(this.window.webContents, {
       lifecycleUrl: this.lifecycleUrl,
-      runtimeOrigin: () => this.#runtimeOrigin,
+      runtimeOrigin: () => null,
       openExternal: (url) => shell.openExternal(url),
     });
     this.window.once("ready-to-show", () => this.window.show());
-    this.window.on("resize", () => this.resizeConfirmation());
-    this.window.on("closed", () => this.closeConfirmation());
+    this.window.on("resize", () => this.resizeWorkbench());
+    this.window.on("closed", () => this.#workbench?.webContents.close());
   }
 
   static async create(preloadPath: string) {
     const rendererRoot = join(import.meta.dirname, "renderer");
-    // The partition is memory-only. Keeping its cache warm lets recovery reuse the lifecycle bundle.
+    // The partition is memory-only; the lifecycle renderer stays mounted in the window.
     const workbenchSession = session.fromPartition(WORKBENCH_PARTITION, { cache: true });
     await workbenchSession.protocol.handle(LIFECYCLE_SCHEME, (request) => {
       const assetPath = resolveLifecycleAssetPath(request.url, rendererRoot);
@@ -48,51 +50,56 @@ export class DesktopWindowController {
   }
 
   webContents() {
-    return [this.window.webContents, ...(this.#confirmation ? [this.#confirmation.webContents] : [])];
+    return [this.window.webContents, ...(this.#workbench ? [this.#workbench.webContents] : [])];
   }
 
-  private resizeConfirmation() {
+  updateState(state: DesktopState) {
+    this.window.webContents.send(DESKTOP_CHANNELS.startupStateChanged, state);
+  }
+
+  private resizeWorkbench() {
     const [width, height] = this.window.getContentSize();
-    this.#confirmation?.setBounds({ x: 0, y: 0, width, height });
+    this.#workbench?.setBounds({ x: 0, y: 0, width, height });
   }
 
-  private closeConfirmation() {
-    this.#confirmation?.webContents.close();
-    this.#confirmation = null;
-  }
-
-  async showQuitConfirmation() {
-    this.dismissQuitConfirmation();
+  private createWorkbench() {
     const view = new WebContentsView({
       webPreferences: createSecureWindowOptions(this.preloadPath, WORKBENCH_PARTITION).webPreferences,
     });
-    this.#confirmation = view;
+    this.#workbench = view;
     secureWebContents(view.webContents, {
       lifecycleUrl: this.lifecycleUrl,
-      runtimeOrigin: () => null,
+      runtimeOrigin: () => this.#runtimeOrigin,
       openExternal: (url) => shell.openExternal(url),
     });
-    // A separate view keeps the workbench and its live connections mounted during confirmation.
+    view.setVisible(false);
     this.window.contentView.addChildView(view);
-    this.resizeConfirmation();
-    await view.webContents.loadURL(this.lifecycleUrl);
-    view.webContents.focus();
+    this.resizeWorkbench();
+    return view;
+  }
+
+  async showQuitConfirmation() {
+    await this.showLifecycle();
   }
 
   dismissQuitConfirmation() {
-    if (this.#confirmation) this.window.contentView.removeChildView(this.#confirmation);
-    this.closeConfirmation();
-    this.window.webContents.focus();
+    this.#workbench?.setVisible(true);
+    this.#workbench?.webContents.focus();
   }
 
   async showLifecycle() {
-    this.dismissQuitConfirmation();
-    await this.window.loadURL(this.lifecycleUrl);
+    // Recovery must not wait for a new renderer, JavaScript bundle, or theme initialization.
+    this.#workbench?.setVisible(false);
+    if (this.window.webContents.getURL() !== this.lifecycleUrl) await this.window.loadURL(this.lifecycleUrl);
+    this.window.webContents.focus();
   }
 
   async showWorkbench(descriptor: RuntimeDescriptor) {
     this.#runtimeOrigin = descriptor.origin;
-    await provisionRuntimeSession(this.window.webContents.session, descriptor);
-    await this.window.loadURL(descriptor.origin);
+    const view = this.#workbench ?? this.createWorkbench();
+    await provisionRuntimeSession(view.webContents.session, descriptor);
+    await view.webContents.loadURL(descriptor.origin);
+    view.setVisible(true);
+    view.webContents.focus();
   }
 }

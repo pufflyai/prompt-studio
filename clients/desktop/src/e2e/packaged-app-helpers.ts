@@ -6,6 +6,8 @@ import { type Browser, chromium, type Page, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
 import { redactSensitiveText } from "pstdio-logging";
 import { resolvePackagedLayout } from "../packaging/package-layout";
+import { LIFECYCLE_URL } from "../windows/lifecycle-protocol";
+import { waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
 import { waitForVisibleElement } from "./visible-element-timing";
 
@@ -73,13 +75,13 @@ export type PackagedWindow = {
   home: string;
   browser: Browser;
   child: ChildProcess;
-  page: Page;
+  lifecyclePage: Page;
   startedAt: number;
   runtime: RuntimeDescriptor;
   finishTrace: () => Promise<void>;
 };
 
-export type PackagedApp = PackagedWindow & { readyInMs: number };
+export type PackagedApp = PackagedWindow & { page: Page; readyInMs: number };
 
 export const launchPackagedWindow = async (home: string, runtimeEnvironment: Record<string, string> = {}) => {
   const startedAt = Date.now();
@@ -100,10 +102,10 @@ export const launchPackagedWindow = async (home: string, runtimeEnvironment: Rec
     const runtime = await waitForDescriptor(home);
     browser = await chromium.connectOverCDP(endpoint);
     const context = browser.contexts()[0];
-    const page = context?.pages()[0];
-    if (!page || !context) throw new Error("Packaged app did not create a renderer page");
+    const lifecyclePage = context?.pages().find((page) => page.url() === LIFECYCLE_URL) ?? context?.pages()[0];
+    if (!lifecyclePage || !context) throw new Error("Packaged app did not create a lifecycle page");
     const finishTrace = await startElectronTrace(context, `packaged-${child.pid}`);
-    return { home, browser, child, page, startedAt, runtime, finishTrace };
+    return { home, browser, child, lifecyclePage, startedAt, runtime, finishTrace };
   } catch (error) {
     await browser?.close().catch(() => {});
     if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
@@ -114,9 +116,9 @@ export const launchPackagedWindow = async (home: string, runtimeEnvironment: Rec
 export const launchPackagedApp = async (home: string, runtimeEnvironment: Record<string, string> = {}) => {
   const app = await launchPackagedWindow(home, runtimeEnvironment);
   try {
-    await app.page.waitForURL(`${app.runtime.origin}/`, { waitUntil: "commit" });
-    const visibleAt = await waitForVisibleElement(app.page, "#root");
-    return { ...app, readyInMs: visibleAt - app.startedAt };
+    const page = await waitForWorkbenchPage(app.lifecyclePage, app.runtime.origin);
+    const visibleAt = await waitForVisibleElement(page, "#root");
+    return { ...app, page, readyInMs: visibleAt - app.startedAt };
   } catch (error) {
     await disposePackagedApp(app);
     throw error;

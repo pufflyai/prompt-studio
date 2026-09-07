@@ -51,6 +51,7 @@ autoUpdater.on("error", reportUpdateError);
 
 const setState = (next: DesktopState) => {
   state = next;
+  windowController?.updateState(next);
   logger.info({ event: "desktop.state.changed", state: next.kind }, "Desktop lifecycle state changed");
 };
 
