@@ -62,6 +62,7 @@ export class DesktopWindowController {
   }
 
   async showQuitConfirmation() {
+    this.dismissQuitConfirmation();
     const view = new WebContentsView({
       webPreferences: createSecureWindowOptions(this.preloadPath, WORKBENCH_PARTITION).webPreferences,
     });

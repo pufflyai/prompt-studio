@@ -15,6 +15,8 @@ The 15-second startup budget also cancels pending health requests during discove
 
 Active-work confirmation uses a sandboxed `WebContentsView` inside the existing window. The workbench stays mounted underneath, preserving its terminal connections, open resources, and unsaved input. The confirmation receives the backend-authoritative session, terminal, and job labels through the lifecycle state. Its narrow `cancelQuit` and `confirmQuit` preload actions are sender-checked like every other desktop capability. Cancel closes the confirmation and returns focus to the workbench. Confirm asks Electron main to cancel activity, then Electron waits without a timeout for the owned runtime to exit.
 
+If the runtime refuses confirmed shutdown, Electron removes the confirmation and shows recovery. A new quit attempt reads current runtime ownership and activity before offering confirmation again. The window owns at most one confirmation view.
+
 Extension processes started through `ctx.process.spawnDetached` are independent
 of that managed activity. They survive desktop Quit and API shutdown through
 `pst close`. The extension owns their cleanup. Packaged Electron tests execute a
@@ -110,6 +112,8 @@ bun run dev:desktop
 ```
 
 This builds the Electron client, starts the Docker-isolated unified runtime, seeds its project, and attaches Electron to that authenticated external runtime. Its home is repository-local under `__test-tmp__/dev-isolated/pstdio-desktop/`; it never defaults to `~/.pstdio`. Closing Electron detaches from the externally owned runtime and tears down the Compose project and its isolated state.
+
+Cold dependency installation and compilation can take longer than 90 seconds. The host waits while that setup container runs. After setup starts the API process, the container allows 90 seconds for API health and the desktop descriptor, aborts stalled health requests, and exits on failure. The host then reports the container logs instead of waiting indefinitely for a failed runtime.
 
 Use `bun run dev` for the source API plus Vite dashboard, or `bun run dev:isolated` for the browser-oriented Docker flow. Only `dev:desktop` starts Electron.
 

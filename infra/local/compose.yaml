@@ -51,16 +51,9 @@ services:
 
         trap 'kill "$$api_child" $$dashboard_child 2>/dev/null || true' INT TERM EXIT
 
-        until curl -fsS "$$api_url/healthz" >/dev/null; do
-          sleep 1
-        done
-
+        runtime_token="$$(bun scripts/dev/isolated-runtime-readiness.ts "$$api_url" "$$api_child")"
         auth_header=()
         if [ "$$PSTDIO_DESKTOP_FLOW" = "1" ]; then
-          until [ -s "$$PSTDIO_HOME/runtime.json" ]; do
-            sleep 1
-          done
-          runtime_token="$$(bun --eval 'console.log(JSON.parse(await Bun.file(process.env.PSTDIO_HOME + "/runtime.json").text()).token)')"
           auth_header=(-H "authorization: Bearer $$runtime_token")
         fi
 

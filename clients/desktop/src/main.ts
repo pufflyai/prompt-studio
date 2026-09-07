@@ -158,10 +158,17 @@ const requestQuit = async () => {
   const result = await runtimeManager.requestShutdown(false);
   if (result.state === "active") {
     setState(
-      transitionDesktopState(state, {
-        type: "quit_requested",
-        activity: result.activity,
-      }),
+      transitionDesktopState(
+        {
+          kind: "workbench",
+          runtime: {
+            instanceId: runtime.descriptor.instanceId,
+            origin: runtime.descriptor.origin,
+            ownerType: runtime.descriptor.ownerType,
+          },
+        },
+        { type: "quit_requested", activity: result.activity },
+      ),
     );
     await windowController?.showQuitConfirmation();
     return;
@@ -196,6 +203,7 @@ const confirmQuit = async () => {
   const result = await runtimeManager.requestShutdown(true);
   if (result.state !== "accepted") {
     setState({ kind: "recovery", error: recoveryError(new Error("Runtime refused graceful shutdown")) });
+    await windowController?.showLifecycle();
     quitting = false;
     return;
   }

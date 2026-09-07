@@ -33,13 +33,14 @@ test.afterEach(async () => {
   cleanup.length = 0;
 });
 
-test("confirms active work in the bundled lifecycle view before stopping its runtime", async () => {
+test("recovers from refused shutdown and closes each quit confirmation", async () => {
   const token = "desktop-active-work-secret";
   const home = mkdtempSync(join(tmpdir(), "pstdio-desktop-active-work-"));
   const descriptorPath = join(home, "runtime.json");
   const runtimeProcess = spawn(process.execPath, ["-e", "setInterval(() => {}, 1000)"], { stdio: "ignore" });
   const eventResponses = new Set<ServerResponse>();
   const shutdownForces: boolean[] = [];
+  let refuseForcedShutdown = true;
   cleanup.push(() => rmSync(home, { recursive: true, force: true }));
   cleanup.push(() => stopProcess(runtimeProcess));
 
@@ -85,6 +86,11 @@ test("confirms active work in the bundled lifecycle view before stopping its run
             },
           }),
         );
+        return;
+      }
+      if (refuseForcedShutdown) {
+        refuseForcedShutdown = false;
+        response.writeHead(503).end();
         return;
       }
       response.writeHead(202).end();
@@ -158,10 +164,27 @@ test("confirms active work in the bundled lifecycle view before stopping its run
   await expect(nextConfirmation.getByRole("button", { name: "Keep Prompt Studio open" })).toBeFocused();
   await nextConfirmation.keyboard.press("Tab");
   await expect(nextConfirmation.getByRole("button", { name: "Cancel work and quit" })).toBeFocused();
+  await nextConfirmation.keyboard.press("Enter").catch((error) => {
+    if (!nextConfirmation.isClosed()) throw error;
+  });
+  await expect(window.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
+  expect(nextConfirmation.isClosed()).toBe(true);
+  expect(
+    await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.length),
+  ).toBe(0);
+  const finalConfirmationOpened = electronApp.context().waitForEvent("page");
+  await window.getByRole("button", { name: "Quit", exact: true }).click();
+  const finalConfirmation = await finalConfirmationOpened;
+  await expect(finalConfirmation.getByRole("button", { name: "Keep Prompt Studio open" })).toBeFocused();
+  expect(
+    await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].contentView.children.length),
+  ).toBe(1);
+  await finalConfirmation.keyboard.press("Tab");
+  await expect(finalConfirmation.getByRole("button", { name: "Cancel work and quit" })).toBeFocused();
   await finishTrace();
   const closed = electronApp.waitForEvent("close");
-  await acceptFocusedButton(nextConfirmation);
+  await acceptFocusedButton(finalConfirmation);
   await closed;
 
-  expect(shutdownForces).toEqual([false, false, true]);
+  expect(shutdownForces).toEqual([false, false, true, false, true]);
 });

@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import {
   createPackagedHome,
@@ -11,7 +12,7 @@ import {
   waitForExit,
 } from "./packaged-app-helpers";
 
-const fixturePath = resolve(import.meta.dirname, "../../../../packages/workbench-fixture");
+const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
 const readHeartbeat = (path: string) =>
   existsSync(path) ? (JSON.parse(readFileSync(path, "utf8")) as { pid: number; tick: number }) : null;
 
