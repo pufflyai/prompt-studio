@@ -1,5 +1,29 @@
 # @pstdio/sdk
 
+## 0.22.0
+
+_2026-09-07_
+
+### Minor Changes
+
+- c84459e: Define one contribution-ID grammar (lowercase kebab-case segments separated by dots), enforce it as an error in `pst extensions check`, resolve host-published refs without owner prefixing for every contribution kind, rename first-party ids to the grammar (extension API 1.0.0-alpha.6), and migrate stored automation scopes, runs, schedule and skill preferences to the renamed ids.
+- 19ee208: Make grouped collection displays and board rules extension-owned instead of workspace and status special cases.
+- 99d8075: Revise workbench composition, package delivery, navigation, typed controls, and placement lifecycle across the extension API.
+- 99d8075: Replace hybrid pages with separate static and resource pages, explicit parents, and panels that follow the selected resource when closing tabs.
+- 99d8075: Unify mode panel policy, preserve visibility controls in custom navigation, and use layout state for docked panels.
+- 99d8075: Replace the placement lifecycle flags with one explicit model: static items declare `presence`, resource bindings require `cardinality` and own their Add panel `add` action, page slots use `openOn: "page-resource"`, keybindings execute navigation `action` values, and region size policy moves to mode and host `regionSettings`.
+- 99d8075: Replace Extension Lab with five complete showcases and support mode themes and chrome.
+- 01911e8: Add typed workbench pages, panels, locations, regions, and navigation validation.
+- 6c42fb6: Expose host-managed extension upgrades through the CLI.
+- 99d8075: Unify Core and extension view authoring, compose Sidenav placements as vertical sections, move Lab and Tickets onto canonical page navigation, hide template settings without a provider, keep new tabs at the right edge, and render one tab status glyph.
+- 1d30451: Add a mount-scoped `artifacts.read` webview capability with typed client reads (list, readText, imageUrl), host-enforced mount confinement, size limits, a raster-image allowlist, and short-lived signed image URLs
+
+### Patch Changes
+
+- 2ac2e6a: Render extension-owned template and resource parameters as modal dropdowns.
+- 99d8075: Fix page panel closing and explicit navigation; validate public extension examples and authoring guidance.
+- 3bd3d7e: Support running pstdio from a source checkout on Windows: `.cmd` command wrappers, safe resolution and cmd.exe argument escaping for npm `.cmd`/`.bat`/`.ps1` shims, copied (not symlinked) extension files in the runtime cache, and hidden console windows.
+
 ## 0.21.0
 
 _2026-08-27_

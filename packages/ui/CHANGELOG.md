@@ -1,5 +1,24 @@
 # @pstdio/ui
 
+## 0.22.0
+
+_2026-09-07_
+
+### Minor Changes
+
+- 19ee208: Make grouped collection displays and board rules extension-owned instead of workspace and status special cases.
+- 99d8075: Revise workbench composition, package delivery, navigation, typed controls, and placement lifecycle across the extension API.
+- 99d8075: Replace Extension Lab with five complete showcases and support mode themes and chrome.
+- 99d8075: Unify Core and extension view authoring, compose Sidenav placements as vertical sections, move Lab and Tickets onto canonical page navigation, hide template settings without a provider, keep new tabs at the right edge, and render one tab status glyph.
+
+### Patch Changes
+
+- c84459e: Keep the workbench visible when a stored extension theme is unavailable
+- 41e1e8f: Show resource actions on tree rows while preserving file selection and workspace permissions.
+- 8e003d4: Replace the Ticket board settings panel with state commands on each ticket status
+- 92c0967: Preserve untouched Markdown source and let users wrap table rows.
+- Updated internal dependencies: `@pstdio/sdk@0.22.0`
+
 ## 0.21.0
 
 _2026-08-27_

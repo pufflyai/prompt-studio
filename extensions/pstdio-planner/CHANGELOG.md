@@ -1,5 +1,30 @@
 # pstdio-planner
 
+## 0.13.0
+
+_2026-09-07_
+
+### Minor Changes
+
+- c84459e: Define one contribution-ID grammar (lowercase kebab-case segments separated by dots), enforce it as an error in `pst extensions check`, resolve host-published refs without owner prefixing for every contribution kind, rename first-party ids to the grammar (extension API 1.0.0-alpha.6), and migrate stored automation scopes, runs, schedule and skill preferences to the renamed ids.
+- 19ee208: Make grouped collection displays and board rules extension-owned instead of workspace and status special cases.
+- 99d8075: Revise workbench composition, package delivery, navigation, typed controls, and placement lifecycle across the extension API.
+
+### Patch Changes
+
+- 99d8075: Fix Planner property controls and honor declared ticket file selection.
+- 99d8075: Use the component icon for ticket detail breadcrumbs.
+- 2ac2e6a: Render extension-owned template and resource parameters as modal dropdowns.
+- 99d8075: Fix page panel closing and explicit navigation; validate public extension examples and authoring guidance.
+- 99d8075: Rename the planner handoff flag to Review Needed with a gray bell icon and update existing flags.
+- 99d8075: Replace hybrid pages with separate static and resource pages, explicit parents, and panels that follow the selected resource when closing tabs.
+- 99d8075: Replace the placement lifecycle flags with one explicit model: static items declare `presence`, resource bindings require `cardinality` and own their Add panel `add` action, page slots use `openOn: "page-resource"`, keybindings execute navigation `action` values, and region size policy moves to mode and host `regionSettings`.
+- 41e1e8f: Show resource actions on tree rows while preserving file selection and workspace permissions.
+- 01911e8: Add typed workbench pages, panels, locations, regions, and navigation validation.
+- 8e003d4: Replace the Ticket board settings panel with state commands on each ticket status
+- 99d8075: Unify Core and extension view authoring, compose Sidenav placements as vertical sections, move Lab and Tickets onto canonical page navigation, hide template settings without a provider, keep new tabs at the right edge, and render one tab status glyph.
+- Updated internal dependencies: `@pstdio/sdk@0.22.0`, `@pstdio/ui@0.22.0`
+
 ## 0.12.0
 
 _2026-08-27_

@@ -1,5 +1,55 @@
 # pstdio
 
+## 0.31.0
+
+_2026-09-07_
+
+### Minor Changes
+
+- 1d30451: Move artifact mount roots from `.pstdio/<package-name>/` to `.pstdio/extension-storage/<package-name>/` so extension package names can never collide with host-owned `.pstdio/` entries such as docs, reports, extensions, and config.json
+- c84459e: Define one contribution-ID grammar (lowercase kebab-case segments separated by dots), enforce it as an error in `pst extensions check`, resolve host-published refs without owner prefixing for every contribution kind, rename first-party ids to the grammar (extension API 1.0.0-alpha.6), and migrate stored automation scopes, runs, schedule and skill preferences to the renamed ids.
+- 19ee208: Make grouped collection displays and board rules extension-owned instead of workspace and status special cases.
+- 99d8075: Revise workbench composition, package delivery, navigation, typed controls, and placement lifecycle across the extension API.
+- 99d8075: Replace hybrid pages with separate static and resource pages, explicit parents, and panels that follow the selected resource when closing tabs.
+- 99d8075: Replace the placement lifecycle flags with one explicit model: static items declare `presence`, resource bindings require `cardinality` and own their Add panel `add` action, page slots use `openOn: "page-resource"`, keybindings execute navigation `action` values, and region size policy moves to mode and host `regionSettings`.
+- 99d8075: Replace Extension Lab with five complete showcases and support mode themes and chrome.
+- 01911e8: Add typed workbench pages, panels, locations, regions, and navigation validation.
+- 6c42fb6: Expose host-managed extension upgrades through the CLI.
+- 99d8075: Unify Core and extension view authoring, compose Sidenav placements as vertical sections, move Lab and Tickets onto canonical page navigation, hide template settings without a provider, keep new tabs at the right edge, and render one tab status glyph.
+- 1d30451: Add a mount-scoped `artifacts.read` webview capability with typed client reads (list, readText, imageUrl), host-enforced mount confinement, size limits, a raster-image allowlist, and short-lived signed image URLs
+
+### Patch Changes
+
+- 272f9a4: Roll back failed dashboard extension contribution refreshes.
+- 99d8075: Hide single panel tabs by default with an alwaysShowTabs option and center status bar items vertically.
+- 2ac2e6a: Fix local development startup, source extension refresh, coverage reporting, and built-in CLI command routing.
+- 05d1699: Open the dashboard on the API's own origin and remove the separate dashboard server and its `--dashboard-port` option.
+- 99d8075: Simplify the Kiln showcase and add a Three.js editor with a fixed-height animated track timeline.
+- 99d8075: Hide single panel tabs and omit empty attached side panel headers.
+- 99d8075: Fix Planner property controls and honor declared ticket file selection.
+- 99d8075: Fix ticket navigation, file refresh, workspace actions, and session opening and closing.
+- 2ac2e6a: Render extension-owned template and resource parameters as modal dropdowns.
+- 99d8075: Fix page panel closing and explicit navigation; validate public extension examples and authoring guidance.
+- 99d8075: Allow hosts to disable Side Panel detachment and customize its bubble icon.
+- 99d8075: Keep single session and terminal tabs visible in project mode.
+- 327d8dc: Refresh a repo-local extension in its own directory, serve only the commands its source defines now, keep one enabled provider per extension id, and show each extension's source folder.
+- 8838c64: Add project-owned file and resource capabilities to dashboard extension webviews.
+- 99d8075: Unify mode panel policy, preserve visibility controls in custom navigation, and use layout state for docked panels.
+- 99d8075: Preserve Side and Secondary panel visibility and selected tabs through Back and Forward navigation.
+- 99d8075: Remove the helper sentence from editable workflow status settings.
+- 2ac2e6a: Report missing terminal working directories without stopping Prompt Studio.
+- 41e1e8f: Show resource actions on tree rows while preserving file selection and workspace permissions.
+- 99d8075: Open an empty dashboard chat panel with a session tab and keep workspace Changes and Files fixed.
+- 99d8075: Hide template settings without editable extension templates and remove runtime template creation.
+- 8e003d4: Replace the Ticket board settings panel with state commands on each ticket status
+- 92c0967: Preserve untouched Markdown source and let users wrap table rows.
+- 99d8075: Keep Files and Changes independently closable on workspace pages.
+- ec192eb: Serve the dashboard correctly from a source checkout on Windows. Filesystem
+  asset keys were `\`-separated while requests look them up with `/`, so every
+  nested asset fell through to `index.html` and `pst serve` rendered a blank
+  page.
+- 3bd3d7e: Support running pstdio from a source checkout on Windows: `.cmd` command wrappers, safe resolution and cmd.exe argument escaping for npm `.cmd`/`.bat`/`.ps1` shims, copied (not symlinked) extension files in the runtime cache, and hidden console windows.
+
 ## 0.30.0
 
 _2026-08-27_

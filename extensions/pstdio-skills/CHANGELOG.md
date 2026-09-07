@@ -1,5 +1,29 @@
 # Prompt Studio Skills
 
+## 0.4.0
+
+_2026-09-07_
+
+### Minor Changes
+
+- c84459e: Define one contribution-ID grammar (lowercase kebab-case segments separated by dots), enforce it as an error in `pst extensions check`, resolve host-published refs without owner prefixing for every contribution kind, rename first-party ids to the grammar (extension API 1.0.0-alpha.6), and migrate stored automation scopes, runs, schedule and skill preferences to the renamed ids.
+- 99d8075: Revise workbench composition, package delivery, navigation, typed controls, and placement lifecycle across the extension API.
+
+### Patch Changes
+
+- 05d1699: Open the dashboard on the API's own origin and remove the separate dashboard server and its `--dashboard-port` option.
+- 1d30451: Document four existing host surfaces in the create-pstdio-extension skill: the `textRenderer` byte-preservation escape, mode navigation via `workbenchCommands.switchMode`, runtime contribution inspection, and the per-extension layout reset command
+- 99d8075: Fix page panel closing and explicit navigation; validate public extension examples and authoring guidance.
+- 8838c64: Add project-owned file and resource capabilities to dashboard extension webviews.
+- 99d8075: Replace hybrid pages with separate static and resource pages, explicit parents, and panels that follow the selected resource when closing tabs.
+- 99d8075: Replace the placement lifecycle flags with one explicit model: static items declare `presence`, resource bindings require `cardinality` and own their Add panel `add` action, page slots use `openOn: "page-resource"`, keybindings execute navigation `action` values, and region size policy moves to mode and host `regionSettings`.
+- 01911e8: Add typed workbench pages, panels, locations, regions, and navigation validation.
+- 6c42fb6: Expose host-managed extension upgrades through the CLI.
+- 92c0967: Preserve untouched Markdown source and let users wrap table rows.
+- 99d8075: Unify Core and extension view authoring, compose Sidenav placements as vertical sections, move Lab and Tickets onto canonical page navigation, hide template settings without a provider, keep new tabs at the right edge, and render one tab status glyph.
+- 1d30451: Add a mount-scoped `artifacts.read` webview capability with typed client reads (list, readText, imageUrl), host-enforced mount confinement, size limits, a raster-image allowlist, and short-lived signed image URLs
+- Updated internal dependencies: `@pstdio/sdk@0.22.0`
+
 ## 0.3.5
 
 _2026-08-27_
