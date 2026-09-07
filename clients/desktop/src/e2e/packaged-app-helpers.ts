@@ -83,11 +83,28 @@ export type PackagedWindow = {
 
 export type PackagedApp = PackagedWindow & { page: Page; readyInMs: number };
 
-export const launchPackagedWindow = async (home: string, runtimeEnvironment: Record<string, string> = {}) => {
+export const attachStartupTimings = async (app: PackagedApp) => {
+  const entries = await app.page.evaluate(() =>
+    performance
+      .getEntries()
+      .filter((entry) => ["navigation", "resource"].includes(entry.entryType))
+      .map((entry) => entry.toJSON()),
+  );
+  await test.info().attach("workbench-startup-performance", {
+    body: JSON.stringify({ readyInMs: app.readyInMs, entries }),
+    contentType: "application/json",
+  });
+};
+
+export const launchPackagedWindow = async (
+  home: string,
+  runtimeEnvironment: Record<string, string> = {},
+  startupArguments: string[] = [],
+) => {
   const startedAt = Date.now();
   const child = spawn(
     packageLayout.executable,
-    ["--remote-debugging-port=0", `--user-data-dir=${join(home, "electron-user-data")}`],
+    [...startupArguments, "--remote-debugging-port=0", `--user-data-dir=${join(home, "electron-user-data")}`],
     {
       cwd: home,
       env: { ...packagedEnvironment(home), ...runtimeEnvironment },
@@ -113,8 +130,12 @@ export const launchPackagedWindow = async (home: string, runtimeEnvironment: Rec
   }
 };
 
-export const launchPackagedApp = async (home: string, runtimeEnvironment: Record<string, string> = {}) => {
-  const app = await launchPackagedWindow(home, runtimeEnvironment);
+export const launchPackagedApp = async (
+  home: string,
+  runtimeEnvironment: Record<string, string> = {},
+  startupArguments: string[] = [],
+) => {
+  const app = await launchPackagedWindow(home, runtimeEnvironment, startupArguments);
   try {
     const page = await waitForWorkbenchPage(app.lifecyclePage, app.runtime.origin);
     const visibleAt = await waitForVisibleElement(page, "#root");

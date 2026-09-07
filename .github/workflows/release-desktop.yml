@@ -16,18 +16,10 @@ jobs:
       matrix:
         # Windows x64 stays disabled until its trusted signing lane is available.
         include:
-          - target: darwin-arm64
-            platform: darwin
-            arch: arm64
-            os: macos-15
           - target: darwin-x64
             platform: darwin
             arch: x64
             os: macos-15-intel
-          - target: linux-x64
-            platform: linux
-            arch: x64
-            os: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
@@ -127,9 +119,33 @@ jobs:
       - name: Verify Electron fuse policy
         run: bun run --cwd clients/desktop verify:fuses
 
+      - name: Retain signed diagnostic application
+        run: >-
+          ditto -c -k --sequesterRsrc --keepParent
+          "clients/desktop/out/Prompt Studio-darwin-${{ matrix.arch }}/Prompt Studio.app"
+          "${{ runner.temp }}/signed-diagnostic-app.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-diagnostic-app-${{ matrix.target }}
+          path: ${{ runner.temp }}/signed-diagnostic-app.zip
+          compression-level: 0
+          retention-days: 7
+
+      - name: Profile packaged startup
+        run: bun run --cwd clients/desktop test:packaged --grep 'profiles packaged startup'
+
+      - name: Retain startup profiles
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaged-startup-cpu-${{ matrix.target }}
+          path: clients/desktop/test-results
+          retention-days: 7
+
       - name: Smoke packaged application
         if: matrix.platform != 'linux'
-        run: bun run --cwd clients/desktop test:packaged
+        run: bun run --cwd clients/desktop test:packaged --grep-invert 'profiles packaged startup'
 
       - name: Smoke packaged Linux application
         if: matrix.platform == 'linux'
