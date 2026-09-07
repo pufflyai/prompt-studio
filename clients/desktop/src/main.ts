@@ -16,6 +16,7 @@ import { DesktopUpdateManager } from "./release/desktop-update-manager";
 import { DesktopRuntimeManager } from "./runtime/runtime-manager";
 import { DesktopSidecarError, validateSidecarArtifact } from "./runtime/sidecar-artifact";
 import { focusPrimaryWindow } from "./security/apply-window-security";
+import { DesktopProjectTabsStore } from "./windows/desktop-project-tabs-store";
 import { LIFECYCLE_SCHEME } from "./windows/lifecycle-protocol";
 import { DesktopWindowController } from "./windows/window-controller";
 import { DesktopWorkbenchStateStore } from "./windows/workbench-state-store";
@@ -23,6 +24,7 @@ import { DesktopWorkbenchStateStore } from "./windows/workbench-state-store";
 const logger = createLogger({ component: "desktop", level: "info", service: "pstdio-desktop", sync: true });
 const descriptorPath = resolvePstdioRuntimeDescriptorPath();
 const externalRuntime = process.env.PSTDIO_DESKTOP_EXTERNAL_RUNTIME === "1";
+const projectTabs = new DesktopProjectTabsStore(join(app.getPath("userData"), "project-tabs.json"));
 
 protocol.registerSchemesAsPrivileged([
   {
@@ -114,7 +116,8 @@ const runtimeManager = new DesktopRuntimeManager({
   },
 });
 
-const finishQuit = () => {
+const finishQuit = async () => {
+  await projectTabs.flush();
   allowQuit = true;
   app.quit();
 };
@@ -266,6 +269,8 @@ const bootstrap = async () => {
     checkForUpdates: () => updateManager.checkForUpdates(),
     quitApp: requestQuit,
     getWorkbenchState: () => workbenchState.getState(),
+    getProjectTabs: () => projectTabs.getProjectTabs(),
+    setProjectTabs: (value) => projectTabs.setProjectTabs(value),
     setPageLocation: (projectId, value) => workbenchState.setPageLocation(projectId, value),
     setSelectedProjectId: (projectId) => workbenchState.setSelectedProjectId(projectId),
   });

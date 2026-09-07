@@ -12,6 +12,7 @@ import {
   runPackagedCli,
   waitForExit,
 } from "./packaged-app-helpers";
+import { openPackagedProject } from "./packaged-project-helpers";
 
 for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
   test(`protects a running terminal before ${shutdown}`, async () => {
@@ -29,6 +30,7 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
       });
       expect(created.status).toBe(201);
       expect(created.body.extension_warnings ?? []).toEqual([]);
+      await openPackagedProject(app.page, "Active terminal work");
       await app.page.getByText("Recent sessions", { exact: true }).waitFor();
       const socketOpened = app.page.waitForEvent(
         "websocket",

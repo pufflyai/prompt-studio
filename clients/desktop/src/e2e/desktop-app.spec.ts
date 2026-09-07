@@ -93,7 +93,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
   const launchEnvironment = environment({ PSTDIO_HOME: home });
   const electronApp = await electron.launch({
     executablePath: electronPath,
-    args: [appPath],
+    args: [appPath, `--user-data-dir=${join(home, "electron-user-data")}`],
     env: launchEnvironment,
   });
   const finishTrace = await startElectronTrace(electronApp.context(), "attached-runtime");
@@ -111,6 +111,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       "confirmQuit",
       "copyDiagnostics",
       "getAppInfo",
+      "getProjectTabs",
       "getStartupState",
       "getWorkbenchState",
       "openLogs",
@@ -118,6 +119,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       "retryRuntime",
       "revealInFinder",
       "setPageLocation",
+      "setProjectTabs",
       "setSelectedProjectId",
     ]);
     expect(
@@ -129,6 +131,15 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       true,
     );
 
+    await window.evaluate(() =>
+      (globalThis as unknown as Window).promptStudioDesktop.setProjectTabs({ projectIds: ["second", "first"] }),
+    );
+    expect(await window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getProjectTabs())).toEqual(
+      {
+        projectIds: ["second", "first"],
+      },
+    );
+
     expect(
       await window.evaluate(() => (globalThis as unknown as Window).open("http://127.0.0.1:1/blocked")),
     ).toBeNull();
@@ -138,7 +149,10 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     );
 
     await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.minimize());
-    const secondInstance = spawn(electronPath, [appPath], { env: launchEnvironment, stdio: "ignore" });
+    const secondInstance = spawn(electronPath, [appPath, `--user-data-dir=${join(home, "electron-user-data")}`], {
+      env: launchEnvironment,
+      stdio: "ignore",
+    });
     const secondExitCode = await new Promise<number | null>((resolveExit) =>
       secondInstance.once("exit", (code) => resolveExit(code)),
     );
@@ -170,7 +184,7 @@ test("keeps startup failures in an actionable recovery window", async () => {
   const home = createHome();
   const electronApp = await electron.launch({
     executablePath: electronPath,
-    args: [appPath],
+    args: [appPath, `--user-data-dir=${join(home, "electron-user-data")}`],
     env: environment({ PSTDIO_HOME: home }),
   });
   const finishTrace = await startElectronTrace(electronApp.context(), "startup-recovery");

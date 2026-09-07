@@ -2491,6 +2491,12 @@
         "4.5": {
           "value": "1.125rem"
         },
+        "window-tab-gap": {
+          "value": "0.4375rem"
+        },
+        "window-controls-mac": {
+          "value": "4.875rem"
+        },
         "none": {
           "value": "0"
         },
@@ -2798,6 +2804,18 @@
         },
         "vh": {
           "value": "100vh"
+        },
+        "window-title-bar": {
+          "value": "2.75rem"
+        },
+        "window-tab": {
+          "value": "1.75rem"
+        },
+        "window-tab-close": {
+          "value": "0.8125rem"
+        },
+        "window-tab-max": {
+          "value": "15rem"
         },
         "collection-row": {
           "value": "2.125rem"
@@ -14126,6 +14144,142 @@
               "insetX": "0",
               "bottom": "0",
               "background": "linear-gradient(to top, var(--marquee-edge-color, white), transparent)"
+            }
+          }
+        }
+      },
+      "windowTitleBar": {
+        "className": "ps-window-title-bar",
+        "slots": [
+          "root",
+          "content"
+        ],
+        "base": {
+          "root": {
+            "position": "relative",
+            "flexShrink": 0,
+            "width": "full",
+            "height": "window-title-bar",
+            "bg": "bg.subtle",
+            "color": "fg",
+            "borderBottomWidth": "1px",
+            "borderColor": "border",
+            "userSelect": "none",
+            "WebkitAppRegion": "drag"
+          },
+          "content": {
+            "display": "flex",
+            "alignItems": "center",
+            "gap": "xs",
+            "height": "full",
+            "minWidth": 0,
+            "paddingInline": "compact",
+            "& button, & a, & input, & [role=tab]": {
+              "WebkitAppRegion": "no-drag"
+            }
+          }
+        },
+        "variants": {
+          "controls": {
+            "mac": {
+              "content": {
+                "paddingInlineStart": "window-controls-mac"
+              }
+            },
+            "overlay": {
+              "content": {
+                "marginLeft": "env(titlebar-area-x, 0px)",
+                "width": "env(titlebar-area-width, 100%)"
+              }
+            }
+          }
+        },
+        "defaultVariants": {
+          "controls": "overlay"
+        }
+      },
+      "windowTabs": {
+        "className": "ps-window-tabs",
+        "slots": [
+          "list",
+          "tab",
+          "trigger",
+          "label",
+          "close"
+        ],
+        "base": {
+          "list": {
+            "display": "flex",
+            "alignItems": "center",
+            "gap": "2xs",
+            "minWidth": 0,
+            "overflowX": "auto",
+            "scrollbarWidth": "none"
+          },
+          "tab": {
+            "display": "flex",
+            "alignItems": "center",
+            "flexShrink": 0,
+            "height": "window-tab",
+            "maxWidth": "window-tab-max",
+            "borderRadius": "xs",
+            "borderWidth": "1px",
+            "borderColor": "border",
+            "color": "fg.muted",
+            "bg": "transparent",
+            "_selected": {
+              "bg": "bg.muted",
+              "color": "fg"
+            },
+            "_hover": {
+              "bg": "bg.hover",
+              "color": "fg"
+            }
+          },
+          "trigger": {
+            "display": "flex",
+            "alignItems": "center",
+            "gap": "window-tab-gap",
+            "minWidth": 0,
+            "height": "full",
+            "paddingInlineStart": "compact",
+            "paddingInlineEnd": "window-tab-gap",
+            "cursor": "pointer",
+            "textStyle": "label/S/medium",
+            "borderRadius": "xs",
+            "focusVisibleRing": "inside",
+            "WebkitAppRegion": "no-drag",
+            "_icon": {
+              "width": "icon-xs",
+              "height": "icon-xs",
+              "flexShrink": 0
+            }
+          },
+          "label": {
+            "overflow": "hidden",
+            "textOverflow": "ellipsis",
+            "whiteSpace": "nowrap"
+          },
+          "close": {
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "center",
+            "flexShrink": 0,
+            "width": "window-tab-close",
+            "height": "window-tab-close",
+            "marginInlineEnd": "compact",
+            "color": "fg.muted",
+            "borderRadius": "2xs",
+            "cursor": "pointer",
+            "focusVisibleRing": "outside",
+            "WebkitAppRegion": "no-drag",
+            "_hover": {
+              "bg": "bg.active",
+              "color": "fg"
+            },
+            "_icon": {
+              "width": "full",
+              "height": "full"
             }
           }
         }

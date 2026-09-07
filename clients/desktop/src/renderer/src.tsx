@@ -4,13 +4,16 @@ import { createRoot } from "react-dom/client";
 import "@pstdio/ui/style.css";
 import { DesktopLifecycleApp } from "./desktop-lifecycle-app";
 
-const initialState = await window.promptStudioDesktop.getStartupState();
+const [initialState, appInfo] = await Promise.all([
+  window.promptStudioDesktop.getStartupState(),
+  window.promptStudioDesktop.getAppInfo(),
+]);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ThemePreferenceProvider initialPreference="system">
       <ChakraProvider value={psTheme}>
-        <DesktopLifecycleApp initialState={initialState} />
+        <DesktopLifecycleApp initialState={initialState} platform={appInfo.platform} />
       </ChakraProvider>
     </ThemePreferenceProvider>
   </StrictMode>,

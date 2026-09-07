@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import { DESKTOP_CHANNELS, type PromptStudioDesktopApi } from "./desktop-api";
+import { DESKTOP_CHANNELS, type DesktopProjectTabsState, type PromptStudioDesktopApi } from "./desktop-api";
 
 const desktopApi: PromptStudioDesktopApi = Object.freeze({
   cancelQuit: () => ipcRenderer.invoke(DESKTOP_CHANNELS.cancelQuit),
@@ -13,6 +13,8 @@ const desktopApi: PromptStudioDesktopApi = Object.freeze({
   checkForUpdates: () => ipcRenderer.invoke(DESKTOP_CHANNELS.checkForUpdates),
   quitApp: () => ipcRenderer.invoke(DESKTOP_CHANNELS.quitApp),
   getWorkbenchState: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getWorkbenchState),
+  getProjectTabs: () => ipcRenderer.invoke(DESKTOP_CHANNELS.getProjectTabs),
+  setProjectTabs: (state: DesktopProjectTabsState) => ipcRenderer.invoke(DESKTOP_CHANNELS.setProjectTabs, state),
   setPageLocation: (projectId: string, value: string | null) =>
     ipcRenderer.invoke(DESKTOP_CHANNELS.setPageLocation, projectId, value),
   setSelectedProjectId: (projectId: string | null) =>
