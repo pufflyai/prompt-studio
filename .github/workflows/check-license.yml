@@ -6,8 +6,6 @@ on:
       - "main"
   merge_group:
   pull_request:
-    branches:
-      - "main"
 
 jobs:
   license_check:
