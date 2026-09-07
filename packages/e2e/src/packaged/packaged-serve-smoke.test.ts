@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
@@ -71,6 +71,39 @@ const expectExamplePages = (metadata: WorkbenchExtensionMetadata) => {
     }),
   );
 };
+
+test("checks the repo scope and reports bundled versions despite an invalid user extension", () => {
+  const root = realpathSync(mkdtempSync(join(tmpdir(), "packaged-extension-check-")));
+  try {
+    expect(spawnSync("git", ["init", "--quiet", root]).status).toBe(0);
+    const home = join(root, "user-home");
+    const invalidExtension = join(home, "extensions", "invalid");
+    mkdirSync(invalidExtension, { recursive: true });
+    writeFileSync(join(invalidExtension, "package.json"), "{}");
+    const result = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "check", "--scope", "repo", "--json"], {
+      cwd: root,
+      env: { ...process.env, PSTDIO_HOME: home },
+      encoding: "utf8",
+    });
+    expect(result.status).toBe(0);
+    const body = JSON.parse(result.stdout);
+    const version = spawnSync(PACKAGED_BINARY_PATH, ["--version"], { encoding: "utf8" }).stdout.trim();
+    expect(body.versions).toMatchObject({
+      cli: version,
+      dashboard: version,
+      sdk: expect.any(String),
+      extensionApi: expect.any(String),
+    });
+    expect(body.checks).toHaveLength(1);
+    expect(body.checks[0]).toMatchObject({
+      errorCount: 0,
+      extensionsRoot: join(root, ".pstdio", "extensions"),
+      hostCompatibility: { status: "verified", host: { hostVersion: version } },
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
 
 describe("packaged pstdio — self-hosted serve", () => {
   test("includes the extension development and update commands", () => {

@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Fix cold desktop startup and Linux packaging, and preserve extension settings during loading.
+Fix desktop startup, Linux packaging, detached extension process survival, and settings initialization.

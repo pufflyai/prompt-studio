@@ -2,8 +2,9 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { type Browser, chromium, type Page } from "@playwright/test";
+import { type Browser, chromium, type Page, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
+import { redactSensitiveText } from "pstdio-logging";
 import { resolvePackagedLayout } from "../packaging/package-layout";
 import { startElectronTrace } from "./electron-trace";
 
@@ -68,6 +69,7 @@ const waitForDevTools = (child: ChildProcess) =>
   });
 
 export type PackagedApp = {
+  home: string;
   browser: Browser;
   child: ChildProcess;
   page: Page;
@@ -76,17 +78,18 @@ export type PackagedApp = {
   finishTrace: () => Promise<void>;
 };
 
-export const launchPackagedApp = async (home: string): Promise<PackagedApp> => {
+export const launchPackagedApp = async (home: string, runtimeEnvironment: Record<string, string> = {}) => {
   const startedAt = Date.now();
   const child = spawn(
     packageLayout.executable,
     ["--remote-debugging-port=0", `--user-data-dir=${join(home, "electron-user-data")}`],
     {
       cwd: home,
-      env: packagedEnvironment(home),
+      env: { ...packagedEnvironment(home), ...runtimeEnvironment },
       stdio: "pipe",
     },
   );
+  child.stdout.resume();
   let browser: Browser | null = null;
   try {
     browser = await chromium.connectOverCDP(await waitForDevTools(child));
@@ -97,7 +100,7 @@ export const launchPackagedApp = async (home: string): Promise<PackagedApp> => {
     const runtime = await waitForDescriptor(home);
     await page.waitForURL(`${runtime.origin}/`);
     await page.locator("#root").waitFor({ state: "visible" });
-    return { browser, child, page, readyInMs: Date.now() - startedAt, runtime, finishTrace };
+    return { home, browser, child, page, readyInMs: Date.now() - startedAt, runtime, finishTrace };
   } catch (error) {
     await browser?.close().catch(() => {});
     if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
@@ -139,6 +142,12 @@ export const runPackagedCli = (home: string, args: string[]) =>
 export const disposePackagedApp = async (app: PackagedApp | null) => {
   if (!app) return;
   await app.finishTrace();
+  const logPath = join(app.home, "logs.jsonl");
+  const log = existsSync(logPath) ? readFileSync(logPath, "utf8").slice(-32_000) : "No runtime log was written.";
+  await test.info().attach("runtime-log", {
+    body: redactSensitiveText(log, [app.runtime.token]),
+    contentType: "text/plain",
+  });
   await app.browser.close().catch(() => {});
   if (app.child.exitCode === null && app.child.signalCode === null) app.child.kill("SIGKILL");
 };

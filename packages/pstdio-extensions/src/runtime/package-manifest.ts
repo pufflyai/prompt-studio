@@ -200,7 +200,11 @@ export const getExtensionApiVersionError = (name: string, declared: string) => {
     return `Extension "${name}" declares engines.pstdio "${declared}". While the extension API is in alpha it must be the exact version "${EXTENSION_API_VERSION}", not a range.`;
   }
 
-  return `Extension "${name}" targets extension API ${declared} but this host provides ${EXTENSION_API_VERSION}. Update Prompt Studio, or install a build of the extension for this version.`;
+  const repair =
+    Bun.semver.order(declared, EXTENSION_API_VERSION) < 0
+      ? "Run `pst extensions update` from a linked project to repair host-managed extensions, or update this extension to a build for this host."
+      : "Update Prompt Studio, or install a build of the extension for this host.";
+  return `Extension "${name}" targets extension API ${declared} but this host provides ${EXTENSION_API_VERSION}. ${repair}`;
 };
 
 export const readPackageManifestMetadata = (packageDir: string): ReadPackageManifestResult => {

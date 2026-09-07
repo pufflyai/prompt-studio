@@ -13,6 +13,11 @@ The lifecycle state machine distinguishes discovery, spawn, readiness, workbench
 
 Active-work confirmation stays inside the bundled lifecycle renderer instead of using a native message box. The renderer receives the backend-authoritative session, terminal, and job labels through the lifecycle state. Its narrow `cancelQuit` and `confirmQuit` preload actions are sender-checked like every other desktop capability. Cancel reloads the existing workbench; confirm asks Electron main to cancel activity, then Electron waits without a timeout for the owned runtime to exit.
 
+Extension processes started through `ctx.process.spawnDetached` are independent
+of that managed activity. They survive desktop Quit and API shutdown through
+`pst close`. The extension owns their cleanup. Packaged Electron tests execute a
+real extension command and verify its heartbeat continues after each shutdown.
+
 ## Runtime ownership
 
 Desktop attaches to any healthy descriptor for the default `PSTDIO_HOME`. A desktop-owned runtime is stopped only after the authenticated shutdown endpoint accepts the request. Active work returns a backend-authoritative summary and requires confirmation before cancellation. Desktop waits without a shutdown timeout and does not escalate to process signals.

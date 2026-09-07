@@ -99,11 +99,14 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     });
 
     const originalPid = first.runtime.pid;
-    expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
-    const persistent = await waitForDescriptor(home, (descriptor) => descriptor.ownerType === "persistent");
+    await test.step("Promote the running sidecar through the packaged CLI", async () => {
+      expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
+    });
+    const persistent = await test.step("Read the persistent runtime descriptor", () =>
+      waitForDescriptor(home, (descriptor) => descriptor.ownerType === "persistent"));
     expect(persistent.pid).toBe(originalPid);
 
-    await first.finishTrace();
+    await test.step("Save the first window trace before Quit", () => first!.finishTrace());
     await first.page.evaluate(() => void window.promptStudioDesktop.quitApp());
     await waitForExit(first.child);
     expect(

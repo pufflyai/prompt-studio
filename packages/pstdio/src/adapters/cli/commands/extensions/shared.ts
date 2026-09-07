@@ -15,6 +15,7 @@ export type ExtensionsAddArgs = {
 
 export type ExtensionsCheckArgs = {
   json?: boolean;
+  scope?: "repo" | "user";
 };
 
 export const enableInstalledExtension = async (projectId: string, installed: InstalledExtensionSource) =>

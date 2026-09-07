@@ -77,6 +77,7 @@ export const startPackagedServe = async (tempRoot: string, env: Record<string, s
       stdio: "pipe",
     },
   );
+  child.stdout?.resume();
 
   let stderr = "";
   child.stderr?.on("data", (chunk: Buffer | string) => {

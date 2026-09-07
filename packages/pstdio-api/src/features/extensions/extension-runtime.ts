@@ -23,6 +23,7 @@ import {
   toCheckTemplates,
   toCheckThemes,
 } from "./check-from-runtime";
+import { emptyCheck } from "./empty-extension-check";
 import { addDiagnostic, isRecord, type UnknownRecord } from "./extension-diagnostics";
 import { mergeCheck } from "./merge-checks";
 
@@ -44,48 +45,6 @@ export type LoadedExtension = {
   metadata: ExtensionMetadata;
   diagnostics: RuntimeExtensionDiagnostic[];
 };
-
-const emptyCheck = (extensionsRoot: string, exists: boolean): ExtensionsCheckResponse => ({
-  extensionsRoot,
-  extensionsRootExists: exists,
-  errorCount: 0,
-  warningCount: 0,
-  extensions: [],
-  commands: [],
-  middlewares: [],
-  hooks: [],
-  schedules: [],
-  artifactMounts: [],
-  themes: [],
-  fileIconThemes: [],
-  menuContributions: [],
-  commandPaletteContributions: [],
-  modes: [],
-  pages: [],
-  views: [],
-  viewMenus: [],
-  placements: [],
-  resourceKinds: [],
-  resourceHierarchyProviders: [],
-  navigationItems: [],
-  navigationTrees: [],
-  statusBarItems: [],
-  statuses: [],
-  activityItems: [],
-  settingsSections: [],
-  keybindings: [],
-  settingsPanels: [],
-  commandPaletteResources: [],
-  settingsDefinitions: [],
-  templates: [],
-  skills: [],
-  diagnostics: [],
-  hostCompatibility: {
-    status: "verified",
-    host: dashboardExtensionHostCapabilities,
-    diagnostics: [],
-  },
-});
 
 type CheckExtensionHostOptions = {
   hostCapabilities?: ExtensionHostCapabilities | null;
@@ -239,7 +198,7 @@ export const checkExtensionSource = async (
   extensionsRoot: string,
   options: CheckExtensionHostOptions = {},
 ) => {
-  const check = emptyCheck(extensionsRoot, existsSync(extensionsRoot));
+  const check = emptyCheck(extensionsRoot, existsSync(extensionsRoot), options.hostCapabilities);
   const diagnostics: RuntimeExtensionDiagnostic[] = [];
   const source = await loadExtensionPackage({ path: sourcePath, sourceKind: "local_path" }, diagnostics);
 
@@ -294,7 +253,7 @@ const collectFallbackMetadata = (sourcePath: string) => {
 };
 
 export const checkExtensionsRoot = async (extensionsRoot: string, options: CheckExtensionHostOptions = {}) => {
-  const check = emptyCheck(extensionsRoot, existsSync(extensionsRoot));
+  const check = emptyCheck(extensionsRoot, existsSync(extensionsRoot), options.hostCapabilities);
   if (!existsSync(extensionsRoot)) return check;
 
   const extensionDirectories = readdirSync(extensionsRoot, { withFileTypes: true })

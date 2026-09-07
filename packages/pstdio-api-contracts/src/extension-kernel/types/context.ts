@@ -228,6 +228,11 @@ export interface ProcessRunInput {
 export interface ExtensionProcessApi {
   run(input: ProcessRunInput): Promise<ProcessRunResult>;
   runOrThrow(input: ProcessRunInput): Promise<ProcessRunResult>;
+  /**
+   * Starts an independent process with no attached standard streams.
+   * It survives runtime and desktop shutdown and does not delay host exit.
+   * The extension owns the child's lifetime and must arrange its cleanup.
+   */
   spawnDetached(input: { command: string[]; cwd?: string; env?: Record<string, string> }): Promise<{ pid?: number }>;
 }
 

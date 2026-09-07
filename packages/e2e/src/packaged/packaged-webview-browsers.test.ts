@@ -94,6 +94,8 @@ describe("packaged extension webviews", () => {
 
           browser = await browserCase.type.launch({ headless: true, ...browserCase.launchOptions });
           const page = await browser.newPage();
+          page.setDefaultTimeout(10_000);
+          page.setDefaultNavigationTimeout(10_000);
           const extensionAssetStatuses: number[] = [];
           const authenticationFailures: string[] = [];
           page.on("response", (response) => {

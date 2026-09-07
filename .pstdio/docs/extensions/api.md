@@ -62,6 +62,27 @@ Derived fields:
 
 Invalid packages produce diagnostics from `pst extensions check`. Missing manifest fields, invalid `main`, unsupported `engines.pstdio`, and entry import failures are reported with the package path.
 
+### Scoped checks and versions
+
+`pst extensions check` checks the user and repo-local roots. Use `--scope repo` to check only
+the current Git repository, or `--scope user` to check only the user root. Errors outside the
+selected scope do not affect the result. The repo scope requires a Git repository.
+
+The command prints the CLI, extension API, SDK, and bundled dashboard versions before its
+diagnostics. `--json` returns them in `versions`, alongside `checks`. Compatibility status and
+errors are reported for each checked root.
+
+| Component | Version source | Compatibility rule |
+| --- | --- | --- |
+| CLI | Installed `pstdio` package | Owns the bundled runtime and dashboard release. |
+| Extension API | `EXTENSION_API_VERSION` | Must exactly match the extension's `engines.pstdio`. |
+| SDK | `SDK_VERSION` from `@pstdio/sdk/extensions` | Versions independently; its package number is not an API compatibility check. |
+| Dashboard | The CLI's bundled dashboard release | Each declared contribution must have a supported host capability. |
+
+An older extension should be updated or reinstalled for the current host. Run
+`pst extensions update` in a linked project to repair host-managed extensions. An extension
+that requires a newer API needs a newer Prompt Studio release or an extension build for this host.
+
 ## Installing And Updating
 
 Installs and updates are explicit. Source that appears in the extensions root is never adopted on its own.
@@ -97,6 +118,21 @@ trusted configuration because every entry names code the host may run.
   project agreed to run.
 - `pst extensions dev <path>` still reinstalls on every edit. That is an explicit development loop,
   not automatic adoption.
+
+## Detached processes
+
+Use `ctx.process.spawnDetached({ command, cwd, env })` for work that must continue
+after Prompt Studio shuts down. It returns the child PID, starts an independent
+process group, disconnects standard input/output/error, and releases the host's
+process reference. The child survives both desktop Quit and `pst close`; it does
+not delay runtime exit or appear as host-managed activity.
+
+The extension owns the child's lifetime. Arrange a stop command or another
+cleanup mechanism, and have the child write any required output to its own
+storage. Desktop relaunch does not automatically reattach to detached work.
+
+Use `ctx.process.run` or `runOrThrow` when the command should wait for output and
+an exit code. Use the terminal API for an interactive session.
 
 ## Developing A Repo-Scoped Extension
 
