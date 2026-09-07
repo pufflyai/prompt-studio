@@ -83,6 +83,19 @@ export type PackagedWindow = {
 
 export type PackagedApp = PackagedWindow & { page: Page; readyInMs: number };
 
+export const attachStartupTimings = async (app: PackagedApp) => {
+  const entries = await app.page.evaluate(() =>
+    performance
+      .getEntries()
+      .filter((entry) => ["navigation", "resource"].includes(entry.entryType))
+      .map((entry) => entry.toJSON()),
+  );
+  await test.info().attach("workbench-startup-performance", {
+    body: JSON.stringify({ readyInMs: app.readyInMs, entries }),
+    contentType: "application/json",
+  });
+};
+
 export const launchPackagedWindow = async (home: string, runtimeEnvironment: Record<string, string> = {}) => {
   const startedAt = Date.now();
   const child = spawn(

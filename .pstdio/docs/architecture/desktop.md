@@ -71,6 +71,8 @@ The lifecycle and workbench renderers use the same hardened web preferences and 
 
 ## Recovery and diagnostics
 
+The workbench registers file rendering without loading its editor implementation. Code and diff editor components initialize the bundled Monaco runtime when first rendered. Opening a desktop window with no file open does not download or initialize Monaco.
+
 Recovery codes distinguish a missing sidecar, readiness timeout, port bind failure, PGlite ownership conflict, PGlite recovery failure, uncertain runtime ownership, and unexpected exit. Recovery never recommends deleting the database.
 
 Open logs reveals the shared Prompt Studio log file. Copy diagnostics contains only application/runtime versions, platform and architecture, lifecycle state, safe loopback origin, owner PID/type, log path, and bounded process output. Runtime tokens, bearer headers, URL credentials, and named secrets are redacted.

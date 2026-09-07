@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import {
+  attachStartupTimings,
   createPackagedHome,
   desktopVersion,
   disposePackagedApp,
@@ -34,7 +35,12 @@ test("proves cold packaged startup and both authenticated transport paths", asyn
   try {
     app = await launchPackagedApp(home);
     testInfo.annotations.push({ type: "cold-start-ms", description: String(app.readyInMs) });
+    await attachStartupTimings(app);
     expect(app.readyInMs).toBeLessThan(8_000);
+    const startupEditors = await app.page.evaluate(() =>
+      performance.getEntriesByType("resource").filter((entry) => entry.name.includes("/monaco-browser-")),
+    );
+    expect(startupEditors).toEqual([]);
     expect(new URL(app.runtime.origin).hostname).toBe("127.0.0.1");
     expect(app.runtime.ownerType).toBe("desktop");
 
@@ -127,6 +133,7 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
 
     second = await test.step("Relaunch the desktop against the persistent runtime", () => launchPackagedApp(home));
     testInfo.annotations.push({ type: "warm-attach-ms", description: String(second.readyInMs) });
+    await attachStartupTimings(second);
     expect(second.readyInMs).toBeLessThan(3_000);
     expect(second.runtime.pid).toBe(originalPid);
     expect(second.runtime.ownerType).toBe("persistent");

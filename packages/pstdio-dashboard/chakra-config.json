@@ -1026,6 +1026,12 @@
     "caretColor": {},
     "cursor": {
       "values": "cursor"
+    },
+    "WebkitAppRegion": {
+      "values": [
+        "drag",
+        "no-drag"
+      ]
     }
   },
   "preflight": true,
