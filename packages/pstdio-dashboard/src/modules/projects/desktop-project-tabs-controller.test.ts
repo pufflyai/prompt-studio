@@ -1,4 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createWorkbench } from "@pstdio/workbench";
 import { getWriter, markInitialCollectionsSyncComplete } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
@@ -58,4 +61,33 @@ test("hydrates order after sync and removes deleted tabs with a selection fallba
   await Promise.resolve();
   expect(tabs.getProjectIds()).toEqual(["first"]);
   expect(getDashboardSelectedProjectId(workbench)).toBe("first");
+});
+
+test("reports a failed tab write and clears the error after the next saved change", async () => {
+  const home = mkdtempSync(join(tmpdir(), "project-tabs-persistence-"));
+  disposals.push(() => rmSync(home, { recursive: true, force: true }));
+  const blockedDirectory = join(home, "app-data");
+  writeFileSync(blockedDirectory, "blocks the application data directory");
+  const path = join(blockedDirectory, "project-tabs.json");
+  const workbench = createWorkbench();
+  let save: Promise<void> = Promise.resolve();
+  const tabs = new DesktopProjectTabsController([], (state) => {
+    save = Bun.write(path, JSON.stringify(state)).then(() => {});
+    return save;
+  });
+  getWriter("projects")?.truncateAndWrite([{ id: "first", name: "First" }]);
+  const projects = workbench.registerModule(createProjectsModule({ projectTabs: tabs }));
+  disposals.push(() => projects.dispose());
+  markInitialCollectionsSyncComplete();
+
+  await tabs.select(workbench, "first");
+  await expect(save).rejects.toThrow();
+  expect(tabs.getProjectIds()).toEqual(["first"]);
+  expect(workbench.notifications.listNotifications()).toMatchObject([{ level: "error" }]);
+
+  rmSync(blockedDirectory);
+  await tabs.close(workbench, "first");
+  await save;
+  expect(await Bun.file(path).json()).toEqual({ projectIds: [] });
+  expect(workbench.notifications.listNotifications()).toEqual([]);
 });

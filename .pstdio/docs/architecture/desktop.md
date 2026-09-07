@@ -46,6 +46,8 @@ The dashboard controller owns only the ordered open IDs. Selecting a tab and sel
 
 Electron's `DesktopProjectTabsStore` persists only `{ projectIds: string[] }` in `project-tabs.json`. It validates IDs, serializes atomic writes, and finishes pending writes before quit. Missing or invalid files start with an empty list. The dashboard removes deleted IDs after initial project sync and refreshes tab labels when project data arrives. This persistence does not retain runtime tokens or general browser storage.
 
+A failed write shows an error through the workbench notification system. Tabs remain usable. The next tab change saves the full current order and dismisses the error after a successful write.
+
 `@pstdio/ui` owns the title-bar and tab recipes from Pencil node `Q1dRGx`. `@pstdio/workbench` provides a generic `titleBar` slot above its regions and inside its theme. It has no project or Electron knowledge.
 
 Run the real packaged tab flow with:
