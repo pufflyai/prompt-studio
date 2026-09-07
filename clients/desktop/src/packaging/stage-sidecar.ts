@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { resolveSidecarTarget } from "../runtime/sidecar-artifact";
+import { signMacOSSidecar } from "./sign-macos-sidecar";
 
 type StageSidecarInput = {
   sourcePath: string;
@@ -9,6 +10,7 @@ type StageSidecarInput = {
   platform: NodeJS.Platform;
   arch: string;
   version: string;
+  macosSignIdentity?: string;
 };
 
 export const stageSidecar = (input: StageSidecarInput) => {
@@ -24,6 +26,11 @@ export const stageSidecar = (input: StageSidecarInput) => {
   mkdirSync(binDir, { recursive: true });
   copyFileSync(input.sourcePath, binaryPath);
   if (input.platform !== "win32") chmodSync(binaryPath, 0o755);
+
+  // The manifest must describe the final signed bytes sealed inside the application.
+  if (input.platform === "darwin" && input.macosSignIdentity) {
+    signMacOSSidecar(binaryPath, input.macosSignIdentity);
+  }
 
   const checksum = createHash("sha256").update(readFileSync(binaryPath)).digest("hex");
   writeFileSync(
