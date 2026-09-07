@@ -117,7 +117,23 @@ bun run --cwd clients/desktop make -- --skip-package
 bun run --cwd clients/desktop verify:fuses
 ```
 
+Use Node 24, the same version as CI, for Electron Forge packaging.
+
 The source Electron suite starts isolated temporary homes and a real Electron process. It checks authenticated attachment, the sandboxed/frozen preload boundary, ephemeral cookie storage, denied popups and permissions, single-instance focus, persistent-runtime detach, and actionable recovery. The packaged suite launches the produced application itself over the Chromium debugging protocol without enabling Electron's disabled Node inspector. It measures the cold-start, warm-attach, and crash-recovery budgets; creates and lists a project through the HttpOnly browser session and descriptor-bearer CLI; promotes ownership without restarting the runtime; proves persistent detach plus project and workbench-state restoration; exercises intentional `pst close`; and retries an unexpected sidecar exit without relaunching Electron.
+
+Pull-request CI requires both Electron suites on Linux before downstream Docker
+builds can run. It configures the SUID sandbox for the source and packaged
+executables, verifies the packaged fuse policy, and uploads readiness results
+and browser traces. Trace export removes runtime cookies and bearer
+credentials from every text entry before artifacts are uploaded.
+
+The secured compiled-runtime browser suite runs Chromium, Firefox, and WebKit.
+It proves opaque iframe command and project-setting persistence across reloads.
+Chromium also sends a terminal sentinel through the runtime's ephemeral,
+cookie-authenticated WebSocket endpoint and closes the terminal. CI requires
+the browser binaries and fails instead of skipping missing engines. These
+checks complement the Vite browser suite, which covers the development
+transport, and signed native release tests, which cover distribution trust.
 
 Run `bun run --cwd scripts verify:packages` whenever packaged defaults change. It verifies the compiled runtime's embedded dashboard, migrations, built-in extensions, and host-platform runtime behavior.
 

@@ -3,9 +3,18 @@ import type { ChildProcess } from "node:child_process";
 import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type Browser, type BrowserType, chromium, firefox, type LaunchOptions, webkit } from "@playwright/test";
+import {
+  type Browser,
+  type BrowserType,
+  chromium,
+  expect as expectBrowser,
+  firefox,
+  type LaunchOptions,
+  webkit,
+} from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
+import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -42,7 +51,7 @@ describe("packaged extension webviews", () => {
     const browserTest = browserAvailable || REQUIRE_WEBVIEW_BROWSERS ? test : test.skip;
 
     browserTest(
-      `loads authenticated opaque-origin assets and calls the host in ${browserCase.name}`,
+      `persists commands and settings through authenticated opaque webviews in ${browserCase.name}`,
       async () => {
         const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-webview-"));
         let child: ChildProcess | null = null;
@@ -86,9 +95,14 @@ describe("packaged extension webviews", () => {
           browser = await browserCase.type.launch({ headless: true, ...browserCase.launchOptions });
           const page = await browser.newPage();
           const extensionAssetStatuses: number[] = [];
+          const authenticationFailures: string[] = [];
           page.on("response", (response) => {
-            if (new URL(response.url()).pathname.startsWith("/v1/extensions/")) {
+            const pathname = new URL(response.url()).pathname;
+            if (pathname.startsWith("/v1/extensions/")) {
               extensionAssetStatuses.push(response.status());
+            }
+            if (pathname.startsWith("/v1/") && [401, 403].includes(response.status())) {
+              authenticationFailures.push(`${response.status()} ${pathname}`);
             }
           });
           await page.addInitScript(
@@ -111,8 +125,48 @@ describe("packaged extension webviews", () => {
           await frame.getByRole("button", { name: "Say hello" }).click();
           await page.getByText("Hello from Extension Lab").waitFor({ timeout: 10_000 });
 
+          const bumpResponse = page.waitForResponse((response) =>
+            new URL(response.url()).pathname.endsWith(
+              "/commands/pstdio.workbench-fixture.command.counter.bump/execute",
+            ),
+          );
+          await frame.getByRole("button", { name: "Increment", exact: true }).click();
+          expect((await bumpResponse).status()).toBe(200);
+          expect(await (await bumpResponse).json()).toMatchObject({
+            outcome: { status: "success", value: { counter: 1 } },
+          });
+          await page.reload();
+          await expectBrowser(frame.getByText("1", { exact: true })).toBeVisible();
+
+          await page.getByText("Settings", { exact: true }).last().click();
+          await page.getByRole("dialog").last().getByText("Lab (project)", { exact: true }).click();
+          const settingsFrame = page.frameLocator('iframe[title="Lab (project)"]');
+          expect(await page.locator('iframe[title="Lab (project)"]').getAttribute("sandbox")).not.toContain(
+            "allow-same-origin",
+          );
+          await settingsFrame.getByRole("spinbutton").fill("7");
+          await settingsFrame.getByRole("button", { name: "Save", exact: true }).click();
+          await expectBrowser(settingsFrame.getByText("Saved", { exact: true })).toBeVisible();
+
+          await page.reload();
+          await page.getByText("Settings", { exact: true }).last().click();
+          await page.getByRole("dialog").last().getByText("Lab (project)", { exact: true }).click();
+          await expectBrowser(settingsFrame.getByRole("spinbutton")).toHaveValue("7");
+          await page.keyboard.press("Escape");
+          await page.goto(`${started.baseUrl}/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
+          await expectBrowser(frame.getByText("1", { exact: true })).toBeVisible();
+          await frame.getByRole("button", { name: "Increment", exact: true }).click();
+          await expectBrowser(frame.getByText("8", { exact: true })).toBeVisible();
+
+          if (browserCase.name === "Chromium") {
+            await verifyPackagedTerminal(page, started.baseUrl, project.id, started.descriptor.token);
+          }
+
           expect(extensionAssetStatuses.length).toBeGreaterThanOrEqual(3);
           expect(extensionAssetStatuses.every((status) => status === 200)).toBe(true);
+          expect(authenticationFailures).toEqual([]);
+          expect((await page.content()).includes(started.descriptor.token)).toBe(false);
+          expect((await page.evaluate(() => document.cookie)).includes(started.descriptor.token)).toBe(false);
         } finally {
           await browser?.close();
           if (child) await stopProcess(child);

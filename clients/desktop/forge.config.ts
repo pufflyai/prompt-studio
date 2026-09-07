@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { FuseV1Options, FuseVersion } from "@electron/fuses";
 import { FusesPlugin } from "@electron-forge/plugin-fuses";
 import type { ForgeConfig } from "@electron-forge/shared-types";
+import { desktopPackageName } from "./src/packaging/package-layout";
 import { resolveDesktopSigning } from "./src/release/release-config";
 
 const desktopRoot = import.meta.dirname;
@@ -23,7 +24,8 @@ const config: ForgeConfig = {
     appBundleId: "studio.prompt.desktop",
     appCategoryType: "public.app-category.developer-tools",
     asar: true,
-    executableName: "Prompt Studio",
+    name: desktopPackageName(process.platform),
+    executableName: desktopPackageName(process.platform),
     extraResource: [join(desktopRoot, ".sidecar", "bin")],
     icon: join(assetsRoot, "icon"),
     ignore: [
@@ -66,7 +68,7 @@ const config: ForgeConfig = {
       platforms: ["linux"],
       config: {
         options: {
-          bin: "Prompt Studio",
+          bin: desktopPackageName("linux"),
           homepage: "https://prompt.studio",
           icon: join(assetsRoot, "icon.png"),
           maintainer: "Prompt Studio <support@prompt.studio>",

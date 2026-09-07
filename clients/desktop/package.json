@@ -57,6 +57,7 @@
     "@types/semver": "7.7.1",
     "@vitejs/plugin-react": "5.1.1",
     "electron": "43.3.0",
+    "fflate": "0.8.3",
     "storybook": "^10.1.9",
     "typescript": "6.0.2",
     "vite": "7.3.5"

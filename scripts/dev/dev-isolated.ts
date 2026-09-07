@@ -5,9 +5,10 @@
 
 import { spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
-import { join, posix, resolve } from "node:path";
+import { posix, resolve } from "node:path";
+import { waitForRuntimeDescriptor } from "./desktop-runtime-startup";
 import { resolveWorkingTreeDefaultExtensions } from "./working-tree-extensions";
 
 const COMPOSE_FILE = "infra/local/compose.yaml";
@@ -191,20 +192,32 @@ const reserveHostPorts = async (): Promise<HostPorts> => {
   return { dashboard, api: await reserveHostPort() };
 };
 
-const waitForRuntimeDescriptor = async (pstdioHome: string) => {
-  const path = join(pstdioHome, "runtime.json");
-  for (let attempt = 0; attempt < 90; attempt += 1) {
-    if (existsSync(path)) {
-      try {
-        const descriptor = JSON.parse(readFileSync(path, "utf8")) as { token?: unknown };
-        if (typeof descriptor.token === "string" && descriptor.token) return descriptor.token;
-      } catch {
-        // The runtime may still be replacing the descriptor atomically.
-      }
-    }
-    await Bun.sleep(1_000);
-  }
-  throw new Error("Timed out waiting for the isolated desktop runtime descriptor.");
+const createComposeServiceMonitor = (
+  projectName: string,
+  repoRoot: string,
+  hostPorts: HostPorts,
+  desktopMode: boolean,
+) => {
+  const args = ["compose", "-f", COMPOSE_FILE, "-p", projectName];
+  const options = {
+    cwd: repoRoot,
+    env: composeEnv(repoRoot, projectName, hostPorts, desktopMode),
+    encoding: "utf8" as const,
+  };
+  return {
+    isContainerRunning: () => {
+      const result = spawnSync("docker", [...args, "ps", "--status", "running", "--quiet", SERVICE], options);
+      if (result.status !== 0) throw new Error(`docker compose ps failed: ${result.stderr.trim()}`);
+      return result.stdout.trim().length > 0;
+    },
+    readContainerLogs: () => {
+      const result = spawnSync("docker", [...args, "logs", "--no-color", "--tail", "200", SERVICE], options);
+      return [result.stdout, result.stderr]
+        .map((output) => output.trim())
+        .filter(Boolean)
+        .join("\n");
+    },
+  };
 };
 
 const waitForSeededProject = async (apiPort: number, token?: string) => {
@@ -261,7 +274,12 @@ const main = async () => {
   const port = desktopMode
     ? apiPort
     : lookupHostPort(projectName, repoRoot, containerPorts.dashboard, hostPorts, desktopMode);
-  const token = desktopMode ? await waitForRuntimeDescriptor(pstdioHome) : undefined;
+  const token = desktopMode
+    ? await waitForRuntimeDescriptor(
+        pstdioHome,
+        createComposeServiceMonitor(projectName, repoRoot, hostPorts, desktopMode),
+      )
+    : undefined;
   const project = await waitForSeededProject(apiPort, token);
   const dashboardUrl = resolveIsolatedDashboardUrl(port);
   writeFileSync(

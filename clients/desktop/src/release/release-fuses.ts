@@ -1,5 +1,5 @@
-import { join } from "node:path";
 import { type FuseConfig, FuseState, FuseV1Options, FuseVersion, getCurrentFuseWire } from "@electron/fuses";
+import { resolvePackagedLayout } from "../packaging/package-layout";
 
 const expectedFuseStates = new Map<FuseV1Options, FuseState>([
   [FuseV1Options.RunAsNode, FuseState.DISABLE],
@@ -22,16 +22,8 @@ export const assertDesktopFuses = (wire: FuseConfig<FuseState>) => {
   }
 };
 
-export const resolvePackagedExecutable = (desktopRoot: string, platform: NodeJS.Platform, arch: string) => {
-  const packageRoot = join(desktopRoot, "out", `Prompt Studio-${platform}-${arch}`);
-  if (platform === "darwin") {
-    return join(packageRoot, "Prompt Studio.app", "Contents", "MacOS", "Prompt Studio");
-  }
-  return join(packageRoot, platform === "win32" ? "Prompt Studio.exe" : "Prompt Studio");
-};
-
 export const verifyPackagedDesktopFuses = async (desktopRoot: string, platform: NodeJS.Platform, arch: string) => {
-  const executablePath = resolvePackagedExecutable(desktopRoot, platform, arch);
+  const { executable: executablePath } = resolvePackagedLayout(desktopRoot, platform, arch);
   assertDesktopFuses(await getCurrentFuseWire(executablePath));
   return executablePath;
 };

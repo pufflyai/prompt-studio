@@ -15,9 +15,11 @@ Choose the artifact for the computer that will run Prompt Studio:
 | Linux x64 | `Prompt-Studio-<version>-linux-x64.deb` | portable ZIP |
 
 The Linux ZIP is portable rather than system-integrated. Extract it to a stable
-directory, preserve executable permissions, and launch `Prompt Studio` from the
-extracted directory. The DEB participates in the distribution's normal package
-inventory.
+directory without spaces, preserve executable permissions, and launch
+`prompt-studio` from the extracted directory. Electron's SUID sandbox currently
+cannot launch an executable whose full path contains spaces. The DEB installs
+under its normal system path and participates in the distribution's package
+inventory. See [the temporary path restriction](../../adrs/0019-temporary-linux-desktop-package-paths.md).
 
 ## Verify a download
 

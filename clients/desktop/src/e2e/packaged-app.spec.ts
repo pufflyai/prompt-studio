@@ -50,8 +50,8 @@ test("proves cold packaged startup and both authenticated transport paths", asyn
       status: 201,
     });
     expect(await app.page.evaluate(() => document.cookie)).toBe("");
-    expect(await app.page.content()).not.toContain(app.runtime.token);
-    expect(app.page.url()).not.toContain(app.runtime.token);
+    expect((await app.page.content()).includes(app.runtime.token)).toBe(false);
+    expect(app.page.url().includes(app.runtime.token)).toBe(false);
     expect(
       await app.page.evaluate(() => {
         const encodedConfig = document.querySelector<HTMLMetaElement>('meta[name="pstdio-config"]')?.content;
@@ -63,6 +63,7 @@ test("proves cold packaged startup and both authenticated transport paths", asyn
     expect(list.exitCode).toBe(0);
     expect(list.stdout).toContain("Packaged transport project");
 
+    await app.finishTrace();
     const close = runPackagedCli(home, ["close"]);
     await waitForExit(app.child);
     expect(await close).toMatchObject({ exitCode: 0, stdout: expect.stringContaining("Runtime stopped.") });
@@ -85,9 +86,8 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     expect(created).toMatchObject({ status: 201 });
     const projectId = created.body.id;
     if (!projectId) throw new Error("Packaged project creation did not return an id");
-    await first.page.getByRole("option", { name: /Workspaces/ }).click();
-    await expect(first.page.getByRole("option", { name: /Workspaces/ })).toHaveAttribute("aria-selected", "true");
-    await expect(first.page.getByLabel("Main").getByRole("heading", { name: "No workspaces yet" })).toBeVisible();
+    await first.page.getByRole("option", { name: "Sessions", exact: true }).click();
+    await expect(first.page.getByLabel("Main").getByText("No active conversations", { exact: true })).toBeVisible();
     await expect
       .poll(() => first?.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState()))
       .toMatchObject({ selectedProjectId: projectId });
@@ -95,7 +95,7 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     const pageLocation = firstState.pageLocations[projectId];
     expect(JSON.parse(pageLocation ?? "null")).toMatchObject({
       version: 1,
-      location: { page: { id: "workspaces", kind: "page" } },
+      location: { page: { id: "sessions", kind: "page" } },
     });
 
     const originalPid = first.runtime.pid;
@@ -103,6 +103,7 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     const persistent = await waitForDescriptor(home, (descriptor) => descriptor.ownerType === "persistent");
     expect(persistent.pid).toBe(originalPid);
 
+    await first.finishTrace();
     await first.page.evaluate(() => void window.promptStudioDesktop.quitApp());
     await waitForExit(first.child);
     expect(
@@ -127,9 +128,9 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     expect(
       await second.page.evaluate(async () => (await (await fetch("/v1/projects")).json()) as Array<{ name: string }>),
     ).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Relaunch persistence project" })]));
-    await expect(second.page.getByRole("option", { name: /Workspaces/ })).toHaveAttribute("aria-selected", "true");
-    await expect(second.page.getByLabel("Main").getByRole("heading", { name: "No workspaces yet" })).toBeVisible();
+    await expect(second.page.getByLabel("Main").getByText("No active conversations", { exact: true })).toBeVisible();
 
+    await second.finishTrace();
     const close = runPackagedCli(home, ["close"]);
     await waitForExit(second.child);
     expect(await close).toMatchObject({ exitCode: 0 });
@@ -161,6 +162,7 @@ test("shows recovery promptly after a sidecar crash and retries without relaunch
     await app.page.waitForURL(`${replacement.origin}/`);
     await expect(app.page.locator("#root")).not.toBeEmpty();
 
+    await app.finishTrace();
     const close = runPackagedCli(home, ["close"]);
     await waitForExit(app.child);
     expect(await close).toMatchObject({ exitCode: 0 });

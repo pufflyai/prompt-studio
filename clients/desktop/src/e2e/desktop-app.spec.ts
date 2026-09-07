@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron as electron, expect, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
+import { startElectronTrace } from "./electron-trace";
 
 const require = createRequire(import.meta.url);
 const electronPath = require("electron") as string;
@@ -95,6 +96,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     args: [appPath],
     env: launchEnvironment,
   });
+  const finishTrace = await startElectronTrace(electronApp.context(), "attached-runtime");
   try {
     const window = await electronApp.firstWindow();
     await expect(window.getByText("Existing Prompt Studio dashboard")).toBeVisible();
@@ -145,6 +147,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       false,
     );
 
+    await finishTrace();
     const closed = electronApp.waitForEvent("close");
     await electronApp.evaluate(({ app }) => app.quit());
     await closed;
@@ -156,6 +159,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       ).ok,
     ).toBe(true);
   } finally {
+    await finishTrace();
     await electronApp.close().catch(() => {});
     for (const response of eventResponses) response.end();
     await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
@@ -169,6 +173,7 @@ test("keeps startup failures in an actionable recovery window", async () => {
     args: [appPath],
     env: environment({ PSTDIO_HOME: home }),
   });
+  const finishTrace = await startElectronTrace(electronApp.context(), "startup-recovery");
   try {
     const window = await electronApp.firstWindow();
     await expect(window.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
@@ -176,6 +181,7 @@ test("keeps startup failures in an actionable recovery window", async () => {
     await expect(window.getByRole("button", { name: "Copy diagnostics" })).toBeVisible();
     await expect(window.getByRole("button", { name: "Quit" })).toBeVisible();
   } finally {
+    await finishTrace();
     await electronApp.evaluate(({ app }) => app.exit(0)).catch(() => {});
     await electronApp.close().catch(() => {});
   }

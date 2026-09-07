@@ -4,27 +4,14 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { type Browser, chromium, type Page } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
+import { resolvePackagedLayout } from "../packaging/package-layout";
+import { startElectronTrace } from "./electron-trace";
 
 const desktopRoot = resolve(import.meta.dirname, "../..");
 
 export const desktopVersion = JSON.parse(readFileSync(join(desktopRoot, "package.json"), "utf8")).version as string;
 
-const outputRoot = () => join(desktopRoot, "out", `Prompt Studio-${process.platform}-${process.arch}`);
-
-const executablePath = () => {
-  if (process.platform === "darwin") {
-    return join(outputRoot(), "Prompt Studio.app", "Contents", "MacOS", "Prompt Studio");
-  }
-  if (process.platform === "win32") return join(outputRoot(), "Prompt Studio.exe");
-  return join(outputRoot(), "Prompt Studio");
-};
-
-const sidecarPath = () => {
-  if (process.platform === "darwin") {
-    return join(outputRoot(), "Prompt Studio.app", "Contents", "Resources", "bin", "pstdio");
-  }
-  return join(outputRoot(), "resources", "bin", process.platform === "win32" ? "pstdio.exe" : "pstdio");
-};
+const packageLayout = resolvePackagedLayout(desktopRoot, process.platform, process.arch);
 
 const packagedEnvironment = (home: string) => {
   const env = Object.fromEntries(
@@ -74,6 +61,10 @@ const waitForDevTools = (child: ChildProcess) =>
       clearTimeout(timeout);
       rejectConnection(new Error(`Packaged app exited with code ${code}\n${stderr}`));
     });
+    child.once("error", (error) => {
+      clearTimeout(timeout);
+      rejectConnection(error);
+    });
   });
 
 export type PackagedApp = {
@@ -82,12 +73,13 @@ export type PackagedApp = {
   page: Page;
   readyInMs: number;
   runtime: RuntimeDescriptor;
+  finishTrace: () => Promise<void>;
 };
 
 export const launchPackagedApp = async (home: string): Promise<PackagedApp> => {
   const startedAt = Date.now();
   const child = spawn(
-    executablePath(),
+    packageLayout.executable,
     ["--remote-debugging-port=0", `--user-data-dir=${join(home, "electron-user-data")}`],
     {
       cwd: home,
@@ -95,13 +87,22 @@ export const launchPackagedApp = async (home: string): Promise<PackagedApp> => {
       stdio: "pipe",
     },
   );
-  const browser = await chromium.connectOverCDP(await waitForDevTools(child));
-  const page = browser.contexts()[0]?.pages()[0];
-  if (!page) throw new Error("Packaged app did not create a renderer page");
-  const runtime = await waitForDescriptor(home);
-  await page.waitForURL(`${runtime.origin}/`);
-  await page.locator("#root").waitFor({ state: "visible" });
-  return { browser, child, page, readyInMs: Date.now() - startedAt, runtime };
+  let browser: Browser | null = null;
+  try {
+    browser = await chromium.connectOverCDP(await waitForDevTools(child));
+    const context = browser.contexts()[0];
+    const page = context?.pages()[0];
+    if (!page || !context) throw new Error("Packaged app did not create a renderer page");
+    const finishTrace = await startElectronTrace(context, `packaged-${child.pid}`);
+    const runtime = await waitForDescriptor(home);
+    await page.waitForURL(`${runtime.origin}/`);
+    await page.locator("#root").waitFor({ state: "visible" });
+    return { browser, child, page, readyInMs: Date.now() - startedAt, runtime, finishTrace };
+  } catch (error) {
+    await browser?.close().catch(() => {});
+    if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+    throw error;
+  }
 };
 
 export const waitForExit = (child: ChildProcess) =>
@@ -119,7 +120,7 @@ export const waitForExit = (child: ChildProcess) =>
 
 export const runPackagedCli = (home: string, args: string[]) =>
   new Promise<{ exitCode: number | null; stderr: string; stdout: string }>((resolveExit) => {
-    const child = spawn(sidecarPath(), args, {
+    const child = spawn(packageLayout.sidecar, args, {
       cwd: home,
       env: packagedEnvironment(home),
       stdio: "pipe",
@@ -137,6 +138,7 @@ export const runPackagedCli = (home: string, args: string[]) =>
 
 export const disposePackagedApp = async (app: PackagedApp | null) => {
   if (!app) return;
+  await app.finishTrace();
   await app.browser.close().catch(() => {});
   if (app.child.exitCode === null && app.child.signalCode === null) app.child.kill("SIGKILL");
 };

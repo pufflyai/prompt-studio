@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron as electron, expect, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
+import { startElectronTrace } from "./electron-trace";
 
 const require = createRequire(import.meta.url);
 const electronPath = require("electron") as string;
@@ -119,7 +120,9 @@ test("confirms active work in the bundled lifecycle view before stopping its run
     args: [appPath],
     env: environment({ PSTDIO_HOME: home }),
   });
+  const finishTrace = await startElectronTrace(electronApp.context(), "active-work");
   cleanup.push(async () => {
+    await finishTrace();
     await electronApp.evaluate(({ app }) => app.exit(0)).catch(() => {});
     await electronApp.close().catch(() => {});
   });
@@ -143,6 +146,7 @@ test("confirms active work in the bundled lifecycle view before stopping its run
   expect(
     await window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()),
   ).toMatchObject({ kind: "confirming_active_work" });
+  await finishTrace();
   const closed = electronApp.waitForEvent("close");
   await window.evaluate(() => {
     void (globalThis as unknown as Window).promptStudioDesktop.confirmQuit();
