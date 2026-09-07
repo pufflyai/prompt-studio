@@ -1,8 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
-
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
+import { uiOrigin as apiBase } from "../ui-server";
 
 const bypassOnboarding = async (
   page: import("@playwright/test").Page,

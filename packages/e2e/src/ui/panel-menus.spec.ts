@@ -1,8 +1,6 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { createPlannerTicket } from "../helpers/planner-api";
-
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
+import { uiOrigin as apiBase } from "../ui-server";
 
 const openTabCustomMenu = async (tab: import("@playwright/test").Locator) => {
   if ((await tab.getAttribute("aria-selected")) !== "true") await tab.click();

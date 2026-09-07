@@ -3,9 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { uiOrigin as apiBase } from "../ui-server";
 
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
 const commandId = "pstdio.ps-256-files.command.inspect";
 
 const deleteAllProjects = async (request: APIRequestContext) => {

@@ -1,7 +1,5 @@
 import { expect, test } from "@playwright/test";
-
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
+import { uiOrigin as apiBase } from "../ui-server";
 
 const navSwitchProjectButton = (page: import("@playwright/test").Page) =>
   page.getByRole("region", { name: "Nav Chrome" }).getByRole("button", { name: "Switch project", exact: true });

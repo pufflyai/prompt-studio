@@ -1,6 +1,7 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { createPlannerAttempt, createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { uiOrigin as apiBase } from "../ui-server";
 import {
   createResourceActionsProject as createProject,
   expectResourceMenuItems as expectMenuItems,
@@ -8,9 +9,6 @@ import {
 } from "./helpers/resource-actions";
 import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
-
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
 
 test("shows the same ticket and workspace actions on rows and breadcrumbs", async ({ page, request }) => {
   test.slow();

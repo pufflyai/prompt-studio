@@ -3,9 +3,7 @@ import { join, relative } from "node:path";
 import { expect, test } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "../default-extensions";
-
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
+import { uiOrigin as apiBase } from "../ui-server";
 
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId?: string) => {
   await page.addInitScript((selectedProjectId: string | undefined) => {

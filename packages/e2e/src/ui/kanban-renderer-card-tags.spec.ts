@@ -5,9 +5,8 @@ import {
   getPlannerTicketTags,
   listPlannerTickets,
 } from "../helpers/planner-api";
+import { uiOrigin as apiBase } from "../ui-server";
 
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
   const res = await request.get(`${apiBase}/v1/projects`);
   const projects = (await res.json()) as { id: string }[];

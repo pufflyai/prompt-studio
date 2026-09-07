@@ -1,9 +1,8 @@
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { uiOrigin as apiBase } from "../ui-server";
 
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
 const extensionLabPath = join(import.meta.dirname, "../../../../packages/workbench-fixture");
 
 const bypassOnboarding = async (

@@ -4,9 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
-
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
+import { uiOrigin as apiBase } from "../ui-server";
 
 const deleteAllProjects = async (request: APIRequestContext) => {
   const res = await request.get(`${apiBase}/v1/projects`);

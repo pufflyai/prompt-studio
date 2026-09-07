@@ -1,4 +1,5 @@
 import { expect, type Page, test } from "@playwright/test";
+import { uiOrigin as apiBase } from "../ui-server";
 
 const projectId = (page: Page) => new URL(page.url()).pathname.split("/")[2];
 const openExample = async (page: Page, name: string, resource?: string) => {
@@ -47,7 +48,7 @@ const editDocument = async (page: Page, content: string) => {
 };
 
 test.beforeEach(async ({ page, request }) => {
-  const response = await request.post(`http://localhost:${process.env.E2E_API_PORT ?? "3200"}/v1/projects`, {
+  const response = await request.post(`${apiBase}/v1/projects`, {
     data: { name: "Public showcases" },
   });
   expect(response.ok()).toBe(true);
@@ -117,7 +118,7 @@ test("Boombox retains its player across pages and disposes it when its extension
   await view(page, "Library").getByRole("button", { name: "Liked songs", exact: true }).click();
   await expect(view(page, "Lazy Sunday").getByRole("button", { name: "Play Paper Moon by Mira Vale" })).toBeVisible();
   await expect(view(page, "Lazy Sunday").getByRole("button", { name: "Play Soft Focus by Low Island" })).toHaveCount(0);
-  const extensionsUrl = `http://localhost:${process.env.E2E_API_PORT ?? "3200"}/v1/projects/${projectId(page)}/extensions`;
+  const extensionsUrl = `${apiBase}/v1/projects/${projectId(page)}/extensions`;
   const listed = await request.get(extensionsUrl);
   expect(listed.ok()).toBe(true);
   const { extensions } = await listed.json();

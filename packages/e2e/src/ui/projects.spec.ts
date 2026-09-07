@@ -3,9 +3,8 @@ import { basename, dirname, join } from "node:path";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "@playwright/test";
 import { enableCoreSkillsExtension } from "../extension-helpers";
+import { uiOrigin as apiBase } from "../ui-server";
 
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
 const pickerLoadTimeoutMs = 15_000;
 const projectCreationTimeoutMs = 25_000;
 const resolveProjectDefaultPath = (projectId: string) => `/projects/${projectId}/tickets`;

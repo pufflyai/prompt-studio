@@ -1,5 +1,6 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { uiOrigin as apiBase } from "../ui-server";
 import {
   createAttemptWithSessionViaApi,
   createGitRepo,
@@ -7,8 +8,6 @@ import {
   registerRepoViaApi,
 } from "./helpers/workspace-session-attempt";
 
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
 const QUESTION_PROMPT_TRIGGER = "__fake_question_prompt__";
 
 const bypassOnboarding = async (page: import("@playwright/test").Page) => {

@@ -1,7 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
-
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
+import { uiOrigin as apiBase } from "../ui-server";
 
 const bypassOnboarding = async (page: Page) => {
   await page.addInitScript(() => {

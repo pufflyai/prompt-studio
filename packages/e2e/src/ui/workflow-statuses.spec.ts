@@ -1,8 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
-
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
+import { uiOrigin as apiBase } from "../ui-server";
 
 const createProject = async (request: import("@playwright/test").APIRequestContext) => {
   const response = await request.post(`${apiBase}/v1/projects`, {

@@ -6,8 +6,8 @@ import {
   createPlannerTicketFile,
   getPlannerTicket,
 } from "../helpers/planner-api";
+import { uiOrigin as apiBase } from "../ui-server";
 import {
-  resourceActionsApiBase as apiBase,
   createResourceActionsProject,
   expectResourceMenuItems,
   prepareResourceActionsDashboard,

@@ -3,8 +3,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
+import { uiOrigin as apiBase } from "../ui-server";
 
-const apiBase = `http://localhost:${process.env.E2E_API_PORT ?? "3200"}`;
 const repoRoot = resolve(import.meta.dirname, "../../../..");
 const fakeHarness = "pstdio.workbench-fixture.harness.fake";
 

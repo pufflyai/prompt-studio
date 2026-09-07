@@ -1,9 +1,7 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { uiOrigin as apiBase } from "../ui-server";
 import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
-
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
 
 const prepareDashboard = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((selectedProjectId) => {

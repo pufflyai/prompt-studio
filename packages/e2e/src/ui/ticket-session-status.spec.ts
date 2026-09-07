@@ -1,14 +1,12 @@
 import { rmSync } from "node:fs";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { uiOrigin as apiBase } from "../ui-server";
 import {
   createAttemptWithSessionViaApi,
   createGitRepo,
   createTicketViaApi,
   registerRepoViaApi,
 } from "./helpers/workspace-session-attempt";
-
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
 
 const TICKET_CONTENT = "Session status on the workspace badge";
 const TERMINAL_STATUS_PATTERN = /^(completed|failed|cancelled|disconnected)$/;

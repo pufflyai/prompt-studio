@@ -3,9 +3,7 @@ import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type APIRequestContext, expect, type Page } from "@playwright/test";
-
-const apiPortValue = Number(process.env.E2E_API_PORT ?? "3200");
-export const apiBase = `http://localhost:${apiPortValue}`;
+import { uiOrigin as apiBase } from "../../ui-server";
 
 const POLL_INTERVALS = [250, 500, 1_000, 2_000, 3_000];
 const DEFAULT_TIMEOUT_MS = 90_000;

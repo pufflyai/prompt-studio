@@ -1,11 +1,10 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
+import { uiOrigin as apiBase } from "../ui-server";
 import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 import { STORY_RENDER_TIMEOUT_MS, startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
 const projectModeStoryId = "dashboard-sidenav--project-mode";
 const workspacesViewStoryId = "dashboard-sidenav--workspaces-view";
 const ticketModeStoryId = "dashboard-sidenav--ticket-mode";

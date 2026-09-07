@@ -1,9 +1,9 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { createGitRepo, registerRepoViaApi } from "../ui/helpers/workspace-session-attempt";
+import { viteOrigins } from "../vite-terminal-servers";
 
-const apiPort = Number(process.env.E2E_API_PORT ?? "3400");
-const apiBase = `http://localhost:${apiPort}`;
+const apiBase = viteOrigins.api;
 
 const prepareDashboard = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((selectedProjectId) => {

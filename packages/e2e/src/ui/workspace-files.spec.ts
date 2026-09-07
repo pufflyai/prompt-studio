@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
+import { uiOrigin as apiBase } from "../ui-server";
 import {
   exerciseWorkspaceFileOperations,
   expectFoldersBeforeFiles,
@@ -12,9 +13,6 @@ import {
   prepareDashboard,
 } from "./helpers/workspace-files";
 import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
-
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
 
 test("browses and edits workspace files, then refreshes the lazy diff", async ({ page, request, context }) => {
   test.slow();

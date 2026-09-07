@@ -38,6 +38,9 @@ jobs:
       - name: Check formatting
         run: bun run format:check
 
+      - name: Check package boundaries and browser test origins
+        run: bun run verify:boundaries
+
       - name: Validate changesets
         run: bun run validate:changesets
 

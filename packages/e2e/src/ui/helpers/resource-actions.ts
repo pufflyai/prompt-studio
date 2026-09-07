@@ -1,7 +1,5 @@
 import { type APIRequestContext, expect, type Page } from "@playwright/test";
-
-export const resourceActionsApiBase = `http://localhost:${Number(process.env.E2E_API_PORT ?? "3200")}`;
-const apiBase = resourceActionsApiBase;
+import { uiOrigin as apiBase } from "../../ui-server";
 
 export const createResourceActionsProject = async (request: APIRequestContext) => {
   const response = await request.post(`${apiBase}/v1/projects`, {

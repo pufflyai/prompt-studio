@@ -1,11 +1,9 @@
 import { rmSync } from "node:fs";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
+import { uiOrigin as apiBase } from "../ui-server";
 import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
-
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
-const apiBase = `http://localhost:${apiPort}`;
 
 const createProject = async (request: APIRequestContext) => {
   const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "Resource layout restore" } });

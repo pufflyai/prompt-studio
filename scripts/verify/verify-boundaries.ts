@@ -143,8 +143,6 @@ const collectSourceFiles = (dir: string) => {
   return files;
 };
 
-const collectSpecifiers = (file: string) => sourceImports(readFileSync(file, "utf8"));
-
 const packageNameOf = (specifier: string, workspaceNames: Set<string>) => {
   const parts = specifier.split("/");
   const candidates = specifier.startsWith("@") ? [parts.slice(0, 2).join("/")] : [parts[0]];
@@ -231,7 +229,17 @@ const checkSourceImports = (pkg: WorkspacePackage, workspaceNames: Set<string>, 
   const pkgRoot = path.join(ROOT, pkg.dir);
   for (const file of collectSourceFiles(pkgRoot)) {
     const relativeFile = path.relative(ROOT, file).replaceAll("\\", "/");
-    for (const specifier of collectSpecifiers(file)) {
+    const source = readFileSync(file, "utf8");
+    if (
+      (/^packages\/e2e\/src\/(?:ui|vite-terminal)\//.test(relativeFile) ||
+        /^packages\/e2e\/playwright(?:\.vite-terminal)?\.config\.ts$/.test(relativeFile)) &&
+      /E2E_(?:API|VITE_DEV|VITE_PREVIEW)_PORT|\blocalhost\b|\b127\.0\.0\.1\b|\[::1\]/.test(source)
+    ) {
+      errors.push(
+        `${relativeFile}: use relative request URLs or import the suite origin from src/ui-server.ts or src/vite-terminal-servers.ts instead of defining a browser test address`,
+      );
+    }
+    for (const specifier of sourceImports(source)) {
       checkSpecifier(specifier, { pkg, pkgRoot, file, relativeFile, workspaceNames }, errors);
     }
   }

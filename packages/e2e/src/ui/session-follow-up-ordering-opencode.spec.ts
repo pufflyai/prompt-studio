@@ -1,7 +1,7 @@
 import { rmSync } from "node:fs";
 import { type APIRequestContext, expect, test } from "@playwright/test";
+import { uiOrigin as apiBase } from "../ui-server";
 import {
-  apiBase,
   bypassOnboarding,
   createFollowUpGitRepo,
   createProjectViaApi,

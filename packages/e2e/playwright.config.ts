@@ -3,13 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "./src/default-extensions";
+import { uiOrigin } from "./src/ui-server";
 
 const repoRoot = join(import.meta.dirname, "../..");
 
-// `pstdio serve` hosts the API and the dashboard on a single origin, so the UI
-// and its runtime calls share one port. (`E2E_DASHBOARD_PORT` is still exported
-// by the runner for older tooling; it is unused here.)
-const apiPort = Number(process.env.E2E_API_PORT ?? "3200");
+const serverUrl = new URL(uiOrigin);
 const runId = process.env.E2E_RUN_ID ?? `${Date.now()}-${process.pid}`;
 const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
 const resolvedHomePath = process.env.E2E_HOME ?? homePath;
@@ -51,7 +49,7 @@ export default defineConfig({
   globalSetup: "./src/scripts/global-setup.ts",
   reporter: [["html", { open: "never", outputFolder: `playwright-report/${runId}` }], ["list"]],
   use: {
-    baseURL: `http://localhost:${apiPort}`,
+    baseURL: uiOrigin,
     navigationTimeout: 60_000,
     trace: "on-first-retry",
     screenshot: "only-on-failure",
@@ -67,8 +65,8 @@ export default defineConfig({
       // One process now boots the API, the dashboard, and the extension runtime,
       // so it keeps the 30s budget the previous dashboard-boot server already
       // used (the API-only server it replaced needed less).
-      command: `bun run --cwd ../../packages/pstdio pstdio -- serve --foreground --host localhost --port ${apiPort}`,
-      port: apiPort,
+      command: `bun run --cwd ../../packages/pstdio pstdio -- serve --foreground --host ${serverUrl.hostname} --port ${serverUrl.port}`,
+      url: `${uiOrigin}/healthz`,
       reuseExistingServer: false,
       timeout: 30_000,
       env: {
@@ -79,7 +77,7 @@ export default defineConfig({
         PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_DEFAULT_EXTENSIONS,
         PSTDIO_EXTENSION_RELEASE_REF: "e2e",
         PSTDIO_EXTENSION_SOURCE_ROOT: repoRoot,
-        PSTDIO_TERMINAL_ORIGINS: `http://localhost:${apiPort}`,
+        PSTDIO_TERMINAL_ORIGINS: uiOrigin,
         HOME: resolvedHomePath,
         BUN_INSTALL_CACHE_DIR: bunCacheDir,
       },
