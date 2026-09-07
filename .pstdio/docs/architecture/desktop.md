@@ -91,6 +91,8 @@ resources/
 
 `app.asar` contains the Electron application. The architecture-matched Bun executable stays outside ASAR with executable permissions. Its manifest records the schema, platform, architecture, application version, executable name, and SHA-256 checksum. Desktop validates the target, permissions, checksum, manifest version, and executable-reported version before spawning it. A corrupt or incompatible package opens recovery with reinstall guidance and is never launched.
 
+macOS release staging signs the Bun runtime with the release identity, hardened runtime, a secure timestamp, and the JIT entitlement before computing its checksum. Forge preserves that nested signature when signing the enclosing application. Signing the runtime again would change its bytes and invalidate the manifest. The packaged launch suite checks the final signed application, so this ordering is part of release validation.
+
 Active release targets are macOS arm64/x64 and Linux x64. Forge retains the
 Windows x64 Squirrel configuration for the later signed Windows release, but CI
 does not build or publish it. Forge produces ZIP and DMG artifacts on macOS and

@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { stageSidecar } from "../src/packaging/stage-sidecar";
+import { resolveDesktopSigning } from "../src/release/release-config";
 import { resolveSidecarTarget, validateSidecarArtifact } from "../src/runtime/sidecar-artifact";
 
 const parseFlag = (args: string[], name: string) => {
@@ -47,6 +48,11 @@ const staged = stageSidecar({
   platform,
   arch,
   version: packageJson.version,
+  macosSignIdentity: resolveDesktopSigning({
+    platform,
+    release: process.env.PSTDIO_DESKTOP_RELEASE === "1",
+    env: process.env,
+  }).osxSign?.identity,
 });
 
 validateSidecarArtifact({
