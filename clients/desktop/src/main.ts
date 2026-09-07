@@ -163,7 +163,7 @@ const requestQuit = async () => {
         activity: result.activity,
       }),
     );
-    await windowController?.showLifecycle();
+    await windowController?.showQuitConfirmation();
     return;
   }
   if (result.state === "accepted") {
@@ -184,12 +184,9 @@ const requestQuit = async () => {
 
 const cancelQuit = async () => {
   if (state.kind !== "confirming_active_work") return;
-  const runtime = runtimeManager.runtime;
-  if (!runtime) return;
-
   setState(transitionDesktopState(state, { type: "quit_cancelled" }));
   quitting = false;
-  await windowController?.showWorkbench(runtime.descriptor);
+  windowController?.dismissQuitConfirmation();
 };
 
 const confirmQuit = async () => {
@@ -225,7 +222,7 @@ const bootstrap = async () => {
   });
   registerDesktopIpc({
     ipcMain,
-    window: windowController.window,
+    webContents: () => windowController?.webContents() ?? [],
     lifecycleUrl: windowController.lifecycleUrl,
     runtimeOrigin: () => windowController?.runtimeOrigin() ?? null,
     appInfo: () => ({ platform: process.platform, version: app.getVersion() }),

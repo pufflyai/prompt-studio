@@ -92,7 +92,9 @@ test("confirms active work in the bundled lifecycle view before stopping its run
       return;
     }
     response.setHeader("content-type", "text/html");
-    response.end("<!doctype html><html><body><main>Owned Prompt Studio dashboard</main></body></html>");
+    response.end(
+      '<!doctype html><html><body><main>Owned Prompt Studio dashboard<textarea aria-label="Draft"></textarea></main></body></html>',
+    );
   });
   await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
   cleanup.push(async () => {
@@ -130,25 +132,32 @@ test("confirms active work in the bundled lifecycle view before stopping its run
   const window = await electronApp.firstWindow();
   await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
 
+  await window.getByRole("textbox", { name: "Draft" }).fill("Unsaved work");
+  const confirmationOpened = electronApp.context().waitForEvent("page");
   await electronApp.evaluate(({ app }) => app.quit());
-  await window.waitForURL((url) => url.protocol === "pstdio:" && url.hostname === "lifecycle");
+  const confirmation = await confirmationOpened;
+  await confirmation.waitForURL((url) => url.protocol === "pstdio:" && url.hostname === "lifecycle");
+  expect(await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
   expect(
-    await window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()),
+    await confirmation.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()),
   ).toMatchObject({ kind: "confirming_active_work" });
-  await window.evaluate(() => {
+  await confirmation.evaluate(() => {
     void (globalThis as unknown as Window).promptStudioDesktop.cancelQuit();
   });
   await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
+  await expect(window.getByRole("textbox", { name: "Draft" })).toHaveValue("Unsaved work");
   expect(shutdownForces).toEqual([false]);
 
+  const nextConfirmationOpened = electronApp.context().waitForEvent("page");
   await electronApp.evaluate(({ app }) => app.quit());
-  await window.waitForURL((url) => url.protocol === "pstdio:" && url.hostname === "lifecycle");
+  const nextConfirmation = await nextConfirmationOpened;
+  await nextConfirmation.waitForURL((url) => url.protocol === "pstdio:" && url.hostname === "lifecycle");
   expect(
-    await window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()),
+    await nextConfirmation.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()),
   ).toMatchObject({ kind: "confirming_active_work" });
   await finishTrace();
   const closed = electronApp.waitForEvent("close");
-  await window.evaluate(() => {
+  await nextConfirmation.evaluate(() => {
     void (globalThis as unknown as Window).promptStudioDesktop.confirmQuit();
   });
   await closed;

@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Fix desktop startup, Linux packaging, detached extension process survival, and settings initialization.
+Fix desktop startup, Linux packaging, quit cancellation, detached extension process survival, and settings initialization.

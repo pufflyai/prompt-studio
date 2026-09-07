@@ -107,19 +107,22 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     expect(persistent.pid).toBe(originalPid);
 
     await test.step("Save the first window trace before Quit", () => first!.finishTrace());
-    await first.page.evaluate(() => void window.promptStudioDesktop.quitApp());
-    await waitForExit(first.child);
-    expect(
-      (
-        await fetch(`${persistent.origin}/runtime/ready`, {
-          headers: { authorization: `Bearer ${persistent.token}` },
-        })
-      ).ok,
-    ).toBe(true);
-    await first.browser.close();
+    await test.step("Quit the first desktop window after promotion", () =>
+      first!.page.evaluate(() => void window.promptStudioDesktop.quitApp()));
+    await test.step("Wait for the first desktop process to exit", () => waitForExit(first!.child));
+    await test.step("Probe the persistent runtime after desktop exit", async () => {
+      expect(
+        (
+          await fetch(`${persistent.origin}/runtime/ready`, {
+            headers: { authorization: `Bearer ${persistent.token}` },
+          })
+        ).ok,
+      ).toBe(true);
+    });
+    await test.step("Disconnect from the first desktop browser", () => first!.browser.close());
     first = null;
 
-    second = await launchPackagedApp(home);
+    second = await test.step("Relaunch the desktop against the persistent runtime", () => launchPackagedApp(home));
     testInfo.annotations.push({ type: "warm-attach-ms", description: String(second.readyInMs) });
     expect(second.readyInMs).toBeLessThan(3_000);
     expect(second.runtime.pid).toBe(originalPid);
