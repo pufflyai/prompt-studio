@@ -1,12 +1,21 @@
 import { join } from "node:path";
 import { BrowserWindow, type Session, session, shell, WebContentsView } from "electron";
 import type { RuntimeDescriptor } from "pstdio/runtime";
+import { createLogger } from "pstdio-logging";
 import { DESKTOP_CHANNELS } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { secureSession, secureWebContents } from "../security/apply-window-security";
 import { provisionRuntimeSession } from "../security/runtime-session";
 import { createSecureWindowOptions } from "../security/window-security";
 import { LIFECYCLE_SCHEME, LIFECYCLE_URL, readLifecycleAsset } from "./lifecycle-protocol";
+
+const profile = createLogger({
+  component: "desktop-window-profile",
+  level: "info",
+  service: "pstdio-desktop",
+  sync: true,
+});
+const phase = (phase: string) => profile.info({ event: "desktop.window.profile", phase }, "Desktop window profile");
 
 const WORKBENCH_PARTITION = "pstdio-workbench";
 
@@ -21,8 +30,11 @@ export class DesktopWindowController {
     workbenchSession: Session,
   ) {
     this.lifecycleUrl = LIFECYCLE_URL;
+    phase("security.begin");
     secureSession(workbenchSession);
+    phase("security.ready");
     this.window = new BrowserWindow(createSecureWindowOptions(preloadPath, WORKBENCH_PARTITION));
+    phase("native.created");
     secureWebContents(this.window.webContents, {
       lifecycleUrl: this.lifecycleUrl,
       runtimeOrigin: () => null,
@@ -34,12 +46,15 @@ export class DesktopWindowController {
   }
 
   static async create(preloadPath: string) {
+    phase("controller.begin");
     const rendererRoot = join(import.meta.dirname, "renderer");
     // The partition is memory-only; the lifecycle renderer stays mounted in the window.
     const workbenchSession = session.fromPartition(WORKBENCH_PARTITION, { cache: true });
+    phase("session.created");
     await workbenchSession.protocol.handle(LIFECYCLE_SCHEME, (request) =>
       readLifecycleAsset(request.url, rendererRoot),
     );
+    phase("protocol.ready");
     return new DesktopWindowController(preloadPath, workbenchSession);
   }
 

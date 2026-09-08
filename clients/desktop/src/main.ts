@@ -22,6 +22,20 @@ import { DesktopWindowController } from "./windows/window-controller";
 import { DesktopWorkbenchStateStore } from "./windows/workbench-state-store";
 
 const logger = createLogger({ component: "desktop", level: "info", service: "pstdio-desktop", sync: true });
+const startupPhase = (phase: string) =>
+  logger.info(
+    {
+      event: "desktop.startup.profile",
+      phase,
+      nativeCreatedAt: process.getCreationTime(),
+      uptime: process.uptime(),
+      cpu: process.cpuUsage(),
+    },
+    "Desktop startup profile",
+  );
+startupPhase("main.loaded");
+app.once("will-finish-launching", () => startupPhase("app.will-finish-launching"));
+app.once("ready", () => startupPhase("app.ready"));
 const descriptorPath = resolvePstdioRuntimeDescriptorPath();
 const externalRuntime = process.env.PSTDIO_DESKTOP_EXTERNAL_RUNTIME === "1";
 const projectTabs = new DesktopProjectTabsStore(join(app.getPath("userData"), "project-tabs.json"));
@@ -106,7 +120,10 @@ const runtimeManager = new DesktopRuntimeManager({
       arch: process.arch,
       appVersion: app.getVersion(),
     }),
-  onPhase: (phase) => setState({ kind: "starting", phase }),
+  onPhase: (phase) => {
+    startupPhase(`runtime.${phase}`);
+    setState({ kind: "starting", phase });
+  },
   onIntentionalShutdown: () => {
     setState({ kind: "closing" });
     void windowController?.showLifecycle();
@@ -129,6 +146,7 @@ const startRuntime = async () => {
   const lifecycleReady = windowController?.showLifecycle();
   try {
     const runtime = await runtimeManager.start();
+    startupPhase("runtime.ready");
     await Promise.all([windowController?.showWorkbench(runtime.descriptor), lifecycleReady]);
     setState(
       transitionDesktopState(state, {
@@ -219,7 +237,9 @@ const confirmQuit = async () => {
 };
 
 const bootstrap = async () => {
+  startupPhase("bootstrap.begin");
   const workbenchState = new DesktopWorkbenchStateStore(join(app.getPath("userData"), "workbench-state.json"));
+  startupPhase("workbench-state.loaded");
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
       createApplicationMenuTemplate(process.platform, () => {
@@ -227,9 +247,12 @@ const bootstrap = async () => {
       }),
     ),
   );
+  startupPhase("menu.created");
   const preloadPath = join(import.meta.dirname, "preload.cjs");
   windowController = await DesktopWindowController.create(preloadPath);
+  startupPhase("window.created");
   const { window } = windowController;
+  window.webContents.once("did-finish-load", () => startupPhase("lifecycle.loaded"));
   window.once("ready-to-show", () => {
     logger.info({ event: "desktop.window.ready", visible: window.isVisible() }, "Desktop startup window is ready");
   });
@@ -280,7 +303,13 @@ const bootstrap = async () => {
     setPageLocation: (projectId, value) => workbenchState.setPageLocation(projectId, value),
     setSelectedProjectId: (projectId) => workbenchState.setSelectedProjectId(projectId),
   });
+  startupPhase("ipc.registered");
   await startRuntime();
+  startupPhase("workbench.ready");
+  logger.info(
+    { event: "desktop.gpu.profile", gpu: app.getGPUFeatureStatus(), cpu: app.getAppMetrics() },
+    "Desktop process profile",
+  );
 };
 
 if (electronSquirrelStartup) {
@@ -289,6 +318,7 @@ if (electronSquirrelStartup) {
   app.quit();
 } else {
   if (process.platform === "win32") app.setAppUserModelId("com.squirrel.PromptStudio.PromptStudio");
+  startupPhase("single-instance.acquired");
   app.on("second-instance", () => focusPrimaryWindow(windowController?.window ?? null));
   app.on("before-quit", (event) => {
     if (allowQuit) return;
