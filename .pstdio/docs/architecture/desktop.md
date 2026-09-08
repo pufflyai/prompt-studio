@@ -75,6 +75,8 @@ The workbench registers file rendering without loading its editor implementation
 
 Recovery codes distinguish a missing sidecar, readiness timeout, port bind failure, PGlite ownership conflict, PGlite recovery failure, uncertain runtime ownership, and unexpected exit. Recovery never recommends deleting the database.
 
+The runtime's `db.open.failed` event identifies database startup failures even when PGlite returns an opaque WebAssembly error. Desktop uses that event to show database recovery guidance. It leaves damaged files untouched and can retry after the user restores them.
+
 Open logs reveals the shared Prompt Studio log file. Copy diagnostics contains only application/runtime versions, platform and architecture, lifecycle state, safe loopback origin, owner PID/type, log path, and bounded process output. Runtime tokens, bearer headers, URL credentials, and named secrets are redacted.
 
 ## Packaged layout
@@ -163,7 +165,9 @@ The source Electron suite starts isolated temporary homes and a real Electron pr
 
 Packaged startup recovery tests start a real persistent runtime through its bundled CLI. On macOS and Linux, suspending that process proves the startup deadline reaches an actionable recovery view and preserves its descriptor. Resuming it and pressing Retry through the keyboard attaches the same runtime in the same window. A separate test repairs a mismatched instance ID after ownership recovery, then verifies attachment to the original owner. Both flows stop the runtime through `pst close` and remove their isolated homes.
 
-Startup and recovery measurements sample element visibility on animation frames and return the timestamp from the renderer. Assertion polling, protocol replies, and trace snapshots must not add time after the UI is visible. The strict limits remain 8 seconds for cold startup, 3 seconds for warm attach, and 500 milliseconds for crash recovery.
+Database recovery tests use temporary homes. They verify that a competing database owner remains healthy and that desktop retries after it stops. They also damage an isolated database control file, verify that recovery preserves it, and restore its original contents before retrying. These tests use the packaged CLI and never open the database directly.
+
+Workbench startup and recovery measurements sample element visibility on animation frames and return the timestamp from the renderer. Startup-window timing uses the later of the native window's `ready-to-show` event and the lifecycle document's first contentful paint. The native event also verifies that the window is visible. Both are measured from process launch, including time before the debugger attaches. Assertion polling, protocol replies, and trace snapshots must not add time after the UI is visible. The strict limits remain 8 seconds for cold startup, 3 seconds for warm attach, and 500 milliseconds each for the startup window and crash recovery.
 
 Pull-request CI requires both Electron suites on Linux before downstream Docker
 builds can run. It configures the SUID sandbox for the source and packaged

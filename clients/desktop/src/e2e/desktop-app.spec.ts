@@ -115,6 +115,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     dashboardResponse.resolve();
     const window = await waitForWorkbenchPage(lifecycle, descriptor.origin);
     await expect(window.getByText("Existing Prompt Studio dashboard")).toBeVisible();
+    expect(await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible())).toBe(true);
     await expect
       .poll(() => window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()))
       .toMatchObject({ kind: "workbench" });
@@ -217,6 +218,7 @@ test("keeps startup failures in an actionable recovery window", async () => {
   try {
     const window = await waitForLifecyclePage(electronApp.context());
     await expect(window.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
+    expect(await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible())).toBe(true);
     await expect(window.getByRole("button", { name: "Open logs" })).toBeVisible();
     await expect(window.getByRole("button", { name: "Copy diagnostics" })).toBeVisible();
     await expect(window.getByRole("button", { name: "Quit" })).toBeVisible();

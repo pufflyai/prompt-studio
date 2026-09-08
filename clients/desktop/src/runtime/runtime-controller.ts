@@ -70,7 +70,11 @@ export const reconcileRuntimeOwnership = (current: RuntimeDescriptor, discovery:
 
 export const classifyRuntimeFailure = (detail: string) => {
   const normalized = detail.toLowerCase();
-  if (normalized.includes("eaddrinuse") || normalized.includes("address already in use")) {
+  if (
+    normalized.includes("eaddrinuse") ||
+    normalized.includes("address already in use") ||
+    /failed to start server\. is port \d+ in use\?/.test(normalized)
+  ) {
     return { code: "port_bind_failure" as const, message: "The local runtime could not bind its loopback port." };
   }
   if (normalized.includes("pglite") && (normalized.includes("lock") || normalized.includes("already owns"))) {
@@ -79,10 +83,17 @@ export const classifyRuntimeFailure = (detail: string) => {
       message: "Another process still owns the Prompt Studio database.",
     };
   }
-  if (normalized.includes("checkpoint") || normalized.includes("wal")) {
+  const databaseOpenFailed = detail.split("\n").some((line) => {
+    try {
+      return JSON.parse(line)?.event === "db.open.failed";
+    } catch {
+      return false;
+    }
+  });
+  if (databaseOpenFailed || normalized.includes("checkpoint") || normalized.includes("wal")) {
     return {
       code: "pglite_recovery_failure" as const,
-      message: "Prompt Studio could not recover the database checkpoint safely.",
+      message: "Prompt Studio could not open its database safely.",
     };
   }
   return { code: "unexpected_exit" as const, message: "The Prompt Studio runtime stopped unexpectedly." };

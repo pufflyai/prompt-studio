@@ -35,7 +35,9 @@ test("proves cold packaged startup and both authenticated transport paths", asyn
   try {
     app = await launchPackagedApp(home);
     testInfo.annotations.push({ type: "cold-start-ms", description: String(app.readyInMs) });
-    await attachStartupTimings(app);
+    const startupWindowInMs = await attachStartupTimings(app);
+    testInfo.annotations.push({ type: "startup-window-ms", description: String(startupWindowInMs) });
+    expect(startupWindowInMs).toBeLessThan(500);
     expect(app.readyInMs).toBeLessThan(8_000);
     const startupEditors = await app.page.evaluate(() =>
       performance.getEntriesByType("resource").filter((entry) => entry.name.includes("/monaco-browser-")),
@@ -133,7 +135,9 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
 
     second = await test.step("Relaunch the desktop against the persistent runtime", () => launchPackagedApp(home));
     testInfo.annotations.push({ type: "warm-attach-ms", description: String(second.readyInMs) });
-    await attachStartupTimings(second);
+    const startupWindowInMs = await attachStartupTimings(second);
+    testInfo.annotations.push({ type: "startup-window-ms", description: String(startupWindowInMs) });
+    expect(startupWindowInMs).toBeLessThan(500);
     expect(second.readyInMs).toBeLessThan(3_000);
     expect(second.runtime.pid).toBe(originalPid);
     expect(second.runtime.ownerType).toBe("persistent");

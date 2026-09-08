@@ -228,6 +228,10 @@ const bootstrap = async () => {
   );
   const preloadPath = join(import.meta.dirname, "preload.cjs");
   windowController = await DesktopWindowController.create(preloadPath);
+  const { window } = windowController;
+  window.once("ready-to-show", () => {
+    logger.info({ event: "desktop.window.ready", visible: window.isVisible() }, "Desktop startup window is ready");
+  });
   windowController.window.on("close", (event) => {
     if (allowQuit) return;
     event.preventDefault();

@@ -204,7 +204,8 @@ export class DesktopRuntimeManager {
       return this.#attach(descriptor, false);
     } catch (error) {
       await terminateSpawnedRuntime(child, childTerminated, this.#deps.sleep);
-      const failure = classifyRuntimeFailure(error instanceof Error ? error.message : String(error));
+      const detail = this.#output || (error instanceof Error ? error.message : String(error));
+      const failure = classifyRuntimeFailure(detail);
       throw new Error(`${failure.code}: ${failure.message}`);
     }
   }
