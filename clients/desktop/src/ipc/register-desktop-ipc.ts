@@ -4,8 +4,10 @@ import type { DesktopProjectTabsState, DesktopWorkbenchState } from "../desktop-
 import { DESKTOP_CHANNELS } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { isAllowedIpcSender } from "../security/ipc-security";
+import { titleBarOverlayOptions } from "../windows/title-bar-appearance";
 
 type DesktopIpcOptions = {
+  setTitleBarAppearance: (appearance: { color: string; symbolColor: string }) => void;
   appInfo: () => { platform: string; version: string };
   cancelQuit: () => Promise<void>;
   checkForUpdates: () => Promise<void>;
@@ -55,6 +57,9 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
   };
 
   handle(DESKTOP_CHANNELS.cancelQuit, options.cancelQuit);
+  handle(DESKTOP_CHANNELS.titleBarAppearance, (appearance) =>
+    options.setTitleBarAppearance(titleBarOverlayOptions(appearance)),
+  );
   handle(DESKTOP_CHANNELS.confirmQuit, options.confirmQuit);
   handle(DESKTOP_CHANNELS.appInfo, options.appInfo);
   handle(DESKTOP_CHANNELS.startupState, options.getState);

@@ -34,6 +34,7 @@ export interface PromptStudioDesktopApi {
 }
 
 export const DESKTOP_CHANNELS = {
+  titleBarAppearance: "pstdio:desktop:title-bar-appearance",
   cancelQuit: "pstdio:desktop:cancel-quit",
   confirmQuit: "pstdio:desktop:confirm-quit",
   appInfo: "pstdio:desktop:app-info",

@@ -14,7 +14,7 @@ describe("desktop window security", () => {
       expect(options).toMatchObject({ trafficLightPosition: { x: 10, y: 15 } });
       expect(options).not.toHaveProperty("titleBarOverlay");
     } else {
-      expect(options).toMatchObject({ titleBarOverlay: { height: 44 } });
+      expect(options).toMatchObject({ titleBarOverlay: { color: "#00000000" } });
       expect(options).not.toHaveProperty("trafficLightPosition");
     }
   });

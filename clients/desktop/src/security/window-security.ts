@@ -19,7 +19,7 @@ export const createSecureWindowOptions = (preload: string, partition: string, pl
   minHeight: 520,
   show: false,
   titleBarStyle: "hidden" as const,
-  ...(platform === "darwin" ? { trafficLightPosition: { x: 10, y: 15 } } : { titleBarOverlay: { height: 44 } }),
+  ...(platform === "darwin" ? { trafficLightPosition: { x: 10, y: 15 } } : { titleBarOverlay: { color: "#00000000" } }),
   webPreferences: {
     sandbox: true,
     contextIsolation: true,
