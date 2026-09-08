@@ -11,7 +11,7 @@ export const StartHereView = (props: StartHereViewProps) => {
   const styles = useLandingStyles();
   return (
     <Box css={styles.tools} minHeight={{ base: "96", lg: "full" }} role="region" aria-label="Your tools">
-      <ShapeField spawn="container" worldOffset={windowOffset} />
+      <ShapeField worldOffset={windowOffset} />
     </Box>
   );
 };

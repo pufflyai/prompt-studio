@@ -4,4 +4,4 @@
 "@pstdio/ui": patch
 ---
 
-Align landing panels with the workbench and add current desktop downloads
+Update the landing workbench with desktop downloads, interactive tool examples, and building block guides

@@ -30,7 +30,7 @@ const LandingContent = (props: LandingContentProps) => {
   const { view, windowOffset } = props;
   if (view === "start") return <StartHereView windowOffset={windowOffset} />;
   let page = <FeaturesView />;
-  if (view === "why-prompt-studio") page = <WhyPromptStudioView windowOffset={windowOffset} />;
+  if (view === "why-prompt-studio") page = <WhyPromptStudioView />;
   if (view === "privacy" || view === "terms") page = <DocView page={LEGAL_PAGES[view]} />;
   return (
     <Box layerStyle="panel" bg="bg" width="full" minWidth="0" height="full" overflow="hidden">

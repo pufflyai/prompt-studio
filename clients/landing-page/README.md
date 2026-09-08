@@ -15,6 +15,23 @@ The cross uses three collision rectangles that share the SVG arm dimensions. The
 half-disc uses a curved polygon and renders around its physical centre of mass, so
 its drawing and collisions stay aligned as it turns.
 
+## Product examples
+
+Why Prompt Studio tells a short product story through interactive examples. Visitors
+can explore sources, draft an example brief, follow the research-to-task workflow,
+and add an owner filter to a feedback board. These use local demo data. They do not
+call an agent or install extensions.
+
+Features pairs a research desk, feedback board, and daily brief with their building
+blocks. Each block keeps the same shape across the page and the falling tools.
+Selecting a block opens an example that uses it. Search, notifications, navigation,
+extension management, and themes appear in a separate section for shared services.
+Use "workbench" for the overall home for tools. A workspace is a separate product concept.
+
+The page layout and preview styles use the shared `landingStory` recipe. Storybook
+covers its desktop and narrow-panel layouts. Preview panels respond to their actual
+container width, including when the download panel is resized.
+
 ## Desktop downloads
 
 `desktop-releases.ts` reads the public GitHub releases API. It selects a stable

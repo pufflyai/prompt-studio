@@ -7,8 +7,6 @@ import {
   type FieldPiece,
   INITIAL_TOOL_COUNT,
   MAX_TOOL_COUNT,
-  type Perch,
-  parcourLayout,
   randomToolPlacement,
   TOOL_SPAWN_INTERVAL,
 } from "./field-layout";
@@ -30,15 +28,12 @@ const usePrefersReducedMotion = () => {
 };
 
 interface ShapeFieldProps {
-  spawn: "container" | "parcour";
-  /** Measured text lines the parcour rests on. */
-  perches?: Perch[];
   /** Position of the containing window. Moving it nudges the loose shapes. */
   worldOffset?: { x: number; y: number };
 }
 
 export const ShapeField = (props: ShapeFieldProps) => {
-  const { spawn, perches, worldOffset } = props;
+  const { worldOffset } = props;
   const reducedMotion = usePrefersReducedMotion();
 
   const hostRef = useRef<HTMLDivElement>(null);
@@ -66,7 +61,7 @@ export const ShapeField = (props: ShapeFieldProps) => {
     return () => observer.disconnect();
   }, []);
 
-  const layout = spawn === "container" ? containerLayout(size, initialPlacements) : parcourLayout(perches ?? []);
+  const layout = containerLayout(size, initialPlacements);
   const ready = size.width > 0 && size.height > 0 && layout.pieces.length > 0;
 
   // Declared first, so the world and boundary effects below read the current geometry.
@@ -91,15 +86,12 @@ export const ShapeField = (props: ShapeFieldProps) => {
     Matter.Composite.add(engine.world, [...wallsRef.current, ...pieces.map((piece) => piece.body)]);
 
     // New bodies join the existing world so the pile survives each arrival and resize.
-    const spawnTimer =
-      spawn === "container"
-        ? setInterval(() => {
-            const piece = createPiece(containerPiece(sizeRef.current, pieces.length, randomToolPlacement()));
-            pieces.push(piece);
-            Matter.Composite.add(engine.world, piece.body);
-            if (pieces.length >= MAX_TOOL_COUNT) clearInterval(spawnTimer);
-          }, TOOL_SPAWN_INTERVAL)
-        : undefined;
+    const spawnTimer = setInterval(() => {
+      const piece = createPiece(containerPiece(sizeRef.current, pieces.length, randomToolPlacement()));
+      pieces.push(piece);
+      Matter.Composite.add(engine.world, piece.body);
+      if (pieces.length >= MAX_TOOL_COUNT) clearInterval(spawnTimer);
+    }, TOOL_SPAWN_INTERVAL);
 
     const runner = Matter.Runner.create();
     Matter.Runner.run(runner, engine);
@@ -149,14 +141,14 @@ export const ShapeField = (props: ShapeFieldProps) => {
       piecesRef.current = [];
       wallsRef.current = [];
     };
-  }, [ready, reducedMotion, spawn]);
+  }, [ready, reducedMotion]);
 
   useEffect(() => {
     const engine = engineRef.current;
     if (!engine) return;
 
     Matter.Composite.remove(engine.world, wallsRef.current);
-    wallsRef.current = createWalls(spawn === "container" ? [] : parcourLayout(perches ?? []).walls, size);
+    wallsRef.current = createWalls([], size);
     Matter.Composite.add(engine.world, wallsRef.current);
 
     // Keep the pile centred and inside the new boundaries when a panel shrinks.
@@ -172,7 +164,7 @@ export const ShapeField = (props: ShapeFieldProps) => {
         y: Math.min(0, size.height - max.y),
       });
     }
-  }, [size, perches, spawn]);
+  }, [size]);
 
   useEffect(() => {
     offsetRef.current = worldOffset;

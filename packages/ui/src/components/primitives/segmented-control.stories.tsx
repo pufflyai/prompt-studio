@@ -70,3 +70,13 @@ export const Disabled = {
     <SegmentedControl options={selectionModes} value="single_select" disabled onValueChange={() => undefined} />
   ),
 };
+
+export const SelectedHover = {
+  ...Toggle,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const multiple = canvas.getByRole("button", { name: "Multiple" });
+    await userEvent.click(multiple);
+    await userEvent.hover(multiple);
+  },
+};

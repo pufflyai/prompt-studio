@@ -107,4 +107,4 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const Desktop: Story = {};
 export const WhyPromptStudio: Story = { args: { section: "All your vibe coded tools under one roof" } };
-export const Features: Story = { args: { section: "A workspace for the tools you build." } };
+export const Features: Story = { args: { section: "What will you build?" } };

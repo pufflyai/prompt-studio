@@ -1,82 +1,50 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import { useEffect, useRef, useState } from "react";
-import type { Perch } from "../shapes/field-layout";
-import { ShapeField } from "../shapes/shape-field";
+import { useStoryStyles } from "./building-blocks";
 import { PageScroll } from "./page-scroll";
-import { REASONS } from "./why-prompt-studio-content";
+import { ChangeToolDemo, ConnectedToolsDemo, WorkbenchOverviewDemo } from "./why-story-demos";
 
-const samePerches = (left: Perch[], right: Perch[]) =>
-  left.length === right.length &&
-  left.every((perch, index) => {
-    const other = right[index];
-    return (
-      Math.abs(perch.x - other.x) < 0.5 &&
-      Math.abs(perch.y - other.y) < 0.5 &&
-      Math.abs(perch.width - other.width) < 0.5
-    );
-  });
+const REASONS = [
+  {
+    title: "All your vibe coded tools under one roof.",
+    body: "Give the tools you build a home. Open them together in your own workbench.",
+    Demo: WorkbenchOverviewDemo,
+  },
+  {
+    title: "Connect the tools you build to fit your workflows.",
+    body: "Use what one tool produces in the next. Here, research becomes a brief and a plan.",
+    Demo: ConnectedToolsDemo,
+  },
+  {
+    title: "Make it work your way.",
+    body: "Start with something useful. Ask your agent for the changes you need.",
+    Demo: ChangeToolDemo,
+  },
+];
 
-interface WhyPromptStudioViewProps {
-  windowOffset?: { x: number; y: number };
-}
-
-export const WhyPromptStudioView = (props: WhyPromptStudioViewProps) => {
-  const { windowOffset } = props;
-
-  const fieldRef = useRef<HTMLDivElement>(null);
-  const titleRefs = useRef<(HTMLParagraphElement | null)[]>([]);
-  const [perches, setPerches] = useState<Perch[]>([]);
-
-  useEffect(() => {
-    const field = fieldRef.current;
-    if (!field) return;
-
-    const measure = () => {
-      const base = field.getBoundingClientRect();
-      const measured = titleRefs.current.flatMap((title, index) => {
-        if (!title) return [];
-        const rect = title.getBoundingClientRect();
-        return [{ x: rect.left - base.left, y: rect.top - base.top, width: rect.width, marks: REASONS[index].marks }];
-      });
-
-      setPerches((current) => (samePerches(current, measured) ? current : measured));
-    };
-
-    measure();
-
-    const observer = new ResizeObserver(measure);
-    observer.observe(field);
-    for (const title of titleRefs.current) {
-      if (title) observer.observe(title);
-    }
-
-    return () => observer.disconnect();
-  }, []);
-
+export const WhyPromptStudioView = () => {
+  const styles = useStoryStyles();
   return (
     <PageScroll>
-      <Box ref={fieldRef} position="relative" width="100%">
-        <ShapeField spawn="parcour" perches={perches} worldOffset={windowOffset} />
-        <Stack width="full" gap="4xl" px="xl" pt="4xl" pb="4xl">
-          {REASONS.map((reason, index) => (
-            <Stack key={reason.title} gap="sm">
-              <Text
-                as="h2"
-                ref={(element) => {
-                  titleRefs.current[index] = element;
-                }}
-                textStyle="heading/M"
-                width="fit-content"
-                maxWidth="100%"
-              >
-                {reason.title}
+      <Box css={styles.page}>
+        {REASONS.map(({ title, body, Demo }, index) => (
+          <Box as="section" css={styles.section} key={title}>
+            <Stack css={styles.intro}>
+              <Text textStyle="label/S/regular" color="fg.muted">
+                0{index + 1} / {index === 0 ? "Your workbench" : "Your tools"}
               </Text>
-              <Text textStyle="paragraph/M/regular" color="fg.muted">
-                {reason.body}
+              <Text as={index === 0 ? "h1" : "h2"} textStyle={{ base: "heading/M", md: "heading/L" }}>
+                {title}
+              </Text>
+              <Text textStyle="paragraph/L/regular" color="fg.muted">
+                {body}
               </Text>
             </Stack>
-          ))}
-        </Stack>
+            <Demo />
+          </Box>
+        ))}
+        <Text css={styles.caption}>
+          Your tools live in your repository. Keep changing them and share what you build.
+        </Text>
       </Box>
     </PageScroll>
   );
