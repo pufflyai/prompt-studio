@@ -13,6 +13,7 @@ const WORKBENCH_PARTITION = "pstdio-workbench";
 export class DesktopWindowController {
   #runtimeOrigin: string | null = null;
   #workbench: WebContentsView | null = null;
+  readonly #shown: Promise<void>;
   readonly lifecycleUrl: string;
   readonly window: BrowserWindow;
 
@@ -28,7 +29,12 @@ export class DesktopWindowController {
       runtimeOrigin: () => null,
       openExternal: (url) => shell.openExternal(url),
     });
-    this.window.once("ready-to-show", () => this.window.show());
+    this.#shown = new Promise((resolve) => {
+      this.window.once("ready-to-show", () => {
+        this.window.show();
+        resolve();
+      });
+    });
     this.window.on("resize", () => this.resizeWorkbench());
     this.window.on("closed", () => this.#workbench?.webContents.close());
   }
@@ -93,6 +99,8 @@ export class DesktopWindowController {
   }
 
   async showWorkbench(descriptor: RuntimeDescriptor) {
+    // A child view must not cover the startup renderer before it shows the native window.
+    await this.#shown;
     this.#runtimeOrigin = descriptor.origin;
     const view = this.#workbench ?? this.createWorkbench();
     await provisionRuntimeSession(view.webContents.session, descriptor);
