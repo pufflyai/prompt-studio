@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Locator, type Page } from "@playwright/test";
 
+// The separator grip is painted with the border token.
 export const getResizeSeparatorColors = (separator: Locator) =>
   separator.evaluate((element) => {
     const probe = document.createElement("div");
@@ -9,7 +10,8 @@ export const getResizeSeparatorColors = (separator: Locator) =>
     document.body.append(probe);
     const expected = getComputedStyle(probe).backgroundColor;
     probe.remove();
-    return { actual: getComputedStyle(element, "::before").backgroundColor, expected };
+    const gripDot = element.querySelector("[data-part=grip] > *");
+    return { actual: gripDot ? getComputedStyle(gripDot).backgroundColor : "", expected };
   });
 
 export const prepareDashboard = async (page: Page, projectId: string, repoId: string) => {

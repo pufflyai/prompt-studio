@@ -26,6 +26,9 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
   await page.goto(`/projects/${projectId}/tickets`);
 };
 
+// Panels are inset from the window and separated from each other by the panel gap.
+const PANEL_GAP_PX = 4;
+
 const expectNear = (actual: number, expected: number) => {
   expect(Math.abs(actual - expected)).toBeLessThanOrEqual(1);
 };
@@ -37,11 +40,11 @@ const expectDashboardAttachedBounds = async (page: import("@playwright/test").Pa
   expect(mainBox).not.toBeNull();
   expect(sideBox).not.toBeNull();
 
-  expectNear(sideBox!.y, 0);
-  expectNear(sideBox!.height, 720);
+  expectNear(sideBox!.y, PANEL_GAP_PX);
+  expectNear(sideBox!.height, 720 - 2 * PANEL_GAP_PX);
   expectNear(sideBox!.width, 420);
-  expectNear(mainBox!.x + mainBox!.width, sideBox!.x);
-  expectNear(sideBox!.x + sideBox!.width, 1280);
+  expectNear(mainBox!.x + mainBox!.width + PANEL_GAP_PX, sideBox!.x);
+  expectNear(sideBox!.x + sideBox!.width, 1280 - PANEL_GAP_PX);
 };
 
 test("closes and keyboard-restores the same full-height Side Panel", async ({ page, request }) => {
@@ -72,7 +75,7 @@ test("closes and keyboard-restores the same full-height Side Panel", async ({ pa
 
   const closedMainBox = await page.locator('[data-workbench-panel="main"]').boundingBox();
   expect(closedMainBox).not.toBeNull();
-  expectNear(closedMainBox!.x + closedMainBox!.width, 1280);
+  expectNear(closedMainBox!.x + closedMainBox!.width, 1280 - PANEL_GAP_PX);
   expect(await mainNode!.evaluate((element) => element.isConnected)).toBe(true);
   expect(await secondaryNode!.evaluate((element) => element.isConnected)).toBe(true);
   expect(await sideRegionNode!.evaluate((element) => element.isConnected)).toBe(true);
