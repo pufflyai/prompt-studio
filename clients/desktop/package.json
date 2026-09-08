@@ -8,7 +8,7 @@
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
-    "build": "bun run build:main && bun run build:preload && vite build",
+    "build": "bun run build:main && bun run build:preload && vite build && bun scripts/prerender-startup.tsx",
     "build:main": "bun build src/main.ts --outfile dist/main.js --target node --format esm --external electron",
     "build:preload": "bun build src/preload.ts --outfile dist/preload.cjs --target node --format cjs --external electron",
     "build:sidecar": "bun scripts/build-sidecar.ts",

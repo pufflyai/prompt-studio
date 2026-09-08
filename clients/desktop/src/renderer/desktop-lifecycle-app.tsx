@@ -51,14 +51,11 @@ const useDesktopState = (initialState: DesktopState) => {
   return state;
 };
 
-const useReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
 const StartingState = (props: { phase: keyof typeof phaseCopy }) => {
   const { phase } = props;
-  const reducedMotion = useReducedMotion();
   return (
     <Stack align="center" gap="lg" role="status" aria-live="polite">
-      {!reducedMotion && <Spinner size="lg" color="fg.muted" aria-hidden="true" />}
+      <Spinner size="lg" color="fg.muted" aria-hidden="true" _motionReduce={{ display: "none" }} />
       <Stack align="center" gap="xs" textAlign="center">
         <Heading textStyle="heading/M">Opening Prompt Studio</Heading>
         <Text color="fg.muted" textStyle="paragraph/M/regular">
@@ -172,10 +169,9 @@ const ActiveWorkState = (props: {
 };
 
 const ClosingState = () => {
-  const reducedMotion = useReducedMotion();
   return (
     <Stack align="center" gap="lg" role="status" aria-live="polite">
-      {!reducedMotion && <Spinner size="lg" color="fg.muted" aria-hidden="true" />}
+      <Spinner size="lg" color="fg.muted" aria-hidden="true" _motionReduce={{ display: "none" }} />
       <Stack align="center" gap="xs" textAlign="center">
         <Heading textStyle="heading/M">Closing Prompt Studio</Heading>
         <Text color="fg.muted" textStyle="paragraph/M/regular">
