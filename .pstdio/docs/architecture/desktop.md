@@ -99,9 +99,12 @@ resources/
 
 macOS release staging signs the Bun runtime with the release identity, hardened runtime, a secure timestamp, and the JIT entitlement before computing its checksum. Forge preserves that nested signature when signing the enclosing application. Signing the runtime again would change its bytes and invalidate the manifest. The packaged launch suite checks the final signed application, so this ordering is part of release validation.
 
-Active release targets are macOS arm64/x64 and Linux x64. Forge retains the
-Windows x64 Squirrel configuration for the later signed Windows release, but CI
-does not build or publish it. Forge produces ZIP and DMG artifacts on macOS and
+Active release targets are Apple Silicon macOS arm64 and Linux x64. Intel macOS
+desktop distribution is deferred after native startup and packaged test deadlines
+failed. Windows desktop distribution remains deferred until trusted signing is
+available. Forge retains their packaging support, but CI does not build or publish
+those desktop targets. Intel macOS and Windows CLI packages remain supported.
+Forge produces ZIP and DMG artifacts on macOS and
 ZIP and DEB artifacts on Linux. The package enables ASAR integrity and an
 explicit full Electron fuse policy that disables Node execution, Node options,
 CLI inspection, and privileged `file://` behavior.
@@ -119,11 +122,10 @@ update metadata.
 | Target | Native output | Release verification | Update path |
 | --- | --- | --- | --- |
 | macOS arm64 | DMG and ZIP | Developer ID signature, notarization staple, Gatekeeper, clean-home launch | Electron updater through release-owned JSON metadata |
-| macOS x64 | DMG and ZIP | Developer ID signature, notarization staple, Gatekeeper, clean-home launch | Electron updater through release-owned JSON metadata |
 | Linux x64 | DEB and portable ZIP | DEB inspection and clean-home launch | Distribution package manager or GitHub release page |
 
 Every target audits the packaged Electron fuse wire and emits a target manifest
-plus SHA-256 checksums. The publish job requires the complete three-target set,
+plus SHA-256 checksums. The publish job requires the complete two-target set,
 revalidates every checksum and component version, uploads the artifacts to the
 existing draft release, and only then publishes it. Native jobs receive read-only
 repository access; only the final publisher receives `contents: write`.
@@ -171,7 +173,7 @@ Database recovery tests use temporary homes. They verify that a competing databa
 
 Detached-work tests install a small command-only fixture from `packages/workbench-fixture/fixtures/detached-work`. Its only dependency is the public SDK. Installation runs normally in each isolated home, and the tests verify that its process continues after either desktop quit or API shutdown.
 
-Workbench startup and recovery measurements sample element visibility on animation frames and return the timestamp from the renderer. Startup-window timing uses the later of the native window's `ready-to-show` event and the lifecycle document's first contentful paint. The native event also verifies that the window is visible. The controller waits for that native event before creating the workbench view, so a fast attachment cannot cover the startup renderer while the window is still hidden. Runtime discovery continues while the startup window loads. Both timings are measured from process launch, including time before the debugger attaches. Assertion polling, protocol replies, and trace snapshots must not add time after the UI is visible. The limits are 8 seconds for cold startup, 3 seconds for warm attach, and 500 milliseconds for crash recovery. The startup window must appear within 750 milliseconds on Apple Silicon and Linux, and 800 milliseconds on Intel Macs.
+Workbench startup and recovery measurements sample element visibility on animation frames and return the timestamp from the renderer. Startup-window timing uses the later of the native window's `ready-to-show` event and the lifecycle document's first contentful paint. The native event also verifies that the window is visible. The controller waits for that native event before creating the workbench view, so a fast attachment cannot cover the startup renderer while the window is still hidden. Runtime discovery continues while the startup window loads. Both timings are measured from process launch, including time before the debugger attaches. Assertion polling, protocol replies, and trace snapshots must not add time after the UI is visible. The limits are 8 seconds for cold startup, 3 seconds for warm attach, and 500 milliseconds for crash recovery. The startup window must appear within 750 milliseconds on the supported Apple Silicon and Linux targets. The deferred Intel test path retains its 800-millisecond window limit for future validation.
 
 Pull-request CI requires both Electron suites on Linux before downstream Docker
 builds can run. It configures the SUID sandbox for the source and packaged

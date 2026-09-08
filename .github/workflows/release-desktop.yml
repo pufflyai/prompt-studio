@@ -6,7 +6,7 @@ on:
       targets:
         description: Native targets to validate
         type: string
-        default: '[{"target":"darwin-arm64","platform":"darwin","arch":"arm64","os":"macos-15"},{"target":"darwin-x64","platform":"darwin","arch":"x64","os":"macos-15-intel"},{"target":"linux-x64","platform":"linux","arch":"x64","os":"ubuntu-latest"}]'
+        default: '[{"target":"darwin-arm64","platform":"darwin","arch":"arm64","os":"macos-15"},{"target":"linux-x64","platform":"linux","arch":"x64","os":"ubuntu-latest"}]'
 
 permissions:
   contents: read
@@ -19,7 +19,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Windows x64 stays disabled until its trusted signing lane is available.
+        # Intel macOS and Windows desktop distribution remain deferred.
         include: ${{ fromJSON(inputs.targets) }}
     steps:
       - uses: actions/checkout@v5
