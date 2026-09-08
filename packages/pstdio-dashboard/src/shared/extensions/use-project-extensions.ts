@@ -211,11 +211,12 @@ export const useExecuteExtensionCommand = (projectId: string | undefined) => {
   return useMutation({
     mutationFn: async ({ commandId, body }: { commandId: string; body: unknown }) => {
       if (!projectId) throw new Error("Project id is required to execute extension commands.");
-      return executeExtensionCommand(projectId, commandId, body);
+      const response = await executeExtensionCommand(projectId, commandId, body);
+      publishExtensionCommandEvent(response, { projectId });
+      return response;
     },
     onSuccess: async (response) => {
       surfaceCommandOutcome(response);
-      publishExtensionCommandEvent(response, { projectId });
       await queryClient.invalidateQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) });
     },
   });
