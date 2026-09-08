@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Scale the UI up 15% on 1440p displays and 40% on 4K displays.
+Scale the UI root font size to 18px on 1440p displays and 22px on 4K displays.
