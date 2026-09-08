@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron as electron, expect, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
-import { waitForWorkbenchPage } from "./desktop-pages";
+import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
 import { acceptFocusedButton } from "./lifecycle-actions";
 
@@ -137,7 +137,7 @@ test("recovers from refused shutdown and closes each quit confirmation", async (
     await electronApp.close().catch(() => {});
   });
 
-  const lifecycle = await electronApp.firstWindow();
+  const lifecycle = await waitForLifecyclePage(electronApp.context());
   const window = await waitForWorkbenchPage(lifecycle, descriptor.origin);
   await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
 
