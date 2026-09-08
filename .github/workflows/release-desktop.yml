@@ -2,6 +2,11 @@ name: Validate native desktop candidate
 
 on:
   workflow_dispatch:
+    inputs:
+      targets:
+        description: Native targets to validate
+        type: string
+        default: '[{"target":"darwin-arm64","platform":"darwin","arch":"arm64","os":"macos-15"},{"target":"darwin-x64","platform":"darwin","arch":"x64","os":"macos-15-intel"},{"target":"linux-x64","platform":"linux","arch":"x64","os":"ubuntu-latest"}]'
 
 permissions:
   contents: read
@@ -15,19 +20,7 @@ jobs:
       fail-fast: false
       matrix:
         # Windows x64 stays disabled until its trusted signing lane is available.
-        include:
-          - target: darwin-arm64
-            platform: darwin
-            arch: arm64
-            os: macos-15
-          - target: darwin-x64
-            platform: darwin
-            arch: x64
-            os: macos-15-intel
-          - target: linux-x64
-            platform: linux
-            arch: x64
-            os: ubuntu-latest
+        include: ${{ fromJSON(inputs.targets) }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -123,6 +116,7 @@ jobs:
           sudo chown root:root "$sandbox_path"
           sudo chmod 4755 "$sandbox_path"
           test "$(stat -c '%U:%G %a' "$sandbox_path")" = "root:root 4755"
+          bun --cwd clients/desktop -e 'require("electron")'
           source_sandbox_path=$(bun --cwd clients/desktop -e 'console.log(require("node:path").join(require("node:path").dirname(require("electron")), "chrome-sandbox"))')
           sudo chown root:root "$source_sandbox_path"
           sudo chmod 4755 "$source_sandbox_path"
