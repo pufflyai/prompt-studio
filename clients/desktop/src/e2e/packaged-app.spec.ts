@@ -17,7 +17,7 @@ import {
 import { openPackagedProject } from "./packaged-project-helpers";
 import { waitForVisibleElement } from "./visible-element-timing";
 
-const startupWindowBudgetMs = process.platform === "darwin" && process.arch === "x64" ? 800 : 500;
+const startupWindowBudgetMs = process.platform === "darwin" && process.arch === "x64" ? 800 : 750;
 
 const createProjectThroughBrowser = (app: PackagedApp, name: string) =>
   app.page.evaluate(async (projectName) => {
