@@ -1,5 +1,20 @@
 # pstdio
 
+## 0.32.0
+
+_2026-09-08_
+
+### Minor Changes
+
+- 14692cc: Add persistent desktop project tabs beside native window controls.
+
+### Patch Changes
+
+- 62918f4: Fix desktop startup, Linux packaging, quit cancellation, detached extension process survival, and settings initialization.
+- 94943a0: Improve contrast for muted light text and destructive button states to match Pencil.
+- 62918f4: Add scoped extension checks, repair guidance, and package version diagnostics.
+- 94943a0: Load code editor assets when an editor opens so workbench startup stays responsive.
+
 ## 0.31.0
 
 _2026-09-07_
