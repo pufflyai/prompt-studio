@@ -303,6 +303,9 @@
                   "type": "frame",
                   "id": "c3DDJl",
                   "name": "Light Panel",
+                  "theme": {
+                    "mode": "light"
+                  },
                   "width": "fill_container",
                   "fill": "#FFFFFF",
                   "cornerRadius": 16,
@@ -346,13 +349,13 @@
                               "height": 15,
                               "icon": "sun",
                               "library": "lucide",
-                              "fill": "#9DA0A6"
+                              "fill": "$ds-fg-muted"
                             },
                             {
                               "type": "text",
                               "id": "Jw27K",
                               "name": "Label",
-                              "fill": "#9DA0A6",
+                              "fill": "$ds-fg-muted",
                               "content": "mode",
                               "fontFamily": "$font-body",
                               "fontSize": 12,
@@ -366,7 +369,7 @@
                       "type": "text",
                       "id": "TIsux",
                       "name": "Surfaces Label",
-                      "fill": "#9DA0A6",
+                      "fill": "$ds-fg-muted",
                       "content": "SURFACES",
                       "fontFamily": "$font-heading",
                       "fontSize": 11,
@@ -422,7 +425,7 @@
                                   "type": "text",
                                   "id": "lrDd4",
                                   "name": "Hex",
-                                  "fill": "#9DA0A6",
+                                  "fill": "$ds-fg-muted",
                                   "content": "#FFFFFF",
                                   "fontFamily": "$font-body",
                                   "fontSize": 11,
@@ -474,7 +477,7 @@
                                   "type": "text",
                                   "id": "jS62H",
                                   "name": "Hex",
-                                  "fill": "#9DA0A6",
+                                  "fill": "$ds-fg-muted",
                                   "content": "#F9FBFA",
                                   "fontFamily": "$font-body",
                                   "fontSize": 11,
@@ -526,7 +529,7 @@
                                   "type": "text",
                                   "id": "Tv1CR",
                                   "name": "Hex",
-                                  "fill": "#9DA0A6",
+                                  "fill": "$ds-fg-muted",
                                   "content": "#F0F5F1",
                                   "fontFamily": "$font-body",
                                   "fontSize": 11,
@@ -578,7 +581,7 @@
                                   "type": "text",
                                   "id": "e7HlDu",
                                   "name": "Hex",
-                                  "fill": "#9DA0A6",
+                                  "fill": "$ds-fg-muted",
                                   "content": "#EDF2EE",
                                   "fontFamily": "$font-body",
                                   "fontSize": 11,
@@ -594,7 +597,7 @@
                       "type": "text",
                       "id": "nKCX3",
                       "name": "Text Label",
-                      "fill": "#9DA0A6",
+                      "fill": "$ds-fg-muted",
                       "content": "TEXT",
                       "fontFamily": "$font-heading",
                       "fontSize": 11,
@@ -648,7 +651,7 @@
                                   "type": "text",
                                   "id": "QAnRE",
                                   "name": "Hex",
-                                  "fill": "#9DA0A6",
+                                  "fill": "$ds-fg-muted",
                                   "content": "#22252C",
                                   "fontFamily": "$font-body",
                                   "fontSize": 11,
@@ -670,7 +673,7 @@
                               "type": "text",
                               "id": "jlKrN",
                               "name": "Specimen",
-                              "fill": "#9DA0A6",
+                              "fill": "$ds-fg-muted",
                               "content": "Aa",
                               "fontFamily": "$font-display",
                               "fontSize": 40,
@@ -698,8 +701,8 @@
                                   "type": "text",
                                   "id": "pzCXJ",
                                   "name": "Hex",
-                                  "fill": "#9DA0A6",
-                                  "content": "#9DA0A6",
+                                  "fill": "$ds-fg-muted",
+                                  "content": "#5A5F67",
                                   "fontFamily": "$font-body",
                                   "fontSize": 11,
                                   "fontWeight": "normal"
@@ -748,7 +751,7 @@
                                   "type": "text",
                                   "id": "Uqmxc",
                                   "name": "Hex",
-                                  "fill": "#9DA0A6",
+                                  "fill": "$ds-fg-muted",
                                   "content": "#C5C5C7",
                                   "fontFamily": "$font-body",
                                   "fontSize": 11,
@@ -5783,6 +5786,194 @@
                                   "content": "Delete"
                                 }
                               }
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "d0BYV",
+                          "name": "Destructive states light",
+                          "theme": {
+                            "mode": "light"
+                          },
+                          "width": "fill_container",
+                          "fill": "$ds-bg",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "c7pDeT",
+                              "name": "Mode label light",
+                              "fill": "$ds-fg-muted",
+                              "content": "Light mode",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "ZEol7",
+                              "name": "Destructive interactions light",
+                              "gap": 10,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "pmlG7",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Destructive default light",
+                                  "theme": {
+                                    "btn": "destructive",
+                                    "size": "xs",
+                                    "btn-interaction": "default"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Default"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "QnZYU",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Destructive hover light",
+                                  "theme": {
+                                    "btn": "destructive",
+                                    "size": "xs",
+                                    "btn-interaction": "hover"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Hover"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "fsvku",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Destructive pressed light",
+                                  "theme": {
+                                    "btn": "destructive",
+                                    "size": "xs",
+                                    "btn-interaction": "pressed"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Pressed"
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "type": "frame",
+                          "id": "q4Bthl",
+                          "name": "Destructive states dark",
+                          "theme": {
+                            "mode": "dark"
+                          },
+                          "width": "fill_container",
+                          "fill": "$ds-bg",
+                          "layout": "vertical",
+                          "gap": 12,
+                          "padding": 12,
+                          "children": [
+                            {
+                              "type": "text",
+                              "id": "cscor",
+                              "name": "Mode label dark",
+                              "fill": "$ds-fg-muted",
+                              "content": "Dark mode",
+                              "fontFamily": "$font-body",
+                              "fontSize": 12,
+                              "fontWeight": "normal"
+                            },
+                            {
+                              "type": "frame",
+                              "id": "N30NU",
+                              "name": "Destructive interactions dark",
+                              "gap": 10,
+                              "alignItems": "center",
+                              "children": [
+                                {
+                                  "id": "MIa6x",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Destructive default dark",
+                                  "theme": {
+                                    "btn": "destructive",
+                                    "size": "xs",
+                                    "btn-interaction": "default"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Default"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "sEoCq",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Destructive hover dark",
+                                  "theme": {
+                                    "btn": "destructive",
+                                    "size": "xs",
+                                    "btn-interaction": "hover"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Hover"
+                                    }
+                                  }
+                                },
+                                {
+                                  "id": "BSYJU",
+                                  "type": "ref",
+                                  "ref": "c24zV7",
+                                  "name": "Destructive pressed dark",
+                                  "theme": {
+                                    "btn": "destructive",
+                                    "size": "xs",
+                                    "btn-interaction": "pressed"
+                                  },
+                                  "height": 24,
+                                  "descendants": {
+                                    "DsEVd": {
+                                      "enabled": false
+                                    },
+                                    "Hf4GT": {
+                                      "content": "Pressed"
+                                    }
+                                  }
+                                }
+                              ]
                             }
                           ]
                         }
@@ -78070,7 +78261,7 @@
                                         "btn": "ghost",
                                         "size": "xs"
                                       },
-                                      "x": 70,
+                                      "x": 72,
                                       "y": 4,
                                       "descendants": {
                                         "k7mgm": {
@@ -129941,7 +130132,7 @@
               "name": "DataTable filter popover",
               "width": 434,
               "x": 72,
-              "y": 701,
+              "y": 696,
               "flipX": false,
               "flipY": false,
               "height": 269,
@@ -129958,7 +130149,7 @@
               "name": "DataTable display popover",
               "width": 300,
               "x": 72,
-              "y": 994,
+              "y": 989,
               "descendants": {
                 "s99FW": {
                   "content": "TABLE DISPLAY"
@@ -154696,7 +154887,7 @@
                                       "name": "Tab Refinement Related",
                                       "width": "fit_content",
                                       "x": 0,
-                                      "y": 41,
+                                      "y": 40,
                                       "descendants": {
                                         "L109Bg": {
                                           "content": "Refine PS-276"
@@ -167718,6 +167909,11 @@
     "call": [
       "rest",
       "hover"
+    ],
+    "btn-interaction": [
+      "default",
+      "hover",
+      "pressed"
     ]
   },
   "variables": {
@@ -167960,7 +168156,7 @@
       "type": "color",
       "value": [
         {
-          "value": "#9DA0A6",
+          "value": "#5A5F67",
           "theme": {
             "mode": "light"
           }
@@ -168857,13 +169053,13 @@
       "type": "color",
       "value": [
         {
-          "value": "#FF3232",
+          "value": "#DE1D1D",
           "theme": {
             "mode": "light"
           }
         },
         {
-          "value": "#FF3232",
+          "value": "#DE1D1D",
           "theme": {
             "mode": "dark"
           }
@@ -168914,12 +169110,6 @@
           }
         },
         {
-          "value": "$ds-danger",
-          "theme": {
-            "btn": "destructive"
-          }
-        },
-        {
           "value": "$ds-bg",
           "theme": {
             "btn": "outline"
@@ -168941,6 +169131,27 @@
           "value": "$ds-surface",
           "theme": {
             "btn": "disabled"
+          }
+        },
+        {
+          "value": "$ds-danger",
+          "theme": {
+            "btn": "destructive",
+            "btn-interaction": "default"
+          }
+        },
+        {
+          "value": "$ds-danger-hover",
+          "theme": {
+            "btn": "destructive",
+            "btn-interaction": "hover"
+          }
+        },
+        {
+          "value": "$ds-danger-pressed",
+          "theme": {
+            "btn": "destructive",
+            "btn-interaction": "pressed"
           }
         }
       ]
@@ -171597,6 +171808,14 @@
           }
         }
       ]
+    },
+    "ds-danger-hover": {
+      "type": "color",
+      "value": "#BA1313"
+    },
+    "ds-danger-pressed": {
+      "type": "color",
+      "value": "#8E0E0E"
     }
   },
   "fileToken": "5daee32e-f2e6-4f1b-a902-d5068ac252c1"
