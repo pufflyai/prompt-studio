@@ -63,10 +63,12 @@ describe("DesktopRuntimeManager", () => {
     expect(child.killedWith).toBe("SIGTERM");
   });
 
-  test("waits for a failed sidecar to exit before reporting the startup failure", async () => {
+  test("reports the sidecar failure after discovery fails and the process exits", async () => {
     const child = new RuntimeChild();
-    const replacement = { ...descriptor, instanceId: "replacement-runtime" };
-    const discoveries = [{ state: "missing" as const }, { state: "healthy" as const, descriptor: replacement }];
+    const discoveries = [
+      { state: "missing" as const },
+      { state: "unsafe" as const, reason: "ownership_uncertain" as const },
+    ];
     const manager = new DesktopRuntimeManager(
       {
         descriptorPath: "/tmp/runtime.json",
@@ -95,8 +97,9 @@ describe("DesktopRuntimeManager", () => {
     expect(child.killedSignals).toEqual(["SIGTERM", "SIGKILL"]);
     expect(settled).toBe(false);
 
+    child.stdout.write(`${JSON.stringify({ event: "db.open.failed", err: { message: "WebAssembly trap" } })}\n`);
     child.emit("exit", null, "SIGKILL");
-    await expect(startup).rejects.toThrow("unexpected_exit");
+    await expect(startup).rejects.toThrow("pglite_recovery_failure");
   });
 
   test("reports an unexpected child exit after a spawned runtime became ready", async () => {

@@ -94,7 +94,16 @@ describe("desktop runtime controller", () => {
 
   test("classifies actionable startup failures", () => {
     expect(classifyRuntimeFailure("listen EADDRINUSE: address already in use").code).toBe("port_bind_failure");
+    expect(classifyRuntimeFailure("Failed to start server. Is port 59152 in use?").code).toBe("port_bind_failure");
     expect(classifyRuntimeFailure("PGlite database is already locked").code).toBe("pglite_ownership_conflict");
     expect(classifyRuntimeFailure("invalid checkpoint record").code).toBe("pglite_recovery_failure");
+  });
+
+  test("recognizes a database-open failure when PGlite reports an opaque WebAssembly error", () => {
+    const message = "Unreachable code should not be executed";
+    const output = JSON.stringify({ event: "db.open.failed", err: { message } });
+
+    expect(classifyRuntimeFailure(output).code).toBe("pglite_recovery_failure");
+    expect(classifyRuntimeFailure(message).code).toBe("unexpected_exit");
   });
 });
