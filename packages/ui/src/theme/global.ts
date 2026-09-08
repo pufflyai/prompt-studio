@@ -52,10 +52,10 @@ export const globalCss = {
   },
 
   "@media (min-width: 2560px)": {
-    html: { fontSize: "1.25rem" },
+    html: { fontSize: "1.15rem" },
   },
 
   "@media (min-width: 3840px)": {
-    html: { fontSize: "1.5rem" },
+    html: { fontSize: "1.4rem" },
   },
 };
