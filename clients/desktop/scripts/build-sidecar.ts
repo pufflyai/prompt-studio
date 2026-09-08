@@ -55,7 +55,7 @@ const staged = stageSidecar({
   }).osxSign?.identity,
 });
 
-validateSidecarArtifact({
+await validateSidecarArtifact({
   resourcesPath,
   platform,
   arch,

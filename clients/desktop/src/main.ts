@@ -98,8 +98,9 @@ const recoveryError = (error: unknown): DesktopRecoveryError => {
 const runtimeManager = new DesktopRuntimeManager({
   descriptorPath,
   externalRuntime,
-  resolveSidecarPath: () =>
+  resolveSidecarPath: (signal) =>
     validateSidecarArtifact({
+      signal,
       resourcesPath: process.resourcesPath,
       platform: process.platform,
       arch: process.arch,

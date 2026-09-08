@@ -1,13 +1,12 @@
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
-import { BrowserWindow, net, type Session, session, shell, WebContentsView } from "electron";
+import { BrowserWindow, type Session, session, shell, WebContentsView } from "electron";
 import type { RuntimeDescriptor } from "pstdio/runtime";
 import { DESKTOP_CHANNELS } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { secureSession, secureWebContents } from "../security/apply-window-security";
 import { provisionRuntimeSession } from "../security/runtime-session";
 import { createSecureWindowOptions } from "../security/window-security";
-import { LIFECYCLE_SCHEME, LIFECYCLE_URL, resolveLifecycleAssetPath } from "./lifecycle-protocol";
+import { LIFECYCLE_SCHEME, LIFECYCLE_URL, readLifecycleAsset } from "./lifecycle-protocol";
 
 const WORKBENCH_PARTITION = "pstdio-workbench";
 
@@ -38,10 +37,9 @@ export class DesktopWindowController {
     const rendererRoot = join(import.meta.dirname, "renderer");
     // The partition is memory-only; the lifecycle renderer stays mounted in the window.
     const workbenchSession = session.fromPartition(WORKBENCH_PARTITION, { cache: true });
-    await workbenchSession.protocol.handle(LIFECYCLE_SCHEME, (request) => {
-      const assetPath = resolveLifecycleAssetPath(request.url, rendererRoot);
-      return assetPath ? net.fetch(pathToFileURL(assetPath).href) : new Response(null, { status: 404 });
-    });
+    await workbenchSession.protocol.handle(LIFECYCLE_SCHEME, (request) =>
+      readLifecycleAsset(request.url, rendererRoot),
+    );
     return new DesktopWindowController(preloadPath, workbenchSession);
   }
 

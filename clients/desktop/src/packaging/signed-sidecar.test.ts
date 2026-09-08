@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { validateSidecarArtifact } from "../runtime/sidecar-artifact";
 import { stageSidecar } from "./stage-sidecar";
 
-test.skipIf(process.platform !== "darwin")("signs the runtime before recording its packaged checksum", () => {
+test.skipIf(process.platform !== "darwin")("signs the runtime before recording its packaged checksum", async () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-signed-sidecar-"));
   try {
     const entrypoint = join(root, "runtime.ts");
@@ -34,9 +34,9 @@ test.skipIf(process.platform !== "darwin")("signs the runtime before recording i
     const verify = spawnSync("codesign", ["--verify", "--strict", staged.binaryPath], { encoding: "utf8" });
     expect(verify.status, verify.stderr).toBe(0);
     expect(readFileSync(staged.binaryPath).equals(readFileSync(sourcePath))).toBe(false);
-    expect(
+    await expect(
       validateSidecarArtifact({ resourcesPath, platform: "darwin", arch: process.arch, appVersion: "0.31.0" }),
-    ).toBe(staged.binaryPath);
+    ).resolves.toBe(staged.binaryPath);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

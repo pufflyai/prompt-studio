@@ -31,7 +31,7 @@ export type ManagedRuntime = {
 type RuntimeManagerOptions = {
   descriptorPath: string;
   externalRuntime?: boolean;
-  resolveSidecarPath: () => string;
+  resolveSidecarPath: (signal: AbortSignal) => string | Promise<string>;
   onIntentionalShutdown: () => void;
   onUnexpectedExit: (detail: string) => void;
   onPhase: (phase: "discovery" | "spawning" | "readiness") => void;
@@ -154,7 +154,7 @@ export class DesktopRuntimeManager {
     if (discovery.state === "unsafe") {
       throw new Error(`Runtime ownership is unsafe: ${discovery.reason}`);
     }
-    const sidecarPath = this.#options.resolveSidecarPath();
+    const sidecarPath = await this.#options.resolveSidecarPath(signal);
     if (!this.#deps.existsSync(sidecarPath)) throw new Error(`Desktop sidecar is missing: ${sidecarPath}`);
 
     this.#options.onPhase("spawning");
