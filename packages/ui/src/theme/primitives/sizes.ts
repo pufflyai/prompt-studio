@@ -24,7 +24,6 @@ export const sp = {
 export const spacing = {
   "window-tab-gap": { value: "0.4375rem" },
   "window-controls-mac": { value: "4.875rem" },
-  "panel-gap": { value: sp[50] },
   none: { value: "0" },
   "3xs": { value: sp[25] },
   "2xs": { value: sp[50] },

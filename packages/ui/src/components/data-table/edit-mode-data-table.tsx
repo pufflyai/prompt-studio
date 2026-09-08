@@ -81,7 +81,6 @@ export const EditModeDataTable = (props: DataTableProps) => {
   const pageRows = filteredData.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
   let tableWidth = "fit-content";
   if (fullWidth) tableWidth = isReadOnly ? "100%" : "calc(100% + var(--chakra-spacing-10))";
-  const minimumTableWidth = resolveMinimumTableWidth(fullWidth, columns.length);
   const enableSelection = shouldEnableSelection(props);
   const selectionActions = resolveSelectionActions(props);
 
@@ -192,7 +191,7 @@ export const EditModeDataTable = (props: DataTableProps) => {
             size="sm"
             tableLayout="fixed"
             width={tableWidth}
-            minWidth={minimumTableWidth}
+            minWidth={resolveMinimumTableWidth(fullWidth, columns.length)}
             borderWidth="1px"
             borderColor="border.subtle"
           >

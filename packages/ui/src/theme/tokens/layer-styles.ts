@@ -1,14 +1,6 @@
 import { defineLayerStyles } from "@chakra-ui/react";
 
 export const layerStyles = defineLayerStyles({
-  panel: {
-    value: {
-      borderRadius: "sm",
-      borderWidth: "1px",
-      borderColor: "border.subtle",
-      overflow: "hidden",
-    },
-  },
   floatingBar: {
     value: {
       paddingInline: "sm",
