@@ -5,5 +5,5 @@
       "@pstdio/sdk/extensions": ["../../packages/sdk/src/extensions/index.ts"]
     }
   },
-  "include": ["extension.ts", "extension.test.ts"]
+  "include": ["*.ts"]
 }

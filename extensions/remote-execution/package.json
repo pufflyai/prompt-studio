@@ -1,11 +1,11 @@
 {
   "name": "remote-execution",
   "version": "1.1.0",
-  "displayName": "Remote Execution Example",
-  "description": "Shows remote workspaces, a cwd-free harness, named connections, and scoped automation.",
+  "displayName": "Remote Execution",
+  "description": "Run agent sessions on a remote service with managed connections and scoped automation.",
   "private": true,
   "type": "module",
-  "publisher": "example",
+  "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
     "pstdio": "1.0.0-alpha.10"

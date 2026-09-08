@@ -1,0 +1,8 @@
+{
+  "connections.control-plane": "Service de contrôle distant",
+  "workspace-types.remote": "Espace de travail distant",
+  "params.repository": "Dépôt",
+  "harnesses.remote-agent": "Agent distant",
+  "commands.launch": "Lancer une session distante",
+  "params.prompt": "Instruction"
+}

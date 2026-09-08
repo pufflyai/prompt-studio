@@ -6,7 +6,7 @@ const remoteWorkspace = {
   executionKind: "remote",
   executionTarget: {
     kind: "remote",
-    providerId: "example.remote-execution.workspace-type.remote",
+    providerId: "pstdio.remote-execution.workspace-type.remote",
     providerRef: { version: 1, data: { remoteId: "remote-workspace-1" } },
   },
 } as const;
@@ -20,7 +20,7 @@ if (!harness) throw new Error("Remote harness is not defined.");
 const provider = extension.workspaceTypes?.[0];
 if (!provider) throw new Error("Remote workspace provider is not defined.");
 
-describe("remote execution example workspace provider", () => {
+describe("remote execution workspace provider", () => {
   test("rejects a failed remote lifecycle response", async () => {
     const ctx = {
       connections: {
@@ -41,7 +41,7 @@ describe("remote execution example workspace provider", () => {
   });
 });
 
-describe("remote execution example harness", () => {
+describe("remote execution harness", () => {
   test("streams neutral message patches into the host event sink", async () => {
     const patches: unknown[] = [];
     const encoder = new TextEncoder();
@@ -190,7 +190,7 @@ describe("remote execution example harness", () => {
   });
 });
 
-describe("remote execution example ambiguous mutations", () => {
+describe("remote execution ambiguous mutations", () => {
   test("cleans up an ambiguously accepted start with the stable host session id", async () => {
     const controller = new AbortController();
     const requests: Array<Record<string, unknown>> = [];

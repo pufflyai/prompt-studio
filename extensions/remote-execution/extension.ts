@@ -13,18 +13,20 @@ import {
   defineExtension,
   defineHarness,
   defineWorkspaceType,
+  l10n,
+  packageAsset,
   params,
   projectSlots,
 } from "@pstdio/sdk/extensions";
 
 const connectionId = "control-plane";
-const extensionId = "example.remote-execution";
+const extensionId = "pstdio.remote-execution";
 const providerId = `${extensionId}.workspace-type.remote`;
 const harnessId = `${extensionId}.harness.remote-agent`;
 
 const controlPlane = defineConnection({
   id: connectionId,
-  label: "Remote control plane",
+  label: l10n("connections.control-plane", "Remote control plane"),
   transport: "http",
   auth: { type: "bearer" },
   supportsStreaming: true,
@@ -32,15 +34,6 @@ const controlPlane = defineConnection({
   allowedPathPrefixes: ["/v1/workspaces", "/v1/sessions"],
   check: { method: "GET", path: "/v1/workspaces/health" },
 });
-
-const remoteCapabilities = {
-  files: "none",
-  diff: false,
-  merge: false,
-  rebase: false,
-  archive: true,
-  delete: true,
-} as const;
 
 const successfulBody = <T>(response: { status: number; body: T }) => {
   if (response.status < 200 || response.status >= 300) {
@@ -51,8 +44,8 @@ const successfulBody = <T>(response: { status: number; body: T }) => {
 
 const remoteWorkspace = defineWorkspaceType({
   id: "remote",
-  label: "Remote workspace",
-  params: { repository: params.text({ label: "Repository", required: true }) },
+  label: l10n("workspace-types.remote", "Remote workspace"),
+  params: { repository: params.text({ label: l10n("params.repository", "Repository"), required: true }) },
   async create(ctx, input) {
     const response = await ctx.connections.request<WorkspaceProviderResult>(connectionId, {
       method: "POST",
@@ -241,7 +234,7 @@ const reattachRemoteHarnessSession = (ctx: HarnessContext, input: HarnessReattac
 
 const remoteHarness = defineHarness({
   id: "remote-agent",
-  label: "Remote agent",
+  label: l10n("harnesses.remote-agent", "Remote agent"),
   cwdRequirement: "optional",
   capabilities: () => ["SessionReattach"],
   start: startRemoteHarnessSession,
@@ -258,13 +251,15 @@ const remoteHarness = defineHarness({
 
 const launch = defineCommand({
   id: "launch",
-  title: "Launch remote session",
+  title: l10n("commands.launch", "Launch remote session"),
   automation: true,
-  palette: [{ group: "Remote execution", label: "Launch remote session" }],
-  menus: [{ slot: projectSlots.headerOverflow, label: "Launch remote session", icon: "cloud" }],
+  palette: [{ group: "Remote execution", label: l10n("commands.launch", "Launch remote session") }],
+  menus: [
+    { slot: projectSlots.headerOverflow, label: l10n("commands.launch", "Launch remote session"), icon: "cloud" },
+  ],
   params: {
-    repository: params.text({ label: "Repository", required: true }),
-    prompt: params.longText({ label: "Prompt", required: true }),
+    repository: params.text({ label: l10n("params.repository", "Repository"), required: true }),
+    prompt: params.longText({ label: l10n("params.prompt", "Prompt"), required: true }),
   },
   async run(ctx, input) {
     const workspace = await ctx.workspaces.create({
@@ -284,10 +279,10 @@ const launch = defineCommand({
 });
 
 export default defineExtension({
+  defaultLocale: "en",
+  translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) },
   connections: [controlPlane],
   workspaceTypes: [remoteWorkspace],
   harnesses: [remoteHarness],
   commands: [launch],
 });
-
-export { remoteCapabilities };

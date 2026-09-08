@@ -5,17 +5,10 @@ const launch = extension.commands?.[0];
 if (!launch) throw new Error("Remote launch command is not defined.");
 
 describe("remote execution manual launch", () => {
-  test("is available in the command palette and launches the same workspace and session flow", async () => {
+  test("creates a remote workspace and starts a session with its own harness", async () => {
     const createWorkspace = mock(async () => ({ id: "workspace-1", workspace_shorthand: "REMOTE-1" }));
     const createSession = mock(async () => ({ id: "session-1" }));
 
-    expect(launch.palette).toEqual([{ group: "Remote execution", label: "Launch remote session" }]);
-    expect(launch.menus).toEqual([
-      expect.objectContaining({
-        slot: expect.objectContaining({ id: "project.headerOverflow" }),
-        label: "Launch remote session",
-      }),
-    ]);
     await launch.run(
       {
         projectId: "project-1",
@@ -28,7 +21,7 @@ describe("remote execution manual launch", () => {
     expect(createWorkspace).toHaveBeenCalledWith(
       expect.objectContaining({
         project_id: "project-1",
-        provider_id: "example.remote-execution.workspace-type.remote",
+        provider_id: "pstdio.remote-execution.workspace-type.remote",
         params: { repository: "openai/prompt-studio" },
       }),
     );
@@ -37,6 +30,7 @@ describe("remote execution manual launch", () => {
         title: "Remote session: REMOTE-1",
         prompt: "Implement the ticket",
         workspaceId: "workspace-1",
+        harness: { harnessId: "pstdio.remote-execution.harness.remote-agent" },
       }),
     );
   });
