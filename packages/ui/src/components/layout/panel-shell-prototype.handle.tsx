@@ -130,7 +130,7 @@ export const PrototypeResizeHandle = (props: PrototypeResizeHandleProps) => {
         transition="opacity 120ms ease"
       >
         {DOT_INDEXES.map((index) => (
-          <Box key={index} boxSize="0.5" borderRadius="full" bg="fg.subtle" />
+          <Box key={index} boxSize="0.5" borderRadius="full" bg="border.subtle" />
         ))}
       </Flex>
       <Box
