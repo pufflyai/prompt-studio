@@ -12,11 +12,13 @@ export const layerStyles = defineLayerStyles({
       boxShadow: "lg",
     },
   },
+  // Cards clip their content so square children never paint over the rounded corners.
   panel: {
     value: {
       borderRadius: "sm",
       borderWidth: "1px",
       borderColor: "border.subtle",
+      overflow: "hidden",
     },
   },
   modal: {
