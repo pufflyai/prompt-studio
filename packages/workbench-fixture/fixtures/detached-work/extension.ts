@@ -1,6 +1,6 @@
-import { defineCommand, params } from "@pstdio/sdk/extensions";
+import { defineCommand, defineExtension, params } from "@pstdio/sdk/extensions";
 
-export const detachedProbeCommand = defineCommand({
+const detachedProbeCommand = defineCommand({
   id: "spawn-detached-probe",
   title: "Start a detached process probe",
   params: {
@@ -21,3 +21,5 @@ export const detachedProbeCommand = defineCommand({
     return ctx.process.spawnDetached({ command: [input.executable, "--eval", script] });
   },
 });
+
+export default defineExtension({ commands: [detachedProbeCommand] });

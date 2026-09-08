@@ -1,7 +1,8 @@
-import { spawnSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { promisify } from "node:util";
 
 export type DesktopSidecarErrorCode =
   | "checksum_mismatch"
@@ -74,9 +75,20 @@ const parseManifest = (path: string) => {
   }
 };
 
-const readBinaryVersion = (path: string) => {
-  const result = spawnSync(path, ["--version"], { encoding: "utf8", windowsHide: true });
-  return result.status === 0 ? result.stdout.trim() : null;
+const executeFile = promisify(execFile);
+const readBinaryVersion = async (path: string, signal?: AbortSignal) => {
+  try {
+    const { stdout } = await executeFile(path, ["--version"], { encoding: "utf8", windowsHide: true, signal });
+    return stdout.trim();
+  } catch {
+    return null;
+  }
+};
+
+const readBinaryChecksum = async (path: string, signal?: AbortSignal) => {
+  const hash = createHash("sha256");
+  for await (const chunk of createReadStream(path, { signal })) hash.update(chunk);
+  return hash.digest("hex");
 };
 
 type ValidateSidecarArtifactInput = {
@@ -84,10 +96,11 @@ type ValidateSidecarArtifactInput = {
   platform: NodeJS.Platform;
   arch: string;
   appVersion: string;
-  readVersion?: (path: string) => string | null;
+  signal?: AbortSignal;
+  readVersion?: (path: string, signal?: AbortSignal) => string | null | Promise<string | null>;
 };
 
-export const validateSidecarArtifact = (input: ValidateSidecarArtifactInput) => {
+export const validateSidecarArtifact = async (input: ValidateSidecarArtifactInput) => {
   const target = resolveSidecarTarget(input.platform, input.arch);
   const binDir = join(input.resourcesPath, "bin");
   const binaryPath = join(binDir, target.executable);
@@ -118,7 +131,7 @@ export const validateSidecarArtifact = (input: ValidateSidecarArtifactInput) => 
     );
   }
 
-  const checksum = createHash("sha256").update(readFileSync(binaryPath)).digest("hex");
+  const checksum = await readBinaryChecksum(binaryPath, input.signal);
   if (checksum !== manifest.checksum) {
     throw new DesktopSidecarError(
       "checksum_mismatch",
@@ -126,7 +139,7 @@ export const validateSidecarArtifact = (input: ValidateSidecarArtifactInput) => 
     );
   }
 
-  const binaryVersion = (input.readVersion ?? readBinaryVersion)(binaryPath);
+  const binaryVersion = await (input.readVersion ?? readBinaryVersion)(binaryPath, input.signal);
   if (manifest.version !== input.appVersion || binaryVersion !== input.appVersion) {
     throw new DesktopSidecarError(
       "version_mismatch",
