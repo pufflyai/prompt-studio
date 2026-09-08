@@ -8,7 +8,7 @@ export const fg = {
 
   muted: {
     value: {
-      _light: "{colors.blacks.450}",
+      _light: "{colors.blacks.600}",
       _dark: "#8B9099",
     },
   },

@@ -1,14 +1,14 @@
 {
   "name": "@pstdio/desktop",
   "productName": "Prompt Studio",
-  "version": "0.31.0",
+  "version": "0.32.0",
   "private": true,
   "description": "The local-first Prompt Studio desktop application.",
   "author": "Prompt Studio <support@prompt.studio>",
   "type": "module",
   "main": "dist/main.js",
   "scripts": {
-    "build": "bun run build:main && bun run build:preload && vite build",
+    "build": "bun run build:main && bun run build:preload && vite build && bun scripts/prerender-startup.tsx",
     "build:main": "bun build src/main.ts --outfile dist/main.js --target node --format esm --external electron",
     "build:preload": "bun build src/preload.ts --outfile dist/preload.cjs --target node --format cjs --external electron",
     "build:sidecar": "bun scripts/build-sidecar.ts",
@@ -56,9 +56,11 @@
     "@types/react-dom": "19.2.3",
     "@types/semver": "7.7.1",
     "@vitejs/plugin-react": "5.1.1",
-    "electron": "43.3.0",
+    "electron": "43.6.0",
+    "fflate": "0.8.3",
     "storybook": "^10.1.9",
     "typescript": "6.0.2",
-    "vite": "7.3.5"
+    "vite": "7.3.5",
+    "workbench-fixture": "workspace:*"
   }
 }

@@ -123,7 +123,7 @@ The result contains `workspaceId` and `sessionId`. Open the session to see outpu
 
 If a submit response is lost, the extension reads the existing conversation instead of resending the prompt. If the service remains unreachable, the session becomes disconnected. Check PocketCoder's conversation before manually repeating a prompt whose outcome is unknown.
 
-PocketCoder does not provide idempotent turn IDs. The extension saves a non-secret conversation cursor for each pending turn so restart recovery does not mistake an earlier reply for a new one. See the [temporary turn-cursor decision](../../.pstdio/docs/adrs/0019-temporary-pocketcoder-turn-cursor.md).
+PocketCoder does not provide idempotent turn IDs. The extension saves a non-secret conversation cursor for each pending turn so restart recovery does not mistake an earlier reply for a new one. See the [temporary turn-cursor decision](../../.pstdio/docs/adrs/0021-temporary-pocketcoder-turn-cursor.md).
 
 **Stop cancels the entire PocketCoder workspace.** Deleting a Prompt Studio workspace also cancels the remote execution and waits for a terminal state. PocketCoder retains its historical record. A canceled or expired workspace cannot accept follow-ups; launch a new one. This extension does not expose checkpoint restore, archive, file browsing, diff, merge, or attachments.
 

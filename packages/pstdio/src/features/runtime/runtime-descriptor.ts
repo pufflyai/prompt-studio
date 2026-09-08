@@ -40,6 +40,7 @@ type RuntimeFetcher = (input: string | URL | Request, init?: RequestInit) => Pro
 type DiscoverRuntimeDeps = {
   fetch: RuntimeFetcher;
   isPidAlive: (pid: number) => boolean;
+  signal: AbortSignal;
 };
 
 export type RuntimeDiscovery =
@@ -154,10 +155,11 @@ const parseReadyResponse = (value: unknown): RuntimeReadyResponse | null => {
   return value as RuntimeReadyResponse;
 };
 
-const probeRuntime = async (descriptor: RuntimeDescriptor, fetcher: RuntimeFetcher) => {
+const probeRuntime = async (descriptor: RuntimeDescriptor, fetcher: RuntimeFetcher, signal?: AbortSignal) => {
   try {
     const response = await fetcher(`${descriptor.origin}/runtime/ready`, {
       headers: { authorization: `Bearer ${descriptor.token}` },
+      signal,
     });
     if (!response.ok) return false;
     const ready = parseReadyResponse(await response.json());
@@ -179,7 +181,8 @@ export const discoverRuntime = async (
   if (!descriptor) return { state: "unsafe", reason: "invalid_descriptor" };
 
   const pidAlive = (overrides.isPidAlive ?? isRuntimePidAlive)(descriptor.pid);
-  const ready = await probeRuntime(descriptor, overrides.fetch ?? fetch);
+  const ready = await probeRuntime(descriptor, overrides.fetch ?? fetch, overrides.signal);
+  overrides.signal?.throwIfAborted();
   if (pidAlive && ready) return { state: "healthy", descriptor };
   if (pidAlive || ready) return { state: "unsafe", reason: "ownership_uncertain" };
 

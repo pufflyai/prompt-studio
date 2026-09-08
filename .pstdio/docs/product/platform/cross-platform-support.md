@@ -101,10 +101,11 @@ The changes fall into five areas, ordered by severity.
 
 ### Operational Requirements
 
-- CI builds and launches desktop distributions on native Linux x64, macOS arm64,
-  and macOS x64 runners. The macOS release jobs verify signing and notarization
-  before publication. Windows desktop distribution is deferred until its trusted
-  signing lane is available; Windows CLI validation remains active.
+- CI builds and launches desktop distributions on native Linux x64 and Apple
+  Silicon macOS arm64 runners. The macOS release job verifies signing and
+  notarization before publication. Intel macOS desktop distribution is deferred.
+  Windows desktop distribution is deferred until its trusted signing lane is
+  available. Intel macOS and Windows CLI validation remains active.
 
 ## Rules & Constraints
 

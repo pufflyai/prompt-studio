@@ -30,7 +30,7 @@ describe("createProcessApi", () => {
     const calls: unknown[] = [];
     const api = createProcessApi(((command: string[], options: unknown) => {
       calls.push({ command, options });
-      return { pid: 123 };
+      return { pid: 123, unref() {} };
     }) as never);
 
     await expect(api.spawnDetached({ command: ["pstdio-probe-not-real", "--version"] })).resolves.toEqual({ pid: 123 });

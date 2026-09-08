@@ -26,6 +26,7 @@ export const WorkbenchSidenav = (props: WorkbenchSidenavProps) => {
           data-workbench-region="sidenav"
           as="aside"
           bg={workbenchBackgrounds.sidenav}
+          layerStyle="panel"
           display="flex"
           flexDirection="column"
           h="full"
@@ -89,9 +90,6 @@ export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
       region="activity"
       data-workbench-region="activity"
       as="nav"
-      bg={workbenchBackgrounds.activityBar}
-      borderRightWidth="1px"
-      borderColor="border.subtle"
       flexShrink={0}
       h="full"
       minH="0"
@@ -114,9 +112,6 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
       region="status"
       data-workbench-region="status"
       as="footer"
-      bg={workbenchBackgrounds.statusBar}
-      borderTopWidth="1px"
-      borderColor="border.subtle"
       flexShrink={0}
       h={WORKBENCH_STATUS_BAR_HEIGHT}
       minH="0"

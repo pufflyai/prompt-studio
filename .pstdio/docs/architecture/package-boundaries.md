@@ -51,6 +51,9 @@ layer-map change.
    The private `@pstdio/desktop` client may consume the public runtime lifecycle
    subpath from `pstdio`, path/logging utilities, and `@pstdio/ui`. It must not
    import API domain services, database packages, or another client.
+   Its packaged Electron tests declare `workbench-fixture` as a development
+   dependency and resolve its package root for installation through the public
+   extension API. The fixture is not part of the desktop runtime bundle.
 
 8. **Packaging glue**
    `pstdio` may include generated packaging glue for compiled runtime artifacts.

@@ -31,6 +31,9 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
   await page.goto(`/projects/${projectId}/tickets`);
 };
 
+// Panels are inset from the window and separated from each other by the panel gap.
+const PANEL_GAP_PX = 4;
+
 const expectNear = (actual: number, expected: number) => {
   expect(Math.abs(actual - expected)).toBeLessThanOrEqual(1);
 };
@@ -67,24 +70,27 @@ const expectCanonicalFrame = async (
   expect(sideBox).not.toBeNull();
 
   const contentHeight = options.statusBar === "visible" ? 688 : 720;
+  const panelHeight = contentHeight - 2 * PANEL_GAP_PX;
   const sidenavWidth = options.sidenav === "visible" ? 250 : 0;
+  const sideX = 1280 - PANEL_GAP_PX - 420;
+  const mainColumnX = PANEL_GAP_PX + sidenavWidth + (options.sidenav === "visible" ? PANEL_GAP_PX : 0);
 
   if (sidenavBox) {
-    expectNear(sidenavBox.x, 0);
-    expectNear(sidenavBox.y, 0);
+    expectNear(sidenavBox.x, PANEL_GAP_PX);
+    expectNear(sidenavBox.y, PANEL_GAP_PX);
     expectNear(sidenavBox.width, sidenavWidth);
-    expectNear(sidenavBox.height, contentHeight);
+    expectNear(sidenavBox.height, panelHeight);
   }
 
-  expectNear(navBox!.x, sidenavWidth);
-  expectNear(navBox!.y, 0);
-  expectNear(navBox!.width, 860 - sidenavWidth);
+  expectNear(navBox!.x, mainColumnX);
+  expectNear(navBox!.y, PANEL_GAP_PX);
+  expectNear(navBox!.width, sideX - PANEL_GAP_PX - mainColumnX);
   expectNear(navBox!.height, 40);
 
-  expectNear(sideBox!.x, 860);
-  expectNear(sideBox!.y, 0);
+  expectNear(sideBox!.x, sideX);
+  expectNear(sideBox!.y, PANEL_GAP_PX);
   expectNear(sideBox!.width, 420);
-  expectNear(sideBox!.height, contentHeight);
+  expectNear(sideBox!.height, panelHeight);
 
   if (options.statusBar === "visible") {
     const statusBox = await statusBar.boundingBox();

@@ -29,6 +29,7 @@ import type {
 } from "./install-extension-source-types";
 import { prepareInstallDependencies } from "./prepare-extension-dependencies";
 
+export { dashboardExtensionHostCapabilities } from "pstdio-extensions";
 export {
   createSharedNamedSourceCheckout,
   namedSourceRef,

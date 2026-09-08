@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import {
+  attachStartupTimings,
   createPackagedHome,
   desktopVersion,
   disposePackagedApp,
@@ -13,6 +14,10 @@ import {
   waitForDescriptor,
   waitForExit,
 } from "./packaged-app-helpers";
+import { openPackagedProject } from "./packaged-project-helpers";
+import { waitForVisibleElement } from "./visible-element-timing";
+
+const startupWindowBudgetMs = 1_000;
 
 const createProjectThroughBrowser = (app: PackagedApp, name: string) =>
   app.page.evaluate(async (projectName) => {
@@ -32,7 +37,14 @@ test("proves cold packaged startup and both authenticated transport paths", asyn
   try {
     app = await launchPackagedApp(home);
     testInfo.annotations.push({ type: "cold-start-ms", description: String(app.readyInMs) });
+    const startupWindowInMs = await attachStartupTimings(app);
+    testInfo.annotations.push({ type: "startup-window-ms", description: String(startupWindowInMs) });
+    expect(startupWindowInMs).toBeLessThan(startupWindowBudgetMs);
     expect(app.readyInMs).toBeLessThan(8_000);
+    const startupEditors = await app.page.evaluate(() =>
+      performance.getEntriesByType("resource").filter((entry) => entry.name.includes("/monaco-browser-")),
+    );
+    expect(startupEditors).toEqual([]);
     expect(new URL(app.runtime.origin).hostname).toBe("127.0.0.1");
     expect(app.runtime.ownerType).toBe("desktop");
 
@@ -50,8 +62,8 @@ test("proves cold packaged startup and both authenticated transport paths", asyn
       status: 201,
     });
     expect(await app.page.evaluate(() => document.cookie)).toBe("");
-    expect(await app.page.content()).not.toContain(app.runtime.token);
-    expect(app.page.url()).not.toContain(app.runtime.token);
+    expect((await app.page.content()).includes(app.runtime.token)).toBe(false);
+    expect(app.page.url().includes(app.runtime.token)).toBe(false);
     expect(
       await app.page.evaluate(() => {
         const encodedConfig = document.querySelector<HTMLMetaElement>('meta[name="pstdio-config"]')?.content;
@@ -63,6 +75,7 @@ test("proves cold packaged startup and both authenticated transport paths", asyn
     expect(list.exitCode).toBe(0);
     expect(list.stdout).toContain("Packaged transport project");
 
+    await app.finishTrace();
     const close = runPackagedCli(home, ["close"]);
     await waitForExit(app.child);
     expect(await close).toMatchObject({ exitCode: 0, stdout: expect.stringContaining("Runtime stopped.") });
@@ -85,9 +98,9 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     expect(created).toMatchObject({ status: 201 });
     const projectId = created.body.id;
     if (!projectId) throw new Error("Packaged project creation did not return an id");
-    await first.page.getByRole("option", { name: /Workspaces/ }).click();
-    await expect(first.page.getByRole("option", { name: /Workspaces/ })).toHaveAttribute("aria-selected", "true");
-    await expect(first.page.getByLabel("Main").getByRole("heading", { name: "No workspaces yet" })).toBeVisible();
+    await openPackagedProject(first.page, "Relaunch persistence project");
+    await first.page.getByRole("option", { name: "Sessions", exact: true }).click();
+    await expect(first.page.getByLabel("Main").getByText("No active conversations", { exact: true })).toBeVisible();
     await expect
       .poll(() => first?.page.evaluate(() => window.promptStudioDesktop.getWorkbenchState()))
       .toMatchObject({ selectedProjectId: projectId });
@@ -95,28 +108,38 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     const pageLocation = firstState.pageLocations[projectId];
     expect(JSON.parse(pageLocation ?? "null")).toMatchObject({
       version: 1,
-      location: { page: { id: "workspaces", kind: "page" } },
+      location: { page: { id: "sessions", kind: "page" } },
     });
 
     const originalPid = first.runtime.pid;
-    expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
-    const persistent = await waitForDescriptor(home, (descriptor) => descriptor.ownerType === "persistent");
+    await test.step("Promote the running sidecar through the packaged CLI", async () => {
+      expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
+    });
+    const persistent = await test.step("Read the persistent runtime descriptor", () =>
+      waitForDescriptor(home, (descriptor) => descriptor.ownerType === "persistent"));
     expect(persistent.pid).toBe(originalPid);
 
-    await first.page.evaluate(() => void window.promptStudioDesktop.quitApp());
-    await waitForExit(first.child);
-    expect(
-      (
-        await fetch(`${persistent.origin}/runtime/ready`, {
-          headers: { authorization: `Bearer ${persistent.token}` },
-        })
-      ).ok,
-    ).toBe(true);
-    await first.browser.close();
+    await test.step("Save the first window trace before Quit", () => first!.finishTrace());
+    await test.step("Quit the first desktop window after promotion", () =>
+      first!.page.evaluate(() => void window.promptStudioDesktop.quitApp()));
+    await test.step("Wait for the first desktop process to exit", () => waitForExit(first!.child));
+    await test.step("Probe the persistent runtime after desktop exit", async () => {
+      expect(
+        (
+          await fetch(`${persistent.origin}/runtime/ready`, {
+            headers: { authorization: `Bearer ${persistent.token}` },
+          })
+        ).ok,
+      ).toBe(true);
+    });
+    await test.step("Disconnect from the first desktop browser", () => first!.browser.close());
     first = null;
 
-    second = await launchPackagedApp(home);
+    second = await test.step("Relaunch the desktop against the persistent runtime", () => launchPackagedApp(home));
     testInfo.annotations.push({ type: "warm-attach-ms", description: String(second.readyInMs) });
+    const startupWindowInMs = await attachStartupTimings(second);
+    testInfo.annotations.push({ type: "startup-window-ms", description: String(startupWindowInMs) });
+    expect(startupWindowInMs).toBeLessThan(startupWindowBudgetMs);
     expect(second.readyInMs).toBeLessThan(3_000);
     expect(second.runtime.pid).toBe(originalPid);
     expect(second.runtime.ownerType).toBe("persistent");
@@ -127,9 +150,9 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
     expect(
       await second.page.evaluate(async () => (await (await fetch("/v1/projects")).json()) as Array<{ name: string }>),
     ).toEqual(expect.arrayContaining([expect.objectContaining({ name: "Relaunch persistence project" })]));
-    await expect(second.page.getByRole("option", { name: /Workspaces/ })).toHaveAttribute("aria-selected", "true");
-    await expect(second.page.getByLabel("Main").getByRole("heading", { name: "No workspaces yet" })).toBeVisible();
+    await expect(second.page.getByLabel("Main").getByText("No active conversations", { exact: true })).toBeVisible();
 
+    await second.finishTrace();
     const close = runPackagedCli(home, ["close"]);
     await waitForExit(second.child);
     expect(await close).toMatchObject({ exitCode: 0 });
@@ -149,18 +172,25 @@ test("shows recovery promptly after a sidecar crash and retries without relaunch
   try {
     app = await launchPackagedApp(home);
     const originalInstanceId = app.runtime.instanceId;
+    const lifecycleStartedAt = await app.lifecyclePage.evaluate(() => performance.timeOrigin);
     const crashedAt = Date.now();
     process.kill(app.runtime.pid, process.platform === "win32" ? undefined : "SIGKILL");
-    await expect(app.page.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
-    const recoveryInMs = Date.now() - crashedAt;
+    const visibleAt = await waitForVisibleElement(
+      app.lifecyclePage,
+      '[role="alert"] :is(h1, h2, h3)',
+      "Prompt Studio needs attention",
+    );
+    const recoveryInMs = visibleAt - crashedAt;
     testInfo.annotations.push({ type: "recovery-ui-ms", description: String(recoveryInMs) });
     expect(recoveryInMs).toBeLessThan(500);
+    expect(await app.lifecyclePage.evaluate(() => performance.timeOrigin)).toBe(lifecycleStartedAt);
 
-    await app.page.getByRole("button", { name: "Retry" }).click();
+    await app.lifecyclePage.getByRole("button", { name: "Retry" }).click();
     const replacement = await waitForDescriptor(home, (descriptor) => descriptor.instanceId !== originalInstanceId);
     await app.page.waitForURL(`${replacement.origin}/`);
     await expect(app.page.locator("#root")).not.toBeEmpty();
 
+    await app.finishTrace();
     const close = runPackagedCli(home, ["close"]);
     await waitForExit(app.child);
     expect(await close).toMatchObject({ exitCode: 0 });

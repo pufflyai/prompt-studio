@@ -35,13 +35,16 @@ export const createProcessApi = (spawner: ProcessSpawner = Bun.spawn): CommandRu
     async spawnDetached(input) {
       const resolved = resolveProcessCommand(input.command);
       const proc = spawner(resolved.argv, {
+        detached: true,
         cwd: input.cwd,
         env: createExtensionProcessEnvironment(process.env, input.env),
         stderr: "ignore",
+        stdin: "ignore",
         stdout: "ignore",
         windowsHide: true,
         windowsVerbatimArguments: resolved.windowsVerbatimArguments,
       });
+      proc.unref();
       return { pid: proc.pid };
     },
   };

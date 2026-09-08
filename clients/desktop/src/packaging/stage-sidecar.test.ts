@@ -12,7 +12,7 @@ afterEach(() => {
   roots.length = 0;
 });
 
-test("stages exactly one executable sidecar with a verifiable manifest", () => {
+test("stages exactly one executable sidecar with a verifiable manifest", async () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-sidecar-stage-"));
   roots.push(root);
   const sourcePath = join(root, "build", "pstdio");
@@ -31,7 +31,7 @@ test("stages exactly one executable sidecar with a verifiable manifest", () => {
   expect(result.binaryPath).toBe(join(resourcesPath, "bin", "pstdio"));
   expect(statSync(result.binaryPath).mode & 0o111).not.toBe(0);
   expect(readFileSync(result.binaryPath, "utf8")).toBe("compiled-runtime");
-  expect(
+  await expect(
     validateSidecarArtifact({
       resourcesPath,
       platform: "darwin",
@@ -39,7 +39,7 @@ test("stages exactly one executable sidecar with a verifiable manifest", () => {
       appVersion: "0.25.2",
       readVersion: () => "0.25.2",
     }),
-  ).toBe(result.binaryPath);
+  ).resolves.toBe(result.binaryPath);
 });
 
 describe("stageSidecar", () => {

@@ -1,5 +1,5 @@
 import { Box, Button, Heading, HStack, Spinner, Stack, Text } from "@chakra-ui/react";
-import { AlertMessage, SimpleCard, SimpleCardBody } from "@pstdio/ui";
+import { AlertMessage, SimpleCard, SimpleCardBody, WindowTitleBar } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 
@@ -21,6 +21,7 @@ interface DesktopLifecycleActions {
 interface DesktopLifecycleViewProps {
   actions?: DesktopLifecycleActions;
   state: DesktopState;
+  platform?: string;
 }
 
 const desktopActions: DesktopLifecycleActions = {
@@ -32,32 +33,29 @@ const desktopActions: DesktopLifecycleActions = {
   retryRuntime: () => window.promptStudioDesktop.retryRuntime(),
 };
 
-const useDesktopState = () => {
-  const [state, setState] = useState<DesktopState>({ kind: "starting", phase: "discovery" });
+const useDesktopState = (initialState: DesktopState) => {
+  const [state, setState] = useState(initialState);
   useEffect(() => {
     let active = true;
     const refresh = async () => {
       const next = await window.promptStudioDesktop.getStartupState();
       if (active) setState(next);
     };
+    const unsubscribe = window.promptStudioDesktop.onStartupState(setState);
     void refresh();
-    const interval = window.setInterval(() => void refresh(), 150);
     return () => {
       active = false;
-      window.clearInterval(interval);
+      unsubscribe();
     };
   }, []);
   return state;
 };
 
-const useReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
 const StartingState = (props: { phase: keyof typeof phaseCopy }) => {
   const { phase } = props;
-  const reducedMotion = useReducedMotion();
   return (
     <Stack align="center" gap="lg" role="status" aria-live="polite">
-      {!reducedMotion && <Spinner size="lg" color="fg.muted" aria-hidden="true" />}
+      <Spinner size="lg" color="fg.muted" aria-hidden="true" _motionReduce={{ display: "none" }} />
       <Stack align="center" gap="xs" textAlign="center">
         <Heading textStyle="heading/M">Opening Prompt Studio</Heading>
         <Text color="fg.muted" textStyle="paragraph/M/regular">
@@ -171,10 +169,9 @@ const ActiveWorkState = (props: {
 };
 
 const ClosingState = () => {
-  const reducedMotion = useReducedMotion();
   return (
     <Stack align="center" gap="lg" role="status" aria-live="polite">
-      {!reducedMotion && <Spinner size="lg" color="fg.muted" aria-hidden="true" />}
+      <Spinner size="lg" color="fg.muted" aria-hidden="true" _motionReduce={{ display: "none" }} />
       <Stack align="center" gap="xs" textAlign="center">
         <Heading textStyle="heading/M">Closing Prompt Studio</Heading>
         <Text color="fg.muted" textStyle="paragraph/M/regular">
@@ -186,20 +183,24 @@ const ClosingState = () => {
 };
 
 export const DesktopLifecycleView = (props: DesktopLifecycleViewProps) => {
-  const { actions = desktopActions, state } = props;
+  const { actions = desktopActions, state, platform = "darwin" } = props;
   return (
-    <Box as="main" minHeight="100vh" bg="bg" color="fg" display="grid" placeItems="center" padding="xl">
-      <Box width="full" maxWidth="2xl">
-        {state.kind === "starting" && <StartingState phase={state.phase} />}
-        {state.kind === "recovery" && <RecoveryState actions={actions} state={state} />}
-        {state.kind === "confirming_active_work" && <ActiveWorkState actions={actions} state={state} />}
-        {state.kind === "closing" && <ClosingState />}
+    <Stack as="main" width="full" minHeight="100vh" bg="bg" color="fg" gap="0">
+      <WindowTitleBar platform={platform} />
+      <Box flex="1" display="grid" placeItems="center" padding="xl">
+        <Box width="full" maxWidth="2xl">
+          {state.kind === "starting" && <StartingState phase={state.phase} />}
+          {state.kind === "recovery" && <RecoveryState actions={actions} state={state} />}
+          {state.kind === "confirming_active_work" && <ActiveWorkState actions={actions} state={state} />}
+          {state.kind === "closing" && <ClosingState />}
+        </Box>
       </Box>
-    </Box>
+    </Stack>
   );
 };
 
-export const DesktopLifecycleApp = () => {
-  const state = useDesktopState();
-  return <DesktopLifecycleView state={state} />;
+export const DesktopLifecycleApp = (props: { initialState: DesktopState; platform: string }) => {
+  const { initialState, platform } = props;
+  const state = useDesktopState(initialState);
+  return <DesktopLifecycleView state={state} platform={platform} />;
 };

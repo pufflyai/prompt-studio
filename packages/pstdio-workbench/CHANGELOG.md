@@ -1,5 +1,18 @@
 # @pstdio/workbench
 
+## 0.10.0
+
+_2026-09-08_
+
+### Minor Changes
+
+- 14692cc: Add persistent desktop project tabs beside native window controls.
+
+### Patch Changes
+
+- 94943a0: Load code editor assets when an editor opens so workbench startup stays responsive.
+- Updated internal dependencies: `@pstdio/ui@0.23.0`, `@pstdio/sdk@0.22.1`
+
 ## 0.9.0
 
 _2026-09-07_

@@ -6,6 +6,8 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron as electron, expect, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
+import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
+import { startElectronTrace } from "./electron-trace";
 
 const require = createRequire(import.meta.url);
 const electronPath = require("electron") as string;
@@ -34,6 +36,8 @@ test.afterEach(() => {
 test("loads the existing runtime in a sandboxed window and detaches on quit", async () => {
   const token = "desktop-e2e-secret";
   const eventResponses = new Set<ServerResponse>();
+  const dashboardRequested = Promise.withResolvers<void>();
+  const dashboardResponse = Promise.withResolvers<void>();
   let authenticatedReady = false;
   const server = createServer((request, response) => {
     if (request.url === "/runtime/ready") {
@@ -69,7 +73,11 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       return;
     }
     response.setHeader("content-type", "text/html");
-    response.end("<!doctype html><html><body><main>Existing Prompt Studio dashboard</main></body></html>");
+    response.write("<!doctype html><html><body>");
+    dashboardRequested.resolve();
+    void dashboardResponse.promise.then(() =>
+      response.end("<main>Existing Prompt Studio dashboard</main></body></html>"),
+    );
   });
   await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
   const address = server.address();
@@ -92,12 +100,25 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
   const launchEnvironment = environment({ PSTDIO_HOME: home });
   const electronApp = await electron.launch({
     executablePath: electronPath,
-    args: [appPath],
+    args: [appPath, `--user-data-dir=${join(home, "electron-user-data")}`],
     env: launchEnvironment,
   });
+  const finishTrace = await startElectronTrace(electronApp.context(), "attached-runtime");
   try {
-    const window = await electronApp.firstWindow();
+    const lifecycle = await waitForLifecyclePage(electronApp.context());
+    await dashboardRequested.promise;
+    expect(
+      await lifecycle.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()),
+    ).toMatchObject({
+      kind: "starting",
+    });
+    dashboardResponse.resolve();
+    const window = await waitForWorkbenchPage(lifecycle, descriptor.origin);
     await expect(window.getByText("Existing Prompt Studio dashboard")).toBeVisible();
+    expect(await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible())).toBe(true);
+    await expect
+      .poll(() => window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()))
+      .toMatchObject({ kind: "workbench" });
     expect(await window.evaluate(() => document.cookie)).toBe("");
     expect(await window.evaluate(() => typeof process)).toBe("undefined");
     expect(authenticatedReady).toBe(true);
@@ -109,13 +130,16 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       "confirmQuit",
       "copyDiagnostics",
       "getAppInfo",
+      "getProjectTabs",
       "getStartupState",
       "getWorkbenchState",
+      "onStartupState",
       "openLogs",
       "quitApp",
       "retryRuntime",
       "revealInFinder",
       "setPageLocation",
+      "setProjectTabs",
       "setSelectedProjectId",
     ]);
     expect(
@@ -125,6 +149,21 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     ).toBe(false);
     expect(await window.evaluate(() => Object.isFrozen((globalThis as unknown as Window).promptStudioDesktop))).toBe(
       true,
+    );
+    expect(
+      await window.evaluate(() => {
+        const unsubscribe = (globalThis as unknown as Window).promptStudioDesktop.onStartupState(() => {});
+        return unsubscribe();
+      }),
+    ).toBeUndefined();
+
+    await window.evaluate(() =>
+      (globalThis as unknown as Window).promptStudioDesktop.setProjectTabs({ projectIds: ["second", "first"] }),
+    );
+    expect(await window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getProjectTabs())).toEqual(
+      {
+        projectIds: ["second", "first"],
+      },
     );
 
     expect(
@@ -136,7 +175,10 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     );
 
     await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.minimize());
-    const secondInstance = spawn(electronPath, [appPath], { env: launchEnvironment, stdio: "ignore" });
+    const secondInstance = spawn(electronPath, [appPath, `--user-data-dir=${join(home, "electron-user-data")}`], {
+      env: launchEnvironment,
+      stdio: "ignore",
+    });
     const secondExitCode = await new Promise<number | null>((resolveExit) =>
       secondInstance.once("exit", (code) => resolveExit(code)),
     );
@@ -145,6 +187,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       false,
     );
 
+    await finishTrace();
     const closed = electronApp.waitForEvent("close");
     await electronApp.evaluate(({ app }) => app.quit());
     await closed;
@@ -156,6 +199,8 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       ).ok,
     ).toBe(true);
   } finally {
+    dashboardResponse.resolve();
+    await finishTrace();
     await electronApp.close().catch(() => {});
     for (const response of eventResponses) response.end();
     await new Promise<void>((resolveClose) => server.close(() => resolveClose()));
@@ -166,16 +211,19 @@ test("keeps startup failures in an actionable recovery window", async () => {
   const home = createHome();
   const electronApp = await electron.launch({
     executablePath: electronPath,
-    args: [appPath],
+    args: [appPath, `--user-data-dir=${join(home, "electron-user-data")}`],
     env: environment({ PSTDIO_HOME: home }),
   });
+  const finishTrace = await startElectronTrace(electronApp.context(), "startup-recovery");
   try {
-    const window = await electronApp.firstWindow();
+    const window = await waitForLifecyclePage(electronApp.context());
     await expect(window.getByRole("heading", { name: "Prompt Studio needs attention" })).toBeVisible();
+    expect(await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible())).toBe(true);
     await expect(window.getByRole("button", { name: "Open logs" })).toBeVisible();
     await expect(window.getByRole("button", { name: "Copy diagnostics" })).toBeVisible();
     await expect(window.getByRole("button", { name: "Quit" })).toBeVisible();
   } finally {
+    await finishTrace();
     await electronApp.evaluate(({ app }) => app.exit(0)).catch(() => {});
     await electronApp.close().catch(() => {});
   }

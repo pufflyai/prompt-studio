@@ -23,6 +23,7 @@ import { createHeadersModule } from "./modules/headers/module";
 import { createHelpModule } from "./modules/help/module";
 import { createKeyboardShortcutsModule } from "./modules/keyboard-shortcuts/module";
 import { createNotificationsModule } from "./modules/notifications/module";
+import type { DesktopProjectTabsController } from "./modules/projects/desktop-project-tabs-controller";
 import { createProjectsModule } from "./modules/projects/module";
 import { createSessionBubbleModule } from "./modules/sessions/bubble/module";
 import { createSessionsModule } from "./modules/sessions/module";
@@ -37,11 +38,13 @@ import { DASHBOARD_SIDENAV_REGION_SIZE } from "./shared/workbench/dashboard-side
 export { dashboardWorkbenchStorageNamespace } from "@/shared/app/dashboard-workbench-storage-keys";
 
 interface CreateDashboardWorkbenchInput {
+  projectTabs?: DesktopProjectTabsController;
   pageLocationBrowser?: WorkbenchPageLocationBrowser;
   storage?: WorkbenchStorageLike;
 }
 
 type CreateDashboardModulesInput = {
+  projectTabs?: DesktopProjectTabsController;
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
   sessionDraftPersistence?: DashboardSessionDraftPersistence;
   sessionSelectionPersistence?: DashboardSessionSelectionPersistence;
@@ -51,8 +54,11 @@ export const createDashboardModules = (input: CreateDashboardModulesInput = {}) 
   createSidenavModule(),
   createWorkspacesModule(),
   createExtensionsModule(),
-  createProjectsModule({ projectSelectionPersistence: input.projectSelectionPersistence }),
-  createHeadersModule(),
+  createProjectsModule({
+    projectSelectionPersistence: input.projectSelectionPersistence,
+    projectTabs: input.projectTabs,
+  }),
+  createHeadersModule(input.projectTabs),
   createKeyboardShortcutsModule(),
   createHelpModule(),
   createCommandPaletteModule(),
@@ -107,6 +113,7 @@ export const createDashboardWorkbench = (input: CreateDashboardWorkbenchInput = 
   });
 
   const modules = createDashboardModules({
+    projectTabs: input.projectTabs,
     projectSelectionPersistence,
     sessionDraftPersistence,
     sessionSelectionPersistence,

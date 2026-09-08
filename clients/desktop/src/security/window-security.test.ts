@@ -7,6 +7,18 @@ import {
 } from "./window-security";
 
 describe("desktop window security", () => {
+  test.each(["darwin", "win32", "linux"])("keeps native controls in the %s title bar", (platform) => {
+    const options = createSecureWindowOptions("/app/preload.cjs", "pstdio-workbench", platform);
+    expect(options.titleBarStyle).toBe("hidden");
+    if (platform === "darwin") {
+      expect(options).toMatchObject({ trafficLightPosition: { x: 10, y: 15 } });
+      expect(options).not.toHaveProperty("titleBarOverlay");
+    } else {
+      expect(options).toMatchObject({ titleBarOverlay: { height: 44 } });
+      expect(options).not.toHaveProperty("trafficLightPosition");
+    }
+  });
+
   test("uses the hardened BrowserWindow baseline and an ephemeral partition", () => {
     const options = createSecureWindowOptions("/app/preload.cjs", "pstdio-workbench");
 

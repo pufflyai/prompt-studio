@@ -1,15 +1,8 @@
-import { ChakraProvider, psTheme, ThemePreferenceProvider } from "@pstdio/ui";
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
 import "@pstdio/ui/style.css";
-import { DesktopLifecycleApp } from "./desktop-lifecycle-app";
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <ThemePreferenceProvider initialPreference="system">
-      <ChakraProvider value={psTheme}>
-        <DesktopLifecycleApp />
-      </ChakraProvider>
-    </ThemePreferenceProvider>
-  </StrictMode>,
-);
+// Give the packaged startup document a painted frame before initializing the theme and React.
+requestAnimationFrame(() => {
+  requestAnimationFrame(() => {
+    void import("./hydrate");
+  });
+});

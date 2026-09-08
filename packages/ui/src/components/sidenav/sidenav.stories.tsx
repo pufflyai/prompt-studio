@@ -198,7 +198,6 @@ const SidenavShell = (props: SidenavShellProps) => {
         maxSizePx={480}
         contentMinSizePx={320}
         resizeLabel="Resize sidenav"
-        showResizeSeparator={false}
         onCollapsedChange={(collapsed) => setSidenavOpen(!collapsed)}
         resizablePanel={
           <Sidenav

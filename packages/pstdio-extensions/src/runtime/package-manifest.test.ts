@@ -152,6 +152,21 @@ describe("readPackageManifest validation", () => {
     ]);
     expect(result.diagnostics[0]?.message).toContain("1.0.0-alpha.1099");
     expect(result.diagnostics[0]?.message).toContain(EXTENSION_API_VERSION);
+    expect(result.diagnostics[0]?.message).toContain("Update Prompt Studio");
+  });
+
+  test("directs an older extension to the extension repair command", () => {
+    const dir = createPackage({
+      name: "old-extension",
+      version: "1.0.0",
+      publisher: "pstdio",
+      main: "./extension.ts",
+      engines: { pstdio: "1.0.0-alpha.1" },
+    });
+    const result = readPackageManifest(dir);
+    expect(result.manifest).toBeNull();
+    expect(result.diagnostics[0]?.message).toContain("pst extensions update");
+    expect(result.diagnostics[0]?.message).not.toContain("Update Prompt Studio");
   });
 
   test("reads metadata for an extension built for a different API version without loading it", () => {

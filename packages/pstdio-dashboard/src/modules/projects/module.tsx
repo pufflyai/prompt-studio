@@ -11,6 +11,7 @@ import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { CreateProjectWidget } from "./components/create-project-widget";
 import { ProjectPickerWidget } from "./components/project-picker-widget";
 import { createDashboardProjects } from "./data/project-data";
+import type { DesktopProjectTabsController } from "./desktop-project-tabs-controller";
 import {
   clearSelectedProject,
   type DashboardProjectSelectionContext,
@@ -22,6 +23,7 @@ import {
 
 interface CreateProjectsModuleInput {
   projectSelectionPersistence?: DashboardProjectSelectionPersistence;
+  projectTabs?: DesktopProjectTabsController;
 }
 
 const requiredProjectPickerOverlay = "dashboard-workbench.required-project-picker";
@@ -187,14 +189,13 @@ export const createProjectsModule = (input: CreateProjectsModuleInput = {}) =>
         selectedProjectContext,
         input.projectSelectionPersistence,
       );
-      const singleProjectSelection = startedWithPersistedProject
-        ? undefined
-        : registerSingleProjectSelectionSync(ctx, selectedProjectContext, input.projectSelectionPersistence);
-      const selectedProjectDeletionSync = registerSelectedProjectDeletionSync(
-        ctx,
-        selectedProjectContext,
-        input.projectSelectionPersistence,
-      );
+      const singleProjectSelection =
+        startedWithPersistedProject || input.projectTabs
+          ? undefined
+          : registerSingleProjectSelectionSync(ctx, selectedProjectContext, input.projectSelectionPersistence);
+      const selectedProjectDeletionSync =
+        input.projectTabs?.connect(ctx) ??
+        registerSelectedProjectDeletionSync(ctx, selectedProjectContext, input.projectSelectionPersistence);
 
       return [
         ...(persistedProjectSelection ? [persistedProjectSelection] : []),

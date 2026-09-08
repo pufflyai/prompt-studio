@@ -54,7 +54,7 @@ describe("desktop runtime controller", () => {
     let request: Request | undefined;
 
     await expect(
-      verifyExternalRuntime(descriptor, async (input, init) => {
+      verifyExternalRuntime(descriptor, new AbortController().signal, async (input, init) => {
         request = new Request(input, init);
         return Response.json({
           ok: true,
@@ -71,7 +71,7 @@ describe("desktop runtime controller", () => {
 
   test("rejects an external descriptor for a replacement runtime", async () => {
     await expect(
-      verifyExternalRuntime(descriptor, async () =>
+      verifyExternalRuntime(descriptor, new AbortController().signal, async () =>
         Response.json({ ok: true, protocolVersion: 1, instanceId: "replacement", ownerType: "persistent" }),
       ),
     ).rejects.toThrow("External runtime identity did not match");
@@ -94,7 +94,16 @@ describe("desktop runtime controller", () => {
 
   test("classifies actionable startup failures", () => {
     expect(classifyRuntimeFailure("listen EADDRINUSE: address already in use").code).toBe("port_bind_failure");
+    expect(classifyRuntimeFailure("Failed to start server. Is port 59152 in use?").code).toBe("port_bind_failure");
     expect(classifyRuntimeFailure("PGlite database is already locked").code).toBe("pglite_ownership_conflict");
     expect(classifyRuntimeFailure("invalid checkpoint record").code).toBe("pglite_recovery_failure");
+  });
+
+  test("recognizes a database-open failure when PGlite reports an opaque WebAssembly error", () => {
+    const message = "Unreachable code should not be executed";
+    const output = JSON.stringify({ event: "db.open.failed", err: { message } });
+
+    expect(classifyRuntimeFailure(output).code).toBe("pglite_recovery_failure");
+    expect(classifyRuntimeFailure(message).code).toBe("unexpected_exit");
   });
 });

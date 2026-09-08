@@ -221,6 +221,7 @@ export const DiffViewer = (props: DiffViewerProps) => {
         minSizePx={224}
         contentMinSizePx={320}
         resizeLabel="Resize file list panel"
+        separator="line"
         onCollapsedChange={(collapsed) => setTreePanelOpen(!collapsed)}
       />
     </Flex>

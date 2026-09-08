@@ -1,6 +1,6 @@
 import { isAbsolute } from "node:path";
-import type { BrowserWindow, IpcMain, IpcMainInvokeEvent } from "electron";
-import type { DesktopWorkbenchState } from "../desktop-api";
+import type { IpcMain, IpcMainInvokeEvent, WebContents } from "electron";
+import type { DesktopProjectTabsState, DesktopWorkbenchState } from "../desktop-api";
 import { DESKTOP_CHANNELS } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { isAllowedIpcSender } from "../security/ipc-security";
@@ -13,6 +13,8 @@ type DesktopIpcOptions = {
   copyDiagnostics: () => void;
   getState: () => DesktopState;
   getWorkbenchState: () => DesktopWorkbenchState;
+  getProjectTabs: () => Promise<DesktopProjectTabsState>;
+  setProjectTabs: (state: unknown) => Promise<void>;
   ipcMain: IpcMain;
   lifecycleUrl: string;
   openLogs: () => void;
@@ -22,22 +24,24 @@ type DesktopIpcOptions = {
   runtimeOrigin: () => string | null;
   setPageLocation: (projectId: string, value: string | null) => void;
   setSelectedProjectId: (projectId: string | null) => void;
-  window: BrowserWindow;
+  webContents: () => WebContents[];
 };
 
 const assertSender = (event: IpcMainInvokeEvent, options: DesktopIpcOptions) => {
   const senderFrame = event.senderFrame;
-  const allowed = isAllowedIpcSender(
-    {
-      senderId: event.sender.id,
-      senderFrameUrl: senderFrame?.url ?? "",
-      isMainFrame: senderFrame === event.sender.mainFrame,
-    },
-    {
-      expectedWebContentsId: options.window.webContents.id,
-      lifecycleUrl: options.lifecycleUrl,
-      runtimeOrigin: options.runtimeOrigin(),
-    },
+  const allowed = options.webContents().some((webContents) =>
+    isAllowedIpcSender(
+      {
+        senderId: event.sender.id,
+        senderFrameUrl: senderFrame?.url ?? "",
+        isMainFrame: senderFrame === event.sender.mainFrame,
+      },
+      {
+        expectedWebContentsId: webContents.id,
+        lifecycleUrl: options.lifecycleUrl,
+        runtimeOrigin: options.runtimeOrigin(),
+      },
+    ),
   );
   if (!allowed) throw new Error("Rejected desktop IPC from an untrusted sender");
 };
@@ -64,6 +68,8 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
   handle(DESKTOP_CHANNELS.checkForUpdates, options.checkForUpdates);
   handle(DESKTOP_CHANNELS.quitApp, options.quitApp);
   handle(DESKTOP_CHANNELS.getWorkbenchState, options.getWorkbenchState);
+  handle(DESKTOP_CHANNELS.getProjectTabs, options.getProjectTabs);
+  handle(DESKTOP_CHANNELS.setProjectTabs, options.setProjectTabs);
   handle(DESKTOP_CHANNELS.setPageLocation, (projectId, value) => {
     if (typeof projectId !== "string" || !projectId || (typeof value !== "string" && value !== null)) {
       throw new Error("Invalid desktop page location update");

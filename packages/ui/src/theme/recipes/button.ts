@@ -60,10 +60,10 @@ export const buttonRecipe = defineRecipe({
       },
       destructive: {
         color: "blacks.50",
-        bg: "red.500",
+        bg: "red.600",
         border: "none",
-        _hover: { bg: "red.600" },
-        _active: { bg: "red.700" },
+        _hover: { "&:not(:active, [data-active])": { bg: "red.700" } },
+        _active: { bg: "red.800" },
       },
       outline: {
         color: "fg",

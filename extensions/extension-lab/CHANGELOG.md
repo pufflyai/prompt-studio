@@ -1,5 +1,13 @@
 # extension-lab
 
+## 0.9.1
+
+_2026-09-08_
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/ui@0.23.0`, `@pstdio/sdk@0.22.1`
+
 ## 0.9.0
 
 _2026-09-07_

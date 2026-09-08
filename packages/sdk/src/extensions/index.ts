@@ -58,6 +58,7 @@ export {
   workspaceSlots,
   worktreeEvents,
 } from "pstdio-api-contracts/extension-kernel";
+export { SDK_VERSION } from "../version";
 export { type CommandResponse, unwrapCommandOutcome } from "./command-outcome";
 export { defineCommand, defineHook, defineMiddleware } from "./define-command";
 export {

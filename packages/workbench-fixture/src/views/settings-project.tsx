@@ -7,7 +7,7 @@ import { readBoolean, readNumber } from "../utils/settings-values";
 
 const ProjectSettings = () => {
   const { host } = useLabHost();
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState<number | null>(null);
   const [enabled, setEnabled] = useState(true);
   const [status, setStatus] = useState<string | null>(null);
 
@@ -34,14 +34,24 @@ const ProjectSettings = () => {
     <Stack gap="md" p="lg" maxW="md">
       <Stack gap="xs">
         <Text textStyle="label/S/medium">Counter step</Text>
-        <Input value={String(step)} onChange={(event) => setStep(Number(event.target.value))} type="number" min={1} />
+        <Input
+          value={step === null ? "" : String(step)}
+          disabled={step === null}
+          onChange={(event) => setStep(Number(event.target.value))}
+          type="number"
+          min={1}
+        />
       </Stack>
       <HStack justify="space-between">
         <Text textStyle="label/S/medium">Counter enabled</Text>
-        <Switch checked={enabled} onCheckedChange={(event: { checked: boolean }) => setEnabled(event.checked)} />
+        <Switch
+          disabled={step === null}
+          checked={enabled}
+          onCheckedChange={(event: { checked: boolean }) => setEnabled(event.checked)}
+        />
       </HStack>
       <HStack gap="sm">
-        <Button type="button" size="sm" onClick={save}>
+        <Button type="button" size="sm" onClick={save} disabled={step === null}>
           Save
         </Button>
         {status ? (

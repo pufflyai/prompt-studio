@@ -1,5 +1,13 @@
 # @pstdio/sdk
 
+## 0.22.1
+
+_2026-09-08_
+
+### Patch Changes
+
+- 62918f4: Add scoped extension checks, repair guidance, and package version diagnostics.
+
 ## 0.22.0
 
 _2026-09-07_

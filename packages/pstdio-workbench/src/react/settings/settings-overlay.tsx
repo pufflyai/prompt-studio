@@ -71,7 +71,7 @@ export const SettingsOverlay = (props: SettingsOverlayProps) => {
           contentMinSizePx={360}
           collapsible={false}
           resizeLabel="Resize settings navigation"
-          showResizeSeparator
+          separator="line"
         />
       </Box>
     </Flex>

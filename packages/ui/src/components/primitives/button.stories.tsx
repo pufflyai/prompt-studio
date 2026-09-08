@@ -111,6 +111,7 @@ export const PrimaryAndDestructive = {
           className={getThemePreferenceClassNames(surface.id, surface.mode).join(" ")}
           data-color-mode={surface.mode}
           data-theme={surface.id}
+          color="fg"
           borderWidth="1px"
           borderColor="border.subtle"
           borderRadius="xs"
@@ -128,6 +129,18 @@ export const PrimaryAndDestructive = {
                 Disabled
               </Button>
               <Button variant="destructive">Delete item</Button>
+            </HStack>
+            <Text textStyle="label/XS" color="fg.muted">
+              Destructive actions keep readable labels in every enabled state.
+            </Text>
+            <HStack gap="sm" flexWrap="wrap">
+              <Button variant="destructive">Default</Button>
+              <Button variant="destructive" data-hover>
+                Hover
+              </Button>
+              <Button variant="destructive" data-hover data-active>
+                Pressed
+              </Button>
             </HStack>
           </Stack>
         </Box>

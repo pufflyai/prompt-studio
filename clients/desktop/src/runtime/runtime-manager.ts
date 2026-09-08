@@ -14,6 +14,7 @@ import { redactSensitiveText } from "pstdio-logging";
 import {
   classifyRuntimeFailure,
   createSidecarLaunchArguments,
+  DESKTOP_RUNTIME_TIMEOUT_MS,
   reconcileRuntimeOwnership,
   verifyExternalRuntime,
   waitForDesktopRuntime,
@@ -30,7 +31,7 @@ export type ManagedRuntime = {
 type RuntimeManagerOptions = {
   descriptorPath: string;
   externalRuntime?: boolean;
-  resolveSidecarPath: () => string;
+  resolveSidecarPath: (signal: AbortSignal) => string | Promise<string>;
   onIntentionalShutdown: () => void;
   onUnexpectedExit: (detail: string) => void;
   onPhase: (phase: "discovery" | "spawning" | "readiness") => void;
@@ -127,22 +128,33 @@ export class DesktopRuntimeManager {
   }
 
   async start() {
+    const signal = AbortSignal.timeout(DESKTOP_RUNTIME_TIMEOUT_MS);
+    try {
+      return await this.#start(signal);
+    } catch (error) {
+      if (signal.aborted) throw new Error("runtime_timeout: Runtime readiness timed out.");
+      throw error;
+    }
+  }
+
+  async #start(signal: AbortSignal) {
     this.#intentional = false;
     this.#eventAbort?.abort();
     this.#options.onPhase("discovery");
     if (this.#options.externalRuntime) {
       const descriptor = this.#deps.readRuntimeDescriptor(this.#options.descriptorPath);
       if (!descriptor) throw new Error("External runtime descriptor is missing or invalid");
-      await this.#deps.verifyExternalRuntime(descriptor);
+      await this.#deps.verifyExternalRuntime(descriptor, signal);
       return this.#attach(descriptor, true);
     }
 
-    const discovery = await this.#deps.discoverRuntime(this.#options.descriptorPath);
+    const discover = (path: string) => this.#deps.discoverRuntime(path, { signal });
+    const discovery = await discover(this.#options.descriptorPath);
     if (discovery.state === "healthy") return this.#attach(discovery.descriptor, false);
     if (discovery.state === "unsafe") {
       throw new Error(`Runtime ownership is unsafe: ${discovery.reason}`);
     }
-    const sidecarPath = this.#options.resolveSidecarPath();
+    const sidecarPath = await this.#options.resolveSidecarPath(signal);
     if (!this.#deps.existsSync(sidecarPath)) throw new Error(`Desktop sidecar is missing: ${sidecarPath}`);
 
     this.#options.onPhase("spawning");
@@ -170,6 +182,8 @@ export class DesktopRuntimeManager {
         markChildTerminated();
         const detail = this.#output || `Runtime exited with ${code === null ? `signal ${signal}` : `code ${code}`}`;
         if (!ready) reject(new Error(detail));
+        // A clean owned-process exit can arrive before its HTTP shutdown event.
+        else if (code === 0) this.#handleIntentionalShutdown();
         else if (!this.#intentional) this.#options.onUnexpectedExit(detail);
       });
       child.once("close", markChildTerminated);
@@ -180,7 +194,7 @@ export class DesktopRuntimeManager {
     try {
       const descriptor = await Promise.race([
         waitForDesktopRuntime(this.#options.descriptorPath, instanceId, {
-          discover: this.#deps.discoverRuntime,
+          discover,
           now: Date.now,
           sleep: this.#deps.sleep,
         }),
@@ -190,7 +204,8 @@ export class DesktopRuntimeManager {
       return this.#attach(descriptor, false);
     } catch (error) {
       await terminateSpawnedRuntime(child, childTerminated, this.#deps.sleep);
-      const failure = classifyRuntimeFailure(error instanceof Error ? error.message : String(error));
+      const detail = this.#output || (error instanceof Error ? error.message : String(error));
+      const failure = classifyRuntimeFailure(detail);
       throw new Error(`${failure.code}: ${failure.message}`);
     }
   }
@@ -215,19 +230,17 @@ export class DesktopRuntimeManager {
     this.#eventAbort?.abort();
   }
 
+  #handleIntentionalShutdown() {
+    if (this.#intentional) return;
+    this.#intentional = true;
+    this.#options.onIntentionalShutdown();
+  }
+
   #attach(descriptor: RuntimeDescriptor, external: boolean) {
     this.#runtime = { descriptor, external };
     this.#eventAbort = new AbortController();
     void this.#deps
-      .observeRuntimeShutdown(
-        descriptor,
-        () => {
-          this.#intentional = true;
-          this.#options.onIntentionalShutdown();
-        },
-        fetch,
-        this.#eventAbort.signal,
-      )
+      .observeRuntimeShutdown(descriptor, () => this.#handleIntentionalShutdown(), fetch, this.#eventAbort.signal)
       .catch(() => {});
     return this.#runtime;
   }

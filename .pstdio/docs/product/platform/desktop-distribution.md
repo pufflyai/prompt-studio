@@ -11,13 +11,14 @@ Choose the artifact for the computer that will run Prompt Studio:
 | Platform | Install artifact | Alternative |
 | --- | --- | --- |
 | Apple Silicon macOS | `Prompt-Studio-<version>-darwin-arm64.dmg` | matching ZIP |
-| Intel macOS | `Prompt-Studio-<version>-darwin-x64.dmg` | matching ZIP |
 | Linux x64 | `Prompt-Studio-<version>-linux-x64.deb` | portable ZIP |
 
 The Linux ZIP is portable rather than system-integrated. Extract it to a stable
-directory, preserve executable permissions, and launch `Prompt Studio` from the
-extracted directory. The DEB participates in the distribution's normal package
-inventory.
+directory without spaces, preserve executable permissions, and launch
+`prompt-studio` from the extracted directory. Electron's SUID sandbox currently
+cannot launch an executable whose full path contains spaces. The DEB installs
+under its normal system path and participates in the distribution's package
+inventory. See [the temporary path restriction](../../adrs/0019-temporary-linux-desktop-package-paths.md).
 
 ## Verify a download
 
@@ -34,8 +35,10 @@ spctl --assess --type execute --verbose=2 "/Applications/Prompt Studio.app"
 xcrun stapler validate "/Applications/Prompt Studio.app"
 ```
 
-Windows desktop distribution is deferred until its trusted signing lane is
-available. Do not distribute an unsigned development package as a release.
+Intel macOS desktop distribution is deferred. Intel users can use the supported
+CLI and browser dashboard. Windows desktop distribution is deferred until its
+trusted signing lane is available. Do not distribute a development package for
+either platform as a supported desktop release.
 
 ## Updates
 
@@ -98,14 +101,14 @@ the target artifacts are eligible for publication:
 
 The workflow uploads the Playwright JSON result as
 `release-readiness-<platform>-<architecture>` with 14-day retention. A release
-owner links the three native job runs and their evidence artifacts from the
+owner links both native job runs and their evidence artifacts from the
 ticket validation report. Contract tests in the owning packages separately
 cover active-work refusal/confirmation, indefinite graceful wait, lock and bind
 failures, corrupt PGlite recovery classification, exact instance targeting,
 window/IPC restrictions, checksums, fuses, update metadata, and version drift.
 
 A local unsigned run is useful implementation evidence, but it is not a
-substitute for the three native workflow results. Never record 5/5 release
+substitute for both native workflow results. Never record 5/5 release
 confidence until the signed and notarized macOS checks, Linux package inspection,
 native packaged suites, and complete published release set all pass for the same
 version.

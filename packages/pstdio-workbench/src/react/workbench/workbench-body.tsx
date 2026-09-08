@@ -23,7 +23,6 @@ interface WorkbenchBodyProps {
 
 const SECONDARY_PANEL_SIZE = { defaultPx: 240, minPx: 128, maxPx: 420 };
 const SECONDARY_PANEL_CONTENT_MIN_SIZE_PX = 240;
-const SECONDARY_PANEL_RESIZE_HANDLE_SIZE_PX = 4;
 const mainHeaderTrailingMenuPath = headerTrailingMenuPath("main");
 
 const resolveRegionSize = (
@@ -115,7 +114,16 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   );
 
   const mainContent = (
-    <Grid data-workbench-panel="main" gridTemplateRows="auto minmax(0, 1fr)" h="full" minH="0" minW="0" w="full">
+    <Grid
+      data-workbench-panel="main"
+      gridTemplateRows="auto minmax(0, 1fr)"
+      h="full"
+      minH="0"
+      minW="0"
+      w="full"
+      bg={workbenchBackgrounds.main}
+      layerStyle="panel"
+    >
       <MainHeaderBar workbench={workbench} hasMainHeader={hasMainHeader} />
       <Box gridRow="2" h="full" minH="0" minW="0" overflow="hidden">
         {mainPanelWithMenus}
@@ -144,9 +152,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       minSizePx={secondaryPanelSize.minPx}
       maxSizePx={secondaryPanelSize.maxPx}
       contentMinSizePx={SECONDARY_PANEL_CONTENT_MIN_SIZE_PX}
-      resizeHandleSizePx={SECONDARY_PANEL_RESIZE_HANDLE_SIZE_PX}
       resizeLabel="Resize Secondary Panel"
-      showResizeSeparator
       onSizeChange={(height) => workbench.layout.setRegionSize("secondary", height)}
       onCollapsedChange={secondaryPanel.onCollapsedChange}
     />

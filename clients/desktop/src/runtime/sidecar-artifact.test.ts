@@ -53,10 +53,10 @@ describe("desktop sidecar artifact", () => {
     );
   });
 
-  test("accepts a matching executable, checksum, target, and reported version", () => {
+  test("accepts a matching executable, checksum, target, and reported version", async () => {
     const artifact = createArtifact();
 
-    expect(
+    await expect(
       validateSidecarArtifact({
         resourcesPath: artifact.resourcesPath,
         platform: "darwin",
@@ -64,7 +64,28 @@ describe("desktop sidecar artifact", () => {
         appVersion: "0.25.2",
         readVersion: () => "0.25.2",
       }),
-    ).toBe(artifact.binaryPath);
+    ).resolves.toBe(artifact.binaryPath);
+  });
+
+  test("waits for the version check without blocking the caller", async () => {
+    const artifact = createArtifact();
+    const version = Promise.withResolvers<string>();
+    const validation = validateSidecarArtifact({
+      resourcesPath: artifact.resourcesPath,
+      platform: "darwin",
+      arch: "arm64",
+      appVersion: "0.25.2",
+      readVersion: () => version.promise,
+    });
+    let validated = false;
+    const completion = Promise.resolve(validation).then((path) => {
+      validated = true;
+      return path;
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(validated).toBe(false);
+    version.resolve("0.25.2");
+    await expect(completion).resolves.toBe(artifact.binaryPath);
   });
 
   test.each([
@@ -72,12 +93,12 @@ describe("desktop sidecar artifact", () => {
     ["target_mismatch", () => createArtifact({ arch: "x64" })],
     ["checksum_mismatch", () => createArtifact({ checksum: "0".repeat(64) })],
     ["version_mismatch", () => createArtifact({ version: "0.25.1" })],
-  ] as const)("fails before launch with %s", (code, create) => {
+  ] as const)("fails before launch with %s", async (code, create) => {
     const artifact = create();
     roots.push(artifact.resourcesPath);
 
     try {
-      validateSidecarArtifact({
+      await validateSidecarArtifact({
         resourcesPath: artifact.resourcesPath,
         platform: "darwin",
         arch: "arm64",
@@ -91,10 +112,10 @@ describe("desktop sidecar artifact", () => {
     }
   });
 
-  test("rejects a binary whose own version drifts from the application", () => {
+  test("rejects a binary whose own version drifts from the application", async () => {
     const artifact = createArtifact();
 
-    expect(() =>
+    await expect(
       validateSidecarArtifact({
         resourcesPath: artifact.resourcesPath,
         platform: "darwin",
@@ -102,6 +123,6 @@ describe("desktop sidecar artifact", () => {
         appVersion: "0.25.2",
         readVersion: () => "0.25.1",
       }),
-    ).toThrow(expect.objectContaining({ code: "version_mismatch" }));
+    ).rejects.toThrow(expect.objectContaining({ code: "version_mismatch" }));
   });
 });

@@ -14,7 +14,9 @@ import {
   resolveDraggedPanelSize,
   resolveResizableBounds,
 } from "@/components/layout/resizable-split-layout.geometry";
+import type { ResizableSplitSeparator } from "@/components/layout/resizable-split-layout.handle";
 import { ResizableSplitPanels } from "@/components/layout/resizable-split-layout.panels";
+import { type PanelDimension, useResizableSplitRootSize } from "@/components/layout/resizable-split-layout.root-size";
 
 interface ResizableSplitLayoutProps extends Omit<FlexProps, "children" | "onResize"> {
   resizablePanel: ReactNode;
@@ -27,8 +29,7 @@ interface ResizableSplitLayoutProps extends Omit<FlexProps, "children" | "onResi
   collapsed?: boolean;
   collapsible?: boolean;
   resizeLabel?: string;
-  resizeHandleSizePx?: number;
-  showResizeSeparator?: boolean;
+  separator?: ResizableSplitSeparator;
   onSizeChange?: (size: number) => void;
   onCollapsedChange?: (collapsed: boolean) => void;
 }
@@ -37,8 +38,6 @@ const FALLBACK_ROOT_SIZE = { width: 1200, height: 720 };
 const KEYBOARD_RESIZE_STEP = 24;
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
-
-type PanelDimension = "width" | "height";
 
 const getElementSize = (element: HTMLDivElement | null, dimension: PanelDimension) =>
   element?.getBoundingClientRect()[dimension] ?? 0;
@@ -76,8 +75,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     collapsed: controlledCollapsed,
     collapsible = true,
     resizeLabel = "Resize panel",
-    resizeHandleSizePx = 12,
-    showResizeSeparator = true,
+    separator = "gap",
     onSizeChange,
     onCollapsedChange,
     ...rest
@@ -88,10 +86,11 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   const resizablePanelRef = useRef<HTMLDivElement>(null);
   const contentPanelRef = useRef<HTMLDivElement>(null);
   const cleanupDragRef = useRef<() => void>(() => undefined);
+  const rootSize = useResizableSplitRootSize(rootRef, axis.dimension);
   const lastSizeRef = useRef(defaultSizePx);
   const [panelSize, setPanelSize] = useState(defaultSizePx);
-  const [rootSize, setRootSize] = useState(0);
   const [internalCollapsed, setInternalCollapsed] = useState(false);
+  const [dragging, setDragging] = useState(false);
   const collapsed = controlledCollapsed ?? internalCollapsed;
   const bounds = resolveResizableBounds({
     rootSize,
@@ -103,26 +102,6 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   const resolvedPanelSize = collapsed ? 0 : clamp(panelSize, bounds.minSize, bounds.maxSize);
   const contentPanelId = `${id}-content`;
   const resizablePanelId = `${id}-resizable`;
-
-  useEffect(() => {
-    const element = rootRef.current;
-    if (!element) return;
-
-    const updateRootSize = () => {
-      setRootSize(element.getBoundingClientRect()[axis.dimension]);
-    };
-
-    updateRootSize();
-
-    if (typeof ResizeObserver === "undefined") return;
-
-    const observer = new ResizeObserver(updateRootSize);
-    observer.observe(element);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [axis.dimension]);
 
   useEffect(() => {
     lastSizeRef.current = defaultSizePx;
@@ -229,6 +208,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
       document.body.style.userSelect = previousUserSelect;
       if (resizeHandle.hasPointerCapture(event.pointerId)) resizeHandle.releasePointerCapture(event.pointerId);
       setDraggingPanelState("");
+      setDragging(false);
       if (animationFrame) {
         window.cancelAnimationFrame(animationFrame);
         animationFrame = 0;
@@ -248,10 +228,15 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     document.body.style.cursor = axis.cursor;
     document.body.style.userSelect = "none";
     setDraggingPanelState("none");
+    setDragging(true);
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", cleanup, { once: true });
     window.addEventListener("pointercancel", cleanup, { once: true });
     window.addEventListener("blur", cleanup, { once: true });
+  };
+
+  const handleCollapse = () => {
+    if (collapsible) setCollapsed(true);
   };
 
   const handleResizeKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -295,10 +280,11 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
         resizablePanel={resizablePanel}
         resizablePanelId={resizablePanelId}
         resizablePanelRef={resizablePanelRef}
-        resizeHandleSizePx={resizeHandleSizePx}
+        dragging={dragging}
         resizeLabel={resizeLabel}
         resolvedPanelSize={resolvedPanelSize}
-        showResizeSeparator={showResizeSeparator}
+        separator={separator}
+        onCollapse={handleCollapse}
         onResizeKeyDown={handleResizeKeyDown}
         onResizeStart={handleResizeStart}
       />
