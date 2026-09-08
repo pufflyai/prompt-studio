@@ -3,8 +3,9 @@ import { useRef, useState } from "react";
 import type { ToolShapeKind } from "../shapes/tool-shapes";
 import { blockFor } from "./building-block-content";
 import { BlockChip, BuildingBlocks, useStoryStyles } from "./building-blocks";
+import { DemoWorkbench } from "./demo-workbench";
 import { PageScroll } from "./page-scroll";
-import { DemoWorkbench, ToolDemo } from "./tool-demo";
+import { ToolDemo } from "./tool-demo";
 import { TOOL_EXAMPLES } from "./tool-examples-content";
 import { WorkbenchServices } from "./workbench-services";
 
@@ -28,14 +29,8 @@ export const FeaturesView = () => {
       <Box css={styles.page}>
         <Box ref={exampleRef} css={styles.section} as="section" aria-labelledby="tool-examples-title">
           <Stack css={styles.intro}>
-            <Text textStyle="label/S/regular" color="fg.muted">
-              What you can build
-            </Text>
             <Text id="tool-examples-title" as="h1" textStyle={{ base: "heading/M", md: "heading/L" }}>
               What will you build?
-            </Text>
-            <Text textStyle="paragraph/L/regular" color="fg.muted">
-              A research desk. A feedback board. The tool your workflow is missing.
             </Text>
           </Stack>
           <HStack gap="xs" flexWrap="wrap" role="group" aria-label="Example tools">
@@ -53,15 +48,12 @@ export const FeaturesView = () => {
               </Button>
             ))}
           </HStack>
-          <Text textStyle="paragraph/M/regular" color="fg.muted">
-            {example.description}
-          </Text>
           <DemoWorkbench name={example.name}>
             <ToolDemo key={example.id} example={example.id} highlighted={selectedBlock} />
           </DemoWorkbench>
           <Box css={styles.composition}>
             <Text textStyle="label/S/regular" color="fg.muted">
-              Made with · Select a shape to see what it adds
+              Made with
             </Text>
             <HStack gap="sm" flexWrap="wrap">
               {example.blocks.map((block) => (

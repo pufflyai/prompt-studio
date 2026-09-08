@@ -14,19 +14,19 @@ const SERVICES = [
     name: "Notifications",
     description: "Know when work finishes or needs your attention.",
     icon: Bell,
-    example: "Your daily brief is ready",
+    example: "Font build complete",
   },
   {
     name: "Navigation",
     description: "Open your tools and arrange them side by side.",
     icon: Navigation,
-    example: "Research library / Launch brief",
+    example: "Font editor / Coding agents",
   },
   {
     name: "Extension management",
     description: "Install, enable, and manage the tools in your workbench.",
     icon: Blocks,
-    example: "Research desk · Enabled",
+    example: "Font editor · Enabled",
   },
   {
     name: "Themes",

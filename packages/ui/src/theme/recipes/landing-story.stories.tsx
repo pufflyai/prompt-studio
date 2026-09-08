@@ -19,17 +19,17 @@ const LandingStory = () => {
         </Stack>
         <Box css={styles.visual}>
           <Box css={styles.visualHeader}>
-            <Text>Research desk</Text>
+            <Text>Font editor</Text>
             <Text>Interactive example</Text>
           </Box>
           <Box css={styles.panels}>
-            {["Research library", "Launch brief"].map((title, index) => (
+            {["Type specimen", "Glyph editor"].map((title, index) => (
               <Box css={styles.panel} key={title} data-highlighted={selected === ["Pages", "Editors"][index]}>
                 <Box css={styles.panelHeader}>
                   <Text>{title}</Text>
                 </Box>
                 <Box css={styles.panelBody}>
-                  <Text textStyle="paragraph/M/regular">Your sources and the brief you are writing, side by side.</Text>
+                  <Text textStyle="heading/display/L">Aa</Text>
                 </Box>
               </Box>
             ))}

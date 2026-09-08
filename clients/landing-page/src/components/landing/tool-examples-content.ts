@@ -1,70 +1,79 @@
+import type { SessionCompletionStatus } from "@pstdio/ui";
 import type { ToolShapeKind } from "../shapes/tool-shapes";
 
-export type ToolExampleId = "research" | "feedback" | "brief";
+export type ToolExampleId = "font" | "agents";
 
 export const TOOL_EXAMPLES: {
   id: ToolExampleId;
   name: string;
-  description: string;
   blocks: { kind: ToolShapeKind; purpose: string }[];
 }[] = [
   {
-    id: "research",
-    name: "Research desk",
-    description: "Keep your sources beside the brief you are writing.",
+    id: "font",
+    name: "Font editor",
     blocks: [
-      { kind: "page", purpose: "A library gives your sources a place to live." },
-      { kind: "editor", purpose: "An editor opens the brief beside your research." },
-      { kind: "command", purpose: "A command turns the selected sources into a draft brief." },
-      { kind: "skill", purpose: "A skill gives your agent the research method and brief format you use." },
+      { kind: "page", purpose: "Preview your typeface as you change it." },
+      { kind: "editor", purpose: "Pick a glyph and adjust the font weight." },
+      { kind: "command", purpose: "Switch between a specimen and the full glyph set." },
     ],
   },
   {
-    id: "feedback",
-    name: "Feedback board",
-    description: "Turn customer feedback into a plan you can act on.",
+    id: "agents",
+    name: "Coding agents",
     blocks: [
-      { kind: "page", purpose: "A board groups feedback so you can decide what to work on." },
-      { kind: "command", purpose: "A command brings new feedback into the board." },
-      { kind: "hook", purpose: "A hook updates the board when an agent finishes a review." },
-    ],
-  },
-  {
-    id: "brief",
-    name: "Daily brief",
-    description: "Open your workbench to a summary of what needs your attention.",
-    blocks: [
-      { kind: "page", purpose: "A page puts the summary and its sources in one view." },
-      { kind: "command", purpose: "A command collects the updates and prepares a brief." },
-      { kind: "automation", purpose: "A schedule runs the brief command every weekday morning." },
+      { kind: "page", purpose: "See your agents, their progress, and what they are building." },
+      { kind: "command", purpose: "Pause a run or approve a result." },
+      { kind: "skill", purpose: "Give your agents your font design and review guidelines." },
+      { kind: "hook", purpose: "Refresh the preview when an agent changes a file." },
+      { kind: "automation", purpose: "Check glyph coverage every morning." },
     ],
   },
 ];
 
-export const RESEARCH_SOURCES = [
+export const EXAMPLE_AGENTS: {
+  id: string;
+  title: string;
+  agent: string;
+  kind: ToolShapeKind;
+  status: SessionCompletionStatus;
+  progress: number;
+  files: { name: string; added: number; removed: number }[];
+}[] = [
   {
-    title: "Customer interviews",
-    meta: "6 conversations",
-    finding: "New customers want one clear place to start.",
-    action: "Simplify the first screen",
+    id: "font",
+    title: "Build the font",
+    agent: "Codex",
+    kind: "command",
+    status: "in_progress",
+    progress: 11,
+    files: [
+      { name: "glyphs/A.svg", added: 18, removed: 4 },
+      { name: "glyphs/B.svg", added: 24, removed: 8 },
+      { name: "workbench.woff2", added: 1, removed: 1 },
+    ],
   },
   {
-    title: "Onboarding notes",
-    meta: "12 observations",
-    finding: "A useful example helps people get to their first result.",
-    action: "Add a guided example",
+    id: "specimen",
+    title: "Polish the specimen",
+    agent: "Claude Code",
+    kind: "skill",
+    status: "awaiting_input",
+    progress: 16,
+    files: [
+      { name: "specimen.tsx", added: 42, removed: 12 },
+      { name: "type-scale.ts", added: 16, removed: 6 },
+    ],
   },
   {
-    title: "Support conversations",
-    meta: "8 questions",
-    finding: "People want to see what changed and what to do next.",
-    action: "Make the next step visible",
+    id: "coverage",
+    title: "Check glyph coverage",
+    agent: "OpenCode",
+    kind: "automation",
+    status: "in_progress",
+    progress: 7,
+    files: [
+      { name: "glyph-coverage.ts", added: 32, removed: 2 },
+      { name: "coverage-report.json", added: 26, removed: 0 },
+    ],
   },
-];
-
-export const FEEDBACK_ITEMS = [
-  { title: "Export a report as PDF", owner: "Alex", status: "To review" },
-  { title: "Show active filters", owner: "Sam", status: "Planned" },
-  { title: "Keep my last view", owner: "Alex", status: "Planned" },
-  { title: "Add a weekly digest", owner: "Sam", status: "To review" },
 ];

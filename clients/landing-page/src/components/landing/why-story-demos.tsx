@@ -1,95 +1,61 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { ArrowRight } from "lucide-react";
 import { useState } from "react";
-import type { ToolShapeKind } from "../shapes/tool-shapes";
+import { AgentDashboardDemo } from "./agent-dashboard-demo";
 import { BlockSymbol, useStoryStyles } from "./building-blocks";
-import { DemoPanel, DemoWorkbench, FeedbackDemo, ResearchDemo, TaskDemo } from "./tool-demo";
-import { RESEARCH_SOURCES } from "./tool-examples-content";
-
-const WORKFLOW: { label: string; kind: ToolShapeKind }[] = [
-  { label: "Collect research", kind: "page" },
-  { label: "Write a brief", kind: "editor" },
-  { label: "Create tasks", kind: "command" },
-];
+import { DemoWorkbench, useToolDemoStyles } from "./demo-workbench";
+import { FontEditorDemo } from "./font-editor-demo";
 
 export const ConnectedToolsDemo = () => {
-  const [step, setStep] = useState(0);
   const styles = useStoryStyles();
   return (
     <Stack gap="md">
-      <Box css={styles.flow} role="group" aria-label="Explore an example workflow">
-        {WORKFLOW.map((item, index) => (
-          <Button key={item.label} variant="ghost" aria-pressed={step === index} onClick={() => setStep(index)}>
-            <BlockSymbol kind={item.kind} />
-            {item.label}
-          </Button>
-        ))}
+      <Box css={styles.flow} textStyle="label/S/regular">
+        <HStack gap="xs">
+          <BlockSymbol kind="editor" />
+          <Text>Edit font</Text>
+        </HStack>
+        <ArrowRight size={14} aria-hidden="true" />
+        <HStack gap="xs">
+          <BlockSymbol kind="command" />
+          <Text>Build font</Text>
+        </HStack>
+        <ArrowRight size={14} aria-hidden="true" />
+        <HStack gap="xs">
+          <BlockSymbol kind="page" />
+          <Text>Preview</Text>
+        </HStack>
       </Box>
-      <DemoWorkbench name="Research → brief → plan">
-        {step === 0 && (
-          <DemoPanel title="Collected research" kind="page">
-            {RESEARCH_SOURCES.map((source) => (
-              <Box css={styles.row} key={source.title}>
-                <Stack gap="xs">
-                  <Text textStyle="label/M/medium">{source.title}</Text>
-                  <Text textStyle="paragraph/M/regular" color="fg.muted">
-                    {source.finding}
-                  </Text>
-                </Stack>
-              </Box>
-            ))}
-          </DemoPanel>
-        )}
-        {step === 1 && (
-          <DemoPanel title="A brief from your research" kind="editor">
-            <Text textStyle="heading/M">A simpler first week</Text>
-            <Text textStyle="paragraph/M/regular">
-              Our interviews, onboarding notes, and support conversations point to the same opportunity. Help new
-              customers reach a useful result sooner.
-            </Text>
-            <Text textStyle="paragraph/M/regular" color="fg.muted">
-              Simplify the first screen. Add a guided example. Make the next step visible.
-            </Text>
-            <Text textStyle="label/S/regular" color="fg.muted">
-              Based on all 3 sources
-            </Text>
-          </DemoPanel>
-        )}
-        {step === 2 && <TaskDemo />}
+      <DemoWorkbench name="Coding agents">
+        <AgentDashboardDemo />
       </DemoWorkbench>
-      <Text css={styles.caption}>An example of tools built to share their results in one project.</Text>
     </Stack>
   );
 };
 
 export const ChangeToolDemo = () => {
   const [changed, setChanged] = useState(false);
-  const styles = useStoryStyles();
+  const styles = useToolDemoStyles();
   return (
     <Stack gap="md">
       <Box css={styles.prompt}>
-        <HStack>
+        <HStack gap="sm" flex="1">
           <BlockSymbol kind="skill" />
-          <Text textStyle="label/S/medium">You and your agent</Text>
+          <Text>Show previews of what each agent is building.</Text>
         </HStack>
-        <Text textStyle="paragraph/L/regular">Add an owner filter to my feedback board.</Text>
-        <Button alignSelf="start" onClick={() => setChanged(!changed)}>
-          {changed ? "Reset example change" : "Try the example change"}
+        <Button aria-pressed={changed} onClick={() => setChanged(!changed)}>
+          {changed ? "Undo change" : "Try the change"}
         </Button>
-        {changed && (
-          <Text aria-live="polite" css={styles.caption}>
-            The owner filter is ready. Pick Alex or Sam below.
-          </Text>
-        )}
       </Box>
-      <DemoWorkbench>
-        <FeedbackDemo key={String(changed)} withFilter={changed} />
+      <DemoWorkbench name="Your agent dashboard">
+        <AgentDashboardDemo withPreview={changed} />
       </DemoWorkbench>
     </Stack>
   );
 };
 
 export const WorkbenchOverviewDemo = () => (
-  <DemoWorkbench>
-    <ResearchDemo />
+  <DemoWorkbench name="Font editor">
+    <FontEditorDemo />
   </DemoWorkbench>
 );
