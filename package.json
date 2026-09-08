@@ -53,6 +53,7 @@
   },
   "workspaces": [
     "clients/*",
+    "examples/*",
     "packages/*",
     "extensions/*",
     "infra/local/extensions/*",

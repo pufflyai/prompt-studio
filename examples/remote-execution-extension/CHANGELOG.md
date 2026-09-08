@@ -1,4 +1,4 @@
-# remote-workspaces
+# remote-execution
 
 ## 1.1.0
 

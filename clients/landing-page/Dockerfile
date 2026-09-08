@@ -6,6 +6,7 @@ WORKDIR /app
 COPY package.json bun.lock tsconfig.base.json ./
 COPY packages packages
 COPY clients clients
+COPY examples examples
 COPY extensions extensions
 COPY infra/local/extensions infra/local/extensions
 COPY .pstdio/extensions/font-editor/package.json .pstdio/extensions/font-editor/package.json
