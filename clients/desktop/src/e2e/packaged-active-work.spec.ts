@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import { readRuntimeActivity } from "pstdio/runtime";
 import { acceptFocusedButton } from "./lifecycle-actions";
@@ -14,12 +15,18 @@ import {
 } from "./packaged-app-helpers";
 import { openPackagedProject } from "./packaged-project-helpers";
 
+const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
+
 for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
   test(`protects a running terminal before ${shutdown}`, async () => {
     const home = createPackagedHome();
     let app: PackagedApp | null = null;
     try {
-      app = await launchPackagedApp(home);
+      app = await launchPackagedApp(home, {
+        PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
+          defaultExtensions: [{ source: fixturePath, installName: "workbench-fixture", skipInstall: true }],
+        }),
+      });
       const created = await app.page.evaluate(async () => {
         const response = await fetch("/v1/projects", {
           method: "POST",
