@@ -9,7 +9,8 @@ import {
 
 // Prototype of the panel separator redesign. Not exported from the package.
 // At rest the separator shows three small dots. After a short hover delay it
-// becomes a full-length bar so the drag target is obvious.
+// becomes a full-length bar so the drag target is obvious. The visible part is
+// as thin as the gap; an invisible hit area extends over the neighbouring cards.
 
 export type PrototypeHandleOrientation = "vertical" | "horizontal";
 
@@ -20,13 +21,14 @@ interface PrototypeResizeHandleProps {
   hoverDelayMs: number;
   onResizeStart: () => void;
   onResize: (deltaPx: number) => void;
+  onStep: (forward: boolean) => void;
+  onToggle: () => void;
 }
 
-const KEYBOARD_STEP_PX = 24;
 const DOT_INDEXES = [0, 1, 2];
 
 export const PrototypeResizeHandle = (props: PrototypeResizeHandleProps) => {
-  const { orientation, label, size, hoverDelayMs, onResizeStart, onResize } = props;
+  const { orientation, label, size, hoverDelayMs, onResizeStart, onResize, onStep, onToggle } = props;
   const vertical = orientation === "vertical";
   const cursor = vertical ? "col-resize" : "row-resize";
   const [hovered, setHovered] = useState(false);
@@ -82,12 +84,19 @@ export const PrototypeResizeHandle = (props: PrototypeResizeHandleProps) => {
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     const backward = vertical ? "ArrowLeft" : "ArrowUp";
     const forward = vertical ? "ArrowRight" : "ArrowDown";
-    if (event.key !== backward && event.key !== forward) return;
 
-    event.preventDefault();
-    onResizeStart();
-    onResize(event.key === forward ? KEYBOARD_STEP_PX : -KEYBOARD_STEP_PX);
+    if (event.key === backward || event.key === forward) {
+      event.preventDefault();
+      onStep(event.key === forward);
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onToggle();
+    }
   };
+
+  const hitArea = vertical
+    ? { top: 0, bottom: 0, insetInlineStart: "-1", insetInlineEnd: "-1" }
+    : { insetInline: 0, top: "-1", bottom: "-1" };
 
   return (
     <Flex
@@ -96,6 +105,7 @@ export const PrototypeResizeHandle = (props: PrototypeResizeHandleProps) => {
       aria-orientation={orientation}
       tabIndex={0}
       position="relative"
+      zIndex="docked"
       align="center"
       justify="center"
       flexShrink={0}
@@ -104,10 +114,12 @@ export const PrototypeResizeHandle = (props: PrototypeResizeHandleProps) => {
       cursor={cursor}
       touchAction="none"
       outline="none"
+      _before={{ content: '""', position: "absolute", ...hitArea }}
       _focusVisible={{ "& [data-part=bar]": { opacity: 1 }, "& [data-part=dots]": { opacity: 0 } }}
       onPointerEnter={handlePointerEnter}
       onPointerLeave={handlePointerLeave}
       onPointerDown={handlePointerDown}
+      onDoubleClick={onToggle}
       onKeyDown={handleKeyDown}
     >
       <Flex
@@ -118,7 +130,7 @@ export const PrototypeResizeHandle = (props: PrototypeResizeHandleProps) => {
         transition="opacity 120ms ease"
       >
         {DOT_INDEXES.map((index) => (
-          <Box key={index} boxSize="1" borderRadius="full" bg="fg.subtle" />
+          <Box key={index} boxSize="0.5" borderRadius="full" bg="fg.subtle" />
         ))}
       </Flex>
       <Box
