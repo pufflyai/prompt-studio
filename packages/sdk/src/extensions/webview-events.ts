@@ -10,8 +10,8 @@ export interface WebviewEventsClient {
   subscribe(event: RendererEventReference, listener: () => void): () => void;
 }
 
-export const createWebviewEventsClient = (host: GuestHost, extensionId: string): WebviewEventsClient => ({
-  subscribe(event, listener) {
+export const createWebviewEventsClient = (host: GuestHost, extensionId: string) => ({
+  subscribe(event: RendererEventReference, listener: () => void) {
     const id = typeof event === "string" ? event : `${event.extensionId ?? extensionId}.${event.id}`;
     return host.onEvent(EXTENSION_EVENTS_SCOPE, (payload) => {
       const notification = payload as WebviewExtensionEvent;
