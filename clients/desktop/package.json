@@ -12,6 +12,7 @@
     "build:main": "bun build src/main.ts --outfile dist/main.js --target node --format esm --external electron",
     "build:preload": "bun build src/preload.ts --outfile dist/preload.cjs --target node --format cjs --external electron",
     "build:sidecar": "bun scripts/build-sidecar.ts",
+    "icons:generate": "bun scripts/generate-icons.ts",
     "lint": "tsc --noEmit && biome check .",
     "make": "electron-forge make",
     "package": "electron-forge package",
