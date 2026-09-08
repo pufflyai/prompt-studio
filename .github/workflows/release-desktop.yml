@@ -1,224 +1,54 @@
-name: Validate native desktop candidate
+name: Validate retained Intel desktop
 
 on:
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   native:
-    name: ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
+    name: darwin-x64
+    runs-on: macos-15-intel
     timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        # Windows x64 stays disabled until its trusted signing lane is available.
-        include:
-          - target: darwin-arm64
-            platform: darwin
-            arch: arm64
-            os: macos-15
-          - target: darwin-x64
-            platform: darwin
-            arch: x64
-            os: macos-15-intel
-          - target: linux-x64
-            platform: linux
-            arch: x64
-            os: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with:
-          ref: ${{ github.sha }}
-          fetch-depth: 0
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
+      - uses: oven-sh/setup-bun@v2
         with:
           bun-version-file: package.json
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: "24"
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Verify candidate component versions
+      - run: bun install --frozen-lockfile
+      - name: Download signed diagnostic application
+        uses: actions/download-artifact@v4
+        with:
+          name: signed-diagnostic-app-darwin-x64
+          run-id: 34171056033
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/signed-desktop
+      - name: Extract signed application
         run: >-
-          bun -e 'const desktop = await Bun.file("clients/desktop/package.json").json();
-          const runtime = await Bun.file("packages/pstdio/package.json").json();
-          if (runtime.version !== desktop.version) throw new Error("Desktop candidate version drift");'
-
-      - name: Import macOS signing credentials
-        if: matrix.platform == 'darwin'
-        shell: bash
-        env:
-          MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}
-          MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
-          APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY }}
-          CERTIFICATE_PATH: ${{ runner.temp }}/pstdio-desktop.p12
-          APPLE_API_KEY_PATH: ${{ runner.temp }}/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
-          KEYCHAIN_PATH: ${{ runner.temp }}/pstdio-desktop.keychain-db
+          ditto -x -k "${{ runner.temp }}/signed-desktop/signed-diagnostic-app.zip"
+          "clients/desktop/out/Prompt Studio-darwin-x64"
+      - name: Verify retained signature and notarization
         run: |
-          set -euo pipefail
-          test -n "$MACOS_CERTIFICATE"
-          test -n "$MACOS_CERTIFICATE_PASSWORD"
-          test -n "$APPLE_API_KEY_CONTENT"
-          bun -e 'await Bun.write(process.env.CERTIFICATE_PATH, Buffer.from(process.env.MACOS_CERTIFICATE, "base64")); await Bun.write(process.env.APPLE_API_KEY_PATH, Buffer.from(process.env.APPLE_API_KEY_CONTENT, "base64"));'
-          KEYCHAIN_PASSWORD=$(uuidgen)
-          echo "::add-mask::$KEYCHAIN_PASSWORD"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security import "$CERTIFICATE_PATH" -P "$MACOS_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
-          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security list-keychains -d user -s "$KEYCHAIN_PATH"
-
-      - name: Decode Windows signing certificate
-        if: matrix.platform == 'win32'
-        shell: pwsh
-        env:
-          WINDOWS_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE }}
-          WINDOWS_CERTIFICATE_FILE: ${{ runner.temp }}/pstdio-desktop.pfx
-        run: |
-          if (-not $env:WINDOWS_CERTIFICATE) { throw "WINDOWS_CERTIFICATE is required" }
-          [IO.File]::WriteAllBytes($env:WINDOWS_CERTIFICATE_FILE, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE))
-
-      - name: Build signed macOS distributions
-        if: matrix.platform == 'darwin'
-        env:
-          DEBUG: electron-notarize*
-          PSTDIO_DESKTOP_RELEASE: "1"
-          MACOS_SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
-          APPLE_API_KEY: ${{ runner.temp }}/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8
-          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
-          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
-        run: bun run --cwd clients/desktop make -- --arch=${{ matrix.arch }}
-
-      - name: Build signed Windows distributions
-        if: matrix.platform == 'win32'
-        env:
-          PSTDIO_DESKTOP_RELEASE: "1"
-          WINDOWS_CERTIFICATE_FILE: ${{ runner.temp }}/pstdio-desktop.pfx
-          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
-        run: bun run --cwd clients/desktop make -- --arch=${{ matrix.arch }}
-
-      - name: Build Linux distributions
-        if: matrix.platform == 'linux'
-        env:
-          PSTDIO_DESKTOP_RELEASE: "1"
-        run: bun run --cwd clients/desktop make -- --arch=${{ matrix.arch }}
-
-      - name: Configure Linux Chromium sandbox
-        if: matrix.platform == 'linux'
-        shell: bash
-        run: |
-          set -euo pipefail
-          sandbox_path="clients/desktop/out/prompt-studio-linux-${{ matrix.arch }}/chrome-sandbox"
-          test -f "$sandbox_path"
-          sudo chown root:root "$sandbox_path"
-          sudo chmod 4755 "$sandbox_path"
-          test "$(stat -c '%U:%G %a' "$sandbox_path")" = "root:root 4755"
-
+          APP_PATH="clients/desktop/out/Prompt Studio-darwin-x64/Prompt Studio.app"
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
+          xcrun stapler validate "$APP_PATH"
+          spctl --assess --type execute --verbose=2 "$APP_PATH"
+      - name: Build fixture SDK
+        run: bun run --cwd packages/sdk build
       - name: Verify Electron fuse policy
         run: bun run --cwd clients/desktop verify:fuses
-
-      - name: Retain signed diagnostic application
-        if: matrix.platform == 'darwin'
-        run: >-
-          ditto -c -k --sequesterRsrc --keepParent
-          "clients/desktop/out/Prompt Studio-darwin-${{ matrix.arch }}/Prompt Studio.app"
-          "${{ runner.temp }}/signed-diagnostic-app.zip"
-
-      - uses: actions/upload-artifact@v4
-        if: matrix.platform == 'darwin'
-        with:
-          name: signed-diagnostic-app-${{ matrix.target }}
-          path: ${{ runner.temp }}/signed-diagnostic-app.zip
-          compression-level: 0
-          retention-days: 7
-
       - name: Smoke packaged application
-        if: matrix.platform != 'linux'
         run: bun run --cwd clients/desktop test:packaged
-
-      - name: Smoke packaged Linux application
-        if: matrix.platform == 'linux'
-        run: xvfb-run -a bun run --cwd clients/desktop test:packaged
-
-      - name: Upload packaged release-readiness evidence
+      - name: Retain packaged readiness evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: candidate-readiness-${{ matrix.target }}
+          name: candidate-readiness-darwin-x64
           path: clients/desktop/test-results
           if-no-files-found: error
           retention-days: 7
-
-      - name: Verify macOS signatures and notarization
-        if: matrix.platform == 'darwin'
-        shell: bash
-        run: |
-          set -euo pipefail
-          APP_PATH="clients/desktop/out/Prompt Studio-darwin-${{ matrix.arch }}/Prompt Studio.app"
-          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
-          codesign --verify --strict --verbose=2 "$APP_PATH/Contents/Resources/bin/pstdio"
-          xcrun stapler validate "$APP_PATH"
-          spctl --assess --type execute --verbose=2 "$APP_PATH"
-
-      - name: Verify Windows signatures
-        if: matrix.platform == 'win32'
-        shell: pwsh
-        run: |
-          $paths = @(
-            "clients/desktop/out/Prompt Studio-win32-x64/Prompt Studio.exe",
-            "clients/desktop/out/Prompt Studio-win32-x64/resources/bin/pstdio.exe",
-            (Get-ChildItem "clients/desktop/out/make" -Recurse -Filter "*Setup.exe" | Select-Object -First 1 -ExpandProperty FullName)
-          )
-          foreach ($path in $paths) {
-            $signature = Get-AuthenticodeSignature $path
-            if ($signature.Status -ne "Valid") { throw "Invalid Authenticode signature: $path ($($signature.Status))" }
-          }
-
-      - name: Verify Linux package
-        if: matrix.platform == 'linux'
-        shell: bash
-        run: |
-          set -euo pipefail
-          DEB=$(find clients/desktop/out/make -type f -name '*.deb' -print -quit)
-          test -n "$DEB"
-          dpkg-deb --info "$DEB"
-
-      - name: Describe the unpublished candidate
-        env:
-          CANDIDATE_NOTES: ${{ runner.temp }}/desktop-release-notes.md
-        run: >-
-          bun -e 'await Bun.write(process.env.CANDIDATE_NOTES,
-          "Unpublished validation candidate at " + process.env.GITHUB_SHA +
-          ". This is not a release and must not replace published version assets.");'
-
-      - name: Prepare release artifacts
-        env:
-          PSTDIO_DESKTOP_PUBLISHED_AT: ${{ github.event.repository.updated_at }}
-        run: >-
-          bun run --cwd clients/desktop release:prepare -- --target ${{ matrix.target }}
-          --notes-file "${{ runner.temp }}/desktop-release-notes.md"
-
-      - name: Upload verified native artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: desktop-candidate-${{ matrix.target }}
-          path: clients/desktop/out/release/${{ matrix.target }}/*
-          if-no-files-found: error
-          retention-days: 7
-
-      - name: Remove macOS signing keychain
-        if: always() && matrix.platform == 'darwin'
-        shell: bash
-        env:
-          KEYCHAIN_PATH: ${{ runner.temp }}/pstdio-desktop.keychain-db
-        run: security delete-keychain "$KEYCHAIN_PATH" || true

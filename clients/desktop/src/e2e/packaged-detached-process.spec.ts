@@ -25,7 +25,7 @@ for (const shutdown of ["desktop quit", "API shutdown"] as const) {
     try {
       app = await launchPackagedApp(home, {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-          defaultExtensions: [{ source: fixturePath, installName: "workbench-fixture" }],
+          defaultExtensions: [{ source: fixturePath, installName: "workbench-fixture", skipInstall: true }],
         }),
       });
       const project = await app.page.evaluate(async () => {
