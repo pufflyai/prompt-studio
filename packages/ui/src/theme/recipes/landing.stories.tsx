@@ -1,11 +1,12 @@
-import { Box, Button, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Box, Button, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ChevronDown, Download } from "lucide-react";
+import { ChevronDown, Download, SquareTerminal } from "lucide-react";
 import { ResizableSplitLayout } from "@/components/layout/resizable-split-layout";
 import { SearchableMenu } from "@/components/overlays/searchable-menu";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 
-const LandingPanels = () => {
+const LandingPanels = (props: { section?: string }) => {
+  const { section } = props;
   const recipe = useSlotRecipe({ key: "landing" });
   const styles = recipe({});
   return (
@@ -45,32 +46,50 @@ const LandingPanels = () => {
                       <Text textStyle="label/S/regular" color="fg.muted">
                         macOS · Apple silicon · DMG · v0.32.0
                       </Text>
-                      <SearchableMenu
-                        showSearch={false}
-                        searchPlaceholder="Find a build"
-                        emptyState="No builds available"
-                        trigger={
-                          <Button variant="ghost" size="sm">
-                            Other platforms
-                            <ChevronDown />
-                          </Button>
-                        }
-                        items={[
-                          { id: "mac", label: "macOS · Apple silicon · DMG", isSelected: true },
-                          { id: "linux", label: "Linux · x64 · DEB" },
-                        ]}
-                      />
-                      <Button asChild variant="ghost" size="sm">
-                        <a href="https://github.com/pufflyai/prompt-studio/blob/main/.pstdio/docs/product/cli/setup.md">
-                          Use via CLI
-                        </a>
-                      </Button>
+                      <HStack gap="xs">
+                        <SearchableMenu
+                          showSearch={false}
+                          searchPlaceholder="Find a build"
+                          emptyState="No builds available"
+                          trigger={
+                            <Button variant="ghost" size="sm">
+                              Other platforms
+                              <ChevronDown />
+                            </Button>
+                          }
+                          items={[
+                            { id: "mac", label: "macOS · Apple silicon · DMG", isSelected: true },
+                            { id: "linux", label: "Linux · x64 · DEB" },
+                          ]}
+                        />
+                        <Button asChild variant="ghost" size="sm">
+                          <a href="https://github.com/pufflyai/prompt-studio/blob/main/README.md">
+                            <SquareTerminal />
+                            Use via CLI
+                          </a>
+                        </Button>
+                      </HStack>
                     </Box>
                   </Box>
                 </ScrollArea>
               </Box>
             }
-            contentPanel={<Box css={styles.tools} />}
+            contentPanel={
+              <Box css={styles.tools}>
+                {section && (
+                  <ScrollArea height="full">
+                    <Stack gap="xl" p="xl">
+                      <Text as="h2" textStyle="heading/M">
+                        {section}
+                      </Text>
+                      <Text textStyle="paragraph/M/regular" color="fg.muted">
+                        Build custom tools with your agent and use them together in one app.
+                      </Text>
+                    </Stack>
+                  </ScrollArea>
+                )}
+              </Box>
+            }
           />
         </Box>
       </Box>
@@ -87,3 +106,5 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Desktop: Story = {};
+export const WhyPromptStudio: Story = { args: { section: "All your vibe coded tools under one roof" } };
+export const Features: Story = { args: { section: "A workspace for the tools you build." } };

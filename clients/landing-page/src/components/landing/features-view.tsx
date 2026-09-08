@@ -2,47 +2,69 @@ import { Box, Flex, Heading, HStack, SimpleGrid, Stack, Text } from "@chakra-ui/
 import { ToolShape, type ToolShapeKind } from "../shapes/tool-shapes";
 import { PageScroll } from "./page-scroll";
 
-/** What Prompt Studio hands every tool. Ordered as the mission lists the core areas. */
+/** Features people use while building and running their tools. */
 const PROVIDED = [
   {
     name: "Sessions",
     detail:
-      "The durable record of one agent run: the prompt, the live output, approvals, attachments, and how it ended. Still readable a month later.",
+      "Follow your agent as it works. Read its output, answer questions, and return to the conversation when you need it.",
   },
   {
     name: "Workspaces",
     detail:
-      "An isolated place for work to happen, backed by a git worktree by default, so several agents can run at once without standing on each other.",
+      "Work on several ideas at once. Give each agent its own copy of the project so changes stay separate until you are ready to bring them together.",
   },
   {
     name: "Storage",
-    detail:
-      "Somewhere for your tool to keep its data, scoped to your extension, backed up and synced with everything else.",
+    detail: "Keep the information your tools collect and create. Come back to it the next time you open the project.",
   },
   {
     name: "Live sync",
-    detail:
-      "Every client and every agent sees the same state as it changes. You do not write subscriptions, polling, or reconciliation.",
+    detail: "See updates as they happen while you and your agents work on the same project.",
   },
   {
-    name: "Permissions",
-    detail:
-      "What a tool is allowed to touch, and the secrets it can never read. Enforced by the platform, so one careless extension cannot widen its own access.",
+    name: "Notifications",
+    detail: "Find out when a task finishes or an agent needs your input, without watching every conversation.",
   },
 ];
 
 /** What an extension contributes. One shape per surface, matching the illustration vocabulary. */
 const SURFACES: { name: string; badge: string; kind: ToolShapeKind; detail: string }[] = [
-  { name: "Commands", badge: "CLI", kind: "command", detail: "Add pst commands that people and agents can both run." },
-  { name: "Pages", badge: "UI", kind: "page", detail: "Add project pages inside the workbench." },
-  { name: "Editors", badge: "NATIVE", kind: "editor", detail: "Build native editors for project resources." },
-  { name: "Skills", badge: "AGENT", kind: "skill", detail: "Package instructions an agent can install and follow." },
-  { name: "Hooks", badge: "EVENTS", kind: "hook", detail: "React to project, workspace, and session events." },
+  {
+    name: "Commands",
+    badge: "CLI",
+    kind: "command",
+    detail: "Turn repeated work into a command you or your agent can run.",
+  },
+  {
+    name: "Pages",
+    badge: "UI",
+    kind: "page",
+    detail: "Build dashboards, trackers, and forms you can open beside your other tools.",
+  },
+  {
+    name: "Editors",
+    badge: "NATIVE",
+    kind: "editor",
+    detail: "View and edit project files in a way that fits their content.",
+  },
+  {
+    name: "Skills",
+    badge: "AGENT",
+    kind: "skill",
+    detail: "Teach your agent how you want a task done, then reuse those instructions.",
+  },
+  {
+    name: "Hooks",
+    badge: "EVENTS",
+    kind: "hook",
+    detail: "Run a tool when something changes in your project or an agent finishes work.",
+  },
   {
     name: "Automations",
     badge: "SCHEDULED",
     kind: "automation",
-    detail: "Schedule extension work without leaving the project.",
+    detail: "Schedule summaries, checks, and other tasks to run for you.",
   },
 ];
 
@@ -69,16 +91,15 @@ export const FeaturesView = () => (
           lineHeight="1.15"
           maxWidth="660px"
         >
-          What you get, and what you add.
+          A workspace for the tools you build.
         </Heading>
         <Text fontFamily="body" fontSize="15px" lineHeight="1.5" color="fg.muted" maxWidth="660px">
-          Prompt Studio runs the parts every tool needs. Anything specific to your work is an extension, and an
-          extension is a plain package built with @pstdio/sdk.
+          Build custom tools with your agent, use them together, and keep improving them as your work changes.
         </Text>
 
         <SectionHeading
-          title="What Prompt Studio provides"
-          intro="Handed to every tool, on its first line. None of it is yours to write, configure, or keep in sync."
+          title="Build with your agents"
+          intro="Keep your conversations, project files, and running work together."
         />
         <Stack gap="24px" pt="8px">
           {PROVIDED.map((service) => (
@@ -94,15 +115,15 @@ export const FeaturesView = () => (
         </Stack>
 
         <SectionHeading
-          title="Everything else is an extension"
-          intro="The workbench has no fixed set of screens. Its tabs, pages, editors, commands and scheduled work are all contributed, including the ones Prompt Studio ships with. Your extensions use exactly the same interfaces as ours."
+          title="Choose what belongs in your workspace"
+          intro="Add the tools you need and remove the ones you do not. Tools are packaged as extensions, so you can install one, build your own, or change an existing one with your agent."
         />
 
         <SectionHeading
-          title="What an extension can add"
-          intro="Six surfaces. Ask for any of them in a sentence and your agent writes the extension that contributes it."
+          title="What will you build?"
+          intro="A dashboard for your data, an editor for your files, or a task that runs every morning. Describe what you want your tool to do."
         />
-        <SimpleGrid columns={{ base: 1, md: 2 }} gap="12px" pt="2px">
+        <SimpleGrid minChildWidth="60" gap="12px" pt="2px">
           {SURFACES.map((surface) => (
             <Stack
               key={surface.name}

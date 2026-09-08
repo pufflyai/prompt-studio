@@ -3,8 +3,10 @@
 The landing page uses the shared UI theme and panel separators. Its Pencil source is
 `design/prompt-studio-design-system.pen`; the main frame is `web/Landing Workbench`.
 
-The home page has a 480px introduction panel and a tools panel. On small screens the
-panels stack vertically. Sections use the shared ScrollArea. Six tools start on the
+Every page keeps the 480px introduction and download panel on the left. Navigation
+changes the right panel, preserving the selected download and resized panel width.
+On small screens the panels stack and share one ScrollArea. Desktop panels scroll
+independently. The home page shows a tools panel. Six tools start on the
 floor at random positions and angles. One tool drops from a random position every
 three seconds until there are 30. Tools can be dragged. Reduced motion keeps the
 initial six tools still. Random placements stay stable through redraws and resizing.
@@ -20,7 +22,8 @@ its drawing and collisions stay aligned as it turns.
 The picker lists only published desktop packages, excluding CLI binaries and
 extension releases. It prefers the visitor's operating system when available.
 The selected build shows its platform, architecture, package format and version.
-Each platform option occupies one row. A separate link opens the CLI documentation.
+Each platform option occupies one row. Other platforms and Use via CLI share a row
+under the build details. The CLI link opens the repository's README on GitHub.
 If GitHub cannot be reached, the download button opens the releases page.
 
 ## Isolated preview

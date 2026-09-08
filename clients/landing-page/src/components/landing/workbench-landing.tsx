@@ -5,12 +5,14 @@ import { CommandPaletteModal } from "./command-palette-modal";
 import { privacyPage, termsPage } from "./content/legal";
 import { docPageToMarkdown } from "./doc-page-markdown";
 import { DocView } from "./doc-view";
+import { START_HERE_INTRO, START_HERE_TITLE } from "./download-panel";
 import { FeaturesView } from "./features-view";
 import type { LandingView } from "./landing-content";
+import { LandingPanels } from "./landing-panels";
 import { landingPathForView, landingViewFromPath } from "./landing-route";
 import { ProjectTabsBar } from "./project-tabs-bar";
 import { ResourceSidebar } from "./resource-sidebar";
-import { START_HERE_INTRO, START_HERE_TITLE, StartHereView } from "./start-here-view";
+import { StartHereView } from "./start-here-view";
 import { useLandingStyles } from "./use-landing-styles";
 import { useWindowChrome } from "./use-window-chrome";
 import { WhyPromptStudioView } from "./why-prompt-studio-view";
@@ -87,7 +89,9 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
         onOpenNavigation={() => setPaletteOpen(true)}
       />
       <Box as="main" css={styles.main}>
-        <LandingContent view={view} windowOffset={windowed ? offset : undefined} />
+        <LandingPanels>
+          <LandingContent view={view} windowOffset={windowed ? offset : undefined} />
+        </LandingPanels>
       </Box>
     </Flex>
   );

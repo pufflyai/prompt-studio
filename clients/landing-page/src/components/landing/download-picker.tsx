@@ -1,4 +1,4 @@
-import { Box, Button, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import { SearchableMenu } from "@pstdio/ui";
 import { ChevronDown, Download, Monitor, SquareTerminal } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -55,33 +55,35 @@ export const DownloadPicker = () => {
           ? `${selected.platform} · ${selected.architecture} · ${downloadDescription(selected)} · v${release.version} · ${Math.round(selected.size / 1024 / 1024)} MB`
           : "Browse available desktop builds on GitHub."}
       </Text>
-      {selected && release && (
-        <SearchableMenu
-          searchPlaceholder="Find a build"
-          emptyState="No builds available"
-          showSearch={false}
-          width="20rem"
-          trigger={
-            <Button variant="ghost" size="sm">
-              Other platforms
-              <ChevronDown />
-            </Button>
-          }
-          items={release.downloads.map((download) => ({
-            id: download.id,
-            label: `${download.platform} · ${download.architecture} · ${download.format.toUpperCase()}`,
-            icon: Monitor,
-            isSelected: download.id === selected.id,
-            onSelect: () => setSelectedId(download.id),
-          }))}
-        />
-      )}
-      <Button asChild variant="ghost" size="sm">
-        <a href={SITE_LINKS.cliDocs} target="_blank" rel="noopener">
-          <SquareTerminal />
-          Use via CLI
-        </a>
-      </Button>
+      <HStack gap="xs">
+        {selected && release && (
+          <SearchableMenu
+            searchPlaceholder="Find a build"
+            emptyState="No builds available"
+            showSearch={false}
+            width="20rem"
+            trigger={
+              <Button variant="ghost" size="sm">
+                Other platforms
+                <ChevronDown />
+              </Button>
+            }
+            items={release.downloads.map((download) => ({
+              id: download.id,
+              label: `${download.platform} · ${download.architecture} · ${download.format.toUpperCase()}`,
+              icon: Monitor,
+              isSelected: download.id === selected.id,
+              onSelect: () => setSelectedId(download.id),
+            }))}
+          />
+        )}
+        <Button asChild variant="ghost" size="sm">
+          <a href={SITE_LINKS.readme} target="_blank" rel="noopener">
+            <SquareTerminal />
+            Use via CLI
+          </a>
+        </Button>
+      </HStack>
       {failed && (
         <Text textStyle="label/S/regular" color="fg.muted">
           Build details are unavailable. The button opens all releases.

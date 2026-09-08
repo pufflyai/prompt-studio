@@ -5,7 +5,7 @@ export const INSTALL_COMMANDS = ["bun add --global pstdio@latest", "pst"];
 
 export const SITE_LINKS = {
   github: "https://github.com/pufflyai/prompt-studio",
-  cliDocs: "https://github.com/pufflyai/prompt-studio/blob/main/.pstdio/docs/product/cli/setup.md",
+  readme: "https://github.com/pufflyai/prompt-studio/blob/main/README.md",
   issues: "https://github.com/pufflyai/prompt-studio/issues",
   discord: "https://discord.gg/3RxwUEk8fW",
   harnessClaudeCode: "https://github.com/pufflyai/prompt-studio/tree/main/extensions/harness-claude-code",
