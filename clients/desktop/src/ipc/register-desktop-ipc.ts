@@ -4,10 +4,10 @@ import type { DesktopProjectTabsState, DesktopWorkbenchState } from "../desktop-
 import { DESKTOP_CHANNELS } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { isAllowedIpcSender } from "../security/ipc-security";
-import { titleBarOverlayOptions } from "../windows/title-bar-appearance";
+import { type TitleBarAppearance, titleBarOverlayOptions } from "../windows/title-bar-appearance";
 
 type DesktopIpcOptions = {
-  setTitleBarAppearance: (appearance: { color: string; symbolColor: string }) => void;
+  setTitleBarAppearance: (appearance: TitleBarAppearance) => void;
   appInfo: () => { platform: string; version: string };
   cancelQuit: () => Promise<void>;
   checkForUpdates: () => Promise<void>;

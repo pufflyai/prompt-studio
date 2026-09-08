@@ -1,16 +1,22 @@
-interface TitleBarAppearance {
-  color: string;
-  symbolColor: string;
-}
+import type { TitleBarAppearance } from "./title-bar-appearance";
 
-// The renderer owns theme colors. Native controls must follow the rendered theme,
-// which can differ from the operating system theme.
+// The renderer owns the title bar dimensions and theme. Native controls must
+// share that geometry so their icons stay centered beside the project tabs.
 export const observeTitleBarAppearance = (update: (appearance: TitleBarAppearance) => void) => {
   const sync = () => {
     const titleBar = document.querySelector("[data-window-title-bar]");
     if (!titleBar) return;
     const style = getComputedStyle(titleBar);
-    update({ color: style.backgroundColor, symbolColor: style.color });
+    update({ color: style.backgroundColor, symbolColor: style.color, height: titleBar.clientHeight });
+  };
+
+  const size = new ResizeObserver(sync);
+  const observeTitleBar = () => {
+    const titleBar = document.querySelector("[data-window-title-bar]");
+    if (!titleBar) return false;
+    size.observe(titleBar);
+    sync();
+    return true;
   };
 
   const theme = new MutationObserver(sync);
@@ -19,17 +25,15 @@ export const observeTitleBarAppearance = (update: (appearance: TitleBarAppearanc
   }
 
   const mounted = new MutationObserver(() => {
-    if (!document.querySelector("[data-window-title-bar]")) return;
-    sync();
-    mounted.disconnect();
+    if (observeTitleBar()) mounted.disconnect();
   });
-  mounted.observe(document.body, { childList: true, subtree: true });
+  if (!observeTitleBar()) mounted.observe(document.body, { childList: true, subtree: true });
   window.addEventListener("focus", sync);
-  sync();
 
   return () => {
     mounted.disconnect();
     theme.disconnect();
+    size.disconnect();
     window.removeEventListener("focus", sync);
   };
 };
