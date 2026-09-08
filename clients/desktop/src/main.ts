@@ -127,7 +127,8 @@ const startRuntime = async () => {
   setState(initialDesktopState);
   const lifecycleReady = windowController?.showLifecycle();
   try {
-    const [runtime] = await Promise.all([runtimeManager.start(), lifecycleReady]);
+    const runtime = await runtimeManager.start();
+    await Promise.all([windowController?.showWorkbench(runtime.descriptor), lifecycleReady]);
     setState(
       transitionDesktopState(state, {
         type: "runtime_ready",
@@ -138,7 +139,6 @@ const startRuntime = async () => {
         },
       }),
     );
-    await windowController?.showWorkbench(runtime.descriptor);
   } catch (error) {
     await lifecycleReady;
     logger.error(

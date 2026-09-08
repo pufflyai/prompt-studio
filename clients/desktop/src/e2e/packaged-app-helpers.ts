@@ -6,8 +6,7 @@ import { type Browser, chromium, type Page, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
 import { redactSensitiveText } from "pstdio-logging";
 import { resolvePackagedLayout } from "../packaging/package-layout";
-import { LIFECYCLE_URL } from "../windows/lifecycle-protocol";
-import { waitForWorkbenchPage } from "./desktop-pages";
+import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
 import { waitForVisibleElement } from "./visible-element-timing";
 
@@ -115,8 +114,8 @@ export const launchPackagedWindow = async (home: string, runtimeEnvironment: Rec
     const runtime = await waitForDescriptor(home);
     browser = await chromium.connectOverCDP(endpoint);
     const context = browser.contexts()[0];
-    const lifecyclePage = context?.pages().find((page) => page.url() === LIFECYCLE_URL) ?? context?.pages()[0];
-    if (!lifecyclePage || !context) throw new Error("Packaged app did not create a lifecycle page");
+    if (!context) throw new Error("Packaged app did not create a browser context");
+    const lifecyclePage = await waitForLifecyclePage(context);
     const finishTrace = await startElectronTrace(context, `packaged-${child.pid}`);
     return { home, browser, child, lifecyclePage, startedAt, runtime, finishTrace };
   } catch (error) {
