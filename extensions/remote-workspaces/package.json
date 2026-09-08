@@ -1,11 +1,11 @@
 {
-  "name": "remote-execution",
+  "name": "remote-workspaces",
   "version": "1.1.0",
-  "displayName": "Remote Execution Example",
-  "description": "Shows remote workspaces, a cwd-free harness, named connections, and scoped automation.",
+  "displayName": "Remote Workspaces",
+  "description": "Run agent sessions in PocketCoder workspaces on another machine.",
   "private": true,
   "type": "module",
-  "publisher": "example",
+  "publisher": "pstdio",
   "main": "./extension.ts",
   "engines": {
     "pstdio": "1.0.0-alpha.10"
