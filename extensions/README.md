@@ -231,5 +231,5 @@ Each enabled extension also registers a command palette action named `Reset <ext
 - [Extension authoring guide](./docs/index.md)
 - [Extension API](./docs/api.md)
 - [Planner extension](./pstdio-planner/README.md)
-- [Remote execution extension](./remote-execution/README.md)
+- [Remote Workspaces extension](./remove-workspaces/README.md)
 - [Extension runtime architecture](../.pstdio/docs/architecture/extensions-runtime.md)

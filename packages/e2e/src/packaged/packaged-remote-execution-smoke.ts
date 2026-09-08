@@ -5,12 +5,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
+import { verifyPocketCoderLifecycle } from "./packaged-pocketcoder-lifecycle";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 const repoRoot = join(import.meta.dirname, "../../../..");
 
 export const registerRemoteExecutionSmokeTests = () => {
-  test("installs remote execution with its connection, harness, and automation command", async () => {
+  test("installs remote workspaces and runs a PocketCoder conversation through the packaged host", async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-remote-execution-"));
     let child: ChildProcess | null = null;
     let closeRegistry: (() => Promise<void>) | null = null;
@@ -26,7 +27,7 @@ export const registerRemoteExecutionSmokeTests = () => {
       const started = await startPackagedServe(tempRoot, {
         NPM_CONFIG_USERCONFIG: npmConfigPath,
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-          defaultExtensions: [{ source: join(repoRoot, "extensions/remote-execution") }],
+          defaultExtensions: [{ source: join(repoRoot, "extensions/remove-workspaces") }],
         }),
       });
       child = started.child;
@@ -39,7 +40,7 @@ export const registerRemoteExecutionSmokeTests = () => {
       expect(createRes.status).toBe(201);
       const project = (await createRes.json()) as { id: string; extension_warnings?: unknown[] };
       expect(project.extension_warnings).toBeUndefined();
-      expect(existsSync(join(tempRoot, "extensions/remote-execution/node_modules/@pstdio/sdk/package.json"))).toBe(
+      expect(existsSync(join(tempRoot, "extensions/remove-workspaces/node_modules/@pstdio/sdk/package.json"))).toBe(
         true,
       );
 
@@ -48,18 +49,19 @@ export const registerRemoteExecutionSmokeTests = () => {
       const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
       expect(metadata.connections).toContainEqual(
         expect.objectContaining({
-          extensionId: "pstdio.remote-execution",
-          localId: "control-plane",
+          extensionId: "pstdio.remove-workspaces",
+          localId: "pocketcoder",
           authType: "bearer",
           supportsCheck: true,
         }),
       );
       expect(metadata.harnesses).toContainEqual(
-        expect.objectContaining({ id: "pstdio.remote-execution.harness.remote-agent" }),
+        expect.objectContaining({ id: "pstdio.remove-workspaces.harness.remote-agent" }),
       );
       expect(metadata.commands).toContainEqual(
-        expect.objectContaining({ id: "pstdio.remote-execution.command.launch", automation: true }),
+        expect.objectContaining({ id: "pstdio.remove-workspaces.command.launch", automation: true }),
       );
+      await verifyPocketCoderLifecycle(started.baseUrl, headers, project.id);
     } finally {
       if (child) await stopProcess(child);
       if (closeRegistry) await closeRegistry();

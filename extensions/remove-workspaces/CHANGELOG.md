@@ -1,4 +1,4 @@
-# remote-execution
+# remove-workspaces
 
 ## 1.1.0
 
