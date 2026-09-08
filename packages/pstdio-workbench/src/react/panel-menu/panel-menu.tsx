@@ -24,7 +24,6 @@ import { resolvePanelCollapsible } from "../workbench/workbench-panel-state";
 import {
   canAttachWorkbenchPanelMenu,
   PANEL_CONTENT_MIN_SIZE_PX,
-  PANEL_MENU_RESIZE_HANDLE_SIZE_PX,
   shouldCollapseWorkbenchPanelMenus,
 } from "./panel-menu-sizing";
 
@@ -152,9 +151,7 @@ const addPanelMenu = (input: { content: ReactNode; view: WorkbenchPanelMenuView;
       minSizePx={view.size.minPx}
       maxSizePx={view.size.maxPx}
       contentMinSizePx={PANEL_CONTENT_MIN_SIZE_PX}
-      resizeHandleSizePx={PANEL_MENU_RESIZE_HANDLE_SIZE_PX}
       resizeLabel={`Resize ${view.label}`}
-      showResizeSeparator
       onSizeChange={(width) => workbench.layout.setRegionSize(view.region, width)}
       onCollapsedChange={view.onCollapsedChange}
     />

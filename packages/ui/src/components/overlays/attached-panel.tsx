@@ -22,7 +22,6 @@ export const AttachedPanel = (props: AttachedPanelProps) => {
       w={resolvedWidth}
       minW={resolvedMinWidth}
       h="100%"
-      borderLeftWidth="1px"
       bg="bg"
       overflow="hidden"
       {...rest}

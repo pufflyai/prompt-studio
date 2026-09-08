@@ -40,9 +40,11 @@ export const spacing = {
   "4xl": { value: sp[800] },
   "4.5xl": { value: sp[900] },
   "5xl": { value: sp[1600] },
+  "panel-gap": { value: sp[50] },
 };
 
 export const sizes = {
+  "panel-gap": { value: sp[50] },
   "window-title-bar": { value: "2.75rem" },
   "window-tab": { value: "1.75rem" },
   "window-tab-close": { value: "0.8125rem" },

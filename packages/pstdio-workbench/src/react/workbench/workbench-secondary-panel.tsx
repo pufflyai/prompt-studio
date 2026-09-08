@@ -27,6 +27,7 @@ export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => 
       data-workbench-region="secondary"
       as="section"
       bg={workbenchBackgrounds.panel}
+      layerStyle="panel"
       flex="1"
       h="full"
       minH="0"

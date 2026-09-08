@@ -1,8 +1,20 @@
-import { Box } from "@chakra-ui/react";
-import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
+import { Box, Flex } from "@chakra-ui/react";
+import {
+  type KeyboardEvent as ReactKeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import type { getResizableSplitAxis } from "@/components/layout/resizable-split-layout.geometry";
 
-const RESIZE_SEPARATOR_HOVER_STYLE = { _before: { bg: "border.inverted" } };
+// The separator is the gap between two panels. At rest it shows a grip of three
+// dots. After a short hover delay, while dragging, or on keyboard focus it becomes
+// a full-length bar so the drag target is obvious. The visible part is as thin as
+// the gap; an invisible hit area extends over the neighbouring panels.
+
+const HOVER_DELAY_MS = 250;
+const GRIP_DOTS = [0, 1, 2];
 
 interface ResizeHandleProps {
   axis: ReturnType<typeof getResizableSplitAxis>;
@@ -10,11 +22,11 @@ interface ResizeHandleProps {
   collapsed: boolean;
   collapsible: boolean;
   contentPanelId: string;
+  dragging: boolean;
   resizablePanelId: string;
-  resizeHandleSizePx: number;
   resizeLabel: string;
   resolvedPanelSize: number;
-  showResizeSeparator: boolean;
+  onCollapse: () => void;
   onResizeKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
   onResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
 }
@@ -26,39 +38,36 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
     collapsed,
     collapsible,
     contentPanelId,
+    dragging,
     resizablePanelId,
-    resizeHandleSizePx,
     resizeLabel,
     resolvedPanelSize,
-    showResizeSeparator,
+    onCollapse,
     onResizeKeyDown,
     onResizeStart,
   } = props;
-  const verticalSeparator = axis.separatorOrientation === "vertical";
-  const resizeHandleSize = `${resizeHandleSizePx}px`;
-  const resizeHandleOffset = `${resizeHandleSizePx / -2}px`;
-  const separatorStyle = verticalSeparator
-    ? {
-        content: '""',
-        position: "absolute" as const,
-        top: 0,
-        bottom: 0,
-        insetInlineStart: "50%",
-        w: "1px",
-        bg: showResizeSeparator ? "border" : "transparent",
-        transform: "translateX(-50%)",
-      }
-    : {
-        content: '""',
-        position: "absolute" as const,
-        insetInline: 0,
-        top: "50%",
-        h: "1px",
-        bg: showResizeSeparator ? "border" : "transparent",
-        transform: "translateY(-50%)",
-      };
+  const vertical = axis.separatorOrientation === "vertical";
+  const [hovered, setHovered] = useState(false);
+  const hoverTimerRef = useRef(0);
+  const active = hovered || dragging;
+
+  useEffect(() => () => window.clearTimeout(hoverTimerRef.current), []);
+
+  const handlePointerEnter = () => {
+    hoverTimerRef.current = window.setTimeout(() => setHovered(true), HOVER_DELAY_MS);
+  };
+
+  const handlePointerLeave = () => {
+    window.clearTimeout(hoverTimerRef.current);
+    setHovered(false);
+  };
+
+  const hitArea = vertical
+    ? { top: 0, bottom: 0, insetInlineStart: "-1", insetInlineEnd: "-1" }
+    : { insetInline: 0, top: "-1", bottom: "-1" };
+
   return (
-    <Box
+    <Flex
       role="separator"
       aria-label={resizeLabel}
       aria-orientation={axis.separatorOrientation}
@@ -68,28 +77,52 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
       aria-valuenow={Math.round(resolvedPanelSize)}
       aria-hidden={collapsed ? true : undefined}
       tabIndex={collapsed ? -1 : 0}
-      display={collapsed ? "none" : undefined}
+      display={collapsed ? "none" : "flex"}
       position="relative"
       zIndex="docked"
-      flex={`0 0 ${resizeHandleSize}`}
-      h={verticalSeparator ? "full" : resizeHandleSize}
-      w={verticalSeparator ? resizeHandleSize : "full"}
-      mx={verticalSeparator ? resizeHandleOffset : undefined}
-      my={verticalSeparator ? undefined : resizeHandleOffset}
+      align="center"
+      justify="center"
+      flexShrink={0}
+      w={vertical ? "panel-gap" : "full"}
+      h={vertical ? "full" : "panel-gap"}
       cursor={axis.cursor}
       touchAction="none"
       outline="none"
+      _before={{ content: '""', position: "absolute", ...hitArea }}
+      _focusVisible={{ "& [data-part=bar]": { opacity: 1 }, "& [data-part=grip]": { opacity: 0 } }}
+      onPointerEnter={handlePointerEnter}
+      onPointerLeave={handlePointerLeave}
       onPointerDown={onResizeStart}
+      onDoubleClick={collapsible ? onCollapse : undefined}
       onKeyDown={onResizeKeyDown}
-      _before={separatorStyle}
-      _hover={showResizeSeparator ? RESIZE_SEPARATOR_HOVER_STYLE : undefined}
-      _focusVisible={{
-        _before: {
-          bg: "colorPalette.focusRing",
-          h: verticalSeparator ? undefined : "2px",
-          w: verticalSeparator ? "2px" : undefined,
-        },
-      }}
-    />
+    >
+      <Flex
+        data-part="grip"
+        direction={vertical ? "column" : "row"}
+        gap="3xs"
+        opacity={active ? 0 : 1}
+        transition="opacity 120ms ease"
+      >
+        {GRIP_DOTS.map((dot) => (
+          <Box key={dot} boxSize="0.5" borderRadius="full" bg="border" />
+        ))}
+      </Flex>
+      <Box
+        data-part="bar"
+        position="absolute"
+        top={vertical ? "0" : "50%"}
+        bottom={vertical ? "0" : undefined}
+        insetInlineStart={vertical ? "50%" : "0"}
+        insetInlineEnd={vertical ? undefined : "0"}
+        w={vertical ? "0.5" : undefined}
+        h={vertical ? undefined : "0.5"}
+        transform={vertical ? "translateX(-50%)" : "translateY(-50%)"}
+        borderRadius="2xs"
+        bg="fg.info"
+        opacity={active ? 1 : 0}
+        transition="opacity 120ms ease"
+        pointerEvents="none"
+      />
+    </Flex>
   );
 };

@@ -19,10 +19,10 @@ interface ResizableSplitPanelsProps {
   resizablePanel: ReactNode;
   resizablePanelId: string;
   resizablePanelRef: RefObject<HTMLDivElement | null>;
-  resizeHandleSizePx: number;
+  dragging: boolean;
   resizeLabel: string;
   resolvedPanelSize: number;
-  showResizeSeparator: boolean;
+  onCollapse: () => void;
   onResizeKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
   onResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
 }
@@ -39,10 +39,10 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
     resizablePanel,
     resizablePanelId,
     resizablePanelRef,
-    resizeHandleSizePx,
+    dragging,
     resizeLabel,
     resolvedPanelSize,
-    showResizeSeparator,
+    onCollapse,
     onResizeKeyDown,
     onResizeStart,
   } = props;
@@ -87,10 +87,10 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
       collapsible={collapsible}
       contentPanelId={contentPanelId}
       resizablePanelId={resizablePanelId}
-      resizeHandleSizePx={resizeHandleSizePx}
+      dragging={dragging}
       resizeLabel={resizeLabel}
       resolvedPanelSize={resolvedPanelSize}
-      showResizeSeparator={showResizeSeparator}
+      onCollapse={onCollapse}
       onResizeKeyDown={onResizeKeyDown}
       onResizeStart={onResizeStart}
     />

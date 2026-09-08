@@ -12,6 +12,13 @@ export const layerStyles = defineLayerStyles({
       boxShadow: "lg",
     },
   },
+  panel: {
+    value: {
+      borderRadius: "sm",
+      borderWidth: "1px",
+      borderColor: "border.subtle",
+    },
+  },
   modal: {
     value: {
       paddingInline: "xs",

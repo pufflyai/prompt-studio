@@ -8,7 +8,7 @@ import {
 describe("workbench theme backgrounds", () => {
   test("maps workbench regions to theme background variables", () => {
     expect(getWorkbenchRegionBackground("activity")).toBe(
-      "var(--chakra-colors-vscode-activityBar-background, var(--chakra-colors-vscode-sideBar-background, var(--chakra-colors-bg-muted)))",
+      "var(--chakra-colors-vscode-editor-background, var(--chakra-colors-bg))",
     );
     expect(getWorkbenchRegionBackground("sidenav")).toBe(
       "var(--chakra-colors-vscode-sideBar-background, var(--chakra-colors-bg-subtle))",
@@ -23,7 +23,7 @@ describe("workbench theme backgrounds", () => {
       "var(--chakra-colors-vscode-editorWidget-background, var(--chakra-colors-vscode-panel-background, var(--chakra-colors-bg-panel)))",
     );
     expect(getWorkbenchRegionBackground("status")).toBe(
-      "var(--chakra-colors-vscode-statusBar-background, var(--chakra-colors-vscode-sideBar-background, var(--chakra-colors-bg-subtle)))",
+      "var(--chakra-colors-vscode-editor-background, var(--chakra-colors-bg))",
     );
     expect(workbenchCommandPaletteBackground).toBe(
       "var(--chakra-colors-vscode-editorWidget-background, var(--chakra-colors-vscode-panel-background, var(--chakra-colors-bg-panel)))",

@@ -86,7 +86,6 @@ export const WorkbenchAttachedSidePanelLayout = (props: WorkbenchAttachedSidePan
       onSizeChange={(width) => workbench.layout.setRegionSize("side", width)}
       contentMinSizePx={contentMinSizePx}
       resizeLabel="Resize Side Panel"
-      showResizeSeparator
       onCollapsedChange={(collapsed) => {
         if (attached && collapsed) onCollapse();
       }}

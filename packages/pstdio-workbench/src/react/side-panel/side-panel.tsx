@@ -55,6 +55,7 @@ export const WorkbenchAttachedSidePanel = (props: WorkbenchSidePanelProps) => {
         width="full"
         minWidth="0"
         bg={workbenchBackgrounds.widget}
+        layerStyle="panel"
         header={
           settings?.showHeader !== false && (header || canFloat) ? (
             <Header data-workbench-panel-header="side" variant="main" flexShrink={0} gap="sm">

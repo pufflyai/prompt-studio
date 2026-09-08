@@ -250,7 +250,6 @@ const WorkbenchContent = (props: WorkbenchProps) => {
       maxSizePx={sidenavSize.maxPx}
       contentMinSizePx={CONTENT_MIN_SIZE_PX}
       resizeLabel="Resize sidenav"
-      showResizeSeparator
       onSizeChange={(width) => workbench.layout.setRegionSize("sidenav", width)}
       onCollapsedChange={(collapsed) => {
         if (!collapsed || sidenavCollapsible) setPanelOpen("sidenav", !collapsed);
@@ -274,7 +273,15 @@ const WorkbenchContent = (props: WorkbenchProps) => {
     <WorkbenchThemeScope h="full" minH="0" minW="0" w="full">
       <Flex direction="column" h="full" minH="0" minW="0" position="relative" w="full">
         {titleBar}
-        <Flex flex="1" minH="0" minW="0" overflow="hidden">
+        <Flex
+          flex="1"
+          minH="0"
+          minW="0"
+          overflow="hidden"
+          py="panel-gap"
+          pr="panel-gap"
+          pl={hasActivityBarWidgets ? "0" : "panel-gap"}
+        >
           <WorkbenchSidePanelBoundary
             workbench={workbench}
             showAttachedSidePanel={showAttachedSidePanel}
