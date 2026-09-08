@@ -10,7 +10,7 @@ PocketCoder's AgentAPI relay accepts `POST /agent/message` without a caller-supp
 
 ## Temporary workaround
 
-The `remove-workspaces` harness saves the highest existing AgentAPI message ID before submitting each turn. It stores that non-secret cursor in public harness state, keyed by the host session ID and bound to the PocketCoder workspace ID. Reattachment uses the saved cursor and waits for an assistant message beyond it. It never resends a prompt automatically.
+The `remote-workspaces` harness saves the highest existing AgentAPI message ID before submitting each turn. It stores that non-secret cursor in public harness state, keyed by the host session ID and bound to the PocketCoder workspace ID. Reattachment uses the saved cursor and waits for an assistant message beyond it. It never resends a prompt automatically.
 
 The harness owns this cursor. A new turn replaces it. A completed or canceled turn removes it. A disconnected turn retains it for recovery; a later follow-up replaces it. An abandoned disconnected session leaves a small record until the host's harness state is removed. The record contains no transcript or credentials.
 

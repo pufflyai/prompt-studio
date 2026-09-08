@@ -29,7 +29,7 @@ export const verifyPocketCoderLifecycle = async (
     throw new Error("PocketCoder conversation did not complete.");
   };
   try {
-    const connectionPath = `/projects/${projectId}/extension-connections/pstdio.remove-workspaces/pocketcoder`;
+    const connectionPath = `/projects/${projectId}/extension-connections/pstdio.remote-workspaces/pocketcoder`;
     const configured = await call(connectionPath, "PUT", {
       baseUrl: remote.server.url.toString(),
       secret: remote.secret,
@@ -37,7 +37,7 @@ export const verifyPocketCoderLifecycle = async (
     expect(JSON.stringify(configured)).not.toContain(remote.secret);
     expect(await call(`${connectionPath}/check`, "POST")).toMatchObject({ lastCheck: { ok: true } });
     const launched = await call(
-      `/projects/${projectId}/extensions/commands/pstdio.remove-workspaces.command.launch/execute`,
+      `/projects/${projectId}/extensions/commands/pstdio.remote-workspaces.command.launch/execute`,
       "POST",
       {
         source: "api",

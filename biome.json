@@ -50,7 +50,15 @@
           }
         }
       },
-      "nursery": {},
+      "nursery": {
+        "noExcessiveLinesPerFile": {
+          "level": "error",
+          "options": {
+            "maxLines": 350,
+            "skipBlankLines": true
+          }
+        }
+      },
       "a11y": {
         "useButtonType": "off"
       },
@@ -76,6 +84,27 @@
           "correctness": {
             "noUnusedVariables": "off",
             "noUnusedImports": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.spec.ts",
+        "**/*.spec.tsx",
+        "**/*.stories.ts",
+        "**/*.stories.tsx",
+        "**/*.css",
+        "**/*.generated.*",
+        "**/generated/**",
+        "**/__generated__/**"
+      ],
+      "linter": {
+        "rules": {
+          "nursery": {
+            "noExcessiveLinesPerFile": "off"
           }
         }
       }

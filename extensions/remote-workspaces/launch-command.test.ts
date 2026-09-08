@@ -9,7 +9,7 @@ describe("PocketCoder launch", () => {
     const sessions: unknown[] = [];
     const result = await launch.run(
       {
-        extensionId: "pstdio.remove-workspaces",
+        extensionId: "pstdio.remote-workspaces",
         projectId: "project-1",
         workspaces: {
           async create(input: unknown) {
@@ -30,7 +30,7 @@ describe("PocketCoder launch", () => {
       {
         project_id: "project-1",
         shorthand_base: "remote",
-        provider_id: "pstdio.remove-workspaces.workspace-type.remote",
+        provider_id: "pstdio.remote-workspaces.workspace-type.remote",
         params: { template: "pi-harness" },
       },
     ]);
@@ -38,7 +38,7 @@ describe("PocketCoder launch", () => {
       expect.objectContaining({
         prompt: "Implement the ticket",
         workspaceId: "workspace-1",
-        harness: { harnessId: "pstdio.remove-workspaces.harness.remote-agent" },
+        harness: { harnessId: "pstdio.remote-workspaces.harness.remote-agent" },
       }),
     ]);
     expect(result).toEqual({ workspaceId: "workspace-1", sessionId: "session-1" });
@@ -49,7 +49,7 @@ describe("PocketCoder launch", () => {
     await expect(
       launch.run(
         {
-          extensionId: "pstdio.remove-workspaces",
+          extensionId: "pstdio.remote-workspaces",
           projectId: "project-1",
           workspaces: {
             async create() {

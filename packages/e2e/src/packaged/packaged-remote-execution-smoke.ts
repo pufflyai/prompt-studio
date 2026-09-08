@@ -27,7 +27,7 @@ export const registerRemoteExecutionSmokeTests = () => {
       const started = await startPackagedServe(tempRoot, {
         NPM_CONFIG_USERCONFIG: npmConfigPath,
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-          defaultExtensions: [{ source: join(repoRoot, "extensions/remove-workspaces") }],
+          defaultExtensions: [{ source: join(repoRoot, "extensions/remote-workspaces") }],
         }),
       });
       child = started.child;
@@ -40,7 +40,7 @@ export const registerRemoteExecutionSmokeTests = () => {
       expect(createRes.status).toBe(201);
       const project = (await createRes.json()) as { id: string; extension_warnings?: unknown[] };
       expect(project.extension_warnings).toBeUndefined();
-      expect(existsSync(join(tempRoot, "extensions/remove-workspaces/node_modules/@pstdio/sdk/package.json"))).toBe(
+      expect(existsSync(join(tempRoot, "extensions/remote-workspaces/node_modules/@pstdio/sdk/package.json"))).toBe(
         true,
       );
 
@@ -49,17 +49,17 @@ export const registerRemoteExecutionSmokeTests = () => {
       const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
       expect(metadata.connections).toContainEqual(
         expect.objectContaining({
-          extensionId: "pstdio.remove-workspaces",
+          extensionId: "pstdio.remote-workspaces",
           localId: "pocketcoder",
           authType: "bearer",
           supportsCheck: true,
         }),
       );
       expect(metadata.harnesses).toContainEqual(
-        expect.objectContaining({ id: "pstdio.remove-workspaces.harness.remote-agent" }),
+        expect.objectContaining({ id: "pstdio.remote-workspaces.harness.remote-agent" }),
       );
       expect(metadata.commands).toContainEqual(
-        expect.objectContaining({ id: "pstdio.remove-workspaces.command.launch", automation: true }),
+        expect.objectContaining({ id: "pstdio.remote-workspaces.command.launch", automation: true }),
       );
       await verifyPocketCoderLifecycle(started.baseUrl, headers, project.id);
     } finally {

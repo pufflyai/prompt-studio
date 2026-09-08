@@ -1,4 +1,4 @@
-# remove-workspaces
+# remote-workspaces
 
 ## 1.1.0
 

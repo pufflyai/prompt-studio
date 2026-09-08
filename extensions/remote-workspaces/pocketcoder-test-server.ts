@@ -17,7 +17,7 @@ export const remoteWorkspace = {
   workspaceId: "host-workspace",
   executionTarget: {
     kind: "remote" as const,
-    providerId: "pstdio.remove-workspaces.workspace-type.remote",
+    providerId: "pstdio.remote-workspaces.workspace-type.remote",
     providerRef: { version: 1, data: { remoteId: workspaceId } },
   },
 };
@@ -55,7 +55,7 @@ export const startPocketCoderTestServer = (handle: (request: Request) => Respons
     requests,
     patches,
     ctx: {
-      extensionId: "pstdio.remove-workspaces",
+      extensionId: "pstdio.remote-workspaces",
       connections,
       logger: { warn() {} },
       state: {

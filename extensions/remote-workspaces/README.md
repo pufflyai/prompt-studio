@@ -1,6 +1,6 @@
 # Remote Workspaces
 
-Run PocketCoder workspaces on your desktop while Prompt Studio runs on another machine. The extension package is named `remove-workspaces` and its ID is `pstdio.remove-workspaces`.
+Run PocketCoder workspaces on your desktop while Prompt Studio runs on another machine. The extension package is named `remote-workspaces` and its ID is `pstdio.remote-workspaces`.
 
 PocketCoder runs the containers and coding agent. Prompt Studio sends prompts, displays the conversation, and manages workspace records. Model credentials and repository access belong on the PocketCoder machine. Your local project files are not copied to the desktop.
 
@@ -89,7 +89,7 @@ The tunnel must be reachable from the Prompt Studio **server**, which makes the 
 From a Prompt Studio checkout, inside a linked project:
 
 ```sh
-pst extensions add ./extensions/remove-workspaces --force
+pst extensions add ./extensions/remote-workspaces --force
 pst extensions check
 ```
 
@@ -105,7 +105,7 @@ You can repeat the check from the CLI:
 
 ```sh
 pst connections check --project <project-id> \
-  --extension pstdio.remove-workspaces --connection pocketcoder
+  --extension pstdio.remote-workspaces --connection pocketcoder
 ```
 
 ## Run a workspace
@@ -115,7 +115,7 @@ Choose **Launch PocketCoder session** from the command palette or project action
 The equivalent CLI command is:
 
 ```sh
-pst remove-workspaces launch --template pi-harness \
+pst remote-workspaces launch --template pi-harness \
   --prompt 'Inspect the workspace and describe its files'
 ```
 
@@ -137,11 +137,11 @@ To run Codex, Claude Code, or OpenCode, install a runnable template for that age
 
 ## External automation
 
-Issue a Prompt Studio machine token scoped to the project and `pstdio.remove-workspaces.command.launch`. Set `PSTDIO_AUTOMATION_TOKEN` and, if needed, `PSTDIO_API_URL` in the caller's environment:
+Issue a Prompt Studio machine token scoped to the project and `pstdio.remote-workspaces.command.launch`. Set `PSTDIO_AUTOMATION_TOKEN` and, if needed, `PSTDIO_API_URL` in the caller's environment:
 
 ```sh
 pst automation run --project <project-id> \
-  --command pstdio.remove-workspaces.command.launch \
+  --command pstdio.remote-workspaces.command.launch \
   --idempotency-key desktop-task-42 \
   --input '{"template":"pi-harness","prompt":"Inspect the project"}'
 ```
@@ -162,11 +162,11 @@ Reuse the same idempotency key when retrying the same launch request. Use a new 
 
 ## Development
 
-Follow Prompt Studio's isolated Docker workflow. Watch changes with `PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions dev ./extensions/remove-workspaces` against that host. Validate with:
+Follow Prompt Studio's isolated Docker workflow. Watch changes with `PSTDIO_HOME="$HOME/.pstdio-dev" pst extensions dev ./extensions/remote-workspaces` against that host. Validate with:
 
 ```sh
-bun test extensions/remove-workspaces
-bun run --cwd extensions/remove-workspaces typecheck
+bun test extensions/remote-workspaces
+bun run --cwd extensions/remote-workspaces typecheck
 bun run verify:translations
 bun run validate
 ```

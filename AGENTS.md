@@ -69,7 +69,7 @@ Clearly describe it as a temporary workaround, not the intended design.
 ## Visual design rules
 
 - Pencil `.pen` designs define how the `@pstdio/ui` component library must look. This includes colors, text styles, spacing, corner roundness, component states, and layout. Make the code match the design.
-- The main design system file is [`design/prompt-studio-design-system.pen`](design/prompt-studio-design-system.pen). Open and edit `.pen` files only with the Pencil MCP tools. Never edit them by hand.
+- The main design system file is [`design/prompt-studio-design-system.pen`](design/prompt-studio-design-system.pen). Open and edit `.pen` files only with the Pencil CLI. Never edit them by hand.
 - If the design and code do not match, update the code to match the design. If the design is wrong, fix it in Pencil first, then update the code.
 - Storybook defines component **APIs and props**. Pencil defines how components **look**.
 
