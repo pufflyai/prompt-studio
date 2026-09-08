@@ -53,7 +53,7 @@ try {
     const home = join(root, `home-${results.length}`);
     mkdirSync(home);
     const output = join(home, "timings.json");
-    const env = {
+    const env: NodeJS.ProcessEnv = {
       ...process.env,
       HOME: home,
       USERPROFILE: home,
@@ -81,7 +81,7 @@ try {
     process.env.PSTDIO_PROBE_OUTPUT ?? resolve(import.meta.dirname, "../test-results/startup-formats.json");
   await Bun.write(
     output,
-    JSON.stringify(
+    `${JSON.stringify(
       {
         platform: process.platform,
         arch: process.arch,
@@ -90,7 +90,7 @@ try {
       },
       null,
       2,
-    ) + "\n",
+    )}\n`,
   );
 } finally {
   rmSync(root, { recursive: true, force: true });
