@@ -5,12 +5,15 @@ import { text } from "pstdio-extensions/workbench";
 import { createElement } from "react";
 import type { Disposable, KanbanRendererCreateSubmission, KanbanRendererQueryState, ResourceRef } from "../../core";
 import { WorkbenchIcon } from "../../react";
-import type {
-  ReactAttributeDescriptor as AttributeDescriptor,
-  ReactKanbanRendererContribution as KanbanRendererContribution,
-} from "../../react/renderers/kanban/kanban-presentation";
+import type { ReactAttributeDescriptor as AttributeDescriptor } from "../../react/renderers/kanban/kanban-presentation";
 import { toWorkbenchNavigationTargetResult } from "../host/extension-navigation-target";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
+import {
+  createStatusOptionsResolver,
+  initialColumnGrouping,
+  statusColorConfig,
+  toWorkbenchBoardColumnConfig,
+} from "./kanban-renderer-board-config";
 import {
   createMutableAttributeSource,
   defaultResolveRowActionResource,
@@ -20,7 +23,6 @@ import {
   type KanbanRendererRow,
   type Localizer,
   mergeParams,
-  type ResolveStatusOptions,
   type RowAction,
   registerRowActionCommands,
   runDefaultRowAction,
@@ -28,7 +30,6 @@ import {
   toWorkbenchRow,
 } from "./kanban-renderer-contribution-helpers";
 
-type BoardColumnConfig = ReturnType<NonNullable<KanbanRendererContribution["getBoardColumnConfig"]>>;
 type ColumnConfigRecord = Record<string, WireBoardColumnConfig>;
 
 export interface WorkbenchExtensionKanbanRendererAdapter {
@@ -91,75 +92,6 @@ export interface WorkbenchExtensionKanbanRendererAdapter {
    */
   onAfterMutation?: (record: WorkbenchExtensionKanbanRendererRecord) => void;
 }
-
-const createBoardActionIcon = (icon: string | undefined) => {
-  const BoardActionIcon = (props: { size?: number | string }) =>
-    createElement(WorkbenchIcon, { name: icon ?? "MoreHorizontal", ...props });
-  return BoardActionIcon;
-};
-
-const toWorkbenchBoardColumnConfig = (config: WireBoardColumnConfig | undefined, localize: Localizer) =>
-  ({
-    color: config?.color,
-    canDragIn: config?.canDragIn,
-    canDragOut: config?.canDragOut,
-    canCreate: config?.canCreate,
-    actions: config?.actions?.map((action) => ({
-      id: action.id,
-      label: localize(action.label, action.id),
-      icon: createBoardActionIcon(action.icon),
-    })),
-  }) satisfies BoardColumnConfig;
-
-const statusSetId = (record: WorkbenchExtensionKanbanRendererRecord, ref: Parameters<ResolveStatusOptions>[0]) =>
-  `${ref.extensionId ?? record.extensionId}.status.${ref.id}`;
-
-const createStatusOptionsResolver = (
-  context: WorkbenchExtensionCommandContext,
-  record: WorkbenchExtensionKanbanRendererRecord,
-): ResolveStatusOptions => {
-  const sources = new Map<string, ReturnType<ResolveStatusOptions>>();
-  return (ref) => {
-    const id = statusSetId(record, ref);
-    const existing = sources.get(id);
-    if (existing) return existing;
-
-    const source = {
-      getSnapshot: () =>
-        (context.workbench.statuses.getStatuses(id) ?? []).map((status) => ({
-          value: status.id,
-          label: status.label,
-          color: status.color,
-          icon: status.icon,
-        })),
-      subscribe: (listener: () => void) =>
-        context.workbench.statuses.store.subscribeSelector((state) => state.values[id], listener),
-    };
-    sources.set(id, source);
-    void context.workbench.statuses.load(id).catch(() => undefined);
-    return source;
-  };
-};
-
-const statusColorConfig = (
-  context: WorkbenchExtensionCommandContext,
-  record: WorkbenchExtensionKanbanRendererRecord,
-  attributes: WorkbenchExtensionKanbanRendererRecord["attributes"],
-  groupingAttributeId: string | undefined,
-  groupKey: string,
-): WireBoardColumnConfig | undefined => {
-  const attribute = attributes?.find((candidate) => candidate.id === groupingAttributeId);
-  if (attribute?.type.kind !== "status") return undefined;
-  const id = statusSetId(record, attribute.type.statuses);
-  const status = context.workbench.statuses.getStatuses(id)?.find((candidate) => candidate.id === groupKey);
-  return status ? { color: status.color } : undefined;
-};
-
-const initialColumnGrouping = (record: WorkbenchExtensionKanbanRendererRecord) => {
-  if (record.defaultSettings?.columnGrouping) return record.defaultSettings.columnGrouping;
-  const statusAttributes = record.attributes?.filter((attribute) => attribute.type.kind === "status") ?? [];
-  return statusAttributes.length === 1 ? statusAttributes[0]?.id : undefined;
-};
 
 const createRowActionIcon = (icon: string | undefined) =>
   icon ? createElement(WorkbenchIcon, { name: icon, size: 16 }) : undefined;

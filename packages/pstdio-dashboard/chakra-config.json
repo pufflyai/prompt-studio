@@ -2550,6 +2550,9 @@
         },
         "5xl": {
           "value": "8rem"
+        },
+        "panel-gap": {
+          "value": "0.25rem"
         }
       },
       "sizes": {
@@ -2810,6 +2813,9 @@
         },
         "vh": {
           "value": "100vh"
+        },
+        "panel-gap": {
+          "value": "0.25rem"
         },
         "window-title-bar": {
           "value": "2.75rem"
@@ -14809,6 +14815,14 @@
           "border": "1px solid",
           "borderColor": "border",
           "boxShadow": "lg"
+        }
+      },
+      "panel": {
+        "value": {
+          "borderRadius": "sm",
+          "borderWidth": "1px",
+          "borderColor": "border.subtle",
+          "overflow": "hidden"
         }
       },
       "modal": {
