@@ -35,7 +35,7 @@ export class DesktopWindowController {
         resolve();
       });
     });
-    this.window.on("resize", () => this.resizeWorkbench());
+    this.window.contentView.on("bounds-changed", () => this.resizeWorkbench());
     this.window.on("closed", () => this.#workbench?.webContents.close());
   }
 
@@ -62,7 +62,8 @@ export class DesktopWindowController {
   }
 
   private resizeWorkbench() {
-    const [width, height] = this.window.getContentSize();
+    // Native window resize events can arrive before the content view has been laid out.
+    const { width, height } = this.window.contentView.getBounds();
     this.#workbench?.setBounds({ x: 0, y: 0, width, height });
   }
 

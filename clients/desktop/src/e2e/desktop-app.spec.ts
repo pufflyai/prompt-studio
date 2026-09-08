@@ -122,6 +122,17 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     expect(await window.evaluate(() => document.cookie)).toBe("");
     expect(await window.evaluate(() => typeof process)).toBe("undefined");
     expect(authenticatedReady).toBe(true);
+    await test.step("keeps the workbench viewport inside the resized native content", async () => {
+      for (const size of [
+        { width: 1600, height: 1000 },
+        { width: 800, height: 560 },
+      ]) {
+        await electronApp.evaluate(({ BrowserWindow }, size) => {
+          BrowserWindow.getAllWindows()[0].setContentSize(size.width, size.height);
+        }, size);
+        await expect.poll(() => window.evaluate(() => ({ width: innerWidth, height: innerHeight }))).toEqual(size);
+      }
+    });
     expect(
       await window.evaluate(() => Object.keys((globalThis as unknown as Window).promptStudioDesktop).sort()),
     ).toEqual([
