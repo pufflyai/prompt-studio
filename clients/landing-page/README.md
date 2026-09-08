@@ -9,6 +9,10 @@ floor at random positions and angles. One tool drops from a random position ever
 three seconds until there are 30. Tools can be dragged. Reduced motion keeps the
 initial six tools still. Random placements stay stable through redraws and resizing.
 
+The cross uses three collision rectangles that share the SVG arm dimensions. The
+half-disc uses a curved polygon and renders around its physical centre of mass, so
+its drawing and collisions stay aligned as it turns.
+
 ## Desktop downloads
 
 `desktop-releases.ts` reads the public GitHub releases API. It selects a stable

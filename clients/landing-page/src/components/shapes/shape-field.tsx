@@ -12,7 +12,7 @@ import {
   randomToolPlacement,
   TOOL_SPAWN_INTERVAL,
 } from "./field-layout";
-import { createPiece, createWalls, type Piece } from "./shape-physics";
+import { createPiece, createWalls, type Piece, pieceTransform } from "./shape-physics";
 import { ToolShape } from "./tool-shapes";
 
 const usePrefersReducedMotion = () => {
@@ -166,11 +166,10 @@ export const ShapeField = (props: ShapeFieldProps) => {
       for (const piece of piecesRef.current) Matter.Body.translate(piece.body, { x: shift, y: 0 });
     }
     for (const piece of piecesRef.current) {
-      const halfWidth = piece.width / 2;
-      const halfHeight = piece.height / 2;
-      Matter.Body.setPosition(piece.body, {
-        x: Math.max(halfWidth, Math.min(size.width - halfWidth, piece.body.position.x)),
-        y: Math.min(size.height - halfHeight, piece.body.position.y),
+      const { min, max } = piece.body.bounds;
+      Matter.Body.translate(piece.body, {
+        x: Math.max(0, -min.x) + Math.min(0, size.width - max.x),
+        y: Math.min(0, size.height - max.y),
       });
     }
   }, [size, perches, spawn]);
@@ -271,13 +270,12 @@ export const ShapeField = (props: ShapeFieldProps) => {
           height={`${piece.height}px`}
           cursor="grab"
           pointerEvents="auto"
+          transformOrigin="0 0"
           _active={{ cursor: "grabbing" }}
           // Inline transform on purpose: this changes every frame, and a Chakra style
           // prop would mint a new atomic CSS class each time.
           style={{
-            transform: `translate(${piece.body.position.x - piece.width / 2}px, ${
-              piece.body.position.y - piece.height / 2
-            }px) rotate(${piece.body.angle}rad)`,
+            transform: pieceTransform(piece),
           }}
           onPointerDown={onPointerDown(piece)}
           onPointerMove={onPointerMove}

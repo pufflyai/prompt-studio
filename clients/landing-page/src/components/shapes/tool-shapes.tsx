@@ -1,3 +1,5 @@
+import { crossPath, halfDiscPath } from "./tool-shape-geometry";
+
 /**
  * The illustration vocabulary: one primitive per extension contribution type, so a
  * cluster of shapes reads as a specific toolset rather than decoration. The Prompt
@@ -46,16 +48,16 @@ export const ToolShape = (props: ToolShapeProps) => {
 
   if (kind === "skill") {
     return (
-      <svg width={width} height={size} viewBox="0 0 26 13" aria-hidden="true" focusable="false">
-        <path d="M0 13A13 13 0 0 1 26 13Z" fill={color} />
+      <svg width={width} height={size} viewBox={`0 0 ${width} ${size}`} aria-hidden="true" focusable="false">
+        <path d={halfDiscPath(width, size)} fill={color} />
       </svg>
     );
   }
 
   if (kind === "hook") {
     return (
-      <svg width={width} height={size} viewBox="0 0 26 26" aria-hidden="true" focusable="false">
-        <path d="M10 0h6v10h10v6H16v10h-6V16H0v-6h10z" fill={color} />
+      <svg width={width} height={size} viewBox={`0 0 ${width} ${size}`} aria-hidden="true" focusable="false">
+        <path d={crossPath(width, size)} fill={color} />
       </svg>
     );
   }
