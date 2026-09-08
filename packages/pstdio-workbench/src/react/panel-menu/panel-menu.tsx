@@ -152,6 +152,7 @@ const addPanelMenu = (input: { content: ReactNode; view: WorkbenchPanelMenuView;
       maxSizePx={view.size.maxPx}
       contentMinSizePx={PANEL_CONTENT_MIN_SIZE_PX}
       resizeLabel={`Resize ${view.label}`}
+      separator="line"
       onSizeChange={(width) => workbench.layout.setRegionSize(view.region, width)}
       onCollapsedChange={view.onCollapsedChange}
     />

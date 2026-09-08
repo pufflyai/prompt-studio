@@ -14,6 +14,7 @@ import {
   resolveDraggedPanelSize,
   resolveResizableBounds,
 } from "@/components/layout/resizable-split-layout.geometry";
+import type { ResizableSplitSeparator } from "@/components/layout/resizable-split-layout.handle";
 import { ResizableSplitPanels } from "@/components/layout/resizable-split-layout.panels";
 
 interface ResizableSplitLayoutProps extends Omit<FlexProps, "children" | "onResize"> {
@@ -27,6 +28,7 @@ interface ResizableSplitLayoutProps extends Omit<FlexProps, "children" | "onResi
   collapsed?: boolean;
   collapsible?: boolean;
   resizeLabel?: string;
+  separator?: ResizableSplitSeparator;
   onSizeChange?: (size: number) => void;
   onCollapsedChange?: (collapsed: boolean) => void;
 }
@@ -74,6 +76,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     collapsed: controlledCollapsed,
     collapsible = true,
     resizeLabel = "Resize panel",
+    separator = "gap",
     onSizeChange,
     onCollapsedChange,
     ...rest
@@ -301,6 +304,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
         dragging={dragging}
         resizeLabel={resizeLabel}
         resolvedPanelSize={resolvedPanelSize}
+        separator={separator}
         onCollapse={handleCollapse}
         onResizeKeyDown={handleResizeKeyDown}
         onResizeStart={handleResizeStart}

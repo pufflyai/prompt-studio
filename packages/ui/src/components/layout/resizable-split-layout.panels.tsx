@@ -6,7 +6,7 @@ import type {
   RefObject,
 } from "react";
 import type { getResizableSplitAxis } from "@/components/layout/resizable-split-layout.geometry";
-import { ResizeHandle } from "@/components/layout/resizable-split-layout.handle";
+import { type ResizableSplitSeparator, ResizeHandle } from "@/components/layout/resizable-split-layout.handle";
 
 interface ResizableSplitPanelsProps {
   axis: ReturnType<typeof getResizableSplitAxis>;
@@ -22,6 +22,7 @@ interface ResizableSplitPanelsProps {
   dragging: boolean;
   resizeLabel: string;
   resolvedPanelSize: number;
+  separator: ResizableSplitSeparator;
   onCollapse: () => void;
   onResizeKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
   onResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
@@ -42,6 +43,7 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
     dragging,
     resizeLabel,
     resolvedPanelSize,
+    separator,
     onCollapse,
     onResizeKeyDown,
     onResizeStart,
@@ -90,6 +92,7 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
       dragging={dragging}
       resizeLabel={resizeLabel}
       resolvedPanelSize={resolvedPanelSize}
+      separator={separator}
       onCollapse={onCollapse}
       onResizeKeyDown={onResizeKeyDown}
       onResizeStart={onResizeStart}

@@ -8,10 +8,13 @@ import {
 } from "react";
 import type { getResizableSplitAxis } from "@/components/layout/resizable-split-layout.geometry";
 
-// The separator is the gap between two panels. At rest it shows a grip of three
-// dots. After a short hover delay, while dragging, or on keyboard focus it becomes
-// a full-length bar so the drag target is obvious. The visible part is as thin as
-// the gap; an invisible hit area extends over the neighbouring panels.
+// Two separators share one behaviour. The "gap" separator sits between panel
+// cards: it is as wide as the panel gap and shows a grip of three dots. The
+// "line" separator divides content inside a panel: it is a 1px border line.
+// Both become a full-length bar after a short hover delay, while dragging, or
+// on keyboard focus, and both have an invisible hit area wider than themselves.
+
+export type ResizableSplitSeparator = "gap" | "line";
 
 const HOVER_DELAY_MS = 250;
 const GRIP_DOTS = [0, 1, 2];
@@ -26,6 +29,7 @@ interface ResizeHandleProps {
   resizablePanelId: string;
   resizeLabel: string;
   resolvedPanelSize: number;
+  separator: ResizableSplitSeparator;
   onCollapse: () => void;
   onResizeKeyDown: (event: ReactKeyboardEvent<HTMLDivElement>) => void;
   onResizeStart: (event: ReactPointerEvent<HTMLDivElement>) => void;
@@ -42,11 +46,14 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
     resizablePanelId,
     resizeLabel,
     resolvedPanelSize,
+    separator,
     onCollapse,
     onResizeKeyDown,
     onResizeStart,
   } = props;
   const vertical = axis.separatorOrientation === "vertical";
+  const line = separator === "line";
+  const thickness = line ? "1px" : "panel-gap";
   const [hovered, setHovered] = useState(false);
   const hoverTimerRef = useRef(0);
   const active = hovered || dragging;
@@ -83,8 +90,9 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
       align="center"
       justify="center"
       flexShrink={0}
-      w={vertical ? "panel-gap" : "full"}
-      h={vertical ? "full" : "panel-gap"}
+      w={vertical ? thickness : "full"}
+      h={vertical ? "full" : thickness}
+      bg={line ? "border" : undefined}
       cursor={axis.cursor}
       touchAction="none"
       outline="none"
@@ -96,17 +104,19 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
       onDoubleClick={collapsible ? onCollapse : undefined}
       onKeyDown={onResizeKeyDown}
     >
-      <Flex
-        data-part="grip"
-        direction={vertical ? "column" : "row"}
-        gap="3xs"
-        opacity={active ? 0 : 1}
-        transition="opacity 120ms ease"
-      >
-        {GRIP_DOTS.map((dot) => (
-          <Box key={dot} boxSize="0.5" borderRadius="full" bg="border" />
-        ))}
-      </Flex>
+      {line ? null : (
+        <Flex
+          data-part="grip"
+          direction={vertical ? "column" : "row"}
+          gap="3xs"
+          opacity={active ? 0 : 1}
+          transition="opacity 120ms ease"
+        >
+          {GRIP_DOTS.map((dot) => (
+            <Box key={dot} boxSize="0.5" borderRadius="full" bg="border" />
+          ))}
+        </Flex>
+      )}
       <Box
         data-part="bar"
         position="absolute"

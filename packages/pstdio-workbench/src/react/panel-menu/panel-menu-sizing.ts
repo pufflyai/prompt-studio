@@ -5,7 +5,7 @@ interface CanAttachWorkbenchPanelMenuInput {
 }
 
 export const PANEL_CONTENT_MIN_SIZE_PX = 120;
-export const PANEL_MENU_RESIZE_HANDLE_SIZE_PX = 4;
+export const PANEL_MENU_RESIZE_HANDLE_SIZE_PX = 1;
 export const PANEL_MENU_COLLAPSE_THRESHOLD_PX = 480;
 
 export const shouldCollapseWorkbenchPanelMenus = (panelWidth: number) =>

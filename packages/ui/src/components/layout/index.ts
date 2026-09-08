@@ -9,3 +9,4 @@ export {
   PANEL_HEADER_TAB_SIZE,
 } from "./panel-header.constants";
 export { ResizableSplitLayout } from "./resizable-split-layout";
+export type { ResizableSplitSeparator } from "./resizable-split-layout.handle";

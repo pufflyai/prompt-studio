@@ -170,3 +170,12 @@ const PanelShell = () => (
 export const WorkbenchShell: Story = {
   render: () => <PanelShell />,
 };
+
+export const LineSeparator: Story = {
+  args: {
+    separator: "line",
+    p: "0",
+    resizablePanel: <PanelCard title="File list" description="Inner split: a 1px line instead of a grip." />,
+    contentPanel: <PanelCard title="Diff" description="Hover the line to see the bar." />,
+  },
+};
