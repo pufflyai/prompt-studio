@@ -117,7 +117,7 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
         w={vertical ? "0.5" : undefined}
         h={vertical ? undefined : "0.5"}
         transform={vertical ? "translateX(-50%)" : "translateY(-50%)"}
-        borderRadius="2xs"
+        borderRadius="xs"
         bg="fg.info"
         opacity={active ? 1 : 0}
         transition="opacity 120ms ease"
