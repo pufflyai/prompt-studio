@@ -2,11 +2,11 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Locator, type Page } from "@playwright/test";
 
-// Inner separators are 1px lines painted with the border token.
+// Inner separators are 1px lines painted with the subtle border token.
 export const getResizeSeparatorColors = (separator: Locator) =>
   separator.evaluate((element) => {
     const probe = document.createElement("div");
-    probe.style.backgroundColor = "var(--chakra-colors-border)";
+    probe.style.backgroundColor = "var(--chakra-colors-border-subtle)";
     document.body.append(probe);
     const expected = getComputedStyle(probe).backgroundColor;
     probe.remove();

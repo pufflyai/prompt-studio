@@ -151,7 +151,7 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
       flexShrink={0}
       w={layout.w}
       h={layout.h}
-      bg={line ? "border" : undefined}
+      bg={line ? "border.subtle" : undefined}
       cursor={axis.cursor}
       touchAction="none"
       outline="none"
