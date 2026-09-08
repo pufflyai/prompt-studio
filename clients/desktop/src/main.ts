@@ -51,6 +51,7 @@ autoUpdater.on("error", reportUpdateError);
 
 const setState = (next: DesktopState) => {
   state = next;
+  windowController?.updateState(next);
   logger.info({ event: "desktop.state.changed", state: next.kind }, "Desktop lifecycle state changed");
 };
 
@@ -97,8 +98,9 @@ const recoveryError = (error: unknown): DesktopRecoveryError => {
 const runtimeManager = new DesktopRuntimeManager({
   descriptorPath,
   externalRuntime,
-  resolveSidecarPath: () =>
+  resolveSidecarPath: (signal) =>
     validateSidecarArtifact({
+      signal,
       resourcesPath: process.resourcesPath,
       platform: process.platform,
       arch: process.arch,
@@ -126,7 +128,8 @@ const startRuntime = async () => {
   setState(initialDesktopState);
   const lifecycleReady = windowController?.showLifecycle();
   try {
-    const [runtime] = await Promise.all([runtimeManager.start(), lifecycleReady]);
+    const runtime = await runtimeManager.start();
+    await Promise.all([windowController?.showWorkbench(runtime.descriptor), lifecycleReady]);
     setState(
       transitionDesktopState(state, {
         type: "runtime_ready",
@@ -137,7 +140,6 @@ const startRuntime = async () => {
         },
       }),
     );
-    await windowController?.showWorkbench(runtime.descriptor);
   } catch (error) {
     await lifecycleReady;
     logger.error(
@@ -227,6 +229,10 @@ const bootstrap = async () => {
   );
   const preloadPath = join(import.meta.dirname, "preload.cjs");
   windowController = await DesktopWindowController.create(preloadPath);
+  const { window } = windowController;
+  window.once("ready-to-show", () => {
+    logger.info({ event: "desktop.window.ready", visible: window.isVisible() }, "Desktop startup window is ready");
+  });
   windowController.window.on("close", (event) => {
     if (allowQuit) return;
     event.preventDefault();

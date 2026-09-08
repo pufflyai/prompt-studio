@@ -41,24 +41,21 @@ const useDesktopState = (initialState: DesktopState) => {
       const next = await window.promptStudioDesktop.getStartupState();
       if (active) setState(next);
     };
+    const unsubscribe = window.promptStudioDesktop.onStartupState(setState);
     void refresh();
-    const interval = window.setInterval(() => void refresh(), 150);
     return () => {
       active = false;
-      window.clearInterval(interval);
+      unsubscribe();
     };
   }, []);
   return state;
 };
 
-const useReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
 const StartingState = (props: { phase: keyof typeof phaseCopy }) => {
   const { phase } = props;
-  const reducedMotion = useReducedMotion();
   return (
     <Stack align="center" gap="lg" role="status" aria-live="polite">
-      {!reducedMotion && <Spinner size="lg" color="fg.muted" aria-hidden="true" />}
+      <Spinner size="lg" color="fg.muted" aria-hidden="true" _motionReduce={{ display: "none" }} />
       <Stack align="center" gap="xs" textAlign="center">
         <Heading textStyle="heading/M">Opening Prompt Studio</Heading>
         <Text color="fg.muted" textStyle="paragraph/M/regular">
@@ -172,10 +169,9 @@ const ActiveWorkState = (props: {
 };
 
 const ClosingState = () => {
-  const reducedMotion = useReducedMotion();
   return (
     <Stack align="center" gap="lg" role="status" aria-live="polite">
-      {!reducedMotion && <Spinner size="lg" color="fg.muted" aria-hidden="true" />}
+      <Spinner size="lg" color="fg.muted" aria-hidden="true" _motionReduce={{ display: "none" }} />
       <Stack align="center" gap="xs" textAlign="center">
         <Heading textStyle="heading/M">Closing Prompt Studio</Heading>
         <Text color="fg.muted" textStyle="paragraph/M/regular">
@@ -189,7 +185,7 @@ const ClosingState = () => {
 export const DesktopLifecycleView = (props: DesktopLifecycleViewProps) => {
   const { actions = desktopActions, state, platform = "darwin" } = props;
   return (
-    <Stack as="main" minHeight="100vh" bg="bg" color="fg" gap="0">
+    <Stack as="main" width="full" minHeight="100vh" bg="bg" color="fg" gap="0">
       <WindowTitleBar platform={platform} />
       <Box flex="1" display="grid" placeItems="center" padding="xl">
         <Box width="full" maxWidth="2xl">

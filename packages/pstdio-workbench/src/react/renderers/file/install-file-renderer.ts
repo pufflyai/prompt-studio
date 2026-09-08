@@ -1,4 +1,3 @@
-import { preloadCodeEditor } from "@pstdio/ui/diff";
 import { createElement, lazy, Suspense } from "react";
 import { getWorkbenchRenderers, type WorkbenchCore } from "../../../core";
 
@@ -9,29 +8,19 @@ const loadWorkbenchFileRendererView = () =>
 
 const WorkbenchFileRendererView = lazy(loadWorkbenchFileRendererView);
 
-if (typeof document !== "undefined") void preloadCodeEditor();
+// Track per-core installation so repeated <Workbench> renders are idempotent.
+const installed = new WeakSet<WorkbenchCore>();
 
-export const createWorkbenchFileRendererInstaller = (preloadView: () => void) => {
-  // Track per-core installation so repeated <Workbench> renders are idempotent.
-  const installed = new WeakSet<WorkbenchCore>();
-
-  return (workbench: WorkbenchCore) => {
-    if (installed.has(workbench)) return;
-    installed.add(workbench);
-    preloadView();
-    getWorkbenchRenderers(workbench).setFileRendererImplementation(({ workbench: scope, instance, fileRendererId }) => {
-      const contribution = getWorkbenchRenderers(scope).getFileRenderer(fileRendererId);
-      if (!contribution) return null;
-      return createElement(
-        Suspense,
-        { fallback: null },
-        createElement(WorkbenchFileRendererView, { workbench: scope, contribution, placement: instance }),
-      );
-    });
-  };
+export const installWorkbenchFileRenderer = (workbench: WorkbenchCore) => {
+  if (installed.has(workbench)) return;
+  installed.add(workbench);
+  getWorkbenchRenderers(workbench).setFileRendererImplementation(({ workbench: scope, instance, fileRendererId }) => {
+    const contribution = getWorkbenchRenderers(scope).getFileRenderer(fileRendererId);
+    if (!contribution) return null;
+    return createElement(
+      Suspense,
+      { fallback: null },
+      createElement(WorkbenchFileRendererView, { workbench: scope, contribution, placement: instance }),
+    );
+  });
 };
-
-export const installWorkbenchFileRenderer = createWorkbenchFileRendererInstaller(() => {
-  if (typeof window !== "undefined") void preloadCodeEditor();
-  void loadWorkbenchFileRendererView();
-});

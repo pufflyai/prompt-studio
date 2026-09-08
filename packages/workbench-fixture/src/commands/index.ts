@@ -2,7 +2,6 @@ import { awakenCommand } from "./awaken-command";
 import { camsCurrentCommand, camsSelectCommand, camsTreeCommand } from "./cams-commands";
 import { bumpCounterCommand, readCounterCommand, resetCounterCommand } from "./counter-commands";
 import { tryAwakenCommand, workspaceOnlyCommand } from "./demo-commands";
-import { detachedProbeCommand } from "./detached-probe-command";
 import {
   createGlassLabArtifactCommand,
   deleteGlassLabArtifactCommand,
@@ -36,5 +35,4 @@ export const labCommands = [
   heartbeatCommand,
   workspaceOnlyCommand,
   readWebviewFileCommand,
-  detachedProbeCommand,
 ];

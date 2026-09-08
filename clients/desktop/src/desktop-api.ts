@@ -19,6 +19,7 @@ export interface PromptStudioDesktopApi {
   confirmQuit: () => Promise<void>;
   getAppInfo: () => Promise<DesktopAppInfo>;
   getStartupState: () => Promise<DesktopState>;
+  onStartupState: (listener: (state: DesktopState) => void) => () => void;
   retryRuntime: () => Promise<void>;
   openLogs: () => Promise<void>;
   revealInFinder: (path: string) => Promise<void>;
@@ -37,6 +38,7 @@ export const DESKTOP_CHANNELS = {
   confirmQuit: "pstdio:desktop:confirm-quit",
   appInfo: "pstdio:desktop:app-info",
   startupState: "pstdio:desktop:startup-state",
+  startupStateChanged: "pstdio:desktop:startup-state-changed",
   retryRuntime: "pstdio:desktop:retry-runtime",
   openLogs: "pstdio:desktop:open-logs",
   revealInFinder: "pstdio:desktop:reveal-in-finder",

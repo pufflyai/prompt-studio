@@ -2,10 +2,11 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { type Browser, chromium, type Page, test } from "@playwright/test";
+import { type Browser, chromium, expect, type Page, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
 import { redactSensitiveText } from "pstdio-logging";
 import { resolvePackagedLayout } from "../packaging/package-layout";
+import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
 import { waitForVisibleElement } from "./visible-element-timing";
 
@@ -23,6 +24,7 @@ const packagedEnvironment = (home: string) => {
       HOME: home,
       LOCALAPPDATA: join(home, "local-app-data"),
       PSTDIO_HOME: home,
+      PSTDIO_LOG_PATH: join(home, "logs.jsonl"),
       USERPROFILE: home,
       XDG_CONFIG_HOME: join(home, "config"),
     }).filter((entry): entry is [string, string] => entry[1] !== undefined),
@@ -69,17 +71,55 @@ const waitForDevTools = (child: ChildProcess) =>
     });
   });
 
-export type PackagedApp = {
+export type PackagedWindow = {
   home: string;
   browser: Browser;
   child: ChildProcess;
-  page: Page;
-  readyInMs: number;
-  runtime: RuntimeDescriptor;
+  lifecyclePage: Page;
+  startedAt: number;
+  runtime?: RuntimeDescriptor;
   finishTrace: () => Promise<void>;
 };
 
-export const launchPackagedApp = async (home: string, runtimeEnvironment: Record<string, string> = {}) => {
+export type PackagedApp = PackagedWindow & { runtime: RuntimeDescriptor; page: Page; readyInMs: number };
+
+export const attachStartupTimings = async (app: PackagedApp) => {
+  const lifecycle = await app.lifecyclePage.evaluate(() => ({
+    timeOrigin: performance.timeOrigin,
+    entries: performance.getEntries().map((entry) => entry.toJSON()),
+  }));
+  await test.info().attach("lifecycle-startup-performance", {
+    body: JSON.stringify({ startedAt: app.startedAt, ...lifecycle }),
+    contentType: "application/json",
+  });
+  const entries = await app.page.evaluate(() =>
+    performance
+      .getEntries()
+      .filter((entry) => ["navigation", "resource"].includes(entry.entryType))
+      .map((entry) => entry.toJSON()),
+  );
+  await test.info().attach("workbench-startup-performance", {
+    body: JSON.stringify({ readyInMs: app.readyInMs, entries }),
+    contentType: "application/json",
+  });
+  const windowShown = readFileSync(join(app.home, "logs.jsonl"), "utf8")
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line) as { event?: string; time: string; visible?: boolean })
+    .reverse()
+    .find((entry) => entry.event === "desktop.window.ready");
+  const firstContent = lifecycle.entries.find((entry) => entry.name === "first-contentful-paint");
+  expect(windowShown).toBeDefined();
+  expect(windowShown?.visible).toBe(true);
+  expect(firstContent).toBeDefined();
+  return Math.max(Date.parse(windowShown!.time), lifecycle.timeOrigin + firstContent.startTime) - app.startedAt;
+};
+
+const launchPackaged = async <T>(
+  home: string,
+  runtimeEnvironment: Record<string, string>,
+  waitForStartup: (home: string) => Promise<T>,
+) => {
   const startedAt = Date.now();
   const child = spawn(
     packageLayout.executable,
@@ -95,18 +135,46 @@ export const launchPackagedApp = async (home: string, runtimeEnvironment: Record
   try {
     const endpoint = await waitForDevTools(child);
     // Keep the debugging connection out of the spawned runtime. See ADR 0020.
-    const runtime = await waitForDescriptor(home);
+    const startup = await waitForStartup(home);
     browser = await chromium.connectOverCDP(endpoint);
     const context = browser.contexts()[0];
-    const page = context?.pages()[0];
-    if (!page || !context) throw new Error("Packaged app did not create a renderer page");
+    if (!context) throw new Error("Packaged app did not create a browser context");
+    const lifecyclePage = await waitForLifecyclePage(context);
     const finishTrace = await startElectronTrace(context, `packaged-${child.pid}`);
-    await page.waitForURL(`${runtime.origin}/`, { waitUntil: "commit" });
-    const visibleAt = await waitForVisibleElement(page, "#root");
-    return { home, browser, child, page, readyInMs: visibleAt - startedAt, runtime, finishTrace };
+    return { home, browser, child, lifecyclePage, startedAt, startup, finishTrace };
   } catch (error) {
     await browser?.close().catch(() => {});
     if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+    throw error;
+  }
+};
+
+export const launchPackagedWindow = async (home: string, runtimeEnvironment: Record<string, string> = {}) => {
+  const { startup: runtime, ...window } = await launchPackaged(home, runtimeEnvironment, waitForDescriptor);
+  return { ...window, runtime };
+};
+
+export const launchPackagedRecovery = async (home: string, runtimeEnvironment: Record<string, string> = {}) => {
+  const { startup: _startup, ...window } = await launchPackaged(home, runtimeEnvironment, async () => {
+    const logPath = join(home, "logs.jsonl");
+    // A failed sidecar has exited before CDP attaches, preserving ADR 0020's process isolation.
+    await expect
+      .poll(
+        () => existsSync(logPath) && readFileSync(logPath, "utf8").includes('"event":"desktop.runtime.start.failed"'),
+      )
+      .toBe(true);
+  });
+  return window;
+};
+
+export const launchPackagedApp = async (home: string, runtimeEnvironment: Record<string, string> = {}) => {
+  const app = await launchPackagedWindow(home, runtimeEnvironment);
+  try {
+    const page = await waitForWorkbenchPage(app.lifecyclePage, app.runtime.origin);
+    const visibleAt = await waitForVisibleElement(page, "#root");
+    return { ...app, page, readyInMs: visibleAt - app.startedAt };
+  } catch (error) {
+    await disposePackagedApp(app);
     throw error;
   }
 };
@@ -142,13 +210,13 @@ export const runPackagedCli = (home: string, args: string[]) =>
     child.once("exit", (exitCode) => resolveExit({ exitCode, stderr, stdout }));
   });
 
-export const disposePackagedApp = async (app: PackagedApp | null) => {
+export const disposePackagedApp = async (app: PackagedWindow | null) => {
   if (!app) return;
   await app.finishTrace();
   const logPath = join(app.home, "logs.jsonl");
   const log = existsSync(logPath) ? readFileSync(logPath, "utf8").slice(-32_000) : "No runtime log was written.";
   await test.info().attach("runtime-log", {
-    body: redactSensitiveText(log, [app.runtime.token]),
+    body: redactSensitiveText(log, [app.runtime?.token ?? "", readDescriptor(app.home)?.token ?? ""]),
     contentType: "text/plain",
   });
   await app.browser.close().catch(() => {});

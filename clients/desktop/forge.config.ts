@@ -41,7 +41,11 @@ const config: ForgeConfig = {
       /^\/vite\.config\.ts$/,
     ],
     prune: false,
-    osxSign: signing.osxSign,
+    osxSign: signing.osxSign && {
+      ...signing.osxSign,
+      // The runtime is already signed before its manifest is generated.
+      ignore: (filePath) => filePath.endsWith("/Contents/Resources/bin/pstdio"),
+    },
     osxNotarize: signing.osxNotarize,
     windowsSign: signing.windowsSign,
   },

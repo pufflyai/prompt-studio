@@ -1,5 +1,20 @@
 # @pstdio/ui
 
+## 0.23.0
+
+_2026-09-08_
+
+### Minor Changes
+
+- 14692cc: Add persistent desktop project tabs beside native window controls.
+
+### Patch Changes
+
+- 62918f4: Restore portable ListRow type declarations in UI package builds.
+- 94943a0: Improve contrast for muted light text and destructive button states to match Pencil.
+- 94943a0: Load code editor assets when an editor opens so workbench startup stays responsive.
+- Updated internal dependencies: `@pstdio/sdk@0.22.1`
+
 ## 0.22.0
 
 _2026-09-07_

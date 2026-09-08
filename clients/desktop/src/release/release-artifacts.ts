@@ -43,7 +43,7 @@ type SidecarManifest = {
   checksum: string;
 };
 
-const activeReleaseTargets: DesktopReleaseTarget[] = ["darwin-arm64", "darwin-x64", "linux-x64"];
+const activeReleaseTargets: DesktopReleaseTarget[] = ["darwin-arm64", "linux-x64"];
 
 export const parseDesktopReleaseTarget = (value: string) => {
   const target = activeReleaseTargets.find((candidate) => candidate === value);

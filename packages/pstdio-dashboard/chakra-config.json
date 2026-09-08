@@ -1026,6 +1026,12 @@
     "caretColor": {},
     "cursor": {
       "values": "cursor"
+    },
+    "WebkitAppRegion": {
+      "values": [
+        "drag",
+        "no-drag"
+      ]
     }
   },
   "preflight": true,
@@ -3234,7 +3240,7 @@
           },
           "muted": {
             "value": {
-              "_light": "{colors.blacks.450}",
+              "_light": "{colors.blacks.600}",
               "_dark": "#8B9099"
             }
           },
@@ -4443,13 +4449,15 @@
             },
             "destructive": {
               "color": "blacks.50",
-              "bg": "red.500",
+              "bg": "red.600",
               "border": "none",
               "_hover": {
-                "bg": "red.600"
+                "&:not(:active, [data-active])": {
+                  "bg": "red.700"
+                }
               },
               "_active": {
-                "bg": "red.700"
+                "bg": "red.800"
               }
             },
             "ghost-static": {

@@ -12,7 +12,9 @@ import {
   waitForExit,
 } from "./packaged-app-helpers";
 
-const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
+const fixturePath = dirname(
+  fileURLToPath(import.meta.resolve("workbench-fixture/fixtures/detached-work/package.json")),
+);
 const readHeartbeat = (path: string) =>
   existsSync(path) ? (JSON.parse(readFileSync(path, "utf8")) as { pid: number; tick: number }) : null;
 
@@ -25,7 +27,7 @@ for (const shutdown of ["desktop quit", "API shutdown"] as const) {
     try {
       app = await launchPackagedApp(home, {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
-          defaultExtensions: [{ source: fixturePath, installName: "workbench-fixture" }],
+          defaultExtensions: [{ source: fixturePath, installName: "desktop-process-fixture" }],
         }),
       });
       const project = await app.page.evaluate(async () => {
@@ -41,7 +43,7 @@ for (const shutdown of ["desktop quit", "API shutdown"] as const) {
       const result = await app.page.evaluate(
         async ({ projectId, ...params }) => {
           const response = await fetch(
-            `/v1/projects/${projectId}/extensions/commands/pstdio.workbench-fixture.command.spawn-detached-probe/execute`,
+            `/v1/projects/${projectId}/extensions/commands/pstdio.desktop-process-fixture.command.spawn-detached-probe/execute`,
             {
               method: "POST",
               headers: { "content-type": "application/json" },

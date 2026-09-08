@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import {
+  attachStartupTimings,
   createPackagedHome,
   desktopVersion,
   disposePackagedApp,
@@ -15,6 +16,8 @@ import {
 } from "./packaged-app-helpers";
 import { openPackagedProject } from "./packaged-project-helpers";
 import { waitForVisibleElement } from "./visible-element-timing";
+
+const startupWindowBudgetMs = 1_000;
 
 const createProjectThroughBrowser = (app: PackagedApp, name: string) =>
   app.page.evaluate(async (projectName) => {
@@ -34,7 +37,14 @@ test("proves cold packaged startup and both authenticated transport paths", asyn
   try {
     app = await launchPackagedApp(home);
     testInfo.annotations.push({ type: "cold-start-ms", description: String(app.readyInMs) });
+    const startupWindowInMs = await attachStartupTimings(app);
+    testInfo.annotations.push({ type: "startup-window-ms", description: String(startupWindowInMs) });
+    expect(startupWindowInMs).toBeLessThan(startupWindowBudgetMs);
     expect(app.readyInMs).toBeLessThan(8_000);
+    const startupEditors = await app.page.evaluate(() =>
+      performance.getEntriesByType("resource").filter((entry) => entry.name.includes("/monaco-browser-")),
+    );
+    expect(startupEditors).toEqual([]);
     expect(new URL(app.runtime.origin).hostname).toBe("127.0.0.1");
     expect(app.runtime.ownerType).toBe("desktop");
 
@@ -127,6 +137,9 @@ test("promotes ownership, detaches, and preserves data through a warm relaunch",
 
     second = await test.step("Relaunch the desktop against the persistent runtime", () => launchPackagedApp(home));
     testInfo.annotations.push({ type: "warm-attach-ms", description: String(second.readyInMs) });
+    const startupWindowInMs = await attachStartupTimings(second);
+    testInfo.annotations.push({ type: "startup-window-ms", description: String(startupWindowInMs) });
+    expect(startupWindowInMs).toBeLessThan(startupWindowBudgetMs);
     expect(second.readyInMs).toBeLessThan(3_000);
     expect(second.runtime.pid).toBe(originalPid);
     expect(second.runtime.ownerType).toBe("persistent");
@@ -159,18 +172,20 @@ test("shows recovery promptly after a sidecar crash and retries without relaunch
   try {
     app = await launchPackagedApp(home);
     const originalInstanceId = app.runtime.instanceId;
+    const lifecycleStartedAt = await app.lifecyclePage.evaluate(() => performance.timeOrigin);
     const crashedAt = Date.now();
     process.kill(app.runtime.pid, process.platform === "win32" ? undefined : "SIGKILL");
     const visibleAt = await waitForVisibleElement(
-      app.page,
+      app.lifecyclePage,
       '[role="alert"] :is(h1, h2, h3)',
       "Prompt Studio needs attention",
     );
     const recoveryInMs = visibleAt - crashedAt;
     testInfo.annotations.push({ type: "recovery-ui-ms", description: String(recoveryInMs) });
     expect(recoveryInMs).toBeLessThan(500);
+    expect(await app.lifecyclePage.evaluate(() => performance.timeOrigin)).toBe(lifecycleStartedAt);
 
-    await app.page.getByRole("button", { name: "Retry" }).click();
+    await app.lifecyclePage.getByRole("button", { name: "Retry" }).click();
     const replacement = await waitForDescriptor(home, (descriptor) => descriptor.instanceId !== originalInstanceId);
     await app.page.waitForURL(`${replacement.origin}/`);
     await expect(app.page.locator("#root")).not.toBeEmpty();

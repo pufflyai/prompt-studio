@@ -99,17 +99,18 @@ describe("prepareDesktopReleaseArtifacts", () => {
   });
 });
 
-test("parseDesktopReleaseTarget disables Windows until its release lane is restored", () => {
+test("parseDesktopReleaseTarget accepts supported targets and rejects invalid input", () => {
   expect(parseDesktopReleaseTarget("darwin-arm64")).toBe("darwin-arm64");
-  expect(parseDesktopReleaseTarget("darwin-x64")).toBe("darwin-x64");
   expect(parseDesktopReleaseTarget("linux-x64")).toBe("linux-x64");
-  expect(() => parseDesktopReleaseTarget("win32-x64")).toThrow("Unsupported desktop release target win32-x64");
+  expect(() => parseDesktopReleaseTarget("invalid-target")).toThrow(
+    "Unsupported desktop release target invalid-target",
+  );
 });
 
 test("verifyDesktopReleaseSet requires one version and the complete native matrix", () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-desktop-release-set-"));
   roots.push(root);
-  const targets = ["darwin-arm64", "darwin-x64", "linux-x64"] as const;
+  const targets = ["darwin-arm64", "linux-x64"] as const;
   for (const target of targets) {
     const manifest: DesktopReleaseManifest = {
       schemaVersion: 1,
