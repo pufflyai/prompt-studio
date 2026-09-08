@@ -18,6 +18,12 @@ export interface FieldPiece {
   y: number;
   width: number;
   height: number;
+  angle: number;
+}
+
+interface ToolPlacement {
+  horizontal: number;
+  angle: number;
 }
 
 const TOOLS: ToolShapeKind[] = [
@@ -54,30 +60,33 @@ const HEIGHTS: Record<ToolShapeKind, number> = {
 };
 
 export const INITIAL_TOOL_COUNT = 6;
-export const MAX_TOOL_COUNT = 50;
+export const MAX_TOOL_COUNT = 30;
 export const TOOL_SPAWN_INTERVAL = 3000;
 
-export const containerPiece = (size: FieldSize, index: number, settled = false) => {
-  const columns = 6;
-  const cell = (size.width - 24) / columns;
-  const scale = Math.min(1.35, cell / 105);
+export const randomToolPlacement = () => ({ horizontal: Math.random(), angle: (Math.random() * 2 - 1) * Math.PI });
+
+export const containerPiece = (size: FieldSize, index: number, placement: ToolPlacement, settled = false) => {
+  const scale = Math.min(1.35, (size.width - 24) / 630);
   const kind = TOOLS[index % TOOLS.length];
   const height = HEIGHTS[kind] * scale;
   const width = height * TOOL_SHAPE_ASPECT[kind];
-  const column = index % columns;
+  const { horizontal, angle } = placement;
+  const halfWidth = (width * Math.abs(Math.cos(angle)) + height * Math.abs(Math.sin(angle))) / 2;
+  const halfHeight = (width * Math.abs(Math.sin(angle)) + height * Math.abs(Math.cos(angle))) / 2;
   return {
     id: `tool-${index}`,
     kind,
-    x: 12 + column * cell + (cell - width) / 2,
-    y: settled ? size.height - height : -height,
+    x: halfWidth + horizontal * (size.width - halfWidth * 2) - width / 2,
+    y: (settled ? size.height - halfHeight : -halfHeight) - height / 2,
     width,
     height,
+    angle,
   };
 };
 
-export const containerLayout = (size: FieldSize) => {
+export const containerLayout = (size: FieldSize, placements: ToolPlacement[]) => {
   if (size.width <= 0 || size.height <= 0) return { pieces: [], walls: [] };
-  const pieces = Array.from({ length: INITIAL_TOOL_COUNT }, (_, index) => containerPiece(size, index, true));
+  const pieces = placements.map((placement, index) => containerPiece(size, index, placement, true));
   return { pieces, walls: [] };
 };
 
@@ -129,6 +138,7 @@ export const parcourLayout = (perches: Perch[]) => {
       y: perch.y - PERCH_THICKNESS - mark.height,
       width: mark.width,
       height: mark.height,
+      angle: 0,
     }));
   });
 

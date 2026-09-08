@@ -5,8 +5,9 @@ The landing page uses the shared UI theme and panel separators. Its Pencil sourc
 
 The home page has a 480px introduction panel and a tools panel. On small screens the
 panels stack vertically. Sections use the shared ScrollArea. Six tools start on the
-floor, then one or two fall every three seconds until there are 50. Tools can be
-dragged. Reduced motion keeps the initial six tools still.
+floor at random positions and angles. One tool drops from a random position every
+three seconds until there are 30. Tools can be dragged. Reduced motion keeps the
+initial six tools still. Random placements stay stable through redraws and resizing.
 
 ## Desktop downloads
 

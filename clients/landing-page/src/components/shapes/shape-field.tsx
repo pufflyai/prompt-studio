@@ -5,9 +5,11 @@ import {
   containerLayout,
   containerPiece,
   type FieldPiece,
+  INITIAL_TOOL_COUNT,
   MAX_TOOL_COUNT,
   type Perch,
   parcourLayout,
+  randomToolPlacement,
   TOOL_SPAWN_INTERVAL,
 } from "./field-layout";
 import { createPiece, createWalls, type Piece } from "./shape-physics";
@@ -49,6 +51,8 @@ export const ShapeField = (props: ShapeFieldProps) => {
   const velocityRef = useRef({ x: 0, y: 0 });
   const dragRef = useRef<{ pointerId: number; constraint: Matter.Constraint } | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
+  // Keep each visit's random arrangement stable through redraws and panel resizing.
+  const [initialPlacements] = useState(() => Array.from({ length: INITIAL_TOOL_COUNT }, randomToolPlacement));
   const [, forceRender] = useState(0);
 
   useEffect(() => {
@@ -62,7 +66,7 @@ export const ShapeField = (props: ShapeFieldProps) => {
     return () => observer.disconnect();
   }, []);
 
-  const layout = spawn === "container" ? containerLayout(size) : parcourLayout(perches ?? []);
+  const layout = spawn === "container" ? containerLayout(size, initialPlacements) : parcourLayout(perches ?? []);
   const ready = size.width > 0 && size.height > 0 && layout.pieces.length > 0;
 
   // Declared first, so the world and boundary effects below read the current geometry.
@@ -90,16 +94,9 @@ export const ShapeField = (props: ShapeFieldProps) => {
     const spawnTimer =
       spawn === "container"
         ? setInterval(() => {
-            const remaining = MAX_TOOL_COUNT - pieces.length;
-            const count = Math.min(remaining, 1 + Math.floor(Math.random() * 2));
-            const additions = Array.from({ length: count }, (_, index) =>
-              createPiece(containerPiece(sizeRef.current, pieces.length + index)),
-            );
-            pieces.push(...additions);
-            Matter.Composite.add(
-              engine.world,
-              additions.map((piece) => piece.body),
-            );
+            const piece = createPiece(containerPiece(sizeRef.current, pieces.length, randomToolPlacement()));
+            pieces.push(piece);
+            Matter.Composite.add(engine.world, piece.body);
             if (pieces.length >= MAX_TOOL_COUNT) clearInterval(spawnTimer);
           }, TOOL_SPAWN_INTERVAL)
         : undefined;
@@ -252,6 +249,7 @@ export const ShapeField = (props: ShapeFieldProps) => {
             position="absolute"
             left={`${piece.x}px`}
             top={`${piece.y}px`}
+            transform={`rotate(${piece.angle}rad)`}
           >
             <ToolShape kind={piece.kind} size={piece.height} width={piece.width} />
           </Box>

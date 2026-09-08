@@ -7,6 +7,7 @@ export const createPiece = (item: FieldPiece) => {
   const x = item.x + item.width / 2;
   const y = item.y + item.height / 2;
   const options: Matter.IBodyDefinition = {
+    angle: item.angle,
     restitution: 0.28,
     friction: 0.45,
     frictionStatic: 0.6,
