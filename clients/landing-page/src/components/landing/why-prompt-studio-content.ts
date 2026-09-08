@@ -13,7 +13,7 @@ export const REASONS: { title: string; body: string; marks: ToolShapeKind[] }[] 
   },
   {
     title: "Let your tools work together",
-    body: "Use the output of one tool in another. Turn research into a report, or a report into a list of tasks. Connect the tools you build as your work grows.",
+    body: "Use the output of one tool in another. Turn research into a report, or a report into a list of tasks. Connect the tools you build to fit your workflows.",
     marks: ["command", "page"],
   },
   {

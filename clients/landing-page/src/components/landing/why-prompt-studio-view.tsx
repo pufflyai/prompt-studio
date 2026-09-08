@@ -1,4 +1,4 @@
-import { Box, Flex, Stack, Text } from "@chakra-ui/react";
+import { Box, Stack, Text } from "@chakra-ui/react";
 import { useEffect, useRef, useState } from "react";
 import type { Perch } from "../shapes/field-layout";
 import { ShapeField } from "../shapes/shape-field";
@@ -57,28 +57,26 @@ export const WhyPromptStudioView = (props: WhyPromptStudioViewProps) => {
     <PageScroll>
       <Box ref={fieldRef} position="relative" width="100%">
         <ShapeField spawn="parcour" perches={perches} worldOffset={windowOffset} />
-        <Flex justify="center">
-          <Stack width="full" maxWidth="2xl" gap="4xl" px="xl" pt="4xl" pb="4xl">
-            {REASONS.map((reason, index) => (
-              <Stack key={reason.title} gap="sm">
-                <Text
-                  as="h2"
-                  ref={(element) => {
-                    titleRefs.current[index] = element;
-                  }}
-                  textStyle="heading/M"
-                  width="fit-content"
-                  maxWidth="100%"
-                >
-                  {reason.title}
-                </Text>
-                <Text textStyle="paragraph/M/regular" color="fg.muted">
-                  {reason.body}
-                </Text>
-              </Stack>
-            ))}
-          </Stack>
-        </Flex>
+        <Stack width="full" gap="4xl" px="xl" pt="4xl" pb="4xl">
+          {REASONS.map((reason, index) => (
+            <Stack key={reason.title} gap="sm">
+              <Text
+                as="h2"
+                ref={(element) => {
+                  titleRefs.current[index] = element;
+                }}
+                textStyle="heading/M"
+                width="fit-content"
+                maxWidth="100%"
+              >
+                {reason.title}
+              </Text>
+              <Text textStyle="paragraph/M/regular" color="fg.muted">
+                {reason.body}
+              </Text>
+            </Stack>
+          ))}
+        </Stack>
       </Box>
     </PageScroll>
   );

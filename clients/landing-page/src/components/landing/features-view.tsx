@@ -73,7 +73,7 @@ const SectionHeading = (props: { title: string; intro: string }) => (
     <Text fontFamily="heading" fontSize="22px" fontWeight="semibold" lineHeight="1.2" letterSpacing="-0.3px">
       {props.title}
     </Text>
-    <Text fontFamily="body" fontSize="13px" lineHeight="1.5" color="fg.muted" maxWidth="660px">
+    <Text fontFamily="body" fontSize="13px" lineHeight="1.5" color="fg.muted">
       {props.intro}
     </Text>
   </Stack>
@@ -81,89 +81,86 @@ const SectionHeading = (props: { title: string; intro: string }) => (
 
 export const FeaturesView = () => (
   <PageScroll>
-    <Flex justify="center">
-      <Stack width="100%" maxWidth="820px" gap="18px" px="32px" pt="38px" pb="44px">
-        <Heading
-          as="h1"
-          fontFamily="heading"
-          fontWeight="semibold"
-          fontSize={{ base: "26px", md: "34px" }}
-          lineHeight="1.15"
-          maxWidth="660px"
-        >
-          A workspace for the tools you build.
-        </Heading>
-        <Text fontFamily="body" fontSize="15px" lineHeight="1.5" color="fg.muted" maxWidth="660px">
-          Build custom tools with your agent, use them together, and keep improving them as your work changes.
-        </Text>
+    <Stack width="100%" gap="18px" px="32px" pt="38px" pb="44px">
+      <Heading
+        as="h1"
+        fontFamily="heading"
+        fontWeight="semibold"
+        fontSize={{ base: "26px", md: "34px" }}
+        lineHeight="1.15"
+      >
+        A workspace for the tools you build.
+      </Heading>
+      <Text fontFamily="body" fontSize="15px" lineHeight="1.5" color="fg.muted">
+        Build custom tools with your agent, use them together, and keep improving them as your work changes.
+      </Text>
 
-        <SectionHeading
-          title="Build with your agents"
-          intro="Keep your conversations, project files, and running work together."
-        />
-        <Stack gap="24px" pt="8px">
-          {PROVIDED.map((service) => (
-            <Stack key={service.name} gap="6px">
-              <Text fontFamily="heading" fontSize="16px" fontWeight="semibold" letterSpacing="-0.2px">
-                {service.name}
-              </Text>
-              <Text fontFamily="body" fontSize="13px" lineHeight="1.55" color="fg.muted" maxWidth="640px">
-                {service.detail}
-              </Text>
-            </Stack>
-          ))}
-        </Stack>
-
-        <SectionHeading
-          title="Choose what belongs in your workspace"
-          intro="Add the tools you need and remove the ones you do not. Tools are packaged as extensions, so you can install one, build your own, or change an existing one with your agent."
-        />
-
-        <SectionHeading
-          title="What will you build?"
-          intro="A dashboard for your data, an editor for your files, or a task that runs every morning. Describe what you want your tool to do."
-        />
-        <SimpleGrid minChildWidth="60" gap="12px" pt="2px">
-          {SURFACES.map((surface) => (
-            <Stack
-              key={surface.name}
-              gap="12px"
-              px="20px"
-              py="18px"
-              bg="bg.subtle"
-              borderWidth="1px"
-              borderColor="border.subtle"
-              rounded="10px"
-            >
-              <HStack gap="12px" align="center">
-                <Flex
-                  width="44px"
-                  height="44px"
-                  flexShrink="0"
-                  align="center"
-                  justify="center"
-                  bg="bg.muted"
-                  rounded="8px"
-                >
-                  <ToolShape kind={surface.kind} size={20} />
-                </Flex>
-                <Text fontFamily="heading" fontSize="18px" fontWeight="semibold" letterSpacing="-0.2px">
-                  {surface.name}
-                </Text>
-                <Box flex="1" />
-                <Box px="7px" py="3px" borderWidth="1px" borderColor="border.subtle" rounded="4px">
-                  <Text fontFamily="mono" fontSize="8px" color="fg.subtle" letterSpacing="0.7px">
-                    {surface.badge}
-                  </Text>
-                </Box>
-              </HStack>
-              <Text fontFamily="body" fontSize="13px" lineHeight="1.5" color="fg.muted">
-                {surface.detail}
-              </Text>
-            </Stack>
-          ))}
-        </SimpleGrid>
+      <SectionHeading
+        title="Build with your agents"
+        intro="Keep your conversations, project files, and running work together."
+      />
+      <Stack gap="24px" pt="8px">
+        {PROVIDED.map((service) => (
+          <Stack key={service.name} gap="6px">
+            <Text fontFamily="heading" fontSize="16px" fontWeight="semibold" letterSpacing="-0.2px">
+              {service.name}
+            </Text>
+            <Text fontFamily="body" fontSize="13px" lineHeight="1.55" color="fg.muted">
+              {service.detail}
+            </Text>
+          </Stack>
+        ))}
       </Stack>
-    </Flex>
+
+      <SectionHeading
+        title="Choose what belongs in your workspace"
+        intro="Add the tools you need and remove the ones you do not. Tools are packaged as extensions, so you can install one, build your own, or change an existing one with your agent."
+      />
+
+      <SectionHeading
+        title="What will you build?"
+        intro="A dashboard for your data, an editor for your files, or a task that runs every morning. Describe what you want your tool to do."
+      />
+      <SimpleGrid minChildWidth="60" gap="12px" pt="2px">
+        {SURFACES.map((surface) => (
+          <Stack
+            key={surface.name}
+            gap="12px"
+            px="20px"
+            py="18px"
+            bg="bg.subtle"
+            borderWidth="1px"
+            borderColor="border.subtle"
+            rounded="10px"
+          >
+            <HStack gap="12px" align="center">
+              <Flex
+                width="44px"
+                height="44px"
+                flexShrink="0"
+                align="center"
+                justify="center"
+                bg="bg.muted"
+                rounded="8px"
+              >
+                <ToolShape kind={surface.kind} size={20} />
+              </Flex>
+              <Text fontFamily="heading" fontSize="18px" fontWeight="semibold" letterSpacing="-0.2px">
+                {surface.name}
+              </Text>
+              <Box flex="1" />
+              <Box px="7px" py="3px" borderWidth="1px" borderColor="border.subtle" rounded="4px">
+                <Text fontFamily="mono" fontSize="8px" color="fg.subtle" letterSpacing="0.7px">
+                  {surface.badge}
+                </Text>
+              </Box>
+            </HStack>
+            <Text fontFamily="body" fontSize="13px" lineHeight="1.5" color="fg.muted">
+              {surface.detail}
+            </Text>
+          </Stack>
+        ))}
+      </SimpleGrid>
+    </Stack>
   </PageScroll>
 );
