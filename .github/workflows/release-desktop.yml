@@ -124,6 +124,10 @@ jobs:
       - name: Verify Electron fuse policy
         run: bun run --cwd clients/desktop verify:fuses
 
+      - name: Smoke source Linux Electron
+        if: matrix.platform == 'linux'
+        run: xvfb-run -a bun run --cwd clients/desktop test:electron
+
       - name: Smoke packaged application
         if: matrix.platform != 'linux'
         run: bun run --cwd clients/desktop test:packaged
