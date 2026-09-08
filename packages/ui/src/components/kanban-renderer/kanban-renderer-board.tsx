@@ -98,7 +98,7 @@ export const KanbanRendererBoard = (props: KanbanRendererBoardProps) => {
       size="xs"
       showHorizontalScrollbar
       showVerticalScrollbar={false}
-      contentProps={{ display: "flex", alignItems: "stretch", gap: "sm", padding: "xs", minH: "100%" }}
+      contentProps={{ display: "flex", alignItems: "stretch", gap: "xs", padding: "xs", minH: "100%" }}
     >
       {columns.map((column) => (
         <Stack
