@@ -12,7 +12,9 @@ import {
   waitForExit,
 } from "./packaged-app-helpers";
 
-const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/fixtures/detached-work/package.json")));
+const fixturePath = dirname(
+  fileURLToPath(import.meta.resolve("workbench-fixture/fixtures/detached-work/package.json")),
+);
 const readHeartbeat = (path: string) =>
   existsSync(path) ? (JSON.parse(readFileSync(path, "utf8")) as { pid: number; tick: number }) : null;
 
