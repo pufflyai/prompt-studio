@@ -1,44 +1,40 @@
 import { DocumentationReader } from "./documentation-reader";
 import { repositoryDocPathFromUrl } from "./repository-docs";
 
-const QUICKSTART_MARKDOWN = `# Use the CLI
+const QUICKSTART_MARKDOWN = `# Let your agent extend the CLI
 
-The \`pst\` command starts Prompt Studio and gives people and agents the same project, agent, session, and extension tools.
+When a command is missing, ask your agent to add it as a Prompt Studio extension. The new command becomes part of the project CLI.
 
-## 1. Install and start
+## 1. Describe the command you need
 
-Install Prompt Studio once. Run it from the repository you want to open.
+Tell the agent what the command should do and what input it needs.
 
-\`\`\`bash
-bun add --global pstdio@latest
-pst
+> Add a release-note command that reads a ticket and writes a customer update.
+
+## 2. The agent adds an extension command
+
+The extension defines a command that people and agents can both use.
+
+\`\`\`typescript
+export default defineExtension({
+  commands: {
+    "release-note": {
+      agent: true,
+      run: () => buildReleaseNote(),
+    },
+  },
+});
 \`\`\`
 
-## 2. Create a project
+## 3. Use the new command
 
-A project gives the repository a stable name and keeps its configuration, tickets, documentation, and sessions together.
-
-\`\`\`bash
-pst projects create
-\`\`\`
-
-## 3. Connect an agent
-
-Set up an agent once. The workbench can then start its sessions inside the active project.
+The command is now available from the project CLI.
 
 \`\`\`bash
-pst agents setup <agent-id>
+pst release-note --ticket PS-460
 \`\`\`
 
-## 4. Let agents extend the workbench
-
-The CLI is also the entry point for extensions. Ask an agent to build the command, page, editor, automation, or skill your work needs. The agent can write the TypeScript extension, validate it, and run it in development mode.
-
-\`\`\`bash
-pst extensions dev ./my-extension
-\`\`\`
-
-Extensions make new tools available to both people and agents. Read the [full CLI guide](/documentation/product/cli) or learn how to [build an extension](/documentation/extensions).
+Read the [extension documentation](/documentation/extensions) to see the full API.
 `;
 
 interface QuickstartViewProps {

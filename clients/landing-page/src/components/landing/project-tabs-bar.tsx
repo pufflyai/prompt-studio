@@ -1,6 +1,8 @@
-import { Box, Circle, HStack, Stack, Text } from "@chakra-ui/react";
+import { Box, Circle, HStack, Text } from "@chakra-ui/react";
+import { PromptStudioIcon } from "@pstdio/ui";
 import { Minus, Plus, X } from "lucide-react";
-import { PROJECT_TABS, type ProjectTabId } from "./landing-content";
+import { PROJECT_TAB } from "./landing-content";
+import { useLandingStyles } from "./use-landing-styles";
 
 // the macOS traffic-light chrome colors are OS constants, not design-system tokens
 const MAC_CONTROLS = [
@@ -10,95 +12,64 @@ const MAC_CONTROLS = [
 ];
 
 interface ProjectTabsBarProps {
-  activeTab: ProjectTabId;
-  branchLabel: string;
+  windowed: boolean;
   onNavigateHome: () => void;
-  onSelectTab: (tab: ProjectTabId) => void;
+  /**
+   * Every window control unmaximises rather than doing what it says. A landing page
+   * that can be closed into a blank desktop is a dead end, so red and yellow lead
+   * somewhere recoverable too; green toggles back.
+   */
+  onToggleWindowed: () => void;
+  onTitleBarPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
+  onTitleBarDoubleClick: () => void;
 }
 
 export const ProjectTabsBar = (props: ProjectTabsBarProps) => {
-  const { activeTab, branchLabel, onNavigateHome, onSelectTab } = props;
+  const { windowed, onNavigateHome, onToggleWindowed, onTitleBarPointerDown, onTitleBarDoubleClick } = props;
+
+  const styles = useLandingStyles(windowed);
 
   return (
     <>
-      <Stack
-        as="button"
-        aria-label="Go to Prompt Studio home"
-        height="52px"
-        flexShrink="0"
-        gap="1px"
-        px="8px"
-        justify="center"
-        bg="bg.subtle"
-        borderBottomWidth="1px"
-        borderColor="border"
-        display={{ base: "flex", md: "none" }}
-        textAlign="left"
-        onClick={onNavigateHome}
-      >
-        <Text fontFamily="heading" fontWeight="medium" fontSize="13px" lineHeight="1.2">
+      <Box as="button" aria-label="Go to Prompt Studio home" css={styles.mobileTitlebar} onClick={onNavigateHome}>
+        <Box width="5" height="5" flexShrink="0">
+          <PromptStudioIcon />
+        </Box>
+        <Text fontFamily="heading" fontWeight="medium" textStyle="label/M/medium" lineHeight="1.2">
           Prompt Studio
         </Text>
-        <Text fontFamily="mono" fontSize="8px" letterSpacing="0.8px" color="fg.subtle" lineHeight="1.2">
-          {branchLabel}
-        </Text>
-      </Stack>
-      <HStack
-        height="44px"
-        flexShrink="0"
-        gap="8px"
-        px="10px"
-        bg="bg.subtle"
-        borderBottomWidth="1px"
-        borderColor="border"
-        overflow="hidden"
-        display={{ base: "none", md: "flex" }}
-      >
-        <HStack className="group" width="44px" justify="flex-end" gap="8px" flexShrink="0">
+      </Box>
+      <Box css={styles.titlebar} onPointerDown={onTitleBarPointerDown} onDoubleClick={onTitleBarDoubleClick}>
+        <Box className="group" css={styles.windowControls}>
           {MAC_CONTROLS.map((control) => (
             <Circle
               key={control.label}
-              size="10px"
+              as="button"
+              size="icon-2xs"
               bg={control.color}
               color="blackAlpha.700"
               aria-label={control.label}
+              // Stop the title-bar drag from claiming the pointer, otherwise the click
+              // never lands and green cannot restore the window.
+              onPointerDown={(event) => event.stopPropagation()}
+              onClick={(event) => {
+                event.stopPropagation();
+                onToggleWindowed();
+              }}
             >
               <Box display="none" _groupHover={{ display: "flex" }}>
                 <control.icon size={7} strokeWidth={3} />
               </Box>
             </Circle>
           ))}
+        </Box>
+        <HStack as="button" css={styles.brandTab} onClick={onNavigateHome}>
+          <PROJECT_TAB.icon size={14} />
+          <Text fontFamily="heading" fontWeight="medium" textStyle="label/S/medium" whiteSpace="nowrap">
+            {PROJECT_TAB.label}
+          </Text>
         </HStack>
-        <HStack gap="4px" overflow="hidden">
-          {PROJECT_TABS.map((tab) => {
-            const isActive = tab.id === activeTab;
-
-            return (
-              <HStack
-                key={tab.label}
-                as="button"
-                cursor="pointer"
-                height="28px"
-                px="10px"
-                gap="7px"
-                rounded="4px"
-                flexShrink="0"
-                bg={isActive ? "bg.hover" : "transparent"}
-                color={isActive ? "fg" : "fg.subtle"}
-                borderWidth="1px"
-                borderColor={isActive ? "border" : "transparent"}
-                _hover={{ bg: "bg.hover", color: "fg" }}
-                onClick={() => onSelectTab(tab.id)}
-              >
-                <tab.icon size={14} />
-                <Text fontFamily="heading" fontWeight="medium" fontSize="12px" whiteSpace="nowrap">
-                  {tab.label}
-                </Text>
-              </HStack>
-            );
-          })}
-        </HStack>
-      </HStack>
+      </Box>
     </>
   );
 };

@@ -19,10 +19,12 @@
     "@pstdio/ui": "workspace:*",
     "astro": "^7.1.0",
     "lucide-react": "^0.556.0",
+    "matter-js": "^0.20.0",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@types/matter-js": "^0.20.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0"
   }

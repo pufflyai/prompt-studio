@@ -1,63 +1,52 @@
-import { Box, Flex, HStack, Link, Text } from "@chakra-ui/react";
+import { Box, Button, Flex, HStack, Text } from "@chakra-ui/react";
 import { StockholmIcon } from "@pstdio/ui";
-import { GitBranch } from "lucide-react";
+import { Scale, ShieldCheck } from "lucide-react";
 import type { LandingView } from "./landing-content";
+import { useLandingStyles } from "./use-landing-styles";
+
+const LEGAL_LINKS = [
+  { label: "Privacy", view: "privacy" as const, href: "/privacy", icon: ShieldCheck },
+  { label: "Terms", view: "terms" as const, href: "/terms", icon: Scale },
+];
 
 interface WorkbenchStatusBarProps {
-  label: string;
   onNavigate: (view: LandingView) => void;
-  onOpenChangelog: () => void;
 }
 
 export const WorkbenchStatusBar = (props: WorkbenchStatusBarProps) => {
-  const { label, onNavigate, onOpenChangelog } = props;
+  const { onNavigate } = props;
+
+  const styles = useLandingStyles();
 
   return (
-    <HStack
-      as="footer"
-      aria-label="Workbench status"
-      height="28px"
-      flexShrink="0"
-      gap="14px"
-      px="12px"
-      bg="bg.subtle"
-      borderTopWidth="1px"
-      borderColor="border"
-      color="fg.muted"
-      display={{ base: "none", md: "flex" }}
-    >
-      <HStack as="button" gap="8px" fontFamily="mono" fontSize="9px" onClick={onOpenChangelog}>
-        <GitBranch size={10} />
-        <Text>{label}</Text>
-      </HStack>
-      <Flex flex="1" />
-      <HStack gap="6px" color="fg.subtle">
-        <Box width="11px" height="11px">
-          <StockholmIcon />
-        </Box>
-        <Text fontFamily="body" fontSize="9px">
-          © Pufflig AB. Stockholm, 2026
-        </Text>
-      </HStack>
-      {[
-        { label: "Privacy", view: "privacy" as const, href: "/privacy" },
-        { label: "Terms", view: "terms" as const, href: "/terms" },
-      ].map((item) => (
-        <Link
+    <HStack as="footer" aria-label="Workbench status" css={styles.status}>
+      {LEGAL_LINKS.map((item) => (
+        <Button
           key={item.view}
-          href={item.href}
-          fontFamily="body"
-          fontSize="9px"
+          asChild
+          size="xs"
+          variant="ghost"
           color="fg.muted"
-          _hover={{ color: "fg", textDecoration: "none" }}
           onClick={(event) => {
             event.preventDefault();
             onNavigate(item.view);
           }}
         >
-          {item.label}
-        </Link>
+          <a href={item.href}>
+            <item.icon />
+            {item.label}
+          </a>
+        </Button>
       ))}
+      <Flex flex="1" />
+      <HStack gap={{ base: "4px", md: "6px" }} color="fg.subtle" minWidth="0">
+        <Box width={{ base: "10px", md: "11px" }} height={{ base: "10px", md: "11px" }} flexShrink="0">
+          <StockholmIcon />
+        </Box>
+        <Text fontFamily="body" fontSize={{ base: "7px", md: "9px" }} whiteSpace="nowrap">
+          © Pufflig AB. Stockholm, 2026
+        </Text>
+      </HStack>
     </HStack>
   );
 };

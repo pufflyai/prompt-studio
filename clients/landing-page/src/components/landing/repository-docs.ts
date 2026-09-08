@@ -9,6 +9,15 @@ const rawDocumentModules = import.meta.glob<string>("../../../../../.pstdio/docs
   query: "?raw",
 });
 
+/**
+ * The landing page is user onboarding, so it publishes only the folders written for
+ * people running Prompt Studio. Contributor material (`architecture/`, `adrs/`,
+ * `contributing/`, `lessons-learned/`) stays in the repository.
+ */
+export const PUBLISHED_DOC_FOLDERS = ["product", "extensions", "references"] as const;
+
+const isPublished = (path: string) => PUBLISHED_DOC_FOLDERS.some((folder) => path.startsWith(`${folder}/`));
+
 export interface RepositoryDocument {
   markdown: string;
   path: string;
@@ -41,6 +50,7 @@ export const REPOSITORY_DOCUMENTS: RepositoryDocument[] = Object.entries(rawDocu
       url: repositoryDocUrl(path),
     };
   })
+  .filter((document) => isPublished(document.path))
   .sort((left, right) => left.path.localeCompare(right.path));
 
 const documentsByPath = new Map(REPOSITORY_DOCUMENTS.map((document) => [document.path, document]));
@@ -61,8 +71,6 @@ const buildDocumentTree = () => {
   const root: MutableTreeNode = { id: "doc-folder:root", label: "Documentation", children: [], isFolder: true };
 
   for (const document of REPOSITORY_DOCUMENTS) {
-    if (document.path === "index.md") continue;
-
     const segments = document.path.split("/");
     const filename = segments.pop();
     if (!filename) continue;
@@ -108,8 +116,7 @@ const buildDocumentTree = () => {
 
 export const REPOSITORY_DOC_TREE = buildDocumentTree();
 
-export const repositoryDocument = (path?: string) =>
-  documentsByPath.get(path ?? "index.md") ?? documentsByPath.get("index.md");
+export const repositoryDocument = (path?: string) => (path ? documentsByPath.get(path) : undefined);
 
 const splitSource = (source: string) => {
   const match = source.match(/^([^?#]*)([?#].*)?$/);

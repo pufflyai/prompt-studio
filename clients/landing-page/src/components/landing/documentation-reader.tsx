@@ -1,6 +1,7 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { type MarkdownUrlResolver, RichMessage } from "@pstdio/ui/rich-text";
 import type { MouseEvent } from "react";
+import { PageScroll } from "./page-scroll";
 
 interface DocumentationReaderProps {
   markdown: string;
@@ -24,10 +25,12 @@ export const DocumentationReader = (props: DocumentationReaderProps) => {
   };
 
   return (
-    <Flex height="100%" minHeight="0" justify="center" overflow="hidden" onClick={handleClick}>
-      <Box width="100%" maxWidth="52rem" height="100%" minHeight="0" px={{ base: "20px", md: "32px" }} py="32px">
-        <RichMessage defaultState={markdown} fullWidth resolveMarkdownUrl={resolveMarkdownUrl} />
-      </Box>
-    </Flex>
+    <PageScroll>
+      <Flex width="100%" justify="center" onClick={handleClick}>
+        <Box width="100%" maxWidth="52rem" px={{ base: "20px", md: "32px" }} py="32px">
+          <RichMessage defaultState={markdown} fullWidth resolveMarkdownUrl={resolveMarkdownUrl} />
+        </Box>
+      </Flex>
+    </PageScroll>
   );
 };

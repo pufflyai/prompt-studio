@@ -79,7 +79,7 @@ export const BlogView = (props: BlogViewProps) => {
           maxSizePx={420}
           contentMinSizePx={320}
           resizeLabel="Resize post list"
-          showResizeSeparator
+          separator="line"
           onCollapsedChange={(collapsed) => onPostListOpenChange(!collapsed)}
           resizablePanel={<PostList activePostId={activePostId} onSelectPost={onSelectPost} />}
           contentPanel={<PostContent page={activePost.page} />}

@@ -1,176 +1,118 @@
-import { Box, Flex, Heading, HStack, Link, SimpleGrid, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, Heading, HStack, SimpleGrid, Stack, Text } from "@chakra-ui/react";
 import type { LucideIcon } from "lucide-react";
-import {
-  Activity,
-  Columns3,
-  FileChartColumn,
-  FlaskConical,
-  GraduationCap,
-  MessageCircle,
-  Palette,
-  SquareTerminal,
-} from "lucide-react";
+import { CalendarClock, FileCode2, GraduationCap, LayoutGrid, SquareTerminal, Webhook } from "lucide-react";
 
-interface GalleryEntry {
-  id: string;
+interface ExtensionCapability {
   name: string;
   description: string;
-  version?: string;
+  badge: string;
   icon: LucideIcon;
 }
 
-const DESKTOP_EXTENSIONS: GalleryEntry[] = [
+const EXTENSION_CAPABILITIES: ExtensionCapability[] = [
   {
-    id: "pstdio-planner",
-    name: "Planner",
-    description: "Turn projects into agent-ready tickets, boards, and automations.",
-    version: "1.4.2",
-    icon: Columns3,
+    name: "Commands",
+    description: "Add pst commands that people and agents can run.",
+    badge: "CLI",
+    icon: SquareTerminal,
   },
   {
-    id: "pstdio-reports",
-    name: "Reports",
-    description: "Capture implementation, review, and validation handoffs.",
-    version: "1.1.0",
-    icon: FileChartColumn,
+    name: "Pages",
+    description: "Add project pages inside the workbench.",
+    badge: "UI",
+    icon: LayoutGrid,
   },
   {
-    id: "pstdio-skills",
+    name: "Editors",
+    description: "Build native editors for project resources.",
+    badge: "NATIVE",
+    icon: FileCode2,
+  },
+  {
     name: "Skills",
-    description: "Package repeatable agent instructions for every project.",
-    version: "1.0.3",
+    description: "Package instructions an agent can install and follow.",
+    badge: "AGENT",
     icon: GraduationCap,
   },
   {
-    id: "pstdio-base-themes",
-    name: "Base themes",
-    description: "Switch the entire workbench across curated color modes.",
-    version: "2.0.1",
-    icon: Palette,
+    name: "Hooks",
+    description: "React to project, workspace, and session events.",
+    badge: "EVENTS",
+    icon: Webhook,
   },
   {
-    id: "pstdio-extension-lab",
-    name: "Extension lab",
-    description: "Build and preview new workbench extensions locally.",
-    version: "0.9.4",
-    icon: FlaskConical,
-  },
-  {
-    id: "harness-open-code",
-    name: "OpenCode harness",
-    description: "Connect OpenCode models and sessions to your projects.",
-    version: "1.2.0",
-    icon: SquareTerminal,
+    name: "Automations",
+    description: "Schedule extension work without leaving the project.",
+    badge: "SCHEDULED",
+    icon: CalendarClock,
   },
 ];
 
-const MOBILE_EXTENSIONS: GalleryEntry[] = [
-  { id: "pstdio-planner", name: "Planner", description: "Plan, assign, and track agent work.", icon: Columns3 },
-  {
-    id: "pstdio-reports",
-    name: "Reports",
-    description: "Generate implementation and review reports.",
-    icon: FileChartColumn,
-  },
-  { id: "pstdio-slack", name: "Slack", description: "Bring project updates into team channels.", icon: MessageCircle },
-  {
-    id: "pstdio-build-monitor",
-    name: "Build Monitor",
-    description: "Watch builds and surface failing checks.",
-    icon: Activity,
-  },
-];
+const CapabilityCard = (props: { capability: ExtensionCapability }) => {
+  const { capability } = props;
 
-const extensionCodeUrl = (id: string) => `https://github.com/pufflyai/prompt-studio/tree/main/extensions/${id}`;
-
-const GalleryCard = (props: { entry: GalleryEntry; mobile?: boolean }) => {
-  const { entry, mobile = false } = props;
-
-  const content = (
-    <>
+  return (
+    <HStack
+      minHeight={{ base: "77px", md: "94px" }}
+      gap="14px"
+      px="14px"
+      py="12px"
+      align="center"
+      bg="bg.subtle"
+      borderWidth="1px"
+      borderColor="border"
+      rounded="8px"
+    >
       <Flex
-        width={mobile ? "36px" : "44px"}
-        height={mobile ? "36px" : "44px"}
+        width={{ base: "36px", md: "42px" }}
+        height={{ base: "36px", md: "42px" }}
         flexShrink="0"
         align="center"
         justify="center"
         bg="bg.hover"
-        borderWidth={mobile ? "0" : "1px"}
-        borderColor="border"
-        rounded={mobile ? "6px" : "9px"}
+        rounded="6px"
       >
-        <entry.icon size={mobile ? 17 : 22} />
+        <capability.icon size={18} />
       </Flex>
-      <Stack gap="2px" flex="1" minWidth="0">
-        <Text fontFamily="heading" fontWeight={mobile ? "medium" : "semibold"} fontSize="15px">
-          {entry.name}
-        </Text>
-        <Text fontFamily="body" fontSize={mobile ? "12px" : "13px"} lineHeight="1.35" color="fg.muted">
-          {entry.description}
+      <Stack gap="3px" flex="1" minWidth="0">
+        <HStack justify="space-between" gap="8px">
+          <Text fontFamily="heading" fontWeight="medium" fontSize="15px">
+            {capability.name}
+          </Text>
+          <Box px="6px" py="2px" borderWidth="1px" borderColor="border" rounded="3px">
+            <Text fontFamily="mono" fontSize="8px" color="fg.subtle">
+              {capability.badge}
+            </Text>
+          </Box>
+        </HStack>
+        <Text fontFamily="body" fontSize="12px" lineHeight="1.4" color="fg.muted">
+          {capability.description}
         </Text>
       </Stack>
-      {entry.version && (
-        <Box px="8px" py="3px" bg="bg.hover" rounded="full">
-          <Text fontFamily="mono" fontSize="9px" color="fg.muted">
-            {entry.version}
-          </Text>
-        </Box>
-      )}
-    </>
-  );
-
-  const sharedProps = {
-    minHeight: mobile ? "83px" : "85px",
-    gap: "14px",
-    px: mobile ? "14px" : "15px",
-    py: "12px",
-    bg: "bg.subtle",
-    borderWidth: "1px",
-    borderColor: "border",
-    rounded: "8px",
-  } as const;
-
-  if (mobile) return <HStack {...sharedProps}>{content}</HStack>;
-
-  return (
-    <HStack asChild {...sharedProps} _hover={{ bg: "bg.hover", textDecoration: "none" }}>
-      <Link href={extensionCodeUrl(entry.id)} target="_blank" rel="noopener">
-        {content}
-      </Link>
     </HStack>
   );
 };
 
 export const ExtensionGallery = () => (
-  <>
-    <Stack display={{ base: "flex", md: "none" }} width="100%" gap="0" px="16px" pt="20px" pb="92px">
-      <Heading as="h1" fontFamily="heading" fontWeight="semibold" fontSize="26px" lineHeight="1.15">
-        Extension gallery
+  <Box height="100%" overflowY="auto">
+    <Stack width="100%" maxWidth="820px" mx="auto" gap="0" px={{ base: "16px", md: "32px" }} py="20px">
+      <Heading
+        as="h1"
+        fontFamily="heading"
+        fontWeight="semibold"
+        fontSize={{ base: "26px", md: "30px" }}
+        lineHeight="1.15"
+      >
+        Building Extensions
       </Heading>
-      <Text fontFamily="body" fontSize="13px" lineHeight="1.45" color="fg.muted" mt="10px">
-        A sample of focused tools and workflows available for a workbench.
+      <Text fontFamily="body" fontSize="13px" lineHeight="1.5" color="fg.muted" mt="10px" maxWidth="620px">
+        Agents can extend Prompt Studio with project commands and workbench tools.
       </Text>
-      <Stack gap="7px" mt="16px">
-        {MOBILE_EXTENSIONS.map((entry) => (
-          <GalleryCard key={entry.id} entry={entry} mobile />
-        ))}
-      </Stack>
-    </Stack>
-    <Stack display={{ base: "none", md: "flex" }} width="100%" gap="14px" pt="28px" pb="34px" px="32px">
-      <Text fontFamily="mono" fontSize="10px" fontWeight="semibold" letterSpacing="1.1px" color="purple.300">
-        EXTEND THE WORKBENCH
-      </Text>
-      <Heading as="h1" fontFamily="heading" fontWeight="semibold" fontSize="28px" letterSpacing="-0.5px">
-        Extension gallery
-      </Heading>
-      <Text fontFamily="body" fontSize="13px" color="fg.muted" mt="-7px">
-        Add tools, agent harnesses, themes, and workflows without leaving the workbench.
-      </Text>
-      <SimpleGrid columns={{ md: 2, xl: 3 }} gap="14px" mt="4px">
-        {DESKTOP_EXTENSIONS.map((entry) => (
-          <GalleryCard key={entry.id} entry={entry} />
+      <SimpleGrid columns={{ base: 1, md: 2, xl: 3 }} gap="8px" mt="18px">
+        {EXTENSION_CAPABILITIES.map((capability) => (
+          <CapabilityCard key={capability.name} capability={capability} />
         ))}
       </SimpleGrid>
     </Stack>
-  </>
+  </Box>
 );

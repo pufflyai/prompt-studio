@@ -15,7 +15,7 @@ export const INITIAL_NOTIFICATIONS: NotificationCenterItem[] = [
   {
     id: "welcome",
     title: "Welcome to Prompt Studio",
-    body: "Press ⌘K anywhere to search or run a command.",
+    body: "Press ⌘P anywhere to search or run a command.",
     priority: "low",
     status: "read",
     sourceLabel: "workbench",

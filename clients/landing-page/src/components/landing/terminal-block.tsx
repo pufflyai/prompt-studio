@@ -39,7 +39,7 @@ export const TerminalBlock = (props: TerminalBlockProps) => {
       py="11px"
       bg="bg.code"
       borderWidth="1px"
-      borderColor="border"
+      borderColor="border.subtle"
       rounded="6px"
     >
       <Stack gap="8px" flex="1" pt="2px">

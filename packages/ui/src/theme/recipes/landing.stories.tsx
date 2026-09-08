@@ -1,0 +1,89 @@
+import { Box, Button, Text, useSlotRecipe } from "@chakra-ui/react";
+import type { Meta, StoryObj } from "@storybook/react";
+import { ChevronDown, Download } from "lucide-react";
+import { ResizableSplitLayout } from "@/components/layout/resizable-split-layout";
+import { SearchableMenu } from "@/components/overlays/searchable-menu";
+import { ScrollArea } from "@/components/primitives/scroll-area";
+
+const LandingPanels = () => {
+  const recipe = useSlotRecipe({ key: "landing" });
+  const styles = recipe({});
+  return (
+    <Box css={styles.root}>
+      <Box css={styles.window}>
+        <Box css={styles.titlebar}>
+          <Text>Prompt Studio</Text>
+        </Box>
+        <Box css={styles.mobileTitlebar}>
+          <Text>Prompt Studio</Text>
+        </Box>
+        <Box css={styles.body}>
+          <ResizableSplitLayout
+            width="full"
+            height="full"
+            resizableSide="left"
+            defaultSizePx={480}
+            minSizePx={360}
+            contentMinSizePx={300}
+            collapsible={false}
+            resizeLabel="Resize download panel"
+            resizablePanel={
+              <Box css={styles.hero}>
+                <ScrollArea height="full">
+                  <Box css={styles.heroCopy}>
+                    <Text as="h1" textStyle="heading/XL">
+                      A place for your tools to live.
+                    </Text>
+                    <Text textStyle="paragraph/XL/regular" color="fg.muted">
+                      Build and run tailored tools with your agents.
+                    </Text>
+                    <Box css={styles.download}>
+                      <Button variant="primary" size="lg" width="full">
+                        <Download />
+                        Download Prompt Studio
+                      </Button>
+                      <Text textStyle="label/S/regular" color="fg.muted">
+                        macOS · Apple silicon · DMG · v0.32.0
+                      </Text>
+                      <SearchableMenu
+                        showSearch={false}
+                        searchPlaceholder="Find a build"
+                        emptyState="No builds available"
+                        trigger={
+                          <Button variant="ghost" size="sm">
+                            Other platforms
+                            <ChevronDown />
+                          </Button>
+                        }
+                        items={[
+                          { id: "mac", label: "macOS · Apple silicon · DMG", isSelected: true },
+                          { id: "linux", label: "Linux · x64 · DEB" },
+                        ]}
+                      />
+                      <Button asChild variant="ghost" size="sm">
+                        <a href="https://github.com/pufflyai/prompt-studio/blob/main/.pstdio/docs/product/cli/setup.md">
+                          Use via CLI
+                        </a>
+                      </Button>
+                    </Box>
+                  </Box>
+                </ScrollArea>
+              </Box>
+            }
+            contentPanel={<Box css={styles.tools} />}
+          />
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
+const meta = {
+  title: "Theme/Landing Panels",
+  component: LandingPanels,
+  parameters: { layout: "fullscreen" },
+} satisfies Meta<typeof LandingPanels>;
+
+export default meta;
+type Story = StoryObj<typeof meta>;
+export const Desktop: Story = {};

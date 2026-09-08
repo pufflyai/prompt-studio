@@ -77,7 +77,7 @@ const ticketCardProps = (ticket: RoadmapTicket): KanbanRendererCardProps => ({
 const MOBILE_TICKETS = ROADMAP_COLUMNS.find((column) => column.id === "in-progress")?.tickets ?? [];
 
 const MobileKanban = () => (
-  <Stack display={{ base: "flex", md: "none" }} height="100%" gap="0" px="11px" pt="16px" pb="71px">
+  <Stack display={{ base: "flex", md: "none" }} height="100%" gap="0" px="11px" pt="16px" pb="16px">
     <Text as="h1" fontFamily="heading" fontSize="20px" fontWeight="semibold">
       Release plan
     </Text>

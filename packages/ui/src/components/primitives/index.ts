@@ -17,6 +17,7 @@ export type { IconColorPickerIconOption } from "./icon-options";
 export { getIconComponent, optionColors, optionIcons } from "./icon-options";
 export type { IntegrationCardProps } from "./integration-card";
 export { IntegrationCard } from "./integration-card";
+export { PromptStudioIcon } from "./prompt-studio-icon";
 export type { RadioProps } from "./radio";
 export { Radio, RadioGroup } from "./radio";
 export { ResourceBadge } from "./resource-badge";
