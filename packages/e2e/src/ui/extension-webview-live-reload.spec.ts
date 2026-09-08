@@ -18,7 +18,11 @@ const declareMissingWebviewDependency = (extensionRoot: string) => {
   writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
   const viewFile = join(extensionRoot, "src/views/lab-page.tsx");
-  const source = readFileSync(viewFile, "utf8").replace('"Sandbox webview"', `"${recoveredHeading}"`);
+  // A translation can mask a changed fallback. Mark the rebuilt module with a literal instead.
+  const source = readFileSync(viewFile, "utf8").replace(
+    't("webview.labPage.heading", "Sandbox webview")',
+    JSON.stringify(recoveredHeading),
+  );
   writeFileSync(viewFile, `import "${missingDependencyName}";\n${source}`);
 };
 

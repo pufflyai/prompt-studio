@@ -15,6 +15,7 @@ export interface ExtensionRefreshEvent extends FileRendererRefreshEnvelope {
 }
 
 const eventSubscribers = new Set<(event: ExtensionRefreshEvent) => void>();
+const resetSubscribers = new Set<() => void>();
 let tick = 0;
 
 export const subscribeToExtensionCommandFeed = (listener: (event: ExtensionCommandEvent) => void) => {
@@ -35,9 +36,20 @@ export const publishExtensionEvent = (event: ExtensionRefreshEvent) => {
   for (const listener of eventSubscribers) listener(event);
 };
 
+export const subscribeToExtensionEventReset = (listener: () => void) => {
+  resetSubscribers.add(listener);
+  return () => {
+    resetSubscribers.delete(listener);
+  };
+};
+
+export const publishExtensionEventReset = () => {
+  for (const listener of resetSubscribers) listener();
+};
+
 export const publishExtensionCommandEvent = (
   response: CommandExecuteResponse,
-  envelope: FileRendererRefreshEnvelope = {},
+  envelope: Omit<ExtensionRefreshEvent, "id"> = {},
 ) => {
   tick += 1;
   const event: ExtensionCommandEvent = {

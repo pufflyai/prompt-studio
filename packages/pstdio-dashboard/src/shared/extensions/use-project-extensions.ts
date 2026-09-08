@@ -215,7 +215,7 @@ export const useExecuteExtensionCommand = (projectId: string | undefined) => {
     },
     onSuccess: async (response) => {
       surfaceCommandOutcome(response);
-      publishExtensionCommandEvent(response);
+      publishExtensionCommandEvent(response, { projectId });
       await queryClient.invalidateQueries({ queryKey: projectExtensionMetadataQueryKey(projectId) });
     },
   });

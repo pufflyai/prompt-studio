@@ -23,6 +23,7 @@ export const bumpCounterCommand = defineCommand({
     const step = ((await ctx.settings.get("counter.step")) ?? 1) as number;
     const next = current + step * amount;
     await ctx.storage.set(COUNTER_STORAGE_KEY, next);
+    await ctx.events.emit("pstdio.workbench-fixture.counter.changed", {});
     return { counter: next };
   },
 });
@@ -51,6 +52,7 @@ export const resetCounterCommand = defineCommand({
   ],
   async run(ctx, _commandParams) {
     await ctx.storage.set(COUNTER_STORAGE_KEY, 0);
+    await ctx.events.emit("pstdio.workbench-fixture.counter.changed", {});
     return { counter: 0 };
   },
 });

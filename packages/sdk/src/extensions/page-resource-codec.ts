@@ -1,4 +1,4 @@
-import type { WorkbenchPageResourceCodec } from "../../registries/pages/page-registry-types";
+import type { PageResourceCodec } from "./page-url";
 
 const fromUri = (uri: string) => {
   try {
@@ -20,7 +20,7 @@ const fromUri = (uri: string) => {
 };
 
 /** Resource URI conversion belongs to route and persistence adapters. */
-export const defaultPageResourceCodec: WorkbenchPageResourceCodec = {
+export const defaultPageResourceCodec: PageResourceCodec = {
   normalize: (resource) => ({ ...resource }),
   toUri: (resource) => {
     const uri = `pstdio://extension-resource/${encodeURIComponent(resource.type)}/${encodeURIComponent(resource.id)}`;

@@ -6,7 +6,7 @@ import {
   type SyncWriter,
   type SyncWriterProvider,
 } from "@pstdio/sdk/client";
-import { publishExtensionEvent } from "@/shared/extensions/extension-webview-broadcast";
+import { publishExtensionEvent, publishExtensionEventReset } from "@/shared/extensions/extension-webview-broadcast";
 import { getWriter, type SyncedTable } from "./collections";
 
 export type SyncClient = SyncConnection;
@@ -42,4 +42,8 @@ export const startSync = (apiUrl: string, callbacks: SyncCallbacks = {}): SyncCl
     heartbeatIntervalMs: HEARTBEAT_INTERVAL_MS,
     heartbeatThreshold: HEARTBEAT_THRESHOLD,
     ...callbacks,
+    onConnected: () => {
+      publishExtensionEventReset();
+      callbacks.onConnected?.();
+    },
   });

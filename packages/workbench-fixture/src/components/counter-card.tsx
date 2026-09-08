@@ -1,4 +1,5 @@
 import { Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { createWebviewClient } from "@pstdio/sdk/extensions";
 import { useEffect, useState } from "react";
 import { type CounterCommandId, executeCounterCommand, getCounterFromCommandEvent } from "../data/counter-api";
 import { useLabStore } from "../data/lab-store";
@@ -17,17 +18,23 @@ export const CounterCard = () => {
     if (!projectId) return;
 
     let cancelled = false;
-    void (async () => {
+    const refresh = async () => {
       try {
         const next = await executeCounterCommand({ host, commandId: "pstdio.workbench-fixture.command.counter.read" });
         if (!cancelled) setCounter(next);
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err));
       }
-    })();
+    };
+    void refresh();
+    const unsubscribe = createWebviewClient<Record<never, never>>(host).events.subscribe(
+      "pstdio.workbench-fixture.counter.changed",
+      () => void refresh(),
+    );
 
     return () => {
       cancelled = true;
+      unsubscribe();
     };
   }, [host, projectId, setCounter]);
 

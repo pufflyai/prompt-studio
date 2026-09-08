@@ -1,4 +1,4 @@
-import { workbenchPages } from "@pstdio/sdk/extensions";
+import { defaultPageResourceCodec, workbenchPages } from "@pstdio/sdk/extensions";
 import { createWorkbenchBreadcrumbController } from "./controllers/breadcrumbs/breadcrumb-registry";
 import { createWorkbenchCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
 import { createPlacementCloseController } from "./controllers/composition/placement-close-controller";
@@ -10,7 +10,6 @@ import {
   createMemoryWorkbenchPageLocationBrowser,
   createMemoryWorkbenchPageLocationPersistence,
 } from "./controllers/page-location/page-location-memory";
-import { defaultPageResourceCodec } from "./controllers/page-location/page-resource-codec";
 import { createLiveWorkbenchPageRegistry } from "./controllers/page-runtime/page-runtime";
 import {
   createPageStateRestorer,

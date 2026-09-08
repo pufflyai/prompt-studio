@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { PageLocation } from "@pstdio/sdk/extensions";
+import { parseWorkbenchPageUrl, serializeWorkbenchPageUrl } from "@pstdio/sdk/extensions";
 import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
-import { parseWorkbenchPageUrl, serializeWorkbenchPageUrl } from "./page-location-codec";
 
 const resources: WorkbenchPageResourceCodec = {
   normalize: (resource) => ({ ...resource, id: resource.id.toUpperCase() }),

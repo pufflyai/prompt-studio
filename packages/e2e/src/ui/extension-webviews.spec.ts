@@ -114,6 +114,31 @@ test.describe("Extension webviews", () => {
   test.beforeEach(async ({ request }) => {
     await deleteAllProjects(request);
   });
+  test("refreshes a mounted webview after another client changes extension data", async ({ page, request }) => {
+    const project = await createProject(request);
+    await disableDefaultExtensionLab(request, project.id);
+    await enableExtension(request, project.id, {
+      displayName: "Extension Lab",
+      extensionId: "pstdio.workbench-fixture",
+      installName: "workbench-fixture-events",
+      name: "workbench-fixture",
+      sourcePath: extensionLabPath,
+    });
+    await bypassOnboarding(page, project.id);
+    await openExtensionLab(page, project.id);
+    const frame = page.frameLocator('iframe[title="Lab"]');
+    await expect(frame.getByText("0", { exact: true })).toBeVisible();
+    await frame.locator("body").evaluate((body) => {
+      body.dataset.interaction = "preserved";
+    });
+    const response = await request.post(
+      `${apiBase}/v1/projects/${project.id}/extensions/commands/pstdio.workbench-fixture.command.counter.bump/execute`,
+      { data: { params: { amount: 42 }, source: "cli" } },
+    );
+    expect(response.ok()).toBe(true);
+    await expect(frame.getByText("42", { exact: true })).toBeVisible();
+    await expect(frame.locator("body")).toHaveAttribute("data-interaction", "preserved");
+  });
   test("loads managed webviews and routes host calls through the shell bridge", async ({ page, request }) => {
     const project = await createProject(request);
 

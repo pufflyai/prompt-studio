@@ -20,6 +20,7 @@ import {
 } from "../api";
 import { type ExtensionCommandEvent, subscribeToExtensionCommandFeed } from "../extension-webview-broadcast";
 import { createDashboardExtensionWebviewCapabilities } from "../extension-webview-capabilities";
+import { subscribeWebviewExtensionEvents } from "../extension-webview-events";
 import { useExecuteExtensionCommand } from "../use-project-extensions";
 import { executeWebviewCommand } from "./extension-webview-command";
 import { BridgedWebviewSurface, StaticWebviewSurface, type WebviewDescriptor } from "./extension-webview-surfaces";
@@ -58,6 +59,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
   const [locale, setLocale] = useState(currentLocale);
 
   useEffect(() => subscribeToExtensionCommandFeed((event) => setLastCommand(event)), []);
+  useEffect(() => subscribeWebviewExtensionEvents(hostEvents, projectId), [hostEvents, projectId]);
   useEffect(() => {
     const onLanguageChanged = () => setLocale(currentLocale());
     i18n.on("languageChanged", onLanguageChanged);

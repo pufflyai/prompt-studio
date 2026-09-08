@@ -9,6 +9,7 @@ import { unwrapCommandOutcome } from "./command-outcome";
 import type { SettingsMap } from "./define-extension";
 import type { GuestHost } from "./define-extension-view";
 import { type ArtifactMountKey, artifactMountId } from "./webview-capabilities";
+import { createWebviewEventsClient, type WebviewEventsClient } from "./webview-events";
 
 // Command types derive from a record of `defineCommand` values (the extension's
 // exported commands map), not from `typeof extension`: `defineExtension` cannot keep
@@ -50,6 +51,7 @@ export type WebviewArtifactsClient = {
 export type WebviewClient<TCommands, TSettings = undefined> = {
   artifacts: WebviewArtifactsClient;
   commands: WebviewCommandsClient<TCommands>;
+  events: WebviewEventsClient;
   settings: WebviewSettingsClient<ClientSettingsMap<TSettings>>;
 };
 
@@ -121,5 +123,6 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
     imageUrl: (mount, path) => host.call("artifacts.read", { op: "imageUrl", mount: artifactMountId(mount), path }),
   };
 
-  return { artifacts, commands, settings } as WebviewClient<TCommands, TSettings>;
+  const events = createWebviewEventsClient(host, extensionId);
+  return { artifacts, commands, events, settings } as WebviewClient<TCommands, TSettings>;
 };

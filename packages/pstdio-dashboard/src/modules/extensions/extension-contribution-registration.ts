@@ -107,7 +107,10 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
               metadata: notification.metadata,
             });
           }
-          publishExtensionCommandEvent(response, fileRendererRefreshEnvelopeFromCommand(body, response));
+          publishExtensionCommandEvent(response, {
+            ...fileRendererRefreshEnvelopeFromCommand(body, response),
+            projectId: input.projectId,
+          });
           await openSessionCommandResult(input.ctx, input.projectId, response);
           return response;
         },

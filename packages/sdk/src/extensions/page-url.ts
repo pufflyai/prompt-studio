@@ -1,11 +1,27 @@
-import type { FileRendererSectionTarget, PageLocation, PageRef, ResourceRef } from "@pstdio/sdk/extensions";
-import type { WorkbenchPageContribution, WorkbenchPageResourceCodec } from "../../registries/pages/page-registry";
+import type {
+  FileRendererSectionTarget,
+  PageLocation,
+  PageRef,
+  ResourceRef,
+} from "pstdio-api-contracts/extension-kernel";
+import { defaultPageResourceCodec } from "./page-resource-codec";
+
+export interface PageUrlDefinition {
+  id: string;
+  ref: PageRef;
+  path: string;
+}
+export interface PageResourceCodec {
+  normalize(resource: ResourceRef): ResourceRef;
+  toUri(resource: ResourceRef): string;
+  fromUri(uri: string): ResourceRef | undefined;
+}
 
 const hostExtensionId = "pstdio";
 
 const pageRefKey = (ref: PageRef) => `${ref.extensionId ?? ""}:page:${ref.id}`;
 
-const pageForRef = (pages: readonly WorkbenchPageContribution[], ref: PageRef) =>
+const pageForRef = (pages: readonly PageUrlDefinition[], ref: PageRef) =>
   pages.find((page) => pageRefKey(page.ref) === pageRefKey(ref));
 
 const encodePath = (path: string) =>
@@ -15,7 +31,7 @@ const encodePath = (path: string) =>
     .map((segment) => encodeURIComponent(segment))
     .join("/");
 
-const routePath = (projectId: string, page: WorkbenchPageContribution) => {
+const routePath = (projectId: string, page: PageUrlDefinition) => {
   const project = `/projects/${encodeURIComponent(projectId)}`;
   const path = encodePath(page.path);
   if (page.ref.extensionId === hostExtensionId) return path ? `${project}/${path}` : project;
@@ -69,8 +85,8 @@ const parseSection = (value: string) => {
 export const serializeWorkbenchPageUrl = (input: {
   projectId: string;
   location: PageLocation;
-  pages: readonly WorkbenchPageContribution[];
-  resources: WorkbenchPageResourceCodec;
+  pages: readonly PageUrlDefinition[];
+  resources: PageResourceCodec;
 }) => {
   const page = pageForRef(input.pages, input.location.page);
   if (!page) throw new Error(`Unknown page ref: ${pageRefKey(input.location.page)}`);
@@ -105,10 +121,10 @@ export const isWorkbenchProjectUrl = (urlValue: string, projectId: string) => {
   }
 };
 
-const pageForRoute = (pages: readonly WorkbenchPageContribution[], extensionId: string, path: string) =>
+const pageForRoute = (pages: readonly PageUrlDefinition[], extensionId: string, path: string) =>
   pages.find((page) => page.ref.extensionId === extensionId && page.path === path);
 
-const parseResource = (uri: string, resources: WorkbenchPageResourceCodec): ResourceRef | undefined => {
+const parseResource = (uri: string, resources: PageResourceCodec): ResourceRef | undefined => {
   try {
     const resource = resources.fromUri(uri);
     return resource ? resources.normalize(resource) : undefined;
@@ -126,8 +142,8 @@ export interface ParsedWorkbenchPageUrl {
 export const parseWorkbenchPageUrl = (input: {
   url: string;
   projectId: string;
-  pages: readonly WorkbenchPageContribution[];
-  resources: WorkbenchPageResourceCodec;
+  pages: readonly PageUrlDefinition[];
+  resources: PageResourceCodec;
 }): ParsedWorkbenchPageUrl | undefined => {
   let url: URL;
   try {
@@ -156,4 +172,19 @@ export const parseWorkbenchPageUrl = (input: {
     ...(resource ? { resource } : {}),
     ...(section ? { section } : {}),
   };
+};
+
+/** Serialize a project page using the same resource encoding as the dashboard. */
+export const serializePageUrl = (input: { projectId: string; page: PageUrlDefinition; resource?: ResourceRef }) =>
+  serializeWorkbenchPageUrl({
+    projectId: input.projectId,
+    location: { page: input.page.ref, resource: input.resource },
+    pages: [input.page],
+    resources: defaultPageResourceCodec,
+  });
+
+/** Resolve a dashboard URL against the caller's declared pages and project. */
+export const parsePageUrl = (input: { url: string; projectId: string; pages: readonly PageUrlDefinition[] }) => {
+  if (!input.url.startsWith("/") || input.url.startsWith("//")) return undefined;
+  return parseWorkbenchPageUrl({ ...input, resources: defaultPageResourceCodec });
 };

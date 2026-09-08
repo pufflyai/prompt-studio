@@ -44,7 +44,7 @@ export const ExtensionActivityRailWidget = (props: { input: WorkbenchPanelRender
       params: item.params,
       source: "dashboard",
     });
-    publishExtensionCommandEvent(response);
+    publishExtensionCommandEvent(response, { projectId });
   };
 
   return (

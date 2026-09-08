@@ -1,6 +1,6 @@
 import type { NavigationTargetPage, PageLocation, PlacementIdentity } from "@pstdio/sdk/extensions";
+import { isWorkbenchProjectUrl } from "@pstdio/sdk/extensions";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
-import { isWorkbenchProjectUrl } from "./page-location-codec";
 import type {
   CreateWorkbenchPageLocationControllerInput,
   ResolvedPageLocation,
