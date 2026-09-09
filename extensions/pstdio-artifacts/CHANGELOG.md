@@ -1,5 +1,13 @@
 # pstdio-artifacts
 
+## 0.2.1
+
+_2026-09-09_
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/ui@0.24.1`
+
 ## 0.2.0
 
 _2026-09-09_
