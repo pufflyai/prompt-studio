@@ -3,7 +3,7 @@ import { SessionIndicator } from "@pstdio/ui";
 import { Pause, Play } from "lucide-react";
 import { EXAMPLE_ICONS, type ExampleIcon } from "../../content/icon-set-content";
 import type { DEMO_EXTENSIONS } from "../../content/service-demo-content";
-import { DEFAULT_SHADER_SOURCE, DEFAULT_SHADER_SPEED } from "../../content/shader-demo-content";
+import { DEFAULT_SHADER_SPEED, MATRIX_SHADER_SOURCE } from "../../content/shader-demo-content";
 import { useStoryStyles, useToolDemoStyles } from "../../hooks/use-landing-styles";
 import { useShaderPreview } from "../../hooks/use-shader-preview";
 
@@ -20,7 +20,7 @@ type DemoExtension = (typeof DEMO_EXTENSIONS)[number];
 const ExtensionShaderPanel = (props: { icon: ExampleIcon }) => {
   const { icon } = props;
   const styles = useToolDemoStyles();
-  const preview = useShaderPreview(DEFAULT_SHADER_SOURCE, 6, DEFAULT_SHADER_SPEED, icon.codepoint);
+  const preview = useShaderPreview(MATRIX_SHADER_SOURCE, 6, DEFAULT_SHADER_SPEED, icon.codepoint);
   return (
     <Stack gap="sm">
       <Box

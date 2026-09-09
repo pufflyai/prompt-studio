@@ -31,9 +31,9 @@ export const TOOL_EXAMPLES: {
     id: "shaders",
     name: "Shader editor",
     blocks: [
-      { kind: "page", purpose: "Pick an icon and watch the shader paint it in real time." },
-      { kind: "editor", purpose: "Edit the shader and reuse icons from your icon set." },
-      { kind: "hook", purpose: "Refresh the preview when the selected icon or shader changes." },
+      { kind: "page", purpose: "Watch flowing ribbons of color respond to scale and speed." },
+      { kind: "editor", purpose: "Edit the shader to change its colors and motion." },
+      { kind: "hook", purpose: "Refresh the preview as you change the shader." },
     ],
   },
   {

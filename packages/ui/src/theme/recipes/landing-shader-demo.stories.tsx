@@ -48,7 +48,7 @@ const ShaderDemo = (props: { withControls: boolean }) => {
       </Box>
       <Box css={story.panels}>
         <Box css={story.panel}>
-          <Box css={story.panelHeader}>icon-rain.frag</Box>
+          <Box css={story.panelHeader}>icon-matrix.frag</Box>
           <Box css={story.panelBody}>
             <Textarea
               css={styles.shaderCode}
@@ -57,11 +57,11 @@ const ShaderDemo = (props: { withControls: boolean }) => {
               spellCheck={false}
               defaultValue={`vec3 shade(vec2 uv) {
   vec2 cell = uv * u_scale;
-  cell.y += u_time * 2.0;
-  float trail = mod(floor(cell.y), 18.0);
+  float phase = mod(floor(cell.y) + u_time * 2.0, 18.0);
+  float trail = exp(-phase * 0.32) * smoothstep(0.0, 0.8, phase);
   float icon = texture2D(u_icon, cell).a;
   vec3 green = vec3(0.04, 0.65, 0.28);
-  return green * icon * max(0.04, 1.0 - trail / 11.0);
+  return green * icon * (0.035 + trail);
 }`}
             />
           </Box>
@@ -69,23 +69,6 @@ const ShaderDemo = (props: { withControls: boolean }) => {
         <Box css={story.panel}>
           <Box css={story.panelHeader}>Preview</Box>
           <Box css={story.panelBody}>
-            <Box css={styles.shaderCanvas}>
-              <Box
-                height="64"
-                display="grid"
-                gridTemplateColumns="repeat(8, minmax(0, 1fr))"
-                placeItems="center"
-                p="md"
-                role="img"
-                aria-label="Icon rain preview"
-              >
-                {Array.from({ length: 64 }, (_, index) => (
-                  <Box key={index} color="fg.success" opacity={0.15 + ((index * 7) % 11) / 13}>
-                    <selected.icon />
-                  </Box>
-                ))}
-              </Box>
-            </Box>
             {withControls && (
               <Stack gap="lg">
                 <Stack gap="sm">
@@ -118,6 +101,23 @@ const ShaderDemo = (props: { withControls: boolean }) => {
                 </Stack>
               </Stack>
             )}
+            <Box css={styles.shaderCanvas}>
+              <Box
+                height="64"
+                display="grid"
+                gridTemplateColumns="repeat(8, minmax(0, 1fr))"
+                placeItems="center"
+                p="md"
+                role="img"
+                aria-label="Icon matrix preview"
+              >
+                {Array.from({ length: 64 }, (_, index) => (
+                  <Box key={index} color="fg.success" opacity={0.15 + ((index * 7) % 11) / 13}>
+                    <selected.icon />
+                  </Box>
+                ))}
+              </Box>
+            </Box>
           </Box>
         </Box>
       </Box>
