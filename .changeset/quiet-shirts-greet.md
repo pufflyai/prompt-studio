@@ -4,4 +4,4 @@
 "pstdio": patch
 ---
 
-Expose dashboard URL helpers and webview change subscriptions with reconnect invalidation, and show the desktop after its startup document loads.
+Expose dashboard URL helpers and webview change subscriptions with reconnect invalidation, and initialize the desktop window and lifecycle actions without waiting for animation frames.

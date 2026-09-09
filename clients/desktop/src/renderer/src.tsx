@@ -1,8 +1,4 @@
 import "@pstdio/ui/style.css";
 
-// Give the packaged startup document a painted frame before initializing the theme and React.
-requestAnimationFrame(() => {
-  requestAnimationFrame(() => {
-    void import("./hydrate");
-  });
-});
+// Lifecycle actions must initialize even when an occluded window stops painting.
+void import("./hydrate");
