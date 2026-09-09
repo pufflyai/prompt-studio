@@ -226,6 +226,24 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     return normalizeExtensionSources([cached.source], cached.diagnostics, { repoRoots: [] });
   };
 
+  const validateResourcePrefixes = async (
+    projectId: string,
+    installedSource: EnabledExtensionSource["installedSource"],
+  ) => {
+    const enabled = (await deps.extensionService.listEnabledSourcesForProject(projectId)).filter(
+      (record) => record.installedSource.extension_id !== installedSource.extension_id,
+    );
+    const loaded = await sources.collect(enabled);
+    const candidate = await sources.load(installedSource);
+    if (candidate) loaded.push(candidate);
+    const runtime = normalizeExtensionSources(loaded.map((record) => record.source));
+    const errors = runtime.diagnostics.filter(
+      (diagnostic) => diagnostic.code.startsWith("extension_resource_prefix_") && diagnostic.severity === "error",
+    );
+    if (errors.length)
+      throw Object.assign(new Error(errors.map((error) => error.message).join("\n")), { diagnostics: errors });
+  };
+
   const markDirty = (state: ProjectState, reason: RuntimeInvalidationReason) => {
     state.revision += 1;
     state.dirtyReason = reason;
@@ -270,5 +288,5 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     );
   };
 
-  return { get, getInstalledSourceRuntime, invalidate };
+  return { get, getInstalledSourceRuntime, invalidate, validateResourcePrefixes };
 };

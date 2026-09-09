@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { EventBus } from "../features/sync/event-bus";
 import { createFileService, type FileServiceDeps } from "./file-service";
 
 const mockFilesDBService = () =>
@@ -33,7 +34,7 @@ describe("FileService", () => {
   test("get delegates to the db service", async () => {
     const db = mockFilesDBService();
     const storage = mockFilesStorageService();
-    const service = createFileService({ filesDBService: db, filesStorageService: storage });
+    const service = createFileService({ eventBus: new EventBus(), filesDBService: db, filesStorageService: storage });
 
     const result = await service.get("f1");
 
@@ -44,7 +45,7 @@ describe("FileService", () => {
   test("list delegates to the db service", async () => {
     const db = mockFilesDBService();
     const storage = mockFilesStorageService();
-    const service = createFileService({ filesDBService: db, filesStorageService: storage });
+    const service = createFileService({ eventBus: new EventBus(), filesDBService: db, filesStorageService: storage });
 
     await service.list("p1");
 
@@ -54,7 +55,7 @@ describe("FileService", () => {
   test("upload writes file to disk then inserts into db", async () => {
     const db = mockFilesDBService();
     const storage = mockFilesStorageService();
-    const service = createFileService({ filesDBService: db, filesStorageService: storage });
+    const service = createFileService({ eventBus: new EventBus(), filesDBService: db, filesStorageService: storage });
 
     const data = Buffer.from("hello world");
     const result = await service.upload({
@@ -75,7 +76,7 @@ describe("FileService", () => {
   test("update writes file and updates db metadata", async () => {
     const db = mockFilesDBService();
     const storage = mockFilesStorageService();
-    const service = createFileService({ filesDBService: db, filesStorageService: storage });
+    const service = createFileService({ eventBus: new EventBus(), filesDBService: db, filesStorageService: storage });
 
     const data = Buffer.from("updated content");
     const result = await service.update("f1", { data });
@@ -91,7 +92,7 @@ describe("FileService", () => {
     const db = mockFilesDBService();
     db.get = mock(async () => null) as unknown as typeof db.get;
     const storage = mockFilesStorageService();
-    const service = createFileService({ filesDBService: db, filesStorageService: storage });
+    const service = createFileService({ eventBus: new EventBus(), filesDBService: db, filesStorageService: storage });
 
     const result = await service.update("nonexistent", { data: Buffer.from("x") });
 
@@ -101,7 +102,7 @@ describe("FileService", () => {
   test("remove deletes from disk and db", async () => {
     const db = mockFilesDBService();
     const storage = mockFilesStorageService();
-    const service = createFileService({ filesDBService: db, filesStorageService: storage });
+    const service = createFileService({ eventBus: new EventBus(), filesDBService: db, filesStorageService: storage });
 
     const result = await service.remove("f1");
 
@@ -114,7 +115,7 @@ describe("FileService", () => {
     const db = mockFilesDBService();
     db.get = mock(async () => null) as unknown as typeof db.get;
     const storage = mockFilesStorageService();
-    const service = createFileService({ filesDBService: db, filesStorageService: storage });
+    const service = createFileService({ eventBus: new EventBus(), filesDBService: db, filesStorageService: storage });
 
     const result = await service.remove("nonexistent");
 

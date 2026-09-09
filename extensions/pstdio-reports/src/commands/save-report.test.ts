@@ -1,10 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
 import { REPORTS_COLLECTION } from "../data/collections";
 import { reportFilesDir } from "../data/draft-storage";
-import { createMemoryStorage } from "../data/memory-storage";
 import { makeCommandArgs } from "./command-context.fixture";
-import { createMemoryRepoFiles } from "./repo-files.fixture";
 import { saveReportCommand } from "./save-report";
 import { writeReportCommand } from "./write-report";
 

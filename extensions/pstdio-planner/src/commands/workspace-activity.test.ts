@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createMemoryStorage } from "../data/memory-storage";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "./command-context.fixture";
 import { workspaceActivityCommand } from "./workspace-activity";
 

@@ -21,6 +21,7 @@ import { createExtensionWebviewAccess } from "./features/extensions/extension-we
 import { fireSessionLifecycleEventAsync, type SessionHookDeps } from "./features/hooks/session-hooks";
 import { createSessionScheduler } from "./features/sessions/session-scheduler";
 import { EventBus } from "./features/sync/event-bus";
+import { createExtensionAutomationPreferencesService } from "./services/extension-automation-preferences-service";
 import { createExtensionFileService } from "./services/extension-file-service";
 import { createFileService } from "./services/file-service";
 import { createNotificationService } from "./services/notification-service";
@@ -49,14 +50,13 @@ const createCoreDomainServices = (input: {
 }) => {
   const { db, dbs, eventBus, storageRoot } = input;
   const filesStorageService = createFilesStorageService(storageRoot);
-  const fileService = createFileService({ filesDBService: dbs.filesDBService, filesStorageService });
+  const fileService = createFileService({ filesDBService: dbs.filesDBService, filesStorageService, eventBus });
 
   return {
     fileService,
-    projectService: createProjectService({ projectsDBService: dbs.projectsDBService }),
-    repoService: createRepoService({ reposDBService: dbs.reposDBService }),
+    projectService: createProjectService({ projectsDBService: dbs.projectsDBService, eventBus }),
+    repoService: createRepoService({ reposDBService: dbs.reposDBService, eventBus }),
     extensionFileService: createExtensionFileService({
-      eventBus,
       extensionFilesDBService: dbs.extensionFilesDBService,
       extensionInstancesDBService: dbs.extensionInstancesService,
       fileService,
@@ -106,7 +106,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
   const {
     activityEventsService,
     automationDBService,
-    extensionAutomationPreferencesService,
+    extensionAutomationPreferencesService: extensionAutomationPreferencesDBService,
     extensionConnectionsDBService,
     extensionInstancesService,
     extensionSettingsDBService,
@@ -121,6 +121,10 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
   } = dbs;
 
   const eventBus = new EventBus({ bufferSize: input.config.sync.eventBufferSize });
+  const extensionAutomationPreferencesService = createExtensionAutomationPreferencesService({
+    db: extensionAutomationPreferencesDBService,
+    eventBus,
+  });
 
   const {
     extensionFileService,
@@ -154,6 +158,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     storageRoot,
   });
   const skillService = createSkillService({
+    eventBus,
     extensionRuntimeCatalog,
     extensionSkillPreferencesDBService,
     fileService,
@@ -168,6 +173,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
   });
 
   const sessionHookDeps = (): SessionHookDeps => ({
+    extensionResourceSequencesService: dbs.extensionResourceSequencesService,
     activityEventsService,
     eventBus,
     extensionAutomationPreferencesService,
@@ -220,6 +226,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
   const terminalSupervisor = createAppTerminalSupervisor();
 
   deps = {
+    extensionResourceSequencesService: dbs.extensionResourceSequencesService,
     extensionWebviewAccess: createExtensionWebviewAccess(),
     readiness: { database: true, storage: true },
     closeDb,

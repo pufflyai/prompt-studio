@@ -1,3 +1,4 @@
+import { createDraftLayout } from "@pstdio/sdk/data";
 import type { ArtifactMount, ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { tagsCollection, ticketsCollection } from "./collections";
 import { applyFrontmatter, buildTicketFrontmatter } from "./frontmatter";
@@ -6,9 +7,10 @@ import type { StoredTicket } from "./types";
 
 export const TICKETS_DIR = ".pstdio/tickets";
 
-export const ticketDir = (shorthand: string) => `${TICKETS_DIR}/${shorthand}`;
-export const ticketMarkdownPath = (shorthand: string) => `${ticketDir(shorthand)}/ticket.md`;
-export const ticketFilesDir = (shorthand: string) => `${ticketDir(shorthand)}/files`;
+const layout = createDraftLayout(TICKETS_DIR, "ticket");
+export const ticketDir = layout.directory;
+export const ticketMarkdownPath = layout.markdown;
+export const ticketFilesDir = layout.files;
 export const ticketFilesPattern = (shorthand: string) => `${ticketFilesDir(shorthand)}/**`;
 
 export const ensureTicketDraftsIgnored = async (repoFiles: ArtifactMount) => {
@@ -78,7 +80,4 @@ export const readTicketMarkdown = async (repoFiles: ArtifactMount, shorthand: st
 
 // repoFiles is only present for repo-scoped invocations (the CLI). Domain commands
 // that touch the working tree fail loudly when invoked without it.
-export const requireRepoFiles = (repoFiles: ArtifactMount | undefined): ArtifactMount => {
-  if (!repoFiles) throw new Error("This command must be run inside a project repository.");
-  return repoFiles;
-};
+export { requireRepoFiles } from "@pstdio/sdk/data";

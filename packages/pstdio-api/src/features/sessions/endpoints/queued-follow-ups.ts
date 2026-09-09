@@ -119,8 +119,7 @@ const removeEntry = async (deps: SessionsRouteDeps, input: { sessionId: string; 
   const entry = await getPendingQueueEntry(deps, input);
   if (!entry) return false;
 
-  await deps.sessionQueueEntriesService.remove(input.queuePosition);
-  return true;
+  return deps.sessionQueueEntriesService.removePending(input.queuePosition);
 };
 
 const moveEntry = async (

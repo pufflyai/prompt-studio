@@ -16,6 +16,7 @@ import type {
   ExtensionProcessApi,
   ExtensionProjectContext,
   ExtensionReposApi,
+  ExtensionResourcesApi,
   ExtensionSessionsApi,
   ExtensionSettingsApi,
   ExtensionSkillsApi,
@@ -37,6 +38,7 @@ export interface CommandRunnerEnvironment {
   /** Host workspace id when the environment is built for a worktree-backed workspace. */
   workspaceId?: string;
   storage: ExtensionStorageApi;
+  resources: ExtensionResourcesApi;
   artifacts: ExtensionArtifactApi;
   repoFiles?: ArtifactMount;
   workspaceFiles?: WorkspaceFilesMount;

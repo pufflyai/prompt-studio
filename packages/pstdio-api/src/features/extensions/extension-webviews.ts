@@ -45,9 +45,6 @@ export const collectExtensionWebviews = (loaded: Pick<LoadedExtension, "definiti
   return webviews;
 };
 
-export const findExtensionWebview = (loaded: Pick<LoadedExtension, "definition" | "metadata">, webviewId: string) =>
-  collectExtensionWebviews(loaded).find((webview) => webview.id === webviewId) ?? null;
-
 export const resolvePackageAssetFile = (asset: PackageAssetDescriptor) =>
   fileURLToPath(new URL(asset.path, asset.baseUrl));
 

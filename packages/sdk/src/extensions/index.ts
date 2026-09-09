@@ -132,3 +132,4 @@ export {
 } from "./webview-client";
 export { EXTENSION_EVENTS_SCOPE, type WebviewEventsClient, type WebviewExtensionEvent } from "./webview-events";
 export { matchesResourceWhen } from "./when";
+export const projectPrefix = () => ({ $prefix: "project" as const });

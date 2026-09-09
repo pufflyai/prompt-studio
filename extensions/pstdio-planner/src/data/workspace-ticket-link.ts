@@ -14,7 +14,7 @@ const ticketShorthandFromBranch = (branch: string | undefined) => {
 };
 
 const ticketShorthandFromAnchor = (anchor: ResourceAnchor) => {
-  const shorthand = anchor.metadata?.shorthand;
+  const shorthand = anchor.shorthand;
   if (typeof shorthand === "string") return shorthand;
   return anchor.label ?? null;
 };

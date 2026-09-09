@@ -53,7 +53,7 @@ const ticketAnchor = (
     extensionId: ctx.extensionId,
     label: ticket.shorthand,
     role: "primary",
-    metadata: { shorthand: ticket.shorthand },
+    shorthand: ticket.shorthand,
   }) satisfies ResourceAnchor;
 
 const readExpectedAttempt = async (ctx: CommandContext, input: RequestHumanInput, ticketId: string) => {

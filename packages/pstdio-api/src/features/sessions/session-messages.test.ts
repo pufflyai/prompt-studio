@@ -8,6 +8,7 @@ import { createDb, createFilesDBService, createProjectsDBService, createSessions
 import { createFilesStorageService } from "pstdio-storage";
 import { createFileService } from "../../services/file-service";
 import { testHarnessId } from "../harnesses/test-harness-registry";
+import { EventBus } from "../sync/event-bus";
 import { buildMessagesFromPatches, persistSessionMessages } from "./session-messages";
 
 const msg = (id: string, role: "user" | "assistant", text: string): SessionMessage => ({
@@ -149,7 +150,7 @@ const setupDb = async (tempRoot: string, label: string) => {
   return {
     conn,
     sessionsService: createSessionsDBService(conn.db),
-    fileService: createFileService({ filesDBService, filesStorageService }),
+    fileService: createFileService({ eventBus: new EventBus(), filesDBService, filesStorageService }),
     projectsService: createProjectsDBService(conn.db),
   };
 };

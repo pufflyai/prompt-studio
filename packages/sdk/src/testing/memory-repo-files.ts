@@ -1,4 +1,4 @@
-import type { ArtifactMount } from "@pstdio/sdk/extensions";
+import type { ArtifactMount } from "pstdio-api-contracts/extension-kernel";
 
 export const createMemoryRepoFiles = (): ArtifactMount & { files: Map<string, Uint8Array> } => {
   const files = new Map<string, Uint8Array>();

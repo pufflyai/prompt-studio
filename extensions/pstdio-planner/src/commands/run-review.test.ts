@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putAttempt } from "../data/attempt-storage";
-import { createMemoryStorage } from "../data/memory-storage";
 import { makeCommandArgs } from "./command-context.fixture";
 import { runReviewCommand } from "./run-review";
 

@@ -24,6 +24,7 @@ export interface ResourceMenuSlotDefinition {
 }
 
 export interface ResourceKindDefinition extends ContributionDefinition<"resource-kind"> {
+  readonly prefix?: string | { readonly $prefix: "project" };
   readonly label?: Localizable<string>;
   readonly icon?: string;
   readonly menuSlots?: readonly ResourceMenuSlotDefinition[];

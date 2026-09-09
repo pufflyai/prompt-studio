@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { statusesCollection, tagsCollection } from "./collections";
-import { createMemoryStorage } from "./memory-storage";
 import { DEFAULT_STATUSES, DEFAULT_TAGS, HUMAN_REQUESTED_TAG, seedDefaultStatuses, seedDefaultTags } from "./seed";
 
 describe("seedDefaultStatuses", () => {

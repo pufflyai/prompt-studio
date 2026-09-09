@@ -6,6 +6,7 @@ import {
   createInstalledExtensionSourcesDBService,
   createProjectsDBService,
 } from "pstdio-db";
+import { EventBus } from "../features/sync/event-bus";
 import { createExtensionService } from "./extension-service";
 import { createProjectService } from "./project-service";
 
@@ -29,7 +30,10 @@ const fontEditorSource = (sourcePath: string) => ({
 beforeEach(async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
-  projectService = createProjectService({ projectsDBService: createProjectsDBService(result.db) });
+  projectService = createProjectService({
+    eventBus: new EventBus(),
+    projectsDBService: createProjectsDBService(result.db),
+  });
   installedExtensionSourcesService = createInstalledExtensionSourcesDBService(result.db);
   extensionInstancesService = createExtensionInstancesDBService(result.db);
   extensionUserDataService = createExtensionUserDataDBService(result.db);

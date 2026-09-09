@@ -15,6 +15,7 @@ export { createExtensionFilesDBService } from "./services/extension-files/extens
 export { createExtensionInstancesDBService } from "./services/extension-instances/extension-instances";
 export { createExtensionAutomationPreferencesDBService } from "./services/extension-preferences/automation-preferences";
 export { createExtensionSkillPreferencesDBService } from "./services/extension-preferences/extension-preferences";
+export { createExtensionResourceSequencesDBService } from "./services/extension-resource-sequences";
 export {
   createExtensionSettingsDBService,
   type ExtensionSettingOwnerType,

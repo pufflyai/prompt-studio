@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { ticketsCollection } from "../data/collections";
-import { createMemoryStorage } from "../data/memory-storage";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { runAttemptCommand } from "./run-attempt";
@@ -88,8 +88,8 @@ describe("runAttemptCommand", () => {
             extensionId: "pstdio-planner",
             label: "T-1",
             role: "primary",
+            shorthand: "T-1",
             metadata: {
-              shorthand: "T-1",
               resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
@@ -110,8 +110,8 @@ describe("runAttemptCommand", () => {
             extensionId: "pstdio-planner",
             label: "T-1",
             role: "primary",
+            shorthand: "T-1",
             metadata: {
-              shorthand: "T-1",
               resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
@@ -164,7 +164,8 @@ describe("runAttemptCommand", () => {
             extensionId: "pstdio-planner",
             label: "PS-304",
             role: "primary",
-            metadata: { shorthand: "PS-304" },
+            shorthand: "PS-304",
+            metadata: {},
           },
         ],
         base: "main-sha",
@@ -184,7 +185,8 @@ describe("runAttemptCommand", () => {
             extensionId: "pstdio-planner",
             label: "PS-304",
             role: "primary",
-            metadata: { shorthand: "PS-304" },
+            shorthand: "PS-304",
+            metadata: {},
           },
           expect.objectContaining({ type: "planner-attempt", id: "workspace-1" }),
         ]),
@@ -231,8 +233,8 @@ describe("runAttemptCommand guarded launches", () => {
             extensionId: "pstdio-planner",
             label: "T-1",
             role: "primary",
+            shorthand: "T-1",
             metadata: {
-              shorthand: "T-1",
               resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
@@ -335,8 +337,8 @@ describe("createWorkspaceCommand", () => {
             extensionId: "pstdio-planner",
             label: "T-1",
             role: "primary",
+            shorthand: "T-1",
             metadata: {
-              shorthand: "T-1",
               resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
@@ -377,14 +379,14 @@ describe("createWorkspaceCommand", () => {
         anchors: [
           expect.objectContaining({
             id: child.id,
+            shorthand: child.shorthand,
             metadata: {
-              shorthand: child.shorthand,
               resourceParent: {
                 type: "ticket",
                 id: parent.id,
                 label: `${parent.shorthand} Parent`,
+                shorthand: parent.shorthand,
                 metadata: {
-                  shorthand: parent.shorthand,
                   resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
                 },
               },
@@ -510,7 +512,8 @@ describe("breakIntoSubTicketsCommand", () => {
             extensionId: "pstdio-planner",
             label: "ticket-1",
             role: "primary",
-            metadata: { shorthand: "ticket-1" },
+            shorthand: "ticket-1",
+            metadata: {},
           },
         ],
         title: "Break into sub-tickets: ticket-1",

@@ -175,6 +175,7 @@ const ticketToRowWithTags = (
     resource: {
       type: TICKET_RESOURCE_KIND,
       id: ticket.id,
+      shorthand: ticket.shorthand,
       projectId,
       label: ticketDisplayTitle(ticket),
       icon: TICKET_RESOURCE_ICON,

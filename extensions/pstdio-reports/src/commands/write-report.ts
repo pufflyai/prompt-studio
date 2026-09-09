@@ -73,7 +73,7 @@ export const writeReportCommand = defineCommand({
 
     const now = new Date().toISOString();
     const report = await putReport(ctx.storage, {
-      id: crypto.randomUUID(),
+      ...(await ctx.resources.allocate({ kind: "report" })),
       workspaceShorthand,
       workspaceId: workspace?.id ?? null,
       name,
@@ -99,6 +99,6 @@ export const writeReportCommand = defineCommand({
       path,
     });
 
-    return { reportId: report.id, workspace: workspaceShorthand, name, path, filesPath };
+    return { reportId: report.id, shorthand: report.shorthand, workspace: workspaceShorthand, name, path, filesPath };
   },
 });

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putTicket } from "../data/collections";
-import { createMemoryStorage } from "../data/memory-storage";
 import type { StoredTicket } from "../data/types";
 import { makeCommandArgs } from "./command-context.fixture";
 import { readTicketsCommand } from "./read-tickets";

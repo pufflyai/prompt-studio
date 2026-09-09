@@ -82,6 +82,7 @@ type ExtensionServiceDeps = {
   onInstalledSourcesChanged?: (sourcePath?: string, validatedSource?: LoadedExtension) => Promise<void> | void;
   checkExtension?: typeof checkExtensionSource;
   projectService: ReturnType<typeof createProjectService>;
+  validateResourcePrefixes?: (projectId: string, installedSourceId: string) => Promise<void>;
 };
 
 export const createExtensionService = (deps: ExtensionServiceDeps) => {
@@ -232,6 +233,8 @@ export const createExtensionService = (deps: ExtensionServiceDeps) => {
     instance: { id: string; scope_id: string },
     installedSource: { extension_id: string },
   ) => {
+    const candidate = await deps.extensionInstancesService.get(instance.id);
+    if (candidate) await deps.validateResourcePrefixes?.(instance.scope_id, candidate.installed_extension_id);
     const changed = await deps.extensionInstancesService.claimProjectExtensionProvider({
       extensionId: installedSource.extension_id,
       instanceId: instance.id,

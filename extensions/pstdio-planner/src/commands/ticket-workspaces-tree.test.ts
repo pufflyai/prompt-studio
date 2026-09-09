@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { workbenchPages } from "@pstdio/sdk/extensions";
-import { createMemoryStorage } from "../data/memory-storage";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { createWorkspaceCommand } from "./ticket-actions";
@@ -32,7 +32,7 @@ describe("ticket files tree workspace commands", () => {
       id: "ws-1",
       workspace_shorthand: "WS-1",
       anchors_json: [
-        { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
+        { type: "ticket", id: ticket.id, label: ticket.shorthand, shorthand: ticket.shorthand, metadata: {} },
       ],
       branch: "feature/work",
       worktree_path: "/tmp/ws-1",
@@ -45,8 +45,8 @@ describe("ticket files tree workspace commands", () => {
           type: "ticket",
           id: "other-ticket",
           label: "PS-999",
+          shorthand: "PS-999",
           metadata: {
-            shorthand: "PS-999",
             resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },
@@ -91,8 +91,8 @@ describe("ticket files tree workspace commands", () => {
                 type: "ticket",
                 id: ticket.id,
                 label: `${ticket.shorthand} ${ticket.title}`,
+                shorthand: ticket.shorthand,
                 metadata: {
-                  shorthand: ticket.shorthand,
                   resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
                 },
               },
@@ -107,8 +107,8 @@ describe("ticket files tree workspace commands", () => {
                   type: "ticket",
                   id: ticket.id,
                   label: `${ticket.shorthand} ${ticket.title}`,
+                  shorthand: ticket.shorthand,
                   metadata: {
-                    shorthand: ticket.shorthand,
                     resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
                   },
                 },
@@ -138,7 +138,7 @@ describe("ticket files tree workspace commands", () => {
                 id: "ws-old",
                 workspace_shorthand: "WS-1",
                 anchors_json: [
-                  { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
+                  { type: "ticket", id: ticket.id, label: ticket.shorthand, shorthand: ticket.shorthand, metadata: {} },
                 ],
                 updated_at: "2026-01-01T00:00:00.000Z",
               },
@@ -146,7 +146,7 @@ describe("ticket files tree workspace commands", () => {
                 id: "ws-new",
                 workspace_shorthand: "WS-2",
                 anchors_json: [
-                  { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
+                  { type: "ticket", id: ticket.id, label: ticket.shorthand, shorthand: ticket.shorthand, metadata: {} },
                 ],
                 updated_at: "2026-01-02T00:00:00.000Z",
               },
@@ -177,8 +177,8 @@ describe("ticket files tree workspace commands", () => {
                     type: "ticket",
                     id: "PS-999",
                     label: "PS-999",
+                    shorthand: "PS-999",
                     metadata: {
-                      shorthand: "PS-999",
                       resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
                     },
                   },

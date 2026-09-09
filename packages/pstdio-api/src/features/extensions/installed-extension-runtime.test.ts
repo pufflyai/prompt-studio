@@ -12,6 +12,7 @@ import {
 } from "pstdio-db";
 import { createExtensionService } from "../../services/extension-service";
 import { createProjectService } from "../../services/project-service";
+import { EventBus } from "../sync/event-bus";
 import { createExtensionRootWatcher } from "./extension-root-watcher";
 import { EXTENSION_INSTALLING_MARKER, resolvePstdioHome } from "./install-extension-source";
 import { createInstalledExtensionRuntime, selectExistingSources } from "./installed-extension-runtime";
@@ -197,7 +198,10 @@ describe("createInstalledExtensionRuntime", () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-live-repo-extension-"));
 
     try {
-      const projectService = createProjectService({ projectsDBService: createProjectsDBService(db) });
+      const projectService = createProjectService({
+        eventBus: new EventBus(),
+        projectsDBService: createProjectsDBService(db),
+      });
       const installedExtensionSourcesService = createInstalledExtensionSourcesDBService(db);
       const extensionInstancesService = createExtensionInstancesDBService(db);
 

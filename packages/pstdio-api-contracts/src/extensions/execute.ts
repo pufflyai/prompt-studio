@@ -4,6 +4,7 @@ import { commandSourceSchema, extensionSlotKindSchema, jsonObjectSchema, seriali
 import { workbenchAttachmentTargetSchema } from "./targets";
 
 export const extensionResourceRefSchema = z.object({
+  shorthand: z.string().optional(),
   type: z.string(),
   id: z.string(),
   projectId: z.string().optional(),

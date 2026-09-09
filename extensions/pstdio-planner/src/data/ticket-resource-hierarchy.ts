@@ -7,6 +7,7 @@ export interface TicketResourceReference extends JsonObject {
   type: "ticket";
   id: string;
   label: string;
+  shorthand: string;
   metadata: JsonObject;
 }
 
@@ -20,13 +21,14 @@ const ticketsBrowseRootReference = (): JsonObject => ({
 
 const createTicketResourceReference = (lineage: StoredTicket[], index: number): TicketResourceReference => {
   const ticket = lineage[index];
-  const metadata: JsonObject = { shorthand: ticket.shorthand };
+  const metadata: JsonObject = {};
   metadata.resourceParent =
     index > 0 ? createTicketResourceReference(lineage, index - 1) : ticketsBrowseRootReference();
 
   return {
     type: "ticket",
     id: ticket.id,
+    shorthand: ticket.shorthand,
     label: ticketDisplayTitle(ticket),
     metadata,
   };

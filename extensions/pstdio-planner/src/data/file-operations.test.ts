@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putTicket, ticketsCollection } from "./collections";
 import { createTicketFile, deleteTicketFile, updateTicketFile } from "./file-operations";
-import { createMemoryStorage } from "./memory-storage";
 import type { StoredTicket } from "./types";
 
 const ticket = (overrides: Partial<StoredTicket> = {}): StoredTicket => ({

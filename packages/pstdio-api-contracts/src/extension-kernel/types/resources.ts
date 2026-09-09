@@ -5,11 +5,16 @@ export type ResourceRole = "primary" | "context" | "source" | "result";
 export interface ResourceRef {
   type: string;
   id: string;
+  shorthand?: string;
   projectId?: string;
   label?: string;
   icon?: string;
   extensionId?: string;
   metadata?: JsonObject;
+}
+
+export interface ExtensionResourcesApi {
+  allocate(input: { kind: string }): Promise<{ id: string; shorthand: string }>;
 }
 
 export interface ViewHierarchyParent {

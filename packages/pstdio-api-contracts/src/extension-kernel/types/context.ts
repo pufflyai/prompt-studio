@@ -12,7 +12,7 @@ import type {
 import type { ExtensionConnectionsApi, ExtensionLoggerApi } from "./connections";
 import type { EventDeliveryResult, EventRef } from "./events";
 import type { JsonObject, MaybePromise, Struct } from "./json";
-import type { RendererContext, RepoContext, ResourceAnchor, ResourceRef } from "./resources";
+import type { ExtensionResourcesApi, RendererContext, RepoContext, ResourceAnchor, ResourceRef } from "./resources";
 import type { SlotInvocationContext } from "./slots";
 import type { ExtensionWorkspacesApi } from "./workspaces";
 
@@ -271,6 +271,7 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   repo?: RepoContext;
   source?: CommandSource;
   storage: ExtensionStorageApi;
+  resources: ExtensionResourcesApi;
   artifacts: ExtensionArtifactApi;
   /** Working tree of the invocation's repo, scoped to its root. Absent for non-repo (event/hook) invocations. */
   repoFiles?: ArtifactMount;

@@ -140,7 +140,6 @@ describe("project extension lifecycle", () => {
       enabled: false,
     });
     expect(deps.extensionAutomationPreferencesService.set).toHaveBeenCalledTimes(1);
-    expect(deps.eventBus.emit).toHaveBeenCalledTimes(1);
   });
 
   test("reports whether uninstall retained user data", async () => {

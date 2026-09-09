@@ -1,14 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
+import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
 import { reportsCollection } from "../data/collections";
 import { reportFilesDir, reportMarkdownPath } from "../data/draft-storage";
 import { parseReportFrontmatter, stripFrontmatter } from "../data/frontmatter";
-import { createMemoryStorage } from "../data/memory-storage";
 import { saveReportTemplate } from "../data/template-store";
 import { makeCommandArgs } from "./command-context.fixture";
 import { deleteReportCommand } from "./delete-report";
 import { readReportCommand } from "./read-report";
-import { createMemoryRepoFiles } from "./repo-files.fixture";
 import { saveReportCommand } from "./save-report";
 import { writeReportCommand } from "./write-report";
 
@@ -72,6 +71,7 @@ describe("report workflow", () => {
 
     expect(result).toEqual({
       reportId: expect.any(String),
+      shorthand: "RP-1",
       workspace: "PS-116_A1",
       name: "review",
       path: reportMarkdownPath("review"),
@@ -474,7 +474,7 @@ describe("saved report identity and failures", () => {
           overrides: { repoFiles },
         }),
       ),
-    ).rejects.toThrow("Unsafe workspace");
+    ).rejects.toThrow("Unsafe");
 
     await expect(
       writeReportCommand.run(

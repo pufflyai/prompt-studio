@@ -2,10 +2,10 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import extension from "./extension";
 import { putTicket } from "./src/data/collections";
 import { ticketMarkdownPath } from "./src/data/draft-storage";
-import { createMemoryStorage } from "./src/data/memory-storage";
 import type { StoredTicket } from "./src/data/types";
 
 const command = (id: string) => extension.commands?.find((contribution) => contribution.id === id);
@@ -183,7 +183,7 @@ describe("pstdio planner workspace contributions", () => {
           workspace: {
             id: "workspace-1",
             anchors_json: [
-              { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
+              { type: "ticket", id: ticket.id, label: ticket.shorthand, shorthand: ticket.shorthand, metadata: {} },
             ],
           },
         },
@@ -221,7 +221,7 @@ describe("pstdio planner workspace contributions", () => {
           workspace: {
             id: "workspace-1",
             anchors_json: [
-              { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
+              { type: "ticket", id: ticket.id, label: ticket.shorthand, shorthand: ticket.shorthand, metadata: {} },
             ],
           },
         },

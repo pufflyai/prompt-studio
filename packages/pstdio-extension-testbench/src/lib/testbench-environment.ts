@@ -1,4 +1,5 @@
 import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
+import { createMemoryResources } from "@pstdio/sdk/testing";
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 
 export type BenchStorageSeed = {
@@ -126,9 +127,13 @@ const createStorage = (seed: BenchStorageSeed = {}): CommandRunnerEnvironment["s
   return api;
 };
 
-export const createBenchEnvironment = (seed?: BenchStorageSeed): CommandRunnerEnvironment => ({
+export const createBenchEnvironment = (
+  seed?: BenchStorageSeed,
+  prefixes: Record<string, string> = {},
+): CommandRunnerEnvironment => ({
   project: { id: "bench-project", name: "Bench Project", shorthand: "BP" },
   storage: createStorage(seed),
+  resources: createMemoryResources(prefixes),
   artifacts: { mount: () => ({}) as never },
   packageFiles: {
     exists: async () => false,

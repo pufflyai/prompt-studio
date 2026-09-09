@@ -25,6 +25,7 @@ import { createFilesApi } from "./files";
 import { createNotifyApi } from "./notifications";
 import { createExtensionPackageFilesApi } from "./package-files";
 import { createReposApi, resolveRegisteredRepoPath } from "./repos";
+import { createResourcesApi } from "./resources";
 import { createSessionsApi } from "./sessions";
 import { createSettingsApi } from "./settings";
 import { createStorageApi } from "./storage";
@@ -89,6 +90,7 @@ export const createCommandEnvironment = (
     project: input.project,
     workspaceId: input.workspaceId,
     storage,
+    resources: createResourcesApi(deps, input),
     artifacts: createArtifactsApi(deps, input),
     repoFiles: input.repo ? createRepoFilesApi(resolveRepoPath) : undefined,
     workspaceFiles: input.workspaceDir

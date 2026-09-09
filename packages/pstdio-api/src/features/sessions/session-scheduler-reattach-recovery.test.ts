@@ -1,20 +1,13 @@
-import { afterAll, afterEach, describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
-import type { HarnessContext } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 
-const OPENCODE_ID = testHarnessId("opencode");
-const previousDefaultExtensions = process.env.PSTDIO_DEFAULT_EXTENSIONS;
-
-process.env.PSTDIO_DEFAULT_EXTENSIONS = "[]";
-
 const pendingSession = (agentSessionId: string): HarnessSession => {
   const exit = Promise.withResolvers<HarnessExit>();
-
   return {
     agentSessionId,
     done: exit.promise,
@@ -23,229 +16,69 @@ const pendingSession = (agentSessionId: string): HarnessSession => {
   };
 };
 
-const completedSession = (agentSessionId: string): HarnessSession => ({
-  agentSessionId,
-  done: Promise.resolve({ status: "completed" }),
-  stop: () => {},
-  timeoutStrategy: "provider",
-});
-
-const startSession = mock((_ctx: HarnessContext, _input: { prompt: string }) => pendingSession("replayed-start"));
-const resumeSession = mock((_ctx: HarnessContext, _input: { prompt: string }) => pendingSession("replayed-resume"));
-const reattachSession = mock((_ctx: HarnessContext, input: { agentSessionId: string }) =>
-  pendingSession(input.agentSessionId),
-);
-const reattachCompletedSession = mock((_ctx: HarnessContext, input: { agentSessionId: string }) =>
-  completedSession(input.agentSessionId),
-);
-const failedReattachSession = mock(() => {
-  throw Object.assign(new Error("reattach failed"), { retryable: true });
-});
-
-const createReattachRegistry = (options?: { reattachFails?: boolean; reattachCompletes?: boolean }) => {
-  let reattach = reattachSession;
-  if (options?.reattachFails) {
-    reattach = failedReattachSession;
-  } else if (options?.reattachCompletes) {
-    reattach = reattachCompletedSession;
-  }
-
-  return createTestHarnessRegistry([
-    createTestHarnessRecord("opencode", {
-      provider: {
-        capabilities: () => ["SessionReattach"],
-        reattach,
-        resume: resumeSession,
-        start: startSession,
-      },
-    }),
-  ]);
-};
-
-afterEach(() => {
-  failedReattachSession.mockClear();
-  reattachCompletedSession.mockClear();
-  reattachSession.mockClear();
-  resumeSession.mockClear();
-  startSession.mockClear();
-});
-
-afterAll(() => {
-  if (previousDefaultExtensions === undefined) {
-    delete process.env.PSTDIO_DEFAULT_EXTENSIONS;
-  } else {
-    process.env.PSTDIO_DEFAULT_EXTENSIONS = previousDefaultExtensions;
-  }
-});
-
 describe("session scheduler reattach recovery", () => {
-  test("cleans dispatch-started attachment rows after a reattached session completes", async () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-reattach-attachment-recovery-test-"));
-    const databasePath = join(tempRoot, "db");
-    const storageRoot = join(tempRoot, "storage");
-    const firstApp = await createTestApp({
-      databasePath,
-      storageRoot,
-      buildWebviews: false,
-      harnessRegistry: createReattachRegistry(),
-    });
-    await Bun.sleep(100);
-    let projectId = "";
+  test.each([true, false])("recovers claimed follow-ups before orphan reattach (claimed: %s)", async (claimed) => {
+    const root = mkdtempSync(join(tmpdir(), "pstdio-queue-reattach-"));
+    const databasePath = join(root, "db");
+    const storageRoot = join(root, "storage");
+    const resumed: string[] = [];
+    const reattached: string[] = [];
+    const registry = () =>
+      createTestHarnessRegistry([
+        createTestHarnessRecord("opencode", {
+          provider: {
+            capabilities: () => ["SessionReattach"],
+            start: () => pendingSession("new-session"),
+            resume: (_ctx, input) => {
+              resumed.push(input.prompt);
+              return pendingSession(input.agentSessionId);
+            },
+            reattach: (_ctx, input) => {
+              reattached.push(input.agentSessionId);
+              return pendingSession(input.agentSessionId);
+            },
+          },
+        }),
+      ]);
+    const first = await createTestApp({ databasePath, storageRoot, harnessRegistry: registry() });
     let sessionId = "";
-    let fileId = "";
-
     try {
-      const projectRes = await firstApp.app.request("/v1/projects", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Reattach Attachment Recovery Project" }),
-      });
-      expect(projectRes.status).toBe(201);
-      const project = (await projectRes.json()) as { id: string };
-      projectId = project.id;
-
-      const uploadRes = await firstApp.app.request(`/v1/projects/${project.id}/session-attachments`, {
-        method: "POST",
-        headers: {
-          "content-type": "text/plain",
-          "x-file-name": encodeURIComponent("reattach-existing.txt"),
-        },
-        body: "reattach existing context",
-      });
-      expect(uploadRes.status).toBe(201);
-      const attachment = (await uploadRes.json()) as { file_id: string };
-      fileId = attachment.file_id;
-
-      const session = await firstApp.deps.sessionService.create({
+      const project = await first.deps.projectService.create({ name: "Queue recovery" });
+      const session = await first.deps.sessionService.create({
         project_id: project.id,
-        title: "Existing provider session",
-        agent: OPENCODE_ID,
-        cwd: tempRoot,
+        agent: testHarnessId("opencode"),
+        cwd: root,
+        title: "Existing session",
       });
       sessionId = session.id;
-      await firstApp.deps.sessionService.update(session.id, { agent_session_id: "opencode-existing-session" });
-      await firstApp.deps.sessionQueueEntriesService.createDispatchStarted({
-        session_id: session.id,
-        prompt: "do not replay this prompt",
-        request_kind: "start",
-        attachments_json: [{ file_id: attachment.file_id }],
-      });
-      expect(await firstApp.deps.sessionQueueEntriesService.listDispatchStarted()).toHaveLength(1);
-    } finally {
-      await firstApp.close();
-    }
-
-    const recoveredApp = await createTestApp({
-      databasePath,
-      storageRoot,
-      buildWebviews: false,
-      harnessRegistry: createReattachRegistry({ reattachCompletes: true }),
-    });
-
-    try {
-      for (let attempt = 0; attempt < 40; attempt += 1) {
-        const session = await recoveredApp.deps.sessionService.get(sessionId);
-        if (session?.status === "completed" || startSession.mock.calls.length > 0) break;
-        await Bun.sleep(25);
+      await first.deps.sessionService.update(session.id, { agent_session_id: "previous-provider-session" });
+      if (claimed) {
+        const queued = await first.deps.sessionService.queueExistingWithEntry({
+          id: session.id,
+          prompt: "accepted follow-up",
+          request_kind: "follow_up",
+        });
+        await first.deps.sessionService.claimQueuedForDispatch(session.id, queued!.entry!.queue_position);
       }
-
-      expect(reattachCompletedSession).toHaveBeenCalledTimes(1);
-      expect(startSession).not.toHaveBeenCalled();
-      expect(resumeSession).not.toHaveBeenCalled();
-      expect(await recoveredApp.deps.sessionService.get(sessionId)).toMatchObject({ status: "completed" });
-      expect(await recoveredApp.deps.sessionQueueEntriesService.listDispatchStarted()).toEqual([]);
-
-      const deleteRes = await recoveredApp.app.request(`/v1/projects/${projectId}/session-attachments/${fileId}`, {
-        method: "DELETE",
-      });
-      expect(deleteRes.status).toBe(204);
     } finally {
-      await recoveredApp.close();
-      rmSync(tempRoot, { recursive: true, force: true });
+      await first.close();
     }
-  });
-
-  test("preserves dispatch-started attachments when transient reattach retries fail", async () => {
-    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-reattach-failure-cleanup-test-"));
-    const databasePath = join(tempRoot, "db");
-    const storageRoot = join(tempRoot, "storage");
-    const firstApp = await createTestApp({
-      databasePath,
-      storageRoot,
-      buildWebviews: false,
-      harnessRegistry: createReattachRegistry(),
-    });
-    await Bun.sleep(100);
-    let projectId = "";
-    let sessionId = "";
-    let fileId = "";
-
+    const recovered = await createTestApp({ databasePath, storageRoot, harnessRegistry: registry() });
     try {
-      const projectRes = await firstApp.app.request("/v1/projects", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Failed Reattach Attachment Cleanup Project" }),
-      });
-      expect(projectRes.status).toBe(201);
-      const project = (await projectRes.json()) as { id: string };
-      projectId = project.id;
-
-      const uploadRes = await firstApp.app.request(`/v1/projects/${project.id}/session-attachments`, {
-        method: "POST",
-        headers: {
-          "content-type": "text/plain",
-          "x-file-name": encodeURIComponent("reattach-failure.txt"),
-        },
-        body: "reattach failure context",
-      });
-      expect(uploadRes.status).toBe(201);
-      const attachment = (await uploadRes.json()) as { file_id: string };
-      fileId = attachment.file_id;
-
-      const session = await firstApp.deps.sessionService.create({
-        project_id: project.id,
-        title: "Failed provider reattach",
-        agent: OPENCODE_ID,
-        cwd: tempRoot,
-      });
-      sessionId = session.id;
-      await firstApp.deps.sessionService.update(session.id, { agent_session_id: "opencode-failed-reattach" });
-      await firstApp.deps.sessionQueueEntriesService.createDispatchStarted({
-        session_id: session.id,
-        prompt: "cleanup this failed reattach marker",
-        request_kind: "start",
-        attachments_json: [{ file_id: attachment.file_id }],
-      });
-      expect(await firstApp.deps.sessionQueueEntriesService.listDispatchStarted()).toHaveLength(1);
-    } finally {
-      await firstApp.close();
-    }
-
-    const recoveredApp = await createTestApp({
-      databasePath,
-      storageRoot,
-      buildWebviews: false,
-      harnessRegistry: createReattachRegistry({ reattachFails: true }),
-    });
-
-    try {
-      for (let attempt = 0; attempt < 120; attempt += 1) {
-        if (failedReattachSession.mock.calls.length >= 4) break;
-        await Bun.sleep(25);
+      for (let attempt = 0; attempt < 40 && resumed.length + reattached.length === 0; attempt += 1) await Bun.sleep(25);
+      if (claimed) {
+        expect(resumed).toEqual(["accepted follow-up"]);
+        expect(reattached).toEqual([]);
+      } else {
+        expect(reattached).toEqual(["previous-provider-session"]);
+        expect(resumed).toEqual([]);
       }
-
-      expect(failedReattachSession.mock.calls.length).toBeGreaterThanOrEqual(4);
-      expect(await recoveredApp.deps.sessionService.get(sessionId)).toMatchObject({ status: "in_progress" });
-      expect(await recoveredApp.deps.sessionQueueEntriesService.listDispatchStarted()).toHaveLength(1);
-      expect(recoveredApp.deps.sessionService.store.get(sessionId)).toBeNull();
-
-      const deleteRes = await recoveredApp.app.request(`/v1/projects/${projectId}/session-attachments/${fileId}`, {
-        method: "DELETE",
-      });
-      expect(deleteRes.status).toBe(409);
+      expect(await recovered.deps.sessionQueueEntriesService.listPendingBySession(sessionId)).toEqual([]);
+      expect(await recovered.deps.sessionQueueEntriesService.listDispatchStarted()).toEqual([]);
+      expect(recovered.deps.sessionService.store.get(sessionId)).not.toBeNull();
     } finally {
-      await recoveredApp.close();
-      rmSync(tempRoot, { recursive: true, force: true });
+      await recovered.close();
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });

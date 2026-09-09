@@ -1,8 +1,9 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { allocateTicketIdentity, putTicket, ticketsCollection } from "../data/collections";
+import { putTicket, ticketsCollection } from "../data/collections";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON } from "../data/mappers";
 import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
+import { allocateTicketIdentity } from "../data/ticket-identity";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
 import type { StoredTicketAttachment } from "../data/types";
 import { plannerTicketsChanged } from "../events";
@@ -42,7 +43,8 @@ export const createTicketCommand = defineCommand({
     if (commandParams.tags !== undefined) await seedDefaultTags(ctx.storage);
     const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
     const now = new Date().toISOString();
-    const { shorthand, sortOrder } = allocateTicketIdentity(ctx.project.shorthand, existing);
+    const { id, shorthand } = await allocateTicketIdentity(ctx);
+    const sortOrder = Math.max(-1, ...existing.map((ticket) => ticket.sortOrder)) + 1;
 
     const attributes = commandParams.attributes ?? {};
     const attributeStatusId = typeof attributes.status === "string" ? attributes.status : undefined;
@@ -68,7 +70,7 @@ export const createTicketCommand = defineCommand({
         : (commandParams.parentId ?? null);
 
     const ticket = await putTicket(ctx.storage, {
-      id: crypto.randomUUID(),
+      id,
       shorthand,
       title: commandParams.content ? deriveTitle(commandParams.content) : (commandParams.title ?? "Untitled"),
       content: commandParams.content ?? "",

@@ -1,4 +1,10 @@
-import { defineExtension, defineSkill, defineTemplateType, packageAsset } from "@pstdio/sdk/extensions";
+import {
+  defineExtension,
+  defineResourceKind,
+  defineSkill,
+  defineTemplateType,
+  packageAsset,
+} from "@pstdio/sdk/extensions";
 import { reportTemplates } from "./report-templates";
 import { deleteReportCommand } from "./src/commands/delete-report";
 import { readReportCommand } from "./src/commands/read-report";
@@ -14,6 +20,7 @@ const reportTemplateCommandRefs = {
 };
 
 export default defineExtension({
+  resourceKinds: [defineResourceKind({ id: "report", prefix: "RP" })],
   commands: [
     writeReportCommand,
     readReportCommand,

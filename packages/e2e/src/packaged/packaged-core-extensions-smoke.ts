@@ -58,6 +58,26 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
 
           const project = (await createRes.json()) as { extension_warnings?: unknown[]; id: string };
           expect(project.extension_warnings).toBeUndefined();
+          const identities = await Promise.all(
+            Array.from({ length: 3 }, async (_, index) => {
+              const response = await fetch(
+                `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.pstdio-planner.command.create-ticket/execute`,
+                {
+                  method: "POST",
+                  headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+                  body: JSON.stringify({ source: "api", params: { title: `Packaged identity ${index}` } }),
+                },
+              );
+              expect(response.status).toBe(200);
+              const body = (await response.json()) as {
+                outcome: { ok: boolean; value: { id: string; shorthand: string } };
+              };
+              expect(body.outcome.ok).toBe(true);
+              return body.outcome.value;
+            }),
+          );
+          expect(new Set(identities.map((identity) => identity.id)).size).toBe(3);
+          expect(new Set(identities.map((identity) => identity.shorthand)).size).toBe(3);
           const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
             headers: runtimeAuthorization(started.descriptor),
           });

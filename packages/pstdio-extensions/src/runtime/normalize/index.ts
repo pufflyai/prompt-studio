@@ -17,6 +17,7 @@ import { validatePageNavigationTargets } from "./page-target-validation";
 import { validatePageDefinitions } from "./page-validation";
 import { registerPages } from "./pages";
 import { registerProviders } from "./providers";
+import { validateResourcePrefixes } from "./resource-prefixes";
 import { registerSchedules } from "./schedules";
 import { registerSettings } from "./settings";
 import { registerTranslations } from "./translations";
@@ -107,6 +108,7 @@ export const normalizeExtensionSources = (
   }
 
   validateCompositionRelationships(runtime);
+  validateResourcePrefixes(runtime);
   validatePageDefinitions(runtime);
   validatePageNavigationTargets(runtime);
 

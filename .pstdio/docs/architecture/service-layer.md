@@ -102,3 +102,5 @@ Domain services own event emission. When a mutation succeeds, the domain service
 
 Planner tickets are extension-owned. Core services may log activity that refers
 to planner resources, but there is no core `ticketService` or ticket DB service.
+
+Project, repository, file, skill, and automation preference services emit their own successful mutations. HTTP handlers do not repeat those events. Missing update/delete targets emit nothing. Project creation and file upload accept an initialization callback so setup finishes before the set event; failed setup rolls back the new row. Extension file ownership is attached through that upload callback.

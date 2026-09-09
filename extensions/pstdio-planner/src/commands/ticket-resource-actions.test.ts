@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { createMemoryStorage } from "../data/memory-storage";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { createTicketFileCommand, listTicketFilesTreeCommand } from "./ticket-files";
@@ -29,7 +29,7 @@ test("ticket tree rows identify their action resource independently of file navi
               id: "linked-workspace",
               workspace_shorthand: "WS-1",
               name: "Ticket workspace",
-              anchors_json: [{ type: "ticket", id: ticket.id, metadata: { shorthand: ticket.shorthand } }],
+              anchors_json: [{ type: "ticket", id: ticket.id, shorthand: ticket.shorthand, metadata: {} }],
             },
           ],
         },

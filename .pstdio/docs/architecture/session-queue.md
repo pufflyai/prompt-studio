@@ -129,3 +129,7 @@ The dashboard treats `queued` as an accepted-but-not-running state:
 4. Startup recovery must reset stale dispatch claims before orphan recovery.
 5. Question responses must not be queued behind their own active session capacity.
 6. Dashboard chat must preserve queued prompts until persisted history replaces optimistic state.
+
+Queued follow-up removal deletes only entries whose dispatch marker is still empty, in one conditional database statement. Once the scheduler claims an entry, client removal returns false and leaves scheduler-owned state intact.
+
+At startup, a dispatch marker without a live runtime is recovered before orphan-session reattachment, even when the provider supports reattachment. An old provider session ID does not prove that the newly claimed prompt was delivered. Recovery retries the durable prompt. As with any crash between provider acceptance and local acknowledgement, delivery is at least once: the provider may see the prompt again. Sessions without a claimed queue entry still use normal provider reattachment.

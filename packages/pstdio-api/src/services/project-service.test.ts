@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { EventBus } from "../features/sync/event-bus";
 import { createProjectService } from "./project-service";
 
 describe("ProjectService", () => {
@@ -6,6 +7,7 @@ describe("ProjectService", () => {
     const project = { id: "p1", name: "Test" };
     const get = mock(async () => project);
     const service = createProjectService({
+      eventBus: new EventBus(),
       projectsDBService: { get },
     } as unknown as Parameters<typeof createProjectService>[0]);
 

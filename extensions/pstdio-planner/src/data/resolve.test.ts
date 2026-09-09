@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { ticketsCollection } from "./collections";
-import { createMemoryStorage } from "./memory-storage";
 import { resolveStatusId, resolveTagId, resolveTagOptionIds, resolveTicketId } from "./resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "./seed";
 

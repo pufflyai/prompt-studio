@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { ExtensionDefinition } from "@pstdio/sdk/extensions";
+import { createMemoryResources } from "@pstdio/sdk/testing";
 import { normalizeExtensionSources } from "../normalize";
 import { type CommandRunnerEnvironment, createCommandRunner } from "./runner";
 
@@ -26,6 +27,7 @@ const createSessionResource = () => ({ type: "session" as const, id: "", title: 
 const environment: CommandRunnerEnvironment = {
   project: { id: "project-1", name: "Project One", shorthand: "PO" },
   storage,
+  resources: createMemoryResources({}),
   artifacts: { mount: () => ({}) as never },
   packageFiles: {
     exists: async () => false,

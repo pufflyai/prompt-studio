@@ -57,6 +57,10 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
       await refreshInstalledExtensionProcesses(sourcePath, validatedSource);
     },
     projectService: input.projectService,
+    validateResourcePrefixes: async (projectId, installedSourceId) => {
+      const source = await input.installedExtensionSourcesService.get(installedSourceId);
+      if (source) await extensionRuntimeCatalog.validateResourcePrefixes(projectId, source);
+    },
   });
   const extensionUpgradeService = createExtensionUpgradeService({
     extensionService,

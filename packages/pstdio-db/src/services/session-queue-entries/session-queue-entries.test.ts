@@ -27,6 +27,21 @@ afterEach(async () => {
 });
 
 describe("session queue entries service", () => {
+  test("pending deletion preserves a claimed follow-up until dispatch cleanup", async () => {
+    const session = await sessionsService.create({ project_id: projectId, title: "follow-up", agent: "fake" });
+    const pending = await queueService.create({ session_id: session.id, prompt: "pending", request_kind: "follow_up" });
+    const claimed = await queueService.create({ session_id: session.id, prompt: "claimed", request_kind: "follow_up" });
+    await queueService.markDispatchStarted(claimed.queue_position);
+
+    expect(await queueService.removePending(pending.queue_position)).toBe(true);
+    expect(await queueService.removePending(claimed.queue_position)).toBe(false);
+    expect(await queueService.removePending(pending.queue_position)).toBe(false);
+    expect(await queueService.listDispatchStarted()).toEqual([expect.objectContaining({ prompt: "claimed" })]);
+
+    await queueService.remove(claimed.queue_position);
+    expect(await queueService.listDispatchStarted()).toEqual([]);
+  });
+
   test("lists entries in deterministic FIFO order", async () => {
     const first = await sessionsService.create({ project_id: projectId, title: "first", agent: "claude-code" });
     const second = await sessionsService.create({ project_id: projectId, title: "second", agent: "claude-code" });

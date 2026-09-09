@@ -22,6 +22,7 @@ const subTicketNode = (
   const resource = {
     type: "ticket",
     id: ticket.id,
+    shorthand: ticket.shorthand,
     label,
     metadata: ticketResourceHierarchyMetadata(ticket, ticketsById),
   };

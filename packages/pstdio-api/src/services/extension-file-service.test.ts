@@ -1,5 +1,4 @@
 import { describe, expect, test } from "bun:test";
-import { EventBus, type SyncEvent } from "../features/sync/event-bus";
 import { createExtensionFileService, type ExtensionFileServiceDeps } from "./extension-file-service";
 
 const projectInstance = {
@@ -43,13 +42,8 @@ const makeHarness = (options?: {
   const detached: unknown[] = [];
   const uploaded: unknown[] = [];
   const removed: string[] = [];
-  const events: SyncEvent[] = [];
-
-  const eventBus = new EventBus();
-  eventBus.subscribe((event) => events.push(event));
 
   const deps: ExtensionFileServiceDeps = {
-    eventBus,
     extensionFilesDBService: {
       attach: async (input) => {
         attached.push(input);
@@ -66,9 +60,11 @@ const makeHarness = (options?: {
       get: async () => (options?.instance === undefined ? projectInstance : options.instance),
     },
     fileService: {
-      upload: async (input) => {
+      upload: async (input, initialize) => {
         uploaded.push(input);
-        return { ...fileRow("file-1"), file_name: input.file_name };
+        const file = { ...fileRow("file-1"), file_name: input.file_name };
+        await initialize?.(file);
+        return file;
       },
       remove: async (fileId) => {
         removed.push(fileId);
@@ -77,11 +73,11 @@ const makeHarness = (options?: {
     },
   };
 
-  return { service: createExtensionFileService(deps), attached, detached, uploaded, removed, events };
+  return { service: createExtensionFileService(deps), attached, detached, uploaded, removed };
 };
 
 describe("ExtensionFileService", () => {
-  test("upload stores bytes, attaches ownership, and emits the files set event", async () => {
+  test("upload stores bytes, attaches ownership", async () => {
     const harness = makeHarness();
 
     const file = await harness.service.upload({
@@ -96,9 +92,6 @@ describe("ExtensionFileService", () => {
       expect.objectContaining({ project_id: "project-1", file_name: "notes.txt", file_kind: "extension" }),
     ]);
     expect(harness.attached).toEqual([expect.objectContaining({ ...ownershipScope, file_id: "file-1" })]);
-    expect(harness.events).toEqual([
-      expect.objectContaining({ table: "files", op: "set", data: expect.objectContaining({ id: "file-1" }) }),
-    ]);
   });
 
   test("upload refuses instances that are not project instances of the project", async () => {
@@ -113,7 +106,6 @@ describe("ExtensionFileService", () => {
     expect(file).toBeNull();
     expect(harness.uploaded).toEqual([]);
     expect(harness.attached).toEqual([]);
-    expect(harness.events).toEqual([]);
   });
 
   test("list returns owned files for a valid instance and null otherwise", async () => {
@@ -124,7 +116,7 @@ describe("ExtensionFileService", () => {
     await expect(invalid.service.list(ownershipScope)).resolves.toBeNull();
   });
 
-  test("remove detaches ownership, deletes the file, and emits the files delete event", async () => {
+  test("remove detaches ownership, deletes the file", async () => {
     const harness = makeHarness({ ownedFile: fileRow("file-1") });
 
     const result = await harness.service.remove({
@@ -138,7 +130,6 @@ describe("ExtensionFileService", () => {
       expect.objectContaining({ project_id: "project-1", extension_instance_id: "instance-1", file_id: "file-1" }),
     ]);
     expect(harness.removed).toEqual(["file-1"]);
-    expect(harness.events).toEqual([expect.objectContaining({ table: "files", op: "delete", data: { id: "file-1" } })]);
   });
 
   test("remove leaves state untouched when the file is not owned by the instance", async () => {
@@ -153,6 +144,5 @@ describe("ExtensionFileService", () => {
     expect(result).toBe(false);
     expect(harness.detached).toEqual([]);
     expect(harness.removed).toEqual([]);
-    expect(harness.events).toEqual([]);
   });
 });

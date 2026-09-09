@@ -6,6 +6,7 @@ import {
   type ProjectExtensionRuntimeSnapshot,
   resolveEnabledSourceForRecord,
 } from "../features/extensions/project-extension-runtime-snapshot";
+import type { EventBus } from "../features/sync/event-bus";
 import {
   catalogId,
   catalogNameFromKey,
@@ -24,6 +25,7 @@ type InternalSkill = Skill & {
 };
 
 export type SkillServiceDeps = {
+  eventBus: EventBus;
   extensionRuntimeCatalog: ProjectExtensionRuntimeCatalog;
   extensionSkillPreferencesDBService: ReturnType<typeof createExtensionSkillPreferencesDBService>;
   fileService: ReturnType<typeof createFileService>;
@@ -188,6 +190,12 @@ const findByNameInternal = async (deps: SkillServiceDeps, projectId: string, nam
 };
 
 export const createSkillService = (deps: SkillServiceDeps) => {
+  const publish = (skill: InternalSkill | null) => {
+    if (!skill) return null;
+    const result = toPublicSkill(skill);
+    deps.eventBus.emit("skills", "set", result);
+    return result;
+  };
   const list = async (projectId: string) => (await listInternal(deps, projectId)).map(toPublicSkill);
 
   const getByName = async (projectId: string, name: string) => {
@@ -203,7 +211,7 @@ export const createSkillService = (deps: SkillServiceDeps) => {
       description: input.description,
       files: ingested,
     });
-    return toPublicSkill(await hydrateProjectSkill(deps.fileService, created));
+    return publish(await hydrateProjectSkill(deps.fileService, created))!;
   };
 
   const update = async (projectId: string, name: string, input: { description?: string; files?: SkillFile[] }) => {
@@ -212,7 +220,7 @@ export const createSkillService = (deps: SkillServiceDeps) => {
         description: input.description,
       });
       if (!updated) return null;
-      return toPublicSkill(await hydrateProjectSkill(deps.fileService, updated));
+      return publish(await hydrateProjectSkill(deps.fileService, updated));
     }
 
     const existing = await deps.skillsDBService.getByName(projectId, name);
@@ -229,7 +237,7 @@ export const createSkillService = (deps: SkillServiceDeps) => {
       await deps.fileService.remove(previous.file_id);
     }
 
-    return toPublicSkill(await hydrateProjectSkill(deps.fileService, updated));
+    return publish(await hydrateProjectSkill(deps.fileService, updated));
   };
 
   const setPreference = async (
@@ -242,8 +250,7 @@ export const createSkillService = (deps: SkillServiceDeps) => {
 
     if (skill.source_kind === "project") {
       if (input.description === undefined) return toPublicSkill(skill);
-      const updated = await deps.skillsDBService.update(projectId, name, { description: input.description });
-      return updated ? toPublicSkill(await hydrateProjectSkill(deps.fileService, updated)) : null;
+      return update(projectId, name, { description: input.description });
     }
 
     await deps.extensionSkillPreferencesDBService.set({
@@ -256,10 +263,16 @@ export const createSkillService = (deps: SkillServiceDeps) => {
     });
 
     const refreshed = await findByNameInternal(deps, projectId, name, true);
-    return refreshed ? toPublicSkill(refreshed) : null;
+    return publish(refreshed);
   };
 
-  const remove = (projectId: string, name: string) => deps.skillsDBService.remove(projectId, name);
+  const remove = async (projectId: string, name: string) => {
+    const existing = await deps.skillsDBService.getByName(projectId, name);
+    if (!existing) return false;
+    const removed = await deps.skillsDBService.remove(projectId, name);
+    if (removed) deps.eventBus.emit("skills", "delete", { id: existing.id });
+    return removed;
+  };
 
   return {
     list,

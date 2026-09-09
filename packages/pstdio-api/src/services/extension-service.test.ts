@@ -57,7 +57,10 @@ const makeExtension = (root: string, input: { name?: string; version?: string; t
 beforeEach(async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
-  projectService = createProjectService({ projectsDBService: createProjectsDBService(result.db) });
+  projectService = createProjectService({
+    eventBus: new EventBus(),
+    projectsDBService: createProjectsDBService(result.db),
+  });
   installedExtensionSourcesService = createInstalledExtensionSourcesDBService(result.db);
   extensionInstancesService = createExtensionInstancesDBService(result.db);
   extensionUserDataService = createExtensionUserDataDBService(result.db);

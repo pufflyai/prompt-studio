@@ -1,9 +1,7 @@
 import type { createExtensionFilesDBService, createExtensionInstancesDBService } from "pstdio-db";
-import type { EventBus } from "../features/sync/event-bus";
 import type { createFileService } from "./file-service";
 
 export type ExtensionFileServiceDeps = {
-  eventBus: EventBus;
   extensionFilesDBService: ReturnType<typeof createExtensionFilesDBService>;
   extensionInstancesDBService: Pick<ReturnType<typeof createExtensionInstancesDBService>, "get">;
   fileService: Pick<ReturnType<typeof createFileService>, "upload" | "remove">;
@@ -31,21 +29,24 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
   const upload = async (input: ExtensionFileScope & { file_name: string; data: Buffer; mime_type?: string | null }) => {
     if (!(await ownsProjectInstance(input))) return null;
 
-    const file = await deps.fileService.upload({
-      project_id: input.project_id,
-      file_name: input.file_name,
-      file_kind: "extension",
-      data: input.data,
-      mime_type: input.mime_type ?? null,
-    });
-    await deps.extensionFilesDBService.attach({
-      project_id: input.project_id,
-      extension_instance_id: input.extension_instance_id,
-      file_id: file.id,
-      scope_type: input.scope_type,
-      scope_id: input.scope_id,
-    });
-    deps.eventBus.emit("files", "set", file);
+    const file = await deps.fileService.upload(
+      {
+        project_id: input.project_id,
+        file_name: input.file_name,
+        file_kind: "extension",
+        data: input.data,
+        mime_type: input.mime_type ?? null,
+      },
+      async (file) => {
+        await deps.extensionFilesDBService.attach({
+          project_id: input.project_id,
+          extension_instance_id: input.extension_instance_id,
+          file_id: file.id,
+          scope_type: input.scope_type,
+          scope_id: input.scope_id,
+        });
+      },
+    );
 
     return file;
   };
@@ -63,7 +64,6 @@ export const createExtensionFileService = (deps: ExtensionFileServiceDeps) => {
 
     await deps.extensionFilesDBService.detach(input);
     await deps.fileService.remove(input.file_id);
-    deps.eventBus.emit("files", "delete", { id: input.file_id });
 
     return true;
   };

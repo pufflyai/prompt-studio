@@ -77,13 +77,12 @@ export const createProjectExtensionLifecycle = (deps: LifecycleDeps) => {
     );
     if (!schedule) return null;
 
-    const preference = await deps.extensionAutomationPreferencesService.set({
+    await deps.extensionAutomationPreferencesService.set({
       project_id: projectId,
       extension_instance_id: instanceId,
       automation_id: automationId,
       enabled,
     });
-    deps.eventBus.emit("extension_automation_preferences", "set", preference);
 
     return {
       id: schedule.id,

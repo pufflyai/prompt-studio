@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ExtensionSessionsApi, ExtensionWorkspace } from "@pstdio/sdk/extensions";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putTicket } from "../data/collections";
-import { createMemoryStorage } from "../data/memory-storage";
 import { seedDefaultStatuses } from "../data/seed";
 import type { StoredTicket } from "../data/types";
 import { commandParamsFor, makeCommandContext } from "./command-context.fixture";
@@ -107,8 +107,8 @@ describe("queryTicketsCommand", () => {
           type: "ticket",
           id: "ticket-1",
           label: "T-1 Ticket",
+          shorthand: "T-1",
           metadata: {
-            shorthand: "T-1",
             resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },

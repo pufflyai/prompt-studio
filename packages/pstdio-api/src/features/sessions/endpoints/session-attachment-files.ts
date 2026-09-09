@@ -183,7 +183,6 @@ export const uploadSessionAttachmentHandler = (
       data,
       mime_type: contentType,
     });
-    deps.eventBus.emit("files", "set", file);
 
     return c.json(toSessionAttachment(projectId, file), 201);
   };
@@ -222,7 +221,6 @@ export const deleteSessionAttachmentHandler = (
     }
 
     await deps.fileService.remove(fileId);
-    deps.eventBus.emit("files", "delete", { id: fileId });
 
     return c.body(null, 204);
   };

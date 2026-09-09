@@ -45,8 +45,6 @@ export const updateProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
       return c.json({ error: "Project not found" }, 404);
     }
 
-    deps.eventBus.emit("projects", "set", updated);
-
     return c.json(toProjectResponse(updated), 200);
   };
 };

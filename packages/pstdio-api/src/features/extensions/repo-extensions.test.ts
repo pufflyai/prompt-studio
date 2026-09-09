@@ -12,6 +12,7 @@ import {
 } from "pstdio-db";
 import { createExtensionService } from "../../services/extension-service";
 import { createProjectService } from "../../services/project-service";
+import { EventBus } from "../sync/event-bus";
 import { syncRepoExtensionsForLinkedRepos, syncRepoExtensionsForProject } from "./repo-extensions";
 
 let close: (() => Promise<void>) | undefined;
@@ -41,7 +42,10 @@ beforeEach(async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
   tempRoot = mkdtempSync(join(tmpdir(), "pstdio-repo-extensions-"));
-  projectService = createProjectService({ projectsDBService: createProjectsDBService(result.db) });
+  projectService = createProjectService({
+    eventBus: new EventBus(),
+    projectsDBService: createProjectsDBService(result.db),
+  });
   installedExtensionSourcesService = createInstalledExtensionSourcesDBService(result.db);
   extensionInstancesService = createExtensionInstancesDBService(result.db);
   extensionService = createExtensionService({

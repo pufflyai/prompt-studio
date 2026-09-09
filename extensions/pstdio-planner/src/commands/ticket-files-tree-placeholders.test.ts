@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { workbenchPages } from "@pstdio/sdk/extensions";
-import { createMemoryStorage } from "../data/memory-storage";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { listTicketFilesTreeCommand } from "./ticket-files";
@@ -80,7 +80,7 @@ describe("ticket files tree workspace metadata", () => {
                 id: "ws-1",
                 workspace_shorthand: "WS-1",
                 anchors_json: [
-                  { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { shorthand: ticket.shorthand } },
+                  { type: "ticket", id: ticket.id, label: ticket.shorthand, shorthand: ticket.shorthand, metadata: {} },
                 ],
                 worktree_path: "/tmp/ws-1",
               },
@@ -103,14 +103,14 @@ describe("ticket files tree workspace metadata", () => {
               type: "ticket",
               id: ticket.id,
               label: `${ticket.shorthand} Child`,
+              shorthand: ticket.shorthand,
               metadata: {
-                shorthand: ticket.shorthand,
                 resourceParent: {
                   type: "ticket",
                   id: parent.id,
                   label: `${parent.shorthand} Parent`,
+                  shorthand: parent.shorthand,
                   metadata: {
-                    shorthand: parent.shorthand,
                     resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
                   },
                 },

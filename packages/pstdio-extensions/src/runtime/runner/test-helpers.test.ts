@@ -1,3 +1,4 @@
+import { createMemoryResources } from "@pstdio/sdk/testing";
 import type { ExtensionRuntime } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { normalizeExtensionSources } from "../normalize";
@@ -34,6 +35,7 @@ const createSessionResource = () => ({ type: "session" as const, id: "", title: 
 export const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): CommandRunnerEnvironment => {
   const environment: CommandRunnerEnvironment = {
     project: { id: "p1", name: "Prompt Studio", shorthand: "PS" },
+    resources: createMemoryResources({}),
     storage,
     artifacts: { mount: () => ({}) as never },
     packageFiles: {

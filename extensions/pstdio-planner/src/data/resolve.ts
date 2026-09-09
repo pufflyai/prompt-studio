@@ -1,28 +1,6 @@
+import { resolveByIdOrName } from "@pstdio/sdk/data";
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { statusesCollection, tagsCollection, ticketsCollection } from "./collections";
-
-const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
-
-// Resolution lives next to the data so any client (CLI, board, integrations) can
-// address tickets/statuses/tags by human name or shorthand. We match an exact id
-// first, then a case-insensitive name, and fail loudly on unknown or ambiguous
-// values rather than picking arbitrarily (Decision 3).
-const resolveByIdOrName = <TItem extends { id: string }>(
-  items: TItem[],
-  value: string,
-  nameOf: (item: TItem) => string,
-  label: string,
-) => {
-  const byId = items.find((item) => item.id === value);
-  if (byId) return byId.id;
-
-  const byName = items.filter((item) => sameName(nameOf(item), value));
-  if (byName.length > 1) throw new Error(`Ambiguous ${label} "${value}"`);
-
-  const [match] = byName;
-  if (match) return match.id;
-  throw new Error(`Unknown ${label} "${value}"`);
-};
 
 export const resolveStatusId = async (storage: ExtensionStorageApi, value: string) =>
   resolveByIdOrName(await statusesCollection(storage).list(), value, (status) => status.name, "status");
@@ -43,7 +21,7 @@ export const findTicket = async (storage: ExtensionStorageApi, value: string) =>
   const byId = tickets.find((ticket) => ticket.id === value);
   if (byId) return byId;
 
-  const byShorthand = tickets.filter((ticket) => sameName(ticket.shorthand, value));
+  const byShorthand = tickets.filter((ticket) => ticket.shorthand.toLowerCase() === value.trim().toLowerCase());
   if (byShorthand.length > 1) throw new Error(`Ambiguous ticket "${value}"`);
   return byShorthand[0];
 };

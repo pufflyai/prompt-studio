@@ -1,8 +1,9 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
-import { allocateTicketIdentity, putTicket, ticketsCollection } from "../data/collections";
+import { putTicket, ticketsCollection } from "../data/collections";
 import { requireRepoFiles, ticketMarkdownPath, ticketToMarkdown, writeTicketMarkdown } from "../data/draft-storage";
 import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
+import { allocateTicketIdentity } from "../data/ticket-identity";
 
 // `pst tickets write`: create a draft ticket in extension storage and lay down its
 // local `.pstdio/tickets/<shorthand>/ticket.md` via the host file primitive. The
@@ -30,7 +31,8 @@ export const writeTicketCommand = defineCommand({
 
     const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
     const now = new Date().toISOString();
-    const { shorthand, sortOrder } = allocateTicketIdentity(ctx.project.shorthand, existing);
+    const { id, shorthand } = await allocateTicketIdentity(ctx);
+    const sortOrder = Math.max(-1, ...existing.map((ticket) => ticket.sortOrder)) + 1;
 
     const statusId =
       commandParams.status !== undefined
@@ -41,7 +43,7 @@ export const writeTicketCommand = defineCommand({
       commandParams.parent !== undefined ? await resolveTicketId(ctx.storage, commandParams.parent) : null;
 
     const ticket = await putTicket(ctx.storage, {
-      id: crypto.randomUUID(),
+      id,
       shorthand,
       title: commandParams.title,
       content: `# ${commandParams.title}\n`,

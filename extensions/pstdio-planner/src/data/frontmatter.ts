@@ -1,3 +1,11 @@
+import {
+  findClosingFrontmatterDelimiter,
+  quoteYamlScalar as q,
+  stripFrontmatter,
+  unquoteYamlScalar as unquote,
+} from "@pstdio/sdk/data";
+
+export { applyFrontmatter, stripFrontmatter } from "@pstdio/sdk/data";
 // Frontmatter helpers for the local-file draft workflow (`tickets write/save/pull`).
 // Ported from the legacy pstdio CLI so the draft round-trip lives entirely in the
 // extension; the host only provides the generic file primitive (ctx.repoFiles).
@@ -14,8 +22,6 @@ export interface TicketFrontmatterFields {
   tagNames: string[];
 }
 
-const escapeYamlScalar = (value: string) => value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
-const q = (value: string) => `"${escapeYamlScalar(value)}"`;
 const formatList = (values: string[]) => `[${values.map(q).join(", ")}]`;
 
 export const buildTicketFrontmatter = (fields: TicketFrontmatterFields) => {
@@ -34,34 +40,12 @@ export const buildTicketFrontmatter = (fields: TicketFrontmatterFields) => {
   return lines.join("\n");
 };
 
-const findClosingFrontmatterDelimiter = (content: string) => {
-  const match = /\n---[ \t]*(?:\r?\n|$)/.exec(content.slice(3));
-  if (!match) return null;
-
-  const start = 3 + match.index + 1;
-  const end = 3 + match.index + match[0].length;
-  return { end, start };
-};
-
-export const stripFrontmatter = (content: string) => {
-  if (!content.startsWith("---")) return content;
-  const delimiter = findClosingFrontmatterDelimiter(content);
-  if (!delimiter) return content;
-  return content.slice(delimiter.end);
-};
-
 export const extractTicketTitle = (content: string) => {
   for (const line of stripFrontmatter(content).split("\n")) {
     const trimmed = line.trim();
     if (trimmed.startsWith("# ")) return trimmed.slice(2).trim() || null;
   }
   return null;
-};
-
-export const applyFrontmatter = (frontmatter: string, content: string) => {
-  const body = stripFrontmatter(content).replace(/^\n+/, "");
-  if (!body) return frontmatter;
-  return `${frontmatter}\n\n${body}`;
 };
 
 export interface ParsedTicketFrontmatter {
@@ -73,8 +57,6 @@ export interface ParsedTicketFrontmatter {
   blockedReason?: string;
   tagNames?: string[];
 }
-
-const unquote = (value: string) => value.replace(/^["']|["']$/g, "");
 
 const parseList = (raw: string) => {
   const inner = raw.replace(/^\[/, "").replace(/\]$/, "");

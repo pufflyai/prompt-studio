@@ -11,6 +11,7 @@ export interface StoredReportFile {
 
 export interface StoredReport {
   id: string;
+  shorthand?: string;
   workspaceShorthand: string;
   workspaceId: string | null;
   name: string;

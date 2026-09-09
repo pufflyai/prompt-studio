@@ -48,7 +48,6 @@ export const removeRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<type
         repoPath: repo.path,
       });
     }
-    deps.eventBus.emit("project_repos", "delete", { id: link.id });
     return c.body(null, 204);
   };
 };

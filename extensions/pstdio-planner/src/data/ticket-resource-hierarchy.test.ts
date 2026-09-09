@@ -74,19 +74,18 @@ describe("ticket resource hierarchy", () => {
     ]);
 
     expect(ticketResourceHierarchyMetadata(child, tickets)).toEqual({
-      shorthand: "PS-3",
       resourceParent: {
         type: "ticket",
         id: "parent",
         label: "PS-2 Parent",
+        shorthand: "PS-2",
         metadata: {
-          shorthand: "PS-2",
           resourceParent: {
             type: "ticket",
             id: "root",
             label: "PS-1 Root",
+            shorthand: "PS-1",
             metadata: {
-              shorthand: "PS-1",
               resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },
@@ -107,14 +106,14 @@ describe("ticket resource hierarchy", () => {
       type: "ticket",
       id: "child",
       label: "PS-2 Ticket",
+      shorthand: "PS-2",
       metadata: {
-        shorthand: "PS-2",
         resourceParent: {
           type: "ticket",
           id: "parent",
           label: "PS-1 Ticket",
+          shorthand: "PS-1",
           metadata: {
-            shorthand: "PS-1",
             resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },
@@ -132,8 +131,8 @@ describe("ticket resource hierarchy", () => {
         type: "ticket",
         id: "child",
         label: "PS-2 Child",
+        shorthand: "PS-2",
         metadata: {
-          shorthand: "PS-2",
           resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
         },
       },

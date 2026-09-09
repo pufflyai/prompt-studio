@@ -1,10 +1,12 @@
+import { createDraftLayout } from "@pstdio/sdk/data";
 import type { ArtifactMount } from "@pstdio/sdk/extensions";
 import { applyFrontmatter, buildReportFrontmatter } from "./frontmatter";
 import type { StoredReport } from "./types";
 
 export const REPORTS_DIR = ".pstdio/reports";
 
-export const reportDir = (name: string) => `${REPORTS_DIR}/${name}`;
+const layout = createDraftLayout(REPORTS_DIR, "report");
+export const reportDir = layout.directory;
 const reportSuffix = (sequence: number) => (sequence === 0 ? "" : `_${sequence.toString().padStart(2, "0")}`);
 
 export const reportInstanceName = (name: string, sequence = 0) => `${name}${reportSuffix(sequence)}`;
@@ -49,7 +51,4 @@ export const readReportMarkdown = async (repoFiles: ArtifactMount, report: Store
   return repoFiles.readText(path);
 };
 
-export const requireRepoFiles = (repoFiles: ArtifactMount | undefined): ArtifactMount => {
-  if (!repoFiles) throw new Error("This command must be run inside a project repository.");
-  return repoFiles;
-};
+export { requireRepoFiles } from "@pstdio/sdk/data";

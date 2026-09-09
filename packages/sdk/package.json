@@ -41,11 +41,19 @@
     "./hooks": {
       "types": "./dist/hooks.d.ts",
       "import": "./dist/hooks/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing/index.js"
+    },
+    "./data": {
+      "types": "./dist/data.d.ts",
+      "import": "./dist/data/index.js"
     }
   },
   "scripts": {
     "build": "rm -rf ./dist && bun run build:js && bun run build:types && bun ../../scripts/release/stage-package.ts .",
-    "build:js": "bun build ./src/api/index.ts ./src/client/index.ts ./src/extensions/index.ts ./src/extensions/react/index.ts ./src/prompts/index.ts ./src/hooks/index.ts ./src/resources/index.ts --outdir ./dist --root ./src --target node --format esm --external mustache --external react --external @tanstack/react-query",
+    "build:js": "bun build ./src/api/index.ts ./src/client/index.ts ./src/extensions/index.ts ./src/extensions/react/index.ts ./src/prompts/index.ts ./src/hooks/index.ts ./src/resources/index.ts ./src/testing/index.ts ./src/data/index.ts --outdir ./dist --root ./src --target node --format esm --external mustache --external react --external @tanstack/react-query",
     "build:types": "vite build --config vite.types.config.ts",
     "prepack": "bun run build",
     "typecheck": "tsc --noEmit",

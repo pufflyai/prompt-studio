@@ -1,5 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
-import { createMemoryStorage } from "../data/memory-storage";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { ticketWorktreesRemoveAllCommand } from "./ticket-workspaces";

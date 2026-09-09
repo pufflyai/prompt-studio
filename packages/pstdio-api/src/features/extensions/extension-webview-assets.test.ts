@@ -4,8 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { loadExtensionSources } from "pstdio-extensions";
 import { createExtensionWebviewAccess } from "./extension-webview-access";
 import { createExtensionWebviewAssetRoutes } from "./extension-webview-asset-routes";
+import { createProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
 const webviewAccess = createExtensionWebviewAccess({
   signingKey: Buffer.from("test-webview-signing-key"),
@@ -35,6 +37,7 @@ const writeExtension = (root: string, entry: string) => {
     `export default {
       views: [{
         id: "labPage",
+        ref: { kind: "view", id: "labPage" },
         title: "Lab",
         body: { kind: "webview", entry: { kind: "package-asset", path: "${entry}", baseUrl: import.meta.url } },
       }],
@@ -42,17 +45,36 @@ const writeExtension = (root: string, entry: string) => {
   );
 };
 
-const createApp = (input: { cacheRoot: string; sourcePath: string; lastErrorJson?: unknown; failure?: string }) => {
+const createApp = (input: {
+  cacheRoot: string;
+  sourcePath: string;
+  lastErrorJson?: unknown;
+  failure?: string;
+  onLoad?: () => void;
+  onCatalog?: (catalog: ReturnType<typeof createProjectExtensionRuntimeCatalog>) => void;
+}) => {
   const app = new OpenAPIHono();
+  const extensionRuntimeCatalog = createProjectExtensionRuntimeCatalog({
+    extensionService: {} as never,
+    projectService: {} as never,
+    repoService: {} as never,
+    loadSources: (options) => {
+      input.onLoad?.();
+      return loadExtensionSources(options);
+    },
+  });
+  input.onCatalog?.(extensionRuntimeCatalog);
   app.route(
     "/v1",
     createExtensionWebviewAssetRoutes({
+      extensionRuntimeCatalog,
       extensionService: {
         getInstalledSource: async (installName: string) => {
           if (input.failure) throw new Error(input.failure);
           return installName === "extension-lab"
             ? {
                 install_name: "extension-lab",
+                source_kind: "local_path",
                 source_path: input.sourcePath,
                 last_error_json: input.lastErrorJson,
               }
@@ -102,13 +124,35 @@ describe("extension webview asset routes", () => {
     );
 
     try {
-      const app = createApp({ cacheRoot, sourcePath });
+      let loads = 0;
+      let invalidate: (() => void) | undefined;
+      const app = createApp({
+        cacheRoot,
+        sourcePath,
+        onCatalog: (catalog) => {
+          invalidate = () => catalog.invalidate({ sourcePath, reason: "source_changed" });
+        },
+        onLoad: () => {
+          loads += 1;
+        },
+      });
+      for (let request = 0; request < 5; request += 1) {
+        expect((await app.request(`${webviewBasePath}/assets/module.js`)).status).toBe(200);
+      }
       const res = await app.request(`${webviewBasePath}/assets/module.js`);
+      expect(loads).toBe(1);
 
       expect(res.status).toBe(200);
       expect(res.headers.get("content-type")).toContain("application/javascript");
       expect(res.headers.get("referrer-policy")).toBe("no-referrer");
       expect(await res.text()).toBe("console.log('managed');");
+      invalidate!();
+      await Promise.all(
+        Array.from({ length: 5 }, async () => {
+          expect((await app.request(`${webviewBasePath}/assets/module.js`)).status).toBe(200);
+        }),
+      );
+      expect(loads).toBe(2);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putTicket, statusesCollection, ticketsCollection } from "./data/collections";
-import { createMemoryStorage } from "./data/memory-storage";
 import type { StoredTicket } from "./data/types";
 import { ticketStatuses } from "./ticket-status-provider";
 

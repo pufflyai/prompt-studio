@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { allocateTicketIdentity, putTicket, ticketsCollection } from "../data/collections";
-import { createMemoryStorage } from "../data/memory-storage";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
+import { putTicket, ticketsCollection } from "../data/collections";
 import { seedDefaultStatuses } from "../data/seed";
 import type { StoredTicket } from "../data/types";
 import { commandParamsFor, makeCommandArgs, makeCommandContext } from "./command-context.fixture";
@@ -16,7 +16,8 @@ const createSessionResource = () => ({
 
 const seedTicket = async (storage: ReturnType<typeof createMemoryStorage>, overrides: Partial<StoredTicket> = {}) => {
   const now = new Date().toISOString();
-  const { shorthand, sortOrder } = allocateTicketIdentity("T", await ticketsCollection(storage).list());
+  const sortOrder = (await ticketsCollection(storage).list()).length;
+  const shorthand = `T-${sortOrder + 1}`;
   return putTicket(storage, {
     id: crypto.randomUUID(),
     shorthand,

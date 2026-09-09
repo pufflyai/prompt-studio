@@ -127,3 +127,5 @@ Tests may inspect generation and loader counts through a narrow test hook. Impor
 - [Project Extension Runtime Snapshots](../extensions/runtime-snapshots.md)
 - [Extension Conformance and Regression Coverage](../extensions/conformance.md)
 - [Extension Runtime](./extensions-runtime.md)
+
+Webview asset requests use `getInstalledSourceRuntime` for contribution checks. They share the catalog's source cache, including concurrent requests. Source invalidation allows one new import for the next version; ordinary asset requests do not create new module identities.

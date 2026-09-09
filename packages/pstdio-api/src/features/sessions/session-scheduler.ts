@@ -1,7 +1,6 @@
 import type { HarnessAttachment, HarnessParams, SessionAttachmentRef } from "pstdio-api-contracts";
 import type { ResourceRef } from "pstdio-db";
 import type { SessionsRouteDeps } from "./deps";
-import { getSessionHarness } from "./get-session-harness";
 import { SessionCancellationCleanupError } from "./session-request-cancellation";
 import {
   createSubmittedDispatchEntry,
@@ -138,16 +137,6 @@ const startScheduledSession = async (
 };
 
 export const createSessionScheduler = (deps: SessionsRouteDeps) => {
-  const canReattachActiveSession = async (session: ExistingSession) => {
-    if (!session.agent || !session.agent_session_id) return false;
-
-    const harness = await getSessionHarness(deps.harnessRegistry, session);
-    return Boolean(
-      harness?.supportsReattach &&
-        (await harness.capabilities({ projectId: session.project_id ?? undefined })).includes("SessionReattach"),
-    );
-  };
-
   const maybeRequeueReleasedSession = async (sessionId: string) => {
     const session = await deps.sessionService.get(sessionId);
     if (!session || !isTerminal(session.status)) return;
@@ -307,7 +296,6 @@ export const createSessionScheduler = (deps: SessionsRouteDeps) => {
     for (const entry of claimedEntries) {
       const session = await deps.sessionService.get(entry.session_id);
       if (session?.status === "in_progress" && !deps.sessionService.store.get(session.id)) {
-        if (await canReattachActiveSession(session)) continue;
         await deps.sessionService.recoverQueuedDispatchClaim(session.id, entry.queue_position);
       }
     }

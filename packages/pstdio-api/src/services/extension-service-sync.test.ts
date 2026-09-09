@@ -7,6 +7,7 @@ import {
   createProjectsDBService,
 } from "pstdio-db";
 import { toProjectExtensionInstance } from "../features/extensions/project-extension-instance";
+import { EventBus } from "../features/sync/event-bus";
 import type { SyncInstalledSourceInput } from "./extension-service";
 import { createExtensionService } from "./extension-service";
 import { createProjectService } from "./project-service";
@@ -35,7 +36,7 @@ beforeEach(async () => {
   const result = await createDb({ path: ":memory:" });
   close = result.close;
   const projectDbService = createProjectsDBService(result.db);
-  projectService = createProjectService({ projectsDBService: projectDbService });
+  projectService = createProjectService({ eventBus: new EventBus(), projectsDBService: projectDbService });
   extensionInstancesService = createExtensionInstancesDBService(result.db);
   installedExtensionSourcesService = createInstalledExtensionSourcesDBService(result.db);
   extensionUserDataService = createExtensionUserDataDBService(result.db);

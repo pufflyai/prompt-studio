@@ -136,6 +136,7 @@ export const createContextFactory = (
       extensionId: ids.extensionId,
       name: ids.name,
       storage: env.storage,
+      resources: env.resources,
       artifacts: env.artifacts,
       repoFiles: env.repoFiles,
       workspaceFiles: env.workspaceFiles,

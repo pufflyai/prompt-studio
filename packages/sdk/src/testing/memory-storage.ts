@@ -4,11 +4,8 @@ import type {
   ExtensionStorageApi,
   ExtensionStorageCollectionApi,
   StorageScope,
-} from "@pstdio/sdk/extensions";
+} from "pstdio-api-contracts/extension-kernel";
 
-// Faithful in-memory implementation of the extension storage runtime, used by
-// tests to exercise the real data layer without a database. Mirrors the runtime
-// semantics: create() generates an id and stores the value *without* it.
 export const createMemoryStorage = (): ExtensionStorageApi => {
   const kv = new Map<string, unknown>();
   const collections = new Map<string, Map<string, unknown>>();

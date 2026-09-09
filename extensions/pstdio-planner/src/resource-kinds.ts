@@ -1,7 +1,8 @@
-import { defineResourceKind, l10n, resourceMenuSlotRef } from "@pstdio/sdk/extensions";
+import { defineResourceKind, l10n, projectPrefix, resourceMenuSlotRef } from "@pstdio/sdk/extensions";
 
 export const ticketResourceKind = defineResourceKind({
   id: "ticket",
+  prefix: projectPrefix(),
   label: l10n("resourceKinds.ticket.label", "Ticket"),
   icon: "component",
   menuSlots: [

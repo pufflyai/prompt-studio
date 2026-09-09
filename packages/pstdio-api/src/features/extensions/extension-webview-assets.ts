@@ -1,14 +1,11 @@
 import { existsSync, statSync } from "node:fs";
 import { extname, join, resolve, sep } from "node:path";
-import { loadExtensionSource } from "./extension-runtime";
-import { classifyWebviewEntry, findExtensionWebview, resolveManagedWebviewPaths } from "./extension-webviews";
+import type { createExtensionService } from "../../services/extension-service";
+import { classifyWebviewEntry, resolveManagedWebviewPaths } from "./extension-webviews";
 import { resolvePstdioHome } from "./install-extension-source";
+import type { ProjectExtensionRuntimeCatalog } from "./project-extension-runtime-catalog";
 
-type InstalledSourceLookup = {
-  getInstalledSource: (
-    installName: string,
-  ) => Promise<{ install_name: string; source_path: string; last_error_json?: unknown } | null>;
-};
+type InstalledSourceLookup = Pick<ReturnType<typeof createExtensionService>, "getInstalledSource">;
 
 export type WebviewBuildError = {
   message: string;
@@ -38,6 +35,7 @@ export const renderWebviewBuildErrorModule = (error: WebviewBuildError) =>
 
 export type ExtensionWebviewAssetDeps = {
   extensionService: InstalledSourceLookup;
+  extensionRuntimeCatalog: Pick<ProjectExtensionRuntimeCatalog, "getInstalledSourceRuntime">;
   webviewCacheRoot?: string;
 };
 
@@ -76,9 +74,9 @@ export const resolveWebviewAssetFile = async (
   const source = await deps.extensionService.getInstalledSource(input.installName);
   if (!source) return null;
 
-  const loaded = await loadExtensionSource(source.source_path);
-  const webview = findExtensionWebview(loaded, input.webviewId);
-  if (!webview) return null;
+  const runtime = await deps.extensionRuntimeCatalog.getInstalledSourceRuntime(source);
+  const webview = runtime.views.find((view) => view.id === input.webviewId)?.contribution.body;
+  if (!webview || webview.kind !== "webview") return null;
 
   const classification = classifyWebviewEntry(webview.entry);
   if (classification.kind === "unsupported") return null;

@@ -1,14 +1,15 @@
 import type { ExtensionTerminalApi } from "pstdio-api-contracts/extension-kernel";
 import type {
   createActivityEventsDBService,
-  createExtensionAutomationPreferencesDBService,
   createExtensionInstancesDBService,
+  createExtensionResourceSequencesDBService,
   createExtensionSettingsDBService,
   createExtensionStorageDBService,
   createInstalledExtensionSourcesDBService,
   createNotificationsDBService,
   createSessionQueueEntriesDBService,
 } from "pstdio-db";
+import type { createExtensionAutomationPreferencesService } from "../services/extension-automation-preferences-service";
 import type { createExtensionFileService } from "../services/extension-file-service";
 import type { createExtensionService } from "../services/extension-service";
 import type { createExtensionUpgradeService } from "../services/extension-upgrade-service";
@@ -60,7 +61,8 @@ export interface RouteDeps {
   notificationService: ReturnType<typeof createNotificationService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   extensionInstancesService: ReturnType<typeof createExtensionInstancesDBService>;
-  extensionAutomationPreferencesService: ReturnType<typeof createExtensionAutomationPreferencesDBService>;
+  extensionAutomationPreferencesService: ReturnType<typeof createExtensionAutomationPreferencesService>;
+  extensionResourceSequencesService: ReturnType<typeof createExtensionResourceSequencesDBService>;
   extensionFileService: ReturnType<typeof createExtensionFileService>;
   extensionConnectionService: ReturnType<typeof createExtensionConnectionService>;
   extensionSettingsDBService: ReturnType<typeof createExtensionSettingsDBService>;

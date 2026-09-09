@@ -65,14 +65,14 @@ describe("createExtensionTestbenchApi", () => {
           projectId: "extension-testbench",
           label: "PS-16 Tree renderer preview",
           icon: "component",
+          shorthand: "PS-16",
           metadata: {
-            shorthand: "PS-16",
             resourceParent: {
               type: "ticket",
               id: "PS-15",
               label: "PS-15 Parent ticket preview",
+              shorthand: "PS-15",
               metadata: {
-                shorthand: "PS-15",
                 resourceParent: {
                   type: "view",
                   viewId: "pstdio.pstdio-planner.view.tickets",

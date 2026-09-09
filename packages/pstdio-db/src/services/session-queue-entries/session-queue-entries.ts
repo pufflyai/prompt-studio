@@ -135,6 +135,16 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
     await db.delete(session_queue_entries).where(eq(session_queue_entries.queue_position, queuePosition));
   };
 
+  const removePending = async (queuePosition: number) => {
+    const removed = await db
+      .delete(session_queue_entries)
+      .where(
+        and(eq(session_queue_entries.queue_position, queuePosition), isNull(session_queue_entries.dispatch_started_at)),
+      )
+      .returning({ queuePosition: session_queue_entries.queue_position });
+    return removed.length > 0;
+  };
+
   const removeBySession = async (sessionId: string) => {
     await db.delete(session_queue_entries).where(eq(session_queue_entries.session_id, sessionId));
   };
@@ -149,6 +159,7 @@ export const createSessionQueueEntriesDBService = (db: DbClient) => {
     updatePending,
     swapPending,
     remove,
+    removePending,
     removeBySession,
   };
 };

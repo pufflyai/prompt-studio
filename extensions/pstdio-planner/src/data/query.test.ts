@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { ExtensionWorkspace } from "@pstdio/sdk/extensions";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putTicket } from "./collections";
-import { createMemoryStorage } from "./memory-storage";
 import { runTicketsQuery } from "./query";
 import { seedDefaultStatuses } from "./seed";
 import type { StoredTicket } from "./types";
@@ -30,8 +30,8 @@ const makeWorkspace = (overrides: Partial<ExtensionWorkspace> & { id: string }):
       type: "ticket",
       id: "ticket-1",
       label: "T-1",
+      shorthand: "T-1",
       metadata: {
-        shorthand: "T-1",
         resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
       },
     },
@@ -170,8 +170,8 @@ describe("runTicketsQuery workspace badges", () => {
               type: "ticket",
               id: "ticket-2",
               label: "T-2",
+              shorthand: "T-2",
               metadata: {
-                shorthand: "T-2",
                 resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
               },
             },
@@ -202,8 +202,8 @@ describe("runTicketsQuery workspace badges", () => {
           type: "ticket",
           id: "ticket-1",
           label: "T-1 Has workspaces",
+          shorthand: "T-1",
           metadata: {
-            shorthand: "T-1",
             resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },
@@ -222,8 +222,8 @@ describe("runTicketsQuery workspace badges", () => {
           type: "ticket",
           id: "ticket-1",
           label: "T-1 Has workspaces",
+          shorthand: "T-1",
           metadata: {
-            shorthand: "T-1",
             resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },
@@ -253,7 +253,7 @@ describe("runTicketsQuery workspace badges", () => {
           name: "Child attempt",
           workspace_shorthand: "T-2_A1",
           anchors_json: [
-            { type: "ticket", id: child.id, label: child.shorthand, metadata: { shorthand: child.shorthand } },
+            { type: "ticket", id: child.id, label: child.shorthand, shorthand: child.shorthand, metadata: {} },
           ],
         }),
       ],
@@ -267,14 +267,14 @@ describe("runTicketsQuery workspace badges", () => {
           type: "ticket",
           id: child.id,
           label: "T-2 Child",
+          shorthand: "T-2",
           metadata: {
-            shorthand: "T-2",
             resourceParent: {
               type: "ticket",
               id: parent.id,
               label: "T-1 Parent",
+              shorthand: "T-1",
               metadata: {
-                shorthand: "T-1",
                 resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
               },
             },

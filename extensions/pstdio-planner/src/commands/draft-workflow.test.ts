@@ -1,13 +1,12 @@
 import { describe, expect, test } from "bun:test";
+import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
 import { ticketsCollection } from "../data/collections";
 import { ticketFilesDir, ticketMarkdownPath } from "../data/draft-storage";
 import { parseTicketFrontmatter, stripFrontmatter } from "../data/frontmatter";
-import { createMemoryStorage } from "../data/memory-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { makeCommandArgs } from "./command-context.fixture";
 import { listTicketFilesCommand } from "./list-ticket-files";
 import { pullTicketCommand } from "./pull-ticket";
-import { createMemoryRepoFiles } from "./repo-files.fixture";
 import { saveTicketCommand } from "./save-ticket";
 import { writeTicketCommand } from "./write-ticket";
 
@@ -38,7 +37,7 @@ describe("draft workflow", () => {
     expect(ticket.draft).toBe(true);
     expect(ticket.statusId).toBe("ready");
 
-    const markdown = repoFiles.files.get(ticketMarkdownPath("T-1"))!;
+    const markdown = await repoFiles.readText(ticketMarkdownPath("T-1"))!;
     const parsed = parseTicketFrontmatter(markdown);
     expect(parsed.draft).toBe(true);
     expect(parsed.tagNames).toEqual(["High"]);
@@ -75,7 +74,7 @@ describe("draft workflow", () => {
     );
 
     // Simulate the user editing the body and adding a ticket file locally.
-    repoFiles.files.set(
+    await repoFiles.writeText(
       ticketMarkdownPath(shorthand),
       [
         "---",
@@ -90,7 +89,7 @@ describe("draft workflow", () => {
         "Body text.",
       ].join("\n"),
     );
-    repoFiles.files.set(`${ticketFilesDir(shorthand)}/notes.md`, "extra notes");
+    await repoFiles.writeText(`${ticketFilesDir(shorthand)}/notes.md`, "extra notes");
 
     const result = await saveTicketCommand.run(
       ...makeCommandArgs({ storage, params: { id: shorthand }, overrides: { repoFiles } }),
@@ -117,7 +116,7 @@ describe("draft workflow", () => {
       ...makeCommandArgs({ storage, params: { title: "Blocked ticket" }, overrides: { repoFiles } }),
     );
 
-    repoFiles.files.set(
+    await repoFiles.writeText(
       ticketMarkdownPath(shorthand),
       [
         "---",
@@ -146,7 +145,7 @@ describe("draft workflow", () => {
 
     // Some writers emit empty quoted scalars for absent fields; saving must not
     // treat parent_id: "" as a reference to an unknown ticket.
-    repoFiles.files.set(
+    await repoFiles.writeText(
       ticketMarkdownPath(shorthand),
       [
         "---",
@@ -187,10 +186,10 @@ describe("draft workflow", () => {
     )) as { skipped: boolean };
 
     expect(result.skipped).toBe(false);
-    const pulled = repoFiles.files.get(ticketMarkdownPath(shorthand))!;
+    const pulled = await repoFiles.readText(ticketMarkdownPath(shorthand))!;
     expect(pulled).toBeDefined();
     expect(stripFrontmatter(pulled)).toContain(`# ${stored.title}`);
-    expect(repoFiles.files.get(`${ticketFilesDir(shorthand)}/spec.md`)).toBe("spec body");
+    expect(await repoFiles.readText(`${ticketFilesDir(shorthand)}/spec.md`)).toBe("spec body");
   });
 
   test("pull without force does not clobber local edits", async () => {
@@ -198,14 +197,14 @@ describe("draft workflow", () => {
     const { shorthand } = await writeTicketCommand.run(
       ...makeCommandArgs({ storage, params: { title: "Seeded" }, overrides: { repoFiles } }),
     );
-    repoFiles.files.set(ticketMarkdownPath(shorthand), "local edits");
+    await repoFiles.writeText(ticketMarkdownPath(shorthand), "local edits");
 
     const result = (await pullTicketCommand.run(
       ...makeCommandArgs({ storage, params: { id: shorthand }, overrides: { repoFiles } }),
     )) as { skipped: boolean };
 
     expect(result.skipped).toBe(true);
-    expect(repoFiles.files.get(ticketMarkdownPath(shorthand))).toBe("local edits");
+    expect(await repoFiles.readText(ticketMarkdownPath(shorthand))).toBe("local edits");
   });
 
   test("files compares stored files against the local files directory", async () => {
@@ -218,7 +217,7 @@ describe("draft workflow", () => {
       ...stored,
       files: [{ id: "f1", name: "only-storage.md", content: "x", createdAt: "x", updatedAt: "x" }],
     });
-    repoFiles.files.set(`${ticketFilesDir(shorthand)}/only-local.md`, "y");
+    await repoFiles.writeText(`${ticketFilesDir(shorthand)}/only-local.md`, "y");
 
     const rows = await listTicketFilesCommand.run(
       ...makeCommandArgs({ storage, params: { id: shorthand }, overrides: { repoFiles } }),

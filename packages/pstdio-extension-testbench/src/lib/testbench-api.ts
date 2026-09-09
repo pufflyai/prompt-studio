@@ -168,7 +168,15 @@ const loadExtensionBench = async (input: LoadExtensionBenchInput) => {
   }
   const metadata = createWorkbenchExtensionMetadata({ resolveWebview: input.resolveWebview, runtime });
   const inventory = createBenchContributionInventory(runtime);
-  const environment = createBenchEnvironment(input.storage);
+  const environment = createBenchEnvironment(
+    input.storage,
+    Object.fromEntries(
+      runtime.resourceKinds.flatMap((record) => {
+        const prefix = record.contribution.prefix;
+        return prefix === undefined ? [] : [[record.localId, typeof prefix === "string" ? prefix : "BP"]];
+      }),
+    ),
+  );
   const runner = createCommandRunner(runtime, { buildEnvironment: () => environment });
   const resources = await collectBenchResources({ metadata, projectId, runner });
 

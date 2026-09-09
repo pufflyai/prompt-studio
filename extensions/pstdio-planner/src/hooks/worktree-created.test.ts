@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { ArtifactMount, WorkspaceFilesMount } from "@pstdio/sdk/extensions";
-import { createMemoryStorage } from "../data/memory-storage";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import type { StoredTicket } from "../data/types";
 import { copyOrWriteTicketFile } from "./worktree-created";
 

@@ -37,7 +37,7 @@ export const ticketAnchor = (ctx: PlannerContext, ticket: StoredTicket) =>
     extensionId: ctx.extensionId,
     label: ticket.shorthand,
     role: "primary",
-    metadata: { shorthand: ticket.shorthand },
+    shorthand: ticket.shorthand,
   }) satisfies ResourceAnchor;
 
 export const notifyProposalRefined = (ctx: NotifyActionContext, ticket: StoredTicket) => {

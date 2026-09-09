@@ -1,9 +1,11 @@
 import type { createFilesDBService } from "pstdio-db";
 import type { createFilesStorageService } from "pstdio-storage";
+import type { EventBus } from "../features/sync/event-bus";
 
 export type FileServiceDeps = {
   filesDBService: ReturnType<typeof createFilesDBService>;
   filesStorageService: ReturnType<typeof createFilesStorageService>;
+  eventBus: EventBus;
 };
 
 export const createFileService = (deps: FileServiceDeps) => {
@@ -14,13 +16,16 @@ export const createFileService = (deps: FileServiceDeps) => {
   const list = db.list;
   const removeProjectStorage = storage.removeProjectStorage;
 
-  const upload = async (input: {
-    project_id: string;
-    file_name: string;
-    file_kind: string;
-    data: Buffer;
-    mime_type?: string | null;
-  }) => {
+  const upload = async (
+    input: {
+      project_id: string;
+      file_name: string;
+      file_kind: string;
+      data: Buffer;
+      mime_type?: string | null;
+    },
+    initialize?: (file: NonNullable<Awaited<ReturnType<typeof db.get>>>) => Promise<void>,
+  ) => {
     // Widen to the persisted column type so upload's inferred row matches reads.
     const id: string = crypto.randomUUID();
     const storagePath = storage.writeFile(input.project_id, id, input.data);
@@ -40,7 +45,15 @@ export const createFileService = (deps: FileServiceDeps) => {
       updated_at: timestamp,
     };
 
-    await db.insert(file);
+    try {
+      await db.insert(file);
+      await initialize?.(file);
+    } catch (error) {
+      await db.remove(file.id);
+      storage.deleteFile(storagePath);
+      throw error;
+    }
+    deps.eventBus.emit("files", "set", file);
 
     return file;
   };
@@ -66,6 +79,7 @@ export const createFileService = (deps: FileServiceDeps) => {
       updated_at: updated.updated_at,
     });
 
+    deps.eventBus.emit("files", "set", updated);
     return updated;
   };
 
@@ -75,6 +89,7 @@ export const createFileService = (deps: FileServiceDeps) => {
 
     storage.deleteFile(existing.storage_path);
     await db.remove(fileId);
+    deps.eventBus.emit("files", "delete", { id: fileId });
 
     return true;
   };

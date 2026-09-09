@@ -87,14 +87,6 @@ const resolveRelinkState = async (
   return { isRelinking: true, linkedProjectError: null as string | null };
 };
 
-const emitProjectRepoLink = async (
-  deps: Pick<ProjectsRouteDeps, "repoService" | "eventBus">,
-  input: { projectId: string; repoId: string },
-) => {
-  const link = await deps.repoService.getProjectRepoLink(input.projectId, input.repoId);
-  if (link) deps.eventBus.emit("project_repos", "set", link);
-};
-
 // The repo path may not be a git repo yet (e.g. not initialized), so branch
 // resolution falls back to null rather than failing repo registration.
 const resolveCurrentBranch = async (repoPath: string) => {
@@ -153,8 +145,6 @@ export const registerRepoHandler = (deps: ProjectsRouteDeps): AppRouteHandler<ty
       repoPath: repo.path,
     });
 
-    deps.eventBus.emit("repos", "set", repo);
-    await emitProjectRepoLink(deps, { projectId: id, repoId: repo.id });
     await ensureDefaultWorkspace(deps, { projectId: id, repo });
 
     await provisionProjectWorkspaces(deps, id);

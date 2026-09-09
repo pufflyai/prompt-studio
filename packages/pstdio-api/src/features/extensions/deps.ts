@@ -8,6 +8,7 @@ export type ExtensionsRouteDeps = Pick<
   | "eventBus"
   | "extensionService"
   | "extensionRuntimeCatalog"
+  | "extensionResourceSequencesService"
   | "extensionConnectionService"
   | "extensionSettingsDBService"
   | "extensionSettingsService"

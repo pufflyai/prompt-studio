@@ -1,9 +1,8 @@
 import { describe, expect, test } from "bun:test";
+import { createMemoryRepoFiles, createMemoryStorage } from "@pstdio/sdk/testing";
 import { ticketMarkdownPath } from "../data/draft-storage";
-import { createMemoryStorage } from "../data/memory-storage";
 import { applyTicketTemplateCommand } from "./apply-ticket-template";
 import { makeCommandArgs } from "./command-context.fixture";
-import { createMemoryRepoFiles } from "./repo-files.fixture";
 
 describe("applyTicketTemplateCommand", () => {
   test("preserves the ticket title and renders ticket placeholders", async () => {

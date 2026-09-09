@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { EventBus } from "../features/sync/event-bus";
 import { createRepoService } from "./repo-service";
 
 describe("RepoService", () => {
@@ -6,6 +7,7 @@ describe("RepoService", () => {
     const repos = [{ id: "r1", project_id: "p1" }];
     const listByProject = mock(async () => repos);
     const service = createRepoService({
+      eventBus: new EventBus(),
       reposDBService: { listByProject },
     } as unknown as Parameters<typeof createRepoService>[0]);
 

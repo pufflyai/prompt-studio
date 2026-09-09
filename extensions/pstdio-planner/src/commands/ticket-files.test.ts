@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { ticketsCollection } from "../data/collections";
-import { createMemoryStorage } from "../data/memory-storage";
 import type { StoredTicketAttachment } from "../data/types";
 import { attachTicketFileCommand } from "./attach-ticket-file";
 import { makeCommandArgs } from "./command-context.fixture";
@@ -35,8 +35,8 @@ const ticketDocumentTarget = (ticket: { id: string; shorthand: string; title?: s
     type: "ticket",
     id: ticket.id,
     label: ticket.title ? `${ticket.shorthand} ${ticket.title}` : ticket.shorthand,
+    shorthand: ticket.shorthand,
     metadata: {
-      shorthand: ticket.shorthand,
       documentId,
       resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
     },

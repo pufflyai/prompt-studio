@@ -12,7 +12,7 @@ const run = (cwd: string, args: string[]) => {
 const readManifest = (path: string) => JSON.parse(readFileSync(join(path, "package.json"), "utf8"));
 
 const nativeEntries: Record<string, readonly string[]> = {
-  "@pstdio/sdk": ["./resources", "./api", "./client", "./extensions", "./prompts", "./hooks"],
+  "@pstdio/sdk": ["./resources", "./api", "./client", "./extensions", "./prompts", "./hooks", "./testing", "./data"],
   "@pstdio/workbench": [".", "./storage", "./webview-runtime"],
 };
 

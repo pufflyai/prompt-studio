@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { putTicket, ticketsCollection } from "../data/collections";
-import { createMemoryStorage } from "../data/memory-storage";
 import type { StoredTicket } from "../data/types";
 import { archiveTicketColumnActionCommand, archiveTicketCommand } from "./archive-ticket";
 import { makeCommandArgs } from "./command-context.fixture";
@@ -36,7 +36,8 @@ const ticketAnchor = (shorthand: string, id: string) => ({
   type: "ticket",
   id,
   label: shorthand,
-  metadata: { shorthand },
+  shorthand,
+  metadata: {},
 });
 
 const deferred = () => {
@@ -62,8 +63,9 @@ describe("archive ticket", () => {
     const result = (await archiveTicketCommand.run(
       ...makeCommandArgs({
         storage,
-        params: { id: "T-1" },
+        params: {},
         overrides: {
+          resource: { type: "ticket", id: "ticket-1" },
           workspaces: {
             list: async () => workspaces,
             archive: async (id: string) => {
@@ -94,8 +96,9 @@ describe("archive ticket", () => {
       archiveTicketCommand.run!(
         ...makeCommandArgs({
           storage,
-          params: { id: "T-1" },
+          params: {},
           overrides: {
+            resource: { type: "ticket", id: "ticket-1" },
             workspaces: {
               list: async () => workspaces,
               archive: async (id: string) => {
@@ -259,8 +262,9 @@ describe("archive ticket", () => {
     const result = (await archiveTicketCommand.run(
       ...makeCommandArgs({
         storage,
-        params: { id: "T-1" },
+        params: {},
         overrides: {
+          resource: { type: "ticket", id: "ticket-1" },
           workspaces: {
             list: async () => workspaces,
             archive: async () => {

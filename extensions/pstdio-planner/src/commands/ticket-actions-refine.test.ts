@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createMemoryStorage } from "../data/memory-storage";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { refineTicketCommand } from "./ticket-actions";
@@ -42,7 +42,8 @@ describe("refineTicketCommand", () => {
             extensionId: "pstdio-planner",
             label: "PS-304",
             role: "primary",
-            metadata: { shorthand: "PS-304" },
+            shorthand: "PS-304",
+            metadata: {},
           },
         ],
         prompt: expect.stringContaining("Tighten the acceptance criteria."),
@@ -86,8 +87,8 @@ describe("refineTicketCommand", () => {
             extensionId: "pstdio-planner",
             label: "T-1",
             role: "primary",
+            shorthand: "T-1",
             metadata: {
-              shorthand: "T-1",
               resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
             },
           },

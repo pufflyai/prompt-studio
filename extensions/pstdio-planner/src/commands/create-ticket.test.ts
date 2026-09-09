@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { ticketsCollection } from "../data/collections";
-import { createMemoryStorage } from "../data/memory-storage";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
@@ -106,14 +106,14 @@ describe("createTicketCommand", () => {
       projectId: "proj-1",
       label: `${created.shorthand} Child`,
       icon: "component",
+      shorthand: created.shorthand,
       metadata: {
-        shorthand: created.shorthand,
         resourceParent: {
           type: "ticket",
           id: parent.id,
           label: `${parent.shorthand} Parent`,
+          shorthand: parent.shorthand,
           metadata: {
-            shorthand: parent.shorthand,
             resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
           },
         },
@@ -127,7 +127,9 @@ describe("createTicketCommand", () => {
     const second = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Second" } }));
     await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Third" } }));
 
-    await deleteTicketCommand.run(...makeCommandArgs({ storage, params: { rowId: second.id } }));
+    await deleteTicketCommand.run(
+      ...makeCommandArgs({ storage, params: {}, overrides: { resource: { type: "ticket", id: second.id } } }),
+    );
     const created = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Fourth" } }));
 
     expect(created.shorthand).toBe("T-4");
@@ -147,33 +149,10 @@ describe("createTicketCommand", () => {
     const second = await createTicketCommand.run(...ctx("Second"));
     await createTicketCommand.run(...ctx("Third"));
 
-    await deleteTicketCommand.run(...makeCommandArgs({ storage, params: { rowId: second.id } }));
-    const created = await createTicketCommand.run(...ctx("Fourth"));
-
-    expect(created.shorthand).toBe("PS-4");
-  });
-
-  test("continues numbering after legacy ticket shorthands", async () => {
-    const storage = createMemoryStorage();
-    await ticketsCollection(storage).put("legacy", {
-      id: "legacy",
-      shorthand: "T-3",
-      title: "Legacy",
-      content: "",
-      statusId: null,
-      archived: false,
-      sortOrder: 0,
-      createdAt: "",
-      updatedAt: "",
-    });
-
-    const created = await createTicketCommand.run(
-      ...makeCommandArgs({
-        storage,
-        params: { title: "Next" },
-        overrides: { project: { id: "proj-1", name: "Prompt Studio", shorthand: "PS" } },
-      }),
+    await deleteTicketCommand.run(
+      ...makeCommandArgs({ storage, params: {}, overrides: { resource: { type: "ticket", id: second.id } } }),
     );
+    const created = await createTicketCommand.run(...ctx("Fourth"));
 
     expect(created.shorthand).toBe("PS-4");
   });

@@ -17,6 +17,7 @@ export const ticketPageTarget = (resource: ResourceRef): NavigationTargetPage =>
       ? {
           type: parent.type,
           id: parent.id,
+          ...(typeof parent.shorthand === "string" ? { shorthand: parent.shorthand } : {}),
           ...(typeof parent.label === "string" ? { label: parent.label } : {}),
           ...(typeof parent.extensionId === "string" ? { extensionId: parent.extensionId } : {}),
           ...(typeof parent.projectId === "string" ? { projectId: parent.projectId } : {}),

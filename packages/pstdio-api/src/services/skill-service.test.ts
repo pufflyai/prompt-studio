@@ -16,6 +16,7 @@ import {
 } from "pstdio-db";
 import { createFilesStorageService } from "pstdio-storage";
 import { createProjectExtensionRuntimeCatalog } from "../features/extensions/project-extension-runtime-catalog";
+import { EventBus } from "../features/sync/event-bus";
 import { createExtensionService } from "./extension-service";
 import { createFileService } from "./file-service";
 import { createProjectService } from "./project-service";
@@ -122,6 +123,7 @@ describe("SkillService", () => {
       },
     ]);
     const service = createSkillService({
+      eventBus: new EventBus(),
       ...fakeExtensionDeps,
       skillsDBService: { list } as unknown as Parameters<typeof createSkillService>[0]["skillsDBService"],
       fileService: fakeFileService,
@@ -174,8 +176,11 @@ const setupServiceWithExtension = async () => {
   const importCountPath = join(tempRoot, "imports.txt");
   writeExtensionWithSkill(extensionRoot, importCountPath);
 
-  const projectService = createProjectService({ projectsDBService: createProjectsDBService(db) });
-  const repoService = createRepoService({ reposDBService: createReposDBService(db) });
+  const projectService = createProjectService({
+    eventBus: new EventBus(),
+    projectsDBService: createProjectsDBService(db),
+  });
+  const repoService = createRepoService({ eventBus: new EventBus(), reposDBService: createReposDBService(db) });
   const extensionService = createExtensionService({
     extensionInstancesService: createExtensionInstancesDBService(db),
     extensionUserDataService: createExtensionUserDataDBService(db),
@@ -184,10 +189,12 @@ const setupServiceWithExtension = async () => {
   });
   const catalog = createProjectExtensionRuntimeCatalog({ extensionService, projectService, repoService });
   const fileService = createFileService({
+    eventBus: new EventBus(),
     filesDBService: createFilesDBService(db),
     filesStorageService: createFilesStorageService(join(tempRoot, "storage")),
   });
   const service = createSkillService({
+    eventBus: new EventBus(),
     extensionRuntimeCatalog: catalog,
     extensionSkillPreferencesDBService: createExtensionSkillPreferencesDBService(db),
     fileService,

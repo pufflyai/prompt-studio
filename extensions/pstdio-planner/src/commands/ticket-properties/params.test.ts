@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { l10n } from "@pstdio/sdk/extensions";
-import { createMemoryStorage } from "../../data/memory-storage";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { readTicketStatuses } from "../../data/status-operations";
 import { readTicketTags } from "../../data/tag-operations";
 import type { StoredTicket } from "../../data/types";

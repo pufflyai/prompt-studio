@@ -71,7 +71,7 @@ describe("project-scoped session harness reads", () => {
     expect(transitionStatus).toHaveBeenCalledWith(staleSession.id, "disconnected");
   });
 
-  test("queue recovery treats a project-disabled reattach harness as unavailable", async () => {
+  test("queue recovery restores claimed work without consulting orphan reattach capabilities", async () => {
     const { get, registry } = createDisabledProjectRegistry(
       createTestHarnessRecord("opencode", {
         provider: {
@@ -103,8 +103,7 @@ describe("project-scoped session harness reads", () => {
 
     await createSessionScheduler(deps).recoverQueuedSessions();
 
-    expect(get).toHaveBeenCalledTimes(1);
-    expect(get).toHaveBeenCalledWith(AGENT_ID, { projectId: PROJECT_ID });
+    expect(get).not.toHaveBeenCalled();
     expect(recoverQueuedDispatchClaim).toHaveBeenCalledWith(session.id, 4);
   });
 

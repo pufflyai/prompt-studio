@@ -1,4 +1,5 @@
 {
+  "commands.migrateTicketIdentities": "Migrer les identifiants des tickets",
   "archiveState.active": "Actif",
   "archiveState.archived": "Archivé",
   "boardView.archiveAll": "Tout archiver",

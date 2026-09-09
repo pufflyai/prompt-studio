@@ -91,24 +91,17 @@ export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
   return async (c) => {
     const { name, agents } = c.req.valid("json");
     const existingProjects = await deps.projectService.list();
-    const project = await deps.projectService.create({ name });
-
-    try {
-      const extensionWarnings = await setupProjectExtensions(deps, project.id, existingProjects.length === 0);
+    let extensionWarnings: ExtensionSetupWarning[] = [];
+    const project = await deps.projectService.create({ name }, async (project) => {
+      extensionWarnings = await setupProjectExtensions(deps, project.id, existingProjects.length === 0);
       if (agents) {
         await applyProjectHarnessSelection(deps, { projectId: project.id, selectedHarnessIds: agents });
       }
-
-      deps.eventBus.emit("projects", "set", project);
-
-      const response = toProjectResponse(project);
-      return c.json(
-        extensionWarnings.length > 0 ? { ...response, extension_warnings: extensionWarnings } : response,
-        201,
-      );
-    } catch (error) {
-      await deps.projectService.hardDelete(project.id);
-      throw error;
-    }
+    });
+    const response = toProjectResponse(project);
+    return c.json(
+      extensionWarnings.length > 0 ? { ...response, extension_warnings: extensionWarnings } : response,
+      201,
+    );
   };
 };

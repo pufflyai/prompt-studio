@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createMemoryStorage } from "../data/memory-storage";
+import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { listTicketFilesTreeCommand } from "./ticket-files";
@@ -47,8 +47,8 @@ describe("ticket files tree sub-ticket section", () => {
                 type: "ticket",
                 id: parent.id,
                 label: `${parent.shorthand} ${parent.title}`,
+                shorthand: parent.shorthand,
                 metadata: {
-                  shorthand: parent.shorthand,
                   resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
                 },
               },
@@ -58,14 +58,14 @@ describe("ticket files tree sub-ticket section", () => {
               type: "ticket",
               id: child.id,
               label: `${child.shorthand} ${child.title}`,
+              shorthand: child.shorthand,
               metadata: {
-                shorthand: child.shorthand,
                 resourceParent: {
                   type: "ticket",
                   id: parent.id,
                   label: `${parent.shorthand} ${parent.title}`,
+                  shorthand: parent.shorthand,
                   metadata: {
-                    shorthand: parent.shorthand,
                     resourceParent: { type: "view", viewId: "pstdio.pstdio-planner.view.tickets" },
                   },
                 },
