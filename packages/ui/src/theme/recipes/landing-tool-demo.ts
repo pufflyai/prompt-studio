@@ -28,8 +28,16 @@ export const landingToolDemoSlotRecipe = defineSlotRecipe({
     "plotPoint",
     "shaderCode",
     "shaderCanvas",
+    "extensionPanels",
   ],
   base: {
+    extensionPanels: {
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, {sizes.48}), 1fr))",
+      gap: "panel-gap",
+      minHeight: "64",
+      width: "full",
+    },
     iconPicker: {
       display: "grid",
       gridTemplateColumns: "repeat(3, minmax(0, 1fr))",

@@ -8,6 +8,17 @@ export const TOOL_EXAMPLES: {
   blocks: { kind: ToolShapeKind; purpose: string }[];
 }[] = [
   {
+    id: "agents",
+    name: "Coding agent dashboard",
+    blocks: [
+      { kind: "page", purpose: "Track tasks across your agents on a kanban board." },
+      { kind: "command", purpose: "Assign a task to an agent or start a run." },
+      { kind: "skill", purpose: "Give your agents your coding and review guidelines." },
+      { kind: "hook", purpose: "Move a task to review when an agent finishes." },
+      { kind: "automation", purpose: "Get a morning summary of completed runs and results to review." },
+    ],
+  },
+  {
     id: "icons",
     name: "Icon set editor",
     blocks: [
@@ -23,17 +34,6 @@ export const TOOL_EXAMPLES: {
       { kind: "page", purpose: "Pick an icon and watch the shader paint it in real time." },
       { kind: "editor", purpose: "Edit the shader and reuse icons from your icon set." },
       { kind: "hook", purpose: "Refresh the preview when the selected icon or shader changes." },
-    ],
-  },
-  {
-    id: "agents",
-    name: "Coding agent dashboard",
-    blocks: [
-      { kind: "page", purpose: "Track tasks across your agents on a kanban board." },
-      { kind: "command", purpose: "Assign a task to an agent or start a run." },
-      { kind: "skill", purpose: "Give your agents your coding and review guidelines." },
-      { kind: "hook", purpose: "Move a task to review when an agent finishes." },
-      { kind: "automation", purpose: "Get a morning summary of completed runs and results to review." },
     ],
   },
   {

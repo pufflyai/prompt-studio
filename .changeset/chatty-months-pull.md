@@ -1,6 +1,6 @@
 ---
 "pstdio": patch
-"@pstdio/ui": patch
+"@pstdio/ui": minor
 ---
 
-Add landing page recipes for downloads, tool examples, and building blocks
+Add responsive split layouts and landing page recipes for downloads, tool examples, and building blocks

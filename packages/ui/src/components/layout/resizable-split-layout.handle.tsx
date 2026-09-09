@@ -1,4 +1,4 @@
-import { Box, Flex } from "@chakra-ui/react";
+import { Box, Flex, type SystemStyleObject } from "@chakra-ui/react";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
@@ -82,6 +82,7 @@ const ResizeHandleBar = (props: HandlePartProps) => {
 };
 
 interface ResizeHandleProps {
+  css: SystemStyleObject;
   axis: ReturnType<typeof getResizableSplitAxis>;
   bounds: { minSize: number; maxSize: number };
   collapsed: boolean;
@@ -99,6 +100,7 @@ interface ResizeHandleProps {
 
 export const ResizeHandle = (props: ResizeHandleProps) => {
   const {
+    css,
     axis,
     bounds,
     collapsed,
@@ -119,9 +121,7 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
   const hoverTimerRef = useRef(0);
   const active = hovered || dragging;
   // A collapsed panel hides its separator; the nav chrome owns reopening.
-  const visibility = collapsed
-    ? { "aria-hidden": true, tabIndex: -1, display: "none" }
-    : { tabIndex: 0, display: "flex" };
+  const visibility = collapsed ? { "aria-hidden": true, tabIndex: -1 } : { tabIndex: 0 };
 
   useEffect(() => () => window.clearTimeout(hoverTimerRef.current), []);
 
@@ -135,7 +135,9 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
   };
 
   return (
-    <Flex
+    <Box
+      css={css}
+      data-collapsed={collapsed}
       role="separator"
       aria-label={resizeLabel}
       aria-orientation={axis.separatorOrientation}
@@ -146,8 +148,8 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
       {...visibility}
       position="relative"
       zIndex="docked"
-      align="center"
-      justify="center"
+      alignItems="center"
+      justifyContent="center"
       flexShrink={0}
       w={layout.w}
       h={layout.h}
@@ -165,6 +167,6 @@ export const ResizeHandle = (props: ResizeHandleProps) => {
     >
       {line ? null : <ResizeHandleGrip active={active} layout={layout} />}
       <ResizeHandleBar active={active} layout={layout} />
-    </Flex>
+    </Box>
   );
 };

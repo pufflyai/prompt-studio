@@ -21,6 +21,7 @@ import { menuSlotRecipe } from "./recipes/menu";
 import { numberInputSlotRecipe } from "./recipes/number-input";
 import { popoverRecipe } from "./recipes/popover";
 import { progressCircleSlotRecipe } from "./recipes/progress-circle";
+import { resizableSplitLayoutSlotRecipe } from "./recipes/resizable-split-layout";
 import { skeletonRecipe } from "./recipes/skeleton";
 import { switchSlotRecipe } from "./recipes/switch";
 import { tabsSlotRecipe } from "./recipes/tabs";
@@ -78,6 +79,7 @@ const config = defineConfig({
       landing: landingSlotRecipe,
       landingStory: landingStorySlotRecipe,
       landingToolDemo: landingToolDemoSlotRecipe,
+      resizableSplitLayout: resizableSplitLayoutSlotRecipe,
       alert: alertSlotRecipe,
       colorPicker: colorPickerSlotRecipe,
       drawer: drawerSlotRecipe,

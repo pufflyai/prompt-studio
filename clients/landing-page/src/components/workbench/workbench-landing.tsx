@@ -1,4 +1,4 @@
-import { Box, Flex, useBreakpointValue } from "@chakra-ui/react";
+import { Box, Flex } from "@chakra-ui/react";
 import { ResizableSplitLayout } from "@pstdio/ui";
 import type { LandingView } from "../../content/landing-content";
 import { privacyPage, termsPage } from "../../content/legal";
@@ -55,7 +55,6 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
   const { view, navigate, paletteOpen, setPaletteOpen } = useLandingNavigation(initialPath);
   const { windowed, offset, toggleWindowed, onTitleBarPointerDown } = useWindowChrome();
   const styles = useLandingStyles(windowed);
-  const showSidebar = useBreakpointValue({ base: false, lg: true }) ?? false;
 
   const content = (
     <Flex direction="column" flex="1" minWidth="0">
@@ -84,22 +83,19 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
           onTitleBarDoubleClick={toggleWindowed}
         />
         <Flex css={styles.body}>
-          {showSidebar ? (
-            <ResizableSplitLayout
-              width="full"
-              height="full"
-              defaultSizePx={220}
-              minSizePx={180}
-              maxSizePx={320}
-              contentMinSizePx={600}
-              collapsible={false}
-              resizeLabel="Resize navigation"
-              resizablePanel={<ResourceSidebar activeView={view} onNavigate={navigate} />}
-              contentPanel={content}
-            />
-          ) : (
-            content
-          )}
+          <ResizableSplitLayout
+            layout={{ base: "content", lg: "split" }}
+            width="full"
+            height="full"
+            defaultSizePx={220}
+            minSizePx={180}
+            maxSizePx={320}
+            contentMinSizePx={600}
+            collapsible={false}
+            resizeLabel="Resize navigation"
+            resizablePanel={<ResourceSidebar activeView={view} onNavigate={navigate} />}
+            contentPanel={content}
+          />
         </Flex>
         <WorkbenchStatusBar onNavigate={navigate} />
       </Flex>

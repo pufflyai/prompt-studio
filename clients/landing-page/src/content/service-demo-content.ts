@@ -24,10 +24,10 @@ export const DEMO_NOTIFICATIONS = [
 ];
 
 export const DEMO_EXTENSIONS = [
-  { id: "icons", name: "Icon set editor", description: "Browse, edit, and export your icons", icon: Shapes },
-  { id: "shader", name: "Shader editor", description: "Edit shaders with a live preview", icon: FileCode },
-  { id: "agents", name: "Coding agent dashboard", description: "Track the tools your agents are building", icon: Bot },
-];
+  { id: "icons", name: "Icon set editor", icon: Shapes },
+  { id: "shader", name: "Shader editor", icon: FileCode },
+  { id: "agents", name: "Coding agent dashboard", icon: Bot },
+] as const;
 
 export const DEMO_TOOL_TABS = [
   { id: "icons", label: "Icons" },

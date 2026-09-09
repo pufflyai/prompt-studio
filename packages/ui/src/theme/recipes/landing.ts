@@ -18,6 +18,8 @@ export const landingSlotRecipe = defineSlotRecipe({
     "tools",
     "download",
     "brandTab",
+    "panelsScroll",
+    "panelScroll",
   ],
   base: {
     root: { height: "100dvh", position: "relative", overflow: "hidden", bg: "bg.subtle" },
@@ -89,6 +91,16 @@ export const landingSlotRecipe = defineSlotRecipe({
     },
     body: { display: "flex", flex: 1, minHeight: 0, p: "panel-gap" },
     main: { flex: 1, minHeight: 0, minWidth: 0, position: "relative", overflow: "hidden" },
+    panelsScroll: {
+      "& > [data-part=viewport] > [data-part=content]": { height: { base: "auto", lg: "full" } },
+      "& > [data-part=scrollbar]": { display: { base: "flex", lg: "none" } },
+    },
+    panelScroll: {
+      display: { base: "contents", lg: "flex" },
+      "& > [data-part=viewport]": { display: { base: "contents", lg: "block" } },
+      "& > [data-part=viewport] > [data-part=content]": { display: { base: "contents", lg: "block" } },
+      "& > [data-part=scrollbar]": { display: { base: "none", lg: "flex" } },
+    },
     hero: { layerStyle: "panel", bg: "bg", width: "full", height: "full", overflow: "hidden" },
     heroCopy: {
       display: "flex",
