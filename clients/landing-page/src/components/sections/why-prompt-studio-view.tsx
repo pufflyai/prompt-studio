@@ -6,18 +6,18 @@ import { BuildingBlocks } from "./building-blocks";
 
 const REASONS = [
   {
-    title: "Extend Prompt Studio by combining building blocks.",
-    subtitle: "Choose the pieces your tool needs.",
+    title: "The right building blocks to create extensions.",
+    subtitle: "Give your agents the pieces they need to build useful tools.",
     Demo: BuildingBlocks,
   },
   {
-    title: "A clean editor out of the box",
+    title: "A clean editor out of the box.",
     subtitle: "Give your tools a consistent UI, with panels, navigation, and themes included.",
     Demo: WorkbenchOverviewDemo,
   },
   {
-    title: "Connect the tools you build to fit your workflows.",
-    subtitle: "Use shared files and commands to connect your tools into a workflow.",
+    title: "Connect the tools you build.",
+    subtitle: "Use shared files and commands to connect your tools into workflows.",
     Demo: ConnectedToolsDemo,
   },
   {

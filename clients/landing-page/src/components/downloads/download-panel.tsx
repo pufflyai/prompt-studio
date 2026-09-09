@@ -9,7 +9,7 @@ import { DownloadPicker } from "./download-picker";
 
 export const START_HERE_TITLE = "A workbench for your tools.";
 export const START_HERE_INTRO =
-  "Coding agents can build tools to help with your work. Prompt Studio gives them a place to live, with the shared infrastructure they need to work together: search, CLI commands, editors, custom UI, and more.";
+  "Coding agents can build tools to help with your work. Prompt Studio gives them a place to live, with the shared infrastructure they need to work together.";
 
 export const DownloadPanel = () => {
   const styles = useLandingStyles();

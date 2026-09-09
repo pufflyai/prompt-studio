@@ -11,10 +11,10 @@ const LandingStory = () => {
       <Box css={styles.section}>
         <Stack css={styles.intro}>
           <Text as="h1" textStyle="heading/L">
-            Extend Prompt Studio by combining building blocks.
+            Combine building blocks to build extensions.
           </Text>
           <Text textStyle="paragraph/L/regular" color="fg.muted">
-            Choose the pieces your tool needs.
+            Give your agents the pieces they need to build useful tools.
           </Text>
         </Stack>
         <Box css={styles.blockGrid}>

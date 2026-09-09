@@ -22,10 +22,10 @@ export const WorkbenchServices = () => {
     <>
       <Stack gap="sm">
         <Text as="h1" textStyle={{ base: "heading/M", md: "heading/L" }}>
-          The plumbing, included.
+          Easy to extend from a solid foundation.
         </Text>
         <Text textStyle="paragraph/M/regular" color="fg.muted">
-          Shared features that every tool can use.
+          Prompt Studio ships with builtin features that every tool can use.
         </Text>
       </Stack>
       {WORKBENCH_SERVICES.map((service) => {
