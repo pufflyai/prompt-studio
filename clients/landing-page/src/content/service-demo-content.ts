@@ -2,7 +2,7 @@ import { Bot, ChartNoAxesCombined, FileCode, Shapes, Terminal } from "lucide-rea
 
 export const SEARCH_DEMO_ENTRIES = [
   { id: "icons", label: "Icon set editor", detail: "Tool", icon: Shapes },
-  { id: "shader", label: "waves.frag", detail: "Shader file", icon: FileCode },
+  { id: "shader", label: "icon-rain.frag", detail: "Shader file", icon: FileCode },
   { id: "export", label: "Export icon set", detail: "Command", icon: Terminal },
   { id: "formulas", label: "Compound growth", detail: "Financial formula", icon: ChartNoAxesCombined },
 ];

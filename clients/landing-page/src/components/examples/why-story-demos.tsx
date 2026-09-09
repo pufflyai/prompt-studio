@@ -9,7 +9,7 @@ import { ShaderEditorDemo } from "./shader-editor-demo";
 
 export const ConnectedToolsDemo = () => (
   <DemoWorkbench>
-    <ShaderEditorDemo withControls />
+    <ShaderEditorDemo withControls={false} />
   </DemoWorkbench>
 );
 

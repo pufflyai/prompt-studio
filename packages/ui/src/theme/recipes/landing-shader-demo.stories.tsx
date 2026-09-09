@@ -14,7 +14,7 @@ const ShaderDemo = (props: { withControls: boolean }) => {
   const styles = useSlotRecipe({ key: "landingToolDemo" })({});
   const story = useSlotRecipe({ key: "landingStory" })({});
   const [selected, setSelected] = useState(icons[0]);
-  const [scale, setScale] = useState(18);
+  const [scale, setScale] = useState(8);
   const [speed, setSpeed] = useState(0.6);
   return (
     <Box css={story.page}>
@@ -48,7 +48,7 @@ const ShaderDemo = (props: { withControls: boolean }) => {
       </Box>
       <Box css={story.panels}>
         <Box css={story.panel}>
-          <Box css={story.panelHeader}>waves.frag</Box>
+          <Box css={story.panelHeader}>icon-rain.frag</Box>
           <Box css={story.panelBody}>
             <Textarea
               css={styles.shaderCode}
@@ -56,15 +56,12 @@ const ShaderDemo = (props: { withControls: boolean }) => {
               wrap="off"
               spellCheck={false}
               defaultValue={`vec3 shade(vec2 uv) {
-  float rings = length(uv - 0.5);
-  float wave = sin(
-    rings * u_scale - u_time
-  );
-  vec3 a = vec3(0.10, 0.20, 0.55);
-  vec3 b = vec3(0.40, 0.90, 0.85);
-  vec3 color = mix(a, b, wave * 0.5 + 0.5);
-  float icon = texture2D(u_icon, uv).a;
-  return mix(vec3(0.04, 0.06, 0.10), color, icon);
+  vec2 cell = uv * u_scale;
+  cell.y += u_time * 2.0;
+  float trail = mod(floor(cell.y), 18.0);
+  float icon = texture2D(u_icon, cell).a;
+  vec3 green = vec3(0.04, 0.65, 0.28);
+  return green * icon * max(0.04, 1.0 - trail / 11.0);
 }`}
             />
           </Box>
@@ -73,10 +70,20 @@ const ShaderDemo = (props: { withControls: boolean }) => {
           <Box css={story.panelHeader}>Preview</Box>
           <Box css={story.panelBody}>
             <Box css={styles.shaderCanvas}>
-              <Box height="64" display="grid" placeItems="center" role="img" aria-label="Shader icon preview">
-                <Box boxSize="40" fontSize="{sizes.40}" color="fg.info">
-                  <selected.icon />
-                </Box>
+              <Box
+                height="64"
+                display="grid"
+                gridTemplateColumns="repeat(8, minmax(0, 1fr))"
+                placeItems="center"
+                p="md"
+                role="img"
+                aria-label="Icon rain preview"
+              >
+                {Array.from({ length: 64 }, (_, index) => (
+                  <Box key={index} color="fg.success" opacity={0.15 + ((index * 7) % 11) / 13}>
+                    <selected.icon />
+                  </Box>
+                ))}
               </Box>
             </Box>
             {withControls && (

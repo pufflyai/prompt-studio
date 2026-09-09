@@ -44,7 +44,7 @@ export const ShaderEditorDemo = (props: ShaderEditorDemoProps) => {
         <Text>Shader preview</Text>
       </HStack>
       <Box css={story.panels}>
-        <DemoPanel title="waves.frag" kind="editor" highlighted={highlighted}>
+        <DemoPanel title="icon-rain.frag" kind="editor" highlighted={highlighted}>
           <Textarea
             css={styles.shaderCode}
             aria-label="Fragment shader code"
