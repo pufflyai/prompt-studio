@@ -32,6 +32,8 @@ export {
 } from "./session-indicator";
 export type { SimpleCardBodyProps, SimpleCardProps } from "./simple-card";
 export { SimpleCard, SimpleCardBody } from "./simple-card";
+export type { SliderProps } from "./slider";
+export { Slider } from "./slider";
 export type { SwitchProps } from "./switch";
 export { Switch } from "./switch";
 export type { TagSwatchProps } from "./tag-swatch";

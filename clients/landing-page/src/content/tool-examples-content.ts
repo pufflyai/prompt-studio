@@ -2,7 +2,7 @@ import type { SessionCompletionStatus } from "@pstdio/ui";
 import { EXAMPLE_ICONS, type ExampleIcon } from "./icon-set-content";
 import type { ToolShapeKind } from "./tool-shapes";
 
-export type ToolExampleId = "icons" | "agents";
+export type ToolExampleId = "icons" | "agents" | "formulas";
 
 export const TOOL_EXAMPLES: {
   id: ToolExampleId;
@@ -26,7 +26,15 @@ export const TOOL_EXAMPLES: {
       { kind: "command", purpose: "Pause a run or approve a result." },
       { kind: "skill", purpose: "Give your agents your icon design and review guidelines." },
       { kind: "hook", purpose: "Refresh the preview when an agent changes a file." },
-      { kind: "automation", purpose: "Check your icon set every morning." },
+      { kind: "automation", purpose: "Get a morning summary of completed runs and results to review." },
+    ],
+  },
+  {
+    id: "formulas",
+    name: "Formula glossary",
+    blocks: [
+      { kind: "page", purpose: "Keep useful formulas together with visual examples." },
+      { kind: "editor", purpose: "Adjust the inputs and explore what each formula does." },
     ],
   },
 ];
@@ -38,7 +46,7 @@ export const EXAMPLE_AGENTS: {
   kind: ToolShapeKind;
   status: SessionCompletionStatus;
   progress: number;
-  files: { name: string; added: number; removed: number }[];
+  filesChanged: number;
   previewIcons: ExampleIcon[];
 }[] = [
   {
@@ -48,11 +56,7 @@ export const EXAMPLE_AGENTS: {
     kind: "command",
     status: "in_progress",
     progress: 11,
-    files: [
-      { name: "icons/cloud-add.svg", added: 18, removed: 4 },
-      { name: "icons/history.svg", added: 24, removed: 8 },
-      { name: "icon-set.json", added: 2, removed: 0 },
-    ],
+    filesChanged: 3,
     previewIcons: EXAMPLE_ICONS.slice(0, 6),
   },
   {
@@ -62,10 +66,7 @@ export const EXAMPLE_AGENTS: {
     kind: "skill",
     status: "awaiting_input",
     progress: 16,
-    files: [
-      { name: "icons/notification.svg", added: 12, removed: 6 },
-      { name: "icons/magicpen.svg", added: 16, removed: 6 },
-    ],
+    filesChanged: 2,
     previewIcons: EXAMPLE_ICONS.slice(6),
   },
   {
@@ -75,10 +76,7 @@ export const EXAMPLE_AGENTS: {
     kind: "automation",
     status: "in_progress",
     progress: 7,
-    files: [
-      { name: "check-icons.ts", added: 32, removed: 2 },
-      { name: "icon-report.json", added: 26, removed: 0 },
-    ],
+    filesChanged: 2,
     previewIcons: EXAMPLE_ICONS,
   },
 ];

@@ -1,7 +1,6 @@
 import { Box, Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { SessionIndicator } from "@pstdio/ui";
-import { FileChangeBadge } from "@pstdio/ui/diff";
-import { Check, FileCode2, GitBranch, Pause, Play } from "lucide-react";
+import { Check, GitBranch, Pause, Play } from "lucide-react";
 import { useState } from "react";
 import { EXAMPLE_AGENTS } from "../../content/tool-examples-content";
 import type { ToolShapeKind } from "../../content/tool-shapes";
@@ -20,8 +19,8 @@ const STATUS_LABELS = {
   cancelled: "Cancelled",
 };
 
-export const AgentDashboardDemo = (props: { highlighted?: ToolShapeKind; withPreview?: boolean }) => {
-  const { highlighted, withPreview = true } = props;
+export const AgentDashboardDemo = (props: { highlighted?: ToolShapeKind }) => {
+  const { highlighted } = props;
   const [agents, setAgents] = useState(EXAMPLE_AGENTS);
   const [selected, setSelected] = useState(agents[0].id);
   const agent = agents.find((item) => item.id === selected)!;
@@ -93,7 +92,7 @@ export const AgentDashboardDemo = (props: { highlighted?: ToolShapeKind; withPre
           </Box>
           <HStack gap="sm" mt="auto" pt="sm" color="fg.muted">
             <BlockSymbol kind="automation" />
-            <Text textStyle="label/S/regular">Icon check · Every day at 9:00</Text>
+            <Text textStyle="label/S/regular">Summarize agent runs · Weekdays at 9:00</Text>
           </HStack>
         </DemoPanel>
         <DemoPanel title={agent.title} kind="command" highlighted={highlighted}>
@@ -101,34 +100,18 @@ export const AgentDashboardDemo = (props: { highlighted?: ToolShapeKind; withPre
             <Icon as={GitBranch} boxSize="icon-sm" />
             <Text>workbench / icons</Text>
           </HStack>
-          {withPreview ? (
-            <Box css={styles.preview}>
-              <HStack css={styles.toolbar}>
-                <HStack gap="xs">
-                  <BlockSymbol kind="hook" />
-                  <Text textStyle="label/S/regular">App preview</Text>
-                </HStack>
-                <Text textStyle="label/S/regular" color="fg.muted">
-                  {agent.files.length} files changed
-                </Text>
+          <Box css={styles.preview}>
+            <HStack css={styles.toolbar}>
+              <HStack gap="xs">
+                <BlockSymbol kind="hook" />
+                <Text textStyle="label/S/regular">App preview</Text>
               </HStack>
-              <IconSetPreview icons={agent.previewIcons} />
-            </Box>
-          ) : (
-            <Box css={styles.preview}>
-              {agent.files.map((file) => (
-                <Box css={styles.file} key={file.name}>
-                  <Icon as={FileCode2} boxSize="icon-sm" color="fg.muted" />
-                  <Text truncate flex="1">
-                    {file.name}
-                  </Text>
-                  <Text color="fg.success">+{file.added}</Text>
-                  <Text color="fg.error">−{file.removed}</Text>
-                  <FileChangeBadge change="modified" />
-                </Box>
-              ))}
-            </Box>
-          )}
+              <Text textStyle="label/S/regular" color="fg.muted">
+                {agent.filesChanged} files changed
+              </Text>
+            </HStack>
+            <IconSetPreview icons={agent.previewIcons} />
+          </Box>
           <Box css={styles.checks}>
             {["SVG checks", "Codepoints verified"].map((label) => (
               <HStack key={label} gap="xs">

@@ -5,6 +5,7 @@ import { useStoryStyles, useToolDemoStyles } from "../../hooks/use-landing-style
 import { BlockSymbol } from "../sections/building-blocks";
 import { AgentDashboardDemo } from "./agent-dashboard-demo";
 import { DemoWorkbench } from "./demo-workbench";
+import { FormulaGlossaryDemo } from "./formula-glossary-demo";
 import { IconSetEditorDemo } from "./icon-set-editor-demo";
 
 export const ConnectedToolsDemo = () => {
@@ -42,14 +43,14 @@ export const ChangeToolDemo = () => {
       <Box css={styles.prompt}>
         <HStack gap="sm" flex="1">
           <BlockSymbol kind="skill" />
-          <Text>Show previews of what each agent is building.</Text>
+          <Text>Let me adjust the inputs and see the result on the curve.</Text>
         </HStack>
         <Button aria-pressed={changed} onClick={() => setChanged(!changed)}>
           {changed ? "Undo change" : "Try the change"}
         </Button>
       </Box>
       <DemoWorkbench>
-        <AgentDashboardDemo withPreview={changed} />
+        <FormulaGlossaryDemo interactive={changed} />
       </DemoWorkbench>
     </Stack>
   );

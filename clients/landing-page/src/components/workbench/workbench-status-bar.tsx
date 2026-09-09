@@ -1,4 +1,4 @@
-import { Box, Button, Flex, HStack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import { Scale, ShieldCheck } from "lucide-react";
 import type { LandingView } from "../../content/landing-content";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
@@ -38,12 +38,11 @@ export const WorkbenchStatusBar = (props: WorkbenchStatusBarProps) => {
           </a>
         </Button>
       ))}
-      <Flex flex="1" />
-      <HStack gap={{ base: "4px", md: "6px" }} color="fg.subtle" minWidth="0">
-        <Box width={{ base: "10px", md: "11px" }} height={{ base: "10px", md: "11px" }} flexShrink="0">
+      <HStack gap="xs" color="fg" ms="auto" flexShrink="0">
+        <Box boxSize="icon-md" flexShrink="0">
           <StockholmIcon />
         </Box>
-        <Text fontFamily="body" fontSize={{ base: "7px", md: "9px" }} whiteSpace="nowrap">
+        <Text textStyle="label/S/medium" whiteSpace="nowrap">
           © Pufflig AB. Stockholm, 2026
         </Text>
       </HStack>

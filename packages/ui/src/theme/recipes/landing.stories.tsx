@@ -94,6 +94,17 @@ const LandingPanels = (props: { section?: string }) => {
             }
           />
         </Box>
+        <HStack as="footer" css={styles.status}>
+          <Button size="xs" variant="ghost">
+            Privacy
+          </Button>
+          <Button size="xs" variant="ghost">
+            Terms
+          </Button>
+          <Text color="fg" textStyle="label/S/medium" ms="auto" flexShrink="0">
+            © Pufflig AB. Stockholm, 2026
+          </Text>
+        </HStack>
       </Box>
     </Box>
   );
