@@ -1,15 +1,11 @@
 import { type LandingView, SIDEBAR_VIEWS } from "../content/landing-content";
+import { LANDING_PAGES } from "../content/landing-pages";
+import type { ToolExampleId } from "../content/tool-examples-content";
 
-const LANDING_VIEW_PATHS: Record<LandingView, string> = {
-  start: "/",
-  "what-is-prompt-studio": "/what-is-prompt-studio",
-  examples: "/examples",
-  features: "/features",
-  privacy: "/privacy",
-  terms: "/terms",
-};
+export const landingPathForView = (view: LandingView) => LANDING_PAGES.find((page) => page.view === view)!.path;
 
-export const landingPathForView = (view: LandingView) => LANDING_VIEW_PATHS[view];
+export const landingPathForExample = (exampleId: ToolExampleId) =>
+  LANDING_PAGES.find((page) => page.exampleId === exampleId)!.path;
 
 export const nextLandingView = (view: LandingView) => {
   if (view === "privacy") return "terms";
@@ -18,21 +14,16 @@ export const nextLandingView = (view: LandingView) => {
 };
 
 export const previousLandingView = (view: LandingView) => {
+  if (view === "start") return null;
   if (view === "privacy") return "start";
   if (view === "terms") return "privacy";
-  return SIDEBAR_VIEWS[(SIDEBAR_VIEWS.indexOf(view) - 1 + SIDEBAR_VIEWS.length) % SIDEBAR_VIEWS.length];
+  return SIDEBAR_VIEWS[SIDEBAR_VIEWS.indexOf(view) - 1];
 };
 
-const normalizePath = (path: string) => {
-  const pathname = path.split(/[?#]/)[0];
-  if (pathname === "/") return pathname;
-  return pathname.replace(/\/+$/, "");
+export const landingPageFromPath = (path: string) => {
+  const pathname = `${path.split(/[?#]/)[0].replace(/\/+$/, "")}/`;
+  if (pathname === "/examples/") return LANDING_PAGES.find((page) => page.view === "examples");
+  return LANDING_PAGES.find((page) => page.path === pathname);
 };
 
-export const landingViewFromPath = (path: string): LandingView => {
-  const pathname = normalizePath(path);
-  const match = Object.entries(LANDING_VIEW_PATHS).find(([, candidate]) => candidate === pathname);
-  return (match?.[0] as LandingView | undefined) ?? "start";
-};
-
-export const ALL_LANDING_PATHS = Object.values(LANDING_VIEW_PATHS);
+export const ALL_LANDING_PATHS = [...LANDING_PAGES.map((page) => page.path), "/examples/"];

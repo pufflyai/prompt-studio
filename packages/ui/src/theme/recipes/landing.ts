@@ -127,11 +127,13 @@ export const landingSlotRecipe = defineSlotRecipe({
     },
     heroNavigation: {
       display: "flex",
+      flexWrap: "wrap",
       justifyContent: "space-between",
       gap: "sm",
       flexShrink: 0,
       px: { base: "lg", xl: "3xl" },
       py: "lg",
+      "& [data-direction=next]": { marginInlineStart: "auto", flexDirection: "row-reverse" },
     },
     heroCopy: {
       display: "flex",

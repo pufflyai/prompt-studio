@@ -3,6 +3,7 @@ import { ListRow } from "@pstdio/ui";
 import { ArrowUpRight, CircleDot, MessagesSquare } from "lucide-react";
 import { type LandingView, SIDEBAR_VIEWS, SITE_LINKS, VIEW_META } from "../../content/landing-content";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
+import { landingPathForView } from "../../services/landing-route";
 
 const EXTERNAL_LINKS = [
   { label: "Issues", icon: CircleDot, href: SITE_LINKS.issues },
@@ -27,9 +28,15 @@ export const ResourceSidebar = (props: ResourceSidebarProps) => {
             key={view}
             icon={<meta.icon />}
             label={meta.label}
+            href={landingPathForView(view)}
+            role="link"
             isSelected={view === activeView}
             aria-current={view === activeView ? "page" : undefined}
-            onClick={() => onNavigate(view)}
+            onClick={(event) => {
+              if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+              event.preventDefault();
+              onNavigate(view);
+            }}
           />
         );
       })}

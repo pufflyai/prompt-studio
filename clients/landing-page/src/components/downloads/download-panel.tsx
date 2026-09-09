@@ -11,11 +11,12 @@ export const START_HERE_TITLE = "A workbench for your tools.";
 export const START_HERE_INTRO =
   "Coding agents can build tools to help with your work. Prompt Studio gives them a place to live, with the shared infrastructure they need to work together.";
 
-export const DownloadPanel = () => {
+export const DownloadPanel = (props: { headingLevel: "h1" | "h2" }) => {
+  const { headingLevel } = props;
   const styles = useLandingStyles();
   return (
     <Box css={styles.heroCopy}>
-      <Text as="h1" textStyle={{ base: "heading/L", xl: "heading/XL" }}>
+      <Text id="download-panel-title" as={headingLevel} textStyle={{ base: "heading/L", xl: "heading/XL" }}>
         {START_HERE_TITLE}
       </Text>
       <Text textStyle="paragraph/XL/regular" color="fg.muted">

@@ -9,19 +9,21 @@ dedicated landing recipes and do not change the dashboard's components or theme.
 - `src/components/sections` contains Start Here, What is Prompt Studio, Examples, Features, and legal views.
 - `src/components/downloads` contains the download picker and agent compatibility cards.
 - `src/components/examples` contains the interactive icon set editor and coding agent demos.
-- `src/content` owns navigation metadata, example data, building blocks, and legal copy.
+- `src/content` owns the page catalog, navigation metadata, example data, building blocks, and legal copy.
 - `src/hooks` connects browser navigation, release loading, and animation to React.
-- `src/services` loads GitHub releases, selects desktop assets, and converts legal copy to Markdown.
+- `src/services` resolves routes and page metadata, loads GitHub releases, selects desktop assets, and converts legal copy to Markdown.
 - `src/services/shapes` owns tool geometry, placement, collisions, dragging, and simulation cleanup.
 
 The demos and falling tools render in code. They use no screenshot or image assets.
 
 ## Layout
 
-Every page keeps the 480px introduction and download panel on the left. Navigation
+Desktop pages keep the 480px introduction and download panel on the left. Navigation
 changes the right panel, preserving the selected download and resized panel width.
-On small screens the panels stack and share one ScrollArea. Desktop panels scroll
-independently. The home page shows a tools panel. Six tools start on the
+On small screens the content comes first and the introduction and download panel
+comes last. The panels share one ScrollArea, which returns to the top when the page
+changes. CSS sets this order before hydration. Desktop panels scroll independently.
+The home page shows a tools panel. Six tools start on the
 floor at random positions and angles. One tool drops from a random position every
 three seconds until there are 30. Tools can be dragged. Reduced motion keeps the
 initial six tools still. Random placements stay stable through redraws and resizing.
@@ -35,10 +37,11 @@ control collapses or expands the window. Red and yellow enter window mode and ar
 disabled there. Drag the title bar to move the window. Mobile navigation opens a
 menu below the header; desktop navigation uses the sidebar. There are no breadcrumbs.
 
-Previous and Next buttons sit at the bottom of the introduction and download panel,
-outside its scroll area. The main pages follow the sidebar order and wrap between
-Features and Start Here. Privacy leads to Terms, and Terms returns to Start Here.
-These links use browser history without remounting the download panel.
+Ghost navigation buttons sit at the bottom of the introduction and download panel,
+outside its scroll area. Each button shows its destination page name and an arrow.
+Start Here only shows the next page. The main pages follow the sidebar order, and
+Features leads back to Start Here. Privacy leads to Terms, and Terms returns to
+Start Here. These links use browser history without remounting the download panel.
 
 ## Product examples
 
@@ -50,6 +53,17 @@ Visitors can browse an icon set, follow work in a coding agent dashboard, and ad
 dashboard. These use local demo data. They do not call an agent or install extensions.
 
 Examples pairs each tool with a short description and its building blocks.
+Each tab is a link to a prerendered page:
+
+- `/examples/coding-agent-dashboard/`
+- `/examples/icon-set-editor/`
+- `/examples/shader-editor/`
+- `/examples/financial-formulas/`
+
+The selected example comes from the URL. Reloading, opening a link in another tab,
+and browser history preserve that selection. `/examples/` shows the first example
+and declares its full URL as canonical.
+
 The icon set editor uses the existing Prompt Studio icons. Visitors can search by
 name or codepoint, select an icon, and rename it in local demo state. Its grid and
 inspector follow the repository's icon editor.
@@ -63,6 +77,10 @@ Use "workbench" for the overall home for tools. A workspace is a separate produc
 The page layout and preview styles use the shared `landingStory` and `landingToolDemo`
 recipes. Storybook covers desktop and narrow-panel layouts. Preview panels respond
 to their actual container width, including when the download panel is resized.
+
+The page catalog supplies static routes, unique metadata, canonical links, and
+`/sitemap.xml`. `/robots.txt` points crawlers to that sitemap. The
+[SEO audit](docs/seo-audit.md) records the checks and remaining work.
 
 ## Desktop downloads
 

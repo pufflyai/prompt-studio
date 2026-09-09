@@ -4,12 +4,14 @@ export type ToolExampleId = "icons" | "shaders" | "agents" | "formulas";
 
 export const TOOL_EXAMPLES: {
   id: ToolExampleId;
+  slug: string;
   name: string;
   description: string;
   blocks: { kind: ToolShapeKind; purpose: string }[];
 }[] = [
   {
     id: "agents",
+    slug: "coding-agent-dashboard",
     name: "Coding agent dashboard",
     description: "Follow coding agents from task to review, with sessions and hooks keeping the board up to date.",
     blocks: [
@@ -22,6 +24,7 @@ export const TOOL_EXAMPLES: {
   },
   {
     id: "icons",
+    slug: "icon-set-editor",
     name: "Icon set editor",
     description: "Browse, rename, and organise the icons you use across your tools.",
     blocks: [
@@ -32,6 +35,7 @@ export const TOOL_EXAMPLES: {
   },
   {
     id: "shaders",
+    slug: "shader-editor",
     name: "Shader editor",
     description: "Edit a fragment shader and shape its animation with a live preview.",
     blocks: [
@@ -42,6 +46,7 @@ export const TOOL_EXAMPLES: {
   },
   {
     id: "formulas",
+    slug: "financial-formulas",
     name: "Financial formulas",
     description: "Explore financial formulas and let agents use them to answer questions.",
     blocks: [

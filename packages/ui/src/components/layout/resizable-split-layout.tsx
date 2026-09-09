@@ -30,7 +30,7 @@ interface ResizableSplitLayoutProps extends Omit<FlexProps, "children" | "onResi
   collapsible?: boolean;
   resizeLabel?: string;
   separator?: ResizableSplitSeparator;
-  layout?: ConditionalValue<"split" | "stacked" | "content">;
+  layout?: ConditionalValue<"split" | "stacked" | "stacked-reverse" | "content">;
   onSizeChange?: (size: number) => void;
   onCollapsedChange?: (collapsed: boolean) => void;
 }

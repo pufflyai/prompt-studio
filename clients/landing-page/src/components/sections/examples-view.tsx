@@ -1,16 +1,22 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
 import { useState } from "react";
 import { blockFor } from "../../content/building-block-content";
-import { TOOL_EXAMPLES } from "../../content/tool-examples-content";
+import { TOOL_EXAMPLES, type ToolExampleId } from "../../content/tool-examples-content";
 import type { ToolShapeKind } from "../../content/tool-shapes";
 import { useStoryStyles } from "../../hooks/use-landing-styles";
+import { landingPathForExample } from "../../services/landing-route";
 import { DemoWorkbench } from "../examples/demo-workbench";
 import { ToolDemo } from "../examples/tool-demo";
 import { PageScroll } from "../workbench/page-scroll";
 import { BlockChip } from "./building-blocks";
 
-export const ExamplesView = () => {
-  const [exampleId, setExampleId] = useState(TOOL_EXAMPLES[0].id);
+interface ExamplesViewProps {
+  exampleId: ToolExampleId;
+  onNavigate: (exampleId: ToolExampleId) => void;
+}
+
+export const ExamplesView = (props: ExamplesViewProps) => {
+  const { exampleId, onNavigate } = props;
   const [selectedBlock, setSelectedBlock] = useState<ToolShapeKind>("page");
   const example = TOOL_EXAMPLES.find((item) => item.id === exampleId)!;
   const contribution = example.blocks.find((block) => block.kind === selectedBlock)!;
@@ -22,21 +28,23 @@ export const ExamplesView = () => {
         <Box css={styles.section} as="section" aria-labelledby="tool-examples-title">
           <Stack css={styles.intro}>
             <Text id="tool-examples-title" as="h1" textStyle={{ base: "heading/M", md: "heading/L" }}>
-              What will you build?
+              {example.name}
             </Text>
           </Stack>
-          <HStack gap="xs" flexWrap="wrap" role="group" aria-label="Example tools">
+          <HStack gap="xs" flexWrap="wrap" as="nav" aria-label="Example tools">
             {TOOL_EXAMPLES.map((item) => (
-              <Button
-                key={item.id}
-                variant="ghost"
-                aria-pressed={exampleId === item.id}
-                onClick={() => {
-                  setExampleId(item.id);
-                  setSelectedBlock("page");
-                }}
-              >
-                {item.name}
+              <Button key={item.id} asChild variant="ghost" data-active={exampleId === item.id ? "" : undefined}>
+                <a
+                  href={landingPathForExample(item.id)}
+                  aria-current={exampleId === item.id ? "page" : undefined}
+                  onClick={(event) => {
+                    if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                    event.preventDefault();
+                    onNavigate(item.id);
+                  }}
+                >
+                  {item.name}
+                </a>
               </Button>
             ))}
           </HStack>

@@ -1,5 +1,12 @@
 import { defineSlotRecipe } from "@chakra-ui/react";
 
+const stackedPanels = {
+  root: { flexDirection: "column", height: "auto", overflow: "visible", gap: "panel-gap" },
+  resizablePanel: { display: "flex", width: "full", height: "auto", flex: "initial", overflow: "visible" },
+  contentPanel: { height: "auto", flex: "initial", overflow: "visible" },
+  separator: { display: "none" },
+} as const;
+
 export const resizableSplitLayoutSlotRecipe = defineSlotRecipe({
   slots: ["root", "resizablePanel", "contentPanel", "separator"],
   base: {
@@ -30,11 +37,10 @@ export const resizableSplitLayoutSlotRecipe = defineSlotRecipe({
         contentPanel: { height: "full", flex: "1", overflow: "hidden" },
         separator: { display: "flex" },
       },
-      stacked: {
-        root: { flexDirection: "column", height: "auto", overflow: "visible", gap: "panel-gap" },
-        resizablePanel: { display: "flex", width: "full", height: "auto", flex: "initial", overflow: "visible" },
-        contentPanel: { height: "auto", flex: "initial", overflow: "visible" },
-        separator: { display: "none" },
+      stacked: stackedPanels,
+      "stacked-reverse": {
+        ...stackedPanels,
+        root: { ...stackedPanels.root, flexDirection: "column-reverse" },
       },
       content: {
         root: { height: "full", overflow: "hidden" },

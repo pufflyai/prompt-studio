@@ -18,28 +18,26 @@ export const PageNavigation = (props: PageNavigationProps) => {
   ];
   return (
     <Box as="nav" aria-label="Page navigation" css={styles.heroNavigation}>
-      {pages.map((page) => (
-        <Button
-          key={page.direction}
-          asChild
-          variant="outline"
-          flexDirection={page.direction === "next" ? "row-reverse" : "row"}
-        >
-          <a
-            href={landingPathForView(page.view)}
-            aria-label={`${page.label}: ${VIEW_META[page.view].label}`}
-            title={VIEW_META[page.view].label}
-            onClick={(event) => {
-              if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-              event.preventDefault();
-              onNavigate(page.view);
-            }}
-          >
-            <page.icon />
-            {page.label}
-          </a>
-        </Button>
-      ))}
+      {pages.map((page) => {
+        const targetView = page.view;
+        if (!targetView) return null;
+        return (
+          <Button key={page.direction} asChild variant="ghost" data-direction={page.direction}>
+            <a
+              href={landingPathForView(targetView)}
+              aria-label={`${page.label}: ${VIEW_META[targetView].label}`}
+              onClick={(event) => {
+                if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                event.preventDefault();
+                onNavigate(targetView);
+              }}
+            >
+              <page.icon />
+              {VIEW_META[targetView].label}
+            </a>
+          </Button>
+        );
+      })}
     </Box>
   );
 };

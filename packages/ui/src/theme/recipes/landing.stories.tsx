@@ -16,11 +16,19 @@ import { ResizableSplitLayout } from "@/components/layout/resizable-split-layout
 import { SearchableMenu } from "@/components/overlays/searchable-menu";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 
-const LandingPanels = (props: { section?: string; desktopAvailable?: boolean; windowed?: boolean }) => {
-  const { section, desktopAvailable = true, windowed: initialWindowed = false } = props;
+const STORY_PAGES = [
+  { label: "Start Here", title: "" },
+  { label: "What is Prompt Studio", title: "Extend Prompt Studio by combining building blocks." },
+  { label: "Examples", title: "What will you build?" },
+  { label: "Features", title: "A solid foundation to extend from" },
+];
+
+const LandingPanels = (props: { initialPage?: number; desktopAvailable?: boolean; windowed?: boolean }) => {
+  const { initialPage = 0, desktopAvailable = true, windowed: initialWindowed = false } = props;
   const [windowed, setWindowed] = useState(initialWindowed);
-  const [pageIndex, setPageIndex] = useState(0);
-  const activeSection = section ?? ["", "What is Prompt Studio", "Examples", "Features"][pageIndex];
+  const [pageIndex, setPageIndex] = useState(initialPage);
+  const activeSection = STORY_PAGES[pageIndex].title;
+  const nextPageIndex = (pageIndex + 1) % STORY_PAGES.length;
   const recipe = useSlotRecipe({ key: "landing" });
   const styles = recipe({ windowed });
   const controls = [
@@ -120,13 +128,24 @@ const LandingPanels = (props: { section?: string; desktopAvailable?: boolean; wi
                   </ScrollArea>
                 </Box>
                 <Box as="nav" aria-label="Page navigation" css={styles.heroNavigation}>
-                  <Button variant="outline" onClick={() => setPageIndex((value) => (value + 3) % 4)}>
-                    <ArrowLeft />
-                    Previous
-                  </Button>
-                  <Button variant="outline" onClick={() => setPageIndex((value) => (value + 1) % 4)}>
-                    Next
+                  {pageIndex > 0 && (
+                    <Button
+                      variant="ghost"
+                      aria-label={`Previous: ${STORY_PAGES[pageIndex - 1].label}`}
+                      onClick={() => setPageIndex(pageIndex - 1)}
+                    >
+                      <ArrowLeft />
+                      {STORY_PAGES[pageIndex - 1].label}
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    data-direction="next"
+                    aria-label={`Next: ${STORY_PAGES[nextPageIndex].label}`}
+                    onClick={() => setPageIndex(nextPageIndex)}
+                  >
                     <ArrowRight />
+                    {STORY_PAGES[nextPageIndex].label}
                   </Button>
                 </Box>
               </Box>
@@ -176,6 +195,6 @@ type Story = StoryObj<typeof meta>;
 export const Desktop: Story = {};
 export const Windowed: Story = { args: { windowed: true } };
 export const DesktopUnavailable: Story = { args: { desktopAvailable: false } };
-export const WhatIsPromptStudio: Story = { args: { section: "Extend Prompt Studio by combining building blocks." } };
-export const Examples: Story = { args: { section: "What will you build?" } };
-export const Features: Story = { args: { section: "A solid foundation to extend from" } };
+export const WhatIsPromptStudio: Story = { args: { initialPage: 1 } };
+export const Examples: Story = { args: { initialPage: 2 } };
+export const Features: Story = { args: { initialPage: 3 } };

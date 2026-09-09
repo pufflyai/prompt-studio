@@ -4,7 +4,7 @@ import BaseLayout from "../layouts/base-layout.astro";
 import { ALL_LANDING_PATHS } from "../services/landing-route";
 
 export const getStaticPaths = () =>
-  ALL_LANDING_PATHS.filter((path) => path !== "/").map((path) => ({ params: { path: path.slice(1) } }));
+  ALL_LANDING_PATHS.filter((path) => path !== "/").map((path) => ({ params: { path: path.slice(1, -1) } }));
 ---
 
 <BaseLayout>

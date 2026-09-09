@@ -95,6 +95,10 @@ export const ResponsivePanels: Story = {
   },
 };
 
+export const ContentFirstOnMobile: Story = {
+  args: { layout: { base: "stacked-reverse", lg: "split" }, collapsible: false },
+};
+
 export const ResponsiveNavigation: Story = {
   args: { layout: { base: "content", lg: "split" }, collapsible: false },
   parameters: {

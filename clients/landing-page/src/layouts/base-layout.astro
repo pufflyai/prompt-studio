@@ -1,30 +1,11 @@
 ---
 import { siteMetadata } from "../config/site-metadata";
+import { landingMetadata } from "../services/landing-metadata";
 
-interface Props {
-  title?: string;
-  description?: string;
-}
-
-const { title = siteMetadata.title, description = siteMetadata.description } = Astro.props;
-
-const canonicalUrl = new URL(Astro.url.pathname, siteMetadata.siteUrl).href;
+const { title, description, canonicalUrl, structuredData, indexable } = landingMetadata(Astro.url.pathname);
 const bannerUrl = new URL(siteMetadata.bannerPath, siteMetadata.siteUrl).href;
 const faviconSvgUrl = new URL(siteMetadata.faviconSvgPath, siteMetadata.siteUrl).href;
 const faviconPngUrl = new URL(siteMetadata.faviconPngPath, siteMetadata.siteUrl).href;
-const keywords = siteMetadata.keywords.join(", ");
-
-const jsonLd = {
-  "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  name: "Prompt Studio",
-  url: canonicalUrl,
-  description,
-  applicationCategory: "DeveloperApplication",
-  operatingSystem: "macOS, Linux, Windows",
-  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-  image: bannerUrl,
-};
 ---
 
 <!doctype html>
@@ -35,13 +16,14 @@ const jsonLd = {
 
     <title>{title}</title>
     <meta name="description" content={description} />
-    <meta name="keywords" content={keywords} />
+    {!indexable && <meta name="robots" content="noindex" />}
     <meta name="image" content={bannerUrl} />
 
-    <link rel="canonical" href={canonicalUrl} />
+    {indexable && <link rel="canonical" href={canonicalUrl} />}
 
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Prompt Studio" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:image" content={bannerUrl} />
@@ -55,7 +37,7 @@ const jsonLd = {
     <link rel="icon" type="image/svg+xml" href={faviconSvgUrl} />
     <link rel="icon" type="image/png" href={faviconPngUrl} />
 
-    <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    {indexable && <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />}
     <script>
       const stored = localStorage.getItem("theme-preference");
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;

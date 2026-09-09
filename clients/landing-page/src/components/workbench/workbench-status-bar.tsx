@@ -2,11 +2,12 @@ import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import { Scale, ShieldCheck } from "lucide-react";
 import type { LandingView } from "../../content/landing-content";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
+import { landingPathForView } from "../../services/landing-route";
 import { StockholmIcon } from "../icons/stockholm-icon";
 
 const LEGAL_LINKS = [
-  { label: "Privacy", view: "privacy" as const, href: "/privacy", icon: ShieldCheck },
-  { label: "Terms", view: "terms" as const, href: "/terms", icon: Scale },
+  { label: "Privacy", view: "privacy" as const, icon: ShieldCheck },
+  { label: "Terms", view: "terms" as const, icon: Scale },
 ];
 
 interface WorkbenchStatusBarProps {
@@ -28,11 +29,12 @@ export const WorkbenchStatusBar = (props: WorkbenchStatusBarProps) => {
           variant="ghost"
           color="fg.muted"
           onClick={(event) => {
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
             event.preventDefault();
             onNavigate(item.view);
           }}
         >
-          <a href={item.href}>
+          <a href={landingPathForView(item.view)}>
             <item.icon />
             {item.label}
           </a>

@@ -1,7 +1,8 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { ResizableSplitLayout } from "@pstdio/ui";
-import type { LandingView } from "../../content/landing-content";
+import type { LandingPage } from "../../content/landing-pages";
 import { privacyPage, termsPage } from "../../content/legal";
+import type { ToolExampleId } from "../../content/tool-examples-content";
 import { useLandingNavigation } from "../../hooks/use-landing-navigation";
 import { useLandingStyles } from "../../hooks/use-landing-styles";
 import { useWindowChrome } from "../../hooks/use-window-chrome";
@@ -21,15 +22,18 @@ import { WorkbenchStatusBar } from "./workbench-status-bar";
 const LEGAL_PAGES = { privacy: privacyPage, terms: termsPage };
 
 interface LandingContentProps {
-  view: LandingView;
+  page: LandingPage;
+  onNavigateExample: (exampleId: ToolExampleId) => void;
   windowOffset?: { x: number; y: number };
 }
 
 const LandingContent = (props: LandingContentProps) => {
-  const { view, windowOffset } = props;
+  const { page: activePage, onNavigateExample, windowOffset } = props;
+  const { view, exampleId } = activePage;
   if (view === "start") return <StartHereView windowOffset={windowOffset} />;
   let page = <FeaturesView />;
-  if (view === "examples") page = <ExamplesView />;
+  if (view === "examples" && exampleId)
+    page = <ExamplesView key={exampleId} exampleId={exampleId} onNavigate={onNavigateExample} />;
   if (view === "what-is-prompt-studio") page = <WhatIsPromptStudioView />;
   if (view === "privacy" || view === "terms") page = <DocView page={LEGAL_PAGES[view]} />;
   return (
@@ -45,7 +49,8 @@ interface WorkbenchLandingProps {
 
 export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
   const { initialPath } = props;
-  const { view, navigate, paletteOpen, setPaletteOpen } = useLandingNavigation(initialPath);
+  const { page, navigate, navigateExample, paletteOpen, setPaletteOpen } = useLandingNavigation(initialPath);
+  const { view } = page;
   const { windowed, offset, toggleWindowed, onTitleBarPointerDown } = useWindowChrome();
   const styles = useLandingStyles(windowed);
 
@@ -53,8 +58,12 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
     <Flex direction="column" flex="1" minWidth="0">
       <WorkbenchNav activeView={view} onOpenNavigation={() => setPaletteOpen(true)} />
       <Box as="main" css={styles.main}>
-        <LandingPanels navigation={<PageNavigation view={view} onNavigate={navigate} />}>
-          <LandingContent view={view} windowOffset={windowed ? offset : undefined} />
+        <LandingPanels page={page} navigation={<PageNavigation view={view} onNavigate={navigate} />}>
+          <LandingContent
+            page={page}
+            onNavigateExample={navigateExample}
+            windowOffset={windowed ? offset : undefined}
+          />
         </LandingPanels>
       </Box>
     </Flex>

@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import type { LandingView } from "../content/landing-content";
-import { landingPathForView, landingViewFromPath } from "../services/landing-route";
+import type { ToolExampleId } from "../content/tool-examples-content";
+import { updateLandingMetadata } from "../services/landing-metadata";
+import { landingPageFromPath, landingPathForExample, landingPathForView } from "../services/landing-route";
 
 export const useLandingNavigation = (initialPath: string) => {
-  const [view, setView] = useState(() => landingViewFromPath(initialPath));
+  const [path, setPath] = useState(initialPath);
+  const page = landingPageFromPath(path)!;
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
@@ -13,7 +16,7 @@ export const useLandingNavigation = (initialPath: string) => {
         setPaletteOpen((open) => !open);
       }
     };
-    const onPopState = () => setView(landingViewFromPath(window.location.pathname));
+    const onPopState = () => setPath(window.location.pathname);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("popstate", onPopState);
     return () => {
@@ -22,11 +25,15 @@ export const useLandingNavigation = (initialPath: string) => {
     };
   }, []);
 
-  const navigate = (next: LandingView) => {
-    const path = landingPathForView(next);
-    setView(next);
-    if (path !== window.location.pathname) window.history.pushState({}, "", path);
+  useEffect(() => updateLandingMetadata(path), [path]);
+
+  const navigateToPath = (nextPath: string) => {
+    setPath(nextPath);
+    if (nextPath !== window.location.pathname) window.history.pushState({}, "", nextPath);
   };
 
-  return { view, navigate, paletteOpen, setPaletteOpen };
+  const navigate = (next: LandingView) => navigateToPath(landingPathForView(next));
+  const navigateExample = (exampleId: ToolExampleId) => navigateToPath(landingPathForExample(exampleId));
+
+  return { page, navigate, navigateExample, paletteOpen, setPaletteOpen };
 };
