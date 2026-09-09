@@ -1,11 +1,14 @@
 import { describe, expect, test } from "bun:test";
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
+import { subscribeToExtensionEventFeed } from "@/shared/extensions/extension-webview-broadcast";
 import { surfaceNotificationCommandResponse } from "./notification-center-widget";
 
 describe("NotificationCenterWidget", () => {
   test("surfaces extension command notices from notification actions", () => {
     const shown: unknown[] = [];
+    const events: unknown[] = [];
+    const unsubscribe = subscribeToExtensionEventFeed((event) => events.push(event));
     const input = {
       workbench: {
         notifications: {
@@ -18,6 +21,7 @@ describe("NotificationCenterWidget", () => {
     const response: CommandExecuteResponse = {
       commandId: "extension-lab.say-hello",
       extensionId: "extension-lab",
+      eventIds: ["extension-lab.event.changed"],
       outcome: {
         ok: true,
         status: "success",
@@ -25,7 +29,12 @@ describe("NotificationCenterWidget", () => {
       },
     };
 
-    surfaceNotificationCommandResponse(input, response);
+    try {
+      surfaceNotificationCommandResponse(input, response, "notification-project");
+      expect(events).toEqual([{ id: "extension-lab.event.changed", projectId: "notification-project" }]);
+    } finally {
+      unsubscribe();
+    }
 
     expect(shown).toEqual([
       {

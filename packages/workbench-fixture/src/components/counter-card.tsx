@@ -28,7 +28,7 @@ export const CounterCard = () => {
     };
     void refresh();
     const unsubscribe = createWebviewClient<Record<never, never>>(host).events.subscribe(
-      "pstdio.workbench-fixture.counter.changed",
+      { kind: "event", id: "counter.changed" },
       () => void refresh(),
     );
 

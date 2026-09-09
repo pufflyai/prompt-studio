@@ -1,4 +1,5 @@
 import type { CommandRef, ContributionKind, ContributionRef, EventRef, WhenExpression } from "@pstdio/sdk/extensions";
+import { resolveEventReferenceId } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension } from "../../types/runtime";
 
 export const contributionId = (ext: NormalizedExtension, localId: string) => `${ext.name}.${localId}`;
@@ -25,15 +26,7 @@ export const resolveContributionRefId = <Kind extends ContributionKind>(
 
 export const resolveCommandRef = (ext: NormalizedExtension, ref: CommandRef) => resolveContributionRefId(ext.id, ref);
 
-export const resolveEventRef = (ext: NormalizedExtension, ref: EventRef) => {
-  const extensionId = ref.extensionId ?? ext.id;
-  const lifecycleMatch = /^(command\.(?:requested|started|completed|rejected|failed):)(.+)$/.exec(ref.id);
-  if (lifecycleMatch) {
-    const command = { kind: "command", id: lifecycleMatch[2]!, extensionId } as const;
-    return `${lifecycleMatch[1]}${resolveContributionRefId(extensionId, command)}`;
-  }
-  return extensionId === hostExtensionId ? ref.id : `${extensionId}.event.${ref.id}`;
-};
+export const resolveEventRef = (ext: NormalizedExtension, ref: EventRef) => resolveEventReferenceId(ref, ext.id);
 
 // A resource kind's id is the plain name its extension declares, unlike a panel or mode
 // id. That same string is the resource type in every payload crossing the extension

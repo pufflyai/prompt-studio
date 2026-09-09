@@ -4,4 +4,4 @@
 "pstdio": patch
 ---
 
-Expose dashboard URL helpers and webview change subscriptions, reconnect rebuilt webviews with a fresh iframe, and initialize desktop lifecycle actions without waiting for animation frames.
+Expose dashboard URL helpers and project-scoped webview subscriptions with shared event ID resolution and reconnect invalidation, and fix desktop startup and webview module reloads.

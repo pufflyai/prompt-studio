@@ -100,6 +100,7 @@ export {
   type PropsStore,
   type WebviewFilesClient,
 } from "./define-extension-view";
+export { resolveEventReferenceId } from "./event-reference";
 export { defaultPageResourceCodec } from "./page-resource-codec";
 export {
   isWorkbenchProjectUrl,

@@ -2,6 +2,7 @@ import type {
   ActivityItemContribution,
   ArtifactMountContribution,
   CommandPaletteResourceContribution,
+  CommandRef,
   ContributionDefinition,
   ContributionKind,
   EventRef,
@@ -48,7 +49,7 @@ type ExactOptions<Definition, Contract> = unknown extends Contract
     ? Definition
     : Contract extends unknown
       ? Definition extends Contract
-        ? Contract extends EventRef
+        ? Contract extends EventRef | CommandRef
           ? Definition
           : Definition extends (...args: never[]) => unknown
             ? Definition

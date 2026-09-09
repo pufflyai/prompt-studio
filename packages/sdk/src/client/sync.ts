@@ -19,6 +19,7 @@ export type SyncConnection = {
 };
 
 export type StartSyncInput = SyncWriterProvider & {
+  /** Called after the initial snapshot, or when a cursor-based connection resumes. */
   onConnected?: () => void;
   onDisconnected?: () => void;
   onConnectionLost?: () => void;
@@ -154,23 +155,29 @@ export const createSyncClient = (clientOptions: ClientOptions): SyncClient => ({
       if (event === "init") setConnected();
     };
 
+    const readConnection = async (signal: AbortSignal) => {
+      const response = await resolveFetch(clientOptions)(
+        resolveClientUrl(resolveBaseUrl(clientOptions), buildSyncStreamPath(lastSeq)),
+        {
+          headers: Object.fromEntries(createRequestHeaders(clientOptions).entries()),
+          signal,
+          credentials: "same-origin",
+        },
+      );
+      if (!response.ok || !response.body) throw new Error("SSE connection failed");
+      if (closed) return;
+      // Resumed streams may contain no init event or replay rows. The existing
+      // snapshot is already initialized, so transport readiness is enough.
+      if (lastSeq > 0) setConnected();
+      await readSseStream(response.body, ({ event, data }) => handleEvent(event, data), { signal });
+    };
+
     const connect = async () => {
       if (closed) return;
 
       abortController = new AbortController();
       try {
-        const response = await resolveFetch(clientOptions)(
-          resolveClientUrl(resolveBaseUrl(clientOptions), buildSyncStreamPath(lastSeq)),
-          {
-            headers: Object.fromEntries(createRequestHeaders(clientOptions).entries()),
-            signal: abortController.signal,
-            credentials: "same-origin",
-          },
-        );
-        if (!response.ok || !response.body) throw new Error("SSE connection failed");
-        await readSseStream(response.body, ({ event, data }) => handleEvent(event, data), {
-          signal: abortController.signal,
-        });
+        await readConnection(abortController.signal);
       } catch (err) {
         if (closed || (err as Error).name === "AbortError") return;
       }

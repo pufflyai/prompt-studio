@@ -54,7 +54,7 @@ const stop = client.events.subscribe(
 stop();
 ```
 
-Local event refs use the client's extension owner. Qualified event refs and namespaced string IDs can subscribe to another extension in the same project. Commands emit events after committing their changes through `ctx.events.emit`.
+Local event refs use the client's extension owner: `{ kind: "event", id: "notes.changed" }` resolves to `<extensionId>.event.notes.changed`. Qualified event refs can name another extension in the same project. String IDs are already resolved and stay unchanged. Host-owned and command-lifecycle refs follow the runtime's rules through the shared `resolveEventReferenceId` helper. Commands emit events after committing their changes through `ctx.events.emit`.
 
 The host delivers only events matching the view's project. Projectless events reach global views only. Listeners also run when host sync connects or reconnects, so a mounted view can reconcile missed changes. Load current data when mounting, then subscribe; events are invalidations, not stored records or an exactly-once stream. Duplicate refetches must be safe. The subscription does not reload the webview document or grant new permissions.
 

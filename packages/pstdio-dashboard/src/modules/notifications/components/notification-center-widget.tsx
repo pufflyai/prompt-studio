@@ -86,6 +86,7 @@ const showError = (input: WorkbenchPanelRenderInput, title: string, error: unkno
 export const surfaceNotificationCommandResponse = (
   input: Pick<WorkbenchPanelRenderInput, "workbench">,
   response: CommandExecuteResponse,
+  projectId: string,
 ) => {
   for (const commandNotification of collectExtensionCommandNotifications(response)) {
     input.workbench.notifications.show({
@@ -95,7 +96,7 @@ export const surfaceNotificationCommandResponse = (
       metadata: commandNotification.metadata,
     });
   }
-  publishExtensionCommandEvent(response);
+  publishExtensionCommandEvent(response, { projectId });
 };
 
 export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) => {
@@ -134,7 +135,7 @@ export const NotificationCenterWidget = (props: NotificationCenterWidgetProps) =
           resource: notification.target ?? undefined,
           source: "dashboard",
         });
-        surfaceNotificationCommandResponse(input, response);
+        surfaceNotificationCommandResponse(input, response, notification.projectId);
       }
 
       close();

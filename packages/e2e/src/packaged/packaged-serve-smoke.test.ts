@@ -266,7 +266,7 @@ describe("packaged pstdio — self-hosted serve", () => {
         expect(counter.status).toBe(200);
         expect(await counter.json()).toMatchObject({
           outcome: { status: "success", value: { counter: 1 } },
-          eventIds: expect.arrayContaining(["pstdio.workbench-fixture.counter.changed"]),
+          eventIds: expect.arrayContaining(["pstdio.workbench-fixture.event.counter.changed"]),
         });
         const workspaceAction = metadata.menuContributions.find(
           (contribution) => contribution.label === "Workspace-only lab action",

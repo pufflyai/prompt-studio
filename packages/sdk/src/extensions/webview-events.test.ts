@@ -1,9 +1,21 @@
 import { describe, expect, test } from "bun:test";
+import type { RendererEventReference } from "pstdio-api-contracts/extension-kernel";
 import type { GuestHost } from "./guest-host";
 import { createWebviewClient } from "./webview-client";
 
 describe("webview change subscriptions", () => {
-  test("matches owned and external events, reconciles on reconnect, and disposes", () => {
+  test.each([
+    [{ kind: "event", id: "changed" }, "acme.notes.event.changed"],
+    [{ kind: "event", extensionId: "other.notes", id: "changed" }, "other.notes.event.changed"],
+    [{ kind: "event", extensionId: "pstdio", id: "workspace.provision" }, "workspace.provision"],
+    [{ kind: "event", id: "command.completed:save" }, "command.completed:acme.notes.command.save"],
+    [
+      { kind: "event", extensionId: "other.notes", id: "command.failed:save" },
+      "command.failed:other.notes.command.save",
+    ],
+    [{ kind: "event", extensionId: "pstdio", id: "command.completed:save" }, "command.completed:save"],
+    ["other.notes.event.changed", "other.notes.event.changed"],
+  ] satisfies Array<[RendererEventReference, string]>)("matches %j, resets, and disposes", (event, eventId) => {
     const listeners = new Set<(payload: unknown) => void>();
     const host: GuestHost = {
       extensionId: "acme.notes",
@@ -19,18 +31,18 @@ describe("webview change subscriptions", () => {
     };
     const client = createWebviewClient<Record<never, never>>(host);
     let changes = 0;
-    const unsubscribe = client.events.subscribe({ kind: "event", id: "changed" }, () => changes++);
+    const unsubscribe = client.events.subscribe(event, () => changes++);
     const emit = (payload: unknown) => {
       for (const listener of listeners) listener(payload);
     };
     emit({ type: "changed", id: "other.notes.changed" });
     expect(changes).toBe(0);
-    emit({ type: "changed", id: "acme.notes.changed" });
+    emit({ type: "changed", id: eventId });
     expect(changes).toBe(1);
     emit({ type: "reset" });
     expect(changes).toBe(2);
     unsubscribe();
-    emit({ type: "changed", id: "acme.notes.changed" });
+    emit({ type: "changed", id: eventId });
     expect(changes).toBe(2);
     expect(listeners.size).toBe(0);
 

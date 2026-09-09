@@ -45,7 +45,7 @@ host.call("navigation.teleport", {});
 host.call<number>("preferences.get", { name: "count" });
 
 import type { ControlValue, JsonValue } from "./index";
-import { eventRef } from "./index";
+import { defineCommand, eventRef, params } from "./index";
 
 const changed = eventRef<{ id: string }>({ extensionId: "acme.notes", id: "notes.changed" });
 defineView({
@@ -54,3 +54,19 @@ defineView({
   body: { kind: "file", refreshEvents: [changed], load: () => ({ content: "" }) },
 });
 export const serializableControlValue = (value: ControlValue): JsonValue => value;
+
+const deleteRow = defineCommand({
+  id: "delete-row",
+  title: "Delete row",
+  params: { rowId: params.text({ required: true }) },
+  run: (_ctx, input) => ({ id: input.rowId }),
+});
+defineView({
+  id: "typed-row-actions",
+  title: "Rows",
+  body: {
+    kind: "dataTable",
+    query: () => ({ rows: [] }),
+    rowActions: [{ id: "delete", label: "Delete", command: deleteRow.ref }],
+  },
+});

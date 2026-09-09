@@ -49,7 +49,7 @@ export const publishExtensionEventReset = () => {
 
 export const publishExtensionCommandEvent = (
   response: CommandExecuteResponse,
-  envelope: Omit<ExtensionRefreshEvent, "id"> = {},
+  envelope: Omit<ExtensionRefreshEvent, "id"> & { projectId: string | undefined },
 ) => {
   tick += 1;
   const event: ExtensionCommandEvent = {

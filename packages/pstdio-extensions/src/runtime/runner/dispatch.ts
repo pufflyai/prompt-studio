@@ -7,6 +7,7 @@ import type {
   ExtensionLoggerApi,
   Struct,
 } from "@pstdio/sdk/extensions";
+import { resolveEventReferenceId } from "@pstdio/sdk/extensions";
 import type { ExtensionRuntime, NormalizedExtension } from "../../types/runtime";
 import type { BuildEnvironmentInput, CommandRunnerHostDeps } from "./types";
 
@@ -17,11 +18,7 @@ export const refId = (ref: CommandRef | EventRef | string, ownerExtensionId?: st
   // owner prefixing — the same rule normalize/references.ts applies.
   if (!extensionId || extensionId === "pstdio") return ref.id;
   if (ref.kind === "command") return `${extensionId}.command.${ref.id}`;
-  const lifecycleMatch = /^(command\.(?:requested|started|completed|rejected|failed):)(.+)$/.exec(ref.id);
-  if (lifecycleMatch) {
-    return `${lifecycleMatch[1]}${extensionId}.command.${lifecycleMatch[2]}`;
-  }
-  return `${extensionId}.event.${ref.id}`;
+  return resolveEventReferenceId(ref, ownerExtensionId);
 };
 
 export const lifecycleEventId = (phase: CommandLifecyclePhase, commandId: string) => `command.${phase}:${commandId}`;

@@ -7,22 +7,31 @@ describe("extension event feed", () => {
     const received: unknown[] = [];
     const dispose = subscribeToExtensionEventFeed((event) => received.push(event));
 
-    publishExtensionCommandEvent({
-      commandId: "lab.update",
-      extensionId: "pstdio.lab",
-      eventIds: ["tickets.changed", "tickets.changed", "files.changed"],
-      outcome: { ok: true, status: "success" },
-    });
+    publishExtensionCommandEvent(
+      {
+        commandId: "lab.update",
+        extensionId: "pstdio.lab",
+        eventIds: ["tickets.changed", "tickets.changed", "files.changed"],
+        outcome: { ok: true, status: "success" },
+      },
+      { projectId: undefined },
+    );
 
-    expect(received).toEqual([{ id: "tickets.changed" }, { id: "files.changed" }]);
+    expect(received).toEqual([
+      { id: "tickets.changed", projectId: undefined },
+      { id: "files.changed", projectId: undefined },
+    ]);
 
     dispose();
-    publishExtensionCommandEvent({
-      commandId: "lab.update",
-      extensionId: "pstdio.lab",
-      eventIds: ["tickets.changed"],
-      outcome: { ok: true, status: "success" },
-    });
+    publishExtensionCommandEvent(
+      {
+        commandId: "lab.update",
+        extensionId: "pstdio.lab",
+        eventIds: ["tickets.changed"],
+        outcome: { ok: true, status: "success" },
+      },
+      { projectId: undefined },
+    );
     expect(received).toHaveLength(2);
   });
 
@@ -38,6 +47,7 @@ describe("extension event feed", () => {
         outcome: { ok: true, status: "success" },
       },
       {
+        projectId: "project-1",
         resourceKey: resourceKey({ type: "ticket", id: "ticket-1" }),
         origin: {
           rendererId: "planner.ticketContent",
@@ -51,6 +61,7 @@ describe("extension event feed", () => {
     expect(received).toEqual([
       {
         id: "tickets.changed",
+        projectId: "project-1",
         resourceKey: resourceKey({ type: "ticket", id: "ticket-1" }),
         origin: {
           rendererId: "planner.ticketContent",
