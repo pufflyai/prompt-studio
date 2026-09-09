@@ -35,7 +35,7 @@ export const landingStorySlotRecipe = defineSlotRecipe({
       gap: "xl",
       width: "full",
       minWidth: 0,
-      pt: "4xl",
+      pt: "xl",
       pb: "xl",
     },
     intro: { display: "flex", flexDirection: "column", gap: "sm", maxWidth: "3xl" },
