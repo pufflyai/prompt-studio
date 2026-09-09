@@ -2,14 +2,13 @@ import { Box, Button, HStack, Stack, Text, Textarea } from "@chakra-ui/react";
 import { Slider } from "@pstdio/ui";
 import { Pause, Play } from "lucide-react";
 import { useState } from "react";
-import { DEFAULT_SHADER_SCALE, DEFAULT_SHADER_SPEED } from "../../content/shader-demo-content";
 import type { ToolShapeKind } from "../../content/tool-shapes";
 import { useStoryStyles, useToolDemoStyles } from "../../hooks/use-landing-styles";
 import { useShaderPreview } from "../../hooks/use-shader-preview";
 import { DemoPanel } from "./demo-workbench";
 
 interface ShaderEditorDemoProps {
-  shader: { filename: string; source: string };
+  shader: { filename: string; source: string; scale: number; speed: number };
   iconCodepoint?: string;
   withControls: boolean;
   highlighted?: ToolShapeKind;
@@ -18,12 +17,12 @@ interface ShaderEditorDemoProps {
 export const ShaderEditorDemo = (props: ShaderEditorDemoProps) => {
   const { shader, iconCodepoint, withControls, highlighted } = props;
   const [source, setSource] = useState(shader.source);
-  const [scale, setScale] = useState(DEFAULT_SHADER_SCALE);
-  const [speed, setSpeed] = useState(DEFAULT_SHADER_SPEED);
+  const [scale, setScale] = useState(shader.scale);
+  const [speed, setSpeed] = useState(shader.speed);
   const preview = useShaderPreview(
     source,
-    withControls ? scale : DEFAULT_SHADER_SCALE,
-    withControls ? speed : DEFAULT_SHADER_SPEED,
+    withControls ? scale : shader.scale,
+    withControls ? speed : shader.speed,
     iconCodepoint,
   );
   const story = useStoryStyles();

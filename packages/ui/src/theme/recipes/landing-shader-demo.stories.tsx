@@ -14,8 +14,8 @@ const ShaderDemo = (props: { withControls: boolean }) => {
   const styles = useSlotRecipe({ key: "landingToolDemo" })({});
   const story = useSlotRecipe({ key: "landingStory" })({});
   const [selected, setSelected] = useState(icons[0]);
-  const [scale, setScale] = useState(8);
-  const [speed, setSpeed] = useState(0.6);
+  const [scale, setScale] = useState(16);
+  const [speed, setSpeed] = useState(1.8);
   return (
     <Box css={story.page}>
       <Box css={styles.prompt}>
