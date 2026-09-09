@@ -12,19 +12,19 @@ export const WORKBENCH_SERVICES = [
     name: "Notifications",
     description: "Know when work finishes or needs your attention.",
     icon: Bell,
-    example: "Font build complete",
+    example: "Icon set build complete",
   },
   {
     name: "Navigation",
     description: "Open your tools and arrange them side by side.",
     icon: Navigation,
-    example: "Font editor / Coding agents",
+    example: "Icon set editor / Coding agents",
   },
   {
     name: "Extension management",
     description: "Install, enable, and manage the tools in your workbench.",
     icon: Blocks,
-    example: "Font editor · Enabled",
+    example: "Icon set editor · Enabled",
   },
   {
     name: "Themes",

@@ -8,7 +8,7 @@ import type { ToolShapeKind } from "../../content/tool-shapes";
 import { useStoryStyles, useToolDemoStyles } from "../../hooks/use-landing-styles";
 import { BlockSymbol } from "../sections/building-blocks";
 import { DemoPanel } from "./demo-workbench";
-import { FontSpecimen } from "./font-editor-demo";
+import { IconSetPreview } from "./icon-set-preview";
 
 const STATUS_LABELS = {
   in_progress: "Running",
@@ -93,13 +93,13 @@ export const AgentDashboardDemo = (props: { highlighted?: ToolShapeKind; withPre
           </Box>
           <HStack gap="sm" mt="auto" pt="sm" color="fg.muted">
             <BlockSymbol kind="automation" />
-            <Text textStyle="label/S/regular">Glyph check · Every day at 9:00</Text>
+            <Text textStyle="label/S/regular">Icon check · Every day at 9:00</Text>
           </HStack>
         </DemoPanel>
         <DemoPanel title={agent.title} kind="command" highlighted={highlighted}>
           <HStack gap="xs" color="fg.muted" textStyle="mono/XS">
             <Icon as={GitBranch} boxSize="icon-sm" />
-            <Text>workbench / fonts</Text>
+            <Text>workbench / icons</Text>
           </HStack>
           {withPreview ? (
             <Box css={styles.preview}>
@@ -112,7 +112,7 @@ export const AgentDashboardDemo = (props: { highlighted?: ToolShapeKind; withPre
                   {agent.files.length} files changed
                 </Text>
               </HStack>
-              <FontSpecimen alphabet={agent.id === "coverage"} weight={agent.id === "specimen" ? 700 : 500} />
+              <IconSetPreview icons={agent.previewIcons} />
             </Box>
           ) : (
             <Box css={styles.preview}>
@@ -130,7 +130,7 @@ export const AgentDashboardDemo = (props: { highlighted?: ToolShapeKind; withPre
             </Box>
           )}
           <Box css={styles.checks}>
-            {["Outline checks", "Font compiled"].map((label) => (
+            {["SVG checks", "Codepoints verified"].map((label) => (
               <HStack key={label} gap="xs">
                 <Icon as={Check} boxSize="icon-sm" />
                 <Text>{label}</Text>

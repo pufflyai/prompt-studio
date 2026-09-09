@@ -1,7 +1,8 @@
 import type { SessionCompletionStatus } from "@pstdio/ui";
+import { EXAMPLE_ICONS, type ExampleIcon } from "./icon-set-content";
 import type { ToolShapeKind } from "./tool-shapes";
 
-export type ToolExampleId = "font" | "agents";
+export type ToolExampleId = "icons" | "agents";
 
 export const TOOL_EXAMPLES: {
   id: ToolExampleId;
@@ -9,12 +10,12 @@ export const TOOL_EXAMPLES: {
   blocks: { kind: ToolShapeKind; purpose: string }[];
 }[] = [
   {
-    id: "font",
-    name: "Font editor",
+    id: "icons",
+    name: "Icon set editor",
     blocks: [
-      { kind: "page", purpose: "Preview your typeface as you change it." },
-      { kind: "editor", purpose: "Pick a glyph and adjust the font weight." },
-      { kind: "command", purpose: "Switch between a specimen and the full glyph set." },
+      { kind: "page", purpose: "Browse and search your icon set." },
+      { kind: "editor", purpose: "Inspect an icon, its name, and its codepoint." },
+      { kind: "command", purpose: "Rename an icon across your set." },
     ],
   },
   {
@@ -23,9 +24,9 @@ export const TOOL_EXAMPLES: {
     blocks: [
       { kind: "page", purpose: "See your agents, their progress, and what they are building." },
       { kind: "command", purpose: "Pause a run or approve a result." },
-      { kind: "skill", purpose: "Give your agents your font design and review guidelines." },
+      { kind: "skill", purpose: "Give your agents your icon design and review guidelines." },
       { kind: "hook", purpose: "Refresh the preview when an agent changes a file." },
-      { kind: "automation", purpose: "Check glyph coverage every morning." },
+      { kind: "automation", purpose: "Check your icon set every morning." },
     ],
   },
 ];
@@ -38,42 +39,46 @@ export const EXAMPLE_AGENTS: {
   status: SessionCompletionStatus;
   progress: number;
   files: { name: string; added: number; removed: number }[];
+  previewIcons: ExampleIcon[];
 }[] = [
   {
-    id: "font",
-    title: "Build the font",
+    id: "icons",
+    title: "Add navigation icons",
     agent: "Codex",
     kind: "command",
     status: "in_progress",
     progress: 11,
     files: [
-      { name: "glyphs/A.svg", added: 18, removed: 4 },
-      { name: "glyphs/B.svg", added: 24, removed: 8 },
-      { name: "workbench.woff2", added: 1, removed: 1 },
+      { name: "icons/cloud-add.svg", added: 18, removed: 4 },
+      { name: "icons/history.svg", added: 24, removed: 8 },
+      { name: "icon-set.json", added: 2, removed: 0 },
     ],
+    previewIcons: EXAMPLE_ICONS.slice(0, 6),
   },
   {
-    id: "specimen",
-    title: "Polish the specimen",
+    id: "outlines",
+    title: "Refine icon outlines",
     agent: "Claude Code",
     kind: "skill",
     status: "awaiting_input",
     progress: 16,
     files: [
-      { name: "specimen.tsx", added: 42, removed: 12 },
-      { name: "type-scale.ts", added: 16, removed: 6 },
+      { name: "icons/notification.svg", added: 12, removed: 6 },
+      { name: "icons/magicpen.svg", added: 16, removed: 6 },
     ],
+    previewIcons: EXAMPLE_ICONS.slice(6),
   },
   {
     id: "coverage",
-    title: "Check glyph coverage",
+    title: "Check the icon set",
     agent: "OpenCode",
     kind: "automation",
     status: "in_progress",
     progress: 7,
     files: [
-      { name: "glyph-coverage.ts", added: 32, removed: 2 },
-      { name: "coverage-report.json", added: 26, removed: 0 },
+      { name: "check-icons.ts", added: 32, removed: 2 },
+      { name: "icon-report.json", added: 26, removed: 0 },
     ],
+    previewIcons: EXAMPLE_ICONS,
   },
 ];

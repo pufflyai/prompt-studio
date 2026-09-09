@@ -8,7 +8,7 @@ dedicated landing recipes and do not change the dashboard's components or theme.
 - `src/components/workbench` owns page chrome and panel composition.
 - `src/components/sections` contains Start Here, Why Prompt Studio, Features, and legal views.
 - `src/components/downloads` contains the download picker and agent compatibility cards.
-- `src/components/examples` contains the interactive font editor and coding agent demos.
+- `src/components/examples` contains the interactive icon set editor and coding agent demos.
 - `src/content` owns navigation metadata, example data, building blocks, and legal copy.
 - `src/hooks` connects browser navigation, release loading, and animation to React.
 - `src/services` loads GitHub releases, selects desktop assets, and converts legal copy to Markdown.
@@ -33,11 +33,13 @@ its drawing and collisions stay aligned as it turns.
 ## Product examples
 
 Why Prompt Studio tells a short product story through interactive examples. Visitors
-can edit a font, follow work in a coding agent dashboard, and add previews to that
+can browse an icon set, follow work in a coding agent dashboard, and add previews to that
 dashboard. These use local demo data. They do not call an agent or install extensions.
 
-Features pairs the font editor and coding agent dashboard with their building blocks.
-The font editor supports glyph selection, font weight changes, and a glyph set view.
+Features pairs the icon set editor and coding agent dashboard with their building blocks.
+The icon set editor uses the existing Prompt Studio icons. Visitors can search by
+name or codepoint, select an icon, and rename it in local demo state. Its grid and
+inspector follow the repository's icon editor.
 The dashboard supports agent selection, pause and resume, and approving a result.
 Each building block keeps the same shape across the page and the falling tools.
 Selecting a block opens an example that uses it. Search, notifications, navigation,

@@ -1,85 +1,95 @@
-import { Box, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Box, HStack, Input, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { Slider } from "@/components/primitives/slider";
+import { createGlyphIcon } from "@/components/primitives/glyph-icon";
+
+const icons = [
+  "cloud-add",
+  "history",
+  "folder",
+  "global",
+  "notification",
+  "grid-4",
+  "code",
+  "component",
+  "magicpen",
+].map((name) => ({ name, icon: createGlyphIcon(name) }));
 
 const VisualTool = () => {
   const styles = useSlotRecipe({ key: "landingToolDemo" })({});
   const story = useSlotRecipe({ key: "landingStory" })({});
-  const [glyph, setGlyph] = useState("A");
-  const [weight, setWeight] = useState(500);
+  const [selected, setSelected] = useState(icons[0]);
+  const [query, setQuery] = useState("");
   return (
     <Box css={story.page}>
-      <Box css={story.panels}>
+      <Box css={styles.iconEditor}>
         <Box css={story.panel}>
-          <Box css={story.panelHeader}>Glyph editor</Box>
+          <Box css={story.panelHeader}>Your icon set</Box>
           <Stack css={story.panelBody}>
-            <Box css={styles.glyphs}>
-              {["A", "B", "G", "R"].map((letter) => (
-                <Box
-                  as="button"
-                  key={letter}
-                  css={styles.glyph}
-                  aria-pressed={letter === glyph}
-                  onClick={() => setGlyph(letter)}
-                >
-                  {letter}
-                </Box>
-              ))}
-            </Box>
-            <Box css={styles.canvas}>
-              <Box asChild css={styles.art}>
-                <svg viewBox="0 0 320 280" data-weight={weight} role="img" aria-label={`Selected glyph ${glyph}`}>
-                  <text x="160" y="232" data-type="glyph" textAnchor="middle" fill="currentColor">
-                    {glyph}
-                  </text>
-                  <Box asChild css={styles.guide}>
-                    <path
-                      d="M24 57H296 M24 232H296 M64 32V256 M256 32V256"
-                      stroke="currentColor"
-                      fill="none"
-                      strokeDasharray="4 4"
-                    />
-                  </Box>
-                </svg>
-              </Box>
-            </Box>
-            <HStack css={styles.toolbar}>
-              <Text>Weight</Text>
-              <Text>{weight}</Text>
-            </HStack>
-            <Slider
-              aria-label={["Font weight"]}
-              min={400}
-              max={700}
-              step={100}
-              value={[weight]}
-              onValueChange={({ value }) => setWeight(value[0])}
+            <Input
+              placeholder="Search icons"
+              aria-label="Search icons"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
             />
+            <Box css={styles.iconGrid}>
+              {icons
+                .filter((item) => item.name.includes(query.toLowerCase()))
+                .map((item) => (
+                  <Box
+                    as="button"
+                    key={item.name}
+                    css={styles.iconTile}
+                    aria-pressed={item.name === selected.name}
+                    onClick={() => setSelected(item)}
+                  >
+                    <Box css={styles.tileSymbol}>
+                      <item.icon />
+                    </Box>
+                    <Text css={styles.iconName}>{item.name}</Text>
+                  </Box>
+                ))}
+            </Box>
           </Stack>
         </Box>
-        <Stack gap="sm">
-          <Box css={styles.metrics}>
-            {["Running", "To review", "Completed"].map((label, i) => (
-              <Box css={styles.metric} key={label}>
-                <Text textStyle="heading/M">{[2, 1, 16][i]}</Text>
-                <Text textStyle="label/S/regular">{label}</Text>
+        <Box css={story.panel}>
+          <Box css={story.panelHeader}>Icon inspector</Box>
+          <Stack css={story.panelBody}>
+            <Box css={styles.inspector}>
+              <Box css={styles.iconCanvas} role="img" aria-label={selected.name}>
+                <Box css={styles.inspectorSymbol}>
+                  <selected.icon />
+                </Box>
               </Box>
-            ))}
-          </Box>
-          {["in_progress", "awaiting_input", "completed"].map((status, index) => (
-            <Box as="button" css={styles.session} key={status} aria-pressed={index === 0}>
-              <Text textStyle="label/M/medium">
-                {["Build the font", "Polish the specimen", "Check glyph coverage"][index]}
-              </Text>
-              <Box css={styles.progress} aria-hidden="true">
-                {Array.from({ length: 16 }, (_, i) => (
-                  <Box key={i} css={styles.segment} data-filled={i < 12} data-status={status} />
-                ))}
-              </Box>
+              <Input value={selected.name} readOnly aria-label="Icon name" />
             </Box>
-          ))}
-        </Stack>
+          </Stack>
+        </Box>
+      </Box>
+      <Box css={styles.metrics}>
+        {["Running", "To review", "Completed"].map((label, i) => (
+          <Box css={styles.metric} key={label}>
+            <Text textStyle="heading/M">{[2, 1, 16][i]}</Text>
+            <Text textStyle="label/S/regular">{label}</Text>
+          </Box>
+        ))}
+      </Box>
+      <Box css={styles.sessions}>
+        {["in_progress", "awaiting_input", "completed"].map((status, index) => (
+          <Box css={styles.session} key={status}>
+            <HStack css={styles.toolbar}>
+              <Text textStyle="label/M/medium">
+                {["Add navigation icons", "Refine icon outlines", "Check the icon set"][index]}
+              </Text>
+              <Text textStyle="label/S/regular">{["Running", "To review", "Completed"][index]}</Text>
+            </HStack>
+            <Box css={styles.progress} aria-hidden="true">
+              {Array.from({ length: 16 }, (_, i) => (
+                <Box key={i} css={styles.segment} data-filled={i < 12} data-status={status} />
+              ))}
+            </Box>
+          </Box>
+        ))}
       </Box>
     </Box>
   );

@@ -5,7 +5,7 @@ import { useStoryStyles, useToolDemoStyles } from "../../hooks/use-landing-style
 import { BlockSymbol } from "../sections/building-blocks";
 import { AgentDashboardDemo } from "./agent-dashboard-demo";
 import { DemoWorkbench } from "./demo-workbench";
-import { FontEditorDemo } from "./font-editor-demo";
+import { IconSetEditorDemo } from "./icon-set-editor-demo";
 
 export const ConnectedToolsDemo = () => {
   const styles = useStoryStyles();
@@ -14,12 +14,12 @@ export const ConnectedToolsDemo = () => {
       <Box css={styles.flow} textStyle="label/S/regular">
         <HStack gap="xs">
           <BlockSymbol kind="editor" />
-          <Text>Edit font</Text>
+          <Text>Edit icons</Text>
         </HStack>
         <ArrowRight size={14} aria-hidden="true" />
         <HStack gap="xs">
           <BlockSymbol kind="command" />
-          <Text>Build font</Text>
+          <Text>Build icon set</Text>
         </HStack>
         <ArrowRight size={14} aria-hidden="true" />
         <HStack gap="xs">
@@ -56,7 +56,7 @@ export const ChangeToolDemo = () => {
 };
 
 export const WorkbenchOverviewDemo = () => (
-  <DemoWorkbench name="Font editor">
-    <FontEditorDemo />
+  <DemoWorkbench name="Icon set editor">
+    <IconSetEditorDemo />
   </DemoWorkbench>
 );

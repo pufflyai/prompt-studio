@@ -1,7 +1,6 @@
 import { ChakraProvider } from "@chakra-ui/react";
 import { getInitialThemePreference, psTheme, ThemePreferenceProvider } from "@pstdio/ui";
 import "@pstdio/ui/style.css";
-import "@fontsource/onest/600.css";
 import type { ReactNode } from "react";
 
 interface RootProviderProps {

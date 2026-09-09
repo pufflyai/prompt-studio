@@ -1,6 +1,9 @@
-import { Box, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Box, HStack, Icon, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
+import { createGlyphIcon } from "@/components/primitives/glyph-icon";
+
+const ExampleIcon = createGlyphIcon("cloud-add");
 
 const LandingStory = () => {
   const recipe = useSlotRecipe({ key: "landingStory" });
@@ -19,17 +22,17 @@ const LandingStory = () => {
         </Stack>
         <Box css={styles.visual}>
           <Box css={styles.visualHeader}>
-            <Text>Font editor</Text>
+            <Text>Icon set editor</Text>
             <Text>Interactive example</Text>
           </Box>
           <Box css={styles.panels}>
-            {["Type specimen", "Glyph editor"].map((title, index) => (
+            {["Your icon set", "Icon inspector"].map((title, index) => (
               <Box css={styles.panel} key={title} data-highlighted={selected === ["Pages", "Editors"][index]}>
                 <Box css={styles.panelHeader}>
                   <Text>{title}</Text>
                 </Box>
                 <Box css={styles.panelBody}>
-                  <Text textStyle="heading/display/L">Aa</Text>
+                  <Icon as={ExampleIcon} boxSize="16" />
                 </Box>
               </Box>
             ))}
