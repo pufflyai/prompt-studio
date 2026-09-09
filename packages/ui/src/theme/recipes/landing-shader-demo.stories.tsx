@@ -9,8 +9,8 @@ const icons = ["star", "cloud-add", "global", "grid-4", "code", "component"].map
   icon: createGlyphIcon(name),
 }));
 
-const ShaderDemo = (props: { withControls: boolean }) => {
-  const { withControls } = props;
+const ShaderDemo = (props: { withControls: boolean; connected: boolean }) => {
+  const { withControls, connected } = props;
   const styles = useSlotRecipe({ key: "landingToolDemo" })({});
   const story = useSlotRecipe({ key: "landingStory" })({});
   const [selected, setSelected] = useState(icons[0]);
@@ -18,34 +18,38 @@ const ShaderDemo = (props: { withControls: boolean }) => {
   const [speed, setSpeed] = useState(1.8);
   return (
     <Box css={story.page}>
-      <Box css={styles.prompt}>
-        <Text>Add sliders to adjust the scale and speed.</Text>
-        <Button variant="subtle" size="lg">
-          Try the change
-        </Button>
-      </Box>
-      <Box css={story.panel}>
-        <Box css={story.panelHeader}>Your icon set</Box>
-        <Box css={story.panelBody}>
-          <Box css={styles.iconPicker}>
-            {icons.map((item) => (
-              <Button
-                key={item.name}
-                size="2xl"
-                variant="ghost"
-                aria-label={`Use ${item.name}`}
-                aria-pressed={selected.name === item.name}
-                onClick={() => setSelected(item)}
-              >
-                <Box css={styles.tileSymbol}>
-                  <item.icon />
-                </Box>
-              </Button>
-            ))}
-          </Box>
-          <Text textStyle="label/S/regular">Icon set → {selected.name} → Shader preview</Text>
+      {!connected && (
+        <Box css={styles.prompt}>
+          <Text>Add sliders to adjust the scale and speed.</Text>
+          <Button variant="subtle" size="lg">
+            Try the change
+          </Button>
         </Box>
-      </Box>
+      )}
+      {connected && (
+        <Box css={story.panel}>
+          <Box css={story.panelHeader}>Your icon set</Box>
+          <Box css={story.panelBody}>
+            <Box css={styles.iconPicker}>
+              {icons.map((item) => (
+                <Button
+                  key={item.name}
+                  size="2xl"
+                  variant="ghost"
+                  aria-label={`Use ${item.name}`}
+                  aria-pressed={selected.name === item.name}
+                  onClick={() => setSelected(item)}
+                >
+                  <Box css={styles.tileSymbol}>
+                    <item.icon />
+                  </Box>
+                </Button>
+              ))}
+            </Box>
+            <Text textStyle="label/S/regular">Icon set → {selected.name} → Shader preview</Text>
+          </Box>
+        </Box>
+      )}
       <Box css={story.panels}>
         <Box css={story.panel}>
           <Box css={story.panelHeader}>icon-matrix.frag</Box>
@@ -93,7 +97,7 @@ const ShaderDemo = (props: { withControls: boolean }) => {
                   <Slider
                     aria-label={["Shader speed"]}
                     min={0}
-                    max={2}
+                    max={4}
                     step={0.1}
                     value={[speed]}
                     onValueChange={({ value }) => setSpeed(value[0])}
@@ -128,15 +132,15 @@ const ShaderDemo = (props: { withControls: boolean }) => {
 const meta = {
   title: "Theme/Landing Shader Demo",
   component: ShaderDemo,
-  args: { withControls: false },
+  args: { withControls: false, connected: true },
   parameters: { layout: "fullscreen" },
 } satisfies Meta<typeof ShaderDemo>;
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Editor: Story = {};
-export const WithControls: Story = { args: { withControls: true } };
+export const WithControls: Story = { args: { withControls: true, connected: false } };
 export const NarrowPanel: Story = {
-  args: { withControls: true },
+  args: { withControls: true, connected: false },
   decorators: [
     (Story) => (
       <Box width="80">

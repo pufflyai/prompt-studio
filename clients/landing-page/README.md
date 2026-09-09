@@ -35,10 +35,16 @@ control collapses or expands the window. Red and yellow enter window mode and ar
 disabled there. Drag the title bar to move the window. Mobile navigation opens a
 menu below the header; desktop navigation uses the sidebar. There are no breadcrumbs.
 
+Each page ends with a navigation link. The main pages follow the sidebar order and
+Features returns to Start Here. Privacy leads to Terms, and Terms returns to Start Here.
+These links use browser history without remounting the download panel.
+
 ## Product examples
 
 What is Prompt Studio lives at `/what-is-prompt-studio`. It starts with the building-block cards, then shows a clean editor,
-connected tools, and tools adapted by an agent. Each entry has a title and subtitle.
+connected tools, and tools adapted by an agent. Each entry has a title and subtitle,
+with extra space between entries. The Tweak demo focuses on the shader and its controls.
+The matrix speed control ranges from 0× to 4×.
 Visitors can browse an icon set, follow work in a coding agent dashboard, and add previews to that
 dashboard. These use local demo data. They do not call an agent or install extensions.
 
@@ -49,8 +55,8 @@ inspector follow the repository's icon editor.
 The dashboard supports agent selection, pause and resume, and approving a result.
 Each building block keeps the same shape across the page and the falling tools.
 The shapes above each example explain the blocks it uses. Search, notifications, navigation,
-extension management, and themes have a separate Features page. Space and a divider
-separate each feature's description and demo from the next feature.
+extension management, and themes have a separate Features page. Space separates
+each feature's description and demo from the next feature.
 Use "workbench" for the overall home for tools. A workspace is a separate product concept.
 
 The page layout and preview styles use the shared `landingStory` and `landingToolDemo`

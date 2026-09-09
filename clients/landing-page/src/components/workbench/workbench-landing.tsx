@@ -12,6 +12,7 @@ import { StartHereView } from "../sections/start-here-view";
 import { WhatIsPromptStudioView } from "../sections/what-is-prompt-studio-view";
 import { CommandPaletteModal } from "./command-palette-modal";
 import { LandingPanels } from "./landing-panels";
+import { NextPageLink } from "./next-page-link";
 import { ProjectTabsBar } from "./project-tabs-bar";
 import { ResourceSidebar } from "./resource-sidebar";
 import { WorkbenchNav } from "./workbench-nav";
@@ -21,16 +22,18 @@ const LEGAL_PAGES = { privacy: privacyPage, terms: termsPage };
 
 interface LandingContentProps {
   view: LandingView;
+  onNavigate: (view: LandingView) => void;
   windowOffset?: { x: number; y: number };
 }
 
 const LandingContent = (props: LandingContentProps) => {
-  const { view, windowOffset } = props;
-  if (view === "start") return <StartHereView windowOffset={windowOffset} />;
-  let page = <FeaturesView />;
-  if (view === "examples") page = <ExamplesView />;
-  if (view === "what-is-prompt-studio") page = <WhatIsPromptStudioView />;
-  if (view === "privacy" || view === "terms") page = <DocView page={LEGAL_PAGES[view]} />;
+  const { view, windowOffset, onNavigate } = props;
+  const footer = <NextPageLink view={view} onNavigate={onNavigate} />;
+  if (view === "start") return <StartHereView windowOffset={windowOffset} footer={footer} />;
+  let page = <FeaturesView footer={footer} />;
+  if (view === "examples") page = <ExamplesView footer={footer} />;
+  if (view === "what-is-prompt-studio") page = <WhatIsPromptStudioView footer={footer} />;
+  if (view === "privacy" || view === "terms") page = <DocView page={LEGAL_PAGES[view]} footer={footer} />;
   return (
     <Box layerStyle="panel" bg="bg" width="full" minWidth="0" height="full" overflow="hidden">
       {page}
@@ -53,7 +56,7 @@ export const WorkbenchLanding = (props: WorkbenchLandingProps) => {
       <WorkbenchNav activeView={view} onOpenNavigation={() => setPaletteOpen(true)} />
       <Box as="main" css={styles.main}>
         <LandingPanels>
-          <LandingContent view={view} windowOffset={windowed ? offset : undefined} />
+          <LandingContent view={view} onNavigate={navigate} windowOffset={windowed ? offset : undefined} />
         </LandingPanels>
       </Box>
     </Flex>

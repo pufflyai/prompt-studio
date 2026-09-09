@@ -1,11 +1,12 @@
-import { Box, Icon, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Box, Icon, Link, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
+import { ArrowRight } from "lucide-react";
 import { createGlyphIcon } from "@/components/primitives/glyph-icon";
 
 const ExampleIcon = createGlyphIcon("cloud-add");
 
 const LandingStory = () => {
-  const styles = useSlotRecipe({ key: "landingStory" })({});
+  const styles = useSlotRecipe({ key: "landingStory" })({ spacing: "spacious" });
   return (
     <Box css={styles.page}>
       <Box css={styles.section}>
@@ -58,6 +59,12 @@ const LandingStory = () => {
             ))}
           </Box>
         </Box>
+      </Box>
+      <Box css={styles.pageNavigation} as="nav" aria-label="Continue exploring">
+        <Link href="/examples" variant="underline" color="fg" textStyle="label/M/medium">
+          <Text>Next: Examples</Text>
+          <Icon as={ArrowRight} boxSize="icon-sm" />
+        </Link>
       </Box>
     </Box>
   );

@@ -8,7 +8,7 @@ import { useShaderPreview } from "../../hooks/use-shader-preview";
 import { DemoPanel } from "./demo-workbench";
 
 interface ShaderEditorDemoProps {
-  shader: { filename: string; source: string; scale: number; speed: number };
+  shader: { filename: string; source: string; scale: number; speed: number; maxSpeed: number };
   iconCodepoint?: string;
   withControls: boolean;
   highlighted?: ToolShapeKind;
@@ -80,7 +80,7 @@ export const ShaderEditorDemo = (props: ShaderEditorDemoProps) => {
               <Slider
                 aria-label={["Shader speed"]}
                 min={0}
-                max={2}
+                max={shader.maxSpeed}
                 step={0.1}
                 value={[speed]}
                 onValueChange={({ value }) => setSpeed(value[0])}

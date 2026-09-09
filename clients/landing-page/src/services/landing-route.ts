@@ -1,4 +1,4 @@
-import type { LandingView } from "../content/landing-content";
+import { type LandingView, SIDEBAR_VIEWS } from "../content/landing-content";
 
 const LANDING_VIEW_PATHS: Record<LandingView, string> = {
   start: "/",
@@ -10,6 +10,12 @@ const LANDING_VIEW_PATHS: Record<LandingView, string> = {
 };
 
 export const landingPathForView = (view: LandingView) => LANDING_VIEW_PATHS[view];
+
+export const nextLandingView = (view: LandingView) => {
+  if (view === "privacy") return "terms";
+  if (view === "terms") return "start";
+  return SIDEBAR_VIEWS[(SIDEBAR_VIEWS.indexOf(view) + 1) % SIDEBAR_VIEWS.length];
+};
 
 const normalizePath = (path: string) => {
   const pathname = path.split(/[?#]/)[0];

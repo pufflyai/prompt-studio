@@ -36,5 +36,17 @@ export const MATRIX_SHADER_SOURCE = `vec3 shade(vec2 uv) {
     + ink * icon * (0.035 + trail);
 }`;
 
-export const AURORA_SHADER = { filename: "aurora.frag", source: DEFAULT_SHADER_SOURCE, scale: 8, speed: 0.6 };
-export const MATRIX_SHADER = { filename: "icon-matrix.frag", source: MATRIX_SHADER_SOURCE, scale: 16, speed: 1.8 };
+export const AURORA_SHADER = {
+  filename: "aurora.frag",
+  source: DEFAULT_SHADER_SOURCE,
+  scale: 8,
+  speed: 0.6,
+  maxSpeed: 2,
+};
+export const MATRIX_SHADER = {
+  filename: "icon-matrix.frag",
+  source: MATRIX_SHADER_SOURCE,
+  scale: 16,
+  speed: 1.8,
+  maxSpeed: 4,
+};

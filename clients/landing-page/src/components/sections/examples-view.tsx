@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { blockFor } from "../../content/building-block-content";
 import { TOOL_EXAMPLES } from "../../content/tool-examples-content";
 import type { ToolShapeKind } from "../../content/tool-shapes";
@@ -9,7 +9,8 @@ import { ToolDemo } from "../examples/tool-demo";
 import { PageScroll } from "../workbench/page-scroll";
 import { BlockChip } from "./building-blocks";
 
-export const ExamplesView = () => {
+export const ExamplesView = (props: { footer: ReactNode }) => {
+  const { footer } = props;
   const [exampleId, setExampleId] = useState(TOOL_EXAMPLES[0].id);
   const [selectedBlock, setSelectedBlock] = useState<ToolShapeKind>("page");
   const example = TOOL_EXAMPLES.find((item) => item.id === exampleId)!;
@@ -68,6 +69,7 @@ export const ExamplesView = () => {
             <ToolDemo key={example.id} example={example.id} highlighted={selectedBlock} />
           </DemoWorkbench>
         </Box>
+        {footer}
       </Box>
     </PageScroll>
   );

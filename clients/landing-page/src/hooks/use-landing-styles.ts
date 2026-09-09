@@ -5,5 +5,6 @@ export const useLandingStyles = (windowed = false) => {
   return recipe({ windowed });
 };
 
-export const useStoryStyles = () => useSlotRecipe({ key: "landingStory" })({});
+export const useStoryStyles = (spacing: "normal" | "spacious" = "normal") =>
+  useSlotRecipe({ key: "landingStory" })({ spacing });
 export const useToolDemoStyles = () => useSlotRecipe({ key: "landingToolDemo" })({});

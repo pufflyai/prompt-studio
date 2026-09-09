@@ -16,6 +16,7 @@ export const landingStorySlotRecipe = defineSlotRecipe({
     "blockSymbol",
     "blockMark",
     "composition",
+    "pageNavigation",
   ],
   base: {
     page: {
@@ -35,8 +36,6 @@ export const landingStorySlotRecipe = defineSlotRecipe({
       gap: "xl",
       width: "full",
       minWidth: 0,
-      borderTopWidth: "1px",
-      borderColor: "border",
       pt: "4xl",
       pb: "xl",
     },
@@ -97,5 +96,13 @@ export const landingStorySlotRecipe = defineSlotRecipe({
       borderColor: "border.subtle",
       pt: "lg",
     },
+    pageNavigation: { display: "flex", justifyContent: "flex-end", width: "full", flexShrink: 0, py: "md" },
   },
+  variants: {
+    spacing: {
+      normal: {},
+      spacious: { page: { gap: "5xl" } },
+    },
+  },
+  defaultVariants: { spacing: "normal" },
 });
