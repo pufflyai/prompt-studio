@@ -276,7 +276,8 @@ export const ExtensionFrame = (props: ExtensionFrameProps) => {
         </div>
       ) : null}
       <iframe
-        key={frameEpoch}
+        // A new runtime or module needs its own browsing context and bridge handshake.
+        key={`${frameEpoch}\n${view.webview.runtimeUrl}\n${view.webview.moduleUrl}`}
         ref={iframeRef}
         title={title ?? view.label}
         allow="fullscreen"

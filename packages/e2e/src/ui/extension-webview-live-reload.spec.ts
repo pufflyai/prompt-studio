@@ -187,33 +187,36 @@ test.describe("Extension webview live reload", () => {
       expect(metadataResponse.ok()).toBe(true);
       const metadata = (await metadataResponse.json()) as WorkbenchExtensionMetadata;
       expectWebview(metadata, "lab-page");
-      const initialModuleUrl = await getWebviewModuleUrl(request, project.id, "lab-page");
+      let previousModuleUrl = await getWebviewModuleUrl(request, project.id, "lab-page");
       await bypassOnboarding(page, project.id);
 
       await page.goto(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);
       const frame = page.frameLocator('iframe[title="Lab"]');
       await expect(frame.getByRole("heading", { name: "Sandbox webview" })).toBeVisible();
 
-      const nextHeading = `Sandbox webview ${Date.now()}`;
       const viewFile = join(extensionRoot, "src/views/lab-page.tsx");
       const current = readFileSync(viewFile, "utf8");
-      writeFileSync(
-        viewFile,
-        current.replace('t("webview.labPage.heading", "Sandbox webview")', JSON.stringify(nextHeading)),
-      );
+      for (let revision = 1; revision <= 2; revision += 1) {
+        const nextHeading = `Sandbox webview revision ${revision}`;
+        writeFileSync(
+          viewFile,
+          current.replace('t("webview.labPage.heading", "Sandbox webview")', JSON.stringify(nextHeading)),
+        );
 
-      const startedAt = Date.now();
-      await expect.poll(() => getWebviewModuleUrl(request, project.id, "lab-page")).not.toBe(initialModuleUrl);
-      await expect.poll(() => getActivePageId(page)).toBe("pstdio.workbench-fixture.page.lab");
-      await expect(frame.getByRole("heading", { name: nextHeading })).toBeVisible({ timeout: 5_000 });
-      const elapsedMs = Date.now() - startedAt;
+        const startedAt = Date.now();
+        await expect.poll(() => getWebviewModuleUrl(request, project.id, "lab-page")).not.toBe(previousModuleUrl);
+        await expect.poll(() => getActivePageId(page)).toBe("pstdio.workbench-fixture.page.lab");
+        await expect(frame.getByRole("heading", { name: nextHeading })).toBeVisible({ timeout: 5_000 });
+        const elapsedMs = Date.now() - startedAt;
 
-      await testInfo.attach("webview-live-reload-elapsed-ms", {
-        body: String(elapsedMs),
-        contentType: "text/plain",
-      });
-      console.info(`webview live reload elapsed: ${elapsedMs}ms`);
-      expect(elapsedMs).toBeLessThan(5_000);
+        await testInfo.attach(`webview-live-reload-${revision}-elapsed-ms`, {
+          body: String(elapsedMs),
+          contentType: "text/plain",
+        });
+        console.info(`webview live reload elapsed: ${elapsedMs}ms`);
+        expect(elapsedMs).toBeLessThan(5_000);
+        previousModuleUrl = await getWebviewModuleUrl(request, project.id, "lab-page");
+      }
     } finally {
       await uninstall?.();
       rmSync(extensionRoot, { recursive: true, force: true });
