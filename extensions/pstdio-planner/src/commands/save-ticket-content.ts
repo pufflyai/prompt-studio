@@ -16,7 +16,9 @@ export const saveTicketContent = async (
   if (!existing) return null;
 
   const documentId = selectedDocumentFromResource(input.resource);
-  if (documentId !== TICKET_BODY_DOCUMENT && existing.files?.some((file) => file.id === documentId)) {
+  if (documentId !== TICKET_BODY_DOCUMENT) {
+    // A save for a document that no longer exists must not overwrite the ticket body.
+    if (!existing.files?.some((file) => file.id === documentId)) return null;
     const ticket = await updateTicketFile({
       storage: ctx.storage,
       ticketId: existing.id,

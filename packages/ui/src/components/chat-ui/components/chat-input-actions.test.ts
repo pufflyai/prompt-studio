@@ -7,6 +7,7 @@ describe("chat input actions", () => {
       resolveChatInputKeyboardAction({
         canInterrupt: true,
         hasQuestionPrompt: false,
+        canSubmit: true,
         isDisabled: false,
         streaming: true,
         text: "stop",
@@ -19,6 +20,7 @@ describe("chat input actions", () => {
       resolveChatInputButtonAction({
         canInterrupt: true,
         hasQuestionPrompt: false,
+        canSubmit: true,
         isDisabled: false,
         streaming: true,
         text: "stop",
@@ -30,6 +32,7 @@ describe("chat input actions", () => {
     const input = {
       canInterrupt: false,
       hasQuestionPrompt: true,
+      canSubmit: true,
       isDisabled: false,
       streaming: true,
       text: "Which project?: Prompt Studio",
@@ -43,6 +46,7 @@ describe("chat input actions", () => {
     const input = {
       canInterrupt: false,
       hasQuestionPrompt: false,
+      canSubmit: true,
       isDisabled: false,
       streaming: false,
       text: "hello",
@@ -50,5 +54,20 @@ describe("chat input actions", () => {
 
     expect(resolveChatInputKeyboardAction(input)).toBe("submit");
     expect(resolveChatInputButtonAction(input)).toBe("submit");
+  });
+
+  it("blocks submission but keeps interrupt when the runtime cannot accept a message", () => {
+    const blocked = {
+      canInterrupt: true,
+      canSubmit: false,
+      hasQuestionPrompt: false,
+      isDisabled: false,
+      streaming: false,
+      text: "hello",
+    };
+
+    expect(resolveChatInputKeyboardAction(blocked)).toBe("none");
+    expect(resolveChatInputButtonAction(blocked)).toBe("none");
+    expect(resolveChatInputButtonAction({ ...blocked, streaming: true })).toBe("interrupt");
   });
 });

@@ -5,6 +5,7 @@ import {
   type ChatInputQuestionPrompt,
   getQuestionPromptSignature,
   hasMissingRequiredQuestionAnswer,
+  toggleQuestionOptionSelection,
 } from "./chat-input-question-prompt";
 
 describe("chat input question helpers", () => {
@@ -229,5 +230,22 @@ describe("chat input question helpers", () => {
     };
 
     expect(getQuestionPromptSignature(promptA)).not.toBe(getQuestionPromptSignature(promptB));
+  });
+
+  it("swaps single-choice answers and toggles multiple-choice options", () => {
+    const single = { header: "Scope", question: "Which scope?", options: [] };
+    const multiple = { ...single, question: "Which files?", multiple: true };
+    const singleKey = Object.keys(toggleQuestionOptionSelection({}, single, 0, "All"))[0]!;
+    const multipleKey = Object.keys(toggleQuestionOptionSelection({}, multiple, 1, "a.ts"))[0]!;
+
+    expect(toggleQuestionOptionSelection({ [singleKey]: ["All"] }, single, 0, "Some")[singleKey]).toEqual(["Some"]);
+    expect(toggleQuestionOptionSelection({ [singleKey]: ["All"] }, single, 0, "All")[singleKey]).toEqual([]);
+    expect(toggleQuestionOptionSelection({ [multipleKey]: ["a.ts"] }, multiple, 1, "b.ts")[multipleKey]).toEqual([
+      "a.ts",
+      "b.ts",
+    ]);
+    expect(
+      toggleQuestionOptionSelection({ [multipleKey]: ["a.ts", "b.ts"] }, multiple, 1, "a.ts")[multipleKey],
+    ).toEqual(["b.ts"]);
   });
 });

@@ -12,6 +12,7 @@ import { dashboardResourceParent } from "@/shared/workbench/resource-hierarchy";
 import { dataTableViewBody, treeViewSections } from "@/shared/workbench/workbench-view-test-helpers";
 import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "./module";
+import { workspaceFileResource } from "./workspace-file-resource";
 
 const registerTicketHierarchy = (workbench: ReturnType<typeof createWorkbench>) => {
   workbench.resources.registerKind({
@@ -429,5 +430,27 @@ describe("createWorkspacesModule breadcrumbs", () => {
       .find((entry) => entry.resource.type === "workspace")?.resource;
     openWorkspacesPage(workbench, workspace!);
     expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual(["Workspaces", "PS-307_A1"]);
+  });
+  test("keeps the ticket ancestry when opening a file inside a ticket-linked workspace", async () => {
+    const workbench = createWorkbench();
+    const workspace = createDashboardResource("workspace", "workspace-direct", "PS-307_A1", "GitBranch", "project-1", {
+      workspaceId: "workspace-direct",
+      workspaceShorthand: "PS-307_A1",
+    });
+    workbench.registerModule(createWorkspacesModule());
+    registerTicketHierarchy(workbench);
+    selectDashboardProject(workbench, { id: "project-1", name: "Prompt Studio" });
+    openWorkspacesPage(workbench, workspace, {
+      kind: "page",
+      page: { extensionId: "pstdio.pstdio-planner", kind: "page", id: "ticket" },
+      resource: { type: "ticket", id: "ticket-1", label: "PS-307 Dashboard workbench datalayer" },
+    });
+    openWorkspacesPage(workbench, workspaceFileResource(workspace, "README.md"));
+    expect(workbench.breadcrumbs.getItems()?.map((item) => item.title)).toEqual([
+      "Tickets",
+      "PS-307 Dashboard workbench datalayer",
+      "PS-307_A1",
+    ]);
+    expect(workbench.pages.store.getState().location?.resource?.metadata?.workspaceFilePath).toBe("README.md");
   });
 });

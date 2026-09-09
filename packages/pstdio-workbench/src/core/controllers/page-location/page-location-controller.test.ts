@@ -264,3 +264,49 @@ describe("page location project and owner lifecycle", () => {
     });
   });
 });
+
+describe("page location ancestry on re-targeting", () => {
+  const openWorkspaceUnderTicket = (harness: ReturnType<typeof createHarness>) => {
+    harness.controller.boot("p1");
+    harness.controller.navigate(ticketTarget());
+    harness.controller.navigate({
+      kind: "page",
+      page: workspaceRef,
+      resource: { type: "workspace", id: "ws-4" },
+      parent: ticketTarget(),
+    });
+  };
+  const ticketAncestry = {
+    page: ticketRef,
+    resource: { type: "ticket", id: "PS-326" },
+    parent: { page: ticketsRef, parent: { page: startRef } },
+  };
+
+  test("keeps the active ancestry when the active page re-targets its own resource", () => {
+    const harness = createHarness();
+    openWorkspaceUnderTicket(harness);
+    const pushesBefore = harness.browser.pushes.length;
+    harness.controller.navigate({
+      kind: "page",
+      page: workspaceRef,
+      resource: { type: "workspace", id: "ws-4", metadata: { filePath: "README.md" } },
+    });
+    expect(harness.registry.store.getState().location).toEqual({
+      page: workspaceRef,
+      resource: { type: "workspace", id: "WS-4", metadata: { filePath: "README.md" } },
+      parent: ticketAncestry,
+    });
+    expect(harness.browser.pushes).toHaveLength(pushesBefore);
+  });
+
+  test("falls back to the declared parent when navigating to another resource without context", () => {
+    const harness = createHarness();
+    openWorkspaceUnderTicket(harness);
+    harness.controller.navigate({ kind: "page", page: workspaceRef, resource: { type: "workspace", id: "ws-5" } });
+    expect(harness.registry.store.getState().location).toEqual({
+      page: workspaceRef,
+      resource: { type: "workspace", id: "WS-5" },
+      parent: { page: startRef },
+    });
+  });
+});

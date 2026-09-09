@@ -38,6 +38,7 @@ interface ChatPanelComposerProps {
   chatInputReferences: ReferenceItem[];
   hasWorkspaceHub: boolean;
   inputDisabled: boolean;
+  submitDisabled: boolean;
   onAttachFiles?: (files: File[]) => void;
   onAttachText?: (text: string) => void;
   onChatInputAddReference?: (resourceId: string, resourceType: ReferenceItem["resourceType"]) => void;
@@ -80,6 +81,8 @@ export interface ChatPanelProps {
   workspaceHub?: ReactNode;
   workspaceInitializing?: boolean;
   inputDisabled?: boolean;
+  /** Blocks sending while the editor stays usable, for example while no model is selected. */
+  submitDisabled?: boolean;
   chatInputQuestionPrompt?: ChatInputQuestionPrompt;
   chatInputAutoFocus?: boolean;
   queuedFollowUps?: QueuedFollowUp[];
@@ -140,6 +143,7 @@ const ChatPanelComposer = (props: ChatPanelComposerProps) => {
     chatInputReferences,
     hasWorkspaceHub,
     inputDisabled,
+    submitDisabled,
     onAttachFiles,
     onAttachText,
     onChatInputAddReference,
@@ -189,6 +193,7 @@ const ChatPanelComposer = (props: ChatPanelComposerProps) => {
           onClearAttachments={onClearAttachments}
           attachmentList={attachmentList}
           isDisabled={inputDisabled}
+          submitDisabled={submitDisabled}
           attachedToTop={hasQueuedFollowUps}
           recessed={hasWorkspaceHub}
           questionPrompt={chatInputQuestionPrompt}
@@ -228,6 +233,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
     workspaceHub,
     workspaceInitializing = false,
     inputDisabled = false,
+    submitDisabled = false,
     chatInputQuestionPrompt,
     chatInputAutoFocus = false,
     queuedFollowUps = [],
@@ -315,6 +321,7 @@ export const ChatPanel = (props: ChatPanelProps) => {
         chatInputReferences={chatInputReferences}
         hasWorkspaceHub={hasWorkspaceHub}
         inputDisabled={inputDisabled}
+        submitDisabled={submitDisabled}
         onAttachFiles={onAttachFiles}
         onAttachText={onAttachText}
         onChatInputAddReference={onChatInputAddReference}

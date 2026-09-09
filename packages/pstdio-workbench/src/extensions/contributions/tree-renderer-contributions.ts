@@ -10,7 +10,7 @@ import type {
   TreeViewSection,
   WorkbenchModuleContext,
 } from "../../core";
-import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
+import { isExtensionNavigationTarget, toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 import { localizeParamSchema } from "./param-schema-localization";
 import { createQueryParams, executeCallback, executeTreeActionCommand } from "./tree-renderer-callbacks";
@@ -67,7 +67,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
   };
   const mapTarget = (
     target: ExtensionTreeTarget | undefined,
-    node: ExtensionTreeNode,
+    node: ExtensionTreeNode | undefined,
     ctx: TreeContext,
   ): NavigationTarget | undefined => {
     if (!target) return undefined;
@@ -83,9 +83,9 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       commandId: runnerCommandId,
       args: {
         commandId: `${commandTarget.target.command.extensionId ?? record.extensionId}.command.${commandTarget.target.command.id}`,
-        nodeId: node.id,
+        ...(node ? { nodeId: node.id } : {}),
         params: commandTarget.target.params,
-        resource: node.resource ?? ctx.resource,
+        resource: node?.resource ?? ctx.resource,
         treeId: record.id,
       } satisfies TargetCommandArgs,
     });
@@ -115,7 +115,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       // node-target navigation runs through the runner command and must not refetch.
       run: commandId
         ? async (params) => {
-            await executeTreeActionCommand(
+            const result = await executeTreeActionCommand(
               input,
               record,
               commandId,
@@ -123,6 +123,9 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
               node?.resource ?? ctx.resource,
             );
             ctx.refresh();
+            // A mutation may move the selection, for example when it deletes the open document.
+            const target = isExtensionNavigationTarget(result) ? mapTarget(result, node, ctx) : undefined;
+            if (target) await input.workbench.navigation.openTarget(target);
           }
         : undefined,
     };

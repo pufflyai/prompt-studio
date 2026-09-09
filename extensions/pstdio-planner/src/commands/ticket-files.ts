@@ -158,10 +158,16 @@ export const deleteTicketFileCommand = defineCommand({
     fileId: params.text({ required: true }),
   },
   async run(ctx, commandParams) {
-    await deleteTicketFile({ storage: ctx.storage, ticketId: commandParams.ticketId, fileId: commandParams.fileId });
-    await ctx.events.emit(plannerTicketsChanged, { ticketId: commandParams.ticketId });
-    // ticketId travels with the result so the editor can filter the broadcast.
-    return { ticketId: commandParams.ticketId, fileId: commandParams.fileId };
+    const { ticketId, fileId } = commandParams;
+    await deleteTicketFile({ storage: ctx.storage, ticketId, fileId });
+    await ctx.events.emit(plannerTicketsChanged, { ticketId });
+    if (selectedDocumentFromResource(ctx.resource) !== fileId) return { ticketId, fileId };
+
+    // The open document is gone, so the page moves back to the ticket body.
+    const tickets = await ticketsCollection(ctx.storage).list();
+    const ticket = tickets.find((entry) => entry.id === ticketId);
+    if (!ticket) return { ticketId, fileId };
+    return ticketPageTarget(ticketResourceReference(ticket, createTicketParentLookup(tickets)));
   },
 });
 

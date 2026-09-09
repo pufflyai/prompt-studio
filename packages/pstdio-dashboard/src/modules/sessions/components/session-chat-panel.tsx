@@ -5,6 +5,7 @@ import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useWorkbenchStore } from "@pstdio/workbench/react";
 import { ArrowUpRight } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { useAgents } from "@/shared/agents/use-agents";
 import { dashboardSelectedProjectIdContextKey, getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import { readRecentHarnessSelection } from "@/shared/command-params/recent-harness-param";
@@ -35,7 +36,7 @@ import {
   useUpdateQueuedFollowUp,
 } from "../hooks/use-queued-follow-up-actions";
 import { useStopSession } from "../hooks/use-stop-session";
-import { resolveSessionSelectionSync } from "../runtime/session-runtime-selection";
+import { canSubmitSessionMessage, resolveSessionSelectionSync } from "../runtime/session-runtime-selection";
 import type { HarnessParamValues } from "./harness-param-values";
 import { SessionAttachmentControls } from "./session-attachment-controls";
 import { SessionAttachmentList } from "./session-attachment-list";
@@ -113,6 +114,12 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState(view.workspaceId ?? "");
   const [harnessParamOverrides, setHarnessParamOverrides] = useState<HarnessParamValues>({});
   const draftAttachments = useSessionDraftAttachments(projectId);
+  const { data: agents = [] } = useAgents(projectId);
+  const canSubmit = canSubmitSessionMessage({
+    agentOptions: agents.map((agent) => ({ value: agent.id, disabled: agent.availability.type === "NOT_FOUND" })),
+    selectedAgent,
+    selectedModel,
+  });
   const chatDraft = useSessionChatDraft(drafts, view.draftKey);
   const [pendingFollowUp, setPendingFollowUp] = useState<PendingFollowUpState | null>(null);
   const pendingIdRef = useRef(0);
@@ -243,6 +250,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           onAttachFiles={projectId ? (files) => void draftAttachments.uploadFiles(files) : undefined}
           onAttachText={projectId ? (text) => void draftAttachments.uploadText(text) : undefined}
           inputDisabled={draftAttachments.uploading}
+          submitDisabled={!canSubmit}
           workspaceHub={
             <ChatWorkspaceHub
               workspaceControl={

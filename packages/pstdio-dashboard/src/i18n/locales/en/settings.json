@@ -530,7 +530,8 @@
     "descriptionGlobal": "Configure coding Harnesses available to every project.",
     "descriptionProject": "Configure coding Harnesses available to this project and select the default model.",
     "defaultModelTitle": "Default model",
-    "defaultModelDescription": "Used when new sessions start without an explicit Harness or model."
+    "defaultModelDescription": "Used when new sessions start without an explicit Harness or model. Its run options below apply to every session of this Harness.",
+    "runDefaultsSaveError": "Failed to save run defaults"
   },
   "agentRow": {
     "installed": "Installed",

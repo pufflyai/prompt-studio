@@ -124,6 +124,50 @@ describe("ticket files tree commands", () => {
     });
   });
 
+  test("deleting the open file re-targets the page to the ticket body", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+    const file = await createTicketFileCommand.run(
+      ...makeCommandArgs({ storage, params: { ticketId: ticket.id, name: "notes.md" } }),
+    );
+    const openFile = { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { documentId: file.id } };
+
+    const result = await deleteTicketFileCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: { ticketId: ticket.id, fileId: file.id },
+        overrides: { resource: openFile },
+      }),
+    );
+
+    const bodyTarget = ticketDocumentTarget(ticket, "unused");
+    delete (bodyTarget.resource.metadata as { documentId?: string }).documentId;
+    expect(result).toEqual(bodyTarget);
+    expect((await ticketsCollection(storage).get(ticket.id))?.files).toEqual([]);
+  });
+
+  test("deleting another file keeps the open document", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+    const open = await createTicketFileCommand.run(
+      ...makeCommandArgs({ storage, params: { ticketId: ticket.id, name: "open.md" } }),
+    );
+    const other = await createTicketFileCommand.run(
+      ...makeCommandArgs({ storage, params: { ticketId: ticket.id, name: "other.md" } }),
+    );
+
+    const result = await deleteTicketFileCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: { ticketId: ticket.id, fileId: other.id },
+        overrides: { resource: { type: "ticket", id: ticket.id, metadata: { documentId: open.id } } },
+      }),
+    );
+
+    expect(result).toEqual({ ticketId: ticket.id, fileId: other.id });
+    expect((await ticketsCollection(storage).get(ticket.id))?.files?.map((entry) => entry.id)).toEqual([open.id]);
+  });
+
   test("marks the selected document so the host highlights it", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));

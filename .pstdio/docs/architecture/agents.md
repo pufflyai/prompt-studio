@@ -81,9 +81,11 @@ HarnessStartInput.params / HarnessResumeInput.params
 ```
 
 Project-scoped defaults are stored in the existing extension settings value
-store under a host-owned owner key for `(project, harness)`. Run overrides are
-kept transient in the dashboard and submitted with the start or follow-up
-request. Queued requests persist the effective params with their queue entry so
+store under a host-owned owner key for `(project, harness)`. The dashboard edits
+them in the Runtime settings `Default model` card: the harness and model picker,
+with the run options of that harness beneath it, resolved for the selected model
+and saved on change. Run overrides are kept transient in the dashboard and
+submitted with the start or follow-up request. Queued requests persist the effective params with their queue entry so
 dispatch receives the same values the user submitted.
 
 Validation happens twice:

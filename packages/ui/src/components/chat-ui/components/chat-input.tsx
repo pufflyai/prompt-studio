@@ -19,6 +19,7 @@ import {
   getQuestionSelectionKey,
   hasMissingRequiredQuestionAnswer,
   QuestionPromptControls,
+  toggleQuestionOptionSelection,
 } from "./chat-input-question-prompt";
 import { COMPOSER_CONTROL_HEIGHT } from "./composer-constants";
 import { SendButton } from "./send-button";
@@ -35,6 +36,8 @@ export interface ChatInputProps {
   attachedResources?: string[];
   onClearAttachments?: () => void;
   isDisabled?: boolean;
+  /** Keeps the editor usable but blocks sending, for example while no model is selected. */
+  submitDisabled?: boolean;
   onChange?: (text: string) => void;
   attachmentList?: ReactNode;
   actions?: ReactNode;
@@ -85,6 +88,7 @@ export const ChatInput = (props: ChatInputProps) => {
     attachedResources = [],
     onClearAttachments,
     isDisabled = false,
+    submitDisabled = false,
     onChange,
     placeholder,
     attachmentList,
@@ -176,6 +180,7 @@ export const ChatInput = (props: ChatInputProps) => {
   );
   const actionState = {
     canInterrupt: streaming && !questionPrompt && Boolean(onInterrupt),
+    canSubmit: !submitDisabled,
     hasQuestionPrompt: Boolean(questionPrompt),
     isDisabled: isDisabled || hasMissingRequiredSelection,
     streaming,
@@ -218,24 +223,9 @@ export const ChatInput = (props: ChatInputProps) => {
   });
 
   const toggleQuestionOption = (question: ChatInputQuestion, questionIndex: number, optionLabel: string) => {
-    const key = getQuestionSelectionKey(question, questionIndex);
-
-    setSelectedOptionsByQuestion((current) => {
-      const selected = current[key] ?? [];
-      const alreadySelected = selected.includes(optionLabel);
-
-      if (question.multiple) {
-        return {
-          ...current,
-          [key]: alreadySelected ? selected.filter((label) => label !== optionLabel) : [...selected, optionLabel],
-        };
-      }
-
-      return {
-        ...current,
-        [key]: alreadySelected ? [] : [optionLabel],
-      };
-    });
+    setSelectedOptionsByQuestion((current) =>
+      toggleQuestionOptionSelection(current, question, questionIndex, optionLabel),
+    );
   };
 
   const updateQuestionCustomAnswer = (question: ChatInputQuestion, questionIndex: number, answer: string) => {

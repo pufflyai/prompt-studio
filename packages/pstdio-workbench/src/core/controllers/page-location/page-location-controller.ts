@@ -239,6 +239,7 @@ export const createWorkbenchPageLocationController = <Value>(
         target,
         pages: pages(),
         resources: internals.resources,
+        active: input.registry.store.getState().location,
       }),
     normalizeStored,
     locationsEqual: (left, right) => workbenchPageLocationsEqual(left, right, internals.resources),
@@ -253,7 +254,13 @@ export const createWorkbenchPageLocationController = <Value>(
     },
   });
   setPageLocationPreparation<Value>(controller, {
-    resolve: (target) => normalizeWorkbenchPageTarget({ target, pages: pages(), resources: internals.resources }),
+    resolve: (target) =>
+      normalizeWorkbenchPageTarget({
+        target,
+        pages: pages(),
+        resources: internals.resources,
+        active: input.registry.store.getState().location,
+      }),
     commit: (state, beforePublish) => {
       if (!state.projectId || !state.location) throw new Error("Cannot navigate before a project is active");
       const history = workbenchPageLocationsEqual(

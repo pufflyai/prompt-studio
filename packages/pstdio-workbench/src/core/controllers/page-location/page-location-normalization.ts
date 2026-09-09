@@ -53,12 +53,16 @@ const canonicalPageRef = (page: WorkbenchPageContribution) =>
 
 const sectionKey = (section: FileRendererSectionTarget | undefined) => (section ? JSON.stringify(section) : "");
 
+const resourceKey = (location: PageLocation, resources: WorkbenchPageResourceCodec) =>
+  location.resource ? resources.toUri(resources.normalize(location.resource)) : "";
+
+// Same page and resource identity. The section is a position inside that resource.
+const sharesPageResource = (left: PageLocation, right: PageLocation, resources: WorkbenchPageResourceCodec) =>
+  workbenchPageRefKey(left.page) === workbenchPageRefKey(right.page) &&
+  resourceKey(left, resources) === resourceKey(right, resources);
+
 export const workbenchPageLocationRouteKey = (location: PageLocation, resources: WorkbenchPageResourceCodec) =>
-  [
-    workbenchPageRefKey(location.page),
-    location.resource ? resources.toUri(resources.normalize(location.resource)) : "",
-    sectionKey(location.section),
-  ].join("|");
+  [workbenchPageRefKey(location.page), resourceKey(location, resources), sectionKey(location.section)].join("|");
 
 export const workbenchPageLocationKey = (location: PageLocation, resources: WorkbenchPageResourceCodec): string => {
   const own = workbenchPageLocationRouteKey(location, resources);
@@ -134,11 +138,20 @@ const normalizeResolvedLocation = (input: {
   });
 };
 
+// A page that re-targets its own resource, such as selecting another file in the open
+// workspace, keeps its place in the hierarchy instead of falling back to its declared parent.
+const inheritedParent = (
+  candidate: PageLocation,
+  active: PageLocation | undefined,
+  resources: WorkbenchPageResourceCodec,
+) => (active?.parent && sharesPageResource(candidate, active, resources) ? active.parent : undefined);
+
 const normalizePageTarget = (input: {
   target: NavigationTargetPage;
   pages: readonly WorkbenchPageContribution[];
   resources: WorkbenchPageResourceCodec;
   seen: Set<string>;
+  active?: PageLocation;
 }): { pageId: string; location: PageLocation; open?: NavigationTargetPage["open"] } => {
   const page = pageForRef(input.pages, input.target.page);
   if (!page) throw new Error(`Unknown page: ${workbenchPageRefKey(input.target.page)}`);
@@ -154,7 +167,7 @@ const normalizePageTarget = (input: {
   const contextualParent = input.target.parent
     ? normalizePageTarget({ target: input.target.parent, pages: input.pages, resources: input.resources, seen })
         .location
-    : undefined;
+    : inheritedParent(candidate, input.active, input.resources);
   const location = normalizeResolvedLocation({
     page,
     pages: input.pages,
@@ -171,6 +184,7 @@ export const normalizeWorkbenchPageTarget = (input: {
   target: NavigationTargetPage;
   pages: readonly WorkbenchPageContribution[];
   resources: WorkbenchPageResourceCodec;
+  active?: PageLocation;
 }) => normalizePageTarget({ ...input, seen: new Set() });
 
 export const normalizeWorkbenchPageLocation = (input: {
