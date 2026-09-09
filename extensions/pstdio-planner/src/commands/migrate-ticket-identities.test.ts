@@ -110,3 +110,27 @@ test("interrupted file rewrite resumes with the original allocation and backup",
     "T-2",
   );
 });
+
+test("migration completes for a project that has no local ticket drafts", async () => {
+  const storage = createMemoryStorage();
+  const repoFiles = createMemoryRepoFiles();
+  const original = await putTicket(storage, {
+    id: "dashboard-ticket",
+    shorthand: "T-9",
+    title: "Created from the dashboard",
+    content: "# Created from the dashboard",
+    statusId: null,
+    archived: false,
+    sortOrder: 0,
+    createdAt: "2026-01-01",
+    updatedAt: "2026-01-01",
+  });
+  const context = makeCommandContext({ storage, params: {}, overrides: { repoFiles } });
+
+  expect(await migrateTicketIdentitiesCommand.run(context, {})).toMatchObject({ complete: true, migrated: 1 });
+  expect((await ticketsCollection(storage).get(original.id))?.shorthand).toBe("T-1");
+  expect(await repoFiles.readText(".pstdio/tickets/T-1/ticket.md")).toContain("# Created from the dashboard");
+  expect((await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "New" } }))).shorthand).toBe(
+    "T-2",
+  );
+});

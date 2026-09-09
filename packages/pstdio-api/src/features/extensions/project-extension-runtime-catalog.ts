@@ -12,7 +12,11 @@ import {
   type ProjectExtensionRuntimeSnapshot,
   type RuntimeInvalidationReason,
 } from "./project-extension-runtime-snapshot";
-import { canonicalSourcePath, createExtensionSourceCache } from "./project-extension-runtime-sources";
+import {
+  canonicalSourcePath,
+  createExtensionSourceCache,
+  type LoadableExtensionSource,
+} from "./project-extension-runtime-sources";
 
 type ProjectState = {
   /** Bumped on every invalidation; a load may publish only if it still matches. */
@@ -37,6 +41,8 @@ export type ProjectExtensionRuntimeCatalogObserver = {
 };
 
 export type ProjectExtensionRuntimeCatalog = ReturnType<typeof createProjectExtensionRuntimeCatalog>;
+
+type CandidateExtensionSource = LoadableExtensionSource & { extension_id: string };
 
 export const createProjectExtensionRuntimeCatalog = (deps: {
   extensionService: ReturnType<typeof createExtensionService>;
@@ -226,10 +232,9 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     return normalizeExtensionSources([cached.source], cached.diagnostics, { repoRoots: [] });
   };
 
-  const validateResourcePrefixes = async (
-    projectId: string,
-    installedSource: EnabledExtensionSource["installedSource"],
-  ) => {
+  // Runs before an enable is persisted, so the candidate is described by its manifest
+  // and source path rather than by a row.
+  const validateResourcePrefixes = async (projectId: string, installedSource: CandidateExtensionSource) => {
     const enabled = (await deps.extensionService.listEnabledSourcesForProject(projectId)).filter(
       (record) => record.installedSource.extension_id !== installedSource.extension_id,
     );

@@ -65,3 +65,24 @@ describe("resolveTicketId", () => {
     expect(await resolveTicketId(storage, "t1")).toBe("t1");
   });
 });
+
+describe("findTicket", () => {
+  test("resolves a shorthand that was stored with surrounding whitespace", async () => {
+    const storage = createMemoryStorage();
+    const tickets = ticketsCollection(storage);
+    await tickets.createIfAbsent("ticket-1", {
+      id: "ticket-1",
+      shorthand: " PS-1",
+      title: "Padded shorthand",
+      content: "",
+      statusId: null,
+      tagIds: [],
+      archived: false,
+      sortOrder: 0,
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-01T00:00:00.000Z",
+    } as never);
+
+    expect(await resolveTicketId(storage, "PS-1")).toBe("ticket-1");
+  });
+});

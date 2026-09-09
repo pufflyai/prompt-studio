@@ -32,10 +32,12 @@ export const createMemoryRepoFiles = (): ArtifactMount & { files: Map<string, Ui
         .map((path) => ({ path }));
     },
     listDirs: async () => [],
+    // The real mount resolves the path before removing it, so deleting something
+    // that is not there fails instead of passing silently.
     delete: async (path) => {
-      for (const file of [...files.keys()]) {
-        if (file === path || file.startsWith(`${path}/`)) files.delete(file);
-      }
+      const matches = [...files.keys()].filter((file) => file === path || file.startsWith(`${path}/`));
+      if (matches.length === 0) throw Object.assign(new Error(`ENOENT: ${path}`), { code: "ENOENT" });
+      for (const file of matches) files.delete(file);
     },
   };
 };

@@ -6,4 +6,4 @@ export {
   stripFrontmatter,
   unquoteYamlScalar,
 } from "./frontmatter";
-export { resolveByIdOrName } from "./resolve";
+export { resolveByIdOrName, sameName } from "./resolve";

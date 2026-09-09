@@ -42,3 +42,19 @@ describe("deriveShorthand", () => {
     expect(deriveShorthand("#my-@app")).toBe("MA");
   });
 });
+
+describe("deriveShorthand produces a usable resource prefix", () => {
+  test("falls back when the name has no letters", () => {
+    expect(deriveShorthand("2026")).toBe("PRJ");
+    expect(deriveShorthand("...")).toBe("PRJ");
+  });
+
+  test("avoids the prefix reserved for workspaces", () => {
+    expect(deriveShorthand("Work Space")).toBe("WOS");
+    expect(deriveShorthand("web server")).toBe("WES");
+  });
+
+  test("clamps a long name to the maximum prefix length", () => {
+    expect(deriveShorthand("a b c d e f g h i j k l m n o p q r s")).toBe("ABCDEFGHIJKLMNOP");
+  });
+});

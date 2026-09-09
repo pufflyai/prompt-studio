@@ -47,7 +47,9 @@ export const migrateTicketIdentitiesCommand = defineCommand({
       const identity = (await allocations.get(ticket.id))!;
       await putTicket(ctx.storage, { ...ticket, shorthand: identity.shorthand });
     }
-    await repoFiles.delete(TICKETS_DIR);
+    // A project can reach the migration with no drafts checked out, and a resumed run
+    // has already removed them, so only clear the directory when it is there.
+    if (await repoFiles.exists(TICKETS_DIR)) await repoFiles.delete(TICKETS_DIR);
     const migrated = await tickets.list();
     const byId = new Map(migrated.map((ticket) => [ticket.id, ticket]));
     for (const ticket of migrated) {

@@ -1,4 +1,4 @@
-import { resolveByIdOrName } from "@pstdio/sdk/data";
+import { resolveByIdOrName, sameName } from "@pstdio/sdk/data";
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
 import { statusesCollection, tagsCollection, ticketsCollection } from "./collections";
 
@@ -21,7 +21,7 @@ export const findTicket = async (storage: ExtensionStorageApi, value: string) =>
   const byId = tickets.find((ticket) => ticket.id === value);
   if (byId) return byId;
 
-  const byShorthand = tickets.filter((ticket) => ticket.shorthand.toLowerCase() === value.trim().toLowerCase());
+  const byShorthand = tickets.filter((ticket) => sameName(ticket.shorthand, value));
   if (byShorthand.length > 1) throw new Error(`Ambiguous ticket "${value}"`);
   return byShorthand[0];
 };

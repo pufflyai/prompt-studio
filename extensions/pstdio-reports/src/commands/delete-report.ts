@@ -33,11 +33,16 @@ export const deleteReportCommand = defineCommand({
         candidate.workspaceShorthand === workspaceShorthand &&
         (candidate.directoryName ?? candidate.name) === directoryName,
     );
+    // A report without attached files has no files directory, and a report that was
+    // never checked out has no paths at all, so each removal is guarded.
     if (siblingExists) {
-      await repoFiles.delete(reportMarkdownPathFor(report));
-      await repoFiles.delete(reportFilesDirFor(report));
+      const markdownPath = reportMarkdownPathFor(report);
+      const filesDir = reportFilesDirFor(report);
+      if (await repoFiles.exists(markdownPath)) await repoFiles.delete(markdownPath);
+      if (await repoFiles.exists(filesDir)) await repoFiles.delete(filesDir);
     } else {
-      await repoFiles.delete(reportDir(directoryName));
+      const directory = reportDir(directoryName);
+      if (await repoFiles.exists(directory)) await repoFiles.delete(directory);
     }
     await ctx.events.emit("pstdio-reports.report.deleted", {
       projectId: ctx.projectId,

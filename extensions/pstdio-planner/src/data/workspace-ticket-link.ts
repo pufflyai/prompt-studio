@@ -14,8 +14,11 @@ const ticketShorthandFromBranch = (branch: string | undefined) => {
 };
 
 const ticketShorthandFromAnchor = (anchor: ResourceAnchor) => {
-  const shorthand = anchor.shorthand;
-  if (typeof shorthand === "string") return shorthand;
+  if (typeof anchor.shorthand === "string") return anchor.shorthand;
+  // Anchors stored before the shorthand moved to the top level still carry it in
+  // metadata, and their label is the display title rather than the shorthand.
+  const stored = (anchor.metadata as { shorthand?: unknown } | undefined)?.shorthand;
+  if (typeof stored === "string") return stored;
   return anchor.label ?? null;
 };
 

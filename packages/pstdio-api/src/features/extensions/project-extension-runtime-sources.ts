@@ -3,6 +3,9 @@ import { join } from "node:path";
 import { type LoadedExtensionSource, loadExtensionSources } from "pstdio-extensions";
 import type { EnabledExtensionSource } from "./project-extension-runtime-snapshot";
 
+/** The fields a source needs to be imported, so an unpersisted candidate can be loaded too. */
+export type LoadableExtensionSource = Pick<EnabledExtensionSource["installedSource"], "source_kind" | "source_path">;
+
 export type CachedSource = {
   diagnostics: Awaited<ReturnType<typeof loadExtensionSources>>["diagnostics"];
   source: LoadedExtensionSource;
@@ -31,7 +34,7 @@ export const createExtensionSourceCache = (input: { loadSources?: typeof loadExt
   // them. An uninstalled source stops being enabled, so it is never retained.
   const lastHealthyByPath = new Map<string, CachedSource>();
 
-  const load = (installedSource: EnabledExtensionSource["installedSource"]) => {
+  const load = (installedSource: LoadableExtensionSource) => {
     const key = canonicalSourcePath(installedSource.source_path);
     const cached = sourcesByPath.get(key);
     if (cached) return cached;

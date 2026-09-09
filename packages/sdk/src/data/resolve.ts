@@ -1,4 +1,4 @@
-const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+export const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 // Resolution lives next to the data so any client (CLI, board, integrations) can
 // address tickets/statuses/tags by human name or shorthand. We match an exact id
