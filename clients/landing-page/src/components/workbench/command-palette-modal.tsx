@@ -5,7 +5,7 @@ import { DESKTOP_RELEASES_URL } from "../../services/desktop-releases";
 
 const VIEW_SEARCH_TEXT: Record<LandingView, string> = {
   start: "home landing start here install",
-  "why-prompt-studio": "why prompt studio plumbing extensions reasons mission",
+  "what-is-prompt-studio": "what is prompt studio extensions tools building blocks workbench",
   examples: "examples tools icons coding agent dashboard kanban financial formula glossary building blocks",
   features: "features search notifications navigation extension management themes plumbing",
   privacy: "privacy policy legal data",

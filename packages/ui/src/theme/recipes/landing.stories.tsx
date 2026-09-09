@@ -1,18 +1,45 @@
-import { Box, Button, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Box, Button, chakra, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { ChevronDown, Download, SquareTerminal } from "lucide-react";
+import { ChevronDown, Download, Maximize2, Minimize2, Minus, SquareTerminal, X } from "lucide-react";
+import { useState } from "react";
 import { ResizableSplitLayout } from "@/components/layout/resizable-split-layout";
 import { SearchableMenu } from "@/components/overlays/searchable-menu";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 
-const LandingPanels = (props: { section?: string; desktopAvailable?: boolean }) => {
-  const { section, desktopAvailable = true } = props;
+const LandingPanels = (props: { section?: string; desktopAvailable?: boolean; windowed?: boolean }) => {
+  const { section, desktopAvailable = true, windowed: initialWindowed = false } = props;
+  const [windowed, setWindowed] = useState(initialWindowed);
   const recipe = useSlotRecipe({ key: "landing" });
-  const styles = recipe({});
+  const styles = recipe({ windowed });
+  const controls = [
+    { id: "close", label: "Close", icon: X, disabled: windowed },
+    { id: "minimize", label: "Minimize", icon: Minus, disabled: windowed },
+    {
+      id: "zoom",
+      label: windowed ? "Expand window" : "Collapse window",
+      icon: windowed ? Maximize2 : Minimize2,
+      disabled: false,
+    },
+  ];
   return (
     <Box css={styles.root}>
       <Box css={styles.window}>
         <Box css={styles.titlebar}>
+          <Box css={styles.windowControls} className="group">
+            {controls.map((control) => (
+              <chakra.button
+                key={control.id}
+                type="button"
+                css={styles.windowControl}
+                data-control={control.id}
+                aria-label={control.label}
+                disabled={control.disabled}
+                onClick={() => setWindowed((value) => !value)}
+              >
+                <control.icon strokeWidth={3} />
+              </chakra.button>
+            ))}
+          </Box>
           <Text>Prompt Studio</Text>
         </Box>
         <Box css={styles.mobileTitlebar}>
@@ -123,6 +150,8 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Desktop: Story = {};
+export const Windowed: Story = { args: { windowed: true } };
 export const DesktopUnavailable: Story = { args: { desktopAvailable: false } };
-export const WhyPromptStudio: Story = { args: { section: "Extend Prompt Studio by combining building blocks." } };
-export const Features: Story = { args: { section: "What will you build?" } };
+export const WhatIsPromptStudio: Story = { args: { section: "Extend Prompt Studio by combining building blocks." } };
+export const Examples: Story = { args: { section: "What will you build?" } };
+export const Features: Story = { args: { section: "A solid foundation to extend from" } };

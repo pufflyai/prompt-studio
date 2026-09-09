@@ -5,11 +5,13 @@ export type ToolExampleId = "icons" | "shaders" | "agents" | "formulas";
 export const TOOL_EXAMPLES: {
   id: ToolExampleId;
   name: string;
+  description: string;
   blocks: { kind: ToolShapeKind; purpose: string }[];
 }[] = [
   {
     id: "agents",
     name: "Coding agent dashboard",
+    description: "Follow coding agents from task to review, with sessions and hooks keeping the board up to date.",
     blocks: [
       { kind: "page", purpose: "Track tasks across your agents on a kanban board." },
       { kind: "command", purpose: "Assign a task to an agent or start a run." },
@@ -21,6 +23,7 @@ export const TOOL_EXAMPLES: {
   {
     id: "icons",
     name: "Icon set editor",
+    description: "Browse, rename, and organise the icons you use across your tools.",
     blocks: [
       { kind: "page", purpose: "Browse and search your icon set." },
       { kind: "editor", purpose: "Inspect an icon, its name, and its codepoint." },
@@ -30,6 +33,7 @@ export const TOOL_EXAMPLES: {
   {
     id: "shaders",
     name: "Shader editor",
+    description: "Edit a fragment shader and shape its animation with a live preview.",
     blocks: [
       { kind: "page", purpose: "Watch flowing ribbons of color respond to scale and speed." },
       { kind: "editor", purpose: "Edit the shader to change its colors and motion." },
@@ -39,6 +43,7 @@ export const TOOL_EXAMPLES: {
   {
     id: "formulas",
     name: "Financial formulas",
+    description: "Explore financial formulas and let agents use them to answer questions.",
     blocks: [
       { kind: "page", purpose: "Explore savings plans, loan repayment, and discounted cash flow." },
       { kind: "editor", purpose: "Adjust the inputs and explore what each formula does." },

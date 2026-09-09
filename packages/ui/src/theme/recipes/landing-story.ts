@@ -4,6 +4,7 @@ export const landingStorySlotRecipe = defineSlotRecipe({
   slots: [
     "page",
     "section",
+    "featureSection",
     "intro",
     "visual",
     "panels",
@@ -28,6 +29,17 @@ export const landingStorySlotRecipe = defineSlotRecipe({
       containerType: "inline-size",
     },
     section: { display: "flex", flexDirection: "column", gap: "lg", width: "full", minWidth: 0 },
+    featureSection: {
+      display: "flex",
+      flexDirection: "column",
+      gap: "xl",
+      width: "full",
+      minWidth: 0,
+      borderTopWidth: "1px",
+      borderColor: "border",
+      pt: "4xl",
+      pb: "xl",
+    },
     intro: { display: "flex", flexDirection: "column", gap: "sm", maxWidth: "3xl" },
     visual: { layerStyle: "panel", bg: "bg.subtle", p: "xs", width: "full", minWidth: 0 },
     panels: {

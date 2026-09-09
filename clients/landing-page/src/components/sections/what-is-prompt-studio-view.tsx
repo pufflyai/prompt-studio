@@ -27,7 +27,7 @@ const REASONS = [
   },
 ];
 
-export const WhyPromptStudioView = () => {
+export const WhatIsPromptStudioView = () => {
   const styles = useStoryStyles();
   return (
     <PageScroll>

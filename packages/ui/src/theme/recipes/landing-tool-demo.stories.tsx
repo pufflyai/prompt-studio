@@ -23,6 +23,9 @@ const VisualTool = () => {
   const [query, setQuery] = useState("");
   return (
     <Box css={story.page}>
+      <Text textStyle="paragraph/M/regular" color="fg.muted">
+        Browse, rename, and organise the icons you use across your tools.
+      </Text>
       <Box css={styles.iconEditor}>
         <Box css={story.panel}>
           <Box css={story.panelHeader}>Your icon set</Box>

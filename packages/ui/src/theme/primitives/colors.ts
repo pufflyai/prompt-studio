@@ -212,6 +212,11 @@ export const mint = {
 };
 
 export const colors = {
+  windowControl: {
+    close: { value: "#FF5F57" },
+    minimize: { value: "#FEBC2E" },
+    zoom: { value: "#28C840" },
+  },
   illustration: {
     desktop: { value: "#FF6B1A" },
     page: { value: "#29ABE2" },

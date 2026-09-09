@@ -19,11 +19,11 @@ const SharedFeatures = () => {
     <Box css={story.page}>
       <Stack gap="sm">
         <Text as="h1" textStyle="heading/M">
-          The plumbing, included.
+          A solid foundation to extend from
         </Text>
         <Text color="fg.muted">Shared features that every tool can use.</Text>
       </Stack>
-      <Box css={story.section}>
+      <Box css={story.featureSection}>
         <Text as="h2" textStyle="heading/S">
           Search
         </Text>
@@ -44,7 +44,7 @@ const SharedFeatures = () => {
           </Box>
         </Box>
       </Box>
-      <Box css={story.section}>
+      <Box css={story.featureSection}>
         <Text as="h2" textStyle="heading/S">
           Extension management
         </Text>

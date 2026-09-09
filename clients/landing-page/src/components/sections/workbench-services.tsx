@@ -22,7 +22,7 @@ export const WorkbenchServices = () => {
     <>
       <Stack gap="sm">
         <Text as="h1" textStyle={{ base: "heading/M", md: "heading/L" }}>
-          Easy to extend from a solid foundation.
+          A solid foundation to extend from
         </Text>
         <Text textStyle="paragraph/M/regular" color="fg.muted">
           Prompt Studio ships with builtin features that every tool can use.
@@ -31,7 +31,7 @@ export const WorkbenchServices = () => {
       {WORKBENCH_SERVICES.map((service) => {
         const Demo = SERVICE_DEMOS[service.id];
         return (
-          <Box key={service.id} as="section" css={styles.section} aria-labelledby={`service-${service.id}`}>
+          <Box key={service.id} as="section" css={styles.featureSection} aria-labelledby={`service-${service.id}`}>
             <HStack gap="md" align="start">
               <Icon as={service.icon} boxSize="6" color="fg.muted" />
               <Stack gap="sm">

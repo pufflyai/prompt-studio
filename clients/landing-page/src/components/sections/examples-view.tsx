@@ -40,6 +40,9 @@ export const ExamplesView = () => {
               </Button>
             ))}
           </HStack>
+          <Text textStyle="paragraph/M/regular" color="fg.muted" aria-live="polite">
+            {example.description}
+          </Text>
           <Box css={styles.composition}>
             <Text textStyle="label/S/regular" color="fg.muted">
               Made with

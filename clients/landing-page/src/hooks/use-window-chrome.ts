@@ -2,12 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 const DESKTOP_INSET = 96;
 
-/**
- * The easter egg. Any Mac window control unmaximises the page onto a desktop, where the
- * title bar becomes a drag handle. Every control leads somewhere recoverable on purpose:
- * a landing page that can be closed into a blank desktop is a dead end, and someone will
- * click red first. Not persisted, so a reload comes back maximised.
- */
+// Window mode lasts until reload. The landing page always stays reachable.
 export const useWindowChrome = () => {
   const [windowed, setWindowed] = useState(false);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -21,7 +16,7 @@ export const useWindowChrome = () => {
   };
 
   const onTitleBarPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!windowed) return;
+    if (!windowed || event.button !== 0) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     dragRef.current = {
       id: event.pointerId,

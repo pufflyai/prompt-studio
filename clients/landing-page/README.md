@@ -6,7 +6,7 @@ dedicated landing recipes and do not change the dashboard's components or theme.
 ## Code structure
 
 - `src/components/workbench` owns page chrome and panel composition.
-- `src/components/sections` contains Start Here, Why Prompt Studio, Features, and legal views.
+- `src/components/sections` contains Start Here, What is Prompt Studio, Examples, Features, and legal views.
 - `src/components/downloads` contains the download picker and agent compatibility cards.
 - `src/components/examples` contains the interactive icon set editor and coding agent demos.
 - `src/content` owns navigation metadata, example data, building blocks, and legal copy.
@@ -30,21 +30,27 @@ The cross uses three collision rectangles that share the SVG arm dimensions. The
 half-disc uses a curved polygon and renders around its physical centre of mass, so
 its drawing and collisions stay aligned as it turns.
 
+The desktop header contains the Prompt Studio tab and window controls. The green
+control collapses or expands the window. Red and yellow enter window mode and are
+disabled there. Drag the title bar to move the window. Mobile navigation opens a
+menu below the header; desktop navigation uses the sidebar. There are no breadcrumbs.
+
 ## Product examples
 
-Why Prompt Studio starts with the building-block cards, then shows a clean editor,
+What is Prompt Studio lives at `/what-is-prompt-studio`. It starts with the building-block cards, then shows a clean editor,
 connected tools, and tools adapted by an agent. Each entry has a title and subtitle.
 Visitors can browse an icon set, follow work in a coding agent dashboard, and add previews to that
 dashboard. These use local demo data. They do not call an agent or install extensions.
 
-Features pairs the icon set editor and coding agent dashboard with their building blocks.
+Examples pairs each tool with a short description and its building blocks.
 The icon set editor uses the existing Prompt Studio icons. Visitors can search by
 name or codepoint, select an icon, and rename it in local demo state. Its grid and
 inspector follow the repository's icon editor.
 The dashboard supports agent selection, pause and resume, and approving a result.
 Each building block keeps the same shape across the page and the falling tools.
-The shapes beneath each Features example explain the blocks it uses. Search, notifications, navigation,
-extension management, and themes appear in a separate section for shared services.
+The shapes above each example explain the blocks it uses. Search, notifications, navigation,
+extension management, and themes have a separate Features page. Space and a divider
+separate each feature's description and demo from the next feature.
 Use "workbench" for the overall home for tools. A workspace is a separate product concept.
 
 The page layout and preview styles use the shared `landingStory` and `landingToolDemo`
