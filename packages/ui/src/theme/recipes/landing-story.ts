@@ -16,8 +16,6 @@ export const landingStorySlotRecipe = defineSlotRecipe({
     "blockMark",
     "composition",
     "service",
-    "flow",
-    "caption",
   ],
   base: {
     page: {
@@ -97,7 +95,5 @@ export const landingStorySlotRecipe = defineSlotRecipe({
       borderColor: "border.subtle",
       "&:last-child": { borderBottomWidth: 0 },
     },
-    flow: { display: "flex", gap: "xs", flexWrap: "wrap", alignItems: "center" },
-    caption: { textStyle: "label/S/regular", color: "fg.muted" },
   },
 });

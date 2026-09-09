@@ -45,9 +45,6 @@ export const WhyPromptStudioView = () => {
             <Demo />
           </Box>
         ))}
-        <Text css={styles.caption}>
-          Your tools live in your repository. Keep changing them and share what you build.
-        </Text>
       </Box>
     </PageScroll>
   );

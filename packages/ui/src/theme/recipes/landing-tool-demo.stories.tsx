@@ -1,7 +1,8 @@
-import { Box, HStack, Input, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Box, Button, HStack, Input, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { createGlyphIcon } from "@/components/primitives/glyph-icon";
+import { type SessionCompletionStatus, SessionIndicator } from "@/components/primitives/session-indicator";
 
 const icons = [
   "cloud-add",
@@ -67,29 +68,35 @@ const VisualTool = () => {
         </Box>
       </Box>
       <Box css={styles.metrics}>
-        {["Running", "To review", "Completed"].map((label, i) => (
+        {["Running", "Queued", "Completed"].map((label) => (
           <Box css={styles.metric} key={label}>
-            <Text textStyle="heading/M">{[2, 1, 16][i]}</Text>
+            <Text textStyle="heading/M">1</Text>
             <Text textStyle="label/S/regular">{label}</Text>
           </Box>
         ))}
       </Box>
       <Box css={styles.sessions}>
-        {["in_progress", "awaiting_input", "completed"].map((status, index) => (
-          <Box css={styles.session} key={status}>
-            <HStack css={styles.toolbar}>
-              <Text textStyle="label/M/medium">
-                {["Add navigation icons", "Refine icon outlines", "Check the icon set"][index]}
-              </Text>
-              <Text textStyle="label/S/regular">{["Running", "To review", "Completed"][index]}</Text>
-            </HStack>
-            <Box css={styles.progress} aria-hidden="true">
-              {Array.from({ length: 16 }, (_, i) => (
-                <Box key={i} css={styles.segment} data-filled={i < 12} data-status={status} />
-              ))}
+        {(["completed", "in_progress", "queued", "disconnected"] satisfies SessionCompletionStatus[]).map(
+          (status, index) => (
+            <Box css={styles.session} key={status} data-status={status}>
+              <HStack css={styles.toolbar}>
+                <Text textStyle="label/M/medium">
+                  {["Draw the icons", "Refine the outlines", "Check the icon set", "Paused workflow"][index]}
+                </Text>
+                <HStack css={styles.sessionStatus} data-status={status}>
+                  <SessionIndicator status={status} />
+                  <Text textStyle="label/S/regular">{["Completed", "Running", "Queued", "Paused"][index]}</Text>
+                </HStack>
+              </HStack>
             </Box>
-          </Box>
-        ))}
+          ),
+        )}
+      </Box>
+      <Box css={styles.prompt}>
+        <Text>Let me adjust the inputs and see the result on the curve.</Text>
+        <Button variant="primary" size="lg">
+          Try the change
+        </Button>
       </Box>
     </Box>
   );
@@ -103,6 +110,25 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Desktop: Story = {};
+const WorkflowPreviewStates = () => {
+  const styles = useSlotRecipe({ key: "landingToolDemo" })({});
+  return (
+    <Box css={styles.iconGrid} p="md">
+      {["pending", "active", "ready"].map((state, index) => {
+        const Glyph = icons[index].icon;
+        return (
+          <Box css={styles.iconTile} data-state={state} key={state}>
+            <Box css={styles.tileSymbol}>
+              <Glyph />
+            </Box>
+            <Text css={styles.iconName}>{state}</Text>
+          </Box>
+        );
+      })}
+    </Box>
+  );
+};
+export const PreviewStates: Story = { render: () => <WorkflowPreviewStates /> };
 export const NarrowPanel: Story = {
   decorators: [
     (Story) => (

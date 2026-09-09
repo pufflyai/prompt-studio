@@ -1,54 +1,50 @@
 import { Box, Button, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { SessionIndicator } from "@pstdio/ui";
-import { Check, GitBranch, Pause, Play } from "lucide-react";
-import { useState } from "react";
-import { EXAMPLE_AGENTS } from "../../content/tool-examples-content";
+import { Check, CircleDashed, Pause, Play } from "lucide-react";
 import type { ToolShapeKind } from "../../content/tool-shapes";
+import { WORKFLOW_ICONS } from "../../content/workflow-demo-content";
 import { useStoryStyles, useToolDemoStyles } from "../../hooks/use-landing-styles";
+import { useWorkflowDemo } from "../../hooks/use-workflow-demo";
 import { BlockSymbol } from "../sections/building-blocks";
 import { DemoPanel } from "./demo-workbench";
-import { IconSetPreview } from "./icon-set-preview";
+import { IconSetPreview, type PreviewIconState } from "./icon-set-preview";
 
 const STATUS_LABELS = {
   in_progress: "Running",
-  awaiting_input: "To review",
   completed: "Completed",
   disconnected: "Paused",
   queued: "Queued",
-  failed: "Failed",
-  cancelled: "Cancelled",
 };
 
 export const AgentDashboardDemo = (props: { highlighted?: ToolShapeKind }) => {
   const { highlighted } = props;
-  const [agents, setAgents] = useState(EXAMPLE_AGENTS);
-  const [selected, setSelected] = useState(agents[0].id);
-  const agent = agents.find((item) => item.id === selected)!;
+  const workflow = useWorkflowDemo();
+  const { frame, finished, playing, completed, steps } = workflow;
+  const current = steps[frame.stepIndex];
   const story = useStoryStyles();
   const styles = useToolDemoStyles();
-  const completed = agent.status === "completed";
-  const running = agent.status === "in_progress";
-  const reviewing = agent.status === "awaiting_input";
-
-  const act = () => {
-    let status = "in_progress" as typeof agent.status;
-    if (running) status = "disconnected";
-    if (reviewing) status = "completed";
-    setAgents(agents.map((item) => (item.id === selected ? { ...item, status } : item)));
-  };
-
-  let actionLabel = "Resume agent";
-  if (running) actionLabel = "Pause agent";
-  if (reviewing) actionLabel = "Approve result";
-  if (completed) actionLabel = "Approved";
+  const running = playing && !finished ? 1 : 0;
+  const iconsPerAction = Math.ceil(WORKFLOW_ICONS.length / current.actions.length);
+  const activeStart = frame.actionIndex * iconsPerAction;
+  const activeEnd = activeStart + iconsPerAction;
+  const icons = WORKFLOW_ICONS.map((item, index) => {
+    let state: PreviewIconState = "ready";
+    if (!finished && index >= activeStart && index < activeEnd) state = "active";
+    if (frame.stepIndex === 0 && index >= activeEnd) state = "pending";
+    return { ...item, state };
+  });
+  const checks = [
+    { label: "SVG checks", passed: finished || (frame.stepIndex === 2 && frame.actionIndex >= 2) },
+    { label: "Codepoints verified", passed: finished || (frame.stepIndex === 2 && frame.actionIndex >= 3) },
+  ];
 
   return (
-    <Stack gap="panel-gap">
+    <Stack ref={workflow.hostRef} gap="panel-gap" role="group" aria-label="Icon set workflow">
       <Box css={styles.metrics}>
         {[
-          { label: "Running", value: agents.filter((item) => item.status === "in_progress").length },
-          { label: "To review", value: agents.filter((item) => item.status === "awaiting_input").length },
-          { label: "Completed", value: 16 + agents.filter((item) => item.status === "completed").length },
+          { label: "Running", value: running },
+          { label: "Queued", value: steps.filter((step) => step.status === "queued").length },
+          { label: "Completed", value: completed },
         ].map((metric) => (
           <Box css={styles.metric} key={metric.label}>
             <Text textStyle="heading/M">{metric.value}</Text>
@@ -60,33 +56,22 @@ export const AgentDashboardDemo = (props: { highlighted?: ToolShapeKind }) => {
       </Box>
       <Box css={story.panels}>
         <DemoPanel title="Agent sessions" kind="page" highlighted={highlighted}>
-          <Box css={styles.sessions} role="group" aria-label="Example agent sessions">
-            {agents.map((item) => (
-              <Box
-                as="button"
-                css={styles.session}
-                key={item.id}
-                aria-pressed={selected === item.id}
-                onClick={() => setSelected(item.id)}
-              >
+          <Box css={styles.sessions} as="ol" aria-label="Workflow steps">
+            {steps.map((step) => (
+              <Box as="li" css={styles.session} key={step.id} data-status={step.status}>
                 <HStack gap="sm">
-                  <BlockSymbol kind={item.kind} />
-                  <Text textStyle="label/M/medium">{item.title}</Text>
+                  <BlockSymbol kind={step.kind} />
+                  <Text textStyle="label/M/medium">{step.title}</Text>
                 </HStack>
                 <HStack css={styles.toolbar}>
                   <Text textStyle="label/S/regular" color="fg.muted">
-                    {item.agent}
+                    {step.agent}
                   </Text>
-                  <HStack gap="xs">
-                    <SessionIndicator status={item.status} boxSize="icon-sm" />
-                    <Text textStyle="label/S/regular">{STATUS_LABELS[item.status]}</Text>
+                  <HStack css={styles.sessionStatus} data-status={step.status}>
+                    <SessionIndicator status={step.status} boxSize="icon-sm" />
+                    <Text textStyle="label/S/regular">{STATUS_LABELS[step.status]}</Text>
                   </HStack>
                 </HStack>
-                <Box css={styles.progress} aria-hidden="true">
-                  {Array.from({ length: 16 }, (_, i) => (
-                    <Box key={i} css={styles.segment} data-filled={i < item.progress} data-status={item.status} />
-                  ))}
-                </Box>
               </Box>
             ))}
           </Box>
@@ -95,41 +80,27 @@ export const AgentDashboardDemo = (props: { highlighted?: ToolShapeKind }) => {
             <Text textStyle="label/S/regular">Summarize agent runs · Weekdays at 9:00</Text>
           </HStack>
         </DemoPanel>
-        <DemoPanel title={agent.title} kind="command" highlighted={highlighted}>
-          <HStack gap="xs" color="fg.muted" textStyle="mono/XS">
-            <Icon as={GitBranch} boxSize="icon-sm" />
-            <Text>workbench / icons</Text>
+        <DemoPanel title={finished ? "Icon set ready" : current.title} kind="command" highlighted={highlighted}>
+          <HStack css={styles.toolbar}>
+            <Text textStyle="label/S/regular" color="fg.muted" role="status">
+              {finished ? "Workflow complete. Your icons are ready to use." : frame.action}
+            </Text>
+            <Button variant="outline" onClick={workflow.toggle}>
+              {playing ? <Pause /> : <Play />}
+              {playing ? "Pause workflow" : "Start workflow"}
+            </Button>
           </HStack>
           <Box css={styles.preview}>
-            <HStack css={styles.toolbar}>
-              <HStack gap="xs">
-                <BlockSymbol kind="hook" />
-                <Text textStyle="label/S/regular">App preview</Text>
-              </HStack>
-              <Text textStyle="label/S/regular" color="fg.muted">
-                {agent.filesChanged} files changed
-              </Text>
-            </HStack>
-            <IconSetPreview icons={agent.previewIcons} />
+            <IconSetPreview icons={icons} />
           </Box>
           <Box css={styles.checks}>
-            {["SVG checks", "Codepoints verified"].map((label) => (
-              <HStack key={label} gap="xs">
-                <Icon as={Check} boxSize="icon-sm" />
-                <Text>{label}</Text>
+            {checks.map((check) => (
+              <HStack key={check.label} gap="xs" color={check.passed ? "fg.success" : "fg.muted"}>
+                <Icon as={check.passed ? Check : CircleDashed} boxSize="icon-sm" />
+                <Text>{check.label}</Text>
               </HStack>
             ))}
           </Box>
-          <HStack css={styles.toolbar}>
-            <HStack aria-live="polite" gap="xs">
-              <SessionIndicator status={agent.status} boxSize="icon-sm" />
-              <Text textStyle="label/S/regular">{STATUS_LABELS[agent.status]}</Text>
-            </HStack>
-            <Button variant="outline" onClick={act} disabled={completed}>
-              {running ? <Pause /> : <Play />}
-              {actionLabel}
-            </Button>
-          </HStack>
         </DemoPanel>
       </Box>
     </Stack>
