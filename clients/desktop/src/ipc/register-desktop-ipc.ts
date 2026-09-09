@@ -7,7 +7,7 @@ import { isAllowedIpcSender } from "../security/ipc-security";
 import { type TitleBarAppearance, titleBarOverlayOptions } from "../windows/title-bar-appearance";
 
 type DesktopIpcOptions = {
-  setTitleBarAppearance: (appearance: TitleBarAppearance) => void;
+  setTitleBarAppearance: (appearance: TitleBarAppearance) => Promise<void>;
   appInfo: () => { platform: string; version: string };
   cancelQuit: () => Promise<void>;
   checkForUpdates: () => Promise<void>;

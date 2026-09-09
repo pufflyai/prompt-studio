@@ -7,6 +7,7 @@ import { secureSession, secureWebContents } from "../security/apply-window-secur
 import { provisionRuntimeSession } from "../security/runtime-session";
 import { createSecureWindowOptions } from "../security/window-security";
 import { LIFECYCLE_SCHEME, LIFECYCLE_URL, readLifecycleAsset } from "./lifecycle-protocol";
+import type { TitleBarAppearance } from "./title-bar-appearance";
 
 const WORKBENCH_PARTITION = "pstdio-workbench";
 
@@ -59,6 +60,13 @@ export class DesktopWindowController {
 
   updateState(state: DesktopState) {
     this.window.webContents.send(DESKTOP_CHANNELS.startupStateChanged, state);
+  }
+
+  async setTitleBarAppearance(appearance: TitleBarAppearance) {
+    if (process.platform === "darwin") return;
+    // Updating the hidden native overlay can suppress ready-to-show (ADR 0021).
+    await this.#shown;
+    this.window.setTitleBarOverlay(appearance);
   }
 
   private resizeWorkbench() {

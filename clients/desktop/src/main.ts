@@ -239,8 +239,8 @@ const bootstrap = async () => {
     void requestQuit();
   });
   registerDesktopIpc({
-    setTitleBarAppearance: (appearance) => {
-      if (process.platform !== "darwin") windowController?.window.setTitleBarOverlay(appearance);
+    setTitleBarAppearance: async (appearance) => {
+      await windowController?.setTitleBarAppearance(appearance);
     },
     ipcMain,
     webContents: () => windowController?.webContents() ?? [],

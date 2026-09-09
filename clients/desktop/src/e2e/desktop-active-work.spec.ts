@@ -138,6 +138,9 @@ test("recovers from refused shutdown and closes each quit confirmation", async (
   });
 
   const lifecycle = await waitForLifecyclePage(electronApp.context());
+  await expect
+    .poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isVisible()))
+    .toBe(true);
   const window = await waitForWorkbenchPage(lifecycle, descriptor.origin);
   await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
 
