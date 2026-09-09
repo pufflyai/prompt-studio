@@ -14,6 +14,7 @@ const e2eExtension = (name: string) => ({
 
 const e2eDefaultExtensions = [
   e2eExtension("pstdio-base-themes"),
+  e2eExtension("pstdio-artifacts"),
   e2eExtension("pstdio-planner"),
   e2eExtension("pstdio-reports"),
   e2eExtension("pstdio-skills"),

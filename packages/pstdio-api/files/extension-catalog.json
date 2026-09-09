@@ -54,6 +54,19 @@
       "default": true
     },
     {
+      "installName": "pstdio-artifacts",
+      "displayName": "Artifacts",
+      "description": "Publish interactive HTML pages and browse their saved revisions.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-artifacts",
+        "ref": "{hostRelease}"
+      },
+      "publisher": "pstdio",
+      "default": false
+    },
+    {
       "installName": "pstdio-planner",
       "displayName": "Prompt Studio Planner",
       "description": "Tickets, managed attempts, reviews, and templates.",

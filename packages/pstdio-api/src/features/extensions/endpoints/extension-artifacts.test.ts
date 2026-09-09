@@ -38,7 +38,18 @@ const writeExtension = (name: string, withMount: boolean) => {
   const mounts = withMount
     ? `artifactMounts: [{ id: "runs", ref: { kind: "artifact-mount", id: "runs" }, path: "runs", label: "Runs" }],`
     : "";
-  writeFileSync(join(extensionRoot, "extension.ts"), `export default { ${mounts} };`);
+  writeFileSync(
+    join(extensionRoot, "extension.ts"),
+    `export default { ${mounts}
+    commands: [{ id: "publish", ref: { kind: "command", id: "publish" }, title: "Publish",
+      async run(ctx) {
+        const mount = ctx.artifacts.mount("runs");
+        await mount.writeText("published.html", "<h1>Published</h1>");
+        return { html: await mount.readText("published.html") };
+      }
+    }]
+  };`,
+  );
   return extensionRoot;
 };
 
@@ -122,6 +133,20 @@ afterEach(async () => {
 });
 
 describe("extension artifact endpoints", () => {
+  test("a project command can write to and read from its declared mount", async () => {
+    const response = await app.request(
+      `/v1/projects/${projectId}/extensions/commands/pstdio.lab.command.publish/execute`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ params: {} }),
+      },
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).outcome).toMatchObject({ status: "success", value: { html: "<h1>Published</h1>" } });
+    expect(await Bun.file(join(mountRoot, "published.html")).text()).toBe("<h1>Published</h1>");
+  });
+
   test("lists artifact metadata with media types, optionally under a prefix", async () => {
     const response = await app.request(artifactsPath(labInstanceId, "runs", "files"));
     expect(response.status).toBe(200);

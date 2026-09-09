@@ -10,7 +10,7 @@ function getAbsolutePath(value: string) {
 const rootDir = dirname(fileURLToPath(import.meta.url));
 
 const config: StorybookConfig = {
-  stories: ["../src/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
+  stories: ["../src/**/*.stories.@(js|jsx|mjs|ts|tsx)", "../../../extensions/pstdio-artifacts/src/**/*.stories.tsx"],
   addons: [],
   framework: getAbsolutePath("@storybook/react-vite"),
   viteFinal: async (config) =>

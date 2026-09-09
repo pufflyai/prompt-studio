@@ -100,6 +100,7 @@ export const executeProjectExtensionCommand = async (
     onDidDispatchEvent: (eventId) => eventIds.add(eventId),
     buildEnvironment: (environment) =>
       createCommandEnvironment(deps, snapshot.enabledSources, {
+        artifactMounts: snapshot.runtime.artifactMounts,
         extensionId: environment.extensionId,
         name: environment.name,
         project: snapshot.project,

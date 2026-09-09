@@ -6,6 +6,7 @@ import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
+import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
@@ -236,7 +237,7 @@ describe("packaged pstdio — self-hosted serve", () => {
 
       try {
         const started = await startPackagedServe(tempRoot, {
-          PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "extension-lab"),
+          PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "extension-lab", "pstdio-artifacts"),
         });
         child = started.child;
 
@@ -255,6 +256,12 @@ describe("packaged pstdio — self-hosted serve", () => {
 
         const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
         expectExamplePages(metadata);
+        await expectPackagedArtifacts({
+          baseUrl: started.baseUrl,
+          projectId: project.id,
+          headers: runtimeAuthorization(started.descriptor),
+          metadata,
+        });
         const counter = await fetch(
           `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.workbench-fixture.command.counter.bump/execute`,
           {
