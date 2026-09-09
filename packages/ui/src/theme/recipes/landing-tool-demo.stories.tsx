@@ -93,8 +93,8 @@ const VisualTool = () => {
         )}
       </Box>
       <Box css={styles.prompt}>
-        <Text>Let me adjust the inputs and see the result on the curve.</Text>
-        <Button variant="primary" size="lg">
+        <Text>Add sliders to adjust the scale and speed.</Text>
+        <Button variant="subtle" size="lg">
           Try the change
         </Button>
       </Box>

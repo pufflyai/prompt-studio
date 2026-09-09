@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { BadgeCheck, House, LayoutGrid, Scale, Sparkles } from "lucide-react";
+import { BadgeCheck, House, LayoutGrid, PanelsTopLeft, Scale, Sparkles } from "lucide-react";
 
 export const SITE_LINKS = {
   github: "https://github.com/pufflyai/prompt-studio",
@@ -12,7 +12,7 @@ export const SITE_LINKS = {
 };
 
 /** In-app views rendered inside the workbench main area. */
-export type LandingView = "start" | "why-prompt-studio" | "features" | "privacy" | "terms";
+export type LandingView = "start" | "why-prompt-studio" | "examples" | "features" | "privacy" | "terms";
 
 export interface ViewMeta {
   label: string;
@@ -22,12 +22,13 @@ export interface ViewMeta {
 export const VIEW_META: Record<LandingView, ViewMeta> = {
   start: { label: "Start Here", icon: Sparkles },
   "why-prompt-studio": { label: "Why Prompt Studio", icon: BadgeCheck },
+  examples: { label: "Examples", icon: PanelsTopLeft },
   features: { label: "Features", icon: LayoutGrid },
   privacy: { label: "Privacy policy", icon: Scale },
   terms: { label: "Terms of service", icon: Scale },
 };
 
 /** Views the sidebar lists, in order. */
-export const SIDEBAR_VIEWS: LandingView[] = ["start", "why-prompt-studio", "features"];
+export const SIDEBAR_VIEWS: LandingView[] = ["start", "why-prompt-studio", "examples", "features"];
 
 export const PROJECT_TAB = { label: "Prompt Studio", icon: House };

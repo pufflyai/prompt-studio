@@ -15,7 +15,6 @@ export const landingStorySlotRecipe = defineSlotRecipe({
     "blockSymbol",
     "blockMark",
     "composition",
-    "service",
   ],
   base: {
     page: {
@@ -85,15 +84,6 @@ export const landingStorySlotRecipe = defineSlotRecipe({
       borderTopWidth: "1px",
       borderColor: "border.subtle",
       pt: "lg",
-    },
-    service: {
-      display: "grid",
-      gridTemplateColumns: "auto minmax(0, 1fr)",
-      gap: "md",
-      py: "lg",
-      borderBottomWidth: "1px",
-      borderColor: "border.subtle",
-      "&:last-child": { borderBottomWidth: 0 },
     },
   },
 });

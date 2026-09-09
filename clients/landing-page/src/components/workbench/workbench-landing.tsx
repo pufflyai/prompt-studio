@@ -8,6 +8,7 @@ import { useWindowChrome } from "../../hooks/use-window-chrome";
 import { docPageToMarkdown } from "../../services/doc-page-markdown";
 import { START_HERE_INTRO, START_HERE_TITLE } from "../downloads/download-panel";
 import { DocView } from "../sections/doc-view";
+import { ExamplesView } from "../sections/examples-view";
 import { FeaturesView } from "../sections/features-view";
 import { StartHereView } from "../sections/start-here-view";
 import { WhyPromptStudioView } from "../sections/why-prompt-studio-view";
@@ -29,6 +30,7 @@ const LandingContent = (props: LandingContentProps) => {
   const { view, windowOffset } = props;
   if (view === "start") return <StartHereView windowOffset={windowOffset} />;
   let page = <FeaturesView />;
+  if (view === "examples") page = <ExamplesView />;
   if (view === "why-prompt-studio") page = <WhyPromptStudioView />;
   if (view === "privacy" || view === "terms") page = <DocView page={LEGAL_PAGES[view]} />;
   return (

@@ -24,8 +24,12 @@ export const landingToolDemoSlotRecipe = defineSlotRecipe({
     "plotCurve",
     "plotCursor",
     "plotPoint",
+    "shaderCode",
+    "shaderCanvas",
   ],
   base: {
+    shaderCode: { textStyle: "mono/XS", fontSize: "sm", minHeight: "64", flex: 1, resize: "none" },
+    shaderCanvas: { display: "block", width: "full", aspectRatio: "4 / 3", bg: "bg.subtle", borderRadius: "sm" },
     plot: { width: "full", bg: "bg.subtle", borderRadius: "sm" },
     plotGrid: { fill: "none", stroke: "border.subtle", strokeWidth: 1 },
     plotCurve: { fill: "none", stroke: "fg.info", strokeWidth: 3, strokeLinecap: "round", strokeLinejoin: "round" },

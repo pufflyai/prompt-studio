@@ -3,14 +3,14 @@ import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { useToolDemoStyles } from "../../hooks/use-landing-styles";
 import { BlockSymbol } from "../sections/building-blocks";
-import { AgentDashboardDemo } from "./agent-dashboard-demo";
+import { AgentWorkflowDemo } from "./agent-workflow-demo";
 import { DemoWorkbench } from "./demo-workbench";
-import { FormulaGlossaryDemo } from "./formula-glossary-demo";
 import { IconSetEditorDemo } from "./icon-set-editor-demo";
+import { ShaderEditorDemo } from "./shader-editor-demo";
 
 export const ConnectedToolsDemo = () => (
   <DemoWorkbench>
-    <AgentDashboardDemo />
+    <AgentWorkflowDemo />
   </DemoWorkbench>
 );
 
@@ -22,21 +22,15 @@ export const ChangeToolDemo = () => {
       <Box css={styles.prompt}>
         <HStack gap="sm" flex="1">
           <BlockSymbol kind="skill" />
-          <Text>Let me adjust the inputs and see the result on the curve.</Text>
+          <Text>Add sliders to adjust the scale and speed.</Text>
         </HStack>
-        <Button
-          variant={changed ? "outline" : "primary"}
-          size="lg"
-          flexShrink="0"
-          aria-pressed={changed}
-          onClick={() => setChanged(!changed)}
-        >
+        <Button variant="subtle" size="lg" flexShrink="0" aria-pressed={changed} onClick={() => setChanged(!changed)}>
           {changed ? "Undo change" : "Try the change"}
           <ArrowRight />
         </Button>
       </Box>
       <DemoWorkbench>
-        <FormulaGlossaryDemo interactive={changed} />
+        <ShaderEditorDemo withControls={changed} />
       </DemoWorkbench>
     </Stack>
   );

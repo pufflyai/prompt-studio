@@ -18,20 +18,20 @@ export const TOOL_EXAMPLES: {
   },
   {
     id: "agents",
-    name: "Coding agents",
+    name: "Coding agent dashboard",
     blocks: [
-      { kind: "page", purpose: "See your agents, their progress, and what they are building." },
-      { kind: "command", purpose: "Start or pause a workflow across your agents." },
-      { kind: "skill", purpose: "Give your agents your icon design and review guidelines." },
-      { kind: "hook", purpose: "Refresh the preview when an agent changes a file." },
+      { kind: "page", purpose: "Track tasks across your agents on a kanban board." },
+      { kind: "command", purpose: "Assign a task to an agent or start a run." },
+      { kind: "skill", purpose: "Give your agents your coding and review guidelines." },
+      { kind: "hook", purpose: "Move a task to review when an agent finishes." },
       { kind: "automation", purpose: "Get a morning summary of completed runs and results to review." },
     ],
   },
   {
     id: "formulas",
-    name: "Formula glossary",
+    name: "Financial formulas",
     blocks: [
-      { kind: "page", purpose: "Keep useful formulas together with visual examples." },
+      { kind: "page", purpose: "Explore growth, interest, and purchasing power in one glossary." },
       { kind: "editor", purpose: "Adjust the inputs and explore what each formula does." },
     ],
   },

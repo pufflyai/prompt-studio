@@ -2,34 +2,33 @@ import { Bell, Blocks, Navigation, Palette, Search } from "lucide-react";
 
 export const WORKBENCH_SERVICES = [
   {
+    id: "search",
     name: "Search",
-    description: "Find commands and jump to what you need.",
+    description: "Find files, open tools, and run commands from one search.",
     icon: Search,
-    example: "Search your workbench",
-    shortcut: true,
   },
   {
+    id: "notifications",
     name: "Notifications",
     description: "Know when work finishes or needs your attention.",
     icon: Bell,
-    example: "Icon set build complete",
   },
   {
+    id: "navigation",
     name: "Navigation",
-    description: "Open your tools and arrange them side by side.",
+    description: "Switch between your tools and keep useful views open.",
     icon: Navigation,
-    example: "Icon set editor / Coding agents",
   },
   {
+    id: "extensions",
     name: "Extension management",
     description: "Install, enable, and manage the tools in your workbench.",
     icon: Blocks,
-    example: "Icon set editor · Enabled",
   },
   {
+    id: "themes",
     name: "Themes",
-    description: "Give your tools a consistent look that feels like yours.",
+    description: "Use light, dark, or your own theme across all your tools.",
     icon: Palette,
-    example: "Light · Dark · Your own theme",
   },
-];
+] as const;

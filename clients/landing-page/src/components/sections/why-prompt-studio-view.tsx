@@ -21,7 +21,7 @@ const REASONS = [
     Demo: ConnectedToolsDemo,
   },
   {
-    title: "Make it work your way.",
+    title: "Tweak things to work your way.",
     subtitle: "Ask your coding agent to add a view or change how your tool works.",
     Demo: ChangeToolDemo,
   },

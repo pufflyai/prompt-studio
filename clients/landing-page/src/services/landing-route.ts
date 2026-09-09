@@ -3,6 +3,7 @@ import type { LandingView } from "../content/landing-content";
 const LANDING_VIEW_PATHS: Record<LandingView, string> = {
   start: "/",
   "why-prompt-studio": "/why-prompt-studio",
+  examples: "/examples",
   features: "/features",
   privacy: "/privacy",
   terms: "/terms",

@@ -1,40 +1,54 @@
-import { Box, HStack, Icon, Kbd, Stack, Text } from "@chakra-ui/react";
+import { Box, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { WORKBENCH_SERVICES } from "../../content/workbench-services";
 import { useStoryStyles } from "../../hooks/use-landing-styles";
+import { DemoWorkbench } from "../examples/demo-workbench";
+import { ExtensionsDemo } from "../service-demos/extensions-demo";
+import { NavigationDemo } from "../service-demos/navigation-demo";
+import { NotificationsDemo } from "../service-demos/notifications-demo";
+import { SearchDemo } from "../service-demos/search-demo";
+import { ThemesDemo } from "../service-demos/themes-demo";
+
+const SERVICE_DEMOS = {
+  search: SearchDemo,
+  notifications: NotificationsDemo,
+  navigation: NavigationDemo,
+  extensions: ExtensionsDemo,
+  themes: ThemesDemo,
+};
 
 export const WorkbenchServices = () => {
   const styles = useStoryStyles();
   return (
-    <Box as="section" css={styles.section} aria-labelledby="plumbing-title">
+    <>
       <Stack gap="sm">
-        <Text id="plumbing-title" as="h2" textStyle="heading/M">
+        <Text as="h1" textStyle={{ base: "heading/M", md: "heading/L" }}>
           The plumbing, included.
         </Text>
         <Text textStyle="paragraph/M/regular" color="fg.muted">
-          Every tool can use the same workbench essentials.
+          Shared features that every tool can use.
         </Text>
       </Stack>
-      <Box>
-        {WORKBENCH_SERVICES.map((service) => (
-          <Box key={service.name} css={styles.service}>
-            <Icon as={service.icon} boxSize="6" color="fg.muted" />
-            <Stack gap="sm" minWidth="0">
-              <Text as="h3" textStyle="heading/S">
-                {service.name}
-              </Text>
-              <Text textStyle="paragraph/M/regular" color="fg.muted">
-                {service.description}
-              </Text>
-              <HStack gap="sm" flexWrap="wrap">
-                <Text textStyle="label/S/regular" color="fg.subtle">
-                  {service.example}
+      {WORKBENCH_SERVICES.map((service) => {
+        const Demo = SERVICE_DEMOS[service.id];
+        return (
+          <Box key={service.id} as="section" css={styles.section} aria-labelledby={`service-${service.id}`}>
+            <HStack gap="md" align="start">
+              <Icon as={service.icon} boxSize="6" color="fg.muted" />
+              <Stack gap="sm">
+                <Text id={`service-${service.id}`} as="h2" textStyle="heading/S">
+                  {service.name}
                 </Text>
-                {service.shortcut && <Kbd>⌘ P</Kbd>}
-              </HStack>
-            </Stack>
+                <Text textStyle="paragraph/M/regular" color="fg.muted">
+                  {service.description}
+                </Text>
+              </Stack>
+            </HStack>
+            <DemoWorkbench>
+              <Demo />
+            </DemoWorkbench>
           </Box>
-        ))}
-      </Box>
-    </Box>
+        );
+      })}
+    </>
   );
 };
