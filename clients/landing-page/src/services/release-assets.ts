@@ -77,16 +77,21 @@ export const latestDesktopRelease = (releases: GitHubRelease[]) => {
   return undefined;
 };
 
-export const preferredDownload = (downloads: DesktopDownload[], userAgent: string) => {
-  if (/Linux/.test(userAgent) && !/Android/.test(userAgent)) {
-    const architecture = /aarch64|arm64/i.test(userAgent) ? "ARM64" : "x64";
-    return (
-      downloads.find((download) => download.platform === "Linux" && download.architecture === architecture) ??
-      downloads[0]
-    );
+export const preferredDownload = (downloads: DesktopDownload[], userAgent: string, maxTouchPoints: number) => {
+  const mac = /Macintosh|Mac OS X/i.test(userAgent);
+  // iPadOS can identify itself as a Mac when requesting desktop websites.
+  if (/Android|iPhone|iPad|iPod|Windows Phone|CrOS/i.test(userAgent) || (mac && maxTouchPoints > 1)) {
+    return undefined;
   }
-  if (/Windows/.test(userAgent)) return downloads.find((download) => download.platform === "Windows") ?? downloads[0];
-  return downloads[0];
+  if (mac) return downloads.find((download) => download.platform === "macOS");
+  const architecture = /aarch64|arm64/i.test(userAgent) ? "ARM64" : "x64";
+  if (/Windows/i.test(userAgent)) {
+    return downloads.find((download) => download.platform === "Windows" && download.architecture === architecture);
+  }
+  if (/Linux/i.test(userAgent)) {
+    return downloads.find((download) => download.platform === "Linux" && download.architecture === architecture);
+  }
+  return undefined;
 };
 
 export const downloadDescription = (download: DesktopDownload) => {

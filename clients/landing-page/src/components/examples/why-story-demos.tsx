@@ -3,14 +3,13 @@ import { ArrowRight } from "lucide-react";
 import { useState } from "react";
 import { useToolDemoStyles } from "../../hooks/use-landing-styles";
 import { BlockSymbol } from "../sections/building-blocks";
-import { AgentWorkflowDemo } from "./agent-workflow-demo";
 import { DemoWorkbench } from "./demo-workbench";
 import { IconSetEditorDemo } from "./icon-set-editor-demo";
 import { ShaderEditorDemo } from "./shader-editor-demo";
 
 export const ConnectedToolsDemo = () => (
   <DemoWorkbench>
-    <AgentWorkflowDemo />
+    <ShaderEditorDemo withControls />
   </DemoWorkbench>
 );
 

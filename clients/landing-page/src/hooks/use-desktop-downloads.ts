@@ -12,7 +12,7 @@ export const useDesktopDownloads = () => {
     fetchDesktopRelease(controller.signal)
       .then((result) => {
         setRelease(result);
-        setSelectedId(preferredDownload(result.downloads, navigator.userAgent).id);
+        setSelectedId(preferredDownload(result.downloads, navigator.userAgent, navigator.maxTouchPoints)?.id);
       })
       .catch(() => {
         if (!controller.signal.aborted) setFailed(true);

@@ -1,12 +1,19 @@
-import { Box, Button, chakra, HStack, Stack, Text, Textarea, useSlotRecipe } from "@chakra-ui/react";
+import { Box, Button, HStack, Stack, Text, Textarea, useSlotRecipe } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
+import { createGlyphIcon } from "@/components/primitives/glyph-icon";
 import { Slider } from "@/components/primitives/slider";
+
+const icons = ["star", "cloud-add", "global", "grid-4", "code", "component"].map((name) => ({
+  name,
+  icon: createGlyphIcon(name),
+}));
 
 const ShaderDemo = (props: { withControls: boolean }) => {
   const { withControls } = props;
   const styles = useSlotRecipe({ key: "landingToolDemo" })({});
   const story = useSlotRecipe({ key: "landingStory" })({});
+  const [selected, setSelected] = useState(icons[0]);
   const [scale, setScale] = useState(18);
   const [speed, setSpeed] = useState(0.6);
   return (
@@ -16,6 +23,28 @@ const ShaderDemo = (props: { withControls: boolean }) => {
         <Button variant="subtle" size="lg">
           Try the change
         </Button>
+      </Box>
+      <Box css={story.panel}>
+        <Box css={story.panelHeader}>Your icon set</Box>
+        <Box css={story.panelBody}>
+          <Box css={styles.iconPicker}>
+            {icons.map((item) => (
+              <Button
+                key={item.name}
+                size="2xl"
+                variant="ghost"
+                aria-label={`Use ${item.name}`}
+                aria-pressed={selected.name === item.name}
+                onClick={() => setSelected(item)}
+              >
+                <Box css={styles.tileSymbol}>
+                  <item.icon />
+                </Box>
+              </Button>
+            ))}
+          </Box>
+          <Text textStyle="label/S/regular">Icon set → {selected.name} → Shader preview</Text>
+        </Box>
       </Box>
       <Box css={story.panels}>
         <Box css={story.panel}>
@@ -33,7 +62,9 @@ const ShaderDemo = (props: { withControls: boolean }) => {
   );
   vec3 a = vec3(0.10, 0.20, 0.55);
   vec3 b = vec3(0.40, 0.90, 0.85);
-  return mix(a, b, wave * 0.5 + 0.5);
+  vec3 color = mix(a, b, wave * 0.5 + 0.5);
+  float icon = texture2D(u_icon, uv).a;
+  return mix(vec3(0.04, 0.06, 0.10), color, icon);
 }`}
             />
           </Box>
@@ -41,19 +72,13 @@ const ShaderDemo = (props: { withControls: boolean }) => {
         <Box css={story.panel}>
           <Box css={story.panelHeader}>Preview</Box>
           <Box css={story.panelBody}>
-            <chakra.svg css={styles.shaderCanvas} viewBox="0 0 400 300" role="img" aria-label="Shader preview layout">
-              {[1, 2, 3, 4, 5].map((ring) => (
-                <chakra.circle
-                  key={ring}
-                  cx="200"
-                  cy="150"
-                  r={ring * (900 / scale)}
-                  fill="none"
-                  stroke="fg.info"
-                  strokeWidth="20"
-                />
-              ))}
-            </chakra.svg>
+            <Box css={styles.shaderCanvas}>
+              <Box height="64" display="grid" placeItems="center" role="img" aria-label="Shader icon preview">
+                <Box boxSize="40" fontSize="{sizes.40}" color="fg.info">
+                  <selected.icon />
+                </Box>
+              </Box>
+            </Box>
             {withControls && (
               <Stack gap="lg">
                 <Stack gap="sm">

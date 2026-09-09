@@ -3,6 +3,7 @@ import { defineSlotRecipe } from "@chakra-ui/react";
 export const landingToolDemoSlotRecipe = defineSlotRecipe({
   slots: [
     "iconEditor",
+    "iconPicker",
     "iconGrid",
     "iconTile",
     "iconName",
@@ -22,16 +23,24 @@ export const landingToolDemoSlotRecipe = defineSlotRecipe({
     "plot",
     "plotGrid",
     "plotCurve",
+    "plotComparison",
     "plotCursor",
     "plotPoint",
     "shaderCode",
     "shaderCanvas",
   ],
   base: {
+    iconPicker: {
+      display: "grid",
+      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+      "@container (min-width: 26rem)": { gridTemplateColumns: "repeat(6, minmax(0, 1fr))" },
+      gap: "xs",
+    },
     shaderCode: { textStyle: "mono/XS", fontSize: "sm", minHeight: "64", flex: 1, resize: "none" },
     shaderCanvas: { display: "block", width: "full", aspectRatio: "4 / 3", bg: "bg.subtle", borderRadius: "sm" },
     plot: { width: "full", bg: "bg.subtle", borderRadius: "sm" },
     plotGrid: { fill: "none", stroke: "border.subtle", strokeWidth: 1 },
+    plotComparison: { fill: "none", stroke: "fg.muted", strokeWidth: 2, strokeDasharray: "5 5" },
     plotCurve: { fill: "none", stroke: "fg.info", strokeWidth: 3, strokeLinecap: "round", strokeLinejoin: "round" },
     plotCursor: { stroke: "fg.muted", strokeWidth: 1, strokeDasharray: "4 4" },
     plotPoint: { fill: "fg", stroke: "bg", strokeWidth: 2 },

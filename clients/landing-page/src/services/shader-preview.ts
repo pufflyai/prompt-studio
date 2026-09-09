@@ -9,6 +9,7 @@ precision mediump float;
 uniform float u_time;
 uniform float u_scale;
 uniform vec2 u_resolution;
+uniform sampler2D u_icon;
 #line 1
 ${source}
 void main() {
@@ -38,11 +39,19 @@ export const createShaderPreview = (canvas: HTMLCanvasElement) => {
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
   gl.enableVertexAttribArray(0);
   gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+  const texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
   let program: WebGLProgram | null = null;
   let uniforms: {
     time: WebGLUniformLocation | null;
     scale: WebGLUniformLocation | null;
     resolution: WebGLUniformLocation | null;
+    icon: WebGLUniformLocation | null;
   } | null = null;
 
   const setSource = (source: string) => {
@@ -69,12 +78,18 @@ export const createShaderPreview = (canvas: HTMLCanvasElement) => {
       time: gl.getUniformLocation(program, "u_time"),
       scale: gl.getUniformLocation(program, "u_scale"),
       resolution: gl.getUniformLocation(program, "u_resolution"),
+      icon: gl.getUniformLocation(program, "u_icon"),
     };
     return null;
   };
 
   return {
     setSource,
+    setIcon: (canvas: HTMLCanvasElement) => {
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+    },
     resize: () => {
       const ratio = Math.min(window.devicePixelRatio, 2);
       canvas.width = Math.max(1, Math.round(canvas.clientWidth * ratio));
@@ -84,6 +99,7 @@ export const createShaderPreview = (canvas: HTMLCanvasElement) => {
     render: (time: number, scale: number) => {
       gl.useProgram(program);
       if (!uniforms) return;
+      gl.uniform1i(uniforms.icon, 0);
       gl.uniform1f(uniforms.time, time);
       gl.uniform1f(uniforms.scale, scale);
       gl.uniform2f(uniforms.resolution, canvas.width, canvas.height);
@@ -93,6 +109,7 @@ export const createShaderPreview = (canvas: HTMLCanvasElement) => {
       gl.useProgram(null);
       gl.deleteProgram(program);
       gl.deleteBuffer(buffer);
+      gl.deleteTexture(texture);
       gl.deleteShader(vertex);
       gl.getExtension("WEBGL_lose_context")?.loseContext();
     },

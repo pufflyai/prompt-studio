@@ -7,19 +7,20 @@ const FormulaDemo = () => {
   const styles = useSlotRecipe({ key: "landingToolDemo" })({});
   const story = useSlotRecipe({ key: "landingStory" })({});
   const [years, setYears] = useState(10);
-  const result = 10000 * 1.05 ** years;
+  const balance = (year: number) => 10000 * 1.005 ** (year * 12) + (300 * (1.005 ** (year * 12) - 1)) / 0.005;
+  const result = balance(years);
   const maximum = result * 1.1;
   const points = Array.from(
     { length: 101 },
-    (_, index) => `${24 + index * 3.52},${200 - ((10000 * 1.05 ** ((years * index) / 100)) / maximum) * 176}`,
+    (_, index) => `${24 + index * 3.52},${200 - (balance((years * index) / 100) / maximum) * 176}`,
   ).join(" ");
 
   return (
     <Box css={story.page}>
       <Box css={story.panel}>
-        <Box css={story.panelHeader}>Compound growth</Box>
+        <Box css={story.panelHeader}>Savings with contributions</Box>
         <Stack css={story.panelBody}>
-          <Text textStyle="heading/M">A = P × (1 + r)ᵗ</Text>
+          <Text textStyle="mono/XS">FV = P(1+i)ⁿ + C[(1+i)ⁿ−1]/i</Text>
           <Text color="fg.muted" textStyle="label/S/regular">
             Future value
           </Text>
@@ -28,10 +29,19 @@ const FormulaDemo = () => {
               result,
             )}
           </Text>
-          <chakra.svg css={styles.plot} viewBox="0 0 400 224" role="img" aria-label="Compound growth over time">
+          <chakra.svg
+            css={styles.plot}
+            viewBox="0 0 400 224"
+            role="img"
+            aria-label="Savings with contributions over time"
+          >
             <chakra.path
               css={styles.plotGrid}
               d="M24 24H376 M24 112H376 M24 200H376 M24 24V200 M200 24V200 M376 24V200"
+            />
+            <chakra.polyline
+              css={styles.plotComparison}
+              points={`24,${200 - (10000 / maximum) * 176} 376,${200 - ((10000 + 300 * years * 12) / maximum) * 176}`}
             />
             <chakra.polyline css={styles.plotCurve} points={points} />
             <chakra.circle css={styles.plotPoint} cx="376" cy={200 - (result / maximum) * 176} r="5" />

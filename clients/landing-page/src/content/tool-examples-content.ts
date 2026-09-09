@@ -1,6 +1,6 @@
 import type { ToolShapeKind } from "./tool-shapes";
 
-export type ToolExampleId = "icons" | "agents" | "formulas";
+export type ToolExampleId = "icons" | "shaders" | "agents" | "formulas";
 
 export const TOOL_EXAMPLES: {
   id: ToolExampleId;
@@ -14,6 +14,15 @@ export const TOOL_EXAMPLES: {
       { kind: "page", purpose: "Browse and search your icon set." },
       { kind: "editor", purpose: "Inspect an icon, its name, and its codepoint." },
       { kind: "command", purpose: "Rename an icon across your set." },
+    ],
+  },
+  {
+    id: "shaders",
+    name: "Shader editor",
+    blocks: [
+      { kind: "page", purpose: "Pick an icon and watch the shader paint it in real time." },
+      { kind: "editor", purpose: "Edit the shader and reuse icons from your icon set." },
+      { kind: "hook", purpose: "Refresh the preview when the selected icon or shader changes." },
     ],
   },
   {
@@ -31,8 +40,9 @@ export const TOOL_EXAMPLES: {
     id: "formulas",
     name: "Financial formulas",
     blocks: [
-      { kind: "page", purpose: "Explore growth, interest, and purchasing power in one glossary." },
+      { kind: "page", purpose: "Explore savings plans, loan repayment, and discounted cash flow." },
       { kind: "editor", purpose: "Adjust the inputs and explore what each formula does." },
+      { kind: "command", purpose: "Let an agent call a formula to answer a question with calculated results." },
     ],
   },
 ];

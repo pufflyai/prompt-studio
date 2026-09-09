@@ -5,8 +5,8 @@ import { ResizableSplitLayout } from "@/components/layout/resizable-split-layout
 import { SearchableMenu } from "@/components/overlays/searchable-menu";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 
-const LandingPanels = (props: { section?: string }) => {
-  const { section } = props;
+const LandingPanels = (props: { section?: string; desktopAvailable?: boolean }) => {
+  const { section, desktopAvailable = true } = props;
   const recipe = useSlotRecipe({ key: "landing" });
   const styles = recipe({});
   return (
@@ -42,11 +42,13 @@ const LandingPanels = (props: { section?: string }) => {
                     </Text>
                     <Box css={styles.download}>
                       <Button variant="primary" size="lg" width="full">
-                        <Download />
-                        Download Prompt Studio
+                        {desktopAvailable ? <Download /> : <SquareTerminal />}
+                        {desktopAvailable ? "Download Prompt Studio" : "Use via CLI"}
                       </Button>
                       <Text textStyle="label/S/regular" color="fg.muted">
-                        macOS · Apple silicon · DMG · v0.32.0
+                        {desktopAvailable
+                          ? "macOS · Apple silicon · DMG · v0.32.0"
+                          : "The desktop app is not available on this platform yet."}
                       </Text>
                       <HStack gap="xs">
                         <SearchableMenu
@@ -60,16 +62,18 @@ const LandingPanels = (props: { section?: string }) => {
                             </Button>
                           }
                           items={[
-                            { id: "mac", label: "macOS · Apple silicon · DMG", isSelected: true },
+                            { id: "mac", label: "macOS · Apple silicon · DMG", isSelected: desktopAvailable },
                             { id: "linux", label: "Linux · x64 · DEB" },
                           ]}
                         />
-                        <Button asChild variant="ghost" size="sm">
-                          <a href="https://github.com/pufflyai/prompt-studio/blob/main/README.md">
-                            <SquareTerminal />
-                            Use via CLI
-                          </a>
-                        </Button>
+                        {desktopAvailable && (
+                          <Button asChild variant="ghost" size="sm">
+                            <a href="https://github.com/pufflyai/prompt-studio/blob/main/README.md">
+                              <SquareTerminal />
+                              Use via CLI
+                            </a>
+                          </Button>
+                        )}
                       </HStack>
                     </Box>
                   </Box>
@@ -119,5 +123,6 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Desktop: Story = {};
+export const DesktopUnavailable: Story = { args: { desktopAvailable: false } };
 export const WhyPromptStudio: Story = { args: { section: "Extend Prompt Studio by combining building blocks." } };
 export const Features: Story = { args: { section: "What will you build?" } };

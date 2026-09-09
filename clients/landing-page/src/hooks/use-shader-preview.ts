@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { createShaderIconTexture } from "../services/shader-icon-texture";
 import { createShaderPreview } from "../services/shader-preview";
 
-export const useShaderPreview = (source: string, scale: number, speed: number) => {
+export const useShaderPreview = (source: string, scale: number, speed: number, codepoint: string) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewRef = useRef<ReturnType<typeof createShaderPreview> | null>(null);
   const timeRef = useRef(0);
@@ -48,6 +49,22 @@ export const useShaderPreview = (source: string, scale: number, speed: number) =
     setError(preview.setSource(source));
     preview.render(timeRef.current, scaleRef.current);
   }, [source]);
+
+  useEffect(() => {
+    let active = true;
+    createShaderIconTexture(codepoint)
+      .then((texture) => {
+        if (!active) return;
+        previewRef.current?.setIcon(texture);
+        previewRef.current?.render(timeRef.current, scaleRef.current);
+      })
+      .catch((error: Error) => {
+        if (active) setError(error.message);
+      });
+    return () => {
+      active = false;
+    };
+  }, [codepoint]);
 
   useEffect(() => {
     scaleRef.current = scale;
