@@ -35,8 +35,9 @@ control collapses or expands the window. Red and yellow enter window mode and ar
 disabled there. Drag the title bar to move the window. Mobile navigation opens a
 menu below the header; desktop navigation uses the sidebar. There are no breadcrumbs.
 
-Each page ends with a navigation link. The main pages follow the sidebar order and
-Features returns to Start Here. Privacy leads to Terms, and Terms returns to Start Here.
+Previous and Next buttons sit at the bottom of the introduction and download panel,
+outside its scroll area. The main pages follow the sidebar order and wrap between
+Features and Start Here. Privacy leads to Terms, and Terms returns to Start Here.
 These links use browser history without remounting the download panel.
 
 ## Product examples

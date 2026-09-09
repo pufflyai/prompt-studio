@@ -5,8 +5,8 @@ import { useLandingStyles } from "../../hooks/use-landing-styles";
 import { DownloadPanel } from "../downloads/download-panel";
 import { PageScroll } from "./page-scroll";
 
-export const LandingPanels = (props: { children: ReactNode }) => {
-  const { children } = props;
+export const LandingPanels = (props: { children: ReactNode; navigation: ReactNode }) => {
+  const { children, navigation } = props;
   const styles = useLandingStyles();
   return (
     <PageScroll scope="panels">
@@ -20,9 +20,12 @@ export const LandingPanels = (props: { children: ReactNode }) => {
         resizeLabel="Resize download panel"
         resizablePanel={
           <Box css={styles.hero}>
-            <PageScroll>
-              <DownloadPanel />
-            </PageScroll>
+            <Box flex="1" minHeight="0">
+              <PageScroll>
+                <DownloadPanel />
+              </PageScroll>
+            </Box>
+            {navigation}
           </Box>
         }
         contentPanel={children}

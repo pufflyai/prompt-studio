@@ -17,6 +17,12 @@ export const nextLandingView = (view: LandingView) => {
   return SIDEBAR_VIEWS[(SIDEBAR_VIEWS.indexOf(view) + 1) % SIDEBAR_VIEWS.length];
 };
 
+export const previousLandingView = (view: LandingView) => {
+  if (view === "privacy") return "start";
+  if (view === "terms") return "privacy";
+  return SIDEBAR_VIEWS[(SIDEBAR_VIEWS.indexOf(view) - 1 + SIDEBAR_VIEWS.length) % SIDEBAR_VIEWS.length];
+};
+
 const normalizePath = (path: string) => {
   const pathname = path.split(/[?#]/)[0];
   if (pathname === "/") return pathname;

@@ -1,5 +1,4 @@
 import { Box, Stack, Text } from "@chakra-ui/react";
-import type { ReactNode } from "react";
 import { useStoryStyles } from "../../hooks/use-landing-styles";
 import { ChangeToolDemo, ConnectedToolsDemo, WorkbenchOverviewDemo } from "../examples/why-story-demos";
 import { PageScroll } from "../workbench/page-scroll";
@@ -28,8 +27,7 @@ const REASONS = [
   },
 ];
 
-export const WhatIsPromptStudioView = (props: { footer: ReactNode }) => {
-  const { footer } = props;
+export const WhatIsPromptStudioView = () => {
   const styles = useStoryStyles("spacious");
   return (
     <PageScroll>
@@ -47,7 +45,6 @@ export const WhatIsPromptStudioView = (props: { footer: ReactNode }) => {
             <Demo />
           </Box>
         ))}
-        {footer}
       </Box>
     </PageScroll>
   );
