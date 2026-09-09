@@ -56,6 +56,13 @@ const jsonLd = {
     <link rel="icon" type="image/png" href={faviconPngUrl} />
 
     <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+    <script>
+      const stored = localStorage.getItem("theme-preference");
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const dark = stored ? stored.includes("dark") : prefersDark;
+      document.documentElement.classList.toggle("dark", dark);
+      document.documentElement.classList.toggle("light", !dark);
+    </script>
   </head>
   <body style="margin:0;overflow:auto;">
     <slot />

@@ -2900,9 +2900,6 @@
         },
         "view-subheader": {
           "value": "2.25rem"
-        },
-        "data-table-column-min": {
-          "value": "15rem"
         }
       },
       "zIndex": {

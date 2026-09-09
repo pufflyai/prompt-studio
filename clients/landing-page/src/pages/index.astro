@@ -6,13 +6,3 @@ import BaseLayout from "../layouts/base-layout.astro";
 <BaseLayout>
   <IndexPage initialPath={Astro.url.pathname} client:load />
 </BaseLayout>
-
-<script>
-  // apply the stored (or system) theme before hydration so the page doesn't flash;
-  // ThemePreferenceProvider takes over once React mounts
-  const stored = localStorage.getItem("theme-preference");
-  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const dark = stored ? stored.includes("dark") : prefersDark;
-  document.documentElement.classList.toggle("dark", dark);
-  document.documentElement.classList.toggle("light", !dark);
-</script>

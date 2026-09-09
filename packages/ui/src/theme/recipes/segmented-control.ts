@@ -28,7 +28,7 @@ export const segmentedControlSlotRecipe = defineSlotRecipe({
       transitionDuration: "fast",
       focusVisibleRing: "outside",
       _hover: { color: "fg" },
-      _selected: { bg: "bg.inverted", color: "fg.inverted", _hover: { color: "fg.inverted" } },
+      _selected: { bg: "bg.inverted", color: "fg.inverted" },
       _disabled: { cursor: "not-allowed", opacity: 0.5, _hover: { color: "fg.muted" } },
     },
   },

@@ -41,11 +41,6 @@ const buildRendererInitialState = (props: Pick<DataTableProps, "defaultViews" | 
   activeViewId: props.defaultActiveViewId,
 });
 
-const resolveMinimumTableWidth = (fullWidth: boolean, columnCount: number) =>
-  fullWidth && columnCount > 1
-    ? `calc(var(--chakra-sizes-data-table-column-min) * ${columnCount} + var(--chakra-spacing-9))`
-    : undefined;
-
 export const EditModeDataTable = (props: DataTableProps) => {
   const {
     data,
@@ -191,7 +186,6 @@ export const EditModeDataTable = (props: DataTableProps) => {
             size="sm"
             tableLayout="fixed"
             width={tableWidth}
-            minWidth={resolveMinimumTableWidth(fullWidth, columns.length)}
             borderWidth="1px"
             borderColor="border.subtle"
           >

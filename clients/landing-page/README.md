@@ -1,7 +1,22 @@
 # Landing page
 
-The landing page uses the shared UI theme and panel separators. Its Pencil source is
-`design/prompt-studio-design-system.pen`; the main frame is `web/Landing Workbench`.
+The landing page uses the shared UI theme and panel separators. Its styles use
+dedicated landing recipes and do not change the dashboard's components or theme.
+
+## Code structure
+
+- `src/components/workbench` owns page chrome and panel composition.
+- `src/components/sections` contains Start Here, Why Prompt Studio, Features, and legal views.
+- `src/components/downloads` contains the download picker and agent compatibility cards.
+- `src/components/examples` contains the interactive font editor and coding agent demos.
+- `src/content` owns navigation metadata, example data, building blocks, and legal copy.
+- `src/hooks` connects browser navigation, release loading, and animation to React.
+- `src/services` loads GitHub releases, selects desktop assets, and converts legal copy to Markdown.
+- `src/services/shapes` owns tool geometry, placement, collisions, dragging, and simulation cleanup.
+
+The demos and falling tools render in code. They use no screenshot or image assets.
+
+## Layout
 
 Every page keeps the 480px introduction and download panel on the left. Navigation
 changes the right panel, preserving the selected download and resized panel width.
@@ -35,8 +50,10 @@ to their actual container width, including when the download panel is resized.
 
 ## Desktop downloads
 
-`desktop-releases.ts` reads the public GitHub releases API. It selects a stable
-`pstdio@` release with desktop assets and uses the asset URLs returned by GitHub.
+`services/desktop-releases.ts` reads the public GitHub releases API.
+`services/release-assets.ts` selects a stable `pstdio@` release with desktop assets
+and uses the asset URLs returned by GitHub. `useDesktopDownloads` owns loading,
+selection, and cancellation when the picker unmounts.
 The picker lists only published desktop packages, excluding CLI binaries and
 extension releases. It prefers the visitor's operating system when available.
 The selected build shows its platform, architecture, package format and version.

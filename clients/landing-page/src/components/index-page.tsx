@@ -1,5 +1,5 @@
-import { WorkbenchLanding } from "./landing/workbench-landing";
 import { RootProvider } from "./root-provider";
+import { WorkbenchLanding } from "./workbench/workbench-landing";
 
 interface IndexPageProps {
   initialPath: string;
