@@ -1,5 +1,17 @@
 # pstdio
 
+## 0.32.1
+
+_2026-09-09_
+
+### Patch Changes
+
+- 4f1e548: Add responsive split layouts and landing page recipes for downloads, tool examples, and building blocks
+- 8418ab0: Render workbench panels as rounded cards with grip separators that show a bar on hover, and make the activity bar, header row, and status bar flat.
+- e7b0c05: Expose dashboard URL helpers and project-scoped webview subscriptions with shared event ID resolution and reconnect invalidation, and fix desktop startup and webview module reloads.
+- 54d1746: Move remote execution from examples into the remote-workspaces extension and connect workspace lifecycles and agent conversations to PocketCoder.
+- 73ded1d: Add a theme-aware artifact gallery with persistent tabs, agent publishing, version history, rename, and delete.
+
 ## 0.32.0
 
 _2026-09-08_

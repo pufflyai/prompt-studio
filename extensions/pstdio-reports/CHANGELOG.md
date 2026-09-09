@@ -1,5 +1,13 @@
 # pstdio-reports
 
+## 0.5.1
+
+_2026-09-09_
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.23.0`
+
 ## 0.5.0
 
 _2026-09-07_

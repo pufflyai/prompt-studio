@@ -1,5 +1,18 @@
 # @pstdio/ui
 
+## 0.24.0
+
+_2026-09-09_
+
+### Minor Changes
+
+- 4f1e548: Add responsive split layouts and landing page recipes for downloads, tool examples, and building blocks
+- 8418ab0: Render workbench panels as rounded cards with grip separators that show a bar on hover, and make the activity bar, header row, and status bar flat.
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.23.0`
+
 ## 0.23.0
 
 _2026-09-08_

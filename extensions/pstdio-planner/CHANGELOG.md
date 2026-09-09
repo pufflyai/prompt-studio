@@ -1,5 +1,13 @@
 # pstdio-planner
 
+## 0.13.2
+
+_2026-09-09_
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/ui@0.24.0`, `@pstdio/sdk@0.23.0`
+
 ## 0.13.1
 
 _2026-09-08_

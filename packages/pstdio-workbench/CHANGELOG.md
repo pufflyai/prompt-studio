@@ -1,5 +1,18 @@
 # @pstdio/workbench
 
+## 0.11.0
+
+_2026-09-09_
+
+### Minor Changes
+
+- 8418ab0: Render workbench panels as rounded cards with grip separators that show a bar on hover, and make the activity bar, header row, and status bar flat.
+
+### Patch Changes
+
+- e7b0c05: Expose dashboard URL helpers and project-scoped webview subscriptions with shared event ID resolution and reconnect invalidation, and fix desktop startup and webview module reloads.
+- Updated internal dependencies: `@pstdio/ui@0.24.0`, `@pstdio/sdk@0.23.0`
+
 ## 0.10.0
 
 _2026-09-08_

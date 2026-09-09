@@ -1,5 +1,13 @@
 # @pstdio/sdk
 
+## 0.23.0
+
+_2026-09-09_
+
+### Minor Changes
+
+- e7b0c05: Expose dashboard URL helpers and project-scoped webview subscriptions with shared event ID resolution and reconnect invalidation, and fix desktop startup and webview module reloads.
+
 ## 0.22.1
 
 _2026-09-08_

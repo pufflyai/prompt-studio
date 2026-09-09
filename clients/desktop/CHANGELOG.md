@@ -1,5 +1,11 @@
 # @pstdio/desktop
 
+## 0.32.1
+
+### Patch Changes
+
+- Synchronize the desktop application with `pstdio@0.32.1`.
+
 ## 0.32.0
 
 ### Patch Changes
