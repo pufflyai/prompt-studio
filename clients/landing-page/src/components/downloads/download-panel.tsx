@@ -7,9 +7,9 @@ import { AnthropicLogo } from "../icons/anthropic-logo";
 import { DashedTag } from "./dashed-tag";
 import { DownloadPicker } from "./download-picker";
 
-export const START_HERE_TITLE = "A place for your tools to live.";
+export const START_HERE_TITLE = "A workbench for your tools.";
 export const START_HERE_INTRO =
-  "Prompt Studio is a workbench where you and your agents can build and run tailored tools for your work.";
+  "Coding agents can build tools to help with your work. Prompt Studio gives them a place to live, with the shared infrastructure they need to work together: search, CLI commands, editors, custom UI, and more.";
 
 export const DownloadPanel = () => {
   const styles = useLandingStyles();

@@ -1,4 +1,4 @@
-import { Box, Button, HStack, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, HStack, Text } from "@chakra-ui/react";
 import { BUILDING_BLOCKS, blockFor } from "../../content/building-block-content";
 import type { ToolShapeKind } from "../../content/tool-shapes";
 import { useStoryStyles } from "../../hooks/use-landing-styles";
@@ -41,41 +41,24 @@ export const BlockChip = (props: BlockChipProps) => {
   return <HStack gap="xs">{content}</HStack>;
 };
 
-export const BuildingBlocks = (props: { selected: ToolShapeKind; onSelect: (kind: ToolShapeKind) => void }) => {
-  const { selected, onSelect } = props;
+export const BuildingBlocks = () => {
   const styles = useStoryStyles();
   return (
-    <Box css={styles.section} as="section" aria-labelledby="building-blocks-title">
-      <Stack gap="sm">
-        <Text id="building-blocks-title" as="h2" textStyle="heading/M">
-          Choose the pieces your tool needs.
-        </Text>
-        <Text textStyle="paragraph/M/regular" color="fg.muted">
-          Combine building blocks in an extension. Each shape is a different kind of building block.
-        </Text>
-      </Stack>
-      <Box css={styles.blockGrid}>
-        {BUILDING_BLOCKS.map((block) => (
-          <Box
-            key={block.kind}
-            as="button"
-            css={styles.block}
-            aria-pressed={selected === block.kind}
-            onClick={() => onSelect(block.kind)}
-          >
-            <Box css={styles.blockSymbol}>
-              <BlockSymbol kind={block.kind} large />
-            </Box>
-            <Text as="span" textStyle="heading/S">
-              {block.name}
-            </Text>
-            <Text textStyle="paragraph/M/regular">{block.detail}</Text>
-            <Text textStyle="paragraph/S/regular" color="fg.muted">
-              {block.example}
-            </Text>
+    <Box css={styles.blockGrid}>
+      {BUILDING_BLOCKS.map((block) => (
+        <Box key={block.kind} css={styles.block}>
+          <Box css={styles.blockSymbol}>
+            <BlockSymbol kind={block.kind} large />
           </Box>
-        ))}
-      </Box>
+          <Text as="h2" textStyle="heading/S">
+            {block.name}
+          </Text>
+          <Text textStyle="paragraph/M/regular">{block.detail}</Text>
+          <Text textStyle="paragraph/S/regular" color="fg.muted">
+            {block.example}
+          </Text>
+        </Box>
+      ))}
     </Box>
   );
 };

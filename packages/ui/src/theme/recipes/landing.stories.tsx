@@ -33,10 +33,12 @@ const LandingPanels = (props: { section?: string }) => {
                 <ScrollArea height="full">
                   <Box css={styles.heroCopy}>
                     <Text as="h1" textStyle="heading/XL">
-                      A place for your tools to live.
+                      A workbench for your tools.
                     </Text>
                     <Text textStyle="paragraph/XL/regular" color="fg.muted">
-                      Build and run tailored tools with your agents.
+                      Coding agents can build tools to help with your work. Prompt Studio gives them a place to live,
+                      with the shared infrastructure they need to work together: search, CLI commands, editors, custom
+                      UI, and more.
                     </Text>
                     <Box css={styles.download}>
                       <Button variant="primary" size="lg" width="full">
@@ -106,5 +108,5 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Desktop: Story = {};
-export const WhyPromptStudio: Story = { args: { section: "All your vibe coded tools under one roof" } };
+export const WhyPromptStudio: Story = { args: { section: "Extend Prompt Studio by combining building blocks." } };
 export const Features: Story = { args: { section: "What will you build?" } };

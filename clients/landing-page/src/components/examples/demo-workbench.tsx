@@ -27,16 +27,8 @@ export const DemoPanel = (props: DemoPanelProps) => {
   );
 };
 
-export const DemoWorkbench = (props: { children: ReactNode; name: string }) => {
-  const { children, name } = props;
+export const DemoWorkbench = (props: { children: ReactNode }) => {
+  const { children } = props;
   const styles = useStoryStyles();
-  return (
-    <Box css={styles.visual}>
-      <Box css={styles.visualHeader}>
-        <Text>{name}</Text>
-        <Text>Interactive example</Text>
-      </Box>
-      {children}
-    </Box>
-  );
+  return <Box css={styles.visual}>{children}</Box>;
 };

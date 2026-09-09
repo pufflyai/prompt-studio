@@ -1,33 +1,53 @@
-import { Box, HStack, Icon, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Box, Icon, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
-import { useState } from "react";
 import { createGlyphIcon } from "@/components/primitives/glyph-icon";
 
 const ExampleIcon = createGlyphIcon("cloud-add");
 
 const LandingStory = () => {
-  const recipe = useSlotRecipe({ key: "landingStory" });
-  const styles = recipe({});
-  const [selected, setSelected] = useState("Pages");
+  const styles = useSlotRecipe({ key: "landingStory" })({});
   return (
     <Box css={styles.page}>
       <Box css={styles.section}>
         <Stack css={styles.intro}>
           <Text as="h1" textStyle="heading/L">
-            What will you build?
+            Extend Prompt Studio by combining building blocks.
           </Text>
           <Text textStyle="paragraph/L/regular" color="fg.muted">
-            Combine building blocks in your own workbench.
+            Choose the pieces your tool needs.
+          </Text>
+        </Stack>
+        <Box css={styles.blockGrid}>
+          {[
+            { name: "Pages", detail: "Give your tool an interface." },
+            { name: "Editors", detail: "Work with files your way." },
+            { name: "Commands", detail: "Add an action you or your agent can run." },
+            { name: "Skills", detail: "Teach your agent how you work." },
+            { name: "Hooks", detail: "Run an action when something happens." },
+            { name: "Schedules", detail: "Give repeated work a time to run." },
+          ].map((block) => (
+            <Box key={block.name} css={styles.block}>
+              <Text as="h2" textStyle="heading/S">
+                {block.name}
+              </Text>
+              <Text textStyle="paragraph/M/regular">{block.detail}</Text>
+            </Box>
+          ))}
+        </Box>
+      </Box>
+      <Box css={styles.section}>
+        <Stack css={styles.intro}>
+          <Text as="h2" textStyle="heading/L">
+            A clean editor out of the box
+          </Text>
+          <Text textStyle="paragraph/L/regular" color="fg.muted">
+            Give your tools a consistent UI, with panels, navigation, and themes included.
           </Text>
         </Stack>
         <Box css={styles.visual}>
-          <Box css={styles.visualHeader}>
-            <Text>Icon set editor</Text>
-            <Text>Interactive example</Text>
-          </Box>
           <Box css={styles.panels}>
-            {["Your icon set", "Icon inspector"].map((title, index) => (
-              <Box css={styles.panel} key={title} data-highlighted={selected === ["Pages", "Editors"][index]}>
+            {["Your icon set", "Icon inspector"].map((title) => (
+              <Box css={styles.panel} key={title}>
                 <Box css={styles.panelHeader}>
                   <Text>{title}</Text>
                 </Box>
@@ -39,23 +59,6 @@ const LandingStory = () => {
           </Box>
         </Box>
       </Box>
-      <Box css={styles.blockGrid}>
-        {["Pages", "Editors", "Commands", "Skills", "Hooks", "Schedules"].map((name) => (
-          <Box
-            as="button"
-            key={name}
-            css={styles.block}
-            aria-pressed={selected === name}
-            onClick={() => setSelected(name)}
-          >
-            <Text textStyle="heading/S">{name}</Text>
-            <Text textStyle="paragraph/M/regular">A building block for your tools.</Text>
-          </Box>
-        ))}
-      </Box>
-      <HStack css={styles.composition}>
-        <Text aria-live="polite">Selected: {selected}</Text>
-      </HStack>
     </Box>
   );
 };

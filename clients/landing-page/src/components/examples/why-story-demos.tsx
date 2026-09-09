@@ -27,7 +27,7 @@ export const ConnectedToolsDemo = () => {
           <Text>Preview</Text>
         </HStack>
       </Box>
-      <DemoWorkbench name="Coding agents">
+      <DemoWorkbench>
         <AgentDashboardDemo />
       </DemoWorkbench>
     </Stack>
@@ -48,7 +48,7 @@ export const ChangeToolDemo = () => {
           {changed ? "Undo change" : "Try the change"}
         </Button>
       </Box>
-      <DemoWorkbench name="Your agent dashboard">
+      <DemoWorkbench>
         <AgentDashboardDemo withPreview={changed} />
       </DemoWorkbench>
     </Stack>
@@ -56,7 +56,7 @@ export const ChangeToolDemo = () => {
 };
 
 export const WorkbenchOverviewDemo = () => (
-  <DemoWorkbench name="Icon set editor">
+  <DemoWorkbench>
     <IconSetEditorDemo />
   </DemoWorkbench>
 );

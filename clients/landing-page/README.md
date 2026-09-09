@@ -32,8 +32,9 @@ its drawing and collisions stay aligned as it turns.
 
 ## Product examples
 
-Why Prompt Studio tells a short product story through interactive examples. Visitors
-can browse an icon set, follow work in a coding agent dashboard, and add previews to that
+Why Prompt Studio starts with the building-block cards, then shows a clean editor,
+connected tools, and tools adapted by an agent. Each entry has a title and subtitle.
+Visitors can browse an icon set, follow work in a coding agent dashboard, and add previews to that
 dashboard. These use local demo data. They do not call an agent or install extensions.
 
 Features pairs the icon set editor and coding agent dashboard with their building blocks.
@@ -42,7 +43,7 @@ name or codepoint, select an icon, and rename it in local demo state. Its grid a
 inspector follow the repository's icon editor.
 The dashboard supports agent selection, pause and resume, and approving a result.
 Each building block keeps the same shape across the page and the falling tools.
-Selecting a block opens an example that uses it. Search, notifications, navigation,
+The shapes beneath each Features example explain the blocks it uses. Search, notifications, navigation,
 extension management, and themes appear in a separate section for shared services.
 Use "workbench" for the overall home for tools. A workspace is a separate product concept.
 
