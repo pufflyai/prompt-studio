@@ -166805,7 +166805,7 @@
         "mode": "light"
       },
       "width": 1248,
-      "height": 220,
+      "height": 320,
       "fill": "$ds-bg",
       "layout": "vertical",
       "gap": 16,
@@ -166825,7 +166825,7 @@
           "type": "frame",
           "id": "SUg7j",
           "name": "cmp/WindowTitleBar",
-          "context": "Desktop title bar matches the app background with no bottom rule. Normal macOS tabs begin 90px from the left; full-screen tabs begin at the 10px content padding.",
+          "context": "Desktop title bar matches the app background with no bottom rule. Normal macOS tabs begin 90px from the left; full-screen tabs begin at the 10px content padding. Project tabs can be dragged horizontally to reorder. The moving tab uses the existing hover background and stays above adjacent tabs; its shape and text remain unchanged. Keyboard users press Space to pick up, arrows to move, Space to drop, and Escape to cancel. Selection stays with the same project.",
           "reusable": true,
           "width": "fill_container",
           "height": 44,
@@ -167216,6 +167216,150 @@
               ]
             }
           ]
+        },
+        {
+          "type": "text",
+          "id": "exgI1",
+          "name": "Reorder label",
+          "fill": "$ds-fg-muted",
+          "content": "Project tabs · Reordered (Docs stays selected)",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "id": "icauw",
+          "type": "ref",
+          "ref": "SUg7j",
+          "name": "WindowTitleBar · Reordered",
+          "descendants": {
+            "lpqoa": {
+              "children": [
+                {
+                  "id": "J9533",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Agentic kanban",
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default",
+                    "tab-status": "none"
+                  },
+                  "height": 28,
+                  "context": "Project tab. Clicking activates Agentic kanban without navigating away from the workbench.",
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "columns-3"
+                    },
+                    "k9XlqC": {
+                      "content": "Agentic kanban"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "reHcY",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Agentic design",
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default",
+                    "tab-status": "none"
+                  },
+                  "height": 28,
+                  "context": "Project tab. Clicking activates Agentic design without navigating away from the workbench.",
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "pen-tool"
+                    },
+                    "k9XlqC": {
+                      "content": "Agentic design"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "tBG4G",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Docs",
+                  "theme": {
+                    "size": "sm",
+                    "tab": "active",
+                    "tab-status": "none"
+                  },
+                  "height": 28,
+                  "context": "Project tab. Clicking activates Docs without navigating away from the workbench.",
+                  "x": 304,
+                  "y": 8,
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "book-open"
+                    },
+                    "k9XlqC": {
+                      "content": "Docs"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "FBt1g",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Agentic data analysis",
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default",
+                    "tab-status": "none"
+                  },
+                  "height": 28,
+                  "context": "Project tab. Clicking activates Agentic data analysis without navigating away from the workbench.",
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "chart-no-axes-combined"
+                    },
+                    "k9XlqC": {
+                      "content": "Agentic data analysis"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "f1AyaJ",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Workflow builder",
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default",
+                    "tab-status": "none"
+                  },
+                  "height": 28,
+                  "context": "Project tab. Clicking activates Workflow builder without navigating away from the workbench.",
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "workflow"
+                    },
+                    "k9XlqC": {
+                      "content": "Workflow builder"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                }
+              ]
+            }
+          }
         }
       ]
     }

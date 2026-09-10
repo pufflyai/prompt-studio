@@ -1,4 +1,12 @@
 import { createSlotRecipeContext, type HTMLChakraProps } from "@chakra-ui/react";
+import { closestCenter, DndContext, KeyboardSensor, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import {
+  horizontalListSortingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { X } from "lucide-react";
 import { type KeyboardEvent, type ReactNode, useEffect, useRef } from "react";
 import { windowTabsRecipe as recipe } from "@/theme/recipes/window-title-bar";
@@ -21,12 +29,66 @@ export interface WindowTabsProps {
   selectedId?: string;
   onSelect: (id: string) => void;
   onClose: (id: string) => void;
+  onReorder?: (id: string, targetId: string) => void;
   "aria-label": string;
 }
 
+interface WindowTabItemProps {
+  tab: WindowTab;
+  selected: boolean;
+  tabIndex: number;
+  reorderable: boolean;
+  onSelect: () => void;
+  onClose: () => void;
+  onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void;
+}
+
+const WindowTabItem = (props: WindowTabItemProps) => {
+  const { tab, selected, tabIndex, reorderable, onSelect, onClose, onKeyDown } = props;
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging, isSorting } =
+    useSortable({ id: tab.id, disabled: !reorderable });
+  return (
+    <Tab
+      ref={setNodeRef}
+      role="presentation"
+      data-selected={selected ? "" : undefined}
+      data-dragging={isDragging ? "" : undefined}
+      transform={CSS.Translate.toString(transform)}
+      transition={transition}
+    >
+      <Trigger
+        {...(reorderable ? attributes : {})}
+        {...listeners}
+        ref={setActivatorNodeRef}
+        type="button"
+        role="tab"
+        aria-selected={selected}
+        aria-label={tab.label}
+        tabIndex={tabIndex}
+        title={tab.label}
+        onClick={onSelect}
+        onKeyDown={(event) => {
+          listeners?.onKeyDown?.(event);
+          if (!isSorting && !event.defaultPrevented) onKeyDown(event);
+        }}
+      >
+        {tab.icon}
+        <Label>{tab.label}</Label>
+      </Trigger>
+      <Close type="button" aria-label={`Close ${tab.label}`} title={`Close ${tab.label}`} onClick={onClose}>
+        <X aria-hidden="true" />
+      </Close>
+    </Tab>
+  );
+};
+
 export const WindowTabs = (props: WindowTabsProps) => {
-  const { tabs, selectedId, onSelect, onClose, "aria-label": label } = props;
+  const { tabs, selectedId, onSelect, onClose, onReorder, "aria-label": label } = props;
   const listRef = useRef<HTMLDivElement>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
   useEffect(() => {
     if (!selectedId) return;
     listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
@@ -56,32 +118,30 @@ export const WindowTabs = (props: WindowTabsProps) => {
   };
 
   return (
-    <List ref={listRef} role="tablist" aria-label={label}>
-      {tabs.map((tab, index) => (
-        <Tab key={tab.id} role="presentation" data-selected={tab.id === selectedId ? "" : undefined}>
-          <Trigger
-            type="button"
-            role="tab"
-            aria-selected={tab.id === selectedId}
-            aria-label={tab.label}
-            tabIndex={tab.id === (selectedId ?? tabs[0]?.id) ? 0 : -1}
-            title={tab.label}
-            onClick={() => onSelect(tab.id)}
-            onKeyDown={(event) => handleKey(event, index)}
-          >
-            {tab.icon}
-            <Label>{tab.label}</Label>
-          </Trigger>
-          <Close
-            type="button"
-            aria-label={`Close ${tab.label}`}
-            title={`Close ${tab.label}`}
-            onClick={() => closeTab(index)}
-          >
-            <X aria-hidden="true" />
-          </Close>
-        </Tab>
-      ))}
-    </List>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      modifiers={[({ transform }) => ({ ...transform, y: 0 })]}
+      onDragEnd={({ active, over }) => {
+        if (over && active.id !== over.id) onReorder?.(String(active.id), String(over.id));
+      }}
+    >
+      <SortableContext items={tabs.map((tab) => tab.id)} strategy={horizontalListSortingStrategy}>
+        <List ref={listRef} role="tablist" aria-label={label}>
+          {tabs.map((tab, index) => (
+            <WindowTabItem
+              key={tab.id}
+              tab={tab}
+              selected={tab.id === selectedId}
+              tabIndex={tab.id === (selectedId ?? tabs[0]?.id) ? 0 : -1}
+              reorderable={Boolean(onReorder)}
+              onSelect={() => onSelect(tab.id)}
+              onClose={() => closeTab(index)}
+              onKeyDown={(event) => handleKey(event, index)}
+            />
+          ))}
+        </List>
+      </SortableContext>
+    </DndContext>
   );
 };

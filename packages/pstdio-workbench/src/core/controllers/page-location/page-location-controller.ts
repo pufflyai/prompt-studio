@@ -185,7 +185,7 @@ export const createWorkbenchPageLocationController = <Value>(
   const popStateSubscription = input.browser.onPopState(onPopState);
   const pageRemovalSubscription = input.registry.store.subscribe((state, previous) => {
     const removedPage = Object.keys(previous.pages).some((pageId) => !state.pages[pageId]);
-    if (!removedPage || !state.projectId) return;
+    if (!removedPage || !state.projectId || state.projectId !== previous.projectId || !previous.location) return;
     try {
       if (state.location) {
         normalizeStored(state.location);

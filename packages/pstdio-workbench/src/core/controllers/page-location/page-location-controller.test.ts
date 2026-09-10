@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { batchWorkbenchChanges } from "../../shared/store/workbench-batch";
 import {
   createPageLocationHarness as createHarness,
   pageRef as ref,
@@ -10,6 +11,26 @@ import {
 } from "./page-location-controller.test-support";
 
 describe("page location controller", () => {
+  test("keeps the saved destination while outgoing project pages unload", () => {
+    const harness = createHarness();
+    const outgoing = harness.registry.registerPage({
+      ...harness.registry.getPage("tickets")!,
+      id: "outgoing",
+      ref: ref("acme.outgoing", "tickets"),
+      path: "outgoing",
+    });
+    harness.controller.boot("p1");
+    harness.persistence.values.set("p2", { page: ticketsRef, parent: { page: startRef } });
+    batchWorkbenchChanges(() => {
+      harness.controller.setProject("p2");
+      outgoing.dispose();
+    });
+    expect(harness.registry.store.getState().location).toBeUndefined();
+    expect(harness.persistence.values.get("p2")?.page).toEqual(ticketsRef);
+    expect(harness.controller.boot("p2").ok).toBe(true);
+    expect(harness.registry.store.getState().location?.page).toEqual(ticketsRef);
+  });
+
   test("commits canonical location, mode, page, and placements in one observable transition", () => {
     const harness = createHarness();
     harness.controller.boot("p1");

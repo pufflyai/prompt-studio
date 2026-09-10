@@ -62,6 +62,8 @@ export const selectProject = (
   closeProjectSelectionOverlays(ctx);
   if (previousProjectId === project.id) return;
 
+  // Detach the outgoing page before extension teardown can save a Start fallback over it.
+  ctx.pageLocations.clearProject();
   resetProjectModeOnProjectChange(ctx, previousProjectId, project.id);
   selectDashboardProject(selectedProjectContext, project, persistence);
   if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav))
@@ -73,8 +75,8 @@ export const clearSelectedProject = (
   selectedProjectContext: DashboardProjectSelectionContext,
   persistence: DashboardProjectSelectionPersistence | undefined,
 ) => {
-  clearDashboardProjectSelection(selectedProjectContext, persistence);
   ctx.pageLocations.clearProject();
+  clearDashboardProjectSelection(selectedProjectContext, persistence);
   ctx.modes.setActiveMode("project-selection");
 };
 

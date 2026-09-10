@@ -44,6 +44,7 @@ export const windowTabsRecipe = defineSlotRecipe({
   base: {
     list: { display: "flex", alignItems: "center", gap: "2xs", minWidth: 0, overflowX: "auto", scrollbarWidth: "none" },
     tab: {
+      position: "relative",
       display: "flex",
       alignItems: "center",
       flexShrink: 0,
@@ -56,6 +57,8 @@ export const windowTabsRecipe = defineSlotRecipe({
       bg: "transparent",
       _selected: { bg: "bg.muted", color: "fg" },
       _hover: { bg: "bg.hover", color: "fg" },
+      _dragging: { bg: "bg.hover", color: "fg", zIndex: "docked" },
+      WebkitAppRegion: "no-drag",
     },
     trigger: {
       display: "flex",
@@ -70,6 +73,7 @@ export const windowTabsRecipe = defineSlotRecipe({
       borderRadius: "xs",
       focusVisibleRing: "inside",
       WebkitAppRegion: "no-drag",
+      touchAction: "none",
       _icon: { width: "icon-xs", height: "icon-xs", flexShrink: 0 },
     },
     label: { overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" },

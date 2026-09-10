@@ -23,6 +23,13 @@ const Example = (props: { initialTabs?: WindowTab[]; platform?: string }) => {
         selectedId={selectedId}
         aria-label="Project tabs"
         onSelect={setSelectedId}
+        onReorder={(id, targetId) => {
+          const reordered = [...tabs];
+          const from = reordered.findIndex((tab) => tab.id === id);
+          const to = reordered.findIndex((tab) => tab.id === targetId);
+          reordered.splice(to, 0, ...reordered.splice(from, 1));
+          setTabs(reordered);
+        }}
         onClose={(id) => {
           const index = tabs.findIndex((tab) => tab.id === id);
           const remaining = tabs.filter((tab) => tab.id !== id);
@@ -45,7 +52,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Native window title-bar tabs. The host owns selection and close behavior. Native controls occupy the reserved area; stories do not draw them. The desktop host sets data-window-full-screen on the document in macOS full screen to release that space.",
+          "Native window title-bar tabs. The host owns selection, close behavior, and optional reordering. Drag a tab to move it, or focus it and press Space, arrow keys, then Space to drop or Escape to cancel. Reordering keeps the selected tab. Native controls occupy the reserved area; stories do not draw them. The desktop host sets data-window-full-screen on the document in macOS full screen to release that space.",
       },
     },
   },
@@ -54,6 +61,27 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const SeveralTabs: Story = { render: () => <Example /> };
+export const KeyboardReordering: Story = {
+  render: () => <Example />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const docs = canvas.getByRole("tab", { name: "Docs" });
+    docs.focus();
+    await userEvent.keyboard(" {ArrowRight} ");
+    await expect(canvas.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Agentic kanban",
+      "Docs",
+      "Agentic design",
+    ]);
+    await expect(docs).toHaveAttribute("aria-selected", "true");
+    await userEvent.keyboard(" {ArrowRight}{Escape}");
+    await expect(canvas.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
+      "Agentic kanban",
+      "Docs",
+      "Agentic design",
+    ]);
+  },
+};
 export const FullScreen: Story = {
   render: () => (
     <Box data-window-full-screen="">

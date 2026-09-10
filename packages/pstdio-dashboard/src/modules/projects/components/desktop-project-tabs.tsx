@@ -39,6 +39,7 @@ export const DesktopProjectTabs = (props: DesktopProjectTabsProps) => {
         aria-label="Project tabs"
         onSelect={(id) => void controller.select(workbench, id)}
         onClose={(id) => void controller.close(workbench, id)}
+        onReorder={(id, targetId) => controller.reorder(workbench, id, targetId)}
       />
       <IconButton
         aria-label="Open project"

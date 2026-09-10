@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 import { readRuntimeActivity } from "pstdio/runtime";
 import {
@@ -12,7 +13,9 @@ import {
   runPackagedCli,
   waitForExit,
 } from "./packaged-app-helpers";
-import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
+import { createPackagedProject, dragProjectTab, openPackagedProject } from "./packaged-project-helpers";
+
+const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
 
 test("opens, switches, closes, and restores project tabs in one packaged window", async ({
   browserName: _browserName,
@@ -20,7 +23,11 @@ test("opens, switches, closes, and restores project tabs in one packaged window"
   const home = createPackagedHome();
   let app: PackagedApp | null = null;
   try {
-    app = await launchPackagedApp(home);
+    app = await launchPackagedApp(home, {
+      PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
+        defaultExtensions: [{ source: fixturePath, installName: "workbench-fixture", skipInstall: true }],
+      }),
+    });
     const first = await createPackagedProject(app.page, "Docs");
     const second = await createPackagedProject(app.page, "Agentic design");
     await openPackagedProject(app.page, first.name);
@@ -39,12 +46,18 @@ test("opens, switches, closes, and restores project tabs in one packaged window"
     const terminal = (await readRuntimeActivity(app.runtime)).terminals[0];
     await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
     await expect(app.page.getByLabel("Main").getByText("No active conversations", { exact: true })).toBeVisible();
+    await app.page.getByRole("option", { name: "Lab", exact: true }).click();
+    await expect(app.page).toHaveURL(/\/extensions\/[^/]+\/lab$/);
+    const firstPageUrl = app.page.url();
 
     await openPackagedProject(app.page, second.name);
+    await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
+    await expect(app.page).toHaveURL(/\/sessions$/);
+    const secondPageUrl = app.page.url();
     await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveCount(2);
     await app.page.getByRole("tab", { name: first.name, exact: true }).click();
     await expect(app.page.getByRole("tab", { name: first.name, exact: true })).toHaveAttribute("aria-selected", "true");
-    await expect(app.page.getByLabel("Main").getByText("No active conversations", { exact: true })).toBeVisible();
+    await expect(app.page).toHaveURL(firstPageUrl);
     await openPackagedProject(app.page, first.name);
     await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveCount(2);
 
@@ -59,12 +72,31 @@ test("opens, switches, closes, and restores project tabs in one packaged window"
       "aria-selected",
       "true",
     );
+    await expect(app.page).toHaveURL(secondPageUrl);
     expect((await readRuntimeActivity(app.runtime)).terminals).toEqual([terminal]);
     await openPackagedProject(app.page, first.name);
+    await expect(app.page).toHaveURL(firstPageUrl);
     await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveText([
       second.name,
       first.name,
     ]);
+
+    await dragProjectTab(app.page, first.name, second.name);
+    const projectTabs = app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab");
+    await expect(projectTabs).toHaveText([first.name, second.name]);
+    await expect(app.page.getByRole("tab", { name: first.name, exact: true })).toHaveAttribute("aria-selected", "true");
+    await expect(app.page).toHaveURL(firstPageUrl);
+    await app.page.getByRole("tab", { name: first.name, exact: true }).focus();
+    await app.page.keyboard.press("Space");
+    await app.page.keyboard.press("ArrowRight");
+    await app.page.keyboard.press("Space");
+    await expect(projectTabs).toHaveText([second.name, first.name]);
+    await app.page.keyboard.press("Space");
+    await app.page.keyboard.press("ArrowLeft");
+    await app.page.keyboard.press("Escape");
+    await expect(projectTabs).toHaveText([second.name, first.name]);
+    await dragProjectTab(app.page, first.name, second.name);
+    await expect(projectTabs).toHaveText([first.name, second.name]);
 
     expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
     const runtimeBeforeRelaunch = readDescriptor(home)!;
@@ -74,9 +106,10 @@ test("opens, switches, closes, and restores project tabs in one packaged window"
     await app.browser.close();
     app = await launchPackagedApp(home);
     await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveText([
-      second.name,
       first.name,
+      second.name,
     ]);
+    await expect(app.page).toHaveURL(firstPageUrl);
     await expect(app.page.getByRole("tab", { name: first.name, exact: true })).toHaveAttribute("aria-selected", "true");
     expect(readDescriptor(home)).toMatchObject({
       instanceId: runtimeBeforeRelaunch.instanceId,

@@ -43,6 +43,19 @@ test("picker and tab selection share the existing project command and ordered li
   expect(getWriter("projects")).toBeDefined();
 });
 
+test("reordering saves the new tab order without changing the selected project", async () => {
+  const { workbench, tabs, writes, select } = setup(["first", "second", "third"], ["first", "second", "third"]);
+  await select("second");
+  tabs.reorder(workbench, "first", "third");
+  expect(tabs.getProjectIds()).toEqual(["second", "third", "first"]);
+  expect(getDashboardSelectedProjectId(workbench)).toBe("second");
+  expect(writes.at(-1)).toEqual(["second", "third", "first"]);
+  tabs.reorder(workbench, "first", "second");
+  expect(tabs.getProjectIds()).toEqual(["first", "second", "third"]);
+  await tabs.close(workbench, "second");
+  expect(getDashboardSelectedProjectId(workbench)).toBe("third");
+});
+
 test("closing the last tab keeps project selection open when project data changes", async () => {
   const { workbench, tabs, select } = setup(["first"]);
   await select("first");

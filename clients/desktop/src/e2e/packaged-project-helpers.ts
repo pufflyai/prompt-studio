@@ -19,3 +19,15 @@ export const createPackagedProject = async (page: Page, name: string) => {
   expect(result.status).toBe(201);
   return result.project;
 };
+
+export const dragProjectTab = async (page: Page, name: string, targetName: string) => {
+  const source = page.getByRole("tab", { name, exact: true });
+  const target = page.getByRole("tab", { name: targetName, exact: true });
+  await source.scrollIntoViewIfNeeded();
+  const from = (await source.boundingBox())!;
+  const to = (await target.boundingBox())!;
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 12 });
+  await page.mouse.up();
+};

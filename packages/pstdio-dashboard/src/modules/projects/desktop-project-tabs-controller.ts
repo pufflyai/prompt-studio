@@ -4,7 +4,7 @@ import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { createDashboardProjects, findDashboardProject } from "./data/project-data";
-import { closeProjectTab, openProjectTab, reconcileProjectTabs } from "./desktop-project-tabs";
+import { closeProjectTab, openProjectTab, reconcileProjectTabs, reorderProjectTab } from "./desktop-project-tabs";
 
 type ProjectContext = Pick<WorkbenchModuleContext, "context" | "commands" | "notifications">;
 const persistenceErrorId = "dashboard.project-tabs.persistence-error";
@@ -54,6 +54,10 @@ export class DesktopProjectTabsController {
     const project = findDashboardProject(projectId);
     if (!project) return Promise.resolve();
     return ctx.commands.executeCommand(dashboardCommandIds.selectProject, { project });
+  }
+
+  reorder(ctx: ProjectContext, projectId: string, targetId: string) {
+    this.#update(ctx, reorderProjectTab(this.#projectIds, projectId, targetId));
   }
 
   async close(ctx: ProjectContext, projectId: string) {
