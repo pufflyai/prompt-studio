@@ -26,7 +26,10 @@ const setup = async (page: Page, request: APIRequestContext) => {
     const draft = header.getByRole("tab", { name: "New session", exact: true });
     if ((await draft.count()) === 0) await header.getByRole("button", { name: "Add panel", exact: true }).click();
     await draft.click();
-    await page.getByRole("menuitem", { name: session.title, exact: true }).click();
+    await page
+      .getByRole("menu", { name: "New session menu", exact: true })
+      .getByRole("menuitem", { name: session.title, exact: true })
+      .click();
   }
   return { header, sessions };
 };
