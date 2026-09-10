@@ -137,6 +137,7 @@ export const createExtensionScheduler = (input: Input) => {
         logger: input.extensionLogger ?? extensionLogger,
         buildEnvironment: (ids) =>
           createCommandEnvironment(input.deps, snapshot.enabledSources, {
+            artifactMounts: snapshot.runtime.artifactMounts,
             extensionId: ids.extensionId,
             name: ids.name,
             project: snapshot.project,

@@ -56,6 +56,10 @@ test("shows the startup window before creating the workbench view", async () => 
       const beforeStartup = JSON.parse((await lines.next()).value!);
       expect(beforeStartup).toEqual({ visible: false, childViews: 0 });
       application.stdin!.write("show\n");
+      const documentReady = JSON.parse((await lines.next()).value!);
+      expect(documentReady).toEqual({ documentReadyVisible: true });
+      const lifecycleShown = JSON.parse((await lines.next()).value!);
+      expect(lifecycleShown).toEqual({ lifecycleVisible: true });
       const afterStartup = JSON.parse((await lines.next()).value!);
       expect(afterStartup).toEqual({ visible: true, childViews: 1 });
     } finally {

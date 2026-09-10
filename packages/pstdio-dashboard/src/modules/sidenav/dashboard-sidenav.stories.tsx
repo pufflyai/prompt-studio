@@ -187,6 +187,9 @@ const createTicketsNavigationModule = () => ({
   },
 });
 const seedSessions = () => {
+  getWriter("settings")?.truncateAndWrite([
+    { id: "global", max_concurrent_sessions: null, notifications_enabled: true },
+  ]);
   getWriter("sessions")?.truncateAndWrite([
     sessionRow("session-today-1", "Refactor sidenav", "completed", "2026-06-24T09:00:00Z", "workspace-1"),
     sessionRow("session-today-2", "Investigate flaky test", "failed", "2026-06-24T08:00:00Z"),

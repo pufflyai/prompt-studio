@@ -43,6 +43,25 @@ interface QuestionPromptStepperProps extends QuestionPromptControlsProps {
 export const getQuestionSelectionKey = (question: ChatInputQuestion, index: number) =>
   question.id ?? `question-${index}`;
 
+// Single-choice questions swap the answer; multiple-choice questions toggle one option.
+export const toggleQuestionOptionSelection = (
+  selectedOptionsByQuestion: Record<string, string[]>,
+  question: ChatInputQuestion,
+  questionIndex: number,
+  optionLabel: string,
+) => {
+  const key = getQuestionSelectionKey(question, questionIndex);
+  const selected = selectedOptionsByQuestion[key] ?? [];
+  const alreadySelected = selected.includes(optionLabel);
+  if (question.multiple) {
+    return {
+      ...selectedOptionsByQuestion,
+      [key]: alreadySelected ? selected.filter((label) => label !== optionLabel) : [...selected, optionLabel],
+    };
+  }
+  return { ...selectedOptionsByQuestion, [key]: alreadySelected ? [] : [optionLabel] };
+};
+
 export const getQuestionPromptSignature = (questionPrompt: ChatInputQuestionPrompt | undefined) => {
   if (!questionPrompt) return "";
 

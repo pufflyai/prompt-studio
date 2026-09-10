@@ -86,6 +86,28 @@ export const NotCollapsible: Story = {
   args: { collapsible: false },
 };
 
+export const ResponsivePanels: Story = {
+  args: { layout: { base: "stacked", lg: "split" }, collapsible: false },
+  parameters: {
+    docs: {
+      description: { story: "Stack panels below the large breakpoint. CSS selects the layout before hydration." },
+    },
+  },
+};
+
+export const ContentFirstOnMobile: Story = {
+  args: { layout: { base: "stacked-reverse", lg: "split" }, collapsible: false },
+};
+
+export const ResponsiveNavigation: Story = {
+  args: { layout: { base: "content", lg: "split" }, collapsible: false },
+  parameters: {
+    docs: {
+      description: { story: "Hide the resizable navigation panel on small screens while keeping content mounted." },
+    },
+  },
+};
+
 const ActivityRail = () => (
   <Flex as="nav" direction="column" align="center" flexShrink={0} w="3.5rem" py="xs" gap="2xs">
     <IconButton size="sm" variant="subtle" aria-label="Files">

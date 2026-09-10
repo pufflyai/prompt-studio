@@ -552,5 +552,11 @@
         }
       }
     }
+  },
+  "betaFeatures": {
+    "title": "测试版功能",
+    "description": "试用测试版功能。此设置适用于连接到此安装实例的所有项目和仪表板。",
+    "notifications": "通知",
+    "loading": "正在加载设置…"
   }
 }

@@ -1,0 +1,53 @@
+import { Box, Button, HStack, Text } from "@chakra-ui/react";
+import { Scale, ShieldCheck } from "lucide-react";
+import type { LandingView } from "../../content/landing-content";
+import { useLandingStyles } from "../../hooks/use-landing-styles";
+import { landingPathForView } from "../../services/landing-route";
+import { StockholmIcon } from "../icons/stockholm-icon";
+
+const LEGAL_LINKS = [
+  { label: "Privacy", view: "privacy" as const, icon: ShieldCheck },
+  { label: "Terms", view: "terms" as const, icon: Scale },
+];
+
+interface WorkbenchStatusBarProps {
+  onNavigate: (view: LandingView) => void;
+}
+
+export const WorkbenchStatusBar = (props: WorkbenchStatusBarProps) => {
+  const { onNavigate } = props;
+
+  const styles = useLandingStyles();
+
+  return (
+    <HStack as="footer" aria-label="Workbench status" css={styles.status}>
+      {LEGAL_LINKS.map((item) => (
+        <Button
+          key={item.view}
+          asChild
+          size="xs"
+          variant="ghost"
+          color="fg.muted"
+          onClick={(event) => {
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+            event.preventDefault();
+            onNavigate(item.view);
+          }}
+        >
+          <a href={landingPathForView(item.view)}>
+            <item.icon />
+            {item.label}
+          </a>
+        </Button>
+      ))}
+      <HStack gap="xs" color="fg" ms="auto" flexShrink="0">
+        <Box boxSize="icon-md" flexShrink="0">
+          <StockholmIcon />
+        </Box>
+        <Text textStyle="label/S/medium" whiteSpace="nowrap">
+          © Pufflig AB. Stockholm, 2026
+        </Text>
+      </HStack>
+    </HStack>
+  );
+};

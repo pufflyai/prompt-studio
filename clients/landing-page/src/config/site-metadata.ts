@@ -1,23 +1,9 @@
 export const siteMetadata = {
-  title: "Prompt Studio",
+  title: "Prompt Studio | A workbench for your tools",
   siteUrl: "https://prompt.studio",
   faviconSvgPath: "/images/favicon.svg",
   faviconPngPath: "/images/favicon-32x32.png",
   bannerPath: "/images/banner.png",
-  description: "Prompt Studio is a workbench where you and your agents can build and run tailored tools for your work.",
-  keywords: [
-    "workbench for AI agents",
-    "AI coding agent",
-    "coding agent task manager",
-    "agent orchestration",
-    "agentic coding workflow",
-    "delegate tasks to AI agents",
-    "multi-agent development",
-    "coding agent dashboard",
-    "open source developer tools",
-    "AI developer tools",
-    "parallel coding agents",
-    "manage coding agents",
-    "CLI coding agent",
-  ],
+  description:
+    "A workbench for tools built with coding agents. Connect custom editors, commands, and interfaces with shared search, notifications, and themes.",
 };

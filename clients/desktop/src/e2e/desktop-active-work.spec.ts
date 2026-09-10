@@ -9,6 +9,7 @@ import type { RuntimeDescriptor } from "pstdio/runtime";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
 import { acceptFocusedButton } from "./lifecycle-actions";
+import { expectStartupWindowVisible } from "./startup-window";
 
 const require = createRequire(import.meta.url);
 const electronPath = require("electron") as string;
@@ -127,7 +128,7 @@ test("recovers from refused shutdown and closes each quit confirmation", async (
 
   const electronApp = await electron.launch({
     executablePath: electronPath,
-    args: [appPath],
+    args: [appPath, `--user-data-dir=${join(home, "electron-user-data")}`],
     env: environment({ PSTDIO_HOME: home }),
   });
   const finishTrace = await startElectronTrace(electronApp.context(), "active-work");
@@ -138,9 +139,7 @@ test("recovers from refused shutdown and closes each quit confirmation", async (
   });
 
   const lifecycle = await waitForLifecyclePage(electronApp.context());
-  await expect
-    .poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible()))
-    .toBe(true);
+  await expectStartupWindowVisible(electronApp, lifecycle);
   const window = await waitForWorkbenchPage(lifecycle, descriptor.origin);
   await expect(window.getByText("Owned Prompt Studio dashboard")).toBeVisible();
 

@@ -1,4 +1,4 @@
-import { Flex, type FlexProps } from "@chakra-ui/react";
+import { type ConditionalValue, Flex, type FlexProps, useSlotRecipe } from "@chakra-ui/react";
 import {
   type KeyboardEvent as ReactKeyboardEvent,
   type ReactNode,
@@ -30,6 +30,7 @@ interface ResizableSplitLayoutProps extends Omit<FlexProps, "children" | "onResi
   collapsible?: boolean;
   resizeLabel?: string;
   separator?: ResizableSplitSeparator;
+  layout?: ConditionalValue<"split" | "stacked" | "stacked-reverse" | "content">;
   onSizeChange?: (size: number) => void;
   onCollapsedChange?: (collapsed: boolean) => void;
 }
@@ -41,27 +42,6 @@ const clamp = (value: number, min: number, max: number) => Math.min(Math.max(val
 
 const getElementSize = (element: HTMLDivElement | null, dimension: PanelDimension) =>
   element?.getBoundingClientRect()[dimension] ?? 0;
-
-const applyPanelSizeToElement = (panel: HTMLDivElement | null, size: number, dimension: PanelDimension) => {
-  if (!panel) return;
-
-  panel.style[dimension] = `${size}px`;
-  panel.style.flexBasis = `${size}px`;
-  panel.style.flexGrow = "0";
-  panel.style.flexShrink = "0";
-  panel.style.display = size > 0 ? "flex" : "none";
-};
-
-const clearPanelInlineStyles = (panel: HTMLDivElement | null) => {
-  if (!panel) return;
-
-  panel.style.width = "";
-  panel.style.height = "";
-  panel.style.flexBasis = "";
-  panel.style.flexGrow = "";
-  panel.style.flexShrink = "";
-  panel.style.display = "";
-};
 
 export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   const {
@@ -76,11 +56,16 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
     collapsible = true,
     resizeLabel = "Resize panel",
     separator = "gap",
+    layout = "split",
     onSizeChange,
     onCollapsedChange,
     ...rest
   } = props;
   const axis = getResizableSplitAxis(resizableSide);
+  const styles = useSlotRecipe({ key: "resizableSplitLayout" })({
+    orientation: axis.dimension === "width" ? "horizontal" : "vertical",
+    layout,
+  });
   const id = useId();
   const rootRef = useRef<HTMLDivElement>(null);
   const resizablePanelRef = useRef<HTMLDivElement>(null);
@@ -102,6 +87,7 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   const resolvedPanelSize = collapsed ? 0 : clamp(panelSize, bounds.minSize, bounds.maxSize);
   const contentPanelId = `${id}-content`;
   const resizablePanelId = `${id}-resizable`;
+  const sizeStyle = { ...rest.style, "--split-size": `${resolvedPanelSize}px` };
 
   useEffect(() => {
     lastSizeRef.current = defaultSizePx;
@@ -111,19 +97,8 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   useEffect(() => () => cleanupDragRef.current(), []);
 
   const applyPanelSize = (size: number) => {
-    applyPanelSizeToElement(resizablePanelRef.current, size, axis.dimension);
+    rootRef.current?.style.setProperty("--split-size", `${size}px`);
   };
-
-  useEffect(() => {
-    // React may reuse the same DOM element across renders when this component swaps roles
-    // (e.g., a wrapping ResizableSplitLayout disappears, leaving the inner one in its place).
-    // Clear any inline styles on the content panel that leaked from a prior render where
-    // the same DOM element was the resizable panel; otherwise stale `flex: 0 0 Xpx` pins
-    // the content's width.
-    clearPanelInlineStyles(contentPanelRef.current);
-    clearPanelInlineStyles(resizablePanelRef.current);
-    applyPanelSizeToElement(resizablePanelRef.current, resolvedPanelSize, axis.dimension);
-  }, [axis.dimension, resolvedPanelSize]);
 
   const commitPanelSize = (size: number) => {
     const nextBounds = resolveResizableBounds({
@@ -268,8 +243,9 @@ export const ResizableSplitLayout = (props: ResizableSplitLayoutProps) => {
   };
 
   return (
-    <Flex ref={rootRef} direction={axis.rootDirection} h="full" w="full" overflow="hidden" {...rest}>
+    <Flex ref={rootRef} css={styles.root} {...rest} style={sizeStyle}>
       <ResizableSplitPanels
+        styles={styles}
         axis={axis}
         bounds={bounds}
         collapsed={collapsed}

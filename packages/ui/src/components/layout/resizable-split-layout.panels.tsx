@@ -1,4 +1,4 @@
-import { Flex } from "@chakra-ui/react";
+import { Box, type SystemStyleObject } from "@chakra-ui/react";
 import type {
   KeyboardEvent as ReactKeyboardEvent,
   ReactNode,
@@ -9,6 +9,7 @@ import type { getResizableSplitAxis } from "@/components/layout/resizable-split-
 import { type ResizableSplitSeparator, ResizeHandle } from "@/components/layout/resizable-split-layout.handle";
 
 interface ResizableSplitPanelsProps {
+  styles: Record<"resizablePanel" | "contentPanel" | "separator", SystemStyleObject>;
   axis: ReturnType<typeof getResizableSplitAxis>;
   bounds: { minSize: number; maxSize: number };
   collapsed: boolean;
@@ -30,6 +31,7 @@ interface ResizableSplitPanelsProps {
 
 export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
   const {
+    styles,
     axis,
     bounds,
     collapsed,
@@ -49,39 +51,25 @@ export const ResizableSplitPanels = (props: ResizableSplitPanelsProps) => {
     onResizeStart,
   } = props;
   const resizablePanelNode = (
-    <Flex
+    <Box
       key="resizable-panel"
       id={resizablePanelId}
       ref={resizablePanelRef}
-      display={collapsed ? "none" : "flex"}
-      h={axis.dimension === "height" ? `${resolvedPanelSize}px` : "full"}
-      minW="0"
-      minH="0"
-      overflow="hidden"
-      flex={`0 0 ${resolvedPanelSize}px`}
-      w={axis.dimension === "width" ? `${resolvedPanelSize}px` : "full"}
+      css={styles.resizablePanel}
+      data-collapsed={collapsed}
       aria-hidden={collapsed ? true : undefined}
     >
       {resizablePanel}
-    </Flex>
+    </Box>
   );
   const contentPanelNode = (
-    <Flex
-      key="content-panel"
-      id={contentPanelId}
-      ref={contentPanelRef}
-      display="flex"
-      h="full"
-      minW="0"
-      minH="0"
-      overflow="hidden"
-      flex="1"
-    >
+    <Box key="content-panel" id={contentPanelId} ref={contentPanelRef} css={styles.contentPanel}>
       {contentPanel}
-    </Flex>
+    </Box>
   );
   const resizeTrigger = (
     <ResizeHandle
+      css={styles.separator}
       key="resize-handle"
       axis={axis}
       bounds={bounds}

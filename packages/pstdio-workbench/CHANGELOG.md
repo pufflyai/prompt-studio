@@ -1,5 +1,27 @@
 # @pstdio/workbench
 
+## 0.11.1
+
+_2026-09-09_
+
+### Patch Changes
+
+- 07a641c: Keep the ticket context when opening workspace files, block sending a message without a model, merge harness run defaults into the default model setting, and return to the ticket body when the open ticket file is deleted.
+- Updated internal dependencies: `@pstdio/ui@0.24.1`
+
+## 0.11.0
+
+_2026-09-09_
+
+### Minor Changes
+
+- 8418ab0: Render workbench panels as rounded cards with grip separators that show a bar on hover, and make the activity bar, header row, and status bar flat.
+
+### Patch Changes
+
+- e7b0c05: Expose dashboard URL helpers and project-scoped webview subscriptions with shared event ID resolution and reconnect invalidation, and fix desktop startup and webview module reloads.
+- Updated internal dependencies: `@pstdio/ui@0.24.0`, `@pstdio/sdk@0.23.0`
+
 ## 0.10.0
 
 _2026-09-08_

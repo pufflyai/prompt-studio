@@ -37,7 +37,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>((props, ref) => {
     isSelected = false,
     isExpanded = false,
     showExpandToggle = false,
-    showContextMenuTrigger = true,
+    showContextMenuTrigger = false,
     variant = "default",
     tone = "default",
     selectedBg = "bg.active",

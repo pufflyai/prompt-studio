@@ -106,4 +106,21 @@ describe("ticket body file-renderer commands", () => {
     expect(stored?.files?.find((candidate) => candidate.id === file.id)?.content).toBe("updated file");
     expect(stored?.title).toBe("Ticket");
   });
+
+  test("save-ticket-content ignores a save for a document that was deleted", async () => {
+    const storage = createMemoryStorage();
+    const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+    await seedContent(storage, ticket.id, "# Ticket\nbody");
+
+    const result = await saveTicketContentCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: { content: "stale file draft" },
+        overrides: { resource: { type: "ticket", id: ticket.id, metadata: { documentId: "deleted-file" } } },
+      }),
+    );
+
+    expect(result).toBeNull();
+    expect((await ticketsCollection(storage).get(ticket.id))?.content).toBe("# Ticket\nbody");
+  });
 });

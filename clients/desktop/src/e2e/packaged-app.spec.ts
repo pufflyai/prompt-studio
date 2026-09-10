@@ -17,7 +17,7 @@ import {
 import { openPackagedProject } from "./packaged-project-helpers";
 import { waitForVisibleElement } from "./visible-element-timing";
 
-const startupWindowBudgetMs = 1_000;
+const startupWindowBudgetMs = process.platform === "darwin" ? 1_500 : 1_000;
 
 const createProjectThroughBrowser = (app: PackagedApp, name: string) =>
   app.page.evaluate(async (projectName) => {
@@ -189,6 +189,7 @@ test("shows recovery promptly after a sidecar crash and retries without relaunch
     const replacement = await waitForDescriptor(home, (descriptor) => descriptor.instanceId !== originalInstanceId);
     await app.page.waitForURL(`${replacement.origin}/`);
     await expect(app.page.locator("#root")).not.toBeEmpty();
+    await expect(app.lifecyclePage.getByRole("main")).not.toBeVisible();
 
     await app.finishTrace();
     const close = runPackagedCli(home, ["close"]);

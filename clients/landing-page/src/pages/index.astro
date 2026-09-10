@@ -4,5 +4,5 @@ import BaseLayout from "../layouts/base-layout.astro";
 ---
 
 <BaseLayout>
-  <IndexPage client:load />
+  <IndexPage initialPath={Astro.url.pathname} client:load />
 </BaseLayout>

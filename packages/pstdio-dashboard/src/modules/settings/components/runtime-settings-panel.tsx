@@ -3,7 +3,6 @@ import { toaster } from "@pstdio/ui";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSettings, useUpdateSettings } from "../data/use-settings";
-import { HarnessParamDefaultsCard } from "./harness-param-defaults-card";
 import { ProjectDefaultsCard } from "./project-defaults-card";
 
 const parseLimit = (value: string) => {
@@ -16,7 +15,7 @@ const parseLimit = (value: string) => {
 };
 
 // Global runtime settings (session queue concurrency) plus the selected project's
-// default harness/model when a project is in scope.
+// default harness, model, and run options when a project is in scope.
 export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
   const { projectId } = props;
   const { t } = useTranslation("settings");
@@ -115,12 +114,7 @@ export const RuntimeSettingsPanel = (props: { projectId?: string }) => {
         </Stack>
       )}
 
-      {projectId ? (
-        <>
-          <ProjectDefaultsCard projectId={projectId} />
-          <HarnessParamDefaultsCard projectId={projectId} />
-        </>
-      ) : null}
+      {projectId ? <ProjectDefaultsCard projectId={projectId} /> : null}
     </Stack>
   );
 };

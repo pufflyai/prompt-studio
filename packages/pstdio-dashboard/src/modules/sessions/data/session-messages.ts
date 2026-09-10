@@ -69,3 +69,13 @@ export const resolveDashboardStreamEndMessages = (
   if (streamedMessages.length >= hydratedMessages.length) return streamedMessages;
   return hydratedMessages;
 };
+
+export const combineSessionMessageSources = (
+  streamedMessages: SessionMessage[],
+  hydratedMessages: SessionMessage[],
+  sessionId: string,
+) => {
+  if (streamedMessages.length === 0) return hydratedMessages;
+  const queued = hydratedMessages.filter((message) => message.id.startsWith(`queued-prompt-${sessionId}-`));
+  return [...streamedMessages, ...queued];
+};

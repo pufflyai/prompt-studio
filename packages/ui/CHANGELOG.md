@@ -1,5 +1,26 @@
 # @pstdio/ui
 
+## 0.24.1
+
+_2026-09-09_
+
+### Patch Changes
+
+- 07a641c: Keep the ticket context when opening workspace files, block sending a message without a model, merge harness run defaults into the default model setting, and return to the ticket body when the open ticket file is deleted.
+
+## 0.24.0
+
+_2026-09-09_
+
+### Minor Changes
+
+- 4f1e548: Add responsive split layouts and landing page recipes for downloads, tool examples, and building blocks
+- 8418ab0: Render workbench panels as rounded cards with grip separators that show a bar on hover, and make the activity bar, header row, and status bar flat.
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.23.0`
+
 ## 0.23.0
 
 _2026-09-08_

@@ -25,6 +25,7 @@ export interface DashboardSession {
   resource: ResourceRef;
 }
 export interface DashboardSessionView {
+  status?: string;
   id: string;
   draftKey: string;
   sessionId: string | undefined;
@@ -139,6 +140,7 @@ export const resolveDashboardSessionView = (sessionId: string | undefined): Dash
     id: session.id,
     draftKey: session.id,
     sessionId: session.id,
+    status: session.status,
     workspaceTitle: (workspace?.name as string | null) ?? (workspace?.workspace_shorthand as string | undefined) ?? "",
     workspaceId: workspace?.id ?? null,
     workspaceBranch: (workspace?.branch as string | null) ?? session.workspaceBranch ?? null,

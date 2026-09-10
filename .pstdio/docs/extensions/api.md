@@ -577,6 +577,10 @@ Tree rows use `resource` as their action subject and `target` as their normal-cl
 a row resolves the registered actions for its resource kind and adds its `contextMenuActions`. The command and
 any parameter dialog keep the clicked resource as their context, even when another resource is open.
 
+The host refreshes the tree after a section or row action runs. An action command may also return a navigation
+target. The host opens it after the refresh, for example to move the page back to the ticket body when the
+action deleted the open document.
+
 Set `resource` explicitly on ticket, workspace, and other resource rows. Reuse the same reference in `target`
 when the destination represents that resource. A ticket file can instead open its parent ticket page and use
 row actions with explicit ticket and file IDs. It must not use the parent ticket as its action subject.

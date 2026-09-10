@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  canSubmitSessionMessage,
   resolveRuntimeAgentSelection,
   resolveRuntimeModelSelection,
   resolveRuntimeWorkspaceSelection,
@@ -176,5 +177,29 @@ describe("resolveSessionSelectionSync", () => {
         view: { agent: "agent-b", lastSelectedModel: null, workspaceId: null },
       }),
     ).toEqual({ agent: "agent-b", model: "", workspaceId: "" });
+  });
+});
+
+describe("canSubmitSessionMessage", () => {
+  const agentOptions = [
+    { value: "opencode", disabled: false },
+    { value: "claude-code", disabled: true },
+  ];
+
+  test("allows a message once an enabled harness and a model are selected", () => {
+    expect(canSubmitSessionMessage({ agentOptions, selectedAgent: "opencode", selectedModel: "model-a" })).toBe(true);
+  });
+
+  test("blocks a message without a model", () => {
+    expect(canSubmitSessionMessage({ agentOptions, selectedAgent: "opencode", selectedModel: "" })).toBe(false);
+  });
+
+  test("blocks a message when the harness is not enabled for the project", () => {
+    expect(canSubmitSessionMessage({ agentOptions, selectedAgent: "claude-code", selectedModel: "model-a" })).toBe(
+      false,
+    );
+    expect(canSubmitSessionMessage({ agentOptions: [], selectedAgent: "opencode", selectedModel: "model-a" })).toBe(
+      false,
+    );
   });
 });

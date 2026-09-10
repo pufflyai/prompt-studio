@@ -1,5 +1,22 @@
 # pstdio-planner
 
+## 0.13.3
+
+_2026-09-09_
+
+### Patch Changes
+
+- 07a641c: Keep the ticket context when opening workspace files, block sending a message without a model, merge harness run defaults into the default model setting, and return to the ticket body when the open ticket file is deleted.
+- Updated internal dependencies: `@pstdio/ui@0.24.1`
+
+## 0.13.2
+
+_2026-09-09_
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/ui@0.24.0`, `@pstdio/sdk@0.23.0`
+
 ## 0.13.1
 
 _2026-09-08_

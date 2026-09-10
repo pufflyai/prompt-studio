@@ -99,6 +99,14 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
     await expect(breadcrumb).toContainText(child.shorthand);
     await expect(breadcrumb).toContainText(attempt.workspace.workspace_shorthand);
 
+    // Opening a file keeps the workspace under its ticket instead of the Workspaces list.
+    await page.getByRole("tab", { name: "Files" }).click();
+    await page.getByRole("option", { name: /^README\.md/ }).click();
+    await expect(page.getByText("resource hierarchy e2e")).toBeVisible();
+    await expect(breadcrumb).toContainText(child.shorthand);
+    await expect(breadcrumb).toContainText(attempt.workspace.workspace_shorthand);
+    await expect(breadcrumb).not.toContainText("Workspaces");
+
     await page.getByRole("button", { name: "Navigate back" }).click();
     await expect(breadcrumb).toContainText(child.shorthand);
     await expect(breadcrumb).not.toContainText(attempt.workspace.workspace_shorthand);

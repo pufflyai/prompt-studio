@@ -65,6 +65,7 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
       await expect(keepOpen).toBeFocused();
       await acceptFocusedButton(confirmation);
       await expect(dialog).toHaveCount(0);
+      await expect(app.lifecyclePage.getByRole("main")).not.toBeVisible();
       await expect(app.page.getByRole("textbox", { name: "Terminal input" })).toBeVisible();
       expect(existsSync(join(home, "runtime.json"))).toBe(true);
       await expect.poll(readTerminals).toEqual([activeTerminal]);
