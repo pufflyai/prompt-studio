@@ -136,7 +136,6 @@ const WorkbenchPanelMenu = (props: { workbench: WorkbenchCore; view: WorkbenchPa
 
 const addPanelMenu = (input: { content: ReactNode; view: WorkbenchPanelMenuView; workbench: WorkbenchCore }) => {
   const { content, view, workbench } = input;
-  if (!view.has) return content;
 
   return (
     <ResizableSplitLayout
@@ -145,7 +144,7 @@ const addPanelMenu = (input: { content: ReactNode; view: WorkbenchPanelMenuView;
       resizableSide={view.side}
       resizablePanel={<WorkbenchPanelMenu workbench={workbench} view={view} />}
       contentPanel={content}
-      collapsed={view.collapsed}
+      collapsed={!view.has || view.collapsed}
       collapsible={view.collapsible}
       defaultSizePx={view.size.defaultPx}
       minSizePx={view.size.minPx}

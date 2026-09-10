@@ -39,7 +39,7 @@ const openLabMode = async (page: import("@playwright/test").Page) => {
   await expect(page.getByRole("tab", { name: "Overview", exact: true })).toBeVisible({ timeout: 30_000 });
 };
 
-test("the Lab mode swaps the sidenav for activity and status chrome without a terminal", async ({ page, request }) => {
+test("the Lab mode preserves its live webview when leaving and returning", async ({ page, request }) => {
   test.slow();
   const project = await createProject(request);
   await prepareDashboard(page, project.id);
@@ -62,17 +62,27 @@ test("the Lab mode swaps the sidenav for activity and status chrome without a te
   const activityRail = page.locator('[data-workbench-region="activity"]');
   await expect(activityRail).toBeVisible({ timeout: 30_000 });
   await expect(activityRail.getByRole("button", { name: "Create artifact" })).toBeVisible();
-  await expect(page.locator('[data-workbench-region="sidenav"]')).toHaveCount(0);
+  await expect(page.locator('[data-workbench-region="sidenav"]')).toBeHidden();
   const statusBar = labFrame(page, "Lab status");
   await expect(statusBar.getByText("Extension Lab")).toBeVisible({ timeout: 30_000 });
 
   // No secondary panel means no place to open a terminal in the Lab.
-  await expect(page.locator('[data-workbench-panel="secondary"]')).toHaveCount(0);
+  await expect(page.locator('[data-workbench-panel="secondary"]')).toBeHidden();
+
+  const overview = await page.locator('iframe[title="Overview"]').elementHandle();
+  const liveFrame = await overview?.contentFrame();
+  expect(liveFrame).toBeTruthy();
 
   // The global project header remains the escape from a mode-owned activity rail.
   await page.getByRole("button", { name: /Extension Lab Modes/ }).click();
   await expect(page.locator('[data-workbench-region="sidenav"]')).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator('[data-workbench-region="activity"]')).toHaveCount(0);
+  await expect(page.locator('[data-workbench-region="activity"]')).toBeHidden();
+  expect(liveFrame!.isDetached()).toBe(false);
+  await expect(page.locator('iframe[title="Overview"]')).toBeHidden();
+  await openLabMode(page);
+  await page.getByRole("tab", { name: "Overview", exact: true }).click();
+  await expect(overviewFrame.getByText("1", { exact: true })).toBeVisible();
+  expect(liveFrame!.isDetached()).toBe(false);
 });
 
 test("the Cameras tree menu drives the cams player", async ({ page, request }) => {

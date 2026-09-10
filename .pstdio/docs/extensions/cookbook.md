@@ -51,7 +51,7 @@ Explicit tab presentation wins over the resource label. Accessible close actions
 
 ## Shared mode panels and navigation
 
-[Boombox](../../../extensions/extension-lab/src/examples/boombox.ts) keeps its player in a mode placement. [Kiln](../../../extensions/extension-lab/src/examples/kiln.ts) does the same for its timeline. Page changes within the mode preserve the shared placement's identity. `mountStrategy: "keep-mounted"` preserves local view state while another tab is active. Removing the owning contribution disposes its instances.
+[Boombox](../../../extensions/extension-lab/src/examples/boombox.ts) keeps its player in a mode placement. [Kiln](../../../extensions/extension-lab/src/examples/kiln.ts) does the same for its timeline. Page changes within the mode preserve the shared placement's identity. Visited registered views stay mounted while navigating between pages, tabs, and modes in the same project. Inactive views are hidden and cannot receive focus or pointer input. Returning reuses the live iframe and its local state. Retention ends when the view contribution is removed, the project changes, or the workbench closes. A full reload starts new views. `mountStrategy: "keep-mounted"` also mounts inactive panel placements before their first selection.
 
 `presence: "fixed"` keeps a static panel open and protects it from closing. `"open"` and `"closed"` set its first-visit state; saved user choices win on later visits. Hiding a whole region preserves its panels.
 

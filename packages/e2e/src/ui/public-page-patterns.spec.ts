@@ -9,7 +9,7 @@ const openExample = async (page: Page, name: string, resource?: string) => {
   );
   await expect(page.locator("html")).toHaveAttribute("data-theme", `pstdio.extension-lab.theme.${name}`);
 };
-const view = (page: Page, title: string) => page.frameLocator(`iframe[title="${title}"]`);
+const view = (page: Page, title: string) => page.frameLocator(`iframe[title="${title}"]:visible`);
 const hideAndReopen = async (page: Page, panel: "Side" | "Secondary", title: string) => {
   const frame = page.locator(`iframe[title="${title}"]`);
   const original = await frame.elementHandle();
@@ -94,7 +94,7 @@ test("Boombox retains its player across pages and disposes it when its extension
   request,
 }) => {
   await openExample(page, "boombox");
-  await expect(page.locator('[data-workbench-region="sidenav"]')).toHaveCount(0);
+  await expect(page.locator('[data-workbench-region="sidenav"]')).toBeHidden();
   await expect(view(page, "Player").getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   const playerFrame = await page.locator('iframe[title="Player"]').elementHandle();
   const homeUrl = page.url();
@@ -175,7 +175,7 @@ test("Pigeon sends a local message and keeps it in Sent", async ({ page }) => {
   await expect(view(page, "Message").getByText("The examples are ready.", { exact: true })).toBeVisible();
   const messageUrl = page.url();
   await view(page, "Message").getByRole("button", { name: "Close message", exact: true }).click();
-  await expect(page.locator('iframe[title="Message"]')).toHaveCount(0);
+  await expect(page.locator('iframe[title="Message"]:visible')).toHaveCount(0);
   await expect(page).toHaveURL(messageUrl);
   await expect(inbox.getByText("Showcase review", { exact: true })).toBeVisible();
 });
@@ -188,7 +188,7 @@ test("Kiln docks the inspector and persists object changes", async ({ page }) =>
   await expect(gridToggle).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByRole("button", { name: "Float Side Panel", exact: true })).toHaveCount(0);
   await expect(page.getByRole("tab")).toHaveCount(0);
-  await expect(page.locator('[data-workbench-panel-header="secondary"]')).toHaveCount(0);
+  await expect(page.locator('[data-workbench-panel-header="secondary"]')).toBeHidden();
   await hideAndReopen(page, "Side", "Scene and properties");
   await hideAndReopen(page, "Secondary", "Timeline");
   await inspector.getByRole("button", { name: "Hide Cube", exact: true }).click();
