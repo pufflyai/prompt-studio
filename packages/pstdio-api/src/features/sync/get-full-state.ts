@@ -9,11 +9,13 @@ import {
   projects,
   repos,
   sessions,
+  settings,
   workspace_sessions,
   workspaces,
 } from "pstdio-db";
 
 const tableMap = {
+  settings,
   projects,
   repos,
   project_repos,

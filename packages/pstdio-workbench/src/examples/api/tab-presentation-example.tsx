@@ -1,10 +1,16 @@
-import { Box, Stack, Text } from "@chakra-ui/react";
+import { Box, Button, Stack, Text } from "@chakra-ui/react";
 import { createWorkbench } from "@pstdio/workbench";
 import { Workbench, WorkbenchThemeProvider } from "@pstdio/workbench/react";
 import { useState } from "react";
 
 const createTabPresentationWorkbench = () => {
   const workbench = createWorkbench();
+  const listeners = new Set<() => void>();
+  let running = false;
+  const toggle = () => {
+    running = !running;
+    for (const listener of listeners) listener();
+  };
   workbench.views.registerView({
     id: "guide.session",
     title: "Session",
@@ -33,17 +39,26 @@ const createTabPresentationWorkbench = () => {
     },
     region: "main",
     tab: {
+      subscribe: (listener) => {
+        listeners.add(listener);
+        return () => {
+          listeners.delete(listener);
+        };
+      },
       getSnapshot: () => ({
-        indicator: { icon: "CircleDot", color: "fg.warning", label: "Session status: awaiting input" },
+        indicator: running
+          ? { icon: "LoaderCircle", color: "fg.info", label: "Session status: in_progress" }
+          : { icon: "CircleCheck", color: "fg.success", label: "Session status: completed" },
       }),
     },
   });
-  return workbench;
+  return { workbench, toggle };
 };
 export const TabPresentationExample = () => {
-  const [workbench] = useState(createTabPresentationWorkbench);
+  const [{ workbench, toggle }] = useState(createTabPresentationWorkbench);
   return (
     <WorkbenchThemeProvider>
+      <Button onClick={toggle}>Change session status</Button>
       <Box h="320px" minH="240px" borderWidth="1px" borderColor="border.subtle" overflow="hidden">
         <Workbench workbench={workbench} />
       </Box>

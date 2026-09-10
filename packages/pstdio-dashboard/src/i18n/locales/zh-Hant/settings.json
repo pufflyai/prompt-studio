@@ -552,5 +552,11 @@
     "agentDefault": "代理預設",
     "autoApprove": "自動核准",
     "autoApproveDescription": "自動核准工具使用請求"
+  },
+  "betaFeatures": {
+    "title": "測試版功能",
+    "description": "試用測試版功能。此設定適用於連線到此安裝執行個體的所有專案和儀表板。",
+    "notifications": "通知",
+    "loading": "正在載入設定…"
   }
 }

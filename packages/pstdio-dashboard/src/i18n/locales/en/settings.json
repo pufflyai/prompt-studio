@@ -568,5 +568,11 @@
     "agentDefault": "Agent default",
     "autoApprove": "Auto-approve",
     "autoApproveDescription": "Automatically approve tool use requests"
+  },
+  "betaFeatures": {
+    "title": "Beta features",
+    "description": "Try beta features. This setting applies to every project and dashboard connected to this installation.",
+    "notifications": "Notifications",
+    "loading": "Loading settings…"
   }
 }

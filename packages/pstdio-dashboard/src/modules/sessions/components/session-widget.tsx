@@ -1,12 +1,12 @@
 import { Box, Flex } from "@chakra-ui/react";
 import { useWorkbenchStore, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
-import { useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import type { DashboardSessionDraftPersistence } from "@/shared/app/session-draft-persistence";
 import {
   dashboardActiveResourceIdContextKey,
   dashboardActiveResourceKindContextKey,
 } from "@/shared/extensions/workbench-extension-contributions";
-import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
+import { subscribeDashboardData } from "@/shared/sync/dashboard-rows";
 import { resolveDashboardSessionViewForPlacement } from "../data/dashboard-sessions";
 import { DashboardSessionChatPanel, ReviewChangesAction } from "./session-chat-panel";
 
@@ -17,9 +17,13 @@ interface SessionWidgetProps {
 
 export const SessionWidget = (props: SessionWidgetProps) => {
   const { input, drafts } = props;
-  useSyncExternalStore(subscribeDashboardData, getDashboardDataVersion, getDashboardDataVersion);
-
-  const view = resolveDashboardSessionViewForPlacement(input.instance);
+  const [view, setView] = useState(() => resolveDashboardSessionViewForPlacement(input.instance));
+  useEffect(() => {
+    const refresh = () => setView(resolveDashboardSessionViewForPlacement(input.instance));
+    const unsubscribe = subscribeDashboardData(refresh);
+    refresh();
+    return unsubscribe;
+  }, [input.instance]);
   // Hide the open action when this workspace is already the active resource — you are looking at it.
   const isWorkspaceOpen = useWorkbenchStore(
     input.workbench.context.store,

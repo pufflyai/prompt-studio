@@ -56,7 +56,7 @@ describe("/v1/settings", () => {
     const response = await context.app.request("/v1/settings");
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ max_concurrent_sessions: null });
+    await expect(response.json()).resolves.toEqual({ max_concurrent_sessions: null, notifications_enabled: false });
   });
 
   test("updates max concurrent sessions", async () => {
@@ -67,7 +67,7 @@ describe("/v1/settings", () => {
     });
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ max_concurrent_sessions: 1 });
+    await expect(response.json()).resolves.toEqual({ max_concurrent_sessions: 1, notifications_enabled: false });
   });
 
   test("accepts unlimited max concurrent sessions", async () => {
@@ -84,6 +84,23 @@ describe("/v1/settings", () => {
     });
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ max_concurrent_sessions: null });
+    await expect(response.json()).resolves.toEqual({ max_concurrent_sessions: null, notifications_enabled: false });
   });
+});
+
+test("validates and synchronizes notification opt-in without changing capacity", async () => {
+  const patch = (body: unknown) =>
+    context.app.request("/v1/settings", {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  const invalid = await patch({ notifications_enabled: "true" });
+  expect(invalid.status).toBe(400);
+  await patch({ max_concurrent_sessions: 3 });
+  const response = await patch({ notifications_enabled: true });
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ max_concurrent_sessions: 3, notifications_enabled: true });
+  const current = await context.app.request("/v1/settings");
+  expect(await current.json()).toEqual({ max_concurrent_sessions: 3, notifications_enabled: true });
 });

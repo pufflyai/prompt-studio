@@ -3,6 +3,7 @@ import { type Collection, createCollection } from "@tanstack/react-db";
 export { eq, useLiveQuery } from "@tanstack/react-db";
 
 export const SYNCED_TABLES = [
+  "settings",
   "projects",
   "repos",
   "project_repos",

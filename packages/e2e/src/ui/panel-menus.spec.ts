@@ -130,11 +130,6 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
 
   await menu.getByRole("menuitem", { name: "First context session" }).click();
   await expect(sideHeader.getByRole("tab", { name: /First context session/ })).toBeVisible();
-  await expect(sessionTabs).toHaveCount(3);
-
-  const firstNewSessionTab = sideHeader.getByRole("tab", { name: /New session/ }).first();
-  await firstNewSessionTab.click();
-  await firstNewSessionTab.getByRole("button", { name: "Close New session" }).click();
   await expect(sessionTabs).toHaveCount(2);
 
   await openTabCustomMenu(sideHeader.getByRole("tab", { name: /First context session/ }));
@@ -150,9 +145,9 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
     .getByRole("menu", { name: "New session menu" })
     .getByRole("menuitem", { name: "First context session" })
     .click();
-  await expect(sessionTabs).toHaveCount(3);
+  await expect(sessionTabs).toHaveCount(2);
   await expect(sideHeader.getByRole("tab", { name: /Second context session/ })).toBeVisible();
-  await expect(sideHeader.getByRole("tab", { name: /New session/ })).toBeVisible();
+  await expect(sideHeader.getByRole("tab", { name: /New session/ })).toHaveCount(0);
   await expect(sideHeader.getByRole("tab", { name: /First context session/ })).toBeVisible();
 
   await openTabCustomMenu(sideHeader.getByRole("tab", { name: /First context session/ }));
@@ -160,11 +155,24 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
     .getByRole("menu", { name: "First context session menu" })
     .getByRole("menuitem", { name: "Second context session" })
     .click();
-  await expect(sessionTabs).toHaveCount(3);
+  await expect(sessionTabs).toHaveCount(2);
   await expect(sideHeader.getByRole("tab", { name: /Second context session/ })).toHaveAttribute(
     "aria-selected",
     "true",
   );
+  const before = await sessionTabs.evaluateAll((tabs) => tabs.map((tab) => ({ id: tab.id, title: tab.textContent })));
+  const origin = before.find((tab) => tab.title === "First context session")!;
+  await openTabCustomMenu(sideHeader.getByRole("tab", { name: /First context session/ }));
+  await page
+    .getByRole("menu", { name: "First context session menu" })
+    .getByRole("menuitem", { name: "New session", exact: true })
+    .click();
+  await expect(sessionTabs).toHaveCount(before.length);
+  for (const [index, tab] of before.entries()) {
+    await expect(sessionTabs.nth(index)).toHaveAttribute("id", tab.id);
+    await expect(sessionTabs.nth(index)).toHaveText(tab.id === origin.id ? "New session" : tab.title!);
+  }
+  await expect(sideHeader.getByRole("tab", { selected: true })).toHaveAttribute("id", origin.id);
   await expect(page.getByRole("region", { name: "Side Panel" })).toBeVisible();
 });
 

@@ -95,6 +95,7 @@ test("dashboard keeps project selection open when no project is selected", async
 });
 
 test("dashboard keeps the project mode and blocks controls behind the project switcher", async ({ page, request }) => {
+  await request.patch(`${apiBase}/v1/settings`, { data: { notifications_enabled: true } });
   test.setTimeout(20_000);
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "Overlay Blocking Test");

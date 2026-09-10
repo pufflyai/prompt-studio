@@ -1,5 +1,5 @@
+import { useEffect, useState } from "react";
 import { getKeybindingSteps, type KeybindingSequence, type WorkbenchCore } from "../../core";
-import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { useTanStackWorkbenchHotkeys } from "./tanstack-hotkey-adapter";
 
 export interface WorkbenchHotkeyRegistration {
@@ -90,11 +90,19 @@ export const createWorkbenchHotkeyRegistrations = (input: CreateWorkbenchHotkeyR
 
 export const WorkbenchKeybindingDispatcher = (props: WorkbenchKeybindingDispatcherProps) => {
   const { workbench, disabled, commandIds } = props;
-  useWorkbenchStore(workbench.keybindings.store, (state) => state.keybindings);
-  useWorkbenchStore(workbench.context.store, (state) => state.values);
-  useWorkbenchStore(workbench.commands.store, (state) => state.commands);
-
-  const registrations = createWorkbenchHotkeyRegistrations({ workbench, disabled, commandIds });
+  const [registrations, setRegistrations] = useState(() =>
+    createWorkbenchHotkeyRegistrations({ workbench, disabled, commandIds }),
+  );
+  useEffect(() => {
+    const refresh = () => setRegistrations(createWorkbenchHotkeyRegistrations({ workbench, disabled, commandIds }));
+    const subscriptions = [workbench.keybindings.store, workbench.context.store, workbench.commands.store].map(
+      (store) => store.subscribe(refresh),
+    );
+    refresh();
+    return () => {
+      for (const unsubscribe of subscriptions) unsubscribe();
+    };
+  }, [workbench, disabled, commandIds]);
   useTanStackWorkbenchHotkeys(registrations);
 
   return null;

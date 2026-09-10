@@ -4,7 +4,7 @@ import { settings } from "../../db/schemas.pg";
 
 type SettingsRecord = typeof settings.$inferSelect;
 
-type UpdateInput = Partial<Pick<SettingsRecord, "max_concurrent_sessions">>;
+type UpdateInput = Partial<Pick<SettingsRecord, "max_concurrent_sessions" | "notifications_enabled">>;
 
 const GLOBAL_SETTINGS_ID = "global";
 
