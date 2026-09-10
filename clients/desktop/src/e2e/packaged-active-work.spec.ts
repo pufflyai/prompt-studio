@@ -38,7 +38,7 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
       expect(created.status).toBe(201);
       expect(created.body.extension_warnings ?? []).toEqual([]);
       await openPackagedProject(app.page, "Active terminal work");
-      await app.page.getByText("Recent sessions", { exact: true }).waitFor();
+      await app.page.getByTestId("start-page").waitFor();
       const socketOpened = app.page.waitForEvent(
         "websocket",
         (socket) => new URL(socket.url()).pathname === "/v1/terminal",

@@ -1,247 +1,86 @@
-import { Badge, Box, Button, Flex, HStack, Icon, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, Stack, Text } from "@chakra-ui/react";
 import {
-  ListRow,
-  resolveSessionIndicatorColor,
-  resolveSessionIndicatorIcon,
-  type SessionCompletionStatus,
-} from "@pstdio/ui";
-import type { ResourceRef } from "@pstdio/workbench";
-import { useWorkbenchStore, type WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
-import { GitBranch } from "lucide-react";
+  useWorkbenchStore,
+  WORKBENCH_SETTINGS_OPEN_COMMAND_ID,
+  type WorkbenchPanelRenderInput,
+} from "@pstdio/workbench/react";
 import { useSyncExternalStore } from "react";
-import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
-import { createDashboardResource } from "@/shared/app/resources";
+import { dashboardCommandIds } from "@/shared/app/commands";
 import {
-  type DashboardRows,
-  getDashboardDataVersion,
-  isDashboardProjectRow,
-  isVisibleDashboardRow,
-  readDashboardRows,
-  subscribeDashboardData,
-} from "@/shared/sync/dashboard-rows";
-import { openSessionsPage, openWorkspacesPage } from "@/shared/workbench/page-navigation";
+  dashboardSelectedProjectIdContextKey,
+  dashboardSelectedProjectNameContextKey,
+} from "@/shared/app/project-context";
+import { type RecentProjectResource, readRecentProjectResources } from "@/shared/recents/recent-project-resources";
+import { getDashboardDataVersion, subscribeDashboardData } from "@/shared/sync/dashboard-rows";
+import { openSessionsPage } from "@/shared/workbench/page-navigation";
+import { StartAboutPanel } from "./start-about-panel";
+import { type StartAction, StartActionList } from "./start-action-list";
+import { StartRecentList } from "./start-recent-list";
 
-export interface StartSession {
-  id: string;
-  title: string;
-  status: string;
-  updatedAt: string;
-  workspaceShorthand: string;
-  resource: ResourceRef;
-  workspaceResource?: ResourceRef;
-}
+const dashboardExtensionsSettingsPanelId = "extensions";
 
-const formatUpdatedAt = (updatedAt: string) => {
-  if (!updatedAt) return "";
-
-  const date = new Date(updatedAt);
-  if (Number.isNaN(date.getTime())) return "";
-
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
+const useContextString = (input: WorkbenchPanelRenderInput, key: string) =>
+  useWorkbenchStore(input.workbench.context.store, (state) => {
+    const value = state.values[key];
+    return typeof value === "string" ? value : undefined;
   });
-};
-
-const rowString = (value: unknown) => (typeof value === "string" ? value : "");
-
-const createStartWorkspaceResource = (
-  workspace: DashboardRows["workspaces"][number],
-  projectId: string | undefined,
-) => {
-  const title = rowString(workspace.name) || rowString(workspace.workspace_shorthand) || "Workspace";
-  const shorthand = rowString(workspace.workspace_shorthand);
-  const branch = rowString(workspace.branch);
-  const workspaceType = rowString(workspace.worktree_path) ? "worktree" : "current_branch";
-
-  return createDashboardResource("workspace", workspace.id, title, "GitBranch", projectId, {
-    workspaceId: workspace.id,
-    workspaceType,
-    workspaceIsDefault: Boolean(workspace.is_default),
-    ...(branch ? { workspaceBranch: branch } : {}),
-    ...(shorthand ? { workspaceShorthand: shorthand } : {}),
-  });
-};
-
-const createWorkspaceBySessionId = (rows: DashboardRows, projectId: string | undefined) => {
-  const workspaceById = new Map(
-    rows.workspaces
-      .filter((workspace) => isVisibleDashboardRow(workspace) && isDashboardProjectRow(workspace, projectId))
-      .map((workspace) => [workspace.id, workspace]),
-  );
-  const workspaceBySessionId = new Map<string, DashboardRows["workspaces"][number]>();
-
-  for (const link of rows.workspaceSessions) {
-    const workspace = workspaceById.get(rowString(link.workspace_id));
-    if (workspace) workspaceBySessionId.set(rowString(link.session_id), workspace);
-  }
-
-  return workspaceBySessionId;
-};
-
-const createStartSessions = (rows: DashboardRows, projectId: string | undefined) => {
-  const workspaceBySessionId = createWorkspaceBySessionId(rows, projectId);
-
-  return rows.sessions
-    .filter((session) => isVisibleDashboardRow(session) && isDashboardProjectRow(session, projectId))
-    .map((session) => {
-      const workspace = workspaceBySessionId.get(session.id);
-      const title = rowString(session.title) || "Session";
-      const status = rowString(session.status) || "unknown";
-      const sessionProjectId = rowString(session.project_id) || rowString(workspace?.project_id) || projectId;
-      const workspaceShorthand = rowString(workspace?.workspace_shorthand);
-
-      return {
-        id: session.id,
-        title,
-        status,
-        updatedAt: rowString(session.updated_at) || rowString(session.created_at),
-        workspaceShorthand,
-        resource: createDashboardResource("session", session.id, title, "MessageCircle", sessionProjectId, { status }),
-        ...(workspace ? { workspaceResource: createStartWorkspaceResource(workspace, sessionProjectId) } : {}),
-      } satisfies StartSession;
-    })
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-};
-
-const createStartData = (projectId: string | undefined, _dataVersion: number) => {
-  const rows = readDashboardRows();
-  const sessions = createStartSessions(rows, projectId);
-
-  return {
-    recentSessions: sessions.slice(0, 5),
-  };
-};
-
-interface RecentSessionRowProps {
-  session: StartSession;
-  onOpenSession: (session: StartSession) => void;
-  onOpenWorkspace: (resource: ResourceRef) => void;
-}
-
-interface RecentSessionRowMetaProps {
-  session: StartSession;
-  updatedAt: string;
-  workspaceResource?: ResourceRef;
-  onOpenWorkspace: (resource: ResourceRef) => void;
-}
-
-const RecentSessionRowMeta = (props: RecentSessionRowMetaProps) => {
-  const { session, updatedAt, workspaceResource, onOpenWorkspace } = props;
-
-  if (!workspaceResource && !updatedAt) return null;
-
-  return (
-    <HStack gap="xs" minW="0" maxW={{ base: "48%", md: "60%" }}>
-      {workspaceResource ? (
-        <Button
-          variant="plain"
-          size="xs"
-          h="auto"
-          minH="0"
-          minW="0"
-          maxW="full"
-          px="0"
-          py="0"
-          color="fg.muted"
-          justifyContent="flex-start"
-          onClick={(event) => {
-            event.stopPropagation();
-            onOpenWorkspace(workspaceResource);
-          }}
-          onKeyDown={(event) => event.stopPropagation()}
-          _hover={{ color: "fg", textDecoration: "underline" }}
-        >
-          <Icon as={GitBranch} boxSize="12px" flexShrink={0} />
-          <Text textStyle="label/XS" truncate>
-            {session.workspaceShorthand || workspaceResource.label}
-          </Text>
-        </Button>
-      ) : null}
-      {updatedAt ? (
-        <Badge size="sm" variant="subtle" bg="bg.muted" color="fg.muted" flexShrink={0}>
-          {updatedAt}
-        </Badge>
-      ) : null}
-    </HStack>
-  );
-};
-
-export const RecentSessionRow = (props: RecentSessionRowProps) => {
-  const { session, onOpenSession, onOpenWorkspace } = props;
-  const updatedAt = formatUpdatedAt(session.updatedAt);
-  const status = session.status as SessionCompletionStatus;
-  const workspaceResource = session.workspaceResource;
-
-  return (
-    <ListRow
-      asChild
-      role="button"
-      tabIndex={0}
-      id={session.id}
-      label={session.title}
-      tooltip={session.title}
-      icon={<Icon as={resolveSessionIndicatorIcon(status)} boxSize="16px" />}
-      iconColor={resolveSessionIndicatorColor(status)}
-      endContent={
-        <RecentSessionRowMeta
-          session={session}
-          updatedAt={updatedAt}
-          workspaceResource={workspaceResource}
-          onOpenWorkspace={onOpenWorkspace}
-        />
-      }
-      onClick={() => onOpenSession(session)}
-      onKeyDown={(event) => {
-        if (event.key !== "Enter" && event.key !== " ") return;
-        event.preventDefault();
-        onOpenSession(session);
-      }}
-    />
-  );
-};
 
 export const StartWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
-  const projectId = useWorkbenchStore(input.workbench.context.store, (state) => {
-    const value = state.values[dashboardSelectedProjectIdContextKey];
-    return typeof value === "string" ? value : undefined;
-  });
+  const projectId = useContextString(input, dashboardSelectedProjectIdContextKey);
+  const projectName = useContextString(input, dashboardSelectedProjectNameContextKey);
   const dashboardDataVersion = useSyncExternalStore(
     subscribeDashboardData,
     getDashboardDataVersion,
     getDashboardDataVersion,
   );
-  const data = createStartData(projectId, dashboardDataVersion);
-  const openSession = (session: StartSession) => {
-    openSessionsPage(input.workbench, session.resource);
-  };
-  const openWorkspace = (resource: ResourceRef) => {
-    openWorkspacesPage(input.workbench, resource);
+  const recentResources = readRecentProjectResources(projectId, dashboardDataVersion);
+
+  const actions: StartAction[] = [
+    {
+      id: "new-conversation",
+      label: "New conversation",
+      icon: "message-square",
+      run: () => void input.workbench.commands.executeCommand(dashboardCommandIds.createSession),
+    },
+    {
+      id: "open-tool",
+      label: "Open a tool",
+      icon: "panels-top-left",
+      run: () => void input.workbench.commands.executeCommand(dashboardCommandIds.openCommandPalette),
+    },
+    {
+      id: "browse-extensions",
+      label: "Browse extensions",
+      icon: "blocks",
+      run: () =>
+        void input.workbench.commands.executeCommand(WORKBENCH_SETTINGS_OPEN_COMMAND_ID, {
+          panelId: dashboardExtensionsSettingsPanelId,
+        }),
+    },
+  ];
+
+  const openResource = (resource: RecentProjectResource) => {
+    openSessionsPage(input.workbench, resource.resource);
   };
 
   return (
-    <Flex h="full" minH="0" w="full" bg="bg" overflow="auto">
-      <Stack w="full" maxW="48rem" mx="auto" px={{ base: "sm", md: "lg" }} py="lg" gap="md">
+    <Flex h="full" minH="0" w="full" bg="bg" overflow="auto" data-testid="start-page">
+      <Stack w="full" maxW="52rem" mx="auto" px={{ base: "md", md: "lg" }} pt="4xl" pb="3xl" gap="3xl">
         <Stack gap="xs" minW="0">
-          <Text textStyle="heading/M">Recent sessions</Text>
-          <Stack gap="0" minW="0">
-            {data.recentSessions.map((session) => (
-              <RecentSessionRow
-                key={session.id}
-                session={session}
-                onOpenSession={openSession}
-                onOpenWorkspace={openWorkspace}
-              />
-            ))}
-            {data.recentSessions.length === 0 ? (
-              <Box px="sm" py="md" color="fg.muted">
-                <Text fontSize="sm">No recent sessions</Text>
-              </Box>
-            ) : null}
-          </Stack>
+          <Text textStyle="heading/M">{projectName ?? "Project"}</Text>
+          <Text textStyle="paragraph/M/regular" color="fg.muted">
+            Project home
+          </Text>
+        </Stack>
+        <StartAboutPanel />
+        <Stack direction={{ base: "column", md: "row" }} gap={{ base: "3xl", md: "4xl" }} align="flex-start" minW="0">
+          <Box flex="1" minW="0" w="full">
+            <StartActionList actions={actions} />
+          </Box>
+          <Box flex="1" minW="0" w="full">
+            <StartRecentList resources={recentResources} onOpen={openResource} />
+          </Box>
         </Stack>
       </Stack>
     </Flex>

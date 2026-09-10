@@ -196,7 +196,7 @@ test("dashboard selects the only project on first load", async ({ page, request 
 
   await page.goto("/");
 
-  await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Main").getByTestId("start-page")).toBeVisible();
   await expect
     .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb2:selected-project:global")))
     .toBeTruthy();
@@ -249,7 +249,7 @@ test("switching projects never reopens the picker while restoring the landing vi
   }, firstProject.id);
 
   await page.goto("/");
-  await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Main").getByTestId("start-page")).toBeVisible();
   await navSwitchProjectButton(page).click();
 
   const picker = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search projects...") });
@@ -281,7 +281,7 @@ test("switching projects never reopens the picker while restoring the landing vi
   await expect
     .poll(() => page.evaluate(() => window.localStorage.getItem("dashboard-wb2:selected-project:global")))
     .toBe(secondProject.id);
-  await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Main").getByTestId("start-page")).toBeVisible();
   expect(
     await page.evaluate(
       () =>
@@ -323,7 +323,7 @@ test("dashboard opens the start page for a selected project without a saved loca
   await page.goto("/");
 
   await expect(page.getByRole("option", { name: "Start", exact: true })).toHaveCount(0);
-  await expect(page.getByLabel("Main").getByText("Recent sessions", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Main").getByTestId("start-page")).toBeVisible();
   expect(
     await page.evaluate(
       () =>

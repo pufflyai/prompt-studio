@@ -117,7 +117,7 @@ test("restores the first terminal when the hidden launcher was persisted active"
     await page.getByRole("button", { name: "Hide Secondary Panel" }).click();
     await persistHiddenLauncherAsActive(page);
     await page.reload();
-    await expect(page.getByText("Recent sessions", { exact: true })).toBeVisible();
+    await expect(page.getByTestId("start-page")).toBeVisible();
     await page.getByRole("button", { name: "Show Secondary Panel" }).click();
 
     await expect(page.locator(".xterm:visible")).toHaveCount(1);

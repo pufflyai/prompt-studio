@@ -2,7 +2,7 @@ import { expect, type Page } from "@playwright/test";
 
 export const verifyPackagedTerminal = async (page: Page, origin: string, projectId: string, token: string) => {
   await page.goto(`${origin}/projects/${projectId}`);
-  await page.getByText("Recent sessions", { exact: true }).waitFor();
+  await page.getByTestId("start-page").waitFor();
   const connection = page.waitForEvent("websocket", (socket) => new URL(socket.url()).pathname === "/v1/terminal");
   const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
   if (await showSecondary.isVisible()) await showSecondary.click();

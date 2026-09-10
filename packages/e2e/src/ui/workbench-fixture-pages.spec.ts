@@ -40,7 +40,7 @@ test("an extension page navigates through the public API and browser history", a
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/projects/${project.id}`);
 
-  await expect(page.getByText("Recent sessions", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("start-page")).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('[data-workbench-panel-header="sidenav"]')).toHaveCount(0);
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
   await expect(sidenav).toHaveCount(1);
@@ -68,7 +68,7 @@ test("an extension page navigates through the public API and browser history", a
   await page.goBack();
 
   await expect(page).toHaveURL(`/projects/${project.id}`);
-  await expect(page.getByText("Recent sessions", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("start-page")).toBeVisible();
   await expect(page.locator('iframe[title="Lab"]')).toHaveCount(0);
   await expect(sidenav.getByRole("option", { name: /Session 1 — first contact/ })).toHaveCount(0);
   await expect(sidenav.getByRole("option", { name: "Lab", exact: true })).toBeVisible();
@@ -86,7 +86,7 @@ test("Tickets and Start remain exclusive page locations", async ({ page, request
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`/projects/${project.id}`);
 
-  await expect(page.getByText("Recent sessions", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("start-page")).toBeVisible({ timeout: 30_000 });
   await page.getByRole("option", { name: "Tickets", exact: true }).click({ timeout: 30_000 });
 
   await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
@@ -95,7 +95,7 @@ test("Tickets and Start remain exclusive page locations", async ({ page, request
   await page.getByRole("button", { name: new RegExp(project.name) }).click();
 
   await expect(page).toHaveURL(`/projects/${project.id}`);
-  await expect(page.getByText("Recent sessions", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("start-page")).toBeVisible();
   await expect(page.getByRole("tab", { name: "Tickets", exact: true })).toHaveCount(0);
 });
 
@@ -105,7 +105,7 @@ test("Sessions mode reuses project navigation without duplicate chrome", async (
   await page.goto(`/projects/${project.id}`);
 
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  await expect(page.getByText("Recent sessions", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("start-page")).toBeVisible({ timeout: 30_000 });
   await expect(sidenav.getByRole("option", { name: `${project.name} Switch project`, exact: true })).toHaveCount(0);
   await expect(sidenav.locator('[data-tree-list-node-id="workspaces"]')).toHaveCount(0);
 
@@ -131,7 +131,7 @@ test("Lab replaces an active session page in main", async ({ page, request }) =>
   await page.goto(`/projects/${project.id}`);
 
   const sidenav = page.locator('[data-workbench-region="sidenav"]');
-  await expect(page.getByText("Recent sessions", { exact: true })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("start-page")).toBeVisible({ timeout: 30_000 });
   await sidenav.getByRole("option", { name: "Sessions", exact: true }).click();
   await expect(sidenav.getByRole("option", { name: sessionTitle, exact: true })).toBeVisible();
   await sidenav.getByRole("option", { name: sessionTitle, exact: true }).click();
