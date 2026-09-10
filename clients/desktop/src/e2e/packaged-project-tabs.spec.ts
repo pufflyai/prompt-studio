@@ -13,7 +13,12 @@ import {
   runPackagedCli,
   waitForExit,
 } from "./packaged-app-helpers";
-import { createPackagedProject, dragProjectTab, openPackagedProject } from "./packaged-project-helpers";
+import {
+  createPackagedProject,
+  dragProjectTab,
+  openPackagedProject,
+  startKeyboardTabDrag,
+} from "./packaged-project-helpers";
 
 const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
 
@@ -90,16 +95,14 @@ test("opens, switches, closes, and restores project tabs in one packaged window"
     const dragStatus = app.page.getByRole("status");
     const announcedOver = (targetId: string) => dragStatus.filter({ hasText: new RegExp(`${first.id}.*${targetId}`) });
     await firstTab.click();
-    await app.page.keyboard.press("Space");
-    await expect(firstTab).toHaveAttribute("aria-pressed", "true");
+    await startKeyboardTabDrag(firstTab);
     await expect(announcedOver(first.id)).toHaveCount(1);
     await app.page.keyboard.press("ArrowRight");
     await expect(announcedOver(second.id)).toHaveCount(1);
     await app.page.keyboard.press("Space");
     await expect(projectTabs).toHaveText([second.name, first.name]);
     await firstTab.click();
-    await app.page.keyboard.press("Space");
-    await expect(firstTab).toHaveAttribute("aria-pressed", "true");
+    await startKeyboardTabDrag(firstTab);
     await expect(announcedOver(first.id)).toHaveCount(1);
     await app.page.keyboard.press("ArrowLeft");
     await expect(announcedOver(second.id)).toHaveCount(1);

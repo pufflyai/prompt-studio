@@ -1,4 +1,11 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
+
+export const startKeyboardTabDrag = async (tab: Locator) => {
+  await tab.press("Space");
+  // dnd-kit attaches its keyboard listener in a timer task (ADR 0023).
+  await tab.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+  await expect(tab).toHaveAttribute("aria-pressed", "true");
+};
 
 export const openPackagedProject = async (page: Page, name: string) => {
   const picker = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search projects...") });
