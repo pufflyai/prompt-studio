@@ -44,6 +44,7 @@ const settingsItem = <TItem,>(input: WorkbenchPanelRenderInput, panelId: string)
 // these into the navigation tree and dispatching panel.
 export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContext) => {
   ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 10, scope: "global" });
+  ctx.settings.registerSection({ id: "experimental", title: "Experimental", order: 30, scope: "global" });
   ctx.views.registerView({
     id: "dashboard.settings.beta-features",
     title: "Beta features",
@@ -52,10 +53,11 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
   ctx.settings.registerPanel({
     id: "beta-features",
     title: "Beta features",
-    section: "workbench",
+    section: "experimental",
     kind: "view",
     scope: "global",
     order: 20,
+    icon: "FlaskConical",
     viewId: "dashboard.settings.beta-features",
   });
   ctx.settings.registerSection({ id: "project", title: "Project", order: 20, scope: "project" });
