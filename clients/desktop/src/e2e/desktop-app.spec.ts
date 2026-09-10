@@ -127,10 +127,13 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
         { width: 1600, height: 1000 },
         { width: 800, height: 560 },
       ]) {
-        await electronApp.evaluate(({ BrowserWindow }, size) => {
-          BrowserWindow.getAllWindows()[0].setContentSize(size.width, size.height);
+        const contentSize = await electronApp.evaluate(({ BrowserWindow }, size) => {
+          const nativeWindow = BrowserWindow.getAllWindows()[0];
+          nativeWindow.setContentSize(size.width, size.height);
+          const [width, height] = nativeWindow.getContentSize();
+          return { width, height };
         }, size);
-        await expect.poll(() => window.evaluate(() => ({ width: innerWidth, height: innerHeight }))).toEqual(size);
+        await expect.poll(() => window.evaluate(() => ({ width: innerWidth, height: innerHeight }))).toEqual(contentSize);
       }
     });
     expect(

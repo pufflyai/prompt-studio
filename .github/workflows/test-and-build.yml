@@ -193,8 +193,8 @@ jobs:
         if: runner.os == 'Linux'
         run: bun run --cwd clients/desktop playwright install-deps chromium
 
-      - name: Build monorepo
-        run: bun run build
+      - name: Build desktop and dependencies
+        run: bun run build -- --scope @pstdio/desktop --include-dependencies
 
       - name: Configure the source Electron sandbox
         if: runner.os == 'Linux'
