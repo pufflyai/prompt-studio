@@ -54,6 +54,11 @@ describe("deriveShorthand produces a usable resource prefix", () => {
     expect(deriveShorthand("web server")).toBe("WES");
   });
 
+  test("falls back when the words are too short to lengthen", () => {
+    expect(deriveShorthand("W S")).toBe("PRJ");
+    expect(deriveShorthand("w-s")).toBe("PRJ");
+  });
+
   test("clamps a long name to the maximum prefix length", () => {
     expect(deriveShorthand("a b c d e f g h i j k l m n o p q r s")).toBe("ABCDEFGHIJKLMNOP");
   });

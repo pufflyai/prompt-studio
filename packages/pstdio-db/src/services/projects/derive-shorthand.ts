@@ -17,6 +17,8 @@ export const deriveShorthand = (name: string) => {
 
   if (!initials) return FALLBACK;
   if (initials !== RESERVED_PREFIX) return initials;
-  // Lengthen the first word rather than hand back the reserved prefix.
-  return `${words[0].slice(0, 2).toUpperCase()}${words[1][0].toUpperCase()}`;
+  // Lengthen the first word rather than hand back the reserved prefix. A one-letter
+  // first word leaves nothing to lengthen, so the name yields no usable prefix at all.
+  const lengthened = `${words[0].slice(0, 2).toUpperCase()}${words[1][0].toUpperCase()}`;
+  return lengthened === RESERVED_PREFIX ? FALLBACK : lengthened;
 };
