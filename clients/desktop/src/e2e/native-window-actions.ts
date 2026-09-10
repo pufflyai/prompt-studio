@@ -29,10 +29,10 @@ export const expectNativeWindowActions = async (electronApp: ElectronApplication
       const stop = (globalThis as unknown as Window).promptStudioDesktop.onCommand((id) => received.push(id));
       Object.assign(globalThis, { receivedCommands: received, stopDesktopCommands: stop });
     });
-    await electronApp.evaluate(({ Menu, BrowserWindow }) => {
+    await electronApp.evaluate(({ Menu, BrowserWindow, webContents }) => {
       const settings = Menu.getApplicationMenu()!.getMenuItemById("workbench.settings.open")!;
       if (!settings.enabled) throw new Error("Settings should be enabled in the workbench");
-      settings.click(settings, BrowserWindow.getFocusedWindow() ?? undefined, {} as never);
+      settings.click({}, BrowserWindow.getFocusedWindow(), webContents.getFocusedWebContents());
     });
     await expect
       .poll(() => window.evaluate(() => Reflect.get(globalThis, "receivedCommands")))
@@ -46,7 +46,7 @@ export const expectNativeWindowActions = async (electronApp: ElectronApplication
       ["undo", ""],
       ["redo", "Unsaved draft"],
     ]) {
-      await electronApp.evaluate(({ Menu, BrowserWindow }, role) => {
+      await electronApp.evaluate(({ Menu, BrowserWindow, webContents }, role) => {
         const item = Menu.getApplicationMenu()!
           .items.find((item) => item.label === "Edit")!
           .submenu!.items.find((item) => item.role === role)!;
@@ -55,7 +55,7 @@ export const expectNativeWindowActions = async (electronApp: ElectronApplication
           Menu.sendActionToFirstResponder(`${item.role}:`);
           return;
         }
-        item.click(item, BrowserWindow.getFocusedWindow() ?? undefined, {} as never);
+        item.click({}, BrowserWindow.getFocusedWindow(), webContents.getFocusedWebContents());
       }, role);
       await expect(draft).toHaveValue(value);
     }
