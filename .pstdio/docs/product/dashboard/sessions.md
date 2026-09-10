@@ -134,3 +134,5 @@ It loads project sessions, groups them by date in the left rail, and renders the
 - **Commands to run**: `sed -n '1,260p' packages/pstdio-dashboard/src/features/sessions/components/session-chat-view.tsx`
 - **Expected evidence**: Session selection, new-session creation from the composer, follow-up messaging, approval handling, download, and archive actions are all present.
 - **Where to find artifacts**: `packages/pstdio-dashboard/src/features/sessions/`
+
+Selecting a recent session from a New session tab replaces that draft in place. Its position and retention stay the same. Selecting an already-open session focuses its existing tab.

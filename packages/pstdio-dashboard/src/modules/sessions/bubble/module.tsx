@@ -1,4 +1,4 @@
-import { workbenchPanels } from "@pstdio/sdk/extensions";
+import { type PlacementIdentity, workbenchPanels } from "@pstdio/sdk/extensions";
 import type {
   ResourceRef,
   WorkbenchModuleContext,
@@ -132,33 +132,19 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
           preservePanelMode = false,
           selectWorkspaceSidenav = true,
           tabRetention,
-          pinPreviewSessions = false,
+          replaceDraft,
         } = (args ?? {}) as {
           resource?: ResourceRef;
           preservePanelMode?: boolean;
           selectWorkspaceSidenav?: boolean;
           tabRetention?: WorkbenchTabRetention;
-          pinPreviewSessions?: boolean;
+          replaceDraft?: PlacementIdentity;
         };
         if (resource?.type !== "session" || !resource.id) return undefined;
-        if (pinPreviewSessions) {
-          for (const placement of ctx.layout.getLayout().regions.side.widgets) {
-            if (
-              placement.viewId !== dashboardWidgetIds.sessionBubble ||
-              placement.tabRetention !== "preview" ||
-              !placement.resource
-            ) {
-              continue;
-            }
-            await openSessionBubbleWidgets(ctx, {
-              resource: placement.resource,
-              tabRetention: "persistent",
-            });
-          }
-        }
         const bubble = openDashboardSessionPanel(ctx, {
           resource,
           tabRetention,
+          replaceDraft,
           preservePanelMode,
         });
         if (
