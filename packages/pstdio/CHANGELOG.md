@@ -1,5 +1,26 @@
 # pstdio
 
+## 0.33.0
+
+_2026-09-10_
+
+### Minor Changes
+
+- 7d7d794: Allocate extension resource identities and restore mutation events, queue recovery, and webview reuse.
+
+### Patch Changes
+
+- d1d8696: Show the desktop startup screen before loading remaining resources and starting runtime verification.
+- d35577e: Preserve each project's last page when switching desktop tabs and allow drag and keyboard tab reordering.
+- 7f73b0a: Update active and inactive session tab indicators from live session state.
+- 8811178: Polish the macOS icon and title bar and connect desktop menus to workbench commands.
+- 7f73b0a: Make notifications opt-in through Experimental → Beta features and update their entry points live.
+- 6bd785c: Rebuild the project start page with a Prompt Studio panel, start actions, and recent project resources.
+- 7f73b0a: Queue replies during active sessions and preserve failed drafts and accepted messages across refresh.
+- 7f73b0a: Replace the originating tab when choosing New session or selecting an existing session from a draft.
+- 7f73b0a: Remove automatic row menu chevrons while preserving menu access and explicit actions.
+- cb232b1: Restore macOS project tab clicks by removing the inactive lifecycle title bar.
+
 ## 0.32.2
 
 _2026-09-09_

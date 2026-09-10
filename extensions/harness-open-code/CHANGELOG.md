@@ -1,5 +1,13 @@
 # harness-open-code
 
+## 0.4.2
+
+_2026-09-10_
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.24.0`
+
 ## 0.4.1
 
 _2026-09-09_

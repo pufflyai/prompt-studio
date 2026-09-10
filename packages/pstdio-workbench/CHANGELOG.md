@@ -1,5 +1,16 @@
 # @pstdio/workbench
 
+## 0.11.2
+
+_2026-09-10_
+
+### Patch Changes
+
+- d35577e: Preserve each project's last page when switching desktop tabs and allow drag and keyboard tab reordering.
+- 7f73b0a: Update active and inactive session tab indicators from live session state.
+- 7f73b0a: Make notifications opt-in through Experimental → Beta features and update their entry points live.
+- Updated internal dependencies: `@pstdio/ui@0.24.2`, `@pstdio/sdk@0.24.0`
+
 ## 0.11.1
 
 _2026-09-09_

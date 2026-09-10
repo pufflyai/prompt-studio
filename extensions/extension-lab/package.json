@@ -1,6 +1,6 @@
 {
   "name": "extension-lab",
-  "version": "0.9.3",
+  "version": "0.9.4",
   "displayName": "Extension Lab",
   "description": "Five complete example tools built with public extension pages, resources, modes, and themes.",
   "publisher": "pstdio",
@@ -20,8 +20,8 @@
   "dependencies": {
     "@chakra-ui/react": "^3.0.0",
     "@emotion/react": "^11.0.0",
-    "@pstdio/sdk": "^0.23.0",
-    "@pstdio/ui": "0.24.1",
+    "@pstdio/sdk": "^0.24.0",
+    "@pstdio/ui": "0.24.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "three": "^0.185.1",

@@ -1,5 +1,18 @@
 # pstdio-planner
 
+## 0.14.0
+
+_2026-09-10_
+
+### Minor Changes
+
+- 7d7d794: Allocate extension resource identities and restore mutation events, queue recovery, and webview reuse.
+
+### Patch Changes
+
+- 7d7d794: Refresh open Planner views after tickets are updated through the CLI or API.
+- Updated internal dependencies: `@pstdio/ui@0.24.2`, `@pstdio/sdk@0.24.0`
+
 ## 0.13.3
 
 _2026-09-09_

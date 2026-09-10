@@ -1,5 +1,17 @@
 # @pstdio/ui
 
+## 0.24.2
+
+_2026-09-10_
+
+### Patch Changes
+
+- d35577e: Preserve each project's last page when switching desktop tabs and allow drag and keyboard tab reordering.
+- 8811178: Polish the macOS icon and title bar and connect desktop menus to workbench commands.
+- 7f73b0a: Queue replies during active sessions and preserve failed drafts and accepted messages across refresh.
+- 7f73b0a: Remove automatic row menu chevrons while preserving menu access and explicit actions.
+- Updated internal dependencies: `@pstdio/sdk@0.24.0`
+
 ## 0.24.1
 
 _2026-09-09_

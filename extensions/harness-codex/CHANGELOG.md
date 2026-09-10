@@ -1,5 +1,13 @@
 # harness-codex
 
+## 0.3.2
+
+_2026-09-10_
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.24.0`
+
 ## 0.3.1
 
 _2026-09-09_
