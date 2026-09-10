@@ -50,6 +50,20 @@ export const WaitingForWorkbench: Story = {
   args: { state: { kind: "starting", phase: "readiness" } },
 };
 
+export const Workbench: Story = {
+  tags: ["!manifest"],
+  args: {
+    state: {
+      kind: "workbench",
+      runtime: { instanceId: "runtime-one", origin: "http://127.0.0.1:43127", ownerType: "desktop" },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByRole("main")).not.toBeInTheDocument();
+    await expect(canvasElement.querySelector("[data-window-title-bar]")).not.toBeInTheDocument();
+  },
+};
+
 export const Recovery: Story = {
   args: {
     state: {

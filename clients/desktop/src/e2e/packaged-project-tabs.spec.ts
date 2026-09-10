@@ -25,6 +25,9 @@ test("opens, switches, closes, and restores project tabs in one packaged window"
     const second = await createPackagedProject(app.page, "Agentic design");
     await openPackagedProject(app.page, first.name);
     await expect(app.page.getByText("Recent sessions", { exact: true })).toBeVisible();
+    // Electron combines drag regions from both renderers, even when the
+    // workbench covers the lifecycle page. Chromium clicks bypass that hit test.
+    await expect(app.lifecyclePage.getByRole("main")).not.toBeVisible();
 
     const secondary = app.page.getByRole("button", { name: "Show Secondary Panel" });
     if (await secondary.isVisible()) await secondary.click();

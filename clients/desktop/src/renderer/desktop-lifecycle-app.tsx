@@ -184,6 +184,10 @@ const ClosingState = () => {
 
 export const DesktopLifecycleView = (props: DesktopLifecycleViewProps) => {
   const { actions = desktopActions, state, platform = "darwin" } = props;
+  // Electron includes covered renderers in native drag hit testing. Only the
+  // active surface may contribute a title bar, or it blocks workbench controls.
+  if (state.kind === "workbench") return null;
+
   return (
     <Stack as="main" width="full" minHeight="100vh" bg="bg" color="fg" gap="0">
       <WindowTitleBar platform={platform} />

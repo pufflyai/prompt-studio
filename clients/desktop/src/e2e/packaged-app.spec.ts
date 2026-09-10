@@ -189,6 +189,7 @@ test("shows recovery promptly after a sidecar crash and retries without relaunch
     const replacement = await waitForDescriptor(home, (descriptor) => descriptor.instanceId !== originalInstanceId);
     await app.page.waitForURL(`${replacement.origin}/`);
     await expect(app.page.locator("#root")).not.toBeEmpty();
+    await expect(app.lifecyclePage.getByRole("main")).not.toBeVisible();
 
     await app.finishTrace();
     const close = runPackagedCli(home, ["close"]);
