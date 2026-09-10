@@ -239,6 +239,8 @@ describe("packaged pstdio — self-hosted serve", () => {
       try {
         const started = await startPackagedServe(tempRoot, {
           PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "extension-lab", "pstdio-artifacts"),
+          // This check exercises metadata and commands; browser suites cover webview builds.
+          PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
         });
         child = started.child;
 
