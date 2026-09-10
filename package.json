@@ -10,7 +10,7 @@
     "url": "git+https://github.com/pufflyai/prompt-studio.git"
   },
   "scripts": {
-    "validate": "bun run validate:changesets && bun run verify:lockfile && bun run format:check && bun run verify:boundaries && bun run verify:extension-api-version && bun run verify:translations && bun run lint && bun run build && bun run test",
+    "validate": "bun run validate:changesets && bun run verify:lockfile && bun run format:check && bun run verify:boundaries && bun run verify:extension-api-version && bun run build && bun run verify:translations && bun run lint && bun run test",
     "verify:boundaries": "bun run --cwd scripts verify:boundaries",
     "verify:extension-api-version": "bun run --cwd scripts verify:extension-api-version",
     "verify:lockfile": "bun run --cwd scripts verify:lockfile",

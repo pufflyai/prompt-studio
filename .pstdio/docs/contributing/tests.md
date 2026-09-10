@@ -4,7 +4,7 @@
 
 Use Bun 1.3.14 and Node 24, matching CI. Install dependencies with `bun install --frozen-lockfile`.
 
-`bun run validate` checks changesets, the lockfile, formatting, package boundaries, extension API versions, and translations. It then lints, builds, and tests the monorepo. It checks formatting without changing files.
+`bun run validate` checks changesets, the lockfile, formatting, package boundaries, and extension API versions. It builds the monorepo before checking translations, linting, and testing. Translation validation and type checks load compiled SDK exports, so the build must come first on a clean checkout. Formatting is checked without changing files.
 
 `bun run test` runs package tests through Lerna, followed by the E2E script, CLI, UI, and Vite terminal suites. Packaged and desktop tests run separately in CI.
 

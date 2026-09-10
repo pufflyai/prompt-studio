@@ -39,14 +39,17 @@ jobs:
       - name: Check package boundaries and browser test origins
         run: bun run verify:boundaries
 
-      - name: Check lockfile, extension API version, and translations
-        run: bun run verify:lockfile && bun run verify:extension-api-version && bun run verify:translations
+      - name: Check lockfile and extension API version
+        run: bun run verify:lockfile && bun run verify:extension-api-version
 
       - name: Validate changesets
         run: bun run validate:changesets
 
       - name: Build monorepo
         run: bun run build
+
+      - name: Check translations
+        run: bun run verify:translations
 
       - name: Lint monorepo
         run: bun run lint
