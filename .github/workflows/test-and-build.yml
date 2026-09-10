@@ -243,6 +243,22 @@ jobs:
           path: clients/desktop/test-results
           if-no-files-found: error
 
+      - name: Archive the tested macOS app
+        if: runner.os == 'macOS'
+        run: >-
+          ditto -c -k --sequesterRsrc --keepParent
+          "clients/desktop/out/Prompt Studio-darwin-arm64/Prompt Studio.app"
+          "clients/desktop/out/Prompt-Studio-darwin-arm64.zip"
+
+      - name: Upload the macOS preview build
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: prompt-studio-preview-${{ matrix.target }}
+          path: clients/desktop/out/Prompt-Studio-darwin-arm64.zip
+          compression-level: 0
+          if-no-files-found: error
+
   build_docker:
     needs: [test_and_build, e2e, packaged_and_vite_e2e, desktop_e2e]
     runs-on: ubuntu-latest
