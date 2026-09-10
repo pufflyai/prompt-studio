@@ -45,3 +45,50 @@ test("updates active and inactive session tab indicators from live state", async
     }
   }
 });
+
+test("queues two follow-ups without stopping the active session and preserves a failed draft", async ({
+  page,
+  request,
+}) => {
+  const { header, sessions } = await setup(page, request);
+  const session = sessions[1]!;
+  const url = `${apiBase}/v1/sessions/${session.id}`;
+  await request.patch(`${url}/status`, { data: { status: "in_progress" } });
+  await expect(
+    header.getByRole("tab", { name: session.title, exact: true }).locator('[aria-label="Session status: in_progress"]'),
+  ).toBeVisible();
+  const editor = page.locator('[data-testid="content-editable"][contenteditable="true"]').last();
+  const send = page.getByTestId("send-message-button").last();
+  for (const [index, prompt] of ["First waiting message", "Second waiting message"].entries()) {
+    await editor.fill(prompt);
+    await expect(send).toHaveAttribute("aria-label", "Queue message");
+    const accepted = page.waitForResponse(
+      (response) => response.url() === `${url}/follow-up` && response.request().method() === "POST",
+    );
+    if (index === 0) await editor.press("Enter");
+    else await send.click();
+    expect((await (await accepted).json()).follow_up.status).toBe("queued");
+    await expect(editor).toBeEmpty();
+    await expect(page.getByText(prompt, { exact: true })).toBeVisible();
+    expect((await (await request.get(url)).json()).status).toBe("in_progress");
+  }
+  await page.reload();
+  for (const prompt of ["First waiting message", "Second waiting message"])
+    await expect(page.getByText(prompt, { exact: true })).toHaveCount(1);
+  await page.route(`${url}/follow-up`, (route) =>
+    route.fulfill({ status: 500, contentType: "application/json", body: JSON.stringify({ error: "Could not send" }) }),
+  );
+  await editor.fill("Keep this draft");
+  await send.click();
+  await expect(editor).toHaveText("Keep this draft");
+  await page.unroute(`${url}/follow-up`);
+  await request.patch(`${url}/status`, { data: { status: "completed" } });
+  await expect
+    .poll(async () => {
+      const body = await (await request.get(`${url}/conversation`)).json();
+      return body.messages.filter(
+        (message: { role: string; id: string }) => message.role === "user" && !message.id.startsWith("queued-prompt-"),
+      ).length;
+    })
+    .toBe(3);
+});

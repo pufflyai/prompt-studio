@@ -12,10 +12,10 @@ describe("chat input actions", () => {
         streaming: true,
         text: "stop",
       }),
-    ).toBe("none");
+    ).toBe("submit");
   });
 
-  it("lets the action button interrupt while streaming", () => {
+  it("submits a follow-up with the action button while streaming", () => {
     expect(
       resolveChatInputButtonAction({
         canInterrupt: true,
@@ -25,7 +25,22 @@ describe("chat input actions", () => {
         streaming: true,
         text: "stop",
       }),
-    ).toBe("interrupt");
+    ).toBe("submit");
+  });
+
+  it("keeps Stop available with an empty composer and never stops on Enter", () => {
+    const input = {
+      canInterrupt: true,
+      canSubmit: true,
+      hasQuestionPrompt: false,
+      isDisabled: false,
+      streaming: true,
+      text: "  ",
+    };
+    expect(resolveChatInputButtonAction(input)).toBe("interrupt");
+    expect(resolveChatInputKeyboardAction(input)).toBe("none");
+    expect(resolveChatInputButtonAction({ ...input, isDisabled: true })).toBe("none");
+    expect(resolveChatInputKeyboardAction({ ...input, text: "follow up", isDisabled: true })).toBe("none");
   });
 
   it("submits a question answer while the provider stream waits for the response", () => {

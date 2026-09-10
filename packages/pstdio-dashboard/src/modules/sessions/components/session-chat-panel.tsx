@@ -159,7 +159,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
   );
   const splitDisplay = splitQueuedFollowUps(displayedMessages, sessionId);
   const queuedFollowUpPositions = new Map(splitDisplay.queuedFollowUps.map((item) => [item.id, item.position]));
-  const effectiveStreaming = streaming || Boolean(pendingFollowUp);
+  const effectiveStreaming = streaming || view.status === "in_progress" || Boolean(pendingFollowUp);
   const canInterrupt = Boolean(sessionId) && effectiveStreaming && !stopSession.isPending;
 
   const mutateQueuedFollowUp = (
@@ -273,8 +273,7 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
           }
           onSubmitMessage={(text, _attachments, questionResponse) => {
             const submittedAttachments = draftAttachments.attachments;
-            chatDraft.clear();
-            submitSessionMessage({
+            return submitSessionMessage({
               sessionId,
               projectId,
               agent: selectedAgent || null,
@@ -290,7 +289,10 @@ export const DashboardSessionChatPanel = (props: DashboardSessionChatPanelProps)
               createSession,
               followUp,
               reconnect,
-              onSubmitted: draftAttachments.clearSubmittedAttachments,
+              onSubmitted: () => {
+                chatDraft.clear();
+                draftAttachments.clearSubmittedAttachments();
+              },
               onSessionCreated: (sessionId) => {
                 if (!projectId) return;
                 openCreatedSessionFromDraft({ input, sessionId, prompt: text, projectId });
