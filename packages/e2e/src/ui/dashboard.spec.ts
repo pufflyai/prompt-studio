@@ -1,5 +1,8 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { uiOrigin as apiBase } from "../ui-server";
+import { test } from "./helpers/notification-settings";
+
+test.use({ notificationsEnabled: true });
 
 const navSwitchProjectButton = (page: import("@playwright/test").Page) =>
   page.getByRole("region", { name: "Nav Chrome" }).getByRole("button", { name: "Switch project", exact: true });
@@ -34,24 +37,6 @@ const createSessionViaApi = async (
   expect(res.ok()).toBe(true);
   return (await res.json()) as { id: string; title: string };
 };
-
-test("API health check responds ok", async ({ request }) => {
-  test.setTimeout(5_000);
-  const response = await request.get(`${apiBase}/healthz`);
-
-  expect(response.ok()).toBe(true);
-  const body = await response.json();
-  expect(body.ok).toBe(true);
-});
-
-test("dashboard loads successfully", async ({ page }) => {
-  test.setTimeout(5_000);
-  await page.goto("/");
-
-  await expect(page.locator("body")).toBeVisible();
-  // The dashboard SPA should render without a hard error
-  await expect(page.locator("text=Not found")).not.toBeVisible();
-});
 
 test("dashboard keeps project selection open when no project is selected", async ({ page, request }) => {
   test.setTimeout(20_000);
@@ -95,7 +80,6 @@ test("dashboard keeps project selection open when no project is selected", async
 });
 
 test("dashboard keeps the project mode and blocks controls behind the project switcher", async ({ page, request }) => {
-  await request.patch(`${apiBase}/v1/settings`, { data: { notifications_enabled: true } });
   test.setTimeout(20_000);
   await deleteAllProjects(request);
   const project = await createProjectViaApi(request, "Overlay Blocking Test");

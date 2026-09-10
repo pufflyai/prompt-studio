@@ -183,7 +183,9 @@ test("Pigeon sends a local message and keeps it in Sent", async ({ page }) => {
 test("Kiln docks the inspector and persists object changes", async ({ page }) => {
   await openExample(page, "kiln", "kiln.object/cube");
   const inspector = view(page, "Scene and properties");
-  await expect(view(page, "3D viewport").locator("canvas")).toBeVisible();
+  const gridToggle = view(page, "3D viewport").getByRole("button", { name: "Toggle viewport grid", exact: true });
+  await gridToggle.click();
+  await expect(gridToggle).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByRole("button", { name: "Float Side Panel", exact: true })).toHaveCount(0);
   await expect(page.getByRole("tab")).toHaveCount(0);
   await expect(page.locator('[data-workbench-panel-header="secondary"]')).toHaveCount(0);
@@ -201,8 +203,9 @@ test("Kiln docks the inspector and persists object changes", async ({ page }) =>
   await inspector.getByRole("spinbutton", { name: "Cube position X", exact: true }).fill("2.5");
   await saved;
   await page.reload();
+  await inspector.getByRole("button", { name: "Show Cube", exact: true }).click();
   await expect(inspector.getByRole("spinbutton", { name: "Cube position X", exact: true })).toHaveValue("2.5");
-  await expect(inspector.getByRole("button", { name: "Show Cube", exact: true })).toBeVisible();
+  await expect(inspector.getByRole("button", { name: "Hide Cube", exact: true })).toBeVisible();
 });
 
 test("mode defaults restore the global theme on leaving", async ({ page }) => {

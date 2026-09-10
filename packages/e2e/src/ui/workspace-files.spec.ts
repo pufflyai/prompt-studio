@@ -46,7 +46,6 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
       ticketId: ticket.id,
       repoId: repo.id,
       mode: "worktree",
-      startSession: false,
     });
     workspaceId = attempt.workspace.id;
     const worktreePath = attempt.workspace.worktree_path;

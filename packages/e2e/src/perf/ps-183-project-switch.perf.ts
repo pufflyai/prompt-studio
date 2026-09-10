@@ -85,7 +85,6 @@ const seedProject = async (request: import("@playwright/test").APIRequestContext
     ticketId: child.id,
     repoId: repo.id,
     mode: "worktree",
-    startSession: false,
   });
   await createSession(request, project.id, attempt.workspace.id, `${name} active`, "in_progress");
   await createSession(request, project.id, attempt.workspace.id, `${name} completed`, "completed");

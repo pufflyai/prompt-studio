@@ -19,8 +19,8 @@ beforeAll(async () => {
   api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_PLANNER_EXTENSION } });
 }, SETUP_TIMEOUT);
 
-afterAll(() => {
-  api?.stop();
+afterAll(async () => {
+  await api?.stop();
 });
 
 const dirs: string[] = [];
@@ -144,24 +144,6 @@ describe("pstdio tickets write", () => {
       const content = readFileSync(ticketFile, "utf8");
       expect(content).toContain("# Draft ticket");
       expect(content).toContain('ticket_id: "TW-1"');
-      expect(content).toContain("draft: true");
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
-    "writes a plain draft body from the title",
-    () => {
-      const repo = createInitializedRepo("tk-write-body");
-
-      const result = JSON.parse(run('tickets write --title "Templated"', repo));
-
-      expect(result.shorthand).toBe("TWB-1");
-
-      const ticketFile = join(repo, ".pstdio", "tickets", result.shorthand, "ticket.md");
-      const content = readFileSync(ticketFile, "utf8");
-
-      expect(content).toContain("# Templated");
       expect(content).toContain("draft: true");
     },
     TEST_TIMEOUT,

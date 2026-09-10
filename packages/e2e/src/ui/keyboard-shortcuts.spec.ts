@@ -1,8 +1,10 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { uiOrigin as apiBase } from "../ui-server";
+import { test } from "./helpers/notification-settings";
+
+test.use({ notificationsEnabled: true });
 
 test("lists every registered keyboard shortcut", async ({ page, request }) => {
-  await request.patch(`${apiBase}/v1/settings`, { data: { notifications_enabled: true } });
   const response = await request.post(`${apiBase}/v1/projects`, {
     data: { name: "PS-299 Keyboard Shortcuts" },
   });

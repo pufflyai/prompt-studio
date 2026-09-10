@@ -5,6 +5,7 @@ export default defineConfig({
   testDir: "src/e2e",
   testMatch: "desktop-*.spec.ts",
   workers: 1,
+  forbidOnly: !!process.env.CI,
   fullyParallel: false,
   reporter: [["line"], ["json", { outputFile: "test-results/electron-readiness.json" }]],
 });

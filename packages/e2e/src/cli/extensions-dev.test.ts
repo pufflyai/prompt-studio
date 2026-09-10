@@ -17,8 +17,8 @@ beforeAll(async () => {
   api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: "[]", PSTDIO_EXTENSION_WEBVIEW_BUILDS: "1" } });
 }, SETUP_TIMEOUT);
 
-afterAll(() => {
-  api?.stop();
+afterAll(async () => {
+  await api?.stop();
 });
 
 const writeExtension = (

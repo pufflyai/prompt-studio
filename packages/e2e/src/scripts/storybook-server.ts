@@ -65,7 +65,10 @@ const waitForStorybook = async (baseUrl: string, process: ChildProcess, probeSto
     }
 
     try {
-      const response = await fetch(`${baseUrl}/iframe.html?id=${probeStoryId}`);
+      const response = await fetch(`${baseUrl}/iframe.html?id=${probeStoryId}`, {
+        signal: AbortSignal.timeout(Math.max(1, STORYBOOK_BOOT_TIMEOUT_MS - (Date.now() - startedAt))),
+      });
+      await response.body?.cancel();
       if (response.ok) {
         return;
       }
@@ -125,8 +128,12 @@ export const startStorybookServer = async (probeStoryId: string, packageName: St
       stdio: "pipe",
     },
   );
-  storybook.stdout.resume();
-  storybook.stderr.resume();
+  let output = "";
+  const captureOutput = (chunk: Buffer) => {
+    output = (output + chunk.toString()).slice(-16_384);
+  };
+  storybook.stdout.on("data", captureOutput);
+  storybook.stderr.on("data", captureOutput);
 
   try {
     await waitForStorybook(baseUrl, storybook, probeStoryId);
@@ -135,6 +142,7 @@ export const startStorybookServer = async (probeStoryId: string, packageName: St
     console.log(`${packageName} Storybook is ready`);
   } catch (error) {
     console.error(`Failed to start ${packageName} Storybook`, error);
+    console.error(output);
     await stopChildProcess(storybook);
     throw error;
   }

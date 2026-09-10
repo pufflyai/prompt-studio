@@ -5,5 +5,8 @@ export default defineConfig({
   testMatch: "packaged-webview-browsers.spec.ts",
   timeout: 120_000,
   workers: 1,
-  reporter: [["line"]],
+  retries: 0,
+  forbidOnly: !!process.env.CI,
+  outputDir: "test-results/packaged-browser",
+  reporter: [["line"], ["html", { open: "never", outputFolder: "playwright-report/packaged-browser" }]],
 });

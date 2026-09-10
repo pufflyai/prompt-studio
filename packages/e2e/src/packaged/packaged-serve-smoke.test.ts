@@ -17,7 +17,7 @@ const BUILD_TIMEOUT = 180_000;
 const SMOKE_TEST_TIMEOUT = 30_000;
 
 beforeAll(() => {
-  if (!process.env.PSTDIO_PACKAGED_BINARY_PATH) {
+  if (!process.env.E2E_PACKAGED_BINARY_PATH) {
     buildBinary();
   }
 }, BUILD_TIMEOUT);

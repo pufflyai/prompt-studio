@@ -55,7 +55,11 @@ export const createWorkspaceInRepo = async (ctx: HookTestContext, repo: string) 
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         source: "api",
-        params: { ticket: ticket.id, mode: "worktree", startSession: false },
+        params: {
+          ticket: ticket.id,
+          mode: "worktree",
+          agent: { harnessId: "pstdio.workbench-fixture.harness.fake" },
+        },
       }),
     },
   );
@@ -70,20 +74,6 @@ export const createWorkspaceInRepo = async (ctx: HookTestContext, repo: string) 
   }
 
   return { workspace, ticketShorthand: ticket.shorthand };
-};
-
-export const createSessionViaApi = async (ctx: HookTestContext, projectId: string) => {
-  const res = await fetch(`${ctx.api.url}/v1/sessions`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      project_id: projectId,
-      title: "test",
-      prompt: "test",
-      agent: "pstdio.workbench-fixture.harness.fake",
-    }),
-  });
-  return { res, session: (await res.json()) as { id: string } };
 };
 
 export const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));

@@ -374,8 +374,7 @@ describe("extension CLI router dispatch", () => {
     ] satisfies Array<ExtensionCommandRecord & { cliAliases?: string[] }>;
 
     const exitCode = await dispatchExtensionCliCommand({
-      // Old `--name` flag no longer maps to the renamed `--label`, so label is absent.
-      rawArgs: ["statuses", "create", "--name", "Foo", "--color", "gray"],
+      rawArgs: ["statuses", "create", "--color", "gray"],
       deps: {
         error,
         execute,

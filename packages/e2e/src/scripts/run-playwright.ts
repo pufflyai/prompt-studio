@@ -13,8 +13,9 @@ export const buildPlaywrightEnv = (
 ) => {
   const cleanEnv = { ...env };
 
-  delete cleanEnv.PSTDIO_API_PORT;
-  delete cleanEnv.PSTDIO_API_URL;
+  for (const key of Object.keys(cleanEnv)) {
+    if (key.startsWith("PSTDIO_")) delete cleanEnv[key];
+  }
 
   return {
     ...cleanEnv,

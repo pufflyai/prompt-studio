@@ -18,8 +18,8 @@ beforeAll(async () => {
   api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: PSTDIO_E2E_PLANNER_EXTENSION } });
 }, SETUP_TIMEOUT);
 
-afterAll(() => {
-  api?.stop();
+afterAll(async () => {
+  await api?.stop();
 });
 
 const dirs: string[] = [];
@@ -39,27 +39,14 @@ const createInitializedRepo = (name: string) => {
 
 describe("pstdio tickets delete", () => {
   test(
-    "deletes a ticket",
-    () => {
-      const repo = createInitializedRepo("tk-delete");
-
-      const { shorthand } = JSON.parse(run('tickets create --content "Delete me"', repo));
-
-      const result = JSON.parse(run(`tickets delete --id ${shorthand}`, repo));
-
-      expect(result.deleted).toBe(true);
-    },
-    TEST_TIMEOUT,
-  );
-
-  test(
     "deleted ticket no longer appears in list",
     () => {
       const repo = createInitializedRepo("tk-delete-list");
 
       const { shorthand } = JSON.parse(run('tickets create --content "Gone ticket"', repo));
 
-      run(`tickets delete --id ${shorthand}`, repo);
+      const result = JSON.parse(run(`tickets delete --id ${shorthand}`, repo));
+      expect(result.deleted).toBe(true);
 
       const tickets = JSON.parse(run("tickets list", repo));
       expect(tickets.map((ticket: { title: string }) => ticket.title)).not.toContain("Gone ticket");

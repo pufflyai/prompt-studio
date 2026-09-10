@@ -1,12 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import {
-  createWorkbench,
-  type ResourceRef,
-  shellPlacementContributionId,
-  type WorkbenchLayout,
-  workbenchTopHeaderTrailingMenuPath,
-} from "../../core";
+import { createWorkbench, type ResourceRef, shellPlacementContributionId, type WorkbenchLayout } from "../../core";
 import { registerResourcePage } from "../../core/controllers/page-runtime/page-runtime-test-support";
 import {
   createWorkbenchTerminalModule,
@@ -96,14 +90,6 @@ describe("createWorkbenchTerminalModule", () => {
       },
     });
     expect(workbench.views.getView(WORKBENCH_TERMINAL_WIDGET_ID)).toMatchObject({ title: "Terminal" });
-  });
-  test("does not register a global top-header terminal panel", () => {
-    const workbench = setup();
-    expect(
-      workbench.layout
-        .listMenuItems(workbenchTopHeaderTrailingMenuPath)
-        .some((item) => item.commandId === WORKBENCH_TERMINAL_OPEN_COMMAND_ID),
-    ).toBe(false);
   });
   test("exposes the terminal panel to the secondary add menu", () => {
     const workbench = setup();

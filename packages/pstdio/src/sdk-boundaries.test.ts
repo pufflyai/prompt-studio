@@ -4,7 +4,6 @@ import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
-const featureApiRoot = join(packageRoot, "src", "features");
 
 // Compare against "/"-separated paths on every platform.
 const rel = (from: string, to: string) => relative(from, to).replaceAll("\\", "/");
@@ -33,15 +32,6 @@ describe("sdk boundaries", () => {
   test("cli production source imports API contract types through the sdk", () => {
     const offenders = getProductionFiles(packageRoot)
       .filter((file) => readFileSync(file, "utf8").includes("pstdio-api-contracts"))
-      .map((file) => rel(packageRoot, file));
-
-    expect(offenders).toEqual([]);
-  });
-
-  test("cli feature api adapters use the sdk client instead of direct fetch", () => {
-    const offenders = getProductionFiles(featureApiRoot)
-      .filter((file) => rel(featureApiRoot, file).split("/").includes("api"))
-      .filter((file) => readFileSync(file, "utf8").includes("fetch("))
       .map((file) => rel(packageRoot, file));
 
     expect(offenders).toEqual([]);

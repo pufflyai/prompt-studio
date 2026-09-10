@@ -150,9 +150,6 @@ export const listPlannerTickets = async (request: APIRequestContext, apiBase: st
   return tickets.filter((ticket): ticket is PlannerTicket => ticket !== null);
 };
 
-export const archivePlannerTicket = (request: APIRequestContext, apiBase: string, projectId: string, id: string) =>
-  executePlannerCommand<PlannerTicket | null>(request, apiBase, projectId, "archive-ticket", { id });
-
 export const createPlannerTag = async (
   request: APIRequestContext,
   apiBase: string,
@@ -207,11 +204,10 @@ export const createPlannerAttempt = (
     ticketId: string;
     repoId?: string;
     mode?: "worktree" | "current_branch";
-    startSession?: boolean;
     agent?: { harnessId: string; model?: string };
   },
 ) =>
-  executePlannerCommand<{ workspace: PlannerWorkspace; session: { id: string } | null }>(
+  executePlannerCommand<{ workspace: PlannerWorkspace; session: { id: string } }>(
     request,
     apiBase,
     projectId,
@@ -219,8 +215,7 @@ export const createPlannerAttempt = (
     {
       ticket: input.ticketId,
       mode: input.mode ?? "worktree",
-      startSession: input.startSession ?? false,
-      ...(input.agent !== undefined ? { agent: input.agent } : {}),
+      agent: input.agent ?? { harnessId: "pstdio.workbench-fixture.harness.fake" },
       ...(input.repoId !== undefined ? { repo: { repoId: input.repoId } } : {}),
     },
   );

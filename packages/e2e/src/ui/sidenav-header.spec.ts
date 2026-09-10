@@ -1,9 +1,12 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
-import { expect, type Locator, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
+import { test } from "./helpers/notification-settings";
 import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
 import { STORY_RENDER_TIMEOUT_MS, startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
+
+test.use({ notificationsEnabled: true });
 
 const projectModeStoryId = "dashboard-sidenav--project-mode";
 const workspacesViewStoryId = "dashboard-sidenav--workspaces-view";

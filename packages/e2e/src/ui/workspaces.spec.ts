@@ -74,7 +74,6 @@ const createAttemptViaApi = async (
     ticketId,
     repoId,
     mode: "worktree",
-    startSession: false,
   }) as Promise<AttemptResponse>;
 };
 
@@ -119,6 +118,11 @@ test.describe("Workspace diff", () => {
     const repo = await registerRepoViaApi(request, projectId, "clean-repo", repoRoot);
     const ticket = await createTicketViaApi(request, projectId, "# Clean workspace test");
     const attempt = await createAttemptViaApi(request, projectId, ticket.id, repo.id);
+    const sessionsResponse = await request.get(`${apiBase}/v1/sessions?project_id=${projectId}`);
+    expect(sessionsResponse.ok()).toBe(true);
+    expect(await sessionsResponse.json()).toEqual(
+      expect.arrayContaining([expect.objectContaining({ agent: "pstdio.workbench-fixture.harness.fake" })]),
+    );
 
     // Commit a change — should NOT appear in current mode (only uncommitted)
     const wtPath = attempt.workspace.worktree_path;

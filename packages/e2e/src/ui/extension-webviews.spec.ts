@@ -1,7 +1,10 @@
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { uiOrigin as apiBase } from "../ui-server";
+import { test } from "./helpers/notification-settings";
+
+test.use({ notificationsEnabled: true });
 
 const extensionLabPath = join(import.meta.dirname, "../../../../packages/workbench-fixture");
 
@@ -141,7 +144,6 @@ test.describe("Extension webviews", () => {
   });
   test("loads managed webviews and routes host calls through the shell bridge", async ({ page, request }) => {
     const project = await createProject(request);
-    await request.patch(`${apiBase}/v1/settings`, { data: { notifications_enabled: true } });
 
     await disableDefaultExtensionLab(request, project.id);
     await enableExtension(request, project.id, {

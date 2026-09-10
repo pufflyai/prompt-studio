@@ -10,10 +10,10 @@ import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
 beforeAll(() => {
-  if (!process.env.PSTDIO_PACKAGED_BINARY_PATH) buildBinary();
+  if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
 });
 
-const REQUIRE_BROWSER = process.env.PSTDIO_REQUIRE_WEBVIEW_BROWSERS === "1";
+const REQUIRE_BROWSER = process.env.E2E_REQUIRE_WEBVIEW_BROWSERS === "1";
 const browserAvailable = existsSync(chromium.executablePath());
 const browserTest = browserAvailable || REQUIRE_BROWSER ? test : test.skip;
 const localExampleSource = resolve(import.meta.dirname, "../../../../infra/local/extensions/local-example");

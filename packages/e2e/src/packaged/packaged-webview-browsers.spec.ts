@@ -19,9 +19,9 @@ import { verifyPackagedTerminal } from "./packaged-browser-terminal";
 import { buildBinary } from "./packaged-helpers";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
-const REQUIRE_WEBVIEW_BROWSERS = process.env.PSTDIO_REQUIRE_WEBVIEW_BROWSERS === "1";
+const REQUIRE_WEBVIEW_BROWSERS = process.env.E2E_REQUIRE_WEBVIEW_BROWSERS === "1";
 // Package verification does not install Playwright browsers on every release runner.
-// The required CI job opts out of skips through PSTDIO_REQUIRE_WEBVIEW_BROWSERS.
+// The required CI job opts out of skips through E2E_REQUIRE_WEBVIEW_BROWSERS.
 const webviewBrowsers: { launchOptions?: LaunchOptions; name: string; type: BrowserType }[] = [
   { name: "Chromium", type: chromium },
   {
@@ -41,7 +41,7 @@ const findLabWebview = (metadata: WorkbenchExtensionMetadata) => {
 };
 
 test.beforeAll(() => {
-  if (!process.env.PSTDIO_PACKAGED_BINARY_PATH) buildBinary();
+  if (!process.env.E2E_PACKAGED_BINARY_PATH) buildBinary();
 });
 
 test.describe("packaged extension webviews", () => {

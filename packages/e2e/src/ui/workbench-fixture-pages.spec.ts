@@ -1,5 +1,8 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { uiOrigin as apiBase } from "../ui-server";
+import { test } from "./helpers/notification-settings";
+
+test.use({ notificationsEnabled: true });
 
 const createProject = async (request: import("@playwright/test").APIRequestContext) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
@@ -46,11 +49,7 @@ test("an extension page navigates through the public API and browser history", a
   await expect(sidenav).toHaveCount(1);
   await expect(sidenav.getByRole("option", { name: `${project.name} Switch project`, exact: true })).toHaveCount(0);
   await expect(sidenav.locator('[data-tree-list-node-id="workspaces"]')).toHaveCount(0);
-  const sidenavEntries = await sidenav.getByRole("option").allTextContents();
-  const orderedLabels = ["Search", "Notifications", "Sessions", "Tickets", "Lab"];
-  const orderedIndexes = orderedLabels.map((label) => sidenavEntries.indexOf(label));
-  expect(orderedIndexes.every((index) => index >= 0)).toBe(true);
-  expect(orderedIndexes).toEqual([...orderedIndexes].sort((left, right) => left - right));
+  await expect(sidenav.getByRole("option")).toContainText(["Search", "Notifications", "Sessions", "Tickets", "Lab"]);
   await sidenav.getByRole("option", { name: "Lab", exact: true }).click({ timeout: 30_000 });
 
   await expect(page).toHaveURL(`/projects/${project.id}/extensions/pstdio.workbench-fixture/lab`);

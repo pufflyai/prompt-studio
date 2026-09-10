@@ -9,7 +9,7 @@ describe("non-blocking startup tasks", () => {
 
   afterEach(async () => {
     if (api) {
-      api.stop();
+      await api.stop();
       api = null;
     }
   });
@@ -50,16 +50,8 @@ describe("non-blocking startup tasks", () => {
       expect(sessionRes.ok).toBe(true);
 
       // The raw API test process still shuts down cleanly when its owner exits.
-      api.stop();
-
-      // Verify the server is actually down
-      await new Promise((r) => setTimeout(r, 500));
-      try {
-        await fetch(`${api.url}/healthz`);
-        expect(false).toBe(true); // should not reach here
-      } catch {
-        // expected: connection refused
-      }
+      await api.stop();
+      await expect(fetch(`${api.url}/healthz`)).rejects.toThrow();
       api = null;
     },
     FLOW_TIMEOUT,

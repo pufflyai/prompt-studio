@@ -13,8 +13,8 @@ beforeAll(async () => {
   api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture") } });
 }, SETUP_TIMEOUT);
 
-afterAll(() => {
-  api?.stop();
+afterAll(async () => {
+  await api?.stop();
 });
 
 const dirs: string[] = [];

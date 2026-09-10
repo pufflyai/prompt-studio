@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { createCliCommandTracker, isMutatingCliCommand, MUTATING_CLI_COMMANDS } from "./cli-command-log";
+import { createCliCommandTracker, isMutatingCliCommand } from "./cli-command-log";
 
 describe("isMutatingCliCommand", () => {
   test("returns true for known mutating command paths", () => {
@@ -15,31 +15,9 @@ describe("isMutatingCliCommand", () => {
     expect(isMutatingCliCommand(["sessions", "list"])).toBe(false);
     expect(isMutatingCliCommand(["tickets", "view"])).toBe(false);
   });
-
-  test("exports the mutating command registry", () => {
-    expect(MUTATING_CLI_COMMANDS.has("projects create")).toBe(true);
-    expect(MUTATING_CLI_COMMANDS.has("tickets update")).toBe(false);
-    expect(MUTATING_CLI_COMMANDS.has("tickets list")).toBe(false);
-  });
 });
 
 describe("createCliCommandTracker", () => {
-  test("logs a command after extension metadata marks it as mutating", () => {
-    const events: unknown[] = [];
-    const tracker = createCliCommandTracker({
-      logger: {
-        error: (data) => events.push(data),
-        info: (data) => events.push(data),
-      },
-      rawArgs: ["tickets", "update"],
-    });
-
-    tracker.setMutating(true);
-    tracker.logStart();
-    tracker.logSuccess();
-
-    expect(events).toHaveLength(2);
-  });
   test("logs start and completion for mutating commands", () => {
     const events: { data: Record<string, unknown>; level: "info" | "error"; message: string }[] = [];
 

@@ -69,8 +69,8 @@ beforeAll(async () => {
   api = await startApi({ eventBusBufferSize: 5, env: { PSTDIO_DEFAULT_EXTENSIONS: "[]" } });
 }, SETUP_TIMEOUT);
 
-afterAll(() => {
-  api?.stop();
+afterAll(async () => {
+  await api?.stop();
 });
 
 afterEach(() => {

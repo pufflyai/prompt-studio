@@ -9,8 +9,8 @@ beforeAll(async () => {
   api = await startApi({ env: { PSTDIO_DEFAULT_EXTENSIONS: "[]" } });
 }, SETUP_TIMEOUT);
 
-afterAll(() => {
-  api?.stop();
+afterAll(async () => {
+  await api?.stop();
 });
 
 const run = (args: string) => runPstdio(args, process.cwd(), { PSTDIO_API_URL: api.url });

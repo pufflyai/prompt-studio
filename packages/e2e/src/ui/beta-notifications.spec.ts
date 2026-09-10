@@ -1,5 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { uiOrigin as apiBase } from "../ui-server";
+import { test } from "./helpers/notification-settings";
 
 test("makes notifications opt-in and reflects settings from another client", async ({ page, request }) => {
   await request.patch(`${apiBase}/v1/settings`, { data: { notifications_enabled: false } });

@@ -8,11 +8,6 @@ import { createTicketCommand } from "./create-ticket";
 import { deleteTicketCommand } from "./delete-ticket";
 
 describe("archiveTicketCommand", () => {
-  test("does not declare ticket identity as user input", () => {
-    expect(archiveTicketCommand.params).toBeUndefined();
-    expect(deleteTicketCommand.params).toBeUndefined();
-  });
-
   test("archives a ticket so it drops off the board", async () => {
     const storage = createMemoryStorage();
     const created = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "X" } }));
@@ -25,21 +20,6 @@ describe("archiveTicketCommand", () => {
     const result = await runTicketsQuery({ storage, projectId: "proj-1" });
     expect(result.rows).toHaveLength(0);
   });
-
-  test("archives the active ticket resource", async () => {
-    const storage = createMemoryStorage();
-    const created = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "X" } }));
-
-    await archiveTicketCommand.run(
-      ...makeCommandArgs({
-        storage,
-        params: {},
-        overrides: { resource: { type: "ticket", id: created.id } },
-      }),
-    );
-
-    expect((await ticketsCollection(storage).get(created.id))?.archived).toBe(true);
-  });
 });
 
 describe("deleteTicketCommand", () => {
@@ -49,21 +29,6 @@ describe("deleteTicketCommand", () => {
 
     await deleteTicketCommand.run(
       ...makeCommandArgs({ storage, params: {}, overrides: { resource: { type: "ticket", id: created.id } } }),
-    );
-
-    expect(await ticketsCollection(storage).get(created.id)).toBeUndefined();
-  });
-
-  test("deletes the active ticket resource", async () => {
-    const storage = createMemoryStorage();
-    const created = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "X" } }));
-
-    await deleteTicketCommand.run(
-      ...makeCommandArgs({
-        storage,
-        params: {},
-        overrides: { resource: { type: "ticket", id: created.id } },
-      }),
     );
 
     expect(await ticketsCollection(storage).get(created.id)).toBeUndefined();

@@ -4,6 +4,7 @@ import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PSTDIO_E2E_DEFAULT_EXTENSIONS } from "../default-extensions";
+import { stopChildProcess } from "../scripts/child-process";
 import { SETUP_TIMEOUT } from "./timeouts";
 
 export const getFreePort = () =>
@@ -26,12 +27,15 @@ export const waitForReady = async (url: string, timeoutMs = SETUP_TIMEOUT) => {
   const deadline = performance.now() + timeoutMs;
   while (performance.now() < deadline) {
     try {
-      const res = await fetch(`${url}/healthz`);
+      const res = await fetch(`${url}/healthz`, {
+        signal: AbortSignal.timeout(Math.max(1, Math.ceil(deadline - performance.now()))),
+      });
+      await res.body?.cancel();
       if (res.ok) return;
     } catch {
       // not ready yet
     }
-    await new Promise((r) => setTimeout(r, 200));
+    await Bun.sleep(Math.max(0, Math.min(200, deadline - performance.now())));
   }
   throw new Error(`API did not become ready within ${timeoutMs}ms`);
 };
@@ -42,20 +46,19 @@ export type ApiInstance = {
   storagePath: string;
   homePath: string;
   process: ChildProcess;
-  stop: () => void;
+  stop: () => Promise<void>;
 };
 
 interface StartApiOptions {
   /**
-   * E2E defaults to the fake agent so CI never launches real agent providers
-   * or touches token-backed tools. Tests that select a real provider id must
-   * provide hermetic binary/server mocks for that provider.
+   * Tests must select the fixture harness or provide a controlled executable
+   * for the provider they exercise.
    */
   env?: Record<string, string>;
   eventBusBufferSize?: number;
 }
 
-export const startApi = async (options: StartApiOptions = {}): Promise<ApiInstance> => {
+export const startApi = async (options: StartApiOptions = {}) => {
   const port = await getFreePort();
   const homePath = mkdtempSync(join(tmpdir(), "pstdio-e2e-home-"));
   const storagePath = join(homePath, "storage");
@@ -74,11 +77,24 @@ export const startApi = async (options: StartApiOptions = {}): Promise<ApiInstan
       HOME: homePath,
       ...options.env,
     },
-    stdio: "ignore",
+    stdio: ["ignore", "ignore", "pipe"],
   });
 
-  const url = `http://localhost:${port}`;
-  await waitForReady(url);
+  let stderr = "";
+  child.stderr?.on("data", (chunk: Buffer) => {
+    stderr = (stderr + chunk.toString()).slice(-16_384);
+  });
+  const stop = async () => {
+    await stopChildProcess(child);
+    rmSync(homePath, { recursive: true, force: true });
+  };
+  const url = `http://127.0.0.1:${port}`;
+  try {
+    await waitForReady(url);
+  } catch (error) {
+    await stop();
+    throw new Error(`${error instanceof Error ? error.message : String(error)}\n${stderr}`.trim());
+  }
 
   return {
     url,
@@ -86,9 +102,6 @@ export const startApi = async (options: StartApiOptions = {}): Promise<ApiInstan
     storagePath,
     homePath,
     process: child,
-    stop: () => {
-      child.kill();
-      rmSync(homePath, { recursive: true, force: true });
-    },
+    stop,
   };
 };

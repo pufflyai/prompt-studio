@@ -13,7 +13,14 @@
     "test": {
       "cache": true,
       "dependsOn": ["^build"],
-      "inputs": ["default", "^production"]
+      "inputs": [
+        "default",
+        "^production",
+        "{workspaceRoot}/scripts/test-setup.ts",
+        "{workspaceRoot}/bunfig.toml",
+        "{workspaceRoot}/bun.lock",
+        { "runtime": "bun --version" }
+      ]
     },
     "lint": {
       "cache": true,

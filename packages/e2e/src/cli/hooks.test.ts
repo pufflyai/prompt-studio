@@ -19,8 +19,8 @@ beforeAll(async () => {
   ctx.api = api;
 }, SETUP_TIMEOUT);
 
-afterAll(() => {
-  api?.stop();
+afterAll(async () => {
+  await api?.stop();
 });
 
 afterEach(() => {

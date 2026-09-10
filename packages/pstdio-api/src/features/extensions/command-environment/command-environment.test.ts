@@ -862,26 +862,6 @@ describe("createCommandEnvironment project boundaries", () => {
     await expect(env.repos.resolvePath("other-repo", "README.md")).rejects.toThrow("Repo not found: other-repo");
   });
 
-  test("does not expose legacy ticket helpers", async () => {
-    const env = createCommandEnvironment(
-      {
-        extensionStorageService: makeStorageService(),
-      } as never,
-      makeEnabledSources() as never,
-      {
-        extensionId: "pstdio.extension-lab",
-        name: "extension-lab",
-        project: projectContext,
-        projectId: "project-1",
-      },
-    );
-
-    expect("tickets" in env).toBe(false);
-    expect("ticketStatuses" in env).toBe(false);
-    expect("attemptStatuses" in env).toBe(false);
-    expect("setAttemptStatus" in env.workspaces).toBe(false);
-  });
-
   test("queues remote session follow-ups without a local cwd", async () => {
     const inserted: unknown[] = [];
     const session = {

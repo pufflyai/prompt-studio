@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { createRunId, getPlaywrightCommand, sanitizeForwardedArgs } from "./run-playwright";
+import { buildPlaywrightEnv, createRunId, getPlaywrightCommand, sanitizeForwardedArgs } from "./run-playwright";
 
 const getFreePort = () =>
   new Promise<number>((resolve, reject) => {
@@ -48,8 +48,7 @@ const run = async () => {
   const command = getPlaywrightCommand(["-c", "playwright.vite-terminal.config.ts", ...forwardedArgs]);
   const child = spawn(command.cmd, command.args, {
     env: {
-      ...process.env,
-      E2E_API_PORT: String(apiPort),
+      ...buildPlaywrightEnv(process.env, { apiPort, dashboardPort: devPort }, runId),
       E2E_VITE_DEV_PORT: String(devPort),
       E2E_VITE_PREVIEW_PORT: String(previewPort),
       E2E_RUN_ID: runId,

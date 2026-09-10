@@ -12,8 +12,8 @@ beforeAll(async () => {
   api = await startApi();
 }, SETUP_TIMEOUT);
 
-afterAll(() => {
-  api?.stop();
+afterAll(async () => {
+  await api?.stop();
 });
 
 describe("pstdio agents (harness listing)", () => {

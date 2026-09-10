@@ -54,7 +54,7 @@ const hostBinaryPath = resolveCompiledBinaryPath(platformPackage);
 const packagedE2e = spawnSync("bun", resolvePackagedRuntimeTestArgs(platformPackage), {
   cwd: "./packages/e2e",
   stdio: "inherit",
-  env: { ...process.env, PSTDIO_PACKAGED_BINARY_PATH: hostBinaryPath },
+  env: { ...process.env, E2E_PACKAGED_BINARY_PATH: hostBinaryPath },
 });
 
 if (packagedE2e.status !== 0) {

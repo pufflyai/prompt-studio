@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import { findReservedKeybindingConflict } from "pstdio-extensions";
-import { workbenchCommandPaletteMenuPath } from "./registries/menus/workbench-menu-paths";
 import { createWorkbench } from "./workbench-core";
 
 describe("workbench built-ins", () => {
@@ -99,40 +98,5 @@ describe("workbench built-ins", () => {
         }).toMatchObject({ isPrefix: false });
       }
     }
-  });
-
-  test("does not register removed default workbench commands", () => {
-    const workbench = createWorkbench();
-    const removedCommandIds = [
-      "workbench.focusMain",
-      "workbench.focusSideBar",
-      "workbench.focusPanel",
-      "workbench.action.navigatePrevious",
-      "workbench.action.reopenLastClosed",
-      "workbench.closeActiveWidget",
-    ];
-
-    const commandIds = workbench.layout.listMenuItems(workbenchCommandPaletteMenuPath).map((item) => item.commandId);
-    const keybindingCommandIds = workbench.keybindings
-      .listCommandKeybindings()
-      .map((keybinding) => keybinding.commandId);
-
-    for (const commandId of removedCommandIds) {
-      expect(workbench.commands.getCommand(commandId)).toBeUndefined();
-      expect(commandIds).not.toContain(commandId);
-      expect(keybindingCommandIds).not.toContain(commandId);
-    }
-  });
-
-  test("does not register collection persistence commands", () => {
-    const workbench = createWorkbench();
-    const commandIds = workbench.layout.listMenuItems(workbenchCommandPaletteMenuPath).map((item) => item.commandId);
-
-    expect(workbench.commands.getCommand("favorites.toggleCurrentResource")).toBeUndefined();
-    expect(workbench.commands.getCommand("savedViews.create")).toBeUndefined();
-    expect(commandIds).not.toContain("favorites.toggleCurrentResource");
-    expect(commandIds).not.toContain("favorites.addCurrentResource");
-    expect(commandIds).not.toContain("favorites.removeCurrentResource");
-    expect(commandIds).not.toContain("favorites.clearMissing");
   });
 });

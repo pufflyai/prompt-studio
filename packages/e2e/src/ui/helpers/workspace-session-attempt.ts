@@ -47,27 +47,10 @@ export const createAttemptWithSessionViaApi = async (
   repoId: string,
   _prompt: string,
 ) => {
-  const attempt = await createPlannerAttempt(request, apiBase, projectId, {
+  return createPlannerAttempt(request, apiBase, projectId, {
     ticketId,
     repoId,
     mode: "worktree",
     agent: { harnessId: "pstdio.workbench-fixture.harness.fake" },
-    startSession: true,
   });
-
-  attempt.session ??= await expect
-    .poll(async () => {
-      const sessionsRes = await request.get(`${apiBase}/v1/sessions?project_id=${encodeURIComponent(projectId)}`);
-      expect(sessionsRes.ok()).toBe(true);
-      const sessions = (await sessionsRes.json()) as Array<{ id: string; cwd: string | null }>;
-      return sessions.find((session) => session.cwd?.includes(attempt.workspace.workspace_shorthand)) ?? null;
-    })
-    .not.toBeNull()
-    .then(async () => {
-      const sessionsRes = await request.get(`${apiBase}/v1/sessions?project_id=${encodeURIComponent(projectId)}`);
-      const sessions = (await sessionsRes.json()) as Array<{ id: string; cwd: string | null }>;
-      return sessions.find((session) => session.cwd?.includes(attempt.workspace.workspace_shorthand))!;
-    });
-
-  return attempt as typeof attempt & { session: { id: string } };
 };

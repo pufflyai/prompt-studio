@@ -199,8 +199,8 @@ beforeAll(async () => {
   pointApiAtOpencodeServer(opencodeServer.url.toString());
 }, SETUP_TIMEOUT);
 
-afterAll(() => {
-  api?.stop();
+afterAll(async () => {
+  await api?.stop();
   opencodeServer?.stop(true);
 });
 

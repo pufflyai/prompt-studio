@@ -43,35 +43,3 @@ export const throttleChromiumCpu = async (page: Page) => {
   const session = await page.context().newCDPSession(page);
   await session.send("Emulation.setCPUThrottlingRate", { rate });
 };
-
-export const waitForMark = async (page: Page, markName: string, startMarkName?: string) => {
-  await page.waitForFunction((name) => performance.getEntriesByName(name).length > 0, markName);
-  return page.evaluate(
-    ({ readyName, startName }) => {
-      const ready = performance.getEntriesByName(readyName).at(-1)?.startTime ?? 0;
-      if (!startName) return ready;
-
-      const start = performance.getEntriesByName(startName).at(-1)?.startTime ?? 0;
-      return ready - start;
-    },
-    { readyName: markName, startName: startMarkName },
-  );
-};
-
-export const getTotalLongTaskDuration = (page: Page) =>
-  page.evaluate(() => window.__longTasks?.reduce((total, task) => total + task.duration, 0) ?? 0);
-
-export const navigateForRouteMeasure = async (page: Page, path: string, startMark: string) => {
-  await page.evaluate(
-    ({ nextPath, markName }) => {
-      window.__longTasks = [];
-      performance.clearMarks();
-      performance.mark(markName);
-      window.history.pushState(null, "", nextPath);
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    },
-    { nextPath: path, markName: startMark },
-  );
-};
-
-export const markNow = (page: Page, markName: string) => page.evaluate((name) => performance.mark(name), markName);

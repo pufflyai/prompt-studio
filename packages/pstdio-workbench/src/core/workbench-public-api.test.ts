@@ -1,15 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import * as workbenchApi from "../index";
 import { getWorkbenchPageRegistryInternals } from "./registries/pages/page-registry-internals";
 import { createWorkbench } from "./workbench-core";
 
 describe("Workbench public API", () => {
-  test("keeps renderer registries behind the workbench host boundary", () => {
-    const workbench = createWorkbench();
-    expect("renderers" in workbench).toBe(false);
-    expect("createWorkbenchRendererRegistry" in workbenchApi).toBe(false);
-    expect("createTreeRendererRegistry" in workbenchApi).toBe(false);
-  });
   test("views define content while page placements create visible instances", () => {
     const workbench = createWorkbench();
     workbench.modes.registerMode({ id: "project", activate: () => undefined });

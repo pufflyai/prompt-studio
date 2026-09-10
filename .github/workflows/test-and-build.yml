@@ -39,6 +39,9 @@ jobs:
       - name: Check package boundaries and browser test origins
         run: bun run verify:boundaries
 
+      - name: Check lockfile, extension API version, and translations
+        run: bun run verify:lockfile && bun run verify:extension-api-version && bun run verify:translations
+
       - name: Validate changesets
         run: bun run validate:changesets
 
@@ -54,6 +57,13 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+    env:
+      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
     steps:
       - uses: actions/checkout@v5
         with:
@@ -80,35 +90,63 @@ jobs:
         run: sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
 
       - name: Install Playwright browsers
-        run: bun run --cwd packages/e2e playwright install --with-deps chromium firefox
+        run: bun run --cwd packages/e2e playwright install --with-deps chromium
 
-      - name: Pre-warm bun install cache for plugin workspaces
-        env:
-          BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
-        run: |
-          mkdir -p "$BUN_INSTALL_CACHE_DIR"
-          PRIME_DIR=$(mktemp -d)
-          echo '{"private":true,"type":"module","dependencies":{"@pstdio/sdk":"latest"}}' > "$PRIME_DIR/package.json"
-          (cd "$PRIME_DIR" && bun install)
+      - name: Test UI e2e
+        run: bun run --cwd packages/e2e test:ui -- --shard=${{ matrix.shard }}/3
+
+      - name: Preserve UI test reports and failure traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-e2e-results-${{ matrix.shard }}
+          path: |
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+          if-no-files-found: ignore
+
+  e2e_cli:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    env:
+      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: package.json
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build end-to-end dependencies
+        run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
+
+      # Temporary workaround documented in ADR 0010.
+      - name: Use canonical Ubuntu package mirror
+        run: sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
+
+      - name: Install Firefox for CLI shutdown tests
+        run: bun run --cwd packages/e2e playwright install --with-deps firefox
 
       - name: Test e2e scripts
         run: bun run --cwd packages/e2e test:scripts
 
       - name: Test CLI e2e
-        env:
-          BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
-          E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
         run: bun run --cwd packages/e2e test:cli
-
-      - name: Test UI e2e
-        env:
-          BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
-          E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
-        run: bun run --cwd packages/e2e test:ui
 
   packaged_and_vite_e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 18
+    env:
+      BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
+      E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
     steps:
       - uses: actions/checkout@v5
         with:
@@ -137,25 +175,24 @@ jobs:
       - name: Install Playwright browsers
         run: bun run --cwd packages/e2e playwright install --with-deps chromium firefox webkit
 
-      - name: Pre-warm bun install cache for plugin workspaces
-        env:
-          BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
-        run: |
-          mkdir -p "$BUN_INSTALL_CACHE_DIR"
-          PRIME_DIR=$(mktemp -d)
-          echo '{"private":true,"type":"module","dependencies":{"@pstdio/sdk":"latest"}}' > "$PRIME_DIR/package.json"
-          (cd "$PRIME_DIR" && bun install)
-
       - name: Test Vite terminal e2e
         run: bun run --cwd packages/e2e test:vite-terminal
 
       - name: Test packaged e2e
         env:
           DEBUG: pw:api,pw:browser
-          BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
-          E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
-          PSTDIO_REQUIRE_WEBVIEW_BROWSERS: "1"
+          E2E_REQUIRE_WEBVIEW_BROWSERS: "1"
         run: bun run --cwd packages/e2e test:packaged
+
+      - name: Preserve packaged and Vite test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaged-vite-e2e-results
+          path: |
+            packages/e2e/test-results
+            packages/e2e/playwright-report
+          if-no-files-found: ignore
 
   desktop_e2e:
     runs-on: ${{ matrix.os }}
@@ -244,7 +281,7 @@ jobs:
           if-no-files-found: error
 
   build_docker:
-    needs: [test_and_build, e2e, packaged_and_vite_e2e, desktop_e2e]
+    needs: [test_and_build, e2e, e2e_cli, packaged_and_vite_e2e, desktop_e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
