@@ -2,6 +2,7 @@ import { defineCommand, type ExtensionStorageApi, params } from "@pstdio/sdk/ext
 import { statusesCollection, ticketsCollection } from "../data/collections";
 import { findTicket, resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import type { StoredTicket } from "../data/types";
+import { plannerTicketsChanged } from "../events";
 import { notifyBlocked, resolveBlockedNotification } from "../planner-notifications";
 import { deriveTitle } from "../utils/derive-title";
 
@@ -55,6 +56,7 @@ export const updateTicketCommand = defineCommand({
       updatedAt: new Date().toISOString(),
     };
     await collection.put(existing.id, next);
+    await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
     await syncBlockedNotificationSafely(ctx, existing, next);
     return next;
   },

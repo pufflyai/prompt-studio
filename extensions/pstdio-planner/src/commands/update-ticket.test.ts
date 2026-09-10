@@ -2,12 +2,37 @@ import { describe, expect, test } from "bun:test";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { ticketsCollection } from "../data/collections";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
+import { plannerTicketsChanged } from "../events";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { getTicketCommand } from "./get-ticket";
 import { updateTicketCommand } from "./update-ticket";
 
 describe("get/update ticket commands", () => {
+  test("publishes the saved ticket change so other clients can refresh", async () => {
+    const storage = createMemoryStorage();
+    const created = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Original" } }));
+    const events: unknown[] = [];
+
+    await updateTicketCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: { id: created.shorthand, content: "# Updated" },
+        overrides: {
+          events: {
+            emit: async (event, payload) => {
+              expect(await ticketsCollection(storage).get(created.id)).toMatchObject({ title: "Updated" });
+              events.push({ event, payload });
+              return { delivered: 0 };
+            },
+          },
+        },
+      }),
+    );
+
+    expect(events).toEqual([{ event: plannerTicketsChanged, payload: { ticketId: created.id } }]);
+  });
+
   test("getTicket returns the stored ticket or null", async () => {
     const storage = createMemoryStorage();
     const created = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "X" } }));
