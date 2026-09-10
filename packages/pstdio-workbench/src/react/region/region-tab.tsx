@@ -19,13 +19,15 @@ interface WorkbenchRegionTabProps {
 }
 const useTabSnapshot = (placement: WorkbenchWidgetPlacement): WorkbenchTabSnapshot => {
   const tab = placement.tab;
-  const [, setVersion] = useState(0);
+  const [snapshot, setSnapshot] = useState(() => tab?.getSnapshot(toPanelInstance(placement)) ?? {});
   useEffect(() => {
-    const subscription = tab?.subscribe?.(() => setVersion((version) => version + 1));
+    const refresh = () => setSnapshot(tab?.getSnapshot(toPanelInstance(placement)) ?? {});
+    const subscription = tab?.subscribe?.(refresh);
+    refresh();
     if (!subscription) return undefined;
     return typeof subscription === "function" ? subscription : () => subscription.dispose();
-  }, [tab]);
-  return tab?.getSnapshot(toPanelInstance(placement)) ?? {};
+  }, [placement, tab]);
+  return snapshot;
 };
 const useRegionTabBehavior = (input: WorkbenchRegionTabProps, tabSnapshot: WorkbenchTabSnapshot) => {
   const { disabled = false, nextWidgetId, placement, previousWidgetId, sortable = false, workbench } = input;
