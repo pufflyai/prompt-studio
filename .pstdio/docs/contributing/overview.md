@@ -27,11 +27,45 @@ bun run dev:isolated -- --name my-feature --logs
 bun run dev:isolated -- --name my-feature --down
 ```
 
+The container runs with your host user and group IDs. Windows uses the image's
+non-root user (1000:1000). Builds write into the checkout with that identity.
+Tools and caches live under `/opt/bun` and `/home/bun`; run the launcher without
+`sudo`.
+
 Run the landing page separately when working on it:
 
 ```bash
 bun run dev:landing-page
 ```
+
+### Repair output from the old root container
+
+Stop old containers that mount this checkout before repairing ownership. List
+their names with `docker ps`, then run `docker stop <container-name>` for each.
+From the repository root on Linux, repair generated output once:
+
+```bash
+repo_owner="$(id -u):$(id -g)"
+for generated in \
+  packages/*/dist packages/*/.publish packages/*/.cache packages/*/.temp \
+  packages/*/node_modules/.vite clients/*/dist clients/*/node_modules/.vite \
+  extensions/*/dist .nx __test-tmp__; do
+  if [ -d "$generated" ]; then
+    sudo find "$generated" -user root -exec chown --no-dereference "$repo_owner" {} +
+  fi
+done
+```
+
+Recreate each old stack's volumes before starting it with the new user:
+
+```bash
+bun run dev:isolated -- --name my-feature --down
+bun run dev:isolated -- --name my-feature
+bun run build
+```
+
+`--down` removes that stack's demo project, volumes, and isolated runtime state.
+Copy any demo work you need before running it. New stacks do not need this repair.
 
 ### Desktop development
 
