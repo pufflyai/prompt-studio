@@ -17,25 +17,13 @@ export const StartRecentList = (props: StartRecentListProps) => {
       <Stack gap="none" minW="0">
         {resources.map((resource) => (
           <ListRow
-            asChild
             role="button"
-            tabIndex={0}
             key={resource.id}
             id={resource.id}
             label={resource.title}
             tooltip={resource.title}
             icon={<WorkbenchIcon name={resource.icon} size={14} />}
-            endContent={
-              <Text textStyle="label/XS" color="fg.muted">
-                {resource.kindLabel}
-              </Text>
-            }
-            onClick={() => onOpen(resource)}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter" && event.key !== " ") return;
-              event.preventDefault();
-              onOpen(resource);
-            }}
+            onActivate={() => onOpen(resource)}
           />
         ))}
         {resources.length === 0 ? (

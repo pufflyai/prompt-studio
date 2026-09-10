@@ -40,13 +40,12 @@ describe("recent project resources", () => {
     ]);
   });
 
-  test("describes each resource with its kind label and icon", () => {
+  test("describes each resource with its title and icon", () => {
     const rows = rowsWith([sessionRow("s1", "Weekly report", "2026-06-14T10:00:00.000Z")]);
 
     expect(createRecentProjectResources(rows, "project-1")[0]).toMatchObject({
       id: "s1",
       title: "Weekly report",
-      kindLabel: "Session",
       icon: "MessageCircle",
     });
   });

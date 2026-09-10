@@ -11,7 +11,6 @@ import {
 export interface RecentProjectResource {
   id: string;
   title: string;
-  kindLabel: string;
   icon: string;
   updatedAt: string;
   resource: ResourceRef;
@@ -29,7 +28,6 @@ const createSessionRecent = (row: SyncedRow, projectId: string | undefined): Rec
   return {
     id: row.id,
     title,
-    kindLabel: "Session",
     icon: "MessageCircle",
     updatedAt: rowString(row.updated_at) || rowString(row.created_at),
     resource: createDashboardResource("session", row.id, title, "MessageCircle", sessionProjectId, { status }),

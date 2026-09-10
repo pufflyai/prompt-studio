@@ -9,16 +9,15 @@ import { StartRecentList } from "./start-recent-list";
 const recentResource = (
   id: string,
   title: string,
-  kindLabel: string,
+  kind: string,
   icon: string,
   updatedAt: string,
 ): RecentProjectResource => ({
   id,
   title,
-  kindLabel,
   icon,
   updatedAt,
-  resource: createDashboardResource(kindLabel.toLowerCase(), id, title, icon, "project-1"),
+  resource: createDashboardResource(kind.toLowerCase(), id, title, icon, "project-1"),
 });
 
 const resources: RecentProjectResource[] = [

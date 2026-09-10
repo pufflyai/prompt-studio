@@ -1,4 +1,4 @@
-import { Button, Stack, Text } from "@chakra-ui/react";
+import { Link, Stack, Text } from "@chakra-ui/react";
 import { WorkbenchIcon } from "@pstdio/workbench/react";
 
 export interface StartAction {
@@ -20,10 +20,23 @@ export const StartActionList = (props: StartActionListProps) => {
       <Text textStyle="label/L/regular">Start</Text>
       <Stack gap="sm" minW="0" align="flex-start">
         {actions.map((action) => (
-          <Button key={action.id} variant="ghost" size="sm" px="none" color="fg.info" gap="xs" onClick={action.run}>
+          <Link
+            key={action.id}
+            role="link"
+            tabIndex={0}
+            color="fg.info"
+            textStyle="label/S/regular"
+            gap="xs"
+            onClick={action.run}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.preventDefault();
+              action.run();
+            }}
+          >
             <WorkbenchIcon name={action.icon} size={14} />
-            <Text textStyle="label/S/regular">{action.label}</Text>
-          </Button>
+            {action.label}
+          </Link>
         ))}
       </Stack>
     </Stack>
