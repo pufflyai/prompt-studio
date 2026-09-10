@@ -22,6 +22,9 @@ void app.whenReady().then(async () => {
     startedAt: new Date().toISOString(),
   };
   const workbenchReady = controller.showWorkbench(descriptor);
+  controller.window.webContents.once("dom-ready", () => {
+    console.log(JSON.stringify({ documentReadyVisible: controller.window.isVisible() }));
+  });
   process.stdin.once("data", async () => {
     await controller.showLifecycle();
     console.log(JSON.stringify({ lifecycleVisible: controller.window.isVisible() }));
