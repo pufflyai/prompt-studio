@@ -102,6 +102,7 @@ const openNewSessionDraft = (
   input: {
     workspace?: ResourceRef;
     tabRetention?: WorkbenchTabRetention;
+    replacePanel?: PlacementIdentity;
   } = {},
 ) => {
   const workspace = input.workspace ?? getPrimaryWorkspaceResource(ctx) ?? createDefaultWorkspaceResource(ctx);
@@ -110,6 +111,22 @@ const openNewSessionDraft = (
   selectSidenavSessionNode(ctx, undefined);
   if (ctx.modes.getActiveModeId() === "sessions") {
     return openSessionsPage(ctx, draftResource);
+  }
+  const identity = input.replacePanel;
+  if (identity?.kind === "mode") {
+    const origin = ctx.layout
+      .getLayout()
+      .regions.side.widgets.find(
+        (placement) =>
+          placement.viewId === dashboardWidgetIds.sessionBubble &&
+          placement.placementIdentity?.kind === "mode" &&
+          placement.placementIdentity.placementId === identity.placementId &&
+          placement.placementIdentity.instanceKey === identity.instanceKey,
+      );
+    if (origin) {
+      ctx.modePlacements.updatePlacement(identity, { resource: draftResource, title: draftResource.label });
+      return ctx.layout.activatePanel(origin.widgetId);
+    }
   }
   return openSessionBubbleWidgets(ctx, {
     resource: draftResource,
@@ -164,13 +181,15 @@ const registerSessionBubbleCommands = (ctx: WorkbenchModuleContext) => {
     { id: dashboardCommandIds.createSession, label: "New session", category: "Dashboard", icon: "PenBox" },
     {
       execute: async (args, context) => {
-        const { workspace } = (args ?? {}) as {
+        const { workspace, replacePanel } = (args ?? {}) as {
           workspace?: ResourceRef;
+          replacePanel?: PlacementIdentity;
         };
-        // The tab tray's + asks for a new tab; everywhere else reuses the peek slot.
+        // The tab tray's + asks for a new tab; a tab menu replaces its own placement.
         const isNewTab = context?.source === "panel-add";
         await openNewSessionDraft(ctx, {
           workspace,
+          replacePanel: isNewTab ? undefined : replacePanel,
           tabRetention: isNewTab ? "persistent" : undefined,
         });
         return undefined;

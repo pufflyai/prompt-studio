@@ -98,7 +98,7 @@ export const createSessionTabPresentation = (ctx: WorkbenchModuleContext): Workb
               action: {
                 kind: "command",
                 commandId: dashboardCommandIds.createSession,
-                args: workspace ? { workspace } : undefined,
+                args: { workspace, replacePanel: instance.placementIdentity },
               },
             },
           ],

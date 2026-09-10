@@ -75,6 +75,36 @@ describe("createSessionBubbleModule", () => {
       getWriter("sessions")!.remove("menu-session");
     });
   }
+  for (const retention of ["preview", "persistent"] as const) {
+    test(`replaces the originating ${retention} session through its New session action`, async () => {
+      const workbench = createWorkbench();
+      workbench.registerModule(createSessionBubbleModule());
+      await activateProjectPage(workbench);
+      const resource = createDashboardResource("session", "session-origin", "Origin", "MessageCircle", "project-1");
+      await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+        resource,
+        tabRetention: retention,
+      });
+      const origin = sessionPlacements(workbench)[0]!;
+      await workbench.commands.executeCommand(dashboardCommandIds.createSession, undefined, { source: "panel-add" });
+      const sibling = sessionPlacements(workbench)[1]!;
+      const snapshot = origin.tab!.getSnapshot!(
+        workbench.layout.listPanelInstances("side").find((panel) => panel.instanceId === origin.widgetId)!,
+      );
+      const action = snapshot.menu!.find((group) => group.id === "create")!.rows[0]!.action!;
+      if (action.kind !== "command") throw new Error("Expected a session command");
+      await workbench.commands.executeCommand(action.commandId, action.args);
+      const after = sessionPlacements(workbench);
+      expect(after).toHaveLength(2);
+      expect(after[0]).toMatchObject({
+        placementIdentity: origin.placementIdentity,
+        resource: { type: "session-draft" },
+        tabRetention: retention,
+      });
+      expect(after[1]).toEqual(sibling);
+      expect(workbench.layout.getLayout().regions.side.activeWidgetId).toBe(after[0]!.widgetId);
+    });
+  }
   test("declares the project Session Panel without opening it", () => {
     const workbench = createWorkbench();
     workbench.resources.registerKind({ kind: "workspace", label: "Workspace" });
