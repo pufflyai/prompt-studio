@@ -133,7 +133,9 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
           const [width, height] = nativeWindow.getContentSize();
           return { width, height };
         }, size);
-        await expect.poll(() => window.evaluate(() => ({ width: innerWidth, height: innerHeight }))).toEqual(contentSize);
+        await expect
+          .poll(() => window.evaluate(() => ({ width: innerWidth, height: innerHeight })))
+          .toEqual(contentSize);
       }
     });
     expect(
