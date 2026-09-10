@@ -31,9 +31,9 @@ export class DesktopWindowController {
       openExternal: (url) => shell.openExternal(url),
     });
     this.#shown = new Promise((resolve) => {
-      // The startup document is prerendered. Show it when loaded instead of
-      // making native visibility depend on a hidden renderer's first paint.
-      this.window.webContents.once("did-finish-load", () => {
+      // The document already contains the styled startup screen. Remaining
+      // resources must not keep that screen behind a hidden native window.
+      this.window.webContents.once("dom-ready", () => {
         this.window.show();
         resolve();
       });
