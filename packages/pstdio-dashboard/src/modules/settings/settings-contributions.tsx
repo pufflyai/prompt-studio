@@ -3,6 +3,7 @@ import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, getDashboardSelectedProjectName } from "@/shared/app/project-context";
 import { dashboardEditableTemplatesContextKey } from "@/shared/extensions/workbench-extension-contributions";
+import { BetaFeaturesPanel } from "./components/beta-features-panel";
 import { ExtensionsPanel } from "./components/extensions-panel";
 import { MachineTokensPanel } from "./components/machine-tokens-panel";
 import { ProjectDangerZone } from "./components/project-danger-zone";
@@ -43,6 +44,20 @@ const settingsItem = <TItem,>(input: WorkbenchPanelRenderInput, panelId: string)
 // these into the navigation tree and dispatching panel.
 export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleContext) => {
   ctx.settings.registerSection({ id: "workbench", title: "Workbench", order: 10, scope: "global" });
+  ctx.views.registerView({
+    id: "dashboard.settings.beta-features",
+    title: "Beta features",
+    body: { kind: "react", render: () => <BetaFeaturesPanel /> },
+  });
+  ctx.settings.registerPanel({
+    id: "beta-features",
+    title: "Beta features",
+    section: "workbench",
+    kind: "view",
+    scope: "global",
+    order: 20,
+    viewId: "dashboard.settings.beta-features",
+  });
   ctx.settings.registerSection({ id: "project", title: "Project", order: 20, scope: "project" });
 
   ctx.views.registerView({

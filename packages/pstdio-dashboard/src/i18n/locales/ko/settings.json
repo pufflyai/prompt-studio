@@ -552,5 +552,11 @@
     "agentDefault": "에이전트 기본값",
     "autoApprove": "자동 승인",
     "autoApproveDescription": "도구 사용 요청을 자동으로 승인"
+  },
+  "betaFeatures": {
+    "title": "베타 기능",
+    "description": "베타 기능을 사용해 보세요. 이 설정은 이 설치에 연결된 모든 프로젝트와 대시보드에 적용됩니다.",
+    "notifications": "알림",
+    "loading": "설정 불러오는 중…"
   }
 }

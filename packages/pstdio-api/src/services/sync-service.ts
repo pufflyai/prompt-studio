@@ -10,6 +10,7 @@ import {
   projects,
   repos,
   sessions,
+  settings,
   sql,
   workspace_sessions,
   workspaces,
@@ -17,6 +18,7 @@ import {
 import type { EventBus } from "../features/sync/event-bus";
 
 const tableMap = {
+  settings,
   projects,
   repos,
   project_repos,

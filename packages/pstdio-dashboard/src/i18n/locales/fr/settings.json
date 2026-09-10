@@ -552,5 +552,11 @@
     "agentDefault": "Par défaut de l'agent",
     "autoApprove": "Approbation automatique",
     "autoApproveDescription": "Approuver automatiquement les demandes d'utilisation d'outils"
+  },
+  "betaFeatures": {
+    "title": "Fonctionnalités bêta",
+    "description": "Essayez les fonctionnalités bêta. Ce réglage s’applique à tous les projets et tableaux de bord connectés à cette installation.",
+    "notifications": "Notifications",
+    "loading": "Chargement des paramètres…"
   }
 }

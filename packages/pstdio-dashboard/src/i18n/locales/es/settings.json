@@ -552,5 +552,11 @@
         }
       }
     }
+  },
+  "betaFeatures": {
+    "title": "Funciones beta",
+    "description": "Prueba funciones beta. Este ajuste se aplica a todos los proyectos y paneles conectados a esta instalación.",
+    "notifications": "Notificaciones",
+    "loading": "Cargando ajustes…"
   }
 }

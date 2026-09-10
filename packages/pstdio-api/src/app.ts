@@ -212,7 +212,9 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     },
     onCapacityAvailable: (input) => drainSessionQueue(input),
   });
+  await settingsDBService.get();
   const settingsService = createSettingsService({
+    eventBus,
     settingsDb: settingsDBService,
     onCapacityAvailable: () => drainSessionQueue(),
   });

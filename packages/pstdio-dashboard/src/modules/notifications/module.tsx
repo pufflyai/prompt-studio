@@ -1,10 +1,11 @@
 import { Badge } from "@chakra-ui/react";
-import type { TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
+import type { Disposable, TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
-import { getCollectionsVersion, subscribeCollections } from "@/lib/sync/collections";
+import { subscribeCollections } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, subscribeDashboardSelectedProject } from "@/shared/app/project-context";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
+import { notificationsEnabled } from "@/shared/settings/synced-settings";
 import { registerDashboardNavigationContribution } from "@/shared/workbench/dashboard-navigation-contribution";
 import { NotificationCenterWidget } from "./components/notification-center-widget";
 import { countPendingNotifications } from "./data/dashboard-notifications";
@@ -31,7 +32,8 @@ const registerNotificationSidenav = (ctx: WorkbenchModuleContext) => {
   registerDashboardNavigationContribution(ctx, {
     id: "dashboard.notifications.sidenav-nav",
     modes: ["project"],
-    getSections: () => [{ id: "navigation.root", nodes: [createNotificationNode(ctx)] }],
+    getSections: () =>
+      notificationsEnabled() ? [{ id: "navigation.root", nodes: [createNotificationNode(ctx)] }] : [],
   });
 };
 
@@ -41,7 +43,7 @@ const refreshSidenavs = (ctx: WorkbenchModuleContext) => {
 };
 
 const registerNotificationWidget = (ctx: WorkbenchModuleContext) => {
-  ctx.views.registerView({
+  const view = ctx.views.registerView({
     id: dashboardWidgetIds.notificationsModal,
     title: "Notifications",
     body: {
@@ -49,7 +51,7 @@ const registerNotificationWidget = (ctx: WorkbenchModuleContext) => {
       render: (input) => <NotificationCenterWidget input={input} />,
     },
   });
-  ctx.overlays.registerOverlay({
+  const overlay = ctx.overlays.registerOverlay({
     id: dashboardWidgetIds.notificationsModal,
     viewId: dashboardWidgetIds.notificationsModal,
     config: {
@@ -59,42 +61,58 @@ const registerNotificationWidget = (ctx: WorkbenchModuleContext) => {
       closeTriggerTop: "3.5",
     },
   });
+  return [view, overlay];
 };
 
 export const createNotificationsModule = () =>
   ({
     id: "dashboard.notifications",
     activate(ctx) {
-      registerNotificationWidget(ctx);
       registerNotificationSidenav(ctx);
-      ctx.commands.registerCommand(
-        {
-          id: dashboardCommandIds.openNotifications,
-          label: "Open notifications",
-          category: "Dashboard",
-          icon: "Inbox",
-        },
-        {
-          execute: () => ctx.overlays.openOverlay(dashboardWidgetIds.notificationsModal, { title: "Notifications" }),
-        },
-      );
-      ctx.keybindings.registerKeybinding({
-        action: { kind: "command", commandId: dashboardCommandIds.openNotifications },
-        keybinding: DASHBOARD_NOTIFICATIONS_KEYBINDING,
-        when: "!inputFocus",
-      });
-      ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
-        commandId: dashboardCommandIds.openNotifications,
-        order: 32,
-      });
-
-      const unsubscribeNotifications = subscribeCollections((change) => {
-        if (change && change.table !== "notifications") return;
+      let registrations: Disposable[] = [];
+      const disable = () => {
+        for (const panel of ctx.layout.getLayout().regions.overlay.widgets) {
+          if (panel.viewId === dashboardWidgetIds.notificationsModal) ctx.overlays.closeOverlay(panel.widgetId);
+        }
+        for (const registration of [...registrations].reverse()) registration.dispose();
+        registrations = [];
+      };
+      const refresh = () => {
+        if (notificationsEnabled() && registrations.length === 0) {
+          registrations = [
+            ...registerNotificationWidget(ctx),
+            ctx.commands.registerCommand(
+              {
+                id: dashboardCommandIds.openNotifications,
+                label: "Open notifications",
+                category: "Dashboard",
+                icon: "Inbox",
+              },
+              {
+                execute: () =>
+                  ctx.overlays.openOverlay(dashboardWidgetIds.notificationsModal, { title: "Notifications" }),
+              },
+            ),
+            ctx.keybindings.registerKeybinding({
+              action: { kind: "command", commandId: dashboardCommandIds.openNotifications },
+              keybinding: DASHBOARD_NOTIFICATIONS_KEYBINDING,
+              when: "!inputFocus",
+            }),
+            ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
+              commandId: dashboardCommandIds.openNotifications,
+              order: 32,
+            }),
+          ];
+        } else if (!notificationsEnabled()) {
+          disable();
+        }
         refreshSidenavs(ctx);
+      };
+      const unsubscribe = subscribeCollections((change) => {
+        if (!change || change.table === "settings" || change.table === "notifications") refresh();
       });
       const unsubscribeProject = subscribeDashboardSelectedProject(ctx, () => refreshSidenavs(ctx));
-      getCollectionsVersion();
-
-      return [{ dispose: unsubscribeNotifications }, { dispose: unsubscribeProject }];
+      refresh();
+      return [{ dispose: unsubscribe }, { dispose: unsubscribeProject }, { dispose: disable }];
     },
   }) satisfies WorkbenchModuleContribution;
