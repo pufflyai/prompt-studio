@@ -82,7 +82,7 @@ test("tree file menus rename and delete files while workspace menus archive the 
       .click();
     const fileRow = sidenav.getByRole("option", { name: "notes.md" });
     await fileRow.click();
-    await expect(page.getByTestId("content-editable").first()).toContainText(fileContent);
+    await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toContainText(fileContent);
     await expect(fileRow).toHaveAttribute("aria-selected", "true");
     const openedUrl = page.url();
 
@@ -119,8 +119,8 @@ test("tree file menus rename and delete files while workspace menus archive the 
     await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
     await expect(renamedRow).toHaveCount(0);
     // Deleting the open file returns the editor to the ticket body.
-    await expect(page.getByTestId("content-editable").first()).toContainText(ticket.title);
-    await expect(page.getByTestId("content-editable").first()).not.toContainText(fileContent);
+    await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toContainText(ticket.title);
+    await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).not.toContainText(fileContent);
     await expect(sidenav.getByRole("option", { name: `${ticket.shorthand} ${ticket.title}` })).toHaveAttribute(
       "aria-selected",
       "true",

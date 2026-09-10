@@ -88,7 +88,9 @@ const openTicket = async (page: Page, projectId: string) => {
     .filter({ hasText: "Ticket workflow" })
     .getByText("Ticket workflow", { exact: true })
     .click();
-  await expect(page.getByTestId("content-editable").first()).toContainText("Check navigation and actions.");
+  await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toContainText(
+    "Check navigation and actions.",
+  );
 };
 
 test("refreshes ticket files after creating a file", async ({ page, fixture }) => {
@@ -103,7 +105,7 @@ test("refreshes ticket files after creating a file", async ({ page, fixture }) =
   const file = (await (await fileResponse).json()).outcome.value as { name: string };
   await expect(page.getByRole("option", { name: file.name, exact: true })).toBeVisible();
   await page.getByRole("option", { name: file.name, exact: true }).click();
-  await expect(page.getByTestId("content-editable").first()).toBeVisible();
+  await expect(page.getByTestId("content-editable").filter({ visible: true }).first()).toBeVisible();
 });
 
 for (const action of ["Archive workspace", "Delete workspace"]) {
@@ -133,6 +135,7 @@ for (const action of ["Archive workspace", "Delete workspace"]) {
     );
     await page.getByRole("menuitem", { name: action, exact: true }).click();
     expect((await response).ok()).toBe(true);
+    await page.getByRole("button", { name: "Dismiss notification", exact: true }).click();
     await page.getByRole("button", { name: `${fixture.ticket.shorthand} Ticket workflow`, exact: true }).click();
     await expect(workspaceRow).toHaveCount(0);
   });
@@ -165,7 +168,7 @@ test("opens ticket action sessions and hides the lone Sessions page tab", async 
       "aria-selected",
       "true",
     );
-    await expect(sidePanel.locator('[data-testid="content-editable"][contenteditable="true"]')).toBeVisible();
+    await expect(sidePanel.locator('[data-testid="content-editable"][contenteditable="true"]:visible')).toBeVisible();
     await expect(page).toHaveURL(ticketUrl);
   }
   await page.getByRole("option", { name: "Sessions", exact: true }).first().click();

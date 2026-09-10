@@ -4,6 +4,7 @@ import type { WorkbenchCore } from "../../core";
 import { WorkbenchFocusRegion } from "../focus/focus-region";
 import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
 import { WorkbenchRegion } from "../region/region";
+import { useRetainedViewPlacements } from "../region/use-retained-view-placements";
 import { WorkbenchWidgetHost } from "../region/widget-host";
 import { useWorkbenchActiveModeId } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -46,6 +47,7 @@ export const WorkbenchSidenav = (props: WorkbenchSidenavProps) => {
 
 interface WorkbenchRegionPanelProps {
   workbench: WorkbenchCore;
+  visible?: boolean;
 }
 
 export const WORKBENCH_STATUS_BAR_HEIGHT = "2rem";
@@ -60,22 +62,29 @@ const WorkbenchStatusBarItems = (props: WorkbenchStatusBarItemsProps) => {
   const activeModeId = useWorkbenchActiveModeId(workbench);
   const items = activeModeId === workbench.modes.getActiveModeId() ? workbench.statusBar.listVisibleItems(slot) : [];
 
-  return items.map((item) => {
-    const view = workbench.views.getView(item.viewId);
-    if (!view) return null;
+  const placements = useRetainedViewPlacements(
+    workbench,
+    items.map((item) => ({
+      widgetId: item.id,
+      contributionId: item.viewId,
+      viewId: item.viewId,
+      title: workbench.views.getView(item.viewId)?.title,
+      closable: false,
+    })),
+  );
+  return placements.map((placement) => {
+    const order = items.findIndex((item) => item.id === placement.widgetId);
     return (
-      <Box key={item.id} display="flex" alignItems="center" minW="0" h="full">
-        <WorkbenchWidgetHost
-          workbench={workbench}
-          region="status"
-          placement={{
-            widgetId: item.id,
-            contributionId: view.id,
-            viewId: view.id,
-            title: view.title,
-            closable: false,
-          }}
-        />
+      <Box
+        key={placement.widgetId}
+        display={order < 0 ? "none" : "flex"}
+        inert={order < 0}
+        order={order}
+        alignItems="center"
+        minW="0"
+        h="full"
+      >
+        <WorkbenchWidgetHost workbench={workbench} region="status" placement={placement} />
       </Box>
     );
   });
@@ -89,6 +98,7 @@ export const WorkbenchActivityBar = (props: WorkbenchRegionPanelProps) => {
       workbench={workbench}
       region="activity"
       data-workbench-region="activity"
+      display={props.visible === false ? "none" : "block"}
       as="nav"
       flexShrink={0}
       h="full"
@@ -111,6 +121,7 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
       workbench={workbench}
       region="status"
       data-workbench-region="status"
+      display={props.visible === false ? "none" : "block"}
       as="footer"
       flexShrink={0}
       h={WORKBENCH_STATUS_BAR_HEIGHT}
@@ -118,18 +129,22 @@ export const WorkbenchStatusBar = (props: WorkbenchRegionPanelProps) => {
       minW="0"
       overflow="hidden"
     >
-      {chrome ? (
-        <ModeChromeView workbench={workbench} region="status" viewId={chrome} />
-      ) : (
-        <Box display="flex" alignItems="stretch" justifyContent="space-between" h="full" minW="0" w="full">
-          <Box display="flex" alignItems="stretch" minW="0" h="full">
-            <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
-          </Box>
-          <Box display="flex" alignItems="stretch" minW="0" h="full">
-            <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
-          </Box>
+      <ModeChromeView workbench={workbench} region="status" viewId={chrome || undefined} />
+      <Box
+        display={chrome ? "none" : "flex"}
+        alignItems="stretch"
+        justifyContent="space-between"
+        h="full"
+        minW="0"
+        w="full"
+      >
+        <Box display="flex" alignItems="stretch" minW="0" h="full">
+          <WorkbenchStatusBarItems workbench={workbench} slot="leading" />
         </Box>
-      )}
+        <Box display="flex" alignItems="stretch" minW="0" h="full">
+          <WorkbenchStatusBarItems workbench={workbench} slot="trailing" />
+        </Box>
+      </Box>
     </WorkbenchFocusRegion>
   );
 };
