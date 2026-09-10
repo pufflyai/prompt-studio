@@ -52,3 +52,19 @@ test("makes notifications opt-in and reflects settings from another client", asy
   await expect(nav).toBeVisible();
   await request.patch(`${apiBase}/v1/settings`, { data: { notifications_enabled: false } });
 });
+
+test("opens the Help menu with pointer and keyboard", async ({ page, request }) => {
+  const project = await (await request.post(`${apiBase}/v1/projects`, { data: { name: "Help menu" } })).json();
+  await page.addInitScript((projectId: string) => {
+    localStorage.setItem("onboarding-complete", "true");
+    localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
+  }, project.id);
+  await page.goto(`/projects/${project.id}/`);
+  const help = page.getByRole("button", { name: "Help", exact: true });
+  await help.click();
+  await expect(page.getByRole("menuitem", { name: /^Keyboard shortcuts/ })).toBeVisible();
+  await page.keyboard.press("Escape");
+  await help.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("menuitem", { name: /^Keyboard shortcuts/ })).toBeVisible();
+});
