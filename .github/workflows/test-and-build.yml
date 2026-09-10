@@ -212,6 +212,7 @@ jobs:
         run: bun run --cwd clients/desktop test:electron
 
       - name: Package Electron with its native sidecar
+        id: package_desktop
         run: bun run --cwd clients/desktop package
 
       - name: Configure the packaged Electron sandbox
@@ -244,14 +245,14 @@ jobs:
           if-no-files-found: error
 
       - name: Archive the tested macOS app
-        if: runner.os == 'macOS'
+        if: always() && runner.os == 'macOS' && steps.package_desktop.outcome == 'success'
         run: >-
           ditto -c -k --sequesterRsrc --keepParent
           "clients/desktop/out/Prompt Studio-darwin-arm64/Prompt Studio.app"
           "clients/desktop/out/Prompt-Studio-darwin-arm64.zip"
 
       - name: Upload the macOS preview build
-        if: runner.os == 'macOS'
+        if: always() && runner.os == 'macOS' && steps.package_desktop.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
           name: prompt-studio-preview-${{ matrix.target }}
