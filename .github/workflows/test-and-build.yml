@@ -142,15 +142,7 @@ jobs:
         run: bun run --cwd packages/e2e test:scripts
 
       - name: Test CLI e2e
-        run: strace -f -tt -e trace=process,close,write,pipe,pipe2,dup,dup2,dup3 -o /tmp/pstdio-cli-process.log bun run --cwd packages/e2e test:cli
-
-      - name: Preserve CLI process diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cli-process-diagnostics
-          path: /tmp/pstdio-cli-process.log
-          if-no-files-found: error
+        run: bun run --cwd packages/e2e test:cli
 
   packaged_and_vite_e2e:
     runs-on: ubuntu-latest

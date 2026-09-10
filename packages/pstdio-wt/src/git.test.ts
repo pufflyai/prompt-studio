@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { createGit, GitError, git, resolveGitExecutable } from "./git";
-
-const stream = (value: string) => new Response(value).body!;
+import { join } from "node:path";
+import { GitError, git, gitBytes, resolveGitExecutable } from "./git";
+import { createTempRepo } from "./test-helpers";
 
 describe("git", () => {
   test("bypasses the Git for Windows cmd launcher", () => {
@@ -14,33 +14,25 @@ describe("git", () => {
     expect(command).toBe("C:\\Program Files\\Git\\mingw64\\bin\\git.exe");
   });
 
-  test("hides Windows console windows when spawning git", async () => {
-    const calls: unknown[] = [];
-    const runGit = createGit(
-      ((command: string[], options: unknown) => {
-        calls.push({ command, options });
-        return {
-          exited: Promise.resolve(0),
-          stderr: stream(""),
-          stdout: stream("ok\n"),
-        };
-      }) as never,
-      "git",
-    );
+  test("reads complete large text and binary Git objects", async () => {
+    const repo = await createTempRepo();
+    try {
+      const text = "A complete line with UTF-8: 🦊\n".repeat(40_000);
+      const bytes = Buffer.from([0, 255, 128, 13, 10, 0, 42]);
+      await Bun.write(join(repo.dir, "large.txt"), text);
+      await Bun.write(join(repo.dir, "binary.bin"), bytes);
+      await git(repo.dir, ["add", "."]);
+      await git(repo.dir, ["commit", "-m", "add output fixtures"]);
 
-    await expect(runGit("C:\\repo", ["status", "--short"])).resolves.toBe("ok");
-
-    expect(calls).toEqual([
-      {
-        command: ["git", "status", "--short"],
-        options: expect.objectContaining({
-          cwd: "C:\\repo",
-          stderr: "pipe",
-          stdout: "pipe",
-          windowsHide: true,
-        }),
-      },
-    ]);
+      const [actualText, actualBytes] = await Promise.all([
+        git(repo.dir, ["show", "HEAD:large.txt"]),
+        gitBytes(repo.dir, ["show", "HEAD:binary.bin"]),
+      ]);
+      expect(actualText).toBe(text.trim());
+      expect(actualBytes).toEqual(bytes);
+    } finally {
+      await repo.cleanup();
+    }
   });
 
   test("runs a git command and returns trimmed stdout", async () => {

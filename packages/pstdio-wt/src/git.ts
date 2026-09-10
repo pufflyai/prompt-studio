@@ -1,3 +1,4 @@
+import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { win32 } from "node:path";
 
@@ -12,7 +13,6 @@ export class GitError extends Error {
   }
 }
 
-type GitSpawner = typeof Bun.spawn;
 type GitExecutableDeps = {
   exists?: (path: string) => boolean;
   platform?: NodeJS.Platform | "win32";
@@ -34,25 +34,23 @@ export const resolveGitExecutable = (deps: GitExecutableDeps = {}) => {
   return nativeGit ?? resolved;
 };
 
-export const spawnGit = (
-  cwd: string,
-  args: string[],
-  spawner: GitSpawner = Bun.spawn,
-  executable = resolveGitExecutable(),
-) => spawner([executable, ...args], { cwd, stdout: "pipe", stderr: "pipe", windowsHide: true });
+export const gitBytes = (cwd: string, args: string[]) =>
+  new Promise<Buffer>((resolve, reject) => {
+    // Keep both pipes owned through completion. See ADR 0024.
+    execFile(
+      resolveGitExecutable(),
+      args,
+      { cwd, encoding: "buffer", maxBuffer: Number.POSITIVE_INFINITY, windowsHide: true },
+      (error, stdout, stderr) => {
+        if (error) {
+          reject(
+            typeof error.code === "number" ? new GitError(args.join(" "), error.code, stderr.toString().trim()) : error,
+          );
+          return;
+        }
+        resolve(stdout);
+      },
+    );
+  });
 
-export const createGit =
-  (spawner: GitSpawner = Bun.spawn, executable = resolveGitExecutable()) =>
-  async (cwd: string, args: string[]) => {
-    const proc = spawnGit(cwd, args, spawner, executable);
-    const [stdout, stderr] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
-    const exitCode = await proc.exited;
-
-    if (exitCode !== 0) {
-      throw new GitError(args.join(" "), exitCode, stderr.trim());
-    }
-
-    return stdout.trim();
-  };
-
-export const git = createGit();
+export const git = async (cwd: string, args: string[]) => (await gitBytes(cwd, args)).toString().trim();
