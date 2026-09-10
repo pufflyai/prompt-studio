@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbench } from "@pstdio/workbench";
+import { getWriter } from "@/lib/sync/collections";
 import { dashboardCommandIds } from "@/shared/app/commands";
+import { dashboardSelectedProjectIdContextKey } from "@/shared/app/project-context";
 import { createDashboardResource } from "@/shared/app/resources";
 import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 import { createSessionBubbleModule } from "./module";
@@ -33,6 +35,76 @@ const sessionPlacements = (workbench: ReturnType<typeof createWorkbench>) =>
     .getLayout()
     .regions.side.widgets.filter((widget) => widget.viewId === dashboardWidgetIds.sessionBubble);
 describe("createSessionBubbleModule", () => {
+  for (const retention of ["preview", "persistent"] as const) {
+    test(`replaces the originating ${retention} draft through its recent-session action`, async () => {
+      const workbench = createWorkbench();
+      workbench.registerModule(createSessionBubbleModule());
+      await activateProjectPage(workbench);
+      workbench.context.set(dashboardSelectedProjectIdContextKey, "project-1");
+      getWriter("sessions")!.upsert({
+        id: "menu-session",
+        project_id: "project-1",
+        title: "Selected session",
+        status: "completed",
+      });
+      await workbench.commands.executeCommand(
+        dashboardCommandIds.createSession,
+        undefined,
+        retention === "persistent" ? { source: "panel-add" } : undefined,
+      );
+      const origin = sessionPlacements(workbench)[0]!;
+      await workbench.commands.executeCommand(dashboardCommandIds.createSession, undefined, { source: "panel-add" });
+      const sibling = sessionPlacements(workbench)[1]!;
+      const snapshot = origin.tab!.getSnapshot!(
+        workbench.layout.listPanelInstances("side").find((panel) => panel.instanceId === origin.widgetId)!,
+      );
+      const action = snapshot
+        .menu!.find((group) => group.id === "recent")!
+        .rows.find((row) => row.id === "menu-session")!.action!;
+      if (action.kind !== "command") throw new Error("Expected a session command");
+      await workbench.commands.executeCommand(action.commandId, action.args);
+      const after = sessionPlacements(workbench);
+      expect(after).toHaveLength(2);
+      expect(after[0]).toMatchObject({
+        placementIdentity: origin.placementIdentity,
+        resource: { id: "menu-session", type: "session" },
+        tabRetention: retention,
+      });
+      expect(after[1]).toEqual(sibling);
+      expect(workbench.layout.getLayout().regions.side.activeWidgetId).toBe(after[0]!.widgetId);
+      getWriter("sessions")!.remove("menu-session");
+    });
+  }
+  for (const retention of ["preview", "persistent"] as const) {
+    test(`replaces the originating ${retention} session through its New session action`, async () => {
+      const workbench = createWorkbench();
+      workbench.registerModule(createSessionBubbleModule());
+      await activateProjectPage(workbench);
+      const resource = createDashboardResource("session", "session-origin", "Origin", "MessageCircle", "project-1");
+      await workbench.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
+        resource,
+        tabRetention: retention,
+      });
+      const origin = sessionPlacements(workbench)[0]!;
+      await workbench.commands.executeCommand(dashboardCommandIds.createSession, undefined, { source: "panel-add" });
+      const sibling = sessionPlacements(workbench)[1]!;
+      const snapshot = origin.tab!.getSnapshot!(
+        workbench.layout.listPanelInstances("side").find((panel) => panel.instanceId === origin.widgetId)!,
+      );
+      const action = snapshot.menu!.find((group) => group.id === "create")!.rows[0]!.action!;
+      if (action.kind !== "command") throw new Error("Expected a session command");
+      await workbench.commands.executeCommand(action.commandId, action.args);
+      const after = sessionPlacements(workbench);
+      expect(after).toHaveLength(2);
+      expect(after[0]).toMatchObject({
+        placementIdentity: origin.placementIdentity,
+        resource: { type: "session-draft" },
+        tabRetention: retention,
+      });
+      expect(after[1]).toEqual(sibling);
+      expect(workbench.layout.getLayout().regions.side.activeWidgetId).toBe(after[0]!.widgetId);
+    });
+  }
   test("declares the project Session Panel without opening it", () => {
     const workbench = createWorkbench();
     workbench.resources.registerKind({ kind: "workspace", label: "Workspace" });

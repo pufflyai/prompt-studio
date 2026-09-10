@@ -1,11 +1,13 @@
 import { z } from "zod";
 
 export const settingsSchema = z.object({
+  notifications_enabled: z.boolean(),
   max_concurrent_sessions: z.number().int().min(1).nullable(),
 });
 
 export const updateSettingsInputSchema = z
   .object({
+    notifications_enabled: z.boolean().optional(),
     max_concurrent_sessions: z.number().int().min(1).nullable().optional(),
   })
   .strict()

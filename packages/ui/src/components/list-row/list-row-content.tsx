@@ -4,7 +4,7 @@ import { Tooltip } from "@/components/primitives/tooltip";
 import type { ListRowItem, ListRowProps, RowContentProps } from "./list-row.types";
 import { RowActions } from "./list-row-actions";
 
-export const createResourceRowActions = (item: ListRowItem, showContextMenuTrigger = true) => {
+export const createResourceRowActions = (item: ListRowItem, showContextMenuTrigger = false) => {
   const contextMenuItems = item.contextMenuItems ?? [];
   if (contextMenuItems.length === 0 || !showContextMenuTrigger) return item.actions ?? [];
 

@@ -13,7 +13,7 @@ bun install
 
 ## Run Locally
 
-Start an isolated API, dashboard, database, and seeded project:
+Start an isolated API, dashboard, database, and seeded project. Startup builds the workbench and its dependencies before launching the API and dashboard, so extension views work from a clean checkout:
 
 ```bash
 bun run dev:isolated

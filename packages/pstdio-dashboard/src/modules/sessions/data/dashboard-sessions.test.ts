@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { getWriter } from "@/lib/sync/collections";
 import {
   buildDashboardSessionsFromRows,
   resolveDashboardSessionView,
@@ -65,4 +66,13 @@ describe("resolveDashboardSessionView", () => {
     });
     expect(session?.resource.metadata?.status).toBe("queued");
   });
+});
+
+test("session views expose the latest synchronized running status", () => {
+  const writer = getWriter("sessions")!;
+  writer.upsert({ id: "running-view", project_id: "project-1", status: "in_progress" });
+  expect(resolveDashboardSessionView("running-view").status).toBe("in_progress");
+  writer.upsert({ id: "running-view", project_id: "project-1", status: "completed" });
+  expect(resolveDashboardSessionView("running-view").status).toBe("completed");
+  writer.remove("running-view");
 });

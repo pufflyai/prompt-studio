@@ -24,7 +24,7 @@ export type CreateSessionMutation = {
     },
     options: {
       onSuccess: (result: { sessionId: string; status: string }) => void;
-      onError: () => void;
+      onError: (error?: Error) => void;
     },
   ) => void;
 };
@@ -44,7 +44,7 @@ export type FollowUpMutation = {
     },
     options: {
       onSuccess: (result: { status: string; followUp?: FollowUpDecision }) => void;
-      onError: () => void;
+      onError: (error?: Error) => void;
     },
   ) => void;
 };
@@ -141,7 +141,10 @@ const submitNewSessionMessage = (input: {
   onSubmitted?: () => void;
   onSessionCreated?: (sessionId: string) => void;
 }) => {
-  if (!input.projectId || !input.agent) return;
+  if (!input.projectId || !input.agent)
+    return Promise.reject(new Error("Select a project and an agent before sending."));
+  const projectId = input.projectId;
+  const agent = input.agent;
 
   const pending = createPendingFollowUpState({
     prompt: input.text,
@@ -151,28 +154,32 @@ const submitNewSessionMessage = (input: {
   });
   input.setPendingFollowUp(pending);
 
-  input.createSession.mutate(
-    {
-      projectId: input.projectId,
-      prompt: input.text,
-      agent: input.agent,
-      model: input.model,
-      params: input.params,
-      workspaceId: input.workspaceId,
-      attachments: input.attachments,
-    },
-    {
-      onSuccess: ({ sessionId, status }) => {
-        input.onSubmitted?.();
-        input.setPendingFollowUp((current) =>
-          status === "queued" ? null : clearPendingFollowUpForCreatedSession(current, pending, sessionId),
-        );
-        input.onSessionCreated?.(sessionId);
+  return new Promise<void>((resolve, reject) =>
+    input.createSession.mutate(
+      {
+        projectId,
+        prompt: input.text,
+        agent,
+        model: input.model,
+        params: input.params,
+        workspaceId: input.workspaceId,
+        attachments: input.attachments,
       },
-      onError: () => {
-        input.setPendingFollowUp((current) => clearPendingFollowUpForFailedSession(current, pending));
+      {
+        onSuccess: ({ sessionId, status }) => {
+          input.onSubmitted?.();
+          input.setPendingFollowUp((current) =>
+            status === "queued" ? null : clearPendingFollowUpForCreatedSession(current, pending, sessionId),
+          );
+          input.onSessionCreated?.(sessionId);
+          resolve();
+        },
+        onError: (error) => {
+          input.setPendingFollowUp((current) => clearPendingFollowUpForFailedSession(current, pending));
+          reject(error ?? new Error("Could not create the session."));
+        },
       },
-    },
+    ),
   );
 };
 
@@ -183,47 +190,35 @@ const submitFollowUpMessage = (input: {
   params?: HarnessParamValues;
   text: string;
   attachments?: SessionAttachment[];
-  messages: SessionMessage[];
-  pendingId: string;
   questionResponse?: ChatInputQuestionResponse;
-  setPendingFollowUp: Dispatch<SetStateAction<PendingFollowUpState | null>>;
   followUp: FollowUpMutation;
   reconnect: () => void;
   onSubmitted?: () => void;
   onQuestionResponseError?: () => void;
 }) => {
-  input.setPendingFollowUp(
-    input.questionResponse
-      ? null
-      : createPendingFollowUpState({
-          prompt: input.text,
-          messageCount: input.messages.length,
-          pendingId: input.pendingId,
-          sessionId: input.sessionId,
-          attachments: input.attachments,
-        }),
-  );
-
-  input.followUp.mutate(
-    {
-      sessionId: input.sessionId,
-      prompt: input.text,
-      agent: input.agent ?? undefined,
-      model: input.model,
-      params: input.params,
-      questionResponse: input.questionResponse,
-      attachments: input.attachments,
-    },
-    {
-      onSuccess: () => {
-        input.onSubmitted?.();
-        input.reconnect();
+  return new Promise<void>((resolve, reject) =>
+    input.followUp.mutate(
+      {
+        sessionId: input.sessionId,
+        prompt: input.text,
+        agent: input.agent ?? undefined,
+        model: input.model,
+        params: input.params,
+        questionResponse: input.questionResponse,
+        attachments: input.attachments,
       },
-      onError: () => {
-        input.setPendingFollowUp(null);
-        input.onQuestionResponseError?.();
+      {
+        onSuccess: () => {
+          input.onSubmitted?.();
+          input.reconnect();
+          resolve();
+        },
+        onError: (error) => {
+          input.onQuestionResponseError?.();
+          reject(error ?? new Error("Could not send the follow-up."));
+        },
       },
-    },
+    ),
   );
 };
 
@@ -251,7 +246,7 @@ export const submitSessionMessage = (input: {
   input.pendingIdRef.current += 1;
 
   if (!input.sessionId) {
-    submitNewSessionMessage({
+    return submitNewSessionMessage({
       projectId: input.projectId,
       agent: input.agent,
       model: input.model,
@@ -266,10 +261,9 @@ export const submitSessionMessage = (input: {
       onSubmitted: input.onSubmitted,
       onSessionCreated: input.onSessionCreated,
     });
-    return;
   }
 
-  submitFollowUpMessage({
+  return submitFollowUpMessage({
     sessionId: input.sessionId,
     agent: input.agent,
     model: input.model,
@@ -277,9 +271,6 @@ export const submitSessionMessage = (input: {
     text: input.text,
     attachments: input.attachments,
     questionResponse: input.questionResponse,
-    messages: input.messages,
-    pendingId,
-    setPendingFollowUp: input.setPendingFollowUp,
     followUp: input.followUp,
     reconnect: input.reconnect,
     onSubmitted: input.onSubmitted,

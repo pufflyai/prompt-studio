@@ -27,7 +27,11 @@ import { SendButton } from "./send-button";
 export interface ChatInputProps {
   defaultState: string;
   placeholder?: string;
-  onSubmit?: (text: string, attachments: string[], questionResponse?: ChatInputQuestionResponse) => void;
+  onSubmit?: (
+    text: string,
+    attachments: string[],
+    questionResponse?: ChatInputQuestionResponse,
+  ) => void | Promise<void>;
   onInterrupt?: () => void;
   onAttachFiles?: (files: File[]) => void;
   onAttachText?: (text: string) => void;
@@ -104,6 +108,7 @@ export const ChatInput = (props: ChatInputProps) => {
   } = props;
 
   const restingBorderColor = recessed ? "border.subtle" : "border";
+  const [submitting, setSubmitting] = useState(false);
   const [isSelected, setIsSelected] = useState(false);
   const [editorState, setEditorState] = useState(defaultState);
   const [editorKey, setEditorKey] = useState(0);
@@ -182,12 +187,13 @@ export const ChatInput = (props: ChatInputProps) => {
     canInterrupt: streaming && !questionPrompt && Boolean(onInterrupt),
     canSubmit: !submitDisabled,
     hasQuestionPrompt: Boolean(questionPrompt),
-    isDisabled: isDisabled || hasMissingRequiredSelection,
+    isDisabled: isDisabled || submitting || hasMissingRequiredSelection,
     streaming,
     text: responseText,
   };
   const buttonAction = resolveChatInputButtonAction(actionState);
-  const submitMessage = () => {
+  const messageTitle = streaming && !questionPrompt ? "Queue message" : "Send message";
+  const submitMessage = async () => {
     if (!responseText) return;
 
     const questionResponse = questionPrompt
@@ -196,25 +202,22 @@ export const ChatInput = (props: ChatInputProps) => {
         }
       : undefined;
 
-    onSubmit(responseText, attachedResources, questionResponse);
-    resetEditor(true);
-    onClearAttachments?.();
+    setSubmitting(true);
+    try {
+      await onSubmit(responseText, attachedResources, questionResponse);
+      resetEditor(true);
+      onClearAttachments?.();
+    } catch {
+      // Keep the composer intact so failed submissions can be retried.
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const runAction = (action: ChatInputAction) => {
-    if (action === "interrupt") {
-      onInterrupt?.();
-      return;
-    }
-
-    if (action === "submit") {
-      submitMessage();
-    }
+    if (action === "interrupt") onInterrupt?.();
+    if (action === "submit") void submitMessage();
   };
-
-  const handleKeyboardSubmit = () => runAction(resolveChatInputKeyboardAction(actionState));
-
-  const handleButtonClick = () => runAction(buttonAction);
 
   const attachmentEventHandlers = createAttachmentEventHandlers({
     onAttachFiles,
@@ -285,13 +288,13 @@ export const ChatInput = (props: ChatInputProps) => {
               <PromptEditor
                 key={editorKey}
                 defaultState={editorState}
-                isEditable={!isDisabled}
+                isEditable={!isDisabled && !submitting}
                 placeholder={<ChatInputPlaceholder placeholder={placeholder} />}
                 onChange={(t) => {
                   setText(t);
                   onChange?.(t);
                 }}
-                onSubmit={handleKeyboardSubmit}
+                onSubmit={() => runAction(resolveChatInputKeyboardAction(actionState))}
                 references={references}
                 onAddReference={onAddReference}
               />
@@ -303,9 +306,9 @@ export const ChatInput = (props: ChatInputProps) => {
           <Spacer />
           <SendButton
             canInterrupt={buttonAction === "interrupt"}
-            title={buttonAction === "interrupt" ? "Stop Response" : (submitTitle ?? "Send message")}
-            shortcut={streaming && !questionPrompt ? undefined : "Enter"}
-            onClick={handleButtonClick}
+            title={buttonAction === "interrupt" ? "Stop Response" : (submitTitle ?? messageTitle)}
+            shortcut={buttonAction === "submit" ? "Enter" : undefined}
+            onClick={() => runAction(buttonAction)}
             disabled={buttonAction === "none"}
           />
         </HStack>

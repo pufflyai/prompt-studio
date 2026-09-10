@@ -1,8 +1,10 @@
 import type { SessionMessage } from "@pstdio/ui/chat-ui";
 import { useEffect, useRef, useState } from "react";
 import { getApiClient } from "@/lib/api";
+import { subscribeCollections } from "@/lib/sync/collections";
 import {
   applyDashboardSessionMessagePatch,
+  combineSessionMessageSources,
   type DashboardSessionMessagePatch,
   fetchDashboardSessionConversationMessages,
   resolveDashboardStreamEndMessages,
@@ -56,16 +58,21 @@ export const useDashboardSessionMessages = (sessionId: string | undefined) => {
 
     setState((current) => nextStateForConnectionStart({ current, isSessionChange }));
 
-    void fetchDashboardSessionConversationMessages(sessionId).then((messages) => {
-      if (isDisposed || !messages) return;
-
+    let hydrationRequest = 0;
+    const hydrate = async () => {
+      const request = ++hydrationRequest;
+      const messages = await fetchDashboardSessionConversationMessages(sessionId);
+      if (isDisposed || !messages || request !== hydrationRequest) return;
       hydratedMessages = messages;
-      if (streamedMessages.length > 0) {
-        setState((current) => ({ ...current, loading: false }));
-        return;
-      }
-
-      setState((current) => ({ ...current, messages, loading: false }));
+      setState((current) => ({
+        ...current,
+        messages: combineSessionMessageSources(streamedMessages, hydratedMessages, sessionId),
+        loading: false,
+      }));
+    };
+    void hydrate();
+    const unsubscribe = subscribeCollections((change) => {
+      if (!change || change.table === "sessions") void hydrate();
     });
 
     const connection = getApiClient().sessions.connectStream(
@@ -81,7 +88,7 @@ export const useDashboardSessionMessages = (sessionId: string | undefined) => {
           streamedMessages = applyDashboardSessionMessagePatch(streamedMessages, data as DashboardSessionMessagePatch);
           setState((current) => ({
             ...current,
-            messages: streamedMessages,
+            messages: combineSessionMessageSources(streamedMessages, hydratedMessages, sessionId),
             loading: false,
             streaming: true,
           }));
@@ -90,7 +97,9 @@ export const useDashboardSessionMessages = (sessionId: string | undefined) => {
           if (isDisposed) return;
 
           const messages = resolveDashboardStreamEndMessages(streamedMessages, hydratedMessages);
+          streamedMessages = [];
           setState({ messages, loading: false, streaming: false });
+          void hydrate();
           connection.close();
         },
         onError: () => {
@@ -103,6 +112,7 @@ export const useDashboardSessionMessages = (sessionId: string | undefined) => {
 
     return () => {
       isDisposed = true;
+      unsubscribe();
       connection.close();
     };
   }, [sessionId, connectionAttempt]);

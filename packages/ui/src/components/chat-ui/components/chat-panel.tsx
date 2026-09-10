@@ -24,7 +24,11 @@ interface QueuedFollowUpComposerInput {
   queuedFollowUps: QueuedFollowUp[];
   defaultValue: string;
   onChange?: (text: string) => void;
-  onSubmit?: (text: string, attachments: string[], questionResponse?: ChatInputQuestionResponse) => void;
+  onSubmit?: (
+    text: string,
+    attachments: string[],
+    questionResponse?: ChatInputQuestionResponse,
+  ) => void | Promise<void>;
   onUpdate?: (itemId: string, prompt: string) => void;
 }
 
@@ -66,7 +70,11 @@ export interface ChatPanelProps {
   loaderComponent?: ReactNode;
   chatInputPlaceholder: string;
   chatInputDefaultValue?: string;
-  onSubmitMessage?: (text: string, attachments: string[], questionResponse?: ChatInputQuestionResponse) => void;
+  onSubmitMessage?: (
+    text: string,
+    attachments: string[],
+    questionResponse?: ChatInputQuestionResponse,
+  ) => void | Promise<void>;
   onInterrupt?: () => void;
   onAttachFiles?: (files: File[]) => void;
   onAttachText?: (text: string) => void;
@@ -126,7 +134,7 @@ const useQueuedFollowUpComposer = (input: QueuedFollowUpComposerInput) => {
       return;
     }
 
-    onSubmit?.(text, attachments, questionResponse);
+    return onSubmit?.(text, attachments, questionResponse);
   };
 
   return { change, edit, editingItemId, focusSignal, inputValue, isEditing: Boolean(editingItemId), submit };

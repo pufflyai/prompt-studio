@@ -12,7 +12,7 @@ accepting user work from starting agent processes.
 ## Product Contract
 
 1. A user can submit a new session or follow-up even when all concurrency slots are full.
-2. Accepted work returns a session with status `queued`.
+2. Work waiting for capacity returns a session with status `queued`. A follow-up behind an active turn returns `follow_up.status: queued` while the session stays `in_progress`.
 3. Queued work preserves the submitted prompt in persisted session history.
 4. Queued sessions are visible in the dashboard and cannot be stopped as running processes.
 5. When capacity opens, queued sessions start automatically in FIFO order.
@@ -91,14 +91,14 @@ Startup order:
 
 ## Follow-Ups
 
-Follow-up requests use the same scheduler path as new sessions.
+Follow-up requests use the same scheduler path as new sessions. Enter and the composer button accept ordinary messages while a turn runs. A nonempty composer shows Queue message; an empty composer retains Stop Response. Failed submissions preserve the text and attachments for retry.
 
 When a follow-up is accepted but queued:
 
-1. The session status becomes `queued`.
+1. A session waiting for capacity becomes `queued`. An active session keeps its current status while its next messages wait.
 2. The follow-up prompt is persisted in the queue entry.
 3. Conversation hydration includes the queued user prompt before the queued status banner.
-4. The dashboard keeps an optimistic copy of the prompt until hydrated conversation history replaces it.
+4. The dashboard waits for acceptance before clearing the composer, then hydrates the durable queue. It does not keep a separate client queue.
 
 Question responses for `awaiting_input` sessions bypass capacity checks. They resume work that already occupies active capacity, so queueing them would deadlock the approval flow.
 
