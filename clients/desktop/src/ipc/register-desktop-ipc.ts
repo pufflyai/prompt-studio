@@ -7,6 +7,7 @@ import { isAllowedIpcSender } from "../security/ipc-security";
 import { type TitleBarAppearance, titleBarOverlayOptions } from "../windows/title-bar-appearance";
 
 type DesktopIpcOptions = {
+  isFullScreen: () => boolean;
   setTitleBarAppearance: (appearance: TitleBarAppearance) => Promise<void>;
   appInfo: () => { platform: string; version: string };
   cancelQuit: () => Promise<void>;
@@ -57,6 +58,7 @@ export const registerDesktopIpc = (options: DesktopIpcOptions) => {
   };
 
   handle(DESKTOP_CHANNELS.cancelQuit, options.cancelQuit);
+  handle(DESKTOP_CHANNELS.isFullScreen, options.isFullScreen);
   handle(DESKTOP_CHANNELS.titleBarAppearance, (appearance) =>
     options.setTitleBarAppearance(titleBarOverlayOptions(appearance)),
   );

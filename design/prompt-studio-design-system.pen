@@ -114238,10 +114238,11 @@
           "type": "frame",
           "id": "zCdCK",
           "name": "Project Tabs Bar",
+          "context": "Desktop title bar matches the app background with no bottom rule. Normal macOS tabs begin 90px from the left; full-screen tabs begin at the 10px content padding.",
           "width": "fill_container",
           "height": 44,
-          "fill": "$ds-bg-subtle",
-          "gap": 8,
+          "fill": "$ds-bg",
+          "gap": 24,
           "padding": [
             0,
             10
@@ -114252,10 +114253,9 @@
               "type": "frame",
               "id": "D5g2L",
               "name": "Mac Window Controls",
-              "width": 45,
+              "width": 56,
               "height": "fill_container",
-              "gap": 7,
-              "justifyContent": "end",
+              "gap": 8,
               "alignItems": "center",
               "children": [
                 {
@@ -114263,8 +114263,8 @@
                   "id": "MaAJh",
                   "name": "Close",
                   "fill": "$ds-error",
-                  "width": 10,
-                  "height": 10,
+                  "width": 12,
+                  "height": 12,
                   "stroke": "$ds-border",
                   "strokeWidth": 1
                 },
@@ -114273,8 +114273,8 @@
                   "id": "GrrLu",
                   "name": "Minimize",
                   "fill": "$ds-warning",
-                  "width": 10,
-                  "height": 10,
+                  "width": 12,
+                  "height": 12,
                   "stroke": "$ds-border",
                   "strokeWidth": 1
                 },
@@ -114283,8 +114283,8 @@
                   "id": "NzE7G",
                   "name": "Zoom",
                   "fill": "$ds-success",
-                  "width": 10,
-                  "height": 10,
+                  "width": 12,
+                  "height": 12,
                   "stroke": "$ds-border",
                   "strokeWidth": 1
                 }
@@ -166792,6 +166792,430 @@
           "fill": "#CCCCCC",
           "width": 2,
           "height": 2
+        }
+      ]
+    },
+    {
+      "type": "frame",
+      "id": "iGFTr",
+      "x": 39561,
+      "y": -11572,
+      "name": "Desktop title bars",
+      "theme": {
+        "mode": "light"
+      },
+      "width": 1248,
+      "height": 220,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 16,
+      "padding": 24,
+      "children": [
+        {
+          "type": "text",
+          "id": "m8ePLp",
+          "name": "Normal window label",
+          "fill": "$ds-fg-muted",
+          "content": "macOS · Normal window",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "SUg7j",
+          "name": "cmp/WindowTitleBar",
+          "context": "Desktop title bar matches the app background with no bottom rule. Normal macOS tabs begin 90px from the left; full-screen tabs begin at the 10px content padding.",
+          "reusable": true,
+          "width": "fill_container",
+          "height": 44,
+          "fill": "$ds-bg",
+          "gap": 24,
+          "padding": [
+            0,
+            10
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "N3SGf",
+              "name": "Mac Window Controls",
+              "width": 56,
+              "height": "fill_container",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "b7RjTq",
+                  "name": "Close",
+                  "fill": "$ds-error",
+                  "width": 12,
+                  "height": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "rJ6C6",
+                  "name": "Minimize",
+                  "fill": "$ds-warning",
+                  "width": 12,
+                  "height": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "QRNdh",
+                  "name": "Zoom",
+                  "fill": "$ds-success",
+                  "width": 12,
+                  "height": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "lpqoa",
+              "name": "Open Project Tabs",
+              "width": "fill_container",
+              "height": "fill_container",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "ZnOcb",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Docs",
+                  "theme": {
+                    "size": "sm",
+                    "tab": "active",
+                    "tab-status": "none"
+                  },
+                  "height": 28,
+                  "context": "Project tab. Clicking activates Docs without navigating away from the workbench.",
+                  "x": 0,
+                  "y": 8,
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "book-open"
+                    },
+                    "k9XlqC": {
+                      "content": "Docs"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "W95Xs",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Agentic kanban",
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default",
+                    "tab-status": "none"
+                  },
+                  "height": 28,
+                  "context": "Project tab. Clicking activates Agentic kanban without navigating away from the workbench.",
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "columns-3"
+                    },
+                    "k9XlqC": {
+                      "content": "Agentic kanban"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "V7zLeU",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Agentic design",
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default",
+                    "tab-status": "none"
+                  },
+                  "height": 28,
+                  "context": "Project tab. Clicking activates Agentic design without navigating away from the workbench.",
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "pen-tool"
+                    },
+                    "k9XlqC": {
+                      "content": "Agentic design"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "EnSIf",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Agentic data analysis",
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default",
+                    "tab-status": "none"
+                  },
+                  "height": 28,
+                  "context": "Project tab. Clicking activates Agentic data analysis without navigating away from the workbench.",
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "chart-no-axes-combined"
+                    },
+                    "k9XlqC": {
+                      "content": "Agentic data analysis"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "rO1eZ",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Workflow builder",
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default",
+                    "tab-status": "none"
+                  },
+                  "height": 28,
+                  "context": "Project tab. Clicking activates Workflow builder without navigating away from the workbench.",
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "workflow"
+                    },
+                    "k9XlqC": {
+                      "content": "Workflow builder"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "text",
+          "id": "RqCTy",
+          "name": "Full screen label",
+          "fill": "$ds-fg-muted",
+          "content": "macOS · Full screen",
+          "fontFamily": "$font-body",
+          "fontSize": 14,
+          "fontWeight": "normal"
+        },
+        {
+          "type": "frame",
+          "id": "doVun",
+          "name": "WindowTitleBar · Full screen",
+          "context": "Desktop title bar matches the app background with no bottom rule. Normal macOS tabs begin 90px from the left; full-screen tabs begin at the 10px content padding.",
+          "width": "fill_container",
+          "height": 44,
+          "fill": "$ds-bg",
+          "gap": 8,
+          "padding": [
+            0,
+            10
+          ],
+          "alignItems": "center",
+          "children": [
+            {
+              "type": "frame",
+              "id": "gBJlT",
+              "x": 10,
+              "y": 0,
+              "name": "Mac Window Controls",
+              "enabled": false,
+              "width": 56,
+              "height": "fill_container(44)",
+              "gap": 8,
+              "alignItems": "center",
+              "children": [
+                {
+                  "type": "ellipse",
+                  "id": "kGwis",
+                  "name": "Close",
+                  "fill": "$ds-error",
+                  "width": 12,
+                  "height": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "p75eQ",
+                  "name": "Minimize",
+                  "fill": "$ds-warning",
+                  "width": 12,
+                  "height": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                },
+                {
+                  "type": "ellipse",
+                  "id": "FyGut",
+                  "name": "Zoom",
+                  "fill": "$ds-success",
+                  "width": 12,
+                  "height": 12,
+                  "stroke": "$ds-border",
+                  "strokeWidth": 1
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "EPQqp",
+              "name": "Open Project Tabs",
+              "width": "fill_container",
+              "height": "fill_container",
+              "gap": 4,
+              "alignItems": "center",
+              "children": [
+                {
+                  "id": "FHc6u",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Docs",
+                  "theme": {
+                    "size": "sm",
+                    "tab": "active",
+                    "tab-status": "none"
+                  },
+                  "height": 28,
+                  "context": "Project tab. Clicking activates Docs without navigating away from the workbench.",
+                  "x": 0,
+                  "y": 8,
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "book-open"
+                    },
+                    "k9XlqC": {
+                      "content": "Docs"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "QWTIs",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Agentic kanban",
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default",
+                    "tab-status": "none"
+                  },
+                  "height": 28,
+                  "context": "Project tab. Clicking activates Agentic kanban without navigating away from the workbench.",
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "columns-3"
+                    },
+                    "k9XlqC": {
+                      "content": "Agentic kanban"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "kLVHq",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Agentic design",
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default",
+                    "tab-status": "none"
+                  },
+                  "height": 28,
+                  "context": "Project tab. Clicking activates Agentic design without navigating away from the workbench.",
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "pen-tool"
+                    },
+                    "k9XlqC": {
+                      "content": "Agentic design"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "Jv9UF",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Agentic data analysis",
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default",
+                    "tab-status": "none"
+                  },
+                  "height": 28,
+                  "context": "Project tab. Clicking activates Agentic data analysis without navigating away from the workbench.",
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "chart-no-axes-combined"
+                    },
+                    "k9XlqC": {
+                      "content": "Agentic data analysis"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                },
+                {
+                  "id": "qu4k8",
+                  "type": "ref",
+                  "ref": "TwCXd",
+                  "name": "Workflow builder",
+                  "theme": {
+                    "size": "sm",
+                    "tab": "default",
+                    "tab-status": "none"
+                  },
+                  "height": 28,
+                  "context": "Project tab. Clicking activates Workflow builder without navigating away from the workbench.",
+                  "descendants": {
+                    "w7NkD3": {
+                      "icon": "workflow"
+                    },
+                    "k9XlqC": {
+                      "content": "Workflow builder"
+                    },
+                    "g1LJJh": {
+                      "enabled": true
+                    }
+                  }
+                }
+              ]
+            }
+          ]
         }
       ]
     }

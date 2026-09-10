@@ -3,6 +3,20 @@ import { DESKTOP_CHANNELS, type DesktopProjectTabsState, type PromptStudioDeskto
 import type { DesktopState } from "./lifecycle/lifecycle-machine";
 import { observeTitleBarAppearance } from "./windows/observe-title-bar-appearance";
 
+if (process.platform === "darwin") {
+  const applyFullScreen = (fullScreen: boolean) => {
+    document.documentElement.toggleAttribute("data-window-full-screen", fullScreen);
+  };
+  ipcRenderer.on(DESKTOP_CHANNELS.fullScreenChanged, (_event, fullScreen: boolean) => applyFullScreen(fullScreen));
+  window.addEventListener(
+    "DOMContentLoaded",
+    () => {
+      void ipcRenderer.invoke(DESKTOP_CHANNELS.isFullScreen).then(applyFullScreen);
+    },
+    { once: true },
+  );
+}
+
 if (process.platform !== "darwin") {
   window.addEventListener(
     "DOMContentLoaded",
@@ -29,6 +43,13 @@ const desktopApi: PromptStudioDesktopApi = Object.freeze({
     ipcRenderer.on(DESKTOP_CHANNELS.startupStateChanged, receive);
     return () => {
       ipcRenderer.removeListener(DESKTOP_CHANNELS.startupStateChanged, receive);
+    };
+  },
+  onCommand: (listener: (commandId: string) => void) => {
+    const receive = (_event: Electron.IpcRendererEvent, commandId: string) => listener(commandId);
+    ipcRenderer.on(DESKTOP_CHANNELS.command, receive);
+    return () => {
+      ipcRenderer.removeListener(DESKTOP_CHANNELS.command, receive);
     };
   },
   retryRuntime: () => ipcRenderer.invoke(DESKTOP_CHANNELS.retryRuntime),

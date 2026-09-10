@@ -20,6 +20,7 @@ export interface PromptStudioDesktopApi {
   getAppInfo: () => Promise<DesktopAppInfo>;
   getStartupState: () => Promise<DesktopState>;
   onStartupState: (listener: (state: DesktopState) => void) => () => void;
+  onCommand: (listener: (commandId: string) => void) => () => void;
   retryRuntime: () => Promise<void>;
   openLogs: () => Promise<void>;
   revealInFinder: (path: string) => Promise<void>;
@@ -34,6 +35,9 @@ export interface PromptStudioDesktopApi {
 }
 
 export const DESKTOP_CHANNELS = {
+  command: "pstdio:desktop:command",
+  isFullScreen: "pstdio:desktop:is-full-screen",
+  fullScreenChanged: "pstdio:desktop:full-screen-changed",
   titleBarAppearance: "pstdio:desktop:title-bar-appearance",
   cancelQuit: "pstdio:desktop:cancel-quit",
   confirmQuit: "pstdio:desktop:confirm-quit",

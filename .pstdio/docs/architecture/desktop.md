@@ -38,7 +38,9 @@ The ephemeral browser session deliberately discards credentials and browser stor
 
 ## Native title bar and project tabs
 
-Electron uses a hidden title bar with native controls. macOS traffic lights sit at x=10, y=15 inside the 44-pixel bar. The UI reserves enough space for their native dimensions. Windows and Linux use a 44-pixel native window-controls overlay, and CSS title-bar environment values keep interactive content out of its safe area. The bar is draggable; tabs, close buttons, and the project picker are not. Startup, recovery, confirmation, and closing views reserve the same title-bar space.
+Electron uses a hidden title bar with native controls. macOS traffic lights sit at x=10, y=15 inside the 44-pixel bar. Tabs start at x=90 in a normal window and x=10 in native full screen. The native window owns full-screen state. Its events update a `data-window-full-screen` document attribute through the preload, which also reads the current state after each document load. The shared recipe uses that attribute to release the controls' space. No layout preference or React state duplicates the native state.
+
+Windows and Linux use a 44-pixel native window-controls overlay, and CSS title-bar environment values keep interactive content out of its safe area. The title bar uses the app background token without a bottom border. The bar is draggable; tabs, close buttons, and the project picker are not. Startup, recovery, confirmation, and closing views use the same recipe.
 
 Only the active surface renders a title bar. During the workbench state, the lifecycle view renders nothing while its state subscription remains mounted for recovery and quit confirmation. Electron combines native drag regions from covered renderers, so leaving the lifecycle title bar underneath the workbench would intercept mouse clicks on project tabs and the project picker. Chromium-injected clicks bypass this native hit test; packaged tests also check that the inactive lifecycle surface is absent after startup, recovery, and canceled quit.
 
@@ -50,7 +52,15 @@ Electron's `DesktopProjectTabsStore` persists only `{ projectIds: string[] }` in
 
 A failed write shows an error through the workbench notification system. Tabs remain usable. The next tab change saves the full current order and dismisses the error after a successful write.
 
-`@pstdio/ui` owns the title-bar and tab recipes from Pencil node `Q1dRGx`. `@pstdio/workbench` provides a generic `titleBar` slot above its regions and inside its theme. It has no project or Electron knowledge.
+`@pstdio/ui` owns the title-bar and tab recipes. Pencil node `V3OnvZ` defines the workbench; `iGFTr` shows normal and full-screen desktop title bars. `@pstdio/workbench` provides a generic `titleBar` slot above its regions and inside its theme. It has no project or Electron knowledge.
+
+## Native menus and icon
+
+Edit keeps native undo, redo, clipboard, and selection actions, and adds Settings and Keyboard Shortcuts. View opens Search, the project picker, notifications, and theme selection. It also offers sidebar visibility, history navigation, reload, zoom, and full screen. The menu does not expose developer tools.
+
+App menu items send command IDs only to the workbench renderer through the preload's `onCommand` subscription. The dashboard executes its registered commands and reports failures through workbench notifications. Lifecycle state enables those items only while the workbench is ready. Settings uses Cmd/Ctrl+,; existing workbench shortcuts remain owned by the workbench so native accelerators do not override editor shortcuts.
+
+`clients/desktop/assets/icon-mac.svg` defines the Mac icon's white rounded-square background and existing Prompt Studio mark. `bun run --cwd clients/desktop icons:generate` renders it into `icon.icns`. The same script renders Windows and Linux assets from `icon.svg`.
 
 Run the real packaged tab flow with:
 

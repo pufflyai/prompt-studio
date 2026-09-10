@@ -23,7 +23,7 @@ export const sp = {
 
 export const spacing = {
   "window-tab-gap": { value: "0.4375rem" },
-  "window-controls-mac": { value: "4.875rem" },
+  "window-controls-mac": { value: "5.625rem" },
   none: { value: "0" },
   "3xs": { value: sp[25] },
   "2xs": { value: sp[50] },

@@ -39,6 +39,13 @@ export class DesktopWindowController {
       });
     });
     this.window.contentView.on("bounds-changed", () => this.resizeWorkbench());
+    const updateFullScreen = () => {
+      for (const contents of this.webContents()) {
+        contents.send(DESKTOP_CHANNELS.fullScreenChanged, this.window.isFullScreen());
+      }
+    };
+    this.window.on("enter-full-screen", updateFullScreen);
+    this.window.on("leave-full-screen", updateFullScreen);
     this.window.on("closed", () => this.#workbench?.webContents.close());
   }
 
@@ -62,6 +69,10 @@ export class DesktopWindowController {
 
   updateState(state: DesktopState) {
     this.window.webContents.send(DESKTOP_CHANNELS.startupStateChanged, state);
+  }
+
+  executeCommand(commandId: string) {
+    this.#workbench?.webContents.send(DESKTOP_CHANNELS.command, commandId);
   }
 
   async setTitleBarAppearance(appearance: TitleBarAppearance) {

@@ -9,10 +9,8 @@ export const windowTitleBarRecipe = defineSlotRecipe({
       flexShrink: 0,
       width: "full",
       height: "window-title-bar",
-      bg: "bg.subtle",
+      bg: "bg",
       color: "fg",
-      borderBottomWidth: "1px",
-      borderColor: "border",
       userSelect: "none",
       WebkitAppRegion: "drag",
     },
@@ -28,7 +26,12 @@ export const windowTitleBarRecipe = defineSlotRecipe({
   },
   variants: {
     controls: {
-      mac: { content: { paddingInlineStart: "window-controls-mac" } },
+      mac: {
+        content: {
+          paddingInlineStart: "window-controls-mac",
+          "[data-window-full-screen] &": { paddingInlineStart: "compact" },
+        },
+      },
       overlay: { content: { marginLeft: "env(titlebar-area-x, 0px)", width: "env(titlebar-area-width, 100%)" } },
     },
   },

@@ -11,7 +11,7 @@ import {
   initialDesktopState,
   transitionDesktopState,
 } from "./lifecycle/lifecycle-machine";
-import { createApplicationMenuTemplate } from "./release/application-menu";
+import { createApplicationMenuTemplate, setApplicationCommandsEnabled } from "./release/application-menu";
 import { DesktopUpdateManager } from "./release/desktop-update-manager";
 import { DesktopRuntimeManager } from "./runtime/runtime-manager";
 import { DesktopSidecarError, validateSidecarArtifact } from "./runtime/sidecar-artifact";
@@ -52,6 +52,7 @@ autoUpdater.on("error", reportUpdateError);
 const setState = (next: DesktopState) => {
   state = next;
   windowController?.updateState(next);
+  setApplicationCommandsEnabled(Menu.getApplicationMenu(), next.kind === "workbench");
   logger.info({ event: "desktop.state.changed", state: next.kind }, "Desktop lifecycle state changed");
 };
 
@@ -222,9 +223,15 @@ const bootstrap = async () => {
   const workbenchState = new DesktopWorkbenchStateStore(join(app.getPath("userData"), "workbench-state.json"));
   Menu.setApplicationMenu(
     Menu.buildFromTemplate(
-      createApplicationMenuTemplate(process.platform, () => {
-        void updateManager.checkForUpdates().catch(reportUpdateError);
-      }),
+      createApplicationMenuTemplate(
+        process.platform,
+        () => {
+          void updateManager.checkForUpdates().catch(reportUpdateError);
+        },
+        (commandId) => {
+          if (state.kind === "workbench") windowController?.executeCommand(commandId);
+        },
+      ),
     ),
   );
   const preloadPath = join(import.meta.dirname, "preload.cjs");
@@ -239,6 +246,7 @@ const bootstrap = async () => {
     void requestQuit();
   });
   registerDesktopIpc({
+    isFullScreen: () => window.isFullScreen(),
     setTitleBarAppearance: async (appearance) => {
       await windowController?.setTitleBarAppearance(appearance);
     },

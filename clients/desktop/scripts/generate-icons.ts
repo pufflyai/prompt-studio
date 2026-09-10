@@ -1,8 +1,7 @@
 import { join } from "node:path";
-import { chromium } from "@playwright/test";
+import { chromium, type Page } from "@playwright/test";
 
 const assetsRoot = join(import.meta.dirname, "../assets");
-const svg = await Bun.file(join(assetsRoot, "icon.svg")).text();
 const pngSizes = [48, 72, 96, 144, 192, 256, 384, 512];
 const windowsSizes = [16, 32, 48, 256];
 const macSizes = {
@@ -18,13 +17,10 @@ const macSizes = {
   ic13: 256,
   ic14: 512,
 };
-const sizes = [...new Set([...pngSizes, ...windowsSizes, ...Object.values(macSizes)])];
-const images = new Map<number, Buffer>();
-const browser = await chromium.launch();
-
-try {
-  const page = await browser.newPage();
-  for (const size of sizes) {
+const renderIcon = async (page: Page, filename: string, sizes: number[]) => {
+  const svg = await Bun.file(join(assetsRoot, filename)).text();
+  const images = new Map<number, Buffer>();
+  for (const size of new Set(sizes)) {
     const png = await page.evaluate(
       async ({ svg, size }) => {
         const image = new Image();
@@ -40,6 +36,16 @@ try {
     );
     images.set(size, Buffer.from(png, "base64"));
   }
+  return images;
+};
+
+const browser = await chromium.launch();
+let images: Map<number, Buffer>;
+let macImages: Map<number, Buffer>;
+try {
+  const page = await browser.newPage();
+  images = await renderIcon(page, "icon.svg", [...pngSizes, ...windowsSizes]);
+  macImages = await renderIcon(page, "icon-mac.svg", Object.values(macSizes));
 } finally {
   await browser.close();
 }
@@ -71,7 +77,7 @@ await Bun.write(
 );
 
 const chunks = Object.entries(macSizes).map(([type, size]) => {
-  const png = images.get(size)!;
+  const png = macImages.get(size)!;
   const header = Buffer.alloc(8);
   header.write(type);
   header.writeUInt32BE(png.length + header.length, 4);
@@ -81,4 +87,4 @@ const header = Buffer.alloc(8);
 header.write("icns");
 header.writeUInt32BE(header.length + chunks.reduce((total, chunk) => total + chunk.length, 0), 4);
 await Bun.write(join(assetsRoot, "icon.icns"), Buffer.concat([header, ...chunks]));
-console.log("Generated desktop PNG, ICO, and ICNS icons from assets/icon.svg.");
+console.log("Generated desktop PNG and ICO from icon.svg, and ICNS from icon-mac.svg.");

@@ -4,6 +4,7 @@ import { Workbench } from "@pstdio/workbench/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { connectDesktopCommands } from "@/lib/desktop-commands";
 import { createDesktopProjectTabs } from "@/lib/desktop-project-tabs-bridge";
 import { createDesktopWorkbenchStorage } from "@/lib/desktop-workbench-storage";
 import { dashboardQueryClient } from "@/lib/query-client";
@@ -19,6 +20,8 @@ const renderDashboard = async () => {
   const storage = await createDesktopWorkbenchStorage(window.promptStudioDesktop);
   const projectTabs = await createDesktopProjectTabs(window.promptStudioDesktop);
   const dashboardWorkbench = createDashboardWorkbench({ storage, projectTabs: projectTabs?.controller });
+  const stopDesktopCommands = connectDesktopCommands(window.promptStudioDesktop, dashboardWorkbench);
+  if (stopDesktopCommands) window.addEventListener("pagehide", stopDesktopCommands, { once: true });
   (window as unknown as Record<string, unknown>).__pstdioDashboardWorkbench = dashboardWorkbench;
   const renderParamField = createDashboardParamFieldRenderer(dashboardWorkbench);
 

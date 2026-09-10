@@ -45,7 +45,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Native window title-bar tabs. The host owns selection and close behavior. Native controls occupy the reserved area; stories do not draw them.",
+          "Native window title-bar tabs. The host owns selection and close behavior. Native controls occupy the reserved area; stories do not draw them. The desktop host sets data-window-full-screen on the document in macOS full screen to release that space.",
       },
     },
   },
@@ -54,6 +54,17 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const SeveralTabs: Story = { render: () => <Example /> };
+export const FullScreen: Story = {
+  render: () => (
+    <Box data-window-full-screen="">
+      <Example />
+    </Box>
+  ),
+};
+export const FullScreenDark: Story = {
+  ...FullScreen,
+  globals: { theme: "pstdio-dark" },
+};
 export const OneTab: Story = { render: () => <Example initialTabs={projects.slice(0, 1)} /> };
 export const Overflow: Story = {
   render: () => (

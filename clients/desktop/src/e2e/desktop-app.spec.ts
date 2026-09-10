@@ -8,6 +8,7 @@ import { _electron as electron, expect, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
+import { expectNativeWindowActions } from "./native-window-actions";
 
 const require = createRequire(import.meta.url);
 const electronPath = require("electron") as string;
@@ -76,7 +77,9 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     response.write("<!doctype html><html><body>");
     dashboardRequested.resolve();
     void dashboardResponse.promise.then(() =>
-      response.end("<main>Existing Prompt Studio dashboard</main></body></html>"),
+      response.end(
+        '<main>Existing Prompt Studio dashboard<textarea aria-label="Draft"></textarea></main></body></html>',
+      ),
     );
   });
   await new Promise<void>((resolveListen) => server.listen(0, "127.0.0.1", resolveListen));
@@ -122,6 +125,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     expect(await window.evaluate(() => document.cookie)).toBe("");
     expect(await window.evaluate(() => typeof process)).toBe("undefined");
     expect(authenticatedReady).toBe(true);
+    await expectNativeWindowActions(electronApp, window, lifecycle);
     await test.step("keeps the workbench viewport inside the resized native content", async () => {
       for (const size of [
         { width: 1600, height: 1000 },
@@ -149,6 +153,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       "getProjectTabs",
       "getStartupState",
       "getWorkbenchState",
+      "onCommand",
       "onStartupState",
       "openLogs",
       "quitApp",
@@ -238,6 +243,11 @@ test("keeps startup failures in an actionable recovery window", async () => {
     await expect(window.getByRole("button", { name: "Open logs" })).toBeVisible();
     await expect(window.getByRole("button", { name: "Copy diagnostics" })).toBeVisible();
     await expect(window.getByRole("button", { name: "Quit" })).toBeVisible();
+    expect(
+      await electronApp.evaluate(
+        ({ Menu }) => Menu.getApplicationMenu()!.getMenuItemById("workbench.settings.open")!.enabled,
+      ),
+    ).toBe(false);
   } finally {
     await finishTrace();
     await electronApp.evaluate(({ app }) => app.exit(0)).catch(() => {});
