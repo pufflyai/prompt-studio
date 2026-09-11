@@ -81,9 +81,7 @@ jobs:
           node-version: "24"
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
+        run: node scripts/ci/setup-container-bun.ts
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -120,9 +118,8 @@ jobs:
         with:
           node-version: "24"
 
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
+      - name: Setup Bun
+        run: node scripts/ci/setup-container-bun.ts
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -156,9 +153,7 @@ jobs:
           node-version: "24"
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
+        run: node scripts/ci/setup-container-bun.ts
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
