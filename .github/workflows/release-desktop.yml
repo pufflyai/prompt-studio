@@ -79,7 +79,7 @@ jobs:
           node-version: "24"
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: node scripts/ci/install-native-dependencies.ts
 
       - name: Verify release version
         env:

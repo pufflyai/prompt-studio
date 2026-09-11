@@ -1,6 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, statSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
+import { buildInitialDatabase } from "./build-initial-database";
 
 const PGLITE_ASSETS = ["pglite.wasm", "pglite.data"] as const;
 
@@ -52,4 +53,7 @@ if (Bun.main === import.meta.path) {
     pglitePackageDir: resolvePglitePackageDir(),
     logger: (msg) => console.log(msg),
   });
+  const initialDatabase = join(vendorDir, "initial-database.tar.gz");
+  await buildInitialDatabase(initialDatabase);
+  console.log("[vendor-pglite] generated the empty database image with the installed PGlite version");
 }

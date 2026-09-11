@@ -207,33 +207,42 @@ describe("resolvePgliteOptions", () => {
     expect(opts).toEqual({});
   });
 
-  it("compiles wasm and returns the data Blob when both assets are embedded", async () => {
+  it("loads the embedded engine and initial database image", async () => {
     const wasmFile = toEmbedded("../../pstdio-db/vendor/pglite/pglite.wasm", EMPTY_WASM);
     const dataFile = toEmbedded("../../pstdio-db/vendor/pglite/pglite.data", new Uint8Array([1, 2, 3]));
+    const initialDatabase = toEmbedded("../../pstdio-db/vendor/pglite/initial-database.tar.gz", new Uint8Array([4]));
 
-    const opts = (await resolvePgliteOptions([wasmFile as never, dataFile as never])) as {
+    const opts = (await resolvePgliteOptions([wasmFile as never, dataFile as never, initialDatabase as never])) as {
       fsBundle: typeof dataFile;
       wasmModule: WebAssembly.Module;
+      loadDataDir: typeof initialDatabase;
     };
 
     expect(opts.fsBundle).toBe(dataFile);
     expect(opts.wasmModule).toBeInstanceOf(WebAssembly.Module);
+    expect(opts.loadDataDir).toBe(initialDatabase);
   });
 
   it("recognizes Windows-style embedded PGlite asset names", async () => {
     const wasmFile = toEmbedded("..\\..\\pstdio-db\\vendor\\pglite\\pglite.wasm", EMPTY_WASM);
     const dataFile = toEmbedded("..\\..\\pstdio-db\\vendor\\pglite\\pglite.data", new Uint8Array([1, 2, 3]));
+    const initialDatabase = toEmbedded(
+      "..\\..\\pstdio-db\\vendor\\pglite\\initial-database.tar.gz",
+      new Uint8Array([4]),
+    );
 
-    const opts = (await resolvePgliteOptions([wasmFile as never, dataFile as never])) as {
+    const opts = (await resolvePgliteOptions([wasmFile as never, dataFile as never, initialDatabase as never])) as {
       fsBundle: typeof dataFile;
       wasmModule: WebAssembly.Module;
+      loadDataDir: typeof initialDatabase;
     };
 
     expect(opts.fsBundle).toBe(dataFile);
     expect(opts.wasmModule).toBeInstanceOf(WebAssembly.Module);
+    expect(opts.loadDataDir).toBe(initialDatabase);
   });
 
-  it("throws when only one of the two PGlite assets is embedded", async () => {
+  it("rejects an incomplete embedded database runtime", async () => {
     const wasmFile = toEmbedded("../../pstdio-db/vendor/pglite/pglite.wasm", EMPTY_WASM);
     await expect(resolvePgliteOptions([wasmFile as never])).rejects.toThrow(/Partial PGlite embed/);
   });
