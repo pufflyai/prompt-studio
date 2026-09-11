@@ -1,5 +1,13 @@
 # pstdio
 
+## 0.33.1
+
+_2026-09-11_
+
+### Patch Changes
+
+- 8f62d88: Keep Git subprocess output pipes open until commands finish.
+
 ## 0.33.0
 
 _2026-09-10_
