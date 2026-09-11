@@ -54,6 +54,7 @@ const waitForReady = async (descriptorPath: string, child: ChildProcess, timeout
 };
 
 export const startPackagedServe = async (tempRoot: string, env: Record<string, string> = {}) => {
+  const startedAt = performance.now();
   const descriptorPath = join(tempRoot, "runtime.json");
   const {
     PSTDIO_EXTENSION_SOURCE_ROOT: _sourceRoot,
@@ -78,19 +79,19 @@ export const startPackagedServe = async (tempRoot: string, env: Record<string, s
       stdio: "pipe",
     },
   );
-  child.stdout?.resume();
-
-  let stderr = "";
-  child.stderr?.on("data", (chunk: Buffer | string) => {
-    stderr += chunk.toString();
-  });
+  let output = "";
+  const captureOutput = (chunk: Buffer | string) => {
+    output = `${output}[${Math.round(performance.now() - startedAt)}ms] ${chunk.toString()}`.slice(-32_000);
+  };
+  child.stdout?.on("data", captureOutput);
+  child.stderr?.on("data", captureOutput);
 
   try {
     const descriptor = await waitForReady(descriptorPath, child);
     return { child, baseUrl: descriptor.origin, descriptor };
   } catch (error) {
     await stopProcess(child);
-    throw new Error(`${error instanceof Error ? error.message : String(error)}\n${stderr}`.trim());
+    throw new Error(`${error instanceof Error ? error.message : String(error)}\n${output}`.trim());
   }
 };
 

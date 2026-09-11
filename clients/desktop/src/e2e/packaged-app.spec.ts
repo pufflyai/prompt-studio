@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
+import { test } from "../testing/packaged-fixture";
 import {
   attachStartupTimings,
   createPackagedHome,

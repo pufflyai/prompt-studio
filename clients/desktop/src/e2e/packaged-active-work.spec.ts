@@ -1,8 +1,9 @@
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { readRuntimeActivity } from "pstdio/runtime";
+import { test } from "../testing/packaged-fixture";
 import { acceptFocusedButton } from "./lifecycle-actions";
 import {
   createPackagedHome,
