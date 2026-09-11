@@ -62,7 +62,7 @@ jobs:
     timeout-minutes: 18
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
-      options: --init --ipc=host
+      options: --user 1001 --init --ipc=host
     strategy:
       fail-fast: false
       matrix:
@@ -107,7 +107,7 @@ jobs:
     timeout-minutes: 18
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
-      options: --init --ipc=host
+      options: --user 1001 --init --ipc=host
     env:
       BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
       E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
@@ -138,7 +138,7 @@ jobs:
     timeout-minutes: 18
     container:
       image: mcr.microsoft.com/playwright:v1.60.0-noble
-      options: --init --ipc=host
+      options: --user 1001 --init --ipc=host
     env:
       BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
       E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache

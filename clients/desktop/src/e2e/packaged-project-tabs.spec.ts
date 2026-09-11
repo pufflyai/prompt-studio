@@ -28,7 +28,7 @@ test("opens and closes project tabs while preserving pages and terminals", async
     });
     const first = await createPackagedProject(app.page, "Docs");
     const second = await createPackagedProject(app.page, "Agentic design");
-    await openPackagedProject(app.page, first.name);
+    await openPackagedProject(app.page, first);
     await expect(app.page.getByTestId("start-page")).toBeVisible();
     // Electron combines drag regions from both renderers, even when the
     // workbench covers the lifecycle page. Chromium clicks bypass that hit test.
@@ -48,7 +48,7 @@ test("opens and closes project tabs while preserving pages and terminals", async
     await expect(app.page).toHaveURL(/\/extensions\/[^/]+\/lab$/);
     const firstPageUrl = app.page.url();
 
-    await openPackagedProject(app.page, second.name);
+    await openPackagedProject(app.page, second);
     await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
     await expect(app.page).toHaveURL(/\/sessions$/);
     const secondPageUrl = app.page.url();
@@ -56,7 +56,7 @@ test("opens and closes project tabs while preserving pages and terminals", async
     await app.page.getByRole("tab", { name: first.name, exact: true }).click();
     await expect(app.page.getByRole("tab", { name: first.name, exact: true })).toHaveAttribute("aria-selected", "true");
     await expect(app.page).toHaveURL(firstPageUrl);
-    await openPackagedProject(app.page, first.name);
+    await openPackagedProject(app.page, first);
     await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveCount(2);
 
     const screenshot = testInfo.outputPath("desktop-project-tabs.png");
@@ -72,7 +72,7 @@ test("opens and closes project tabs while preserving pages and terminals", async
     );
     await expect(app.page).toHaveURL(secondPageUrl);
     expect((await readRuntimeActivity(app.runtime)).terminals).toEqual([terminal]);
-    await openPackagedProject(app.page, first.name);
+    await openPackagedProject(app.page, first);
     await expect(app.page).toHaveURL(firstPageUrl);
     await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveText([
       second.name,
@@ -103,7 +103,7 @@ test("reports a failed tab write and recovers when the next tab change can be sa
     const blockedWrite = join(home, "electron-user-data", "project-tabs.json.tmp");
     mkdirSync(blockedWrite);
 
-    await openPackagedProject(app.page, first.name);
+    await openPackagedProject(app.page, first);
     const error = app.page.getByText("Could not save project tabs", { exact: true });
     await expect(error).toBeVisible();
     const screenshot = testInfo.outputPath("desktop-project-tabs-save-error.png");
@@ -111,7 +111,7 @@ test("reports a failed tab write and recovers when the next tab change can be sa
     await testInfo.attach("desktop-project-tabs-save-error", { path: screenshot, contentType: "image/png" });
 
     rmSync(blockedWrite, { recursive: true });
-    await openPackagedProject(app.page, second.name);
+    await openPackagedProject(app.page, second);
     await expect(error).not.toBeVisible();
     await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveText([
       first.name,
