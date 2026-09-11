@@ -207,15 +207,6 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      # Temporary workaround documented in ADR 0010.
-      - name: Use canonical Ubuntu package mirror
-        if: runner.os == 'Linux'
-        run: sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
-
-      - name: Install Electron system dependencies
-        if: runner.os == 'Linux'
-        run: bun run --cwd clients/desktop playwright install-deps chromium
-
       - name: Build desktop and dependencies
         run: bun run build -- --scope @pstdio/desktop --include-dependencies
 
