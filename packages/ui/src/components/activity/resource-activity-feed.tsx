@@ -22,7 +22,7 @@ import { ActivityEvent } from "./activity-event";
 import { ActivityFeed } from "./activity-root";
 import { ActivityTimeline } from "./activity-timeline";
 
-const RichMessage = lazy(() =>
+const RichMessage = /* @__PURE__ */ lazy(() =>
   import("../rich-text/rich-message/rich-message").then((module) => ({ default: module.RichMessage })),
 );
 
