@@ -13,7 +13,7 @@ COPY .pstdio/extensions/pstdio-dev/package.json .pstdio/extensions/pstdio-dev/pa
 COPY .pstdio/extensions/pstdio-planner-loops/package.json .pstdio/extensions/pstdio-planner-loops/package.json
 COPY scripts scripts
 
-RUN bun install --frozen-lockfile --ignore-scripts
+RUN bun install --frozen-lockfile --ignore-scripts --filter @pstdio/landing-page
 
 RUN cd packages/ui && bun run build
 RUN cd clients/landing-page && bun run build
