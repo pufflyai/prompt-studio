@@ -1,0 +1,15 @@
+diff --git a/lib/coreBundle.js b/lib/coreBundle.js
+index bc601fcf741792e3fc76884a28a3c43f80c6472f..e26344b3f9e6140ac233c93d57482761b5f7d853 100644
+--- a/lib/coreBundle.js
++++ b/lib/coreBundle.js
+@@ -7942,8 +7942,8 @@ var init_happyEyeballs = __esm({
+         ).catch((err) => oncreate?.(err));
+       }
+     };
+-    httpsHappyEyeballsAgent = new HttpsHappyEyeballsAgent({ keepAlive: true });
+-    httpHappyEyeballsAgent = new HttpHappyEyeballsAgent({ keepAlive: true });
++    httpsHappyEyeballsAgent = new HttpsHappyEyeballsAgent({ keepAlive: true, timeout: 5000 });
++    httpHappyEyeballsAgent = new HttpHappyEyeballsAgent({ keepAlive: true, timeout: 5000 });
+   }
+ });
+ 

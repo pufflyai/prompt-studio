@@ -694,6 +694,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "playwright-core@1.60.0": "patches/playwright-core@1.60.0.patch",
+  },
   "overrides": {
     "@electron/node-gyp": "10.2.0-electron.2",
   },
