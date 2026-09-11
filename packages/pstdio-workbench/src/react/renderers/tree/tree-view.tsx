@@ -243,7 +243,15 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
       onReorderSections={onMoveSection}
       onReorderNodes={onReorderNodes}
     >
-      <Flex as="section" direction="column" h="full" minH="0" minW="0" aria-label={treeRenderer.title}>
+      <Flex
+        as="section"
+        direction="column"
+        h="full"
+        minH="0"
+        minW="0"
+        aria-label={treeRenderer.title}
+        aria-busy={loading}
+      >
         {!loading && visibleHeaderSections.length > 0 ? (
           <Flex bg={workbenchBackgrounds.sidenav} flexShrink={0}>
             <TreeList
@@ -265,7 +273,7 @@ export const WorkbenchTreeView = (props: WorkbenchTreeViewProps) => {
           </Flex>
         ) : null}
         <TreeViewSearch
-          visible={!loading && Boolean(treeRenderer.searchable)}
+          visible={Boolean(treeRenderer.searchable)}
           placeholder={treeRenderer.searchPlaceholder}
           value={filter}
           onChange={setFilter}

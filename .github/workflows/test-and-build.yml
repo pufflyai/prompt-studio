@@ -60,6 +60,9 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 18
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
     strategy:
       fail-fast: false
       matrix:
@@ -78,22 +81,13 @@ jobs:
           node-version: "24"
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
+        run: node scripts/ci/setup-container-bun.ts
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
       - name: Build end-to-end dependencies
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-
-      # Temporary workaround documented in ADR 0010.
-      - name: Use canonical Ubuntu package mirror
-        run: sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
-
-      - name: Install Playwright browsers
-        run: bun run --cwd packages/e2e playwright install --with-deps chromium
 
       - name: Test UI e2e
         run: bun run --cwd packages/e2e test:ui -- --shard=${{ matrix.shard }}/3
@@ -111,6 +105,9 @@ jobs:
   e2e_cli:
     runs-on: ubuntu-latest
     timeout-minutes: 18
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
     env:
       BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
       E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
@@ -121,22 +118,14 @@ jobs:
         with:
           node-version: "24"
 
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
+      - name: Setup Bun
+        run: node scripts/ci/setup-container-bun.ts
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
       - name: Build end-to-end dependencies
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
-
-      # Temporary workaround documented in ADR 0010.
-      - name: Use canonical Ubuntu package mirror
-        run: sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
-
-      - name: Install Firefox for CLI shutdown tests
-        run: bun run --cwd packages/e2e playwright install --with-deps firefox
 
       - name: Test e2e scripts
         run: bun run --cwd packages/e2e test:scripts
@@ -147,6 +136,9 @@ jobs:
   packaged_and_vite_e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 18
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --user 1001 --init --ipc=host
     env:
       BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
       E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
@@ -161,22 +153,13 @@ jobs:
           node-version: "24"
 
       - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: package.json
+        run: node scripts/ci/setup-container-bun.ts
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
       - name: Build monorepo
         run: bun run build
-
-      # Temporary workaround documented in ADR 0010.
-      - name: Use canonical Ubuntu package mirror
-        run: sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
-
-      - name: Install Playwright browsers
-        run: bun run --cwd packages/e2e playwright install --with-deps chromium firefox webkit
 
       - name: Test Vite terminal e2e
         run: bun run --cwd packages/e2e test:vite-terminal
@@ -222,16 +205,7 @@ jobs:
           bun-version-file: package.json
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      # Temporary workaround documented in ADR 0010.
-      - name: Use canonical Ubuntu package mirror
-        if: runner.os == 'Linux'
-        run: sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
-
-      - name: Install Electron system dependencies
-        if: runner.os == 'Linux'
-        run: bun run --cwd clients/desktop playwright install-deps chromium
+        run: node scripts/ci/install-native-dependencies.ts
 
       - name: Build desktop and dependencies
         run: bun run build -- --scope @pstdio/desktop --include-dependencies

@@ -1,3 +1,4 @@
+import { Spinner } from "@chakra-ui/react";
 import { type PlacementIdentity, workbenchPanels } from "@pstdio/sdk/extensions";
 import type {
   ResourceRef,
@@ -5,7 +6,7 @@ import type {
   WorkbenchModuleContribution,
   WorkbenchTabRetention,
 } from "@pstdio/workbench";
-import { SessionWidget } from "@/modules/sessions/components/session-widget";
+import { lazy, Suspense } from "react";
 import { forgetDashboardSession } from "@/modules/sessions/state/session-selection";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
@@ -18,6 +19,10 @@ import {
 } from "@/shared/workspaces/workspace-options";
 import { openDashboardSessionPanel, openSessionBubbleWidgets, selectSidenavSessionNode } from "./session-bubble";
 import { createSessionTabPresentation } from "./session-tab-presentation";
+
+const SessionWidget = lazy(() =>
+  import("@/modules/sessions/components/session-widget").then((module) => ({ default: module.SessionWidget })),
+);
 
 const metadataString = (resource: ResourceRef | undefined, key: string) => {
   const value = resource?.metadata?.[key];
@@ -61,7 +66,14 @@ const registerSessionBubbleWidgets = (ctx: WorkbenchModuleContext, drafts?: Dash
       id: dashboardWidgetIds.sessionBubble,
       title: "Session",
       icon: "MessageCircle",
-      body: { kind: "react", render: (input) => <SessionWidget input={input} drafts={drafts} /> },
+      body: {
+        kind: "react",
+        render: (input) => (
+          <Suspense fallback={<Spinner />}>
+            <SessionWidget input={input} drafts={drafts} />
+          </Suspense>
+        ),
+      },
     },
     { priority: 30 },
   );

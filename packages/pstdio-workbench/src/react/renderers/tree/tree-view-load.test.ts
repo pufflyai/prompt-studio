@@ -1,11 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createTreeRendererRegistry, createWorkbenchRendererRegistry } from "../../../core";
-import {
-  expandDefaultTreeSections,
-  loadExpandedTreeChildren,
-  loadTreeData,
-  shouldShowTreeLoading,
-} from "./tree-view-load";
+import { expandDefaultTreeSections, loadExpandedTreeChildren, loadTreeData } from "./tree-view-load";
 
 const createTrees = () => {
   const rendererRegistry = createWorkbenchRendererRegistry();
@@ -95,18 +90,5 @@ describe("expandDefaultTreeSections", () => {
     expect(trees.getTreeState("ticket.files").expandedSectionIds).toEqual(["files"]);
     expandDefaultTreeSections(trees, "ticket.files");
     expect(trees.getTreeState("ticket.files").expandedSectionIds).toEqual(["files", "workspaces"]);
-  });
-});
-describe("shouldShowTreeLoading", () => {
-  test("shows the loading state on the first load of a tree", () => {
-    expect(shouldShowTreeLoading(null, "workbench.settings.navigation")).toBe(true);
-  });
-  test("keeps content visible when reloading a tree that already loaded", () => {
-    // Selecting a different item re-runs the load with the same tree id; the
-    // sidenav must not blank between items.
-    expect(shouldShowTreeLoading("workbench.settings.navigation", "workbench.settings.navigation")).toBe(false);
-  });
-  test("shows the loading state when the tree id changes", () => {
-    expect(shouldShowTreeLoading("project.sidenav", "workbench.settings.navigation")).toBe(true);
   });
 });

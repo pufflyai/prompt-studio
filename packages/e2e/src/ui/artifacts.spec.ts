@@ -49,6 +49,7 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     expect(linked.ok()).toBe(true);
     expect(await execute("list", {})).toEqual([]);
     await page.addInitScript((projectId) => {
+      if (window !== window.top) return;
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     }, project.id);

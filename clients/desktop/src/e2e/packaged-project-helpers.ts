@@ -7,11 +7,16 @@ export const startKeyboardTabDrag = async (tab: Locator) => {
   await expect(tab).toHaveAttribute("aria-pressed", "true");
 };
 
-export const openPackagedProject = async (page: Page, name: string) => {
+export const openPackagedProject = async (page: Page, project: { id: string; name: string }) => {
+  const { id, name } = project;
   const picker = page.getByRole("dialog").filter({ has: page.getByPlaceholder("Search projects...") });
   if (!(await picker.isVisible())) await page.getByRole("button", { name: "Open project", exact: true }).click();
   await picker.getByText(name, { exact: true }).click();
   await expect(page.getByRole("tab", { name, exact: true })).toHaveAttribute("aria-selected", "true");
+  // Tab selection precedes project boot, which restores the page and its overlays.
+  const projectPath = `/projects/${id}`;
+  await expect(page).toHaveURL((url) => url.pathname === projectPath || url.pathname.startsWith(`${projectPath}/`));
+  await expect(picker).not.toBeVisible();
 };
 
 export const createPackagedProject = async (page: Page, name: string) => {

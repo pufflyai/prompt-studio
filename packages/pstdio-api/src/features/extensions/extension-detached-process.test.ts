@@ -20,7 +20,12 @@ test("a detached extension command outlives its host without delaying host exit"
     import { createProcessApi } from ${JSON.stringify(new URL("./extension-process-api.ts", import.meta.url).href)};
     await createProcessApi().spawnDetached({ command: [process.execPath, "--eval", ${JSON.stringify(childScript)}] });
   `;
-  const host = Bun.spawn([process.execPath, "--eval", hostScript], { stdout: "ignore", stderr: "pipe" });
+  const host = Bun.spawn([process.execPath, "--eval", hostScript], {
+    // This host must allow descendants to outlive it. The test runner still owns cleanup.
+    env: { ...process.env, BUN_FEATURE_FLAG_NO_ORPHANS: "0" },
+    stdout: "ignore",
+    stderr: "pipe",
+  });
   let childPid: number | undefined;
   try {
     for (let attempt = 0; attempt < 100 && !existsSync(heartbeat); attempt++) await Bun.sleep(10);

@@ -1,8 +1,9 @@
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { readRuntimeActivity } from "pstdio/runtime";
+import { test } from "../testing/packaged-fixture";
 import { acceptFocusedButton } from "./lifecycle-actions";
 import {
   createPackagedHome,
@@ -37,7 +38,7 @@ for (const shutdown of ["desktop confirmation", "forced CLI close"] as const) {
       });
       expect(created.status).toBe(201);
       expect(created.body.extension_warnings ?? []).toEqual([]);
-      await openPackagedProject(app.page, "Active terminal work");
+      await openPackagedProject(app.page, { id: created.body.id, name: "Active terminal work" });
       await app.page.getByTestId("start-page").waitFor();
       const socketOpened = app.page.waitForEvent(
         "websocket",

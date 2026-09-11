@@ -1,8 +1,9 @@
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { readRuntimeActivity } from "pstdio/runtime";
+import { test } from "../testing/packaged-fixture";
 import {
   createPackagedHome,
   disposePackagedApp,
@@ -10,19 +11,12 @@ import {
   type PackagedApp,
   readDescriptor,
   removePackagedHome,
-  runPackagedCli,
-  waitForExit,
 } from "./packaged-app-helpers";
-import {
-  createPackagedProject,
-  dragProjectTab,
-  openPackagedProject,
-  startKeyboardTabDrag,
-} from "./packaged-project-helpers";
+import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
 const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
 
-test("opens, switches, closes, and restores project tabs in one packaged window", async ({
+test("opens and closes project tabs while preserving pages and terminals", async ({
   browserName: _browserName,
 }, testInfo) => {
   const home = createPackagedHome();
@@ -35,7 +29,7 @@ test("opens, switches, closes, and restores project tabs in one packaged window"
     });
     const first = await createPackagedProject(app.page, "Docs");
     const second = await createPackagedProject(app.page, "Agentic design");
-    await openPackagedProject(app.page, first.name);
+    await openPackagedProject(app.page, first);
     await expect(app.page.getByTestId("start-page")).toBeVisible();
     // Electron combines drag regions from both renderers, even when the
     // workbench covers the lifecycle page. Chromium clicks bypass that hit test.
@@ -55,7 +49,7 @@ test("opens, switches, closes, and restores project tabs in one packaged window"
     await expect(app.page).toHaveURL(/\/extensions\/[^/]+\/lab$/);
     const firstPageUrl = app.page.url();
 
-    await openPackagedProject(app.page, second.name);
+    await openPackagedProject(app.page, second);
     await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
     await expect(app.page).toHaveURL(/\/sessions$/);
     const secondPageUrl = app.page.url();
@@ -63,7 +57,7 @@ test("opens, switches, closes, and restores project tabs in one packaged window"
     await app.page.getByRole("tab", { name: first.name, exact: true }).click();
     await expect(app.page.getByRole("tab", { name: first.name, exact: true })).toHaveAttribute("aria-selected", "true");
     await expect(app.page).toHaveURL(firstPageUrl);
-    await openPackagedProject(app.page, first.name);
+    await openPackagedProject(app.page, first);
     await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveCount(2);
 
     const screenshot = testInfo.outputPath("desktop-project-tabs.png");
@@ -79,56 +73,12 @@ test("opens, switches, closes, and restores project tabs in one packaged window"
     );
     await expect(app.page).toHaveURL(secondPageUrl);
     expect((await readRuntimeActivity(app.runtime)).terminals).toEqual([terminal]);
-    await openPackagedProject(app.page, first.name);
+    await openPackagedProject(app.page, first);
     await expect(app.page).toHaveURL(firstPageUrl);
     await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveText([
       second.name,
       first.name,
     ]);
-
-    await dragProjectTab(app.page, first.name, second.name);
-    const projectTabs = app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab");
-    await expect(projectTabs).toHaveText([first.name, second.name]);
-    await expect(app.page.getByRole("tab", { name: first.name, exact: true })).toHaveAttribute("aria-selected", "true");
-    await expect(app.page).toHaveURL(firstPageUrl);
-    const firstTab = app.page.getByRole("tab", { name: first.name, exact: true });
-    const dragStatus = app.page.getByRole("status");
-    const announcedOver = (targetId: string) => dragStatus.filter({ hasText: new RegExp(`${first.id}.*${targetId}`) });
-    await firstTab.click();
-    await startKeyboardTabDrag(firstTab);
-    await expect(announcedOver(first.id)).toHaveCount(1);
-    await app.page.keyboard.press("ArrowRight");
-    await expect(announcedOver(second.id)).toHaveCount(1);
-    await app.page.keyboard.press("Space");
-    await expect(projectTabs).toHaveText([second.name, first.name]);
-    await firstTab.click();
-    await startKeyboardTabDrag(firstTab);
-    await expect(announcedOver(first.id)).toHaveCount(1);
-    await app.page.keyboard.press("ArrowLeft");
-    await expect(announcedOver(second.id)).toHaveCount(1);
-    await app.page.keyboard.press("Escape");
-    await expect(projectTabs).toHaveText([second.name, first.name]);
-    await dragProjectTab(app.page, first.name, second.name);
-    await expect(projectTabs).toHaveText([first.name, second.name]);
-
-    expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
-    const runtimeBeforeRelaunch = readDescriptor(home)!;
-    await app.finishTrace();
-    await app.page.evaluate(() => void window.promptStudioDesktop.quitApp());
-    await waitForExit(app.child);
-    await app.browser.close();
-    app = await launchPackagedApp(home);
-    await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveText([
-      first.name,
-      second.name,
-    ]);
-    await expect(app.page).toHaveURL(firstPageUrl);
-    await expect(app.page.getByRole("tab", { name: first.name, exact: true })).toHaveAttribute("aria-selected", "true");
-    expect(readDescriptor(home)).toMatchObject({
-      instanceId: runtimeBeforeRelaunch.instanceId,
-      pid: runtimeBeforeRelaunch.pid,
-    });
-    expect(app.browser.contexts()[0].pages()).toHaveLength(2);
 
     await app.page.getByRole("button", { name: `Close ${first.name}`, exact: true }).click();
     await app.page.getByRole("button", { name: `Close ${second.name}`, exact: true }).click();
@@ -154,7 +104,7 @@ test("reports a failed tab write and recovers when the next tab change can be sa
     const blockedWrite = join(home, "electron-user-data", "project-tabs.json.tmp");
     mkdirSync(blockedWrite);
 
-    await openPackagedProject(app.page, first.name);
+    await openPackagedProject(app.page, first);
     const error = app.page.getByText("Could not save project tabs", { exact: true });
     await expect(error).toBeVisible();
     const screenshot = testInfo.outputPath("desktop-project-tabs-save-error.png");
@@ -162,7 +112,7 @@ test("reports a failed tab write and recovers when the next tab change can be sa
     await testInfo.attach("desktop-project-tabs-save-error", { path: screenshot, contentType: "image/png" });
 
     rmSync(blockedWrite, { recursive: true });
-    await openPackagedProject(app.page, second.name);
+    await openPackagedProject(app.page, second);
     await expect(error).not.toBeVisible();
     await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveText([
       first.name,

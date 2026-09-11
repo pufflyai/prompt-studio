@@ -2,7 +2,7 @@
   "namedInputs": {
     "default": ["{projectRoot}/**/*", "sharedGlobals"],
     "production": ["default", "!{projectRoot}/**/*.{test,spec}.{ts,tsx,js,jsx}", "!{projectRoot}/**/__tests__/**"],
-    "sharedGlobals": []
+    "sharedGlobals": ["{workspaceRoot}/patches/**/*"]
   },
   "targetDefaults": {
     "build": {
