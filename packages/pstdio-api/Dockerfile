@@ -1,4 +1,4 @@
-FROM oven/bun:1.3.14 AS source
+FROM oven/bun:1.4.2 AS source
 
 WORKDIR /app
 
@@ -26,7 +26,7 @@ RUN bun install --frozen-lockfile --ignore-scripts --production --filter pstdio-
 COPY --from=sdk /app/packages/sdk/dist /app/packages/sdk/dist
 
 
-FROM oven/bun:1.3.14-slim AS runner
+FROM oven/bun:1.4.2-slim AS runner
 
 WORKDIR /app
 
