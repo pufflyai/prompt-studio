@@ -142,7 +142,19 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
     await filesTab.click();
     await search.fill("README");
     await expect(page.getByRole("option", { name: /README\.md/ }).getByText("M", { exact: true })).toBeVisible();
-    await search.fill("logo");
+    const searchResponse = Promise.withResolvers<void>();
+    await page.route("**/files?query=logo&limit=500", async (route) => {
+      await searchResponse.promise;
+      await route.continue();
+    });
+    try {
+      await search.fill("logo");
+      // Pending searches must not leave rows from the previous query clickable.
+      await expect(filesTree.getByRole("option")).toHaveCount(0);
+      await expect(search).toBeFocused();
+    } finally {
+      searchResponse.resolve();
+    }
     await page.getByRole("option", { name: "logo.png" }).click();
     await expect(page.getByRole("img", { name: "logo.png" })).toBeVisible();
 
