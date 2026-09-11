@@ -2,9 +2,11 @@
 
 ## Status
 
-Temporary workaround retained only for native Linux desktop dependency installation.
+Retired. No CI job rewrites the Ubuntu package mirror or installs Playwright system dependencies.
 
 Linux UI, CLI, and packaged/Vite jobs now use the version-matched Playwright image with browsers and system libraries already installed. Run 34570969868 also stalled on the canonical archive: its packaged job spent nearly 15 minutes downloading system libraries and reached the unchanged 18-minute limit before tests started. A prebuilt browser environment replaces the mirror override for those jobs.
+
+Native Linux desktop runners already include every required Electron library, Xvfb, Liberation fonts, and emoji fonts. The install log for job 103182783491 confirms this; its only additions were nine extra font packages and utilities. Job 103189179936 later spent over five minutes repeating that unnecessary APT step. Removing the step keeps native desktop coverage and the existing 15-minute job limit.
 
 ## Ideal design
 
@@ -28,8 +30,8 @@ The end-to-end job no longer uses the runner's nearest configured Ubuntu mirror.
 
 ## Isolation
 
-The override is limited to native Linux desktop setup. It does not change product code, local development, browser versions, test coverage, or timeout values.
+The former override affected CI setup only. It never changed product code, local development, browser versions, test coverage, or timeout values.
 
 ## Removal
 
-Periodically test native Linux desktop setup without the override. Remove the remaining step after three representative pull request runs install its dependencies and finish within the existing job limit using the runner-provided mirror. Keep this ADR as the record of the retired workaround.
+The override was removed together with the unnecessary desktop dependency installation. Browser jobs use the Playwright image; native desktop jobs use the libraries already supplied by the runner. Keep this ADR as the record of the retired workaround.
