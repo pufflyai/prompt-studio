@@ -1,4 +1,4 @@
-import { Box, HStack, Icon, Stack, Text } from "@chakra-ui/react";
+import { Badge, Box, HStack, Icon, Stack, Text } from "@chakra-ui/react";
 import { OpenAiLogo } from "@phosphor-icons/react";
 import { SquareTerminal } from "lucide-react";
 import { SITE_LINKS } from "../../content/landing-content";
@@ -16,6 +16,11 @@ export const DownloadPanel = (props: { headingLevel: "h1" | "h2" }) => {
   const styles = useLandingStyles();
   return (
     <Box css={styles.heroCopy}>
+      <HStack>
+        <Badge variant="subtle" size="md">
+          Alpha release
+        </Badge>
+      </HStack>
       <Text id="download-panel-title" as={headingLevel} textStyle={{ base: "heading/L", xl: "heading/XL" }}>
         {START_HERE_TITLE}
       </Text>
