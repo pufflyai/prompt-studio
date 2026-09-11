@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Prevent stale file search clicks and speed up cold runtime, dashboard, and extension webview startup.
+Fix CI races and speed up cold runtime, dashboard, and extension webview startup with Bun 1.4.2.
