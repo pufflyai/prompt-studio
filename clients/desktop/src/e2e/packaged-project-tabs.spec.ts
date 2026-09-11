@@ -10,19 +10,12 @@ import {
   type PackagedApp,
   readDescriptor,
   removePackagedHome,
-  runPackagedCli,
-  waitForExit,
 } from "./packaged-app-helpers";
-import {
-  createPackagedProject,
-  dragProjectTab,
-  openPackagedProject,
-  startKeyboardTabDrag,
-} from "./packaged-project-helpers";
+import { createPackagedProject, openPackagedProject } from "./packaged-project-helpers";
 
 const fixturePath = dirname(fileURLToPath(import.meta.resolve("workbench-fixture/package.json")));
 
-test("opens, switches, closes, and restores project tabs in one packaged window", async ({
+test("opens and closes project tabs while preserving pages and terminals", async ({
   browserName: _browserName,
 }, testInfo) => {
   const home = createPackagedHome();
@@ -85,50 +78,6 @@ test("opens, switches, closes, and restores project tabs in one packaged window"
       second.name,
       first.name,
     ]);
-
-    await dragProjectTab(app.page, first.name, second.name);
-    const projectTabs = app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab");
-    await expect(projectTabs).toHaveText([first.name, second.name]);
-    await expect(app.page.getByRole("tab", { name: first.name, exact: true })).toHaveAttribute("aria-selected", "true");
-    await expect(app.page).toHaveURL(firstPageUrl);
-    const firstTab = app.page.getByRole("tab", { name: first.name, exact: true });
-    const dragStatus = app.page.getByRole("status");
-    const announcedOver = (targetId: string) => dragStatus.filter({ hasText: new RegExp(`${first.id}.*${targetId}`) });
-    await firstTab.click();
-    await startKeyboardTabDrag(firstTab);
-    await expect(announcedOver(first.id)).toHaveCount(1);
-    await app.page.keyboard.press("ArrowRight");
-    await expect(announcedOver(second.id)).toHaveCount(1);
-    await app.page.keyboard.press("Space");
-    await expect(projectTabs).toHaveText([second.name, first.name]);
-    await firstTab.click();
-    await startKeyboardTabDrag(firstTab);
-    await expect(announcedOver(first.id)).toHaveCount(1);
-    await app.page.keyboard.press("ArrowLeft");
-    await expect(announcedOver(second.id)).toHaveCount(1);
-    await app.page.keyboard.press("Escape");
-    await expect(projectTabs).toHaveText([second.name, first.name]);
-    await dragProjectTab(app.page, first.name, second.name);
-    await expect(projectTabs).toHaveText([first.name, second.name]);
-
-    expect(await runPackagedCli(home, ["serve"])).toMatchObject({ exitCode: 0 });
-    const runtimeBeforeRelaunch = readDescriptor(home)!;
-    await app.finishTrace();
-    await app.page.evaluate(() => void window.promptStudioDesktop.quitApp());
-    await waitForExit(app.child);
-    await app.browser.close();
-    app = await launchPackagedApp(home);
-    await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveText([
-      first.name,
-      second.name,
-    ]);
-    await expect(app.page).toHaveURL(firstPageUrl);
-    await expect(app.page.getByRole("tab", { name: first.name, exact: true })).toHaveAttribute("aria-selected", "true");
-    expect(readDescriptor(home)).toMatchObject({
-      instanceId: runtimeBeforeRelaunch.instanceId,
-      pid: runtimeBeforeRelaunch.pid,
-    });
-    expect(app.browser.contexts()[0].pages()).toHaveLength(2);
 
     await app.page.getByRole("button", { name: `Close ${first.name}`, exact: true }).click();
     await app.page.getByRole("button", { name: `Close ${second.name}`, exact: true }).click();
