@@ -93,8 +93,8 @@ describe("createExtensionWebviewBuildManager", () => {
       expect(builds).toHaveLength(1);
       // Bun's path resolution sometimes canonicalizes macOS `/var/...` to `/private/var/...`.
       // Match the entry path tail rather than the full prefix.
-      expect(builds[0]?.entryPath).toMatch(/\/src\/main\.tsx$/);
-      expect(builds[0]?.outdir).toMatch(/\/dist\.staging-[^/]+$/);
+      expect(builds[0]?.entryPath).toMatch(/[\\/]src[\\/]main\.tsx$/);
+      expect(builds[0]?.outdir).toMatch(/[\\/]dist\.staging-[^\\/]+$/);
       expect(existsSync(distPath)).toBe(true);
 
       expect(successes).toEqual([{ installName: "extension-lab", webviewId: "pstdio.lab.view.labPage" }]);

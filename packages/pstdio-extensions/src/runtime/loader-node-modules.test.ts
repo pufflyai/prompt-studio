@@ -47,17 +47,17 @@ afterEach(() => {
   tempDirs.length = 0;
 });
 
-test("mirrors workspace linked node_modules entries as directories", async () => {
+test.each(["e2e", "@workspace/e2e"])("loads workspace dependency %s from the runtime cache", async (name) => {
   isolateRuntimeCache();
   const repoDir = createTempDir();
   const extensionDir = join(repoDir, "extensions", "loader-test");
   const dependencyDir = join(repoDir, "packages", "e2e");
-  const dependencyImport = JSON.stringify("e2e");
+  const dependencyImport = JSON.stringify(name);
   writePackage(extensionDir);
   mkdirSync(dependencyDir, { recursive: true });
   writeFileSync(
     join(dependencyDir, "package.json"),
-    JSON.stringify({ name: "e2e", version: "1.0.0", type: "module", exports: "./index.ts" }),
+    JSON.stringify({ name, version: "1.0.0", type: "module", exports: "./index.ts" }),
   );
   writeFileSync(join(dependencyDir, "index.ts"), `export const marker = "workspace-dependency";\n`);
   writeFileSync(
@@ -75,7 +75,7 @@ export default {
 `,
   );
 
-  const linkedDependency = join(repoDir, "node_modules", "e2e");
+  const linkedDependency = join(repoDir, "node_modules", name);
   mkdirSync(dirname(linkedDependency), { recursive: true });
   symlinkSync(dependencyDir, linkedDependency, process.platform === "win32" ? "junction" : "dir");
 

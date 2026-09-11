@@ -1,4 +1,7 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterAll, describe, expect, mock, test } from "bun:test";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createCommandEnvironment } from "./command-environment";
 
 const makeEnabledSources = () => [
@@ -27,18 +30,24 @@ const makeStorageService = () => ({
   deleteCollectionItem: async () => {},
 });
 
-const sessionAttachmentFile = (name: string) => ({
-  id: "file-1",
-  project_id: "project-1",
-  file_name: name,
-  file_kind: "session_attachment",
-  storage_path: `/tmp/${name}`,
-  mime_type: "text/plain",
-  size_bytes: 24,
-  hash: null,
-  created_at: "2026-06-17T00:00:00.000Z",
-  updated_at: "2026-06-17T00:00:00.000Z",
-});
+const attachmentRoot = mkdtempSync(join(tmpdir(), "command-attachments-"));
+afterAll(() => rmSync(attachmentRoot, { recursive: true, force: true }));
+const sessionAttachmentFile = (name: string) => {
+  const storagePath = join(attachmentRoot, name);
+  writeFileSync(storagePath, "Attachment content");
+  return {
+    id: "file-1",
+    project_id: "project-1",
+    file_name: name,
+    file_kind: "session_attachment",
+    storage_path: storagePath,
+    mime_type: "text/plain",
+    size_bytes: 24,
+    hash: null,
+    created_at: "2026-06-17T00:00:00.000Z",
+    updated_at: "2026-06-17T00:00:00.000Z",
+  };
+};
 
 describe("createCommandEnvironment sessions listByWorkspace", () => {
   test("lists sessions linked to a workspace through the workspace-session join", async () => {

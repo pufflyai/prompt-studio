@@ -1,3 +1,4 @@
+import { sep } from "node:path";
 import { and, desc, eq, gte, inArray, lt } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { extension_reload_events, installed_extension_sources } from "../../db/schemas.pg";
@@ -71,8 +72,8 @@ export const createInstalledExtensionSourcesDBService = (db: DbClient) => {
   };
 
   const listBySourcePathPrefix = async (sourcePathPrefix: string) => {
-    const childPathPrefix = `${sourcePathPrefix}/`;
-    const nextPathPrefix = `${sourcePathPrefix}0`;
+    const childPathPrefix = `${sourcePathPrefix}${sep}`;
+    const nextPathPrefix = `${sourcePathPrefix}${String.fromCharCode(sep.charCodeAt(0) + 1)}`;
 
     return db
       .select()

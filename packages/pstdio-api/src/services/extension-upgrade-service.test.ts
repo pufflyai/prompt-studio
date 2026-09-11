@@ -1,4 +1,5 @@
 import { describe, expect, mock, test } from "bun:test";
+import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { packagedExtensionCatalog } from "../features/extensions/extension-catalog";
 import { namedSourceRef } from "../features/extensions/install-extension-source";
@@ -248,12 +249,12 @@ describe("catalog extension installation and upgrades", () => {
     expect(installExtensionSource).toHaveBeenCalledWith(
       expect.objectContaining({
         env: expect.objectContaining({
-          PSTDIO_HOME: expect.stringContaining("cache/extension-catalog/https%3A%2F%2Fgithub.com"),
+          PSTDIO_HOME: expect.stringContaining(join("cache", "extension-catalog", "https%3A%2F%2Fgithub.com")),
         }),
         force: true,
         installName: "pstdio-planner",
         hostReleaseRef: "pstdio@0.27.0",
-        repoPath: expect.stringContaining("cache/extension-catalog"),
+        repoPath: expect.stringContaining(join("cache", "extension-catalog")),
         source: "pstdio-planner",
       }),
     );

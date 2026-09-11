@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { join } from "node:path";
 import { createDb } from "../../db/connection.pglite";
 import { createInstalledExtensionSourcesDBService } from "./installed-extension-sources";
 
@@ -65,13 +66,13 @@ describe("installedExtensionSourcesService", () => {
   });
 
   test("retrieves sources by source path and prefix", async () => {
-    const repoRoot = "/repo/.pstdio/extensions";
+    const repoRoot = join("/repo", ".pstdio", "extensions");
     const first = await svc.register({
       install_name: "planner",
       extension_id: "pstdio.planner",
       display_name: "Planner",
       source_kind: "local_path",
-      source_path: `${repoRoot}/planner`,
+      source_path: join(repoRoot, "planner"),
     });
     await svc.register({
       install_name: "other",
@@ -96,14 +97,14 @@ describe("installedExtensionSourcesService", () => {
       return originalQuery(query, params, options);
     }) as typeof pglite.query;
 
-    const repoRoot = "/repo/.pstdio/extensions";
+    const repoRoot = join("/repo", ".pstdio", "extensions");
 
     await svc.register({
       install_name: "planner",
       extension_id: "pstdio.planner",
       display_name: "Planner",
       source_kind: "local_path",
-      source_path: `${repoRoot}/planner`,
+      source_path: join(repoRoot, "planner"),
     });
     await svc.register({
       install_name: "other",

@@ -1,3 +1,4 @@
+import { join, resolve, sep } from "node:path";
 import type { ExtensionDiagnostic, ExtensionRuntime, NormalizedExtension } from "../../types/runtime";
 import type { LoadedExtensionSource } from "../loader";
 import { createAccumulator, createRegistryIndex } from "./accumulator";
@@ -29,7 +30,9 @@ type NormalizeExtensionSourcesOptions = {
 };
 
 const isRepoLocalSource = (source: LoadedExtensionSource, repoRoots: string[]) =>
-  repoRoots.some((repoRoot) => source.packagePath.startsWith(`${repoRoot}/.pstdio/extensions/`));
+  repoRoots.some((repoRoot) =>
+    resolve(source.packagePath).startsWith(`${resolve(join(repoRoot, ".pstdio", "extensions"))}${sep}`),
+  );
 
 const createOverrideDiagnostic = (source: LoadedExtensionSource, override: LoadedExtensionSource) => ({
   code: "extension_overridden_by_local",

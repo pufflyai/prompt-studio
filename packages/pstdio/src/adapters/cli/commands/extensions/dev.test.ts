@@ -297,7 +297,7 @@ describe("extensions dev", () => {
       .mockResolvedValueOnce(installed);
     const handler = createHandler(target.deps as never);
     const running = handler(argv);
-    await waitFor(() => target.logs.includes("watching /repo/dev-test"), "Watcher did not start.");
+    await waitFor(() => target.logs.includes(`watching ${resolve("/repo/dev-test")}`), "Watcher did not start.");
 
     expect(target.errors).toContain("Extension validation failed");
     expect(target.errors).toContain("no new runtime published for dev-test");

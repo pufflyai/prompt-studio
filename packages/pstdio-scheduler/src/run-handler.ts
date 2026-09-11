@@ -95,6 +95,7 @@ export const startActiveRun = (input: {
       resolve();
     };
 
+    // Shutdown awaits this deadline, so it must keep the event loop alive.
     timeoutHandle = setTimeout(() => {
       timedOut = true;
       logRun({
@@ -108,7 +109,6 @@ export const startActiveRun = (input: {
       });
       resolveOnce();
     }, job.timeoutMs);
-    timeoutHandle.unref?.();
 
     completion.finally(resolveOnce);
   });

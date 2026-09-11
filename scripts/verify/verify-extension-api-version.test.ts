@@ -60,8 +60,8 @@ describe("readExtensionManifests", () => {
 
     try {
       expect(readExtensionManifests(root, files)).toEqual([
-        { file: "extensions/planner/package.json", enginesPstdio: HOST_VERSION },
-        { file: ".pstdio/extensions/dev/package.json", enginesPstdio: "1.0.0-alpha.0" },
+        { file: join("extensions", "planner", "package.json"), enginesPstdio: HOST_VERSION },
+        { file: join(".pstdio", "extensions", "dev", "package.json"), enginesPstdio: "1.0.0-alpha.0" },
       ]);
     } finally {
       rmSync(root, { recursive: true, force: true });

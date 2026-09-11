@@ -21,9 +21,9 @@ test("resolveStorageRoot uses ~/.pstdio/storage by default", () => {
 });
 
 test("resolveStorageRoot uses PSTDIO_HOME by default", () => {
-  process.env.PSTDIO_HOME = "/tmp/pstdio-home";
+  process.env.PSTDIO_HOME = path.resolve("/tmp/pstdio-home");
 
-  expect(resolveStorageRoot()).toBe("/tmp/pstdio-home/storage");
+  expect(resolveStorageRoot()).toBe(path.join(process.env.PSTDIO_HOME!, "storage"));
 });
 
 test("resolveStorageRoot expands ~ to home directory", () => {

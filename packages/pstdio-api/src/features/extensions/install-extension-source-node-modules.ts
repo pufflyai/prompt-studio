@@ -64,6 +64,36 @@ export const linkUsableNodeModules = (sourcePath: string, targetPath: string) =>
   symlinkSync(sourceNodeModules, targetNodeModules, lstatSync(sourceNodeModules).isDirectory() ? "junction" : "file");
 };
 
+const rebaseCopiedLink = (copied: string, source: string, target: string) => {
+  const original = join(source, relative(target, copied));
+
+  let linkText: string;
+  try {
+    linkText = readlinkSync(original);
+  } catch {
+    // The workspace link vanished between the copy and this pass. Keep the
+    // verbatim link cpSync already wrote rather than aborting the install.
+    return;
+  }
+
+  const destination = resolve(dirname(original), linkText);
+  const sourceRelative = relative(source, destination);
+  const inside = !sourceRelative.startsWith("..") && !isAbsolute(sourceRelative);
+  const rebased = inside ? relative(dirname(copied), join(target, sourceRelative)) : destination;
+
+  let isDirectory = true;
+  try {
+    isDirectory = statSync(original).isDirectory();
+  } catch {
+    // Windows can refuse to follow a store symlink reached through a junction.
+    // Assume a package directory (the common case) so the rebased junction still
+    // resolves.
+  }
+
+  unlinkSync(copied);
+  symlinkSync(rebased, copied, isDirectory ? "junction" : "file");
+};
+
 export const copyUsableNodeModules = (sourcePath: string, targetPath: string) => {
   const usable = findUsableNodeModules(sourcePath);
   if (!usable) return;
@@ -75,14 +105,7 @@ export const copyUsableNodeModules = (sourcePath: string, targetPath: string) =>
     for (const entry of readdirSync(directory, { withFileTypes: true })) {
       const copied = join(directory, entry.name);
       if (entry.isDirectory()) rebaseLinks(copied);
-      if (!entry.isSymbolicLink()) continue;
-      const original = join(source, relative(target, copied));
-      const destination = resolve(dirname(original), readlinkSync(original));
-      const sourceRelative = relative(source, destination);
-      const inside = !sourceRelative.startsWith("..") && !isAbsolute(sourceRelative);
-      const rebased = inside ? relative(dirname(copied), join(target, sourceRelative)) : destination;
-      unlinkSync(copied);
-      symlinkSync(rebased, copied, statSync(original).isDirectory() ? "junction" : "file");
+      if (entry.isSymbolicLink()) rebaseCopiedLink(copied, source, target);
     }
   };
   rebaseLinks(target);

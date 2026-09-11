@@ -1,4 +1,4 @@
-import { mkdir, readFile, rm, symlink } from "node:fs/promises";
+import { copyFile, mkdir, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
 import type { FilePart, HarnessAttachment, SessionAttachment, SessionAttachmentRef } from "pstdio-api-contracts";
@@ -28,9 +28,6 @@ export const toSessionAttachment = (projectId: string, file: FileRow): SessionAt
   updated_at: file.updated_at,
 });
 
-const isFileAlreadyExistsError = (error: unknown) =>
-  typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST";
-
 // Stored files are keyed by id with no extension, so an agent's Read tool would
 // treat an image as raw text instead of loading it as an image. Expose the bytes
 // through a path that keeps the original filename (and therefore its extension)
@@ -40,12 +37,7 @@ const readableAttachmentPath = async (file: FileRow) => {
   await mkdir(dir, { recursive: true });
 
   const readablePath = join(dir, basename(file.file_name));
-  await rm(readablePath, { force: true });
-  try {
-    await symlink(file.storage_path, readablePath);
-  } catch (error) {
-    if (!isFileAlreadyExistsError(error)) throw error;
-  }
+  await copyFile(file.storage_path, readablePath);
 
   return readablePath;
 };

@@ -30,6 +30,8 @@ All data in the PGlite database can become inaccessible until the WAL is repaire
 
 Prompt Studio creates an owned lock beside the PGlite data directory before opening it. A second Prompt Studio process now refuses to start while the owning process is still running, and stale locks left by stopped processes are reclaimed automatically.
 
+Several processes may try to remove the same stale claim. Removal succeeds if the claim is already gone, including when Windows reports a concurrent deletion as a permission error. Errors remain visible when the claim still exists. Failed acquisition also attempts to remove its own choosing and waiting claims so it does not block other contenders.
+
 The guard only covers Prompt Studio database connections. Do not run Drizzle Studio or other PGlite tools against the live database while `pst` is running. Stop `pst` first, or inspect a copied DB snapshot.
 
 ## Recovery

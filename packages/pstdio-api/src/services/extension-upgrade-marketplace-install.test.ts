@@ -1,9 +1,10 @@
 import { describe, expect, mock, test } from "bun:test";
+import { join, resolve } from "node:path";
 import { createExtensionUpgradeService } from "./extension-upgrade-service";
 
 describe("marketplace extension installation", () => {
   test("loads marketplace sources from the configured workspace release", async () => {
-    const sourceRoot = "/workspace/prompt-studio";
+    const sourceRoot = resolve("/workspace/prompt-studio");
     const installExtensionSource = mock(async () => ({}) as never);
     const service = createExtensionUpgradeService({
       extensionService: {
@@ -23,21 +24,21 @@ describe("marketplace extension installation", () => {
     expect(installExtensionSource).toHaveBeenCalledWith(
       expect.objectContaining({
         env: expect.objectContaining({
-          PSTDIO_HOME: expect.stringContaining("cache/extension-catalog/https%3A%2F%2Fgithub.com"),
+          PSTDIO_HOME: expect.stringContaining(join("cache", "extension-catalog", "https%3A%2F%2Fgithub.com")),
         }),
         force: true,
         installName: "pstdio-planner",
         reuseInstalledDependencies: true,
         skipInstall: true,
-        source: `${sourceRoot}/extensions/pstdio-planner`,
+        source: join(sourceRoot, "extensions", "pstdio-planner"),
       }),
     );
   });
 
   test("installs a repo-scoped marketplace extension from the current source checkout", async () => {
-    const repoPath = "/repos/project";
-    const sourceRoot = "/checkout/prompt-studio";
-    const targetPath = `${repoPath}/.pstdio/extensions/pstdio-planner-loops`;
+    const repoPath = resolve("/repos/project");
+    const sourceRoot = resolve("/checkout/prompt-studio");
+    const targetPath = join(repoPath, ".pstdio", "extensions", "pstdio-planner-loops");
     const installed = {
       check: {} as never,
       installName: "pstdio-planner-loops",
@@ -51,7 +52,7 @@ describe("marketplace extension installation", () => {
       },
       source: {
         kind: "local" as const,
-        path: `${sourceRoot}/.pstdio/extensions/pstdio-planner-loops`,
+        path: join(sourceRoot, ".pstdio", "extensions", "pstdio-planner-loops"),
       },
       sourceHash: "source-hash",
       targetPath,
@@ -112,7 +113,7 @@ describe("marketplace extension installation", () => {
         installName: "pstdio-planner-loops",
         repoPath,
         skipInstall: true,
-        source: `${sourceRoot}/.pstdio/extensions/pstdio-planner-loops`,
+        source: join(sourceRoot, ".pstdio", "extensions", "pstdio-planner-loops"),
       }),
     );
     expect(enableInstalledSourceForProject).toHaveBeenCalledWith(

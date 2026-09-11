@@ -51,9 +51,10 @@ const readOwner = (claimPath: string) => {
 
 const removeClaim = (claimPath: string) => {
   try {
-    fs.rmSync(claimPath);
+    fs.unlinkSync(claimPath);
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+    // Another contender may have removed the same stale claim.
+    if (fs.existsSync(claimPath)) {
       throw error;
     }
   }
@@ -156,36 +157,42 @@ export const acquirePgliteLock = (dbPath: string) => {
   const choosingPath = `${claimPrefix}.choosing`;
   const waitingPath = `${claimPrefix}.waiting`;
   const activePath = `${claimPrefix}.active`;
-  fs.writeFileSync(choosingPath, JSON.stringify(owner), { flag: "wx" });
-  const existingTickets = listClaims(lockPath).map(({ owner: claimOwner }) => claimOwner.ticket);
-  owner.ticket = Math.max(0, ...existingTickets) + 1;
-  fs.writeFileSync(choosingPath, JSON.stringify(owner));
-  fs.renameSync(choosingPath, waitingPath);
-  const choosingDeadline = Date.now() + CHOOSING_TIMEOUT_MS;
+  try {
+    fs.writeFileSync(choosingPath, JSON.stringify(owner), { flag: "wx" });
+    const existingTickets = listClaims(lockPath).map(({ owner: claimOwner }) => claimOwner.ticket);
+    owner.ticket = Math.max(0, ...existingTickets) + 1;
+    fs.writeFileSync(choosingPath, JSON.stringify(owner));
+    fs.renameSync(choosingPath, waitingPath);
+    const choosingDeadline = Date.now() + CHOOSING_TIMEOUT_MS;
 
-  while (true) {
-    if (hasChoosingClaim(lockPath)) {
-      if (Date.now() >= choosingDeadline) {
-        removeClaimBestEffort(waitingPath);
-        throw new Error("Timed out waiting for another process choosing the pstdio.db lock");
+    while (true) {
+      if (hasChoosingClaim(lockPath)) {
+        if (Date.now() >= choosingDeadline) {
+          throw new Error("Timed out waiting for another process choosing the pstdio.db lock");
+        }
+        sleep(1);
+        continue;
+      }
+
+      const claims = listClaims(lockPath);
+      const active = claims.filter(({ path: claimPath }) => claimPath.endsWith(".active"));
+      if (active.length > 0) {
+        throw new Error(describeLock(active[0]?.owner ?? {}));
+      }
+
+      claims.sort(
+        (left, right) => left.owner.ticket - right.owner.ticket || left.owner.id.localeCompare(right.owner.id),
+      );
+      if (claims[0]?.owner.id === owner.id) {
+        fs.renameSync(waitingPath, activePath);
+        break;
       }
       sleep(1);
-      continue;
     }
-
-    const claims = listClaims(lockPath);
-    const active = claims.filter(({ path: claimPath }) => claimPath.endsWith(".active"));
-    if (active.length > 0) {
-      removeClaimBestEffort(waitingPath);
-      throw new Error(describeLock(active[0]?.owner ?? {}));
-    }
-
-    claims.sort((left, right) => left.owner.ticket - right.owner.ticket || left.owner.id.localeCompare(right.owner.id));
-    if (claims[0]?.owner.id === owner.id) {
-      fs.renameSync(waitingPath, activePath);
-      break;
-    }
-    sleep(1);
+  } catch (error) {
+    removeClaimBestEffort(choosingPath);
+    removeClaimBestEffort(waitingPath);
+    throw error;
   }
 
   const release = () => removeClaim(activePath);

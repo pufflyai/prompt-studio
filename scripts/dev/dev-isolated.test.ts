@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "node:path";
+import { posix, resolve } from "node:path";
 import {
   composeMountPaths,
   resolveContainerPorts,
@@ -40,7 +40,7 @@ describe("isolated development paths", () => {
   });
 
   test("seeds every first-party extension from the working tree", () => {
-    const config = JSON.parse(resolveIsolatedDefaultExtensions("/repo", {})) as {
+    const config = JSON.parse(resolveIsolatedDefaultExtensions("/repo", {}, "linux")) as {
       defaultExtensions: Array<string | { installName: string; skipInstall: boolean; source: string }>;
     };
 
@@ -60,7 +60,7 @@ describe("isolated development paths", () => {
         force: true,
         installName,
         skipInstall: true,
-        source: resolve("/repo", source!),
+        source: posix.resolve("/repo", source!),
       })),
     );
   });

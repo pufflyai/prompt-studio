@@ -96,7 +96,7 @@ describe("createDb", () => {
     const dbPath = path.join(tempRoot, "database");
     const aliasPath = path.join(tempRoot, "database-alias");
     fs.mkdirSync(dbPath);
-    fs.symlinkSync(dbPath, aliasPath);
+    fs.symlinkSync(dbPath, aliasPath, "junction");
     const first = await createDb({ path: dbPath });
 
     try {
