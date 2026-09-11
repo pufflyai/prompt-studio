@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, test } from "bun:test";
+import { beforeAll, expect, test } from "bun:test";
 import { type ChildProcess, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -55,259 +55,268 @@ test("checks the repo scope and reports bundled versions despite an invalid user
   }
 });
 
-describe("packaged pstdio — self-hosted serve", () => {
-  test("includes the extension development and update commands", () => {
-    const devResult = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "dev", "--help"], { encoding: "utf8" });
-    const updateResult = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "update", "--help"], { encoding: "utf8" });
+test("includes the extension development and update commands", () => {
+  const devResult = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "dev", "--help"], { encoding: "utf8" });
+  const updateResult = spawnSync(PACKAGED_BINARY_PATH, ["extensions", "update", "--help"], { encoding: "utf8" });
 
-    expect(devResult.status).toBe(0);
-    expect(devResult.stdout).toContain("extensions dev <source>");
-    expect(updateResult.status).toBe(0);
-    expect(updateResult.stdout).toContain("extensions update [name]");
-  });
-
-  test(
-    "serves the dashboard and API from the same origin",
-    async () => {
-      const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
-      let child: ChildProcess | null = null;
-
-      try {
-        const started = await startPackagedServe(tempRoot);
-        child = started.child;
-
-        const dashboardRes = await fetch(started.baseUrl);
-        expect(dashboardRes.status).toBe(200);
-        expect(dashboardRes.headers.get("content-type")).toContain("text/html");
-
-        const projectsRes = await fetch(`${started.baseUrl}/v1/projects`, {
-          headers: runtimeAuthorization(started.descriptor),
-        });
-        expect(projectsRes.status).toBe(200);
-        expect(await projectsRes.json()).toEqual([]);
-      } finally {
-        if (child) {
-          await stopProcess(child);
-        }
-        rmSync(tempRoot, { recursive: true, force: true });
-      }
-    },
-    SMOKE_TEST_TIMEOUT,
-  );
-
-  test(
-    "creates project without internal catalog seeds and with repo bootstrap artifacts",
-    async () => {
-      const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
-      let child: ChildProcess | null = null;
-
-      try {
-        const started = await startPackagedServe(tempRoot);
-        child = started.child;
-
-        const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
-          method: "POST",
-          headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-          body: JSON.stringify({ name: "packaged-serve-project" }),
-        });
-        expect(createRes.status).toBe(201);
-
-        const project = (await createRes.json()) as { id: string };
-        const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
-          headers: runtimeAuthorization(started.descriptor),
-        });
-        expect(extensionsRes.status).toBe(200);
-        const extensionCatalog = (await extensionsRes.json()) as {
-          marketplace: Array<{
-            installName: string;
-            origin: { kind: "git"; path: string; ref: string; url: string };
-            publisher?: string;
-          }>;
-        };
-        expect(extensionCatalog.marketplace).toContainEqual(
-          expect.objectContaining({
-            installName: "pstdio-planner",
-            origin: {
-              kind: "git",
-              path: "extensions/pstdio-planner",
-              ref: "{hostRelease}",
-              url: "https://github.com/pufflyai/prompt-studio",
-            },
-            publisher: "pufflyai",
-          }),
-        );
-
-        const skillsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/skills`, {
-          headers: runtimeAuthorization(started.descriptor),
-        });
-        expect(skillsRes.status).toBe(200);
-
-        const skills = (await skillsRes.json()) as {
-          name: string;
-          files: { path: string; content: string; encoding: "utf8" }[];
-        }[];
-        expect(skills).toEqual([]);
-
-        const repoPath = join(tempRoot, "repo");
-        mkdirSync(repoPath, { recursive: true });
-
-        const repoRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/repos`, {
-          method: "POST",
-          headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-          body: JSON.stringify({ name: "repo", path: repoPath }),
-        });
-        expect(repoRes.status).toBe(201);
-
-        expect(existsSync(join(repoPath, ".pstdio", "config.json"))).toBe(true);
-      } finally {
-        if (child) {
-          await stopProcess(child);
-        }
-        rmSync(tempRoot, { recursive: true, force: true });
-      }
-    },
-    SMOKE_TEST_TIMEOUT,
-  );
-
-  test(
-    "loads a default extension that imports an on-disk node_modules dependency",
-    async () => {
-      const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
-      let child: ChildProcess | null = null;
-
-      try {
-        const extensionSource = writeExtensionWithDependency(tempRoot);
-        const installEnvironmentProbe = writeExtensionInstallEnvironmentProbe(tempRoot);
-        const started = await startPackagedServe(tempRoot, {
-          PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
-            { source: extensionSource, installName: "dep-ext", skipInstall: true },
-            { source: installEnvironmentProbe, installName: "install-env-probe" },
-          ]),
-          HTTPS_PROXY: "http://127.0.0.1:9",
-          NPM_CONFIG_REGISTRY: "http://127.0.0.1:9",
-          NPM_TOKEN: "registry-secret",
-          GITHUB_TOKEN: "source-control-secret",
-          OPENAI_API_KEY: "provider-secret",
-        });
-        child = started.child;
-
-        const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
-          method: "POST",
-          headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-          body: JSON.stringify({ name: "packaged-extension-project" }),
-        });
-        expect(createRes.status).toBe(201);
-
-        const project = (await createRes.json()) as { id: string };
-        const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
-          headers: runtimeAuthorization(started.descriptor),
-        });
-        expect(extensionsRes.status).toBe(200);
-
-        const body = (await extensionsRes.json()) as {
-          extensions: Array<{ enabled: boolean; installName: string; name: string }>;
-        };
-        const extension = body.extensions.find((entry) => entry.installName === "dep-ext");
-
-        expect(extension).toMatchObject({
-          enabled: true,
-          name: "dep-ext",
-        });
-
-        expect(JSON.parse(readFileSync(join(tempRoot, "install-env.json"), "utf8"))).toEqual({
-          httpsProxy: "http://127.0.0.1:9",
-          npmRegistry: "http://127.0.0.1:9",
-          npmToken: "registry-secret",
-          sourceControlToken: null,
-          providerKey: null,
-        });
-      } finally {
-        if (child) {
-          await stopProcess(child);
-        }
-        rmSync(tempRoot, { recursive: true, force: true });
-      }
-    },
-    SMOKE_TEST_TIMEOUT,
-  );
-
-  test(
-    "serves workspace actions and complete showcase mode metadata",
-    async () => {
-      const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
-      let child: ChildProcess | null = null;
-
-      try {
-        const started = await startPackagedServe(tempRoot, {
-          PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "extension-lab", "pstdio-artifacts"),
-          // This check exercises metadata and commands; browser suites cover webview builds.
-          PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
-        });
-        child = started.child;
-
-        const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
-          method: "POST",
-          headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-          body: JSON.stringify({ name: "packaged-workspace-action-project" }),
-        });
-        expect(createRes.status).toBe(201);
-
-        const project = (await createRes.json()) as { id: string };
-        const metadataRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
-          headers: runtimeAuthorization(started.descriptor),
-        });
-        expect(metadataRes.status).toBe(200);
-
-        const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
-        expectExamplePages(metadata);
-        await expectPackagedArtifacts({
-          baseUrl: started.baseUrl,
-          projectId: project.id,
-          headers: runtimeAuthorization(started.descriptor),
-          metadata,
-        });
-        const counter = await fetch(
-          `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.workbench-fixture.command.counter.bump/execute`,
-          {
-            method: "POST",
-            headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-            body: JSON.stringify({ params: {} }),
-          },
-        );
-        expect(counter.status).toBe(200);
-        expect(await counter.json()).toMatchObject({
-          outcome: { status: "success", value: { counter: 1 } },
-          eventIds: expect.arrayContaining(["pstdio.workbench-fixture.event.counter.changed"]),
-        });
-        const workspaceAction = metadata.menuContributions.find(
-          (contribution) => contribution.label === "Workspace-only lab action",
-        );
-        expect(workspaceAction?.when).toEqual({ resourceType: ["workspace"] });
-        expect(metadata.pages).toContainEqual(
-          expect.objectContaining({
-            extensionId: "pstdio.workbench-fixture",
-            localId: "lab",
-            path: "lab",
-          }),
-        );
-        expect(metadata.navigationTrees).toContainEqual(
-          expect.objectContaining({
-            id: "pstdio.workbench-fixture.navigation-tree.lab-cameras",
-            owner: expect.objectContaining({ kind: "page", id: "lab" }),
-            slot: "content",
-            view: expect.objectContaining({ kind: "view", id: "camera-tree" }),
-          }),
-        );
-      } finally {
-        if (child) {
-          await stopProcess(child);
-        }
-        rmSync(tempRoot, { recursive: true, force: true });
-      }
-    },
-    SMOKE_TEST_TIMEOUT,
-  );
+  expect(devResult.status).toBe(0);
+  expect(devResult.stdout).toContain("extensions dev <source>");
+  expect(updateResult.status).toBe(0);
+  expect(updateResult.stdout).toContain("extensions update [name]");
 });
+
+test(
+  "serves the dashboard and API from the same origin",
+  async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
+    let child: ChildProcess | null = null;
+
+    try {
+      const started = await startPackagedServe(tempRoot);
+      child = started.child;
+
+      const dashboardRes = await fetch(started.baseUrl);
+      expect(dashboardRes.status).toBe(200);
+      expect(dashboardRes.headers.get("content-type")).toContain("text/html");
+
+      const projectsRes = await fetch(`${started.baseUrl}/v1/projects`, {
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      expect(projectsRes.status).toBe(200);
+      expect(await projectsRes.json()).toEqual([]);
+    } finally {
+      if (child) {
+        await stopProcess(child);
+      }
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  },
+  SMOKE_TEST_TIMEOUT,
+);
+
+test(
+  "creates an empty project with repo bootstrap artifacts and preserves it after restart",
+  async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
+    let child: ChildProcess | null = null;
+
+    try {
+      const started = await startPackagedServe(tempRoot);
+      child = started.child;
+
+      const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
+        method: "POST",
+        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+        body: JSON.stringify({ name: "packaged-serve-project" }),
+      });
+      expect(createRes.status).toBe(201);
+
+      const project = (await createRes.json()) as { id: string };
+      const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      expect(extensionsRes.status).toBe(200);
+      const extensionCatalog = (await extensionsRes.json()) as {
+        marketplace: Array<{
+          installName: string;
+          origin: { kind: "git"; path: string; ref: string; url: string };
+          publisher?: string;
+        }>;
+      };
+      expect(extensionCatalog.marketplace).toContainEqual(
+        expect.objectContaining({
+          installName: "pstdio-planner",
+          origin: {
+            kind: "git",
+            path: "extensions/pstdio-planner",
+            ref: "{hostRelease}",
+            url: "https://github.com/pufflyai/prompt-studio",
+          },
+          publisher: "pufflyai",
+        }),
+      );
+
+      const skillsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/skills`, {
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      expect(skillsRes.status).toBe(200);
+
+      const skills = (await skillsRes.json()) as {
+        name: string;
+        files: { path: string; content: string; encoding: "utf8" }[];
+      }[];
+      expect(skills).toEqual([]);
+
+      const repoPath = join(tempRoot, "repo");
+      mkdirSync(repoPath, { recursive: true });
+
+      const repoRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/repos`, {
+        method: "POST",
+        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+        body: JSON.stringify({ name: "repo", path: repoPath }),
+      });
+      expect(repoRes.status).toBe(201);
+
+      expect(existsSync(join(repoPath, ".pstdio", "config.json"))).toBe(true);
+
+      await stopProcess(child);
+      const restarted = await startPackagedServe(tempRoot);
+      child = restarted.child;
+      const projectsRes = await fetch(`${restarted.baseUrl}/v1/projects`, {
+        headers: runtimeAuthorization(restarted.descriptor),
+      });
+      expect(projectsRes.status).toBe(200);
+      expect(await projectsRes.json()).toEqual([
+        expect.objectContaining({ id: project.id, name: "packaged-serve-project" }),
+      ]);
+    } finally {
+      if (child) {
+        await stopProcess(child);
+      }
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  },
+  SMOKE_TEST_TIMEOUT,
+);
+
+test(
+  "loads a default extension that imports an on-disk node_modules dependency",
+  async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
+    let child: ChildProcess | null = null;
+
+    try {
+      const extensionSource = writeExtensionWithDependency(tempRoot);
+      const installEnvironmentProbe = writeExtensionInstallEnvironmentProbe(tempRoot);
+      const started = await startPackagedServe(tempRoot, {
+        PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
+          { source: extensionSource, installName: "dep-ext", skipInstall: true },
+          { source: installEnvironmentProbe, installName: "install-env-probe" },
+        ]),
+        HTTPS_PROXY: "http://127.0.0.1:9",
+        NPM_CONFIG_REGISTRY: "http://127.0.0.1:9",
+        NPM_TOKEN: "registry-secret",
+        GITHUB_TOKEN: "source-control-secret",
+        OPENAI_API_KEY: "provider-secret",
+      });
+      child = started.child;
+
+      const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
+        method: "POST",
+        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+        body: JSON.stringify({ name: "packaged-extension-project" }),
+      });
+      expect(createRes.status).toBe(201);
+
+      const project = (await createRes.json()) as { id: string };
+      const extensionsRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions`, {
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      expect(extensionsRes.status).toBe(200);
+
+      const body = (await extensionsRes.json()) as {
+        extensions: Array<{ enabled: boolean; installName: string; name: string }>;
+      };
+      const extension = body.extensions.find((entry) => entry.installName === "dep-ext");
+
+      expect(extension).toMatchObject({
+        enabled: true,
+        name: "dep-ext",
+      });
+
+      expect(JSON.parse(readFileSync(join(tempRoot, "install-env.json"), "utf8"))).toEqual({
+        httpsProxy: "http://127.0.0.1:9",
+        npmRegistry: "http://127.0.0.1:9",
+        npmToken: "registry-secret",
+        sourceControlToken: null,
+        providerKey: null,
+      });
+    } finally {
+      if (child) {
+        await stopProcess(child);
+      }
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  },
+  SMOKE_TEST_TIMEOUT,
+);
+
+test(
+  "serves workspace actions and complete showcase mode metadata",
+  async () => {
+    const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
+    let child: ChildProcess | null = null;
+
+    try {
+      const started = await startPackagedServe(tempRoot, {
+        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "extension-lab", "pstdio-artifacts"),
+        // This check exercises metadata and commands; browser suites cover webview builds.
+        PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
+      });
+      child = started.child;
+
+      const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
+        method: "POST",
+        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+        body: JSON.stringify({ name: "packaged-workspace-action-project" }),
+      });
+      expect(createRes.status).toBe(201);
+
+      const project = (await createRes.json()) as { id: string };
+      const metadataRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/extensions/ui`, {
+        headers: runtimeAuthorization(started.descriptor),
+      });
+      expect(metadataRes.status).toBe(200);
+
+      const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
+      expectExamplePages(metadata);
+      await expectPackagedArtifacts({
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
+        metadata,
+      });
+      const counter = await fetch(
+        `${started.baseUrl}/v1/projects/${project.id}/extensions/commands/pstdio.workbench-fixture.command.counter.bump/execute`,
+        {
+          method: "POST",
+          headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
+          body: JSON.stringify({ params: {} }),
+        },
+      );
+      expect(counter.status).toBe(200);
+      expect(await counter.json()).toMatchObject({
+        outcome: { status: "success", value: { counter: 1 } },
+        eventIds: expect.arrayContaining(["pstdio.workbench-fixture.event.counter.changed"]),
+      });
+      const workspaceAction = metadata.menuContributions.find(
+        (contribution) => contribution.label === "Workspace-only lab action",
+      );
+      expect(workspaceAction?.when).toEqual({ resourceType: ["workspace"] });
+      expect(metadata.pages).toContainEqual(
+        expect.objectContaining({
+          extensionId: "pstdio.workbench-fixture",
+          localId: "lab",
+          path: "lab",
+        }),
+      );
+      expect(metadata.navigationTrees).toContainEqual(
+        expect.objectContaining({
+          id: "pstdio.workbench-fixture.navigation-tree.lab-cameras",
+          owner: expect.objectContaining({ kind: "page", id: "lab" }),
+          slot: "content",
+          view: expect.objectContaining({ kind: "view", id: "camera-tree" }),
+        }),
+      );
+    } finally {
+      if (child) {
+        await stopProcess(child);
+      }
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  },
+  SMOKE_TEST_TIMEOUT,
+);
 
 registerCoreDefaultExtensionSmokeTests();
 registerRemoteExecutionSmokeTests();
