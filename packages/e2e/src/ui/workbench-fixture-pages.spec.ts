@@ -68,7 +68,7 @@ test("an extension page navigates through the public API and browser history", a
 
   await expect(page).toHaveURL(`/projects/${project.id}`);
   await expect(page.getByTestId("start-page")).toBeVisible();
-  await expect(page.locator('iframe[title="Lab"]')).toHaveCount(0);
+  await expect(page.locator('iframe[title="Lab"]')).toBeHidden();
   await expect(sidenav.getByRole("option", { name: /Session 1 — first contact/ })).toHaveCount(0);
   await expect(sidenav.getByRole("option", { name: "Lab", exact: true })).toBeVisible();
 
@@ -142,5 +142,7 @@ test("Lab replaces an active session page in main", async ({ page, request }) =>
     timeout: 30_000,
   });
   await expect(page.locator('[data-workbench-panel="main"]').getByRole("tab")).toHaveCount(0);
-  await expect(page.locator('[data-workbench-region="main"]')).not.toContainText(sessionTitle);
+  await expect(
+    page.locator('[data-workbench-region="main"]').getByText(sessionTitle).filter({ visible: true }),
+  ).toHaveCount(0);
 });

@@ -50,9 +50,9 @@ test("dashboard keeps project selection open when no project is selected", async
   await expect(page.locator('button[aria-label="Switch project"]')).toBeVisible();
   await expect(page.getByRole("option", { name: "Search", exact: true })).toHaveCount(0);
   await expect(page.getByRole("option", { name: "Notifications", exact: true })).toHaveCount(0);
-  await expect(page.locator('[data-workbench-region="sidenav"]')).toHaveCount(0);
-  await expect(page.locator('[data-workbench-region="activity"]')).toHaveCount(0);
-  await expect(page.locator('[data-workbench-region="status"]')).toHaveCount(0);
+  await expect(page.locator('[data-workbench-region="sidenav"]')).toBeHidden();
+  await expect(page.locator('[data-workbench-region="activity"]')).toBeHidden();
+  await expect(page.locator('[data-workbench-region="status"]')).toBeHidden();
 
   await page.keyboard.press("Escape");
   await expect(projectPicker).toBeVisible();
@@ -320,6 +320,8 @@ test("dashboard opens the start page for a selected project without a saved loca
     .getByRole("button", { name: /Recent start session/ })
     .click();
 
-  await expect(page.getByLabel("Main").getByText(session.title, { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel("Main").getByText(session.title, { exact: true }).filter({ visible: true }),
+  ).toBeVisible();
   await expect(page.getByLabel("Breadcrumb").getByText(session.title, { exact: true })).toBeVisible();
 });

@@ -37,27 +37,24 @@ export const WorkbenchSecondaryPanel = (props: WorkbenchSecondaryPanelProps) => 
       flexDirection="column"
       w="full"
     >
-      {settings?.showHeader !== false && (hasSecondaryHeader || hasPanelHeader) ? (
-        <Header
-          data-workbench-panel-header="secondary"
-          variant="main"
-          bg={workbenchBackgrounds.panel}
-          position="relative"
-          flexShrink={0}
-          gap="xs"
-          overflow="hidden"
-          overflowY="hidden"
-        >
-          <WorkbenchRegionTabs workbench={workbench} region="secondary" />
-          {hasSecondaryHeader ? (
-            <Box flex="1" h="full" minW="0" overflow="hidden">
-              <WorkbenchRegion workbench={workbench} region="secondary-header" title="Secondary Panel header" />
-            </Box>
-          ) : null}
-          <WorkbenchPanelMenuOpeners workbench={workbench} panel="secondary" />
-          <WorkbenchHeaderBorder workbench={workbench} region="secondary-header" />
-        </Header>
-      ) : null}
+      <Header
+        display={settings?.showHeader !== false && (hasSecondaryHeader || hasPanelHeader) ? "flex" : "none"}
+        data-workbench-panel-header="secondary"
+        variant="main"
+        bg={workbenchBackgrounds.panel}
+        position="relative"
+        flexShrink={0}
+        gap="xs"
+        overflow="hidden"
+        overflowY="hidden"
+      >
+        <WorkbenchRegionTabs workbench={workbench} region="secondary" />
+        <Box display={hasSecondaryHeader ? "block" : "none"} flex="1" h="full" minW="0" overflow="hidden">
+          <WorkbenchRegion workbench={workbench} region="secondary-header" title="Secondary Panel header" />
+        </Box>
+        <WorkbenchPanelMenuOpeners workbench={workbench} panel="secondary" />
+        <WorkbenchHeaderBorder workbench={workbench} region="secondary-header" />
+      </Header>
       <Box flex="1" minH="0" minW="0" overflow="hidden">
         <WorkbenchPanelMenuLayout workbench={workbench} panel="secondary">
           <WorkbenchRegion workbench={workbench} region="secondary" title="Secondary Panel" />

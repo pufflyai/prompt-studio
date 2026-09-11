@@ -45,7 +45,7 @@ test.describe("workspace sessions", () => {
     const sidePanel = page.getByTestId("workbench-side-panel-floating");
     await expect(sidePanel).toBeVisible();
     await expect(sidePanel.getByRole("textbox")).toBeVisible();
-    await expect(sidePanel.getByText("Mode-driven sidenav", { exact: true })).toBeVisible();
+    await expect(sidePanel.getByText("Mode-driven sidenav", { exact: true }).filter({ visible: true })).toBeVisible();
     await expect(breadcrumb.getByText("Mode-driven sidenav", { exact: true })).toBeVisible();
   });
 
@@ -92,7 +92,7 @@ test.describe("workspace sessions", () => {
     await expect(
       page.getByRole("navigation", { name: "breadcrumb" }).getByText("New session", { exact: true }),
     ).toBeVisible();
-    await expect(page.locator("[data-testid='content-editable']")).toBeVisible();
+    await expect(page.getByRole("textbox")).toBeVisible();
     await expect(page.getByRole("button", { name: "Send message" })).toBeVisible();
   });
 });

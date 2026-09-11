@@ -14,15 +14,13 @@ const ATTACHED_PANEL_MIN_SIZE_PX = 320;
 
 interface WorkbenchSidePanelRegionPortalProps {
   workbench: WorkbenchCore;
-  hasSidePanel: boolean;
-  mounted: boolean;
   sidePanelHost: HTMLDivElement | null;
 }
 
 export const WorkbenchSidePanelRegionPortal = (props: WorkbenchSidePanelRegionPortalProps) => {
-  const { workbench, hasSidePanel, mounted, sidePanelHost } = props;
+  const { workbench, sidePanelHost } = props;
 
-  if (!hasSidePanel || !mounted || !sidePanelHost) return null;
+  if (!sidePanelHost) return null;
 
   return createPortal(
     <WorkbenchRegion workbench={workbench} region="side" title="Side Panel" transparent />,
