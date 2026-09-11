@@ -27,14 +27,14 @@ export interface TestAppOptions {
 }
 
 export const createTestApp = async (options: TestAppOptions = {}) => {
-  const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-api-test-app-"));
+  const tempRoot = options.storageRoot === undefined ? mkdtempSync(join(tmpdir(), "pstdio-api-test-app-")) : undefined;
   const harnessRegistry = options.harnessRegistry;
   try {
     const handle = await createApp(
       {
         config: {
           database: { path: options.databasePath ?? ":memory:" },
-          storage: { root: options.storageRoot ?? join(tempRoot, "storage") },
+          storage: { root: options.storageRoot ?? join(tempRoot!, "storage") },
           sync: { eventBufferSize: options.eventBufferSize ?? 1000 },
           automation: { runsPerMinute: options.automationRunsPerMinute ?? 60 },
           extensions: {
@@ -60,12 +60,12 @@ export const createTestApp = async (options: TestAppOptions = {}) => {
         try {
           await closeApp();
         } finally {
-          rmSync(tempRoot, { recursive: true, force: true });
+          if (tempRoot) rmSync(tempRoot, { recursive: true, force: true });
         }
       },
     };
   } catch (error) {
-    rmSync(tempRoot, { recursive: true, force: true });
+    if (tempRoot) rmSync(tempRoot, { recursive: true, force: true });
     throw error;
   }
 };

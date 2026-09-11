@@ -1,4 +1,4 @@
-import { type ChildProcess, spawn } from "node:child_process";
+import type { ChildProcess } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -6,6 +6,7 @@ import { type Browser, chromium, expect, type Page, test } from "@playwright/tes
 import type { RuntimeDescriptor } from "pstdio/runtime";
 import { redactSensitiveText } from "pstdio-logging";
 import { resolvePackagedLayout } from "../packaging/package-layout";
+import { registerPackagedCleanup, spawnPackagedProcess, stopPackagedProcess } from "../testing/packaged-fixture";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
 import { waitForVisibleElement } from "./visible-element-timing";
@@ -33,7 +34,23 @@ const packagedEnvironment = (home: string) => {
   return env;
 };
 
-export const createPackagedHome = () => mkdtempSync(join(tmpdir(), "pstdio-desktop-package-"));
+export const createPackagedHome = () => {
+  const home = mkdtempSync(join(tmpdir(), "pstdio-desktop-package-"));
+  registerPackagedCleanup(async () => {
+    try {
+      const logPath = join(home, "logs.jsonl");
+      if (existsSync(logPath)) {
+        await test.info().attach("packaged-launch-log", {
+          body: redactSensitiveText(readFileSync(logPath, "utf8").slice(-32_000), [readDescriptor(home)?.token ?? ""]),
+          contentType: "text/plain",
+        });
+      }
+    } finally {
+      removePackagedHome(home);
+    }
+  });
+  return home;
+};
 
 export const readDescriptor = (home: string) => {
   const path = join(home, "runtime.json");
@@ -121,7 +138,7 @@ const launchPackaged = async <T>(
   waitForStartup: (home: string) => Promise<T>,
 ) => {
   const startedAt = Date.now();
-  const child = spawn(
+  const child = spawnPackagedProcess(
     packageLayout.executable,
     ["--remote-debugging-port=0", `--user-data-dir=${join(home, "electron-user-data")}`],
     {
@@ -144,7 +161,7 @@ const launchPackaged = async <T>(
     return { home, browser, child, lifecyclePage, startedAt, startup, finishTrace };
   } catch (error) {
     await browser?.close().catch(() => {});
-    if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+    await stopPackagedProcess(child);
     throw error;
   }
 };
@@ -194,7 +211,7 @@ export const waitForExit = (child: ChildProcess) =>
 
 export const runPackagedCli = (home: string, args: string[]) =>
   new Promise<{ exitCode: number | null; stderr: string; stdout: string }>((resolveExit) => {
-    const child = spawn(packageLayout.sidecar, args, {
+    const child = spawnPackagedProcess(packageLayout.sidecar, args, {
       cwd: home,
       env: packagedEnvironment(home),
       stdio: "pipe",
@@ -220,7 +237,7 @@ export const disposePackagedApp = async (app: PackagedWindow | null) => {
     contentType: "text/plain",
   });
   await app.browser.close().catch(() => {});
-  if (app.child.exitCode === null && app.child.signalCode === null) app.child.kill("SIGKILL");
+  await stopPackagedProcess(app.child);
 };
 
 export const removePackagedHome = (home: string) => {

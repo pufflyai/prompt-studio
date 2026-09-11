@@ -1,16 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  getWorkbenchRenderers,
-  type ResourceRef,
-  type TreeNode,
-  type TreeViewSection,
-  type WorkbenchCore,
-} from "../../../core";
+import { getWorkbenchRenderers, type ResourceRef, type TreeNode, type WorkbenchCore } from "../../../core";
 import {
   expandDefaultTreeSections,
+  type LoadedTreeData,
   loadExpandedTreeChildren,
   loadTreeData,
-  shouldShowTreeLoading,
 } from "./tree-view-load";
 
 export const useTreeData = (
@@ -20,13 +14,9 @@ export const useTreeData = (
   viewId?: string,
   filter?: string,
 ) => {
-  const [header, setHeader] = useState<TreeViewSection[]>([]);
-  const [body, setBody] = useState<TreeViewSection[]>([]);
-  const [footer, setFooter] = useState<TreeViewSection[]>([]);
+  const [data, setData] = useState<(LoadedTreeData & { treeViewId: string; filter?: string }) | null>(null);
   const [childrenByNodeId, setChildrenByNodeId] = useState<Record<string, TreeNode[]>>({});
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const loadedTreeIdRef = useRef<string | null>(null);
   const loadRevisionRef = useRef(0);
 
   useEffect(() => {
@@ -35,7 +25,6 @@ export const useTreeData = (
 
     const loadTree = () => {
       const loadRevision = ++loadRevisionRef.current;
-      if (shouldShowTreeLoading(loadedTreeIdRef.current, treeViewId)) setLoading(true);
       setError(null);
       void loadTreeData(getWorkbenchRenderers(workbench), treeViewId, { resource, viewId, filter })
         .then(async (data) => {
@@ -52,17 +41,18 @@ export const useTreeData = (
                 )
               : {};
           if (cancelled || loadRevision !== loadRevisionRef.current) return;
-          loadedTreeIdRef.current = treeViewId;
-          setHeader(data?.header ?? []);
-          setBody(data?.body ?? []);
-          setFooter(data?.footer ?? []);
+          setData({
+            header: data?.header ?? [],
+            body: data?.body ?? [],
+            footer: data?.footer ?? [],
+            treeViewId,
+            filter,
+          });
           setChildrenByNodeId(children);
-          setLoading(false);
         })
         .catch((loadError) => {
           if (cancelled || loadRevision !== loadRevisionRef.current) return;
           setError(loadError instanceof Error ? loadError.message : "The file tree could not be loaded.");
-          setLoading(false);
         });
     };
 
@@ -76,5 +66,16 @@ export const useTreeData = (
     };
   }, [filter, resource, viewId, workbench, treeViewId]);
 
-  return { body, childrenByNodeId, error, footer, header, loading, setChildrenByNodeId };
+  // Refreshes preserve the current tree, but a different query must not expose
+  // stale rows that can disappear in the middle of a click.
+  const loading = !error && (data?.treeViewId !== treeViewId || data?.filter !== filter);
+  return {
+    body: data?.body ?? [],
+    childrenByNodeId,
+    error,
+    footer: data?.footer ?? [],
+    header: data?.header ?? [],
+    loading,
+    setChildrenByNodeId,
+  };
 };

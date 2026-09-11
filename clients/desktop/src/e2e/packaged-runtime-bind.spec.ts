@@ -1,5 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect } from "@playwright/test";
 import { classifyRuntimeFailure } from "../runtime/runtime-controller";
+import { test } from "../testing/packaged-fixture";
 import {
   createPackagedHome,
   readDescriptor,

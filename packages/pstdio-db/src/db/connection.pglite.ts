@@ -2,7 +2,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { PGlite } from "@electric-sql/pglite";
+import type { PGlite } from "@electric-sql/pglite";
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
 import { normalizeEmbeddedFileName } from "pstdio-paths";
@@ -11,6 +11,7 @@ import {
   hasLegacyTemplatesTable,
   migrateLegacyTemplates,
 } from "./legacy-template-migration";
+import { openPglite } from "./open-pglite";
 import { ensureDbDirectory, resolveDbPath } from "./paths";
 import { acquirePgliteLock } from "./pglite-lock";
 import * as schema from "./schemas.pg";
@@ -24,6 +25,7 @@ const DRIZZLE_PREFIX = "../../pstdio-db/drizzle/";
 const DRIZZLE_EXTRACT_DIR = "pstdio-drizzle";
 const PGLITE_WASM_SUFFIX = "/pstdio-db/vendor/pglite/pglite.wasm";
 const PGLITE_DATA_SUFFIX = "/pstdio-db/vendor/pglite/pglite.data";
+const PGLITE_INITIAL_DATABASE_SUFFIX = "/pstdio-db/vendor/pglite/initial-database.tar.gz";
 const LEGACY_TEMPLATE_STORAGE_MIGRATION = 17;
 
 const migrateThroughLegacyTemplateStorage = async (db: PgliteDatabase<typeof schema>, migrationsFolder: string) => {
@@ -94,18 +96,21 @@ export const resolveMigrationsFolder = async (
 export const resolvePgliteOptions = async (embeddedFiles: readonly EmbeddedFile[] = getEmbeddedFiles()) => {
   const wasmFile = embeddedFiles.find((file) => normalizeEmbeddedFileName(file.name).endsWith(PGLITE_WASM_SUFFIX));
   const dataFile = embeddedFiles.find((file) => normalizeEmbeddedFileName(file.name).endsWith(PGLITE_DATA_SUFFIX));
+  const initialDatabase = embeddedFiles.find((file) =>
+    normalizeEmbeddedFileName(file.name).endsWith(PGLITE_INITIAL_DATABASE_SUFFIX),
+  );
 
-  if (!wasmFile && !dataFile) return {};
-  if (!wasmFile || !dataFile) {
+  if (!wasmFile && !dataFile && !initialDatabase) return {};
+  if (!wasmFile || !dataFile || !initialDatabase) {
     throw new Error(
-      `Partial PGlite embed: expected both *${PGLITE_WASM_SUFFIX} and *${PGLITE_DATA_SUFFIX} in embedded files.`,
+      "Partial PGlite embed: expected the WebAssembly module, filesystem bundle, and initial database image.",
     );
   }
 
   const wasmBytes = await wasmFile.arrayBuffer();
   const wasmModule = await WebAssembly.compile(wasmBytes);
 
-  return { fsBundle: dataFile, wasmModule };
+  return { fsBundle: dataFile, wasmModule, loadDataDir: initialDatabase };
 };
 
 export const createDb = async (options?: { path?: string; onLockAcquired?: () => void }) => {
@@ -119,7 +124,7 @@ export const createDb = async (options?: { path?: string; onLockAcquired?: () =>
   try {
     options?.onLockAcquired?.();
     const pgliteOpts = await resolvePgliteOptions();
-    pglite = dbPath === ":memory:" ? new PGlite(pgliteOpts) : new PGlite(dbPath, pgliteOpts);
+    pglite = openPglite(dbPath, pgliteOpts);
     const openedPglite = pglite;
     await openedPglite.waitReady;
     console.log("[createDb] PGlite ready");

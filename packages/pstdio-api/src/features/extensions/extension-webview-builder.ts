@@ -40,6 +40,8 @@ export const buildExtensionWebview: ExtensionWebviewBuilder = async (input) => {
       outdir: input.outdir,
       target: "browser",
       format: "esm",
+      define: { "process.env.NODE_ENV": '"production"' },
+      minify: true,
       naming: {
         entry: "module.[ext]",
         asset: "[name]-[hash].[ext]",

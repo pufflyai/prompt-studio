@@ -1,9 +1,12 @@
-FROM oven/bun:1.3.14 AS builder
+FROM node:24-bookworm-slim AS builder
+
+COPY --from=oven/bun:1.4.2 /usr/local/bin/bun /usr/local/bin/bun
 
 WORKDIR /app
 
 # Copy the full workspace so every package.json declared in bun.lock is present.
 COPY package.json bun.lock tsconfig.base.json ./
+COPY patches patches
 COPY packages packages
 COPY clients clients
 COPY extensions extensions
@@ -13,7 +16,7 @@ COPY .pstdio/extensions/pstdio-dev/package.json .pstdio/extensions/pstdio-dev/pa
 COPY .pstdio/extensions/pstdio-planner-loops/package.json .pstdio/extensions/pstdio-planner-loops/package.json
 COPY scripts scripts
 
-RUN bun install --frozen-lockfile --ignore-scripts
+RUN bun install --frozen-lockfile --ignore-scripts --filter @pstdio/landing-page
 
 RUN cd packages/ui && bun run build
 RUN cd clients/landing-page && bun run build

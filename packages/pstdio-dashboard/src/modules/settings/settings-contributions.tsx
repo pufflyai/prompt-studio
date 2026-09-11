@@ -1,5 +1,7 @@
+import { Spinner } from "@chakra-ui/react";
 import { standardResourceIcons, type WorkbenchModuleContext, type WorkbenchPanelRenderInput } from "@pstdio/workbench";
 import { WORKBENCH_SETTINGS_OPEN_COMMAND_ID } from "@pstdio/workbench/react";
+import { lazy, Suspense } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId, getDashboardSelectedProjectName } from "@/shared/app/project-context";
 import { dashboardEditableTemplatesContextKey } from "@/shared/extensions/workbench-extension-contributions";
@@ -9,7 +11,6 @@ import { MachineTokensPanel } from "./components/machine-tokens-panel";
 import { ProjectDangerZone } from "./components/project-danger-zone";
 import { ProjectRepositoriesPanel } from "./components/project-repositories-panel";
 import { RuntimeSettingsPanel } from "./components/runtime-settings-panel";
-import { SkillViewer } from "./components/skill-viewer";
 import { TemplateSettingsEditor } from "./components/template-settings-editor";
 import { getProjectSkills, type ProjectSkill } from "./data/skills-api";
 import {
@@ -17,6 +18,8 @@ import {
   type ProjectTemplateAsset,
   templateTypesForProject,
 } from "./data/template-provider-api";
+
+const SkillViewer = lazy(() => import("./components/skill-viewer").then((module) => ({ default: module.SkillViewer })));
 
 // The default settings entry opened by the command/sidenav. It is global, so it
 // stays reachable even when no project is selected.
@@ -87,7 +90,11 @@ export const registerDashboardSettingsContributions = (ctx: WorkbenchModuleConte
       kind: "react",
       render: (input) => {
         const skill = settingsItem<ProjectSkill>(input, "skills");
-        return skill ? <SkillViewer projectId={getDashboardSelectedProjectId(ctx)} skillName={skill.name} /> : null;
+        return skill ? (
+          <Suspense fallback={<Spinner />}>
+            <SkillViewer projectId={getDashboardSelectedProjectId(ctx)} skillName={skill.name} />
+          </Suspense>
+        ) : null;
       },
     },
   });
