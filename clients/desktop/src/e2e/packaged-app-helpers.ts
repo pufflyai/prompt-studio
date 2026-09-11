@@ -6,7 +6,7 @@ import { type Browser, chromium, expect, type Page, test } from "@playwright/tes
 import type { RuntimeDescriptor } from "pstdio/runtime";
 import { redactSensitiveText } from "pstdio-logging";
 import { resolvePackagedLayout } from "../packaging/package-layout";
-import { registerPackagedCleanup, spawnPackagedProcess } from "../testing/packaged-fixture";
+import { registerPackagedCleanup, spawnPackagedProcess, stopPackagedProcess } from "../testing/packaged-fixture";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
 import { waitForVisibleElement } from "./visible-element-timing";
@@ -161,7 +161,7 @@ const launchPackaged = async <T>(
     return { home, browser, child, lifecyclePage, startedAt, startup, finishTrace };
   } catch (error) {
     await browser?.close().catch(() => {});
-    if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+    await stopPackagedProcess(child);
     throw error;
   }
 };
@@ -237,7 +237,7 @@ export const disposePackagedApp = async (app: PackagedWindow | null) => {
     contentType: "text/plain",
   });
   await app.browser.close().catch(() => {});
-  if (app.child.exitCode === null && app.child.signalCode === null) app.child.kill("SIGKILL");
+  await stopPackagedProcess(app.child);
 };
 
 export const removePackagedHome = (home: string) => {

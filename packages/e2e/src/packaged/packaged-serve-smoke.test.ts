@@ -84,6 +84,7 @@ describe("packaged pstdio — self-hosted serve", () => {
           headers: runtimeAuthorization(started.descriptor),
         });
         expect(projectsRes.status).toBe(200);
+        expect(await projectsRes.json()).toEqual([]);
       } finally {
         if (child) {
           await stopProcess(child);
