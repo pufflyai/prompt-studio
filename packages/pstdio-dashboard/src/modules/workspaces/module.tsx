@@ -1,6 +1,8 @@
+import { Spinner } from "@chakra-ui/react";
 import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
 import type { TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
+import { lazy, Suspense } from "react";
 import { dashboardCommandIds } from "@/shared/app/commands";
 import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { dashboardViews } from "@/shared/app/resources";
@@ -14,11 +16,14 @@ import { registerWorkspaceDataTableView } from "./collections/workspace-data-tab
 import { CreateWorkspaceWidget } from "./components/create-workspace-widget";
 import { DeleteWorkspaceEntryWidget } from "./components/delete-workspace-entry-widget";
 import { RenameWorkspaceWidget } from "./components/rename-workspace-widget";
-import { WorkspaceDiffsPanel } from "./components/workspace-widget";
 import { resourceMetadataString } from "./resource-metadata";
 import { registerWorkspaceFileContributions } from "./workspace-file-contributions";
 import { ensureWorkspaceTerminalResource, registerWorkspaceResourceActions } from "./workspace-resource-actions";
 import { watchOpenWorkspaceResource } from "./workspace-resource-sync";
+
+const WorkspaceDiffsPanel = lazy(() =>
+  import("./components/workspace-widget").then((module) => ({ default: module.WorkspaceDiffsPanel })),
+);
 
 const openCreateWorkspace = (ctx: WorkbenchModuleContext) => {
   const projectId = getDashboardSelectedProjectId(ctx);
@@ -105,7 +110,14 @@ const registerWorkspaceDetailWidgets = (ctx: WorkbenchModuleContext) => {
       id: dashboardWidgetIds.workspaceDiffs,
       title: "Changes",
       icon: "FileDiff",
-      body: { kind: "react", render: (input) => <WorkspaceDiffsPanel input={input} /> },
+      body: {
+        kind: "react",
+        render: (input) => (
+          <Suspense fallback={<Spinner />}>
+            <WorkspaceDiffsPanel input={input} />
+          </Suspense>
+        ),
+      },
     },
     { priority: 70 },
   );
