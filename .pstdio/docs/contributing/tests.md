@@ -6,6 +6,8 @@ Use Bun 1.3.14 and Node 24, matching CI. Install dependencies with `bun install 
 
 Native CI installs use `scripts/ci/install-native-dependencies.ts`. On Linux and macOS it gives node-gyp the headers already installed with Node. This removes another download from native addon builds. The setting applies only to dependency installation; Electron packaging selects the headers for Electron separately.
 
+The version-scoped Playwright patch gives its API request agents Node's normal five-second idle socket expiry. This prevents later request contexts from reusing expired connections. It does not retry failed requests. ADR 0027 records the external limitation and removal criteria. Docker build stages copy `patches/` with the lockfile so frozen installs apply the same dependency fixes.
+
 `bun run validate` checks changesets, the lockfile, formatting, package boundaries, and extension API versions. It builds the monorepo before checking translations, linting, and testing. Translation validation and type checks load compiled SDK exports, so the build must come first on a clean checkout. Formatting is checked without changing files.
 
 `bun run test` runs package tests through Lerna, followed by the E2E script, CLI, UI, and Vite terminal suites. Packaged and desktop tests run separately in CI.
