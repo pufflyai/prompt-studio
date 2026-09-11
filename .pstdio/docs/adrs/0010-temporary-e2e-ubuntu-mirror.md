@@ -2,7 +2,9 @@
 
 ## Status
 
-Temporary workaround for slow Azure Ubuntu package downloads on GitHub-hosted runners. Remove it when the runner mirror can install Playwright dependencies within the existing end-to-end job limit.
+Temporary workaround retained only for native Linux desktop dependency installation.
+
+Linux UI, CLI, and packaged/Vite jobs now use the version-matched Playwright image with browsers and system libraries already installed. Run 34570969868 also stalled on the canonical archive: its packaged job spent nearly 15 minutes downloading system libraries and reached the unchanged 18-minute limit before tests started. A prebuilt browser environment replaces the mirror override for those jobs.
 
 ## Ideal design
 
@@ -26,8 +28,8 @@ The end-to-end job no longer uses the runner's nearest configured Ubuntu mirror.
 
 ## Isolation
 
-The override is limited to one step in the Linux end-to-end job. It does not change product code, local development, packaged verification, other CI jobs, browser versions, test coverage, or timeout values.
+The override is limited to native Linux desktop setup. It does not change product code, local development, browser versions, test coverage, or timeout values.
 
 ## Removal
 
-Periodically test the workflow without the override. Remove the step and this ADR after three representative pull request runs install Playwright dependencies and finish the full end-to-end job within the existing 18-minute limit using the runner-provided mirror.
+Periodically test native Linux desktop setup without the override. Remove the remaining step after three representative pull request runs install its dependencies and finish within the existing job limit using the runner-provided mirror. Keep this ADR as the record of the retired workaround.

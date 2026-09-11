@@ -60,6 +60,9 @@ jobs:
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 18
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --init --ipc=host
     strategy:
       fail-fast: false
       matrix:
@@ -88,13 +91,6 @@ jobs:
       - name: Build end-to-end dependencies
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
 
-      # Temporary workaround documented in ADR 0010.
-      - name: Use canonical Ubuntu package mirror
-        run: sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
-
-      - name: Install Playwright browsers
-        run: bun run --cwd packages/e2e playwright install --with-deps chromium
-
       - name: Test UI e2e
         run: bun run --cwd packages/e2e test:ui -- --shard=${{ matrix.shard }}/3
 
@@ -111,6 +107,9 @@ jobs:
   e2e_cli:
     runs-on: ubuntu-latest
     timeout-minutes: 18
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --init --ipc=host
     env:
       BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
       E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
@@ -131,13 +130,6 @@ jobs:
       - name: Build end-to-end dependencies
         run: bun run build -- --scope e2e --scope pstdio-dashboard --include-dependencies
 
-      # Temporary workaround documented in ADR 0010.
-      - name: Use canonical Ubuntu package mirror
-        run: sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
-
-      - name: Install Firefox for CLI shutdown tests
-        run: bun run --cwd packages/e2e playwright install --with-deps firefox
-
       - name: Test e2e scripts
         run: bun run --cwd packages/e2e test:scripts
 
@@ -147,6 +139,9 @@ jobs:
   packaged_and_vite_e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 18
+    container:
+      image: mcr.microsoft.com/playwright:v1.60.0-noble
+      options: --init --ipc=host
     env:
       BUN_INSTALL_CACHE_DIR: /tmp/pstdio-ci-bun-cache
       E2E_BUN_CACHE_DIR: /tmp/pstdio-ci-bun-cache
@@ -170,13 +165,6 @@ jobs:
 
       - name: Build monorepo
         run: bun run build
-
-      # Temporary workaround documented in ADR 0010.
-      - name: Use canonical Ubuntu package mirror
-        run: sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
-
-      - name: Install Playwright browsers
-        run: bun run --cwd packages/e2e playwright install --with-deps chromium firefox webkit
 
       - name: Test Vite terminal e2e
         run: bun run --cwd packages/e2e test:vite-terminal
