@@ -2,7 +2,7 @@
 
 ## Validation
 
-Use Bun 1.3.14 and Node 24, matching CI. Install dependencies with `bun install --frozen-lockfile`.
+Use Bun 1.3.14 and Node 24, matching CI. Install dependencies with `bun install --frozen-lockfile`. The root pins `node-gyp` so native addon install scripts use the local build tool instead of a temporary `bunx node-gyp@latest` download.
 
 `bun run validate` checks changesets, the lockfile, formatting, package boundaries, and extension API versions. It builds the monorepo before checking translations, linting, and testing. Translation validation and type checks load compiled SDK exports, so the build must come first on a clean checkout. Formatting is checked without changing files.
 
