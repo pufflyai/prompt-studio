@@ -3,13 +3,15 @@ services:
     build:
       context: ../..
       dockerfile: infra/local/Dockerfile
+      args:
+        HOST_UID: ${HOST_UID:?HOST_UID is required}
+        HOST_GID: ${HOST_GID:?HOST_GID is required}
+        CONTAINER_WORKTREE: ${CONTAINER_WORKTREE:?CONTAINER_WORKTREE is required}
     init: true
+    user: ${HOST_UID:?HOST_UID is required}:${HOST_GID:?HOST_GID is required}
     working_dir: ${CONTAINER_WORKTREE:?CONTAINER_WORKTREE is required}
     environment:
       DISABLE_AUTOUPDATER: "1"
-      # The container runs as root; without this Claude Code refuses bypassPermissions
-      # ("--dangerously-skip-permissions cannot be used with root") and never starts.
-      IS_SANDBOX: "1"
       PSTDIO_DISABLE_API_AUTO_START: "1"
       PSTDIO_DISABLE_EMBED_MANIFEST: "1"
       PSTDIO_DEFAULT_EXTENSIONS: '${PSTDIO_DEFAULT_EXTENSIONS:-["harness-claude-code","harness-codex","harness-open-code","pstdio-base-themes","pstdio-planner","pstdio-planner-loops","pstdio-skills","extension-lab"]}'
@@ -21,11 +23,11 @@ services:
       PSTDIO_TERMINAL_WEBSOCKET_URL: ${PSTDIO_TERMINAL_WEBSOCKET_URL:?PSTDIO_TERMINAL_WEBSOCKET_URL is required}
     command:
       - bash
-      - -lc
+      - -c
       - |
         set -e
         PROJECT_ROOT=/workspace/project
-        pstdio_bin=/usr/local/bin/pstdio
+        pstdio_bin=/home/bun/.local/bin/pstdio
         api_port=19841
         if [ "$$PSTDIO_DESKTOP_FLOW" = "1" ]; then
           api_port=${CONTAINER_API_PORT:-19841}
@@ -35,7 +37,7 @@ services:
 
         bun install --frozen-lockfile
         bunx lerna run build --scope @pstdio/workbench --include-dependencies
-        bun run pstdio:local:add-dev --install-dir /usr/local/bin --api-url "$$api_url"
+        bun run pstdio:local:add-dev --install-dir /home/bun/.local/bin --api-url "$$api_url"
 
         if [ "$$PSTDIO_DESKTOP_FLOW" = "1" ]; then
           bunx lerna run build --scope pstdio-dashboard --include-dependencies
@@ -100,26 +102,26 @@ services:
         target: ${CONTAINER_WORKTREE:?CONTAINER_WORKTREE is required}/node_modules
       - type: volume
         source: bun-cache
-        target: /root/.bun/install/cache
+        target: /home/bun/.bun/install/cache
       - type: volume
         target: /workspace/project
       - type: volume
         source: opencode-config
-        target: /root/.config/opencode
+        target: /home/bun/.config/opencode
       - type: volume
-        target: /root/.local/share/opencode
+        target: /home/bun/.local/share/opencode
       - type: bind
         source: ${HOME}/.local/share/opencode/auth.json
-        target: /root/.local/share/opencode/auth.json
+        target: /home/bun/.local/share/opencode/auth.json
       - type: bind
         source: ${HOME}/.local/share/opencode/mcp-auth.json
-        target: /root/.local/share/opencode/mcp-auth.json
+        target: /home/bun/.local/share/opencode/mcp-auth.json
       - type: volume
         source: claude-config
-        target: /root/.claude
+        target: /home/bun/.claude
       - type: bind
         source: ${HOME}/.codex/auth.json
-        target: /root/.codex/auth.json
+        target: /home/bun/.codex/auth.json
 
 volumes:
   bun-cache:
