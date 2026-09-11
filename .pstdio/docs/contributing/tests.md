@@ -49,6 +49,8 @@ Playwright uses one worker and no retries. CI rejects focused Playwright tests (
 
 CI runs CLI E2E and three browser shards in separate jobs. Each shard has its own runtime, home, and database. Files stay intact and use one worker, so ordered tests share no state across runners. Every shard and the CLI job must pass before Docker builds start. Each UI shard uploads `ui-e2e-results-<shard>`; the packaged/Vite job uploads `packaged-vite-e2e-results`. Reports and failure artifacts are under `packages/e2e/playwright-report` and `packages/e2e/test-results`. Desktop jobs upload their own readiness results and traces.
 
+Linux UI, CLI, and packaged/Vite jobs use the official `mcr.microsoft.com/playwright:v1.60.0-noble` image. It includes the browser binaries and system libraries, so these jobs do not install Ubuntu packages or browsers during setup. Keep the image version aligned with the installed Playwright version when updating dependencies. Desktop jobs still run on their native Linux and macOS runners.
+
 The UI suite has no migration quarantine list. Obsolete dashboard specs were removed. Current tests cover project selection, ticket workflows, session follow-ups, workspace files and terminals, extension lifecycle, and workbench navigation. Add coverage for restored features against the current UI. Live Claude, Codex, and OpenCode follow-up tests skip unless `E2E_AGENTS` selects the provider. Packaged browser checks cover Chromium, Firefox, and WebKit; the main UI suite covers Chromium.
 
 To investigate a failure, keep retries disabled and repeat the affected spec:
