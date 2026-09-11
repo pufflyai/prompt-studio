@@ -1,3 +1,4 @@
+import { Spinner } from "@chakra-ui/react";
 import { resourceKey, workbenchPages, workbenchPanels } from "@pstdio/sdk/extensions";
 import {
   type ResourceRef,
@@ -5,7 +6,7 @@ import {
   type WorkbenchModuleContribution,
   workbenchCommandPaletteMenuPath,
 } from "@pstdio/workbench";
-import { SessionViewWidget } from "@/modules/sessions/components/session-widget";
+import { lazy, Suspense } from "react";
 import {
   forgetDashboardSession,
   getDashboardSelectedSession,
@@ -25,12 +26,23 @@ import { createDashboardSessions, findDashboardSession } from "./data/dashboard-
 import { openResourceSessionPreview } from "./session-auto-open";
 import { createSessionsSidenavSections } from "./sessions-sidenav-tree";
 
+const SessionViewWidget = lazy(() =>
+  import("@/modules/sessions/components/session-widget").then((module) => ({ default: module.SessionViewWidget })),
+);
+
 const registerSessionWidgets = (ctx: WorkbenchModuleContext, drafts?: DashboardSessionDraftPersistence) => {
   ctx.views.registerView(
     {
       id: dashboardWidgetIds.session,
       title: "Session",
-      body: { kind: "react", render: (input) => <SessionViewWidget input={input} drafts={drafts} /> },
+      body: {
+        kind: "react",
+        render: (input) => (
+          <Suspense fallback={<Spinner />}>
+            <SessionViewWidget input={input} drafts={drafts} />
+          </Suspense>
+        ),
+      },
     },
     { priority: 40 },
   );

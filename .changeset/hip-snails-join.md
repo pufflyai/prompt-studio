@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Prevent stale file search clicks and speed up extension webview startup.
+Prevent stale file search clicks and speed up dashboard and extension webview startup.
