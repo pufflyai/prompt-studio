@@ -9,6 +9,7 @@ on:
       - ".github/workflows/release-desktop.yml"
       - ".github/workflows/release-packages.yml"
       - "bun.lock"
+      - "patches/**"
       - "clients/desktop/**"
       - "package.json"
       - "extensions/**"
