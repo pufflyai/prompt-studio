@@ -1,13 +1,15 @@
 import { Box, Button, Code, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { SessionIndicator } from "@pstdio/ui";
+import { KanbanRendererBoard } from "@pstdio/ui/kanban-renderer";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Check, CircleDashed } from "lucide-react";
 import { useState } from "react";
-import { KanbanRendererBoard } from "@/components/kanban-renderer/kanban-renderer-board";
-import { SessionIndicator } from "@/components/primitives/session-indicator";
+import { landingStorySlotRecipe } from "./landing-story";
+import { landingToolDemoSlotRecipe } from "./landing-tool-demo";
 
 const AgentDemo = () => {
-  const story = useSlotRecipe({ key: "landingStory" })({});
-  const styles = useSlotRecipe({ key: "landingToolDemo" })({});
+  const story = useSlotRecipe({ recipe: landingStorySlotRecipe })({});
+  const styles = useSlotRecipe({ recipe: landingToolDemoSlotRecipe })({});
   const [completed, setCompleted] = useState(false);
   const task = {
     id: "TOOL-16",

@@ -1,11 +1,12 @@
 import { Box, Icon, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { createGlyphIcon } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
-import { createGlyphIcon } from "@/components/primitives/glyph-icon";
+import { landingStorySlotRecipe } from "./landing-story";
 
 const ExampleIcon = createGlyphIcon("cloud-add");
 
 const LandingStory = () => {
-  const styles = useSlotRecipe({ key: "landingStory" })({ spacing: "spacious" });
+  const styles = useSlotRecipe({ recipe: landingStorySlotRecipe })({ spacing: "spacious" });
   return (
     <Box css={styles.page}>
       <Box css={styles.section}>

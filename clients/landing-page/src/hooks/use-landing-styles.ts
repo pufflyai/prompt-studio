@@ -1,10 +1,13 @@
 import { useSlotRecipe } from "@chakra-ui/react";
+import { landingSlotRecipe } from "../theme/recipes/landing";
+import { landingStorySlotRecipe } from "../theme/recipes/landing-story";
+import { landingToolDemoSlotRecipe } from "../theme/recipes/landing-tool-demo";
 
 export const useLandingStyles = (windowed = false) => {
-  const recipe = useSlotRecipe({ key: "landing" });
+  const recipe = useSlotRecipe({ recipe: landingSlotRecipe });
   return recipe({ windowed });
 };
 
 export const useStoryStyles = (spacing: "normal" | "spacious" = "normal") =>
-  useSlotRecipe({ key: "landingStory" })({ spacing });
-export const useToolDemoStyles = () => useSlotRecipe({ key: "landingToolDemo" })({});
+  useSlotRecipe({ recipe: landingStorySlotRecipe })({ spacing });
+export const useToolDemoStyles = () => useSlotRecipe({ recipe: landingToolDemoSlotRecipe })({});

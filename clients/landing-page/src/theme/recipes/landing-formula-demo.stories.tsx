@@ -1,11 +1,13 @@
 import { Box, chakra, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Slider } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { Slider } from "@/components/primitives/slider";
+import { landingStorySlotRecipe } from "./landing-story";
+import { landingToolDemoSlotRecipe } from "./landing-tool-demo";
 
 const FormulaDemo = () => {
-  const styles = useSlotRecipe({ key: "landingToolDemo" })({});
-  const story = useSlotRecipe({ key: "landingStory" })({});
+  const styles = useSlotRecipe({ recipe: landingToolDemoSlotRecipe })({});
+  const story = useSlotRecipe({ recipe: landingStorySlotRecipe })({});
   const [years, setYears] = useState(10);
   const balance = (year: number) => 10000 * 1.005 ** (year * 12) + (300 * (1.005 ** (year * 12) - 1)) / 0.005;
   const result = balance(years);

@@ -1,4 +1,5 @@
 import { Badge, Box, Button, chakra, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { ResizableSplitLayout, ScrollArea, SearchableMenu } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import {
   ArrowLeft,
@@ -12,9 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { ResizableSplitLayout } from "@/components/layout/resizable-split-layout";
-import { SearchableMenu } from "@/components/overlays/searchable-menu";
-import { ScrollArea } from "@/components/primitives/scroll-area";
+import { landingSlotRecipe } from "./landing";
 
 const STORY_PAGES = [
   { label: "Start Here", title: "" },
@@ -29,7 +28,7 @@ const LandingPanels = (props: { initialPage?: number; desktopAvailable?: boolean
   const [pageIndex, setPageIndex] = useState(initialPage);
   const activeSection = STORY_PAGES[pageIndex].title;
   const nextPageIndex = (pageIndex + 1) % STORY_PAGES.length;
-  const recipe = useSlotRecipe({ key: "landing" });
+  const recipe = useSlotRecipe({ recipe: landingSlotRecipe });
   const styles = recipe({ windowed });
   const controls = [
     { id: "close", label: "Close", icon: X, disabled: windowed },
