@@ -9,6 +9,7 @@ import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { posix, resolve } from "node:path";
 import { waitForRuntimeDescriptor } from "./desktop-runtime-startup";
+import { resolveIsolatedUser } from "./isolated-user";
 import { resolveWorkingTreeDefaultExtensions } from "./working-tree-extensions";
 
 const COMPOSE_FILE = "infra/local/compose.yaml";
@@ -117,6 +118,7 @@ export const composeMountPaths = ({
 });
 const composeEnv = (repoRoot: string, projectName: string, hostPorts?: HostPorts, desktopMode = false) => ({
   ...process.env,
+  ...resolveIsolatedUser(),
   HOME: process.env.HOME ?? process.env.USERPROFILE,
   ...composeMountPaths({
     gitCommonDir: resolveGitCommonDir(repoRoot),
@@ -249,6 +251,7 @@ const main = async () => {
     return;
   }
 
+  resolveIsolatedUser();
   const repoRoot = resolve(import.meta.dir, "../..");
   const projectName = parseFlagValue(args, "--name") ?? `${PROJECT_PREFIX}-${randomBytes(2).toString("hex")}`;
   const desktopMode = hasFlag(args, "--desktop");
