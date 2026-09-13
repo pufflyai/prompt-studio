@@ -6,7 +6,9 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "storybook": "storybook dev -p 6007",
+    "build-storybook": "storybook build"
   },
   "engines": {
     "bun": ">=1.4.2"
@@ -20,12 +22,17 @@
     "astro": "^7.1.0",
     "lucide-react": "^0.556.0",
     "matter-js": "^0.20.0",
+    "posthog-js": "^1.430.3",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
     "@types/matter-js": "^0.20.2",
     "@types/react": "^19.2.0",
-    "@types/react-dom": "^19.2.0"
+    "@types/react-dom": "^19.2.0",
+    "@storybook/addon-docs": "^10.1.9",
+    "@storybook/react": "^10.1.9",
+    "@storybook/react-vite": "^10.1.9",
+    "storybook": "^10.1.9"
   }
 }

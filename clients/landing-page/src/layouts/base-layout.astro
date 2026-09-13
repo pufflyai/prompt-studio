@@ -38,6 +38,7 @@ const faviconPngUrl = new URL(siteMetadata.faviconPngPath, siteMetadata.siteUrl)
     <link rel="icon" type="image/png" href={faviconPngUrl} />
 
     {indexable && <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />}
+    <script src="../services/analytics.ts"></script>
     <script>
       const stored = localStorage.getItem("theme-preference");
       const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;

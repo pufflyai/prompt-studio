@@ -11,6 +11,8 @@ export const landingSlotRecipe = defineSlotRecipe({
     "mobileNav",
     "sidebar",
     "status",
+    "copyright",
+    "releaseBadge",
     "body",
     "main",
     "hero",
@@ -104,6 +106,8 @@ export const landingSlotRecipe = defineSlotRecipe({
       px: "xs",
       color: "fg.muted",
     },
+    copyright: { textStyle: { base: "label/XS", md: "label/S/medium" }, whiteSpace: "nowrap" },
+    releaseBadge: { bg: "illustration.skill", color: "white" },
     body: { display: "flex", flex: 1, minHeight: 0, p: "panel-gap" },
     main: { flex: 1, minHeight: 0, minWidth: 0, position: "relative", overflow: "hidden" },
     panelsScroll: {
@@ -153,7 +157,7 @@ export const landingSlotRecipe = defineSlotRecipe({
       overflow: "hidden",
       width: "full",
       height: "full",
-      minHeight: "0",
+      minHeight: { base: "56", lg: "full" },
     },
     download: { display: "flex", flexDirection: "column", gap: "sm", alignItems: "start", width: "full" },
     brandTab: {

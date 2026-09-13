@@ -1,4 +1,5 @@
-import { Box, Button, chakra, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Badge, Box, Button, chakra, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { ResizableSplitLayout, ScrollArea, SearchableMenu } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import {
   ArrowLeft,
@@ -12,9 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import { ResizableSplitLayout } from "@/components/layout/resizable-split-layout";
-import { SearchableMenu } from "@/components/overlays/searchable-menu";
-import { ScrollArea } from "@/components/primitives/scroll-area";
+import { landingSlotRecipe } from "./landing";
 
 const STORY_PAGES = [
   { label: "Start Here", title: "" },
@@ -29,7 +28,7 @@ const LandingPanels = (props: { initialPage?: number; desktopAvailable?: boolean
   const [pageIndex, setPageIndex] = useState(initialPage);
   const activeSection = STORY_PAGES[pageIndex].title;
   const nextPageIndex = (pageIndex + 1) % STORY_PAGES.length;
-  const recipe = useSlotRecipe({ key: "landing" });
+  const recipe = useSlotRecipe({ recipe: landingSlotRecipe });
   const styles = recipe({ windowed });
   const controls = [
     { id: "close", label: "Close", icon: X, disabled: windowed },
@@ -67,6 +66,7 @@ const LandingPanels = (props: { initialPage?: number; desktopAvailable?: boolean
         </Box>
         <Box css={styles.body}>
           <ResizableSplitLayout
+            layout={{ base: "stacked-reverse", lg: "split" }}
             width="full"
             height="full"
             resizableSide="left"
@@ -80,6 +80,11 @@ const LandingPanels = (props: { initialPage?: number; desktopAvailable?: boolean
                 <Box flex="1" minHeight="0">
                   <ScrollArea height="full">
                     <Box css={styles.heroCopy}>
+                      <HStack>
+                        <Badge css={styles.releaseBadge} size="lg">
+                          Alpha release
+                        </Badge>
+                      </HStack>
                       <Text as="h1" textStyle="heading/XL">
                         A workbench for your tools.
                       </Text>
@@ -175,7 +180,7 @@ const LandingPanels = (props: { initialPage?: number; desktopAvailable?: boolean
           <Button size="xs" variant="ghost">
             Terms
           </Button>
-          <Text color="fg" textStyle="label/S/medium" ms="auto" flexShrink="0">
+          <Text color="fg" css={styles.copyright} ms="auto" flexShrink="0">
             © Pufflig AB. Stockholm, 2026
           </Text>
         </HStack>
@@ -193,6 +198,7 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 export const Desktop: Story = {};
+export const Mobile: Story = { globals: { viewport: { value: "mobile1", isRotated: false } } };
 export const Windowed: Story = { args: { windowed: true } };
 export const DesktopUnavailable: Story = { args: { desktopAvailable: false } };
 export const WhatIsPromptStudio: Story = { args: { initialPage: 1 } };

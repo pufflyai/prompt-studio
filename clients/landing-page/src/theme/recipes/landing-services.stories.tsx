@@ -1,14 +1,15 @@
 import { Badge, Box, HStack, Input, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { ListRow, Switch } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Bot, FileCode, Shapes, Star } from "lucide-react";
 import { useState } from "react";
 import { expect, userEvent, within } from "storybook/test";
-import { ListRow } from "@/components/list-row/list-row";
-import { Switch } from "@/components/primitives/switch";
+import { landingStorySlotRecipe } from "./landing-story";
+import { landingToolDemoSlotRecipe } from "./landing-tool-demo";
 
 const SharedFeatures = () => {
-  const story = useSlotRecipe({ key: "landingStory" })({});
-  const tools = useSlotRecipe({ key: "landingToolDemo" })({});
+  const story = useSlotRecipe({ recipe: landingStorySlotRecipe })({});
+  const tools = useSlotRecipe({ recipe: landingToolDemoSlotRecipe })({});
   const extensions = [
     { id: "icons", name: "Icon set editor", icon: Shapes },
     { id: "shader", name: "Shader editor", icon: FileCode },

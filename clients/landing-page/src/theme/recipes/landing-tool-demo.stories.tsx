@@ -1,8 +1,9 @@
 import { Box, Button, HStack, Input, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { createGlyphIcon, type SessionCompletionStatus, SessionIndicator } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { createGlyphIcon } from "@/components/primitives/glyph-icon";
-import { type SessionCompletionStatus, SessionIndicator } from "@/components/primitives/session-indicator";
+import { landingStorySlotRecipe } from "./landing-story";
+import { landingToolDemoSlotRecipe } from "./landing-tool-demo";
 
 const icons = [
   "cloud-add",
@@ -17,8 +18,8 @@ const icons = [
 ].map((name) => ({ name, icon: createGlyphIcon(name) }));
 
 const VisualTool = () => {
-  const styles = useSlotRecipe({ key: "landingToolDemo" })({});
-  const story = useSlotRecipe({ key: "landingStory" })({});
+  const styles = useSlotRecipe({ recipe: landingToolDemoSlotRecipe })({});
+  const story = useSlotRecipe({ recipe: landingStorySlotRecipe })({});
   const [selected, setSelected] = useState(icons[0]);
   const [query, setQuery] = useState("");
   return (
@@ -114,7 +115,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 export const Desktop: Story = {};
 const WorkflowPreviewStates = () => {
-  const styles = useSlotRecipe({ key: "landingToolDemo" })({});
+  const styles = useSlotRecipe({ recipe: landingToolDemoSlotRecipe })({});
   return (
     <Box css={styles.iconGrid} p="md">
       {["pending", "active", "ready"].map((state, index) => {

@@ -13,13 +13,17 @@ export const TOOL_EXAMPLES: {
     id: "agents",
     slug: "coding-agent-dashboard",
     name: "Coding agent dashboard",
-    description: "Follow coding agents from task to review, with sessions and hooks keeping the board up to date.",
+    description:
+      "Manage tickets across coding agents. Commands update the board, skills guide the work, and hooks and schedules keep it moving.",
     blocks: [
-      { kind: "page", purpose: "Track tasks across your agents on a kanban board." },
-      { kind: "command", purpose: "Assign a task to an agent or start a run." },
-      { kind: "skill", purpose: "Give your agents your coding and review guidelines." },
-      { kind: "hook", purpose: "Move a task to review when an agent finishes." },
-      { kind: "automation", purpose: "Get a morning summary of completed runs and results to review." },
+      { kind: "page", purpose: "Track tickets and agent sessions on a kanban board." },
+      { kind: "command", purpose: "Create tickets, update their status, and list work to pick up or review." },
+      { kind: "skill", purpose: "Teach agents how to implement a ticket and review a change." },
+      { kind: "hook", purpose: "Move a ticket to review when an agent finishes." },
+      {
+        kind: "automation",
+        purpose: "Pick up queued tickets each morning and prepare a review summary each afternoon.",
+      },
     ],
   },
   {

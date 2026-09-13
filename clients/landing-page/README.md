@@ -1,7 +1,9 @@
 # Landing page
 
-The landing page uses the shared UI theme and panel separators. Its styles use
-dedicated landing recipes and do not change the dashboard's components or theme.
+The landing page uses reusable components and design tokens from `@pstdio/ui`.
+Landing-specific recipes and stories live in this app, under `src/theme/recipes`.
+They are passed directly to Chakra and are not registered in the shared UI theme.
+The local theme extends the shared theme with the landing illustration colors.
 
 ## Code structure
 
@@ -13,6 +15,7 @@ dedicated landing recipes and do not change the dashboard's components or theme.
 - `src/hooks` connects browser navigation, release loading, and animation to React.
 - `src/services` resolves routes and page metadata, loads GitHub releases, selects desktop assets, and converts legal copy to Markdown.
 - `src/services/shapes` owns tool geometry, placement, collisions, dragging, and simulation cleanup.
+- `src/theme/recipes` owns page layouts and demo styles, with colocated Storybook stories.
 
 The demos and falling tools render in code. They use no screenshot or image assets.
 
@@ -25,8 +28,17 @@ comes last. The panels share one ScrollArea, which returns to the top when the p
 changes. CSS sets this order before hydration. Desktop panels scroll independently.
 The home page shows a tools panel. Six tools start on the
 floor at random positions and angles. One tool drops from a random position every
-three seconds until there are 30. Tools can be dragged. Reduced motion keeps the
-initial six tools still. Random placements stay stable through redraws and resizing.
+three seconds until there are 30. Tools can be dragged. The scene keeps its pieces,
+positions, rotations, velocities, and spawn countdown in memory when navigating
+within the site. Returning restores that scene. Refreshing starts a fresh scene
+with six tools. Physics and spawning pause while
+the page is unfocused, hidden, or the tools panel is outside the viewport. Returning
+resumes the countdown without catching up for time away. Reduced motion keeps the
+current pieces still. Resizing keeps pieces within the panel.
+
+Embedded previews use visibility instead of keyboard focus so a preview toolbar
+does not prevent the scene from starting after refresh. Normal browser tabs also
+require focus.
 
 The cross uses three collision rectangles that share the SVG arm dimensions. The
 half-disc uses a curved polygon and renders around its physical centre of mass, so
@@ -74,9 +86,12 @@ extension management, and themes have a separate Features page. Space separates
 each feature's description and demo from the next feature.
 Use "workbench" for the overall home for tools. A workspace is a separate product concept.
 
-The page layout and preview styles use the shared `landingStory` and `landingToolDemo`
-recipes. Storybook covers desktop and narrow-panel layouts. Preview panels respond
+The page layout and preview styles use the local `landingStory` and `landingToolDemo`
+recipes. The app's Storybook covers desktop and narrow-panel layouts. Preview panels respond
 to their actual container width, including when the download panel is resized.
+
+Build these stories with `bun run --cwd clients/landing-page build-storybook`.
+The reusable component stories remain in the UI package's Storybook.
 
 The page catalog supplies static routes, unique metadata, canonical links, and
 `/sitemap.xml`. `/robots.txt` points crawlers to that sitemap. The

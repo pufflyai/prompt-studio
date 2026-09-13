@@ -14,9 +14,6 @@ import { editableSlotRecipe } from "./recipes/editable";
 import { fieldsetSlotRecipe } from "./recipes/form";
 import { inputRecipe } from "./recipes/input";
 import { kbdRecipe } from "./recipes/kbd";
-import { landingSlotRecipe } from "./recipes/landing";
-import { landingStorySlotRecipe } from "./recipes/landing-story";
-import { landingToolDemoSlotRecipe } from "./recipes/landing-tool-demo";
 import { menuSlotRecipe } from "./recipes/menu";
 import { numberInputSlotRecipe } from "./recipes/number-input";
 import { popoverRecipe } from "./recipes/popover";
@@ -76,9 +73,6 @@ const config = defineConfig({
     slotRecipes: {
       windowTitleBar: windowTitleBarRecipe,
       windowTabs: windowTabsRecipe,
-      landing: landingSlotRecipe,
-      landingStory: landingStorySlotRecipe,
-      landingToolDemo: landingToolDemoSlotRecipe,
       resizableSplitLayout: resizableSplitLayoutSlotRecipe,
       alert: alertSlotRecipe,
       colorPicker: colorPickerSlotRecipe,

@@ -1,8 +1,9 @@
 import { Box, Button, HStack, Stack, Text, Textarea, useSlotRecipe } from "@chakra-ui/react";
+import { createGlyphIcon, ScrollArea, Slider } from "@pstdio/ui";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
-import { createGlyphIcon } from "@/components/primitives/glyph-icon";
-import { Slider } from "@/components/primitives/slider";
+import { landingStorySlotRecipe } from "./landing-story";
+import { landingToolDemoSlotRecipe } from "./landing-tool-demo";
 
 const icons = ["star", "cloud-add", "global", "grid-4", "code", "component"].map((name) => ({
   name,
@@ -11,8 +12,8 @@ const icons = ["star", "cloud-add", "global", "grid-4", "code", "component"].map
 
 const ShaderDemo = (props: { withControls: boolean; connected: boolean }) => {
   const { withControls, connected } = props;
-  const styles = useSlotRecipe({ key: "landingToolDemo" })({});
-  const story = useSlotRecipe({ key: "landingStory" })({});
+  const styles = useSlotRecipe({ recipe: landingToolDemoSlotRecipe })({});
+  const story = useSlotRecipe({ recipe: landingStorySlotRecipe })({});
   const [selected, setSelected] = useState(icons[0]);
   const [scale, setScale] = useState(16);
   const [speed, setSpeed] = useState(1.8);
@@ -54,20 +55,22 @@ const ShaderDemo = (props: { withControls: boolean; connected: boolean }) => {
         <Box css={story.panel}>
           <Box css={story.panelHeader}>icon-matrix.frag</Box>
           <Box css={story.panelBody}>
-            <Textarea
-              css={styles.shaderCode}
-              aria-label="Fragment shader code"
-              wrap="off"
-              spellCheck={false}
-              defaultValue={`vec3 shade(vec2 uv) {
+            <ScrollArea css={styles.shaderScroll} showHorizontalScrollbar>
+              <Textarea
+                css={styles.shaderCode}
+                aria-label="Fragment shader code"
+                wrap="off"
+                spellCheck={false}
+                defaultValue={`vec3 shade(vec2 uv) {
   vec2 cell = uv * u_scale;
   float phase = mod(floor(cell.y) + u_time * 2.0, 18.0);
   float trail = exp(-phase * 0.32) * smoothstep(0.0, 0.8, phase);
   float icon = texture2D(u_icon, cell).a;
   vec3 green = vec3(0.04, 0.65, 0.28);
   return green * icon * (0.035 + trail);
-}`}
-            />
+}\n${Array.from({ length: 20 }, (_, index) => `// Shader note ${index + 1}`).join("\n")}`}
+              />
+            </ScrollArea>
           </Box>
         </Box>
         <Box css={story.panel}>

@@ -1,5 +1,5 @@
 import { Box, Button, HStack, Stack, Text, Textarea } from "@chakra-ui/react";
-import { Slider } from "@pstdio/ui";
+import { ScrollArea, Slider } from "@pstdio/ui";
 import { Pause, Play } from "lucide-react";
 import { useState } from "react";
 import type { ToolShapeKind } from "../../content/tool-shapes";
@@ -31,16 +31,18 @@ export const ShaderEditorDemo = (props: ShaderEditorDemoProps) => {
   return (
     <Box css={story.panels}>
       <DemoPanel title={shader.filename} kind="editor" highlighted={highlighted}>
-        <Textarea
-          css={styles.shaderCode}
-          aria-label="Fragment shader code"
-          wrap="off"
-          spellCheck={false}
-          autoCapitalize="off"
-          autoCorrect="off"
-          value={source}
-          onChange={(event) => setSource(event.target.value)}
-        />
+        <ScrollArea css={styles.shaderScroll} showHorizontalScrollbar>
+          <Textarea
+            css={styles.shaderCode}
+            aria-label="Fragment shader code"
+            wrap="off"
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            value={source}
+            onChange={(event) => setSource(event.target.value)}
+          />
+        </ScrollArea>
         {preview.error && (
           <Text textStyle="mono/XS" color="fg.error" role="alert">
             {preview.error}

@@ -21,7 +21,7 @@ export const AgentSessionDetail = (props: AgentSessionDetailProps) => {
   const triggered = stageReached(task.stage, "hook");
   return (
     <Box css={styles.panels}>
-      <DemoPanel title={`${task.id} · Agent sessions`} kind="command" highlighted={highlighted}>
+      <DemoPanel title={`${task.id} · Agent sessions`} kind="page" highlighted={highlighted}>
         <Text textStyle="label/M/medium">{task.title}</Text>
         <AgentTaskSessions task={task} playing={playing} />
         <Text role="status" textStyle="paragraph/S/regular" color="fg.muted">

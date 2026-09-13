@@ -6,6 +6,7 @@ import type { ToolShapeKind } from "../../content/tool-shapes";
 import { useAgentBoardDemo } from "../../hooks/use-agent-board-demo";
 import { AgentSessionDetail } from "./agent-session-detail";
 import { AgentTaskSessions } from "./agent-task-sessions";
+import { AgentWorkflowExamples } from "./agent-workflow-examples";
 import { DemoPanel } from "./demo-workbench";
 
 export const AgentDashboardDemo = (props: { highlighted?: ToolShapeKind }) => {
@@ -44,32 +45,38 @@ export const AgentDashboardDemo = (props: { highlighted?: ToolShapeKind }) => {
   }));
   return (
     <Stack ref={board.hostRef} gap="panel-gap" role="group" aria-label="Coding agent workflow">
-      <DemoPanel title="Tool development" kind="page" highlighted={highlighted}>
-        <HStack justify="space-between" gap="sm" flexWrap="wrap">
-          <Text textStyle="label/M/medium">{board.tasks.length} tasks · Agent sessions</Text>
-          {board.active ? (
-            <Button variant="outline" onClick={board.toggle}>
-              {board.playing ? <Pause /> : <Play />}
-              {board.playing ? "Pause workflow" : "Start workflow"}
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={board.replay}>
-              <RotateCcw />
-              Replay workflow
-            </Button>
-          )}
-        </HStack>
-        <Box height="96" minWidth="0" role="group" aria-label="Coding agent kanban board">
-          <KanbanRendererBoard columns={columns} selectedItemId={board.selectedId} />
-        </Box>
-      </DemoPanel>
-      <AgentSessionDetail
-        task={board.selected}
-        playing={board.playing}
-        highlighted={highlighted}
-        onStart={board.start}
-        onFinish={board.finish}
-      />
+      {highlighted === "command" || highlighted === "skill" || highlighted === "automation" ? (
+        <AgentWorkflowExamples highlighted={highlighted} />
+      ) : (
+        <>
+          <DemoPanel title="Tool development" kind="page" highlighted={highlighted}>
+            <HStack justify="space-between" gap="sm" flexWrap="wrap">
+              <Text textStyle="label/M/medium">{board.tasks.length} tickets · Agent sessions</Text>
+              {board.active ? (
+                <Button variant="outline" onClick={board.toggle}>
+                  {board.playing ? <Pause /> : <Play />}
+                  {board.playing ? "Pause workflow" : "Start workflow"}
+                </Button>
+              ) : (
+                <Button variant="outline" onClick={board.replay}>
+                  <RotateCcw />
+                  Replay workflow
+                </Button>
+              )}
+            </HStack>
+            <Box height="96" minWidth="0" role="group" aria-label="Coding agent kanban board">
+              <KanbanRendererBoard columns={columns} selectedItemId={board.selectedId} />
+            </Box>
+          </DemoPanel>
+          <AgentSessionDetail
+            task={board.selected}
+            playing={board.playing}
+            highlighted={highlighted}
+            onStart={board.start}
+            onFinish={board.finish}
+          />
+        </>
+      )}
     </Stack>
   );
 };
