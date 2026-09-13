@@ -35,8 +35,7 @@ current pieces still. Resizing keeps pieces within the panel.
 
 Embedded previews use visibility instead of keyboard focus so a preview toolbar
 does not prevent the scene from starting after refresh. Normal browser tabs also
-require focus. See [ADR 0029](../../.pstdio/docs/adrs/0029-temporary-embedded-preview-focus.md)
-for this temporary host limitation.
+require focus.
 
 The cross uses three collision rectangles that share the SVG arm dimensions. The
 half-disc uses a curved polygon and renders around its physical centre of mass, so

@@ -36,7 +36,7 @@ export const useShapeField = (worldOffset?: { x: number; y: number }) => {
       size,
       windowOffset: worldOffset,
       snapshot: readSimulation(),
-      // Embedded preview toolbars can retain keyboard focus; see ADR 0029.
+      // Embedded preview toolbars can retain keyboard focus.
       isActive: () =>
         visible &&
         (window.top !== window || document.hasFocus()) &&
