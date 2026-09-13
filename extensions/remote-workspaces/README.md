@@ -6,7 +6,7 @@ PocketCoder runs the containers and coding agent. Prompt Studio sends prompts, d
 
 ## Start PocketCoder on the desktop
 
-These commands use PocketCoder's source deployment with Pi and an OpenAI model. You need Bun 1.3.14 or later, Docker, Git, and SSH access to the desktop. On Windows, run the commands in a Linux environment with working Docker access. Other agents need their own runnable PocketCoder template.
+These commands use PocketCoder's source deployment with Pi and an OpenAI model. You need Bun 1.4.2, Docker, Git, and SSH access to the desktop. On Windows, run the commands in a Linux environment with working Docker access. Other agents need their own runnable PocketCoder template.
 
 Clone PocketCoder on the desktop:
 

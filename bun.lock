@@ -29,7 +29,7 @@
         "react-dom": "^19.0.0",
       },
       "devDependencies": {
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "@types/pako": "^2.0.4",
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",
@@ -43,7 +43,7 @@
         "@pstdio/sdk": "^0.24.0",
       },
       "devDependencies": {
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "typescript": "6.0.2",
       },
     },
@@ -54,7 +54,7 @@
         "@pstdio/sdk": "^0.24.0",
       },
       "devDependencies": {
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "typescript": "6.0.2",
       },
     },
@@ -132,7 +132,7 @@
         "three": "^0.185.1",
       },
       "devDependencies": {
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",
         "@types/three": "^0.185.4",
@@ -146,7 +146,7 @@
         "@pstdio/sdk": "^0.24.0",
       },
       "devDependencies": {
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "typescript": "6.0.2",
       },
     },
@@ -157,7 +157,7 @@
         "@pstdio/sdk": "^0.24.0",
       },
       "devDependencies": {
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "typescript": "6.0.2",
       },
     },
@@ -168,7 +168,7 @@
         "@pstdio/sdk": "^0.24.0",
       },
       "devDependencies": {
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "typescript": "6.0.2",
       },
     },
@@ -186,7 +186,7 @@
       },
       "devDependencies": {
         "@storybook/react": "^10.1.9",
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",
         "typescript": "6.0.2",
@@ -199,7 +199,7 @@
         "@pstdio/sdk": "^0.24.0",
       },
       "devDependencies": {
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "typescript": "6.0.2",
       },
     },
@@ -218,7 +218,7 @@
       },
       "devDependencies": {
         "@storybook/react": "^10.1.9",
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "@types/react": "^19.0.0",
         "@types/react-dom": "^19.0.0",
         "storybook": "^10.1.9",
@@ -232,7 +232,7 @@
         "@pstdio/sdk": "^0.24.0",
       },
       "devDependencies": {
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "typescript": "6.0.2",
       },
     },
@@ -243,7 +243,7 @@
         "@pstdio/sdk": "^0.24.0",
       },
       "devDependencies": {
-        "@types/bun": "1.3.14",
+        "@types/bun": "1.4.2",
         "typescript": "6.0.2",
       },
     },
@@ -6422,5 +6422,53 @@
     "read-pkg-up/find-up/locate-path/p-locate/p-limit/p-try": ["p-try@1.0.0", "", {}, "sha512-U1etNYuMJoIz3ZXSrrySFjsXQTWOx2/jdi86L+2pRvph/qMKL6sbcCYdH23fqsbm8TH2Gn0OybpT4eSFlCVHww=="],
 
     "get-package-info/read-pkg-up/find-up/locate-path/p-locate/p-limit/p-try": ["p-try@1.0.0", "", {}, "sha512-U1etNYuMJoIz3ZXSrrySFjsXQTWOx2/jdi86L+2pRvph/qMKL6sbcCYdH23fqsbm8TH2Gn0OybpT4eSFlCVHww=="],
-  }
+
+    "extension-lab/@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
+
+    "font-editor/@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
+
+    "harness-claude-code/@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
+
+    "harness-codex/@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
+
+    "harness-open-code/@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
+
+    "pstdio-artifacts/@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
+
+    "pstdio-base-themes/@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
+
+    "pstdio-dev/@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
+
+    "pstdio-planner-loops/@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
+
+    "pstdio-planner/@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
+
+    "pstdio-reports/@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
+
+    "pstdio-skills/@types/bun": ["@types/bun@1.4.2", "", { "dependencies": { "bun-types": "1.4.2" } }, "sha512-GimotNn7+ZV0uVArItBbriZsR1oNf0+WTzPkdcFrzShI7k2norL0uzEaJT8T33dWr7O/c9ZDuAFQrctKCi72oQ=="],
+
+    "extension-lab/@types/bun/bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
+
+    "font-editor/@types/bun/bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
+
+    "harness-claude-code/@types/bun/bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
+
+    "harness-codex/@types/bun/bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
+
+    "harness-open-code/@types/bun/bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
+
+    "pstdio-artifacts/@types/bun/bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
+
+    "pstdio-base-themes/@types/bun/bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
+
+    "pstdio-dev/@types/bun/bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
+
+    "pstdio-planner-loops/@types/bun/bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
+
+    "pstdio-planner/@types/bun/bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
+
+    "pstdio-reports/@types/bun/bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
+
+    "pstdio-skills/@types/bun/bun-types": ["bun-types@1.4.2", "", { "dependencies": { "@types/node": "*" } }, "sha512-bxV1FgK7yBIzjRe5zBozIM4Bem11ZJcCXSrjWRG3YWLt8yFDePu4cLjpebO8OvPeIE9trbyPF4fuj3Cia4Fj3w=="],
+  },
 }
