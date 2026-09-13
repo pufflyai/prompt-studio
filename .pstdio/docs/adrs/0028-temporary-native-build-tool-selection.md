@@ -6,9 +6,11 @@ Bun 1.4.2's isolated dependency layout does not expose the root build tool to ev
 
 A local isolated-install fixture confirms that the fallback selects 13.0.2 even when the workspace declares 12.2.0. Declaring the build tool at the root alone cannot enforce its version in this layout.
 
-As a temporary workaround, the CI native-dependency installer sets `npm_config_node_gyp` to the root package's executable. Bun's own fallback wrapper supports this setting. Installation still runs all trusted lifecycle scripts with the frozen lockfile. The setting is scoped to installation so Electron packaging can select its own build tool and runtime headers.
+Clean macOS CI also shows that Bun can start native scripts before it creates the root build-tool link.
 
-This depends on the root build-tool package being available when dependency scripts run. A regression test installs a real isolated dependency and checks the version its install script executes.
+As a temporary workaround, the CI native-dependency installer first installs the root workspace and its build tools with a workspace filter. It then installs all remaining workspaces and sets `npm_config_node_gyp` to the root package's executable. Bun's own fallback wrapper supports this setting. Installation still runs all trusted lifecycle scripts with the frozen lockfile. The setting is scoped to installation so Electron packaging can select its own build tool and runtime headers.
+
+The extra filtered install prepares the build tool before dependent workspaces run scripts. It adds a second lockfile check, but keeps dependency versions frozen and lifecycle scripts enabled in both phases. A regression test installs a real isolated workspace dependency and checks the version its install script executes.
 
 Remove this setting when Bun resolves the workspace build tool from isolated dependency scripts without a fallback download. Keep the regression test and verify clean macOS desktop and release installs before removal.
 

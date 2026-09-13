@@ -2,9 +2,9 @@ import { expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import manifest from "../../package.json";
 
 test("native dependency scripts use the workspace node-gyp version with isolated installs", async () => {
+  const manifest = await Bun.file(new URL("../../package.json", import.meta.url)).json();
   const cwd = mkdtempSync(join(tmpdir(), "pstdio-native-install-"));
   try {
     await Bun.write(
@@ -12,12 +12,14 @@ test("native dependency scripts use the workspace node-gyp version with isolated
       JSON.stringify({
         name: "native-install-test",
         private: true,
-        dependencies: {
-          "node-gyp": manifest.devDependencies["node-gyp"],
-          "native-fixture": "file:./native-fixture",
-        },
+        workspaces: ["clients/*"],
+        devDependencies: { "node-gyp": manifest.devDependencies["node-gyp"] },
         trustedDependencies: ["native-fixture"],
       }),
+    );
+    await Bun.write(
+      join(cwd, "clients/app/package.json"),
+      JSON.stringify({ name: "native-consumer", dependencies: { "native-fixture": "file:../../native-fixture" } }),
     );
     await Bun.write(join(cwd, "bunfig.toml"), '[install]\nlinker = "isolated"\n');
     await Bun.write(
@@ -41,7 +43,7 @@ test("native dependency scripts use the workspace node-gyp version with isolated
       new Response(install.stderr).text(),
     ]);
     expect({ exitCode, output: exitCode === 0 ? "" : stdout + stderr }).toEqual({ exitCode: 0, output: "" });
-    const version = await Bun.file(join(cwd, "node_modules/native-fixture/node-gyp-version.txt")).text();
+    const version = await Bun.file(join(cwd, "clients/app/node_modules/native-fixture/node-gyp-version.txt")).text();
     expect(version.trim()).toBe(`v${manifest.devDependencies["node-gyp"]}`);
   } finally {
     rmSync(cwd, { recursive: true, force: true });
