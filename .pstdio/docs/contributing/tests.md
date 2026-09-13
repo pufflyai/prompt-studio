@@ -4,6 +4,8 @@
 
 Use Bun 1.4.2 and Node 24, matching CI. Install dependencies with `bun install --frozen-lockfile`. The root pins `node-gyp` so native addon install scripts use the local build tool instead of a temporary `bunx node-gyp@latest` download.
 
+When upgrading Bun, align the root `packageManager` pin, Bun engine requirements, all `@types/bun` dependencies, the lockfile, and every Docker image, including `infra/local/Dockerfile`. Update the local Bun executable and current setup documentation to the same version before validating.
+
 Native CI installs use `scripts/ci/install-native-dependencies.ts`. On Linux and macOS it gives node-gyp the headers already installed with Node. This removes another download from native addon builds. The setting applies only to dependency installation; Electron packaging selects the headers for Electron separately.
 
 The version-scoped Playwright patch gives its API request agents Node's normal five-second idle socket expiry. This prevents later request contexts from reusing expired connections. It does not retry failed requests. ADR 0027 records the external limitation and removal criteria. Docker build stages copy `patches/` with the lockfile so frozen installs apply the same dependency fixes. Patch edits invalidate Nx caches and trigger native packaged verification.
