@@ -74,8 +74,5 @@
   "packageManager": "bun@1.4.2",
   "overrides": {
     "@electron/node-gyp": "10.2.0-electron.2"
-  },
-  "patchedDependencies": {
-    "playwright-core@1.60.0": "patches/playwright-core@1.60.0.patch"
   }
 }
