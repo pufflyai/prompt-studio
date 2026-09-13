@@ -11,7 +11,7 @@ export const retainViewPlacements = (
       .map((placement) => [placement.widgetId, placement]),
   );
   for (const placement of current) {
-    const existing = retained.get(placement.widgetId);
+    const existing = previous.find((entry) => entry.widgetId === placement.widgetId);
     const unchanged =
       existing &&
       Object.keys(existing).length === Object.keys(placement).length &&

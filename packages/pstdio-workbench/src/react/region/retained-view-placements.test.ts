@@ -23,3 +23,9 @@ test("panels without registered views retain their existing unmount behavior", (
   const panel = { widgetId: "panel", contributionId: "panel" } as WorkbenchWidgetPlacement;
   expect(retainViewPlacements([panel], [], new Set())).toEqual([]);
 });
+
+test("unchanged current placements stay stable while their views are not registered", () => {
+  const current = { ...playlist };
+  const previous = [current];
+  expect(retainViewPlacements(previous, [{ ...current }], new Set())).toBe(previous);
+});
