@@ -2,7 +2,10 @@ import { spawnSync } from "node:child_process";
 import { accessSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-const env = { ...process.env };
+const env: NodeJS.ProcessEnv = {
+  ...process.env,
+  npm_config_node_gyp: join(process.cwd(), "node_modules", "node-gyp", "bin", "node-gyp.js"),
+};
 if (process.platform !== "win32") {
   const nodeRoot = dirname(dirname(process.execPath));
   accessSync(join(nodeRoot, "include", "node", "node.h"));
