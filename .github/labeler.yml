@@ -1,0 +1,45 @@
+extensions:
+  - changed-files:
+      - any-glob-to-any-file:
+          - extensions/**
+sdk:
+  - changed-files:
+      - any-glob-to-any-file:
+          - packages/sdk/**
+          - packages/pstdio-api-contracts/**
+database:
+  - changed-files:
+      - any-glob-to-any-file:
+          - packages/pstdio-db/**
+          - packages/pstdio-storage/**
+extension-runtime:
+  - changed-files:
+      - any-glob-to-any-file:
+          - packages/pstdio-extensions/**
+          - packages/pstdio-api-runtime-host/**
+          - packages/pstdio-api/src/features/extensions/**
+security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - packages/pstdio-api/src/features/runtime/runtime-auth.ts
+          - packages/pstdio-api/src/features/extensions/connection-secret-store.ts
+          - packages/pstdio-api/src/features/extensions/extension-webview-access.ts
+          - packages/pstdio-api/src/app-routing.ts
+          - clients/desktop/src/security/**
+          - clients/desktop/src/preload.ts
+sync:
+  - changed-files:
+      - any-glob-to-any-file:
+          - packages/pstdio-api/src/features/sync/**
+          - packages/pstdio-api/src/services/sync-service.ts
+          - packages/sdk/src/client/sync.ts
+release:
+  - changed-files:
+      - any-glob-to-any-file:
+          - .github/workflows/**
+          - .github/labeler.yml
+          - scripts/ci/**
+          - scripts/build/**
+          - scripts/release/**
+          - scripts/embed.json
+          - .changeset/config.json

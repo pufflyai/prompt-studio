@@ -190,3 +190,7 @@ Run the repository validation suite after code changes:
 ```bash
 bun run validate
 ```
+
+## Pull request area labels
+
+See [Pull request area labels](pr-area-labels.md) for automatic review labels, SDK and extension separation, and workflow rollout.

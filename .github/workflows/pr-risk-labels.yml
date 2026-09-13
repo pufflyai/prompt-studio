@@ -1,0 +1,94 @@
+name: PR area labels
+
+on:
+  pull_request_target:
+    branches: [main]
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+  workflow_dispatch:
+    inputs:
+      pr-number:
+        description: Pull request number to reclassify
+        required: true
+        type: number
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+
+concurrency:
+  group: pr-risk-labels-${{ github.event.pull_request.number || inputs.pr-number }}
+  cancel-in-progress: false
+
+jobs:
+  classify:
+    if: github.event_name == 'pull_request_target' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      POLICY_PR: ${{ github.event.pull_request.number || inputs.pr-number }}
+    steps:
+      - name: Load trusted policy and mark the current head pending
+        id: prepare
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const { stripTypeScriptTypes } = await import('node:module');
+            const { writeFile } = await import('node:fs/promises');
+            const { pathToFileURL } = await import('node:url');
+            const { data } = await github.rest.repos.getContent({
+              ...context.repo,
+              path: 'scripts/ci/pr-risk-labels.ts',
+              ref: context.sha,
+            });
+            const source = Buffer.from(data.content, 'base64').toString('utf8');
+            const path = `${process.env.RUNNER_TEMP}/pr-risk-policy.mjs`;
+            await writeFile(path, stripTypeScriptTypes(source));
+            const policy = await import(pathToFileURL(path).href);
+            const options = {
+              apiUrl: process.env.GITHUB_API_URL,
+              repository: `${context.repo.owner}/${context.repo.repo}`,
+              token: process.env.GITHUB_TOKEN,
+              pullNumber: Number(process.env.POLICY_PR),
+              runUrl: `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            };
+            const snapshot = await policy.prepare(policy.createApi(options));
+            core.setOutput('snapshot', JSON.stringify(snapshot));
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Synchronize managed area labels
+        id: labeler
+        uses: actions/labeler@bf12e9b00b37c5c0ca2b87b79b2daf7891dbda13 # v7
+        with:
+          configuration-path: .github/labeler.yml
+          sync-labels: true
+          pr-number: ${{ env.POLICY_PR }}
+
+      - name: Publish SDK and extension separation
+        if: always() && steps.prepare.outcome == 'success'
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          POLICY_SNAPSHOT: ${{ steps.prepare.outputs.snapshot }}
+          LABELER_OUTCOME: ${{ steps.labeler.outcome }}
+          LABELER_OUTPUTS: ${{ toJSON(steps.labeler.outputs) }}
+        with:
+          script: |
+            const { pathToFileURL } = await import('node:url');
+            const policy = await import(pathToFileURL(`${process.env.RUNNER_TEMP}/pr-risk-policy.mjs`).href);
+            const api = policy.createApi({
+              apiUrl: process.env.GITHUB_API_URL,
+              repository: `${context.repo.owner}/${context.repo.repo}`,
+              token: process.env.GITHUB_TOKEN,
+              pullNumber: Number(process.env.POLICY_PR),
+              runUrl: `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`,
+            });
+            const status = await policy.finish(
+              api,
+              JSON.parse(process.env.POLICY_SNAPSHOT),
+              process.env.LABELER_OUTCOME,
+              JSON.parse(process.env.LABELER_OUTPUTS)['all-labels'],
+            );
+            await core.summary.addHeading('SDK and extension separation').addRaw(status.description).write();
+            if (status.state !== 'success') core.setFailed(status.description);
