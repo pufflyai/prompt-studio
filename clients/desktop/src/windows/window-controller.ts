@@ -23,7 +23,7 @@ export class DesktopWindowController {
     workbenchSession: Session,
   ) {
     this.lifecycleUrl = LIFECYCLE_URL;
-    secureSession(workbenchSession);
+    secureSession(workbenchSession, () => this.#runtimeOrigin);
     this.window = new BrowserWindow(createSecureWindowOptions(preloadPath, WORKBENCH_PARTITION));
     secureWebContents(this.window.webContents, {
       lifecycleUrl: this.lifecycleUrl,

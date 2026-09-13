@@ -79,7 +79,7 @@ BrowserWindow enables sandboxing, context isolation, web security, and disables 
 
 - allows main-frame navigation only within the exact runtime origin or the exact bundled lifecycle document;
 - denies popup creation and opens only validated HTTPS links through the operating system;
-- denies permissions by default;
+- denies permissions by default, allowing only clipboard writes from the main runtime page; clipboard reads and requests from embedded frames remain denied;
 - applies a restrictive content security policy;
 - validates the expected WebContents, main frame, and exact renderer origin for every IPC handler.
 
