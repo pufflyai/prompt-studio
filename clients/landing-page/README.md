@@ -25,8 +25,18 @@ comes last. The panels share one ScrollArea, which returns to the top when the p
 changes. CSS sets this order before hydration. Desktop panels scroll independently.
 The home page shows a tools panel. Six tools start on the
 floor at random positions and angles. One tool drops from a random position every
-three seconds until there are 30. Tools can be dragged. Reduced motion keeps the
-initial six tools still. Random placements stay stable through redraws and resizing.
+three seconds until there are 30. Tools can be dragged. The scene keeps its pieces,
+positions, rotations, velocities, and spawn countdown in memory when navigating
+within the site. Returning restores that scene. Refreshing starts a fresh scene
+with six tools. Physics and spawning pause while
+the page is unfocused, hidden, or the tools panel is outside the viewport. Returning
+resumes the countdown without catching up for time away. Reduced motion keeps the
+current pieces still. Resizing keeps pieces within the panel.
+
+Embedded previews use visibility instead of keyboard focus so a preview toolbar
+does not prevent the scene from starting after refresh. Normal browser tabs also
+require focus. See [ADR 0029](../../.pstdio/docs/adrs/0029-temporary-embedded-preview-focus.md)
+for this temporary host limitation.
 
 The cross uses three collision rectangles that share the SVG arm dimensions. The
 half-disc uses a curved polygon and renders around its physical centre of mass, so

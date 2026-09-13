@@ -9,26 +9,7 @@ interface ShapeFieldProps {
 
 export const ShapeField = (props: ShapeFieldProps) => {
   const { worldOffset } = props;
-  const { hostRef, reducedMotion, staticPieces, pieces, onPointerDown, onPointerMove, onPointerUp } =
-    useShapeField(worldOffset);
-  if (reducedMotion) {
-    return (
-      <Box ref={hostRef} position="absolute" inset="0" pointerEvents="none">
-        {staticPieces.map((piece) => (
-          <Box
-            key={piece.id}
-            data-tool-shape={piece.kind}
-            position="absolute"
-            left={`${piece.x}px`}
-            top={`${piece.y}px`}
-            transform={`rotate(${piece.angle}rad)`}
-          >
-            <ToolShape kind={piece.kind} size={piece.height} width={piece.width} />
-          </Box>
-        ))}
-      </Box>
-    );
-  }
+  const { hostRef, pieces, onPointerDown, onPointerMove, onPointerUp } = useShapeField(worldOffset);
 
   return (
     <Box ref={hostRef} position="absolute" inset="0" pointerEvents="none" userSelect="none" touchAction="none">

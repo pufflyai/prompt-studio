@@ -2,6 +2,7 @@ import { Box, Button, HStack, Stack, Text, Textarea, useSlotRecipe } from "@chak
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { createGlyphIcon } from "@/components/primitives/glyph-icon";
+import { ScrollArea } from "@/components/primitives/scroll-area";
 import { Slider } from "@/components/primitives/slider";
 
 const icons = ["star", "cloud-add", "global", "grid-4", "code", "component"].map((name) => ({
@@ -54,20 +55,22 @@ const ShaderDemo = (props: { withControls: boolean; connected: boolean }) => {
         <Box css={story.panel}>
           <Box css={story.panelHeader}>icon-matrix.frag</Box>
           <Box css={story.panelBody}>
-            <Textarea
-              css={styles.shaderCode}
-              aria-label="Fragment shader code"
-              wrap="off"
-              spellCheck={false}
-              defaultValue={`vec3 shade(vec2 uv) {
+            <ScrollArea css={styles.shaderScroll} showHorizontalScrollbar>
+              <Textarea
+                css={styles.shaderCode}
+                aria-label="Fragment shader code"
+                wrap="off"
+                spellCheck={false}
+                defaultValue={`vec3 shade(vec2 uv) {
   vec2 cell = uv * u_scale;
   float phase = mod(floor(cell.y) + u_time * 2.0, 18.0);
   float trail = exp(-phase * 0.32) * smoothstep(0.0, 0.8, phase);
   float icon = texture2D(u_icon, cell).a;
   vec3 green = vec3(0.04, 0.65, 0.28);
   return green * icon * (0.035 + trail);
-}`}
-            />
+}\n${Array.from({ length: 20 }, (_, index) => `// Shader note ${index + 1}`).join("\n")}`}
+              />
+            </ScrollArea>
           </Box>
         </Box>
         <Box css={story.panel}>

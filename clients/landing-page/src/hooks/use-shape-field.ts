@@ -1,15 +1,13 @@
 import { type PointerEvent, useEffect, useRef, useState } from "react";
-import { containerLayout, INITIAL_TOOL_COUNT, randomToolPlacement } from "../services/shapes/field-layout";
 import type { Piece } from "../services/shapes/shape-physics";
+import { readSimulation, saveSimulation } from "../services/shapes/simulation-state";
 import { createToolSimulation } from "../services/shapes/tool-simulation";
 
 export const useShapeField = (worldOffset?: { x: number; y: number }) => {
   const hostRef = useRef<HTMLDivElement>(null);
   const simulationRef = useRef<ReturnType<typeof createToolSimulation> | null>(null);
   const dragIdRef = useRef<number | null>(null);
-  const [reducedMotion, setReducedMotion] = useState(false);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const [placements] = useState(() => Array.from({ length: INITIAL_TOOL_COUNT }, randomToolPlacement));
   const [, forceRender] = useState(0);
   const inputsRef = useRef({ size, worldOffset });
 
@@ -18,36 +16,60 @@ export const useShapeField = (worldOffset?: { x: number; y: number }) => {
   });
 
   useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updateMotion = () => setReducedMotion(query.matches);
-    updateMotion();
-    query.addEventListener("change", updateMotion);
     const host = hostRef.current!;
     const updateSize = () => setSize({ width: host.clientWidth, height: host.clientHeight });
     const observer = new ResizeObserver(updateSize);
     observer.observe(host);
     updateSize();
     return () => {
-      query.removeEventListener("change", updateMotion);
       observer.disconnect();
     };
   }, []);
 
   const ready = size.width > 0 && size.height > 0;
   useEffect(() => {
-    if (!ready || reducedMotion) return;
+    if (!ready) return;
+    const { size, worldOffset } = inputsRef.current;
+    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let visible = false;
     const simulation = createToolSimulation({
-      ...inputsRef.current,
-      placements,
+      size,
+      windowOffset: worldOffset,
+      snapshot: readSimulation(),
+      // Embedded preview toolbars can retain keyboard focus; see ADR 0029.
+      isActive: () =>
+        visible &&
+        (window.top !== window || document.hasFocus()) &&
+        document.visibilityState === "visible" &&
+        !query.matches,
       onFrame: () => forceRender((value) => value + 1),
     });
     simulationRef.current = simulation;
+    simulation.resize(size);
+    forceRender((value) => value + 1);
+
+    const endDrag = () => {
+      simulation.endDrag();
+      dragIdRef.current = null;
+    };
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = entry.isIntersecting;
+    });
+    observer.observe(hostRef.current!);
+    window.addEventListener("blur", endDrag);
+    window.addEventListener("pagehide", endDrag);
+    document.addEventListener("visibilitychange", endDrag);
     return () => {
+      window.removeEventListener("blur", endDrag);
+      window.removeEventListener("pagehide", endDrag);
+      document.removeEventListener("visibilitychange", endDrag);
+      observer.disconnect();
+      saveSimulation(simulation.snapshot());
       simulation.dispose();
       simulationRef.current = null;
       dragIdRef.current = null;
     };
-  }, [ready, reducedMotion, placements]);
+  }, [ready]);
 
   useEffect(() => simulationRef.current?.resize(size), [size]);
   useEffect(() => simulationRef.current?.moveWindow(worldOffset), [worldOffset]);
@@ -80,8 +102,6 @@ export const useShapeField = (worldOffset?: { x: number; y: number }) => {
 
   return {
     hostRef,
-    reducedMotion,
-    staticPieces: containerLayout(size, placements).pieces,
     pieces: simulationRef.current?.pieces ?? [],
     onPointerDown,
     onPointerMove,

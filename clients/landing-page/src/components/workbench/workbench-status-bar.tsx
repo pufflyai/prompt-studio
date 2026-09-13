@@ -44,9 +44,7 @@ export const WorkbenchStatusBar = (props: WorkbenchStatusBarProps) => {
         <Box boxSize="icon-md" flexShrink="0">
           <StockholmIcon />
         </Box>
-        <Text textStyle="label/S/medium" whiteSpace="nowrap">
-          © Pufflig AB. Stockholm, 2026
-        </Text>
+        <Text css={styles.copyright}>© Pufflig AB. Stockholm, 2026</Text>
       </HStack>
     </HStack>
   );

@@ -17,7 +17,7 @@ export const DownloadPanel = (props: { headingLevel: "h1" | "h2" }) => {
   return (
     <Box css={styles.heroCopy}>
       <HStack>
-        <Badge variant="subtle" size="md">
+        <Badge css={styles.releaseBadge} size="lg">
           Alpha release
         </Badge>
       </HStack>

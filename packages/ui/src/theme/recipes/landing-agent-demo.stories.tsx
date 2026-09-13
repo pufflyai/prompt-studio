@@ -1,4 +1,4 @@
-import { Box, Button, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
+import { Box, Button, Code, HStack, Stack, Text, useSlotRecipe } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { Check, CircleDashed } from "lucide-react";
 import { useState } from "react";
@@ -58,6 +58,43 @@ const AgentDemo = () => {
               {completed ? <Check size={16} /> : <CircleDashed size={16} />}
               <Text>Start a review session</Text>
             </HStack>
+          </Stack>
+        </Box>
+      </Box>
+      <Box css={story.panels}>
+        <Box css={story.panel}>
+          <Box css={story.panelHeader}>Ticket commands</Box>
+          <Stack css={story.panelBody}>
+            <Text textStyle="label/M/medium">Create a ticket</Text>
+            <Code whiteSpace="pre-wrap" overflowWrap="anywhere">
+              {'pst tickets create --content "# Add a color picker" --status "Queued"'}
+            </Code>
+            <Text textStyle="label/M/medium">Update ticket status</Text>
+            <Code whiteSpace="pre-wrap" overflowWrap="anywhere">
+              {'pst tickets update --id TOOL-16 --status "Ready for review"'}
+            </Code>
+            <Text textStyle="label/M/medium">List tickets</Text>
+            <Code whiteSpace="pre-wrap" overflowWrap="anywhere">
+              {'pst tickets list --status "Queued"'}
+            </Code>
+          </Stack>
+        </Box>
+        <Box css={story.panel}>
+          <Box css={story.panelHeader}>Agent skills</Box>
+          <Stack css={story.panelBody}>
+            <Text textStyle="label/M/medium">Implement a ticket</Text>
+            <Text>Read the requirements, make the change, run the checks, and update the ticket.</Text>
+            <Text textStyle="label/M/medium">Review a change</Text>
+            <Text>Check the change against the ticket, test edge cases, and record findings.</Text>
+          </Stack>
+        </Box>
+        <Box css={story.panel}>
+          <Box css={story.panelHeader}>Scheduled work</Box>
+          <Stack css={story.panelBody}>
+            <Text textStyle="label/M/medium">Pick up queued tickets · Weekdays at 09:00</Text>
+            <Text>Choose an unblocked ticket and start an agent with the implementation skill.</Text>
+            <Text textStyle="label/M/medium">Prepare a review summary · Weekdays at 16:00</Text>
+            <Text>Summarize tickets ready for review, their checks, and open questions.</Text>
           </Stack>
         </Box>
       </Box>
