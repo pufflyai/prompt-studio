@@ -29,6 +29,7 @@ for (const externalRuntime of [false, true]) {
     });
     const originalDescriptor = readFileSync(descriptorPath, "utf8");
     const manager = new DesktopRuntimeManager({
+      appVersion: "0.31.0",
       descriptorPath,
       externalRuntime,
       resolveSidecarPath: () => {

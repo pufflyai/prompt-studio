@@ -39,6 +39,7 @@ describe("DesktopRuntimeManager", () => {
     let spawnedArgs: string[] = [];
     const manager = new DesktopRuntimeManager(
       {
+        appVersion: descriptor.appVersion,
         descriptorPath: "/tmp/runtime.json",
         resolveSidecarPath: () => "/app/pstdio",
         onIntentionalShutdown: () => {},
@@ -71,6 +72,7 @@ describe("DesktopRuntimeManager", () => {
     ];
     const manager = new DesktopRuntimeManager(
       {
+        appVersion: descriptor.appVersion,
         descriptorPath: "/tmp/runtime.json",
         resolveSidecarPath: () => "/app/pstdio",
         onIntentionalShutdown: () => {},
@@ -108,6 +110,7 @@ describe("DesktopRuntimeManager", () => {
     let unexpected = "";
     const manager = new DesktopRuntimeManager(
       {
+        appVersion: descriptor.appVersion,
         descriptorPath: "/tmp/runtime.json",
         resolveSidecarPath: () => "/app/pstdio",
         onIntentionalShutdown: () => {},
@@ -145,6 +148,7 @@ describe("DesktopRuntimeManager", () => {
     let unexpected = 0;
     const manager = new DesktopRuntimeManager(
       {
+        appVersion: descriptor.appVersion,
         descriptorPath: "/tmp/runtime.json",
         resolveSidecarPath: () => "/app/pstdio",
         onIntentionalShutdown: () => {
@@ -181,6 +185,7 @@ describe("DesktopRuntimeManager", () => {
     let selectedSidecar = false;
     const manager = new DesktopRuntimeManager(
       {
+        appVersion: descriptor.appVersion,
         descriptorPath: "/isolated/runtime.json",
         externalRuntime: true,
         resolveSidecarPath: () => {

@@ -120,6 +120,14 @@ export const LongNames: Story = {
 export const Dark: Story = { render: () => <Example />, globals: { theme: "pstdio-dark" } };
 export const Light: Story = { render: () => <Example />, globals: { theme: "pstdio-light" } };
 export const NativeOverlay: Story = { render: () => <Example platform="win32" /> };
+export const LinuxOverlay: Story = {
+  render: () => (
+    <Box css={{ "--pstdio-titlebar-area-x": "0px", "--pstdio-titlebar-area-width": "calc(100% - 100px)" }}>
+      <Example platform="linux" />
+    </Box>
+  ),
+};
+export const LinuxOverlayDark: Story = { ...LinuxOverlay, globals: { theme: "pstdio-dark" } };
 export const CloseHover: Story = {
   render: () => <Example />,
   play: async ({ canvasElement }) => {

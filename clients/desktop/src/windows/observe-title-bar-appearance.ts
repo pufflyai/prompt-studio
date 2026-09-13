@@ -11,12 +11,14 @@ export const observeTitleBarAppearance = (update: (appearance: TitleBarAppearanc
   };
 
   const size = new ResizeObserver(sync);
+  let observedTitleBar: Element | null = null;
   const observeTitleBar = () => {
     const titleBar = document.querySelector("[data-window-title-bar]");
-    if (!titleBar) return false;
-    size.observe(titleBar);
+    if (titleBar === observedTitleBar) return;
+    size.disconnect();
+    observedTitleBar = titleBar;
+    if (titleBar) size.observe(titleBar);
     sync();
-    return true;
   };
 
   const theme = new MutationObserver(sync);
@@ -24,10 +26,9 @@ export const observeTitleBarAppearance = (update: (appearance: TitleBarAppearanc
     theme.observe(element, { attributes: true, attributeFilter: ["class", "style"] });
   }
 
-  const mounted = new MutationObserver(() => {
-    if (observeTitleBar()) mounted.disconnect();
-  });
-  if (!observeTitleBar()) mounted.observe(document.body, { childList: true, subtree: true });
+  const mounted = new MutationObserver(observeTitleBar);
+  mounted.observe(document.body, { childList: true, subtree: true });
+  observeTitleBar();
   window.addEventListener("focus", sync);
 
   return () => {

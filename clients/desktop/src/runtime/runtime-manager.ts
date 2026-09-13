@@ -29,6 +29,7 @@ export type ManagedRuntime = {
 };
 
 type RuntimeManagerOptions = {
+  appVersion: string;
   descriptorPath: string;
   externalRuntime?: boolean;
   resolveSidecarPath: (signal: AbortSignal) => string | Promise<string>;
@@ -237,6 +238,12 @@ export class DesktopRuntimeManager {
   }
 
   #attach(descriptor: RuntimeDescriptor, external: boolean) {
+    if (descriptor.appVersion !== this.#options.appVersion) {
+      throw new Error(
+        `version_mismatch: Desktop ${this.#options.appVersion} cannot use runtime ${descriptor.appVersion}. ` +
+          "Update the desktop and CLI to the same version. After active work finishes, run pst close and choose Retry.",
+      );
+    }
     this.#runtime = { descriptor, external };
     this.#eventAbort = new AbortController();
     void this.#deps

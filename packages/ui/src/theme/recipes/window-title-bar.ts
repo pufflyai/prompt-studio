@@ -32,7 +32,12 @@ export const windowTitleBarRecipe = defineSlotRecipe({
           "[data-window-full-screen] &": { paddingInlineStart: "compact" },
         },
       },
-      overlay: { content: { marginLeft: "env(titlebar-area-x, 0px)", width: "env(titlebar-area-width, 100%)" } },
+      overlay: {
+        content: {
+          marginLeft: "env(titlebar-area-x, var(--pstdio-titlebar-area-x, 0px))",
+          width: "env(titlebar-area-width, var(--pstdio-titlebar-area-width, 100%))",
+        },
+      },
     },
   },
   defaultVariants: { controls: "overlay" },

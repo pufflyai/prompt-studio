@@ -4,6 +4,11 @@ export interface TitleBarAppearance {
   height: number;
 }
 
+export interface TitleBarArea {
+  x: number;
+  width: number;
+}
+
 export const titleBarOverlayOptions = (value: unknown) => {
   if (
     !value ||

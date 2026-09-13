@@ -8,11 +8,13 @@ import { _electron as electron, expect, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
+import { expectNativeTitleBar, nativeTitleBarFixture } from "./native-title-bar";
 import { expectNativeWindowActions } from "./native-window-actions";
+import { expectRuntimeVersionRecovery } from "./runtime-version";
 
 const require = createRequire(import.meta.url);
 const electronPath = require("electron") as string;
-const appPath = resolve(import.meta.dirname, "../../dist/main.js");
+const appPath = resolve(import.meta.dirname, "../..");
 const roots: string[] = [];
 
 const environment = (values: Record<string, string>) => {
@@ -74,7 +76,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       return;
     }
     response.setHeader("content-type", "text/html");
-    response.write("<!doctype html><html><body>");
+    response.write(`<!doctype html><html><body style="margin:0">${nativeTitleBarFixture}`);
     dashboardRequested.resolve();
     void dashboardResponse.promise.then(() =>
       response.end(
@@ -95,7 +97,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     ownerType: "persistent",
     origin: `http://127.0.0.1:${address.port}`,
     token,
-    appVersion: "0.25.2",
+    appVersion: "0.31.0",
     startedAt: new Date().toISOString(),
   };
   writeFileSync(join(home, "runtime.json"), JSON.stringify(descriptor));
@@ -109,6 +111,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
   const finishTrace = await startElectronTrace(electronApp.context(), "attached-runtime");
   try {
     const lifecycle = await waitForLifecyclePage(electronApp.context());
+    await expectRuntimeVersionRecovery(electronApp, lifecycle, descriptor, home);
     await dashboardRequested.promise;
     expect(
       await lifecycle.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()),
@@ -118,6 +121,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     dashboardResponse.resolve();
     const window = await waitForWorkbenchPage(lifecycle, descriptor.origin);
     await expect(window.getByText("Existing Prompt Studio dashboard")).toBeVisible();
+    await expectNativeTitleBar(electronApp, window);
     expect(await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0]?.isVisible())).toBe(true);
     await expect
       .poll(() => window.evaluate(() => (globalThis as unknown as Window).promptStudioDesktop.getStartupState()))
