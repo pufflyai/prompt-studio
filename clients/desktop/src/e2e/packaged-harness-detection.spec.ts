@@ -63,6 +63,7 @@ for (const shell of ["/bin/bash", "/bin/zsh", "/bin/csh", "/bin/tcsh"]) {
       await app.page.emulateMedia({ reducedMotion: "reduce" });
       await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
       const modelMenu = app.page.getByRole("button", { name: "Select model", exact: true });
+      const conversationHeading = app.page.getByRole("heading", { name: "No active conversations", exact: true });
       await expect(modelMenu).not.toContainText("Loading");
       for (const name of ["Claude Code", "OpenCode", "Codex"]) {
         await modelMenu.click();
@@ -70,11 +71,11 @@ for (const shell of ["/bin/bash", "/bin/zsh", "/bin/csh", "/bin/tcsh"]) {
         const option = app.page.getByTestId("workspace-agent-options").getByRole("menuitem", { name, exact: true });
         await expect(option).toBeEnabled();
         await option.click();
-        await app.page.keyboard.press("Escape");
+        await conversationHeading.click();
         await expect(app.page.getByRole("menuitem", { name: "Select harness", exact: true })).not.toBeVisible();
         await modelMenu.click();
         await expect(app.page.getByRole("menuitem", { name: "Select harness", exact: true })).toContainText(name);
-        await app.page.keyboard.press("Escape");
+        await conversationHeading.click();
         await expect(app.page.getByRole("menuitem", { name: "Select harness", exact: true })).not.toBeVisible();
       }
       await modelMenu.click();
