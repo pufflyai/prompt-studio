@@ -15,7 +15,7 @@ export const getDashboardVersion = () => {
   return buildVersion && buildVersion.length > 0 ? buildVersion : "dev";
 };
 
-export const getDashboardVersionLabel = (version = getDashboardVersion()) => `v${version}`;
+export const getDashboardVersionLabel = (version = getDashboardVersion()) => `v${version} · Alpha`;
 
 export const openDashboardHelpLink = (
   url: string,
