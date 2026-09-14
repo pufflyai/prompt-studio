@@ -1,5 +1,14 @@
 # pstdio-artifacts
 
+## 0.2.3
+
+_2026-09-14_
+
+### Patch Changes
+
+- a4fa9de: Align extension Bun type definitions to 1.4.2.
+- Updated internal dependencies: `@pstdio/sdk@0.24.1`, `@pstdio/ui@0.25.0`
+
 ## 0.2.2
 
 _2026-09-10_

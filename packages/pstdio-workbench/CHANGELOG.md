@@ -1,5 +1,15 @@
 # @pstdio/workbench
 
+## 0.11.3
+
+_2026-09-14_
+
+### Patch Changes
+
+- 7a4b8b6: Align Bun runtime and type definitions to 1.4.2 across development and builds.
+- 500f117: Fix CI races and SSE shutdown errors, and speed up cold runtime, dashboard, and extension webview startup with Bun 1.4.2.
+- Updated internal dependencies: `@pstdio/sdk@0.24.1`, `@pstdio/ui@0.25.0`
+
 ## 0.11.2
 
 _2026-09-10_

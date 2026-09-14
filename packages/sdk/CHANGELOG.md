@@ -1,5 +1,14 @@
 # @pstdio/sdk
 
+## 0.24.1
+
+_2026-09-14_
+
+### Patch Changes
+
+- 7a4b8b6: Align Bun runtime and type definitions to 1.4.2 across development and builds.
+- 500f117: Fix CI races and SSE shutdown errors, and speed up cold runtime, dashboard, and extension webview startup with Bun 1.4.2.
+
 ## 0.24.0
 
 _2026-09-10_
