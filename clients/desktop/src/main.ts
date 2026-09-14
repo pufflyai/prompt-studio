@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { app, autoUpdater, clipboard, ipcMain, Menu, protocol, shell } from "electron";
+import { app, autoUpdater, clipboard, dialog, ipcMain, Menu, protocol, shell } from "electron";
 import electronSquirrelStartup from "electron-squirrel-startup";
 import { createLogger, resolveDefaultLogPath } from "pstdio-logging";
 import { resolvePstdioRuntimeDescriptorPath } from "pstdio-paths";
@@ -43,6 +43,16 @@ const updateManager = new DesktopUpdateManager({
   packaged: app.isPackaged,
   updater: autoUpdater,
   openExternal: (url) => shell.openExternal(url),
+  onUpdateNotAvailable: () => {
+    void dialog
+      .showMessageBox({
+        type: "info",
+        title: "Check for Updates",
+        message: "There are currently no updates available.",
+        buttons: ["OK"],
+      })
+      .catch(reportUpdateError);
+  },
 });
 const reportUpdateError = (error: Error) => {
   logger.error({ event: "desktop.update.failed", message: error.message }, "Desktop update check failed");

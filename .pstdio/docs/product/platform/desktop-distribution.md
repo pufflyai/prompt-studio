@@ -47,6 +47,9 @@ complete `pstdio@<version>` release. They then point Electron's native updater a
 that release's architecture-aware JSON metadata. Source builds do not use the
 native updater.
 
+When **Prompt Studio → Check for Updates…** finds no update, a native information
+dialog says **There are currently no updates available.** Dismiss it with **OK**.
+
 Electron has no built-in Linux updater. Use the package manager for DEB installs,
 or download and replace the portable directory from the GitHub release page.
 The desktop **Check for updates** capability opens that release page on Linux.

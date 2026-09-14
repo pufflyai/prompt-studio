@@ -1,6 +1,7 @@
 import { desktopReleasesUrl, resolveDesktopUpdateFeed, resolveDesktopUpdateStrategy } from "./release-config";
 
 type NativeUpdater = {
+  on: (event: "update-not-available", listener: () => void) => unknown;
   setFeedURL: (options: { url: string }) => void;
   checkForUpdates: () => unknown;
 };
@@ -11,6 +12,7 @@ type DesktopUpdateManagerOptions = {
   packaged: boolean;
   updater: NativeUpdater;
   openExternal: (url: string) => Promise<unknown>;
+  onUpdateNotAvailable: () => void;
   resolveUpdateFeed?: typeof resolveDesktopUpdateFeed;
 };
 
@@ -19,6 +21,7 @@ export class DesktopUpdateManager {
 
   constructor(options: DesktopUpdateManagerOptions) {
     this.#options = options;
+    options.updater.on("update-not-available", options.onUpdateNotAvailable);
   }
 
   async checkForUpdates() {
