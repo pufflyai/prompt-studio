@@ -1,5 +1,13 @@
 # @pstdio/workbench
 
+## 0.11.4
+
+_2026-09-14_
+
+### Patch Changes
+
+- c27cf95: Preserve visited workbench views across page and mode navigation.
+
 ## 0.11.3
 
 _2026-09-14_
