@@ -42,9 +42,23 @@ The ephemeral browser session deliberately discards credentials and browser stor
 
 ## Native title bar and project tabs
 
+Desktop requires the running runtime's application version to match its own.
+Protocol health alone is not sufficient: the runtime serves the dashboard, so an
+older CLI can otherwise replace the current desktop chrome with an older UI.
+A mismatch shows both versions and recovery steps before loading the dashboard.
+Desktop leaves the existing runtime and its active work running. Update desktop
+and CLI to the same version, finish active work, run `pst close`, then choose Retry.
+
 Electron uses a hidden title bar with native controls. macOS traffic lights sit at x=10, y=15 inside the 44-pixel bar. Tabs start at x=90 in a normal window and x=10 in native full screen. The native window owns full-screen state. Its events update a `data-window-full-screen` document attribute through the preload, which also reads the current state after each document load. The shared recipe uses that attribute to release the controls' space. No layout preference or React state duplicates the native state.
 
 Windows and Linux use a 44-pixel native window-controls overlay, and CSS title-bar environment values keep interactive content out of its safe area. The title bar uses the app background token without a bottom border. The bar is draggable; tabs, close buttons, and the project picker are not. Startup, recovery, confirmation, and closing views use the same recipe.
+
+On Linux, double-clicking the empty draggable bar maximizes the window; another
+double-click restores it. Electron 43.6.0 does not supply overlay geometry to child
+views. Until its upstream fix ships, the preload forwards the primary view's safe
+area to the workbench recipe as a CSS fallback. See ADR 0029.
+The appearance observer follows title-bar remounts so recovery and confirmation
+screens update the native controls as well.
 
 Only the active surface renders a title bar. During the workbench state, the lifecycle view renders nothing while its state subscription remains mounted for recovery and quit confirmation. Electron combines native drag regions from covered renderers, so leaving the lifecycle title bar underneath the workbench would intercept mouse clicks on project tabs and the project picker. Chromium-injected clicks bypass this native hit test; packaged tests also check that the inactive lifecycle surface is absent after startup, recovery, and canceled quit.
 

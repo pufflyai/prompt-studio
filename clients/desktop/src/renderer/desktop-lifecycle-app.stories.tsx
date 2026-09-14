@@ -98,6 +98,21 @@ export const ActiveWorkConfirmation: Story = {
   },
 };
 
+export const RuntimeVersionMismatch: Story = {
+  args: {
+    platform: "linux",
+    state: {
+      kind: "recovery",
+      error: {
+        code: "version_mismatch",
+        message:
+          "Desktop 0.33.1 cannot use runtime 0.31.0. Update the desktop and CLI to the same version. After active work finishes, run pst close and choose Retry.",
+        actions: ["retry", "open_logs", "copy_diagnostics", "quit"],
+      },
+    },
+  },
+};
+
 export const Closing: Story = {
   args: { state: { kind: "closing" } },
 };

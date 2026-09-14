@@ -7,7 +7,7 @@ import { secureSession, secureWebContents } from "../security/apply-window-secur
 import { provisionRuntimeSession } from "../security/runtime-session";
 import { createSecureWindowOptions } from "../security/window-security";
 import { LIFECYCLE_SCHEME, LIFECYCLE_URL, readLifecycleAsset } from "./lifecycle-protocol";
-import type { TitleBarAppearance } from "./title-bar-appearance";
+import type { TitleBarAppearance, TitleBarArea } from "./title-bar-appearance";
 
 const WORKBENCH_PARTITION = "pstdio-workbench";
 
@@ -80,6 +80,13 @@ export class DesktopWindowController {
     // Updating the hidden native overlay can suppress ready-to-show (ADR 0021).
     await this.#shown;
     this.window.setTitleBarOverlay(appearance);
+    // Electron does not forward overlay geometry to child views yet (ADR 0029).
+    const area: TitleBarArea | null = await this.window.webContents.executeJavaScript(
+      "navigator.windowControlsOverlay.visible ? navigator.windowControlsOverlay.getTitlebarAreaRect().toJSON() : null",
+    );
+    if (!area) return null;
+    const zoom = this.window.webContents.getZoomFactor();
+    return { x: area.x * zoom, width: area.width * zoom };
   }
 
   private resizeWorkbench() {

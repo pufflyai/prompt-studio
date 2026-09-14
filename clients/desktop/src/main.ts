@@ -57,6 +57,7 @@ const setState = (next: DesktopState) => {
 };
 
 const recoveryCode = (detail: string): DesktopRecoveryError["code"] => {
+  if (detail.startsWith("version_mismatch:")) return "version_mismatch";
   if (detail.startsWith("port_bind_failure:")) return "port_bind_failure";
   if (detail.startsWith("pglite_ownership_conflict:")) return "pglite_ownership_conflict";
   if (detail.startsWith("pglite_recovery_failure:")) return "pglite_recovery_failure";
@@ -97,6 +98,7 @@ const recoveryError = (error: unknown): DesktopRecoveryError => {
 };
 
 const runtimeManager = new DesktopRuntimeManager({
+  appVersion: app.getVersion(),
   descriptorPath,
   externalRuntime,
   resolveSidecarPath: (signal) =>
@@ -247,7 +249,7 @@ const bootstrap = async () => {
   registerDesktopIpc({
     isFullScreen: () => window.isFullScreen(),
     setTitleBarAppearance: async (appearance) => {
-      await windowController?.setTitleBarAppearance(appearance);
+      return windowController?.setTitleBarAppearance(appearance);
     },
     ipcMain,
     webContents: () => windowController?.webContents() ?? [],

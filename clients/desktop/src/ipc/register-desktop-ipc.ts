@@ -4,11 +4,11 @@ import type { DesktopProjectTabsState, DesktopWorkbenchState } from "../desktop-
 import { DESKTOP_CHANNELS } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { isAllowedIpcSender } from "../security/ipc-security";
-import { type TitleBarAppearance, titleBarOverlayOptions } from "../windows/title-bar-appearance";
+import { type TitleBarAppearance, type TitleBarArea, titleBarOverlayOptions } from "../windows/title-bar-appearance";
 
 type DesktopIpcOptions = {
   isFullScreen: () => boolean;
-  setTitleBarAppearance: (appearance: TitleBarAppearance) => Promise<void>;
+  setTitleBarAppearance: (appearance: TitleBarAppearance) => Promise<TitleBarArea | null | undefined>;
   appInfo: () => { platform: string; version: string };
   cancelQuit: () => Promise<void>;
   checkForUpdates: () => Promise<void>;

@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron as electron, expect, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
+import desktopPackage from "../../package.json" with { type: "json" };
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
 import { acceptFocusedButton } from "./lifecycle-actions";
@@ -13,7 +14,7 @@ import { expectStartupWindowVisible } from "./startup-window";
 
 const require = createRequire(import.meta.url);
 const electronPath = require("electron") as string;
-const appPath = resolve(import.meta.dirname, "../../dist/main.js");
+const appPath = resolve(import.meta.dirname, "../..");
 const cleanup: Array<() => void | Promise<void>> = [];
 
 const environment = (values: Record<string, string>) => {
@@ -121,7 +122,7 @@ test("recovers from refused shutdown and closes each quit confirmation", async (
     ownerType: "desktop",
     origin: `http://127.0.0.1:${address.port}`,
     token,
-    appVersion: "0.25.2",
+    appVersion: desktopPackage.version,
     startedAt: new Date().toISOString(),
   };
   writeFileSync(descriptorPath, JSON.stringify(descriptor));

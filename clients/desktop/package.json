@@ -18,7 +18,7 @@
     "package": "electron-forge package",
     "release:prepare": "bun scripts/prepare-release.ts",
     "release:verify": "bun scripts/verify-release-set.ts",
-    "start": "electron dist/main.js",
+    "start": "electron .",
     "prestorybook": "bun run --cwd ../../packages/ui build",
     "storybook": "storybook dev -p 6009",
     "prebuild-storybook": "bun run --cwd ../../packages/ui build",

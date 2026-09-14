@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, webFrame } from "electron";
 import { DESKTOP_CHANNELS, type DesktopProjectTabsState, type PromptStudioDesktopApi } from "./desktop-api";
 import type { DesktopState } from "./lifecycle/lifecycle-machine";
 import { observeTitleBarAppearance } from "./windows/observe-title-bar-appearance";
+import type { TitleBarArea } from "./windows/title-bar-appearance";
 
 if (process.platform === "darwin") {
   const applyFullScreen = (fullScreen: boolean) => {
@@ -22,10 +23,19 @@ if (process.platform !== "darwin") {
     "DOMContentLoaded",
     () => {
       const stop = observeTitleBarAppearance((appearance) => {
-        void ipcRenderer.invoke(DESKTOP_CHANNELS.titleBarAppearance, {
-          ...appearance,
-          height: Math.round(appearance.height * webFrame.getZoomFactor()),
-        });
+        void ipcRenderer
+          .invoke(DESKTOP_CHANNELS.titleBarAppearance, {
+            ...appearance,
+            height: Math.round(appearance.height * webFrame.getZoomFactor()),
+          })
+          .then((area: TitleBarArea | null) => {
+            const style = document.documentElement.style;
+            for (const key of ["x", "width"] as const) {
+              const name = `--pstdio-titlebar-area-${key}`;
+              const value = area ? `${area[key] / webFrame.getZoomFactor()}px` : "";
+              if (style.getPropertyValue(name) !== value) style.setProperty(name, value);
+            }
+          });
       });
       window.addEventListener("unload", stop, { once: true });
     },
