@@ -1,8 +1,37 @@
 import { expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { resolveRuntimeEnvironment } from "./runtime-environment";
+
+for (const shell of ["/bin/bash", "/bin/zsh", "/bin/csh", "/bin/tcsh"]) {
+  test.skipIf(process.platform === "win32" || !existsSync(shell))(
+    `loads interactive and login PATH configuration from ${shell}`,
+    async () => {
+      const home = mkdtempSync(join(tmpdir(), "desktop-login-shell-"));
+      const interactivePath = join(home, "interactive tools");
+      const loginPath = join(home, "login tools");
+      writeFileSync(join(home, ".bashrc"), 'export PATH="$HOME/interactive tools:$PATH"\n');
+      writeFileSync(join(home, ".bash_profile"), 'source "$HOME/.bashrc"\nexport PATH="$HOME/login tools:$PATH"\n');
+      writeFileSync(join(home, ".zshrc"), 'export PATH="$HOME/interactive tools:$PATH"\n');
+      writeFileSync(join(home, ".zprofile"), 'export PATH="$HOME/login tools:$PATH"\n');
+      writeFileSync(join(home, ".cshrc"), 'setenv PATH "$HOME/interactive tools:$PATH"\n');
+      writeFileSync(join(home, ".login"), 'setenv PATH "$HOME/login tools:$PATH"\n');
+      try {
+        const env = await resolveRuntimeEnvironment(AbortSignal.timeout(2_000), {
+          HOME: home,
+          ZDOTDIR: home,
+          SHELL: shell,
+          PATH: "/usr/bin:/bin:/usr/sbin:/sbin",
+        });
+        expect(env.PATH?.split(":")).toContain(interactivePath);
+        expect(env.PATH?.split(":")).toContain(loginPath);
+      } finally {
+        rmSync(home, { recursive: true, force: true });
+      }
+    },
+  );
+}
 
 test("preserves the inherited Windows environment", async () => {
   const env = { PATH: "C:\\tools;C:\\Windows", PSTDIO_HOME: "C:\\runtime", SHELL: "/missing-shell" };
