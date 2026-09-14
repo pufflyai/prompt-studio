@@ -54,6 +54,8 @@ export const expectStandardFileSearch = async (search: Locator) => {
 };
 
 export const expectFoldersBeforeFiles = async (filesTree: Locator) => {
+  await expect(filesTree.getByRole("option", { name: "zzz-folder", exact: true })).toBeVisible();
+  await expect(filesTree.getByRole("option", { name: "LICENSE", exact: true })).toBeVisible();
   const rootPaths = await filesTree
     .getByRole("option")
     .evaluateAll((rows) =>

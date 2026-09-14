@@ -19,6 +19,7 @@ import {
   verifyExternalRuntime,
   waitForDesktopRuntime,
 } from "./runtime-controller";
+import { resolveRuntimeEnvironment } from "./runtime-environment";
 
 const OUTPUT_LIMIT = 64 * 1024;
 const SIDECAR_TERMINATION_GRACE_MS = 2_000;
@@ -56,6 +57,7 @@ type RuntimeManagerDeps = {
   existsSync: typeof existsSync;
   observeRuntimeShutdown: typeof observeRuntimeShutdown;
   readRuntimeDescriptor: typeof readRuntimeDescriptor;
+  resolveEnvironment: typeof resolveRuntimeEnvironment;
   requestRuntimeShutdown: typeof requestRuntimeShutdown;
   sleep: (milliseconds: number) => Promise<void>;
   spawn: (path: string, args: string[], options: RuntimeSpawnOptions) => RuntimeProcess;
@@ -69,6 +71,7 @@ const defaultDeps: RuntimeManagerDeps = {
   existsSync,
   observeRuntimeShutdown,
   readRuntimeDescriptor,
+  resolveEnvironment: resolveRuntimeEnvironment,
   requestRuntimeShutdown,
   sleep: (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
   spawn: (path, args, options) => spawn(path, args, options),
@@ -156,12 +159,14 @@ export class DesktopRuntimeManager {
     }
     const sidecarPath = await this.#options.resolveSidecarPath(signal);
     if (!this.#deps.existsSync(sidecarPath)) throw new Error(`Desktop sidecar is missing: ${sidecarPath}`);
+    const env = await this.#deps.resolveEnvironment(signal);
+    signal.throwIfAborted();
 
     this.#options.onPhase("spawning");
     this.#output = "";
     const instanceId = this.#deps.createInstanceId();
     const child = this.#deps.spawn(sidecarPath, createSidecarLaunchArguments(instanceId), {
-      env: process.env,
+      env,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
     });

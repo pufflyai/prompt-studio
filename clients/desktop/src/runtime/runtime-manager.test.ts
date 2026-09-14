@@ -31,6 +31,30 @@ class RuntimeChild extends EventEmitter {
 }
 
 describe("DesktopRuntimeManager", () => {
+  test("attaches to a healthy runtime without running shell startup", async () => {
+    const manager = new DesktopRuntimeManager(
+      {
+        descriptorPath: "/tmp/runtime.json",
+        resolveSidecarPath: () => {
+          throw new Error("Must not select a sidecar for a running runtime");
+        },
+        onIntentionalShutdown() {},
+        onUnexpectedExit() {},
+        onPhase() {},
+      },
+      {
+        discoverRuntime: async () => ({ state: "healthy", descriptor }),
+        observeRuntimeShutdown: async () => {},
+        resolveEnvironment: async () => {
+          throw new Error("Must not load shell startup for a running runtime");
+        },
+      },
+    );
+
+    await expect(manager.start()).resolves.toEqual({ descriptor, external: false });
+    manager.detach();
+  });
+
   test("refuses a different runtime that publishes the descriptor while the sidecar starts", async () => {
     const child = new RuntimeChild();
     child.exitOnKill = true;
@@ -46,6 +70,7 @@ describe("DesktopRuntimeManager", () => {
         onPhase: () => {},
       },
       {
+        resolveEnvironment: async () => ({ ...process.env }),
         createInstanceId: () => descriptor.instanceId,
         discoverRuntime: async () => discoveries.shift()!,
         existsSync: () => true,
@@ -78,6 +103,7 @@ describe("DesktopRuntimeManager", () => {
         onPhase: () => {},
       },
       {
+        resolveEnvironment: async () => ({ ...process.env }),
         createInstanceId: () => descriptor.instanceId,
         discoverRuntime: async () => discoveries.shift()!,
         existsSync: () => true,
@@ -117,6 +143,7 @@ describe("DesktopRuntimeManager", () => {
         onPhase: () => {},
       },
       {
+        resolveEnvironment: async () => ({ ...process.env }),
         createInstanceId: () => descriptor.instanceId,
         discoverRuntime: async () => discoveries.shift()!,
         existsSync: () => true,
@@ -156,6 +183,7 @@ describe("DesktopRuntimeManager", () => {
         onPhase: () => {},
       },
       {
+        resolveEnvironment: async () => ({ ...process.env }),
         createInstanceId: () => descriptor.instanceId,
         discoverRuntime: async () => discoveries.shift()!,
         existsSync: () => true,
