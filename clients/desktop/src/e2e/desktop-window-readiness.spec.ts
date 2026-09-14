@@ -10,8 +10,9 @@ import { expect, test } from "@playwright/test";
 
 const require = createRequire(import.meta.url);
 
-test("shows the startup window before creating the workbench view", async () => {
+test("loads the workbench early without covering the startup window", async () => {
   const root = mkdtempSync(join(tmpdir(), "desktop-window-readiness-"));
+  let workbenchRequests = 0;
   const server = createServer((request, response) => {
     if (request.url === "/runtime/browser-session") {
       response.setHeader(
@@ -21,6 +22,7 @@ test("shows the startup window before creating the workbench view", async () => 
       response.writeHead(204).end();
       return;
     }
+    if (request.url === "/") workbenchRequests += 1;
     response.setHeader("content-type", "text/html");
     response.end("<!doctype html><main>Ready workbench</main>");
   });
@@ -54,14 +56,15 @@ test("shows the startup window before creating the workbench view", async () => 
     const lines = createInterface({ input: application.stdout! })[Symbol.asyncIterator]();
     try {
       const beforeStartup = JSON.parse((await lines.next()).value!);
-      expect(beforeStartup).toEqual({ visible: false, childViews: 0 });
+      expect(beforeStartup).toEqual({ visible: false, workbenchVisible: false });
+      await expect.poll(() => workbenchRequests).toBe(1);
       application.stdin!.write("show\n");
       const documentReady = JSON.parse((await lines.next()).value!);
       expect(documentReady).toEqual({ documentReadyVisible: true });
       const lifecycleShown = JSON.parse((await lines.next()).value!);
       expect(lifecycleShown).toEqual({ lifecycleVisible: true });
       const afterStartup = JSON.parse((await lines.next()).value!);
-      expect(afterStartup).toEqual({ visible: true, childViews: 1 });
+      expect(afterStartup).toEqual({ visible: true, workbenchVisible: true });
     } finally {
       if (application.exitCode === null && application.signalCode === null) {
         const exited = once(application, "exit");

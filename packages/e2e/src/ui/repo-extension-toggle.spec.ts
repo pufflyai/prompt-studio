@@ -108,7 +108,13 @@ const holdProjectExtensionReads = async (page: import("@playwright/test").Page) 
         .toBeGreaterThan(0),
     release: async () => {
       await page.unroute(pattern);
-      await Promise.all(held.splice(0).map((route) => route.continue().catch(() => undefined)));
+      await Promise.all(
+        held.splice(0).map(async (route) => {
+          await route.continue().catch(() => undefined);
+          const response = await route.request().response();
+          await response?.finished();
+        }),
+      );
     },
   };
 };
@@ -119,7 +125,9 @@ const expectSettingsViewToLoad = async (
   label: string,
   content: string,
 ) => {
-  await settings.getByText(label, { exact: true }).click();
+  const option = settings.getByRole("option", { name: label, exact: true });
+  await option.click();
+  await expect(option).toHaveAttribute("aria-selected", "true");
   const iframe = page.locator(`iframe[title="${label}"]`);
   await expect(iframe).toBeVisible();
   await expect(page.getByRole("alert")).toHaveCount(0);
@@ -130,6 +138,7 @@ const expectExtensionSettingsViewsToLoad = async (
   page: import("@playwright/test").Page,
   settings: import("@playwright/test").Locator,
 ) => {
+  await expect(settings.getByRole("option", { name: "Templates", exact: true })).toBeVisible();
   await expectSettingsViewToLoad(page, settings, "Lab (global)", "Greeting tone");
   await expectSettingsViewToLoad(page, settings, "Lab (project)", "Counter step");
   await expectSettingsViewToLoad(

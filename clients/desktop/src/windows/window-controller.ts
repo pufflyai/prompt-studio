@@ -121,12 +121,12 @@ export class DesktopWindowController {
   }
 
   async showWorkbench(descriptor: RuntimeDescriptor) {
-    // A child view must not cover the startup renderer before it shows the native window.
-    await this.#shown;
     this.#runtimeOrigin = descriptor.origin;
     const view = this.#workbench ?? this.createWorkbench();
     await provisionRuntimeSession(view.webContents.session, descriptor);
     await view.webContents.loadURL(descriptor.origin);
+    // Load in parallel, but never cover the startup renderer before the native window shows.
+    await this.#shown;
     view.setVisible(true);
     view.webContents.focus();
   }

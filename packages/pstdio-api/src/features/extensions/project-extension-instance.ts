@@ -1,4 +1,4 @@
-import { dirname, join } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 import type { ProjectExtensionInstance } from "pstdio-api-contracts";
 import { getExtensionApiVersionError } from "pstdio-extensions";
 import { resolvePstdioHome } from "pstdio-paths";
@@ -47,8 +47,11 @@ export const compatibilityError = (installedSource: { install_name: string; mani
 // named `.pstdio` itself, so the repo pattern `<repo>/.pstdio/extensions/` alone would misread
 // global installs as repo-local.
 const sourceScope = (sourcePath: string) => {
-  if (dirname(sourcePath) === join(resolvePstdioHome({ env: process.env }), "extensions")) return "global" as const;
-  return sourcePath.includes("/.pstdio/extensions/") ? ("repo" as const) : ("global" as const);
+  const parent = dirname(resolve(sourcePath));
+  if (parent === join(resolvePstdioHome({ env: process.env }), "extensions")) return "global" as const;
+  return basename(parent) === "extensions" && basename(dirname(parent)) === ".pstdio"
+    ? ("repo" as const)
+    : ("global" as const);
 };
 
 // The package name follows the source's current manifest, so it can never drift from a stored copy.

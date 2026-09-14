@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { ExtensionLoggerApi, TerminalEvent } from "pstdio-api-contracts/extension-kernel";
 import { createTerminalSupervisor } from "./extension-terminal-runtime";
 
@@ -41,7 +41,7 @@ describe("terminal supervisor", () => {
     const missingDirectory = join(tmpdir(), `pstdio-missing-terminal-cwd-${crypto.randomUUID()}`);
 
     expect(() =>
-      supervisor.api.openSession({ command: ["/bin/sh"], cwd: missingDirectory, cols: 80, rows: 24 }),
+      supervisor.api.openSession({ command: shellCommand(), cwd: missingDirectory, cols: 80, rows: 24 }),
     ).toThrow(`Terminal working directory does not exist: ${missingDirectory}`);
   });
 
@@ -169,12 +169,12 @@ describe("terminal supervisor", () => {
   test("reports live terminal activity with a stable id and display label", async () => {
     const { logger, records } = createRecordingLogger();
     const supervisor = createTerminalSupervisor({ logger });
-    const handle = supervisor.api.openSession({ command: ["/bin/sh"], cols: 80, rows: 24 });
+    const handle = supervisor.api.openSession({ command: shellCommand(), cols: 80, rows: 24 });
     void (async () => {
       for await (const _event of handle.events()) void _event;
     })();
 
-    expect(supervisor.activity()).toEqual([{ id: handle.id, label: "sh" }]);
+    expect(supervisor.activity()).toEqual([{ id: handle.id, label: basename(shellCommand()[0]) }]);
 
     // Interactive shells may ignore SIGTERM while they own a PTY. This test
     // verifies activity cleanup, so use the unconditional cleanup signal.

@@ -128,11 +128,11 @@ describe("createWorkspaceFilesMount browsing", () => {
     expect(new TextDecoder().decode(file.bytes)).toBe("before");
     expect(file.size).toBe(6);
     expect(await mount.resolveEntryPath("docs")).toEqual({
-      absolutePath: realpathSync(join(root, "docs")),
+      absolutePath: realpathSync.native(join(root, "docs")),
       type: "directory",
     });
     expect(await mount.resolveEntryPath("notes.txt")).toEqual({
-      absolutePath: realpathSync(join(root, "notes.txt")),
+      absolutePath: realpathSync.native(join(root, "notes.txt")),
       type: "file",
     });
 

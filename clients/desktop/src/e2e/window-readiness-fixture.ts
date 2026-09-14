@@ -30,14 +30,14 @@ void app.whenReady().then(async () => {
     console.log(JSON.stringify({ lifecycleVisible: controller.window.isVisible() }));
     await workbenchReady;
     process.stdout.write(
-      `${JSON.stringify({ visible: controller.window.isVisible(), childViews: controller.window.contentView.children.length })}\n`,
+      `${JSON.stringify({ visible: controller.window.isVisible(), workbenchVisible: controller.window.contentView.children.some((view) => view.getVisible()) })}\n`,
       () => app.exit(0),
     );
   });
   console.log(
     JSON.stringify({
       visible: controller.window.isVisible(),
-      childViews: controller.window.contentView.children.length,
+      workbenchVisible: controller.window.contentView.children.some((view) => view.getVisible()),
     }),
   );
 });

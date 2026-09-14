@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { createLogger, redactSensitiveText, resolveDefaultLogPath } from "./index";
 
 const readJsonLines = (filePath: string) =>
@@ -15,28 +15,28 @@ describe("resolveDefaultLogPath", () => {
   test("uses the configured db path directory when available", () => {
     const path = resolveDefaultLogPath({
       env: { PSTDIO_DB_PATH: "~/state/pstdio.db" },
-      homedirPath: "/home/tester",
+      homedirPath: resolve("/home/tester"),
     });
 
-    expect(path).toBe("/home/tester/state/logs.jsonl");
+    expect(path).toBe(resolve("/home/tester/state/logs.jsonl"));
   });
 
   test("allows explicit log path override", () => {
     const path = resolveDefaultLogPath({
       logPath: "~/custom/output.jsonl",
-      homedirPath: "/home/tester",
+      homedirPath: resolve("/home/tester"),
     });
 
-    expect(path).toBe("/home/tester/custom/output.jsonl");
+    expect(path).toBe(resolve("/home/tester/custom/output.jsonl"));
   });
 
   test("uses PSTDIO_HOME when no narrower state path is configured", () => {
     const path = resolveDefaultLogPath({
       env: { PSTDIO_HOME: "~/pstdio-dev" },
-      homedirPath: "/home/tester",
+      homedirPath: resolve("/home/tester"),
     });
 
-    expect(path).toBe("/home/tester/pstdio-dev/logs.jsonl");
+    expect(path).toBe(resolve("/home/tester/pstdio-dev/logs.jsonl"));
   });
 });
 

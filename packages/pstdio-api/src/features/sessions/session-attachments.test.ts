@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { SessionsRouteDeps } from "./deps";
 import { resolveSessionAttachments } from "./session-attachments";
 
@@ -33,7 +33,7 @@ describe("resolveSessionAttachments", () => {
 
     const [attachment] = await resolveSessionAttachments(depsWith(file), "project-1", [{ file_id: fileId }]);
 
-    expect(attachment.localPath.endsWith("/diagram.png")).toBe(true);
+    expect(basename(attachment.localPath) === "diagram.png").toBe(true);
     expect(await readFile(attachment.localPath)).toEqual(bytes);
   });
 
@@ -53,12 +53,15 @@ describe("resolveSessionAttachments", () => {
     };
 
     const results = await Promise.all(
-      Array.from({ length: 20 }, () => resolveSessionAttachments(depsWith(file), "project-1", refs)),
+      Array.from({ length: 20 }, async () => {
+        const [attachment] = await resolveSessionAttachments(depsWith(file), "project-1", refs);
+        return { attachment, contents: await readFile(attachment.localPath) };
+      }),
     );
 
-    for (const [attachment] of results) {
-      expect(attachment.localPath.endsWith("/shared.txt")).toBe(true);
-      expect(await readFile(attachment.localPath)).toEqual(bytes);
+    for (const { attachment, contents } of results) {
+      expect(basename(attachment.localPath) === "shared.txt").toBe(true);
+      expect(contents).toEqual(bytes);
     }
   });
 });
