@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { app, autoUpdater, clipboard, ipcMain, Menu, protocol, shell } from "electron";
+import { app, autoUpdater, clipboard, dialog, ipcMain, Menu, protocol, shell } from "electron";
 import electronSquirrelStartup from "electron-squirrel-startup";
 import { createLogger, resolveDefaultLogPath } from "pstdio-logging";
 import { resolvePstdioRuntimeDescriptorPath } from "pstdio-paths";
@@ -13,6 +13,8 @@ import {
 } from "./lifecycle/lifecycle-machine";
 import { createApplicationMenuTemplate, setApplicationCommandsEnabled } from "./release/application-menu";
 import { DesktopUpdateManager } from "./release/desktop-update-manager";
+import { createDesktopUpdateNotifications } from "./release/desktop-update-notifications";
+import { DesktopUpdateReceipt } from "./release/desktop-update-receipt";
 import { DesktopRuntimeManager } from "./runtime/runtime-manager";
 import { DesktopSidecarError, validateSidecarArtifact } from "./runtime/sidecar-artifact";
 import { focusPrimaryWindow } from "./security/apply-window-security";
@@ -37,17 +39,25 @@ let allowQuit = false;
 let quitting = false;
 let state: DesktopState = initialDesktopState;
 let windowController: DesktopWindowController | null = null;
+const updateNotifications = createDesktopUpdateNotifications({
+  currentVersion: app.getVersion(),
+  receipt: new DesktopUpdateReceipt(join(app.getPath("userData"), "downloaded-update-version")),
+  showMessageBox: (options) => dialog.showMessageBox(options),
+  logError: (error) => {
+    logger.error({ event: "desktop.update.failed", message: error.message }, "Desktop update check failed");
+  },
+});
 const updateManager = new DesktopUpdateManager({
   platform: process.platform,
   arch: process.arch,
   packaged: app.isPackaged,
+  currentVersion: app.getVersion(),
   updater: autoUpdater,
   openExternal: (url) => shell.openExternal(url),
+  onUpdateNotAvailable: updateNotifications.notAvailable,
+  onUpdateDownloaded: updateNotifications.downloaded,
+  onUpdateError: updateNotifications.failed,
 });
-const reportUpdateError = (error: Error) => {
-  logger.error({ event: "desktop.update.failed", message: error.message }, "Desktop update check failed");
-};
-autoUpdater.on("error", reportUpdateError);
 
 const setState = (next: DesktopState) => {
   state = next;
@@ -141,6 +151,7 @@ const startRuntime = async () => {
         },
       }),
     );
+    if (app.isPackaged) updateNotifications.installed();
   } catch (error) {
     logger.error(
       { event: "desktop.runtime.start.failed", message: recoveryError(error).message },
@@ -225,7 +236,7 @@ const bootstrap = async () => {
       createApplicationMenuTemplate(
         process.platform,
         () => {
-          void updateManager.checkForUpdates().catch(reportUpdateError);
+          void updateManager.checkForUpdates();
         },
         (commandId) => {
           if (state.kind === "workbench") windowController?.executeCommand(commandId);

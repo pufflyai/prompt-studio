@@ -121,14 +121,17 @@ export const resolveDesktopUpdateFeed = async (input: UpdateFeedInput) => {
       (candidate): candidate is { release: GitHubRelease; version: string } =>
         candidate.version !== null && hasUpdateAssets(candidate.release, input.platform, input.arch),
     )
-    .sort((left, right) => rcompare(left.version, right.version))[0]?.release;
+    .sort((left, right) => rcompare(left.version, right.version))[0];
 
   if (!release) {
     throw new Error(`No complete ${input.platform}-${input.arch} desktop update release is published`);
   }
 
-  const releaseRoot = `${RELEASE_DOWNLOAD_URL}/${release.tag_name}`;
-  return input.platform === "darwin" ? `${releaseRoot}/RELEASES-darwin-${input.arch}.json` : releaseRoot;
+  const releaseRoot = `${RELEASE_DOWNLOAD_URL}/${release.release.tag_name}`;
+  return {
+    version: release.version,
+    url: input.platform === "darwin" ? `${releaseRoot}/RELEASES-darwin-${input.arch}.json` : releaseRoot,
+  };
 };
 
 export const desktopReleasesUrl = RELEASES_URL;
