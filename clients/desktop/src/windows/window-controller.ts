@@ -5,8 +5,9 @@ import { DESKTOP_CHANNELS } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { secureSession, secureWebContents } from "../security/apply-window-security";
 import { provisionRuntimeSession } from "../security/runtime-session";
-import { createSecureWindowOptions, MACOS_WINDOW_BUTTON_POSITION } from "../security/window-security";
+import { createSecureWindowOptions } from "../security/window-security";
 import { LIFECYCLE_SCHEME, LIFECYCLE_URL, readLifecycleAsset } from "./lifecycle-protocol";
+import { filterMacosMouseEvents } from "./macos-mouse-events";
 import type { TitleBarAppearance } from "./title-bar-appearance";
 
 const WORKBENCH_PARTITION = "pstdio-workbench";
@@ -41,10 +42,6 @@ export class DesktopWindowController {
     this.window.contentView.on("bounds-changed", () => this.resizeWorkbench());
     const updateFullScreen = () => {
       const fullScreen = this.window.isFullScreen();
-      // Windowed button margins also enlarge AppKit's full-screen title bar (ADR 0029).
-      if (process.platform === "darwin") {
-        this.window.setWindowButtonPosition(fullScreen ? null : MACOS_WINDOW_BUTTON_POSITION);
-      }
       for (const contents of this.webContents()) {
         contents.send(DESKTOP_CHANNELS.fullScreenChanged, fullScreen);
       }
@@ -98,6 +95,7 @@ export class DesktopWindowController {
       webPreferences: createSecureWindowOptions(this.preloadPath, WORKBENCH_PARTITION).webPreferences,
     });
     this.#workbench = view;
+    filterMacosMouseEvents(this.window, view.webContents);
     secureWebContents(view.webContents, {
       lifecycleUrl: this.lifecycleUrl,
       runtimeOrigin: () => this.#runtimeOrigin,

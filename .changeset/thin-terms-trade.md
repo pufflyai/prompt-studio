@@ -2,4 +2,4 @@
 "pstdio": patch
 ---
 
-Restore native macOS header placement in full screen so project tabs remain clickable and window controls stay available.
+Filter misplaced stationary mouse events so macOS full-screen project tab clicks do not start a drag.
