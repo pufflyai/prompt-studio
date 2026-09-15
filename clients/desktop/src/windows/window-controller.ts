@@ -40,8 +40,11 @@ export class DesktopWindowController {
     });
     this.window.contentView.on("bounds-changed", () => this.resizeWorkbench());
     const updateFullScreen = () => {
+      const fullScreen = this.window.isFullScreen();
+      // AppKit's full-screen title bar can cover the project tabs (ADR 0029).
+      if (process.platform === "darwin") this.window.setWindowButtonVisibility(!fullScreen);
       for (const contents of this.webContents()) {
-        contents.send(DESKTOP_CHANNELS.fullScreenChanged, this.window.isFullScreen());
+        contents.send(DESKTOP_CHANNELS.fullScreenChanged, fullScreen);
       }
     };
     this.window.on("enter-full-screen", updateFullScreen);
