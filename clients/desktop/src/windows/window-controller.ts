@@ -5,7 +5,7 @@ import { DESKTOP_CHANNELS } from "../desktop-api";
 import type { DesktopState } from "../lifecycle/lifecycle-machine";
 import { secureSession, secureWebContents } from "../security/apply-window-security";
 import { provisionRuntimeSession } from "../security/runtime-session";
-import { createSecureWindowOptions } from "../security/window-security";
+import { createSecureWindowOptions, MACOS_WINDOW_BUTTON_POSITION } from "../security/window-security";
 import { LIFECYCLE_SCHEME, LIFECYCLE_URL, readLifecycleAsset } from "./lifecycle-protocol";
 import type { TitleBarAppearance } from "./title-bar-appearance";
 
@@ -41,8 +41,10 @@ export class DesktopWindowController {
     this.window.contentView.on("bounds-changed", () => this.resizeWorkbench());
     const updateFullScreen = () => {
       const fullScreen = this.window.isFullScreen();
-      // AppKit's full-screen title bar can cover the project tabs (ADR 0029).
-      if (process.platform === "darwin") this.window.setWindowButtonVisibility(!fullScreen);
+      // Windowed button margins also enlarge AppKit's full-screen title bar (ADR 0029).
+      if (process.platform === "darwin") {
+        this.window.setWindowButtonPosition(fullScreen ? null : MACOS_WINDOW_BUTTON_POSITION);
+      }
       for (const contents of this.webContents()) {
         contents.send(DESKTOP_CHANNELS.fullScreenChanged, fullScreen);
       }

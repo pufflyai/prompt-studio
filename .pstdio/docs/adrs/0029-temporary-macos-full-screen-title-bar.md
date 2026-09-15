@@ -1,59 +1,61 @@
-# Temporarily hide the native macOS title bar in full screen
+# Temporarily reset macOS window button placement in full screen
 
 ## Status
 
-Candidate temporary workaround for PS-375. User validation of upper-edge project
-tab clicks is pending. Do not treat the reported bug as fixed until that passes.
+Revised candidate for PS-375, pending native user validation. The user confirmed
+that hiding the native title-bar container restored upper-edge tab clicks, but
+also reported missing native buttons and title when revealing the full-screen
+header. That first workaround is rejected.
 
 ## Ideal design
 
-The project tabs should receive clicks across their visible bounds in every
-window mode. Native window controls should remain available without an invisible
-native title bar covering the custom controls.
+Project tabs receive clicks across their visible bounds. macOS owns the native
+full-screen header, including its title, traffic lights, and reveal animation.
+Custom windowed button placement must not affect that header's hit area.
 
 ## External limitation
 
-[Electron issue 41065](https://github.com/electron/electron/issues/41065) describes
-the native macOS title bar covering a custom title bar in full screen. Electron
-does not expose a separate option for removing that native container while
-keeping its window controls. Renderer CSS cannot control that AppKit view.
+Electron's macOS window button proxy applies custom margins by resizing the
+entire native title-bar container. Our windowed position uses a vertical margin
+of 15 points. [Electron's implementation](https://github.com/electron/electron/blob/v43.6.0/shell/browser/ui/cocoa/window_buttons_proxy.mm)
+derives the container height from the button height plus twice this margin.
+It does not expose separate windowed and full-screen positions.
 
-The user reports that the upper part of project tabs fails while the lower part
-works and asks to test after pressing the green window button. This is consistent
-with the upstream issue, but the cause has not been confirmed locally. Chromium
-input passes at both edges because it bypasses native hit testing. Native computer
-automation is currently unavailable.
+The user's successful click test with the container hidden points to that native
+layer. Custom geometry persisting into full screen is the next candidate cause,
+not a confirmed diagnosis. Renderer CSS cannot control this AppKit container.
 
 ## Decision and trade-offs
 
-On macOS, hide the native window buttons and their title-bar container after
-entering full screen. Restore them after leaving full screen. Electron's
-`setWindowButtonVisibility` controls both the buttons and their container.
+Reset the custom button position to macOS's default after entering full screen.
+Restore the configured windowed position after leaving full screen. Use
+Electron's documented `setWindowButtonPosition(null)` operation. Leave button
+visibility and title visibility to Electron and AppKit.
 
-This is a temporary workaround, not the intended design. In full screen the
-traffic lights are unavailable, including on hover. The existing View menu and
-Control-Command-F shortcut still exit full screen. Windowed and maximized windows
-keep their native controls. No user preference or duplicate full-screen state is
-added.
+This is a temporary workaround for the native geometry interaction, not the
+intended long-term design. It preserves the system header and removes the need
+to hide its controls or replace them with custom buttons. Full-screen and
+windowed controls intentionally use different placement owners. No preference,
+hover polling, or duplicate full-screen state is added.
 
 ## Isolation
 
-Keep the native visibility change in `DesktopWindowController`, beside its
-existing full-screen event handling. Derive visibility from the native window's
-current state before notifying either renderer. Other platforms keep their
-existing behavior.
+Keep this operation in `DesktopWindowController` beside the existing native
+full-screen event handling. Share the windowed position with window creation.
+Other platforms retain their existing behavior.
 
 ## Validation and removal
 
-Run the desktop Electron tests for full-screen entry, renderer reload, exit,
-viewport resizing, and native menu actions. Run repository validation. These
-checks do not prove native mouse hit testing.
+Run the Electron scenario for native full-screen entry, system button placement,
+renderer reload, menu exit, and restored windowed placement. Run repository
+validation. Chromium clicks alone cannot prove native mouse hit testing.
 
-Ask the user to try the candidate with two project tabs: press the green button,
-click the top and bottom of each tab, open Help and repeat, then exit full screen
-with Control-Command-F and confirm the native buttons return. Keep this PR a draft
-until the click behavior is confirmed. Revert this candidate if it does not fix
-the reported interaction.
+Ask the user to enter full screen with the green button, compare the top and
+bottom of both project tabs, reveal the macOS header and inspect its buttons and
+title, then open Help and repeat the tab checks. Exit using the revealed green
+button and confirm normal button placement returns. Keep the PR a draft until
+both tabs and native header pass. Remove this candidate if either still fails.
 
-When Electron provides native controls without the overlapping title-bar
-container, remove this visibility change and repeat the same native mouse checks.
+Remove the placement reset when Electron handles the transition from custom
+windowed geometry to native full-screen geometry correctly. Repeat the same
+native mouse and header checks before removing it.

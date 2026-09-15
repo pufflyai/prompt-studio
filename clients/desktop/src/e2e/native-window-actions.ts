@@ -3,6 +3,9 @@ import { type ElectronApplication, expect, type Page, test } from "@playwright/t
 export const expectNativeWindowActions = async (electronApp: ElectronApplication, window: Page, lifecycle: Page) => {
   if (process.platform === "darwin") {
     await test.step("follows native full screen, including a renderer reload", async () => {
+      const windowedButtonPosition = await electronApp.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()[0].getWindowButtonPosition(),
+      );
       await electronApp.evaluate(async ({ BrowserWindow }) => {
         const nativeWindow = BrowserWindow.getAllWindows()[0];
         const entered = new Promise<void>((resolve) => nativeWindow.once("enter-full-screen", () => resolve()));
@@ -11,17 +14,23 @@ export const expectNativeWindowActions = async (electronApp: ElectronApplication
       });
       await expect(window.locator("html")).toHaveAttribute("data-window-full-screen", "");
       await expect(lifecycle.locator("html")).toHaveAttribute("data-window-full-screen", "");
+      expect(
+        await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getWindowButtonPosition()),
+      ).toBeNull();
       await window.reload();
       await expect(window.locator("html")).toHaveAttribute("data-window-full-screen", "");
       await electronApp.evaluate(async ({ BrowserWindow, Menu }) => {
         const nativeWindow = BrowserWindow.getAllWindows()[0];
         const left = new Promise<void>((resolve) => nativeWindow.once("leave-full-screen", () => resolve()));
-        // Full-screen native buttons are hidden; the View menu must still exit.
+        // Exercise the native View menu action, including its full-screen exit route.
         Menu.sendActionToFirstResponder("toggleFullScreen:");
         await left;
       });
       await expect(window.locator("html")).not.toHaveAttribute("data-window-full-screen");
       await expect(lifecycle.locator("html")).not.toHaveAttribute("data-window-full-screen");
+      expect(
+        await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getWindowButtonPosition()),
+      ).toEqual(windowedButtonPosition);
     });
   }
   await test.step("delivers native menu actions to the workbench", async () => {
