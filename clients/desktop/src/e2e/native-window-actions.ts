@@ -13,10 +13,11 @@ export const expectNativeWindowActions = async (electronApp: ElectronApplication
       await expect(lifecycle.locator("html")).toHaveAttribute("data-window-full-screen", "");
       await window.reload();
       await expect(window.locator("html")).toHaveAttribute("data-window-full-screen", "");
-      await electronApp.evaluate(async ({ BrowserWindow }) => {
+      await electronApp.evaluate(async ({ BrowserWindow, Menu }) => {
         const nativeWindow = BrowserWindow.getAllWindows()[0];
         const left = new Promise<void>((resolve) => nativeWindow.once("leave-full-screen", () => resolve()));
-        nativeWindow.setFullScreen(false);
+        // Exercise the native View menu action, including its full-screen exit route.
+        Menu.sendActionToFirstResponder("toggleFullScreen:");
         await left;
       });
       await expect(window.locator("html")).not.toHaveAttribute("data-window-full-screen");

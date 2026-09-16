@@ -10,6 +10,7 @@ import { expectClipboardPermissions } from "./clipboard-permissions";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
 import { expectNativeWindowActions } from "./native-window-actions";
+import { expectProjectTabInputBounds } from "./project-tab-input-bounds";
 
 const require = createRequire(import.meta.url);
 const electronPath = require("electron") as string;
@@ -128,6 +129,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     expect(authenticatedReady).toBe(true);
     await expectClipboardPermissions(electronApp, window);
     await expectNativeWindowActions(electronApp, window, lifecycle);
+    await expectProjectTabInputBounds(electronApp, window);
     await test.step("keeps the workbench viewport inside the resized native content", async () => {
       for (const size of [
         { width: 1600, height: 1000 },
