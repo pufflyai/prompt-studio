@@ -7,6 +7,7 @@ import { secureSession, secureWebContents } from "../security/apply-window-secur
 import { provisionRuntimeSession } from "../security/runtime-session";
 import { createSecureWindowOptions } from "../security/window-security";
 import { LIFECYCLE_SCHEME, LIFECYCLE_URL, readLifecycleAsset } from "./lifecycle-protocol";
+import { filterMacosMouseEvents } from "./macos-mouse-events";
 import type { TitleBarAppearance } from "./title-bar-appearance";
 
 const WORKBENCH_PARTITION = "pstdio-workbench";
@@ -40,8 +41,9 @@ export class DesktopWindowController {
     });
     this.window.contentView.on("bounds-changed", () => this.resizeWorkbench());
     const updateFullScreen = () => {
+      const fullScreen = this.window.isFullScreen();
       for (const contents of this.webContents()) {
-        contents.send(DESKTOP_CHANNELS.fullScreenChanged, this.window.isFullScreen());
+        contents.send(DESKTOP_CHANNELS.fullScreenChanged, fullScreen);
       }
     };
     this.window.on("enter-full-screen", updateFullScreen);
@@ -93,6 +95,7 @@ export class DesktopWindowController {
       webPreferences: createSecureWindowOptions(this.preloadPath, WORKBENCH_PARTITION).webPreferences,
     });
     this.#workbench = view;
+    filterMacosMouseEvents(this.window, view.webContents);
     secureWebContents(view.webContents, {
       lifecycleUrl: this.lifecycleUrl,
       runtimeOrigin: () => this.#runtimeOrigin,

@@ -1,7 +1,9 @@
 import { contextBridge, ipcRenderer, webFrame } from "electron";
 import { DESKTOP_CHANNELS, type DesktopProjectTabsState, type PromptStudioDesktopApi } from "./desktop-api";
 import type { DesktopState } from "./lifecycle/lifecycle-machine";
+import { observeProjectTabBounds } from "./windows/observe-project-tab-bounds";
 import { observeTitleBarAppearance } from "./windows/observe-title-bar-appearance";
+import { PROJECT_TAB_BOUNDS_CHANNEL } from "./windows/project-tab-input";
 
 if (process.platform === "darwin") {
   const applyFullScreen = (fullScreen: boolean) => {
@@ -12,6 +14,13 @@ if (process.platform === "darwin") {
     "DOMContentLoaded",
     () => {
       void ipcRenderer.invoke(DESKTOP_CHANNELS.isFullScreen).then(applyFullScreen);
+      const stop = observeProjectTabBounds(
+        () => webFrame.getZoomFactor(),
+        (bounds) => {
+          ipcRenderer.send(PROJECT_TAB_BOUNDS_CHANNEL, bounds);
+        },
+      );
+      window.addEventListener("unload", stop, { once: true });
     },
     { once: true },
   );
