@@ -1,6 +1,6 @@
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { ListItemNode, ListNode } from "@lexical/list";
-import { CHECK_LIST, LINK as LEXICAL_LINK, TRANSFORMERS } from "@lexical/markdown";
+import { CHECK_LIST, LINK as LEXICAL_LINK, QUOTE as LEXICAL_QUOTE, TRANSFORMERS } from "@lexical/markdown";
 import { HeadingNode, QuoteNode } from "@lexical/rich-text";
 import type { Klass, LexicalNode } from "lexical";
 import { REFERENCE_LINK_TRANSFORMER, ReferenceLinkNode } from "../markdown-editor/plugins/ReferenceLinkPlugin";
@@ -14,6 +14,7 @@ import { EquationNode } from "./plugins/EquationPlugin/EquationNode";
 import { EQUATION_INLINE, EQUATION_MULTILINE } from "./plugins/EquationPlugin/EquationPlugin";
 import { HRNode } from "./plugins/HorizontalRulePlugin/HorizontalRuleNode";
 import { MermaidNode } from "./plugins/MermaidPlugin/MermaidNode";
+import { QUOTE } from "./transformers/markdown-quote-transformer";
 import { TRANSFORMERS_EXTENDED } from "./transformers/markdown-transformers";
 
 export const editorNodes: Array<Klass<LexicalNode>> = [
@@ -37,7 +38,8 @@ export const editorNodes: Array<Klass<LexicalNode>> = [
 
 export const baseEditorTransformers = [
   CHECK_LIST,
-  ...TRANSFORMERS.filter((transformer) => transformer !== LEXICAL_LINK),
+  QUOTE,
+  ...TRANSFORMERS.filter((transformer) => transformer !== LEXICAL_LINK && transformer !== LEXICAL_QUOTE),
   ...TRANSFORMERS_EXTENDED,
   EQUATION_INLINE,
   EQUATION_MULTILINE,
