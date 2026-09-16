@@ -35,11 +35,7 @@ export const isAllowedExternalUrl = (value: string) => {
   try {
     const url = new URL(value);
     return (
-      url.protocol === "https:" &&
-      Boolean(url.hostname) &&
-      !url.username &&
-      !url.password &&
-      (!url.port || url.port === "443")
+      (url.protocol === "https:" || url.protocol === "http:") && Boolean(url.hostname) && !url.username && !url.password
     );
   } catch {
     return false;

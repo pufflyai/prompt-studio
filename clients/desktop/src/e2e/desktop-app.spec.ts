@@ -189,9 +189,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       },
     );
 
-    expect(
-      await window.evaluate(() => (globalThis as unknown as Window).open("http://127.0.0.1:1/blocked")),
-    ).toBeNull();
+    expect(await window.evaluate(() => (globalThis as unknown as Window).open("file:///blocked"))).toBeNull();
     expect(await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
     expect(await window.evaluate(async () => (await navigator.permissions.query({ name: "geolocation" })).state)).toBe(
       "denied",
