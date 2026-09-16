@@ -12,6 +12,22 @@ describe("shouldShowFloatingToolbar", () => {
         hasNativeRange: true,
         isAnchorInsideEditor: true,
         isEditorEditable: true,
+        isPointerSelecting: false,
+      }),
+    ).toBe(false);
+  });
+
+  test("returns false while a pointer selection is in progress", () => {
+    expect(
+      shouldShowFloatingToolbar({
+        hasSelection: true,
+        isRangeSelection: true,
+        isCollapsed: false,
+        hasNativeSelection: true,
+        hasNativeRange: true,
+        isAnchorInsideEditor: true,
+        isEditorEditable: true,
+        isPointerSelecting: true,
       }),
     ).toBe(false);
   });
@@ -26,6 +42,7 @@ describe("shouldShowFloatingToolbar", () => {
         hasNativeRange: true,
         isAnchorInsideEditor: true,
         isEditorEditable: true,
+        isPointerSelecting: false,
       }),
     ).toBe(true);
   });

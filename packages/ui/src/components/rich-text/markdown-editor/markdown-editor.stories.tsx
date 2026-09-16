@@ -170,7 +170,7 @@ Use this editor to exercise live markdown formatting. Try:
 - Start a new line and type \`-\` then a space for a bullet list.
 - Type \`1.\` then a space for an ordered list.
 - Type \`#\`..\`######\` then a space for headings.
-- Type \`>\` then a space for a blockquote.
+- Type \`>\` then a space for a blockquote. Press Shift+Enter to leave it.
 - Wrap text with \`**\`, \`*\`, or \`~~\` for bold, italic, strike.
 - Wrap text with backticks for inline code.
 - Type \`---\` on its own line for a horizontal rule.
