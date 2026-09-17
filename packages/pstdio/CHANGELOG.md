@@ -1,5 +1,14 @@
 # pstdio
 
+## 0.33.4
+
+_2026-09-17_
+
+### Patch Changes
+
+- c6b0e1b: Show desktop update results for up-to-date checks, verified downloads, completed installations, and failures.
+- 6e13c87: Keep overflowing chat tool call titles on a single line.
+
 ## 0.33.3
 
 _2026-09-14_
