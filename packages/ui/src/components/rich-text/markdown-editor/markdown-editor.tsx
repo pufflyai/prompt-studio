@@ -27,6 +27,7 @@ import { LinkEditorPlugin, LinkPlugin } from "../shared/plugins/LinkEditorPlugin
 import ToggleEditablePlugin from "../shared/plugins/ToggleEditablePlugin";
 import { TreeViewPlugin } from "../shared/plugins/TreeViewPlugin/TreeViewPlugin";
 import { splitFrontmatter } from "../utils/markdown";
+import { ClearEditorSelectionPlugin } from "./plugins/clear-editor-selection-plugin";
 import { MarkdownSectionNavigationPlugin } from "./plugins/MarkdownSectionNavigationPlugin";
 import { MarkdownSlashCommandPlugin } from "./plugins/MarkdownSlashCommandPlugin";
 import { MarkdownHistoryPlugin } from "./plugins/markdown-history-plugin";
@@ -122,6 +123,7 @@ export function MarkdownEditor(props: MarkdownEditorProps) {
           <CheckListPlugin />
           {isEditable ? <MarkdownShortcutPlugin transformers={editorTransformers} /> : null}
           {isEditable ? <QuoteExitShortcutPlugin /> : null}
+          {isEditable ? <ClearEditorSelectionPlugin /> : null}
           <HorizontalRulePlugin />
           <CodeHighlightingPlugin />
           <ImportCodeBlocksPlugin />

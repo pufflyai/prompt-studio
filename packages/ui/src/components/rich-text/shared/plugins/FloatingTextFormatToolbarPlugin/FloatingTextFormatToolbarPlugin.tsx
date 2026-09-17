@@ -9,7 +9,7 @@ import {
   REMOVE_LIST_COMMAND,
 } from "@lexical/list";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { $createHeadingNode, $createQuoteNode, type HeadingTagType } from "@lexical/rich-text";
+import { $createHeadingNode, type HeadingTagType } from "@lexical/rich-text";
 import { $setBlocksType } from "@lexical/selection";
 import { $findMatchingParent, mergeRegister } from "@lexical/utils";
 import {
@@ -25,6 +25,7 @@ import {
 import type React from "react";
 import { type Dispatch, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { $formatQuote } from "../../format-quote";
 import { TOGGLE_LINK_EDIT_MODE_COMMAND } from "../LinkEditorPlugin/commands";
 import { getSelectedNode } from "../LinkEditorPlugin/utils/getSelectedNode";
 import { setFloatingElemPos } from "../LinkEditorPlugin/utils/setFloatingElemPos";
@@ -88,12 +89,7 @@ function FloatingTextToolbar({
       const selection = $getSelection();
       if (!$isRangeSelection(selection)) return;
 
-      if (blockType === "quote") {
-        $setBlocksType(selection, $createParagraphNode);
-        return;
-      }
-
-      $setBlocksType(selection, $createQuoteNode);
+      $formatQuote(selection, blockType === "quote");
     });
   };
 
