@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { open, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { join, posix, resolve } from "node:path";
 import type { ArtifactFile, ArtifactMount, WorkspaceFilesMount } from "@pstdio/sdk/extensions";
 import { normalizeArtifactMountPath } from "./path-normalization";
@@ -66,6 +66,18 @@ const createFileMountState = (mountRoot: string) => {
     writeText: async (path, value) => {
       const { operationPath } = await safeRoot.resolveForWrite(path);
       await writeFile(operationPath, value, "utf8");
+    },
+    updateText: async (path, value) => {
+      const { operationPath } = await safeRoot.resolveExisting(path);
+      // Opening without O_CREAT keeps a racing delete authoritative. An unlinked
+      // file handle can finish writing, but cannot put the file back in the mount.
+      const file = await open(operationPath, "r+");
+      try {
+        await file.writeFile(value, "utf8");
+        await file.truncate(Buffer.byteLength(value, "utf8"));
+      } finally {
+        await file.close();
+      }
     },
     readBytes: async (path) => new Uint8Array(await readFile((await safeRoot.resolveExisting(path)).operationPath)),
     writeBytes: async (path, value) => {

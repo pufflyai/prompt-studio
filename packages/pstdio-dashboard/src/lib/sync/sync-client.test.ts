@@ -1,6 +1,19 @@
 import { describe, expect, it } from "bun:test";
 import { subscribeToExtensionEventFeed } from "@/shared/extensions/extension-webview-broadcast";
+import { subscribeToResourceRemovals } from "@/shared/extensions/resource-removal-feed";
 import { createDashboardSyncWriterProvider, parseSyncDeleteEvent } from "./sync-client";
+
+it("delivers resource removal facts without a command response", () => {
+  const received: unknown[] = [];
+  const unsubscribe = subscribeToResourceRemovals((resource) => received.push(resource));
+  const resource = { type: "note", id: "one", extensionId: "notes", projectId: "project" };
+  try {
+    createDashboardSyncWriterProvider().getWriter("resource_events")?.upsert({ id: "event", resource });
+    expect(received).toEqual([resource]);
+  } finally {
+    unsubscribe();
+  }
+});
 
 describe("parseSyncDeleteEvent", () => {
   it("reads the deleted id from sync:delete payloads emitted by the API", () => {

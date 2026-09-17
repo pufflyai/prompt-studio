@@ -137,6 +137,7 @@ export const ExtensionWebviewFrame = (props: ExtensionWebviewFrameProps) => {
       return executeWebviewCommand({
         ...commandInput,
         workbench: props.workbench,
+        projectId,
         executeExtensionCommand: (input) =>
           executeCommand.mutateAsync({
             commandId: input.commandId,

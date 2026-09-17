@@ -44,6 +44,42 @@ const createHarness = (input?: { failSaves?: number; saveRevision?: string }) =>
 };
 
 describe("file edit controller", () => {
+  test("removal preserves a draft and prevents flush or refresh from saving it", async () => {
+    const { controller, saves, loads } = createHarness();
+    controller.setBaseline("loaded");
+    controller.handleChange("draft");
+    expect(controller.markRemoved()).toBe(true);
+    controller.flush();
+    controller.retry();
+    controller.handleRefreshEvent();
+    await tick();
+    expect(controller.getDraft()).toBe("draft");
+    expect(controller.getState().removed).toBe(true);
+    expect(saves).toEqual([]);
+    expect(loads()).toBe(0);
+  });
+
+  test("removal during a save keeps the draft after the old save settles", async () => {
+    let finish = () => {};
+    const controller = createFileEditController({
+      binding,
+      debounceMs: 100,
+      load: () => {},
+      save: () =>
+        new Promise<undefined>((resolve) => {
+          finish = () => resolve(undefined);
+        }),
+    });
+    controller.setBaseline("loaded");
+    controller.handleChange("saving draft");
+    controller.flush();
+    expect(controller.markRemoved()).toBe(true);
+    finish();
+    await tick();
+    expect(controller.getDraft()).toBe("saving draft");
+    expect(controller.getBaseline()).toBe("loaded");
+  });
+
   test("a change equal to the loaded content schedules no save", async () => {
     const { controller, saves } = createHarness();
     controller.setBaseline("loaded", "1");

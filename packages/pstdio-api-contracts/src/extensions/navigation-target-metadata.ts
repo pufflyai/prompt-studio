@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { extensionResourceRefSchema } from "./execute";
+import { extensionResourceRefSchema } from "./resource-ref";
 import { commandTargetSchema, pageRefSchema, panelRefSchema } from "./workbench-refs-metadata";
 
 const sectionSchema = z.object({

@@ -28,7 +28,7 @@ describe("withDashboardWebviewUrls", () => {
 });
 
 describe("registerExtensionContributions", () => {
-  test("opens the session returned by a registered extension action", async () => {
+  test("applies explicit navigation from a registered extension action and returns its data", async () => {
     const workbench = createWorkbench();
     const opened: unknown[] = [];
     workbench.commands.registerCommand(
@@ -49,10 +49,20 @@ describe("registerExtensionContributions", () => {
           ok: true,
           status: "success",
           value: { type: "session", id: "session-1", title: "Refine ticket", status: "running" },
+          navigationRequests: [
+            {
+              kind: "command",
+              target: {
+                command: { kind: "command", extensionId: "pstdio", id: dashboardCommandIds.openSessionPanel },
+                params: { resource: { type: "session", id: "session-1", label: "Refine ticket" } },
+              },
+            },
+          ],
         },
       }),
     });
-    await workbench.commands.executeCommand(metadata.commands[0]!.id);
+    const result = await workbench.commands.executeCommand(metadata.commands[0]!.id);
+    expect(result).toMatchObject({ type: "session", id: "session-1", title: "Refine ticket" });
     expect(opened).toMatchObject([{ resource: { type: "session", id: "session-1", label: "Refine ticket" } }]);
     disposeExtensionContributions(registration);
   });

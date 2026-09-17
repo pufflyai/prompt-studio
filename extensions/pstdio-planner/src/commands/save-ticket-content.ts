@@ -35,7 +35,7 @@ export const saveTicketContent = async (
     title: deriveTitle(input.content),
     updatedAt: new Date().toISOString(),
   };
-  await ticketsCollection(ctx.storage).put(existing.id, next);
+  await ticketsCollection(ctx.storage).update(existing.id, next);
   await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
   return { revision: next.updatedAt };
 };

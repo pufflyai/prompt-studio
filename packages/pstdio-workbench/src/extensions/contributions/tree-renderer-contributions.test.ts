@@ -88,7 +88,7 @@ describe("extension tree renderer contributions", () => {
       }),
     ).toBe(`files:${documentId}`);
   });
-  test("opens the navigation target a tree action returns", async () => {
+  test("applies explicit navigation from a tree action", async () => {
     const startPage = { kind: "page", extensionId: "pstdio.lab", id: "start" } as const;
     const page = { kind: "page", extensionId: "pstdio.lab", id: "ticket" } as const;
     const workbench = createWorkbench({ startPage });
@@ -122,7 +122,15 @@ describe("extension tree renderer contributions", () => {
       activate: (context) =>
         registerWorkbenchExtensionTreeRenderers({
           executeCommand: (commandId) => {
-            if (commandId === "pstdio.lab.command.delete-file") return { kind: "page", page, resource: ticket };
+            if (commandId === "pstdio.lab.command.delete-file")
+              return {
+                outcome: {
+                  ok: true,
+                  status: "success",
+                  value: { id: "file-1" },
+                  navigationRequests: [{ kind: "page", page, resource: ticket }],
+                },
+              };
             return [
               {
                 id: "files",

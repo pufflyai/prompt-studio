@@ -26,7 +26,9 @@ const inbox = defineView({
         resource: { type: message.id, id: item.id, label: item.subject },
       })),
     }),
-    onRowActivate: async (_ctx, { row }) => ({ kind: "page", page: pageRef, resource: row.resource }),
+    onRowActivate: (ctx, { row }) => {
+      ctx.navigation.open({ kind: "page", page: pageRef, resource: row.resource });
+    },
   },
 });
 const reader = defineView({

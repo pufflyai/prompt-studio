@@ -6,6 +6,7 @@ export const createMemoryResources = (
   prefixes: Record<string, string>,
   sequences = new Map<string, number>(),
 ): ExtensionResourcesApi => ({
+  removed: async () => {},
   allocate: async ({ kind }) => {
     const prefix = prefixes[kind];
     if (!prefix) throw new Error(`Undeclared resource kind: ${kind}`);

@@ -100,8 +100,8 @@ export const board = defineView({
         },
       };
     },
-    async onRowActivate(_ctx, { row }) {
-      return { kind: "page", page: { kind: "page", id: "zipline-resource" }, resource: row.resource };
+    async onRowActivate(ctx, { row }) {
+      ctx.navigation.open({ kind: "page", page: { kind: "page", id: "zipline-resource" }, resource: row.resource });
     },
     async onAttributeChange(ctx, { rowId, attributeId, value }) {
       if (attributeId !== "status" || !["Backlog", "In progress", "Done"].includes(String(value)))

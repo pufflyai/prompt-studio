@@ -1,13 +1,9 @@
 import type { CommandExecuteResponse } from "@pstdio/sdk/api";
-import type { WorkbenchModuleContext } from "@pstdio/workbench";
 import {
   type CommandFilesParamValue,
   createCommandFilesParamValue,
   isCommandFilesParamValue,
 } from "@pstdio/workbench/react";
-import { dashboardCommandIds } from "@/shared/app/commands";
-import { createDashboardResource } from "@/shared/app/resources";
-import { dashboardWidgetIds } from "@/shared/app/widget-ids";
 
 export type ExecuteDashboardExtensionCommand = (
   projectId: string,
@@ -20,13 +16,6 @@ export type UploadDashboardExtensionCommandFile = (
   commandId: string,
   file: File,
 ) => Promise<{ id: string }>;
-
-type SessionCommandResult = {
-  type: "session";
-  id: string;
-  title?: string;
-  status?: string;
-};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -89,42 +78,4 @@ export const prepareExtensionCommandArgs = async (input: {
   }
 
   return preparedArgs;
-};
-
-const toSessionCommandResult = (value: unknown): SessionCommandResult | undefined => {
-  if (!value || typeof value !== "object") return undefined;
-  const record = value as Record<string, unknown>;
-  if (record.type !== "session" || typeof record.id !== "string") return undefined;
-
-  return {
-    type: "session",
-    id: record.id,
-    ...(typeof record.title === "string" ? { title: record.title } : {}),
-    ...(typeof record.status === "string" ? { status: record.status } : {}),
-  };
-};
-
-const refreshSessionTrees = (ctx: WorkbenchModuleContext) => {
-  if (ctx.views.getView(dashboardWidgetIds.dashboardSidenav))
-    ctx.views.refreshView(dashboardWidgetIds.dashboardSidenav);
-};
-
-export const openSessionCommandResult = async (
-  ctx: WorkbenchModuleContext,
-  projectId: string,
-  response: CommandExecuteResponse,
-) => {
-  if (!response.outcome.ok) return;
-
-  const result = toSessionCommandResult(response.outcome.value);
-  if (!result) return;
-
-  refreshSessionTrees(ctx);
-  if (!ctx.commands.getCommand(dashboardCommandIds.openSessionPanel)) return;
-
-  await ctx.commands.executeCommand(dashboardCommandIds.openSessionPanel, {
-    resource: createDashboardResource("session", result.id, result.title ?? "Session", "MessageCircle", projectId, {
-      ...(result.status ? { status: result.status } : {}),
-    }),
-  });
 };

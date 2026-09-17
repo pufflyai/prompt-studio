@@ -10,6 +10,7 @@ import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
+import { expectPackagedNavigation } from "./packaged-navigation-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -270,6 +271,12 @@ test(
 
       const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
       expectExamplePages(metadata);
+      await expectPackagedNavigation({
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
+        metadata,
+      });
       await expectPackagedArtifacts({
         baseUrl: started.baseUrl,
         projectId: project.id,

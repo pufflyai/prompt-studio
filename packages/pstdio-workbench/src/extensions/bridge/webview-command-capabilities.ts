@@ -2,7 +2,7 @@ import type { CommandExecuteRequest } from "@pstdio/sdk/api";
 import type { NavigationTarget } from "@pstdio/sdk/extensions";
 import type { HostCapabilityRegistry } from "pstdio-extensions/bridge/contract";
 import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
-import { createExtensionSlot } from "../host/workbench-extension-command";
+import { createExtensionSlot, executeWorkbenchExtensionCommandResponse } from "../host/workbench-extension-command";
 import type { CreateBridgeWebviewHostCapabilities } from "./bridge-webview-renderer";
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
 
@@ -51,14 +51,14 @@ export const createExtensionWebviewHostCapabilities =
         return context.workbench.navigation.openTarget(
           toWorkbenchNavigationTarget(request.target, {
             extensionId: input.extensionIdForWebview(context.webviewId),
+            projectId: input.projectId,
           }),
         );
       },
       "commands.execute": async (params) => {
         const request = params as WebviewCommandExecuteParams;
         const resource = request.resource ?? context.placement.resource;
-        return input.executeCommand(request.commandId, {
-          projectId: input.projectId,
+        return executeWorkbenchExtensionCommandResponse({ ...input, workbench: context.workbench }, request.commandId, {
           ...(request.params ? { params: request.params } : {}),
           ...(resource ? { resource } : {}),
           slot: createExtensionSlot({
@@ -67,7 +67,6 @@ export const createExtensionWebviewHostCapabilities =
             projectId: input.projectId,
             context: { panelId: context.webviewId },
           }),
-          source: "dashboard",
         });
       },
       ...(input.files
