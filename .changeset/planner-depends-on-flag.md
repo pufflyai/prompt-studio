@@ -2,4 +2,4 @@
 "pstdio-planner": minor
 ---
 
-add a repeatable --depends-on flag to ticket create and update, with --clear-depends-on to remove every dependency
+add dependency flags to ticket create and update, and reject dependency cycles in updates and draft saves

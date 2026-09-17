@@ -9,7 +9,7 @@ import {
   resolveTagOptionIds,
   resolveTicketId,
 } from "../data/resolve";
-import { normalizeTicketDependencies } from "../data/ticket-dependencies";
+import { normalizeTicketDependencies, validateTicketDependencies } from "../data/ticket-dependencies";
 import type { StoredTicket, StoredTicketFile } from "../data/types";
 import { deriveTitle } from "../utils/derive-title";
 
@@ -74,6 +74,7 @@ export const saveTicketCommand = defineCommand({
       frontmatter.dependsOn,
       normalizeTicketDependencies(ticket.dependsOn),
     );
+    if (frontmatter.dependsOn !== undefined) await validateTicketDependencies(ctx.storage, ticket, dependsOn);
     const parentId =
       frontmatter.parentShorthand !== undefined
         ? await resolveTicketId(ctx.storage, frontmatter.parentShorthand)

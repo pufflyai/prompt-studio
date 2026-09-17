@@ -41,6 +41,8 @@ pst tickets update --id PS-14 --depends-on PS-12
 
 On `update` the flag replaces the whole set. Leaving it out keeps the stored dependencies, so a routine status change never drops them. Use `--clear-depends-on` to remove every dependency. An unknown shorthand fails the command and names it, and nothing is written.
 
+`update` and `save` reject dependencies that lead back to the ticket itself, directly or through other tickets. A rejected dependency cycle leaves the stored ticket unchanged.
+
 ## Local ticket workflow
 
 `write` creates a draft ticket and writes `.pstdio/tickets/<shorthand>/ticket.md`. Edit that file and any files under its `files/` directory, then run `save`.

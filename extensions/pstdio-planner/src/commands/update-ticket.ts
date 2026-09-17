@@ -7,6 +7,7 @@ import {
   resolveTagOptionIds,
   resolveTicketId,
 } from "../data/resolve";
+import { validateTicketDependencies } from "../data/ticket-dependencies";
 import type { StoredTicket } from "../data/types";
 import { plannerTicketsChanged } from "../events";
 import { notifyBlocked, resolveBlockedNotification } from "../planner-notifications";
@@ -53,6 +54,7 @@ export const updateTicketCommand = defineCommand({
         : commandParams.tagIds;
     const parentId = await resolveParentUpdate(ctx.storage, commandParams.parent, commandParams.unlinkParent);
     const dependsOn = await resolveDependencyUpdate(ctx.storage, commandParams.dependsOn, commandParams.clearDependsOn);
+    if (dependsOn !== undefined) await validateTicketDependencies(ctx.storage, existing, dependsOn);
 
     const next = {
       ...existing,
