@@ -1,5 +1,14 @@
 # @pstdio/ui
 
+## 0.25.1
+
+_2026-09-17_
+
+### Patch Changes
+
+- 79c601e: Keep the Markdown selection toolbar beside the selection when scrolling and hidden during drags, and preserve native quote editing and line breaks when loading and saving Markdown.
+- 6e13c87: Keep overflowing chat tool call titles on a single line.
+
 ## 0.25.0
 
 _2026-09-14_

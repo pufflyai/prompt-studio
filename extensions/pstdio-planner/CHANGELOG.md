@@ -1,5 +1,17 @@
 # pstdio-planner
 
+## 0.15.0
+
+_2026-09-17_
+
+### Minor Changes
+
+- e869009: add dependency flags to ticket create and update, and reject dependency cycles in updates and draft saves
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/ui@0.25.1`
+
 ## 0.14.1
 
 _2026-09-14_
