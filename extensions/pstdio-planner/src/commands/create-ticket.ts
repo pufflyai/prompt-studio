@@ -1,7 +1,7 @@
 import { defineCommand, params } from "@pstdio/sdk/extensions";
 import { putTicket, ticketsCollection } from "../data/collections";
 import { createTicketParentLookup, TICKET_RESOURCE_ICON } from "../data/mappers";
-import { resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
+import { resolveDependencyIds, resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
 import { seedDefaultStatuses, seedDefaultTags } from "../data/seed";
 import { allocateTicketIdentity } from "../data/ticket-identity";
 import { ticketResourceReference } from "../data/ticket-resource-hierarchy";
@@ -10,8 +10,8 @@ import { plannerTicketsChanged } from "../events";
 import { deriveTitle } from "../utils/derive-title";
 
 // Backs the board's "new ticket" and the `pst tickets create`/`add` CLI path. The
-// board passes ids; the CLI passes human names/shorthands, so status/tags/parent
-// are resolved server-side (Decision 3).
+// board passes ids; the CLI passes human names/shorthands, so status, tags,
+// parent, and dependencies are resolved server-side (Decision 3).
 export const createTicketCommand = defineCommand({
   id: "create-ticket",
   mutating: true,
@@ -36,9 +36,13 @@ export const createTicketCommand = defineCommand({
     attachments: params.json<StoredTicketAttachment[]>(),
     parentId: params.text(),
     parent: params.text(),
+    dependsOn: params.list(),
   },
   async run(ctx, commandParams) {
     const existing = await ticketsCollection(ctx.storage).list();
+    // Resolve before anything is written, so an unknown shorthand leaves no
+    // half-created ticket and burns no shorthand.
+    const dependsOn = commandParams.dependsOn ? await resolveDependencyIds(ctx.storage, commandParams.dependsOn) : [];
     const statuses = await seedDefaultStatuses(ctx.storage);
     if (commandParams.tags !== undefined) await seedDefaultTags(ctx.storage);
     const defaultStatus = statuses.find((status) => status.isDefault) ?? statuses[0];
@@ -78,7 +82,7 @@ export const createTicketCommand = defineCommand({
       tagIds,
       attachments: commandParams.attachments ?? [],
       parentId,
-      dependsOn: [],
+      dependsOn,
       blockedReason: null,
       userPrompt: null,
       parallelizable: null,

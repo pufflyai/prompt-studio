@@ -2,7 +2,13 @@ import { type ArtifactMount, defineCommand, type ExtensionStorageApi, params } f
 import { ticketsCollection } from "../data/collections";
 import { fileNameFromPath, readTicketMarkdown, requireRepoFiles, ticketFilesPattern } from "../data/draft-storage";
 import { parseTicketFrontmatter, stripFrontmatter } from "../data/frontmatter";
-import { findTicket, resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
+import {
+  findTicket,
+  resolveDependencyIds,
+  resolveStatusId,
+  resolveTagOptionIds,
+  resolveTicketId,
+} from "../data/resolve";
 import { normalizeTicketDependencies } from "../data/ticket-dependencies";
 import type { StoredTicket, StoredTicketFile } from "../data/types";
 import { deriveTitle } from "../utils/derive-title";
@@ -29,12 +35,11 @@ const readTicketFiles = async (repoFiles: ArtifactMount, ticket: StoredTicket) =
 const resolveTags = async (storage: ExtensionStorageApi, tagNames: string[] | undefined, fallback: string[]) =>
   tagNames === undefined ? fallback : resolveTagOptionIds(storage, tagNames);
 
-const resolveDependencyIds = async (
+const resolveDependencies = async (
   storage: ExtensionStorageApi,
   dependencyRefs: string[] | undefined,
   fallback: string[],
-) =>
-  dependencyRefs === undefined ? fallback : Promise.all(dependencyRefs.map((ref) => resolveTicketId(storage, ref)));
+) => (dependencyRefs === undefined ? fallback : resolveDependencyIds(storage, dependencyRefs));
 
 // `pst tickets save`: reconcile the edited local ticket.md (body + frontmatter +
 // files) back into extension storage and clear the draft flag.
@@ -64,7 +69,7 @@ export const saveTicketCommand = defineCommand({
     const statusId =
       commandParams.status !== undefined ? await resolveStatusId(ctx.storage, commandParams.status) : ticket.statusId;
     const tagIds = await resolveTags(ctx.storage, frontmatter.tagNames, ticket.tagIds ?? []);
-    const dependsOn = await resolveDependencyIds(
+    const dependsOn = await resolveDependencies(
       ctx.storage,
       frontmatter.dependsOn,
       normalizeTicketDependencies(ticket.dependsOn),
