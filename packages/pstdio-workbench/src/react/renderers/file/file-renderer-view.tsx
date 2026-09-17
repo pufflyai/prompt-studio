@@ -1,12 +1,7 @@
 import { Box, Button, Center, Flex, Spinner, Text } from "@chakra-ui/react";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type {
-  FileRendererContent,
-  RegisteredFileRendererContribution,
-  WorkbenchCore,
-  WorkbenchPanelInstance,
-} from "../../../core";
+import type { RegisteredFileRendererContribution, WorkbenchCore, WorkbenchPanelInstance } from "../../../core";
 import { getWorkbenchRenderers } from "../../../core";
 import {
   getFileSectionNavigation,
@@ -18,12 +13,12 @@ import {
   createFileEditController,
   type FileEditController,
   type FileEditControllerState,
-  nextLoadedRevision,
   readCachedFileContent,
   storeCachedFileContent,
 } from "./file-renderer-edit-state";
 import { FileRendererErrorNotice } from "./file-renderer-error-notice";
 import { createFileRendererLoadKey, isCurrentLoadedFile } from "./file-renderer-load-key";
+import { type LoadedFile, prepareFileRendererLoad } from "./file-renderer-load-state";
 import { FileRendererPathHeader } from "./file-renderer-path-header";
 
 interface WorkbenchFileRendererViewProps {
@@ -32,12 +27,6 @@ interface WorkbenchFileRendererViewProps {
   // The bound resource (e.g. the open ticket / ticket-file) the load/save
   // commands operate on.
   placement?: WorkbenchPanelInstance;
-}
-interface LoadedFile extends FileRendererContent {
-  // Bumped on every (re)load so the uncontrolled editors remount with fresh
-  // content on a refresh, but never mid-edit (load only runs on mount/refresh).
-  editorRevision: number;
-  loadKey: string;
 }
 const SAVE_DEBOUNCE_MS = 600;
 const describeError = (error: unknown) => (error instanceof Error ? error.message : "Failed to load file.");
@@ -138,17 +127,11 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       Promise.resolve(contributionRef.current.load(resourceRef.current))
         .then((next) => {
           if (cancelled) return;
-          if (controllerRef.current && !controllerRef.current.acceptLoaded(next.content, next.revision)) return;
+          const updateLoaded = prepareFileRendererLoad(next, loadKey, controllerRef.current);
+          if (!updateLoaded) return;
           setError(null);
           storeCachedFileContent(loadKey, next);
-          // Compare against the editor's current value so a reload that returns
-          // what is already shown (e.g. after a save) keeps the editor mounted.
-          const editorValue = controllerRef.current?.getBaseline();
-          setLoaded((previous) => ({
-            ...next,
-            editorRevision: nextLoadedRevision(previous, next, loadKey, editorValue),
-            loadKey,
-          }));
+          setLoaded(updateLoaded);
         })
         .catch((loadError) => {
           if (cancelled) return;
