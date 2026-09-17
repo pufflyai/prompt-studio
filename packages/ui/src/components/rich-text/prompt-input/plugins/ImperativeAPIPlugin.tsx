@@ -1,6 +1,7 @@
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { $getRoot } from "lexical";
 import { useImperativeHandle } from "react";
-import { generateEditorStateFromString, getTextFromSerializedEditorState } from "../utils";
+import { generateEditorStateFromString } from "../utils";
 
 export interface PromptEditorRef {
   setEditorValue: (value: string) => void;
@@ -19,10 +20,13 @@ export function ImperativeAPIPlugin({
     editorRef,
     () => ({
       setEditorValue: (value: string) => {
-        const state = editor.parseEditorState(JSON.stringify(generateEditorStateFromString(value)));
+        // Keep text and selection in one state when replacement runs inside a key command.
+        const state = editor.parseEditorState(JSON.stringify(generateEditorStateFromString(value)), () => {
+          $getRoot().selectEnd();
+        });
         editor.setEditorState(state);
-        previousTextRef.current = getTextFromSerializedEditorState(value);
-        editor.focus(undefined, { defaultSelection: "rootEnd" });
+        previousTextRef.current = value;
+        editor.focus();
       },
     }),
     [editor, previousTextRef],

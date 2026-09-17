@@ -11,3 +11,9 @@ export const shouldSubmitOnEnter = (event: KeyDownLikeEvent) => {
 
   return !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey;
 };
+
+export const shouldRecallPrevious = (event: KeyDownLikeEvent) =>
+  event.key === "ArrowUp" && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey;
+
+export const shouldRecallNext = (event: KeyDownLikeEvent) =>
+  event.key === "ArrowDown" && !event.ctrlKey && !event.metaKey && !event.shiftKey && !event.altKey;

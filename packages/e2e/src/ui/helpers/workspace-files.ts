@@ -54,14 +54,16 @@ export const expectStandardFileSearch = async (search: Locator) => {
 };
 
 export const expectFoldersBeforeFiles = async (filesTree: Locator) => {
-  const rootPaths = await filesTree
-    .getByRole("option")
-    .evaluateAll((rows) =>
-      rows
-        .filter((row) => row.getAttribute("aria-level") === "1")
-        .map((row) => row.getAttribute("data-tree-list-node-id")),
-    );
-  expect(rootPaths.indexOf("zzz-folder")).toBeLessThan(rootPaths.indexOf("LICENSE"));
+  await expect
+    .poll(() =>
+      filesTree.getByRole("option").evaluateAll((rows) =>
+        rows
+          .filter((row) => row.getAttribute("aria-level") === "1")
+          .map((row) => row.getAttribute("data-tree-list-node-id"))
+          .filter((path) => path === "zzz-folder" || path === "LICENSE"),
+      ),
+    )
+    .toEqual(["zzz-folder", "LICENSE"]);
 };
 
 export const moveEntryToFolder = async (page: Page, filesTree: Locator, sourcePath: string, folder: Locator) => {

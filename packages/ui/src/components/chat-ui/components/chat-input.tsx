@@ -24,8 +24,12 @@ import {
 import { COMPOSER_CONTROL_HEIGHT } from "./composer-constants";
 import { SendButton } from "./send-button";
 
+import { useChatInputHistory } from "./use-chat-input-history";
+
 export interface ChatInputProps {
   defaultState: string;
+  /** Plain-text prompts from the active conversation, newest first. */
+  recentUserMessages?: string[];
   placeholder?: string;
   onSubmit?: (
     text: string,
@@ -80,9 +84,29 @@ const requestPromptEditorFocus = (container: HTMLDivElement | null, onFocus?: ()
     onFocus?.();
   });
 
+const useComposerFocus = (
+  containerRef: { current: HTMLDivElement | null },
+  autoFocus: boolean,
+  focusSignal: number,
+  setIsSelected: (selected: boolean) => void,
+) => {
+  useEffect(() => {
+    if (!autoFocus) return;
+    const handle = requestPromptEditorFocus(containerRef.current, () => setIsSelected(true));
+    return () => cancelAnimationFrame(handle);
+  }, [autoFocus, containerRef, setIsSelected]);
+
+  useEffect(() => {
+    if (focusSignal === 0) return;
+    const handle = requestPromptEditorFocus(containerRef.current, () => setIsSelected(true));
+    return () => cancelAnimationFrame(handle);
+  }, [focusSignal, containerRef, setIsSelected]);
+};
+
 export const ChatInput = (props: ChatInputProps) => {
   const {
     defaultState,
+    recentUserMessages = [],
     onSubmit = () => {},
     onInterrupt,
     onAttachFiles,
@@ -142,17 +166,18 @@ export const ChatInput = (props: ChatInputProps) => {
     setCustomAnswersByQuestion({});
   }, [questionPromptSignature]);
 
-  useEffect(() => {
-    if (!autoFocus) return;
-    const handle = requestPromptEditorFocus(containerRef.current, () => setIsSelected(true));
-    return () => cancelAnimationFrame(handle);
-  }, [autoFocus]);
+  useComposerFocus(containerRef, autoFocus, focusSignal, setIsSelected);
 
-  useEffect(() => {
-    if (focusSignal === 0) return;
-    const handle = requestPromptEditorFocus(containerRef.current, () => setIsSelected(true));
-    return () => cancelAnimationFrame(handle);
-  }, [focusSignal]);
+  const history = useChatInputHistory({
+    recentUserMessages,
+    text,
+    blocked: streaming || isDisabled || submitting || Boolean(questionPrompt),
+    resetKey: JSON.stringify([defaultState, editorKey, questionPromptSignature]),
+    onChange: (value) => {
+      setText(value);
+      onChange?.(value);
+    },
+  });
 
   const handleContainerClick = () => {
     setIsSelected(true);
@@ -160,13 +185,11 @@ export const ChatInput = (props: ChatInputProps) => {
   };
 
   const resetEditor = (shouldFocus = false) => {
-    setEditorState(defaultState);
     setEditorKey((key) => key + 1);
-    const resetText = getTextFromSerializedEditorState(defaultState);
-    setText(resetText);
     setSelectedOptionsByQuestion({});
     setCustomAnswersByQuestion({});
-    onChangeRef.current?.(resetText);
+    history.reset();
+    history.change(getTextFromSerializedEditorState(defaultState));
 
     if (shouldFocus) {
       requestAnimationFrame(() => {
@@ -202,6 +225,7 @@ export const ChatInput = (props: ChatInputProps) => {
         }
       : undefined;
 
+    history.reset();
     setSubmitting(true);
     try {
       await onSubmit(responseText, attachedResources, questionResponse);
@@ -287,13 +311,13 @@ export const ChatInput = (props: ChatInputProps) => {
             <Flex minH={COMPOSER_CONTROL_HEIGHT} align="center">
               <PromptEditor
                 key={editorKey}
+                ref={history.editorRef}
+                onRecallPrevious={history.recallPrevious}
+                onRecallNext={history.recallNext}
                 defaultState={editorState}
                 isEditable={!isDisabled && !submitting}
                 placeholder={<ChatInputPlaceholder placeholder={placeholder} />}
-                onChange={(t) => {
-                  setText(t);
-                  onChange?.(t);
-                }}
+                onChange={history.change}
                 onSubmit={() => runAction(resolveChatInputKeyboardAction(actionState))}
                 references={references}
                 onAddReference={onAddReference}
