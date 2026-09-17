@@ -96,7 +96,7 @@ describe("collectChangesetConfigIssues", () => {
 
     expect(issues).toEqual([
       {
-        filePath: ".changeset/config.json",
+        filePath: join(".changeset", "config.json"),
         message: 'repo-local workspace "repo-local-extension" must be ignored',
       },
     ]);
@@ -106,7 +106,7 @@ describe("collectChangesetConfigIssues", () => {
     const issues = await collectChangesetConfigIssues(writeWorkspace("dependencies"));
 
     expect(issues).toHaveLength(1);
-    expect(issues[0]?.filePath).toBe(".changeset/config.json");
+    expect(issues[0]?.filePath).toBe(join(".changeset", "config.json"));
     expect(issues[0]?.message).toContain('"public-package" depends on the skipped package "private-helper"');
   });
 

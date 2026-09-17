@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
+import { resolve } from "node:path";
 import { resolveAppConfig } from "./app-config";
 
 describe("resolveAppConfig", () => {
   test("resolves supported environment values", () => {
     const config = resolveAppConfig({
       env: {
-        HOME: "/home/tester",
+        HOME: resolve("/home/tester"),
         PSTDIO_DB_PATH: "~/data/database",
         PSTDIO_AUTOMATION_RUNS_PER_MINUTE: "12.8",
         PSTDIO_EVENT_BUS_BUFFER_SIZE: "25.9",
@@ -19,12 +20,12 @@ describe("resolveAppConfig", () => {
 
     expect(config).toEqual({
       automation: { runsPerMinute: 12 },
-      database: { path: "/home/tester/data/database" },
+      database: { path: resolve("/home/tester/data/database") },
       extensions: {
         buildWebviews: false,
         release: { source: "workspace", ref: "pstdio@1.2.3", root: "/workspace/pstdio" },
       },
-      storage: { root: "/home/tester/data/storage" },
+      storage: { root: resolve("/home/tester/data/storage") },
       sync: { eventBufferSize: 25 },
       transport: { terminalOrigins: ["http://one.test", "http://two.test"] },
     });
@@ -33,7 +34,7 @@ describe("resolveAppConfig", () => {
   test("uses the caller release ref when the environment does not provide one", () => {
     const config = resolveAppConfig({
       defaultExtensionReleaseRef: "pstdio@2.0.0",
-      env: { HOME: "/home/tester" },
+      env: { HOME: resolve("/home/tester") },
     });
 
     expect(config.extensions.release).toEqual({ source: "git", ref: "pstdio@2.0.0" });

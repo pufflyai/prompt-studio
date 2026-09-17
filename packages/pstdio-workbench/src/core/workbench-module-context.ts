@@ -25,6 +25,7 @@ export const disposeDisposables = (disposables: Disposable[]) => {
 };
 
 interface CreateModuleContextInput {
+  contextScopeId: string;
   ownerId: string;
   source: ContributionSource;
   track(disposable: Disposable): void;
@@ -34,7 +35,8 @@ export const createModuleContext = (
   core: WorkbenchCore,
   input: CreateModuleContextInput,
 ): WorkbenchModuleContributionContext => {
-  const contextScope = core.context.createScope(input.ownerId);
+  // Contributions may share an owner, but each module or mode owns its context lifetime.
+  const contextScope = core.context.createScope(input.contextScopeId);
   input.track(contextScope);
 
   const track = <TDisposable extends Disposable>(disposable: TDisposable) => {
@@ -105,6 +107,7 @@ export const createModuleContext = (
               const modeDisposables: Disposable[] = [];
               const modeContext = createModuleContext(core, {
                 ...input,
+                contextScopeId: `mode:${mode.id}`,
                 track: (disposable) => modeDisposables.push(disposable),
               });
               const returnedDisposables = toDisposables(mode.activate(modeContext));

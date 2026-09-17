@@ -31,6 +31,7 @@ const getSecondaryHeader = (page: import("@playwright/test").Page) =>
 
 const addTerminal = async (page: import("@playwright/test").Page) => {
   await expect(page.getByRole("region", { name: "Main", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^(Show|Hide) Secondary Panel$/ })).toBeVisible();
   const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
   if (await showSecondary.isVisible()) await showSecondary.click();
   await getSecondaryHeader(page).getByRole("button", { name: "Add panel" }).click();

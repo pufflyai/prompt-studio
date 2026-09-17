@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { acquirePgliteLock } from "./pglite-lock";
 
 const lockModule = new URL("./pglite-lock.ts", import.meta.url).href;
 
@@ -36,6 +37,26 @@ const waitForClaim = async (lockPath: string, suffix: string) => {
 };
 
 describe("acquirePgliteLock", () => {
+  it("removes its claim when stale owner cleanup fails", () => {
+    const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-lock-failed-"));
+    const dbPath = path.join(tempRoot, "database");
+    const lockPath = `${dbPath}.lock`;
+    const stalePath = path.join(lockPath, "999999999-dead-owner.active");
+    fs.mkdirSync(stalePath, { recursive: true });
+    fs.writeFileSync(path.join(stalePath, "keep"), "prevent removal");
+
+    try {
+      expect(() => acquirePgliteLock(dbPath)).toThrow();
+      expect(fs.readdirSync(lockPath)).toEqual([path.basename(stalePath)]);
+      fs.rmSync(stalePath, { recursive: true });
+      const release = acquirePgliteLock(dbPath);
+      release();
+      expect(fs.readdirSync(lockPath)).toEqual([]);
+    } finally {
+      fs.rmSync(tempRoot, { force: true, recursive: true });
+    }
+  });
+
   it("reports the active owner even when its waiting claim cannot be removed", async () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-lock-cleanup-"));
     const dbPath = path.join(tempRoot, "database");
@@ -158,8 +179,10 @@ describe("acquirePgliteLock", () => {
           fs.writeFileSync(path.join(iterationRoot, name + ".result"), "acquired");
           while (!fs.existsSync(releasePath)) await Bun.sleep(1);
           release();
-        } catch {
-          fs.writeFileSync(path.join(iterationRoot, name + ".result"), "rejected");
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          const result = message.includes("refusing to open it a second time") ? "rejected" : message;
+          fs.writeFileSync(path.join(iterationRoot, name + ".result"), result);
         }
       }
     `;

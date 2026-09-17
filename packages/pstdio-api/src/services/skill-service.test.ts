@@ -94,12 +94,6 @@ export default {
   writeFileSync(join(root, "skill", "SKILL.md"), "Review code changes\n");
 };
 
-const fakeFileService = {
-  get: mock(async () => ({ storage_path: "/dev/null" })),
-  upload: mock(async () => ({ id: "f1" })),
-  remove: mock(async () => true),
-} as unknown as Parameters<typeof createSkillService>[0]["fileService"];
-
 const fakeExtensionDeps = {
   extensionRuntimeCatalog: { get: mock(async () => ({ enabledSources: [], runtime: emptyRuntime })) },
   extensionSkillPreferencesDBService: { list: mock(async () => []) },
@@ -110,6 +104,9 @@ const fakeExtensionDeps = {
 
 describe("SkillService", () => {
   test("list hydrates file content via fileService", async () => {
+    const root = mkdtempSync(join(tmpdir(), "skill-content-"));
+    const storagePath = join(root, "content");
+    writeFileSync(storagePath, "Review this code");
     const list = mock(async () => [
       {
         id: "sk1",
@@ -126,14 +123,21 @@ describe("SkillService", () => {
       eventBus: new EventBus(),
       ...fakeExtensionDeps,
       skillsDBService: { list } as unknown as Parameters<typeof createSkillService>[0]["skillsDBService"],
-      fileService: fakeFileService,
+      fileService: { get: async () => ({ storage_path: storagePath }) } as unknown as Parameters<
+        typeof createSkillService
+      >[0]["fileService"],
     });
 
-    const result = await service.list("p1");
+    try {
+      const result = await service.list("p1");
 
-    expect(result).toHaveLength(1);
-    expect(result[0]?.files[0]?.path).toBe("SKILL.md");
-    expect(list).toHaveBeenCalled();
+      expect(result).toHaveLength(1);
+      expect(result[0]?.files[0]?.path).toBe("SKILL.md");
+      expect(result[0]?.files[0]?.content).toBe("Review this code");
+      expect(list).toHaveBeenCalled();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 
   test("list reads extension skills from the runtime snapshot without re-importing", async () => {

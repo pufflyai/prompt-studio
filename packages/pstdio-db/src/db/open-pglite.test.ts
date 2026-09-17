@@ -47,8 +47,8 @@ test("initializes an in-memory database from its packaged image", async () => {
 
 test("preserves existing database records when a packaged image is available", async () => {
   const home = createHome();
-  const existing = await PGlite.create(home);
-  await existing.exec("CREATE TABLE bootstrap_probe (value text); INSERT INTO bootstrap_probe VALUES ('user data');");
+  const existing = await PGlite.create(home, { loadDataDir: image });
+  await existing.exec("UPDATE bootstrap_probe SET value = 'user data';");
   await existing.close();
   const db = openPglite(home, { loadDataDir: image });
   try {
@@ -60,7 +60,7 @@ test("preserves existing database records when a packaged image is available", a
 
 test("leaves a damaged database intact instead of replacing it with the packaged image", async () => {
   const home = createHome();
-  const existing = await PGlite.create(home);
+  const existing = await PGlite.create(home, { loadDataDir: image });
   await existing.close();
   const versionPath = join(home, "PG_VERSION");
   const version = readFileSync(versionPath);

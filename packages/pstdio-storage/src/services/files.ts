@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { ensureProjectStorageRoot, resolveFileStoragePath } from "../storage/paths";
+import { readableFileDirectory } from "../storage/readable-file";
 
 export const createFilesStorageService = (storageRoot: string) => {
   const writeFile = (projectId: string, fileId: string, data: Buffer) => {
@@ -12,6 +13,7 @@ export const createFilesStorageService = (storageRoot: string) => {
   };
 
   const deleteFile = (storagePath: string) => {
+    fs.rmSync(readableFileDirectory(storagePath), { recursive: true, force: true });
     if (fs.existsSync(storagePath)) fs.unlinkSync(storagePath);
   };
 

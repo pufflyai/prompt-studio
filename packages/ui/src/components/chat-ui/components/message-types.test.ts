@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import { basename, relative } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   getAssistantMessageActionTargetId,
   groupMessagesByTurn,
@@ -6,7 +8,7 @@ import {
   type SessionMessage,
 } from "./message-types";
 
-const uiSourceDir = decodeURIComponent(new URL("../../..", import.meta.url).pathname).replace(/\/$/, "");
+const uiSourceDir = fileURLToPath(new URL("../../..", import.meta.url));
 const forbiddenRuntimeTerms = [
   // This file is excluded from the self-scan by the test/spec filename filter.
   "AgentId",
@@ -20,14 +22,9 @@ const listUiSourceFiles = () => {
   const glob = new Bun.Glob("**/*.{ts,tsx}");
 
   return [...glob.scanSync({ cwd: uiSourceDir, absolute: true })].filter((file) => {
-    const name = file.split("/").at(-1) ?? "";
+    const name = basename(file);
     return !name.includes(".test.") && !name.includes(".spec.");
   });
-};
-
-const relativeUiSourcePath = (file: string) => {
-  if (!file.startsWith(`${uiSourceDir}/`)) return file;
-  return file.slice(uiSourceDir.length + 1);
 };
 
 describe("chat message types", () => {
@@ -35,7 +32,7 @@ describe("chat message types", () => {
     const violations = await Promise.all(
       listUiSourceFiles().map(async (file) => {
         const source = await Bun.file(file).text();
-        const relativePath = relativeUiSourcePath(file);
+        const relativePath = relative(uiSourceDir, file);
         const runtimeViolations = forbiddenRuntimeTerms
           .filter((term) => source.includes(term))
           .map((term) => `${relativePath}: ${term}`);

@@ -349,7 +349,7 @@ describe("createExtensionSourceWatcher registrations", () => {
     mkdirSync(join(sourcePath, ".git"), { recursive: true });
     mkdirSync(join(sourcePath, "node_modules", "lucide-react", "dist", "esm"), { recursive: true });
     mkdirSync(join(root, "outside", "deep"), { recursive: true });
-    symlinkSync(join(root, "outside"), join(sourcePath, "linked"));
+    symlinkSync(join(root, "outside"), join(sourcePath, "linked"), "junction");
     writeFileSync(join(sourcePath, ".gitignore"), "dist/\n");
 
     const watchedPaths: string[] = [];

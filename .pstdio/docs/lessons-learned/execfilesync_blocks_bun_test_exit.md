@@ -32,5 +32,6 @@ So the accurate lesson is broader than "`execFileSync` blocks `bun test` exit": 
 - Do not start background schedulers from broad test helpers unless the test is explicitly about the scheduler.
 - Avoid `execFileSync` / `execSync` in request, hook, scheduler, or test-exercised paths. Use async child processes and await them.
 - `unref()` background timers and watchers unless they are intentionally responsible for process lifetime.
+- Keep active-run deadline timers referenced while shutdown awaits them. On Windows with Bun 1.3.14, unreferencing the scheduler's deadline left its timeout test pending indefinitely. The timer is cleared when the handler completes and otherwise releases shutdown at the configured deadline.
 - Do not rely on automation module-level state in tests. Use observable behavior or a shared process-level signal when the loader may bundle on Linux.
 - For CI-only hangs, isolate on CI with a short-timeout single-file step. Local macOS runs are not a reliable signal for Bun loader, inotify, or cold install behavior.

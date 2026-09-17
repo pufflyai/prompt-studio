@@ -200,7 +200,7 @@ describe("GET and PUT /workspaces/:id/file", () => {
 
   test("rejects unsafe paths and symlink escapes", async () => {
     writeFileSync(join(outside, "secret.txt"), "secret");
-    symlinkSync(outside, join(root, "escape"), "dir");
+    symlinkSync(outside, join(root, "escape"), "junction");
     const unsafePaths = ["../secret.txt", "/etc/passwd", "C:/secret.txt", "nested\\secret.txt", "escape/secret.txt"];
 
     for (const path of unsafePaths) {

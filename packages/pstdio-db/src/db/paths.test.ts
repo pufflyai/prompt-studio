@@ -33,9 +33,9 @@ describe("resolveDbPath", () => {
 
   it("uses PSTDIO_HOME for the default database path", () => {
     delete process.env.PSTDIO_DB_PATH;
-    process.env.PSTDIO_HOME = "/tmp/pstdio-home";
+    process.env.PSTDIO_HOME = path.resolve("/tmp/pstdio-home");
 
-    expect(resolveDbPath()).toBe("/tmp/pstdio-home/pstdio.db");
+    expect(resolveDbPath()).toBe(path.join(process.env.PSTDIO_HOME!, "pstdio.db"));
   });
 
   it("expands the home directory from PSTDIO_DB_PATH", () => {
