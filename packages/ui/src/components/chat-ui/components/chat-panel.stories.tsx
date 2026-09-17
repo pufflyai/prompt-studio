@@ -4,6 +4,7 @@ import { ArrowUpRight, ChevronDown, GitBranch } from "lucide-react";
 import { type ComponentProps, useEffect, useRef, useState } from "react";
 import { expect, within } from "storybook/test";
 import rawConversationMessages from "../mocks/full-conversation-normalized.json";
+import { PromptHistoryPanel, PromptHistoryResetPanel, resetHistoryWalk, walkThreePrompts } from "./chat-history-story";
 import { ChatPanel } from "./chat-panel";
 import type { QueuedFollowUp, SessionMessage } from "./message-types";
 import { moveQueuedFollowUp, type QueuedFollowUpMoveDirection } from "./queued-follow-up-list-state";
@@ -682,3 +683,7 @@ export const QueuedFollowUpsWithWorkspaceHub: Story = {
     ),
   },
 };
+
+export const PromptHistory: Story = { render: () => <PromptHistoryPanel />, play: walkThreePrompts };
+
+export const PromptHistoryReset: Story = { render: () => <PromptHistoryResetPanel />, play: resetHistoryWalk };
