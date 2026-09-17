@@ -1,8 +1,10 @@
+import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { mermaidFixtures } from "@/components/mermaid-renderer/mermaid-fixtures";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { MarkdownEditor } from "./markdown-editor";
+import { checkSelectionToolbarScrolling, scrollingMarkdown } from "./markdown-editor-scrolling.play";
 
 const message = `
 # MarkdownEditor
@@ -305,4 +307,21 @@ export const EditableCodeBlocks: Story = {
 export const LiveMarkdownShortcuts: Story = {
   tags: ["!manifest"],
   render: () => <LiveShortcutsStory />,
+};
+
+export const SelectionToolbarEditorScroll: Story = {
+  tags: ["!manifest", "markdown-selection-scroll"],
+  args: { defaultState: scrollingMarkdown },
+  render: (args) => (
+    <Box height="360px">
+      <MarkdownEditor {...args} />
+    </Box>
+  ),
+  play: checkSelectionToolbarScrolling,
+};
+
+export const SelectionToolbarAncestorScroll: Story = {
+  tags: ["!manifest", "markdown-selection-scroll"],
+  args: { defaultState: scrollingMarkdown, scrollable: false },
+  play: checkSelectionToolbarScrolling,
 };

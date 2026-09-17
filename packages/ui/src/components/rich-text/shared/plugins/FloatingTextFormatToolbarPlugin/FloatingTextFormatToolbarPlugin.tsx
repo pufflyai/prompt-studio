@@ -203,7 +203,7 @@ function FloatingTextToolbar({
   }, [editor, setIsToolbarActive]);
 
   useEffect(() => {
-    const scrollerElem = anchorElem.parentElement;
+    const ownerDocument = anchorElem.ownerDocument;
 
     const update = () => {
       editor.getEditorState().read(() => {
@@ -212,16 +212,12 @@ function FloatingTextToolbar({
     };
 
     window.addEventListener("resize", update);
-
-    if (scrollerElem) {
-      scrollerElem.addEventListener("scroll", update);
-    }
+    // Scroll does not bubble; capture it from the editor and its scrollable ancestors.
+    ownerDocument.addEventListener("scroll", update, true);
 
     return () => {
       window.removeEventListener("resize", update);
-      if (scrollerElem) {
-        scrollerElem.removeEventListener("scroll", update);
-      }
+      ownerDocument.removeEventListener("scroll", update, true);
     };
   }, [anchorElem, editor]);
 
