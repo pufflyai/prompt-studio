@@ -38,6 +38,8 @@ export interface PromptEditorProps {
   onChange?: (text: string, state: object) => void;
   onError?: (error: Error) => void;
   onSubmit?: () => void;
+  onRecallPrevious?: () => boolean;
+  onRecallNext?: () => boolean;
   /** Dynamic list of references (tables, connectors) shown when typing # */
   references?: ReferenceItem[];
   /** Optional app callback when a reference is inserted */
@@ -48,7 +50,15 @@ const nodes = [CommentNode, MarkNode, ReferenceNode];
 
 export const BasePromptEditor: ForwardRefRenderFunction<PromptEditorRef, PromptEditorProps> = (props, ref) => {
   const { defaultState, debug = false, isEditable = true, placeholder } = props;
-  const { onChange, onError = () => {}, onSubmit, references = [], onAddReference } = props;
+  const {
+    onChange,
+    onError = () => {},
+    onSubmit,
+    onRecallPrevious,
+    onRecallNext,
+    references = [],
+    onAddReference,
+  } = props;
 
   const initialConfig = {
     namespace: "PROMPT_EDITOR",
@@ -94,7 +104,7 @@ export const BasePromptEditor: ForwardRefRenderFunction<PromptEditorRef, PromptE
         <ImperativeAPIPlugin editorRef={ref} previousTextRef={previousTextRef} />
         <ToggleEditablePlugin isEditable={isEditable} />
         <CommentPlugin />
-        <KeyboardShortcutPlugin onSubmit={onSubmit} />
+        <KeyboardShortcutPlugin onSubmit={onSubmit} onRecallPrevious={onRecallPrevious} onRecallNext={onRecallNext} />
         <ReferenceMenuPlugin items={references} />
         <ReferencePlugin onAddReference={onAddReference} />
         {debug ? <TreeViewPlugin /> : ""}
