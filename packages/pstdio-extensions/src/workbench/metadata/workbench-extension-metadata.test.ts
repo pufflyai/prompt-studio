@@ -64,7 +64,7 @@ describe("createWorkbenchExtensionMetadata", () => {
         id: "pstdio.lab.connection.control-plane",
         localId: "control-plane",
         extensionId: "pstdio.lab",
-        label: "Control plane",
+        label: { $l10n: "contributions/connections/control-plane/label", default: "Control plane" },
         authType: "bearer",
         supportsCheck: true,
       },

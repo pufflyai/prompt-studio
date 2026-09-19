@@ -1,10 +1,10 @@
 import type { ModeContribution } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension } from "../../types/runtime";
-import type { LoadedExtensionSource } from "../loader";
 import type { Accumulator } from "./accumulator";
 import { modeDeclarationSchema } from "./composition-declarations";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { validateDeclaration } from "./declaration-diagnostic";
+import type { LocalizedExtensionSource as LoadedExtensionSource } from "./localizable";
 import { normalizeContributionRef } from "./references";
 
 export const registerModes = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
@@ -13,7 +13,10 @@ export const registerModes = (ext: NormalizedExtension, source: LoadedExtensionS
     source,
     runtime,
     kind: "mode",
-    contributions: contributionArray<ModeContribution>(source.definition.modes),
+    contributions: source.localization.contributions(
+      "modes",
+      contributionArray<ModeContribution>(source.definition.modes),
+    ),
   });
   for (const mode of modes) {
     const localId = mode.id;

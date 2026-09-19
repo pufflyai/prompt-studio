@@ -96,7 +96,7 @@ describe("core extension catalog", () => {
       ),
     ).toBe(true);
     expect(metadata.templateTypes.find((type) => type.localId === "ticket")).toMatchObject({
-      label: "Ticket",
+      label: expect.objectContaining({ $l10n: "contributions/templateTypes/ticket/label" }),
       commands: {
         list: "pstdio.pstdio-planner.command.templates.list",
         read: "pstdio.pstdio-planner.command.templates.read",

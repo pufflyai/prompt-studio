@@ -2,7 +2,6 @@ import {
   defineExtension,
   defineNavigationItem,
   definePage,
-  l10n,
   type ViewContribution,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
@@ -18,7 +17,7 @@ const examples = [scribble, boombox, zipline, pigeon, kiln];
 const faulty = webview("faulty-main", "Lab (faulty)");
 const faultyPage = definePage({
   id: "faulty",
-  title: l10n("pages.faulty", "Lab (faulty)"),
+  title: "Lab (faulty)",
   icon: "flask-conical-off",
   path: "lab-faulty",
   mode: workbenchModes.project,
@@ -42,7 +41,7 @@ export default defineExtension({
     ...examples.flatMap((example) => example.navigationItems),
     defineNavigationItem({
       id: "faulty",
-      label: l10n("navigation.faulty", "Lab (faulty)"),
+      label: "Lab (faulty)",
       icon: "flask-conical-off",
       owner: workbenchModes.project,
       group: "Examples",

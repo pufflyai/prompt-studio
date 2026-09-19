@@ -4,9 +4,8 @@ import { isPackageAssetDescriptor } from "../../artifacts/asset-validation";
 import { PackageAssetError, resolvePackageAsset } from "../../artifacts/package-assets";
 import type { NormalizedExtension } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
-import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
-import { findLocalizedStrings } from "./localizable";
+import type { LocalizedExtensionSource as LoadedExtensionSource } from "./localizable";
 
 const DEFAULT_LOCALE = "en";
 
@@ -41,7 +40,7 @@ const readTranslationBundle = (
   try {
     const resolved = resolvePackageAsset(asset, { sourcePath: source.sourcePath });
     const parsed = readJson(resolved.path);
-    if (isFlatBundle(parsed)) return parsed;
+    if (isFlatBundle(parsed)) return { bundle: parsed, sourcePath: resolved.path };
     throw new Error("bundle must be a flat JSON object with string values");
   } catch (error) {
     const isMissing = error instanceof PackageAssetError;
@@ -58,20 +57,6 @@ const readTranslationBundle = (
   }
 };
 
-const collectInlineDefaults = (definition: unknown) => {
-  const defaults: Record<string, string> = {};
-  const keys = new Set<string>();
-
-  for (const token of findLocalizedStrings(definition)) {
-    keys.add(token.$l10n);
-    if (token.default !== undefined && defaults[token.$l10n] === undefined) {
-      defaults[token.$l10n] = token.default;
-    }
-  }
-
-  return { defaults, keys };
-};
-
 export const registerTranslations = (
   ext: NormalizedExtension,
   source: LoadedExtensionSource,
@@ -81,7 +66,10 @@ export const registerTranslations = (
   const defaultLocale =
     typeof source.definition.defaultLocale === "string" ? source.definition.defaultLocale : DEFAULT_LOCALE;
   const declaredBundles = isRecord(source.definition.translations) ? source.definition.translations : {};
-  const inline = collectInlineDefaults(source.definition);
+  const inline = source.localization;
+  for (const diagnostic of inline.diagnostics) {
+    addTranslationDiagnostic(runtime, { ...diagnostic, extensionId: ext.id, sourcePath: source.sourcePath });
+  }
 
   if (inline.keys.size === 0 && Object.keys(declaredBundles).length === 0) return;
   if (index.translationIds.has(ext.id)) return;
@@ -91,8 +79,19 @@ export const registerTranslations = (
   };
 
   for (const [locale, asset] of Object.entries(declaredBundles)) {
-    const bundle = readTranslationBundle(ext, source, runtime, locale, asset);
-    if (!bundle) continue;
+    const loaded = readTranslationBundle(ext, source, runtime, locale, asset);
+    if (!loaded) continue;
+    const { bundle, sourcePath } = loaded;
+    for (const key of Object.keys(bundle)) {
+      if (!key.startsWith("contributions/") || inline.automaticKeys.has(key)) continue;
+      addTranslationDiagnostic(runtime, {
+        code: "stale_automatic_translation_key",
+        message: `Translation bundle "${sourcePath}" (${locale}) contains unknown automatic key "${key}"`,
+        extensionId: ext.id,
+        sourcePath,
+        metadata: { locale, key },
+      });
+    }
     bundles[locale] = { ...(locale === defaultLocale ? inline.defaults : {}), ...bundle };
   }
 

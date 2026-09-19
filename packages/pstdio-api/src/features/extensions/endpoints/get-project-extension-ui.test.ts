@@ -137,7 +137,7 @@ export default {
       id: "test.themed-extension.theme.midnight",
       localId: "midnight",
       extensionId: "test.themed-extension",
-      title: "Midnight",
+      title: { $l10n: "contributions/themes/midnight/title", default: "Midnight" },
     });
   });
 });

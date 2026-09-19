@@ -1,10 +1,10 @@
 {
-  "commands.migrateTicketIdentities": "Migrer les identifiants des tickets",
+  "contributions/commands/migrate-ticket-identities/title": "Migrer les identifiants des tickets",
   "archiveState.active": "Actif",
   "archiveState.archived": "Archivé",
   "boardView.archiveAll": "Tout archiver",
-  "commandPaletteResources.tickets.title": "Tâches",
-  "kanbanRenderers.tickets.createRow.submitLabel": "Créer",
+  "contributions/commandPaletteResources/tickets/title": "Tâches",
+  "contributions/views/tickets/body/createRow/submitLabel": "Créer",
   "kanbanRenderers.tickets.rowActions.archive": "Tout archiver",
   "kanbanRenderers.tickets.rowActions.breakIntoSubTickets": "Découper en sous-tâches",
   "kanbanRenderers.tickets.rowActions.createWorkspace": "Créer un espace de travail",
@@ -16,7 +16,7 @@
   "displayMenu.propertyOptions.createdAt": "Créé",
   "displayMenu.propertyOptions.status": "Statut",
   "displayMenu.propertyOptions.updatedAt": "Mis à jour",
-  "settingsPanels.ticketTags.title": "Étiquettes",
+  "contributions/views/ticket-tags-settings/title": "Étiquettes",
   "ticketDetail.none": "Aucun",
   "ticketDetail.parent": "Parent"
 }

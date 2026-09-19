@@ -932,3 +932,34 @@ package `planner`, the theme ID is `acme.planner.theme.monokai`.
 Diagnostics should include the extension id when known, the source path, and project/repo context where relevant. If the entry module fails to import, the package still loads with empty contributions and an `extension_import_failed` diagnostic so the dashboard can show the package identity and error.
 
 Warnings are actionable even when the extension still loads. For example, `extension_icon_unknown` means a contribution named an icon the host does not ship; the contribution loads, but the dashboard shows a fallback icon. Composition errors such as `invalid_placement` (a placement has an invalid shape) and `invalid_page_slot` (a page slot has an invalid shape) drop the invalid contribution and keep the rest of the extension loading. Invalid declarations report the extension, contribution, field path, and expected contract. Nested unknown fields are rejected.
+
+## Static translations
+
+Use plain strings in static `Localizable` fields. The host derives keys from the
+contribution's declared path, for example `contributions/views/inbox/title` and
+`contributions/views/inbox/body/rowActions/archive/label`. A view declared with
+`defineView({ id: "inbox", title: "Inbox", body: { kind: "tree", body: async () => [] } })`
+gets an English fallback without a locale file. Pages use the same rule for their
+own titles; a page's `main.view` reference does not change the view's key.
+
+Settings use their property path: `settings: { properties: { "editor/theme~name":
+{ type: "string", scope: "project", title: "Theme" } } }` produces
+`contributions/settings/properties/editor~1theme~0name/title`.
+Escape `~` as `~0` and `/` as `~1` in declared path segments. Dots remain literal.
+Array entries use their declared ID, so reordering does not change translation keys.
+
+Locale bundles remain flat JSON objects. Put the automatic key in a locale bundle
+to override its default. Missing entries use the original string. The grammar is
+part of the extension contract; changing a declaration's ID also changes its keys.
+
+Keep `l10n("shared.inbox", "Inbox")` for shared keys, arrays without item IDs
+(such as command menus and palette entries), and values returned by callbacks.
+A query's rows, columns, and labels are runtime data and are never rewritten.
+Only fields declared `Localizable` are normalized; IDs, paths, and ordinary string
+fields keep their original values.
+
+The `contributions/` prefix belongs to the host. `pst extensions check` reports
+`reserved_translation_key` for explicit tokens using it,
+`stale_automatic_translation_key` for bundle keys without a matching static field,
+and `conflicting_automatic_translation_key` for conflicting defaults at one path.
+Keys outside this prefix may be used only at runtime and are not reported as unused.

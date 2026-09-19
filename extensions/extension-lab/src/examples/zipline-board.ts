@@ -2,7 +2,6 @@ import {
   defineView,
   type KanbanRendererAttributeDescriptor,
   type KanbanRendererSettings,
-  l10n,
 } from "@pstdio/sdk/extensions";
 import { ziplineIssues } from "../apps/zipline-data";
 import { readExampleState } from "../example-state";
@@ -72,7 +71,7 @@ const boardSettings = {
 
 export const board = defineView({
   id: "zipline-board",
-  title: l10n("views.zipline-board", "My issues"),
+  title: "My issues",
   body: {
     kind: "kanban",
     attributes: boardAttributes,

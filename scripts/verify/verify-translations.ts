@@ -5,6 +5,9 @@ const translationDiagnosticCodes = new Set([
   "malformed_translation_bundle",
   "missing_translation_asset",
   "missing_translation_key",
+  "reserved_translation_key",
+  "conflicting_automatic_translation_key",
+  "stale_automatic_translation_key",
 ]);
 
 const root = resolve(import.meta.dir, "../..");

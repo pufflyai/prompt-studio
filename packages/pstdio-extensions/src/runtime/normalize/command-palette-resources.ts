@@ -1,9 +1,9 @@
 import type { CommandPaletteResourceContribution } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension, RuntimeCommandPaletteResourceRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
-import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
+import type { LocalizedExtensionSource as LoadedExtensionSource } from "./localizable";
 import { isLocalizableString } from "./localizable";
 import { registerPrivateHandler } from "./private-handlers";
 import { normalizeContributionRef } from "./references";
@@ -19,7 +19,10 @@ export const registerCommandPaletteResources = (
     source,
     runtime,
     kind: "command-palette-resource",
-    contributions: contributionArray<CommandPaletteResourceContribution>(source.definition.commandPaletteResources),
+    contributions: source.localization.contributions(
+      "commandPaletteResources",
+      contributionArray<CommandPaletteResourceContribution>(source.definition.commandPaletteResources),
+    ),
   });
   for (const contribution of contributions) {
     const localId = contribution.id;

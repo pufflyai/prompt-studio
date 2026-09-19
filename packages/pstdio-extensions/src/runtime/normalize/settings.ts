@@ -1,7 +1,7 @@
 import type { NormalizedExtension, RuntimeExtensionSettingRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
-import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
+import type { LocalizedExtensionSource as LoadedExtensionSource } from "./localizable";
 
 const settingTypes = new Set(["boolean", "number", "string", "array", "object"]);
 
@@ -109,7 +109,7 @@ const validateSetting = (
 };
 
 export const registerSettings = (ext: NormalizedExtension, source: LoadedExtensionSource, runtime: Accumulator) => {
-  const settings = source.definition.settings;
+  const settings = source.localization.settings(source.definition.settings);
   if (!isRecord(settings)) return;
   const properties = settings.properties;
   if (!isRecord(properties)) return;

@@ -2,8 +2,8 @@
   "archiveState.active": "활성",
   "archiveState.archived": "보관됨",
   "boardView.archiveAll": "모두 보관",
-  "commandPaletteResources.tickets.title": "티켓",
-  "kanbanRenderers.tickets.createRow.submitLabel": "생성",
+  "contributions/commandPaletteResources/tickets/title": "티켓",
+  "contributions/views/tickets/body/createRow/submitLabel": "생성",
   "kanbanRenderers.tickets.rowActions.archive": "모두 보관",
   "kanbanRenderers.tickets.rowActions.breakIntoSubTickets": "하위 티켓으로 분할",
   "kanbanRenderers.tickets.rowActions.createWorkspace": "워크스페이스 생성",
@@ -15,7 +15,7 @@
   "displayMenu.propertyOptions.createdAt": "생성일",
   "displayMenu.propertyOptions.status": "상태",
   "displayMenu.propertyOptions.updatedAt": "업데이트",
-  "settingsPanels.ticketTags.title": "태그",
+  "contributions/views/ticket-tags-settings/title": "태그",
   "ticketDetail.none": "없음",
   "ticketDetail.parent": "상위"
 }

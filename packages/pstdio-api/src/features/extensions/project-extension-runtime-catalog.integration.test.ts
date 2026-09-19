@@ -137,7 +137,10 @@ describe("project extension runtime snapshot integration", () => {
       commands: Array<{ id: string; title: string }>;
     };
     expect(commands.commands).toContainEqual(
-      expect.objectContaining({ id: "pstdio.lab.command.ping", title: "Ping v2" }),
+      expect.objectContaining({
+        id: "pstdio.lab.command.ping",
+        title: { $l10n: "contributions/commands/ping/title", default: "Ping v2" },
+      }),
     );
   });
 
