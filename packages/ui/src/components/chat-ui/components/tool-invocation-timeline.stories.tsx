@@ -100,6 +100,44 @@ export default meta;
 
 type Story = StoryObj<typeof ToolInvocationTimeline>;
 
+export const LongTitles: Story = {
+  tags: ["!manifest"],
+  parameters: {
+    docs: {
+      description: {
+        story: "Long tool titles stay on one line in narrow chat panels. Expand a row to read its output.",
+      },
+    },
+  },
+  render: () => (
+    <Box width="full" maxW="sm">
+      <ToolInvocationTimeline
+        invocations={[
+          ...claudeToolInvocations.slice(0, 3),
+          {
+            type: "tool",
+            tool: "mcp__workspace__search_project_documentation",
+            status: "running",
+            state: {
+              input: { query: "Find the workspace setup instructions" },
+              output: "Workspace setup instructions",
+            },
+          },
+          {
+            type: "tool",
+            tool: "Skill",
+            status: "completed",
+            state: {
+              input: { skill: "Research the project structure and validate all package boundaries" },
+              output: { returnDisplay: "Loaded project validation instructions" },
+            },
+          },
+        ]}
+      />
+    </Box>
+  ),
+};
+
 export const FromConversationData: Story = {
   render: () => (
     <Box maxW="960px" w="full" borderWidth="1px" borderRadius="md" bg="bg" p="md">

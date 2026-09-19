@@ -46,11 +46,12 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
   const hasPanelHeader = useWorkbenchPanelHeaderVisible(workbench, "main");
   const settings = useWorkbenchModeRegionSettings(workbench, "main");
 
-  if (settings?.showHeader === false || (!hasMainHeader && !hasPanelHeader)) return null;
+  const visible = settings?.showHeader !== false && (hasMainHeader || hasPanelHeader);
 
   return (
     <Header
       data-workbench-panel-header="main"
+      display={visible ? "flex" : "none"}
       variant="main"
       bg={workbenchBackgrounds.main}
       position="relative"
@@ -63,7 +64,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
       {/* The tab strip grows into the empty header, so only claim space when a
           main-header view is actually mounted or when there are no tabs to claim it. */}
       <Box flex={hasMainHeader || !hasMainContentTabs ? "1" : "0"} h="full" minW="0" overflow="hidden">
-        {hasMainHeader ? <WorkbenchRegion workbench={workbench} region="main-header" title="Main header" /> : null}
+        <WorkbenchRegion workbench={workbench} region="main-header" title="Main header" />
       </Box>
       <WorkbenchHeaderActions
         workbench={workbench}
@@ -131,13 +132,6 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
     </Grid>
   );
 
-  if (!secondaryPanel.has)
-    return (
-      <Grid as="main" h="full" minH="0" minW="0" w="full">
-        {mainContent}
-      </Grid>
-    );
-
   return (
     <ResizableSplitLayout
       as="main"
@@ -146,7 +140,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
       resizableSide="bottom"
       contentPanel={mainContent}
       resizablePanel={<WorkbenchSecondaryPanel workbench={workbench} hasSecondaryHeader={secondaryPanel.hasHeader} />}
-      collapsed={secondaryPanel.collapsed}
+      collapsed={!secondaryPanel.has || secondaryPanel.collapsed}
       collapsible={secondaryPanel.collapsible}
       defaultSizePx={secondaryPanelSize.defaultPx}
       minSizePx={secondaryPanelSize.minPx}

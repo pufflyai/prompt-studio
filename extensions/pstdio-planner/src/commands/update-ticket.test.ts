@@ -217,3 +217,62 @@ describe("updateTicket server-side resolution", () => {
     ).rejects.toThrow(/Unknown status/);
   });
 });
+
+describe("updateTicket dependencies", () => {
+  const seedDependents = async (storage: ReturnType<typeof createMemoryStorage>) => {
+    const first = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "First" } }));
+    const second = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Second" } }));
+    const ticket = await createTicketCommand.run(
+      ...makeCommandArgs({ storage, params: { title: "Dependent", dependsOn: [first.shorthand, second.shorthand] } }),
+    );
+    return { first, second, ticket };
+  };
+
+  test("replaces the whole dependency set", async () => {
+    const storage = createMemoryStorage();
+    const { first, ticket } = await seedDependents(storage);
+
+    const updated = await updateTicketCommand.run(
+      ...makeCommandArgs({ storage, params: { id: ticket.shorthand, dependsOn: [first.shorthand] } }),
+    );
+
+    expect(updated.dependsOn).toEqual([first.id]);
+  });
+
+  test("clears the dependency set on request", async () => {
+    const storage = createMemoryStorage();
+    const { first, second, ticket } = await seedDependents(storage);
+    expect(ticket.dependsOn).toEqual([first.id, second.id]);
+
+    const updated = await updateTicketCommand.run(
+      ...makeCommandArgs({ storage, params: { id: ticket.shorthand, clearDependsOn: true } }),
+    );
+
+    expect(updated.dependsOn).toEqual([]);
+  });
+
+  test("keeps dependencies when the update does not mention them", async () => {
+    const storage = createMemoryStorage();
+    await seedDefaultStatuses(storage);
+    const { first, second, ticket } = await seedDependents(storage);
+
+    const updated = await updateTicketCommand.run(
+      ...makeCommandArgs({ storage, params: { id: ticket.shorthand, status: "In Progress" } }),
+    );
+
+    expect(updated.dependsOn).toEqual([first.id, second.id]);
+  });
+
+  test("names an unknown dependency shorthand and keeps the stored set", async () => {
+    const storage = createMemoryStorage();
+    const { first, second, ticket } = await seedDependents(storage);
+
+    await expect(
+      updateTicketCommand.run(...makeCommandArgs({ storage, params: { id: ticket.shorthand, dependsOn: ["T-404"] } })),
+    ).rejects.toThrow(/Unknown ticket "T-404"/);
+
+    await expect(ticketsCollection(storage).get(ticket.id)).resolves.toMatchObject({
+      dependsOn: [first.id, second.id],
+    });
+  });
+});

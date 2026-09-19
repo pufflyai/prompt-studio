@@ -34,6 +34,21 @@ const roundTrip = (markdown: string) => {
 };
 
 describe("Markdown codec", () => {
+  test("preserves paragraphs, nested blocks, and inline content inside quotes", () => {
+    const markdown = `> First **bold** paragraph with [a link](https://example.com).\\
+> Continued line.
+>
+> Second *paragraph*.
+>
+> - First item
+> - Second item
+>
+> After the list.
+>
+> > Nested quote`;
+    expect(withoutPositions(parseMarkdown(roundTrip(markdown)))).toEqual(withoutPositions(parseMarkdown(markdown)));
+  });
+
   test("semantically round-trips CommonMark and GFM blocks and inline content", () => {
     const markdown = `# Heading
 

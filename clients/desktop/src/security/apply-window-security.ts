@@ -1,4 +1,5 @@
 import type { BrowserWindow, Session, WebContents } from "electron";
+import { canGrantSessionPermission } from "./session-permissions";
 import { CONTENT_SECURITY_POLICY, decideNavigation } from "./window-security";
 
 type WindowSecurityOptions = {
@@ -7,9 +8,25 @@ type WindowSecurityOptions = {
   openExternal: (url: string) => Promise<void>;
 };
 
-export const secureSession = (session: Session) => {
-  session.setPermissionCheckHandler(() => false);
-  session.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false));
+export const secureSession = (session: Session, runtimeOrigin: () => string | null) => {
+  session.setPermissionCheckHandler((_webContents, permission, requestingOrigin, details) =>
+    canGrantSessionPermission({
+      permission,
+      requestingUrl: requestingOrigin,
+      isMainFrame: details.isMainFrame,
+      runtimeOrigin: runtimeOrigin(),
+    }),
+  );
+  session.setPermissionRequestHandler((_webContents, permission, callback, details) =>
+    callback(
+      canGrantSessionPermission({
+        permission,
+        requestingUrl: details.requestingUrl,
+        isMainFrame: details.isMainFrame,
+        runtimeOrigin: runtimeOrigin(),
+      }),
+    ),
+  );
   session.webRequest.onHeadersReceived((details, callback) => {
     if (details.resourceType !== "mainFrame") {
       callback({ responseHeaders: details.responseHeaders });

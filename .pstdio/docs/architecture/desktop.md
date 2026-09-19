@@ -9,6 +9,10 @@ Prompt Studio desktop is a private Electron client in `clients/desktop`. Electro
 - The visible workbench is the existing runtime-served dashboard. Electron bundles only small startup, recovery, confirmation, and closing lifecycle surfaces.
 - The preload exposes a frozen typed capability object. It never exposes raw IPC, filesystem, shell, environment, process, or runtime credentials.
 
+Before starting a new sidecar on macOS or Linux, desktop reads `PATH` from the user's configured interactive login shell. This lets Finder and desktop launchers find the same user-installed harnesses as a terminal, including tools configured in shell startup files. Only `PATH` is adopted; runtime settings and credentials remain those of the launching process. Windows keeps its inherited environment. Attaching to an existing runtime does not run a shell.
+
+Shell path resolution shares the existing 15-second startup deadline. The shell receives a login process name and interactive mode, which also supports csh and tcsh without combining their incompatible login and command flags. Resolution owns a separate process group. Cancellation kills that group and waits for the shell to close, so slow startup commands cannot survive the deadline. If shell startup fails or returns no path, desktop shows startup recovery instead of silently marking installed harnesses unavailable.
+
 The lifecycle state machine distinguishes discovery, spawn, readiness, workbench, active-work confirmation, closing, recovery, retry, and persistent detach. Electron creates the runtime instance ID before spawn and accepts only a descriptor with that exact ID, so a competing process cannot replace the child during readiness. A runtime control event or a clean exit from the owned child marks shutdown as intentional. The process exit can arrive before the HTTP event, so both signals share one notification path. Failed exits open recovery instead of leaving a blank dashboard.
 
 Runtime discovery starts while the lifecycle document loads. The build renders the initial startup view and its design-system styles into the document. Electron shows the native window when that document finishes loading, then allows the workbench view to be created. Native visibility does not wait for the hidden renderer's first paint, which can stall under automation. Desktop keeps its starting state until both documents finish loading. React hydrates the startup view, subscribes to main, and reads the latest state. Hydration starts without waiting for animation frames, so lifecycle actions remain available when an occluded window stops painting. Reduced-motion styles apply before hydration. The lifecycle renderer stays mounted in the BrowserWindow while a sandboxed WebContentsView displays the workbench. Recovery reveals the existing lifecycle page without restarting its renderer or loading its bundle again.
@@ -78,8 +82,8 @@ The flow opens two projects through the picker and restores a different page in 
 BrowserWindow enables sandboxing, context isolation, web security, and disables Node integration and webviews. The bundled lifecycle renderer is served from the privileged `pstdio://lifecycle/` protocol, restricted to files under its renderer root. It does not use the broader `file://` protocol. The shell:
 
 - allows main-frame navigation only within the exact runtime origin or the exact bundled lifecycle document;
-- denies popup creation and opens only validated HTTPS links through the operating system;
-- denies permissions by default;
+- denies popup creation and opens validated HTTP and HTTPS links, including local preview URLs and custom ports, through the operating system; URLs with credentials and non-web schemes remain blocked;
+- denies permissions by default, allowing only clipboard writes from the main runtime page; clipboard reads and requests from embedded frames remain denied;
 - applies a restrictive content security policy;
 - validates the expected WebContents, main frame, and exact renderer origin for every IPC handler.
 

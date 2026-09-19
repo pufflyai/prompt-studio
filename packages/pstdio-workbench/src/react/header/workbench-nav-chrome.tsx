@@ -3,7 +3,7 @@ import { Header, PANEL_HEADER_CONTROL_SIZE, Tooltip } from "@pstdio/ui";
 import type { WorkbenchCore } from "../../core";
 import { workbenchTopHeaderLeadingMenuPath, workbenchTopHeaderTrailingMenuPath } from "../../core";
 import { WorkbenchBreadcrumbView } from "../breadcrumb/breadcrumb-view";
-import { ModeChromeView, useModeChrome } from "../region/mode-chrome";
+import { useModeChrome } from "../region/mode-chrome";
 import { WorkbenchRegion } from "../region/region";
 import { WorkbenchIcon } from "../shared/icon";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -101,21 +101,12 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
   const sidenavControls = regionControls.filter((control) => control.id === "sidenav");
   const trailingRegionControls = regionControls.filter((control) => control.id !== "sidenav");
 
-  if (chrome === false) return null;
-  if (chrome)
-    return (
-      <Header data-workbench-region="nav" variant="main" padding="0" flexShrink={0}>
-        <Box flex="1" minW="0" h="full" overflow="hidden">
-          <ModeChromeView workbench={workbench} viewId={chrome} region="nav" />
-        </Box>
-        <WorkbenchRegionControls controls={regionControls} />
-      </Header>
-    );
-
   return (
     <Header
       data-workbench-region="nav"
+      display={chrome === false ? "none" : "flex"}
       variant="main"
+      padding={chrome ? "0" : undefined}
       bg={workbenchBackgrounds.main}
       position="relative"
       flexShrink={0}
@@ -123,21 +114,40 @@ export const WorkbenchNavChrome = (props: WorkbenchNavChromeProps) => {
       overflow="hidden"
       overflowY="hidden"
     >
-      <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderLeadingMenuPath} />
-      <WorkbenchNavigationControls workbench={workbench} regionControls={sidenavControls} />
-      <Box h="full" minW="0" maxW="60%" overflow="hidden">
-        {hasNav ? (
-          <WorkbenchRegion workbench={workbench} region="nav" title="Nav Chrome" />
-        ) : (
-          <WorkbenchBreadcrumbView workbench={workbench} />
-        )}
+      <Box display={chrome ? "none" : "contents"}>
+        <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderLeadingMenuPath} />
+        <WorkbenchNavigationControls workbench={workbench} regionControls={sidenavControls} />
       </Box>
-      <HStack data-workbench-breadcrumb-action-slot="" flexShrink={0} gap="2xs" h="6" justifyContent="center" minW="6">
-        <WorkbenchBreadcrumbResourceActions workbench={workbench} />
-      </HStack>
-      <Box flex="1" minW="0" />
-      <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
-      <WorkbenchRegionControls controls={trailingRegionControls} />
+      <Box
+        display={hasNav ? "block" : "none"}
+        flex={chrome ? "1" : undefined}
+        h="full"
+        minW="0"
+        maxW={chrome ? undefined : "60%"}
+        overflow="hidden"
+      >
+        <WorkbenchRegion workbench={workbench} region="nav" title="Nav Chrome" />
+      </Box>
+      <Box display={chrome ? "none" : "contents"}>
+        {!hasNav ? (
+          <Box h="full" minW="0" maxW="60%" overflow="hidden">
+            <WorkbenchBreadcrumbView workbench={workbench} />
+          </Box>
+        ) : null}
+        <HStack
+          data-workbench-breadcrumb-action-slot=""
+          flexShrink={0}
+          gap="2xs"
+          h="6"
+          justifyContent="center"
+          minW="6"
+        >
+          <WorkbenchBreadcrumbResourceActions workbench={workbench} />
+        </HStack>
+        <Box flex="1" minW="0" />
+        <WorkbenchHeaderActions workbench={workbench} menuPath={workbenchTopHeaderTrailingMenuPath} />
+      </Box>
+      <WorkbenchRegionControls controls={chrome ? regionControls : trailingRegionControls} />
     </Header>
   );
 };

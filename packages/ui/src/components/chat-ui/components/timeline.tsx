@@ -321,7 +321,7 @@ export function TimelineFromJSON({ data, onOpenFile }: { data: TimelineDoc; onOp
   };
 
   return (
-    <Timeline.Root>
+    <Timeline.Root variant="tool">
       {data.items.map((item, idx) => {
         const key = getKey(item, idx);
         const hasBlocks = (item.blocks?.length ?? 0) > 0;

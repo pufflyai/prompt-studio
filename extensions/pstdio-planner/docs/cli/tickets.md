@@ -6,7 +6,7 @@ Planner owns the `pst tickets` command group. Ticket IDs can be full storage IDs
 
 ```sh
 pst tickets list [--status <status>] [--tags <tag>...] [--parent <id>] [--archived] [--draft]
-pst tickets create [--title <title>] [--content <markdown>] [--status <status>] [--tags <tag>...] [--parent <id>]
+pst tickets create [--title <title>] [--content <markdown>] [--status <status>] [--tags <tag>...] [--parent <id>] [--depends-on <id>...]
 pst tickets add [same options as create]
 pst tickets panel --id <id>
 pst tickets update --id <id> [options]
@@ -28,7 +28,20 @@ pst tickets proposal-refined --id <id>
 
 `panel` returns the complete stored ticket record.
 
-`update` can change `--content`, `--status`, repeatable `--tags`, `--parent`, and `--blocked-reason`. Use `--unlink-parent` to remove a parent link.
+`update` can change `--content`, `--status`, repeatable `--tags`, `--parent`, repeatable `--depends-on`, and `--blocked-reason`. Use `--unlink-parent` to remove a parent link.
+
+## Dependencies
+
+`--depends-on` takes ticket shorthands and is repeatable. Both `create` and `update` accept it, so a dependency can be set in one command instead of a draft round-trip.
+
+```sh
+pst tickets create --title "Ship the flag" --depends-on PS-12 --depends-on PS-13
+pst tickets update --id PS-14 --depends-on PS-12
+```
+
+On `update` the flag replaces the whole set. Leaving it out keeps the stored dependencies, so a routine status change never drops them. Use `--clear-depends-on` to remove every dependency. An unknown shorthand fails the command and names it, and nothing is written.
+
+`update` and `save` reject dependencies that lead back to the ticket itself, directly or through other tickets. A rejected dependency cycle leaves the stored ticket unchanged.
 
 ## Local ticket workflow
 
@@ -39,7 +52,7 @@ pst tickets write --title "Fix login" --status TODO --tags High
 pst tickets save --id PS-12
 ```
 
-`save` reads the body, tags, parent, dependencies, and files from the local ticket. Its only direct update option is `--status`.
+`save` reads the body, tags, parent, dependencies, and files from the local ticket. Its only direct update option is `--status`. The `depends_on` frontmatter list takes the same shorthands as `--depends-on` and resolves the same way; `depends_on: []` clears the set.
 
 `pull` writes stored tickets to the local `.pstdio/tickets` tree. Without `--id`, it pulls all active tickets. Existing local files are preserved unless `--force` is set.
 

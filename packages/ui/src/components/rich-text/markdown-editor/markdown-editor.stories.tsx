@@ -1,8 +1,10 @@
+import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { useState } from "react";
 import { mermaidFixtures } from "@/components/mermaid-renderer/mermaid-fixtures";
 import { ScrollArea } from "@/components/primitives/scroll-area";
 import { MarkdownEditor } from "./markdown-editor";
+import { checkSelectionToolbarScrolling, scrollingMarkdown } from "./markdown-editor-scrolling.play";
 
 const message = `
 # MarkdownEditor
@@ -170,7 +172,7 @@ Use this editor to exercise live markdown formatting. Try:
 - Start a new line and type \`-\` then a space for a bullet list.
 - Type \`1.\` then a space for an ordered list.
 - Type \`#\`..\`######\` then a space for headings.
-- Type \`>\` then a space for a blockquote.
+- Type \`>\` then a space for a blockquote. Press Shift+Enter to continue it, or Enter to leave it.
 - Wrap text with \`**\`, \`*\`, or \`~~\` for bold, italic, strike.
 - Wrap text with backticks for inline code.
 - Type \`---\` on its own line for a horizontal rule.
@@ -305,4 +307,21 @@ export const EditableCodeBlocks: Story = {
 export const LiveMarkdownShortcuts: Story = {
   tags: ["!manifest"],
   render: () => <LiveShortcutsStory />,
+};
+
+export const SelectionToolbarEditorScroll: Story = {
+  tags: ["!manifest", "markdown-selection-scroll"],
+  args: { defaultState: scrollingMarkdown },
+  render: (args) => (
+    <Box height="360px">
+      <MarkdownEditor {...args} />
+    </Box>
+  ),
+  play: checkSelectionToolbarScrolling,
+};
+
+export const SelectionToolbarAncestorScroll: Story = {
+  tags: ["!manifest", "markdown-selection-scroll"],
+  args: { defaultState: scrollingMarkdown, scrollable: false },
+  play: checkSelectionToolbarScrolling,
 };

@@ -34,18 +34,39 @@ describe("desktop window security", () => {
     expect(options.webPreferences.partition).not.toStartWith("persist:");
   });
 
-  test("allows only exact runtime navigation and validated HTTPS external links", () => {
+  test("allows only exact runtime navigation and validated website links", () => {
     const policy = {
       lifecycleUrl: "pstdio://lifecycle/index.html",
       runtimeOrigin: "http://127.0.0.1:43127",
     };
 
     expect(decideNavigation("http://127.0.0.1:43127/projects/one", policy)).toBe("allow");
-    expect(decideNavigation("http://localhost:43127/projects/one", policy)).toBe("deny");
+    expect(decideNavigation("http://localhost:43127/projects/one", policy)).toBe("external");
     expect(decideNavigation("pstdio://lifecycle/index.html#recovery", policy)).toBe("allow");
     expect(decideNavigation("https://prompt.studio/docs", policy)).toBe("external");
-    expect(decideNavigation("http://prompt.studio/docs", policy)).toBe("deny");
+    expect(decideNavigation("http://prompt.studio/docs", policy)).toBe("external");
     expect(isAllowedExternalUrl("https://user:pass@prompt.studio/docs")).toBe(false);
+  });
+
+  test.each([
+    "https://example.com/docs",
+    "http://example.com/docs",
+    "http://localhost:3000/preview",
+    "https://example.com:8443/docs",
+  ])("opens website %s in the system browser", (url) => {
+    expect(isAllowedExternalUrl(url)).toBe(true);
+  });
+
+  test.each([
+    "file:///etc/passwd",
+    "javascript:alert(1)",
+    "data:text/html,hello",
+    "mailto:user@example.com",
+    "https://user:pass@example.com",
+    "http://user:pass@example.com",
+    "not a URL",
+  ])("rejects external URL %s", (url) => {
+    expect(isAllowedExternalUrl(url)).toBe(false);
   });
 
   test("defines a restrictive CSP", () => {

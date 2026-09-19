@@ -45,7 +45,27 @@ either platform as a supported desktop release.
 Packaged macOS applications query the public GitHub Releases API for the newest
 complete `pstdio@<version>` release. They then point Electron's native updater at
 that release's architecture-aware JSON metadata. Source builds do not use the
-native updater.
+native updater. A check compares the published version with the installed desktop
+version before downloading. Equal or older releases are not downloaded.
+
+**Prompt Studio → Check for Updates…** shows a native dialog for each result:
+
+| Result | Feedback |
+| --- | --- |
+| No newer version | **You're up to date.**, with the installed version |
+| Download verified and complete | **Your update is ready to install.**, with the downloaded version and instructions to quit and reopen |
+| New version starts after a downloaded update | **Prompt Studio was updated successfully.**, with the running desktop version; shown once |
+| Lookup, download, or verification fails | **Prompt Studio couldn't complete the update.**, with retry and log guidance |
+
+Dismiss these dialogs with **OK**. A downloaded update is installed when the app
+quits normally. Reopening runs the new version. The existing active-work
+confirmation still applies to quitting; downloading does not stop work.
+
+The desktop keeps the downloaded version in its application support directory
+until a later launch can confirm the matching version is running. First launches
+and launches where the update was not installed do not show an installation
+success message. Updating the desktop bundle does not replace an independently
+running persistent CLI runtime.
 
 Electron has no built-in Linux updater. Use the package manager for DEB installs,
 or download and replace the portable directory from the GitHub release page.

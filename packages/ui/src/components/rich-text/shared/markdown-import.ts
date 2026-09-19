@@ -177,7 +177,15 @@ const appendBlock = (parent: ElementNode, node: RootContent, context: ImportCont
     case "blockquote": {
       const quote = $createQuoteNode();
       parent.append(quote);
-      for (const child of node.children) appendBlock(quote, child, context);
+      for (const [index, child] of node.children.entries()) {
+        if (child.type === "paragraph") {
+          // Native Lexical quotes hold inline content; paragraph children intercept Enter.
+          if (node.children[index - 1]?.type === "paragraph") quote.append($createTextNode("\n\n"));
+          quote.append(...importInlineChildren(child.children, context));
+        } else {
+          appendBlock(quote, child, context);
+        }
+      }
       break;
     }
     case "list": {

@@ -157,3 +157,34 @@ describe("createTicketCommand", () => {
     expect(created.shorthand).toBe("PS-4");
   });
 });
+
+describe("createTicket dependencies", () => {
+  test("records dependencies given as shorthands", async () => {
+    const storage = createMemoryStorage();
+    const first = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "First" } }));
+    const second = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Second" } }));
+
+    const created = await createTicketCommand.run(
+      ...makeCommandArgs({
+        storage,
+        params: { title: "Dependent", dependsOn: [first.shorthand, second.shorthand] },
+      }),
+    );
+
+    expect(created.dependsOn).toEqual([first.id, second.id]);
+    await expect(ticketsCollection(storage).get(created.id)).resolves.toMatchObject({
+      dependsOn: [first.id, second.id],
+    });
+  });
+
+  test("names an unknown dependency shorthand and creates nothing", async () => {
+    const storage = createMemoryStorage();
+    await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "First" } }));
+
+    await expect(
+      createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Dependent", dependsOn: ["T-404"] } })),
+    ).rejects.toThrow(/Unknown ticket "T-404"/);
+
+    await expect(ticketsCollection(storage).list()).resolves.toHaveLength(1);
+  });
+});

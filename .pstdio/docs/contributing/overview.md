@@ -11,6 +11,10 @@ This project is a Bun + TypeScript monorepo using workspaces, Lerna, and Nx cach
 bun install
 ```
 
+Run `bun run clean` to remove dependencies, build and release output, caches,
+test reports and temporary test data, desktop packages and sidecars, and vendored
+PGlite assets. Run `bun run reset` to clean, install dependencies, and rebuild.
+
 ## Run Locally
 
 Start an isolated API, dashboard, database, and seeded project. Startup builds the workbench and its dependencies before launching the API and dashboard, so extension views work from a clean checkout:
