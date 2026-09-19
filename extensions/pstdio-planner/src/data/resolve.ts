@@ -31,3 +31,9 @@ export const resolveTicketId = async (storage: ExtensionStorageApi, value: strin
   if (!ticket) throw new Error(`Unknown ticket "${value}"`);
   return ticket.id;
 };
+
+// Dependencies are written as shorthands by both routes that set them (the
+// `--depends-on` flag and `depends_on` frontmatter) but stored as ticket ids.
+// Both go through here so the two cannot drift.
+export const resolveDependencyIds = async (storage: ExtensionStorageApi, values: string[]) =>
+  Promise.all(values.map((value) => resolveTicketId(storage, value)));

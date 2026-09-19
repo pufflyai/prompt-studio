@@ -1,5 +1,17 @@
 # @pstdio/ui
 
+## 0.25.0
+
+_2026-09-14_
+
+### Minor Changes
+
+- d0558a0: add a resource activity feed with compact and attention states
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.24.1`
+
 ## 0.24.2
 
 _2026-09-10_

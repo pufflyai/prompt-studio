@@ -2,92 +2,125 @@ import { describe, expect, test } from "bun:test";
 import { EventEmitter } from "node:events";
 import { DesktopUpdateManager } from "./desktop-update-manager";
 
-describe("DesktopUpdateManager", () => {
-  test("notifies once for each check that finds no update", async () => {
-    const events = new EventEmitter();
-    const notifications: string[] = [];
-    const manager = new DesktopUpdateManager({
-      platform: "darwin",
-      arch: "arm64",
-      packaged: true,
-      updater: Object.assign(events, {
-        setFeedURL: () => {},
-        checkForUpdates: () => events.emit("update-not-available"),
-      }),
-      openExternal: async () => {},
-      resolveUpdateFeed: async () => "https://example.com/RELEASES-darwin-arm64.json",
-      onUpdateNotAvailable: () => notifications.push("no-update"),
-    });
+const createUpdateCheck = (options: { currentVersion?: string; releaseVersion?: string; event?: string } = {}) => {
+  const events = new EventEmitter();
+  const notifications: string[] = [];
+  const errors: Error[] = [];
+  const feeds: unknown[] = [];
+  let checks = 0;
+  const manager = new DesktopUpdateManager({
+    platform: "darwin",
+    arch: "arm64",
+    packaged: true,
+    currentVersion: options.currentVersion ?? "0.33.2",
+    updater: Object.assign(events, {
+      setFeedURL: (feed: unknown) => feeds.push(feed),
+      checkForUpdates: () => {
+        checks += 1;
+        if (options.event) events.emit(options.event);
+      },
+    }),
+    openExternal: async () => {},
+    onUpdateNotAvailable: () => notifications.push("up-to-date"),
+    onUpdateDownloaded: (version: string) => notifications.push(`downloaded:${version}`),
+    onUpdateError: (error: Error) => errors.push(error),
+    resolveUpdateFeed: async () => ({ version: options.releaseVersion ?? "0.33.3", url: "https://example.com/update" }),
+  });
+  return { manager, events, notifications, errors, feeds, checks: () => checks };
+};
 
-    expect(notifications).toEqual([]);
-    await manager.checkForUpdates();
-    expect(notifications).toEqual(["no-update"]);
-    await manager.checkForUpdates();
-    expect(notifications).toEqual(["no-update", "no-update"]);
-
-    events.emit("update-available");
-    expect(notifications).toHaveLength(2);
+describe("desktop update results", () => {
+  test.each([
+    "0.33.3",
+    "0.34.0",
+  ])("reports %s as up to date without downloading an equal or older release", async (version) => {
+    const check = createUpdateCheck({ currentVersion: version, event: "update-downloaded" });
+    await check.manager.checkForUpdates();
+    expect(check.notifications).toEqual(["up-to-date"]);
+    expect(check.checks()).toBe(0);
+    expect(check.feeds).toEqual([]);
   });
 
-  test("checks the native feed for a packaged macOS application", async () => {
-    const calls: unknown[] = [];
-    const manager = new DesktopUpdateManager({
-      platform: "darwin",
-      arch: "arm64",
-      packaged: true,
-      updater: {
-        on: () => {},
-        setFeedURL: (options) => calls.push(options),
-        checkForUpdates: async () => calls.push("check"),
-      },
-      openExternal: async (url) => calls.push(url),
-      onUpdateNotAvailable: () => {},
-      resolveUpdateFeed: async () =>
-        "https://github.com/pufflyai/prompt-studio/releases/download/pstdio@0.25.3/RELEASES-darwin-arm64.json",
-    });
-
-    await manager.checkForUpdates();
-
-    expect(calls).toEqual([
-      {
-        url: "https://github.com/pufflyai/prompt-studio/releases/download/pstdio@0.25.3/RELEASES-darwin-arm64.json",
-      },
-      "check",
-    ]);
+  test("notifies when the native updater has verified and downloaded the newer version", async () => {
+    const check = createUpdateCheck({ event: "update-downloaded" });
+    await check.manager.checkForUpdates();
+    expect(check.notifications).toEqual(["downloaded:0.33.3"]);
+    expect(check.feeds).toEqual([{ url: "https://example.com/update" }]);
   });
 
-  test("opens GitHub releases for Linux and unpackaged builds", async () => {
+  test("reports a native no-update result once per check", async () => {
+    const check = createUpdateCheck({ event: "update-not-available" });
+    await check.manager.checkForUpdates();
+    await check.manager.checkForUpdates();
+    expect(check.notifications).toEqual(["up-to-date", "up-to-date"]);
+  });
+
+  test("waits for download completion and shares concurrent requests", async () => {
+    const check = createUpdateCheck();
+    const first = check.manager.checkForUpdates();
+    const second = check.manager.checkForUpdates();
+    await Promise.resolve();
+    check.events.emit("update-available");
+    expect(check.notifications).toEqual([]);
+    expect(check.checks()).toBe(1);
+    check.events.emit("update-downloaded");
+    await Promise.all([first, second]);
+    expect(check.notifications).toEqual(["downloaded:0.33.3"]);
+  });
+
+  test("allows a retry after a native error without reporting a successful download", async () => {
+    const check = createUpdateCheck();
+    const first = check.manager.checkForUpdates();
+    await Promise.resolve();
+    check.events.emit("error", new Error("signature rejected"));
+    await first;
+    expect(check.errors.map((error) => error.message)).toEqual(["signature rejected"]);
+    expect(check.notifications).toEqual([]);
+    const retry = check.manager.checkForUpdates();
+    await Promise.resolve();
+    check.events.emit("update-downloaded");
+    await retry;
+    expect(check.checks()).toBe(2);
+    expect(check.notifications).toEqual(["downloaded:0.33.3"]);
+  });
+
+  test("opens releases for Linux and source builds", async () => {
     const opened: string[] = [];
-    const updater = {
-      on: () => {},
-      setFeedURL: () => {
-        throw new Error("native updater should not be configured");
-      },
-      checkForUpdates: async () => {
-        throw new Error("native updater should not run");
-      },
-    };
+    for (const target of [
+      { platform: "linux", packaged: true },
+      { platform: "darwin", packaged: false },
+    ] as const) {
+      const manager = new DesktopUpdateManager({
+        ...target,
+        arch: "arm64",
+        currentVersion: "0.33.2",
+        updater: Object.assign(new EventEmitter(), {
+          setFeedURL: () => {
+            throw new Error("Unexpected native download");
+          },
+          checkForUpdates: () => {
+            throw new Error("Unexpected native check");
+          },
+        }),
+        openExternal: async (url) => {
+          opened.push(url);
+        },
+        onUpdateNotAvailable: () => {},
+        onUpdateDownloaded: () => {},
+        onUpdateError: (error) => {
+          throw error;
+        },
+      });
+      await manager.checkForUpdates();
+    }
+    expect(opened).toEqual(Array(2).fill("https://github.com/pufflyai/prompt-studio/releases"));
+  });
 
-    await new DesktopUpdateManager({
-      platform: "linux",
-      arch: "x64",
-      packaged: true,
-      updater,
-      openExternal: async (url) => opened.push(url),
-      onUpdateNotAvailable: () => {},
-    }).checkForUpdates();
-    await new DesktopUpdateManager({
-      platform: "darwin",
-      arch: "arm64",
-      packaged: false,
-      updater,
-      openExternal: async (url) => opened.push(url),
-      onUpdateNotAvailable: () => {},
-    }).checkForUpdates();
-
-    expect(opened).toEqual([
-      "https://github.com/pufflyai/prompt-studio/releases",
-      "https://github.com/pufflyai/prompt-studio/releases",
-    ]);
+  test("a second check keeps a downloaded update discoverable without downloading again", async () => {
+    const check = createUpdateCheck({ event: "update-downloaded" });
+    await check.manager.checkForUpdates();
+    await check.manager.checkForUpdates();
+    expect(check.checks()).toBe(1);
+    expect(check.notifications).toEqual(["downloaded:0.33.3", "downloaded:0.33.3"]);
   });
 });

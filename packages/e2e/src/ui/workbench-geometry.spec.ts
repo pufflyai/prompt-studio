@@ -50,16 +50,16 @@ const expectCanonicalFrame = async (
   if (options.sidenav === "visible") {
     await expect(sidenav).toBeVisible({ timeout: 45_000 });
   } else {
-    await expect(sidenav).toHaveCount(0);
+    await expect(sidenav).toBeHidden();
   }
   await expect(navChrome).toBeVisible();
   await expect(sidePanel).toBeVisible();
   if (options.statusBar === "visible") {
     await expect(statusBar).toBeVisible();
   } else {
-    await expect(statusBar).toHaveCount(0);
+    await expect(statusBar).toBeHidden();
   }
-  await expect(page.locator('[data-workbench-region="activity"]')).toHaveCount(0);
+  await expect(page.locator('[data-workbench-region="activity"]')).toBeHidden();
 
   const [sidenavBox, navBox, sideBox] = await Promise.all([
     options.sidenav === "visible" ? sidenav.boundingBox() : Promise.resolve(null),

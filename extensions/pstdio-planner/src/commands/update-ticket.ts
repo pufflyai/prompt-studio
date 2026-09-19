@@ -1,6 +1,13 @@
 import { defineCommand, type ExtensionStorageApi, params } from "@pstdio/sdk/extensions";
 import { statusesCollection, ticketsCollection } from "../data/collections";
-import { findTicket, resolveStatusId, resolveTagOptionIds, resolveTicketId } from "../data/resolve";
+import {
+  findTicket,
+  resolveDependencyIds,
+  resolveStatusId,
+  resolveTagOptionIds,
+  resolveTicketId,
+} from "../data/resolve";
+import { validateTicketDependencies } from "../data/ticket-dependencies";
 import type { StoredTicket } from "../data/types";
 import { plannerTicketsChanged } from "../events";
 import { notifyBlocked, resolveBlockedNotification } from "../planner-notifications";
@@ -8,8 +15,9 @@ import { deriveTitle } from "../utils/derive-title";
 
 // Powers the markdown editor's save-on-edit autosave and the `pst tickets update`
 // CLI path. The board passes ids; the CLI passes human names/shorthands, so the
-// status, tags, and parent inputs are resolved server-side (Decision 3). The
-// ticket title is the start of the body, so a content save re-derives it.
+// status, tags, parent, and dependency inputs are resolved server-side
+// (Decision 3). The ticket title is the start of the body, so a content save
+// re-derives it.
 export const updateTicketCommand = defineCommand({
   id: "update-ticket",
   mutating: true,
@@ -27,6 +35,8 @@ export const updateTicketCommand = defineCommand({
     tags: params.list(),
     parent: params.text(),
     unlinkParent: params.boolean(),
+    dependsOn: params.list(),
+    clearDependsOn: params.boolean(),
     blockedReason: params.text(),
   },
   async run(ctx, commandParams) {
@@ -43,6 +53,8 @@ export const updateTicketCommand = defineCommand({
         ? await resolveTagOptionIds(ctx.storage, commandParams.tags)
         : commandParams.tagIds;
     const parentId = await resolveParentUpdate(ctx.storage, commandParams.parent, commandParams.unlinkParent);
+    const dependsOn = await resolveDependencyUpdate(ctx.storage, commandParams.dependsOn, commandParams.clearDependsOn);
+    if (dependsOn !== undefined) await validateTicketDependencies(ctx.storage, existing, dependsOn);
 
     const next = {
       ...existing,
@@ -52,6 +64,7 @@ export const updateTicketCommand = defineCommand({
       ...(statusId !== undefined ? { statusId: statusId || null } : {}),
       ...(tagIds !== undefined ? { tagIds } : {}),
       ...(parentId !== undefined ? { parentId } : {}),
+      ...(dependsOn !== undefined ? { dependsOn } : {}),
       ...(commandParams.blockedReason !== undefined ? { blockedReason: commandParams.blockedReason || null } : {}),
       updatedAt: new Date().toISOString(),
     };
@@ -116,5 +129,18 @@ const resolveParentUpdate = async (
 ) => {
   if (unlink) return null;
   if (parent !== undefined) return resolveTicketId(storage, parent);
+  return undefined;
+};
+
+// A supplied list replaces the whole set, so "not supplied" must stay distinct
+// from "supplied empty": undefined leaves dependencies untouched, and clearing
+// takes its own flag rather than an empty list a routine update could produce.
+const resolveDependencyUpdate = async (
+  storage: ExtensionStorageApi,
+  dependsOn: string[] | undefined,
+  clear: boolean | undefined,
+) => {
+  if (clear) return [];
+  if (dependsOn !== undefined) return resolveDependencyIds(storage, dependsOn);
   return undefined;
 };

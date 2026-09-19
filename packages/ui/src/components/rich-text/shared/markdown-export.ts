@@ -3,6 +3,7 @@ import { $isListItemNode, $isListNode, type ListItemNode, type ListNode } from "
 import { $isHeadingNode, $isQuoteNode } from "@lexical/rich-text";
 import {
   $isElementNode,
+  $isInlineElementOrDecoratorNode,
   $isLineBreakNode,
   $isParagraphNode,
   $isTextNode,
@@ -71,6 +72,26 @@ const exportInlineNode = (node: LexicalNode): PhrasingContent[] => {
 };
 
 const exportInlineChildren = (node: ElementNode) => node.getChildren().flatMap(exportInlineNode);
+
+const exportQuoteChildren = (node: ElementNode) => {
+  const children: BlockContent[] = [];
+  const inline: PhrasingContent[] = [];
+  const flushInline = () => {
+    if (inline.length) children.push({ type: "paragraph", children: inline.splice(0) });
+  };
+
+  for (const child of node.getChildren()) {
+    if ($isTextNode(child) || $isLineBreakNode(child) || $isInlineElementOrDecoratorNode(child)) {
+      inline.push(...exportInlineNode(child));
+    } else {
+      flushInline();
+      const block = exportBlock(child);
+      if (block) children.push(block);
+    }
+  }
+  flushInline();
+  return children;
+};
 
 const paragraphFrom = (node: ElementNode): Paragraph => ({
   type: "paragraph",
@@ -146,10 +167,7 @@ const exportBlock = (node: LexicalNode): BlockContent | null => {
   if ($isQuoteNode(node)) {
     return {
       type: "blockquote",
-      children: node
-        .getChildren()
-        .map(exportBlock)
-        .filter((child) => child !== null),
+      children: exportQuoteChildren(node),
     };
   }
   if ($isListNode(node)) return exportList(node);

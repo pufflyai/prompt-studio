@@ -99,14 +99,17 @@ describe("desktop update strategy", () => {
         arch: "arm64",
         fetchReleases: async () => releases,
       }),
-    ).toBe("https://github.com/pufflyai/prompt-studio/releases/download/pstdio@0.25.3/RELEASES-darwin-arm64.json");
+    ).toEqual({
+      version: "0.25.3",
+      url: "https://github.com/pufflyai/prompt-studio/releases/download/pstdio@0.25.3/RELEASES-darwin-arm64.json",
+    });
     expect(
       await resolveDesktopUpdateFeed({
         platform: "win32",
         arch: "x64",
         fetchReleases: async () => releases,
       }),
-    ).toBe("https://github.com/pufflyai/prompt-studio/releases/download/pstdio@0.25.3");
+    ).toEqual({ version: "0.25.3", url: "https://github.com/pufflyai/prompt-studio/releases/download/pstdio@0.25.3" });
   });
 
   test("rejects a release whose native update set is incomplete", async () => {

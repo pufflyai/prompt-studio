@@ -1,5 +1,14 @@
 # Prompt Studio Skills
 
+## 0.4.3
+
+_2026-09-14_
+
+### Patch Changes
+
+- a4fa9de: Align extension Bun type definitions to 1.4.2.
+- Updated internal dependencies: `@pstdio/sdk@0.24.1`
+
 ## 0.4.2
 
 _2026-09-10_

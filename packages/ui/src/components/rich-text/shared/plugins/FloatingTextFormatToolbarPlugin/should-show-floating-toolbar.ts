@@ -6,6 +6,7 @@ interface ShouldShowFloatingToolbarParams {
   hasNativeRange: boolean;
   isAnchorInsideEditor: boolean;
   isEditorEditable: boolean;
+  isPointerSelecting: boolean;
 }
 
 export function shouldShowFloatingToolbar(params: ShouldShowFloatingToolbarParams) {
@@ -17,6 +18,7 @@ export function shouldShowFloatingToolbar(params: ShouldShowFloatingToolbarParam
     hasNativeRange,
     isAnchorInsideEditor,
     isEditorEditable,
+    isPointerSelecting,
   } = params;
 
   return (
@@ -26,6 +28,7 @@ export function shouldShowFloatingToolbar(params: ShouldShowFloatingToolbarParam
     hasNativeSelection &&
     hasNativeRange &&
     isAnchorInsideEditor &&
-    isEditorEditable
+    isEditorEditable &&
+    !isPointerSelecting
   );
 }

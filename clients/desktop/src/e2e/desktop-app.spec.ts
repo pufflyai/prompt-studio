@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { _electron as electron, expect, test } from "@playwright/test";
 import type { RuntimeDescriptor } from "pstdio/runtime";
+import { expectClipboardPermissions } from "./clipboard-permissions";
 import { waitForLifecyclePage, waitForWorkbenchPage } from "./desktop-pages";
 import { startElectronTrace } from "./electron-trace";
 import { expectNativeWindowActions } from "./native-window-actions";
@@ -125,6 +126,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
     expect(await window.evaluate(() => document.cookie)).toBe("");
     expect(await window.evaluate(() => typeof process)).toBe("undefined");
     expect(authenticatedReady).toBe(true);
+    await expectClipboardPermissions(electronApp, window);
     await expectNativeWindowActions(electronApp, window, lifecycle);
     await test.step("keeps the workbench viewport inside the resized native content", async () => {
       for (const size of [
@@ -187,9 +189,7 @@ test("loads the existing runtime in a sandboxed window and detaches on quit", as
       },
     );
 
-    expect(
-      await window.evaluate(() => (globalThis as unknown as Window).open("http://127.0.0.1:1/blocked")),
-    ).toBeNull();
+    expect(await window.evaluate(() => (globalThis as unknown as Window).open("file:///blocked"))).toBeNull();
     expect(await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(1);
     expect(await window.evaluate(async () => (await navigator.permissions.query({ name: "geolocation" })).state)).toBe(
       "denied",

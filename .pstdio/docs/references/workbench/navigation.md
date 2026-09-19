@@ -15,3 +15,7 @@ A page target may carry `resource`, `section`, `open`, and contextual `parent`. 
 Navigation validates the complete target before changing state. An unresolved page or inactive panel owner produces one error and leaves location, history, breadcrumbs, page instances, mode placements, selection, and visibility unchanged. Commands and external links remain standalone actions. It does not search by resource kind or fall back to `main`.
 
 Browser Back and Forward replay canonical `PageLocation` values. Replay replaces the active owner set and does not push another history entry.
+
+Visited registered views remain mounted in their regions when navigation hides them. Returning to a page or mode reuses its live view, including its iframe and local state. Hidden views do not take layout space or accept user input. Region containers remain in the same DOM position when optional panels or mode chrome change.
+
+Retention is local to the current project and workbench. Removing a view contribution, switching projects, or closing the workbench releases its retained views. A full application reload starts new views. Views are not mounted merely because they are registered; `mountStrategy: "keep-mounted"` can mount inactive placements before their first selection.

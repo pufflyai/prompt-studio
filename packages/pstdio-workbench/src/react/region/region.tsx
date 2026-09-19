@@ -20,6 +20,7 @@ import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../share
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { getWorkbenchRegionBackground } from "../theme/workbench-theme-background";
 import { ModeChromeView, useModeChrome } from "./mode-chrome";
+import { useRetainedViewPlacements } from "./use-retained-view-placements";
 import { WorkbenchWidgetHost } from "./widget-host";
 
 interface WorkbenchRegionProps {
@@ -104,10 +105,12 @@ interface WorkbenchRegionPlacementProps {
   activeWidgetId?: string;
   globalActiveWidgetId?: string;
   region: WorkbenchRegionId;
+  visible: boolean;
+  order: number;
 }
 
 const WorkbenchRegionPlacement = (props: WorkbenchRegionPlacementProps) => {
-  const { workbench, placement, activeWidgetId, globalActiveWidgetId, region } = props;
+  const { workbench, placement, activeWidgetId, globalActiveWidgetId, region, visible, order } = props;
   const renderState = resolveRegionPlacementRenderState(placement, activeWidgetId, region);
   const additive = region === "sidenav";
   const overlaysActivePlacement = !renderState.active && !additive;
@@ -121,7 +124,9 @@ const WorkbenchRegionPlacement = (props: WorkbenchRegionPlacementProps) => {
 
   return (
     <Box
-      display={renderState.display}
+      display={visible ? renderState.display : "none"}
+      inert={!visible || (!renderState.active && !additive)}
+      order={order}
       flex={flex}
       h={overlaysActivePlacement ? "full" : undefined}
       inset={overlaysActivePlacement ? "0" : undefined}
@@ -182,9 +187,8 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
     ? resolveRenderedRegionPlacements(regionState.widgets, activePlacement.widgetId, region)
     : [];
 
-  if (chrome === false) return null;
-  if (chrome) return <ModeChromeView workbench={workbench} region={region} viewId={chrome} />;
-  if (!placement) return null;
+  const retainedPlacements = useRetainedViewPlacements(workbench, chrome !== undefined ? [] : renderedPlacements);
+  const visibleIds = new Set(renderedPlacements.map((entry) => entry.widgetId));
 
   const scrollsHorizontally = horizontalScrollRegions.has(region);
 
@@ -202,6 +206,7 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
   return (
     <Flex
       as="section"
+      display={chrome === false ? "none" : "flex"}
       direction="column"
       h="full"
       minH="0"
@@ -216,7 +221,9 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
     >
       {/* The region owns scrolling: overflowing widget content scrolls here
           with the same narrow overlay scrollbar used across the workbench. */}
+      <ModeChromeView workbench={workbench} region={region} viewId={chrome || undefined} />
       <ScrollArea
+        display={chrome ? "none" : "flex"}
         flex="1"
         minH="0"
         minW="0"
@@ -231,20 +238,21 @@ export const WorkbenchRegion = (props: WorkbenchRegionProps) => {
         // (e.g. a tree with a pinned footer) yet still grow and scroll.
         contentProps={scrollsHorizontally ? horizontalContentProps : verticalContentProps}
       >
-        {placeholder ? (
+        {placeholder && placement ? (
           <WorkbenchWidgetHost workbench={workbench} placement={placement} widget={placeholder} />
-        ) : (
-          renderedPlacements.map((renderedPlacement) => (
-            <WorkbenchRegionPlacement
-              key={renderedPlacement.widgetId}
-              workbench={workbench}
-              placement={renderedPlacement}
-              activeWidgetId={activePlacement?.widgetId}
-              globalActiveWidgetId={globalActiveWidgetId}
-              region={region}
-            />
-          ))
-        )}
+        ) : null}
+        {retainedPlacements.map((renderedPlacement) => (
+          <WorkbenchRegionPlacement
+            key={renderedPlacement.widgetId}
+            visible={!chrome && visibleIds.has(renderedPlacement.widgetId)}
+            order={renderedPlacements.findIndex((entry) => entry.widgetId === renderedPlacement.widgetId)}
+            workbench={workbench}
+            placement={renderedPlacement}
+            activeWidgetId={activePlacement?.widgetId}
+            globalActiveWidgetId={globalActiveWidgetId}
+            region={region}
+          />
+        ))}
       </ScrollArea>
     </Flex>
   );

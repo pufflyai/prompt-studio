@@ -82,8 +82,8 @@ The flow opens two projects through the picker and restores a different page in 
 BrowserWindow enables sandboxing, context isolation, web security, and disables Node integration and webviews. The bundled lifecycle renderer is served from the privileged `pstdio://lifecycle/` protocol, restricted to files under its renderer root. It does not use the broader `file://` protocol. The shell:
 
 - allows main-frame navigation only within the exact runtime origin or the exact bundled lifecycle document;
-- denies popup creation and opens only validated HTTPS links through the operating system;
-- denies permissions by default;
+- denies popup creation and opens validated HTTP and HTTPS links, including local preview URLs and custom ports, through the operating system; URLs with credentials and non-web schemes remain blocked;
+- denies permissions by default, allowing only clipboard writes from the main runtime page; clipboard reads and requests from embedded frames remain denied;
 - applies a restrictive content security policy;
 - validates the expected WebContents, main frame, and exact renderer origin for every IPC handler.
 

@@ -53,6 +53,7 @@ function FloatingTextToolbar({
   const [isUnderline, setIsUnderline] = useState(false);
   const [isCode, setIsCode] = useState(false);
   const [isLink, setIsLink] = useState(false);
+  const isPointerSelectingRef = useRef(false);
   const updateFloatingToolbarRef = useRef<() => boolean | undefined>(() => undefined);
 
   const formatHeading = (headingSize: HeadingTagType) => {
@@ -147,6 +148,7 @@ function FloatingTextToolbar({
         hasNativeRange,
         isAnchorInsideEditor,
         isEditorEditable: editor.isEditable(),
+        isPointerSelecting: isPointerSelectingRef.current,
       }) &&
       nativeSelection
     ) {
@@ -172,7 +174,36 @@ function FloatingTextToolbar({
   };
 
   useEffect(() => {
-    const scrollerElem = anchorElem.parentElement;
+    const rootElement = editor.getRootElement();
+    if (!rootElement) return;
+
+    const ownerDocument = rootElement.ownerDocument;
+    const startPointerSelection = () => {
+      isPointerSelectingRef.current = true;
+      setIsToolbarActive(false);
+    };
+    const finishPointerSelection = () => {
+      if (!isPointerSelectingRef.current) return;
+
+      isPointerSelectingRef.current = false;
+      editor.getEditorState().read(() => {
+        updateFloatingToolbarRef.current();
+      });
+    };
+
+    rootElement.addEventListener("pointerdown", startPointerSelection);
+    ownerDocument.addEventListener("pointerup", finishPointerSelection);
+    ownerDocument.addEventListener("pointercancel", finishPointerSelection);
+
+    return () => {
+      rootElement.removeEventListener("pointerdown", startPointerSelection);
+      ownerDocument.removeEventListener("pointerup", finishPointerSelection);
+      ownerDocument.removeEventListener("pointercancel", finishPointerSelection);
+    };
+  }, [editor, setIsToolbarActive]);
+
+  useEffect(() => {
+    const ownerDocument = anchorElem.ownerDocument;
 
     const update = () => {
       editor.getEditorState().read(() => {
@@ -181,16 +212,12 @@ function FloatingTextToolbar({
     };
 
     window.addEventListener("resize", update);
-
-    if (scrollerElem) {
-      scrollerElem.addEventListener("scroll", update);
-    }
+    // Scroll does not bubble; capture it from the editor and its scrollable ancestors.
+    ownerDocument.addEventListener("scroll", update, true);
 
     return () => {
       window.removeEventListener("resize", update);
-      if (scrollerElem) {
-        scrollerElem.removeEventListener("scroll", update);
-      }
+      ownerDocument.removeEventListener("scroll", update, true);
     };
   }, [anchorElem, editor]);
 
