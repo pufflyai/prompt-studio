@@ -148,15 +148,20 @@ export const createFileEditController = (input: FileEditControllerInput) => {
       baselineRevision = revision;
       notify();
     },
+    // Takes a freshly loaded value as the new baseline and returns the value the
+    // editor was showing, so the caller can tell whether the editor must show
+    // something else. Returns null while pending local state must keep the
+    // editor: the refresh is deferred until the save settles.
     acceptLoaded(value: string | undefined, revision?: string) {
       if (hasPendingLocalState()) {
         deferRefresh(revision ? { revision } : {});
-        return false;
+        return null;
       }
+      const shown = baseline;
       baseline = value;
       baselineRevision = revision;
       notify();
-      return true;
+      return { shown };
     },
     handleChange(value: string) {
       if (saveError && value === draft) return;
@@ -203,43 +208,4 @@ export const createFileEditController = (input: FileEditControllerInput) => {
       runSave();
     },
   };
-};
-
-// A reload that returns what the editor already shows must not remount it: the
-// revision feeds the editor's React key, and a new key destroys focus and
-// selection. `editorValue` is the current baseline for an editable renderer —
-// after a save, a reload returns the saved value, which matches the baseline
-// even though it differs from the previously loaded state.
-export const nextLoadedRevision = (
-  previous: { content?: string; dataUrl?: string; loadKey: string; editorRevision: number } | null,
-  next: { content?: string; dataUrl?: string },
-  loadKey: string,
-  editorValue?: string,
-) => {
-  if (!previous || previous.loadKey !== loadKey) return 1;
-  const shownContent = editorValue ?? previous.content;
-  if (shownContent === next.content && previous.dataUrl === next.dataUrl) return previous.editorRevision;
-  return previous.editorRevision + 1;
-};
-
-// Last loaded document per binding, so reopening a recently viewed file mounts
-// the editor immediately instead of a spinner. The follow-up load reconciles:
-// unchanged content keeps the revision (no remount), changed content remounts.
-const FILE_CONTENT_CACHE_LIMIT = 30;
-const fileContentCache = new Map<
-  string,
-  { content?: string; dataUrl?: string; fileName?: string; mimeType?: string; placeholder?: string; revision?: string }
->();
-
-export const readCachedFileContent = (loadKey: string) => fileContentCache.get(loadKey);
-
-export const storeCachedFileContent = (
-  loadKey: string,
-  content: NonNullable<ReturnType<typeof readCachedFileContent>>,
-) => {
-  fileContentCache.delete(loadKey);
-  fileContentCache.set(loadKey, content);
-  if (fileContentCache.size <= FILE_CONTENT_CACHE_LIMIT) return;
-  const oldest = fileContentCache.keys().next().value;
-  if (oldest !== undefined) fileContentCache.delete(oldest);
 };

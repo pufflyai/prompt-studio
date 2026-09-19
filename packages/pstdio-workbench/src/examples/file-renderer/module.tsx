@@ -1,7 +1,9 @@
+import { Button, Stack, Text } from "@chakra-ui/react";
 import type { WorkbenchModuleContribution } from "../../core";
 
 const PANEL_PLACEHOLDER_ID = "file-renderer.story.placeholder";
 const PANEL_PLACEHOLDER_RENDERER_ID = "file-renderer.story.placeholder.renderer";
+const MARKDOWN_PANEL_ID = "file-renderer.story.markdown.widget";
 // In-memory documents the example file renderers read and write. The markdown and
 // code renderers are editable (they declare a `save`); the image is read-only.
 let markdownContent = [
@@ -25,7 +27,7 @@ const imageDataUrl = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http:
 const renderers = [
   {
     rendererId: "file-renderer.story.markdown",
-    panelId: "file-renderer.story.markdown.widget",
+    panelId: MARKDOWN_PANEL_ID,
     title: "notes.md",
     load: () => ({ fileName: "notes.md", content: markdownContent }),
     save: (_resource: unknown, content: string) => {
@@ -48,13 +50,38 @@ const renderers = [
     load: () => ({ fileName: "logo.svg", mimeType: "image/svg+xml", dataUrl: imageDataUrl }),
   },
 ] as const;
+// Stands in for an agent or the CLI writing the document while the workbench is
+// open: the editor must show the new text without losing an unsaved local edit.
+const ExternalWriteControl = (props: { onWrite: () => void }) => {
+  const { onWrite } = props;
+  return (
+    <Stack p="md" gap="sm" align="start">
+      <Text textStyle="paragraph/XS/regular" color="fg.muted">
+        Replace notes.md from outside the editor.
+      </Text>
+      <Button size="xs" variant="subtle" onClick={onWrite}>
+        Write notes.md externally
+      </Button>
+    </Stack>
+  );
+};
 export const createFileRendererStoryModule = (): WorkbenchModuleContribution => ({
   id: "file-renderer.story",
   activate(ctx) {
     ctx.views.registerView({
       id: PANEL_PLACEHOLDER_RENDERER_ID,
       title: "Documents",
-      body: { kind: "react", render: () => null },
+      body: {
+        kind: "react",
+        render: () => (
+          <ExternalWriteControl
+            onWrite={() => {
+              markdownContent = `# Written outside the editor\n\nAn agent or the CLI replaced this document at ${new Date().toLocaleTimeString()}.`;
+              ctx.views.refreshView(MARKDOWN_PANEL_ID);
+            }}
+          />
+        ),
+      },
     });
     ctx.placeholders.registerPlaceholder({
       id: PANEL_PLACEHOLDER_ID,

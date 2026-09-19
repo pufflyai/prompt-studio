@@ -13,12 +13,15 @@ import {
   createFileEditController,
   type FileEditController,
   type FileEditControllerState,
-  readCachedFileContent,
-  storeCachedFileContent,
 } from "./file-renderer-edit-state";
 import { FileRendererErrorNotice } from "./file-renderer-error-notice";
 import { createFileRendererLoadKey, isCurrentLoadedFile } from "./file-renderer-load-key";
-import { type LoadedFile, prepareFileRendererLoad } from "./file-renderer-load-state";
+import {
+  acceptFileRendererLoad,
+  type LoadedFile,
+  readCachedFileContent,
+  storeCachedFileContent,
+} from "./file-renderer-load-state";
 import { FileRendererPathHeader } from "./file-renderer-path-header";
 
 interface WorkbenchFileRendererViewProps {
@@ -127,10 +130,9 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
       Promise.resolve(contributionRef.current.load(resourceRef.current))
         .then((next) => {
           if (cancelled) return;
-          const updateLoaded = prepareFileRendererLoad(next, loadKey, controllerRef.current);
+          const updateLoaded = acceptFileRendererLoad(next, loadKey, controllerRef.current);
           if (!updateLoaded) return;
           setError(null);
-          storeCachedFileContent(loadKey, next);
           setLoaded(updateLoaded);
         })
         .catch((loadError) => {
