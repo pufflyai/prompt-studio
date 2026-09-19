@@ -12,8 +12,10 @@ import type {
   RepoContext,
   Struct,
 } from "@pstdio/sdk/extensions";
+import { qualifyNavigationTarget } from "@pstdio/sdk/extensions";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { type EventDispatcher, refId } from "./dispatch";
+import type { NavigationScope } from "./navigation-scope";
 import type {
   BuildEnvironmentInput,
   CommandRunnerEnvironment,
@@ -22,7 +24,12 @@ import type {
 } from "./types";
 
 export interface ContextFactory {
-  buildExtensionContext(env: CommandRunnerEnvironment, ids: BuildEnvironmentInput, depth: number): ExtensionContextBase;
+  buildExtensionContext(
+    env: CommandRunnerEnvironment,
+    ids: BuildEnvironmentInput,
+    depth: number,
+    navigationScope?: NavigationScope,
+  ): ExtensionContextBase;
   buildCommandContext(
     env: CommandRunnerEnvironment,
     owner: { extensionId: string; name: string },
@@ -35,6 +42,7 @@ export interface ContextFactory {
     depth: number,
     workspace?: { workspaceDir?: string; workspaceId?: string },
     signal?: AbortSignal,
+    navigationScope?: NavigationScope,
   ): CommandContext;
 }
 
@@ -48,6 +56,7 @@ export interface RunnerState {
 }
 
 interface CommandExecutionScope {
+  navigationScope?: NavigationScope;
   depth: number;
   extensionId: string;
   projectId: string;
@@ -110,6 +119,7 @@ export const createExecuteBuilder = (runRef: {
       metadata: invocation?.metadata,
       signal: scope.signal,
       depth: scope.depth + 1,
+      navigationScope: scope.navigationScope,
     });
     return outcome as CommandOutcome<never>;
   };
@@ -120,9 +130,10 @@ export const createContextFactory = (
   logger: ExtensionLoggerApi,
   createExecute: (scope: CommandExecutionScope) => CommandHelpersApi["execute"],
 ): ContextFactory => ({
-  buildExtensionContext(env, ids, depth) {
+  buildExtensionContext(env, ids, depth, navigationScope) {
     const scope = {
       depth,
+      navigationScope,
       extensionId: ids.extensionId,
       projectId: ids.projectId,
       workspaceDir: ids.workspaceDir,
@@ -137,6 +148,11 @@ export const createContextFactory = (
       name: ids.name,
       storage: env.storage,
       resources: env.resources,
+      navigation: {
+        open: (target) => {
+          if (navigationScope) navigationScope.open(qualifyNavigationTarget(target, ids.extensionId, ids.projectId));
+        },
+      },
       artifacts: env.artifacts,
       repoFiles: env.repoFiles,
       workspaceFiles: env.workspaceFiles,
@@ -179,6 +195,7 @@ export const createContextFactory = (
     depth,
     workspace,
     signal,
+    navigationScope,
   ) {
     const base = this.buildExtensionContext(
       env,
@@ -190,6 +207,7 @@ export const createContextFactory = (
         workspaceId: workspace?.workspaceId,
       },
       depth,
+      navigationScope,
     );
     const commandSignal = signal ?? new AbortController().signal;
     const connections = signal ? connectionsWithSignal(base.connections, signal) : base.connections;
@@ -201,6 +219,7 @@ export const createContextFactory = (
       ...base,
       commands: buildCommandsApi(createExecute, {
         depth,
+        navigationScope,
         extensionId: owner.extensionId,
         projectId,
         workspaceDir: workspace?.workspaceDir,

@@ -10,7 +10,7 @@ import type {
   TreeViewSection,
   WorkbenchModuleContext,
 } from "../../core";
-import { isExtensionNavigationTarget, toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
+import { toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
 import { localizeParamSchema } from "./param-schema-localization";
 import { createQueryParams, executeCallback, executeTreeActionCommand } from "./tree-renderer-callbacks";
@@ -92,6 +92,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     return toWorkbenchNavigationTarget(target, {
       commandTargetOf,
       extensionId: record.extensionId,
+      projectId: input.projectId,
     });
   };
   const mapAction = (
@@ -115,7 +116,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       // node-target navigation runs through the runner command and must not refetch.
       run: commandId
         ? async (params) => {
-            const result = await executeTreeActionCommand(
+            await executeTreeActionCommand(
               input,
               record,
               commandId,
@@ -123,9 +124,6 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
               node?.resource ?? ctx.resource,
             );
             ctx.refresh();
-            // A mutation may move the selection, for example when it deletes the open document.
-            const target = isExtensionNavigationTarget(result) ? mapTarget(result, node, ctx) : undefined;
-            if (target) await input.workbench.navigation.openTarget(target);
           }
         : undefined,
     };

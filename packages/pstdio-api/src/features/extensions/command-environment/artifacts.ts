@@ -34,6 +34,7 @@ export const createArtifactsApi = (
         exists: async (path) => (await mountFor()).exists(path),
         readText: async (path) => (await mountFor()).readText(path),
         writeText: async (path, value) => (await mountFor()).writeText(path, value),
+        updateText: async (path, value) => (await mountFor()).updateText(path, value),
         readBytes: async (path) => (await mountFor()).readBytes(path),
         writeBytes: async (path, value) => (await mountFor()).writeBytes(path, value),
         list: async (pattern) => (await mountFor()).list(pattern),

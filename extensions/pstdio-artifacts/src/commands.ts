@@ -84,7 +84,9 @@ const open = defineCommand({
   params: { url: params.text({ required: true }) },
   async run(ctx, input) {
     const current = (await serviceFor(ctx).revisions(input.url))[0];
-    return artifactTarget(ctx.projectId, artifactIdFromUrl(ctx.projectId, input.url), current.title);
+    const target = artifactTarget(ctx.projectId, artifactIdFromUrl(ctx.projectId, input.url), current.title);
+    ctx.navigation.open(target);
+    return current;
   },
 });
 

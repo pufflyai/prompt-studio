@@ -167,7 +167,8 @@ export const deleteTicketFileCommand = defineCommand({
     const tickets = await ticketsCollection(ctx.storage).list();
     const ticket = tickets.find((entry) => entry.id === ticketId);
     if (!ticket) return { ticketId, fileId };
-    return ticketPageTarget(ticketResourceReference(ticket, createTicketParentLookup(tickets)));
+    ctx.navigation.open(ticketPageTarget(ticketResourceReference(ticket, createTicketParentLookup(tickets))));
+    return { ticketId, fileId };
   },
 });
 

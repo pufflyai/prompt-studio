@@ -5,6 +5,7 @@ import { createEventDispatcher } from "./dispatch";
 import { executeExtensionCommand } from "./execute-command";
 import { executeHostCommand } from "./execute-host-command";
 import { consoleLogger, defaultGenerateId } from "./internals";
+import { createNavigationScope } from "./navigation-scope";
 import type {
   BuildEnvironmentInput,
   CommandExecuteInput,
@@ -31,7 +32,15 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
   const dispatcher = createEventDispatcher({ runtime, deps, generateId, logger, buildEventContext });
   const factory = createContextFactory(dispatcher, logger, executeBuilder);
   const state: RunnerState = { runtime, deps, maxDepth, generateId, dispatcher, factory };
-  const executeInternal = (input: InternalExecuteInput) => executeExtensionCommand(state, input);
+  const executeInternal = async (input: InternalExecuteInput) => {
+    const hasUi = input.source === "dashboard" || input.source === "command-panel";
+    const navigationScope = input.navigationScope?.fork() ?? (hasUi ? createNavigationScope() : undefined);
+    const outcome = await executeExtensionCommand(state, { ...input, navigationScope });
+    navigationScope?.complete(outcome.ok);
+    if (!outcome.ok || input.navigationScope) return outcome;
+    const navigationRequests = navigationScope?.collect();
+    return navigationRequests?.length ? { ...outcome, navigationRequests } : outcome;
+  };
 
   runRef.run = executeInternal;
 

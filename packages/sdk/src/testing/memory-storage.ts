@@ -95,6 +95,10 @@ export const createMemoryStorage = (): ExtensionStorageApi => {
         async put(id, value) {
           store.set(id, value);
         },
+        async update(id, value) {
+          if (!store.has(id)) throw new Error(`Item not found: ${id}`);
+          store.set(id, value);
+        },
         async createIfAbsent(id, value) {
           if (store.has(id)) return false;
           store.set(id, value);

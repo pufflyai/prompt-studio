@@ -19,6 +19,11 @@ export const putTicket = async (storage: ExtensionStorageApi, ticket: StoredTick
   return ticket;
 };
 
+export const updateTicket = async (storage: ExtensionStorageApi, ticket: StoredTicket) => {
+  await ticketsCollection(storage).update(ticket.id, ticket);
+  return ticket;
+};
+
 export const putStatus = async (storage: ExtensionStorageApi, status: StoredStatus) => {
   await statusesCollection(storage).put(status.id, status);
   return status;

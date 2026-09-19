@@ -292,14 +292,24 @@ describe("pstdio planner workspace contributions", () => {
       },
       slots: [],
     });
-    const detailTarget = await tickets.body.onRowActivate?.({} as never, {
-      row: {
-        id: "ticket-1",
-        title: "Ticket one",
-        attributes: {},
-        resource: { type: "ticket", id: "ticket-1", label: "PS-1 Ticket one" },
+    let detailTarget: unknown;
+    await tickets.body.onRowActivate?.(
+      {
+        navigation: {
+          open: (target: unknown) => {
+            detailTarget = target;
+          },
+        },
+      } as never,
+      {
+        row: {
+          id: "ticket-1",
+          title: "Ticket one",
+          attributes: {},
+          resource: { type: "ticket", id: "ticket-1", label: "PS-1 Ticket one" },
+        },
       },
-    });
+    );
     expect(detailTarget).toEqual({
       kind: "page",
       page: { kind: "page", id: "ticket", extensionId: "pstdio.pstdio-planner" },

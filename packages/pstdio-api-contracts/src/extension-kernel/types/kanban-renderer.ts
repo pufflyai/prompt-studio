@@ -3,7 +3,6 @@ import type { CommandRef } from "./commands";
 import type { RendererCallback } from "./context";
 import type { StatusRef } from "./contribution-identity";
 import type { Struct } from "./json";
-import type { NavigationTarget } from "./navigation-target";
 import type { ParamObjectSchema } from "./params";
 import type { RendererContributionBase } from "./renderer-base";
 import type { RendererContext, ResourceRef } from "./resources";
@@ -132,10 +131,7 @@ export interface KanbanRendererRowAction<TParams extends Struct = Struct> {
   destructive?: boolean;
 }
 
-export type KanbanRendererRowActivationHandler = RendererCallback<
-  { row: KanbanRendererRow },
-  undefined | NavigationTarget
->;
+export type KanbanRendererRowActivationHandler = RendererCallback<{ row: KanbanRendererRow }, void>;
 
 export interface KanbanRendererContribution extends RendererContributionBase {
   attributes?: KanbanRendererAttributeDescriptor[];

@@ -9,7 +9,6 @@ import type {
   ResourceRef,
 } from "../../core";
 import { WorkbenchIcon } from "../../react";
-import { toWorkbenchNavigationTargetResult } from "../host/extension-navigation-target";
 import type { WorkbenchExtensionCommandContext } from "../host/workbench-extension-command";
 import { createExtensionSlot, executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
 
@@ -119,13 +118,7 @@ const registerRenderer = (
       })),
       onRowActivate: record.rowActivationHandlerId
         ? async (row) => {
-            const result = await run(
-              record.rowActivationHandlerId!,
-              { row: originalRows.get(row) ?? row },
-              row.resource,
-            );
-            const target = toWorkbenchNavigationTargetResult(result, { extensionId: record.extensionId });
-            if (target) await context.workbench.navigation.openTarget(target);
+            await run(record.rowActivationHandlerId!, { row: originalRows.get(row) ?? row }, row.resource);
           }
         : undefined,
     },

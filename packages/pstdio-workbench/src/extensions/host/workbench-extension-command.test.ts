@@ -71,25 +71,41 @@ const setupPage = () => {
   return workbench;
 };
 describe("executeWorkbenchExtensionCommand", () => {
-  test("closes a scoped page resource through a breadcrumb delete action", async () => {
+  test("applies explicit navigation once while returning ordinary data", async () => {
     const workbench = setupPage();
-    const activeTicket = workbench.getPrimaryResource()!;
-    await executeWorkbenchExtensionCommand(
+    const value = { id: "created" };
+    const result = await executeWorkbenchExtensionCommand(
       {
-        executeCommand: () => ({
-          commandId: "pstdio.planner.command.delete-ticket",
-          extensionId: "pstdio.planner",
-          outcome: { ok: true, status: "success", value: { id: activeTicket.id, deleted: true } },
-        }),
         projectId: "project-1",
         workbench,
+        executeCommand: () => ({
+          outcome: {
+            ok: true,
+            status: "success",
+            value,
+            navigationRequests: [{ kind: "page", page: { kind: "page", id: "tickets", extensionId: "acme.planner" } }],
+          },
+        }),
       },
-      "pstdio.planner.command.delete-ticket",
-      { resource: workbench.breadcrumbs.getItems()?.at(-1)?.resource },
+      "create",
     );
+    expect(result).toEqual(value);
     expect(workbench.pages.store.getState().activePageId).toBe("tickets");
-    expect(workbench.layout.getLayout().regions.main.widgets).toEqual([
-      expect.objectContaining({ contributionId: "workbench.page-placement.tickets.%24main" }),
-    ]);
+  });
+
+  test("returns target-shaped data without navigation", async () => {
+    const workbench = setupPage();
+    const value = { kind: "page", page: { kind: "page", id: "tickets", extensionId: "acme.planner" } };
+    expect(
+      await executeWorkbenchExtensionCommand(
+        {
+          projectId: "project-1",
+          workbench,
+          executeCommand: () => ({ outcome: { ok: true, status: "success", value } }),
+        },
+        "query",
+      ),
+    ).toEqual(value);
+    expect(workbench.pages.store.getState().activePageId).toBe("ticket");
   });
 });

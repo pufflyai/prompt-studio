@@ -1,7 +1,7 @@
-import type { CommandExecuteRequest } from "@pstdio/sdk/api";
-import { resourceKey } from "@pstdio/sdk/extensions";
+import type { CommandExecuteRequest, CommandExecuteResponse } from "@pstdio/sdk/api";
 import type { ResourceRef, WorkbenchCommandExecutionContext, WorkbenchModuleContext } from "../../core";
 import { unwrapCommandValue } from "./command-response";
+import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 export interface WorkbenchExtensionCommandContext {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
   prepareCommandArgs?(
@@ -29,24 +29,10 @@ export const createExtensionSlot = (input: {
   kind: input.kind,
   context: { projectId: input.projectId, ...(input.context ?? {}) },
 });
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-const deletedResourceId = (value: unknown) => {
-  if (!isRecord(value) || value.deleted !== true) return undefined;
-  return typeof value.id === "string" ? value.id : undefined;
-};
-const handleDeletedResource = async (
-  context: WorkbenchExtensionCommandContext,
-  resource: ResourceRef | undefined,
-  value: unknown,
-) => {
-  if (!resource || deletedResourceId(value) !== (resource.id ?? resourceKey(resource))) return;
-  if (resourceKey(context.workbench.getPrimaryResource()) !== resourceKey(resource)) return;
-  const result = context.workbench.pageLocations.navigateToParent();
-  if (!result.ok) throw new Error(result.diagnostic.message);
-};
-export const executeWorkbenchExtensionCommand = async (
-  context: WorkbenchExtensionCommandContext,
+export const executeWorkbenchExtensionCommandResponse = async (
+  context: Pick<WorkbenchExtensionCommandContext, "executeCommand" | "projectId"> & {
+    workbench: Pick<WorkbenchModuleContext, "navigation">;
+  },
   commandId: string,
   input: ExecuteWorkbenchExtensionCommandInput = {},
 ) => {
@@ -59,7 +45,17 @@ export const executeWorkbenchExtensionCommand = async (
     source: "dashboard",
     ...(input.metadata ? { metadata: input.metadata } : {}),
   });
-  const value = unwrapCommandValue(response);
-  await handleDeletedResource(context, input.resource, value);
-  return value;
+  unwrapCommandValue(response);
+  const outcome = (response as Partial<CommandExecuteResponse> | undefined)?.outcome;
+  if (outcome?.status === "success") {
+    for (const target of outcome.navigationRequests ?? []) {
+      await context.workbench.navigation.openTarget(toWorkbenchNavigationTarget(target));
+    }
+  }
+  return response;
 };
+export const executeWorkbenchExtensionCommand = async (
+  context: WorkbenchExtensionCommandContext,
+  commandId: string,
+  input: ExecuteWorkbenchExtensionCommandInput = {},
+) => unwrapCommandValue(await executeWorkbenchExtensionCommandResponse(context, commandId, input));

@@ -13,7 +13,14 @@ export interface ResourceRef {
   metadata?: JsonObject;
 }
 
+export interface ResourceRemovedEvent {
+  id: string;
+  resource: ResourceRef;
+}
+
 export interface ExtensionResourcesApi {
+  /** Publish a committed removal to clients displaying this project resource. */
+  removed(resource: ResourceRef): Promise<void>;
   allocate(input: { kind: string }): Promise<{ id: string; shorthand: string }>;
 }
 

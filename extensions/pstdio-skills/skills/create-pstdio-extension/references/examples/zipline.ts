@@ -40,7 +40,9 @@ const board = defineView({
         resource: { type: task.id, id: item.id, label: item.title },
       })),
     }),
-    onRowActivate: async (_ctx, { row }) => ({ kind: "page", page: pageRef, resource: row.resource }),
+    onRowActivate: (ctx, { row }) => {
+      ctx.navigation.open({ kind: "page", page: pageRef, resource: row.resource });
+    },
   },
 });
 const inspector = defineView({

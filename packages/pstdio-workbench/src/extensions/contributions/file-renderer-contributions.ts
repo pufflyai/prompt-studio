@@ -9,8 +9,8 @@ import type {
   ResourceRef,
   WorkbenchModuleContext,
 } from "../../core";
-import { unwrapCommandValue } from "../host/command-response";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
+import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
 
 type FileRendererRecord = NonNullable<WorkbenchExtensionMetadata["fileRenderers"]>[number];
 export interface RegisterWorkbenchExtensionFileRenderersInput {
@@ -37,8 +37,7 @@ const executeFileCommand = async (
   metadata?: CommandExecuteRequest["metadata"],
 ) => {
   const ext = resource;
-  const result = await input.executeCommand(commandId, {
-    projectId: input.projectId,
+  return executeWorkbenchExtensionCommand(input, commandId, {
     params: {
       renderer: {
         rendererId,
@@ -50,10 +49,8 @@ const executeFileCommand = async (
     },
     resource: ext,
     slot: slotContext({ projectId: input.projectId, rendererId, resource: ext }),
-    source: "dashboard",
     ...(metadata ? { metadata } : {}),
   });
-  return unwrapCommandValue(result);
 };
 const revisionFromValue = (value: unknown) => {
   if (!value || typeof value !== "object") return undefined;

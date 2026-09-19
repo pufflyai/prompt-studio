@@ -1,5 +1,5 @@
 import type { TreeContext } from "../../core";
-import { unwrapCommandValue } from "../host/command-response";
+import { executeWorkbenchExtensionCommand } from "../host/workbench-extension-command";
 import type {
   ExtensionTreeNode,
   ExtensionTreeRendererRecord,
@@ -56,8 +56,7 @@ export const executeCallback = async (
       }
     | undefined;
   const resource = renderer?.resource;
-  const result = await input.executeCommand(commandId, {
-    projectId: input.projectId,
+  return executeWorkbenchExtensionCommand(input, commandId, {
     params,
     resource,
     slot: slotContext({
@@ -66,9 +65,7 @@ export const executeCallback = async (
       resource,
       treeId: record.id,
     }),
-    source: "dashboard",
   });
-  return unwrapCommandValue(result);
 };
 export const executeTreeActionCommand = async (
   input: RegisterWorkbenchExtensionTreeRenderersInput,
@@ -88,13 +85,10 @@ export const executeTreeActionCommand = async (
       invocation: { placement: "visible" },
     },
   };
-  const result = await input.executeCommand(commandId, {
-    projectId: input.projectId,
+  return executeWorkbenchExtensionCommand(input, commandId, {
     params: rendererParams,
     resource,
     slot: slotContext({ modeId, projectId: input.projectId, resource, treeId: record.id }),
-    source: "dashboard",
     metadata: { treeId: record.id },
   });
-  return unwrapCommandValue(result);
 };
