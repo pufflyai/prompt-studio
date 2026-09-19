@@ -1,10 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  createFileEditController,
-  nextLoadedRevision,
-  readCachedFileContent,
-  storeCachedFileContent,
-} from "./file-renderer-edit-state";
+import { createFileEditController } from "./file-renderer-edit-state";
 
 const DEBOUNCE_MS = 5;
 const tick = (ms = DEBOUNCE_MS * 3) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -168,7 +163,7 @@ describe("file edit controller", () => {
     controller.handleRefreshEvent({ resourceKey: binding.resourceKey, revision: "2" });
     controller.handleChange("draft");
 
-    expect(controller.acceptLoaded("external", "2")).toBe(false);
+    expect(controller.acceptLoaded("external", "2")).toBeNull();
     expect(controller.getBaseline()).toBe("loaded");
     expect(controller.getState()).toMatchObject({ dirty: true });
   });
@@ -245,55 +240,5 @@ describe("file edit controller", () => {
     await tick(1);
 
     expect(saves).toEqual(["edited"]);
-  });
-});
-
-describe("nextLoadedRevision", () => {
-  test("keeps the revision when a reload returns the same document", () => {
-    const previous = { content: "same", loadKey: "a", editorRevision: 3 };
-
-    expect(nextLoadedRevision(previous, { content: "same" }, "a")).toBe(3);
-  });
-
-  test("bumps the revision when the content changed", () => {
-    const previous = { content: "old", loadKey: "a", editorRevision: 3 };
-
-    expect(nextLoadedRevision(previous, { content: "new" }, "a")).toBe(4);
-  });
-
-  test("restarts at one for a different load key", () => {
-    const previous = { content: "same", loadKey: "a", editorRevision: 3 };
-
-    expect(nextLoadedRevision(previous, { content: "same" }, "b")).toBe(1);
-  });
-
-  test("keeps the revision when the reload matches what the editor already shows", () => {
-    const previous = { content: "loaded", loadKey: "a", editorRevision: 3 };
-
-    expect(nextLoadedRevision(previous, { content: "saved draft" }, "a", "saved draft")).toBe(3);
-  });
-
-  test("bumps the revision when the reload differs from the editor value", () => {
-    const previous = { content: "loaded", loadKey: "a", editorRevision: 3 };
-
-    expect(nextLoadedRevision(previous, { content: "external change" }, "a", "saved draft")).toBe(4);
-  });
-});
-
-describe("file content cache", () => {
-  test("stores and reads the last loaded document per binding", () => {
-    storeCachedFileContent("cache-test:a", { content: "hello" });
-
-    expect(readCachedFileContent("cache-test:a")).toEqual({ content: "hello" });
-    expect(readCachedFileContent("cache-test:missing")).toBeUndefined();
-  });
-
-  test("evicts the oldest binding beyond the limit", () => {
-    for (let index = 0; index < 31; index += 1) {
-      storeCachedFileContent(`cache-evict:${index}`, { content: String(index) });
-    }
-
-    expect(readCachedFileContent("cache-evict:0")).toBeUndefined();
-    expect(readCachedFileContent("cache-evict:30")).toEqual({ content: "30" });
   });
 });

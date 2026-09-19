@@ -139,6 +139,13 @@ export const createPlannerTicket = (
 export const getPlannerTicket = (request: APIRequestContext, apiBase: string, projectId: string, id: string) =>
   executePlannerCommand<PlannerTicket | null>(request, apiBase, projectId, "get-ticket", { id });
 
+export const savePlannerTicketContent = (
+  request: APIRequestContext,
+  apiBase: string,
+  projectId: string,
+  input: { id: string; content: string },
+) => executePlannerCommand<{ revision: string } | null>(request, apiBase, projectId, "save-ticket-content", input);
+
 export const listPlannerTickets = async (request: APIRequestContext, apiBase: string, projectId: string) => {
   const query = await executePlannerCommand<{ rows: Array<{ id: string }> }>(
     request,
