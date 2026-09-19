@@ -11,6 +11,7 @@ import { validateExtensionDefinition } from "./definition";
 import { registerHooks } from "./hooks";
 import { registerExtension } from "./identity";
 import { registerKeybindings } from "./keybindings";
+import { createLocalizationCollector } from "./localizable";
 import { registerMiddlewares } from "./middlewares";
 import { registerModes } from "./modes";
 import { validatePageNavigationTargets } from "./page-target-validation";
@@ -84,7 +85,8 @@ export const normalizeExtensionSources = (
   const index = createRegistryIndex();
   const extensionsById = new Map<string, NormalizedExtension>();
 
-  for (const source of resolveSources(sources, runtime, options)) {
+  for (const loadedSource of resolveSources(sources, runtime, options)) {
+    const source = { ...loadedSource, localization: createLocalizationCollector() };
     const ext = registerExtension(source, runtime, extensionsById);
     if (!validateExtensionDefinition(ext, source, runtime)) continue;
 
@@ -102,8 +104,8 @@ export const normalizeExtensionSources = (
     registerCommandPaletteResources(ext, source, runtime, index);
     registerContent(ext, source, runtime);
     registerAppearance(ext, source, runtime, index);
-    registerTranslations(ext, source, runtime, index);
     registerProviders(ext, source, runtime);
+    registerTranslations(ext, source, runtime, index);
     registerWebviewValidation(ext, source, runtime);
   }
 

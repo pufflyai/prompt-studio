@@ -1,10 +1,10 @@
 import type { PageContribution, PageMain, PageSlot } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension, RuntimePageMain, RuntimePageSlot } from "../../types/runtime";
-import type { LoadedExtensionSource } from "../loader";
 import type { Accumulator, RegistryIndex } from "./accumulator";
 import { pageDeclarationSchema } from "./composition-declarations";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { validateDeclaration } from "./declaration-diagnostic";
+import type { LocalizedExtensionSource as LoadedExtensionSource } from "./localizable";
 import { normalizePlacementTab } from "./placement-tab";
 import { normalizeContributionRef } from "./references";
 import { normalizePlacementItem } from "./resource-binding";
@@ -45,7 +45,10 @@ export const registerPages = (
     source,
     runtime,
     kind: "page",
-    contributions: contributionArray<PageContribution>(source.definition.pages),
+    contributions: source.localization.contributions(
+      "pages",
+      contributionArray<PageContribution>(source.definition.pages),
+    ),
   });
   for (const contribution of contributions) {
     if (!validateDeclaration({ ext, source, runtime, kind: "page", contribution, schema: pageDeclarationSchema }))

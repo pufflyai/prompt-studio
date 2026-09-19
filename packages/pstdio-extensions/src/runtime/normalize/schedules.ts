@@ -1,9 +1,9 @@
 import type { ScheduleContribution } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension, RuntimeScheduleRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
-import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
+import type { LocalizedExtensionSource as LoadedExtensionSource } from "./localizable";
 import { isLocalizableString } from "./localizable";
 import { resolveCommandRef } from "./references";
 
@@ -13,7 +13,10 @@ export const registerSchedules = (ext: NormalizedExtension, source: LoadedExtens
     source,
     runtime,
     kind: "schedule",
-    contributions: contributionArray<ScheduleContribution>(source.definition.schedules),
+    contributions: source.localization.contributions(
+      "schedules",
+      contributionArray<ScheduleContribution>(source.definition.schedules),
+    ),
   });
   for (const schedule of contributions) {
     const localId = schedule.id;

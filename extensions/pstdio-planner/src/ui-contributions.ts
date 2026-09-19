@@ -35,13 +35,13 @@ import { ticketStatuses } from "./ticket-status-provider";
 export { ticketResourceKind } from "./resource-kinds";
 export const plannerSettingsSection = defineSettingsSection({
   id: "planner",
-  title: l10n("settingsSections.planner.title", "Planner"),
+  title: "Planner",
   order: 40,
 });
 const createPlannerSettingsViews = (baseUrl: string) => ({
   tagSettings: defineView({
     id: "ticket-tags-settings",
-    title: l10n("settingsPanels.ticketTags.title", "Ticket tags"),
+    title: "Ticket tags",
     icon: "tag",
     body: {
       kind: "webview",
@@ -102,18 +102,18 @@ export const createPlannerUi = (baseUrl: string) => {
       createRow: {
         command: createTicketCommand.ref,
         columnParam: "statusId",
-        title: l10n("kanbanRenderers.tickets.createRow.title", "New ticket"),
-        submitLabel: l10n("kanbanRenderers.tickets.createRow.submitLabel", "Create ticket"),
+        title: "New ticket",
+        submitLabel: "Create ticket",
         params: {
           content: {
             type: "markdown",
-            label: l10n("kanbanRenderers.tickets.createRow.content.label", "Description"),
-            placeholder: l10n("kanbanRenderers.tickets.createRow.content.placeholder", "Describe the ticket..."),
+            label: "Description",
+            placeholder: "Describe the ticket...",
             required: true,
           },
           files: {
             type: "files",
-            label: l10n("kanbanRenderers.tickets.createRow.attachments.label", "Attach files"),
+            label: "Attach files",
             multiple: true,
           },
         },
@@ -124,10 +124,10 @@ export const createPlannerUi = (baseUrl: string) => {
           fileParam: "ref",
         },
         labels: {
-          cancel: l10n("kanbanRenderers.tickets.createRow.cancel", "Cancel"),
-          properties: l10n("kanbanRenderers.tickets.createRow.properties", "Properties"),
-          submitError: l10n("kanbanRenderers.tickets.createRow.submitError", "Could not create ticket"),
-          removeFile: l10n("kanbanRenderers.tickets.createRow.removeFile", "Remove file"),
+          cancel: "Cancel",
+          properties: "Properties",
+          submitError: "Could not create ticket",
+          removeFile: "Remove file",
         },
       },
       rowActions: [
@@ -176,11 +176,8 @@ export const createPlannerUi = (baseUrl: string) => {
         ordering: { attributeId: "created", direction: "desc" },
         displayProperties: ["id", "workspace", "type", "priority"],
       },
-      emptyTitle: l10n("kanbanRenderers.tickets.emptyTitle", "No tickets yet"),
-      emptyDescription: l10n(
-        "kanbanRenderers.tickets.emptyDescription",
-        "Create a ticket to start tracking work for this project.",
-      ),
+      emptyTitle: "No tickets yet",
+      emptyDescription: "Create a ticket to start tracking work for this project.",
     },
   });
   const editor = defineView({
@@ -195,7 +192,7 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const files = defineView({
     id: "ticket-files",
-    title: l10n("panels.ticketFiles.title", "Files"),
+    title: "Files",
     icon: "Files",
     body: {
       kind: "tree",
@@ -206,13 +203,13 @@ export const createPlannerUi = (baseUrl: string) => {
   });
   const properties = defineView({
     id: "ticket-properties",
-    title: l10n("controls.ticketProperties.title", "Properties"),
+    title: "Properties",
     body: {
       kind: "controls",
       query: (ctx, input) => queryTicketProperties(ctx, input.renderer.resource),
       onValueChange: (ctx, input) => updateTicketProperty(ctx, input.renderer.resource, input),
       refreshEvents: [plannerTicketsChanged],
-      emptyTitle: l10n("controls.ticketProperties.emptyTitle", "No ticket selected"),
+      emptyTitle: "No ticket selected",
     },
   });
   const { ticketDetailPage, ticketsPage } = createTicketPages(tickets.ref, editor.ref);

@@ -16,7 +16,7 @@ const baseUrl = new URL("../extension.ts", import.meta.url).href;
 export const webview = (id: string, title: string, capabilities: WebviewCapabilityDeclaration[] = []) =>
   defineView({
     id,
-    title: l10n(`views.${id}`, title),
+    title,
     body: {
       kind: "webview",
       entry: packageAsset(`./src/views/${id}.tsx`, baseUrl),
@@ -38,19 +38,19 @@ export const defineExample = (input: ExampleDefinition) => {
   const { name, label, icon } = input;
   const theme = defineTheme({
     id: name,
-    title: l10n(`themes.${name}`, label),
+    title: label,
     format: "vscode-color-theme",
     mode: name === "scribble" || name === "pigeon" ? "light" : "dark",
     source: packageAsset(`./themes/${name}.json`, baseUrl),
   });
   const resourceKind = defineResourceKind({
     id: exampleResources[name][0].type,
-    label: l10n(`resources.${name}`, label),
+    label,
     icon,
   });
   const mode = defineMode({
     id: name,
-    label: l10n(`modes.${name}`, label),
+    label,
     icon,
     regions: ["main", "side", "secondary"],
     defaultTheme: theme.ref,
@@ -90,7 +90,7 @@ export const defineExample = (input: ExampleDefinition) => {
   });
   const navigation = defineNavigationItem({
     id: name,
-    label: l10n(`navigation.${name}`, label),
+    label,
     icon,
     owner: workbenchModes.project,
     group: "Examples",

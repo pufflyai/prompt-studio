@@ -8,9 +8,9 @@ import type {
   RuntimeTemplateTypeRecord,
 } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
-import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
+import type { LocalizedExtensionSource as LoadedExtensionSource } from "./localizable";
 import { isLocalizableString } from "./localizable";
 import { normalizeContributionRef } from "./references";
 
@@ -20,7 +20,10 @@ const registerTemplateTypes = (ext: NormalizedExtension, source: LoadedExtension
     source,
     runtime,
     kind: "template-type",
-    contributions: contributionArray<TemplateTypeContribution>(source.definition.templateTypes),
+    contributions: source.localization.contributions(
+      "templateTypes",
+      contributionArray<TemplateTypeContribution>(source.definition.templateTypes),
+    ),
   });
   for (const type of contributions) {
     const localId = type.id;
@@ -73,7 +76,10 @@ const registerTemplates = (ext: NormalizedExtension, source: LoadedExtensionSour
     source,
     runtime,
     kind: "template",
-    contributions: contributionArray<TemplateContribution>(source.definition.templates),
+    contributions: source.localization.contributions(
+      "templates",
+      contributionArray<TemplateContribution>(source.definition.templates),
+    ),
   });
   for (const template of contributions) {
     const localId = template.id;
@@ -127,7 +133,10 @@ const registerSkills = (ext: NormalizedExtension, source: LoadedExtensionSource,
     source,
     runtime,
     kind: "skill",
-    contributions: contributionArray<SkillContribution>(source.definition.skills),
+    contributions: source.localization.contributions(
+      "skills",
+      contributionArray<SkillContribution>(source.definition.skills),
+    ),
   });
   for (const skill of contributions) {
     const localId = skill.id;

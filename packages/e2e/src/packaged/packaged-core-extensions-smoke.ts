@@ -143,7 +143,7 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
           const refineTicket = metadata.commands.find((command) => command.id.endsWith(".command.refine-ticket"));
           expect(refineTicket?.params?.template).toEqual({
             type: "template",
-            label: "Ticket template",
+            label: expect.objectContaining({ $l10n: "contributions/commands/refine-ticket/params/template/label" }),
             required: false,
             templateType: "pstdio.pstdio-planner.template-type.ticket",
           });

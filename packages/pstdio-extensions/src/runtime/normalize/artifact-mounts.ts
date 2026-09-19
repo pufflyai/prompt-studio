@@ -3,9 +3,9 @@ import { ARTIFACT_MOUNT_ROOT } from "../../artifacts/artifact-mount";
 import { normalizeArtifactMountPath } from "../../artifacts/path-normalization";
 import type { NormalizedExtension, RuntimeArtifactMount } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
-import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
+import type { LocalizedExtensionSource as LoadedExtensionSource } from "./localizable";
 import { isLocalizableString } from "./localizable";
 
 export const registerArtifactMounts = (
@@ -19,7 +19,10 @@ export const registerArtifactMounts = (
     source,
     runtime,
     kind: "artifact-mount",
-    contributions: contributionArray<ArtifactMountContribution>(source.definition.artifactMounts),
+    contributions: source.localization.contributions(
+      "artifactMounts",
+      contributionArray<ArtifactMountContribution>(source.definition.artifactMounts),
+    ),
   });
   for (const mount of contributions) {
     const localId = mount.id;

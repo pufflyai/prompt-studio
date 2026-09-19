@@ -22,10 +22,10 @@ import type {
   RuntimeStatusRecord,
   RuntimeViewRecord,
 } from "../../types/runtime";
-import type { LoadedExtensionSource } from "../loader";
 import type { Accumulator, RegistryIndex } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { validateDeclaration } from "./declaration-diagnostic";
+import type { LocalizedExtensionSource as LoadedExtensionSource } from "./localizable";
 import { normalizeNavigationAction } from "./navigation-action";
 import { navigationItemDeclarationSchema } from "./navigation-declaration";
 import { registerPlacements } from "./placements";
@@ -50,7 +50,10 @@ const registerViews = (
     source,
     runtime,
     kind: "view",
-    contributions: contributionArray<ViewContribution>(source.definition.views),
+    contributions: source.localization.contributions(
+      "views",
+      contributionArray<ViewContribution>(source.definition.views),
+    ),
   });
   for (const contribution of contributions) {
     const base = recordBase(ext, source, "view", contribution.id);
@@ -97,7 +100,10 @@ const registerNavigationItems = (ext: NormalizedExtension, source: LoadedExtensi
     source,
     runtime,
     kind: "navigation-item",
-    contributions: contributionArray<NavigationItemContribution>(source.definition.navigationItems),
+    contributions: source.localization.contributions(
+      "navigationItems",
+      contributionArray<NavigationItemContribution>(source.definition.navigationItems),
+    ),
   });
   for (const contribution of contributions) {
     const base = recordBase(ext, source, "navigation-item", contribution.id);
@@ -182,7 +188,10 @@ const registerStatuses = (
     source,
     runtime,
     kind: "status",
-    contributions: contributionArray<StatusContribution>(source.definition.statuses),
+    contributions: source.localization.contributions(
+      "statuses",
+      contributionArray<StatusContribution>(source.definition.statuses),
+    ),
   });
   for (const contribution of contributions) {
     const base = recordBase(ext, source, "status", contribution.id);
@@ -229,7 +238,10 @@ const registerActivityItems = (ext: NormalizedExtension, source: LoadedExtension
     source,
     runtime,
     kind: "activity-item",
-    contributions: contributionArray<ActivityItemContribution>(source.definition.activityItems),
+    contributions: source.localization.contributions(
+      "activityItems",
+      contributionArray<ActivityItemContribution>(source.definition.activityItems),
+    ),
   });
   for (const contribution of contributions) {
     const record: RuntimeActivityItemRecord = {
@@ -251,7 +263,10 @@ const registerSettingsSections = (ext: NormalizedExtension, source: LoadedExtens
     source,
     runtime,
     kind: "settings-section",
-    contributions: contributionArray<SettingsSectionContribution>(source.definition.settingsSections),
+    contributions: source.localization.contributions(
+      "settingsSections",
+      contributionArray<SettingsSectionContribution>(source.definition.settingsSections),
+    ),
   });
   for (const contribution of contributions) {
     const record: RuntimeSettingsSectionRecord = {

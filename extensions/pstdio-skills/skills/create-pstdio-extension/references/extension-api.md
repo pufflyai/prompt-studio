@@ -423,3 +423,28 @@ export default defineExtension({ harnesses: [myAgent] });
   a period without events.
 - Implement `reattach` (and advertise `SessionReattach`) to re-bind orphaned provider sessions after a host restart.
 - Consumers select a harness with `ctx.sessions.create({ harness: { harnessId, model } })` using the namespaced id.
+
+## Static translations
+
+Use plain strings in static `Localizable` contribution fields. The host derives
+`contributions/<collection>/<local-id>/<field-path>` and keeps the string as the
+default-locale fallback. For example, a view title uses
+`contributions/views/inbox/title`, and an identified row action uses
+`contributions/views/inbox/body/rowActions/archive/label`.
+
+Settings use `contributions/settings/properties/<property-key>/<field>` without
+a contribution ID. A title for `editor/theme~name` becomes
+`contributions/settings/properties/editor~1theme~0name/title`. Escape `~` to `~0`
+and `/` to `~1` in declared segments; preserve dots. Array order never enters keys.
+Add these keys to flat locale JSON bundles to translate them. Missing entries use
+the original strings, including when no locale bundle is declared.
+
+Keep explicit `l10n("shared.key", "Default")` for shared copy, arrays without IDs
+(command menus and palette entries), and callback results. Static metadata and
+runtime values can share explicit keys. The host does not rewrite callback results
+or ordinary string fields such as IDs and paths.
+
+Do not use `contributions/` in explicit tokens. Extension checking rejects reserved
+explicit keys, stale automatic bundle keys, and automatic paths with conflicting
+defaults. Keys outside this namespace may be used at runtime and are not treated
+as unused. Renaming a contribution requires migrating its automatic locale keys.

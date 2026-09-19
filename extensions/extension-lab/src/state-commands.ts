@@ -1,4 +1,4 @@
-import { defineCommand, eventRef, l10n, params } from "@pstdio/sdk/extensions";
+import { defineCommand, eventRef, params } from "@pstdio/sdk/extensions";
 import { readExampleState, writeExampleState } from "./example-state";
 import type { StateChange } from "./state-changes";
 import { type ExampleName, exampleNames, exampleResources } from "./state-defaults";
@@ -15,7 +15,7 @@ const exampleName = (name: string) => {
 };
 export const readState = defineCommand({
   id: "state.read",
-  title: l10n("commands.stateRead", "Read example"),
+  title: "Read example",
   cli: { path: ["state", "read"] },
   params: { name: nameParam() },
   async run(ctx, input) {
@@ -25,7 +25,7 @@ export const readState = defineCommand({
 });
 export const updateState = defineCommand({
   id: "state.update",
-  title: l10n("commands.stateUpdate", "Update example"),
+  title: "Update example",
   cli: { path: ["state", "update"] },
   params: { name: nameParam(), changes: params.json<StateChange[], { required: true }>({ required: true }) },
   async run(ctx, input) {
@@ -37,7 +37,7 @@ export const updateState = defineCommand({
 });
 export const queryResources = defineCommand({
   id: "resources.query",
-  title: l10n("commands.resourcesQuery", "List example resources"),
+  title: "List example resources",
   cli: { path: ["resources", "list"] },
   params: { name: nameParam() },
   async run(ctx, input) {

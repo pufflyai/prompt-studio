@@ -2,8 +2,8 @@
   "archiveState.active": "アクティブ",
   "archiveState.archived": "アーカイブ済み",
   "boardView.archiveAll": "すべてアーカイブ",
-  "commandPaletteResources.tickets.title": "チケット",
-  "kanbanRenderers.tickets.createRow.submitLabel": "作成",
+  "contributions/commandPaletteResources/tickets/title": "チケット",
+  "contributions/views/tickets/body/createRow/submitLabel": "作成",
   "kanbanRenderers.tickets.rowActions.archive": "すべてアーカイブ",
   "kanbanRenderers.tickets.rowActions.breakIntoSubTickets": "サブチケットに分割",
   "kanbanRenderers.tickets.rowActions.createWorkspace": "ワークスペースを作成",
@@ -15,7 +15,7 @@
   "displayMenu.propertyOptions.createdAt": "作成日",
   "displayMenu.propertyOptions.status": "ステータス",
   "displayMenu.propertyOptions.updatedAt": "更新日",
-  "settingsPanels.ticketTags.title": "タグ",
+  "contributions/views/ticket-tags-settings/title": "タグ",
   "ticketDetail.none": "なし",
   "ticketDetail.parent": "親"
 }

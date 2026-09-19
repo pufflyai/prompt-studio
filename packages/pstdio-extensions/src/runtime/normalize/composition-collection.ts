@@ -1,8 +1,8 @@
 import type { ResourceHierarchyProvider, ResourceKindDefinition } from "@pstdio/sdk/extensions";
 import type { NormalizedExtension } from "../../types/runtime";
-import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
+import type { LocalizedExtensionSource as LoadedExtensionSource } from "./localizable";
 import {
   contributionId,
   normalizeContributionRef,
@@ -49,7 +49,10 @@ export const collectCompositionContributions = (
     source,
     runtime,
     kind: "resource-kind",
-    contributions: contributionArray<ResourceKindDefinition>(source.definition.resourceKinds),
+    contributions: source.localization.contributions(
+      "resourceKinds",
+      contributionArray<ResourceKindDefinition>(source.definition.resourceKinds),
+    ),
   });
   for (const contribution of resourceKinds) {
     const localId = contribution.id;
