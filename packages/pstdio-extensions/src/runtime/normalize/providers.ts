@@ -6,9 +6,9 @@ import type {
   RuntimeWorkspaceTypeRecord,
 } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
-import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
+import type { LocalizedExtensionSource as LoadedExtensionSource } from "./localizable";
 import { isLocalizableString } from "./localizable";
 
 const isValidSelectDescriptor = (descriptor: Record<string, unknown>) => {
@@ -58,7 +58,10 @@ const registerConnections = (ext: NormalizedExtension, source: LoadedExtensionSo
     source,
     runtime,
     kind: "connection",
-    contributions: contributionArray<ExtensionConnectionContribution>(source.definition.connections),
+    contributions: source.localization.contributions(
+      "connections",
+      contributionArray<ExtensionConnectionContribution>(source.definition.connections),
+    ),
   });
   for (const connection of connections) {
     if (!isRecord(connection) || typeof connection.id !== "string" || !isLocalizableString(connection.label)) continue;
@@ -78,7 +81,10 @@ const registerHarnesses = (ext: NormalizedExtension, source: LoadedExtensionSour
     source,
     runtime,
     kind: "harness",
-    contributions: contributionArray<HarnessProvider>(source.definition.harnesses),
+    contributions: source.localization.contributions(
+      "harnesses",
+      contributionArray<HarnessProvider>(source.definition.harnesses),
+    ),
   });
   for (const provider of harnesses) {
     if (!isRecord(provider) || typeof provider.id !== "string" || !isLocalizableString(provider.label)) continue;
@@ -116,7 +122,10 @@ const registerWorkspaceTypes = (ext: NormalizedExtension, source: LoadedExtensio
     source,
     runtime,
     kind: "workspace-type",
-    contributions: contributionArray<WorkspaceTypeProvider>(source.definition.workspaceTypes),
+    contributions: source.localization.contributions(
+      "workspaceTypes",
+      contributionArray<WorkspaceTypeProvider>(source.definition.workspaceTypes),
+    ),
   });
   for (const provider of workspaceTypes) {
     if (!isRecord(provider) || typeof provider.id !== "string" || !isLocalizableString(provider.label)) continue;

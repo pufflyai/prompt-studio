@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import type { Skill, SkillFile } from "pstdio-api-contracts";
+import { isLocalizedString } from "pstdio-api-contracts/extension-kernel";
 import type { createExtensionSkillPreferencesDBService, createSkillsDBService } from "pstdio-db";
 import type { ProjectExtensionRuntimeCatalog } from "../features/extensions/project-extension-runtime-catalog";
 import {
@@ -90,16 +91,20 @@ const ingestSkillFiles = async (fileService: SkillServiceDeps["fileService"], pr
     }),
   );
 
+const defaultText = (value: unknown, fallback: string) => {
+  if (typeof value === "string") return value;
+  if (isLocalizedString(value)) return value.default ?? value.$l10n;
+  return fallback;
+};
+
 const extensionSkillTitle = (
   contribution: Record<string, unknown>,
   pref: ExtensionSkillPreference | undefined,
   key: string,
-) =>
-  pref?.display_name_override ??
-  (typeof contribution.title === "string" ? contribution.title : catalogNameFromKey(key));
+) => pref?.display_name_override ?? defaultText(contribution.title, catalogNameFromKey(key));
 
 const extensionSkillDescription = (contribution: Record<string, unknown>, pref: ExtensionSkillPreference | undefined) =>
-  pref?.description_override ?? (typeof contribution.description === "string" ? contribution.description : "");
+  pref?.description_override ?? defaultText(contribution.description, "");
 
 const toExtensionSkill = (input: {
   contribution: unknown;

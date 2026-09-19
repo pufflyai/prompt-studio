@@ -10,6 +10,7 @@ import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
+import { expectAutomaticTranslationMetadata } from "./packaged-localization-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -249,7 +250,12 @@ test(
 
     try {
       const started = await startPackagedServe(tempRoot, {
-        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions("workbench-fixture", "extension-lab", "pstdio-artifacts"),
+        PSTDIO_DEFAULT_EXTENSIONS: e2eExtensions(
+          "workbench-fixture",
+          "extension-lab",
+          "pstdio-artifacts",
+          "pstdio-planner",
+        ),
         // This check exercises metadata and commands; browser suites cover webview builds.
         PSTDIO_EXTENSION_WEBVIEW_BUILDS: "0",
       });
@@ -270,6 +276,7 @@ test(
 
       const metadata = (await metadataRes.json()) as WorkbenchExtensionMetadata;
       expectExamplePages(metadata);
+      expectAutomaticTranslationMetadata(metadata);
       await expectPackagedArtifacts({
         baseUrl: started.baseUrl,
         projectId: project.id,

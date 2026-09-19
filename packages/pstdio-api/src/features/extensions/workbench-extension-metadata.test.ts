@@ -93,7 +93,7 @@ describe("buildWorkbenchExtensionMetadata", () => {
       id: "pstdio.lab.mode.review",
       localId: "review",
       extensionId: "pstdio.lab",
-      label: "Review",
+      label: { $l10n: "contributions/modes/review/label", default: "Review" },
       icon: "message-circle",
       regions: ["main"],
     });
@@ -174,7 +174,10 @@ describe("buildWorkbenchExtensionMetadata", () => {
       selectionActions: [
         {
           id: "restart",
-          label: "Restart selected",
+          label: {
+            $l10n: "contributions/views/services/body/selectionActions/restart/label",
+            default: "Restart selected",
+          },
           command: { extensionId: "pstdio.lab", kind: "command", id: "restart" },
         },
       ],

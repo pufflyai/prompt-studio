@@ -147,7 +147,7 @@ describe("list extension appearance", () => {
       expect(response.status).toBe(200);
       expect(body.themes[0]).toMatchObject({
         id: "pstdio.lab.theme.monokai",
-        title: "Monokai",
+        title: { $l10n: "contributions/themes/monokai/title", default: "Monokai" },
         tokens: {
           "colors.bg": "#272822",
           "colors.bg.error": "#f9267226",

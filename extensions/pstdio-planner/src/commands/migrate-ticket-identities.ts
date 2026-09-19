@@ -1,5 +1,5 @@
 import { requireRepoFiles } from "@pstdio/sdk/data";
-import { defineCommand, l10n } from "@pstdio/sdk/extensions";
+import { defineCommand } from "@pstdio/sdk/extensions";
 import { putTicket, ticketsCollection } from "../data/collections";
 import { TICKETS_DIR, ticketFilesDir, ticketMarkdownPath, ticketToMarkdown } from "../data/draft-storage";
 import { IDENTITY_MIGRATION, identityMigrations } from "../data/ticket-identity";
@@ -9,7 +9,7 @@ const BACKUP_ROOT = ".pstdio/ticket-identity-migration";
 
 export const migrateTicketIdentitiesCommand = defineCommand({
   id: "migrate-ticket-identities",
-  title: l10n("commands.migrateTicketIdentities", "Migrate ticket identities"),
+  title: "Migrate ticket identities",
   mutating: true,
   cli: true,
   params: {},

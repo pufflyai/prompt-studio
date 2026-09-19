@@ -10,10 +10,10 @@ import type {
   RuntimeThemeRecord,
 } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
-import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { contributionArray, contributionRecordBase, uniqueContributions } from "./contribution-collection";
 import { collectIconFontAssets } from "./icon-fonts";
+import type { LocalizedExtensionSource as LoadedExtensionSource } from "./localizable";
 import { asLocalizableString, isLocalizableString } from "./localizable";
 
 type VsCodeColorTheme = {
@@ -201,7 +201,10 @@ const registerThemes = (
     source,
     runtime,
     kind: "theme",
-    contributions: contributionArray<ThemeContribution>(source.definition.themes),
+    contributions: source.localization.contributions(
+      "themes",
+      contributionArray<ThemeContribution>(source.definition.themes),
+    ),
   });
   for (const contribution of contributions) {
     const localId = contribution.id;
@@ -295,7 +298,10 @@ const registerFileIconThemes = (
     source,
     runtime,
     kind: "file-icon-theme",
-    contributions: contributionArray<FileIconThemeContribution>(source.definition.fileIconThemes),
+    contributions: source.localization.contributions(
+      "fileIconThemes",
+      contributionArray<FileIconThemeContribution>(source.definition.fileIconThemes),
+    ),
   });
   for (const contribution of contributions) {
     const localId = contribution.id;

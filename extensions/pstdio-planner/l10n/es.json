@@ -2,8 +2,8 @@
   "archiveState.active": "Activo",
   "archiveState.archived": "Archivado",
   "boardView.archiveAll": "Archivar todo",
-  "commandPaletteResources.tickets.title": "Tareas",
-  "kanbanRenderers.tickets.createRow.submitLabel": "Crear",
+  "contributions/commandPaletteResources/tickets/title": "Tareas",
+  "contributions/views/tickets/body/createRow/submitLabel": "Crear",
   "kanbanRenderers.tickets.rowActions.archive": "Archivar todo",
   "kanbanRenderers.tickets.rowActions.breakIntoSubTickets": "Dividir en subtareas",
   "kanbanRenderers.tickets.rowActions.createWorkspace": "Crear espacio de trabajo",
@@ -15,7 +15,7 @@
   "displayMenu.propertyOptions.createdAt": "Creado",
   "displayMenu.propertyOptions.status": "Estado",
   "displayMenu.propertyOptions.updatedAt": "Actualizado",
-  "settingsPanels.ticketTags.title": "Etiquetas",
+  "contributions/views/ticket-tags-settings/title": "Etiquetas",
   "ticketDetail.none": "Ninguno",
   "ticketDetail.parent": "Padre"
 }

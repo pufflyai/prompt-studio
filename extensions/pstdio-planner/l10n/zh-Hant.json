@@ -2,8 +2,8 @@
   "archiveState.active": "使用中",
   "archiveState.archived": "已封存",
   "boardView.archiveAll": "全部封存",
-  "commandPaletteResources.tickets.title": "工單",
-  "kanbanRenderers.tickets.createRow.submitLabel": "建立",
+  "contributions/commandPaletteResources/tickets/title": "工單",
+  "contributions/views/tickets/body/createRow/submitLabel": "建立",
   "kanbanRenderers.tickets.rowActions.archive": "全部封存",
   "kanbanRenderers.tickets.rowActions.breakIntoSubTickets": "拆分為子工單",
   "kanbanRenderers.tickets.rowActions.createWorkspace": "建立工作區",
@@ -15,7 +15,7 @@
   "displayMenu.propertyOptions.createdAt": "建立時間",
   "displayMenu.propertyOptions.status": "狀態",
   "displayMenu.propertyOptions.updatedAt": "更新時間",
-  "settingsPanels.ticketTags.title": "標籤",
+  "contributions/views/ticket-tags-settings/title": "標籤",
   "ticketDetail.none": "無",
   "ticketDetail.parent": "父級"
 }

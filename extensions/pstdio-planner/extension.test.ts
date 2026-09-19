@@ -66,7 +66,6 @@ describe("pstdio planner extension contributions", () => {
   });
   test("uses a native tree body for ticket files", () => {
     expect(extension.views?.find((view) => view.id === "ticket-files")).toMatchObject({
-      title: { $l10n: "panels.ticketFiles.title", default: "Files" },
       icon: "Files",
       body: {
         kind: "tree",
@@ -135,17 +134,12 @@ describe("pstdio planner extension contributions", () => {
       "zh-Hant": expect.objectContaining({ kind: "package-asset" }),
     });
     const tickets = extension.views?.find((view) => view.id === "tickets");
-    expect(tickets?.title).toEqual({
-      $l10n: "kanbanRenderers.tickets.title",
-      default: "Tickets",
-    });
     expect(tickets?.body.kind === "kanban" ? tickets.body.createRow : undefined).toMatchObject({
       columnParam: "statusId",
       attributesParam: "attributes",
       params: {
         content: {
           type: "markdown",
-          label: { $l10n: "kanbanRenderers.tickets.createRow.content.label", default: "Description" },
           required: true,
         },
         files: { type: "files", multiple: true },
@@ -153,9 +147,6 @@ describe("pstdio planner extension contributions", () => {
       attachments: {
         resourceParam: "ticketId",
         fileParam: "ref",
-      },
-      labels: {
-        cancel: { $l10n: "kanbanRenderers.tickets.createRow.cancel", default: "Cancel" },
       },
     });
     expect(extension.statuses?.[0]?.title).toBe("Ticket status");
@@ -322,9 +313,7 @@ describe("pstdio planner workspace contributions", () => {
   });
   test("keeps tag and board rule settings separate from shared status fields", () => {
     expect(extension.settingsPanels?.map((panel) => panel.id)).toEqual(["ticket-tags"]);
-    expect(extension.settingsSections).toEqual([
-      expect.objectContaining({ id: "planner", order: 40, title: expect.objectContaining({ default: "Planner" }) }),
-    ]);
+    expect(extension.settingsSections).toEqual([expect.objectContaining({ id: "planner", order: 40 })]);
     expect(extension.statuses?.map((provider) => provider.id)).toEqual(["ticket-statuses"]);
   });
 });

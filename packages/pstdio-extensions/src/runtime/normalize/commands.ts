@@ -2,9 +2,9 @@ import type { CommandDefinition } from "@pstdio/sdk/extensions";
 import { normalizeCliPath } from "../../artifacts/path-normalization";
 import type { NormalizedExtension, RuntimeCliContribution, RuntimeCommandRecord } from "../../types/runtime";
 import { createDiagnostic } from "../diagnostics";
-import type { LoadedExtensionSource } from "../loader";
 import { type Accumulator, isRecord, type RegistryIndex } from "./accumulator";
 import { contributionArray, uniqueContributions } from "./contribution-collection";
+import type { LocalizedExtensionSource as LoadedExtensionSource } from "./localizable";
 import { asLocalizableString, isLocalizableString } from "./localizable";
 import { normalizedContributionId } from "./references";
 import { hasCompatibleSlotKind } from "./slot-kind";
@@ -155,7 +155,10 @@ export const registerCommands = (
     source,
     runtime,
     kind: "command",
-    contributions: contributionArray<CommandDefinition>(source.definition.commands),
+    contributions: source.localization.contributions(
+      "commands",
+      contributionArray<CommandDefinition>(source.definition.commands),
+    ),
   });
 
   for (const command of definitions) {

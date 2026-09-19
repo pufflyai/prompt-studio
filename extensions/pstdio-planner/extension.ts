@@ -4,7 +4,6 @@ import {
   defineHook,
   defineSkill,
   defineTemplateType,
-  l10n,
   packageAsset,
   sessionEvents,
 } from "@pstdio/sdk/extensions";
@@ -79,7 +78,7 @@ export default defineExtension({
   commandPaletteResources: [
     defineCommandPaletteResource({
       id: "tickets",
-      title: l10n("commandPaletteResources.tickets.title", "Tickets"),
+      title: "Tickets",
       resourceKind: ticketResourceKind.ref,
       query: queryTicketResources,
     }),
