@@ -13,6 +13,7 @@ export interface Status {
 
 interface PolicyApi {
   readPull: () => Promise<PullRequest>;
+  readExtensionApiVersion: (sha: string) => Promise<string>;
   publish: (sha: string, status: Status) => Promise<unknown>;
 }
 
@@ -72,6 +73,15 @@ export async function finish(
     status = { state: "success", description: "SDK and extension changes are separate" };
     if (labels.has("sdk") && labels.has("extensions")) {
       status = { state: "failure", description: "Split SDK and extension changes into separate PRs" };
+      if (currentLabels.has("sdk-extension-migration-approved")) {
+        const [baseVersion, headVersion] = await Promise.all([
+          api.readExtensionApiVersion(snapshot.base),
+          api.readExtensionApiVersion(snapshot.head),
+        ]);
+        if (baseVersion !== headVersion) {
+          status = { state: "success", description: "Approved coordinated extension API migration" };
+        }
+      }
     }
   } catch (error) {
     status = { state: "error", description: String(error).slice(0, 140) };
@@ -108,6 +118,18 @@ export function createApi(options: ApiOptions) {
   }
   return {
     readPull: async () => (await request(`pulls/${pullNumber}`)) as PullRequest,
+    readExtensionApiVersion: async (sha: string) => {
+      // Inspect immutable source as text. pull_request_target must never execute PR code.
+      const path = "packages/pstdio-api-contracts/src/extension-kernel/types/extension.ts";
+      const file = await request(`contents/${path}?ref=${encodeURIComponent(sha)}`);
+      if (file.encoding !== "base64" || typeof file.content !== "string") {
+        throw new Error(`Could not read the extension API version at ${sha}`);
+      }
+      const source = Buffer.from(file.content, "base64").toString("utf8");
+      const version = source.match(/^export const EXTENSION_API_VERSION = ["']([^"']+)["'];/m)?.[1];
+      if (!version) throw new Error(`Could not parse the extension API version at ${sha}`);
+      return version;
+    },
     publish: (sha: string, status: Status) =>
       request(`statuses/${sha}`, { ...status, context: "sdk-extension-separation", target_url: runUrl }),
   };

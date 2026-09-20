@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { finish, type PullRequest, prepare, type Status } from "./pr-risk-labels";
 
-function fixture(labels: string[] = []) {
+function fixture(labels: string[] = [], versions = { base: "1.0.0-alpha.10", head: "1.0.0-alpha.10" }) {
   let pull: PullRequest = {
     state: "open",
     head: { sha: "head" },
@@ -17,6 +17,9 @@ function fixture(labels: string[] = []) {
     async publish(sha: string, status: Status) {
       statuses.push({ sha, ...status });
     },
+    async readExtensionApiVersion(sha: string) {
+      return versions[sha as keyof typeof versions];
+    },
   };
   return {
     api,
@@ -28,6 +31,46 @@ function fixture(labels: string[] = []) {
 }
 
 describe("SDK and extension separation", () => {
+  test("allows an explicitly approved coordinated API migration", async () => {
+    const labels = ["sdk", "extensions", "sdk-extension-migration-approved"];
+    const { api, statuses } = fixture(labels, { base: "1.0.0-alpha.10", head: "1.0.0-alpha.11" });
+    await finish(api, await prepare(api), "success", labels.join(","));
+    expect(statuses.at(-1)?.state).toBe("success");
+  });
+
+  test("an approval label does not exempt changes within the same API version", async () => {
+    const labels = ["sdk", "extensions", "sdk-extension-migration-approved"];
+    const { api, statuses } = fixture(labels);
+    await finish(api, await prepare(api), "success", labels.join(","));
+    expect(statuses.at(-1)?.state).toBe("failure");
+  });
+
+  test("a version change alone does not exempt mixed SDK and extension changes", async () => {
+    const labels = ["sdk", "extensions"];
+    const { api, statuses } = fixture(labels, { base: "1.0.0-alpha.10", head: "1.0.0-alpha.11" });
+    await finish(api, await prepare(api), "success", labels.join(","));
+    expect(statuses.at(-1)?.state).toBe("failure");
+  });
+
+  test("revoking approval restores the block", async () => {
+    const labels = ["sdk", "extensions", "sdk-extension-migration-approved"];
+    const { api, statuses, setPull } = fixture(labels, { base: "1.0.0-alpha.10", head: "1.0.0-alpha.11" });
+    const snapshot = await prepare(api);
+    setPull({ labels: [{ name: "sdk" }, { name: "extensions" }] });
+    await finish(api, snapshot, "success", labels.join(","));
+    expect(statuses.at(-1)?.state).toBe("failure");
+  });
+
+  test("cannot approve a migration when its version cannot be read", async () => {
+    const labels = ["sdk", "extensions", "sdk-extension-migration-approved"];
+    const { api, statuses } = fixture(labels);
+    api.readExtensionApiVersion = async () => {
+      throw new Error("Version unavailable");
+    };
+    await finish(api, await prepare(api), "success", labels.join(","));
+    expect(statuses.at(-1)?.state).toBe("error");
+  });
+
   test.each([
     [[], "success"],
     [["sdk"], "success"],
