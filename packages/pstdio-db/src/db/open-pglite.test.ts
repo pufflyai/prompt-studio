@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { cpSync, mkdtempSync, readFileSync, rmSync, unlinkSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, unlinkSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
@@ -26,8 +27,8 @@ beforeAll(async () => {
   }
 });
 
-afterAll(() => {
-  for (const home of homes) rmSync(home, { recursive: true, force: true });
+afterAll(async () => {
+  await Promise.all(homes.map((home) => rm(home, { recursive: true, force: true })));
 });
 
 test("initializes an empty database directory from its packaged image", async () => {
