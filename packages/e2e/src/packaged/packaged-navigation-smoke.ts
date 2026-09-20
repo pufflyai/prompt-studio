@@ -20,7 +20,7 @@ export const writeNavigationExtension = (root: string) => {
   writeFileSync(
     join(source, "extension.ts"),
     `export default { commands: [{
-      id: "open", title: "Open",
+      id: "open", ref: { kind: "command", id: "open" }, title: "Open", cli: true,
       run(ctx: { navigation: { open(target: unknown): void } }) {
         ctx.navigation.open({ kind: "href", href: "https://example.com/created" });
         return { id: "created" };
