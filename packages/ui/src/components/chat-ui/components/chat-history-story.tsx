@@ -39,6 +39,10 @@ const focusEditor = (canvasElement: HTMLElement) =>
 
 export const walkThreePrompts = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
   const editor = await focusEditor(canvasElement);
+  for (const modifier of ["Control", "Meta", "Shift", "Alt"]) {
+    await userEvent.keyboard(`{${modifier}>}{ArrowUp}{/${modifier}}`);
+    await expect(editor.textContent).toBe("");
+  }
   for (const text of ["Summarize the plan", "Show the next steps", "Explain the project"]) {
     await userEvent.keyboard("{ArrowUp}");
     await expect(editor).toHaveTextContent(text);
