@@ -1,7 +1,6 @@
-import { mkdir, readFile, rm, symlink } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { basename, join } from "node:path";
+import { readFile } from "node:fs/promises";
 import type { FilePart, HarnessAttachment, SessionAttachment, SessionAttachmentRef } from "pstdio-api-contracts";
+import { readableFilePath } from "pstdio-storage";
 import type { SessionsRouteDeps } from "./deps";
 
 type FileRow = NonNullable<Awaited<ReturnType<SessionsRouteDeps["fileService"]["get"]>>>;
@@ -28,28 +27,6 @@ export const toSessionAttachment = (projectId: string, file: FileRow): SessionAt
   updated_at: file.updated_at,
 });
 
-const isFileAlreadyExistsError = (error: unknown) =>
-  typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST";
-
-// Stored files are keyed by id with no extension, so an agent's Read tool would
-// treat an image as raw text instead of loading it as an image. Expose the bytes
-// through a path that keeps the original filename (and therefore its extension)
-// so images load as images and other binaries are typed correctly.
-const readableAttachmentPath = async (file: FileRow) => {
-  const dir = join(tmpdir(), "pstdio-session-attachments", file.id);
-  await mkdir(dir, { recursive: true });
-
-  const readablePath = join(dir, basename(file.file_name));
-  await rm(readablePath, { force: true });
-  try {
-    await symlink(file.storage_path, readablePath);
-  } catch (error) {
-    if (!isFileAlreadyExistsError(error)) throw error;
-  }
-
-  return readablePath;
-};
-
 export const resolveSessionAttachments = async (
   deps: Pick<SessionsRouteDeps, "fileService">,
   projectId: string,
@@ -68,7 +45,7 @@ export const resolveSessionAttachments = async (
       fileName: file.file_name,
       mimeType: file.mime_type,
       sizeBytes: file.size_bytes,
-      localPath: await readableAttachmentPath(file),
+      localPath: await readableFilePath(file.storage_path, file.file_name),
       url: sessionAttachmentContentUrl(projectId, file.id),
     });
   }

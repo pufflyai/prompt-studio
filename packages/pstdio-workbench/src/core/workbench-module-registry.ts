@@ -25,6 +25,7 @@ export const createWorkbenchModuleRegistry = (
 
       try {
         const context = createModuleContext(resolveCore(), {
+          contextScopeId: `module:${module.id}`,
           ownerId: module.ownerId ?? module.id,
           source: module.source ?? "module",
           track: (disposable) => {

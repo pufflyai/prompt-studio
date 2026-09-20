@@ -33,7 +33,7 @@ describe("resolveEmbedFiles", () => {
 
     const files = resolveEmbedFiles({
       files: [],
-      globs: [join(tree, "**")],
+      globs: [`${tree.replaceAll("\\", "/")}/**`],
       noStraysIn: [],
       platformBinaries: [],
       buildTargets: [],

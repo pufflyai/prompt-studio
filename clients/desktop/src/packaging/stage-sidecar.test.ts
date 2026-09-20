@@ -6,6 +6,8 @@ import { validateSidecarArtifact } from "../runtime/sidecar-artifact";
 import { stageSidecar } from "./stage-sidecar";
 
 const roots: string[] = [];
+const platform = process.platform === "win32" ? "win32" : "darwin";
+const executable = platform === "win32" ? "pstdio.exe" : "pstdio";
 
 afterEach(() => {
   for (const root of roots) rmSync(root, { recursive: true, force: true });
@@ -23,19 +25,19 @@ test("stages exactly one executable sidecar with a verifiable manifest", async (
   const result = stageSidecar({
     sourcePath,
     resourcesPath,
-    platform: "darwin",
-    arch: "arm64",
+    platform,
+    arch: "x64",
     version: "0.25.2",
   });
 
-  expect(result.binaryPath).toBe(join(resourcesPath, "bin", "pstdio"));
-  expect(statSync(result.binaryPath).mode & 0o111).not.toBe(0);
+  expect(result.binaryPath).toBe(join(resourcesPath, "bin", executable));
+  if (process.platform !== "win32") expect(statSync(result.binaryPath).mode & 0o111).not.toBe(0);
   expect(readFileSync(result.binaryPath, "utf8")).toBe("compiled-runtime");
   await expect(
     validateSidecarArtifact({
       resourcesPath,
-      platform: "darwin",
-      arch: "arm64",
+      platform,
+      arch: "x64",
       appVersion: "0.25.2",
       readVersion: () => "0.25.2",
     }),
@@ -51,8 +53,8 @@ describe("stageSidecar", () => {
       stageSidecar({
         sourcePath: join(root, "missing"),
         resourcesPath: join(root, "resources"),
-        platform: "darwin",
-        arch: "arm64",
+        platform,
+        arch: "x64",
         version: "0.25.2",
       }),
     ).toThrow("Compiled desktop runtime is missing");

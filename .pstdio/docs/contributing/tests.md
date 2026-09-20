@@ -77,6 +77,10 @@ Read the first failure and its trace. Check setup, teardown, and server logs bef
 
 Keep the existing job and test time limits. A timeout needs a performance investigation. A passing rerun alone does not explain the failure.
 
+The Windows job tests native dependency installation, relative workspace links, scoped dependency watcher events, and concurrent attachment reads before building. Readable attachments share their stored bytes through hard links and are removed with the file or project storage. Cover both scoped packages and linked `node_modules` directories, as extension installation uses both. It runs package test suites one at a time to avoid competing database startups; the API suite still uses two file workers.
+
+Non-recursive watcher tests remove dependency trees from another process while refreshing watches, then check that later package changes still refresh the source. This covers directory removal during a filesystem read.
+
 ## Live provider tests
 
 These commands opt into real agent sessions:

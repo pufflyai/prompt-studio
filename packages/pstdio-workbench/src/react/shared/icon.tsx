@@ -2,7 +2,7 @@ import { Icon, type IconProps } from "@chakra-ui/react";
 import type { LucideIcon } from "lucide-react";
 import * as lucideIcons from "lucide-react";
 
-interface WorkbenchIconProps extends Omit<IconProps, "as" | "size"> {
+export interface WorkbenchIconProps extends Omit<IconProps, "as" | "size"> {
   name?: string;
   size?: number | string;
 }

@@ -1,7 +1,7 @@
 import { afterEach, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionDiagnostic } from "../types/runtime";
 import { loadExtensionPackage } from "./loader";
@@ -47,17 +47,22 @@ afterEach(() => {
   tempDirs.length = 0;
 });
 
-test("mirrors workspace linked node_modules entries as directories", async () => {
+test.each([
+  ["e2e", false],
+  ["@workspace/e2e", false],
+  ["e2e", true],
+  ["@workspace/e2e", true],
+] as const)("loads workspace dependency %s with linked node_modules %s", async (name, linkedNodeModules) => {
   isolateRuntimeCache();
   const repoDir = createTempDir();
   const extensionDir = join(repoDir, "extensions", "loader-test");
   const dependencyDir = join(repoDir, "packages", "e2e");
-  const dependencyImport = JSON.stringify("e2e");
+  const dependencyImport = JSON.stringify(name);
   writePackage(extensionDir);
   mkdirSync(dependencyDir, { recursive: true });
   writeFileSync(
     join(dependencyDir, "package.json"),
-    JSON.stringify({ name: "e2e", version: "1.0.0", type: "module", exports: "./index.ts" }),
+    JSON.stringify({ name, version: "1.0.0", type: "module", exports: "./index.ts" }),
   );
   writeFileSync(join(dependencyDir, "index.ts"), `export const marker = "workspace-dependency";\n`);
   writeFileSync(
@@ -75,9 +80,12 @@ export default {
 `,
   );
 
-  const linkedDependency = join(repoDir, "node_modules", "e2e");
+  const linkedDependency = join(repoDir, "node_modules", name);
   mkdirSync(dirname(linkedDependency), { recursive: true });
-  symlinkSync(dependencyDir, linkedDependency, process.platform === "win32" ? "junction" : "dir");
+  symlinkSync(relative(dirname(linkedDependency), dependencyDir), linkedDependency, "dir");
+  if (linkedNodeModules) {
+    symlinkSync(join(repoDir, "node_modules"), join(extensionDir, "node_modules"), "junction");
+  }
 
   const diagnostics: ExtensionDiagnostic[] = [];
   const loaded = await loadExtensionPackage({ path: extensionDir }, diagnostics);

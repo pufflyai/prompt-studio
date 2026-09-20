@@ -117,13 +117,15 @@ export class DesktopWindowController {
     // Recovery must not wait for a new renderer, JavaScript bundle, or theme initialization.
     this.#workbench?.setVisible(false);
     if (this.window.webContents.getURL() !== this.lifecycleUrl) await this.window.loadURL(this.lifecycleUrl);
-    this.window.webContents.focus();
+    const contents = this.#workbench?.getVisible() ? this.#workbench.webContents : this.window.webContents;
+    contents.focus();
   }
 
   async showWorkbench(descriptor: RuntimeDescriptor) {
-    // A child view must not cover the startup renderer before it shows the native window.
-    await this.#shown;
     this.#runtimeOrigin = descriptor.origin;
+    // Creating a second renderer must not compete with showing the startup window.
+    // Its remaining resources can continue loading alongside the workbench.
+    await this.#shown;
     const view = this.#workbench ?? this.createWorkbench();
     await provisionRuntimeSession(view.webContents.session, descriptor);
     await view.webContents.loadURL(descriptor.origin);

@@ -11,6 +11,7 @@ import {
   initialDesktopState,
   transitionDesktopState,
 } from "./lifecycle/lifecycle-machine";
+import { startWorkbench } from "./lifecycle/start-workbench";
 import { createApplicationMenuTemplate, setApplicationCommandsEnabled } from "./release/application-menu";
 import { DesktopUpdateManager } from "./release/desktop-update-manager";
 import { createDesktopUpdateNotifications } from "./release/desktop-update-notifications";
@@ -137,10 +138,8 @@ const finishQuit = async () => {
 
 const startRuntime = async () => {
   setState(initialDesktopState);
-  await windowController?.showLifecycle();
   try {
-    const runtime = await runtimeManager.start();
-    await windowController?.showWorkbench(runtime.descriptor);
+    const runtime = await startWorkbench(windowController!, runtimeManager);
     setState(
       transitionDesktopState(state, {
         type: "runtime_ready",

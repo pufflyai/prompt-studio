@@ -1,5 +1,5 @@
 import { watch as fsWatch, lstatSync, readdirSync } from "node:fs";
-import { basename, isAbsolute, join, relative } from "node:path";
+import { basename, isAbsolute, join, relative, sep } from "node:path";
 import { createExtensionIgnoreMatcher, type ExtensionIgnoreMatcher } from "./extension-ignore";
 
 type InstalledSourceRegistration = {
@@ -49,11 +49,10 @@ export type CreateExtensionSourceWatcherInput = {
   watchDependencies?: boolean;
 };
 
-// Watches a single directory (non-recursive). fs errors — e.g. the directory
-// disappearing mid-watch — are routed to onError so they can't crash the API
-// process via an unhandled 'error' event.
+// Windows can watch recursively with one root handle. Opening handles on child
+// directories prevents Windows from replacing the extension's parent directory.
 const defaultWatch: WatchSource = (path, listener, onError) => {
-  const watcher = fsWatch(path, listener);
+  const watcher = fsWatch(path, { recursive: process.platform === "win32" }, listener);
   watcher.on("error", onError);
   return watcher;
 };
@@ -89,12 +88,29 @@ const toEventPath = (directoryPath: string, filename: string | Buffer | null) =>
   return isAbsolute(value) ? value : join(directoryPath, value);
 };
 
+const dependencyWatchDirectories = (dependencyRoot: string) => {
+  const directories = new Set<string>();
+  try {
+    if (!lstatSync(dependencyRoot, { throwIfNoEntry: false })?.isDirectory()) return directories;
+    const entries = readdirSync(dependencyRoot, { withFileTypes: true });
+    directories.add(dependencyRoot);
+    for (const entry of entries) {
+      if (entry.name.startsWith("@") && entry.isDirectory()) directories.add(join(dependencyRoot, entry.name));
+    }
+  } catch (error) {
+    // A package manager can remove node_modules between the stat and directory read.
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  return directories;
+};
+
 export const createExtensionSourceWatcher = async (
   input: CreateExtensionSourceWatcherInput,
 ): Promise<ExtensionSourceWatcher> => {
   const debounceMs = input.debounceMs ?? defaultDebounceMs;
   const registrations = new Map<string, WatchedRegistration>();
   const watch = input.watch ?? defaultWatch;
+  const nativeRecursive = process.platform === "win32" && !input.watch;
   const watchDependencies = input.watchDependencies ?? true;
   let disposed = false;
 
@@ -151,6 +167,10 @@ export const createExtensionSourceWatcher = async (
   };
 
   const watchDirectoryTree = (registration: WatchedRegistration, startPath: string) => {
+    if (nativeRecursive) {
+      watchDirectory(registration, registration.sourcePath);
+      return;
+    }
     let directories: string[];
     try {
       directories = listWatchableDirectories(registration.sourcePath, registration.matcher, startPath);
@@ -163,22 +183,19 @@ export const createExtensionSourceWatcher = async (
   };
 
   const watchDependencyRoot = (registration: WatchedRegistration) => {
+    if (nativeRecursive) return;
     const dependencyRoot = join(registration.sourcePath, "node_modules");
-    const existingWatcher = registration.watchers.get(dependencyRoot);
-    const stats = lstatSync(dependencyRoot, { throwIfNoEntry: false });
-    if (!stats?.isDirectory()) {
-      existingWatcher?.close();
-      registration.watchers.delete(dependencyRoot);
-      return;
+    const directories = dependencyWatchDirectories(dependencyRoot);
+    for (const [path, watcher] of registration.watchers) {
+      if (path !== dependencyRoot && !path.startsWith(dependencyRoot + sep)) continue;
+      if (directories.has(path)) continue;
+      watcher.close();
+      registration.watchers.delete(path);
     }
-    if (!existingWatcher) watchDirectory(registration, dependencyRoot);
+    for (const path of directories) watchDirectory(registration, path);
   };
 
   const watchCreatedDirectory = (registration: WatchedRegistration, eventPath: string) => {
-    if (eventPath === join(registration.sourcePath, "node_modules")) {
-      if (watchDependencies) watchDependencyRoot(registration);
-      return;
-    }
     if (registration.watchers.has(eventPath)) return;
     if (skippedDirectoryNames.has(basename(eventPath))) return;
 
@@ -191,18 +208,24 @@ export const createExtensionSourceWatcher = async (
   const handleDirectoryEvent = (
     registration: WatchedRegistration,
     directoryPath: string,
-    _eventType: string,
+    eventType: string,
     filename: string | Buffer | null,
   ) => {
     const eventPath = toEventPath(directoryPath, filename);
     const relativePath = relative(registration.sourcePath, eventPath);
-    const dependencyRoot = join(registration.sourcePath, "node_modules");
-    const isDependencyEvent = directoryPath === dependencyRoot || eventPath === dependencyRoot;
-    const includedIgnoredPath = relativePath && input.includeIgnoredPath?.(relativePath);
-    if (!isDependencyEvent && relativePath && registration.matcher.ignores(relativePath) && !includedIgnoredPath)
+    const segments = relativePath.split(sep);
+    if (segments[0] === "node_modules") {
+      const packageDepth = segments[1]?.startsWith("@") ? 3 : 2;
+      // Windows also reports parent directory metadata when package contents change.
+      if (!watchDependencies || eventType !== "rename" || segments.length > packageDepth) return;
+      watchDependencyRoot(registration);
+      scheduleReload(registration);
       return;
+    }
+    const includedIgnoredPath = relativePath && input.includeIgnoredPath?.(relativePath);
+    if (relativePath && registration.matcher.ignores(relativePath) && !includedIgnoredPath) return;
 
-    if (directoryPath !== dependencyRoot) watchCreatedDirectory(registration, eventPath);
+    if (!nativeRecursive) watchCreatedDirectory(registration, eventPath);
     scheduleReload(registration);
   };
 

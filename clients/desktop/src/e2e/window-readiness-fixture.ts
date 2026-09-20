@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { app, protocol } from "electron";
 import type { RuntimeDescriptor } from "pstdio/runtime";
-import { LIFECYCLE_SCHEME } from "../windows/lifecycle-protocol";
+import { LIFECYCLE_SCHEME, readLifecycleAsset } from "../windows/lifecycle-protocol";
 import { DesktopWindowController } from "../windows/window-controller";
 
 protocol.registerSchemesAsPrivileged([
@@ -22,6 +22,16 @@ void app.whenReady().then(async () => {
     startedAt: new Date().toISOString(),
   };
   const workbenchReady = controller.showWorkbench(descriptor);
+  const lifecycleProtocol = controller.window.webContents.session.protocol;
+  lifecycleProtocol.unhandle(LIFECYCLE_SCHEME);
+  lifecycleProtocol.handle(LIFECYCLE_SCHEME, async (request) => {
+    if (new URL(request.url).pathname === "/pending.png") {
+      // Finish loading the lifecycle document after the workbench takes focus.
+      await workbenchReady;
+      return new Response(null, { status: 404 });
+    }
+    return readLifecycleAsset(request.url, join(import.meta.dirname, "renderer"));
+  });
   controller.window.webContents.once("dom-ready", () => {
     console.log(JSON.stringify({ documentReadyVisible: controller.window.isVisible() }));
   });
@@ -29,15 +39,24 @@ void app.whenReady().then(async () => {
     await controller.showLifecycle();
     console.log(JSON.stringify({ lifecycleVisible: controller.window.isVisible() }));
     await workbenchReady;
-    process.stdout.write(
-      `${JSON.stringify({ visible: controller.window.isVisible(), childViews: controller.window.contentView.children.length })}\n`,
-      () => app.exit(0),
+    app.focus({ steal: true });
+    controller.window.focus();
+    console.log(
+      JSON.stringify({
+        visible: controller.window.isVisible(),
+        workbenchVisible: controller.window.contentView.children.some((view) => view.getVisible()),
+      }),
     );
+    process.stdin.on("data", async () => {
+      const workbenchFocused = await controller.webContents()[1]?.executeJavaScript("document.hasFocus()");
+      console.log(JSON.stringify({ workbenchFocused }));
+    });
   });
   console.log(
     JSON.stringify({
       visible: controller.window.isVisible(),
-      childViews: controller.window.contentView.children.length,
+      workbenchVisible: controller.window.contentView.children.some((view) => view.getVisible()),
+      workbenchCreated: controller.window.contentView.children.length > 0,
     }),
   );
 });

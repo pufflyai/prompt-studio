@@ -77,7 +77,7 @@ test("preserves browser Forward history between extension pages after refresh", 
   await page.reload();
   await page.goForward();
   await expect(page).toHaveURL(/\/extensions\/pstdio\.pstdio-planner\/ticket\?resource=/);
-  await expect(page.getByText(ticket.content, { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Main", exact: true }).getByRole("textbox")).toHaveText(ticket.content);
 });
 
 test("keeps the project selector and Session Panel available on project home", async ({ page, request }) => {

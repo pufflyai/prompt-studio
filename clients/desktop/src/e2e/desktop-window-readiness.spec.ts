@@ -10,8 +10,9 @@ import { expect, test } from "@playwright/test";
 
 const require = createRequire(import.meta.url);
 
-test("shows the startup window before creating the workbench view", async () => {
+test("loads the workbench after the startup window shows while lifecycle resources are still loading", async () => {
   const root = mkdtempSync(join(tmpdir(), "desktop-window-readiness-"));
+  let workbenchRequests = 0;
   const server = createServer((request, response) => {
     if (request.url === "/runtime/browser-session") {
       response.setHeader(
@@ -21,6 +22,7 @@ test("shows the startup window before creating the workbench view", async () => 
       response.writeHead(204).end();
       return;
     }
+    if (request.url === "/") workbenchRequests += 1;
     response.setHeader("content-type", "text/html");
     response.end("<!doctype html><main>Ready workbench</main>");
   });
@@ -30,7 +32,10 @@ test("shows the startup window before creating the workbench view", async () => 
 
   try {
     mkdirSync(join(root, "renderer"));
-    writeFileSync(join(root, "renderer/index.html"), "<!doctype html><main>Startup progress</main>");
+    writeFileSync(
+      join(root, "renderer/index.html"),
+      '<!doctype html><main>Startup progress</main><img src="pending.png">',
+    );
     writeFileSync(join(root, "preload.cjs"), "");
     const entry = join(root, "main.mjs");
     const build = spawnSync("bun", [
@@ -54,14 +59,21 @@ test("shows the startup window before creating the workbench view", async () => 
     const lines = createInterface({ input: application.stdout! })[Symbol.asyncIterator]();
     try {
       const beforeStartup = JSON.parse((await lines.next()).value!);
-      expect(beforeStartup).toEqual({ visible: false, childViews: 0 });
+      expect(beforeStartup).toEqual({ visible: false, workbenchVisible: false, workbenchCreated: false });
       application.stdin!.write("show\n");
       const documentReady = JSON.parse((await lines.next()).value!);
       expect(documentReady).toEqual({ documentReadyVisible: true });
+      await expect.poll(() => workbenchRequests).toBe(1);
       const lifecycleShown = JSON.parse((await lines.next()).value!);
       expect(lifecycleShown).toEqual({ lifecycleVisible: true });
       const afterStartup = JSON.parse((await lines.next()).value!);
-      expect(afterStartup).toEqual({ visible: true, childViews: 1 });
+      expect(afterStartup).toEqual({ visible: true, workbenchVisible: true });
+      await expect
+        .poll(async () => {
+          application.stdin!.write("focus\n");
+          return JSON.parse((await lines.next()).value!);
+        })
+        .toEqual({ workbenchFocused: true });
     } finally {
       if (application.exitCode === null && application.signalCode === null) {
         const exited = once(application, "exit");
