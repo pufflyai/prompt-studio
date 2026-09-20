@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -28,6 +28,22 @@ afterEach(() => {
 });
 
 describe("createDb", () => {
+  let seed: ReturnType<typeof createTempDbPath>;
+
+  beforeAll(async () => {
+    seed = createTempDbPath();
+    const client = await createDb({ path: seed.dbPath });
+    await client.close();
+  });
+
+  afterAll(() => fs.rmSync(seed.tempRoot, { recursive: true, force: true }));
+
+  // Lock tests need a real database, but do not need to repeat fresh-schema creation.
+  const createSeededDbPath = () => {
+    const target = createTempDbPath();
+    fs.cpSync(seed.dbPath, target.dbPath, { recursive: true });
+    return target;
+  };
   it("creates in-memory databases without migration files", async () => {
     const client = await createDb({ path: ":memory:" });
 
@@ -52,7 +68,7 @@ describe("createDb", () => {
   });
 
   it("refuses to open a database directory held by a live process", async () => {
-    const { dbPath, tempRoot } = createTempDbPath();
+    const { dbPath, tempRoot } = createSeededDbPath();
     const first = await createDb({ path: dbPath });
 
     try {
@@ -66,7 +82,7 @@ describe("createDb", () => {
   });
 
   it("allows a database directory to be reopened after close", async () => {
-    const { dbPath, tempRoot } = createTempDbPath();
+    const { dbPath, tempRoot } = createSeededDbPath();
     const first = await createDb({ path: dbPath });
     await first.close();
 
@@ -77,7 +93,7 @@ describe("createDb", () => {
   });
 
   it("reclaims a lock owned by a dead process", async () => {
-    const { dbPath, tempRoot } = createTempDbPath();
+    const { dbPath, tempRoot } = createSeededDbPath();
     const lockPath = `${dbPath}.lock`;
     fs.writeFileSync(
       lockPath,
@@ -95,7 +111,7 @@ describe("createDb", () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-alias-"));
     const dbPath = path.join(tempRoot, "database");
     const aliasPath = path.join(tempRoot, "database-alias");
-    fs.mkdirSync(dbPath);
+    fs.cpSync(seed.dbPath, dbPath, { recursive: true });
     fs.symlinkSync(dbPath, aliasPath, "junction");
     const first = await createDb({ path: dbPath });
 
@@ -110,7 +126,7 @@ describe("createDb", () => {
   });
 
   it("reclaims an incomplete lock left without owner metadata", async () => {
-    const { dbPath, tempRoot } = createTempDbPath();
+    const { dbPath, tempRoot } = createSeededDbPath();
     const lockPath = `${dbPath}.lock`;
     fs.writeFileSync(lockPath, "");
 
