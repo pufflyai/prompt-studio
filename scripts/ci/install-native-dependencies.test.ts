@@ -31,9 +31,12 @@ test("native dependency scripts use the workspace node-gyp version with isolated
         scripts: { install: "node-gyp --version > node-gyp-version.txt" },
       }),
     );
-    // The workspace install has already cached this exact toolchain. Fixture resolution needs no registry I/O.
-    const lock = Bun.spawnSync([process.execPath, "install", "--lockfile-only", "--offline"], { cwd });
-    expect(lock.exitCode).toBe(0);
+    // Reuse metadata on repeated runs; the early CI smoke can start with an empty metadata cache.
+    const lock = Bun.spawnSync([process.execPath, "install", "--lockfile-only", "--prefer-offline"], { cwd });
+    expect({ exitCode: lock.exitCode, output: lock.exitCode === 0 ? "" : lock.stderr.toString() }).toEqual({
+      exitCode: 0,
+      output: "",
+    });
     const install = Bun.spawn(["node", join(import.meta.dirname, "install-native-dependencies.ts")], {
       cwd,
       stdout: "pipe",
