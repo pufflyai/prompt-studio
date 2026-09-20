@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { type ComponentProps, useState } from "react";
 import { createSerializedPromptState } from "../utils/editor-state";
 import { AttachmentList } from "./attachment-list";
-import { keepDraft, suppressRecall, walkTenPrompts, walkThreePrompts } from "./chat-history-story";
+import { keepDraft, walkTenPrompts, walkThreePrompts } from "./chat-history-story";
 import { ChatInput } from "./chat-input";
 import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 
@@ -292,7 +292,8 @@ export const PromptHistoryDraft: Story = {
   play: keepDraft,
 };
 export const PromptHistoryStreaming: Story = {
+  tags: ["!manifest"],
   render: PromptHistory.render,
   args: { ...PromptHistory.args, streaming: true },
-  play: suppressRecall,
+  play: walkThreePrompts,
 };

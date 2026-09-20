@@ -171,7 +171,7 @@ export const ChatInput = (props: ChatInputProps) => {
   const history = useChatInputHistory({
     recentUserMessages,
     text,
-    blocked: streaming || isDisabled || submitting || Boolean(questionPrompt),
+    blocked: isDisabled || submitting || Boolean(questionPrompt),
     resetKey: JSON.stringify([defaultState, editorKey, questionPromptSignature]),
     onChange: (value) => {
       setText(value);

@@ -73,12 +73,6 @@ export const keepDraft = async ({ canvasElement }: { canvasElement: HTMLElement 
   await expect(editor).toHaveTextContent("Second line");
 };
 
-export const suppressRecall = async ({ canvasElement }: { canvasElement: HTMLElement }) => {
-  const editor = await focusEditor(canvasElement);
-  await userEvent.keyboard("{ArrowUp}");
-  await expect(editor.textContent).toBe("");
-};
-
 export const PromptHistoryResetPanel = () => {
   const [conversation, setConversation] = useState(0);
   const [prompt, setPrompt] = useState("Original prompt");
