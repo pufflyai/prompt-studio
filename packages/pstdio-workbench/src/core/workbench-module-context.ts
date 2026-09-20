@@ -165,6 +165,7 @@ export const createModuleContext = (
     },
     resources: {
       ...core.resources,
+      onWillRemove: (listener) => track(core.resources.onWillRemove(listener)),
       registerKind: (kind, metadata) => track(core.resources.registerKind(kind, withModuleMetadata(input, metadata))),
       registerHierarchyProvider: (provider) => track(core.resources.registerHierarchyProvider(provider)),
       registerProvider: (provider) => track(core.resources.registerProvider(provider)),

@@ -73,7 +73,8 @@ export interface DataTableRendererSelectionAction<TParams extends Struct = Struc
 
 export type DataTableRendererRowActivationHandler = RendererCallback<
   { row: DataTableRendererRow },
-  undefined | NavigationTarget
+  // biome-ignore lint/suspicious/noConfusingVoidType: Support existing target returns and explicit navigation callbacks during adoption.
+  void | NavigationTarget
 >;
 
 export interface DataTableRendererContribution extends RendererContributionBase {

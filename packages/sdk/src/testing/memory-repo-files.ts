@@ -16,6 +16,10 @@ export const createMemoryRepoFiles = (): ArtifactMount & { files: Map<string, Ui
     writeText: async (path, value) => {
       files.set(path, encoder.encode(value));
     },
+    updateText: async (path, value) => {
+      if (!files.has(path)) throw new Error(`File not found: ${path}`);
+      files.set(path, encoder.encode(value));
+    },
     readBytes: async (path) => {
       const value = files.get(path);
       if (value === undefined) throw new Error(`File not found: ${path}`);

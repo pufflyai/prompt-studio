@@ -29,6 +29,7 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
     project: { id: projectId, name: "Test Project", shorthand: "T" },
     storage,
     resources,
+    navigation: { open: () => {} },
     invocation: { params },
     events: { emit: async () => ({ delivered: 0 }) },
     notify: { action: async () => ({}), dismiss: async () => [], resolve: async () => [], toast: async () => {} },

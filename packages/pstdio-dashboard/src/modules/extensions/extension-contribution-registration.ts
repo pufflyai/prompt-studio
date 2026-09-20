@@ -18,6 +18,7 @@ import {
   subscribeToExtensionEventFeed,
 } from "@/shared/extensions/extension-webview-broadcast";
 import { createDashboardSettingsWebviewFileCapabilities } from "@/shared/extensions/extension-webview-capabilities";
+import { subscribeToResourceRemovals } from "@/shared/extensions/resource-removal-feed";
 import {
   buildDashboardExtensionMenuRegistrations,
   buildDashboardWorkbenchWhenExpression,
@@ -71,6 +72,11 @@ export const localizeDashboardExtensionCommandResponse = <T extends { extensionI
 export const registerExtensionContributions = (input: RegisterExtensionContributionsInput) => {
   const disposables: Disposable[] = [];
   try {
+    disposables.push({
+      dispose: subscribeToResourceRemovals((resource) => {
+        if (resource.projectId === input.projectId) input.ctx.resources.removed(resource);
+      }),
+    });
     const menuResult = buildDashboardExtensionMenuRegistrations(input.metadata);
     for (const unresolved of menuResult.unresolved) {
       input.ctx.notifications.show({
@@ -111,7 +117,9 @@ export const registerExtensionContributions = (input: RegisterExtensionContribut
             ...fileRendererRefreshEnvelopeFromCommand(body, response),
             projectId: input.projectId,
           });
-          await openSessionCommandResult(input.ctx, input.projectId, response);
+          if (!response.outcome.ok || !response.outcome.navigationRequests?.length) {
+            await openSessionCommandResult(input.ctx, input.projectId, response);
+          }
           return response;
         },
         kanbanAdapter: kanban.adapter,

@@ -25,6 +25,23 @@ export type SetCollectionItemInput = CollectionScope & {
   project_id?: string | null;
 };
 
+const updateCollectionItem = async (db: DbClient, input: SetCollectionItemInput) => {
+  const updated = await db
+    .update(extension_collection_items)
+    .set({ value_json: input.value_json, updated_at: nowTimestamp() })
+    .where(
+      and(
+        eq(extension_collection_items.extension_instance_id, input.extension_instance_id),
+        eq(extension_collection_items.scope_type, input.scope_type),
+        eq(extension_collection_items.scope_id, input.scope_id),
+        eq(extension_collection_items.collection, input.collection),
+        eq(extension_collection_items.item_id, input.item_id),
+      ),
+    )
+    .returning({ item_id: extension_collection_items.item_id });
+  return updated.length === 1;
+};
+
 export const createExtensionStorageDBService = (db: DbClient) => {
   const getKv = async (scope: KvScope, key: string) => {
     const [row] = await db
@@ -221,6 +238,7 @@ export const createExtensionStorageDBService = (db: DbClient) => {
     listCollection,
     getCollectionItem,
     setCollectionItem,
+    updateCollectionItem: (input: SetCollectionItemInput) => updateCollectionItem(db, input),
     createCollectionItemIfAbsent,
     deleteCollectionItem,
     deleteCollectionItemIfValue,

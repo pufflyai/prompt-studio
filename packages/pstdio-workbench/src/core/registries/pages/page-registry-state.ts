@@ -52,11 +52,7 @@ export const resolveModePlacementSet = <Value>(input: {
 }) => {
   if (!input.modeId) return undefined;
   if (input.desired) return input.desired;
-  if (input.modeId !== input.current.activeModeId || input.projectId !== input.current.projectId)
-    return input.resolveModePlacements(input.modeId, input.location, input.projectId, input.pageId);
-  return input.current.placements.filter(
-    (placement) => placement.identity.kind === "mode" && placement.identity.modeId === input.modeId,
-  );
+  return input.resolveModePlacements(input.modeId, input.location, input.projectId, input.pageId);
 };
 
 export const refreshActiveModePlacements = <Value>(input: {

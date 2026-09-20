@@ -12,6 +12,7 @@ import type {
 import type { ExtensionConnectionsApi, ExtensionLoggerApi } from "./connections";
 import type { EventDeliveryResult, EventRef } from "./events";
 import type { JsonObject, MaybePromise, Struct } from "./json";
+import type { NavigationTarget } from "./navigation-target";
 import type { ExtensionResourcesApi, RendererContext, RepoContext, ResourceAnchor, ResourceRef } from "./resources";
 import type { SlotInvocationContext } from "./slots";
 import type { ExtensionWorkspacesApi } from "./workspaces";
@@ -20,6 +21,8 @@ export interface ExtensionStorageCollectionApi<TItem = unknown> {
   get(id: string): Promise<TItem | undefined>;
   list(): Promise<TItem[]>;
   put(id: string, value: TItem): Promise<void>;
+  /** Replace an existing item atomically. Throws if the item was deleted. */
+  update(id: string, value: TItem): Promise<void>;
   createIfAbsent(id: string, value: TItem): Promise<boolean>;
   deleteIfValue(id: string, value: TItem): Promise<boolean>;
   create(value: TItem): Promise<TItem & { id: string }>;
@@ -78,6 +81,8 @@ export interface ArtifactMount {
   exists(path: string): Promise<boolean>;
   readText(path: string): Promise<string>;
   writeText(path: string, value: string): Promise<void>;
+  /** Replace existing text. Fails if missing and never recreates a concurrently deleted file. */
+  updateText(path: string, value: string): Promise<void>;
   readBytes(path: string): Promise<Uint8Array>;
   writeBytes(path: string, value: Uint8Array): Promise<void>;
   list(pattern?: string): Promise<ArtifactFile[]>;
@@ -272,6 +277,8 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   source?: CommandSource;
   storage: ExtensionStorageApi;
   resources: ExtensionResourcesApi;
+  /** Records navigation for the invoking UI; headless execution opens nothing. */
+  navigation: { open(target: NavigationTarget): void };
   artifacts: ExtensionArtifactApi;
   /** Working tree of the invocation's repo, scoped to its root. Absent for non-repo (event/hook) invocations. */
   repoFiles?: ArtifactMount;

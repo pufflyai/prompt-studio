@@ -117,6 +117,10 @@ const createStorage = (seed: BenchStorageSeed = {}): CommandRunnerEnvironment["s
         async list() {
           return [...items.values()] as never;
         },
+        async update(id, value) {
+          if (!items.has(id)) throw new Error(`Item not found: ${id}`);
+          items.set(id, value);
+        },
         async put(id, value) {
           items.set(id, value);
         },

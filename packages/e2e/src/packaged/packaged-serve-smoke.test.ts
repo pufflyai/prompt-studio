@@ -10,6 +10,7 @@ import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
+import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
 
@@ -188,10 +189,12 @@ test(
     try {
       const extensionSource = writeExtensionWithDependency(tempRoot);
       const installEnvironmentProbe = writeExtensionInstallEnvironmentProbe(tempRoot);
+      const navigationProbe = writeNavigationExtension(tempRoot);
       const started = await startPackagedServe(tempRoot, {
         PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify([
           { source: extensionSource, installName: "dep-ext", skipInstall: true },
           { source: installEnvironmentProbe, installName: "install-env-probe" },
+          { source: navigationProbe, installName: "navigation-probe" },
         ]),
         HTTPS_PROXY: "http://127.0.0.1:9",
         NPM_CONFIG_REGISTRY: "http://127.0.0.1:9",
@@ -222,6 +225,11 @@ test(
       expect(extension).toMatchObject({
         enabled: true,
         name: "dep-ext",
+      });
+      await expectPackagedNavigation({
+        baseUrl: started.baseUrl,
+        projectId: project.id,
+        headers: runtimeAuthorization(started.descriptor),
       });
 
       expect(JSON.parse(readFileSync(join(tempRoot, "install-env.json"), "utf8"))).toEqual({

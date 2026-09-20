@@ -71,6 +71,46 @@ const setupPage = () => {
   return workbench;
 };
 describe("executeWorkbenchExtensionCommand", () => {
+  test("applies explicit navigation once while returning ordinary data", async () => {
+    const workbench = setupPage();
+    const value = { id: "created" };
+    const result = await executeWorkbenchExtensionCommand(
+      {
+        projectId: "project-1",
+        workbench,
+        executeCommand: () => ({
+          outcome: {
+            ok: true,
+            status: "success",
+            value,
+            navigationRequests: [{ kind: "page", page: { kind: "page", id: "tickets", extensionId: "acme.planner" } }],
+          },
+        }),
+      },
+      "create",
+    );
+    expect(result).toEqual(value);
+    expect(workbench.pages.store.getState().activePageId).toBe("tickets");
+  });
+
+  test("returns target-shaped data without navigation", async () => {
+    const workbench = setupPage();
+    const value = { kind: "page", page: { kind: "page", id: "tickets", extensionId: "acme.planner" } };
+    expect(
+      await executeWorkbenchExtensionCommand(
+        {
+          projectId: "project-1",
+          workbench,
+          executeCommand: () => ({ outcome: { ok: true, status: "success", value } }),
+        },
+        "query",
+      ),
+    ).toEqual(value);
+    expect(workbench.pages.store.getState().activePageId).toBe("ticket");
+  });
+});
+
+describe("existing extension behavior during SDK preparation", () => {
   test("closes a scoped page resource through a breadcrumb delete action", async () => {
     const workbench = setupPage();
     const activeTicket = workbench.getPrimaryResource()!;

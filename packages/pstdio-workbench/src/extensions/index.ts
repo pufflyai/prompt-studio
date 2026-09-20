@@ -45,9 +45,11 @@ export {
   isExtensionNavigationTarget,
   type ToWorkbenchNavigationTargetInput,
   toWorkbenchNavigationTarget,
-  toWorkbenchNavigationTargetResult,
 } from "./host/extension-navigation-target";
-export type { WorkbenchExtensionCommandContext } from "./host/workbench-extension-command";
+export {
+  executeWorkbenchExtensionCommandResponse,
+  type WorkbenchExtensionCommandContext,
+} from "./host/workbench-extension-command";
 export {
   type RegisterWorkbenchExtensionContributionsInput,
   registerWorkbenchExtensionContributions,

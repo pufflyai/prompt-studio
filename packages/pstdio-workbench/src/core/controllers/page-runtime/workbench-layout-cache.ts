@@ -1,3 +1,4 @@
+import { type ResourceRef, resourceKey } from "@pstdio/sdk/extensions";
 import type { LayoutPersistenceAdapter } from "../../registries/layout/layout-model-types";
 import {
   type WorkbenchLayout,
@@ -27,6 +28,9 @@ const modeScope = (projectId: string | undefined, modeId: string) =>
 
 /** Page caches hold page and shell placements. Shared mode choices have one project/mode owner. */
 export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
+  // The persistence adapter does not enumerate keys. Track only scopes visited
+  // by this workbench so live removal can edit their existing cached layouts.
+  const scopes = new Set<string | undefined>();
   const adapter: LayoutPersistenceAdapter | undefined = input.persistence
     ? {
         getLayout: (scope) => input.persistence?.getSnapshot(scope)?.layout,
@@ -35,11 +39,25 @@ export const createWorkbenchLayoutCache = (input: createWorkbenchInput) => {
         dispose: input.persistence.dispose,
       }
     : input.layoutPersistence;
-  const read = (scope?: string) =>
-    runWorkbenchEffect(`layout cache read for ${scope ?? "unscoped"}`, () => adapter?.getLayout(scope));
-  const write = (layout: WorkbenchLayout, scope?: string) =>
-    runWorkbenchEffect(`layout cache write for ${scope ?? "unscoped"}`, () => adapter?.setLayout(layout, scope));
+  const read = (scope?: string) => {
+    scopes.add(scope);
+    return runWorkbenchEffect(`layout cache read for ${scope ?? "unscoped"}`, () => adapter?.getLayout(scope));
+  };
+  const write = (layout: WorkbenchLayout, scope?: string) => {
+    scopes.add(scope);
+    return runWorkbenchEffect(`layout cache write for ${scope ?? "unscoped"}`, () => adapter?.setLayout(layout, scope));
+  };
   return {
+    removeResource(resource: ResourceRef) {
+      for (const scope of scopes) {
+        const layout = read(scope);
+        if (layout)
+          write(
+            selectPlacements(layout, (placement) => resourceKey(placement.resource) !== resourceKey(resource)),
+            scope,
+          );
+      }
+    },
     layout: adapter
       ? {
           ...adapter,

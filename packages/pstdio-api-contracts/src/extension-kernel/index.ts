@@ -45,6 +45,7 @@ export {
   worktreeEvents,
 } from "./kernel-slots";
 export { isLocalizedString, type Localizable, type LocalizedString, l10n } from "./l10n";
+export { isNavigationTarget, qualifyNavigationTarget } from "./navigation";
 export { packageAsset } from "./package-asset";
 export { commandRef, eventRef } from "./refs";
 export { defineSlot } from "./slots";
