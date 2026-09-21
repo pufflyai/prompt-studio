@@ -1,7 +1,9 @@
 import { Box } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react";
 import { type ComponentProps, useState } from "react";
+import { createSerializedPromptState } from "../utils/editor-state";
 import { AttachmentList } from "./attachment-list";
+import { keepDraft, walkTenPrompts, walkThreePrompts } from "./chat-history-story";
 import { ChatInput } from "./chat-input";
 import type { ChatInputQuestionPrompt } from "./chat-input-question-prompt";
 
@@ -18,39 +20,7 @@ export default meta;
 type Story = StoryObj<typeof ChatInput>;
 type ChatInputProps = ComponentProps<typeof ChatInput>;
 
-const initialState = JSON.stringify(
-  {
-    root: {
-      children: [
-        {
-          children: [
-            {
-              detail: 0,
-              format: 0,
-              mode: "normal",
-              style: "",
-              text: "",
-              type: "text",
-              version: 1,
-            },
-          ],
-          direction: "ltr",
-          format: "",
-          indent: 0,
-          type: "paragraph",
-          version: 1,
-        },
-      ],
-      direction: "ltr",
-      format: "",
-      indent: 0,
-      type: "root",
-      version: 1,
-    },
-  },
-  null,
-  2,
-);
+const initialState = createSerializedPromptState("");
 
 export const Default: Story = {
   args: {
@@ -297,4 +267,33 @@ export const QuestionMultiStep: Story = {
       alert(`Submitted response: ${text}`);
     },
   },
+};
+
+export const PromptHistory: Story = {
+  render: (args) => (
+    <Box w="32rem">
+      <ChatInput {...args} />
+    </Box>
+  ),
+  args: {
+    defaultState: initialState,
+    recentUserMessages: ["Summarize the plan", "Show the next steps", "Explain the project"],
+  },
+  play: walkThreePrompts,
+};
+export const PromptHistoryCap: Story = {
+  render: PromptHistory.render,
+  args: { defaultState: initialState, recentUserMessages: Array.from({ length: 12 }, (_, i) => `Prompt ${12 - i}`) },
+  play: walkTenPrompts,
+};
+export const PromptHistoryDraft: Story = {
+  render: PromptHistory.render,
+  args: PromptHistory.args,
+  play: keepDraft,
+};
+export const PromptHistoryStreaming: Story = {
+  tags: ["!manifest"],
+  render: PromptHistory.render,
+  args: { ...PromptHistory.args, streaming: true },
+  play: walkThreePrompts,
 };

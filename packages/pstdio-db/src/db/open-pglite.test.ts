@@ -1,11 +1,13 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { mkdtempSync, readFileSync, rmSync, unlinkSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, unlinkSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { openPglite } from "./open-pglite";
 
 let image: Blob;
+let existingHome: string;
 const homes: string[] = [];
 const createHome = () => {
   const home = mkdtempSync(join(tmpdir(), "pstdio-bootstrap-db-"));
@@ -14,17 +16,19 @@ const createHome = () => {
 };
 
 beforeAll(async () => {
-  const source = await PGlite.create();
+  existingHome = createHome();
+  const source = await PGlite.create(existingHome);
   try {
     await source.exec("CREATE TABLE bootstrap_probe (value text); INSERT INTO bootstrap_probe VALUES ('image');");
     image = await source.dumpDataDir("gzip");
+    await source.exec("UPDATE bootstrap_probe SET value = 'user data';");
   } finally {
     await source.close();
   }
 });
 
-afterAll(() => {
-  for (const home of homes) rmSync(home, { recursive: true, force: true });
+afterAll(async () => {
+  await Promise.all(homes.map((home) => rm(home, { recursive: true, force: true })));
 });
 
 test("initializes an empty database directory from its packaged image", async () => {
@@ -47,9 +51,8 @@ test("initializes an in-memory database from its packaged image", async () => {
 
 test("preserves existing database records when a packaged image is available", async () => {
   const home = createHome();
-  const existing = await PGlite.create(home, { loadDataDir: image });
-  await existing.exec("UPDATE bootstrap_probe SET value = 'user data';");
-  await existing.close();
+  // Copy a closed database so this case tests reopen behavior without another bootstrap.
+  cpSync(existingHome, home, { recursive: true });
   const db = openPglite(home, { loadDataDir: image });
   try {
     expect((await db.query("SELECT value FROM bootstrap_probe")).rows).toEqual([{ value: "user data" }]);
@@ -60,8 +63,7 @@ test("preserves existing database records when a packaged image is available", a
 
 test("leaves a damaged database intact instead of replacing it with the packaged image", async () => {
   const home = createHome();
-  const existing = await PGlite.create(home, { loadDataDir: image });
-  await existing.close();
+  cpSync(existingHome, home, { recursive: true });
   const versionPath = join(home, "PG_VERSION");
   const version = readFileSync(versionPath);
   unlinkSync(join(home, "global", "pg_control"));

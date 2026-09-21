@@ -31,8 +31,12 @@ test("native dependency scripts use the workspace node-gyp version with isolated
         scripts: { install: "node-gyp --version > node-gyp-version.txt" },
       }),
     );
-    const lock = Bun.spawnSync([process.execPath, "install", "--lockfile-only"], { cwd });
-    expect(lock.exitCode).toBe(0);
+    // Reuse metadata on repeated runs; the early CI smoke can start with an empty metadata cache.
+    const lock = Bun.spawnSync([process.execPath, "install", "--lockfile-only", "--prefer-offline"], { cwd });
+    expect({ exitCode: lock.exitCode, output: lock.exitCode === 0 ? "" : lock.stderr.toString() }).toEqual({
+      exitCode: 0,
+      output: "",
+    });
     const install = Bun.spawn(["node", join(import.meta.dirname, "install-native-dependencies.ts")], {
       cwd,
       stdout: "pipe",
