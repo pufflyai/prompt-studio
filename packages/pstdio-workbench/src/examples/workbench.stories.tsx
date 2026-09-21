@@ -3,6 +3,7 @@ import { createWorkbench } from "../core";
 import { createStorybookArtifactsBridgeDocument } from "./artifacts-webview/bridge-document.storybook";
 import { createArtifactsWebviewExampleModule } from "./artifacts-webview/module";
 import artifactsWebviewSource from "./artifacts-webview/module.tsx?raw";
+import { checkFileRendererLifecycle } from "./file-renderer/file-renderer-story-interactions";
 import { createFileRendererErrorStoryModule, createFileRendererStoryModule } from "./file-renderer/module";
 import fileRendererSource from "./file-renderer/module.tsx?raw";
 import { createHelloWorldModule } from "./hello-world/module";
@@ -116,6 +117,7 @@ export const FileRenderer: Story = {
     fileRendererSource,
   ),
   render: () => <WorkbenchStory workbench={fileRendererWorkbench} />,
+  play: ({ canvasElement }) => checkFileRendererLifecycle(canvasElement, fileRendererWorkbench),
 };
 
 export const FileRendererLoadError: Story = {
