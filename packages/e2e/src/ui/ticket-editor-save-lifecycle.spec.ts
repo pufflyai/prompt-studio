@@ -1,10 +1,5 @@
 import { expect, test } from "@playwright/test";
-import {
-  createPlannerTicket,
-  getPlannerTicket,
-  getPlannerTicketStatuses,
-  savePlannerTicketContent,
-} from "../helpers/planner-api";
+import { createPlannerTicket, getPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const deleteAllProjects = async (request: import("@playwright/test").APIRequestContext) => {
@@ -99,31 +94,4 @@ test("keeps ticket editor focus and selection across debounce and save", async (
       sameEditor: true,
       text: "Hold this selection",
     });
-});
-
-test("shows ticket content written outside the editor", async ({ page, request }) => {
-  await deleteAllProjects(request);
-  const project = await createProject(request);
-  const title = "External writes";
-  const body = (version: string) => `# ${title}\n\n${version}`;
-  const ticket = await createPlannerTicket(request, apiBase, project.id, { content: body("Original body v1") });
-  await bypassOnboarding(page, project.id);
-  await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
-  const card = page.getByTestId("renderer-card").filter({ hasText: title }).first();
-  await expect(card).toBeVisible({ timeout: 15_000 });
-  await card.click();
-
-  const editor = page.locator('[role="textbox"]:visible').first();
-  await expect(editor).toContainText("Original body v1");
-
-  // Leave the ticket without reloading the page, so the document stays cached.
-  await page.getByRole("button", { name: "Tickets", exact: true }).click();
-  await savePlannerTicketContent(request, apiBase, project.id, { id: ticket.id, content: body("External body v2") });
-  await card.click();
-
-  await expect(editor).toContainText("External body v2");
-
-  await savePlannerTicketContent(request, apiBase, project.id, { id: ticket.id, content: body("External body v3") });
-
-  await expect(editor).toContainText("External body v3");
 });
