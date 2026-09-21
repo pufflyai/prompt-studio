@@ -180,3 +180,57 @@ test("keeps a workspace terminal in its worktree and alive when the workspace is
     rmSync(repoRoot, { recursive: true, force: true });
   }
 });
+
+const readShellPid = async (page: import("@playwright/test").Page) => {
+  const terminalInput = page.getByRole("textbox", { name: "Terminal input" });
+  await expect(terminalInput).toBeFocused();
+  await terminalInput.pressSequentially("printf 'PSTDIO_SHELL:%s:\\n' $$");
+  await terminalInput.press("Enter");
+  const rows = page.locator(".xterm:visible .xterm-rows");
+  await expect(rows).toContainText(/PSTDIO_SHELL:\d+:/);
+  const shown = await rows.innerText();
+  const pid = Number(/PSTDIO_SHELL:(\d+):/.exec(shown)?.[1] ?? 0);
+  expect(pid).toBeGreaterThan(0);
+  return pid;
+};
+
+const isAlive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+test("closing a terminal tab leaves no shell process behind", async ({ page, request }) => {
+  const projectResponse = await request.post(`${apiBase}/v1/projects`, {
+    data: { name: "PS-387 Terminal Cleanup" },
+  });
+  expect(projectResponse.ok()).toBe(true);
+  const project = (await projectResponse.json()) as { id: string };
+
+  try {
+    await prepareDashboard(page, project.id);
+    await page.goto(`/projects/${project.id}`);
+
+    const showSecondary = page.getByRole("button", { name: "Show Secondary Panel" });
+    if (await showSecondary.isVisible()) await showSecondary.click();
+    await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
+    await expect(page.getByRole("textbox", { name: "Terminal input" })).toBeVisible();
+
+    const shellPid = await readShellPid(page);
+    expect(isAlive(shellPid)).toBe(true);
+
+    await page
+      .locator('[data-workbench-panel-header="secondary"]')
+      .getByRole("button", { name: /^Close / })
+      .first()
+      .click();
+    await expect(page.locator(".xterm:visible")).toHaveCount(0);
+
+    await expect(() => expect(isAlive(shellPid)).toBe(false)).toPass({ timeout: 10_000 });
+  } finally {
+    await request.delete(`${apiBase}/v1/projects/${project.id}`);
+  }
+});

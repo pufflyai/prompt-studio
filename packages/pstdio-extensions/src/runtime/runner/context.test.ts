@@ -28,7 +28,7 @@ describe("context factory", () => {
 
     const { api: storage } = makeStorage();
     const runner = createCommandRunner(runtime, {
-      buildEnvironment: () => ({ ...stubEnvironment(storage), terminal }),
+      buildEnvironment: () => stubEnvironment(storage, { terminal }),
     });
 
     const outcome = await runner.execute({ commandId: "pstdio.lab.command.probe", projectId: "p1" });

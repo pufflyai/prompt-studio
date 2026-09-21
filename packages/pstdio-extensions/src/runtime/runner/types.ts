@@ -30,8 +30,18 @@ import type {
   WorkbenchAttachmentInvocationContext,
   WorkspaceFilesMount,
 } from "@pstdio/sdk/extensions";
+import type { InvocationScope } from "./scope";
 
 export const DEFAULT_MAX_COMMAND_DEPTH = 10;
+
+/**
+ * Host helpers that create resources. They are rebound to the invocation that uses them,
+ * so everything they create is released when that invocation ends.
+ */
+export type ScopedHostApis = Pick<
+  CommandRunnerEnvironment,
+  "sessions" | "workspaces" | "connections" | "process" | "terminal"
+>;
 
 export interface CommandRunnerEnvironment {
   project: ExtensionProjectContext;
@@ -57,8 +67,8 @@ export interface CommandRunnerEnvironment {
   /** Host PTY supervisor; absent when the host does not support terminals. */
   terminal?: ExtensionTerminalApi;
   settings: ExtensionSettingsApi;
-  /** Rebinds host helpers that must participate in a command's cancellation scope. */
-  withSignal?: (signal: AbortSignal) => Pick<CommandRunnerEnvironment, "sessions" | "workspaces">;
+  /** Rebinds every resource-creating host helper to the invocation that uses it. */
+  withScope: (scope: InvocationScope) => ScopedHostApis;
 }
 
 export interface BuildEnvironmentInput {

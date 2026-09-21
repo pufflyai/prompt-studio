@@ -14,15 +14,22 @@ import type {
 } from "@pstdio/sdk/extensions";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { type EventDispatcher, refId } from "./dispatch";
+import type { InvocationScope } from "./scope";
 import type {
   BuildEnvironmentInput,
   CommandRunnerEnvironment,
   CommandRunnerHostDeps,
   InternalExecuteInput,
+  ScopedHostApis,
 } from "./types";
 
 export interface ContextFactory {
-  buildExtensionContext(env: CommandRunnerEnvironment, ids: BuildEnvironmentInput, depth: number): ExtensionContextBase;
+  buildExtensionContext(
+    env: CommandRunnerEnvironment,
+    ids: BuildEnvironmentInput,
+    depth: number,
+    scope?: InvocationScope,
+  ): ExtensionContextBase;
   buildCommandContext(
     env: CommandRunnerEnvironment,
     owner: { extensionId: string; name: string },
@@ -33,21 +40,23 @@ export interface ContextFactory {
     source: CommandSource | undefined,
     repo: RepoContext | undefined,
     depth: number,
+    scope: InvocationScope,
     workspace?: { workspaceDir?: string; workspaceId?: string },
-    signal?: AbortSignal,
   ): CommandContext;
 }
 
 export interface RunnerState {
   runtime: ExtensionRuntime;
   deps: CommandRunnerHostDeps;
+  logger: ExtensionLoggerApi;
   maxDepth: number;
   generateId: () => string;
   dispatcher: EventDispatcher;
   factory: ContextFactory;
 }
 
-interface CommandExecutionScope {
+/** Where a nested `ctx.commands.execute()` runs from. */
+interface NestedExecuteOrigin {
   depth: number;
   extensionId: string;
   projectId: string;
@@ -56,28 +65,24 @@ interface CommandExecutionScope {
   signal?: AbortSignal;
 }
 
+const unavailableConnections: ExtensionConnectionsApi = {
+  request: async () => {
+    throw new Error("Extension connections are not available in this host.");
+  },
+  stream: async function* () {
+    yield await Promise.reject(new Error("Extension connections are not available in this host."));
+  },
+};
+
 const buildEventsApi = (dispatcher: EventDispatcher, extensionId: string): ExtensionEventsApi => ({
   emit: async (event, payload) => dispatcher.dispatch(refId(event, extensionId), payload as Struct),
 });
 
-const connectionsWithSignal = (connections: ExtensionConnectionsApi, signal: AbortSignal): ExtensionConnectionsApi => ({
-  request: <TBody>(connectionId: string, input: Parameters<ExtensionConnectionsApi["request"]>[1]) =>
-    connections.request<TBody>(connectionId, {
-      ...input,
-      signal: input.signal ? AbortSignal.any([signal, input.signal]) : signal,
-    }),
-  stream: (connectionId, input) =>
-    connections.stream(connectionId, {
-      ...input,
-      signal: input.signal ? AbortSignal.any([signal, input.signal]) : signal,
-    }),
-});
-
 const buildCommandsApi = (
-  createExecute: (scope: CommandExecutionScope) => CommandHelpersApi["execute"],
-  scope: CommandExecutionScope,
+  createExecute: (origin: NestedExecuteOrigin) => CommandHelpersApi["execute"],
+  origin: NestedExecuteOrigin,
 ): CommandHelpersApi => ({
-  execute: createExecute(scope),
+  execute: createExecute(origin),
   continue: () => ({ type: "continue" }),
   patchParams: (params) => ({ type: "patchParams", params }),
   replaceParams: (params) => ({ type: "replaceParams", params }),
@@ -87,29 +92,29 @@ const buildCommandsApi = (
 
 export const createExecuteBuilder = (runRef: {
   run: (input: InternalExecuteInput) => Promise<CommandOutcome>;
-}): ((scope: CommandExecutionScope) => CommandHelpersApi["execute"]) => {
-  return (scope) => async (command, invocation) => {
-    const id = refId(command, scope.extensionId);
+}): ((origin: NestedExecuteOrigin) => CommandHelpersApi["execute"]) => {
+  return (origin) => async (command, invocation) => {
+    const id = refId(command, origin.extensionId);
     const outcome = await runRef.run({
       commandId: id,
-      projectId: scope.projectId,
+      projectId: origin.projectId,
       params: (invocation?.params ?? {}) as JsonObject,
       resource: invocation?.resource,
       repo: invocation?.repoId
         ? ({
-            projectId: scope.projectId,
+            projectId: origin.projectId,
             repoId: invocation.repoId,
             path: invocation.repoPath ?? "",
           } satisfies RepoContext)
         : undefined,
       slot: invocation?.slot,
       attachment: invocation?.attachment,
-      workspaceDir: scope.workspaceDir,
-      workspaceId: scope.workspaceId,
+      workspaceDir: origin.workspaceDir,
+      workspaceId: origin.workspaceId,
       source: "api",
       metadata: invocation?.metadata,
-      signal: scope.signal,
-      depth: scope.depth + 1,
+      signal: origin.signal,
+      depth: origin.depth + 1,
     });
     return outcome as CommandOutcome<never>;
   };
@@ -118,15 +123,17 @@ export const createExecuteBuilder = (runRef: {
 export const createContextFactory = (
   dispatcher: EventDispatcher,
   logger: ExtensionLoggerApi,
-  createExecute: (scope: CommandExecutionScope) => CommandHelpersApi["execute"],
+  createExecute: (origin: NestedExecuteOrigin) => CommandHelpersApi["execute"],
 ): ContextFactory => ({
-  buildExtensionContext(env, ids, depth) {
-    const scope = {
+  buildExtensionContext(env, ids, depth, scope) {
+    const hostApis: ScopedHostApis = scope ? env.withScope(scope) : env;
+    const origin = {
       depth,
       extensionId: ids.extensionId,
       projectId: ids.projectId,
       workspaceDir: ids.workspaceDir,
       workspaceId: ids.workspaceId,
+      signal: scope?.signal,
     };
 
     return {
@@ -144,24 +151,17 @@ export const createContextFactory = (
       extensionFiles: env.extensionFiles,
       files: env.files,
       skills: env.skills,
-      sessions: env.sessions,
-      workspaces: env.workspaces,
+      sessions: hostApis.sessions,
+      workspaces: hostApis.workspaces,
       repos: env.repos,
-      commands: buildCommandsApi(createExecute, scope),
+      commands: buildCommandsApi(createExecute, origin),
       events: buildEventsApi(dispatcher, ids.extensionId),
       activity: env.activity,
       notify: env.notify,
-      process: env.process,
+      process: hostApis.process,
       net: env.net,
-      connections: env.connections ?? {
-        request: async () => {
-          throw new Error("Extension connections are not available in this host.");
-        },
-        stream: async function* () {
-          yield await Promise.reject(new Error("Extension connections are not available in this host."));
-        },
-      },
-      terminal: env.terminal,
+      connections: hostApis.connections ?? unavailableConnections,
+      terminal: hostApis.terminal,
       logger,
       settings: env.settings,
     };
@@ -177,8 +177,8 @@ export const createContextFactory = (
     source,
     repo,
     depth,
+    scope,
     workspace,
-    signal,
   ) {
     const base = this.buildExtensionContext(
       env,
@@ -190,29 +190,13 @@ export const createContextFactory = (
         workspaceId: workspace?.workspaceId,
       },
       depth,
+      scope,
     );
-    const commandSignal = signal ?? new AbortController().signal;
-    const connections = signal ? connectionsWithSignal(base.connections, signal) : base.connections;
-    const scopedEnvironment = signal ? env.withSignal?.(signal) : undefined;
-    if (signal && !scopedEnvironment) {
-      throw new Error("Command environment cannot scope host helpers to cancellation.");
-    }
     return {
       ...base,
-      commands: buildCommandsApi(createExecute, {
-        depth,
-        extensionId: owner.extensionId,
-        projectId,
-        workspaceDir: workspace?.workspaceDir,
-        workspaceId: workspace?.workspaceId,
-        signal,
-      }),
-      connections,
-      sessions: scopedEnvironment?.sessions ?? base.sessions,
-      workspaces: scopedEnvironment?.workspaces ?? base.workspaces,
       commandId,
       invocationId,
-      signal: commandSignal,
+      signal: scope.signal,
       invocation: {
         source,
         attachment: invocation.attachment,

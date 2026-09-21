@@ -26,6 +26,23 @@ const shellCommand = () => (process.platform === "win32" ? [process.env.ComSpec 
 const line = (command: string) => `${command}${process.platform === "win32" ? "\r" : "\n"}`;
 const posixOnlyTest = process.platform === "win32" ? test.skip : test;
 
+const isAlive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const waitForExit = async (pid: number) => {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    if (!isAlive(pid)) return false;
+    await Bun.sleep(25);
+  }
+  return true;
+};
+
 const waitForInitialOutput = async (events: TerminalEvent[]) => {
   if (process.platform !== "win32") return;
   for (let attempt = 0; attempt < 50; attempt += 1) {
@@ -184,5 +201,63 @@ describe("terminal supervisor", () => {
       message: "terminal session kill",
       metadata: { id: handle.id, signal: "SIGKILL" },
     });
+  });
+
+  posixOnlyTest("kill stops the shell and everything it started, and settles", async () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    // An interactive shell owning a PTY ignores SIGTERM, which is what used to hang kill().
+    const handle = supervisor.api.openSession({ command: ["/bin/bash", "--norc", "-i"], cols: 80, rows: 24 });
+    const events: TerminalEvent[] = [];
+    void (async () => {
+      for await (const event of handle.events()) events.push(event);
+    })();
+
+    // Wait for the prompt so the shell reads the background job instead of dropping it.
+    for (let attempt = 0; attempt < 40 && !events.some((event) => event.kind === "data"); attempt += 1) {
+      await Bun.sleep(25);
+    }
+
+    // The shell reports the pid of its background job, so the test can check that job directly.
+    handle.write("sleep 271 & printf 'PSTDIO_JOB:%s:\\n' $!\n");
+    let jobPid = 0;
+    for (let attempt = 0; attempt < 40 && jobPid === 0; attempt += 1) {
+      jobPid = Number(/PSTDIO_JOB:(\d+):/.exec(decode(events))?.[1] ?? 0);
+      if (jobPid === 0) await Bun.sleep(25);
+    }
+    expect(isAlive(jobPid)).toBe(true);
+
+    const settled = await Promise.race([handle.kill().then(() => "settled"), Bun.sleep(1500).then(() => "hung")]);
+    expect(settled).toBe("settled");
+
+    expect(await waitForExit(jobPid)).toBe(false);
+    expect(supervisor.activity()).toEqual([]);
+  });
+
+  posixOnlyTest("kill stops a session child that ignores the stop signal", async () => {
+    const { logger } = createRecordingLogger();
+    const supervisor = createTerminalSupervisor({ logger });
+    // Without job control the background job stays in the session's process group, so the
+    // shell can exit on the hangup while the job it started keeps running.
+    const handle = supervisor.api.openSession({
+      command: ["/bin/sh", "-c", "(trap '' HUP; sleep 271) & printf 'PSTDIO_JOB:%s:\\n' $!; wait"],
+      cols: 80,
+      rows: 24,
+    });
+    const events: TerminalEvent[] = [];
+    void (async () => {
+      for await (const event of handle.events()) events.push(event);
+    })();
+
+    let jobPid = 0;
+    for (let attempt = 0; attempt < 40 && jobPid === 0; attempt += 1) {
+      jobPid = Number(/PSTDIO_JOB:(\d+):/.exec(decode(events))?.[1] ?? 0);
+      if (jobPid === 0) await Bun.sleep(25);
+    }
+    expect(isAlive(jobPid)).toBe(true);
+
+    await handle.kill();
+
+    expect(await waitForExit(jobPid)).toBe(false);
   });
 });

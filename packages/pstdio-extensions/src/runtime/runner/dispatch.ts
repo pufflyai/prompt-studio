@@ -9,6 +9,7 @@ import type {
 } from "@pstdio/sdk/extensions";
 import { resolveEventReferenceId } from "@pstdio/sdk/extensions";
 import type { ExtensionRuntime, NormalizedExtension } from "../../types/runtime";
+import { createInvocationScope, type InvocationScope } from "./scope";
 import type { BuildEnvironmentInput, CommandRunnerHostDeps } from "./types";
 
 export const refId = (ref: CommandRef | EventRef | string, ownerExtensionId?: string): string => {
@@ -32,7 +33,12 @@ export interface DispatcherDeps {
   deps: CommandRunnerHostDeps;
   generateId: () => string;
   logger: ExtensionLoggerApi;
-  buildEventContext: (input: BuildEnvironmentInput, eventId: string, deliveryId: string) => Promise<EventContext>;
+  buildEventContext: (
+    input: BuildEnvironmentInput,
+    eventId: string,
+    deliveryId: string,
+    scope: InvocationScope,
+  ) => Promise<EventContext>;
 }
 
 const findExtension = (runtime: ExtensionRuntime, id: string): NormalizedExtension | undefined =>
@@ -48,6 +54,8 @@ export const createEventDispatcher = (input: DispatcherDeps): EventDispatcher =>
       const ext = findExtension(input.runtime, sub.extensionId);
       if (!ext) continue;
 
+      // One delivery owns the host resources its handler creates.
+      const scope = createInvocationScope({ logger: input.logger });
       try {
         const workspaceDir = (payload as { workspaceDir?: string }).workspaceDir;
         const workspaceId = (payload as { workspaceId?: string }).workspaceId;
@@ -61,6 +69,7 @@ export const createEventDispatcher = (input: DispatcherDeps): EventDispatcher =>
           },
           eventId,
           input.generateId(),
+          scope,
         );
 
         await sub.handler(ctx, payload);
@@ -75,6 +84,8 @@ export const createEventDispatcher = (input: DispatcherDeps): EventDispatcher =>
           metadata: { eventId },
         });
         input.logger.warn(`Hook "${sub.id}" failed: ${message}`, { eventId });
+      } finally {
+        await scope.close();
       }
     }
 

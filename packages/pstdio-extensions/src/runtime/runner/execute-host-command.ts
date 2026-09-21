@@ -12,6 +12,7 @@ import { lifecycleEventId } from "./dispatch";
 import { createEnvironmentCache, environmentFailedOutcome, withNotices } from "./environment";
 import { middlewaresFor, serializeError } from "./internals";
 import { type MiddlewareChainResult, runMiddlewareChain } from "./middleware";
+import { createInvocationScope, type InvocationScope } from "./scope";
 import type { HostCommandExecuteInput } from "./types";
 
 const buildHostRequestPayload = (
@@ -34,6 +35,19 @@ const buildHostRequestPayload = (
 export const executeHostCommand = async <TResult>(
   state: RunnerState,
   input: HostCommandExecuteInput<TResult>,
+): Promise<CommandOutcome<TResult>> => {
+  const scope = createInvocationScope({ logger: state.logger, parent: input.signal });
+  try {
+    return await runHostCommand(state, input, scope);
+  } finally {
+    await scope.close();
+  }
+};
+
+const runHostCommand = async <TResult>(
+  state: RunnerState,
+  input: HostCommandExecuteInput<TResult>,
+  scope: InvocationScope,
 ): Promise<CommandOutcome<TResult>> => {
   if (input.signal?.aborted) throw input.signal.reason;
   const notices: CommandNotice[] = [];
@@ -73,8 +87,8 @@ export const executeHostCommand = async <TResult>(
       input.source,
       input.repo,
       0,
+      scope,
       { workspaceDir: input.workspaceDir, workspaceId: input.workspaceId },
-      input.signal,
     );
 
   let middlewareResult: MiddlewareChainResult;
