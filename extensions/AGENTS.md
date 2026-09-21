@@ -18,6 +18,7 @@ When a change requires both SDK updates and extension updates:
 
 ## Extension Translations
 
-- Use `l10n("stable.key", "Default copy")` from `@pstdio/sdk/extensions` for user-facing contribution text.
+- Use plain strings for static `Localizable` contribution fields with stable declaration paths. The normalizer derives their translation keys under `contributions/`.
+- Use `l10n("stable.key", "Default copy")` from `@pstdio/sdk/extensions` for shared keys, runtime values, and fields in arrays without stable item IDs. Explicit keys must stay outside `contributions/`.
 - Ship non-source locale bundles with `translations: { fr: packageAsset("./l10n/fr.json", import.meta.url) }`.
 - Keep bundles as flat JSON objects of string values and run `bun run verify:translations` after adding or changing translation keys.

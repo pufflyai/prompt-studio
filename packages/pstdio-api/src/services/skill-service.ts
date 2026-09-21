@@ -93,7 +93,7 @@ const ingestSkillFiles = async (fileService: SkillServiceDeps["fileService"], pr
 
 const defaultText = (value: unknown, fallback: string) => {
   if (typeof value === "string") return value;
-  if (isLocalizedString(value)) return value.default ?? value.$l10n;
+  if (isLocalizedString(value)) return value.default ?? fallback;
   return fallback;
 };
 

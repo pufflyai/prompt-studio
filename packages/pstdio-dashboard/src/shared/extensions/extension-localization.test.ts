@@ -10,6 +10,12 @@ afterEach(async () => {
 });
 
 test("resolves automatic paths and explicit shared keys with locale fallbacks", async () => {
+  const titleKey = "contributions/views/editor.theme/title";
+  const emptyKey = "contributions/views/editor/body/emptyTitle";
+  const bundles = {
+    en: { [titleKey]: "Editor", [emptyKey]: "Empty", shared: "Shared" },
+    fr: { [titleKey]: "Éditeur", shared: "Partagé" },
+  };
   const appearance = {
     themes: [],
     fileIconThemes: [],
@@ -18,14 +24,7 @@ test("resolves automatic paths and explicit shared keys with locale fallbacks", 
       {
         extensionId: "test.locale",
         defaultLocale: "en",
-        bundles: {
-          en: {
-            "contributions/views/editor.theme/title": "Editor",
-            "contributions/views/editor/body/emptyTitle": "Empty",
-            shared: "Shared",
-          },
-          fr: { "contributions/views/editor.theme/title": "Éditeur", shared: "Partagé" },
-        },
+        bundles,
       },
     ],
   } satisfies ListExtensionAppearanceResponse;
@@ -34,15 +33,15 @@ test("resolves automatic paths and explicit shared keys with locale fallbacks", 
   expect(
     localizeExtensionValue(
       {
-        title: { $l10n: "contributions/views/editor.theme/title", default: "Editor" },
-        empty: { $l10n: "contributions/views/editor/body/emptyTitle", default: "Empty" },
-        shared: { $l10n: "shared", default: "Shared" },
+        title: { $l10n: titleKey, default: bundles.en[titleKey] },
+        empty: { $l10n: emptyKey, default: bundles.en[emptyKey] },
+        shared: { $l10n: "shared", default: bundles.en.shared },
       },
       "test.locale",
     ),
-  ).toEqual({ title: "Éditeur", empty: "Empty", shared: "Partagé" });
+  ).toEqual({ title: bundles.fr[titleKey], empty: bundles.en[emptyKey], shared: bundles.fr.shared });
   await i18n.changeLanguage("en");
-  expect(
-    localizeExtensionValue({ $l10n: "contributions/views/editor.theme/title", default: "Editor" }, "test.locale"),
-  ).toBe("Editor");
+  expect(localizeExtensionValue({ $l10n: titleKey, default: bundles.en[titleKey] }, "test.locale")).toBe(
+    bundles.en[titleKey],
+  );
 });

@@ -2,7 +2,7 @@ import { describe, expect, mock, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { EXTENSION_API_VERSION, type Localizable } from "pstdio-api-contracts/extension-kernel";
 import {
   createDb,
   createExtensionInstancesDBService,
@@ -60,7 +60,10 @@ const emptyRuntime = {
   activityItems: [],
 };
 
-const writeExtensionWithSkill = (root: string, importCountPath: string) => {
+const defaultSkillMetadata = { title: "Review code", description: "Review code changes" };
+type SkillMetadata = { title: Localizable; description: Localizable };
+
+const writeExtensionWithSkill = (root: string, importCountPath: string, metadata: SkillMetadata) => {
   mkdirSync(join(root, "skill"), { recursive: true });
   writeFileSync(
     join(root, "package.json"),
@@ -80,16 +83,23 @@ const currentCount = Number(await Bun.file(countPath).text().catch(() => "0"));
 await Bun.write(countPath, String(currentCount + 1));
 
 export default {
+  translations: { en: { kind: "package-asset", path: "./en.json", baseUrl: import.meta.url } },
   skills: [
     {
       id: "review_code",
       ref: { kind: "skill", id: "review_code" },
-      title: "Review code",
-      description: "Review code changes",
+      ...${JSON.stringify(metadata)},
       source: { kind: "package-asset", path: "./skill", baseUrl: import.meta.url },
     },
   ],
 };`,
+  );
+  writeFileSync(
+    join(root, "en.json"),
+    JSON.stringify({
+      "skill.title": defaultSkillMetadata.title,
+      "skill.description": defaultSkillMetadata.description,
+    }),
   );
   writeFileSync(join(root, "skill", "SKILL.md"), "Review code changes\n");
 };
@@ -171,14 +181,30 @@ describe("SkillService", () => {
       rmSync(tempRoot, { recursive: true, force: true });
     }
   });
+
+  test("uses catalog fallbacks for localized metadata without inline defaults", async () => {
+    const { catalog, close, project, service, tempRoot } = await setupServiceWithExtension({
+      title: { $l10n: "skill.title" },
+      description: { $l10n: "skill.description" },
+    });
+    try {
+      const [skill] = await service.list(project.id);
+      expect(skill.title).toBe(skill.name);
+      expect(skill.description).toBe("");
+      expect((await catalog.get(project.id)).runtime.diagnostics).toEqual([]);
+    } finally {
+      await close();
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+  });
 });
 
-const setupServiceWithExtension = async () => {
+const setupServiceWithExtension = async (metadata: SkillMetadata = defaultSkillMetadata) => {
   const { db, close } = await createDb({ path: ":memory:" });
   const tempRoot = mkdtempSync(join(tmpdir(), "skill-svc-runtime-"));
   const extensionRoot = join(tempRoot, "skill-extension");
   const importCountPath = join(tempRoot, "imports.txt");
-  writeExtensionWithSkill(extensionRoot, importCountPath);
+  writeExtensionWithSkill(extensionRoot, importCountPath, metadata);
 
   const projectService = createProjectService({
     eventBus: new EventBus(),

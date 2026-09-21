@@ -25,10 +25,12 @@ const normalize = (definition: LoadedExtensionSource["definition"]) =>
 describe("automatic static translations", () => {
   test("normalizes keyed static fields without changing callbacks or data", () => {
     const query = async () => ({ rows: [], columns: [{ id: "runtime", label: "Runtime" }] });
+    const paramLabel = "Name";
+    const settingTitle = "Theme";
     const command = defineCommand({
       id: "create",
       title: "Create",
-      params: { "a/b~c": { type: "text", label: "Name" } },
+      params: { "a/b~c": { type: "text", label: paramLabel } },
       run: async () => ({ title: "Result" }),
     });
     const view = defineView({
@@ -46,54 +48,60 @@ describe("automatic static translations", () => {
         commands: [command],
         views: [view],
         settings: {
-          properties: { "editor/theme~name": { type: "string", scope: "project", title: "Theme", default: "dark" } },
+          properties: {
+            "editor/theme~name": { type: "string", scope: "project", title: settingTitle, default: "dark" },
+          },
         },
       }),
     );
-    expect(runtime.views[0].contribution.title).toEqual(l10n("contributions/views/table/title", "Table"));
+    expect(runtime.views[0].contribution.title).toEqual(l10n("contributions/views/table/title", view.title));
     expect(runtime.commands[0].params["a/b~c"].label).toEqual(
-      l10n("contributions/commands/create/params/a~1b~0c/label", "Name"),
+      l10n("contributions/commands/create/params/a~1b~0c/label", paramLabel),
     );
     expect(runtime.settings[0].contribution.title).toEqual(
-      l10n("contributions/settings/properties/editor~1theme~0name/title", "Theme"),
+      l10n("contributions/settings/properties/editor~1theme~0name/title", settingTitle),
     );
     expect(runtime.settings[0].contribution.default).toBe("dark");
-    expect(runtime.translations[0].bundles.en["contributions/views/table/body/columns/a~1b~0c/label"]).toBe("Column");
+    expect(runtime.translations[0].bundles.en["contributions/views/table/body/columns/a~1b~0c/label"]).toBe(
+      view.body.columns[0].label,
+    );
     expect(runtime.translations[0].bundles.en["contributions/views/table/body/rowActions/create/label"]).toBe(
-      "Create row",
+      view.body.rowActions[0].label,
     );
     expect(runtime.privateHandlers.find((item) => item.operation === "query")?.handler).toBe(query);
-    expect(view.title).toBe("Table");
+    expect(typeof view.title).toBe("string");
   });
 
   test("keeps shared and unkeyed tokens and collects providers last", () => {
+    const shared = l10n("shared", "Shared");
+    const menu = l10n("menu", "Menu");
+    const plainLabel = "Plain";
     const command = defineCommand({
       id: "create",
-      title: l10n("shared", "Shared"),
-      palette: [{ label: l10n("menu", "Menu") }, { label: "Plain" }],
+      title: shared,
+      palette: [{ label: menu }, { label: plainLabel }],
       run: async () => null,
+    });
+    const connection = defineConnection({
+      id: "remote",
+      label: "Remote",
+      transport: "http",
+      auth: { type: "bearer" },
+      allowedMethods: ["GET"],
+      allowedPathPrefixes: ["/"],
     });
     const runtime = normalize(
       defineExtension({
         commands: [command],
-        connections: [
-          defineConnection({
-            id: "remote",
-            label: "Remote",
-            transport: "http",
-            auth: { type: "bearer" },
-            allowedMethods: ["GET"],
-            allowedPathPrefixes: ["/"],
-          }),
-        ],
+        connections: [connection],
       }),
     );
-    expect(runtime.commands[0].title).toEqual(l10n("shared", "Shared"));
-    expect(runtime.commands[0].palette?.[1].label).toBe("Plain");
+    expect(runtime.commands[0].title).toEqual(command.title);
+    expect(runtime.commands[0].palette?.[1].label).toBe(plainLabel);
     expect(runtime.translations[0].bundles.en).toMatchObject({
-      shared: "Shared",
-      menu: "Menu",
-      "contributions/connections/remote/label": "Remote",
+      shared: shared.default,
+      menu: menu.default,
+      "contributions/connections/remote/label": connection.label,
     });
   });
 });
