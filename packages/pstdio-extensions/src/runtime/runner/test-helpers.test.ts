@@ -32,7 +32,10 @@ export const makeStorage = () => {
 
 const createSessionResource = () => ({ type: "session" as const, id: "", title: "", status: "in_progress" as const });
 
-export const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): CommandRunnerEnvironment => {
+export const stubEnvironment = (
+  storage: CommandRunnerEnvironment["storage"],
+  overrides: Partial<CommandRunnerEnvironment> = {},
+): CommandRunnerEnvironment => {
   const environment: CommandRunnerEnvironment = {
     project: { id: "p1", name: "Prompt Studio", shorthand: "PS" },
     resources: createMemoryResources({}),
@@ -95,7 +98,14 @@ export const stubEnvironment = (storage: CommandRunnerEnvironment["storage"]): C
       set: async () => {},
       delete: async () => {},
     },
-    withSignal: () => ({ sessions: environment.sessions, workspaces: environment.workspaces }),
+    ...overrides,
+    withScope: () => ({
+      sessions: environment.sessions,
+      workspaces: environment.workspaces,
+      connections: environment.connections,
+      process: environment.process,
+      terminal: environment.terminal,
+    }),
   };
   return environment;
 };

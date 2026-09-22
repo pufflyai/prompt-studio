@@ -5,6 +5,7 @@ import { createEventDispatcher } from "./dispatch";
 import { executeExtensionCommand } from "./execute-command";
 import { executeHostCommand } from "./execute-host-command";
 import { consoleLogger, defaultGenerateId } from "./internals";
+import type { InvocationScope } from "./scope";
 import type {
   BuildEnvironmentInput,
   CommandExecuteInput,
@@ -22,15 +23,20 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
   const runRef = { run: undefined as unknown as (input: InternalExecuteInput) => Promise<CommandOutcome> };
   const executeBuilder = createExecuteBuilder(runRef);
 
-  const buildEventContext = async (ids: BuildEnvironmentInput, eventId: string, deliveryId: string) => {
+  const buildEventContext = async (
+    ids: BuildEnvironmentInput,
+    eventId: string,
+    deliveryId: string,
+    scope: InvocationScope,
+  ) => {
     const env = await deps.buildEnvironment(ids);
-    const base = factory.buildExtensionContext(env, ids, 0);
+    const base = factory.buildExtensionContext(env, ids, 0, scope);
     return { ...base, eventId, deliveryId } satisfies EventContext;
   };
 
   const dispatcher = createEventDispatcher({ runtime, deps, generateId, logger, buildEventContext });
   const factory = createContextFactory(dispatcher, logger, executeBuilder);
-  const state: RunnerState = { runtime, deps, maxDepth, generateId, dispatcher, factory };
+  const state: RunnerState = { runtime, deps, logger, maxDepth, generateId, dispatcher, factory };
   const executeInternal = (input: InternalExecuteInput) => executeExtensionCommand(state, input);
 
   runRef.run = executeInternal;
@@ -47,6 +53,7 @@ export const createCommandRunner = (runtime: ExtensionRuntime, deps: CommandRunn
   };
 };
 
+export { createInvocationScope, type InvocationScope, type ScopeDisposer } from "./scope";
 export type {
   BuildEnvironmentInput,
   CommandExecuteInput,
@@ -55,5 +62,6 @@ export type {
   CommandRunnerHostDeps,
   ExtensionEventDispatchInput,
   HostCommandExecuteInput,
+  ScopedHostApis,
 } from "./types";
 export { DEFAULT_MAX_COMMAND_DEPTH } from "./types";

@@ -81,6 +81,13 @@ const environment: CommandRunnerEnvironment = {
   },
   net: { findFreePort: async () => 0 },
   settings: { all: async () => ({}), get: async () => undefined, set: async () => {}, delete: async () => {} },
+  withScope: () => ({
+    sessions: environment.sessions,
+    workspaces: environment.workspaces,
+    connections: environment.connections,
+    process: environment.process,
+    terminal: environment.terminal,
+  }),
 };
 
 const makeRunner = (definition: ExtensionDefinition) => {

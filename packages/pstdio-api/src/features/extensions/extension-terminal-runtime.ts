@@ -8,6 +8,7 @@ import type {
   TerminalSessionRequest,
 } from "pstdio-api-contracts/extension-kernel";
 import { createExtensionProcessEnvironment } from "pstdio-extensions";
+import { exitedWithin, signalProcessTree } from "./process-group";
 
 // Single-consumer async queue bridging Bun.Terminal callbacks to events().
 // `exit` is pushed last, then close() ends iteration.
@@ -71,6 +72,9 @@ const resolveWorkingDirectory = (cwd: TerminalSessionRequest["cwd"]) => {
 };
 
 const TITLE_POLL_INTERVAL_MS = 1000;
+
+/** How long a session may take to honour its stop signal before the host force-kills it. */
+const KILL_ESCALATION_MS = 500;
 
 // The PTY tab title tracks the foreground process like VSCode. On Linux the
 // controlling terminal's foreground process group leader (`tpgid` in
@@ -168,10 +172,17 @@ export const createTerminalSupervisor = (input: { logger: ExtensionLoggerApi }) 
         terminal.close();
       });
 
-      const kill = async (signal: NodeJS.Signals = "SIGTERM") => {
+      // SIGHUP is what a closed terminal sends: shells exit on a hangup even when they ignore
+      // SIGTERM. The shell exiting does not prove its jobs are gone, because a background
+      // process can ignore the hangup and keep the group alive, so always sweep the group with
+      // SIGKILL. Settling on exit or on the deadline keeps a closed tab from hanging its caller.
+      const kill = async (signal: NodeJS.Signals = "SIGHUP") => {
         logger.info("terminal session kill", { id, signal });
-        child.kill(signal);
-        await child.exited;
+        signalProcessTree(child, signal);
+        const stopped = await exitedWithin(child.exited, KILL_ESCALATION_MS);
+
+        signalProcessTree(child, "SIGKILL");
+        if (!stopped) await exitedWithin(child.exited, KILL_ESCALATION_MS);
       };
 
       let consumed = false;

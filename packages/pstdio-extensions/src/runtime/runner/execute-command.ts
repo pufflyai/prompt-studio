@@ -12,6 +12,7 @@ import { lifecycleEventId } from "./dispatch";
 import { createEnvironmentCache, environmentFailedOutcome, withNotices } from "./environment";
 import { findCommand, findPrivateHandler, middlewaresFor, serializeError } from "./internals";
 import { type MiddlewareChainResult, runMiddlewareChain } from "./middleware";
+import { createInvocationScope, type InvocationScope } from "./scope";
 import type { CommandRunnerEnvironment, InternalExecuteInput } from "./types";
 import { validateCommandParams } from "./validate-params";
 
@@ -32,9 +33,26 @@ const buildRequestPayload = (
   projectId,
 });
 
+/**
+ * Opens the invocation scope that owns every host resource the command creates, and closes it
+ * once the command settles. A nested command runs inside its own scope, which closes first.
+ */
 export const executeExtensionCommand = async (
   state: RunnerState,
   input: InternalExecuteInput,
+): Promise<CommandOutcome> => {
+  const scope = createInvocationScope({ logger: state.logger, parent: input.signal });
+  try {
+    return await runExtensionCommand(state, input, scope);
+  } finally {
+    await scope.close();
+  }
+};
+
+const runExtensionCommand = async (
+  state: RunnerState,
+  input: InternalExecuteInput,
+  scope: InvocationScope,
 ): Promise<CommandOutcome> => {
   if (input.signal?.aborted) throw input.signal.reason;
   if (input.depth > state.maxDepth) {
@@ -49,7 +67,7 @@ export const executeExtensionCommand = async (
   const record = findCommand(state.runtime, input.commandId);
   if (!record) {
     const handler = findPrivateHandler(state.runtime, input.commandId);
-    if (handler) return executePrivateHandler(state, input, handler);
+    if (handler) return executePrivateHandler(state, input, handler, scope);
 
     return {
       ok: false,
@@ -93,8 +111,8 @@ export const executeExtensionCommand = async (
       input.source,
       input.repo,
       input.depth,
+      scope,
       { workspaceDir: input.workspaceDir, workspaceId: input.workspaceId },
-      input.signal,
     );
   const buildMiddlewareCtx = async (invocation: CommandInvocation, middleware: RuntimeMiddlewareRecord) =>
     state.factory.buildCommandContext(
@@ -107,8 +125,8 @@ export const executeExtensionCommand = async (
       input.source,
       input.repo,
       input.depth,
+      scope,
       { workspaceDir: input.workspaceDir, workspaceId: input.workspaceId },
-      input.signal,
     );
 
   const requestedPayload = buildRequestPayload(
@@ -200,6 +218,7 @@ const executePrivateHandler = async (
   state: RunnerState,
   input: InternalExecuteInput,
   handler: NonNullable<ReturnType<typeof findPrivateHandler>>,
+  scope: InvocationScope,
 ): Promise<CommandOutcome> => {
   const notices: CommandNotice[] = [];
   const envFor = createEnvironmentCache(state.deps, input.projectId, input.repo, notices, {
@@ -241,6 +260,7 @@ const executePrivateHandler = async (
         workspaceId: input.workspaceId,
       },
       input.depth,
+      scope,
     );
     const value = await handler.handler(ctx, params);
     const elapsedMs = Date.now() - start;

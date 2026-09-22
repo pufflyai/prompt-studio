@@ -134,6 +134,25 @@ storage. Desktop relaunch does not automatically reattach to detached work.
 Use `ctx.process.run` or `runOrThrow` when the command should wait for output and
 an exit code. Use the terminal API for an interactive session.
 
+## Process Limits
+
+The host owns every process `ctx.process.run` and `runOrThrow` start, and stops them when the
+invocation that started them ends. This covers a command that returns, throws, or is cancelled.
+Each command runs in its own process group, so stopping it also stops whatever it started.
+
+- `timeoutMs` is a deadline. The host stops the child when it passes and the call throws.
+- Combined standard output and standard error are capped at 8 MiB. The host stops the child and
+  throws when a command passes the cap. Write large output to a file and read it back instead.
+- Cancelling a command settles any `run()` it is waiting on and leaves no child process behind.
+- A child still running when the command returns is stopped too, and its pending `run()` settles.
+
+`spawnDetached` is the exception. Its children are meant to outlive the host, so the extension
+owns their lifetime.
+
+`ctx.signal` is host cancellation, not command lifetime. It aborts when the host cancels the
+command, and stays open when the command simply returns, so a command can hand it to work the host
+keeps running afterwards, such as a session started with `ctx.sessions.create()`.
+
 ## Developing A Repo-Scoped Extension
 
 A repo-scoped extension installs into `<repo>/.pstdio/extensions/<install-name>`, which is often the
@@ -798,7 +817,8 @@ Terminals are layered: the workbench-native terminal surface is the product UI, 
 
 - **Runtime contexts** get `ctx.terminal` (an `ExtensionTerminalApi`) when the host wires a PTY supervisor. `ctx.terminal.openSession(request)` returns a host-side `TerminalSessionHandle` with `write`, `resize`, `kill`, and a single-consumer `events()` iterable. The handle never crosses into renderer code.
 - **Webviews** declare the `terminal.session` capability — the only public webview terminal capability for this version. Calls are serializable operations (`open`, `write`, `resize`, `kill`, `subscribe`); `open` returns only a `sessionId`, and output/exit events are pushed through the bridge host-event channel. Use `createTerminalSessionBridge(host)` from `@pstdio/sdk/extensions` to get a bridge that plugs into the `Terminal` component from `@pstdio/ui/terminal`. Undeclared webviews are rejected by the capability gate.
-- **Lifecycle ownership**: workbench-surface sessions live in `workbench.terminal`; closing the terminal panel kills its session, and disposing the controller kills every live session. Production runtime sessions belong to the app-scoped PTY supervisor, which force-kills live sessions on app shutdown.
+- **Lifecycle ownership**: workbench-surface sessions live in `workbench.terminal`; closing the terminal panel kills its session, and disposing the controller kills every live session. A session opened through `ctx.terminal` belongs to the invocation that opened it and is killed when that invocation ends. The app-scoped PTY supervisor is the shutdown backstop: it force-kills whatever is still live when the app exits.
+- **Stopping a session**: `kill()` signals the session's process group, so the shell and everything it started stop together. The default signal is `SIGHUP`, which shells honour even while they ignore `SIGTERM`, and the group is then swept with `SIGKILL` because a shell exiting does not prove its children did. The call always settles. A job that puts itself in its own process group and ignores the hangup survives, which is the same `nohup` behaviour every terminal has.
 - **Dashboard transport**: the dashboard backs `workbench.terminal` with the API terminal transport — `POST /v1/terminal/sessions` opens a PTY on the app supervisor, the SSE `events` endpoint streams base64 output chunks and the exit event, and stdin/resize/kill address the session id. Dashboard extension webviews that declare `terminal.session` get live sessions through this path.
 - **Diagnostics** log lifecycle metadata only (session id, pid, exit code, signal) — PTY content is never logged.
 

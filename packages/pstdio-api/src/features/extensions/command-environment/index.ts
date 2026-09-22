@@ -8,6 +8,7 @@ import type {
 import {
   type CommandRunnerEnvironment,
   createWorkspaceFilesMount,
+  type InvocationScope,
   type RuntimeArtifactMount,
   type RuntimeExtensionSettingRecord,
 } from "pstdio-extensions";
@@ -16,7 +17,7 @@ import { runWorkspaceProvisioning } from "../../workspaces/provision-coordinator
 import { setupWorkspaceWorktree } from "../../workspaces/worktree-setup";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createExtensionConnectionsApi } from "../extension-connection-service";
-import { createProcessApi, findFreePort } from "../extension-process-api";
+import { findFreePort } from "../extension-process-api";
 import { createRepoFilesApi } from "../repo-files-api";
 import { createActivityApi } from "./activity";
 import { createArtifactsApi } from "./artifacts";
@@ -26,11 +27,10 @@ import { createNotifyApi } from "./notifications";
 import { createExtensionPackageFilesApi } from "./package-files";
 import { createReposApi, resolveRegisteredRepoPath } from "./repos";
 import { createResourcesApi } from "./resources";
-import { createSessionsApi } from "./sessions";
+import { createScopedHostApis } from "./scoped-host-apis";
 import { createSettingsApi } from "./settings";
 import { createStorageApi } from "./storage";
 import { type CommandEnvironmentRuntimeDeps, type EnabledSource, findEnabledSource } from "./types";
-import { createWorkspacesApi } from "./workspaces";
 
 const workspaceSyncStateRoot = (input: { projectId: string; workspaceDir: string; workspaceId?: string }) => {
   const key = createHash("sha256")
@@ -76,10 +76,12 @@ export const createCommandEnvironment = (
             hostTerminal.openSession({ ...request, cwd: request.cwd ?? input.workspaceDir }),
         }
       : hostTerminal;
-  const scopedHostApis = (signal?: AbortSignal) => ({
-    sessions: createSessionsApi(deps, { projectId: input.projectId, project: input.project, signal }),
-    workspaces: createWorkspacesApi(deps, { projectId: input.projectId, signal }, runtimeDeps),
+  const connections = createExtensionConnectionsApi(deps.extensionConnectionService, {
+    projectId: input.projectId,
+    extensionId: input.extensionId,
   });
+  const scopedHostApis = (scope?: InvocationScope) =>
+    createScopedHostApis(deps, input, { connections, terminal }, runtimeDeps, scope);
   const hostApis = scopedHostApis();
   const resolveRepoPath = () => resolveRegisteredRepoPath(deps, input.projectId, input.repo as RepoContext);
   const manifest = (enabledSource.installedSource.manifest_json ?? {}) as {
@@ -113,14 +115,11 @@ export const createCommandEnvironment = (
     repos: createReposApi(deps, input.projectId),
     activity: createActivityApi(deps, { projectId: input.projectId, enabledSource }),
     notify: createNotifyApi(deps, { projectId: input.projectId, enabledSource }),
-    process: createProcessApi(),
+    process: hostApis.process,
     net: { findFreePort: async (portInput) => findFreePort(portInput?.host) },
-    connections: createExtensionConnectionsApi(deps.extensionConnectionService, {
-      projectId: input.projectId,
-      extensionId: input.extensionId,
-    }),
-    terminal,
+    connections: hostApis.connections,
+    terminal: hostApis.terminal,
     settings,
-    withSignal: (signal) => scopedHostApis(signal),
+    withScope: (scope) => scopedHostApis(scope),
   };
 };
