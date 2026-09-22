@@ -95,7 +95,7 @@ describe("startClaudeCodeSession", () => {
     const session = await startClaudeCodeSession({ prompt: "Hello", events: sink }, deps);
 
     expect(session.agentSessionId).toBe("session-abc");
-    expect(session.timeoutStrategy).toBe("activity");
+    expect(session.timeoutStrategy).toBe("provider");
     expect(await session.done).toEqual({ status: "completed" });
 
     expect(patches.length).toBeGreaterThanOrEqual(2);

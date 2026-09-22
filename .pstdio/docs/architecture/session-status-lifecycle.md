@@ -70,7 +70,11 @@ create / follow-up ──► queued ──► in_progress
                            └──── in_progress (on approval)                         in_progress (on follow-up)
 ```
 
-`disconnected` means the server lost the live process handle (timeout or restart) and could not reattach. The agent session still exists on the provider side; a follow-up sent by the user spawns a fresh resume and transitions the session back to `in_progress`.
+`disconnected` means the server lost the live process handle and could not reattach, or the provider reported a lost connection. A follow-up sent by the user starts a fresh resume and transitions the session back to `in_progress`.
+
+Claude Code and Codex own their process lifecycle (`timeoutStrategy: "provider"`). The host waits for process exit and the message reader to finish. Quiet reasoning or tool execution does not impose a session time limit. Both harnesses drain stderr so diagnostics cannot fill a pipe and block the executable. User cancellation still calls the harness stop handler.
+
+Harnesses that opt into the host activity watchdog, or omit a timeout strategy, are stopped and marked `failed` after ten minutes without message events. Message activity is not a reliable health check for the Claude Code or Codex executables.
 
 `queued` means Prompt Studio accepted the prompt but has not started or resumed the agent runtime yet. A queued session has a persisted queue entry and moves to `in_progress` when the scheduler claims it and dispatch begins.
 
@@ -85,7 +89,7 @@ create / follow-up ──► queued ──► in_progress
 | Approval granted       | `in_progress`          | `approveSessionHandler`                   |
 | Process exit code 0    | `completed`            | `trackProcessExit`                        |
 | Process exit code != 0 | `failed`               | `trackProcessExit`                        |
-| Process activity timeout | `disconnected`       | `trackProcessExit`                        |
+| Host activity timeout (opt-in/default harnesses) | `failed` | `trackHarnessSession`                 |
 | User stop              | `cancelled`            | `stopSessionHandler`                      |
 | Stale recovery (reattach) | stays `in_progress` | `resolveOrphanedSessions` (startup sweep) |
 | Stale recovery (no reattach) | `disconnected`   | `resolveOrphanedSessions` (startup sweep) |
