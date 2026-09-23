@@ -32,6 +32,8 @@ The Claude resume wrapper now treats a follow-up as a one-shot input payload and
 
 ### Add a process-exit timeout at the session layer
 
+Update (PS-389): Claude Code and Codex now use provider-owned completion. A lack of chat events cannot distinguish a hung process from quiet reasoning or a long tool call. The host activity watchdog remains available to other harnesses, but must not terminate these CLI sessions. Their stderr pipes must also be drained to prevent output backpressure from blocking the executable.
+
 The API session tracker now applies a timeout while waiting for agent process exit. If a provider process hangs anyway, `pst` kills it and marks the session as `failed` instead of leaving it stuck forever.
 
 ## Key takeaway

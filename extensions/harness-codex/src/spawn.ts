@@ -256,6 +256,8 @@ export type StartSpawnInput = {
 
 export const startCodexSession = async (input: StartSpawnInput, deps: SpawnDeps = defaultDeps) => {
   const child = deps.spawnProcess(buildStartArgs(input), { cwd: input.cwd, env: input.env });
+  // Keep diagnostics from filling the pipe and blocking the executable.
+  child.stderr.resume();
 
   sendPrompt(child.stdin, promptWithAttachmentManifest(input.prompt, input.attachments));
 
@@ -285,7 +287,7 @@ export const startCodexSession = async (input: StartSpawnInput, deps: SpawnDeps 
     agentSessionId,
     done,
     stop: child.kill,
-    timeoutStrategy: "activity",
+    timeoutStrategy: "provider", // Process exit, not chat activity, owns completion.
     pid: child.pid,
   } satisfies HarnessSession;
 };
@@ -297,6 +299,7 @@ export type ResumeSpawnInput = StartSpawnInput & {
 
 export const resumeCodexSession = (input: ResumeSpawnInput, deps: SpawnDeps = defaultDeps) => {
   const child = deps.spawnProcess(buildResumeArgs(input), { cwd: input.cwd, env: input.env });
+  child.stderr.resume();
 
   sendPrompt(child.stdin, promptWithAttachmentManifest(input.prompt, input.attachments));
 
@@ -313,7 +316,7 @@ export const resumeCodexSession = (input: ResumeSpawnInput, deps: SpawnDeps = de
     agentSessionId: input.agentSessionId,
     done,
     stop: child.kill,
-    timeoutStrategy: "activity",
+    timeoutStrategy: "provider",
     pid: child.pid,
   } satisfies HarnessSession;
 };

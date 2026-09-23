@@ -135,7 +135,7 @@ describe("startCodexSession", () => {
     const session = await startCodexSession({ prompt: "Say hello", events: sink }, deps);
 
     expect(session.agentSessionId).toBe("thread-abc");
-    expect(session.timeoutStrategy).toBe("activity");
+    expect(session.timeoutStrategy).toBe("provider");
     expect(await session.done).toEqual({ status: "completed" });
 
     expect(chunks.join("")).toBe("Say hello");

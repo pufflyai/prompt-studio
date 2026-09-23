@@ -90,8 +90,6 @@ const promptWithAttachmentManifest = (prompt: string, attachments: HarnessAttach
   ].join("\n");
 };
 
-// --- Control protocol ---
-
 const isControlRequest = (parsed: Record<string, unknown>) => parsed.type === "control_request";
 
 const buildControlResponse = (requestId: string, decision: "approve" | "deny" | "timeout", input: unknown) => {
@@ -122,8 +120,6 @@ const buildControlResponse = (requestId: string, decision: "approve" | "deny" | 
     },
   };
 };
-
-// --- Raw event stream ---
 
 async function* createRawEventStream(
   stdout: Readable,
@@ -179,8 +175,6 @@ const runPipelineFromEvents = async (
   }
 };
 
-// --- Session ID extraction ---
-
 const extractSessionId = async (events: AsyncGenerator<RawLogEvent>) => {
   const buffered: RawLogEvent[] = [];
 
@@ -207,8 +201,6 @@ const extractSessionId = async (events: AsyncGenerator<RawLogEvent>) => {
 
   throw new Error("Claude Code stream ended without providing session_id");
 };
-
-// --- Spawn process ---
 
 type SpawnedChild = {
   stdin: Writable;
@@ -279,8 +271,6 @@ const userMessageFor = (prompt: string, attachments: HarnessAttachment[] = []): 
   };
 };
 
-// --- Entry points ---
-
 export type StartSpawnInput = {
   prompt: string;
   attachments?: HarnessAttachment[];
@@ -294,6 +284,8 @@ export type StartSpawnInput = {
 export const startClaudeCodeSession = async (input: StartSpawnInput, deps: SpawnDeps = defaultDeps) => {
   const args = buildStartSessionArgs(input);
   const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
+  // Keep diagnostics from filling the pipe and blocking the executable.
+  child.stderr.resume();
 
   sendUserMessage(child.stdin, promptWithAttachmentManifest(input.prompt, input.attachments));
 
@@ -311,7 +303,7 @@ export const startClaudeCodeSession = async (input: StartSpawnInput, deps: Spawn
     agentSessionId: sessionId,
     done,
     stop: child.kill,
-    timeoutStrategy: "activity",
+    timeoutStrategy: "provider", // Process exit, not chat activity, owns completion.
     pid: child.pid,
   } satisfies HarnessSession;
 };
@@ -325,6 +317,7 @@ export type ResumeSpawnInput = StartSpawnInput & {
 export const resumeClaudeCodeSession = (input: ResumeSpawnInput, deps: SpawnDeps = defaultDeps) => {
   const args = buildResumeArgs(input);
   const child = deps.spawnProcess(args, { cwd: input.cwd, env: input.env });
+  child.stderr.resume();
 
   sendUserMessage(child.stdin, promptWithAttachmentManifest(input.prompt, input.attachments));
 
@@ -342,7 +335,7 @@ export const resumeClaudeCodeSession = (input: ResumeSpawnInput, deps: SpawnDeps
     agentSessionId: input.agentSessionId,
     done,
     stop: child.kill,
-    timeoutStrategy: "activity",
+    timeoutStrategy: "provider",
     pid: child.pid,
   } satisfies HarnessSession;
 };
