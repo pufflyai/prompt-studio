@@ -45,6 +45,7 @@ export {
   isExtensionNavigationTarget,
   type ToWorkbenchNavigationTargetInput,
   toWorkbenchNavigationTarget,
+  toWorkbenchNavigationTargetResult,
 } from "./host/extension-navigation-target";
 export {
   executeWorkbenchExtensionCommandResponse,

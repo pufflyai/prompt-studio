@@ -48,7 +48,7 @@ const handleDeletedResource = async (
 };
 export const executeWorkbenchExtensionCommandResponse = async (
   context: Pick<WorkbenchExtensionCommandContext, "executeCommand" | "projectId"> & {
-    workbench: Pick<WorkbenchModuleContext, "navigation">;
+    workbench: Pick<WorkbenchModuleContext, "navigation" | "notifications">;
   },
   commandId: string,
   input: ExecuteWorkbenchExtensionCommandInput = {},
@@ -66,7 +66,15 @@ export const executeWorkbenchExtensionCommandResponse = async (
   const outcome = (response as Partial<CommandExecuteResponse> | undefined)?.outcome;
   if (outcome?.status === "success") {
     for (const target of outcome.navigationRequests ?? []) {
-      await context.workbench.navigation.openTarget(toWorkbenchNavigationTarget(target));
+      try {
+        await context.workbench.navigation.openTarget(toWorkbenchNavigationTarget(target));
+      } catch (error) {
+        context.workbench.notifications.show({
+          level: "warning",
+          title: "Command completed, but navigation failed",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
     }
   }
   return response;

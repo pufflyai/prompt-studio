@@ -21,8 +21,9 @@ export const writeNavigationExtension = (root: string) => {
     join(source, "extension.ts"),
     `export default { commands: [{
       id: "open", ref: { kind: "command", id: "open" }, title: "Open", cli: true,
-      run(ctx: { navigation: { open(target: unknown): void } }) {
-        ctx.navigation.open({ kind: "href", href: "https://example.com/created" });
+      params: { href: { type: "text" } },
+      run(ctx: { navigation: { open(target: unknown): void } }, params: { href?: string }) {
+        ctx.navigation.open({ kind: "href", href: params.href ?? "https://example.com/created" });
         return { id: "created" };
       },
     }] };\n`,
@@ -54,4 +55,14 @@ export const expectPackagedNavigation = async (input: {
       expect(body.outcome.navigationRequests).toBeUndefined();
     }
   }
+  const unsafe = await fetch(
+    `${input.baseUrl}/v1/projects/${input.projectId}/extensions/commands/test.navigation-probe.command.open/execute`,
+    {
+      method: "POST",
+      headers: { ...input.headers, "content-type": "application/json" },
+      body: JSON.stringify({ source: "dashboard", params: { href: "javascript:alert(1)" } }),
+    },
+  );
+  expect(unsafe.status).toBe(200);
+  expect(await unsafe.json()).toMatchObject({ outcome: { ok: false, status: "error" } });
 };

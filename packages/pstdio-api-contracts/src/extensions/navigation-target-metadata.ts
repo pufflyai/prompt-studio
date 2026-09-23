@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isNavigationHref } from "../extension-kernel/navigation-href";
 import { extensionResourceRefSchema } from "./resource-ref";
 import { commandTargetSchema, pageRefSchema, panelRefSchema } from "./workbench-refs-metadata";
 
@@ -43,6 +44,6 @@ const navigationOperationSchema = z.union([
 export const navigationTargetSchema = z.union([
   navigationOperationSchema,
   z.object({ kind: z.literal("command"), target: commandTargetSchema }),
-  z.object({ kind: z.literal("href"), href: z.string() }),
+  z.object({ kind: z.literal("href"), href: z.string().refine(isNavigationHref, "Expected an HTTP or HTTPS URL") }),
   z.object({ kind: z.literal("compound"), targets: z.array(navigationOperationSchema).min(1) }),
 ]);

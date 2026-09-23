@@ -5,6 +5,20 @@ const page = { extensionId: "acme.planner", kind: "page" as const, id: "tickets"
 const panel = { extensionId: "acme.planner", kind: "page-slot" as const, page, id: "details" };
 
 describe("createNavigationRegistry", () => {
+  test("blocks executable URLs before they reach the browser", async () => {
+    const opened: string[] = [];
+    const navigation = createNavigationRegistry({
+      resolveDispatcher: () => ({
+        openHref: (href) => opened.push(href),
+        executeCommand: () => undefined,
+      }),
+    });
+    await expect(navigation.openTarget({ kind: "href", href: "javascript:alert(1)" })).rejects.toThrow();
+    expect(opened).toEqual([]);
+    await navigation.openTarget({ kind: "href", href: "https://example.com/" });
+    expect(opened).toEqual(["https://example.com/"]);
+  });
+
   test("parses and opens an explicit page target", async () => {
     const calls: unknown[] = [];
     const dispatcher: NavigationDispatcherContext = {

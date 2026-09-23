@@ -3,6 +3,8 @@
 This SDK preparation adds capabilities under API alpha.10. Existing navigation returns and deletion results remain supported while extensions migrate. SDK preparation, extension adoption, and removal of obsolete behavior ship in separate PRs. The later breaking release must update the API version and consumer requirements; this preparation does not claim that removal is complete.
 
 - Replace returned navigation targets with `ctx.navigation.open(target)`. Return ordinary command data.
+- External `href` targets must be absolute HTTP or HTTPS URLs. Other URL schemes are rejected.
+- If a UI navigation request fails after the command succeeds, the host shows a warning and preserves the successful command result. Later navigation requests still run.
 - Table and kanban `onRowActivate` callbacks can return void and use the same context method.
 - Keep direct webview `host.call("navigation.open", { target })`. The host applies navigation from webview command responses; guests must not replay it.
 - Replace `{ id, deleted: true }` UI conventions with `await ctx.resources.removed({ type, id })` immediately after committed deletion. The result can still contain application data.

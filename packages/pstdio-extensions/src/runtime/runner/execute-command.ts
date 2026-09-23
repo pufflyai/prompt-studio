@@ -261,9 +261,9 @@ const executePrivateHandler = async (
         workspaceDir: input.workspaceDir,
         workspaceId: input.workspaceId,
       },
-        input.depth,
-        scope,
-        input.navigationScope,
+      input.depth,
+      scope,
+      input.navigationScope,
     );
     const value = await handler.handler(ctx, params);
     const elapsedMs = Date.now() - start;

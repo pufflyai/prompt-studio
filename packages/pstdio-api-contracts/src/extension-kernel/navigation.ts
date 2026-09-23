@@ -1,3 +1,4 @@
+import { isNavigationHref } from "./navigation-href";
 import type { NavigationTarget } from "./types/navigation-target";
 import type { ResourceRef } from "./types/resources";
 
@@ -37,7 +38,7 @@ const isItemTarget = (value: unknown): value is Exclude<NavigationTarget, { kind
   if (!isRecord(value)) return false;
   if (value.kind === "page") return isPageTarget(value);
   if (value.kind === "panel") return isPanelTarget(value);
-  if (value.kind === "href") return typeof value.href === "string";
+  if (value.kind === "href") return isNavigationHref(value.href);
   return (
     value.kind === "command" &&
     isRecord(value.target) &&
