@@ -106,7 +106,7 @@ describe("createInstalledExtensionRuntime", () => {
       } as never,
       installedExtensionSourcesService: { list: async () => [] } as never,
       projectService: { list: async () => [] } as never,
-      repoService: {} as never,
+      workspaceService: { getDefault: async () => null } as never,
       webviewBuilds: true,
       createRootWatcher: async () => createProcess(),
       createWebviewBuildManager: () =>
@@ -136,7 +136,16 @@ describe("createInstalledExtensionRuntime", () => {
       extensionService: {} as never,
       installedExtensionSourcesService: { list: async () => [] } as never,
       projectService: { list: async () => [{ id: "project-a" }] } as never,
-      repoService: { listByProject: async () => [{ path: "/repos/alpha" }] } as never,
+      workspaceService: {
+        getDefault: async () => ({
+          id: "home",
+          project_id: "project-1",
+          root_path: "/repos/alpha",
+          execution_kind: "local",
+          provider_id: "pstdio.root",
+          provider_state: "ready",
+        }),
+      } as never,
       webviewBuilds: false,
       createRootWatcher: async (config) => {
         listExtensionRoots = config.listExtensionRoots as never;
@@ -166,7 +175,7 @@ describe("createInstalledExtensionRuntime", () => {
       extensionService: {} as never,
       installedExtensionSourcesService: { list: async () => [] } as never,
       projectService: { list: async () => [{ id: "project-a" }] } as never,
-      repoService: { listByProject: async () => repos } as never,
+      workspaceService: { getDefault: async () => (repos[0] ? { root_path: repos[0].path } : null) } as never,
       webviewBuilds: false,
       createRootWatcher: (config) =>
         createExtensionRootWatcher({
@@ -225,7 +234,16 @@ describe("createInstalledExtensionRuntime", () => {
         extensionService,
         installedExtensionSourcesService,
         projectService,
-        repoService: { listByProject: async () => [{ path: repoPath }] } as never,
+        workspaceService: {
+          getDefault: async () => ({
+            id: "home",
+            project_id: "project-1",
+            root_path: repoPath,
+            execution_kind: "local",
+            provider_id: "pstdio.root",
+            provider_state: "ready",
+          }),
+        } as never,
         webviewBuilds: false,
         createRootWatcher: (config) =>
           createExtensionRootWatcher({

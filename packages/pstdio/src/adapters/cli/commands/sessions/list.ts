@@ -1,6 +1,6 @@
 import type { Arguments, Argv } from "yargs";
 import { resolveApiUrl } from "@/features/api-url";
-import { findGitRoot, readConfig } from "@/features/config/config";
+import { findProjectRoot, readConfig } from "@/features/config/config";
 import { listSessions as defaultListSessions } from "@/features/sessions/api/list-sessions";
 
 export const command = "list";
@@ -24,7 +24,7 @@ export type ListArgs = {
 
 type Deps = {
   cwd: () => string;
-  findGitRoot: typeof findGitRoot;
+  findProjectRoot: typeof findProjectRoot;
   readConfig: typeof readConfig;
   listSessions: typeof defaultListSessions;
   log: (msg: string) => void;
@@ -32,7 +32,7 @@ type Deps = {
 
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
-  findGitRoot,
+  findProjectRoot,
   readConfig,
   listSessions: defaultListSessions,
   log: console.log,
@@ -44,7 +44,7 @@ export const createHandler =
     let projectId = argv["project-id"];
 
     if (!projectId) {
-      const root = deps.findGitRoot(deps.cwd());
+      const root = deps.findProjectRoot(deps.cwd());
       if (!root) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
       const config = deps.readConfig(root);
       if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");

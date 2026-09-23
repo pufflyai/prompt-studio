@@ -26,7 +26,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       } as never,
       installedExtensionSourcesService: { list: async () => [] } as never,
       projectService: { list: async () => [] } as never,
-      repoService: {} as never,
+      workspaceService: { getDefault: async () => null } as never,
       webviewBuilds: true,
       createRootWatcher: async () => createProcess(),
       createWebviewBuildManager: () =>
@@ -70,7 +70,7 @@ describe("createInstalledExtensionRuntime targeted webview refresh", () => {
       } as never,
       installedExtensionSourcesService: { list: async () => [] } as never,
       projectService: { list: async () => [] } as never,
-      repoService: {} as never,
+      workspaceService: { getDefault: async () => null } as never,
       webviewBuilds: true,
       createRootWatcher: async () =>
         createProcess(async () => {

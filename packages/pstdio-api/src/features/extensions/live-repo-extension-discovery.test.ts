@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { execSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -44,11 +44,11 @@ const writeExtension = (dir: string, name: string, version: string) => {
   writeFileSync(join(dir, "extension.ts"), "export default {};\n");
 };
 
-const createProject = async (app: AppHandle["app"]) => {
+const createProject = async (app: AppHandle["app"], path: string) => {
   const response = await app.request("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "Live Repo Discovery" }),
+    body: JSON.stringify({ initial_workspace: { provider_id: "pstdio.root", params: { path } } }),
   });
   expect(response.status).toBe(201);
   return response.json() as Promise<{ id: string }>;
@@ -89,7 +89,7 @@ afterEach(() => {
 
 describe("live repo-local extension discovery", () => {
   test("discovers a repo-local extension added after the API starts", async () => {
-    const root = mkdtempSync(join(tmpdir(), "pstdio-live-discovery-"));
+    const root = realpathSync(mkdtempSync(join(tmpdir(), "pstdio-live-discovery-")));
     tempRoots.push(root);
     const restoreEnv = setEnv({
       HOME: join(root, "home"),
@@ -108,15 +108,7 @@ describe("live repo-local extension discovery", () => {
       });
 
       const repoPath = createGitRepo(root, "live-repo");
-      const project = await createProject(handle.app);
-
-      // Link the repo while it holds NO repo-local extensions (Scenario 3).
-      const registerResponse = await handle.app.request(`/v1/projects/${project.id}/repos`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "live-repo", path: repoPath }),
-      });
-      expect(registerResponse.status).toBe(201);
+      const project = await createProject(handle.app, repoPath);
 
       const repoExtensionsRoot = join(repoPath, ".pstdio", "extensions");
       const sourcePath = join(repoExtensionsRoot, "live-tool");

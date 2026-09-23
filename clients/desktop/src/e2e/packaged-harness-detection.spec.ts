@@ -58,7 +58,7 @@ for (const shell of ["/bin/bash", "/bin/zsh", "/bin/csh", "/bin/tcsh"]) {
       expect(cli.exitCode).toBe(0);
       expect(cli.stdout).toContain("Codex");
       expect(cli.stdout.match(/\byes\b/g)).toHaveLength(3);
-      const project = await createPackagedProject(app.page, "Harness selection");
+      const project = await createPackagedProject(app, "Harness selection");
       await openPackagedProject(app.page, project);
       await app.page.emulateMedia({ reducedMotion: "reduce" });
       await app.page.getByRole("option", { name: "Sessions", exact: true }).click();

@@ -28,8 +28,8 @@ export const applyTicketTemplateCommand = defineCommand({
     var: params.list(),
   },
   async run(ctx, commandParams) {
-    const repoFiles = requireRepoFiles(ctx.repoFiles);
-    const current = await readTicketMarkdown(repoFiles, commandParams.id);
+    const projectFiles = requireRepoFiles(ctx.projectFiles);
+    const current = await readTicketMarkdown(projectFiles, commandParams.id);
     if (current === null) throw new Error(`Ticket not found: ${commandParams.id}`);
 
     const template = await readOwnedTemplate(ctx, commandParams.template);
@@ -38,7 +38,7 @@ export const applyTicketTemplateCommand = defineCommand({
 
     const path = ticketMarkdownPath(commandParams.id);
     await writeTicketText(
-      repoFiles,
+      projectFiles,
       commandParams.id,
       renderPrompt(template.content, {
         CREATED_AT: new Date().toISOString(),

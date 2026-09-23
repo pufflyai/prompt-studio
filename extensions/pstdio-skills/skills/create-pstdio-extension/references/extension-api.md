@@ -26,7 +26,7 @@ Every extension package needs a `package.json` next to its entry file:
 }
 ```
 
-Set `pstdio.repoFiles.tracked` when the extension uses its allocated repo directory. It defaults to false.
+Set `pstdio.projectFiles.tracked` when the extension uses its allocated project directory. It defaults to false.
 
 Required fields are `name`, `version`, `publisher`, `main`, and `engines.pstdio`. The extension id is derived as
 `${publisher}.${name}`. Keep the package `name` lowercase kebab-case because it scopes command ids, catalog names,
@@ -168,7 +168,7 @@ Command params are the handler's second argument. `ctx` in a command includes:
 - `commandId`, `invocationId`, `signal`, `invocation`, `attachment`, and `slot`
 - `attachment` for host-owned workbench invocations, including the target, mode, project, and active resource
 - `storage`, `artifacts`, `files`, read-only `packageFiles`, and repo-scoped `extensionFiles`
-- `repoFiles`, `workspaceFiles`, `skills`, `sessions`, `workspaces`, and `repos`
+- `projectFiles`, `workspaceFiles`, `skills`, `sessions`, and `workspaces`
 - `commands`, `events`, `activity`, `notify`
 - `process`, optional `terminal`, `net`, `connections`, `logger`, and `settings`
 

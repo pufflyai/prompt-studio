@@ -156,3 +156,45 @@ describe("process host limits", () => {
     expect(result).toEqual({ exitCode: 0, stdout: "ready", stderr: "" });
   });
 });
+
+test.each(["close", "abort"])("does not spawn after %s while its workspace is being resolved", async (end) => {
+  for (const method of ["run", "spawnDetached"] as const) {
+    const controller = new AbortController();
+    const scope = createInvocationScope({ logger: silentLogger, parent: controller.signal });
+    const { children, spawner } = trackingSpawner();
+    let finish: (path: string) => void = () => {};
+    const cwd = new Promise<string>((resolve) => {
+      finish = resolve;
+    });
+    const api = createProcessApi({ scope, spawner, resolveCwd: () => cwd });
+    const pending = api[method]({ command: ["bun", "-e", "console.log('late')"] });
+    if (end === "close") await scope.close();
+    else controller.abort(new Error("Cancelled"));
+    finish(process.cwd());
+    await expect(pending).rejects.toThrow();
+    expect(children).toHaveLength(0);
+    await scope.close();
+  }
+});
+
+test("never starts a process after its invocation closes between promise continuations", async () => {
+  for (const method of ["run", "spawnDetached"] as const) {
+    const scope = createInvocationScope({ logger: silentLogger });
+    const tracked = trackingSpawner();
+    let closed = false;
+    const startedAfterClosure: boolean[] = [];
+    const spawner = ((command: string[], options: never) => {
+      startedAfterClosure.push(closed);
+      return tracked.spawner(command, options);
+    }) as typeof Bun.spawn;
+    const api = createProcessApi({ scope, spawner, resolveCwd: () => Promise.resolve(process.cwd()) });
+    const pending = api[method]({ command: ["bun", "-e", "console.log('late')"] });
+    queueMicrotask(() => {
+      closed = true;
+      void scope.close();
+    });
+    await pending.catch(() => undefined);
+    expect(startedAfterClosure).not.toContain(true);
+    await Promise.all(tracked.children.map((child) => child.exited));
+  }
+});

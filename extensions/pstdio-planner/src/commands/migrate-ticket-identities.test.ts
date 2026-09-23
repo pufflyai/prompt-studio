@@ -7,7 +7,7 @@ import { migrateTicketIdentitiesCommand } from "./migrate-ticket-identities";
 
 test("migration renumbers saved tickets, backs up local files, refreshes anchors, and resumes safely", async () => {
   const storage = createMemoryStorage();
-  const repoFiles = createMemoryRepoFiles();
+  const projectFiles = createMemoryRepoFiles();
   const original = await putTicket(storage, {
     id: "old-ticket",
     shorthand: "T-9",
@@ -19,14 +19,14 @@ test("migration renumbers saved tickets, backs up local files, refreshes anchors
     createdAt: "2026-01-01",
     updatedAt: "2026-01-01",
   });
-  await repoFiles.writeText(".pstdio/tickets/T-9/ticket.md", "Unsaved local content");
-  await repoFiles.writeText(".pstdio/tickets/T-8/ticket.md", "Orphan");
+  await projectFiles.writeText(".pstdio/tickets/T-9/ticket.md", "Unsaved local content");
+  await projectFiles.writeText(".pstdio/tickets/T-8/ticket.md", "Orphan");
   const anchors: unknown[] = [];
   const context = makeCommandContext({
     storage,
     params: {},
     overrides: {
-      repoFiles,
+      projectFiles,
       sessions: {
         list: async () => [
           {
@@ -52,12 +52,12 @@ test("migration renumbers saved tickets, backs up local files, refreshes anchors
     identities: [{ id: original.id, previousShorthand: "T-9", shorthand: "T-1" }],
   });
   expect((await ticketsCollection(storage).get(original.id))?.shorthand).toBe("T-1");
-  expect(await repoFiles.exists(".pstdio/tickets/T-9/ticket.md")).toBe(false);
-  expect(await repoFiles.exists(".pstdio/tickets/T-8/ticket.md")).toBe(false);
-  expect(await repoFiles.readText(".pstdio/ticket-identity-migration/.pstdio/tickets/T-9/ticket.md")).toBe(
+  expect(await projectFiles.exists(".pstdio/tickets/T-9/ticket.md")).toBe(false);
+  expect(await projectFiles.exists(".pstdio/tickets/T-8/ticket.md")).toBe(false);
+  expect(await projectFiles.readText(".pstdio/ticket-identity-migration/.pstdio/tickets/T-9/ticket.md")).toBe(
     "Unsaved local content",
   );
-  expect(await repoFiles.readText(".pstdio/tickets/T-1/ticket.md")).toContain("# Ticket");
+  expect(await projectFiles.readText(".pstdio/tickets/T-1/ticket.md")).toContain("# Ticket");
   expect(anchors).toContainEqual(expect.objectContaining({ id: original.id, shorthand: "T-1" }));
   expect(await migrateTicketIdentitiesCommand.run(context, {})).toMatchObject({ migrated: 0 });
   const created = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "New" } }));
@@ -66,7 +66,7 @@ test("migration renumbers saved tickets, backs up local files, refreshes anchors
 
 test("interrupted file rewrite resumes with the original allocation and backup", async () => {
   const storage = createMemoryStorage();
-  const repoFiles = createMemoryRepoFiles();
+  const projectFiles = createMemoryRepoFiles();
   await putTicket(storage, {
     id: "original",
     shorthand: "T-8",
@@ -78,20 +78,20 @@ test("interrupted file rewrite resumes with the original allocation and backup",
     createdAt: "2026-01-01",
     updatedAt: "2026-01-01",
   });
-  await repoFiles.writeText(".pstdio/tickets/T-8/ticket.md", "local edit");
+  await projectFiles.writeText(".pstdio/tickets/T-8/ticket.md", "local edit");
   let fail = true;
   const ctx = makeCommandContext({
     storage,
     params: {},
     overrides: {
-      repoFiles: {
-        ...repoFiles,
+      projectFiles: {
+        ...projectFiles,
         writeText: async (path, content) => {
           if (fail) {
             fail = false;
             throw new Error("interrupted");
           }
-          await repoFiles.writeText(path, content);
+          await projectFiles.writeText(path, content);
         },
       },
     },
@@ -103,7 +103,7 @@ test("interrupted file rewrite resumes with the original allocation and backup",
   ).rejects.toThrow("migrate-ticket-identities");
   await migrateTicketIdentitiesCommand.run(ctx, {});
   expect((await ticketsCollection(storage).get("original"))?.shorthand).toBe("T-1");
-  expect(await repoFiles.readText(".pstdio/ticket-identity-migration/.pstdio/tickets/T-8/ticket.md")).toBe(
+  expect(await projectFiles.readText(".pstdio/ticket-identity-migration/.pstdio/tickets/T-8/ticket.md")).toBe(
     "local edit",
   );
   expect((await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Next" } }))).shorthand).toBe(
@@ -113,7 +113,7 @@ test("interrupted file rewrite resumes with the original allocation and backup",
 
 test("migration completes for a project that has no local ticket drafts", async () => {
   const storage = createMemoryStorage();
-  const repoFiles = createMemoryRepoFiles();
+  const projectFiles = createMemoryRepoFiles();
   const original = await putTicket(storage, {
     id: "dashboard-ticket",
     shorthand: "T-9",
@@ -125,11 +125,11 @@ test("migration completes for a project that has no local ticket drafts", async 
     createdAt: "2026-01-01",
     updatedAt: "2026-01-01",
   });
-  const context = makeCommandContext({ storage, params: {}, overrides: { repoFiles } });
+  const context = makeCommandContext({ storage, params: {}, overrides: { projectFiles } });
 
   expect(await migrateTicketIdentitiesCommand.run(context, {})).toMatchObject({ complete: true, migrated: 1 });
   expect((await ticketsCollection(storage).get(original.id))?.shorthand).toBe("T-1");
-  expect(await repoFiles.readText(".pstdio/tickets/T-1/ticket.md")).toContain("# Created from the dashboard");
+  expect(await projectFiles.readText(".pstdio/tickets/T-1/ticket.md")).toContain("# Created from the dashboard");
   expect((await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "New" } }))).shorthand).toBe(
     "T-2",
   );

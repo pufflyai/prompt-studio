@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 
-const createProject = async (request: import("@playwright/test").APIRequestContext) => {
+const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "Extension Lab Modes" },
+    data: folderProjectInput({ name: "Extension Lab Modes" }, folderPath),
   });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };

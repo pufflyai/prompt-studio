@@ -103,6 +103,9 @@ export const createWorkspaceService = (deps: WorkspaceServiceDeps) => {
     get,
     getByShorthand,
     getDefault,
+    attachInitialProvider: async (id: string, input: Parameters<typeof raw.attachInitialProvider>[1]) =>
+      emitOrLog("set", id, await raw.attachInitialProvider(id, input)),
+    findDefaultByPath: raw.findDefaultByPath,
     list,
     listForProviderReconciliation,
     create,

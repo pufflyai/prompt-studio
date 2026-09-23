@@ -37,10 +37,6 @@ export const createSessionsApi = (
     if (!workspace || workspace.project_id !== input.projectId) throw new Error(`Workspace not found: ${id}`);
     return workspace;
   };
-  const getProjectRepo = async (id: string) => {
-    const repos = await deps.repoService.listByProject(input.projectId);
-    return repos.find((repo) => repo.id === id) ?? null;
-  };
 
   return {
     get: async (id) => toExtensionSession(await getProjectSession(id)),
@@ -70,11 +66,11 @@ export const createSessionsApi = (
     },
     create: async (sessionInput) => {
       input.signal?.throwIfAborted();
-      const workspace = sessionInput.workspaceId ? await requireProjectWorkspace(sessionInput.workspaceId) : null;
-      const repo = sessionInput.repoId ? await getProjectRepo(sessionInput.repoId) : null;
-      if (sessionInput.repoId && !repo) throw new Error(`Repo not found: ${sessionInput.repoId}`);
+      const workspace = sessionInput.workspaceId
+        ? await requireProjectWorkspace(sessionInput.workspaceId)
+        : await deps.workspaceService.getDefault(input.projectId);
+      if (!workspace) throw new Error("Attach a workspace before starting a session.");
       if (sessionInput.originalSessionId) await requireProjectSession(sessionInput.originalSessionId);
-      const repoPath = repo?.path;
       const project = await deps.projectService.get(input.projectId);
       if (!project) throw new Error(`Project not found: ${input.projectId}`);
 
@@ -100,7 +96,7 @@ export const createSessionsApi = (
       );
       const prompt = resolveExtensionPrompt(sessionInput);
       const attachments = await resolveSessionAttachments(deps, input.projectId, sessionInput.attachments);
-      const cwd = repoPath ?? (await resolveSessionCwd(deps, input.projectId, workspace?.id));
+      const cwd = await resolveSessionCwd(deps, input.projectId, workspace?.id);
       const session = await createSessionScheduler(deps).createAndStartSession({
         projectId: input.projectId,
         title: sessionInput.title,

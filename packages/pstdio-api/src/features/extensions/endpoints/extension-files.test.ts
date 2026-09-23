@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import type { AppBindings } from "../../../types";
 import { testHarnessId } from "../../harnesses/test-harness-registry";
 
@@ -115,7 +116,10 @@ beforeEach(async () => {
   app = created.app;
   closeApp = created.close;
 
-  const project = await createJson("/v1/projects", { name: "Files Project", agents: [testHarnessId("opencode")] });
+  const project = await createJson(
+    "/v1/projects",
+    folderProjectInput({ name: "Files Project", agents: [testHarnessId("opencode")] }),
+  );
   projectId = project.id;
   labInstanceId = await enableExtension("lab");
   otherInstanceId = await enableExtension("other");
@@ -184,10 +188,13 @@ describe("extension file endpoints", () => {
   });
 
   test("does not resolve a command from another project", async () => {
-    const project = await createJson("/v1/projects", {
-      name: "Foreign Files Project",
-      agents: [testHarnessId("opencode")],
-    });
+    const project = await createJson(
+      "/v1/projects",
+      folderProjectInput({
+        name: "Foreign Files Project",
+        agents: [testHarnessId("opencode")],
+      }),
+    );
 
     const response = await uploadCommandFile(project.id, "pstdio.lab.command.read-upload");
 

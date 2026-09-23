@@ -1,5 +1,6 @@
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import { expect, type Locator, type Page } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, createPlannerTicketFile, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
@@ -17,8 +18,10 @@ const allSectionRowNames = ["Search", "Notifications", "Sessions", "Workspaces",
 const projectSectionRowNames = allSectionRowNames.filter((name) => name !== "Workspaces");
 const sessionSectionRowNames = projectSectionRowNames.filter((name) => name !== "Sessions");
 
-const createProject = async (request: import("@playwright/test").APIRequestContext) => {
-  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-174 Sidenav" } });
+const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "PS-174 Sidenav" }, folderPath),
+  });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };
 };

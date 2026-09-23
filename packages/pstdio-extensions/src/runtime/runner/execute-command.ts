@@ -4,7 +4,6 @@ import type {
   CommandOutcome,
   CommandSource,
   JsonObject,
-  RepoContext,
 } from "@pstdio/sdk/extensions";
 import type { RuntimeCommandRecord, RuntimeMiddlewareRecord } from "../../types/runtime";
 import type { RunnerState } from "./context";
@@ -22,14 +21,12 @@ const buildRequestPayload = (
   invocationId: string,
   projectId: string,
   source: CommandSource | undefined,
-  repo: RepoContext | undefined,
 ) => ({
   commandId: record.id,
   invocationId,
   source,
   params: invocation.params,
   resource: invocation.resource,
-  repo,
   projectId,
 });
 
@@ -78,7 +75,7 @@ const runExtensionCommand = async (
   }
 
   const notices: CommandNotice[] = [];
-  const envFor = createEnvironmentCache(state.deps, input.projectId, input.repo, notices, {
+  const envFor = createEnvironmentCache(state.deps, input.projectId, notices, {
     workspaceDir: input.workspaceDir,
     workspaceId: input.workspaceId,
   });
@@ -93,8 +90,6 @@ const runExtensionCommand = async (
   const initialInvocation: CommandInvocation = {
     params: (input.params ?? {}) as JsonObject,
     resource: input.resource,
-    repoId: input.repo?.repoId,
-    repoPath: input.repo?.path,
     attachment: input.attachment,
     slot: input.slot,
     metadata: input.metadata,
@@ -109,7 +104,6 @@ const runExtensionCommand = async (
       invocationId,
       input.projectId,
       input.source,
-      input.repo,
       input.depth,
       scope,
       { workspaceDir: input.workspaceDir, workspaceId: input.workspaceId },
@@ -123,20 +117,12 @@ const runExtensionCommand = async (
       invocationId,
       input.projectId,
       input.source,
-      input.repo,
       input.depth,
       scope,
       { workspaceDir: input.workspaceDir, workspaceId: input.workspaceId },
     );
 
-  const requestedPayload = buildRequestPayload(
-    record,
-    initialInvocation,
-    invocationId,
-    input.projectId,
-    input.source,
-    input.repo,
-  );
+  const requestedPayload = buildRequestPayload(record, initialInvocation, invocationId, input.projectId, input.source);
   await state.dispatcher.dispatch(lifecycleEventId("requested", record.id), requestedPayload);
 
   let middlewareResult: MiddlewareChainResult;
@@ -221,7 +207,7 @@ const executePrivateHandler = async (
   scope: InvocationScope,
 ): Promise<CommandOutcome> => {
   const notices: CommandNotice[] = [];
-  const envFor = createEnvironmentCache(state.deps, input.projectId, input.repo, notices, {
+  const envFor = createEnvironmentCache(state.deps, input.projectId, notices, {
     workspaceDir: input.workspaceDir,
     workspaceId: input.workspaceId,
   });
@@ -241,7 +227,6 @@ const executePrivateHandler = async (
     source: input.source,
     params,
     resource: input.resource,
-    repo: input.repo,
     projectId: input.projectId,
   };
 

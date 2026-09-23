@@ -91,14 +91,14 @@ const workspaceToBadgeItem = (
 ): TicketWorkspaceBadgeItem => ({
   id: workspace.id,
   label: workspace.workspace_shorthand?.trim() || workspaceDisplayName(workspace),
-  icon: workspace.worktree_path ? "GitBranch" : "GitCommit",
+  icon: workspace.root_path ? "GitBranch" : "GitCommit",
   resource: {
     type: "workspace",
     id: workspace.id,
     label: workspaceDisplayName(workspace),
     metadata: {
       workspaceId: workspace.id,
-      workspaceType: workspace.worktree_path ? "worktree" : "current_branch",
+      workspaceType: workspace.root_path ? "worktree" : "current_branch",
       ...(workspace.workspace_shorthand ? { workspaceShorthand: workspace.workspace_shorthand } : {}),
     },
   },

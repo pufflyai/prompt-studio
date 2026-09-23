@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
 import { expectPlannerIdentities } from "./packaged-planner-identities-smoke";
 import { expectPlannerProperties } from "./packaged-planner-properties-smoke";
@@ -50,10 +51,12 @@ export const registerCoreDefaultExtensionSmokeTests = () => {
           });
           closeRegistry = registry.close;
 
+          const projectFolder = join(tempRoot, "project");
+          mkdirSync(projectFolder);
           const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
             method: "POST",
             headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-            body: JSON.stringify({ name: "packaged-core-extensions-project" }),
+            body: JSON.stringify(folderProjectInput({ name: "packaged-core-extensions-project" }, projectFolder)),
           });
           expect(createRes.status).toBe(201);
 

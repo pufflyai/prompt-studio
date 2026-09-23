@@ -87,9 +87,9 @@ describe("ticket workspace listing", () => {
       overrides: {
         workspaces: {
           list: async () => [
-            { id: "w1", workspace_shorthand: "T-1_A1", branch: "b1", worktree_path: "/wt/1" },
-            { id: "w2", workspace_shorthand: "T-1_A2", branch: "b2", worktree_path: null },
-            { id: "w3", workspace_shorthand: "T-2_A1", branch: "b3", worktree_path: "/wt/3" },
+            { id: "w1", workspace_shorthand: "T-1_A1", branch: "b1", root_path: "/wt/1" },
+            { id: "w2", workspace_shorthand: "T-1_A2", branch: "b2", root_path: null },
+            { id: "w3", workspace_shorthand: "T-2_A1", branch: "b3", root_path: "/wt/3" },
           ],
         },
         sessions: {

@@ -8,7 +8,7 @@ const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) 
   const log = (overrides.log ?? mock()) as Mock<(msg: string) => void>;
   return {
     cwd: () => "/fake/repo",
-    findGitRoot: () => "/fake/repo",
+    findProjectRoot: () => "/fake/repo",
     readConfig: () => ({ project_id: "proj-1" }),
     listSessions: mock(
       async () =>
@@ -53,7 +53,7 @@ describe("sessions list", () => {
   });
 
   test("throws when no project context", async () => {
-    const deps = makeDeps({ findGitRoot: () => null, readConfig: () => null });
+    const deps = makeDeps({ findProjectRoot: () => null, readConfig: () => null });
     const handler = createHandler(deps);
 
     expect(handler(argv())).rejects.toThrow("Not inside a pstdio project");

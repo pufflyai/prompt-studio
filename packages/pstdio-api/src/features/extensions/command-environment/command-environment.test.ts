@@ -2,6 +2,7 @@ import { afterEach, describe, expect, mock, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { folderWorkspaceCapabilities } from "pstdio-db";
 import { createFilesApi } from "./files";
 import { createCommandEnvironment } from "./index";
 import { createSessionsApi } from "./sessions";
@@ -114,7 +115,18 @@ describe("createCommandEnvironment host primitives", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-        repoService: { listByProject: async () => [{ id: "repo-1", path: repoPath }] },
+        workspaceService: {
+          setInitializing: async () => null,
+          getDefault: async () => ({
+            id: "home",
+            project_id: "project-1",
+            root_path: repoPath,
+            execution_kind: "local",
+            provider_id: "pstdio.root",
+            provider_state: "ready",
+            provider_capabilities_json: folderWorkspaceCapabilities,
+          }),
+        },
       } as never,
       enabledSources as never,
       {
@@ -122,7 +134,6 @@ describe("createCommandEnvironment host primitives", () => {
         name: "extension-lab",
         project: projectContext,
         projectId: "project-1",
-        repo: { projectId: "project-1", repoId: "repo-1", path: repoPath },
       },
     );
 
@@ -198,6 +209,7 @@ describe("createCommandEnvironment host primitives", () => {
       {
         extensionStorageService: makeStorageService(),
         workspaceService: {
+          setInitializing: async () => null,
           list: async (projectId: string) => [
             { id: "ws-1", project_id: projectId },
             { id: "ws-2", project_id: projectId },
@@ -219,53 +231,26 @@ describe("createCommandEnvironment host primitives", () => {
     ]);
   });
 
-  test("exposes repoFiles scoped to the registered repo root, ignoring a forged client path", async () => {
+  test("exposes project files through the default workspace", async () => {
     const root = mkdtempSync(join(tmpdir(), "pstdio-extension-repo-files-test-"));
     tempRoots.push(root);
 
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-        // Only repo-1 is registered, pointing at the real root.
-        repoService: { listByProject: async () => [{ id: "repo-1", path: root }] },
-        workspaceService: { list: async () => [] },
-      } as never,
-      makeEnabledSources() as never,
-      {
-        extensionId: "pstdio.extension-lab",
-        name: "extension-lab",
-        project: projectContext,
-        projectId: "project-1",
-        // A forged request supplies an arbitrary path; it must be ignored.
-        repo: { projectId: "project-1", repoId: "repo-1", path: "/tmp/attacker-controlled" },
-      },
-    );
 
-    if (!env.repoFiles) throw new Error("expected repoFiles to be present");
-    await env.repoFiles.writeText(".pstdio/tickets/PS-1/ticket.md", "# hi");
-
-    expect(readFileSync(join(root, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toBe("# hi");
-    expect(await env.repoFiles.readText(".pstdio/tickets/PS-1/ticket.md")).toBe("# hi");
-    await expect(env.repoFiles.writeText("../escape.md", "x")).rejects.toThrow(/escapes/);
-  });
-
-  test("mounts repoFiles at a worktree path that matches a known workspace", async () => {
-    const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-repo-root-"));
-    const worktreeRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-worktree-"));
-    tempRoots.push(repoRoot, worktreeRoot);
-
-    const env = createCommandEnvironment(
-      {
-        extensionStorageService: makeStorageService(),
-        repoService: { listByProject: async () => [{ id: "repo-1", path: repoRoot }] },
         workspaceService: {
-          list: async () => [
-            {
-              id: "ws-1",
-              worktree_path: worktreeRoot,
-              provider_params_json: { repo_id: "repo-1" },
-            },
-          ],
+          setInitializing: async () => null,
+          getDefault: async () => ({
+            id: "home",
+            project_id: "project-1",
+            root_path: root,
+            execution_kind: "local",
+            provider_id: "pstdio.root",
+            provider_state: "ready",
+            provider_capabilities_json: folderWorkspaceCapabilities,
+          }),
+          list: async () => [],
         },
       } as never,
       makeEnabledSources() as never,
@@ -274,24 +259,46 @@ describe("createCommandEnvironment host primitives", () => {
         name: "extension-lab",
         project: projectContext,
         projectId: "project-1",
-        // The CLI resolves a worktree to its owning registered repo but keeps the
-        // worktree's own path so edits land in the workspace, not the main checkout.
-        repo: { projectId: "project-1", repoId: "repo-1", path: worktreeRoot },
       },
     );
 
-    if (!env.repoFiles) throw new Error("expected repoFiles to be present");
-    await env.repoFiles.writeText(".pstdio/tickets/PS-1/ticket.md", "# wt");
+    if (!env.projectFiles) throw new Error("expected projectFiles to be present");
+    await env.projectFiles.writeText(".pstdio/tickets/PS-1/ticket.md", "# hi");
 
-    expect(readFileSync(join(worktreeRoot, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toBe("# wt");
-    expect(readFileSync.bind(null, join(repoRoot, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toThrow();
+    expect(readFileSync(join(root, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toBe("# hi");
+    expect(await env.projectFiles.readText(".pstdio/tickets/PS-1/ticket.md")).toBe("# hi");
+    await expect(env.projectFiles.writeText("../escape.md", "x")).rejects.toThrow(/escapes/);
   });
 
-  test("repoFiles rejects a repo that is not registered for the project", async () => {
+  test("separates default project files from selected workspace files", async () => {
+    const repoRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-repo-root-"));
+    const worktreeRoot = mkdtempSync(join(tmpdir(), "pstdio-extension-worktree-"));
+    tempRoots.push(repoRoot, worktreeRoot);
+
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-        repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] },
+
+        workspaceService: {
+          setInitializing: async () => null,
+          getDefault: async () => ({
+            id: "home",
+            project_id: "project-1",
+            root_path: repoRoot,
+            execution_kind: "local",
+            provider_id: "pstdio.root",
+            provider_state: "ready",
+            provider_capabilities_json: folderWorkspaceCapabilities,
+          }),
+          get: async () => ({
+            id: "ws-1",
+            project_id: "project-1",
+            root_path: worktreeRoot,
+            execution_kind: "local",
+            provider_state: "ready",
+            provider_capabilities_json: folderWorkspaceCapabilities,
+          }),
+        },
       } as never,
       makeEnabledSources() as never,
       {
@@ -299,27 +306,17 @@ describe("createCommandEnvironment host primitives", () => {
         name: "extension-lab",
         project: projectContext,
         projectId: "project-1",
-        repo: { projectId: "project-1", repoId: "unregistered", path: "/anywhere" },
+        workspaceDir: worktreeRoot,
+        workspaceId: "ws-1",
       },
     );
 
-    if (!env.repoFiles) throw new Error("expected repoFiles to be present");
-    await expect(env.repoFiles.writeText("file.md", "x")).rejects.toThrow(/not registered/);
-  });
+    if (!env.projectFiles) throw new Error("expected projectFiles to be present");
+    await env.projectFiles.writeText(".pstdio/tickets/PS-1/ticket.md", "# project");
+    await env.workspaceFiles!.writeText(".pstdio/tickets/PS-1/ticket.md", "# wt");
 
-  test("omits repoFiles when the invocation has no repo", () => {
-    const env = createCommandEnvironment(
-      { extensionStorageService: makeStorageService() } as never,
-      makeEnabledSources() as never,
-      {
-        extensionId: "pstdio.extension-lab",
-        name: "extension-lab",
-        project: projectContext,
-        projectId: "project-1",
-      },
-    );
-
-    expect(env.repoFiles).toBeUndefined();
+    expect(readFileSync(join(worktreeRoot, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toBe("# wt");
+    expect(readFileSync(join(repoRoot, ".pstdio", "tickets", "PS-1", "ticket.md"), "utf8")).toBe("# project");
   });
 });
 
@@ -336,7 +333,6 @@ describe("createCommandEnvironment storage scopes", () => {
       },
     );
 
-    expect(() => env.storage.scope({ type: "repo" } as never)).toThrow("repo storage scope requires repoId");
     expect(() => env.storage.scope({ type: "resource" } as never)).toThrow(
       "resource storage scope requires resource.id",
     );
@@ -356,16 +352,22 @@ describe("createCommandEnvironment session scopes", () => {
     };
     const sessions = createSessionsApi(
       {
-        repoService: {
-          get: mock(async () => ({ id: "repo-foreign", path: "/foreign" })),
-          listByProject: async () => [{ id: "repo-local", path: "/local" }],
-        },
         sessionService: {
           get: async () => foreignSession,
           list: async () => [],
           update: updateSession,
         },
         workspaceService: {
+          setInitializing: async () => null,
+          getDefault: async () => ({
+            id: "home",
+            project_id: "project-1",
+            root_path: "/local",
+            execution_kind: "local",
+            provider_id: "pstdio.root",
+            provider_state: "ready",
+            provider_capabilities_json: folderWorkspaceCapabilities,
+          }),
           get: async () => ({ id: "workspace-foreign", project_id: "project-2" }),
           getByShorthand: async () => null,
         },
@@ -380,9 +382,6 @@ describe("createCommandEnvironment session scopes", () => {
     );
     await expect(sessions.create({ title: "Forged", prompt: "x", workspaceId: "workspace-foreign" })).rejects.toThrow(
       "Workspace not found: workspace-foreign",
-    );
-    await expect(sessions.create({ title: "Forged", prompt: "x", repoId: "repo-foreign" })).rejects.toThrow(
-      "Repo not found: repo-foreign",
     );
     await expect(
       sessions.create({ title: "Forged", prompt: "x", originalSessionId: "session-foreign" }),
@@ -437,7 +436,17 @@ describe("createCommandEnvironment", () => {
 
   test("runs process commands that must succeed", async () => {
     const env = createCommandEnvironment(
-      { extensionStorageService: makeStorageService() } as never,
+      {
+        extensionStorageService: makeStorageService(),
+        workspaceService: {
+          getDefault: async () => ({
+            project_id: "project-1",
+            root_path: process.cwd(),
+            execution_kind: "local",
+            provider_state: "ready",
+          }),
+        },
+      } as never,
       makeEnabledSources() as never,
       {
         extensionId: "pstdio.extension-lab",
@@ -468,8 +477,17 @@ describe("createCommandEnvironment", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-        repoService: {
-          listByProject: async () => [{ id: "repo-1", path: repoPath }],
+        workspaceService: {
+          setInitializing: async () => null,
+          getDefault: async () => ({
+            id: "home",
+            project_id: "project-1",
+            root_path: repoPath,
+            execution_kind: "local",
+            provider_id: "pstdio.root",
+            provider_state: "ready",
+            provider_capabilities_json: folderWorkspaceCapabilities,
+          }),
         },
       } as never,
       makeEnabledSources() as never,
@@ -509,10 +527,17 @@ describe("createCommandEnvironment workspaces", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-        repoService: {
-          listByProject: async () => [{ id: "repo-1", path: "/repo" }],
-        },
+
         workspaceService: {
+          setInitializing: async () => null,
+          getDefault: async () => ({
+            id: "home",
+            project_id: "project-1",
+            root_path: "/repo",
+            execution_kind: "local",
+            provider_id: "pstdio.root",
+            provider_state: "ready",
+          }),
           create: async (input: unknown) => {
             created.push(input);
             return { id: "ws-1", workspace_shorthand: "T-1_A1", anchors_json: [], ...(input as object) };
@@ -535,13 +560,19 @@ describe("createCommandEnvironment workspaces", () => {
       },
       {
         runWorkspaceProvisioning: async (_deps, input) => input.workspace,
-        setupWorkspaceWorktree: async () => ({ branch: "workspace/T-1_A1", worktreePath: "/repo/.worktrees/T-1_A1" }),
+        setupWorkspaceWorktree: async () => ({
+          branch: "workspace/T-1_A1",
+          worktreePath: "/repo/.worktrees/T-1_A1",
+          rootPath: "/repo/.worktrees/T-1_A1",
+          sourceRoot: "/repo",
+          relativePath: "",
+        }),
       },
     );
 
     const workspace = await env.workspaces.create({
       shorthand_base: "T-1",
-      provider_id: "pstdio.root",
+      provider_id: "pstdio.worktree",
       anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
     });
 
@@ -550,7 +581,7 @@ describe("createCommandEnvironment workspaces", () => {
       expect.objectContaining({
         project_id: "project-1",
         shorthand_base: "T-1",
-        provider_id: "pstdio.root",
+        provider_id: "pstdio.worktree",
         provider_operation_kind: "create",
         anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
       }),
@@ -562,6 +593,7 @@ describe("createCommandEnvironment workspaces", () => {
       {
         extensionStorageService: makeStorageService(),
         workspaceService: {
+          setInitializing: async () => null,
           getByShorthand: async (projectId: string, shorthand: string) => ({
             id: "ws-1",
             project_id: projectId,
@@ -589,8 +621,17 @@ describe("createCommandEnvironment workspaces", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-        repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] },
+
         workspaceService: {
+          setInitializing: async () => null,
+          getDefault: async () => ({
+            id: "home",
+            project_id: "project-1",
+            root_path: "/repo",
+            execution_kind: "local",
+            provider_id: "pstdio.root",
+            provider_state: "ready",
+          }),
           get: async () => ({
             id: "default",
             project_id: "project-1",
@@ -598,15 +639,15 @@ describe("createCommandEnvironment workspaces", () => {
             provider_ref_json: null,
             provider_state: "ready",
             execution_kind: "local",
-            worktree_path: null,
+            root_path: "/repo",
             display_path: null,
             provider_capabilities_json: {
               files: "write",
-              diff: true,
-              merge: true,
-              rebase: true,
-              archive: true,
-              delete: true,
+              diff: false,
+              merge: false,
+              rebase: false,
+              archive: false,
+              delete: false,
             },
             provider_error_json: null,
             is_default: true,
@@ -637,14 +678,23 @@ describe("createCommandEnvironment workspace lifecycle", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-        repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] },
+
         workspaceService: {
+          setInitializing: async () => null,
+          getDefault: async () => ({
+            id: "home",
+            project_id: "project-1",
+            root_path: "/repo",
+            execution_kind: "local",
+            provider_id: "pstdio.root",
+            provider_state: "ready",
+          }),
           get: async (id: string) => ({
             id,
             project_id: "project-1",
             workspace_shorthand: "T-1_A1",
             branch: null,
-            worktree_path: null,
+            root_path: null,
             provider_id: "pstdio.worktree",
             provider_ref_json: null,
             execution_kind: "local",
@@ -706,7 +756,7 @@ describe("createCommandEnvironment workspace lifecycle", () => {
       workspace_shorthand: "T-1_A1",
       anchors_json: [],
       branch: "workspace/T-1_A1",
-      worktree_path: "/repo/.worktrees/T-1_A1",
+      root_path: "/repo/.worktrees/T-1_A1",
       provider_id: "pstdio.worktree",
       provider_capabilities_json: { archive: true, delete: true },
       provider_ref_json: null,
@@ -717,7 +767,7 @@ describe("createCommandEnvironment workspace lifecycle", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-        workspaceService: { get: async () => workspace, softDelete },
+        workspaceService: { setInitializing: async () => null, get: async () => workspace, softDelete },
       } as never,
       makeEnabledSources() as never,
       {
@@ -730,7 +780,13 @@ describe("createCommandEnvironment workspace lifecycle", () => {
         deleteProviderBackedWorkspace: remove as never,
         fireExtensionEventAsync: fireRemoved as never,
         runWorkspaceProvisioning: async (_deps, input) => input.workspace,
-        setupWorkspaceWorktree: async () => ({ branch: "unused", worktreePath: "/unused" }),
+        setupWorkspaceWorktree: async () => ({
+          branch: "unused",
+          worktreePath: "/unused",
+          rootPath: "/unused",
+          sourceRoot: "/repo",
+          relativePath: "",
+        }),
       },
     );
 
@@ -742,7 +798,7 @@ describe("createCommandEnvironment workspace lifecycle", () => {
       expect.anything(),
       "project-1",
       expect.objectContaining({ id: "worktree.removed" }),
-      expect.objectContaining({ workspaceId: "ws-1", worktreePath: workspace.worktree_path }),
+      expect.objectContaining({ workspaceId: "ws-1", worktreePath: workspace.root_path }),
     );
   });
 
@@ -756,17 +812,17 @@ describe("createCommandEnvironment workspace lifecycle", () => {
       workspace_shorthand: "T-1_A1",
       anchors_json: [],
       branch: "workspace/T-1_A1",
-      worktree_path: "/repo/.worktrees/T-1_A1",
+      root_path: "/repo/.worktrees/T-1_A1",
       provider_id: "pstdio.worktree",
       provider_ref_json: null,
       provider_state: "ready",
       execution_kind: "local",
     };
-    const clearWorktree = mock(async () => ({ ...workspace, branch: null, worktree_path: null }));
+    const clearWorktree = mock(async () => ({ ...workspace, branch: null, root_path: null }));
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-        workspaceService: { clearWorktree, get: async () => workspace, softDelete },
+        workspaceService: { setInitializing: async () => null, clearWorktree, get: async () => workspace, softDelete },
       } as never,
       makeEnabledSources() as never,
       {
@@ -779,7 +835,13 @@ describe("createCommandEnvironment workspace lifecycle", () => {
         cleanupWorkspaceWorktree: cleanup as never,
         fireExtensionEventAsync: fireRemoved as never,
         runWorkspaceProvisioning: async (_deps, input) => input.workspace,
-        setupWorkspaceWorktree: async () => ({ branch: "unused", worktreePath: "/unused" }),
+        setupWorkspaceWorktree: async () => ({
+          branch: "unused",
+          worktreePath: "/unused",
+          rootPath: "/unused",
+          sourceRoot: "/repo",
+          relativePath: "",
+        }),
       },
     );
 
@@ -791,7 +853,7 @@ describe("createCommandEnvironment workspace lifecycle", () => {
       expect.anything(),
       "project-1",
       expect.objectContaining({ id: "worktree.removed" }),
-      expect.objectContaining({ workspaceId: "ws-1", worktreePath: workspace.worktree_path }),
+      expect.objectContaining({ workspaceId: "ws-1", worktreePath: workspace.root_path }),
     );
   });
 
@@ -804,7 +866,7 @@ describe("createCommandEnvironment workspace lifecycle", () => {
       workspace_shorthand: "OTHER_A1",
       anchors_json: [],
       branch: "workspace/OTHER_A1",
-      worktree_path: "/repo/.worktrees/OTHER_A1",
+      root_path: "/repo/.worktrees/OTHER_A1",
       provider_id: "pstdio.worktree",
       provider_ref_json: null,
       provider_state: "ready",
@@ -813,7 +875,7 @@ describe("createCommandEnvironment workspace lifecycle", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-        workspaceService: { get: async () => workspace, softDelete },
+        workspaceService: { setInitializing: async () => null, get: async () => workspace, softDelete },
       } as never,
       makeEnabledSources() as never,
       {
@@ -825,7 +887,13 @@ describe("createCommandEnvironment workspace lifecycle", () => {
       {
         cleanupWorkspaceWorktree: cleanup as never,
         runWorkspaceProvisioning: async (_deps, input) => input.workspace,
-        setupWorkspaceWorktree: async () => ({ branch: "unused", worktreePath: "/unused" }),
+        setupWorkspaceWorktree: async () => ({
+          branch: "unused",
+          worktreePath: "/unused",
+          rootPath: "/unused",
+          sourceRoot: "/repo",
+          relativePath: "",
+        }),
       },
     );
 
@@ -840,28 +908,6 @@ describe("createCommandEnvironment workspace lifecycle", () => {
 });
 
 describe("createCommandEnvironment project boundaries", () => {
-  test("does not expose a repo owned by another project", async () => {
-    const env = createCommandEnvironment(
-      {
-        extensionStorageService: makeStorageService(),
-        repoService: {
-          get: async () => ({ id: "other-repo", path: "/other" }),
-          listByProject: async () => [{ id: "own-repo", path: "/own" }],
-        },
-      } as never,
-      makeEnabledSources() as never,
-      {
-        extensionId: "pstdio.extension-lab",
-        name: "extension-lab",
-        project: projectContext,
-        projectId: "project-1",
-      },
-    );
-
-    await expect(env.repos.get("other-repo")).rejects.toThrow("Repo not found: other-repo");
-    await expect(env.repos.resolvePath("other-repo", "README.md")).rejects.toThrow("Repo not found: other-repo");
-  });
-
   test("queues remote session follow-ups without a local cwd", async () => {
     const inserted: unknown[] = [];
     const session = {
@@ -920,83 +966,6 @@ describe("createCommandEnvironment project boundaries", () => {
     const port = await env.net.findFreePort();
 
     expect(port).toBeGreaterThan(0);
-  });
-});
-
-describe("createCommandEnvironment sessions", () => {
-  test("uses the linked repo path for extension-created project sessions", async () => {
-    const createdSessions: unknown[] = [];
-    const env = createCommandEnvironment(
-      {
-        extensionStorageService: makeStorageService(),
-        repoService: {
-          listByProject: async () => [{ id: "repo-1", path: "/repo" }],
-        },
-        workspaceService: {
-          get: async () => null,
-          getByShorthand: async () => null,
-        },
-        projectService: {
-          get: async () => ({ id: "project-1", default_agent_id: null, default_agent_model: null }),
-        },
-        harnessRegistry: {
-          get: async () => ({
-            start: async () => ({
-              agentSessionId: "agent-session-1",
-              done: new Promise(() => {}),
-              stop: () => {},
-            }),
-          }),
-          list: async () => [{ id: "fake-agent" }],
-        },
-        settingsService: {
-          get: async () => ({ max_concurrent_sessions: null }),
-        },
-        sessionService: {
-          create: async (input: Record<string, unknown>) => {
-            createdSessions.push(input);
-            return {
-              id: "session-1",
-              project_id: input.project_id,
-              title: input.title,
-              status: "in_progress",
-              agent: input.agent,
-              last_selected_model: input.last_selected_model ?? null,
-              cwd: input.cwd ?? null,
-            };
-          },
-          update: async () => null,
-          get: async () => null,
-          transitionStatus: async () => null,
-          store: {
-            create: mock(() => ({
-              eventStore: {
-                push: () => {},
-                getHistory: () => [],
-                subscribe: async function* () {},
-              },
-              approvalService: { handleResponse: () => {}, dispose: () => {} },
-            })),
-            get: mock(() => null),
-            setSession: mock(() => true),
-            remove: mock(() => {}),
-          },
-        },
-        eventBus: { emit: () => {} },
-        activityEventsService: { create: async () => ({}) },
-      } as never,
-      makeEnabledSources() as never,
-      {
-        extensionId: "pstdio.extension-lab",
-        name: "extension-lab",
-        project: projectContext,
-        projectId: "project-1",
-      },
-    );
-
-    await env.sessions.create({ title: "Refine ticket: T-1", prompt: "Refine ticket T-1" });
-
-    expect(createdSessions[0]).toMatchObject({ cwd: "/repo" });
   });
 });
 
@@ -1164,8 +1133,17 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
     const env = createCommandEnvironment(
       {
         extensionStorageService: makeStorageService(),
-        repoService: { listByProject: async () => [{ id: "repo-1", path: "/repo" }] },
+
         workspaceService: {
+          setInitializing: async () => null,
+          getDefault: async () => ({
+            id: "home",
+            project_id: "project-1",
+            root_path: "/repo",
+            execution_kind: "local",
+            provider_id: "pstdio.root",
+            provider_state: "ready",
+          }),
           create: async (input: unknown) => ({
             id: "ws-1",
             workspace_shorthand: "T-1_A1",
@@ -1196,11 +1174,15 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
         setupWorkspaceWorktree: async () => ({
           branch: "workspace/T-1_A1",
           worktreePath: "/repo/.worktrees/T-1_A1",
+          rootPath: "/repo/.worktrees/T-1_A1",
+          sourceRoot: "/repo",
+          relativePath: "",
         }),
       },
     );
 
     await env.workspaces.create({
+      provider_id: "pstdio.worktree",
       shorthand_base: "T-1",
       anchors: [{ type: "ticket", id: "ticket-1", label: "T-1", metadata: { shorthand: "T-1" } }],
     });
@@ -1211,7 +1193,7 @@ describe("createCommandEnvironment workspaces worktree mode", () => {
     expect(provisioned[0]!.workspace).toMatchObject({
       id: "ws-1",
       branch: "workspace/T-1_A1",
-      worktree_path: "/repo/.worktrees/T-1_A1",
+      root_path: "/repo/.worktrees/T-1_A1",
     });
   });
 });

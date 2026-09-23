@@ -191,7 +191,7 @@ const loadExtensionBench = async (input: LoadExtensionBenchInput) => {
       resource: request.resource as ExtensionResourceRef | undefined,
       attachment: request.attachment as WorkbenchAttachmentInvocationContext | undefined,
       slot: request.slot,
-      repo: request.repo,
+      workspaceId: request.workspaceId,
       source: request.source,
       metadata: request.metadata as JsonObject | undefined,
     });

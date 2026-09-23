@@ -36,6 +36,7 @@ export const updateProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
     const { id } = c.req.valid("param");
     const body = c.req.valid("json");
 
+    if (body.name !== undefined) await deps.projectService.update(id, { name: body.name });
     const updated = await deps.projectService.setDefaults(id, {
       default_agent_id: body.default_agent_id,
       default_agent_model: body.default_agent_model,

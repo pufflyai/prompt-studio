@@ -17,12 +17,12 @@ const publishFile = async (
   ctx: ExtensionContextBase,
   input: { file_path: string; url?: string; favicon?: string; label?: string },
 ) => {
-  const files = ctx.workspaceFiles ?? ctx.repoFiles;
+  const files = ctx.workspaceFiles ?? ctx.projectFiles;
   if (!files) throw new Error("Select a project workspace before publishing an HTML file.");
   let path = input.file_path;
   if (isAbsolute(path)) {
-    const workspace = ctx.workspaceId ? await ctx.workspaces.get(ctx.workspaceId) : undefined;
-    const root = workspace?.worktree_path ?? ctx.repo?.path;
+    const workspace = ctx.workspaceId ? await ctx.workspaces.get(ctx.workspaceId) : await ctx.workspaces.getDefault();
+    const root = workspace?.root_path;
     if (!root) throw new Error("Use a workspace-relative HTML file path.");
     path = relative(root, path);
   }

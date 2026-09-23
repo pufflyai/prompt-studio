@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { SessionMessage } from "pstdio-api-contracts";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -36,7 +37,7 @@ test("completed session replay does not use a host-wide harness disabled for the
     const projectResponse = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Disabled harness replay project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Disabled harness replay project" })),
     });
     expect(projectResponse.status).toBe(201);
     const project = (await projectResponse.json()) as { id: string };

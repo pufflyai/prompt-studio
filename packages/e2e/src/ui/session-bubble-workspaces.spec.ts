@@ -1,8 +1,9 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
-import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
+import { createGitRepo } from "./helpers/workspace-session-attempt";
 
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((selectedProjectId: string) => {
@@ -12,21 +13,21 @@ const bypassOnboarding = async (page: import("@playwright/test").Page, projectId
   }, projectId);
 };
 
-const createProjectViaApi = async (request: import("@playwright/test").APIRequestContext, name: string) => {
+const createProjectViaApi = async (
+  request: import("@playwright/test").APIRequestContext,
+  name: string,
+  folderPath?: string,
+) => {
   const res = await request.post(`${apiBase}/v1/projects`, {
-    data: { name },
+    data: folderProjectInput({ name }, folderPath),
   });
   expect(res.ok()).toBe(true);
   return (await res.json()) as { id: string; name: string };
 };
 
-const createWorkspaceViaApi = async (
-  request: import("@playwright/test").APIRequestContext,
-  projectId: string,
-  repoId: string,
-) => {
+const createWorkspaceViaApi = async (request: import("@playwright/test").APIRequestContext, projectId: string) => {
   const res = await request.post(`${apiBase}/v1/workspaces`, {
-    data: { project_id: projectId, repo_id: repoId },
+    data: { project_id: projectId, provider_id: "pstdio.worktree", params: {} },
   });
   expect(res.ok()).toBe(true);
   return (await res.json()) as { id: string; workspace_shorthand: string };
@@ -49,8 +50,6 @@ test.describe("Session bubble workspace selection", () => {
   test.beforeEach(async ({ request }) => {
     test.setTimeout(15_000);
     await deleteAllProjects(request);
-    const project = await createProjectViaApi(request, "Session Bubble Workspace Test Project");
-    projectId = project.id;
   });
 
   test.afterEach(() => {
@@ -61,11 +60,12 @@ test.describe("Session bubble workspace selection", () => {
   });
 
   test("changes the draft workspace without opening the workspace", async ({ page, request }) => {
-    await bypassOnboarding(page, projectId);
     const repoRoot = createGitRepo("pstdio-e2e-session-bubble-repo-", "session bubble workspace selection");
     repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, apiBase, projectId, "session-bubble-repo", repoRoot);
-    const workspace = await createWorkspaceViaApi(request, projectId, repo.id);
+    projectId = (await createProjectViaApi(request, "Session Bubble Workspace Test Project", repoRoot)).id;
+    await bypassOnboarding(page, projectId);
+
+    const workspace = await createWorkspaceViaApi(request, projectId);
     const ticket = await createPlannerTicket(request, apiBase, projectId, {
       content: "Choose a session workspace",
     });

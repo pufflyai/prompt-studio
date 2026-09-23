@@ -1,20 +1,43 @@
-import { join } from "node:path";
+import { realpath, stat } from "node:fs/promises";
+import { join, relative } from "node:path";
 import { resolvePstdioWorkspacesPath } from "pstdio-paths";
-import { createWorktree, resolveLatestBase } from "pstdio-wt";
+import { createWorktree, git, removeWorktreeAndBranch, resolveLatestBase } from "pstdio-wt";
 
 export const resolveWorkspacesRoot = () => resolvePstdioWorkspacesPath({ env: process.env });
 
-// Creates the git worktree backing a workspace and returns its branch + path. Shared by
-// workspace creation and extension-managed workflows so both produce
-// identical `workspace/<shorthand>` branches under the same root. The worktree's
-// `.pstdio/config.json` (incl. the workspace id) is materialized later by the provision
-// lifecycle, uniformly for every workspace type.
-export const setupWorkspaceWorktree = async (input: { repoPath: string; workspaceShorthand: string; base: string }) => {
-  const branch = `workspace/${input.workspaceShorthand}`;
-  const worktreePath = join(resolveWorkspacesRoot(), input.workspaceShorthand);
-  const base = await resolveLatestBase(input.repoPath, input.base);
+export const setupWorkspaceWorktree = async (input: {
+  repoPath: string;
+  workspaceId: string;
+  workspaceShorthand: string;
+  base: string;
+}) => {
+  const projectPath = await realpath(input.repoPath);
+  const sourceRoot = await realpath(await git(projectPath, ["rev-parse", "--show-toplevel"]));
+  const relativePath = relative(sourceRoot, projectPath);
+  const branch = `workspace/${input.workspaceShorthand}-${input.workspaceId}`;
+  const worktreePath = join(resolveWorkspacesRoot(), input.workspaceId);
+  const base = await resolveLatestBase(sourceRoot, input.base);
+  try {
+    await git(sourceRoot, ["rev-parse", "--verify", `${base}^{commit}`]);
+  } catch {
+    throw new Error(`Git isolation requires a usable base commit: ${input.base}.`);
+  }
+  await createWorktree({ repoRoot: sourceRoot, branch, path: worktreePath, base });
+  const rootPath = join(worktreePath, relativePath);
+  try {
+    if (!(await stat(rootPath)).isDirectory()) throw new Error("Project folder is not a directory.");
+  } catch {
+    await removeWorktreeAndBranch({ repoRoot: sourceRoot, path: worktreePath, branch, force: true });
+    throw new Error(`The project folder does not exist at revision ${input.base}.`);
+  }
+  return { branch, worktreePath, rootPath, sourceRoot, relativePath };
+};
 
-  await createWorktree({ repoRoot: input.repoPath, branch, path: worktreePath, base });
-
-  return { branch, worktreePath };
+export const hasUsableGitBase = async (path: string) => {
+  try {
+    await git(path, ["rev-parse", "--verify", "HEAD^{commit}"]);
+    return true;
+  } catch {
+    return false;
+  }
 };

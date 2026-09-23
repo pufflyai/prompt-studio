@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 
@@ -10,8 +11,10 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-const createProject = async (request: import("@playwright/test").APIRequestContext) => {
-  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-167 Nav Chrome" } });
+const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "PS-167 Nav Chrome" }, folderPath),
+  });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };
 };
@@ -177,7 +180,7 @@ test("keeps the Secondary Panel closed from Workspaces until requested", async (
   await expect(showSecondary).toHaveAttribute("aria-pressed", "false");
 
   await page.goto(`/projects/${project.id}/workspaces`);
-  await expect(page.getByRole("heading", { name: "No workspaces yet" })).toBeVisible();
+  await expect(page.getByRole("row").filter({ hasText: "Project folder" }).first()).toBeVisible();
   await expect(showSecondary).toHaveAttribute("aria-pressed", "false");
   await showSecondary.click();
 

@@ -14,9 +14,9 @@ export const cleanupProjectArtifacts = async (
   const remove = options.deleteProviderWorkspace ?? cleanupProviderBackedWorkspace;
 
   for (const ws of projectWorkspaces) {
-    if (ws.is_default || ws.provider_id === rootProviderId) continue;
+    if (ws.provider_id === rootProviderId) continue;
     const removedWorktree = await remove(deps, ws);
-    if (isBuiltInProviderId(ws.provider_id) && ws.worktree_path && !removedWorktree) {
+    if (isBuiltInProviderId(ws.provider_id) && ws.root_path && !removedWorktree) {
       throw new Error(`Workspace worktree could not be removed: ${ws.id}`);
     }
     await deps.workspaceService.softDelete(ws.id);

@@ -8,13 +8,12 @@ import {
   prepareResourceActionsDashboard as prepareDashboard,
 } from "./helpers/resource-actions";
 import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
-import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
+import { createGitRepo } from "./helpers/workspace-session-attempt";
 
 test("shows the same ticket and workspace actions on rows and breadcrumbs", async ({ page, request }) => {
   test.slow();
-  const project = await createProject(request);
   const repoRoot = createGitRepo("pstdio-resource-actions-", "resource actions e2e");
-  const repo = await registerRepoViaApi(request, apiBase, project.id, "resource-actions-repo", repoRoot);
+  const project = await createProject(request, repoRoot);
 
   try {
     const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
@@ -25,11 +24,9 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
     });
     const attempt = await createPlannerAttempt(request, apiBase, project.id, {
       ticketId: ticket.id,
-      repoId: repo.id,
-      mode: "worktree",
     });
 
-    await prepareDashboard(page, project.id, repo.id);
+    await prepareDashboard(page, project.id);
     await page.goto(`/projects/${project.id}/tickets`);
 
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
@@ -107,7 +104,7 @@ test("shows the same ticket and workspace actions on rows and breadcrumbs", asyn
     await expectMenuItems(page, ["Open terminal", "Rename workspace", "Archive workspace", "Delete workspace"]);
     await page.keyboard.press("Escape");
 
-    await workspaceRow.getByRole("cell", { name: "Worktree", exact: true }).click();
+    await workspaceRow.getByRole("cell", { name: "Git worktree", exact: true }).click();
     await expect(breadcrumbAction).toBeVisible();
     await breadcrumbAction.click();
     await expectMenuItems(page, ["Open terminal", "Rename workspace", "Archive workspace", "Delete workspace"]);

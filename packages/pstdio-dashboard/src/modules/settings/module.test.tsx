@@ -56,7 +56,7 @@ describe("createSettingsModule", () => {
     });
   });
 
-  test("registers the extensions, repositories, skills, and danger-zone panels", () => {
+  test("registers the extensions, project-folder, skills, and danger-zone panels", () => {
     const workbench = createWorkbench();
 
     workbench.registerModule(createSettingsModule());
@@ -66,7 +66,7 @@ describe("createSettingsModule", () => {
 
     expect(byId("harnesses")).toBeUndefined();
     expect(byId("extensions")).toMatchObject({ kind: "view", scope: "project" });
-    expect(byId("repositories")).toMatchObject({ kind: "view", scope: "project" });
+    expect(byId("project-folder")).toMatchObject({ kind: "view", scope: "project" });
     expect(byId("skills")).toMatchObject({ kind: "collection", scope: "project" });
     expect(byId("danger-zone")).toMatchObject({ kind: "view", scope: "project" });
   });

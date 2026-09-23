@@ -170,7 +170,7 @@ describe("pstdio planner workspace contributions", () => {
       await hook("worktree-created")?.run(
         {
           storage,
-          repoFiles: fileMount(worktreePath),
+          projectFiles: fileMount(worktreePath),
           workspaceFiles: fileMount(worktreePath),
         } as never,
         {
@@ -208,7 +208,7 @@ describe("pstdio planner workspace contributions", () => {
       await hook("worktree-created")?.run(
         {
           storage,
-          repoFiles: fileMount(repoPath),
+          projectFiles: fileMount(repoPath),
           workspaceFiles: fileMount(worktreePath),
         } as never,
         {

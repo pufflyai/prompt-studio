@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin } from "../ui-server";
 import { startStorybook, stopStorybook, storyUrl } from "./mermaid-renderer-storybook";
 
@@ -29,7 +30,9 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
   mkdirSync(tempRoot, { recursive: true });
   const repo = mkdtempSync(join(tempRoot, "artifacts-e2e-"));
   execFileSync("git", ["init", "--quiet", repo]);
-  const created = await request.post(`${uiOrigin}/v1/projects`, { data: { name: "Artifacts browser test" } });
+  const created = await request.post(`${uiOrigin}/v1/projects`, {
+    data: folderProjectInput({ name: "Artifacts browser test" }, repo),
+  });
   expect(created.ok()).toBe(true);
   const project = (await created.json()) as { id: string };
   const execute = async (command: string, params: Record<string, unknown>) => {
@@ -43,10 +46,6 @@ test("publishes HTML, isolates its preview, and preserves revisions across live 
     return body.outcome.value;
   };
   try {
-    const linked = await request.post(`${uiOrigin}/v1/projects/${project.id}/repos`, {
-      data: { name: "artifacts", path: repo },
-    });
-    expect(linked.ok()).toBe(true);
     expect(await execute("list", {})).toEqual([]);
     await page.addInitScript((projectId) => {
       if (window !== window.top) return;

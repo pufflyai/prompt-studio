@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
@@ -27,20 +28,21 @@ const createGitRepo = (name: string) => {
 };
 
 const createWorkspaceAttempt = async (repoRoot: string) => {
-  const repoRes = await app.request(`/v1/projects/${projectId}/repos`, {
+  const projectRes = await app.request("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "repo", path: repoRoot }),
+    body: JSON.stringify({ initial_workspace: { provider_id: "pstdio.root", params: { path: repoRoot } } }),
   });
-  const repo = await repoRes.json();
+  expect(projectRes.status).toBe(201);
+  projectId = (await projectRes.json()).id;
 
   const workspaceRes = await app.request("/v1/workspaces", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ project_id: projectId, repo_id: repo.id }),
+    body: JSON.stringify({ project_id: projectId, provider_id: "pstdio.worktree" }),
   });
   expect(workspaceRes.status).toBe(201);
-  const workspace = (await workspaceRes.json()) as { id: string; branch: string | null; worktree_path: string | null };
+  const workspace = (await workspaceRes.json()) as { id: string; branch: string | null; root_path: string | null };
   return { workspace };
 };
 
@@ -56,7 +58,7 @@ beforeAll(async () => {
   const projectRes = await app.request("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "remove-worktree-project" }),
+    body: JSON.stringify(folderProjectInput({ name: "remove-worktree-project" })),
   });
   const project = await projectRes.json();
   projectId = project.id;
@@ -83,8 +85,8 @@ describe("POST /v1/workspaces/:id/remove-worktree", () => {
     const attempt = await createWorkspaceAttempt(repoRoot);
     const { workspace } = attempt;
 
-    expect(workspace.worktree_path).not.toBeNull();
-    expect(existsSync(workspace.worktree_path!)).toBe(true);
+    expect(workspace.root_path).not.toBeNull();
+    expect(existsSync(workspace.root_path!)).toBe(true);
 
     const res = await app.request(`/v1/workspaces/${workspace.id}/remove-worktree`, {
       method: "POST",
@@ -93,7 +95,7 @@ describe("POST /v1/workspaces/:id/remove-worktree", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.removed).toBe(true);
-    expect(existsSync(workspace.worktree_path!)).toBe(false);
+    expect(existsSync(workspace.root_path!)).toBe(false);
 
     const branchOutput = execSync(`git branch --list ${workspace.branch}`, { cwd: repoRoot, encoding: "utf8" }).trim();
     expect(branchOutput).toBe("");
@@ -103,11 +105,11 @@ describe("POST /v1/workspaces/:id/remove-worktree", () => {
     const workspaces = (await listRes.json()) as Array<{
       id: string;
       branch: string | null;
-      worktree_path: string | null;
+      root_path: string | null;
     }>;
     expect(workspaces.find((item) => item.id === workspace.id)).toMatchObject({
       branch: null,
-      worktree_path: null,
+      root_path: null,
     });
 
     const repeatedRes = await app.request(`/v1/workspaces/${workspace.id}/remove-worktree`, {

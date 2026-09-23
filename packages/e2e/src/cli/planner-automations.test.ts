@@ -5,14 +5,7 @@ import { join } from "node:path";
 import { e2eExtensions } from "../default-extensions";
 import { packWorkspacePackageTarball } from "../local-workspace-registry";
 import { cleanupDirs } from "./helpers";
-import {
-  createInitializedRepo,
-  createRun,
-  getProjectId,
-  type HookTestContext,
-  registerRepo,
-  waitFor,
-} from "./hooks-infra";
+import { createInitializedRepo, createRun, getProjectId, type HookTestContext, waitFor } from "./hooks-infra";
 import { type ApiInstance, startApi } from "./start-api";
 import { SETUP_TIMEOUT, TEST_TIMEOUT } from "./timeouts";
 
@@ -133,7 +126,6 @@ describe("planner automations", () => {
       const run = createRun(ctx);
       const repo = createInitializedRepo(ctx, "planner-automations");
       const projectId = getProjectId(repo);
-      await registerRepo(ctx, projectId, repo, "planner-automations-repo");
 
       // The materialized repo-local extension must resolve @pstdio/sdk from the
       // workspace, never from the npm registry — registry coupling here breaks
@@ -212,7 +204,6 @@ describe("planner automations", () => {
       const run = createRun(ctx);
       const repo = createInitializedRepo(ctx, "planner-ticket-actions");
       const projectId = getProjectId(repo);
-      await registerRepo(ctx, projectId, repo, "planner-ticket-actions-repo");
 
       const ticket = JSON.parse(run(`tickets create --content "# Planner ticket actions"`, repo)) as {
         id: string;

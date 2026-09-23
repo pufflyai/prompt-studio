@@ -28,12 +28,12 @@ const workspace = ctx.workspaceId ? await ctx.workspaces.get(ctx.workspaceId) : 
 
 Never parse `.pstdio/config.json`. It is owned by the host.
 
-## Store extension-owned repo files
+## Store extension-owned project files
 
 Declare the tracking policy in `package.json`:
 
 ```json
-{ "pstdio": { "repoFiles": { "tracked": false } } }
+{ "pstdio": { "projectFiles": { "tracked": false } } }
 ```
 
 Then write paths relative to the allocated directory:
@@ -42,4 +42,4 @@ Then write paths relative to the allocated directory:
 await ctx.extensionFiles?.writeText("cache/index.json", JSON.stringify(index));
 ```
 
-The host allocates `.pstdio/ext/<publisher>.<name>/`, rejects path escapes, and adds the gitignore entry on the first write. Use `ctx.packageFiles` to read shipped assets, `ctx.repoFiles` for user-facing repo paths, and `ctx.workspaceFiles` for the active working directory.
+The host allocates `.pstdio/ext/<publisher>.<name>/`, rejects path escapes, and adds the gitignore entry on the first write. Use `ctx.packageFiles` to read shipped assets, `ctx.projectFiles` for files in the default workspace, and `ctx.workspaceFiles` for the active working directory.

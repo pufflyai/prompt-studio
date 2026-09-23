@@ -8,7 +8,6 @@ import type {
   MarkdownParam,
   MultiSelectParam,
   NumberParam,
-  RepoParam,
   ResourceParam,
   SelectParam,
   TemplateParam,
@@ -64,10 +63,6 @@ export const params = {
       type: "multi-select",
       ...options,
     }) as unknown as MultiSelectParam<RequiredOf<TOptions>>,
-
-  repo: <const TOptions extends ParamOptions<RepoParam> | undefined = undefined>(
-    options?: TOptions,
-  ): RepoParam<RequiredOf<TOptions>> => ({ type: "repo", ...options }) as RepoParam<RequiredOf<TOptions>>,
 
   harness: <const TOptions extends ParamOptions<HarnessParam> | undefined = undefined>(
     options?: TOptions,

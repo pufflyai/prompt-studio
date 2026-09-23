@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { folderProjectInput } from "../../test-utils/folder-project-input";
 import type { AppBindings } from "../../types";
 import {
   BLOCKING_COMMAND_ID,
@@ -48,7 +49,7 @@ beforeEach(async () => {
   const projectResponse = await runtimeRequest("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name: "Automation Project" }),
+    body: JSON.stringify(folderProjectInput({ name: "Automation Project" })),
   });
   projectId = (await projectResponse.json()).id;
   const sourcePath = writeAutomationExtension(tempRoot);

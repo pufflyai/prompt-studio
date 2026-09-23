@@ -96,6 +96,7 @@ export const resolvePagePlacements = <Value>(input: {
 }) => {
   const placements: ResolvedOwnedPlacement<Value>[] = [];
   for (const slot of pageSlots(input.page)) {
+    if (slot.isAvailable && !slot.isAvailable(input.resource)) continue;
     if (staticSlotOpen(slot, input.state)) placements.push(placementFor({ ...input, slot, instanceKey: "default" }));
     for (const instance of input.state.resourceInstances[slot.id] ?? []) {
       placements.push(placementFor({ ...input, slot, ...instance }));

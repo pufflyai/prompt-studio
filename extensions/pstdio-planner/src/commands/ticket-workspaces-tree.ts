@@ -25,7 +25,7 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMet
   const workspaceMetadata = {
     workspaceId: workspace.id,
     ...(workspace.workspace_shorthand ? { workspaceShorthand: workspace.workspace_shorthand } : {}),
-    workspaceType: workspace.worktree_path ? "worktree" : "current_branch",
+    workspaceType: workspace.root_path ? "worktree" : "current_branch",
     ...ticket,
   };
   const resource = { type: "workspace", id: workspace.id, label, metadata: workspaceMetadata };

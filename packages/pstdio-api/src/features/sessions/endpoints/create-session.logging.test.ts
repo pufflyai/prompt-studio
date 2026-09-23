@@ -3,8 +3,19 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createEventStore } from "pstdio-api-runtime-host";
+import { folderWorkspaceCapabilities } from "pstdio-db";
 import { testHarnessId } from "../../harnesses/test-harness-registry";
 import { createSessionHandler } from "./create-session";
+
+const homeWorkspace = {
+  id: "home",
+  project_id: "project-1",
+  root_path: "/repo",
+  execution_kind: "local",
+  provider_id: "pstdio.root",
+  provider_state: "ready",
+  provider_capabilities_json: folderWorkspaceCapabilities,
+};
 
 const FAKE_ID = testHarnessId("fake");
 
@@ -66,11 +77,10 @@ const createDeps = () => {
       projectService: {
         get: async () => ({ id: "project-1" }),
       },
-      repoService: {
-        listByProject: async () => [{ path: "/repo" }],
-      },
+
       workspaceService: {
-        get: async () => null,
+        getDefault: async () => homeWorkspace,
+        get: async () => homeWorkspace,
         getByShorthand: async () => null,
       },
       workspaceSessionService: {

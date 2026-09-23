@@ -8,14 +8,14 @@ const mockWorkspace: Workspace = {
   name: "WS-1",
   workspace_shorthand: "WS-1",
   branch: "workspace/WS-1",
-  worktree_path: "/repo/.pstdio/workspaces/WS-1",
+  root_path: "/repo/.pstdio/workspaces/WS-1",
   created_at: "2026-03-05T00:00:00.000Z",
   updated_at: "2026-03-05T00:00:00.000Z",
 };
 
 const baseDeps = {
   cwd: () => "/repo",
-  findGitRoot: () => "/repo" as string | null,
+  findProjectRoot: () => "/repo" as string | null,
   readConfig: () => ({ project_id: "proj-1" }) as { project_id: string } | null,
   createStandaloneWorkspace: mock(async () => mockWorkspace) as never,
 };
@@ -25,9 +25,13 @@ describe("workspaces create", () => {
     const createStandaloneWorkspace = mock(async () => mockWorkspace) as never;
 
     const handler = createHandler({ ...baseDeps, createStandaloneWorkspace });
-    await handler({ base: "main", _: [], $0: "" } as never);
+    await handler({ provider: "pstdio.worktree", params: '{"base":"main"}', _: [], $0: "" } as never);
 
-    expect(createStandaloneWorkspace).toHaveBeenCalledWith({ projectId: "proj-1", base: "main" });
+    expect(createStandaloneWorkspace).toHaveBeenCalledWith({
+      projectId: "proj-1",
+      providerId: "pstdio.worktree",
+      params: { base: "main" },
+    });
   });
 
   test("passes provider and params through to the API", async () => {
@@ -57,7 +61,7 @@ describe("workspaces create", () => {
   });
 
   test("throws when not in git repo", async () => {
-    const handler = createHandler({ ...baseDeps, findGitRoot: () => null });
-    await expect(handler({ _: [], $0: "" } as never)).rejects.toThrow("Not inside a git repository.");
+    const handler = createHandler({ ...baseDeps, findProjectRoot: () => null });
+    await expect(handler({ _: [], $0: "" } as never)).rejects.toThrow("Not inside a pstdio project.");
   });
 });

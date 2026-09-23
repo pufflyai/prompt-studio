@@ -49,7 +49,7 @@ describe("pstdio sessions create --workspace-id", () => {
       const repo = createInitializedRepo("session-ws-shorthand");
       const projectId = readProjectId(repo);
 
-      const workspaceOutput = run("workspaces create", repo, FLOW_TIMEOUT);
+      const workspaceOutput = run("workspaces create --provider pstdio.worktree", repo, FLOW_TIMEOUT);
       expect(workspaceOutput).toContain("Created workspace");
       const workspacesRes = await fetch(`${api.url}/v1/workspaces?project_id=${encodeURIComponent(projectId)}`);
       const workspaces = (await workspacesRes.json()) as Array<{ id: string; workspace_shorthand: string }>;

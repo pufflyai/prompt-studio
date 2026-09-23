@@ -98,13 +98,13 @@ const registerProjects = (ctx: WorkbenchModuleContext) => {
         if (!normalizedQuery) return true;
         return (
           project.name.toLowerCase().includes(normalizedQuery) ||
-          (project.repoPath ?? "").toLowerCase().includes(normalizedQuery)
+          (project.folderPath ?? "").toLowerCase().includes(normalizedQuery)
         );
       });
 
       return projects.map((project) => ({
         resource: project.resource,
-        description: project.repoPath ?? undefined,
+        description: project.folderPath ?? undefined,
         group: "Projects",
         activate: () =>
           ctx.commands.executeCommand(dashboardCommandIds.selectProject, {

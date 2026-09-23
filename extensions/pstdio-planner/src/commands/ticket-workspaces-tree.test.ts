@@ -35,7 +35,7 @@ describe("ticket files tree workspace commands", () => {
         { type: "ticket", id: ticket.id, label: ticket.shorthand, shorthand: ticket.shorthand, metadata: {} },
       ],
       branch: "feature/work",
-      worktree_path: "/tmp/ws-1",
+      root_path: "/tmp/ws-1",
     };
     const unrelated = {
       id: "ws-2",

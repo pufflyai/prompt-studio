@@ -48,7 +48,7 @@ const inspectProviderValue = (root: unknown, maxBytes: number) => {
 const invalidResult = (executionKind: WorkspaceProviderResult["executionKind"], inspection: string) => ({
   provider_state: "failed" as const,
   execution_kind: executionKind,
-  worktree_path: null,
+  root_path: null,
   provider_error_json: providerError(
     inspection === "secret"
       ? {
@@ -120,7 +120,7 @@ export const normalizeResult = (
     return {
       provider_state: "failed" as const,
       execution_kind: "remote" as const,
-      worktree_path: null,
+      root_path: null,
       provider_error_json: providerError({
         code: "provider_ref_missing",
         message: "Remote workspace provider result is missing its provider reference.",
@@ -139,7 +139,7 @@ export const normalizeResult = (
     ...(providerRef ? { provider_ref_json: providerRef } : {}),
     provider_state: result.state,
     execution_kind: result.executionKind,
-    ...(target ? { worktree_path: localRoot } : {}),
+    ...(target ? { root_path: localRoot } : {}),
     provider_error_json: resultError(result.error),
     provider_capabilities_json: result.capabilities,
     ...(displayPath ? { display_path: displayPath } : {}),

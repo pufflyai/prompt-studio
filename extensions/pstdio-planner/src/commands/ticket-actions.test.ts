@@ -20,19 +20,6 @@ const createSessionResource = () => ({
 });
 
 describe("runAttemptCommand", () => {
-  test("exposes mode as a workspace mode selector defaulting to worktree", () => {
-    expect(runAttemptCommand.params?.mode).toEqual({
-      type: "select",
-      label: "Mode",
-      required: false,
-      defaultValue: "worktree",
-      options: [
-        { label: "Worktree", value: "worktree", icon: "GitFork" },
-        { label: "Current branch", value: "current_branch", icon: "GitBranch" },
-      ],
-    });
-  });
-
   test("creates an anchored workspace and session with the ticket shorthand in the prompt", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
@@ -94,7 +81,7 @@ describe("runAttemptCommand", () => {
             },
           },
         ],
-        base: "main-sha",
+        params: { base: "main-sha" },
         provider_id: "pstdio.worktree",
         project_id: "proj-1",
         shorthand_base: "T-1",
@@ -124,7 +111,7 @@ describe("runAttemptCommand", () => {
     ]);
   });
 
-  test("preserves explicit agent, repo, and current-branch params", async () => {
+  test("preserves explicit agent and Git base parameters", async () => {
     const workspaces: unknown[] = [];
     const sessions: unknown[] = [];
 
@@ -134,8 +121,7 @@ describe("runAttemptCommand", () => {
         params: {
           ticket: "PS-304",
           agent: { harnessId: "codex", model: "gpt-5" },
-          repo: { repoId: "repo-1", branch: "main" },
-          mode: "current_branch",
+          base: "main",
         },
         overrides: {
           workspaces: {
@@ -168,10 +154,9 @@ describe("runAttemptCommand", () => {
             metadata: {},
           },
         ],
-        base: "main-sha",
-        provider_id: "pstdio.root",
+        params: { base: "main-sha" },
+        provider_id: "pstdio.worktree",
         project_id: "proj-1",
-        repo_id: "repo-1",
         shorthand_base: "PS-304",
       },
     ]);
@@ -239,7 +224,7 @@ describe("runAttemptCommand guarded launches", () => {
             },
           },
         ],
-        base: "main-sha",
+        params: { base: "main-sha" },
         provider_id: "pstdio.worktree",
         project_id: "proj-1",
         shorthand_base: "T-1",
@@ -287,10 +272,6 @@ describe("runAttemptCommand guarded launches", () => {
 });
 
 describe("createWorkspaceCommand", () => {
-  test("exposes mode as a workspace mode selector defaulting to worktree", () => {
-    expect(createWorkspaceCommand.params?.mode).toEqual(runAttemptCommand.params?.mode);
-  });
-
   test("creates an anchored workspace for the ticket without starting a session", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
@@ -343,6 +324,7 @@ describe("createWorkspaceCommand", () => {
             },
           },
         ],
+        params: { base: "HEAD" },
         provider_id: "pstdio.worktree",
         project_id: "proj-1",
         shorthand_base: "T-1",

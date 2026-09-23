@@ -26,7 +26,6 @@ import { createExtensionFileService } from "./services/extension-file-service";
 import { createFileService } from "./services/file-service";
 import { createNotificationService } from "./services/notification-service";
 import { createProjectService } from "./services/project-service";
-import { createRepoService } from "./services/repo-service";
 import { createSessionService } from "./services/session-service";
 import { createSettingsService } from "./services/settings-service";
 import { createSkillService } from "./services/skill-service";
@@ -55,7 +54,6 @@ const createCoreDomainServices = (input: {
   return {
     fileService,
     projectService: createProjectService({ projectsDBService: dbs.projectsDBService, eventBus }),
-    repoService: createRepoService({ reposDBService: dbs.reposDBService, eventBus }),
     extensionFileService: createExtensionFileService({
       extensionFilesDBService: dbs.extensionFilesDBService,
       extensionInstancesDBService: dbs.extensionInstancesService,
@@ -132,7 +130,6 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     fileService,
     notificationService,
     projectService,
-    repoService,
     syncService,
     workspaceSessionService,
     workspaceService,
@@ -154,7 +151,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     extensionConnectionsDBService,
     installedExtensionSourcesService,
     projectService,
-    repoService,
+    workspaceService,
     storageRoot,
   });
   const skillService = createSkillService({
@@ -188,7 +185,6 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     fileService,
     harnessRegistry,
     projectService,
-    repoService,
     sessionQueueEntriesService,
     sessionService,
     skillService,
@@ -236,7 +232,6 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     automationService,
     harnessRegistry,
     projectService,
-    repoService,
     sessionQueueEntriesService,
     sessionService,
     settingsService,

@@ -29,7 +29,7 @@ export const ticketWorkspacesCommand = defineCommand({
         id: ws.id,
         workspace: ws.workspace_shorthand ?? ws.id,
         branch: ws.branch ?? "",
-        path: ws.worktree_path ?? "",
+        path: ws.root_path ?? "",
         active: sessions.some((session) => isLiveSessionStatus(session.status)),
       });
     }
@@ -47,11 +47,11 @@ export const ticketWorktreesListCommand = defineCommand({
   async run(ctx, commandParams) {
     const { workspaces } = await workspacesForTicket(ctx, commandParams.id);
     return workspaces
-      .filter((ws) => ws.worktree_path)
+      .filter((ws) => ws.root_path)
       .map((ws) => ({
         workspace: ws.workspace_shorthand ?? ws.id,
         branch: ws.branch ?? "",
-        path: ws.worktree_path ?? "",
+        path: ws.root_path ?? "",
       }));
   },
 });
@@ -69,7 +69,7 @@ export const ticketWorktreesRemoveAllCommand = defineCommand({
   params: { id: params.text({ required: true }) },
   async run(ctx, commandParams) {
     const { workspaces } = await workspacesForTicket(ctx, commandParams.id);
-    const worktrees = workspaces.filter((ws) => ws.worktree_path);
+    const worktrees = workspaces.filter((ws) => ws.root_path);
 
     let removed = 0;
     for (const ws of worktrees) {

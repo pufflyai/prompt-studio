@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
@@ -70,15 +71,10 @@ test("deletes, installs, disables, and enables a Marketplace extension without s
 }) => {
   const repoPath = createRepo();
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: `Marketplace extension ${Date.now()}` },
+    data: folderProjectInput({ name: `Marketplace extension ${Date.now()}` }, repoPath),
   });
   expect(projectResponse.ok()).toBe(true);
   const project = (await projectResponse.json()) as { id: string };
-
-  const repoResponse = await request.post(`${apiBase}/v1/projects/${project.id}/repos`, {
-    data: { name: "marketplace-extension", path: repoPath },
-  });
-  expect(repoResponse.status(), await repoResponse.text()).toBe(201);
 
   const initialInstallResponse = await request.post(
     `${apiBase}/v1/projects/${project.id}/extensions/marketplace/pstdio-planner-loops/install`,

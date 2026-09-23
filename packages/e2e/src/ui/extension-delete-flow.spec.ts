@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const bypassOnboarding = async (page: import("@playwright/test").Page, projectId: string) => {
@@ -50,7 +51,9 @@ test("delete extension flow survives clicks inside the confirmation modal", asyn
   const unique = Date.now();
   const installName = `e2e-delete-flow-${unique}`;
   const displayName = `E2E Delete Flow ${unique}`;
-  const projectRes = await request.post(`${apiBase}/v1/projects`, { data: { name: `Delete Flow ${unique}` } });
+  const projectRes = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: `Delete Flow ${unique}` }),
+  });
   expect(projectRes.ok()).toBe(true);
   const project = (await projectRes.json()) as { id: string };
   const sourcePath = createInstalledExtension({ displayName, installName });

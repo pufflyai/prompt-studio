@@ -32,7 +32,13 @@ export const makeCommandContext = <TParams extends Record<string, unknown>>(inpu
     invocation: { params },
     events: { emit: async () => ({ delivered: 0 }) },
     notify: { action: async () => ({}), dismiss: async () => [], resolve: async () => [], toast: async () => {} },
-    workspaces: { list: async () => [], get: async () => null, getByShorthand: async () => null },
+    workspaces: {
+      listProviders: async () => [],
+      getDefault: async () => null,
+      list: async () => [],
+      get: async () => null,
+      getByShorthand: async () => null,
+    },
     sessions: { list: async () => [], listByWorkspace: async () => [], addAnchors: async () => {} },
     ...overrides,
   } as unknown as CommandContext;

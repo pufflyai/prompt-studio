@@ -7,7 +7,6 @@ import {
 } from "../features/extensions/default-extensions";
 import { refreshProjectSkillsInRepos } from "../features/extensions/extension-skill-cleanup";
 import { syncRepoExtensionsForLinkedRepos } from "../features/extensions/repo-extensions";
-import { ensureProjectReposScaffolded } from "../features/projects/startup";
 import { resolveOrphanedSessions } from "../features/sessions/startup";
 import { provisionProjectWorkspaces } from "../features/workspaces/provision-coordinator";
 import { reconcileProviderWorkspaces } from "../features/workspaces/workspace-provider-reconciliation";
@@ -130,7 +129,6 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
   await options?.recoverQueuedSessions?.();
   registerBackgroundTask(resolveOrphanedSessions(deps, signal), options);
   await options?.recoverQueuedAutomation?.();
-  await ensureProjectReposScaffolded(deps);
   await syncInstalledExtensionsForProjects({
     extensionService: deps.extensionService,
     onProjectExtensionInstancesPruned: async ({ projectId }) => {
@@ -143,7 +141,7 @@ export const runStartupTasks = async (deps: RouteDeps, signal?: AbortSignal, opt
       extensionService: deps.extensionService,
       installedExtensionSourcesService: deps.installedExtensionSourcesService,
       projectId: project.id,
-      repoService: deps.repoService,
+      workspaceService: deps.workspaceService,
     });
   }
   const backgroundTasks = Promise.all([

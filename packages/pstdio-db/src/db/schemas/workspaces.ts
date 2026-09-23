@@ -40,6 +40,15 @@ export const defaultLocalWorkspaceCapabilities: WorkspaceCapabilities = {
   delete: true,
 };
 
+export const folderWorkspaceCapabilities: WorkspaceCapabilities = {
+  files: "write",
+  diff: false,
+  merge: false,
+  rebase: false,
+  archive: false,
+  delete: false,
+};
+
 export type WorkspaceProviderError = {
   code: string;
   message: string;
@@ -56,7 +65,7 @@ export const workspaces = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
     branch: text("branch"),
-    worktree_path: text("worktree_path"),
+    root_path: text("root_path"),
     // An unspecified workspace is a root checkout. Isolated worktrees are created only through
     // the provider flow, which always writes pstdio.worktree explicitly.
     provider_id: text("provider_id").notNull().default("pstdio.root"),

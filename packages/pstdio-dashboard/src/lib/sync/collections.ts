@@ -5,8 +5,6 @@ export { eq, useLiveQuery } from "@tanstack/react-db";
 export const SYNCED_TABLES = [
   "settings",
   "projects",
-  "repos",
-  "project_repos",
   "installed_extension_sources",
   "notifications",
   "extension_instances",

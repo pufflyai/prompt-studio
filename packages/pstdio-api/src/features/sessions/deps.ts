@@ -8,7 +8,7 @@ export type SessionsRouteDeps = Pick<
   | "extensionSettingsDBService"
   | "fileService"
   | "projectService"
-  | "repoService"
+  | "workspaceService"
   | "sessionQueueEntriesService"
   | "sessionService"
   | "settingsService"

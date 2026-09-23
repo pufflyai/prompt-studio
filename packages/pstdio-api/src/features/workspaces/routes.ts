@@ -16,6 +16,7 @@ import {
 } from "./endpoints/get-workspace-diff";
 import { getWorkspaceDiffSummaryHandler, getWorkspaceDiffSummaryRoute } from "./endpoints/get-workspace-diff-summary";
 import { listWorkspaceActivityHandler, listWorkspaceActivityRoute } from "./endpoints/list-workspace-activity";
+import { listWorkspaceProvidersHandler, listWorkspaceProvidersRoute } from "./endpoints/list-workspace-providers";
 import { listWorkspacesHandler, listWorkspacesRoute } from "./endpoints/list-workspaces";
 import { removeWorkspaceWorktreeHandler, removeWorkspaceWorktreeRoute } from "./endpoints/remove-worktree";
 import { renameWorkspaceHandler, renameWorkspaceRoute } from "./endpoints/rename-workspace";
@@ -40,6 +41,7 @@ import {
 export const createWorkspaceRoutes = (deps: WorkspacesRouteDeps) => {
   const routes = new OpenAPIHono<AppBindings>();
 
+  routes.openapi(listWorkspaceProvidersRoute, listWorkspaceProvidersHandler(deps));
   routes.openapi(createWorkspaceRoute, createWorkspaceHandler(deps));
   routes.openapi(listWorkspacesRoute, listWorkspacesHandler(deps));
   routes.openapi(getWorkspaceRoute, getWorkspaceHandler(deps));

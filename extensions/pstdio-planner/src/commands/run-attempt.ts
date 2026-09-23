@@ -14,7 +14,6 @@ import {
   resolveTicket,
   resolveTicketIdentity,
   ticketActionParams,
-  workspaceModeParam,
 } from "./ticket-actions";
 
 const humanReadinessReasons = new Set<HumanRequestReason>([
@@ -37,8 +36,7 @@ export const runAttemptCommand = defineCommand({
   ],
   params: {
     ...ticketActionParams,
-    repo: params.repo({ label: "Workspace" }),
-    mode: workspaceModeParam,
+    base: params.text({ label: "Base revision", defaultValue: "HEAD" }),
   },
   async run(ctx, commandParams) {
     const { agent } = commandParams;

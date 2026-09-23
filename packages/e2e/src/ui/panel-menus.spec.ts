@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 
@@ -54,7 +55,9 @@ const _dragMenuClosed = async (page: Page, menu: Locator, separator: Locator, si
 };
 
 test("preserves browser Forward history between extension pages after refresh", async ({ page, request }) => {
-  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 History" } });
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "PS-170 History" }),
+  });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.addInitScript((projectId: string) => {
@@ -81,7 +84,9 @@ test("preserves browser Forward history between extension pages after refresh", 
 });
 
 test("keeps the project selector and Session Panel available on project home", async ({ page, request }) => {
-  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 Project Chrome" } });
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "PS-170 Project Chrome" }),
+  });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.addInitScript((projectId: string) => {
@@ -98,7 +103,9 @@ test("keeps the project selector and Session Panel available on project home", a
 });
 
 test("preserves other Session tabs when selecting from New session", async ({ page, request }) => {
-  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 Session Sub Panels" } });
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "PS-170 Session Sub Panels" }),
+  });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await createSession(request, project.id, "First context session");
@@ -177,7 +184,9 @@ test("preserves other Session tabs when selecting from New session", async ({ pa
 });
 
 test("updates a New session Sub Panel in place after the first message", async ({ page, request }) => {
-  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 Draft Session" } });
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "PS-170 Draft Session" }),
+  });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   const updateResponse = await request.patch(`${apiBase}/v1/projects/${project.id}`, {
@@ -213,7 +222,9 @@ test("updates a New session Sub Panel in place after the first message", async (
 });
 
 test("hides unavailable Side Panel chrome in the Sessions Location", async ({ page, request }) => {
-  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-170 Empty Sessions" } });
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "PS-170 Empty Sessions" }),
+  });
   expect(response.ok()).toBe(true);
   const project = (await response.json()) as { id: string };
   await page.addInitScript((projectId: string) => {

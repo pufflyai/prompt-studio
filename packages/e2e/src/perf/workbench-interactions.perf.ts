@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { calculateStats, installLongTaskObserver, throttleChromiumCpu } from "./perf-helpers";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3300");
@@ -26,8 +27,10 @@ const deleteAllProjects = async (request: import("@playwright/test").APIRequestC
   }
 };
 
-const createProject = async (request: import("@playwright/test").APIRequestContext) => {
-  const response = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-165 Performance" } });
+const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
+  const response = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "PS-165 Performance" }, folderPath),
+  });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };
 };

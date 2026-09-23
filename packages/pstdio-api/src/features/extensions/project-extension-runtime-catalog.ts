@@ -2,7 +2,7 @@ import { type loadExtensionSources, normalizeExtensionSources } from "pstdio-ext
 import { apiLogger } from "../../lib/logger";
 import type { createExtensionService } from "../../services/extension-service";
 import type { createProjectService } from "../../services/project-service";
-import type { createRepoService } from "../../services/repo-service";
+import type { createWorkspaceService } from "../../services/workspace-service";
 import {
   type EnabledExtensionSource,
   ExtensionRuntimeGenerationStaleError,
@@ -47,7 +47,7 @@ type CandidateExtensionSource = LoadableExtensionSource & { extension_id: string
 export const createProjectExtensionRuntimeCatalog = (deps: {
   extensionService: ReturnType<typeof createExtensionService>;
   projectService: ReturnType<typeof createProjectService>;
-  repoService: ReturnType<typeof createRepoService>;
+  workspaceService: ReturnType<typeof createWorkspaceService>;
   loadSources?: typeof loadExtensionSources;
   observer?: ProjectExtensionRuntimeCatalogObserver;
 }) => {
@@ -81,12 +81,12 @@ export const createProjectExtensionRuntimeCatalog = (deps: {
     state.knownSourcePaths = new Set(
       enabledSources.map((source) => canonicalSourcePath(source.installedSource.source_path)),
     );
-    const repos = await deps.repoService.listByProject(projectId);
+    const workspace = await deps.workspaceService.getDefault(projectId);
     const cachedSources = await sources.collect(enabledSources);
     const runtime = normalizeExtensionSources(
       cachedSources.map((cached) => cached.source),
       cachedSources.flatMap((cached) => cached.diagnostics),
-      { repoRoots: repos.map((repo) => repo.path).sort((left, right) => left.localeCompare(right)) },
+      { repoRoots: workspace?.root_path ? [workspace.root_path] : [] },
     );
 
     return { enabledSources, project, runtime };

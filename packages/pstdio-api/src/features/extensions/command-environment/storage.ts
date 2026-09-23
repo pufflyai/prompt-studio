@@ -13,11 +13,6 @@ type RuntimeStorageScope = Parameters<CommandRunnerEnvironment["storage"]["scope
 
 const resolveStorageScopeInput = (input: StorageApiInput, nextScope: RuntimeStorageScope) => {
   if (nextScope.type === "project") return input;
-  if (nextScope.type === "repo") {
-    const repoId = "repoId" in nextScope ? nextScope.repoId : undefined;
-    if (!repoId) throw new Error("repo storage scope requires repoId");
-    return { ...input, scopeType: "repo", scopeId: repoId };
-  }
   if (nextScope.type === "resource") {
     const resource = "resource" in nextScope ? nextScope.resource : undefined;
     if (!resource?.id) throw new Error("resource storage scope requires resource.id");

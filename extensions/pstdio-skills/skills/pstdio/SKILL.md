@@ -66,7 +66,7 @@ A session records a conversation with an agent. It can belong to a workspace and
 
 ## Set up a project
 
-Create a project for the current repository:
+Open the exact current folder as a project. Git is optional:
 
 ```bash
 pst projects create [name]
@@ -74,11 +74,7 @@ pst projects create [name]
 
 When `name` is absent, Prompt Studio uses the current folder name. The command also enables the installed default extensions and creates the documentation tree.
 
-To link the repository to an existing project:
-
-```bash
-pst projects link --project-id <id>
-```
+Opening an already registered folder reuses its project. A child folder is a distinct project.
 
 Configure an agent and install its project skills:
 

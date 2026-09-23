@@ -12,14 +12,15 @@ const resolveHarnessId = async (id: string) => {
 };
 
 describe("agents setup", () => {
-  test("installs skills for opencode", async () => {
+  test("installs project skills in the default workspace despite an old config link", async () => {
     const installSkillsForAgent = mock(async () => ["create-ticket"]);
     const log = mock();
 
     const handler = createHandler({
       resolveHarnessId,
+      getProjectFolder: async () => "/project-home",
       cwd: () => "/repo",
-      findGitRoot: () => "/repo",
+      findProjectRoot: () => "/repo",
       readConfig: () => ({ project_id: "proj-1" }),
       installSkillsForAgent,
       log,
@@ -28,7 +29,7 @@ describe("agents setup", () => {
     await handler({ "agent-id": "opencode", "global-skills": false } as never);
 
     expect(installSkillsForAgent).toHaveBeenCalledWith({
-      root: "/repo",
+      root: "/project-home",
       agentId: "opencode",
       projectId: "proj-1",
       global: false,
@@ -43,8 +44,9 @@ describe("agents setup", () => {
 
     const handler = createHandler({
       resolveHarnessId,
+      getProjectFolder: async () => "/project-home",
       cwd: () => "/repo",
-      findGitRoot: () => "/repo",
+      findProjectRoot: () => "/repo",
       readConfig: () => null,
       installSkillsForAgent,
       log,
@@ -62,8 +64,9 @@ describe("agents setup", () => {
 
     const handler = createHandler({
       resolveHarnessId,
+      getProjectFolder: async () => "/project-home",
       cwd: () => "/cwd",
-      findGitRoot: () => null,
+      findProjectRoot: () => null,
       readConfig: () => null,
       installSkillsForAgent,
       log: mock(),
@@ -82,8 +85,9 @@ describe("agents setup", () => {
   test("throws for unknown agents", async () => {
     const handler = createHandler({
       resolveHarnessId,
+      getProjectFolder: async () => "/project-home",
       cwd: () => "/cwd",
-      findGitRoot: () => "/cwd",
+      findProjectRoot: () => "/cwd",
       readConfig: () => ({ project_id: "p1" }),
       installSkillsForAgent: async () => [],
       log: mock(),

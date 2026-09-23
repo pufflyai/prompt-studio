@@ -3,6 +3,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { folderProjectInput } from "../helpers/folder-project";
 import { getFreePort, waitForReady } from "./start-api";
 import { TEST_TIMEOUT } from "./timeouts";
 
@@ -219,7 +220,7 @@ describe("pstdio serve", () => {
       const createRes = await fetch(`http://localhost:${port}/v1/projects`, {
         method: "POST",
         headers: { ...runtimeAuthorization(), "content-type": "application/json" },
-        body: JSON.stringify({ name: "serve-test" }),
+        body: JSON.stringify(folderProjectInput({ name: "serve-test" })),
       });
       expect(createRes.ok).toBe(true);
 

@@ -4,7 +4,7 @@ import type { SkillAgentInstallation, SkillFile } from "pstdio-api-contracts";
 import { listSkillAgents } from "../harnesses/skill-agents";
 import type { SkillsRouteDeps } from "./deps";
 
-type Deps = Pick<SkillsRouteDeps, "harnessRegistry" | "repoService">;
+type Deps = Pick<SkillsRouteDeps, "harnessRegistry" | "workspaceService">;
 
 type SkillInstallStatusInput = {
   files: SkillFile[];
@@ -49,8 +49,8 @@ const skillCopyOutdated = (input: {
 // date" when ANY installed copy lags the catalog — a session in that repo would otherwise run
 // the old skill while another repo reads as current.
 export const getSkillInstallStatus = async (deps: Deps, input: SkillInstallStatusInput) => {
-  const [repos, agents] = await Promise.all([
-    deps.repoService.listByProject(input.projectId),
+  const [workspace, agents] = await Promise.all([
+    deps.workspaceService.getDefault(input.projectId),
     listSkillAgents(deps.harnessRegistry, { projectId: input.projectId }),
   ]);
 
@@ -63,8 +63,8 @@ export const getSkillInstallStatus = async (deps: Deps, input: SkillInstallStatu
     let installedVersion: string | null = null;
     let installed = false;
     let outdated = false;
-    for (const repo of repos) {
-      const skillDir = join(repo.path, agent.skillsDir, input.name);
+    for (const rootPath of workspace?.root_path ? [workspace.root_path] : []) {
+      const skillDir = join(rootPath, agent.skillsDir, input.name);
       if (!existsSync(join(skillDir, "SKILL.md"))) continue;
       installed = true;
       const copyVersion = readInstalledVersion(join(skillDir, "SKILL.md"));

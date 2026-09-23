@@ -100,14 +100,14 @@ describe("pstdio agents (filesystem)", () => {
   );
 
   test(
-    "skips skill installation outside a git repo",
+    "skips skill installation outside a project folder",
     () => {
       const dir = createTempDir();
       dirs.push(dir);
 
       const output = run("agents setup claude-code", dir);
 
-      expect(output).toContain("Not inside a git repository");
+      expect(output).toContain("Not inside a project folder");
     },
     TEST_TIMEOUT,
   );

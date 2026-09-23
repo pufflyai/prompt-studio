@@ -7,22 +7,6 @@ export const findReport = async (storage: CommandContext["storage"], workspaceSh
     (report) => report.workspaceShorthand === workspaceShorthand && report.name === name,
   ) ?? null;
 
-const pathBasename = (path: string) =>
-  path
-    .replace(/[/\\]+$/g, "")
-    .split(/[/\\]/)
-    .at(-1) ?? "";
-
-const resolveWorkspaceFromRepoPath = async (ctx: CommandContext<Record<string, unknown>>) => {
-  if (!ctx.repo?.path) return null;
-  const workspaces = await ctx.workspaces.list();
-  const workspace = workspaces.find((candidate) => candidate.worktree_path === ctx.repo?.path);
-  if (workspace) return workspace;
-
-  const shorthand = pathBasename(ctx.repo.path);
-  return shorthand ? ctx.workspaces.getByShorthand(shorthand) : null;
-};
-
 export const resolveWorkspace = async (
   ctx: CommandContext<Record<string, unknown>>,
   workspaceOverride: string | undefined,
@@ -35,7 +19,7 @@ export const resolveWorkspace = async (
     workspace = await ctx.workspaces.getByShorthand(workspaceOverride);
   } else {
     const workspaceId = ctx.workspaceId ?? null;
-    workspace = workspaceId ? await ctx.workspaces.get(workspaceId) : await resolveWorkspaceFromRepoPath(ctx);
+    workspace = workspaceId ? await ctx.workspaces.get(workspaceId) : await ctx.workspaces.getDefault();
     workspaceShorthand = workspace?.workspace_shorthand ?? null;
   }
 

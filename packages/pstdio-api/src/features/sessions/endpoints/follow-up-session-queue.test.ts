@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -56,7 +57,7 @@ describe("POST /v1/sessions multi-pending follow-ups", () => {
       const projectRes = await isolated.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Queued Follow-Up Actions Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Queued Follow-Up Actions Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();
@@ -132,7 +133,7 @@ describe("POST /v1/sessions multi-pending follow-ups", () => {
       const projectRes = await isolated.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Multi-Pending Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Multi-Pending Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();
@@ -196,7 +197,7 @@ describe("POST /v1/sessions active follow-up cancellation", () => {
       const projectRes = await isolated.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Active Cancel Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Active Cancel Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();
@@ -241,7 +242,7 @@ describe("POST /v1/sessions active follow-up cancellation", () => {
       const projectRes = await isolated.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Active Cancel Race Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Active Cancel Race Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();
@@ -301,7 +302,7 @@ describe("POST /v1/sessions follow-up terminal races", () => {
       const projectRes = await isolated.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Insert First Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Insert First Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();
@@ -345,7 +346,7 @@ describe("POST /v1/sessions follow-up terminal races", () => {
       const projectRes = await isolated.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Terminal First Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Terminal First Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();

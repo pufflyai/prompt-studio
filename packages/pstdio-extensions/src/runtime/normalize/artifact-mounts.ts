@@ -58,7 +58,6 @@ export const registerArtifactMounts = (
       relativePath,
       fullPath,
       label: mount.label,
-      repoRole: typeof mount.repoRole === "string" ? (mount.repoRole as RuntimeArtifactMount["repoRole"]) : undefined,
     };
     index.mountKeys.set(collisionKey, record);
     runtime.artifactMounts.push(record);

@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { HarnessExit, HarnessSession, HarnessStartInput } from "pstdio-api-contracts";
 import type { HarnessContext } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { folderProjectInput } from "../../test-utils/folder-project-input";
 import { createTestHarnessRecord, createTestHarnessRegistry, testHarnessId } from "../harnesses/test-harness-registry";
 
 const FAKE_ID = testHarnessId("fake");
@@ -70,7 +71,7 @@ describe("session scheduler startup recovery", () => {
       const projectRes = await firstApp.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Direct Attachment Recovery Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Direct Attachment Recovery Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();
@@ -135,7 +136,7 @@ describe("session scheduler startup recovery", () => {
       const projectRes = await firstApp.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Queue Recovery Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Queue Recovery Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();
@@ -188,7 +189,7 @@ describe("session scheduler startup recovery", () => {
       const projectRes = await firstApp.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Claimed Queue Recovery Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Claimed Queue Recovery Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();
@@ -244,7 +245,7 @@ describe("session scheduler startup recovery", () => {
       const projectRes = await firstApp.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Active Follow-up Recovery Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Active Follow-up Recovery Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();

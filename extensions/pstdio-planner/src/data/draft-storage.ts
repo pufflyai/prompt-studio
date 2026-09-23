@@ -13,15 +13,15 @@ export const ticketMarkdownPath = layout.markdown;
 export const ticketFilesDir = layout.files;
 export const ticketFilesPattern = (shorthand: string) => `${ticketFilesDir(shorthand)}/**`;
 
-export const ensureTicketDraftsIgnored = async (repoFiles: ArtifactMount) => {
+export const ensureTicketDraftsIgnored = async (projectFiles: ArtifactMount) => {
   const path = ".pstdio/.gitignore";
-  const existing = (await repoFiles.exists(path)) ? await repoFiles.readText(path) : "";
+  const existing = (await projectFiles.exists(path)) ? await projectFiles.readText(path) : "";
   const lines = existing.split("\n").filter(Boolean);
   if (lines.includes("/tickets")) return;
-  await repoFiles.writeText(path, `${[...lines, "/tickets"].join("\n")}\n`);
+  await projectFiles.writeText(path, `${[...lines, "/tickets"].join("\n")}\n`);
 };
 
-// repoFiles paths are repo-root relative; the basename relative to the files dir
+// projectFiles paths are repo-root relative; the basename relative to the files dir
 // is the ticket file's name.
 export const fileNameFromPath = (shorthand: string, path: string) => path.slice(`${ticketFilesDir(shorthand)}/`.length);
 
@@ -64,20 +64,20 @@ export const ticketToMarkdown = async (storage: ExtensionStorageApi, ticket: Sto
   return applyFrontmatter(frontmatter, ticket.content);
 };
 
-export const writeTicketText = async (repoFiles: ArtifactMount, shorthand: string, content: string) => {
-  await ensureTicketDraftsIgnored(repoFiles);
-  await repoFiles.writeText(ticketMarkdownPath(shorthand), content);
+export const writeTicketText = async (projectFiles: ArtifactMount, shorthand: string, content: string) => {
+  await ensureTicketDraftsIgnored(projectFiles);
+  await projectFiles.writeText(ticketMarkdownPath(shorthand), content);
 };
 
-export const writeTicketMarkdown = (repoFiles: ArtifactMount, ticket: StoredTicket, content: string) =>
-  writeTicketText(repoFiles, ticket.shorthand, content);
+export const writeTicketMarkdown = (projectFiles: ArtifactMount, ticket: StoredTicket, content: string) =>
+  writeTicketText(projectFiles, ticket.shorthand, content);
 
-export const readTicketMarkdown = async (repoFiles: ArtifactMount, shorthand: string) => {
+export const readTicketMarkdown = async (projectFiles: ArtifactMount, shorthand: string) => {
   const path = ticketMarkdownPath(shorthand);
-  if (!(await repoFiles.exists(path))) return null;
-  return repoFiles.readText(path);
+  if (!(await projectFiles.exists(path))) return null;
+  return projectFiles.readText(path);
 };
 
-// repoFiles is only present for repo-scoped invocations (the CLI). Domain commands
+// projectFiles is only present for repo-scoped invocations (the CLI). Domain commands
 // that touch the working tree fail loudly when invoked without it.
 export { requireRepoFiles } from "@pstdio/sdk/data";

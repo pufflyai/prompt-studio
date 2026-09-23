@@ -1,3 +1,4 @@
+import type { ParamObjectSchema } from "pstdio-api-contracts/extension-kernel";
 import {
   type CreateExtensionWorkspaceInput,
   type ExtensionWorkspace,
@@ -7,6 +8,7 @@ import {
 import type { CommandRunnerEnvironment } from "pstdio-extensions";
 import { archiveWorkspaceCascade } from "../../workspaces/archive-workspace-cascade";
 import { removeWorkspaceWorktree } from "../../workspaces/remove-workspace-worktree";
+import { listWorkspaceProviders } from "../../workspaces/workspace-provider-catalog";
 import {
   assertWorkspaceDeleteAllowed,
   cancelProviderBackedWorkspace,
@@ -69,8 +71,6 @@ export const createExtensionWorkspace = async (
     anchors,
     providerId: input.workspaceInput.provider_id,
     params: input.workspaceInput.params,
-    repoId: input.workspaceInput.repo_id,
-    base: input.workspaceInput.base,
     setupWorktree: runtimeDeps.setupWorkspaceWorktree,
     provision: (workspace, repoPath) => runtimeDeps.runWorkspaceProvisioning(deps, { projectId, workspace, repoPath }),
     signal: input.signal,
@@ -94,6 +94,12 @@ export const createWorkspacesApi = (
   };
 
   return {
+    listProviders: async () =>
+      (await listWorkspaceProviders(deps, input.projectId)).map((provider) => ({
+        ...provider,
+        params: provider.params as ParamObjectSchema,
+      })),
+    getDefault: async () => (await deps.workspaceService.getDefault(input.projectId)) as ExtensionWorkspace | null,
     list: async () => (await deps.workspaceService.list(input.projectId)) as ExtensionWorkspace[],
     get: async (id) => (await getScopedWorkspace(id)) as ExtensionWorkspace | null,
     getByShorthand: async (shorthand) =>
@@ -159,12 +165,12 @@ export const createWorkspacesApi = (
       const remove = runtimeDeps.deleteProviderBackedWorkspace ?? deleteProviderBackedWorkspace;
       const removed = await remove(deps, workspace);
       await deps.workspaceService.softDelete(id);
-      if (removed && workspace.worktree_path) {
+      if (removed && workspace.root_path) {
         const { anchors_json: _anchors, ...eventWorkspace } = workspace;
         const fireRemoved = runtimeDeps.fireExtensionEventAsync ?? fireExtensionEventAsync;
         fireRemoved(deps, workspace.project_id, worktreeEvents.removed, {
           projectId: workspace.project_id,
-          worktreePath: workspace.worktree_path,
+          worktreePath: workspace.root_path,
           workspace: eventWorkspace as ExtensionWorkspace,
           workspaceId: workspace.id,
         });

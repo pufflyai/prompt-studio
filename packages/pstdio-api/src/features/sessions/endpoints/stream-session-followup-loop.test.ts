@@ -6,6 +6,7 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { HarnessExit, JsonPatch } from "pstdio-api-contracts";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import type { AppBindings } from "../../../types";
 import {
   createTestHarnessRecord,
@@ -201,7 +202,7 @@ describe("GET /v1/sessions/:id/stream follow-up resume continuity", () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Resume Continuity Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Resume Continuity Project" })),
     });
     const project = await projectRes.json();
 
@@ -257,7 +258,7 @@ describe("GET /v1/sessions/:id/stream follow-up resume continuity", () => {
       const projectRes = await delayedApp.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Delayed Offset Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Delayed Offset Project" })),
       });
       const project = await projectRes.json();
 

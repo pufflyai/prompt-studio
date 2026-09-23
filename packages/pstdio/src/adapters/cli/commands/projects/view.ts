@@ -1,7 +1,6 @@
 import type { Arguments, Argv } from "yargs";
-import { findGitRoot, readConfig } from "@/features/config/config";
+import { findProjectRoot, readConfig } from "@/features/config/config";
 import { getProject } from "@/features/projects/api/get-project";
-import { listRepos } from "@/features/projects/api/list-repos";
 
 export const command = "view";
 export const describe = "View project details";
@@ -12,19 +11,17 @@ export type ViewArgs = { "project-id"?: string };
 
 type Deps = {
   cwd: () => string;
-  findGitRoot: typeof findGitRoot;
+  findProjectRoot: typeof findProjectRoot;
   readConfig: typeof readConfig;
   getProject: typeof getProject;
-  listRepos: typeof listRepos;
   log: (msg: string) => void;
 };
 
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
-  findGitRoot,
+  findProjectRoot,
   readConfig,
   getProject,
-  listRepos,
   log: console.log,
 };
 
@@ -36,7 +33,7 @@ export const createHandler =
     let projectId = argv["project-id"];
 
     if (!projectId) {
-      const root = deps.findGitRoot(deps.cwd());
+      const root = deps.findProjectRoot(deps.cwd());
       if (!root) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
       const config = deps.readConfig(root);
       if (!config) throw new Error("No project specified. Provide --project-id or run inside a linked project.");
@@ -46,8 +43,6 @@ export const createHandler =
     const project = await deps.getProject(projectId);
     if (!project) throw new Error(`Project not found: ${projectId}`);
 
-    const repos = await deps.listRepos(projectId);
-
     const lines = [
       `Name:             ${project.name}`,
       `ID:               ${project.id}`,
@@ -55,7 +50,6 @@ export const createHandler =
       `Created:          ${formatDate(project.created_at)}`,
       `Updated:          ${formatDate(project.updated_at)}`,
       "",
-      `Repos:            ${repos.length > 0 ? `${repos.length} linked` : "none"}`,
     ];
 
     deps.log(lines.join("\n"));

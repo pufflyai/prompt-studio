@@ -18,7 +18,7 @@ describe("resolveSessionLifecyclePayload", () => {
     const deps = depsWithWorkspace({
       id: "ws-1",
       workspace_shorthand: "T-1_A1",
-      worktree_path: "/wt/1",
+      root_path: "/wt/1",
       branch: "feature/t-1",
       anchors_json: [ticketAnchor],
     });
@@ -26,7 +26,7 @@ describe("resolveSessionLifecyclePayload", () => {
     const payload = await resolve(deps, session);
 
     expect(payload.workspaceId).toBe("ws-1");
-    expect(payload.worktreePath).toBe("/wt/1");
+    expect(payload.workspaceDir).toBe("/wt/1");
     expect(payload.branch).toBe("feature/t-1");
     expect(payload.anchors).toEqual([ticketAnchor]);
     expect(payload.workspace?.anchors_json).toEqual([ticketAnchor]);

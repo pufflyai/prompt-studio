@@ -51,6 +51,8 @@ const environment: CommandRunnerEnvironment = {
     addAnchors: async () => {},
   },
   workspaces: {
+    listProviders: async () => [],
+    getDefault: async () => null,
     list: async () => [],
     get: async () => null,
     getByShorthand: async () => null,
@@ -60,12 +62,6 @@ const environment: CommandRunnerEnvironment = {
     archive: async () => ({ id: "" }),
     removeWorktree: async () => ({ removed: true }),
     delete: async () => {},
-  },
-  repos: {
-    list: async () => [],
-    get: async () => ({}) as never,
-    getDefault: async () => undefined,
-    resolvePath: async (_repoId, relativePath) => relativePath,
   },
   activity: { record: async () => ({ id: "" }) },
   notify: {

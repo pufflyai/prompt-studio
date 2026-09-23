@@ -68,7 +68,7 @@ const providerHandle = (deps: WorkspaceProviderLifecycleDeps, workspace: Workspa
     projectId: workspace.project_id,
     providerId: workspace.provider_id,
     workspaceId: workspace.id,
-    workspaceDir: workspace.execution_kind === "local" ? (workspace.worktree_path ?? undefined) : undefined,
+    workspaceDir: workspace.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined,
   });
 
 const runProviderMutation = async (

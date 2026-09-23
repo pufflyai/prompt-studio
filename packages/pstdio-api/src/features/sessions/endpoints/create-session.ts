@@ -9,6 +9,7 @@ import { resolveSessionCwd } from "../resolve-session-cwd";
 import { SessionAttachmentError, withResolvedSubmittingSessionAttachments } from "../session-attachments";
 import { createSessionScheduler } from "../session-scheduler";
 import { resolveCreateSessionAgent, resolveCreateSessionModel } from "./resolve-create-session";
+import { resolveCreateWorkspace } from "./resolve-create-workspace";
 
 export const createSessionRoute = createRoute({
   method: "post",
@@ -59,17 +60,9 @@ export const createSessionHandler = (deps: SessionsRouteDeps): AppRouteHandler<t
       return c.json({ error: `Project not found: ${input.project_id}` }, 404);
     }
 
-    let resolvedWorkspaceId: string | undefined;
-    if (input.workspace_id) {
-      const workspace =
-        (await deps.workspaceService.get(input.workspace_id)) ??
-        (await deps.workspaceService.getByShorthand(input.project_id, input.workspace_id));
-      if (!workspace) {
-        return c.json({ error: `Workspace not found: ${input.workspace_id}` }, 404);
-      }
-      resolvedWorkspaceId = workspace.id;
-    }
-
+    const resolvedWorkspace = await resolveCreateWorkspace(deps, input.project_id, input.workspace_id);
+    if (resolvedWorkspace.error) return c.json({ error: resolvedWorkspace.error }, resolvedWorkspace.status);
+    const resolvedWorkspaceId = resolvedWorkspace.workspace!.id;
     const cwd = await resolveSessionCwd(deps, input.project_id, resolvedWorkspaceId);
     const resolvedAgent = await resolveCreateSessionAgent(input.agent, project, deps.harnessRegistry);
 

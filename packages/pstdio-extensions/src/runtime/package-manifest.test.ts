@@ -44,12 +44,12 @@ describe("readPackageManifest", () => {
       publisher: "pstdio",
       main: "./extension.ts",
       engines: { pstdio: EXTENSION_API_VERSION },
-      pstdio: { repoFiles: { tracked: true } },
+      pstdio: { projectFiles: { tracked: true } },
     });
 
     const result = readPackageManifest(dir);
 
-    expect(result.manifest?.pstdio?.repoFiles).toEqual({ tracked: true });
+    expect(result.manifest?.pstdio?.projectFiles).toEqual({ tracked: true });
     expect(result.diagnostics).toEqual([]);
   });
 
@@ -60,14 +60,14 @@ describe("readPackageManifest", () => {
       publisher: "pstdio",
       main: "./extension.ts",
       engines: { pstdio: EXTENSION_API_VERSION },
-      pstdio: { repoFiles: { tracked: "sometimes" } },
+      pstdio: { projectFiles: { tracked: "sometimes" } },
     });
 
     const result = readPackageManifest(dir);
 
     expect(result.manifest).toBeNull();
     expect(result.diagnostics.map((diagnostic) => diagnostic.message)).toContain(
-      "pstdio.repoFiles.tracked must be a boolean",
+      "pstdio.projectFiles.tracked must be a boolean",
     );
   });
 

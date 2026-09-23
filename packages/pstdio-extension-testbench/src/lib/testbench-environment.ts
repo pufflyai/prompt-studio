@@ -163,6 +163,8 @@ export const createBenchEnvironment = (
       followup: async () => {},
     },
     workspaces: {
+      listProviders: async () => [],
+      getDefault: async () => seed?.workspaces?.find((workspace) => workspace.is_default) ?? null,
       list: async () => seed?.workspaces ?? [],
       archive: async (id) => ({ id }),
       cancel: async (id) => ({ id }),
@@ -172,12 +174,6 @@ export const createBenchEnvironment = (
       getByShorthand: async () => null,
       removeWorktree: async () => ({ removed: true }),
       resolve: async () => ({}) as never,
-    },
-    repos: {
-      get: async () => ({}) as never,
-      getDefault: async () => undefined,
-      list: async () => [],
-      resolvePath: async (_repoId, relativePath) => relativePath,
     },
     activity: { record: async () => ({ id: crypto.randomUUID() }) },
     notify: {

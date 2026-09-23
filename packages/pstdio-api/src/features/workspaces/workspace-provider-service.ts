@@ -1,3 +1,4 @@
+import { realpath, stat } from "node:fs/promises";
 import type { JsonObject } from "pstdio-api-contracts/extension-kernel";
 import type { WorkspacesRouteDeps } from "./deps";
 import { provisionProviderWorkspace } from "./workspace-provider-creation";
@@ -14,22 +15,14 @@ export { resolveWorkspaceExecutionTarget } from "./workspace-provider-execution-
 export { normalizeResult } from "./workspace-provider-result";
 export { isBuiltInProviderId, remoteReadOnlyCapabilities, rootProviderId, worktreeProviderId };
 
-const asString = (value: unknown) => (typeof value === "string" && value.trim() ? value : undefined);
+export class WorkspaceSourceNotFoundError extends Error {}
 
-const resolveRepo = async (deps: WorkspacesRouteDeps, projectId: string, repoId?: string) => {
-  const repos = await deps.repoService.listByProject(projectId);
-  if (repos.length === 0) return null;
-  if (repoId) return repos.find((repo) => repo.id === repoId) ?? null;
-  return repos[0] ?? null;
+export const canonicalFolder = async (path: unknown) => {
+  if (typeof path !== "string" || !path.trim()) throw new Error("Select a project folder.");
+  const canonical = await realpath(path);
+  if (!(await stat(canonical)).isDirectory()) throw new Error("Select an existing directory.");
+  return canonical;
 };
-
-export class WorkspaceRepoNotFoundError extends Error {}
-
-export const mergeProviderParams = (input: { params?: JsonObject; repoId?: string; base?: string }) => ({
-  ...(input.params ?? {}),
-  ...(input.repoId ? { repo_id: input.repoId } : {}),
-  ...(input.base ? { base: input.base } : {}),
-});
 
 export const createProviderBackedWorkspace = async (
   deps: WorkspacesRouteDeps,
@@ -38,23 +31,29 @@ export const createProviderBackedWorkspace = async (
     shorthandBase?: string;
     name?: string;
     anchors?: WorkspaceRecord["anchors_json"];
-    providerId?: string;
+    providerId: string;
     params?: JsonObject;
-    repoId?: string;
-    base?: string;
+    isDefault?: boolean;
     standalone?: boolean;
     setupWorktree?: typeof setupWorkspaceWorktree;
-    provision?: (workspace: WorkspaceRecord, repoPath: string) => Promise<WorkspaceRecord>;
+    provision?: (workspace: WorkspaceRecord, projectPath: string) => Promise<WorkspaceRecord>;
     signal?: AbortSignal;
   },
 ) => {
-  const providerId = input.providerId ?? worktreeProviderId;
-  const params = mergeProviderParams(input);
-  const repo = isBuiltInProviderId(providerId)
-    ? await resolveRepo(deps, input.projectId, asString(params.repo_id))
-    : null;
-  if (isBuiltInProviderId(providerId) && !repo) {
-    throw new WorkspaceRepoNotFoundError(`No repository found for project ${input.projectId}`);
+  const providerId = input.providerId;
+  const params = input.params ?? {};
+  const home = await deps.workspaceService.getDefault(input.projectId);
+  if (providerId === rootProviderId && !input.isDefault) {
+    if (home) return home;
+    throw new WorkspaceSourceNotFoundError("The project has no default workspace.");
+  }
+  let sourcePath: string | null = null;
+  if (providerId === rootProviderId) sourcePath = await canonicalFolder(params.path);
+  if (providerId === worktreeProviderId) {
+    if (!home?.root_path || home.execution_kind !== "local") {
+      throw new WorkspaceSourceNotFoundError("A local project folder is required for a Git workspace.");
+    }
+    sourcePath = home.root_path;
   }
   const operationId = crypto.randomUUID();
   const createInput = {
@@ -66,35 +65,53 @@ export const createProviderBackedWorkspace = async (
     provider_operation_id: operationId,
     provider_operation_kind: "create" as const,
   };
-  const workspace =
-    input.standalone === true
-      ? await deps.workspaceService.createStandalone(createInput)
-      : await deps.workspaceService.create({
-          ...createInput,
-          shorthand_base: input.shorthandBase ?? "",
-          anchors: input.anchors,
-        });
-
+  const createWorkspace = async () => {
+    if (input.isDefault && home && !home.root_path && !home.provider_ref_json) {
+      const attached = await deps.workspaceService.attachInitialProvider(home.id, {
+        provider_id: providerId,
+        provider_params_json: params,
+        root_path: sourcePath ?? undefined,
+        provider_operation_id: operationId,
+      });
+      if (!attached) throw new Error("The project already has an initial workspace.");
+      return attached;
+    }
+    if (input.isDefault)
+      return deps.workspaceService.ensureDefault({
+        ...createInput,
+        name: input.name ?? "Project folder",
+        root_path: sourcePath ?? undefined,
+      });
+    if (input.standalone) return deps.workspaceService.createStandalone(createInput);
+    return deps.workspaceService.create({
+      ...createInput,
+      shorthand_base: input.shorthandBase ?? "",
+      anchors: input.anchors,
+    });
+  };
+  const workspace = await createWorkspace();
+  if (isBuiltInProviderId(providerId) && (input.isDefault || input.provision)) {
+    await deps.workspaceService.setInitializing(workspace.id, true);
+  }
   const updated = await provisionProviderWorkspace(deps, {
-    operationId,
+    operationId: workspace.provider_operation_id ?? operationId,
     projectId: input.projectId,
     providerId,
     params,
-    repo,
+    sourcePath,
     setupWorktree: input.setupWorktree ?? setupWorkspaceWorktree,
     signal: input.signal,
     workspace,
   });
-
-  const provisioningRepoPath = repo?.path ?? updated.worktree_path;
+  const projectPath = home?.root_path ?? updated.root_path;
   if (
     input.provision &&
     updated.provider_state === "ready" &&
     updated.execution_kind === "local" &&
-    updated.worktree_path &&
-    provisioningRepoPath
+    updated.root_path &&
+    projectPath
   ) {
-    return input.provision(updated, provisioningRepoPath);
+    return input.provision(updated, projectPath);
   }
   return updated;
 };

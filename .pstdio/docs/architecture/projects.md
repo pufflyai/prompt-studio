@@ -1,77 +1,35 @@
-# Projects
+# Projects and workspaces
 
-A project is the top-level container in pstdio. It groups repos, docs,
-templates, workspaces, sessions, agent configurations, and enabled extensions
-under a single ID.
+A project owns tools, settings, and saved data. A workspace identifies where work happens. A session runs in a workspace.
 
-Planner tickets are project-scoped, but they are stored by the
-`pstdio-planner` extension rather than core project tables.
+A project has one default workspace. That relationship owns the project's home location. Projects do not store another path or link a list of repositories. Workspace records store a local `root_path` or a remote provider reference.
 
-## Data Model
+## Open a folder
 
-```
-┌──────────────┐        ┌───────────────┐        ┌────────────┐
-│   projects   │───1:N──│ project_repos │──N:1───│   repos    │
-└──────┬───────┘        └───────────────┘        └────────────┘
-       │
-       │ 1:N
-       ├──── workspaces
-       ├──── files
-       ├──── templates
-       ├──── project_extension_instances
-       └──── ydoc_updates
-```
+Choose or create one folder to open a local project. The host resolves symlinks and opens an existing project for the same canonical folder. A child folder is a distinct project selection, even inside a Git repository. The folder name supplies the initial project name, including numeric and Unicode names. Project settings can rename it.
 
-### Tables
+`POST /v1/projects` takes an optional name and one `initial_workspace` with `provider_id` and `params`. Local onboarding uses `pstdio.root` and `{ "path": "/chosen/folder" }`. The server owns default extension setup, config files, and workspace provisioning. Missing agents do not block opening a project. Failed setup stays unavailable and reopening the same folder retries the same project and workspace.
 
-| Table           | Purpose                                       |
-| --------------- | --------------------------------------------- |
-| `projects`      | Core project record (name, shorthand, dates). |
-| `repos`         | Git repositories (name, path, remote).        |
-| `project_repos` | Junction table linking projects to repos.     |
+`POST /v1/projects/{id}/retry-setup` retries setup for an existing local or remote project. It returns the default workspace, including any remaining `setup_error` or provider failure. Retries keep the project, workspace, provider reference, and pending provider operation. A remote resource that already exists is resolved, not created again.
 
-A project can have zero or more repos. The `project_repos` junction table uses cascade deletes on both sides — deleting a project removes all links, deleting a repo unlinks it from all projects.
+The folder picker starts at the host's home directory. It supports hidden folders, a typed path, parent navigation, selecting the current folder, and creating one child folder. Cancelling the picker leaves a newly created folder in place.
 
-## Creation Flow
+## Workspace targets
 
-When a project is created (`pst projects create`), the following happens in order:
+The default folder workspace supports files. Sessions reuse it and share its files. It does not provide diff, merge, rebase, or isolation. Choosing a root sets the file browser root and working directory; it does not sandbox an agent process.
 
-```
-CLI                              API                         DB
- │                                │                           │
- │  POST /projects                │                           │
- │───────────────────────────────►│  INSERT projects          │
- │                                │──────────────────────────►│
- │                                │  enable default extensions│
- │                                │──────────────────────────►│
- │  POST /projects/{id}/repos     │  (for each repo)          │
- │───────────────────────────────►│  UPSERT repos             │
- │                                │  INSERT project_repos     │
- │                                │──────────────────────────►│
- │                                │                           │
- │  write .pstdio/config.json     │                           │
- │  scaffold .pstdio/docs/        │                           │
- │  install default skills        │                           │
-```
+Providers declare their parameters and capabilities. `pstdio.worktree` creates an isolated Git branch when the selected folder belongs to a repository with a usable base commit. For a Git subfolder, the provider creates a repository worktree and uses the matching subfolder as `root_path`. A missing subfolder at the chosen revision fails and cleans up that worktree. Files remain scoped to the folder; Git review and merge cover every affected repository path.
 
-1. **Create the project** — `POST /projects` inserts the project row and enables the configured default extensions.
-2. **Register repos** (optional) — for each repo (`--repo` flag, or auto-detected from cwd), resolves the `remote` URL from `git remote get-url origin` (canonical identifier) and the local `path`. `POST /projects/{id}/repos` reuses the existing `repos` row if one matches by `remote` (preferred) or `path`, otherwise inserts a new one, then links it via `project_repos`. If the local `.pstdio/config.json` points to a different active project, the API returns `409`. If it points to a project that no longer exists, the API treats it as stale state and rewrites `.pstdio/config.json` for the new project. If no repos are specified and the command is not run inside a git repo, this step is skipped.
-3. **Write local config** — `.pstdio/config.json` is written with the `project_id`.
-4. **Scaffold docs** — starter docs are created at `.pstdio/docs/`.
-5. **Enable extensions** — default extensions, including planner when configured, are installed/enabled for the project. Extensions own their template content and commands.
-6. **Install skills** — default skills are installed for each configured agent.
+Remote providers own their source and environment. They keep provider references rather than local paths. A remote target never falls back to the project folder. Creating one does not upload or synchronize local files.
 
-## Linking Additional Repos
+Extension `projectFiles` reads the default workspace. `workspaceFiles` reads the selected workspace. Sessions, terminals, file mounts, extension discovery, and provisioning resolve workspace targets. Planner's commit-based implementation and review actions require Git; other tools remain available in plain folders.
 
-A project can span multiple repos. Use `pst projects link --project-id <id>` from a different repo to add it to an existing project. This registers the new repo and writes `.pstdio/config.json` in that repo. Extension-owned files are preserved when a repo is linked or relinked.
+## Location discovery and deletion
 
-## Soft Deletes
+The CLI finds the nearest ancestor `.pstdio/config.json`, without asking Git for a root. Config identifies a project and workspace; it is not the authority for the project's home. Old config links in discarded folders cannot replace the default workspace.
 
-Projects use soft deletes (`deleted_at` column). A deleted project is hidden from `list` and `get` queries but data is retained. Cascade deletes on child tables only trigger on hard deletes.
+Deleting a project or workspace preserves user-selected folders. Providers can remove only the resources they created. Deleting a project removes its saved host data; it does not remove the chosen folder or its contents.
 
-## Rules
+## Alpha upgrade
 
-1. **Repos are optional.** A project can exist without repos. Repos can be added later via `--repo` or `pst projects link`.
-2. **Repos are linked, not embedded.** The junction table allows many-to-many relationships — one repo can belong to multiple projects.
-3. **All project data goes through the API.** Only local config (`.pstdio/config.json`, `.pstdio/docs/`) is written directly to the filesystem.
-4. **Core side-effect rows are streamed.** Project, workspace, and session changes are emitted as sync events so connected clients stay in sync. Extension-owned state is loaded through extension commands.
+The schema upgrade preserves project and workspace IDs and history. It preserves a recorded default workspace folder first, otherwise the earliest linked folder by link creation time and link ID. Other existing workspaces keep their own locations and Git provider references. Remote references stay remote. A project without a recoverable location retains its data and can attach an initial workspace from settings. The upgrade materializes locations before dropping repository tables.

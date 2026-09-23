@@ -62,7 +62,7 @@ Press Ctrl+C or send SIGTERM to stop. The command waits for an active refresh to
 
 | Problem | What to do |
 | --- | --- |
-| The command says the project is not linked | Run `pst projects create` or `pst projects link`, then start `extensions dev` from that git repo. |
+| The command says the project is not linked | Run `pst projects create --path <folder>`, then start `extensions dev` from that project folder. |
 | Contract or host capability validation fails | Fix the named contribution and capability. Saving the source triggers another check. |
 | `bun install` fails | Fix `package.json`, `bun.lock`, `bun.lockb`, registry access, or the local dependency path. Save a dependency input to retry. |
 | A webview build fails | Read the printed view ID and Bun diagnostics. The last successful bundle remains visible while you fix the source. |

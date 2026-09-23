@@ -41,7 +41,7 @@ export const registerSchedules = (ext: NormalizedExtension, source: LoadedExtens
       cron: schedule.schedule,
       commandId,
       params: schedule.params,
-      repoId: schedule.repo?.id,
+      workspaceId: schedule.workspaceId,
       disabled: typeof schedule.disabled === "boolean" ? schedule.disabled : undefined,
     };
     runtime.schedules.push(record);

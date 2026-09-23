@@ -4,7 +4,7 @@ import type { AppRouteHandler } from "../../../types";
 import type { WorkspacesRouteDeps } from "../deps";
 import { createWorkspaceBodySchema, workspaceResponseSchema } from "../dto";
 import { runWorkspaceProvisioning } from "../provision-coordinator";
-import { createProviderBackedWorkspace, WorkspaceRepoNotFoundError } from "../workspace-provider-service";
+import { createProviderBackedWorkspace, WorkspaceSourceNotFoundError } from "../workspace-provider-service";
 
 export const createWorkspaceRoute = createRoute({
   method: "post",
@@ -42,14 +42,12 @@ export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
         projectId: input.project_id,
         providerId: input.provider_id,
         params: input.params as JsonObject | undefined,
-        repoId: input.repo_id,
-        base: input.base,
         standalone: true,
         provision: (workspace, repoPath) =>
           runWorkspaceProvisioning(deps, { projectId: input.project_id, workspace, repoPath }),
       });
     } catch (error) {
-      if (error instanceof WorkspaceRepoNotFoundError) return c.json({ error: error.message }, 404);
+      if (error instanceof WorkspaceSourceNotFoundError) return c.json({ error: error.message }, 404);
       throw error;
     }
 

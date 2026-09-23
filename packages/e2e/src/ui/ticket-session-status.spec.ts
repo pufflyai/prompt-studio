@@ -1,12 +1,8 @@
 import { rmSync } from "node:fs";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
-import {
-  createAttemptWithSessionViaApi,
-  createGitRepo,
-  createTicketViaApi,
-  registerRepoViaApi,
-} from "./helpers/workspace-session-attempt";
+import { createAttemptWithSessionViaApi, createGitRepo, createTicketViaApi } from "./helpers/workspace-session-attempt";
 
 const TICKET_CONTENT = "Session status on the workspace badge";
 const TERMINAL_STATUS_PATTERN = /^(completed|failed|cancelled|disconnected)$/;
@@ -17,8 +13,8 @@ const deleteAllProjects = async (request: APIRequestContext) => {
   for (const project of projects) await request.delete(`${apiBase}/v1/projects/${project.id}`);
 };
 
-const createProjectViaApi = async (request: APIRequestContext, name: string) => {
-  const res = await request.post(`${apiBase}/v1/projects`, { data: { name } });
+const createProjectViaApi = async (request: APIRequestContext, name: string, folderPath?: string) => {
+  const res = await request.post(`${apiBase}/v1/projects`, { data: folderProjectInput({ name }, folderPath) });
   expect(res.ok()).toBe(true);
   return (await res.json()) as { id: string };
 };
@@ -51,19 +47,13 @@ test.describe("session status on ticket workspace badges", () => {
 
   test("follows the latest workspace session status and opens it in the Side Panel", async ({ page, request }) => {
     await deleteAllProjects(request);
-    const project = await createProjectViaApi(request, "PS-24 Session Status");
     const repoRoot = createGitRepo("pstdio-e2e-ps-24-", "session status e2e");
+    const project = await createProjectViaApi(request, "PS-24 Session Status", repoRoot);
+
     repoDirs.push(repoRoot);
-    const repo = await registerRepoViaApi(request, apiBase, project.id, "ps-24-repo", repoRoot);
+
     const ticket = await createTicketViaApi(request, apiBase, project.id, TICKET_CONTENT);
-    const attempt = await createAttemptWithSessionViaApi(
-      request,
-      apiBase,
-      project.id,
-      ticket.id,
-      repo.id,
-      "Show status",
-    );
+    const attempt = await createAttemptWithSessionViaApi(request, apiBase, project.id, ticket.id, "Show status");
 
     // The fake harness exits on its own; settle on its terminal status before driving transitions
     // so the harness cannot overwrite the status the assertions below are waiting for.

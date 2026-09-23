@@ -1,224 +1,30 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
-import { createHandler, resolveProjectName, resolveRepoPaths, validateRepoPaths } from "./create";
+import { afterEach, expect, mock, test } from "bun:test";
+import { createHandler } from "./create";
 
-const originalConsoleLog = console.log;
-const originalConsoleWarn = console.warn;
-
+const originalLog = console.log;
 afterEach(() => {
-  console.log = originalConsoleLog;
-  console.warn = originalConsoleWarn;
+  console.log = originalLog;
 });
 
-describe("resolveProjectName", () => {
-  test("returns explicit name when provided", () => {
-    expect(resolveProjectName("/work/prompt-studio", "my-project")).toBe("my-project");
-  });
-
-  test("uses folder name when missing", () => {
-    expect(resolveProjectName("/work/prompt-studio")).toBe("prompt-studio");
-  });
-
-  test("uses folder name when name is blank", () => {
-    expect(resolveProjectName("/work/prompt-studio", "   ")).toBe("prompt-studio");
-  });
-});
-
-describe("resolveRepoPaths", () => {
-  test("returns explicit repo paths when --repo is given", () => {
-    const result = resolveRepoPaths(["/a", "/b"], "/work", () => "/work");
-    expect(result).toEqual(["/a", "/b"]);
-  });
-
-  test("returns [gitRoot] when --repo omitted and inside a git repo", () => {
-    const result = resolveRepoPaths(undefined, "/work/my-repo", () => "/work/my-repo");
-    expect(result).toEqual(["/work/my-repo"]);
-  });
-
-  test("returns [] when --repo omitted and not inside a git repo", () => {
-    const result = resolveRepoPaths(undefined, "/work/no-repo", () => null);
-    expect(result).toEqual([]);
-  });
-});
-
-describe("validateRepoPaths", () => {
-  test("throws when a repo path is not a git repo", () => {
-    expect(() => validateRepoPaths(["/not-a-repo"], () => null)).toThrow("Not a git repository: /not-a-repo");
-  });
-
-  test("does not throw for valid paths", () => {
-    expect(() => validateRepoPaths(["/valid-repo"], () => "/valid-repo")).not.toThrow();
-  });
-
-  test("does not throw for empty array", () => {
-    expect(() => validateRepoPaths([], () => null)).not.toThrow();
-  });
-});
-
-describe("createHandler", () => {
-  test("creates project with auto-detected repo when inside git repo", async () => {
-    const createAndInitProject = mock(async (_root: string, _name: string, _opts?: unknown) => ({
-      id: "proj-1",
-      name: "prompt-studio",
-      shorthand: "PS",
+for (const [args, path, name] of [
+  [{}, "/work/monorepo/packages/研究", undefined],
+  [{ path: "../1234" }, "/work/monorepo/packages/1234", undefined],
+  [{ path: "/notes", name: "笔记" }, "/notes", "笔记"],
+] as const) {
+  test(`opens the exact selected folder ${path}`, async () => {
+    const open = mock(async () => ({
+      id: "project",
+      name: name ?? "Folder",
+      shorthand: "P",
       default_agent_id: null,
       default_agent_model: null,
       startup_script: null,
-      created_at: "2026-01-01T00:00:00Z",
-      updated_at: "2026-01-01T00:00:00Z",
+      created_at: "",
+      updated_at: "",
       deleted_at: null,
     }));
-    const handler = createHandler({
-      cwd: () => "/work/prompt-studio",
-      findGitRoot: () => "/work/prompt-studio",
-      createAndInitProject,
-    });
-    const log = mock(() => {});
-    console.log = log as typeof console.log;
-
-    await handler({} as never);
-
-    expect(createAndInitProject).toHaveBeenCalledWith("/work/prompt-studio", "prompt-studio", {
-      repoPaths: ["/work/prompt-studio"],
-    });
-    expect(log).toHaveBeenCalledWith(
-      'Created project "prompt-studio" (proj-1) and initialized .pstdio at /work/prompt-studio',
-    );
+    console.log = mock();
+    await createHandler({ cwd: () => "/work/monorepo/packages/研究", createAndInitProject: open })(args as never);
+    expect(open).toHaveBeenCalledWith(path, name);
   });
-
-  test("creates project with no repos when not in git repo and no --repo given", async () => {
-    const createAndInitProject = mock(async (_root: string, _name: string, _opts?: unknown) => ({
-      id: "proj-2",
-      name: "my-project",
-      shorthand: "MP",
-      default_agent_id: null,
-      default_agent_model: null,
-      startup_script: null,
-      created_at: "2026-01-01T00:00:00Z",
-      updated_at: "2026-01-01T00:00:00Z",
-      deleted_at: null,
-    }));
-    const handler = createHandler({
-      cwd: () => "/work/my-project",
-      findGitRoot: () => null,
-      createAndInitProject,
-    });
-    const log = mock(() => {});
-    console.log = log as typeof console.log;
-
-    await handler({} as never);
-
-    expect(createAndInitProject).toHaveBeenCalledWith("/work/my-project", "my-project", { repoPaths: [] });
-  });
-
-  test("creates project with specified --repo paths", async () => {
-    const createAndInitProject = mock(async (_root: string, _name: string, _opts?: unknown) => ({
-      id: "proj-3",
-      name: "multi",
-      shorthand: "M",
-      default_agent_id: null,
-      default_agent_model: null,
-      startup_script: null,
-      created_at: "2026-01-01T00:00:00Z",
-      updated_at: "2026-01-01T00:00:00Z",
-      deleted_at: null,
-    }));
-    const handler = createHandler({
-      cwd: () => "/work/multi",
-      findGitRoot: (dir: string) => dir,
-      createAndInitProject,
-    });
-    const log = mock(() => {});
-    console.log = log as typeof console.log;
-
-    await handler({ repo: ["/repo-a", "/repo-b"] } as never);
-
-    expect(createAndInitProject).toHaveBeenCalledWith("/work/multi", "multi", {
-      repoPaths: ["/repo-a", "/repo-b"],
-    });
-  });
-
-  test("prints extension setup warnings returned by the API", async () => {
-    const createAndInitProject = mock(async (_root: string, _name: string, _opts?: unknown) => ({
-      id: "proj-warning",
-      name: "with-warning",
-      shorthand: "W",
-      default_agent_id: null,
-      default_agent_model: null,
-      startup_script: null,
-      created_at: "2026-01-01T00:00:00Z",
-      updated_at: "2026-01-01T00:00:00Z",
-      deleted_at: null,
-      extension_warnings: [
-        {
-          code: "extension_setup_failed" as const,
-          extension: "extension-lab",
-          message: "Cannot find module '@pstdio/sdk/extensions'",
-        },
-      ],
-    }));
-    const handler = createHandler({
-      cwd: () => "/work/with-warning",
-      findGitRoot: () => null,
-      createAndInitProject,
-    });
-    console.log = mock(() => {}) as typeof console.log;
-    const warn = mock(() => {});
-    console.warn = warn as typeof console.warn;
-
-    await handler({} as never);
-
-    expect(warn).toHaveBeenCalledWith(
-      "Extension setup warning for extension-lab: Cannot find module '@pstdio/sdk/extensions'",
-    );
-  });
-
-  test("uses git root as init directory when cwd is a subdirectory", async () => {
-    const createAndInitProject = mock(async (_root: string, _name: string, _opts?: unknown) => ({
-      id: "proj-4",
-      name: "prompt-studio",
-      shorthand: "PS",
-      default_agent_id: null,
-      default_agent_model: null,
-      startup_script: null,
-      created_at: "2026-01-01T00:00:00Z",
-      updated_at: "2026-01-01T00:00:00Z",
-      deleted_at: null,
-    }));
-    const handler = createHandler({
-      cwd: () => "/work/prompt-studio/packages/cli",
-      findGitRoot: () => "/work/prompt-studio",
-      createAndInitProject,
-    });
-    const log = mock(() => {});
-    console.log = log as typeof console.log;
-
-    await handler({} as never);
-
-    expect(createAndInitProject).toHaveBeenCalledWith("/work/prompt-studio", "prompt-studio", {
-      repoPaths: ["/work/prompt-studio"],
-    });
-    expect(log).toHaveBeenCalledWith(
-      'Created project "prompt-studio" (proj-4) and initialized .pstdio at /work/prompt-studio',
-    );
-  });
-
-  test("throws when a --repo path is not a git repository", async () => {
-    const handler = createHandler({
-      cwd: () => "/work/project",
-      findGitRoot: () => null,
-      createAndInitProject: async () => ({
-        id: "proj-1",
-        name: "ignored",
-        shorthand: "I",
-        default_agent_id: null,
-        default_agent_model: null,
-        startup_script: null,
-        created_at: "t",
-        updated_at: "t",
-        deleted_at: null,
-      }),
-    });
-
-    await expect(handler({ repo: ["/not-a-repo"] } as never)).rejects.toThrow("Not a git repository: /not-a-repo");
-  });
-});
+}

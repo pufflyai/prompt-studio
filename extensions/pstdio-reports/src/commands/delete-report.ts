@@ -16,7 +16,7 @@ export const deleteReportCommand = defineCommand({
     name: params.text({ required: true }),
   },
   async run(ctx, commandParams) {
-    const repoFiles = requireRepoFiles(ctx.repoFiles);
+    const projectFiles = requireRepoFiles(ctx.projectFiles);
     const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, commandParams.workspace);
     const name = commandParams.name;
     assertSafeReportName(name);
@@ -38,11 +38,11 @@ export const deleteReportCommand = defineCommand({
     if (siblingExists) {
       const markdownPath = reportMarkdownPathFor(report);
       const filesDir = reportFilesDirFor(report);
-      if (await repoFiles.exists(markdownPath)) await repoFiles.delete(markdownPath);
-      if (await repoFiles.exists(filesDir)) await repoFiles.delete(filesDir);
+      if (await projectFiles.exists(markdownPath)) await projectFiles.delete(markdownPath);
+      if (await projectFiles.exists(filesDir)) await projectFiles.delete(filesDir);
     } else {
       const directory = reportDir(directoryName);
-      if (await repoFiles.exists(directory)) await repoFiles.delete(directory);
+      if (await projectFiles.exists(directory)) await projectFiles.delete(directory);
     }
     await ctx.events.emit("pstdio-reports.report.deleted", {
       projectId: ctx.projectId,

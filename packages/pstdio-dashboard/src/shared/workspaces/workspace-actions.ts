@@ -8,8 +8,8 @@ interface DashboardWorkspaceResponse {
 
 interface CreateDashboardWorkspaceInput {
   projectId: string;
-  repoId?: string;
-  base?: string;
+  providerId: string;
+  params?: Record<string, unknown>;
 }
 
 export const createDashboardWorkspace = (input: CreateDashboardWorkspaceInput) =>
@@ -17,8 +17,8 @@ export const createDashboardWorkspace = (input: CreateDashboardWorkspaceInput) =
     method: "POST",
     body: {
       project_id: input.projectId,
-      repo_id: input.repoId,
-      base: input.base,
+      provider_id: input.providerId,
+      params: input.params,
     },
   });
 

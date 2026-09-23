@@ -15,15 +15,15 @@ import { deriveTitle } from "../utils/derive-title";
 
 // Reads the local `files/` directory back into stored ticket files, preserving a
 // file's id across saves when its name is unchanged.
-const readTicketFiles = async (repoFiles: ArtifactMount, ticket: StoredTicket) => {
+const readTicketFiles = async (projectFiles: ArtifactMount, ticket: StoredTicket) => {
   const now = new Date().toISOString();
   const previous = new Map((ticket.files ?? []).map((file) => [file.name, file]));
-  const entries = await repoFiles.list(ticketFilesPattern(ticket.shorthand));
+  const entries = await projectFiles.list(ticketFilesPattern(ticket.shorthand));
 
   return Promise.all(
     entries.map(async (entry): Promise<StoredTicketFile> => {
       const name = fileNameFromPath(ticket.shorthand, entry.path);
-      const content = await repoFiles.readText(entry.path);
+      const content = await projectFiles.readText(entry.path);
       const existing = previous.get(name);
       return existing
         ? { ...existing, content, updatedAt: now }
@@ -56,11 +56,11 @@ export const saveTicketCommand = defineCommand({
     status: params.text(),
   },
   async run(ctx, commandParams) {
-    const repoFiles = requireRepoFiles(ctx.repoFiles);
+    const projectFiles = requireRepoFiles(ctx.projectFiles);
     const ticket = await findTicket(ctx.storage, commandParams.id);
     if (!ticket) throw new Error(`Unknown ticket "${commandParams.id}"`);
 
-    const raw = await readTicketMarkdown(repoFiles, ticket.shorthand);
+    const raw = await readTicketMarkdown(projectFiles, ticket.shorthand);
     if (raw === null) throw new Error(`No local ticket file for ${ticket.shorthand}`);
 
     const frontmatter = parseTicketFrontmatter(raw);
@@ -79,7 +79,7 @@ export const saveTicketCommand = defineCommand({
       frontmatter.parentShorthand !== undefined
         ? await resolveTicketId(ctx.storage, frontmatter.parentShorthand)
         : ticket.parentId;
-    const files = await readTicketFiles(repoFiles, ticket);
+    const files = await readTicketFiles(projectFiles, ticket);
 
     const next: StoredTicket = {
       ...ticket,

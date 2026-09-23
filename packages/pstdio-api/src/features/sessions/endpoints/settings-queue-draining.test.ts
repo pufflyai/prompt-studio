@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -44,7 +45,7 @@ describe("PATCH /v1/settings queue draining", () => {
       const projectRes = await isolated.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Settings Drain Queue Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Settings Drain Queue Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();
@@ -97,7 +98,7 @@ describe("PATCH /v1/settings queue draining", () => {
       const projectRes = await isolated.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Unlimited Settings Drain Queue Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Unlimited Settings Drain Queue Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();

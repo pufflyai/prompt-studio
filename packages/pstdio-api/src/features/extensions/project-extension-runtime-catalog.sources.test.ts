@@ -77,7 +77,9 @@ const createCatalog = (input: {
   createProjectExtensionRuntimeCatalog({
     extensionService: { listEnabledSourcesForProject: async () => input.sources() } as never,
     projectService: { get: async (id: string) => ({ id, name: "Project One", shorthand: "PO" }) } as never,
-    repoService: { listByProject: async () => input.repos ?? [] } as never,
+    workspaceService: {
+      getDefault: async () => (input.repos?.[0] ? { root_path: input.repos[0].path } : null),
+    } as never,
     loadSources: async (options) => {
       input.countImport?.(options?.extensionPackages?.[0]?.path ?? "");
       return loadExtensionSources(options);

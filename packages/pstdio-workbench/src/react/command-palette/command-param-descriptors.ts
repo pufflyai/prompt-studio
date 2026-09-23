@@ -17,10 +17,10 @@ export const commandParamName = (entry: CommandParamEntry) => `${entry.label}${e
 const commandParamOptions = (entry: CommandParamEntry): SelectionOption[] =>
   (entry.options ?? []).map((option) => ({ id: option.value, name: option.label, icon: option.icon }));
 
-// Structured params (harness, repo, template) are normally rendered by the host,
+// Structured params (harness, template) are normally rendered by the host,
 // which knows how to fetch their options. Without a host renderer they fall back
 // to the JSON they are serialized as, so the command can still be run.
-const JSON_PARAM_TYPES = new Set(["json", "resource", "repo", "harness"]);
+const JSON_PARAM_TYPES = new Set(["json", "resource", "harness"]);
 
 /**
  * Maps a declared command param onto the design-system control that owns that

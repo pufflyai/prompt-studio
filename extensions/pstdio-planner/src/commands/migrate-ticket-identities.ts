@@ -14,7 +14,7 @@ export const migrateTicketIdentitiesCommand = defineCommand({
   cli: true,
   params: {},
   async run(ctx) {
-    const repoFiles = requireRepoFiles(ctx.repoFiles);
+    const projectFiles = requireRepoFiles(ctx.projectFiles);
     const migrations = identityMigrations(ctx);
     const tickets = ticketsCollection(ctx.storage);
     let migration = await migrations.get(IDENTITY_MIGRATION);
@@ -30,9 +30,10 @@ export const migrateTicketIdentitiesCommand = defineCommand({
       migration = (await migrations.get(IDENTITY_MIGRATION))!;
     }
     // Keep the original checkout before replacing paths, including unsaved and orphaned files.
-    for (const file of await repoFiles.list(`${TICKETS_DIR}/**`)) {
+    for (const file of await projectFiles.list(`${TICKETS_DIR}/**`)) {
       const backup = `${BACKUP_ROOT}/${file.path}`;
-      if (!(await repoFiles.exists(backup))) await repoFiles.writeBytes(backup, await repoFiles.readBytes(file.path));
+      if (!(await projectFiles.exists(backup)))
+        await projectFiles.writeBytes(backup, await projectFiles.readBytes(file.path));
     }
     const allocations = ctx.storage.collection<{ shorthand: string }>("ticket-identity-allocations");
     for (const ticket of migration.tickets) {
@@ -49,13 +50,13 @@ export const migrateTicketIdentitiesCommand = defineCommand({
     }
     // A project can reach the migration with no drafts checked out, and a resumed run
     // has already removed them, so only clear the directory when it is there.
-    if (await repoFiles.exists(TICKETS_DIR)) await repoFiles.delete(TICKETS_DIR);
+    if (await projectFiles.exists(TICKETS_DIR)) await projectFiles.delete(TICKETS_DIR);
     const migrated = await tickets.list();
     const byId = new Map(migrated.map((ticket) => [ticket.id, ticket]));
     for (const ticket of migrated) {
-      await repoFiles.writeText(ticketMarkdownPath(ticket.shorthand), await ticketToMarkdown(ctx.storage, ticket));
+      await projectFiles.writeText(ticketMarkdownPath(ticket.shorthand), await ticketToMarkdown(ctx.storage, ticket));
       for (const file of ticket.files ?? [])
-        await repoFiles.writeText(`${ticketFilesDir(ticket.shorthand)}/${file.name}`, file.content);
+        await projectFiles.writeText(`${ticketFilesDir(ticket.shorthand)}/${file.name}`, file.content);
     }
     for (const session of await ctx.sessions.list()) {
       const anchors = (session.anchors_json ?? []).flatMap((anchor) => {
@@ -81,7 +82,7 @@ export const migrateTicketIdentitiesCommand = defineCommand({
         id: workspace.id,
         shorthand: workspace.workspace_shorthand,
         branch: workspace.branch,
-        path: workspace.worktree_path,
+        path: workspace.root_path,
       })),
     };
   },

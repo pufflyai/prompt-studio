@@ -28,10 +28,6 @@ describe("createSessionBubbleModule workspace resolution", () => {
   });
   test("opens an unscoped session draft on the project default workspace", async () => {
     const workbench = createWorkbench();
-    getWriter("project_repos")?.truncateAndWrite([
-      { id: "project-repo-1", project_id: "project-default-workspace", repo_id: "repo-1" },
-    ]);
-    getWriter("repos")?.truncateAndWrite([{ id: "repo-1", path: "/repo/prompt-studio" }]);
     getWriter("workspaces")?.truncateAndWrite([
       {
         id: "workspace-default",
@@ -41,6 +37,7 @@ describe("createSessionBubbleModule workspace resolution", () => {
         archived: false,
         workspace_shorthand: "ROOT",
         is_default: true,
+        root_path: "/repo/prompt-studio",
         created_at: "2026-06-01T10:00:00Z",
         updated_at: "2026-06-01T10:00:00Z",
         deleted_at: null,
@@ -76,8 +73,6 @@ describe("createSessionBubbleModule workspace resolution", () => {
         workspacePath: "/repo/prompt-studio",
       });
     } finally {
-      getWriter("project_repos")?.truncateAndWrite([]);
-      getWriter("repos")?.truncateAndWrite([]);
       getWriter("workspaces")?.truncateAndWrite([]);
     }
   });
@@ -101,7 +96,7 @@ describe("createSessionBubbleModule workspace resolution", () => {
         project_id: "project-workspace-resource",
         name: "Active workspace",
         branch: "workspace/PS-307_A1",
-        worktree_path: "/repo/.pstdio/workspaces/PS-307_A1",
+        root_path: "/repo/.pstdio/workspaces/PS-307_A1",
         archived: false,
         workspace_shorthand: "PS-307_A1",
         is_default: false,

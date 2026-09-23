@@ -17,14 +17,14 @@ import type { LoadedExtension } from "./features/extensions/extension-runtime";
 import { installExtensionSource } from "./features/extensions/install-extension-source";
 import { createInstalledExtensionRuntime } from "./features/extensions/installed-extension-runtime";
 import { createProjectExtensionRuntimeCatalog } from "./features/extensions/project-extension-runtime-catalog";
-import { subscribeRepoLinkExtensionRefresh } from "./features/extensions/repo-link-extension-refresh";
+import { subscribeProjectWorkspaceExtensionRefresh } from "./features/extensions/project-workspace-extension-refresh";
 import { createHarnessRegistryService } from "./features/harnesses/harness-registry-service";
 import type { EventBus } from "./features/sync/event-bus";
 import { apiLogger } from "./lib/logger";
 import { createExtensionService } from "./services/extension-service";
 import { createExtensionUpgradeService } from "./services/extension-upgrade-service";
 import type { createProjectService } from "./services/project-service";
-import type { createRepoService } from "./services/repo-service";
+import type { createWorkspaceService } from "./services/workspace-service";
 
 interface WireExtensionServicesInput {
   config: AppConfig["extensions"];
@@ -35,7 +35,7 @@ interface WireExtensionServicesInput {
   extensionConnectionsDBService: ReturnType<typeof createExtensionConnectionsDBService>;
   installedExtensionSourcesService: ReturnType<typeof createInstalledExtensionSourcesDBService>;
   projectService: ReturnType<typeof createProjectService>;
-  repoService: ReturnType<typeof createRepoService>;
+  workspaceService: ReturnType<typeof createWorkspaceService>;
   storageRoot: string;
 }
 
@@ -64,12 +64,12 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
     extensionService,
     installExtensionSource: input.dependencies.installExtensionSource,
     release: input.config.release,
-    repoService: input.repoService,
+    workspaceService: input.workspaceService,
   });
   const extensionRuntimeCatalog = createProjectExtensionRuntimeCatalog({
     extensionService,
     projectService: input.projectService,
-    repoService: input.repoService,
+    workspaceService: input.workspaceService,
   });
   const extensionConnectionService = createExtensionConnectionService({
     connectionsDBService: input.extensionConnectionsDBService,
@@ -119,11 +119,11 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
     installedExtensionSourcesService: input.installedExtensionSourcesService,
     projectRuntimeCatalog: extensionRuntimeCatalog,
     projectService: input.projectService,
-    repoService: input.repoService,
+    workspaceService: input.workspaceService,
     webviewBuilds: input.config.buildWebviews,
   });
   refreshInstalledExtensionProcesses = extensionRuntime.refresh;
-  const unsubscribeRepoLinkRefresh = subscribeRepoLinkExtensionRefresh({
+  const unsubscribeProjectWorkspaceRefresh = subscribeProjectWorkspaceExtensionRefresh({
     eventBus: input.eventBus,
     invalidate: extensionRuntimeCatalog.invalidate,
     refreshWatchers: () => extensionRuntime.refreshWatchers(),
@@ -146,7 +146,7 @@ export const wireAppExtensionServices = async (input: WireExtensionServicesInput
     extensionUpgradeService,
     harnessRegistry,
     unsubscribeExtensionEvents: () => {
-      unsubscribeRepoLinkRefresh();
+      unsubscribeProjectWorkspaceRefresh();
       unsubscribeEnablementInvalidation();
     },
   };

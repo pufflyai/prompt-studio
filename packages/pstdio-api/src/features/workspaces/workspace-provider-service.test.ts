@@ -53,6 +53,7 @@ const makeCreateDeps = (provider: Record<string, unknown>) => {
   return {
     deps: {
       workspaceService: {
+        getDefault: async () => null,
         createStandalone,
         updateProviderProjection,
         updateProviderOperationProjection,
@@ -108,13 +109,13 @@ describe("createProviderBackedWorkspace", () => {
     const workspace = await createProviderBackedWorkspace(deps, {
       projectId: "project-1",
       providerId: "pocketcoder.remote",
-      params: { repository: "repo" },
+      params: { image: "documents" },
       standalone: true,
     });
 
     expect(workspace).toMatchObject({
       execution_kind: "remote",
-      worktree_path: null,
+      root_path: null,
       provider_state: "ready",
       display_path: "Pocket Coder remote-1",
     });

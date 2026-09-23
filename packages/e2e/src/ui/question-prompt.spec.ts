@@ -1,11 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const questionPrompt = "Question follow-up test __fake_question_prompt__";
 
 test("answers a hydrated question tool call from the session composer", async ({ page, request }) => {
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "PS-119 Question Prompt" },
+    data: folderProjectInput({ name: "PS-119 Question Prompt" }),
   });
   expect(projectResponse.ok()).toBe(true);
   const project = (await projectResponse.json()) as { id: string };

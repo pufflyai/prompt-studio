@@ -28,9 +28,7 @@ type SyncRepoExtensionsForProjectInput = {
 };
 
 type SyncRepoExtensionsForLinkedReposInput = Omit<SyncRepoExtensionsForProjectInput, "repoPath"> & {
-  repoService: {
-    listByProject: (projectId: string) => Promise<Array<{ path: string }>>;
-  };
+  workspaceService: { getDefault(projectId: string): Promise<{ root_path: string | null } | null> };
 };
 
 export type SyncRepoExtensionsResult = {
@@ -127,12 +125,7 @@ export const syncRepoExtensionsForProject = async (input: SyncRepoExtensionsForP
 };
 
 export const syncRepoExtensionsForLinkedRepos = async (input: SyncRepoExtensionsForLinkedReposInput) => {
-  const repos = await input.repoService.listByProject(input.projectId);
-  const results = [];
-
-  for (const repo of [...repos].sort((left, right) => left.path.localeCompare(right.path))) {
-    results.push(await syncRepoExtensionsForProject({ ...input, repoPath: repo.path }));
-  }
-
-  return results;
+  const workspace = await input.workspaceService.getDefault(input.projectId);
+  if (!workspace?.root_path) return [];
+  return [await syncRepoExtensionsForProject({ ...input, repoPath: workspace.root_path })];
 };

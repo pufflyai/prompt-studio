@@ -27,8 +27,8 @@ test("opens and closes project tabs while preserving pages and terminals", async
         defaultExtensions: [{ source: fixturePath, installName: "workbench-fixture", skipInstall: true }],
       }),
     });
-    const first = await createPackagedProject(app.page, "Docs");
-    const second = await createPackagedProject(app.page, "Agentic design");
+    const first = await createPackagedProject(app, "Docs");
+    const second = await createPackagedProject(app, "Agentic design");
     await openPackagedProject(app.page, first);
     await expect(app.page.getByTestId("start-page")).toBeVisible();
     // Electron combines drag regions from both renderers, even when the
@@ -99,8 +99,8 @@ test("reports a failed tab write and recovers when the next tab change can be sa
   let app: PackagedApp | null = null;
   try {
     app = await launchPackagedApp(home);
-    const first = await createPackagedProject(app.page, "First project");
-    const second = await createPackagedProject(app.page, "Second project");
+    const first = await createPackagedProject(app, "First project");
+    const second = await createPackagedProject(app, "Second project");
     const blockedWrite = join(home, "electron-user-data", "project-tabs.json.tmp");
     mkdirSync(blockedWrite);
 

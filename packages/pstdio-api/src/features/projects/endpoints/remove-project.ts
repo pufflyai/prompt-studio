@@ -8,7 +8,7 @@ import { notFoundResponseSchema } from "../dto";
 export const removeProjectRoute = createRoute({
   method: "delete",
   path: "/projects/{id}",
-  description: "Hard-delete a project by ID. Removes all associated data, files on disk, and worktrees.",
+  description: "Delete project data and provider-owned resources. Preserve user-selected folders.",
   tags: ["Projects"],
   request: {
     query: z.object({}).strict(),

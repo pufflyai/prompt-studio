@@ -160,12 +160,13 @@ const registerWorkspacesPage = (ctx: WorkbenchModuleContext) => {
       kind: "panels",
       empty: {
         kind: "view",
-        id: dashboardWidgetIds.workspaceDiffs,
+        id: dashboardWidgetIds.workspaceFiles,
       },
     },
     slots: [
       {
         id: "changes",
+        isAvailable: (resource) => resource?.metadata?.workspaceSupportsDiff === true,
         region: "main",
         tab: { getSnapshot: () => ({ label: "Changes" }) },
         order: 1,

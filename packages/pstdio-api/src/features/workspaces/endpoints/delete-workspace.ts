@@ -18,10 +18,10 @@ const releaseWorkspaceBackingResource = async (deps: WorkspacesRouteDeps, worksp
 };
 
 const fireWorkspaceRemovedEvent = (deps: WorkspacesRouteDeps, workspace: WorkspaceRecord) => {
-  if (!workspace.worktree_path) return;
+  if (!workspace.root_path) return;
   fireExtensionEventAsync(deps, workspace.project_id, worktreeEvents.removed, {
     projectId: workspace.project_id,
-    worktreePath: workspace.worktree_path,
+    worktreePath: workspace.root_path,
     workspace: toWorkspaceEventPayload(workspace),
     workspaceId: workspace.id,
   });

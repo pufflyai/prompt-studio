@@ -16,7 +16,6 @@ import type { createExtensionUpgradeService } from "../services/extension-upgrad
 import type { createFileService } from "../services/file-service";
 import type { createNotificationService } from "../services/notification-service";
 import type { createProjectService } from "../services/project-service";
-import type { createRepoService } from "../services/repo-service";
 import type { createSessionService } from "../services/session-service";
 import type { createSettingsService } from "../services/settings-service";
 import type { createSkillService } from "../services/skill-service";
@@ -49,7 +48,6 @@ export interface RouteDeps {
   automationService: ReturnType<typeof createAutomationService>;
   harnessRegistry: HarnessRegistryService;
   projectService: ReturnType<typeof createProjectService>;
-  repoService: ReturnType<typeof createRepoService>;
   sessionService: ReturnType<typeof createSessionService>;
   sessionQueueEntriesService: ReturnType<typeof createSessionQueueEntriesDBService>;
   settingsService: ReturnType<typeof createSettingsService>;

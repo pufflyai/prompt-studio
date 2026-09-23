@@ -1,4 +1,10 @@
 import { z } from "zod";
+import { serializableJsonObjectSchema } from "./extensions/common";
+
+export const initialWorkspaceSchema = z.object({
+  provider_id: z.string().min(1),
+  params: serializableJsonObjectSchema.default({}),
+});
 
 export const extensionSetupWarningSchema = z.object({
   code: z.literal("extension_setup_failed"),
@@ -20,17 +26,14 @@ export const projectSchema = z.object({
 });
 
 export const createProjectInputSchema = z.object({
-  name: z
-    .string()
-    .min(1)
-    .refine((name) => /[a-zA-Z]/.test(name), {
-      message: "Project name must contain at least one letter",
-    }),
+  name: z.string().trim().min(1).optional(),
+  initial_workspace: initialWorkspaceSchema,
   agents: z.array(z.string().min(1)).min(1).optional(),
 });
 
 export const updateProjectInputSchema = z
   .object({
+    name: z.string().trim().min(1).optional(),
     default_agent_id: z.string().min(1).nullable().optional(),
     default_agent_model: z.string().min(1).nullable().optional(),
   })

@@ -1,27 +1,24 @@
----
-status: "draft"
-created: "2026-03-10T20:12:05Z"
----
-
 # CLI workspaces
 
-The core workspace commands manage standalone Git worktrees. Planner ticket attempts create their own linked workspaces through Planner commands.
-
-## Commands
+A workspace is where sessions run. A project's default folder workspace shares files between sessions and requires no Git setup.
 
 ```sh
-pst workspaces create [--base <ref>] [--provider <id>] [--params <json>]
+pst workspaces create --provider <id> [--params <json>]
 pst workspaces list [--json]
 pst workspaces merge --id <workspace-id> [--delete-workspace]
 pst workspaces delete --id <workspace-id>
 ```
 
-`create` makes a worktree-backed workspace from `HEAD` or the ref passed to `--base`. Use `--provider` and `--params` for an extension provider.
+Providers declare their own parameters. The dashboard lists available providers and renders these parameters.
 
-`list` prints active workspaces. Use `--json` when another tool needs the complete records.
+```sh
+pst workspaces create --provider pstdio.worktree --params '{"base":"HEAD"}'
+```
 
-`merge` squash-merges the workspace into the current branch. Add `--delete-workspace` to remove it after a successful merge.
+The Git provider requires a usable commit. For a project in a repository subfolder, sessions run in the matching worktree subfolder. Files stay within that folder; Git diff and merge include all changed repository paths.
 
-`delete` force-removes the workspace metadata, worktree, and workspace branch. Save any work you need before running it.
+`merge` is available only for Git-capable workspaces. It squash-merges the provider-created branch. `--delete-workspace` removes that workspace after a successful merge.
+
+Remote providers supply their own source and environment. They do not upload or synchronize the project folder. `delete` delegates resource cleanup to the provider and preserves user-selected folders.
 
 Run `pst workspaces <command> --help` for current options.

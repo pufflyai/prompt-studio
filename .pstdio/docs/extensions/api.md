@@ -724,7 +724,6 @@ scope only groups files inside that owner boundary:
 | Scope | Webview value | Meaning |
 | --- | --- | --- |
 | Project | Omit `scope` or use `{ type: "project" }` | Files shared by this extension across the active project. |
-| Repository | `{ type: "repo", id: repoId }` | Files grouped under one repository id. |
 | Resource | `{ type: "resource", id: resourceId }` | Files grouped under one resource id. |
 | Extension-defined | `{ type: "import", id: importId }` | Files grouped by a type and id chosen by the extension. Include the id when a command must access the scope. |
 
@@ -742,12 +741,11 @@ The command storage API names the same scopes with runtime objects, not the webv
 | Webview scope | Matching command storage |
 | --- | --- |
 | Omitted or `{ type: "project" }` | `ctx.storage.files` |
-| `{ type: "repo", id: repoId }` | `ctx.storage.scope({ type: "repo", repoId }).files` |
 | `{ type: "resource", id: resource.id }` | `ctx.storage.scope({ type: "resource", resource }).files`, where `resource` is the full `{ type, id, ... }` resource reference. |
 | `{ type: "import", id: importId }` | `ctx.storage.scope({ type: "import", id: importId }).files` |
 
-Repository scopes use `repoId`, resource scopes use a full resource reference, and
-extension-defined command scopes require an id. The upload limit is 25 MiB. The
+Resource scopes use a full resource reference. Extension-defined command scopes
+require an id. The upload limit is 25 MiB. The
 returned `ExtensionBlobRef` contains `id`, `name`, `mimeType`, `size`, `hash`, `url`,
 `createdAt`, and `updatedAt`.
 
@@ -865,7 +863,7 @@ Package asset paths must be relative and stay inside the package.
 
 Command and hook handlers can read other packaged files through `ctx.packageFiles`. This API is read-only and scoped to the installed package root. Files omitted from an installed copy by `.gitignore` are unavailable at runtime.
 
-Set `pstdio.repoFiles.tracked` in the package manifest to control the allocated `ctx.extensionFiles` repo mount. It is rooted at `.pstdio/ext/<publisher>.<name>/`. The host adds an ignore entry on the first write unless `tracked` is true.
+Set `pstdio.projectFiles.tracked` in the package manifest to control the allocated `ctx.extensionFiles` repo mount. It is rooted at `.pstdio/ext/<publisher>.<name>/`. The host adds an ignore entry on the first write unless `tracked` is true.
 
 ## Artifact Mounts And Storage
 

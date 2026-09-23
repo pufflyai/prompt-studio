@@ -6,6 +6,7 @@ import type { OpenAPIHono } from "@hono/zod-openapi";
 import type { HarnessExit, HarnessSession, SessionMessage } from "pstdio-api-contracts";
 import type { RuntimeHarnessRecord } from "pstdio-extensions";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import type { AppBindings } from "../../../types";
 import {
   createTestHarnessRecord,
@@ -82,7 +83,7 @@ const createProject = async (target: OpenAPIHono<AppBindings>, name: string) => 
   const res = await target.request("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(folderProjectInput({ name })),
   });
   expect(res.status).toBe(201);
   return res.json();
@@ -122,7 +123,7 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "OpenCode Follow-up Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "OpenCode Follow-up Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -172,7 +173,7 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "OpenCode Follow-up Model Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "OpenCode Follow-up Model Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -209,7 +210,7 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
     const projectRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Disconnected Follow-up Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Disconnected Follow-up Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -281,7 +282,7 @@ describe("POST /v1/sessions/:id/follow-up (opencode)", () => {
       const projectRes = await failApp.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Fail Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Fail Project" })),
       });
       const project = await projectRes.json();
 

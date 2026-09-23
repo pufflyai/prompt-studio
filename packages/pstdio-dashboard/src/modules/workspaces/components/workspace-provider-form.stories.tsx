@@ -1,0 +1,44 @@
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { WorkspaceProviderForm } from "./workspace-provider-form";
+
+const folder = {
+  id: "pstdio.root",
+  label: "Project folder",
+  description: "Work directly in the project folder. Sessions share its files.",
+  params: {},
+};
+const git = {
+  id: "pstdio.worktree",
+  label: "Git worktree",
+  description: "Git review and merge cover the entire repository, including paths outside the project folder.",
+  params: { base: { type: "text" as const, label: "Base revision", defaultValue: "HEAD", required: true } },
+};
+const remote = {
+  id: "cloud.environment",
+  label: "Remote environment",
+  description: "The provider supplies its files. Local files are not uploaded or synchronized.",
+  params: {
+    image: { type: "text" as const, label: "Environment image", required: true },
+    source: { type: "text" as const, label: "Source URL" },
+  },
+};
+const meta = {
+  title: "Workspaces/Provider selection",
+  component: WorkspaceProviderForm,
+  args: { providers: [folder], onSubmit: async () => {} },
+} satisfies Meta<typeof WorkspaceProviderForm>;
+export default meta;
+type Story = StoryObj<typeof meta>;
+export const SharedFolder: Story = {};
+export const GitAndRemote: Story = { args: { providers: [folder, git, remote] } };
+export const RemoteParameters: Story = { args: { providers: [remote] } };
+export const NoLocation: Story = { args: { providers: [] } };
+export const Provisioning: Story = { args: { providers: [remote], busy: true } };
+export const ProviderFailure: Story = {
+  args: {
+    providers: [folder],
+    onSubmit: async () => {
+      throw new Error("The environment could not be created. Try again.");
+    },
+  },
+};

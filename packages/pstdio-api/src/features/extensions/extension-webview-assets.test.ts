@@ -57,7 +57,7 @@ const createApp = (input: {
   const extensionRuntimeCatalog = createProjectExtensionRuntimeCatalog({
     extensionService: {} as never,
     projectService: {} as never,
-    repoService: {} as never,
+    workspaceService: { getDefault: async () => null } as never,
     loadSources: (options) => {
       input.onLoad?.();
       return loadExtensionSources(options);

@@ -68,7 +68,7 @@ The Files flow uses the same workspace resource:
 8. `DELETE /v1/workspaces/:id/entry?path=...` deletes a file or directory after confirmation.
 9. A successful mutation invalidates file-list, selected-file, diff-files, diff-file, and diff-summary queries.
 
-Workspace file paths are POSIX-style paths relative to the trusted workspace file root. A worktree workspace uses `workspace.worktree_path`. The default `current_branch` workspace uses the project's first server-linked repository. The shared mount rejects absolute, drive-letter, UNC, traversal, separator-confusion, null-byte, and symlink-escape paths. It skips `.git`, limits reads and writes to 1 MiB, and requires the parent directory to exist before creating an entry.
+Workspace file paths are POSIX-style paths relative to the trusted workspace file root. A worktree workspace uses `workspace.root_path`. The default folder workspace uses its recorded `root_path`. The shared mount rejects absolute, drive-letter, UNC, traversal, separator-confusion, null-byte, and symlink-escape paths. It skips `.git`, limits reads and writes to 1 MiB, and requires the parent directory to exist before creating an entry.
 
 ## Backend Diff Generation
 
@@ -85,7 +85,7 @@ The workspace page uses metadata-first endpoints in `pstdio-api`:
 
 1. Resolve workspace by id
 2. Require worktree path
-3. Require and resolve associated repository
+3. Require the diff capability and resolve the Git provider reference
 
 Returns typed errors (400/404) on failure.
 
@@ -144,7 +144,7 @@ API file diff objects are transformed into UI diff types. Rename paths fall back
 - Markdown, plain text, extensionless files, and code use Monaco when the workspace contribution marks them as editable text.
 - Supported images use the shared read-only image preview.
 - No selection, unsupported files, oversized files, and API errors show deliberate states instead of blank editors.
-- The default `current_branch` workspace supports Files through its first linked repository. Its fork-point Diffs view remains unavailable because it has no worktree branch.
+- The default folder workspace supports Files through its `root_path`. It does not advertise Git diff.
 - The Sidenav continues to show workspace sessions. Files and Diffs are not duplicated there.
 
 ### File Cards
@@ -182,8 +182,8 @@ planner file query so re-saved artifact content updates in place.
 
 ### API errors
 
-- 404 — workspace or repository not found
-- 400 — a diff request is missing its required worktree or repository association
+- 404 — workspace not found
+- 400 — a workspace does not support diff or its Git provider reference is unavailable
 - File requests return 404 when no trusted workspace file root can be resolved
 - 500 — git diff failure
 
@@ -201,5 +201,5 @@ planner file query so re-saved artifact content updates in place.
 4. Edit and save the file, then open Diffs and confirm the file and saved body appear.
 5. Confirm the initial Diffs load calls `/diff-files` once and calls `/diff-file` only for the selected file.
 6. Confirm a supported image uses the shared preview.
-7. Open the default `current_branch` workspace and confirm Files browses and edits the first linked repository through Monaco.
-8. Confirm unsafe paths return `400` and a project without a linked repository gets a clear Files error.
+7. Open the default folder workspace and confirm Files browses and edits its exact folder through Monaco.
+8. Confirm unsafe paths return `400` and a workspace without file capability gets a clear Files error.

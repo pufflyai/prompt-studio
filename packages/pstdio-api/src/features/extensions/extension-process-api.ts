@@ -90,6 +90,7 @@ export interface ProcessApiOptions {
   /** Invocation that owns the spawned children. Absent for host-level probes. */
   scope?: InvocationScope;
   spawner?: ProcessSpawner;
+  resolveCwd?: () => Promise<string>;
 }
 
 export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunnerEnvironment["process"] => {
@@ -99,18 +100,27 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
   // Children outliving the invocation that started them is the leak this owns. The scope
   // stops whatever is still running when the invocation ends, however it ended.
   const running = new Set<(reason: unknown) => void>();
+  let closed = false;
   options.scope?.register(() => {
+    closed = true;
     for (const stop of [...running]) stop(new Error("Invocation ended while the command was still running."));
   });
 
-  const runToCompletion = async (input: ProcessRunInput) => {
+  const ensureActive = () => {
     if (signal?.aborted) throw signal.reason;
+    if (closed) throw new Error("Invocation ended before the command could start.");
+  };
+
+  const runToCompletion = async (input: ProcessRunInput) => {
+    const workspaceDirectory = await options.resolveCwd?.();
+    ensureActive();
+    const cwd = input.cwd ?? workspaceDirectory;
 
     const resolved = resolveProcessCommand(input.command);
     // Its own process group, so stopping the command also stops whatever it started. Killing
     // the direct child alone leaves a shell's background jobs running with nobody to stop them.
     const child = spawner(resolved.argv, {
-      cwd: input.cwd,
+      cwd,
       detached: true,
       env: createExtensionProcessEnvironment(process.env, input.env),
       stderr: "pipe",
@@ -165,10 +175,13 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
       throw new Error(processOutput(result) || `Command failed: ${input.command.join(" ")}`);
     },
     async spawnDetached(input) {
+      const workspaceDirectory = await options.resolveCwd?.();
+      ensureActive();
+      const cwd = input.cwd ?? workspaceDirectory;
       const resolved = resolveProcessCommand(input.command);
       const proc = spawner(resolved.argv, {
         detached: true,
-        cwd: input.cwd,
+        cwd,
         env: createExtensionProcessEnvironment(process.env, input.env),
         stderr: "ignore",
         stdin: "ignore",

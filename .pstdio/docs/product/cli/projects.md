@@ -1,48 +1,25 @@
----
-status: "draft"
-created: "2026-03-10T20:12:05Z"
----
-
 # CLI projects
 
-A project groups repositories, documentation, sessions, workspaces, templates, and extension data.
-
-## Commands
+A project owns tools, settings, saved data, and workspaces. Open one existing folder with:
 
 ```sh
-pst projects create [name] [--repo <path>...]
-pst projects link --project-id <project-id>
-pst projects unlink
+pst projects create [name] [--path <folder>]
 pst projects list
 pst projects view [--project-id <project-id>]
-pst projects repos [--project-id <project-id>]
 pst projects delete <project-id>
 ```
 
-## Create a project
-
-`create` initializes `.pstdio/config.json` in the current directory. The project name defaults to the current folder name. Repeat `--repo` to connect more than one Git repository. When `--repo` is absent, Prompt Studio connects the current repository when possible.
+`create` defaults to the exact current directory and its folder name. Git is optional. Numeric and Unicode folder names work. Selecting the same canonical folder again opens its existing project. Selecting a child creates a distinct project, including inside a Git repository.
 
 ```sh
-pst projects create prompt-studio --repo . --repo ../shared-tools
+pst projects create --path ./notes
+pst projects create "My tools" --path ./tools
 ```
 
-## Link or unlink a repository
+The server writes `.pstdio/config.json`, initializes extensions, and provisions the default workspace. Additional sessions share this folder. Project settings can rename the project.
 
-`link` connects the current Git repository to an existing project. `unlink` removes the local project link. It does not delete the project.
+Commands discover the nearest ancestor `.pstdio/config.json`. They do not move to a containing Git root. The default workspace remains the authority for project files, including when an old config file exists elsewhere.
 
-```sh
-pst projects list
-pst projects link --project-id <project-id>
-pst projects unlink
-```
-
-## Inspect a project
-
-`view` prints project details. `repos` lists the repositories connected to the project. Both commands use the project in `.pstdio/config.json` unless `--project-id` is provided.
-
-## Delete a project
-
-`delete` removes the project from active use. It does not remove local `.pstdio` files, so unlink the repository separately when needed.
+`delete` removes the project from active use while preserving the selected folder and its contents. Provider-created resources follow their provider's deletion rules.
 
 Run `pst projects <command> --help` for current options.

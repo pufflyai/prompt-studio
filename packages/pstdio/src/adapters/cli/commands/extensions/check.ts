@@ -8,7 +8,7 @@ import {
 } from "pstdio-api/extensions/install-extension-source";
 import type { Arguments, Argv } from "yargs";
 import { CLI_VERSION } from "@/features/cli-version";
-import { findGitRoot } from "@/features/config/config";
+import { findProjectRoot } from "@/features/config/config";
 import type { ExtensionsCheckArgs } from "./shared";
 
 export const command = "check";
@@ -29,7 +29,7 @@ export const builder = (yargs: Argv) =>
 type Deps = {
   checkExtensionsRoot: typeof checkExtensionsRoot;
   cwd: () => string;
-  findGitRoot: typeof findGitRoot;
+  findProjectRoot: typeof findProjectRoot;
   log: (message: string) => void;
   resolvePstdioHome: typeof resolvePstdioHome;
 };
@@ -37,7 +37,7 @@ type Deps = {
 const defaultDeps: Deps = {
   checkExtensionsRoot,
   cwd: () => process.cwd(),
-  findGitRoot,
+  findProjectRoot,
   log: console.log,
   resolvePstdioHome,
 };
@@ -45,11 +45,11 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ExtensionsCheckArgs>) => {
-    const gitRoot = argv.scope === "user" ? null : deps.findGitRoot(deps.cwd());
-    if (argv.scope === "repo" && !gitRoot) throw new Error("Run the repo scope inside a Git repository.");
+    const projectRoot = argv.scope === "user" ? null : deps.findProjectRoot(deps.cwd());
+    if (argv.scope === "repo" && !projectRoot) throw new Error("Run the repo scope inside a project folder.");
     const roots: string[] = [];
     if (argv.scope !== "repo") roots.push(join(deps.resolvePstdioHome({ env: process.env }), "extensions"));
-    if (gitRoot) roots.push(join(gitRoot, ".pstdio", "extensions"));
+    if (projectRoot) roots.push(join(projectRoot, ".pstdio", "extensions"));
     const checks = [];
     const versions = {
       cli: CLI_VERSION,

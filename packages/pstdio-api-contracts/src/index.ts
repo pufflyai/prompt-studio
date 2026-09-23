@@ -8,7 +8,6 @@ export * from "./files";
 export * from "./harness";
 export * from "./notifications/types";
 export * from "./projects";
-export * from "./repos";
 export * from "./session-attachment-types";
 export * from "./session-messages";
 export * from "./sessions";

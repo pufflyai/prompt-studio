@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { folderProjectInput } from "../../test-utils/folder-project-input";
 import { installExtensionSource } from "../extensions/install-extension-source";
 
 const REPO_ROOT = resolve(import.meta.dir, "../../../../..");
@@ -98,7 +99,9 @@ describe("harness registry", () => {
         await app.request("/v1/projects", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: "fake-only", agents: ["pstdio.workbench-fixture.harness.fake"] }),
+          body: JSON.stringify(
+            folderProjectInput({ name: "fake-only", agents: ["pstdio.workbench-fixture.harness.fake"] }),
+          ),
         })
       ).json();
 

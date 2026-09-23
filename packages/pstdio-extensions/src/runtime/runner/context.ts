@@ -9,7 +9,6 @@ import type {
   ExtensionEventsApi,
   ExtensionLoggerApi,
   JsonObject,
-  RepoContext,
   Struct,
 } from "@pstdio/sdk/extensions";
 import type { ExtensionRuntime } from "../../types/runtime";
@@ -38,7 +37,6 @@ export interface ContextFactory {
     invocationId: string,
     projectId: string,
     source: CommandSource | undefined,
-    repo: RepoContext | undefined,
     depth: number,
     scope: InvocationScope,
     workspace?: { workspaceDir?: string; workspaceId?: string },
@@ -100,13 +98,6 @@ export const createExecuteBuilder = (runRef: {
       projectId: origin.projectId,
       params: (invocation?.params ?? {}) as JsonObject,
       resource: invocation?.resource,
-      repo: invocation?.repoId
-        ? ({
-            projectId: origin.projectId,
-            repoId: invocation.repoId,
-            path: invocation.repoPath ?? "",
-          } satisfies RepoContext)
-        : undefined,
       slot: invocation?.slot,
       attachment: invocation?.attachment,
       workspaceDir: origin.workspaceDir,
@@ -145,7 +136,7 @@ export const createContextFactory = (
       storage: env.storage,
       resources: env.resources,
       artifacts: env.artifacts,
-      repoFiles: env.repoFiles,
+      projectFiles: env.projectFiles,
       workspaceFiles: env.workspaceFiles,
       packageFiles: env.packageFiles,
       extensionFiles: env.extensionFiles,
@@ -153,7 +144,6 @@ export const createContextFactory = (
       skills: env.skills,
       sessions: hostApis.sessions,
       workspaces: hostApis.workspaces,
-      repos: env.repos,
       commands: buildCommandsApi(createExecute, origin),
       events: buildEventsApi(dispatcher, ids.extensionId),
       activity: env.activity,
@@ -167,19 +157,7 @@ export const createContextFactory = (
     };
   },
 
-  buildCommandContext(
-    env,
-    owner,
-    commandId,
-    invocation,
-    invocationId,
-    projectId,
-    source,
-    repo,
-    depth,
-    scope,
-    workspace,
-  ) {
+  buildCommandContext(env, owner, commandId, invocation, invocationId, projectId, source, depth, scope, workspace) {
     const base = this.buildExtensionContext(
       env,
       {
@@ -206,7 +184,6 @@ export const createContextFactory = (
       resource: invocation.resource,
       attachment: invocation.attachment,
       slot: invocation.slot,
-      repo,
       source,
     };
   },

@@ -4,8 +4,6 @@ import { buildDashboardWorkspaceOptionsFromRows, createDashboardWorkspaceOptionR
 
 const rows: DashboardRows = {
   files: [],
-  projectRepos: [{ id: "project-repo-1", project_id: "project-1", repo_id: "repo-1" }],
-  repos: [{ id: "repo-1", path: "/repo/prompt-studio" }],
   sessions: [],
   workspaceSessions: [],
   workspaces: [
@@ -14,7 +12,8 @@ const rows: DashboardRows = {
       project_id: "project-1",
       name: "Root repo",
       branch: "main",
-      worktree_path: null,
+      root_path: "/repo/prompt-studio",
+      provider_id: "pstdio.root",
       workspace_shorthand: "ROOT",
       is_default: true,
       created_at: "2026-06-01T10:00:00Z",
@@ -25,7 +24,8 @@ const rows: DashboardRows = {
       project_id: "project-1",
       name: "Feature branch",
       branch: "workspace/PS-43_A1",
-      worktree_path: "/repo/.pstdio/workspaces/PS-43_A1",
+      root_path: "/repo/.pstdio/workspaces/PS-43_A1",
+      provider_id: "pstdio.worktree",
       workspace_shorthand: "PS-43_A1",
       is_default: false,
       created_at: "2026-06-02T10:00:00Z",
@@ -37,7 +37,7 @@ const rows: DashboardRows = {
       name: "Remote workspace",
       branch: null,
       execution_kind: "remote",
-      worktree_path: null,
+      root_path: null,
       workspace_shorthand: "REMOTE-1",
       is_default: false,
       created_at: "2026-06-03T10:00:00Z",

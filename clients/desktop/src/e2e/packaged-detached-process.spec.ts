@@ -12,6 +12,7 @@ import {
   runPackagedCli,
   waitForExit,
 } from "./packaged-app-helpers";
+import { createPackagedProject } from "./packaged-project-helpers";
 
 const fixturePath = dirname(
   fileURLToPath(import.meta.resolve("workbench-fixture/fixtures/detached-work/package.json")),
@@ -31,16 +32,7 @@ for (const shutdown of ["desktop quit", "API shutdown"] as const) {
           defaultExtensions: [{ source: fixturePath, installName: "desktop-process-fixture" }],
         }),
       });
-      const project = await app.page.evaluate(async () => {
-        const response = await fetch("/v1/projects", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: "Detached extension work" }),
-        });
-        return { status: response.status, body: await response.json() };
-      });
-      expect(project.status).toBe(201);
-      expect(project.body.extension_warnings ?? []).toEqual([]);
+      const project = await createPackagedProject(app, "Detached extension work");
       const result = await app.page.evaluate(
         async ({ projectId, ...params }) => {
           const response = await fetch(
@@ -53,7 +45,7 @@ for (const shutdown of ["desktop quit", "API shutdown"] as const) {
           );
           return { status: response.status, body: await response.json() };
         },
-        { executable: "bun", heartbeatPath, projectId: project.body.id },
+        { executable: "bun", heartbeatPath, projectId: project.id },
       );
       expect(result).toMatchObject({ status: 200, body: { outcome: { status: "success" } } });
       probePid = result.body.outcome.value.pid;

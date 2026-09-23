@@ -1,8 +1,11 @@
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 
 const setup = async (page: Page, request: APIRequestContext) => {
-  const project = await (await request.post(`${apiBase}/v1/projects`, { data: { name: "Live sessions" } })).json();
+  const project = await (
+    await request.post(`${apiBase}/v1/projects`, { data: folderProjectInput({ name: "Live sessions" }) })
+  ).json();
   const sessions: { id: string; title: string }[] = [];
   for (const title of ["Session A", "Session B"]) {
     const response = await request.post(`${apiBase}/v1/sessions`, {

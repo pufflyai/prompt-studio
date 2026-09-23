@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { calculateStats, installLongTaskObserver, throttleChromiumCpu } from "./perf-helpers";
 
@@ -12,9 +13,9 @@ declare global {
   }
 }
 
-const createProject = async (request: import("@playwright/test").APIRequestContext) => {
+const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "PS-173 Performance" },
+    data: folderProjectInput({ name: "PS-173 Performance" }, folderPath),
   });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };

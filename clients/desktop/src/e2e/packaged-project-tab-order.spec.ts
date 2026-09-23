@@ -32,8 +32,8 @@ test("reorders project tabs with mouse and keyboard and restores their order aft
         defaultExtensions: [{ source: fixturePath, installName: "workbench-fixture", skipInstall: true }],
       }),
     });
-    const first = await createPackagedProject(app.page, "Docs");
-    const second = await createPackagedProject(app.page, "Agentic design");
+    const first = await createPackagedProject(app, "Docs");
+    const second = await createPackagedProject(app, "Agentic design");
     await openPackagedProject(app.page, second);
     await openPackagedProject(app.page, first);
     await app.page.getByRole("option", { name: "Lab", exact: true }).click();

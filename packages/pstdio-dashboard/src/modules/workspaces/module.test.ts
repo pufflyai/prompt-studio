@@ -107,6 +107,7 @@ describe("createWorkspacesModule", () => {
     const workbench = createWorkbench();
     const workspace = createDashboardResource("workspace", "workspace-1", "PS-307_A1", "GitBranch", "project-1", {
       workspaceId: "workspace-1",
+      workspaceSupportsDiff: true,
       workspaceShorthand: "PS-307_A1",
     });
     workbench.registerModule(createSidenavModule());
@@ -198,7 +199,7 @@ describe("createWorkspacesModule", () => {
         project_id: "project-1",
         name: "Dashboard workbench datalayer",
         branch: "workspace/PS-307_A1",
-        worktree_path: "/repo/.pstdio/workspaces/PS-307_A1",
+        root_path: "/repo/.pstdio/workspaces/PS-307_A1",
         archived: false,
         workspace_shorthand: "PS-307_A1",
         setup_error: null,
@@ -211,7 +212,7 @@ describe("createWorkspacesModule", () => {
         project_id: "project-2",
         name: "Other project workspace",
         branch: "main",
-        worktree_path: null,
+        root_path: null,
         archived: false,
         workspace_shorthand: "PS-999_A1",
         setup_error: null,
@@ -406,7 +407,7 @@ describe("createWorkspacesModule breadcrumbs", () => {
         project_id: "project-1",
         name: null,
         branch: "workspace/PS-307_A1",
-        worktree_path: "/repo/.pstdio/workspaces/PS-307_A1",
+        root_path: "/repo/.pstdio/workspaces/PS-307_A1",
         archived: false,
         workspace_shorthand: "PS-307_A1",
         setup_error: null,

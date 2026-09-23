@@ -20,7 +20,7 @@ describe("ticketWorktreesRemoveAllCommand", () => {
               {
                 id: "workspace-1",
                 workspace_shorthand: `${ticket.shorthand}_A1`,
-                worktree_path: "/repo/.pstdio/workspaces/one",
+                root_path: "/repo/.pstdio/workspaces/one",
                 anchors_json: [{ type: "ticket", id: ticket.id, label: ticket.shorthand }],
               },
             ],

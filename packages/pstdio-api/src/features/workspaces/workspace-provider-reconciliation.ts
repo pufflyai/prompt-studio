@@ -16,10 +16,16 @@ import {
 import { isBuiltInProviderId, normalizeResult } from "./workspace-provider-service";
 
 type ReconciliationOptions = {
+  workspaceId?: string;
   signal?: AbortSignal;
   providerTimeoutMs?: number;
   retryUntilReadyMs?: number;
   retryDelayMs?: number;
+};
+
+const listReconciliationWorkspaces = async (deps: WorkspacesRouteDeps, projectId: string, workspaceId?: string) => {
+  const workspaces = await deps.workspaceService.listForProviderReconciliation(projectId);
+  return workspaceId ? workspaces.filter((workspace) => workspace.id === workspaceId) : workspaces;
 };
 
 const pendingStateFor = (kind: WorkspaceProviderOperationKind) => {
@@ -193,7 +199,7 @@ const reconcileWorkspace = async (
     projectId: workspace.project_id,
     providerId: workspace.provider_id,
     workspaceId: workspace.id,
-    workspaceDir: workspace.execution_kind === "local" ? (workspace.worktree_path ?? undefined) : undefined,
+    workspaceDir: workspace.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined,
   });
   if (!handle) {
     await deps.workspaceService.updateProviderProjection(workspace.id, missingProviderPatch(workspace));
@@ -240,7 +246,7 @@ const reconcileProviderWorkspacePass = async (
   projectId: string,
   options: ReconciliationOptions,
 ) => {
-  const workspaces = await deps.workspaceService.listForProviderReconciliation(projectId);
+  const workspaces = await listReconciliationWorkspaces(deps, projectId, options.workspaceId);
   const pending = workspaces.filter(
     (workspace) =>
       !isBuiltInProviderId(workspace.provider_id) &&
@@ -285,7 +291,7 @@ export const reconcileProviderWorkspaces = async (
   while (!options.signal?.aborted) {
     await reconcileProviderWorkspacePass(deps, projectId, options);
     if (Date.now() >= deadline) return;
-    const workspaces = await deps.workspaceService.listForProviderReconciliation(projectId);
+    const workspaces = await listReconciliationWorkspaces(deps, projectId, options.workspaceId);
     if (!workspaces.some((workspace) => !isBuiltInProviderId(workspace.provider_id) && needsRecoveryRetry(workspace))) {
       return;
     }

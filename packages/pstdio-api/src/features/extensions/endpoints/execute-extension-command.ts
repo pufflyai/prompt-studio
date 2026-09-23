@@ -5,9 +5,7 @@ import { ProjectNotFoundError } from "../../../services/extension-service";
 import type { AppBindings, AppRouteHandler } from "../../../types";
 import type { ExtensionsRouteDeps } from "../deps";
 import {
-  CommandRepoNotFoundError,
   CommandWorkspaceNotFoundError,
-  CommandWorkspaceRepoMismatchError,
   ExtensionCommandNotFoundError,
   executeProjectExtensionCommand,
 } from "../execute-project-extension-command";
@@ -64,12 +62,6 @@ export const executeExtensionCommandHandler = (
       }
       if (error instanceof CommandWorkspaceNotFoundError) {
         return c.json({ error: error.message, code: "workspace_not_found" }, 404);
-      }
-      if (error instanceof CommandRepoNotFoundError) {
-        return c.json({ error: error.message, code: "repo_not_found" }, 404);
-      }
-      if (error instanceof CommandWorkspaceRepoMismatchError) {
-        return c.json({ error: error.message, code: "workspace_repo_mismatch" }, 404);
       }
       throw error;
     }

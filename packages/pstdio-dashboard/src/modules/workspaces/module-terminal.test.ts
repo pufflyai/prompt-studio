@@ -18,17 +18,13 @@ describe("createWorkspacesModule terminal integration", () => {
       workspaceShorthand: "ROOT",
     });
 
-    getWriter("project_repos")?.truncateAndWrite([
-      { id: "project-repo-1", project_id: "project-1", repo_id: "repo-1" },
-    ]);
-    getWriter("repos")?.truncateAndWrite([{ id: "repo-1", path: "/repo/prompt-studio" }]);
     getWriter("workspaces")?.truncateAndWrite([
       {
         id: "workspace-1",
         project_id: "project-1",
         name: "Root repo",
         branch: "main",
-        worktree_path: null,
+        root_path: "/repo/prompt-studio",
         workspace_shorthand: "ROOT",
         is_default: true,
       },
@@ -45,8 +41,6 @@ describe("createWorkspacesModule terminal integration", () => {
         .find((panel) => panel.viewId === WORKBENCH_TERMINAL_WIDGET_ID);
       expect(terminal?.resource?.metadata).toMatchObject({ workspacePath: "/repo/prompt-studio" });
     } finally {
-      getWriter("project_repos")?.truncateAndWrite([]);
-      getWriter("repos")?.truncateAndWrite([]);
       getWriter("workspaces")?.truncateAndWrite([]);
     }
   });
@@ -66,7 +60,7 @@ describe("createWorkspacesModule terminal integration", () => {
         project_id: "project-1",
         name: "PS-296_A1",
         branch: "bugfix/ps-296",
-        worktree_path: "/repo/.pstdio/workspaces/PS-296_A1",
+        root_path: "/repo/.pstdio/workspaces/PS-296_A1",
         workspace_shorthand: "PS-296_A1",
         is_default: false,
       },

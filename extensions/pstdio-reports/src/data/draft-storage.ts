@@ -45,10 +45,10 @@ export const reportToMarkdown = (report: StoredReport) =>
     report.body,
   );
 
-export const readReportMarkdown = async (repoFiles: ArtifactMount, report: StoredReport) => {
+export const readReportMarkdown = async (projectFiles: ArtifactMount, report: StoredReport) => {
   const path = reportMarkdownPathFor(report);
-  if (!(await repoFiles.exists(path))) return null;
-  return repoFiles.readText(path);
+  if (!(await projectFiles.exists(path))) return null;
+  return projectFiles.readText(path);
 };
 
 export { requireRepoFiles } from "@pstdio/sdk/data";

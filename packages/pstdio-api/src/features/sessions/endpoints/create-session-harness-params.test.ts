@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessResumeInput, HarnessStartInput } from "pstdio-api-contracts";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -79,7 +80,7 @@ describe("POST /v1/sessions harness params", () => {
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Harness Params Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Harness Params Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -108,7 +109,7 @@ describe("POST /v1/sessions harness params", () => {
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Harness Params Defaults Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Harness Params Defaults Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -146,7 +147,7 @@ describe("POST /v1/sessions harness params", () => {
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Stale Harness Params Defaults Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Stale Harness Params Defaults Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -183,7 +184,7 @@ describe("POST /v1/sessions harness params", () => {
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Stale Follow-up Harness Params Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Stale Follow-up Harness Params Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -224,7 +225,7 @@ describe("POST /v1/sessions harness params", () => {
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Queued Stale Follow-up Harness Params Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Queued Stale Follow-up Harness Params Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -256,7 +257,7 @@ describe("POST /v1/sessions harness params", () => {
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Invalid Harness Params Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Invalid Harness Params Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -285,7 +286,7 @@ describe("POST /v1/sessions harness params", () => {
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Model-specific Params Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Model-specific Params Project" })),
     });
     const project = await projectRes.json();
 

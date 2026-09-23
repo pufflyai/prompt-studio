@@ -1,18 +1,19 @@
 import { createDashboardResource } from "@/shared/app/resources";
-import { indexFirstProjectRepoPaths } from "@/shared/projects/project-repo-path";
 import {
   type DashboardRows,
   isDashboardProjectRow,
   isVisibleDashboardRow,
   readDashboardRows,
 } from "@/shared/sync/dashboard-rows";
+import { workspaceKind } from "./workspace-kind";
+import { workspaceState } from "./workspace-state";
 
 export interface DashboardWorkspaceOption {
   id: string;
   title: string;
   shorthand: string;
   branch: string | null;
-  type: "worktree" | "current_branch";
+  type: "worktree" | "folder" | "remote";
   isDefault: boolean;
   executionKind: "local" | "remote";
   providerState: string;
@@ -38,30 +39,24 @@ export const createDashboardWorkspaceCapabilityMetadata = (workspace: DashboardW
   workspaceSupportsDiff: workspace.supportsDiff,
 });
 
-const toWorkspaceOption = (
-  workspace: DashboardRows["workspaces"][number],
-  repoPathByProjectId: ReadonlyMap<string, string>,
-): DashboardWorkspaceOption => {
+const toWorkspaceOption = (workspace: DashboardRows["workspaces"][number]): DashboardWorkspaceOption => {
   const executionKind = workspace.execution_kind === "remote" ? "remote" : "local";
   const capabilities = workspace.provider_capabilities_json as
     | { archive?: boolean; delete?: boolean; files?: string; diff?: boolean }
     | undefined;
-  const workspacePath =
-    executionKind === "remote"
-      ? null
-      : ((workspace.worktree_path as string | null) ?? repoPathByProjectId.get(workspace.project_id as string) ?? null);
+  const workspacePath = executionKind === "remote" ? null : ((workspace.root_path as string | null) ?? null);
 
   return {
     id: workspace.id,
     title: (workspace.name as string | null) ?? (workspace.workspace_shorthand as string),
     shorthand: workspace.workspace_shorthand as string,
     branch: (workspace.branch as string | null) ?? null,
-    type: workspace.worktree_path ? "worktree" : "current_branch",
+    type: workspaceKind(workspace),
     isDefault: Boolean(workspace.is_default),
     executionKind,
-    providerState: (workspace.provider_state as string | undefined) ?? "ready",
+    providerState: workspaceState(workspace),
     supportsFiles: capabilities ? capabilities.files !== "none" : executionKind === "local",
-    supportsDiff: capabilities ? capabilities.diff === true : executionKind === "local",
+    supportsDiff: capabilities?.diff === true,
     supportsArchive: capabilities?.archive === true,
     supportsDelete: capabilities?.delete === true,
     workspacePath,
@@ -82,11 +77,9 @@ export const createDashboardWorkspaceOptionResource = (workspace: DashboardWorks
 
 // The default workspace (root repo) is pinned first; the rest follow newest-first.
 export const buildDashboardWorkspaceOptionsFromRows = (rows: DashboardRows, projectId?: string) => {
-  const repoPathByProjectId = indexFirstProjectRepoPaths(rows.projectRepos, rows.repos);
-
   return rows.workspaces
     .filter((workspace) => isVisibleDashboardRow(workspace) && isDashboardProjectRow(workspace, projectId))
-    .map((workspace) => toWorkspaceOption(workspace, repoPathByProjectId))
+    .map((workspace) => toWorkspaceOption(workspace))
     .sort((a, b) => {
       if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
       return b.updatedAt.localeCompare(a.updatedAt);

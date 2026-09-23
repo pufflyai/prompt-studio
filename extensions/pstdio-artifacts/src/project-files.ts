@@ -6,12 +6,12 @@ export const withProjectFiles = async <TParams extends Struct, TResult>(
   input: TParams,
   run: () => Promise<TResult>,
 ) => {
-  if (ctx.workspaceFiles || ctx.repoFiles) return run();
-  const repo = await ctx.repos.getDefault();
-  if (!repo) throw new Error("Link a repository to this project before publishing HTML.");
+  if (ctx.workspaceFiles || ctx.projectFiles) return run();
+  const workspace = await ctx.workspaces.getDefault();
+  if (!workspace) throw new Error("Attach a project workspace before publishing HTML.");
   const outcome = await ctx.commands.execute<TParams, TResult>(
     { kind: "command", id: commandId, extensionId: ctx.extensionId },
-    { params: input, repoId: repo.repoId, repoPath: repo.path },
+    { params: input, workspaceId: workspace.id },
   );
   return unwrapCommandOutcome({ outcome });
 };

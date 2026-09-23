@@ -70,7 +70,8 @@ const makeDeps = (overrides: Partial<Parameters<typeof createHandler>[0]> = {}) 
     cwd: () => "/repo",
     enableInstalledExtension: mock(async () => ({ enabled: true, projectId: "project-1" })),
     ensureApi: mock(async () => {}),
-    findGitRoot: () => "/repo",
+    findProjectRoot: () => "/repo",
+    getProjectFolder: async () => "/repo",
     installDefaultSkills: mock(async () => {}),
     installExtensionSource: mock(async () => installed),
     log,
@@ -117,7 +118,7 @@ describe("extensions add", () => {
   });
 
   test("skips enablement when outside a linked project", async () => {
-    const deps = makeDeps({ findGitRoot: () => null, readConfig: () => null });
+    const deps = makeDeps({ findProjectRoot: () => null, readConfig: () => null });
     const handler = createHandler(deps);
 
     await handler(argv({ source: "./planner" }));
@@ -148,7 +149,6 @@ describe("extensions add", () => {
 
     await handler(argv({ source: "planner" }));
 
-    expect(deps.ensureApi).not.toHaveBeenCalled();
     expect(deps.enableInstalledExtension).not.toHaveBeenCalled();
     expect(deps.installDefaultSkills).not.toHaveBeenCalled();
     expect(process.exitCode).toBe(1);
@@ -160,7 +160,7 @@ describe("extensions add", () => {
 
   test("prints a clear error when a repo-scoped extension is added outside a linked project", async () => {
     const deps = makeDeps({
-      findGitRoot: () => null,
+      findProjectRoot: () => null,
       readConfig: () => null,
       installExtensionSource: mock(async () => {
         throw new Error('Extension "planner" declares pstdio.scope "repo" and must be installed from a linked repo.');
@@ -181,4 +181,12 @@ describe("extensions add", () => {
   afterEach(() => {
     process.exitCode = 0;
   });
+});
+
+test("uses the default workspace folder when an obsolete config link is found elsewhere", async () => {
+  const deps = makeDeps({ findProjectRoot: () => "/discarded-folder" });
+  const handler = createHandler({ ...deps, getProjectFolder: async () => "/project-home" });
+  await handler(argv({ source: "planner" }));
+  expect(deps.installExtensionSource).toHaveBeenCalledWith(expect.objectContaining({ repoPath: "/project-home" }));
+  expect(deps.installDefaultSkills).toHaveBeenCalledWith("/project-home", "project-1");
 });

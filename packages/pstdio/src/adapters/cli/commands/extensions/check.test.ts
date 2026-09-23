@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "@pstdio/sdk/extensions";
 import { checkExtensionsRoot } from "pstdio-api/extensions/install-extension-source";
 import { CLI_VERSION } from "@/features/cli-version";
-import { findGitRoot } from "@/features/config/config";
+import { findProjectRoot } from "@/features/config/config";
 import { createHandler } from "./check";
 
 const makeCheck = (extensionsRoot: string, errorCount = 0) => ({
@@ -60,7 +60,8 @@ describe("extensions check", () => {
       const logs: string[] = [];
       try {
         mkdirSync(repo);
-        expect(Bun.spawnSync(["git", "init", "--quiet", repo]).exitCode).toBe(0);
+        mkdirSync(join(repo, ".pstdio"));
+        writeFileSync(join(repo, ".pstdio/config.json"), JSON.stringify({ project_id: "project" }));
         for (const [name, path] of Object.entries(roots)) {
           const source = join(path, "example");
           mkdirSync(source, { recursive: true });
@@ -78,7 +79,7 @@ describe("extensions check", () => {
         }
         const handler = createHandler({
           checkExtensionsRoot,
-          findGitRoot,
+          findProjectRoot,
           cwd: () => repo,
           resolvePstdioHome: () => home,
           log: (message) => logs.push(message),
@@ -108,18 +109,18 @@ describe("extensions check", () => {
     });
   }
 
-  test("refuses a repo scope outside a Git repository", async () => {
+  test("refuses a repo scope outside a project folder", async () => {
     const handler = createHandler({
       checkExtensionsRoot,
-      findGitRoot: () => null,
+      findProjectRoot: () => null,
       cwd: () => "/",
       resolvePstdioHome: () => "/unused",
       log: () => {},
     });
-    await expect(handler({ scope: "repo" } as never)).rejects.toThrow("Git repository");
+    await expect(handler({ scope: "repo" } as never)).rejects.toThrow("project folder");
   });
 
-  test("checks the user root and repo-local root when inside a git repo", async () => {
+  test("checks the user root and repo-local root when inside a project folder", async () => {
     const roots: string[] = [];
     const logs: string[] = [];
     const handler = createHandler({
@@ -128,7 +129,7 @@ describe("extensions check", () => {
         return makeCheck(root);
       }),
       cwd: () => "/repo/subdir",
-      findGitRoot: () => "/repo",
+      findProjectRoot: () => "/repo",
       log: (message) => logs.push(message),
       resolvePstdioHome: () => "/home/user/.pstdio",
     });
@@ -158,7 +159,7 @@ describe("extensions check", () => {
         makeCheck(root, root.replaceAll("\\", "/").includes("/repo/") ? 1 : 0),
       ),
       cwd: () => "/repo",
-      findGitRoot: () => "/repo",
+      findProjectRoot: () => "/repo",
       log: () => {},
       resolvePstdioHome: () => "/home/user/.pstdio",
     });

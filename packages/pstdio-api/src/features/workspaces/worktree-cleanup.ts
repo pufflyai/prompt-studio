@@ -1,58 +1,67 @@
 import { existsSync } from "node:fs";
-import { rm } from "node:fs/promises";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { realpath, rm } from "node:fs/promises";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { removeWorktreeAndBranch } from "pstdio-wt";
 import type { WorkspacesRouteDeps } from "./deps";
+import { worktreeProviderId } from "./workspace-provider-identity";
 import { resolveWorkspacesRoot } from "./worktree-setup";
 
-type WorkspaceForCleanup = {
-  project_id: string;
-  workspace_shorthand: string;
-  branch: string | null;
-  worktree_path: string | null;
+export const workspaceGitPaths = (workspace: {
+  provider_id: string;
+  provider_ref_json?: { data: Record<string, unknown> } | null;
+}) => {
+  if (workspace.provider_id !== worktreeProviderId) return undefined;
+  const data = workspace.provider_ref_json?.data;
+  if (typeof data?.sourceRoot !== "string" || typeof data.worktreeRoot !== "string") return undefined;
+  return { sourceRoot: data.sourceRoot, worktreeRoot: data.worktreeRoot };
 };
 
-const isManagedWorktreePath = (path: string) => {
-  const relativePath = relative(resolveWorkspacesRoot(), resolve(path));
-  return (
-    relativePath !== "" && relativePath !== ".." && !relativePath.startsWith(`..${sep}`) && !isAbsolute(relativePath)
-  );
+const canonicalPath = async (path: string) => {
+  let current = resolve(path);
+  const missing: string[] = [];
+  while (true) {
+    try {
+      return resolve(await realpath(current), ...missing);
+    } catch (error) {
+      const parent = dirname(current);
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT" || parent === current) throw error;
+      missing.unshift(basename(current));
+      current = parent;
+    }
+  }
+};
+
+const isManagedWorktreePath = async (path: string) => {
+  const rel = relative(await canonicalPath(resolveWorkspacesRoot()), await canonicalPath(path));
+  return rel !== "" && rel !== ".." && !rel.startsWith(`..${sep}`) && !isAbsolute(rel);
 };
 
 export const cleanupWorkspaceWorktree = async (
-  deps: Pick<WorkspacesRouteDeps, "repoService">,
-  workspace: WorkspaceForCleanup,
+  _deps: Pick<WorkspacesRouteDeps, "workspaceService">,
+  workspace: {
+    provider_id: string;
+    provider_ref_json?: { data: Record<string, unknown> } | null;
+    branch: string | null;
+  },
 ) => {
-  if (!workspace.worktree_path) return false;
-
-  const repos = await deps.repoService.listByProject(workspace.project_id);
-  if (repos.length === 0) return false;
-  if (repos.some((repo) => resolve(repo.path) === resolve(workspace.worktree_path!))) return false;
-  if (!existsSync(workspace.worktree_path)) return true;
-  if (repos.every((repo) => !existsSync(repo.path)) && isManagedWorktreePath(workspace.worktree_path)) {
-    try {
-      await rm(workspace.worktree_path, { recursive: true, force: true });
-      return true;
-    } catch {
-      return false;
-    }
+  const paths = workspaceGitPaths(workspace);
+  if (
+    !paths ||
+    !(await isManagedWorktreePath(paths.worktreeRoot)) ||
+    (await canonicalPath(paths.worktreeRoot)) === (await canonicalPath(paths.sourceRoot))
+  )
+    return false;
+  if (!existsSync(paths.worktreeRoot)) return true;
+  if (!existsSync(paths.sourceRoot)) {
+    await rm(paths.worktreeRoot, { recursive: true, force: true });
+    return true;
   }
-
-  const branch = workspace.branch ?? `workspace/${workspace.workspace_shorthand}`;
-
-  for (const repo of repos) {
-    try {
-      await removeWorktreeAndBranch({
-        repoRoot: repo.path,
-        path: workspace.worktree_path,
-        branch,
-        force: true,
-      });
-      return true;
-    } catch {
-      // Ignore and try the next repo.
-    }
-  }
-
-  return false;
+  if (!workspace.branch) return false;
+  await removeWorktreeAndBranch({
+    repoRoot: paths.sourceRoot,
+    path: paths.worktreeRoot,
+    branch: workspace.branch,
+    force: true,
+  });
+  return true;
 };

@@ -25,16 +25,6 @@ const selectedTicketParams = {
   agent: ticketActionParams.agent,
 };
 
-export const workspaceModeParam = params.select({
-  label: "Mode",
-  required: false,
-  defaultValue: "worktree",
-  options: [
-    { label: "Worktree", value: "worktree", icon: "GitFork" },
-    { label: "Current branch", value: "current_branch", icon: "GitBranch" },
-  ],
-});
-
 const nonEmptyText = (value: string | undefined) => {
   const trimmed = value?.trim();
   return trimmed ? trimmed : undefined;
@@ -111,30 +101,26 @@ export const createAnchoredWorkspace = async (
     CommandContext<{
       ticket?: string;
       rowId?: string;
-      repo?: { repoId: string; branch?: string };
-      mode?: string;
+      base?: string;
     }>,
     "extensionId" | "projectId" | "resource" | "attachment" | "storage" | "workspaces"
   >,
   commandParams: {
     ticket?: string;
     rowId?: string;
-    repo?: { repoId: string; branch?: string };
-    mode?: string;
+    base?: string;
   },
   base?: string,
 ) => {
-  const { mode, repo } = commandParams;
   const ticketRef = resolveTicket(ctx, commandParams);
   const { anchor, shorthand, ticket } = await resolveTicketAnchor(ctx, ticketRef);
-  const attemptMode = mode === "current_branch" ? mode : "worktree";
+  const attemptMode = "worktree";
   const workspace = await ctx.workspaces.create({
     project_id: ctx.projectId,
     shorthand_base: shorthand,
     anchors: [anchor],
-    provider_id: attemptMode === "current_branch" ? "pstdio.root" : "pstdio.worktree",
-    ...(repo ? { repo_id: repo.repoId } : {}),
-    ...((base ?? repo?.branch) ? { base: base ?? repo?.branch } : {}),
+    provider_id: "pstdio.worktree",
+    params: { base: base ?? commandParams.base ?? "HEAD" },
   });
 
   return { anchor, mode: attemptMode, ticket, workspace };
@@ -154,8 +140,7 @@ export const createWorkspaceCommand = defineCommand({
   params: {
     ticket: ticketActionParams.ticket,
     rowId: ticketActionParams.rowId,
-    repo: params.repo({ label: "Workspace" }),
-    mode: workspaceModeParam,
+    base: params.text({ label: "Base revision", defaultValue: "HEAD" }),
   },
   async run(ctx, commandParams) {
     const { mode, ticket, workspace } = await createAnchoredWorkspace(ctx, commandParams);

@@ -147,7 +147,7 @@ const normalizeValue = (entry: CommandParamEntry, value: CommandParamValue) => {
   }
   if (entry.type === "boolean") return value === true || value === "true";
   if (entry.type === "files") return isCommandFilesParamValue(value) ? value : createCommandFilesParamValue();
-  if (entry.type === "json" || entry.type === "resource" || entry.type === "repo" || entry.type === "harness") {
+  if (entry.type === "json" || entry.type === "resource" || entry.type === "harness") {
     return parseJsonValue(entry, value);
   }
   if (entry.type === "multi-select") return Array.isArray(value) ? value : String(value).split(",").filter(Boolean);

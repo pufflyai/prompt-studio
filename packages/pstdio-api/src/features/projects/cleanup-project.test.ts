@@ -10,21 +10,21 @@ describe("cleanupProjectArtifacts", () => {
         provider_id: "example.remote",
         project_id: "project-1",
         is_default: false,
-        worktree_path: null,
+        root_path: null,
       },
       {
         id: "local-1",
         provider_id: "pstdio.worktree",
         project_id: "project-1",
         is_default: false,
-        worktree_path: "/repo/.worktrees/local-1",
+        root_path: "/repo/.worktrees/local-1",
       },
       {
         id: "root-1",
         provider_id: "pstdio.root",
         project_id: "project-1",
         is_default: true,
-        worktree_path: "/repo",
+        root_path: "/repo",
       },
     ];
     const deleteProviderWorkspace = mock(async (_deps: unknown, workspace: { id: string }) => {
@@ -63,7 +63,7 @@ describe("cleanupProjectArtifacts", () => {
                 provider_id: "pstdio.worktree",
                 project_id: "project-1",
                 is_default: false,
-                worktree_path: "/repo/.worktrees/local-1",
+                root_path: "/repo/.worktrees/local-1",
               },
             ],
             softDelete,
@@ -90,7 +90,7 @@ describe("cleanupProjectArtifacts", () => {
           provider_id: "example.remote",
           project_id: "project-1",
           is_default: false,
-          worktree_path: null,
+          root_path: null,
         },
       ])
       .mockResolvedValueOnce([]);

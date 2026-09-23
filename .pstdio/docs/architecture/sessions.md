@@ -42,7 +42,7 @@ Every session has two identifiers:
 - `session.id` — Prompt Studio's database record for lifecycle, metadata, and cached content.
 - `session.agent_session_id` — the external agent's own session/thread ID (for `opencode` or `claude-code`).
 
-A session is optionally associated with a workspace via the `workspace_sessions` join table. When linked, the workspace anchors repo/worktree context. When no workspace is linked, the session runs at the project root. A workspace can have multiple sessions (e.g. an implementation session followed by a review session).
+A session is associated with a workspace via the `workspace_sessions` join table. When no workspace is supplied, the server links the default workspace. Sessions resolve their local or remote execution target through that workspace. A workspace can have multiple sessions (e.g. an implementation session followed by a review session).
 
 ### Session ↔ workspace ↔ planner ticket relationship
 
@@ -55,7 +55,7 @@ planner ticket ──┐
                │         ▼
                │      session(s)
                ├── branch
-               ├── worktree_path
+               ├── root_path
                ├── anchors_json
                └── workspace_shorthand (e.g. A0001)
 ```
@@ -118,7 +118,7 @@ Unique constraint on `(workspace_id, session_id)`.
 | project_id          | text FK       | References `projects.id`                                   |
 | name                | text NOT NULL | Display name (e.g. `Session 1`, `Attempt 2`)               |
 | branch              | text          | Git branch name                                            |
-| worktree_path       | text          | Absolute path to git worktree                              |
+| root_path       | text          | Absolute path to git worktree                              |
 | is_default          | boolean       | Whether this is the default project workspace              |
 | archived            | boolean       | Soft-archive flag                                          |
 | initializing        | boolean       | Workspace setup is still running                           |
@@ -130,7 +130,7 @@ Unique constraint on `(workspace_id, session_id)`.
 
 Session API responses are enriched from workspace context:
 
-- `workspace_id`, `branch`, `worktree_path`
+- `workspace_id`, `branch`, `root_path`
 - Planner ticket metadata when available from workspace anchors/extension lookups.
 
 ## Session lifecycle
@@ -185,14 +185,13 @@ General project chat sessions, not tied to a specific ticket.
   "prompt": "Kickoff session",
   "agent": "opencode",
   "branch": "main",
-  "repo_id": "<repo-id>",
   "model": "openai/gpt-5.3-codex"
 }
 ```
 
 Server flow:
 
-1. Validate repository/workspace context when provided.
+1. Validate workspace ownership and resolve its target.
 2. Resolve agent from the request, project default, or global default (`agent_configs.is_default`).
 3. Resolve model from the request. If the request omitted both `agent` and `model`, the project default model can be used for the resolved default agent.
 4. Create session with status `in_progress` when runtime capacity is available, or `queued` when capacity is full. Store the resolved request model as `last_selected_model`.
@@ -224,7 +223,7 @@ session. This is an extension command, not a core `/v1/tickets` endpoint.
 Modes:
 
 - `worktree` (default): creates branch `workspace/<workspace_shorthand>` and a git worktree at `<workspaces_root>/<workspace_shorthand>`
-- `current_branch`: reuses current repo branch/root
+- `pstdio.root`: reuses the exact project folder and shares files between sessions
 
 `workspaces_root` resolution order:
 
@@ -260,7 +259,7 @@ Server flow:
 
 1. Load existing session.
 2. Route the follow-up through the scheduler. The session becomes `in_progress` when capacity is available or `queued` when capacity is full.
-3. Resolve cwd: workspace root if linked (`worktree_path` first, repo path fallback), otherwise project root.
+3. Resolve the workspace target. Local sessions use `root_path`; remote sessions use the provider target with no local fallback.
 4. Resolve the follow-up model from request `model`, or from `last_selected_model` when the agent is unchanged.
 5. **Same agent:** require `agent_session_id`, call `agent.resumeSession(...)` with `messageOffset` from cached message count.
 6. **Different agent:** update `session.agent`, clear previous `agent_session_id`, update `last_selected_model`, call `agent.startSession(...)`.
@@ -330,8 +329,8 @@ Diffs are a workspace concern — the workspace owns the branch and worktree pat
 
 Endpoint: `GET /v1/workspaces/:workspace_id/diff?mode=unstaged|staged|all`
 
-1. Use `workspace.worktree_path` if present, else repo root from project.
-2. Validate git repository.
+1. Resolve the selected workspace target and its declared capabilities.
+2. Require Git capability only for Git operations.
 3. Compute parsed file diff and totals.
 
 Response includes `diff_text`, per-file entries, and aggregate totals (`additions`, `deletions`, `file_count`).

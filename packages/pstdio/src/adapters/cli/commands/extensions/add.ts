@@ -8,8 +8,9 @@ import {
 } from "pstdio-api/extensions/install-extension-source";
 import type { Arguments, Argv } from "yargs";
 import { CLI_VERSION } from "@/features/cli-version";
-import { findGitRoot, readConfig } from "@/features/config/config";
+import { findProjectRoot, readConfig } from "@/features/config/config";
 import { ensureApi } from "@/features/ensure-api";
+import { getProjectFolder } from "@/features/projects/project-folder";
 import { installDefaultSkills } from "@/features/skills/install-default-skills";
 import { type ExtensionsAddArgs, enableInstalledExtension, formatInstallOutput } from "./shared";
 
@@ -46,7 +47,8 @@ type Deps = {
   cwd: () => string;
   enableInstalledExtension: (projectId: string, installed: InstalledExtensionSource) => Promise<unknown>;
   ensureApi: (apiUrl?: string) => Promise<unknown>;
-  findGitRoot: typeof findGitRoot;
+  findProjectRoot: typeof findProjectRoot;
+  getProjectFolder: typeof getProjectFolder;
   installExtensionSource: (input: InstallExtensionSourceInput) => Promise<InstalledExtensionSource>;
   installDefaultSkills: typeof installDefaultSkills;
   log: (message: string) => void;
@@ -57,15 +59,16 @@ const defaultDeps: Deps = {
   cwd: () => process.cwd(),
   enableInstalledExtension,
   ensureApi,
-  findGitRoot,
+  findProjectRoot,
+  getProjectFolder,
   installDefaultSkills,
   installExtensionSource,
   log: console.log,
   readConfig,
 };
 
-const resolveLinkedProject = (deps: Pick<Deps, "cwd" | "findGitRoot" | "readConfig">) => {
-  const root = deps.findGitRoot(deps.cwd());
+const resolveLinkedProject = (deps: Pick<Deps, "cwd" | "findProjectRoot" | "readConfig">) => {
+  const root = deps.findProjectRoot(deps.cwd());
   if (!root) return null;
   const projectId = deps.readConfig(root)?.project_id;
   return projectId ? { projectId, root } : null;
@@ -75,6 +78,10 @@ export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<ExtensionsAddArgs>) => {
     const project = resolveLinkedProject(deps);
+    if (project) {
+      await deps.ensureApi(process.env.PSTDIO_API_URL);
+      project.root = await deps.getProjectFolder(project.projectId);
+    }
     let installed: InstalledExtensionSource;
     try {
       installed = await deps.installExtensionSource({

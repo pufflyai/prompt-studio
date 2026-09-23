@@ -10,7 +10,7 @@ export type RuntimeInvalidationReason =
   | "source_changed"
   | "webviews_built"
   | "enablement_changed"
-  | "repo_link_changed"
+  | "project_workspace_changed"
   | "runtime_refresh";
 
 // Set on a retained last-healthy snapshot when a replacement load failed as a whole.

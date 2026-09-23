@@ -33,10 +33,6 @@ const checkDescriptor = (key: string, descriptor: ParamDescriptor, value: unknow
     case "list":
       if (!isStringArray(value)) return `Param "${key}" must be a string array (got ${describeValue(value)})`;
       return undefined;
-    case "repo":
-      if (!isPlainObject(value) || typeof value.repoId !== "string")
-        return `Param "${key}" must be a repo reference with a string "repoId"`;
-      return undefined;
     case "harness":
       if (!isPlainObject(value) || typeof value.harnessId !== "string")
         return `Param "${key}" must be a harness reference with a string "harnessId"`;

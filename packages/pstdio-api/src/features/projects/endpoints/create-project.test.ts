@@ -5,6 +5,7 @@ import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import type { AppBindings } from "../../../types";
 import { testHarnessId } from "../../harnesses/test-harness-registry";
 
@@ -87,7 +88,7 @@ describe("POST /v1/projects", () => {
     const res = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Test Project", agents: [OPENCODE_ID] }),
+      body: JSON.stringify(folderProjectInput({ name: "Test Project", agents: [OPENCODE_ID] })),
     });
 
     expect(res.status).toBe(201);
@@ -97,13 +98,18 @@ describe("POST /v1/projects", () => {
     expect(body.id).toBeDefined();
     expect(body.default_agent_id).toBeNull();
     expect(body.default_agent_model).toBeNull();
+    expect(await appHandle.deps.workspaceService.getDefault(body.id)).toMatchObject({
+      initializing: false,
+      setup_error: null,
+      provider_state: "ready",
+    });
   });
 
   test("returns 400 when request body contains unknown keys", async () => {
     const res = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Strict Project", unknown_key: "value" }),
+      body: JSON.stringify(folderProjectInput({ name: "Strict Project", unknown_key: "value" })),
     });
 
     expect(res.status).toBe(400);
@@ -113,7 +119,7 @@ describe("POST /v1/projects", () => {
     const createRes = await app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Empty Catalog Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Empty Catalog Project" })),
     });
     expect(createRes.status).toBe(201);
 
@@ -148,7 +154,7 @@ describe("POST /v1/projects", () => {
         const createRes = await handle.app.request("/v1/projects", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: projectName }),
+          body: JSON.stringify(folderProjectInput({ name: projectName })),
         });
 
         expect(createRes.status).toBe(201);
@@ -211,7 +217,7 @@ describe("POST /v1/projects", () => {
         const firstRes = await handle.app.request("/v1/projects", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: "First Extension Project" }),
+          body: JSON.stringify(folderProjectInput({ name: "First Extension Project" })),
         });
         expect(firstRes.status).toBe(201);
         const firstProject = (await firstRes.json()) as { id: string };
@@ -233,7 +239,7 @@ describe("POST /v1/projects", () => {
         const secondRes = await handle.app.request("/v1/projects", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ name: "Second Extension Project" }),
+          body: JSON.stringify(folderProjectInput({ name: "Second Extension Project" })),
         });
         expect(secondRes.status).toBe(201);
         expect(existsSync(join(installedPath, "user-edit.txt"))).toBe(true);

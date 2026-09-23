@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import { hashExtensionSource, loadExtensionSource } from "../extension-runtime";
 import { createTestScheduledExtensionSource } from "../test-utils/create-test-extension-source";
 
@@ -65,7 +66,7 @@ describe("GET /v1/projects/:projectId/extensions/marketplace/:installName/contri
       storageRoot: join(tempRoot, "storage"),
     });
     const createResponse = await handle.app.request("/v1/projects", {
-      body: JSON.stringify({ name: "Available Contributions Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Available Contributions Project" })),
       headers: { "content-type": "application/json" },
       method: "POST",
     });

@@ -24,7 +24,7 @@ const makeWorkspace = (overrides: Partial<ExtensionWorkspace> & { id: string }):
   project_id: "proj-1",
   workspace_shorthand: "T-1_A1",
   branch: "workspace/T-1_A1",
-  worktree_path: "/worktrees/T-1_A1",
+  root_path: "/worktrees/T-1_A1",
   anchors_json: [
     {
       type: "ticket",
@@ -150,7 +150,7 @@ describe("runTicketsQuery workspace badges", () => {
           id: "workspace-1",
           name: "First attempt",
           workspace_shorthand: "T-1_A1",
-          worktree_path: "/worktrees/T-1_A1",
+          root_path: "/worktrees/T-1_A1",
           created_at: "2026-01-02T00:00:00.000Z",
         }),
         makeWorkspace({
@@ -158,7 +158,7 @@ describe("runTicketsQuery workspace badges", () => {
           name: "Latest attempt",
           workspace_shorthand: "T-1_A2",
           branch: "main",
-          worktree_path: null,
+          root_path: null,
           created_at: "2026-01-03T00:00:00.000Z",
         }),
         makeWorkspace({

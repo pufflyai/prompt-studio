@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
 import { e2eExtensions } from "../default-extensions";
+import { folderProjectInput } from "../helpers/folder-project";
 import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } from "./extension-fixtures";
 import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
@@ -22,10 +23,11 @@ beforeAll(() => {
   }
 }, BUILD_TIMEOUT);
 
-test("checks the repo scope and reports bundled versions despite an invalid user extension", () => {
+test("checks project-local extensions and reports bundled versions despite an invalid user extension", () => {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "packaged-extension-check-")));
   try {
-    expect(spawnSync("git", ["init", "--quiet", root]).status).toBe(0);
+    mkdirSync(join(root, ".pstdio"));
+    writeFileSync(join(root, ".pstdio/config.json"), JSON.stringify({ project_id: "project" }));
     const home = join(root, "user-home");
     const invalidExtension = join(home, "extensions", "invalid");
     mkdirSync(invalidExtension, { recursive: true });
@@ -95,7 +97,7 @@ test(
 );
 
 test(
-  "creates an empty project with repo bootstrap artifacts and preserves it after restart",
+  "opens an empty folder with project bootstrap artifacts and preserves it after restart",
   async () => {
     const tempRoot = mkdtempSync(join(tmpdir(), "pstdio-packaged-serve-"));
     let child: ChildProcess | null = null;
@@ -104,10 +106,12 @@ test(
       const started = await startPackagedServe(tempRoot);
       child = started.child;
 
+      const repoPath = join(tempRoot, "project-folder");
+      mkdirSync(repoPath, { recursive: true });
       const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
         method: "POST",
         headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify({ name: "packaged-serve-project" }),
+        body: JSON.stringify(folderProjectInput({ name: "packaged-serve-project" }, repoPath)),
       });
       expect(createRes.status).toBe(201);
 
@@ -146,16 +150,6 @@ test(
         files: { path: string; content: string; encoding: "utf8" }[];
       }[];
       expect(skills).toEqual([]);
-
-      const repoPath = join(tempRoot, "repo");
-      mkdirSync(repoPath, { recursive: true });
-
-      const repoRes = await fetch(`${started.baseUrl}/v1/projects/${project.id}/repos`, {
-        method: "POST",
-        headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify({ name: "repo", path: repoPath }),
-      });
-      expect(repoRes.status).toBe(201);
 
       expect(existsSync(join(repoPath, ".pstdio", "config.json"))).toBe(true);
 
@@ -204,7 +198,7 @@ test(
       const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
         method: "POST",
         headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify({ name: "packaged-extension-project" }),
+        body: JSON.stringify(folderProjectInput({ name: "packaged-extension-project" })),
       });
       expect(createRes.status).toBe(201);
 
@@ -258,7 +252,7 @@ test(
       const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
         method: "POST",
         headers: { ...runtimeAuthorization(started.descriptor), "content-type": "application/json" },
-        body: JSON.stringify({ name: "packaged-workspace-action-project" }),
+        body: JSON.stringify(folderProjectInput({ name: "packaged-workspace-action-project" })),
       });
       expect(createRes.status).toBe(201);
 

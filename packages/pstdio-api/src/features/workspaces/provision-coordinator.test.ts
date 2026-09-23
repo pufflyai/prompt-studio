@@ -12,16 +12,24 @@ type Row = {
   id: string;
   initializing: boolean;
   setup_error: string | null;
-  worktree_path: string | null;
-  provider_id?: string;
-  provider_state?: string;
-  execution_kind?: string;
+  root_path: string | null;
+  provider_id: string;
+  provider_state: string;
+  execution_kind: string;
 };
 
 const makeDeps = (row: Row) => {
   const calls: string[] = [];
   const deps = {
     workspaceService: {
+      getDefault: async () => ({
+        id: "home",
+        project_id: "project-1",
+        root_path: "/repo",
+        execution_kind: "local",
+        provider_id: "pstdio.root",
+        provider_state: "ready",
+      }),
       list: async () => [row],
       setInitializing: async (_id: string, value: boolean) => {
         calls.push(`initializing:${value}`);
@@ -34,9 +42,6 @@ const makeDeps = (row: Row) => {
         row.initializing = false;
         return { ...row };
       },
-    },
-    repoService: {
-      listByProject: async () => [{ id: "repo-1", path: "/repo" }],
     },
   } as unknown as ProvisionCoordinatorDeps;
   return { deps, calls };
@@ -51,7 +56,15 @@ const makeHooks = (diagnostics: CommandDiagnostic[] | undefined, readyFired: str
 
 describe("runWorkspaceProvisioning", () => {
   test("gates initializing around an awaited provision, then clears it and fires ready", async () => {
-    const row: Row = { id: "ws-1", initializing: false, setup_error: null, worktree_path: "/wt" };
+    const row: Row = {
+      provider_state: "ready",
+      provider_id: "pstdio.worktree",
+      execution_kind: "local",
+      id: "ws-1",
+      initializing: false,
+      setup_error: null,
+      root_path: "/wt",
+    };
     const { deps, calls } = makeDeps(row);
     const readyFired: string[] = [];
 
@@ -69,7 +82,15 @@ describe("runWorkspaceProvisioning", () => {
   });
 
   test("clears a recovered setup error after a successful provision", async () => {
-    const row: Row = { id: "ws-1", initializing: false, setup_error: "old sync failure", worktree_path: "/wt" };
+    const row: Row = {
+      provider_state: "ready",
+      provider_id: "pstdio.worktree",
+      execution_kind: "local",
+      id: "ws-1",
+      initializing: false,
+      setup_error: "old sync failure",
+      root_path: "/wt",
+    };
     const { deps, calls } = makeDeps(row);
     const readyFired: string[] = [];
 
@@ -86,7 +107,15 @@ describe("runWorkspaceProvisioning", () => {
   });
 
   test("sets setup_error and stops when a provision hook reports an error diagnostic", async () => {
-    const row: Row = { id: "ws-1", initializing: false, setup_error: null, worktree_path: "/wt" };
+    const row: Row = {
+      provider_state: "ready",
+      provider_id: "pstdio.worktree",
+      execution_kind: "local",
+      id: "ws-1",
+      initializing: false,
+      setup_error: null,
+      root_path: "/wt",
+    };
     const { deps, calls } = makeDeps(row);
     const readyFired: string[] = [];
 
@@ -110,7 +139,15 @@ describe("runWorkspaceProvisioning", () => {
   });
 
   test("treats a warning diagnostic (a thrown provision hook) as a setup failure", async () => {
-    const row: Row = { id: "ws-1", initializing: false, setup_error: null, worktree_path: "/wt" };
+    const row: Row = {
+      provider_state: "ready",
+      provider_id: "pstdio.worktree",
+      execution_kind: "local",
+      id: "ws-1",
+      initializing: false,
+      setup_error: null,
+      root_path: "/wt",
+    };
     const { deps, calls } = makeDeps(row);
     const readyFired: string[] = [];
 
@@ -141,7 +178,7 @@ describe("provisionProjectWorkspaces", () => {
       id: "ws-remote",
       initializing: false,
       setup_error: null,
-      worktree_path: null,
+      root_path: null,
       provider_id: "pocketcoder.remote",
       provider_state: "ready",
       execution_kind: "remote",
@@ -162,7 +199,15 @@ describe("provisionProjectWorkspaces", () => {
   });
 
   test("schedules derived workspace sync without holding the caller open", async () => {
-    const row: Row = { id: "ws-1", initializing: false, setup_error: null, worktree_path: "/wt" };
+    const row: Row = {
+      provider_state: "ready",
+      provider_id: "pstdio.worktree",
+      execution_kind: "local",
+      id: "ws-1",
+      initializing: false,
+      setup_error: null,
+      root_path: "/wt",
+    };
     const { deps } = makeDeps(row);
     let releaseProvision: (() => void) | undefined;
     let finishProvision: (() => void) | undefined;
@@ -189,7 +234,15 @@ describe("provisionProjectWorkspaces", () => {
   });
 
   test("serializes concurrent reprovisioning for the same project", async () => {
-    const row: Row = { id: "ws-1", initializing: false, setup_error: null, worktree_path: "/wt" };
+    const row: Row = {
+      provider_state: "ready",
+      provider_id: "pstdio.worktree",
+      execution_kind: "local",
+      id: "ws-1",
+      initializing: false,
+      setup_error: null,
+      root_path: "/wt",
+    };
     const { deps } = makeDeps(row);
     const events: string[] = [];
     let releaseFirst: (() => void) | undefined;
@@ -223,7 +276,15 @@ describe("provisionProjectWorkspaces", () => {
   });
 
   test("records setup_error when a reprovision throws after setting initializing", async () => {
-    const row: Row = { id: "ws-1", initializing: false, setup_error: null, worktree_path: "/wt" };
+    const row: Row = {
+      provider_state: "ready",
+      provider_id: "pstdio.worktree",
+      execution_kind: "local",
+      id: "ws-1",
+      initializing: false,
+      setup_error: null,
+      root_path: "/wt",
+    };
     const { deps, calls } = makeDeps(row);
     const readyFired: string[] = [];
 
@@ -240,61 +301,5 @@ describe("provisionProjectWorkspaces", () => {
     expect(row.initializing).toBe(false);
     expect(row.setup_error).toBe("config write failed");
     expect(readyFired).toEqual([]);
-  });
-
-  test("keeps a root workspace in error when one repo fails even if a later repo succeeds", async () => {
-    const row: Row = { id: "ws-root", initializing: false, setup_error: null, worktree_path: null };
-    const calls: string[] = [];
-    const deps = {
-      workspaceService: {
-        list: async () => [row],
-        setInitializing: async (_id: string, value: boolean) => {
-          calls.push(`initializing:${value}`);
-          row.initializing = value;
-          return { ...row };
-        },
-        setSetupError: async (_id: string, message: string | null) => {
-          calls.push(`setup_error:${message}`);
-          row.setup_error = message;
-          row.initializing = false;
-          return { ...row };
-        },
-      },
-      repoService: {
-        listByProject: async () => [
-          { id: "repo-a", path: "/repo-a" },
-          { id: "repo-b", path: "/repo-b" },
-        ],
-      },
-    } as unknown as ProvisionCoordinatorDeps;
-
-    // A root workspace spans every repo: repo-a fails to sync, repo-b syncs cleanly afterward.
-    let call = 0;
-    const hooks: WorkspaceProvisioningHooks = {
-      fireProvision: (async () => {
-        call += 1;
-        const diagnostics: CommandDiagnostic[] | undefined =
-          call === 1
-            ? [
-                {
-                  code: "sync_failed",
-                  message: "repo-a sync failed",
-                  severity: "error",
-                  extensionId: "harness-claude-code",
-                },
-              ]
-            : undefined;
-        return { delivered: 1, diagnostics };
-      }) as WorkspaceProvisioningHooks["fireProvision"],
-      fireReadyAsync: (() => {}) as WorkspaceProvisioningHooks["fireReadyAsync"],
-      ensureConfig: async () => {},
-    };
-
-    await provisionProjectWorkspaces(deps, "p1", hooks);
-
-    // The shared row is settled once after both repos, so repo-b's success can't clear repo-a's failure.
-    expect(calls).toEqual(["initializing:true", "setup_error:repo-a sync failed"]);
-    expect(row.setup_error).toBe("repo-a sync failed");
-    expect(row.initializing).toBe(false);
   });
 });

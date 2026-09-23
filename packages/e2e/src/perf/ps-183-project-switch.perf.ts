@@ -1,7 +1,8 @@
 import { rmSync, writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerAttempt, createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
-import { createGitRepo, registerRepoViaApi } from "../ui/helpers/workspace-session-attempt";
+import { createGitRepo } from "../ui/helpers/workspace-session-attempt";
 import { calculateStats, installLongTaskObserver, throttleChromiumCpu } from "./perf-helpers";
 
 const apiPort = Number(process.env.E2E_API_PORT ?? "3300");
@@ -70,11 +71,13 @@ const createSession = async (
 };
 
 const seedProject = async (request: import("@playwright/test").APIRequestContext, name: string, slug: string) => {
-  const projectResponse = await request.post(`${apiBase}/v1/projects`, { data: { name } });
+  const repoRoot = createGitRepo(`pstdio-ps-183-${slug}-`, `${name} seed`);
+  const projectResponse = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name }, repoRoot),
+  });
   expect(projectResponse.ok()).toBe(true);
   const project = (await projectResponse.json()) as { id: string };
-  const repoRoot = createGitRepo(`pstdio-ps-183-${slug}-`, `${name} seed`);
-  const repo = await registerRepoViaApi(request, apiBase, project.id, `${slug}-repo`, repoRoot);
+
   const parent = await createPlannerTicket(request, apiBase, project.id, { content: `${name} parent` });
   const child = await createPlannerTicket(request, apiBase, project.id, { content: `${name} child` });
   await executePlannerCommand(request, apiBase, project.id, "update-ticket", {
@@ -83,8 +86,6 @@ const seedProject = async (request: import("@playwright/test").APIRequestContext
   });
   const attempt = await createPlannerAttempt(request, apiBase, project.id, {
     ticketId: child.id,
-    repoId: repo.id,
-    mode: "worktree",
   });
   await createSession(request, project.id, attempt.workspace.id, `${name} active`, "in_progress");
   await createSession(request, project.id, attempt.workspace.id, `${name} completed`, "completed");

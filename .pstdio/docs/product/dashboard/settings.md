@@ -19,11 +19,11 @@ The old settings PRD described richer settings behavior than the current dashboa
 - Document the global settings sidenav/panel information architecture.
 - Document manual agent add behavior and executable-path constraints.
 - Document runtime concurrency settings for queued sessions.
-- Document the project settings information architecture including the repositories panel.
+- Document the project settings information architecture including the project folder panel.
 
 ## Non-Goals
 
-- Editing, linking, or unlinking repositories from project settings.
+- Moving an existing project folder from project settings.
 - In-dashboard template editing.
 - Agent setup during first-run onboarding.
 
@@ -41,7 +41,7 @@ Project creation includes a second step for selecting agents, with all installed
 ### Functional Requirements
 
 1. `/projects` must always remain accessible regardless of onboarding state.
-2. Project creation must include an agent-selection step after project details/repositories.
+2. Project creation opens one selected folder immediately. Missing agents do not block opening.
 3. All installed agents must be pre-selected in the agent-selection step by default.
 4. If no agents are installed, project creation controls must be disabled and a warning banner must be shown on `/projects`.
 5. The warning banner must clearly explain how to add agents using Settings -> Agents, including setup/manual add paths.
@@ -51,7 +51,7 @@ Project creation includes a second step for selecting agents, with all installed
 9. Global settings must support enabling, disabling, and setting the default agent.
 10. Global settings must support manually adding a supported agent config with an executable path.
 11. Existing configured executable paths must be displayed but not editable.
-12. `/projects/:projectId/settings` must support a read-only repositories panel that shows linked repos with name and path, plus an empty state when none are linked.
+12. `/projects/:projectId/settings` must support a project folder panel with the default workspace location, project rename, and attachment for a project without a location.
 13. Global settings must expose a runtime setting for maximum concurrent sessions.
 14. Setting maximum concurrent sessions to empty/unlimited must disable queue capacity enforcement.
 15. Reducing maximum concurrent sessions must not cancel active sessions; it only affects new dispatches and queued drains.
@@ -73,7 +73,7 @@ Project creation includes a second step for selecting agents, with all installed
 ## Behavior
 
 1. Project routes no longer depend on onboarding completion state.
-2. Project creation runs as a two-step flow: project details/repositories, then agent selection.
+2. Project creation opens one chosen or newly created folder. Agent defaults remain configurable in settings.
 3. Installed agents are pre-selected on step 2; users can deselect before creating.
 4. If no installed agents are found, project creation is disabled and the warning banner explains how to recover.
 5. Existing projects remain visible and can still be opened when project creation is blocked.
@@ -84,9 +84,9 @@ Project creation includes a second step for selecting agents, with all installed
 10. Saving an empty runtime limit stores unlimited concurrency.
 11. Saving a positive runtime limit bounds the number of active `in_progress` or `awaiting_input` sessions.
 12. Increasing the limit lets the scheduler drain queued sessions when capacity becomes available.
-13. The per-project settings route includes a read-only repositories panel showing linked repos (name and path) with an empty state when none are linked.
+13. The per-project settings route includes a project folder panel showing the default workspace, with rename and missing-location attachment.
 14. The skill detail view shows the skill name, current version badge, description, and full content.
-15. When a newer bundled version is available, an "Update to vX" button appears and propagates the updated skill to all agent directories in linked repos.
+15. When a newer bundled version is available, an "Update to vX" button appears and propagates the updated skill to all agent directories in the default workspace folder.
 16. Each skill shows per-agent installation badges (green, e.g. `claude-code`, `opencode`) indicating which agents have the skill installed locally on disk. When no agents have the skill installed, a "Not installed locally" label is shown instead.
 
 ## Interface
@@ -96,7 +96,7 @@ Project creation includes a second step for selecting agents, with all installed
 | Route | Purpose |
 | ----- | ------- |
 | `/settings` | Global settings shell with sidenav + `Agents` panel. |
-| `/projects/:projectId/settings` | Project settings with tags, repositories, hooks, skills, templates, and danger zone panels. |
+| `/projects/:projectId/settings` | Project settings with tags, project folder, hooks, skills, templates, and danger zone panels. |
 
 ### Current Actions
 
@@ -111,11 +111,11 @@ Project creation includes a second step for selecting agents, with all installed
 ## Rules & Constraints
 
 - Manual add in global settings supports `claude-code` and `opencode` only.
-- Project creation is blocked when `/v1/agents/info` reports zero installed agents.
-- Project settings include tags, repositories (read-only), hooks, skills, templates, and danger zone.
+- Project creation works when no agent is installed.
+- Project settings include tags, project folder, hooks, skills, templates, and danger zone.
 - Repository management (add/remove) is handled in global settings, not project settings.
 - Existing configured executable path is read-only in global settings for this phase.
-- Skill installation badges reflect real-time filesystem checks against agent directories in linked repos.
+- Skill installation badges reflect real-time filesystem checks against agent directories in the default workspace folder.
 - Active runtime capacity counts `in_progress` and `awaiting_input` sessions.
 - `queued` sessions do not count against active runtime capacity.
 

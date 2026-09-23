@@ -13,7 +13,7 @@ import {
   prepareResourceActionsDashboard,
 } from "./helpers/resource-actions";
 import { showHiddenSidenavEntry } from "./helpers/sidenav-navigation";
-import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
+import { createGitRepo } from "./helpers/workspace-session-attempt";
 
 test("tree menus act on an inactive sub-ticket and preserve the open ticket", async ({ page, request }, testInfo) => {
   const project = await createResourceActionsProject(request);
@@ -60,9 +60,9 @@ test("tree file menus rename and delete files while workspace menus archive the 
   page,
   request,
 }, testInfo) => {
-  const project = await createResourceActionsProject(request);
   const repoRoot = createGitRepo("pstdio-tree-resource-actions-", "tree resource actions");
-  const repo = await registerRepoViaApi(request, apiBase, project.id, "tree-actions-repo", repoRoot);
+  const project = await createResourceActionsProject(request, repoRoot);
+
   try {
     const ticket = await createPlannerTicket(request, apiBase, project.id, { content: "Tree resource actions" });
     const fileContent = "Keep this file open while using other menus.";
@@ -70,8 +70,8 @@ test("tree file menus rename and delete files while workspace menus archive the 
       name: "notes.md",
       content: fileContent,
     });
-    const attempt = await createPlannerAttempt(request, apiBase, project.id, { ticketId: ticket.id, repoId: repo.id });
-    await prepareResourceActionsDashboard(page, project.id, repo.id);
+    const attempt = await createPlannerAttempt(request, apiBase, project.id, { ticketId: ticket.id });
+    await prepareResourceActionsDashboard(page, project.id);
     await page.goto(`/projects/${project.id}/tickets`);
     const sidenav = page.locator('[data-workbench-region="sidenav"]');
     await sidenav.getByRole("option", { name: "Tickets", exact: true }).first().click();

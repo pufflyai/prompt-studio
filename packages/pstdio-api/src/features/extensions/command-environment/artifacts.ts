@@ -1,9 +1,9 @@
 import type { CommandRunnerEnvironment, RuntimeArtifactMount } from "pstdio-extensions";
 import { createArtifactMount } from "pstdio-extensions";
-import type { ExtensionsRouteDeps } from "../deps";
+import type { FileAccess } from "./workspace-files";
 
 export const createArtifactsApi = (
-  deps: ExtensionsRouteDeps,
+  resolveProjectPath: (access: FileAccess) => Promise<string>,
   input: {
     artifactMounts?: RuntimeArtifactMount[];
     extensionId: string;
@@ -19,26 +19,25 @@ export const createArtifactsApi = (
     return mount;
   };
 
-  const createForDefaultRepo = async (mount: RuntimeArtifactMount) => {
-    const [repo] = await deps.repoService.listByProject(input.projectId);
-    if (!repo) throw new Error(`Repo not found for project: ${input.projectId}`);
-    return createArtifactMount({ repoRoot: repo.path, name: mount.name, mountPath: mount.relativePath });
+  const createForDefaultWorkspace = async (mount: RuntimeArtifactMount, access: FileAccess) => {
+    const rootPath = await resolveProjectPath(access);
+    return createArtifactMount({ repoRoot: rootPath, name: mount.name, mountPath: mount.relativePath });
   };
 
   return {
     mount(key) {
       const mount = resolveMount(key);
-      const mountFor = () => createForDefaultRepo(mount);
+      const mountFor = (access: FileAccess) => createForDefaultWorkspace(mount, access);
 
       return {
-        exists: async (path) => (await mountFor()).exists(path),
-        readText: async (path) => (await mountFor()).readText(path),
-        writeText: async (path, value) => (await mountFor()).writeText(path, value),
-        readBytes: async (path) => (await mountFor()).readBytes(path),
-        writeBytes: async (path, value) => (await mountFor()).writeBytes(path, value),
-        list: async (pattern) => (await mountFor()).list(pattern),
-        listDirs: async (path) => (await mountFor()).listDirs(path),
-        delete: async (path) => (await mountFor()).delete(path),
+        exists: async (path) => (await mountFor("read")).exists(path),
+        readText: async (path) => (await mountFor("read")).readText(path),
+        writeText: async (path, value) => (await mountFor("write")).writeText(path, value),
+        readBytes: async (path) => (await mountFor("read")).readBytes(path),
+        writeBytes: async (path, value) => (await mountFor("write")).writeBytes(path, value),
+        list: async (pattern) => (await mountFor("read")).list(pattern),
+        listDirs: async (path) => (await mountFor("read")).listDirs(path),
+        delete: async (path) => (await mountFor("write")).delete(path),
       };
     },
   };

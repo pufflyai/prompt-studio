@@ -7,6 +7,6 @@ export type AgentsRouteDeps = Pick<
   | "extensionService"
   | "installedExtensionSourcesService"
   | "projectService"
-  | "repoService"
+  | "workspaceService"
   | "skillService"
 >;

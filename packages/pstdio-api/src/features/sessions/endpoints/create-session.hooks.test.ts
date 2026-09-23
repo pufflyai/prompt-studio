@@ -1,7 +1,18 @@
 import { describe, expect, mock, test } from "bun:test";
 import { createEventStore } from "pstdio-api-runtime-host";
+import { folderWorkspaceCapabilities } from "pstdio-db";
 import { testHarnessId } from "../../harnesses/test-harness-registry";
 import { createSessionHandler } from "./create-session";
+
+const homeWorkspace = {
+  id: "home",
+  project_id: "project-1",
+  root_path: "/repo",
+  execution_kind: "local",
+  provider_id: "pstdio.root",
+  provider_state: "ready",
+  provider_capabilities_json: folderWorkspaceCapabilities,
+};
 
 const FAKE_ID = testHarnessId("fake");
 
@@ -52,11 +63,10 @@ describe("createSessionHandler hooks", () => {
       projectService: {
         get: async () => ({ id: "project-1" }),
       },
-      repoService: {
-        listByProject: async () => [],
-      },
+
       workspaceService: {
-        get: async () => null,
+        getDefault: async () => homeWorkspace,
+        get: async () => homeWorkspace,
         getByShorthand: async () => null,
       },
       workspaceSessionService: {
@@ -138,11 +148,10 @@ describe("createSessionHandler hooks", () => {
       projectService: {
         get: async () => ({ id: "project-1" }),
       },
-      repoService: {
-        listByProject: async () => [],
-      },
+
       workspaceService: {
-        get: async () => null,
+        getDefault: async () => homeWorkspace,
+        get: async () => homeWorkspace,
         getByShorthand: async () => null,
       },
       workspaceSessionService: {
@@ -204,11 +213,10 @@ describe("createSessionHandler hooks", () => {
       projectService: {
         get: async () => ({ id: "project-1" }),
       },
-      repoService: {
-        listByProject: async () => [],
-      },
+
       workspaceService: {
-        get: async () => null,
+        getDefault: async () => homeWorkspace,
+        get: async () => homeWorkspace,
         getByShorthand: async () => null,
       },
       workspaceSessionService: {

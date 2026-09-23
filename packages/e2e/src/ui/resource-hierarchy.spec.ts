@@ -1,20 +1,21 @@
 import { rmSync } from "node:fs";
 import { type APIRequestContext, expect, type Page, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerAttempt, createPlannerTicket, getPlannerTicketStatuses } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
-import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
+import { createGitRepo } from "./helpers/workspace-session-attempt";
 
-const createProject = async (request: APIRequestContext) => {
+const createProject = async (request: APIRequestContext, folderPath?: string) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "PS-173 Resource Hierarchy" },
+    data: folderProjectInput({ name: "PS-173 Resource Hierarchy" }, folderPath),
   });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string };
 };
 
-const prepareDashboard = async (page: Page, projectId: string, repoId: string) => {
+const prepareDashboard = async (page: Page, projectId: string) => {
   await page.addInitScript(
-    ({ selectedProjectId, selectedRepoId }) => {
+    ({ selectedProjectId }) => {
       localStorage.setItem("onboarding-complete", "true");
       localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
       localStorage.setItem("dashboard-wb2:selected-project:global", selectedProjectId);
@@ -24,7 +25,6 @@ const prepareDashboard = async (page: Page, projectId: string, repoId: string) =
           state: {
             lastSelectedAgent: "pstdio.workbench-fixture.harness.fake",
             lastSelectedModels: [],
-            lastSelectedRepo: selectedRepoId,
             lastSelectedBranches: [],
             sessionModalState: "closed",
             selectedSessionId: null,
@@ -33,15 +33,14 @@ const prepareDashboard = async (page: Page, projectId: string, repoId: string) =
         }),
       );
     },
-    { selectedProjectId: projectId, selectedRepoId: repoId },
+    { selectedProjectId: projectId },
   );
 };
 
 test("navigates ticket ancestry to a linked workspace and back", async ({ page, request }) => {
   test.slow();
-  const project = await createProject(request);
   const repoRoot = createGitRepo("pstdio-ps-173-", "resource hierarchy e2e");
-  const repo = await registerRepoViaApi(request, apiBase, project.id, "ps-173-repo", repoRoot);
+  const project = await createProject(request, repoRoot);
 
   try {
     const statuses = await getPlannerTicketStatuses(request, apiBase, project.id);
@@ -62,11 +61,9 @@ test("navigates ticket ancestry to a linked workspace and back", async ({ page, 
     });
     const attempt = await createPlannerAttempt(request, apiBase, project.id, {
       ticketId: child.id,
-      repoId: repo.id,
-      mode: "worktree",
     });
 
-    await prepareDashboard(page, project.id, repo.id);
+    await prepareDashboard(page, project.id);
     await page.goto(`/projects/${project.id}/`);
     await page.getByRole("option", { name: "Tickets", exact: true }).click();
     const rootCard = page.getByTestId("renderer-card").filter({ hasText: root.title }).first();

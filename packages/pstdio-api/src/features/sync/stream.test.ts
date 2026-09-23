@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../test-utils/create-test-app";
+import { folderProjectInput } from "../../test-utils/folder-project-input";
 import type { AppBindings } from "../../types";
 
 let app: OpenAPIHono<AppBindings>;
@@ -106,10 +107,14 @@ describe("GET /v1/sync/stream", () => {
     await app.request("/v1/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "sync-test-project" }),
+      body: JSON.stringify(folderProjectInput({ name: "sync-test-project" })),
     });
 
-    const allEvents = await sse.readEvents(2);
+    const allEvents = await sse.readEvents(1);
+    while (
+      !allEvents.some((event) => event.event === "sync:set" && (event.data as { table?: string }).table === "projects")
+    )
+      allEvents.push(...(await sse.readEvents(1)));
     sse.close();
 
     expect(allEvents[0].event).toBe("init");

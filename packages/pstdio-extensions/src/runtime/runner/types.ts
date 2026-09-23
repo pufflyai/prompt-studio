@@ -15,7 +15,6 @@ import type {
   ExtensionPackageFilesApi,
   ExtensionProcessApi,
   ExtensionProjectContext,
-  ExtensionReposApi,
   ExtensionResourcesApi,
   ExtensionSessionsApi,
   ExtensionSettingsApi,
@@ -24,7 +23,6 @@ import type {
   ExtensionTerminalApi,
   ExtensionWorkspacesApi,
   JsonObject,
-  RepoContext,
   ResourceRef,
   SlotInvocationContext,
   WorkbenchAttachmentInvocationContext,
@@ -50,7 +48,7 @@ export interface CommandRunnerEnvironment {
   storage: ExtensionStorageApi;
   resources: ExtensionResourcesApi;
   artifacts: ExtensionArtifactApi;
-  repoFiles?: ArtifactMount;
+  projectFiles?: ArtifactMount;
   workspaceFiles?: WorkspaceFilesMount;
   packageFiles: ExtensionPackageFilesApi;
   extensionFiles?: ArtifactMount;
@@ -58,7 +56,6 @@ export interface CommandRunnerEnvironment {
   skills?: ExtensionSkillsApi;
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
-  repos: ExtensionReposApi;
   activity: ExtensionActivityApi;
   notify: ExtensionNotifyApi;
   process: ExtensionProcessApi;
@@ -77,7 +74,6 @@ export interface BuildEnvironmentInput {
   /** Package name of the owning extension. */
   name: string;
   /** Repo context of the invocation, when run against a project repo (CLI). */
-  repo?: RepoContext;
   /** Resolved working directory of the workspace, threaded by workspace lifecycle events. */
   workspaceDir?: string;
   /** Host workspace id of the invocation, when run from inside a worktree-backed workspace. */
@@ -103,7 +99,6 @@ export interface CommandExecuteInput {
   resource?: ResourceRef;
   attachment?: WorkbenchAttachmentInvocationContext;
   slot?: SlotInvocationContext;
-  repo?: RepoContext;
   /** Resolved working directory of the workspace the command runs from. */
   workspaceDir?: string;
   /** Host workspace id the command runs from. */

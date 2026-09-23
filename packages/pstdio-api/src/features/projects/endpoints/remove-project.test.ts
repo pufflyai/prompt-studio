@@ -1,11 +1,12 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import { Buffer } from "node:buffer";
 import { execSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { OpenAPIHono } from "@hono/zod-openapi";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import type { AppBindings } from "../../../types";
 
 let app: OpenAPIHono<AppBindings>;
@@ -51,11 +52,15 @@ const createGitRepo = (name: string) => {
   return repoRoot;
 };
 
-const createProject = async (name: string) => {
+const createProject = async (name: string, path?: string) => {
   const res = await app.request("/v1/projects", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(
+      path
+        ? { name, initial_workspace: { provider_id: "pstdio.root", params: { path } } }
+        : folderProjectInput({ name }),
+    ),
   });
   return res.json() as Promise<{ id: string; name: string; shorthand: string }>;
 };
@@ -161,24 +166,17 @@ describe("DELETE /v1/projects/:id", () => {
   });
 
   test("removes worktree directories on disk", async () => {
-    const project = await createProject("worktree-cleanup");
-
     const repoRoot = createGitRepo("worktree-cleanup-repo");
-    const repoRes = await app.request(`/v1/projects/${project.id}/repos`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "repo", path: repoRoot }),
-    });
-    const repo = (await repoRes.json()) as { id: string };
+    const project = await createProject("worktree-cleanup", repoRoot);
 
     const workspaceRes = await app.request("/v1/workspaces", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ project_id: project.id, repo_id: repo.id }),
+      body: JSON.stringify({ project_id: project.id, provider_id: "pstdio.worktree" }),
     });
     expect(workspaceRes.status).toBe(201);
-    const workspace = (await workspaceRes.json()) as { worktree_path: string | null };
-    const worktreePath = workspace.worktree_path;
+    const workspace = (await workspaceRes.json()) as { root_path: string | null };
+    const worktreePath = workspace.root_path;
 
     expect(worktreePath).toBeTruthy();
     expect(existsSync(worktreePath!)).toBe(true);
@@ -186,5 +184,34 @@ describe("DELETE /v1/projects/:id", () => {
     await app.request(`/v1/projects/${project.id}`, { method: "DELETE" });
 
     expect(existsSync(worktreePath!)).toBe(false);
+    expect(existsSync(join(repoRoot, "README.md"))).toBe(true);
   });
+});
+
+test("deletes a project after its Git workspace was archived through a symlinked home", async () => {
+  const home = join(tempRoot, "archived-home");
+  const alias = join(tempRoot, "archived-home-alias");
+  mkdirSync(home);
+  symlinkSync(home, alias, "junction");
+  const previousHome = process.env.PSTDIO_HOME;
+  process.env.PSTDIO_HOME = alias;
+  try {
+    const repoRoot = createGitRepo("archived-worktree-repo");
+    const project = await createProject("archived-worktree", repoRoot);
+    const created = await app.request("/v1/workspaces", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: project.id, provider_id: "pstdio.worktree" }),
+    });
+    expect(created.status).toBe(201);
+    const workspace = await created.json();
+    expect((await app.request(`/v1/workspaces/${workspace.id}/archive`, { method: "POST" })).status).toBe(200);
+    expect(existsSync(workspace.root_path)).toBe(false);
+    expect((await app.request(`/v1/projects/${project.id}`, { method: "DELETE" })).status).toBe(204);
+    expect(existsSync(join(repoRoot, "README.md"))).toBe(true);
+    expect((await app.request(`/v1/projects/${project.id}`)).status).toBe(404);
+  } finally {
+    if (previousHome === undefined) delete process.env.PSTDIO_HOME;
+    else process.env.PSTDIO_HOME = previousHome;
+  }
 });

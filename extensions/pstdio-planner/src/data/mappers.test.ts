@@ -137,7 +137,7 @@ describe("createTicketWorkspaceLookup", () => {
   const workspace = (id: string, shorthand: string, createdAt: string): ExtensionWorkspace => ({
     id,
     workspace_shorthand: shorthand,
-    worktree_path: `/worktrees/${shorthand}`,
+    root_path: `/worktrees/${shorthand}`,
     created_at: createdAt,
   });
 

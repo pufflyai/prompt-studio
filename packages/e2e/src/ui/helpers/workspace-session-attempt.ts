@@ -2,7 +2,6 @@ import { execSync } from "node:child_process";
 import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { expect } from "@playwright/test";
 import { createPlannerAttempt, createPlannerTicket } from "../../helpers/planner-api";
 
 export const createGitRepo = (prefix: string, readmeContent: string) => {
@@ -14,20 +13,6 @@ export const createGitRepo = (prefix: string, readmeContent: string) => {
   execSync("git add README.md", { cwd: repoRoot, stdio: "pipe" });
   execSync('git commit -m "init"', { cwd: repoRoot, stdio: "pipe" });
   return repoRoot;
-};
-
-export const registerRepoViaApi = async (
-  request: import("@playwright/test").APIRequestContext,
-  apiBase: string,
-  projectId: string,
-  name: string,
-  path: string,
-) => {
-  const res = await request.post(`${apiBase}/v1/projects/${projectId}/repos`, {
-    data: { name, path },
-  });
-  expect(res.ok()).toBe(true);
-  return (await res.json()) as { id: string };
 };
 
 export const createTicketViaApi = async (
@@ -44,13 +29,11 @@ export const createAttemptWithSessionViaApi = async (
   apiBase: string,
   projectId: string,
   ticketId: string,
-  repoId: string,
   _prompt: string,
 ) => {
   return createPlannerAttempt(request, apiBase, projectId, {
     ticketId,
-    repoId,
-    mode: "worktree",
+
     agent: { harnessId: "pstdio.workbench-fixture.harness.fake" },
   });
 };

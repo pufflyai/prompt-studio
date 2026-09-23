@@ -1,12 +1,13 @@
 import { expect } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
 import { test } from "./helpers/notification-settings";
 
 test.use({ notificationsEnabled: true });
 
-const createProject = async (request: import("@playwright/test").APIRequestContext) => {
+const createProject = async (request: import("@playwright/test").APIRequestContext, folderPath?: string) => {
   const response = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "Extension Lab Pages" },
+    data: folderProjectInput({ name: "Extension Lab Pages" }, folderPath),
   });
   expect(response.ok()).toBe(true);
   return (await response.json()) as { id: string; name: string };

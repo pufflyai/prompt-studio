@@ -38,14 +38,6 @@ export interface ResourceAnchor extends ResourceRef {
   role?: ResourceRole;
 }
 
-export interface RepoContext {
-  projectId: string;
-  repoId: string;
-  path: string;
-  remote?: string | null;
-  role?: "default" | "selected" | "workspace";
-}
-
 export interface PackageAssetDescriptor {
   kind: "package-asset";
   path: string;

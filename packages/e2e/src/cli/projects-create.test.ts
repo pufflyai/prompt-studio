@@ -43,7 +43,7 @@ describe("pstdio projects create", () => {
 
       const output = run("projects create my-project", repo);
 
-      expect(output).toContain("Created project");
+      expect(output).toContain("Opened project");
       expect(output).toContain("my-project");
 
       // Configuring an agent installs its skills into the registered repos
@@ -79,7 +79,7 @@ describe("pstdio projects create", () => {
   );
 
   test(
-    "defaults name to git root folder name",
+    "defaults name to the selected folder name",
     () => {
       const repo = createGitRepo();
       dirs.push(repo);
@@ -87,7 +87,7 @@ describe("pstdio projects create", () => {
       const output = run("projects create", repo);
       const expectedName = basename(repo);
 
-      expect(output).toContain("Created project");
+      expect(output).toContain("Opened project");
       expect(output).toContain(expectedName);
     },
     TEST_TIMEOUT,
@@ -101,7 +101,7 @@ describe("pstdio projects create", () => {
 
       const output = run("projects create my-project", dir);
 
-      expect(output).toContain("Created project");
+      expect(output).toContain("Opened project");
       expect(output).toContain("my-project");
 
       const config = JSON.parse(readFileSync(join(dir, ".pstdio", "config.json"), "utf8"));
@@ -111,7 +111,7 @@ describe("pstdio projects create", () => {
   );
 
   test(
-    "writes config at git root when run from a subdirectory",
+    "uses the exact subdirectory as the project folder",
     () => {
       const repo = createGitRepo();
       dirs.push(repo);
@@ -121,18 +121,17 @@ describe("pstdio projects create", () => {
 
       const output = run("projects create sub-project", subdir);
 
-      expect(output).toContain("Created project");
+      expect(output).toContain("Opened project");
       expect(output).toContain(repo);
 
-      // Config must be at the git root, not the subdirectory
-      expect(existsSync(join(repo, ".pstdio", "config.json"))).toBe(true);
-      expect(existsSync(join(subdir, ".pstdio", "config.json"))).toBe(false);
+      expect(existsSync(join(repo, ".pstdio", "config.json"))).toBe(false);
+      expect(existsSync(join(subdir, ".pstdio", "config.json"))).toBe(true);
     },
     TEST_TIMEOUT,
   );
 
   test(
-    "fails when already initialized",
+    "opens the registered folder without creating a duplicate",
     () => {
       const repo = createGitRepo();
       dirs.push(repo);
@@ -140,8 +139,8 @@ describe("pstdio projects create", () => {
       run("projects create first-project", repo);
 
       const result = runSafe("projects create second-project", repo);
-      expect(result.exitCode).not.toBe(0);
-      expect(result.stderr).toContain("already initialized");
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toContain("first-project");
     },
     TEST_TIMEOUT,
   );

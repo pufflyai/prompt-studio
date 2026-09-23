@@ -5,9 +5,9 @@ export const assertSafePathSegment = (value: string) => {
     throw new Error(`Unsafe path segment: ${value}`);
 };
 
-export const requireRepoFiles = (repoFiles: ArtifactMount | undefined) => {
-  if (!repoFiles) throw new Error("This command must be run inside a project repository.");
-  return repoFiles;
+export const requireRepoFiles = (projectFiles: ArtifactMount | undefined) => {
+  if (!projectFiles) throw new Error("This command must be run inside a project repository.");
+  return projectFiles;
 };
 
 export const createDraftLayout = (root: string, document: string) => {

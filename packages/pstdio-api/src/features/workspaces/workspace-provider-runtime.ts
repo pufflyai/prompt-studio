@@ -40,7 +40,6 @@ export const defaultWorkspaceProviderRuntime: WorkspaceProviderRuntime = {
           name: environmentInput.name,
           project: snapshot.project,
           projectId: environmentInput.projectId,
-          repo: environmentInput.repo,
           settings: snapshot.runtime.settings,
           workspaceDir: environmentInput.workspaceDir,
           workspaceId: environmentInput.workspaceId,

@@ -12,7 +12,7 @@ import type {
 import type { ExtensionConnectionsApi, ExtensionLoggerApi } from "./connections";
 import type { EventDeliveryResult, EventRef } from "./events";
 import type { JsonObject, MaybePromise, Struct } from "./json";
-import type { ExtensionResourcesApi, RendererContext, RepoContext, ResourceAnchor, ResourceRef } from "./resources";
+import type { ExtensionResourcesApi, RendererContext, ResourceAnchor, ResourceRef } from "./resources";
 import type { SlotInvocationContext } from "./slots";
 import type { ExtensionWorkspacesApi } from "./workspaces";
 
@@ -29,7 +29,6 @@ export interface ExtensionStorageCollectionApi<TItem = unknown> {
 
 export type StorageScope =
   | { type: "project" }
-  | { type: "repo"; repoId: string }
   | { type: "resource"; resource: ResourceRef }
   | { type: string; id: string };
 
@@ -165,7 +164,6 @@ export interface ExtensionSessionsApi {
     prompt?: string;
     harness?: ExtensionHarnessInput;
     workspaceId?: string;
-    repoId?: string;
     anchors?: ResourceAnchor[];
     attachments?: SessionAttachmentRef[];
     originalSessionId?: string;
@@ -179,13 +177,6 @@ export interface ExtensionSessionsApi {
 export interface ExtensionHarnessInput {
   harnessId: string;
   model?: string;
-}
-
-export interface ExtensionReposApi {
-  list(): Promise<RepoContext[]>;
-  get(repoId: string): Promise<RepoContext>;
-  getDefault(): Promise<RepoContext | undefined>;
-  resolvePath(repoId: string, relativePath: string, options?: { basePath?: string }): Promise<string>;
 }
 
 export interface ExtensionEventsApi {
@@ -268,25 +259,23 @@ export interface ExtensionContextBase<TSettings extends Record<string, unknown> 
   extensionId: string;
   /** Extension package name. Used for grouping/prefixing user-facing references. */
   name: string;
-  repo?: RepoContext;
   source?: CommandSource;
   storage: ExtensionStorageApi;
   resources: ExtensionResourcesApi;
   artifacts: ExtensionArtifactApi;
-  /** Working tree of the invocation's repo, scoped to its root. Absent for non-repo (event/hook) invocations. */
-  repoFiles?: ArtifactMount;
+  /** Project files through the default workspace. Operations require a ready workspace with file access. */
+  projectFiles?: ArtifactMount;
   /** Files of the workspace this context targets, scoped to its working dir. */
   workspaceFiles?: WorkspaceFilesMount;
   /** Read-only files packaged with the installed extension, scoped to its package root. */
   packageFiles: ExtensionPackageFilesApi;
-  /** Repo directory allocated to this extension. Present wherever repoFiles is present. */
+  /** Project directory allocated to this extension. Present wherever projectFiles is present. */
   extensionFiles?: ArtifactMount;
   files: ExtensionFilesApi;
   /** Project skill catalog. Present where the host wires it (command/event contexts). */
   skills?: ExtensionSkillsApi;
   sessions: ExtensionSessionsApi;
   workspaces: ExtensionWorkspacesApi;
-  repos: ExtensionReposApi;
   commands: CommandHelpersApi;
   events: ExtensionEventsApi;
   activity: ExtensionActivityApi;

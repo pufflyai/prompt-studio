@@ -1,7 +1,8 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { uiOrigin as apiBase } from "../ui-server";
-import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
+import { createGitRepo } from "./helpers/workspace-session-attempt";
 
 const prepareDashboard = async (page: import("@playwright/test").Page, projectId: string) => {
   await page.addInitScript((selectedProjectId) => {
@@ -12,7 +13,10 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
 };
 
 const openWorkspaceTerminal = async (page: import("@playwright/test").Page, workspaceName: string) => {
-  const workspaceRow = page.getByRole("row").filter({ hasText: workspaceName }).first();
+  const workspaceRow = page
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: workspaceName, exact: true }) })
+    .first();
   await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
   await workspaceRow.getByRole("button", { name: "Row actions" }).click();
   await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
@@ -20,7 +24,10 @@ const openWorkspaceTerminal = async (page: import("@playwright/test").Page, work
 };
 
 const openWorkspace = async (page: import("@playwright/test").Page, workspaceName: string) => {
-  const workspaceRow = page.getByRole("row").filter({ hasText: workspaceName }).first();
+  const workspaceRow = page
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: workspaceName, exact: true }) })
+    .first();
   await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
   await workspaceRow.click();
   await expect(page.getByRole("link", { name: workspaceName, exact: true })).toBeVisible();
@@ -66,32 +73,31 @@ const persistHiddenLauncherAsActive = async (page: import("@playwright/test").Pa
 };
 
 test("opens default and worktree terminals in their effective workspace directories", async ({ page, request }) => {
+  const repoRoot = createGitRepo("pstdio-ps-43-", "workspace terminal e2e");
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "PS-43 Workspace Terminal" },
+    data: folderProjectInput({ name: "PS-43 Workspace Terminal" }, repoRoot),
   });
   expect(projectResponse.ok()).toBe(true);
   const project = (await projectResponse.json()) as { id: string };
-  const repoRoot = createGitRepo("pstdio-ps-43-", "workspace terminal e2e");
 
   try {
-    const repo = await registerRepoViaApi(request, apiBase, project.id, "ps-43-repo", repoRoot);
     const workspaceResponse = await request.post(`${apiBase}/v1/workspaces`, {
-      data: { project_id: project.id, repo_id: repo.id },
+      data: { project_id: project.id, provider_id: "pstdio.worktree", params: {} },
     });
     expect(workspaceResponse.ok()).toBe(true);
     const worktree = (await workspaceResponse.json()) as {
       workspace_shorthand: string;
-      worktree_path: string;
+      root_path: string;
     };
 
     await prepareDashboard(page, project.id);
     await page.goto(`/projects/${project.id}/workspaces`);
 
-    await openWorkspaceTerminal(page, "ps-43-repo");
+    await openWorkspaceTerminal(page, "Project folder");
     await expectTerminalPwd(page, repoRoot);
 
     await openWorkspaceTerminal(page, worktree.workspace_shorthand);
-    await expectTerminalPwd(page, worktree.worktree_path);
+    await expectTerminalPwd(page, worktree.root_path);
   } finally {
     await request.delete(`${apiBase}/v1/projects/${project.id}`);
     rmSync(repoRoot, { recursive: true, force: true });
@@ -100,7 +106,7 @@ test("opens default and worktree terminals in their effective workspace director
 
 test("restores the first terminal when the hidden launcher was persisted active", async ({ page, request }) => {
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "PS-43 Restored Terminal" },
+    data: folderProjectInput({ name: "PS-43 Restored Terminal" }),
   });
   expect(projectResponse.ok()).toBe(true);
   const project = (await projectResponse.json()) as { id: string };
@@ -134,30 +140,30 @@ test("keeps a workspace terminal in its worktree and alive when the workspace is
   page,
   request,
 }) => {
+  const repoRoot = createGitRepo("pstdio-ps-296-terminal-", "workspace terminal return e2e");
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "PS-296 Workspace Terminal Return" },
+    data: folderProjectInput({ name: "PS-296 Workspace Terminal Return" }, repoRoot),
   });
   expect(projectResponse.ok()).toBe(true);
   const project = (await projectResponse.json()) as { id: string };
-  const repoRoot = createGitRepo("pstdio-ps-296-terminal-", "workspace terminal return e2e");
 
   try {
-    const repo = await registerRepoViaApi(request, apiBase, project.id, "ps-296-terminal-repo", repoRoot);
     const workspaceResponse = await request.post(`${apiBase}/v1/workspaces`, {
-      data: { project_id: project.id, repo_id: repo.id },
+      data: { project_id: project.id, provider_id: "pstdio.worktree", params: {} },
     });
     expect(workspaceResponse.ok()).toBe(true);
     const workspace = (await workspaceResponse.json()) as {
       workspace_shorthand: string;
-      worktree_path: string;
+      root_path: string;
     };
 
     await prepareDashboard(page, project.id);
     await page.goto(`/projects/${project.id}/workspaces`);
     await openWorkspace(page, workspace.workspace_shorthand);
     await showSecondaryPanel(page);
+    await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
     await page.locator(".xterm:visible").click();
-    await expectTerminalPwd(page, workspace.worktree_path);
+    await expectTerminalPwd(page, workspace.root_path);
 
     const terminalInput = page.getByRole("textbox", { name: "Terminal input" });
     await terminalInput.pressSequentially(
@@ -205,7 +211,7 @@ const isAlive = (pid: number) => {
 
 test("closing a terminal tab leaves no shell process behind", async ({ page, request }) => {
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "PS-387 Terminal Cleanup" },
+    data: folderProjectInput({ name: "Terminal Cleanup" }),
   });
   expect(projectResponse.ok()).toBe(true);
   const project = (await projectResponse.json()) as { id: string };

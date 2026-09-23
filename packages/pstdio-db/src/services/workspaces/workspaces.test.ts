@@ -37,7 +37,7 @@ describe("createWorkspacesDBService", () => {
       shorthand_base: "PS-1",
       anchors: [ticketAnchor],
       branch: "workspace/PS-1_A1",
-      worktree_path: "/repo/.pstdio/workspaces/PS-1_A1",
+      root_path: "/repo/.pstdio/workspaces/PS-1_A1",
     });
 
     expect(ws.workspace_shorthand).toBe("PS-1_A1");
@@ -95,7 +95,7 @@ describe("createWorkspacesDBService", () => {
       project_id: projectId,
       name: "T-1 attempt",
       branch: "workspace/WS-1",
-      worktree_path: "/repo/.pstdio/workspaces/WS-1",
+      root_path: "/repo/.pstdio/workspaces/WS-1",
     });
 
     expect(ws.workspace_shorthand).toBe("WS-1");
@@ -121,7 +121,7 @@ describe("createWorkspacesDBService", () => {
     expect(ws.is_default).toBe(true);
     expect(ws.name).toBe("prompt-studio");
     expect(ws.branch).toBe("main");
-    expect(ws.worktree_path).toBeNull();
+    expect(ws.root_path).toBeNull();
   });
 
   test("getDefault returns the default workspace or null", async () => {
@@ -235,7 +235,7 @@ describe("createWorkspacesDBService lookups and mutations", () => {
       project_id: projectId,
       name: "PS-1_A1",
       branch: null,
-      worktree_path: null,
+      root_path: null,
       archived: false,
       workspace_shorthand: "PS-1_A1",
       initializing: false,

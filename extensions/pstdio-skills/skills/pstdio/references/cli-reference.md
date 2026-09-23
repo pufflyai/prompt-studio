@@ -16,12 +16,9 @@ pst logs [--lines <count>] [--path]
 ## Projects
 
 ```sh
-pst projects create [name] [--repo <path>...]
-pst projects link --project-id <id>
-pst projects unlink
+pst projects create [name] [--path <folder>]
 pst projects list
 pst projects view [--project-id <id>]
-pst projects repos [--project-id <id>]
 pst projects delete <project-id>
 ```
 
@@ -139,7 +136,7 @@ pst reports delete [--workspace <id>] [--name <name>]
 
 | Problem | Command or check |
 | --- | --- |
-| Project is not linked | Run `pst projects list`, then `pst projects link --project-id <id>`. |
+| Project is not linked | Run `pst projects create --path <folder>` to open the selected folder. |
 | Skills are missing | Run `pst agents install-skills <agent-id>`. |
 | Extensions fail validation | Run `pst extensions check`, then inspect the diagnostics. |
 | Runtime is unreachable | Run `pst serve`, then `pst logs`. |

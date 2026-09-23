@@ -12,7 +12,7 @@ export const makeWorkspace = (overrides: Record<string, unknown> = {}) => ({
   project_id: "project-1",
   name: "WS-1",
   branch: null,
-  worktree_path: null,
+  root_path: null,
   provider_id: "pocketcoder.remote",
   provider_params_json: { repository: "repo" },
   provider_ref_json: { version: 1, data: { remoteId: "remote-1" } },

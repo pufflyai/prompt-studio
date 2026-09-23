@@ -3,7 +3,7 @@ import { createHandler } from "./merge";
 
 const baseDeps = {
   cwd: () => "/repo",
-  findGitRoot: () => "/repo" as string | null,
+  findProjectRoot: () => "/repo" as string | null,
   readConfig: () => ({ project_id: "proj-1" }) as { project_id: string } | null,
   mergeWorkspace: mock(async () => {}),
 };
@@ -16,7 +16,6 @@ describe("workspaces merge", () => {
     await handler({ id: "PS-1_A1", _: [], $0: "" } as never);
 
     expect(mergeWorkspace).toHaveBeenCalledWith({
-      repoRoot: "/repo",
       projectId: "proj-1",
       workspaceShorthand: "PS-1_A1",
       deleteAfter: undefined,
@@ -30,16 +29,15 @@ describe("workspaces merge", () => {
     await handler({ id: "PS-1_A1", "delete-workspace": true, _: [], $0: "" } as never);
 
     expect(mergeWorkspace).toHaveBeenCalledWith({
-      repoRoot: "/repo",
       projectId: "proj-1",
       workspaceShorthand: "PS-1_A1",
       deleteAfter: true,
     });
   });
 
-  test("throws when not in git repo", async () => {
-    const handler = createHandler({ ...baseDeps, findGitRoot: () => null });
-    await expect(handler({ id: "PS-1_A1", _: [], $0: "" } as never)).rejects.toThrow("Not inside a git repository.");
+  test("throws when outside a project folder", async () => {
+    const handler = createHandler({ ...baseDeps, findProjectRoot: () => null });
+    await expect(handler({ id: "PS-1_A1", _: [], $0: "" } as never)).rejects.toThrow("Not inside a pstdio project.");
   });
 
   test("throws when not in pstdio project", async () => {

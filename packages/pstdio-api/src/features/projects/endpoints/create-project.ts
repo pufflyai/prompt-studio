@@ -1,15 +1,11 @@
 import { createRoute, z } from "@hono/zod-openapi";
 import type { ExtensionSetupWarning } from "pstdio-api-contracts";
-import { apiLogger } from "../../../lib/logger";
 import type { AppRouteHandler } from "../../../types";
-import {
-  installDefaultExtensions,
-  registerInstalledExtensionSources,
-  syncInstalledExtensionsForProject,
-} from "../../extensions/default-extensions";
 import { applyProjectHarnessSelection } from "../../harnesses/apply-harness-selection";
 import type { ProjectsRouteDeps } from "../deps";
 import { createProjectBodySchema, projectResponseSchema, toProjectResponse } from "../dto";
+import { retryProjectExtensions, setupProjectExtensions } from "../project-extension-setup";
+import { initializeProjectWorkspace, resolveInitialWorkspace, withFolderCreation } from "../project-folder";
 
 export const createProjectRoute = createRoute({
   method: "post",
@@ -23,6 +19,14 @@ export const createProjectRoute = createRoute({
     },
   },
   responses: {
+    200: {
+      description: "Existing project opened.",
+      content: { "application/json": { schema: projectResponseSchema } },
+    },
+    400: {
+      description: "Invalid project folder.",
+      content: { "application/json": { schema: z.object({ error: z.string() }) } },
+    },
     201: {
       description: "Project created.",
       content: { "application/json": { schema: projectResponseSchema } },
@@ -30,78 +34,49 @@ export const createProjectRoute = createRoute({
   },
 });
 
-const enableSyncedProjectExtensions = async (deps: ProjectsRouteDeps, projectId: string) => {
-  const extensions = await deps.extensionService.listProjectExtensionInstances(projectId);
-  for (const { instance } of extensions) {
-    if (!instance.enabled) await deps.extensionService.setProjectExtensionEnabled(instance.id, true);
-  }
-};
-
-const messageFromError = (error: unknown) => (error instanceof Error ? error.message : String(error));
-
-const createExtensionWarning = (extension: string, error: unknown): ExtensionSetupWarning => ({
-  code: "extension_setup_failed",
-  extension,
-  message: messageFromError(error),
-});
-
-const logExtensionWarning = (warning: ExtensionSetupWarning) => {
-  apiLogger.warn(
-    {
-      code: warning.code,
-      event: "projects.extension_setup.warning",
-      extension: warning.extension,
-      message: warning.message,
-    },
-    "Project extension setup warning",
-  );
-};
-
-const setupProjectExtensions = async (deps: ProjectsRouteDeps, projectId: string, installDefaults: boolean) => {
-  const warnings: ExtensionSetupWarning[] = [];
-  const addWarning = (warning: ExtensionSetupWarning) => {
-    warnings.push(warning);
-    logExtensionWarning(warning);
-  };
-
-  if (installDefaults) {
-    try {
-      const installed = await installDefaultExtensions({
-        forceSourceDefaults: process.env.PSTDIO_DISABLE_EMBED_MANIFEST === "1",
-        onInstallFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
-        releaseRef: deps.extensionUpgradeService?.releaseRef,
-      });
-      await registerInstalledExtensionSources(deps.extensionService, installed);
-    } catch (error) {
-      addWarning(createExtensionWarning("default extensions", error));
-    }
-  }
-
-  await syncInstalledExtensionsForProject({
-    extensionService: deps.extensionService,
-    onLoadFailure: ({ error, installName }) => addWarning(createExtensionWarning(installName, error)),
-    projectId,
-  });
-  await enableSyncedProjectExtensions(deps, projectId);
-
-  return warnings;
+const openExistingProject = async (
+  deps: ProjectsRouteDeps,
+  initial: Awaited<ReturnType<typeof resolveInitialWorkspace>>,
+) => {
+  if (!initial.path) return null;
+  const home = await deps.workspaceService.findDefaultByPath(initial.path);
+  if (!home) return null;
+  const project = await deps.projectService.get(home.project_id);
+  if (!project) return null;
+  let extensionWarnings: ExtensionSetupWarning[] = [];
+  if (home.setup_error || home.initializing || home.provider_state !== "ready")
+    await initializeProjectWorkspace(deps, project.id, initial.initial, async () => {
+      extensionWarnings = await retryProjectExtensions(deps, project.id);
+      return extensionWarnings;
+    });
+  const response = toProjectResponse(project);
+  return extensionWarnings.length ? { ...response, extension_warnings: extensionWarnings } : response;
 };
 
 export const createProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<typeof createProjectRoute> => {
   return async (c) => {
-    const { name, agents } = c.req.valid("json");
-    const existingProjects = await deps.projectService.list();
-    let extensionWarnings: ExtensionSetupWarning[] = [];
-    const project = await deps.projectService.create({ name }, async (project) => {
-      extensionWarnings = await setupProjectExtensions(deps, project.id, existingProjects.length === 0);
-      if (agents) {
-        await applyProjectHarnessSelection(deps, { projectId: project.id, selectedHarnessIds: agents });
-      }
+    const input = c.req.valid("json");
+    let initial: Awaited<ReturnType<typeof resolveInitialWorkspace>>;
+    try {
+      initial = await resolveInitialWorkspace(input);
+    } catch (error) {
+      return c.json({ error: error instanceof Error ? error.message : String(error) }, 400);
+    }
+    return withFolderCreation(initial.path, async () => {
+      const existing = await openExistingProject(deps, initial);
+      if (existing) return c.json(existing, 200);
+      const existingProjects = await deps.projectService.list();
+      let extensionWarnings: ExtensionSetupWarning[] = [];
+      const project = await deps.projectService.create({ name: initial.name }, async (project) => {
+        await initializeProjectWorkspace(deps, project.id, initial.initial, async () => {
+          extensionWarnings = await setupProjectExtensions(deps, project.id, existingProjects.length === 0);
+          if (input.agents)
+            await applyProjectHarnessSelection(deps, { projectId: project.id, selectedHarnessIds: input.agents });
+          return extensionWarnings;
+        });
+      });
+      const response = toProjectResponse(project);
+      return c.json(extensionWarnings.length ? { ...response, extension_warnings: extensionWarnings } : response, 201);
     });
-    const response = toProjectResponse(project);
-    return c.json(
-      extensionWarnings.length > 0 ? { ...response, extension_warnings: extensionWarnings } : response,
-      201,
-    );
   };
 };

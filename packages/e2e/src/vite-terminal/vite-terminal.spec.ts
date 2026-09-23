@@ -1,6 +1,7 @@
 import { rmSync } from "node:fs";
 import { expect, test } from "@playwright/test";
-import { createGitRepo, registerRepoViaApi } from "../ui/helpers/workspace-session-attempt";
+import { folderProjectInput } from "../helpers/folder-project";
+import { createGitRepo } from "../ui/helpers/workspace-session-attempt";
 import { viteOrigins } from "../vite-terminal-servers";
 
 const apiBase = viteOrigins.api;
@@ -14,7 +15,9 @@ const prepareDashboard = async (page: import("@playwright/test").Page, projectId
 };
 
 const openWorkspaceTerminal = async (page: import("@playwright/test").Page, workspaceName: string) => {
-  const workspaceRow = page.getByRole("row").filter({ hasText: workspaceName });
+  const workspaceRow = page
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: workspaceName, exact: true }) });
   await expect(workspaceRow).toBeVisible({ timeout: 30_000 });
   await workspaceRow.getByRole("button", { name: "Row actions" }).click();
   await page.getByRole("menuitem", { name: "Open terminal", exact: true }).click();
@@ -33,15 +36,14 @@ test("keeps HTTP same-origin and opens terminals through the runtime WebSocket e
   page,
   request,
 }, testInfo) => {
+  const repoRoot = createGitRepo("pstdio-ps-232-", "vite terminal e2e");
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: `PS-232 Vite Terminal ${testInfo.project.name}` },
+    data: folderProjectInput({ name: `PS-232 Vite Terminal ${testInfo.project.name}` }, repoRoot),
   });
   expect(projectResponse.ok()).toBe(true);
   const project = (await projectResponse.json()) as { id: string };
-  const repoRoot = createGitRepo("pstdio-ps-232-", "vite terminal e2e");
 
   try {
-    await registerRepoViaApi(request, apiBase, project.id, "ps-232-repo", repoRoot);
     const terminalSockets: import("@playwright/test").WebSocket[] = [];
     const apiRequestOrigins: string[] = [];
     page.on("websocket", (socket) => {
@@ -55,14 +57,14 @@ test("keeps HTTP same-origin and opens terminals through the runtime WebSocket e
     await prepareDashboard(page, project.id);
     await page.goto(`/projects/${project.id}/workspaces`);
 
-    await openWorkspaceTerminal(page, "ps-232-repo");
+    await openWorkspaceTerminal(page, "Project folder");
     expect(apiRequestOrigins).toContain(new URL(baseURL ?? "").origin);
     await runTerminalCommand(page, "echo __ps232_first_terminal__", "__ps232_first_terminal__");
     await runTerminalCommand(page, "exit", "exit");
     await expect.poll(() => terminalSockets[0]?.isClosed()).toBe(true);
 
     await page.reload();
-    await openWorkspaceTerminal(page, "ps-232-repo");
+    await openWorkspaceTerminal(page, "Project folder");
     await runTerminalCommand(page, "echo __ps232_second_terminal__", "__ps232_second_terminal__");
 
     expect(terminalSockets.length).toBeGreaterThanOrEqual(2);

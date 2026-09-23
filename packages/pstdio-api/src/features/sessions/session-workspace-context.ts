@@ -6,12 +6,12 @@ type WorkspaceRecord = {
   provider_ref_json?: { version: number; data: Record<string, unknown> } | null;
   execution_kind?: "local" | "remote";
   display_path?: string | null;
-  worktree_path?: string | null;
+  root_path?: string | null;
 };
 
 export const toHarnessWorkspaceContext = (
   workspace: WorkspaceRecord | null | undefined,
-  cwd?: string,
+  _cwd?: string,
 ): HarnessWorkspaceContext | undefined => {
   if (!workspace) return undefined;
 
@@ -31,8 +31,8 @@ export const toHarnessWorkspaceContext = (
     };
   }
 
-  const rootPath = workspace.worktree_path ?? cwd;
-  if (!rootPath) return undefined;
+  const rootPath = workspace.root_path;
+  if (!rootPath) throw new Error(`Workspace ${workspace.id} has no local execution target.`);
 
   return {
     workspaceId: workspace.id,
@@ -49,5 +49,5 @@ export const resolveSessionWorkspaceContext = async (
     getWorkspaceBySessionId(sessionId: string): Promise<WorkspaceRecord | null>;
   },
   sessionId: string,
-  cwd?: string,
-) => toHarnessWorkspaceContext(await workspaceSessionService.getWorkspaceBySessionId(sessionId), cwd);
+  _cwd?: string,
+) => toHarnessWorkspaceContext(await workspaceSessionService.getWorkspaceBySessionId(sessionId), _cwd);

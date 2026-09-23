@@ -4,23 +4,16 @@ import { buildDashboardWorkspacesFromRows, toWorkspaceDataTableRow } from "./das
 
 const rows = {
   files: [],
-  projectRepos: [
-    { id: "project-repo-1", project_id: "project-1", repo_id: "repo-1" },
-    { id: "project-repo-2", project_id: "project-1", repo_id: "repo-2" },
-  ],
-  repos: [
-    { id: "repo-1", path: "/repo/prompt-studio" },
-    { id: "repo-2", path: "/repo/other" },
-  ],
   sessions: [],
   workspaceSessions: [],
   workspaces: [
     {
       id: "workspace-1",
+      provider_id: "pstdio.worktree",
       project_id: "project-1",
       name: "Dashboard workbench datalayer",
       branch: "workspace/PS-307_A1",
-      worktree_path: "/repo/.pstdio/workspaces/PS-307_A1",
+      root_path: "/repo/.pstdio/workspaces/PS-307_A1",
       archived: false,
       workspace_shorthand: "PS-307_A1",
       setup_error: null,
@@ -33,7 +26,7 @@ const rows = {
       project_id: "project-2",
       name: "Other project workspace",
       branch: "main",
-      worktree_path: null,
+      root_path: null,
       archived: false,
       workspace_shorthand: "PS-999_A1",
       setup_error: null,
@@ -99,11 +92,19 @@ describe("dashboard workspaces", () => {
     expect(workspace.resource.metadata).toMatchObject({ workspaceBranch: "workspace/PS-307_A1" });
   });
 
-  test("uses the first linked repository path for a default workspace resource", () => {
+  test("uses the selected folder for a default workspace resource", () => {
     const [workspace] = buildDashboardWorkspacesFromRows(
       {
         ...rows,
-        workspaces: [{ ...rows.workspaces[0], branch: "main", worktree_path: null }],
+        workspaces: [
+          {
+            ...rows.workspaces[0],
+            is_default: true,
+            provider_id: "pstdio.root",
+            branch: null,
+            root_path: "/repo/prompt-studio",
+          },
+        ],
       },
       { projectId: "project-1" },
     );
@@ -118,7 +119,7 @@ describe("dashboard workspaces", () => {
         workspaces: [
           {
             ...rows.workspaces[0],
-            worktree_path: null,
+            root_path: null,
             execution_kind: "remote",
             provider_id: "example.remote-execution.workspace-type.remote",
             provider_state: "failed",
@@ -236,8 +237,8 @@ describe("dashboard workspaces", () => {
       values: {
         attempt: "PS-307_A1",
         name: "Dashboard workbench datalayer",
-        type: "Worktree",
-        provider: "pstdio.root",
+        type: "Git worktree",
+        provider: "pstdio.worktree",
         state: "Ready",
         diff: "+0 -0",
       },

@@ -51,7 +51,7 @@ const createHarness = (input: {
   const catalog = createProjectExtensionRuntimeCatalog({
     extensionService: { listEnabledSourcesForProject: async (id: string) => input.sourcesByProject(id) } as never,
     projectService: { get: async (id: string) => ({ id, name: `Project ${id}`, shorthand: "PS" }) } as never,
-    repoService: { listByProject: async () => [] } as never,
+    workspaceService: { getDefault: async () => null } as never,
     loadSources,
     observer: {
       onLoadStart: (event) => loadStarts.push({ projectId: event.projectId, reason: event.reason }),
@@ -116,7 +116,7 @@ describe("project extension runtime catalog", () => {
     const first = await harness.catalog.get("p1");
     harness.catalog.invalidate({ projectId: "p1", reason: "enablement_changed" });
     harness.catalog.invalidate({ projectId: "p1", reason: "enablement_changed" });
-    harness.catalog.invalidate({ projectId: "p1", reason: "repo_link_changed" });
+    harness.catalog.invalidate({ projectId: "p1", reason: "project_workspace_changed" });
     const second = await harness.catalog.get("p1");
 
     expect(second).not.toBe(first);

@@ -20,8 +20,9 @@ export const readReport = async (ctx: Pick<CommandContext, "commands">, reportId
 export const workspaceGitPath = async (ctx: CommandContext, workspaceId: string) => {
   const workspace = await ctx.workspaces.get(workspaceId);
   if (!workspace) throw new Error(`Unknown workspace "${workspaceId}"`);
-  const repo = workspace.worktree_path ? null : await ctx.repos.getDefault();
-  const path = workspace.worktree_path ?? repo?.path;
+  if (workspace.execution_kind !== "local" || !workspace.provider_capabilities_json?.diff)
+    throw new Error("This workspace does not support Git attempts.");
+  const path = workspace.root_path;
   if (!path) throw new Error(`Workspace "${workspaceId}" has no repository path.`);
   return path;
 };

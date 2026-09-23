@@ -4,6 +4,7 @@ import type {
   ExtensionTerminalApi,
   TerminalSessionRequest,
 } from "pstdio-api-contracts/extension-kernel";
+import { workspaceEvents } from "pstdio-api-contracts/extension-kernel";
 import type { InvocationScope, ScopedHostApis } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createProcessApi } from "../extension-process-api";
@@ -36,7 +37,7 @@ const withSessionOwnership = (terminal: ExtensionTerminalApi, scope: InvocationS
 
 export const createScopedHostApis = (
   deps: ExtensionsRouteDeps,
-  input: { project: ExtensionProjectContext; projectId: string },
+  input: { project: ExtensionProjectContext; projectId: string; workspaceId?: string; eventId?: string },
   hosts: { connections: ExtensionConnectionsApi; terminal?: ExtensionTerminalApi },
   runtimeDeps: CommandEnvironmentRuntimeDeps,
   scope?: InvocationScope,
@@ -47,7 +48,24 @@ export const createScopedHostApis = (
     sessions: createSessionsApi(deps, { projectId: input.projectId, project: input.project, signal }),
     workspaces: createWorkspacesApi(deps, { projectId: input.projectId, signal }, runtimeDeps),
     connections: signal ? withConnectionSignal(hosts.connections, signal) : hosts.connections,
-    process: createProcessApi({ scope }),
+    process: createProcessApi({
+      scope,
+      resolveCwd: async () => {
+        const workspace = input.workspaceId
+          ? await deps.workspaceService.get(input.workspaceId)
+          : await deps.workspaceService.getDefault(input.projectId);
+        const provisioning = input.eventId === workspaceEvents.provision.id && workspace?.id === input.workspaceId;
+        if (
+          workspace?.deleted_at ||
+          workspace?.provider_state !== "ready" ||
+          (!provisioning && (workspace?.initializing || workspace?.setup_error))
+        )
+          throw new Error("This workspace has no ready local process target.");
+        if (workspace?.project_id !== input.projectId || workspace.execution_kind !== "local" || !workspace.root_path)
+          throw new Error("This workspace has no local process target.");
+        return workspace.root_path;
+      },
+    }),
     terminal: scope && hosts.terminal ? withSessionOwnership(hosts.terminal, scope) : hosts.terminal,
   };
 };

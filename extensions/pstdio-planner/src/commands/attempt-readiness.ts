@@ -4,11 +4,10 @@ import { attemptSelectionsCollection, listAttempts } from "../data/attempt-stora
 import { statusesCollection, ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
 
-type ReadinessContext = Pick<CommandContext, "process" | "repos" | "sessions" | "settings" | "storage" | "repo">;
+type ReadinessContext = Pick<CommandContext, "process" | "workspaces" | "sessions" | "settings" | "storage">;
 
 interface ReadinessParams {
-  repoId?: string;
-  repo?: { repoId: string; branch?: string };
+  base?: string;
 }
 
 const runGit = async (ctx: ReadinessContext, repoPath: string, args: string[]) => {
@@ -22,12 +21,13 @@ export const loadAttemptReadiness = async (
   ticketRef: string,
   commandParams: ReadinessParams,
 ) => {
-  const [storedTickets, attempts, selections, statuses, repos] = await Promise.all([
+  const [storedTickets, attempts, selections, statuses, home, providers] = await Promise.all([
     ticketsCollection(ctx.storage).list(),
     listAttempts(ctx.storage),
     attemptSelectionsCollection(ctx.storage).list(),
     statusesCollection(ctx.storage).list(),
-    ctx.repos.list(),
+    ctx.workspaces.getDefault(),
+    ctx.workspaces.listProviders(),
   ]);
   const storedTarget = await findTicket(ctx.storage, ticketRef);
   const target: AttemptReadinessTicket = storedTarget ?? {
@@ -38,12 +38,15 @@ export const loadAttemptReadiness = async (
     parallelizable: null,
   };
   const tickets = storedTarget ? storedTickets : [...storedTickets, target];
-  const repo =
-    repos.find((candidate) => candidate.repoId === (commandParams.repoId ?? commandParams.repo?.repoId)) ??
-    ctx.repo ??
-    repos.find((candidate) => candidate.role === "default") ??
-    repos[0];
-  if (!repo) throw new Error("A repository is required to start an attempt.");
+  if (
+    !home?.root_path ||
+    home.execution_kind !== "local" ||
+    !providers.some((provider) => provider.id === "pstdio.worktree")
+  ) {
+    throw new Error(
+      "Planner attempts require a Git repository with a usable base commit. Tools and ordinary sessions remain available in the project folder.",
+    );
+  }
 
   const liveStatuses = new Set(["queued", "in_progress", "awaiting_input"]);
   const active = attempts.filter(
@@ -55,7 +58,7 @@ export const loadAttemptReadiness = async (
   const settings = await ctx.settings.all();
   const configuredCapacity = settings["automation.maxInProgress"];
   const maxInProgress = typeof configuredCapacity === "number" ? configuredCapacity : 2;
-  const mainHeadSha = await runGit(ctx, repo.path, ["rev-parse", commandParams.repo?.branch ?? "HEAD"]);
+  const mainHeadSha = await runGit(ctx, home.root_path, ["rev-parse", commandParams.base ?? "HEAD"]);
   const doneStatusIds = new Set(
     statuses.filter((status) => status.name.trim().toLowerCase() === "done").map((status) => status.id),
   );
@@ -72,7 +75,7 @@ export const loadAttemptReadiness = async (
     maxInProgress,
     isAncestor: async (baseSha, headSha) => {
       const result = await ctx.process.run({
-        command: ["git", "-C", repo.path, "merge-base", "--is-ancestor", baseSha, headSha],
+        command: ["git", "-C", home.root_path, "merge-base", "--is-ancestor", baseSha, headSha],
       });
       if (result.exitCode === 0) return true;
       if (result.exitCode === 1) return false;
@@ -80,7 +83,7 @@ export const loadAttemptReadiness = async (
     },
   });
 
-  return { readiness, repo, target };
+  return { readiness, workspace: home, target };
 };
 
 export const attemptReadinessCommand = defineCommand({
@@ -89,7 +92,7 @@ export const attemptReadinessCommand = defineCommand({
   cli: true,
   params: {
     ticket: params.text({ label: "Ticket", required: true }),
-    repoId: params.text({ label: "Repository", required: false }),
+    base: params.text({ label: "Base revision", required: false }),
   },
   async run(ctx, commandParams) {
     return (await loadAttemptReadiness(ctx, commandParams.ticket, commandParams)).readiness;

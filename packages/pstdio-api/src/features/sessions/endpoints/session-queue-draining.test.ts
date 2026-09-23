@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { HarnessExit, HarnessSession } from "pstdio-api-contracts";
 import { createTestApp } from "../../../test-utils/create-test-app";
+import { folderProjectInput } from "../../../test-utils/folder-project-input";
 import {
   createTestHarnessRecord,
   createTestHarnessRegistry,
@@ -50,7 +51,7 @@ describe("POST /v1/sessions queue draining", () => {
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Question Response Queue Bypass Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Question Response Queue Bypass Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -89,7 +90,7 @@ describe("POST /v1/sessions queue draining", () => {
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Follow-up Queue Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Follow-up Queue Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -134,7 +135,7 @@ describe("POST /v1/sessions queue draining", () => {
     const projectRes = await handle.app.request("/v1/projects", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ name: "Multi-Pending Queued Project" }),
+      body: JSON.stringify(folderProjectInput({ name: "Multi-Pending Queued Project" })),
     });
     expect(projectRes.status).toBe(201);
     const project = await projectRes.json();
@@ -178,7 +179,7 @@ describe("POST /v1/sessions isolated queue draining", () => {
       const projectRes = await isolated.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Concurrent Follow-up Queue Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Concurrent Follow-up Queue Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();
@@ -240,7 +241,7 @@ describe("POST /v1/sessions isolated queue draining", () => {
       const projectRes = await isolated.app.request("/v1/projects", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: "Drain Queue Project" }),
+        body: JSON.stringify(folderProjectInput({ name: "Drain Queue Project" })),
       });
       expect(projectRes.status).toBe(201);
       const project = await projectRes.json();

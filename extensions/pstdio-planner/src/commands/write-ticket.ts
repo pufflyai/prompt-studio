@@ -24,7 +24,7 @@ export const writeTicketCommand = defineCommand({
     parent: params.text(),
   },
   async run(ctx, commandParams) {
-    const repoFiles = requireRepoFiles(ctx.repoFiles);
+    const projectFiles = requireRepoFiles(ctx.projectFiles);
     const existing = await ticketsCollection(ctx.storage).list();
     const statuses = await seedDefaultStatuses(ctx.storage);
     if (commandParams.tags !== undefined) await seedDefaultTags(ctx.storage);
@@ -62,7 +62,7 @@ export const writeTicketCommand = defineCommand({
       updatedAt: now,
     });
 
-    await writeTicketMarkdown(repoFiles, ticket, await ticketToMarkdown(ctx.storage, ticket));
+    await writeTicketMarkdown(projectFiles, ticket, await ticketToMarkdown(ctx.storage, ticket));
     return { shorthand: ticket.shorthand, path: ticketMarkdownPath(ticket.shorthand) };
   },
 });

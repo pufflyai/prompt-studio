@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
 import type { ChildProcess } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { WorkbenchExtensionMetadata } from "pstdio-api-contracts";
+import { folderProjectInput } from "../helpers/folder-project";
 import { startLocalWorkspaceRegistry } from "../local-workspace-registry";
 import { verifyPocketCoderLifecycle } from "./packaged-pocketcoder-lifecycle";
 import { runtimeAuthorization, startPackagedServe, stopProcess } from "./packaged-serve-helpers";
@@ -32,10 +33,12 @@ export const registerRemoteExecutionSmokeTests = () => {
       });
       child = started.child;
       const headers = runtimeAuthorization(started.descriptor);
+      const projectFolder = join(tempRoot, "project");
+      mkdirSync(projectFolder);
       const createRes = await fetch(`${started.baseUrl}/v1/projects`, {
         method: "POST",
         headers: { ...headers, "content-type": "application/json" },
-        body: JSON.stringify({ name: "remote-execution-project" }),
+        body: JSON.stringify(folderProjectInput({ name: "remote-execution-project" }, projectFolder)),
       });
       expect(createRes.status).toBe(201);
       const project = (await createRes.json()) as { id: string; extension_warnings?: unknown[] };

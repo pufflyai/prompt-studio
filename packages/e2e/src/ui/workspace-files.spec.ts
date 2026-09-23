@@ -2,6 +2,7 @@ import { execSync } from "node:child_process";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerAttempt, createPlannerTicket } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 import {
@@ -12,17 +13,18 @@ import {
   openWorkspace,
   prepareDashboard,
 } from "./helpers/workspace-files";
-import { createGitRepo, registerRepoViaApi } from "./helpers/workspace-session-attempt";
+import { createGitRepo } from "./helpers/workspace-session-attempt";
 
 test("browses and edits workspace files, then refreshes the lazy diff", async ({ page, request, context }) => {
   test.slow();
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const repoRoot = createGitRepo("pstdio-ps-118-", "Workspace files e2e");
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "PS-118 Workspace Files" },
+    data: folderProjectInput({ name: "PS-118 Workspace Files" }, repoRoot),
   });
   expect(projectResponse.ok()).toBe(true);
   const project = (await projectResponse.json()) as { id: string };
-  const repoRoot = createGitRepo("pstdio-ps-118-", "Workspace files e2e");
+
   let workspaceId: string | undefined;
 
   try {
@@ -40,15 +42,12 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
     execSync("git add LICENSE assets/logo.png zzz-folder/keep.txt", { cwd: repoRoot, stdio: "pipe" });
     execSync('git commit -m "add browse fixtures"', { cwd: repoRoot, stdio: "pipe" });
 
-    const repo = await registerRepoViaApi(request, apiBase, project.id, "ps-118-repo", repoRoot);
     const ticket = await createPlannerTicket(request, apiBase, project.id, { content: "PS-118 file editor" });
     const attempt = await createPlannerAttempt(request, apiBase, project.id, {
       ticketId: ticket.id,
-      repoId: repo.id,
-      mode: "worktree",
     });
     workspaceId = attempt.workspace.id;
-    const worktreePath = attempt.workspace.worktree_path;
+    const worktreePath = attempt.workspace.root_path;
     writeFileSync(join(worktreePath, "changed.ts"), "export const before = true;\n");
     execSync("git add changed.ts", { cwd: worktreePath, stdio: "pipe" });
     execSync('git commit -m "add changed file"', { cwd: worktreePath, stdio: "pipe" });
@@ -62,7 +61,7 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
       }
       if (url.pathname.endsWith("/file") && browserRequest.method() === "PUT") fileWrites.push(url.search);
     });
-    await prepareDashboard(page, project.id, repo.id);
+    await prepareDashboard(page, project.id);
     await page.goto(`/projects/${project.id}/workspaces`);
     await openWorkspace(page, attempt.workspace.workspace_shorthand);
 
@@ -179,15 +178,14 @@ test("browses and edits workspace files, then refreshes the lazy diff", async ({
 });
 
 test("browses and edits files in the default workspace", async ({ page, request }) => {
+  const repoRoot = createGitRepo("pstdio-ps-118-default-", "Default workspace files e2e");
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "PS-118 Default Workspace Files" },
+    data: folderProjectInput({ name: "PS-118 Default Workspace Files" }, repoRoot),
   });
   expect(projectResponse.ok()).toBe(true);
   const project = (await projectResponse.json()) as { id: string };
-  const repoRoot = createGitRepo("pstdio-ps-118-default-", "Default workspace files e2e");
 
   try {
-    const repo = await registerRepoViaApi(request, apiBase, project.id, "ps-118-default-repo", repoRoot);
     const workspacesResponse = await request.get(
       `${apiBase}/v1/workspaces?project_id=${encodeURIComponent(project.id)}`,
     );
@@ -201,11 +199,10 @@ test("browses and edits files in the default workspace", async ({ page, request 
     expect(workspace).toBeDefined();
     if (!workspace) throw new Error("Default workspace was not created.");
 
-    await prepareDashboard(page, project.id, repo.id);
+    await prepareDashboard(page, project.id);
     await page.goto(`/projects/${project.id}/workspaces`);
     await openWorkspace(page, workspace.workspace_shorthand);
 
-    await page.getByRole("tab", { name: "Files" }).click();
     const search = page.getByRole("textbox", { name: "Search files" });
     await search.fill("README");
     await expect(page.getByRole("region", { name: "Files", exact: true }).getByRole("option")).toHaveCount(1);
@@ -222,22 +219,10 @@ test("browses and edits files in the default workspace", async ({ page, request 
     expect((await saveResponse).ok()).toBe(true);
     await expect.poll(() => readFileSync(join(repoRoot, "README.md"), "utf8")).toContain(appendedReadme);
 
-    const readmeBodyResponse = page.waitForResponse(
-      (response) => response.url().includes("/diff-file?mode=current&path=README.md") && response.ok(),
-    );
-    const changesTab = page.getByRole("tab", { name: "Changes" });
-    await changesTab.click();
+    await page.reload();
     await page.getByRole("textbox", { name: "Search files" }).fill("README");
-    await page.getByTestId("diff-viewer").getByRole("option", { name: "README.md M" }).click();
-    await readmeBodyResponse;
-    await expect(page.getByTestId("diff-viewer").getByRole("option", { name: "README.md M" })).toBeVisible();
-    await expect(
-      page.getByTestId("diff-viewer").getByRole("row", { name: /Edited in the default workspace/ }),
-    ).toBeVisible();
-
-    await page.getByRole("tab", { name: "Files" }).click();
-    await page.getByRole("textbox", { name: "Search files" }).fill("README");
-    await expect(page.getByRole("option", { name: "README.md M" }).getByText("M", { exact: true })).toBeVisible();
+    await page.getByRole("option", { name: "README.md", exact: true }).click();
+    await expect(page.locator(".monaco-editor .view-lines")).toContainText("Edited in the default workspace");
   } finally {
     rmSync(repoRoot, { recursive: true, force: true });
   }

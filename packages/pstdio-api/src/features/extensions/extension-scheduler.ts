@@ -61,15 +61,6 @@ const scheduleMetadata = (schedule: { id: string; title: Localizable<string> }, 
   scheduledFor: ctx.scheduledFor.toISOString(),
 });
 
-const resolveScheduleRepo = async (deps: ExtensionsRouteDeps, projectId: string, repoId: string | undefined) => {
-  if (!repoId) return undefined;
-
-  const repo = await deps.repoService.get(repoId);
-  if (!repo) throw new Error(`Repo not found for extension schedule: ${repoId}`);
-
-  return { projectId, repoId: repo.id, path: repo.path };
-};
-
 const outcomeError = (input: { commandId: string; reason?: string; status?: string }) =>
   new Error(
     `Extension schedule command "${input.commandId}" failed: ${input.reason ?? input.status ?? "unknown error"}`,
@@ -142,17 +133,23 @@ export const createExtensionScheduler = (input: Input) => {
             name: ids.name,
             project: snapshot.project,
             projectId: ids.projectId,
-            repo: ids.repo,
             workspaceDir: ids.workspaceDir,
+            workspaceId: ids.workspaceId,
             settings: snapshot.runtime.settings,
           }),
       });
 
+      const workspace = schedule.workspaceId
+        ? await input.deps.workspaceService.get(schedule.workspaceId)
+        : await input.deps.workspaceService.getDefault(meta.projectId);
+      if (workspace && workspace.project_id !== meta.projectId)
+        throw new Error("Workspace does not belong to this project.");
       const outcome = await runner.execute({
         commandId: schedule.commandId,
         projectId: meta.projectId,
         params: (schedule.params ?? {}) as JsonObject,
-        repo: await resolveScheduleRepo(input.deps, meta.projectId, schedule.repoId),
+        workspaceId: workspace?.id,
+        workspaceDir: workspace?.execution_kind === "local" ? (workspace.root_path ?? undefined) : undefined,
         source: "schedule",
         metadata: scheduleMetadata(schedule, ctx),
       });

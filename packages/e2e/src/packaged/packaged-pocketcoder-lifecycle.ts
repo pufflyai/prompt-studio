@@ -59,7 +59,7 @@ export const verifyPocketCoderLifecycle = async (
     expect(workspaces.find((workspace: { id: string }) => workspace.id === workspaceId)).toMatchObject({
       execution_kind: "remote",
       provider_state: "ready",
-      worktree_path: null,
+      root_path: null,
     });
     await call(`/sessions/${sessionId}/follow-up`, "POST", { prompt: "Second turn" });
     const second = await waitForConversation(sessionId, 4);

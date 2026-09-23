@@ -82,7 +82,7 @@ describe("ticket files tree workspace metadata", () => {
                 anchors_json: [
                   { type: "ticket", id: ticket.id, label: ticket.shorthand, shorthand: ticket.shorthand, metadata: {} },
                 ],
-                worktree_path: "/tmp/ws-1",
+                root_path: "/tmp/ws-1",
               },
             ],
           },

@@ -37,6 +37,7 @@ const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
       workspaceShorthand: WORKSPACE_ID,
       workspaceType: state === "default" || state === "remote" ? "current_branch" : "worktree",
       workspaceView: state === "diffs" ? "diffs" : "files",
+      workspaceSupportsDiff: state !== "default" && state !== "remote",
       ...(state === "remote"
         ? {
             workspaceExecutionKind: "remote",

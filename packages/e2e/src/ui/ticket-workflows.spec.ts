@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { type APIRequestContext, test as base, expect, type Page } from "@playwright/test";
+import { folderProjectInput } from "../helpers/folder-project";
 import { createPlannerTicket, executePlannerCommand } from "../helpers/planner-api";
 import { uiOrigin as apiBase } from "../ui-server";
 
@@ -25,14 +26,11 @@ const createFixture = async (request: APIRequestContext, page: Page) => {
     "-m",
     "init",
   ]);
-  const created = await request.post(`${apiBase}/v1/projects`, { data: { name: "PS-326 ticket workflows" } });
+  const created = await request.post(`${apiBase}/v1/projects`, {
+    data: folderProjectInput({ name: "PS-326 ticket workflows" }, repo),
+  });
   expect(created.ok()).toBe(true);
   const project = (await created.json()) as { id: string };
-  const registered = await request.post(`${apiBase}/v1/projects/${project.id}/repos`, {
-    data: { name: "repo", path: repo },
-  });
-  expect(registered.ok()).toBe(true);
-  const repoRecord = (await registered.json()) as { id: string };
   const enabled = await request.post(
     `${apiBase}/v1/projects/${project.id}/extensions/installed/workbench-fixture/enable`,
     {
@@ -62,7 +60,7 @@ const createFixture = async (request: APIRequestContext, page: Page) => {
     localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
     localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
   }, project.id);
-  return { project, repo, repoRecord, ticket };
+  return { project, repo, ticket };
 };
 
 const test = base.extend<{ fixture: Awaited<ReturnType<typeof createFixture>> }>({
@@ -115,7 +113,7 @@ for (const action of ["Archive workspace", "Delete workspace"]) {
       apiBase,
       fixture.project.id,
       "create-workspace",
-      { ticket: fixture.ticket.id, repo: { repoId: fixture.repoRecord.id } },
+      { ticket: fixture.ticket.id },
     );
     await openTicket(page, fixture.project.id);
     const workspaceRow = page

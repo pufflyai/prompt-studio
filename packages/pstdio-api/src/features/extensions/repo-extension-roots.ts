@@ -7,7 +7,7 @@ export type LinkedRepoExtensionRoot = {
 
 type ListLinkedRepoExtensionRootsInput = {
   projectService: { list: () => Promise<Array<{ id: string }>> };
-  repoService: { listByProject: (projectId: string) => Promise<Array<{ path: string }>> };
+  workspaceService: { getDefault(projectId: string): Promise<{ root_path: string | null } | null> };
 };
 
 const repoExtensionsRoot = (repoPath: string) => join(repoPath, ".pstdio", "extensions");
@@ -18,10 +18,11 @@ export const listLinkedRepoExtensionRoots = async (input: ListLinkedRepoExtensio
   const roots = new Map<string, LinkedRepoExtensionRoot>();
 
   for (const project of await input.projectService.list()) {
-    for (const repo of await input.repoService.listByProject(project.id)) {
-      const rootPath = repoExtensionsRoot(repo.path);
+    const workspace = await input.workspaceService.getDefault(project.id);
+    if (workspace?.root_path) {
+      const rootPath = repoExtensionsRoot(workspace.root_path);
       const root = roots.get(rootPath) ?? { rootPath, links: [] };
-      root.links.push({ projectId: project.id, repoPath: repo.path });
+      root.links.push({ projectId: project.id, repoPath: workspace.root_path });
       roots.set(rootPath, root);
     }
   }

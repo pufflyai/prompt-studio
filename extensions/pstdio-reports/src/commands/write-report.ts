@@ -25,7 +25,7 @@ const resolveTemplateBody = async (ctx: CommandContext, name: string | undefined
 
 const resolveAvailableReport = async (
   ctx: CommandContext<Record<string, unknown>>,
-  repoFiles: NonNullable<CommandContext["repoFiles"]>,
+  projectFiles: NonNullable<CommandContext["projectFiles"]>,
   workspaceShorthand: string,
   directoryName: string,
 ) => {
@@ -38,7 +38,7 @@ const resolveAvailableReport = async (
     const name = reportInstanceName(directoryName, sequence);
     const path = reportMarkdownPath(directoryName, sequence);
     const nameExists = reports.some((report) => report.name === name);
-    if (!nameExists && !(await repoFiles.exists(path))) {
+    if (!nameExists && !(await projectFiles.exists(path))) {
       return { name, path, filesPath: reportFilesDir(directoryName, sequence) };
     }
     sequence += 1;
@@ -64,12 +64,17 @@ export const writeReportCommand = defineCommand({
     source: params.text(),
   },
   async run(ctx, commandParams) {
-    const repoFiles = requireRepoFiles(ctx.repoFiles);
+    const projectFiles = requireRepoFiles(ctx.projectFiles);
     const kind = commandParams.kind ?? "report";
     const directoryName = resolveReportName(commandParams.name, kind);
     const templateBody = await resolveTemplateBody(ctx, commandParams.template);
     const { workspace, workspaceShorthand } = await resolveWorkspace(ctx, commandParams.workspace);
-    const { name, path, filesPath } = await resolveAvailableReport(ctx, repoFiles, workspaceShorthand, directoryName);
+    const { name, path, filesPath } = await resolveAvailableReport(
+      ctx,
+      projectFiles,
+      workspaceShorthand,
+      directoryName,
+    );
 
     const now = new Date().toISOString();
     const report = await putReport(ctx.storage, {
@@ -87,7 +92,7 @@ export const writeReportCommand = defineCommand({
       updatedAt: now,
     });
 
-    await repoFiles.writeText(path, reportToMarkdown(report));
+    await projectFiles.writeText(path, reportToMarkdown(report));
     await ctx.events.emit("pstdio-reports.report.created", {
       projectId: ctx.projectId,
       reportId: report.id,

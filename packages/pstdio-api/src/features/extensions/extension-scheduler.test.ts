@@ -95,7 +95,7 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
       },
     ],
   };
-  const repoService = { listByProject: async () => [] };
+  const workspaceService = { getDefault: async () => null };
   const projectService = {
     get: async () => ({ id: "project-1", name: "Project", shorthand: "PS" }),
   };
@@ -110,7 +110,7 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
     extensionRuntimeCatalog: createProjectExtensionRuntimeCatalog({
       extensionService: extensionService as never,
       projectService: projectService as never,
-      repoService: repoService as never,
+      workspaceService: workspaceService as never,
     }),
     extensionService,
     projectService,
@@ -125,9 +125,8 @@ const createDeps = (sourcePath: string, automationPreferences: AutomationPrefere
     },
     activityEventsService: {},
     fileService: {},
-    repoService,
+    workspaceService,
     sessionService: {},
-    workspaceService: {},
   } as never;
 };
 

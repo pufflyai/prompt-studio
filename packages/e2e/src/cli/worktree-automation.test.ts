@@ -56,9 +56,9 @@ describe("workspace provisioning", () => {
       );
 
       const { workspace, ticketShorthand } = await createWorkspaceInRepo(ctx, repo);
-      expect(workspace.worktree_path).toBeTruthy();
+      expect(workspace.root_path).toBeTruthy();
 
-      const worktreePath = workspace.worktree_path!;
+      const worktreePath = workspace.root_path!;
       expect(await waitForPath(join(worktreePath, ".pstdio", "config.json"))).toBe(true);
       const ticketPath = join(worktreePath, ".pstdio", "tickets", ticketShorthand, "ticket.md");
       expect(await waitForPath(ticketPath)).toBe(true);

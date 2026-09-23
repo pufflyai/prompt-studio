@@ -2,27 +2,30 @@ import type {
   CreateProjectInput,
   ListActivityResponse,
   ListProjectActivityInput,
-  RegisterRepoInput,
-  Repo,
+  UpdateProjectInput,
 } from "pstdio-api-contracts";
-import type { Project } from "../resources";
+import type { Project, Workspace } from "../resources";
 import type { RequestFn } from "./request";
 
 export type ProjectClient = {
   list(): Promise<Project[]>;
   get(projectId: string): Promise<Project>;
   create(input: CreateProjectInput): Promise<Project>;
+  attachInitialWorkspace(projectId: string, input: CreateProjectInput["initial_workspace"]): Promise<Workspace>;
+  retrySetup(projectId: string): Promise<Workspace>;
+  update(projectId: string, input: UpdateProjectInput): Promise<Project>;
   delete(projectId: string): Promise<void>;
   listActivity(projectId: string, input?: ListProjectActivityInput): Promise<ListActivityResponse>;
-  listRepos(projectId: string): Promise<Repo[]>;
-  registerRepo(projectId: string, input: RegisterRepoInput): Promise<Repo>;
-  removeRepo(projectId: string, repoId: string): Promise<void>;
 };
 
 export const createProjectClient = (request: RequestFn): ProjectClient => ({
   list: () => request("/v1/projects"),
   get: (projectId) => request(`/v1/projects/${projectId}`),
   create: (input) => request("/v1/projects", { method: "POST", body: input }),
+  attachInitialWorkspace: (projectId, input) =>
+    request(`/v1/projects/${encodeURIComponent(projectId)}/initial-workspace`, { method: "POST", body: input }),
+  retrySetup: (projectId) => request(`/v1/projects/${projectId}/retry-setup`, { method: "POST" }),
+  update: (projectId, input) => request(`/v1/projects/${projectId}`, { method: "PATCH", body: input }),
   delete: (projectId) => request(`/v1/projects/${projectId}`, { method: "DELETE" }),
   listActivity: (projectId, input = {}) => {
     const params = new URLSearchParams();
@@ -35,7 +38,4 @@ export const createProjectClient = (request: RequestFn): ProjectClient => ({
     const query = params.toString();
     return request(`/v1/projects/${projectId}/activity${query ? `?${query}` : ""}`);
   },
-  listRepos: (projectId) => request(`/v1/projects/${projectId}/repos`),
-  registerRepo: (projectId, input) => request(`/v1/projects/${projectId}/repos`, { method: "POST", body: input }),
-  removeRepo: (projectId, repoId) => request(`/v1/projects/${projectId}/repos/${repoId}`, { method: "DELETE" }),
 });

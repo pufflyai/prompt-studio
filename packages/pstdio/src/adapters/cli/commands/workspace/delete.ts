@@ -1,6 +1,6 @@
 import type { Arguments, Argv } from "yargs";
-import { findGitRoot, readConfig } from "@/features/config/config";
-import { deleteWorkspaceWithWorktree as defaultDeleteWorkspace } from "@/features/workspaces/delete-workspace";
+import { findProjectRoot, readConfig } from "@/features/config/config";
+import { deleteWorkspace as defaultDeleteWorkspace } from "@/features/workspaces/delete-workspace";
 
 export const command = "delete";
 export const describe = "Force-remove a workspace";
@@ -14,14 +14,14 @@ type DeleteArgs = {
 
 type Deps = {
   cwd: () => string;
-  findGitRoot: typeof findGitRoot;
+  findProjectRoot: typeof findProjectRoot;
   readConfig: typeof readConfig;
   deleteWorkspace: typeof defaultDeleteWorkspace;
 };
 
 const defaultDeps: Deps = {
   cwd: () => process.cwd(),
-  findGitRoot,
+  findProjectRoot,
   readConfig,
   deleteWorkspace: defaultDeleteWorkspace,
 };
@@ -29,14 +29,13 @@ const defaultDeps: Deps = {
 export const createHandler =
   (deps: Deps = defaultDeps) =>
   async (argv: Arguments<DeleteArgs>) => {
-    const root = deps.findGitRoot(deps.cwd());
-    if (!root) throw new Error("Not inside a git repository.");
+    const root = deps.findProjectRoot(deps.cwd());
+    if (!root) throw new Error("Not inside a pstdio project.");
 
     const config = deps.readConfig(root);
     if (!config) throw new Error("Not inside a pstdio project. Run 'pstdio projects create' first.");
 
     await deps.deleteWorkspace({
-      repoRoot: root,
       projectId: config.project_id,
       workspaceShorthand: argv.id,
     });
