@@ -123,6 +123,7 @@ export const CodeEditor = (props: CodeEditorProps) => {
 
   const options = {
     tabSize: 2,
+    fixedOverflowWidgets: true,
     minimap: {
       enabled: false,
     },

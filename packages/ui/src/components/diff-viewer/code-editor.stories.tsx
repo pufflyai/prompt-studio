@@ -29,6 +29,46 @@ export const Editable: Story = {};
 
 export const ReadOnly: Story = { args: { isEditable: false } };
 
+export const ConstrainedContainer: Story = {
+  args: {
+    defaultCode: 'export const greeting: number = "Hello";\n',
+  },
+  decorators: [
+    (Story) => (
+      <Box width="xs" height="2xs" overflow="hidden" borderWidth="1px" borderColor="border.subtle">
+        <Story />
+      </Box>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    await preloadCodeEditor();
+    const monaco: typeof import("monaco-editor") = await loader.init();
+    const editor = await waitFor(
+      () => {
+        const instance = monaco.editor.getEditors().find((candidate) => canvasElement.contains(candidate.getDomNode()));
+        expect(instance).toBeDefined();
+        expect(monaco.editor.getModelMarkers({ resource: instance!.getModel()!.uri }).length).toBeGreaterThan(0);
+        return instance!;
+      },
+      { timeout: 5_000 },
+    );
+    editor.setPosition({ lineNumber: 1, column: 15 });
+    await editor.getAction("editor.action.showHover")!.run();
+    await waitFor(() => {
+      const hover = canvasElement.querySelector<HTMLElement>(".monaco-hover");
+      expect(hover).toBeVisible();
+      const bounds = hover!.getBoundingClientRect();
+      expect(bounds.right).toBeGreaterThan(editor.getDomNode()!.getBoundingClientRect().right);
+      const document = canvasElement.ownerDocument;
+      for (const x of [bounds.left + 5, bounds.right - 5]) {
+        for (const y of [bounds.top + 5, bounds.bottom - 5]) {
+          expect(hover!.contains(document.elementFromPoint(x, y))).toBe(true);
+        }
+      }
+    });
+  },
+};
+
 export const Tsx: Story = {
   args: {
     fileName: "icon.tsx",

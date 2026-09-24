@@ -4,4 +4,4 @@
 "pstdio": patch
 ---
 
-Fix TSX file previews and open terminal URLs with Ctrl-click or Cmd-click.
+Fix TSX file previews, keep editor popovers visible, and open terminal URLs with Ctrl-click or Cmd-click.
