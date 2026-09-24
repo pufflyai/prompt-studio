@@ -1,6 +1,6 @@
 import { DiffEditor, Editor } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
-import { lazy, Suspense, useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useId, useRef } from "react";
 import type { MonacoThemeData } from "../../theme";
 import { useThemePreference } from "../../utils/theme-preference";
 
@@ -92,6 +92,8 @@ export const configureCodeEditor = (
 
 interface CodeEditorProps {
   language: string;
+  /** File name, including its extension, used to parse the editor model. */
+  fileName?: string;
   defaultCode?: string;
   code?: string;
   isEditable: boolean;
@@ -101,7 +103,21 @@ interface CodeEditorProps {
 }
 
 export const CodeEditor = (props: CodeEditorProps) => {
-  const { defaultCode, code, showLineNumbers, isEditable, language = "javascript", onChange, disableScroll } = props;
+  const {
+    defaultCode,
+    code,
+    showLineNumbers,
+    isEditable,
+    language = "javascript",
+    fileName,
+    onChange,
+    disableScroll,
+  } = props;
+  const editorId = useId();
+  // Preserve the extension for JSX parsing while keeping each editor's model independent.
+  const modelPath = fileName
+    ? `inmemory://editor/${encodeURIComponent(editorId)}/${encodeURIComponent(fileName)}`
+    : undefined;
   const editorTheme = useEditorTheme();
   const applyEditorTheme = useApplyEditorTheme(editorTheme);
 
@@ -134,6 +150,7 @@ export const CodeEditor = (props: CodeEditorProps) => {
         width="100%"
         height="100%"
         language={language}
+        path={modelPath}
         defaultValue={defaultCode}
         value={code}
         theme={EDITOR_THEME_NAME}

@@ -53,6 +53,22 @@ export const Default: Story = {
   ),
 };
 
+export const WebLinks: Story = {
+  render: () => (
+    <TerminalStory
+      bridgeFactory={() =>
+        createScriptedTerminalBridge({
+          initial: [
+            { data: "Ctrl-click or Cmd-click a URL to open it.\r\n" },
+            { data: "https://example.com/terminal?from=preview\r\n" },
+            { data: "http://localhost:5173/\r\n" },
+          ],
+        })
+      }
+    />
+  ),
+};
+
 export const LightTheme: Story = {
   render: () => (
     <TerminalStory
