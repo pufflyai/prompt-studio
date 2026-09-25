@@ -8,9 +8,7 @@
     "preview": "astro preview",
     "astro": "astro",
     "storybook": "storybook dev -p 6007",
-    "build-storybook": "storybook build",
-    "assets:banner": "bun install --cwd remotion --frozen-lockfile && bun run --cwd remotion banner",
-    "assets:icon": "bun install --cwd remotion --frozen-lockfile && bun run --cwd remotion icon"
+    "build-storybook": "storybook build"
   },
   "engines": {
     "bun": ">=1.4.2"

@@ -3,8 +3,7 @@ import type { Meta, StoryObj } from "@storybook/react";
 import { DocColumn } from "./doc-column";
 import { PageNavigation } from "./page-navigation";
 
-// Sample markup only. Real legal text lives in the markdown files, and the
-// verify:legal-documents check rejects copies of it anywhere in code.
+// Sample markup only. Real legal text lives in the markdown files.
 const PRIVACY_HTML = `
 <h1>Sample policy</h1>
 <p><em>Current as of January 1, 2026</em></p>

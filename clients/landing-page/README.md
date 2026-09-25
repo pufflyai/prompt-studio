@@ -17,7 +17,6 @@ The local theme extends the shared theme with the landing illustration colors.
 - `src/services/shapes` owns tool geometry, placement, collisions, dragging, and simulation cleanup.
 - `src/theme/recipes` owns page layouts and demo styles, with colocated Storybook stories.
 - `src/content/legal` holds the legal documents as markdown. See [Legal documents](#legal-documents).
-- `remotion` draws the social banner and the Apple touch icon, and renders them into `public/images`.
 
 The demos and falling tools render in code. They use no screenshot or image assets.
 
@@ -126,39 +125,15 @@ pages hand the HTML to the workbench as props, and `DocColumn` shows it, so the
 served HTML holds every heading, paragraph, list, and link, and no markdown parser
 ships to the browser. The `landingDoc` recipe styles the plain tags.
 
-`bun run verify:legal-documents` runs in `bun run validate` after the build and
-fails when:
-
-- a line of a legal document holds more than one sentence,
-- a line of a legal document is missing from its built page, or
-- a long line of legal text is copied into code under `src`.
-
 The build itself fails when a legal page in `DOCUMENT_VIEWS` has no markdown file, so
 a renamed or deleted document cannot ship as an empty page.
 
 ## Brand assets
 
-`remotion` holds the source for the images that other sites and apps show:
-
-- `Banner` is the 1200x630 image used for `og:image` and `twitter:image`.
-- `AppleTouchIcon` is the 180x180 home screen icon.
-
-Both draw with the same Chakra theme as the site, so tokens and fonts match the
-product. Render them after changing the source, or after the hero copy changes:
-
-```sh
-bun run --cwd clients/landing-page assets:banner
-bun run --cwd clients/landing-page assets:icon
-```
-
-`remotion` is its own package, outside the workspace, with its own lockfile. Remotion
-pins exact versions of shared libraries such as zod, and a second copy of zod in the
-workspace breaks the API's typecheck. Keeping the tool separate keeps its
-dependencies out of the app. The scripts above install it on first use.
-
-Rendering starts a headless browser, which Remotion downloads on first use. The
-render declares its own font faces, because Remotion's bundler drops the font
-imports that `@pstdio/ui/theme` ships.
+The social banner is the original 1546x423 image in `public/images/banner.png`.
+The 180x180 Apple touch icon uses the full mark from the desktop
+`clients/desktop/assets/icon.svg`, on an opaque white background.
+The operating system supplies the home screen icon's rounded corners.
 
 ## Desktop downloads
 
