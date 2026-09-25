@@ -33,30 +33,26 @@ void app.whenReady().then(async () => {
     return readLifecycleAsset(request.url, join(import.meta.dirname, "renderer"));
   });
   controller.window.webContents.once("dom-ready", () => {
-    console.log(JSON.stringify({ documentReadyVisible: controller.window.isVisible() }));
+    process.send!({ documentReadyVisible: controller.window.isVisible() });
   });
   process.stdin.once("data", async () => {
     await controller.showLifecycle();
-    console.log(JSON.stringify({ lifecycleVisible: controller.window.isVisible() }));
+    process.send!({ lifecycleVisible: controller.window.isVisible() });
     await workbenchReady;
     app.focus({ steal: true });
     controller.window.focus();
-    console.log(
-      JSON.stringify({
-        visible: controller.window.isVisible(),
-        workbenchVisible: controller.window.contentView.children.some((view) => view.getVisible()),
-      }),
-    );
-    process.stdin.on("data", async () => {
-      const workbenchFocused = await controller.webContents()[1]?.executeJavaScript("document.hasFocus()");
-      console.log(JSON.stringify({ workbenchFocused }));
-    });
-  });
-  console.log(
-    JSON.stringify({
+    process.send!({
       visible: controller.window.isVisible(),
       workbenchVisible: controller.window.contentView.children.some((view) => view.getVisible()),
-      workbenchCreated: controller.window.contentView.children.length > 0,
-    }),
-  );
+    });
+    process.stdin.on("data", async () => {
+      const workbenchFocused = await controller.webContents()[1]?.executeJavaScript("document.hasFocus()");
+      process.send!({ workbenchFocused });
+    });
+  });
+  process.send!({
+    visible: controller.window.isVisible(),
+    workbenchVisible: controller.window.contentView.children.some((view) => view.getVisible()),
+    workbenchCreated: controller.window.contentView.children.length > 0,
+  });
 });

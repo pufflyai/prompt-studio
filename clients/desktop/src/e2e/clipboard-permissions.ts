@@ -3,6 +3,7 @@ import { type ElectronApplication, expect, type Page, test } from "@playwright/t
 export const expectClipboardPermissions = async (electronApp: ElectronApplication, window: Page) => {
   await test.step("copies message text through the browser clipboard API", async () => {
     const message = "The change is complete.\n\nRun `bun run validate`.";
+    const nativeMessage = process.platform === "win32" ? message.replaceAll("\n", "\r\n") : message;
     await window.evaluate((text) => {
       const button = document.createElement("button");
       button.textContent = "Copy message";
@@ -18,7 +19,7 @@ export const expectClipboardPermissions = async (electronApp: ElectronApplicatio
     }, message);
     await window.getByRole("button", { name: "Copy message", exact: true }).click();
     await expect(window.getByRole("button", { name: "Copied", exact: true })).toBeVisible();
-    expect(await electronApp.evaluate(({ clipboard }) => clipboard.readText())).toBe(message);
+    expect(await electronApp.evaluate(({ clipboard }) => clipboard.readText())).toBe(nativeMessage);
     expect(
       await window.evaluate(() =>
         navigator.clipboard.readText().then(
@@ -44,6 +45,6 @@ export const expectClipboardPermissions = async (electronApp: ElectronApplicatio
     });
     await embeddedCopy.click();
     await expect(embeddedCopy).toHaveText("denied");
-    expect(await electronApp.evaluate(({ clipboard }) => clipboard.readText())).toBe(message);
+    expect(await electronApp.evaluate(({ clipboard }) => clipboard.readText())).toBe(nativeMessage);
   });
 };

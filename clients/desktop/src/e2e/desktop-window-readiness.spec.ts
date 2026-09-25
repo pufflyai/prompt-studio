@@ -1,11 +1,10 @@
 import { spawn, spawnSync } from "node:child_process";
-import { once } from "node:events";
+import { on, once } from "node:events";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createInterface } from "node:readline";
 import { expect, test } from "@playwright/test";
 
 const require = createRequire(import.meta.url);
@@ -54,24 +53,24 @@ test("loads the workbench after the startup window shows while lifecycle resourc
     delete env.ELECTRON_RUN_AS_NODE;
     const application = spawn(require("electron") as string, [entry, `--user-data-dir=${join(root, "profile")}`], {
       env: { ...env, PSTDIO_WINDOW_TEST_ORIGIN: `http://127.0.0.1:${address.port}` },
-      stdio: ["pipe", "pipe", "inherit"],
+      stdio: ["pipe", "inherit", "inherit", "ipc"],
     });
-    const lines = createInterface({ input: application.stdout! })[Symbol.asyncIterator]();
+    const messages = on(application, "message");
     try {
-      const beforeStartup = JSON.parse((await lines.next()).value!);
+      const [beforeStartup] = (await messages.next()).value!;
       expect(beforeStartup).toEqual({ visible: false, workbenchVisible: false, workbenchCreated: false });
       application.stdin!.write("show\n");
-      const documentReady = JSON.parse((await lines.next()).value!);
+      const [documentReady] = (await messages.next()).value!;
       expect(documentReady).toEqual({ documentReadyVisible: true });
       await expect.poll(() => workbenchRequests).toBe(1);
-      const lifecycleShown = JSON.parse((await lines.next()).value!);
+      const [lifecycleShown] = (await messages.next()).value!;
       expect(lifecycleShown).toEqual({ lifecycleVisible: true });
-      const afterStartup = JSON.parse((await lines.next()).value!);
+      const [afterStartup] = (await messages.next()).value!;
       expect(afterStartup).toEqual({ visible: true, workbenchVisible: true });
       await expect
         .poll(async () => {
           application.stdin!.write("focus\n");
-          return JSON.parse((await lines.next()).value!);
+          return (await messages.next()).value![0];
         })
         .toEqual({ workbenchFocused: true });
     } finally {
