@@ -34,6 +34,8 @@ Use the commit and artifact named in the change request or PR. GitHub Actions re
 
 Release candidates and published releases are different. An unsigned Windows development package can check application behavior, but it cannot prove trusted installation or the signed update path. Do not record it as a passed release check.
 
+For a Windows development artifact, extract the entire ZIP to one directory, keep its `resources` directory beside `Prompt Studio.exe`, and run that executable. Follow the application checks below and record installation, signature, and update checks as pending.
+
 For a published release, download the Intel `darwin-x64` DMG or the Windows `win32-x64-Setup.exe` from the same version. Compare its SHA-256 with that release's checksum file.
 
 ```powershell

@@ -47,6 +47,8 @@ test("opens and closes project tabs while preserving pages and terminals", async
     await expect(app.page.getByLabel("Main").getByText("No active conversations", { exact: true })).toBeVisible();
     await app.page.getByRole("option", { name: "Lab", exact: true }).click();
     await expect(app.page).toHaveURL(/\/extensions\/[^/]+\/lab$/);
+    const lab = app.page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" });
+    await expect(lab).toBeVisible();
     const firstPageUrl = app.page.url();
 
     await openPackagedProject(app.page, second);
@@ -59,6 +61,7 @@ test("opens and closes project tabs while preserving pages and terminals", async
     await expect(app.page).toHaveURL(firstPageUrl);
     await openPackagedProject(app.page, first);
     await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveCount(2);
+    await expect(lab).toBeVisible();
 
     const screenshot = testInfo.outputPath("desktop-project-tabs.png");
     await app.page.screenshot({ path: screenshot });
@@ -75,6 +78,7 @@ test("opens and closes project tabs while preserving pages and terminals", async
     expect((await readRuntimeActivity(app.runtime)).terminals).toEqual([terminal]);
     await openPackagedProject(app.page, first);
     await expect(app.page).toHaveURL(firstPageUrl);
+    await expect(lab).toBeVisible();
     await expect(app.page.getByRole("tablist", { name: "Project tabs" }).getByRole("tab")).toHaveText([
       second.name,
       first.name,

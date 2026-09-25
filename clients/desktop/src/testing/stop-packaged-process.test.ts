@@ -22,7 +22,16 @@ const child = spawn(process.execPath, ["-e", ${JSON.stringify(parent)}], { detac
 while (!existsSync(${JSON.stringify(pidFile)})) await new Promise((resolve) => setTimeout(resolve, 10));
 await stopPackagedProcess(child);
 for (const pid of JSON.parse(readFileSync(${JSON.stringify(pidFile)}, "utf8"))) {
-  try { process.kill(pid, 0); process.exitCode = 1; console.error("Leaked process", pid); } catch {}
+  // A process group is signalled together, but each descendant exits independently.
+  const deadline = Date.now() + 1000;
+  while (true) {
+    try { process.kill(pid, 0); } catch (error) {
+      if (error.code !== "ESRCH") throw error;
+      break;
+    }
+    if (Date.now() >= deadline) { process.exitCode = 1; console.error("Leaked process", pid); break; }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
 }
 `,
   );
