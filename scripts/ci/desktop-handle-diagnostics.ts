@@ -7,7 +7,7 @@ source = source.replace(
   `  try {
     rmSync(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   } catch (error) {
-    console.error("CLEANUP RUNTIME", process.execPath, process.version, JSON.stringify(runtime));
+    console.error("CLEANUP RUNTIME", process.execPath, process.version, JSON.stringify({ pid: runtime?.pid, ownerType: runtime?.ownerType }));
     try { console.error(inspectHandles("handle64.exe", ["-accepteula", "-nobanner", home], { encoding: "utf8" })); }
     catch (inspection) { console.error(String((inspection as { stdout?: unknown }).stdout)); }
     throw error;
