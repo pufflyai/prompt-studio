@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createTestApp } from "../../../test-utils/create-test-app";
@@ -9,7 +10,7 @@ let root: string;
 let previousDefaults: string | undefined;
 
 beforeAll(async () => {
-  root = realpathSync(mkdtempSync(join(tmpdir(), "register-repo-failure-")));
+  root = await realpath(mkdtempSync(join(tmpdir(), "register-repo-failure-")));
   previousDefaults = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify({ defaultExtensions: [] });
   handle = await createTestApp({ databasePath: ":memory:", storageRoot: join(root, "storage"), buildWebviews: false });

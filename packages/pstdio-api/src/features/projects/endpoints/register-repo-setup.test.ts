@@ -1,5 +1,6 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
@@ -10,7 +11,7 @@ let root: string;
 let previousDefaults: string | undefined;
 
 beforeAll(async () => {
-  root = realpathSync(mkdtempSync(join(tmpdir(), "register-repo-setup-")));
+  root = await realpath(mkdtempSync(join(tmpdir(), "register-repo-setup-")));
   previousDefaults = process.env.PSTDIO_DEFAULT_EXTENSIONS;
   process.env.PSTDIO_DEFAULT_EXTENSIONS = JSON.stringify({ defaultExtensions: [] });
   handle = await createTestApp({ databasePath: ":memory:", storageRoot: join(root, "storage"), buildWebviews: false });
