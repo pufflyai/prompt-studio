@@ -1,7 +1,7 @@
-import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import type { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
 import {
   discoverRuntime,
   observeRuntimeShutdown,
@@ -20,8 +20,8 @@ import {
   waitForDesktopRuntime,
 } from "./runtime-controller";
 import { resolveRuntimeEnvironment } from "./runtime-environment";
+import { spawnRuntimeProcess } from "./runtime-process";
 
-const OUTPUT_LIMIT = 64 * 1024;
 const SIDECAR_TERMINATION_GRACE_MS = 2_000;
 
 export type ManagedRuntime = {
@@ -40,16 +40,13 @@ type RuntimeManagerOptions = {
 
 type RuntimeProcess = {
   kill: (signal?: NodeJS.Signals | number) => boolean;
-  stdout: { on: (event: "data", listener: (chunk: unknown) => void) => unknown };
-  stderr: { on: (event: "data", listener: (chunk: unknown) => void) => unknown };
+  readOutput: () => string;
   once: EventEmitter["once"];
 };
 
 type RuntimeSpawnOptions = {
-  detached: boolean;
   env: NodeJS.ProcessEnv;
-  stdio: ["ignore", "pipe", "pipe"];
-  windowsHide: boolean;
+  outputPath: string;
 };
 
 type RuntimeManagerDeps = {
@@ -75,12 +72,10 @@ const defaultDeps: RuntimeManagerDeps = {
   resolveEnvironment: resolveRuntimeEnvironment,
   requestRuntimeShutdown,
   sleep: (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
-  spawn: (path, args, options) => spawn(path, args, options),
+  spawn: spawnRuntimeProcess,
   verifyExternalRuntime,
   waitForRuntimeExit,
 };
-
-const appendBounded = (current: string, chunk: unknown) => `${current}${String(chunk)}`.slice(-OUTPUT_LIMIT);
 
 const terminateSpawnedRuntime = async (
   child: RuntimeProcess,
@@ -101,7 +96,7 @@ const terminateSpawnedRuntime = async (
 export class DesktopRuntimeManager {
   #eventAbort: AbortController | null = null;
   #intentional = false;
-  #output = "";
+  #readOutput = () => "";
   #runtime: ManagedRuntime | null = null;
   readonly #deps: RuntimeManagerDeps;
   readonly #options: RuntimeManagerOptions;
@@ -128,7 +123,7 @@ export class DesktopRuntimeManager {
 
   diagnosticsDetail() {
     const token = this.#runtime?.descriptor.token;
-    return redactSensitiveText(this.#output, token ? [token] : []);
+    return redactSensitiveText(this.#readOutput(), token ? [token] : []);
   }
 
   async start() {
@@ -164,21 +159,13 @@ export class DesktopRuntimeManager {
     signal.throwIfAborted();
 
     this.#options.onPhase("spawning");
-    this.#output = "";
+    this.#readOutput = () => "";
     const instanceId = this.#deps.createInstanceId();
     const child = this.#deps.spawn(sidecarPath, createSidecarLaunchArguments(instanceId), {
-      // A desktop-owned runtime can be promoted to outlive the desktop process.
-      detached: process.platform === "win32",
       env,
-      stdio: ["ignore", "pipe", "pipe"],
-      windowsHide: true,
+      outputPath: join(dirname(this.#options.descriptorPath), "desktop-runtime.log"),
     });
-    child.stdout.on("data", (chunk) => {
-      this.#output = appendBounded(this.#output, chunk);
-    });
-    child.stderr.on("data", (chunk) => {
-      this.#output = appendBounded(this.#output, chunk);
-    });
+    this.#readOutput = child.readOutput;
 
     let ready = false;
     let markChildTerminated: () => void = () => {};
@@ -188,7 +175,8 @@ export class DesktopRuntimeManager {
     const childExit = new Promise<never>((_resolve, reject) => {
       child.once("exit", (code, signal) => {
         markChildTerminated();
-        const detail = this.#output || `Runtime exited with ${code === null ? `signal ${signal}` : `code ${code}`}`;
+        const detail =
+          child.readOutput() || `Runtime exited with ${code === null ? `signal ${signal}` : `code ${code}`}`;
         if (!ready) reject(new Error(detail));
         // A clean owned-process exit can arrive before its HTTP shutdown event.
         else if (code === 0) this.#handleIntentionalShutdown();
@@ -212,7 +200,7 @@ export class DesktopRuntimeManager {
       return this.#attach(descriptor, false);
     } catch (error) {
       await terminateSpawnedRuntime(child, childTerminated, this.#deps.sleep);
-      const detail = this.#output || (error instanceof Error ? error.message : String(error));
+      const detail = child.readOutput() || (error instanceof Error ? error.message : String(error));
       const failure = classifyRuntimeFailure(detail);
       throw new Error(`${failure.code}: ${failure.message}`);
     }
