@@ -1,4 +1,4 @@
-import { and, count, eq, inArray } from "drizzle-orm";
+import { and, count, eq, inArray, ne } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { type ResourceRef, session_queue_entries, sessions } from "../../db/schemas.pg";
 import { mergeResourceAnchors, removeResourceAnchors } from "../resource-anchors";
@@ -291,7 +291,7 @@ export const createSessionsDBService = (db: DbClient) => {
       const [updated] = await db
         .update(sessions)
         .set({ anchors_json: removeResourceAnchors(sessions.anchors_json, refs), updated_at: new Date().toISOString() })
-        .where(eq(sessions.id, id))
+        .where(and(eq(sessions.id, id), ne(sessions.anchors_json, removeResourceAnchors(sessions.anchors_json, refs))))
         .returning();
       return updated ?? null;
     },

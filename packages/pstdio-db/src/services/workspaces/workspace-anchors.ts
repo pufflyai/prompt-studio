@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import type { DbClient } from "../../db/connection.pglite";
 import { type ResourceRef, workspaces } from "../../db/schemas.pg";
 import { mergeResourceAnchors, removeResourceAnchors } from "../resource-anchors";
@@ -22,7 +22,9 @@ export const createWorkspaceAnchorMutations = (db: DbClient) => ({
         anchors_json: removeResourceAnchors(workspaces.anchors_json, refs),
         updated_at: new Date().toISOString(),
       })
-      .where(eq(workspaces.id, id))
+      .where(
+        and(eq(workspaces.id, id), ne(workspaces.anchors_json, removeResourceAnchors(workspaces.anchors_json, refs))),
+      )
       .returning();
     return updated ?? null;
   },
