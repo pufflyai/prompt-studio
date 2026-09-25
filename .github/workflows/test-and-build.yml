@@ -247,8 +247,8 @@ jobs:
       - name: Install dependencies
         run: node scripts/ci/install-native-dependencies.ts
 
-      - name: Build desktop and dependencies
-        run: bun run build -- --scope @pstdio/desktop --include-dependencies
+      - name: Package Electron with its native sidecar
+        run: bun run --cwd clients/desktop package
 
       - name: Configure the source Electron sandbox
         if: runner.os == 'Linux'
@@ -264,9 +264,6 @@ jobs:
       - name: Test source Electron on macOS and Windows
         if: runner.os != 'Linux'
         run: bun run --cwd clients/desktop test:electron
-
-      - name: Package Electron with its native sidecar
-        run: bun run --cwd clients/desktop package
 
       - name: Configure the packaged Electron sandbox
         if: runner.os == 'Linux'
