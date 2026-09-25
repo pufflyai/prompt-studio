@@ -34,6 +34,8 @@ The CLI finds the nearest ancestor `.pstdio/config.json`, without asking Git for
 
 Folder initialization claims this config before provisioning. Another host's binding is preserved and setup fails with a clear error. Retries accept the same identity. A known obsolete link can be replaced only when it does not belong to a live workspace at that folder.
 
+Host metadata must stay inside the workspace folder. Setup rejects symlinks at `.pstdio`, `config.json`, and its `.gitignore` before writing metadata. Deletion preserves linked metadata. A selected folder alias is still resolved to its canonical folder during onboarding.
+
 Deleting a project or workspace preserves user-selected folders and user files. Providers can remove only the resources they created. Project deletion removes its saved host data and its own matching CLI config binding, so the folder can be opened again. Foreign and malformed config files are preserved.
 
 ## Alpha upgrade

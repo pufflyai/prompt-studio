@@ -1,12 +1,27 @@
-import { mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { lstat, mkdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import type { ExtensionEventDeps } from "../extensions/extension-event-runtime";
 
 type Config = Record<string, unknown> & { project_id: string; workspace_id?: string };
 type ConfigDeps = Pick<ExtensionEventDeps, "workspaceService">;
 const configPath = (dir: string) => join(dir, ".pstdio", "config.json");
 const missing = (error: unknown) => ["ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? "");
+const findSymlink = async (...paths: string[]) => {
+  for (const path of paths) {
+    try {
+      if ((await lstat(path)).isSymbolicLink()) return path;
+    } catch (error) {
+      if (!missing(error)) throw error;
+    }
+  }
+  return null;
+};
+const rejectSymlinks = async (...paths: string[]) => {
+  const path = await findSymlink(...paths);
+  if (path) throw new Error(`Workspace metadata must not use a symlink: ${path}`);
+};
 const readConfig = async (path: string) => {
+  await rejectSymlinks(dirname(path), path);
   let content: string;
   try {
     content = await readFile(path, "utf8");
@@ -61,6 +76,7 @@ export const ensureWorkspaceConfig = async (
   deps: ConfigDeps,
 ) => {
   const dst = configPath(workspaceDir);
+  await rejectSymlinks(dirname(dst), dst, join(workspaceDir, ".pstdio", ".gitignore"));
   const source = workspaceDir === projectDir ? null : await readConfig(configPath(projectDir));
   const template = source?.project_id === projectId ? source : {};
   const identity = { project_id: projectId, workspace_id: workspaceId };
@@ -86,6 +102,7 @@ export const ensureWorkspaceConfig = async (
 
 export const removeWorkspaceConfig = async (workspaceDir: string, projectId: string, workspaceId: string) => {
   const path = configPath(workspaceDir);
+  if (await findSymlink(dirname(path), path)) return;
   const config = await readConfig(path);
   if (config?.project_id !== projectId) return;
   if (config.workspace_id !== undefined && config.workspace_id !== workspaceId) return;

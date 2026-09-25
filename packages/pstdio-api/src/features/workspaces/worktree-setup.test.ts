@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
-import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, realpath, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { getWorktreeDiff, git } from "pstdio-wt";
@@ -78,6 +78,30 @@ test("requires a usable commit before allocating isolation", async () => {
     setupWorkspaceWorktree({ repoPath: repo, workspaceId: "three", workspaceShorthand: "WS-3", base: "HEAD" }),
   ).rejects.toThrow();
   expect(existsSync(join(resolveWorkspacesRoot(), "three"))).toBe(false);
+});
+
+test("rejects a base revision whose project subfolder is a symlink outside the new worktree", async () => {
+  const workspaceId = "escape";
+  const outside = join(resolveWorkspacesRoot(), `${workspaceId}-outside`);
+  await mkdir(outside, { recursive: true });
+  await writeFile(join(outside, "notes.txt"), "Preserve these notes.");
+  await git(repo, ["config", "core.symlinks", "true"]);
+  const folder = join(repo, "docs");
+  await symlink(outside, folder, "dir");
+  await commit();
+  const base = await git(repo, ["rev-parse", "HEAD"]);
+  await rm(folder);
+  await mkdir(folder);
+  await writeFile(join(folder, "notes.txt"), "Project notes.");
+  await commit();
+
+  await expect(
+    setupWorkspaceWorktree({ repoPath: folder, workspaceId, workspaceShorthand: "WS-4", base }),
+  ).rejects.toThrow("outside the new worktree");
+  expect(existsSync(join(resolveWorkspacesRoot(), workspaceId))).toBe(false);
+  expect(await git(repo, ["branch", "--list", "workspace/WS-4-escape"])).toBe("");
+  expect(await readFile(join(outside, "notes.txt"), "utf8")).toBe("Preserve these notes.");
+  expect(existsSync(join(outside, ".pstdio"))).toBe(false);
 });
 
 test("workspaces with the same shorthand have independent Git resources", async () => {

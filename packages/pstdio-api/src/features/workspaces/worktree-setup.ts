@@ -1,5 +1,5 @@
 import { realpath, stat } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { isAbsolute, join, relative, sep } from "node:path";
 import { resolvePstdioWorkspacesPath } from "pstdio-paths";
 import { createWorktree, git, removeWorktreeAndBranch, resolveLatestBase } from "pstdio-wt";
 
@@ -23,14 +23,28 @@ export const setupWorkspaceWorktree = async (input: {
     throw new Error(`Git isolation requires a usable base commit: ${input.base}.`);
   }
   await createWorktree({ repoRoot: sourceRoot, branch, path: worktreePath, base });
-  const rootPath = join(worktreePath, relativePath);
   try {
-    if (!(await stat(rootPath)).isDirectory()) throw new Error("Project folder is not a directory.");
-  } catch {
+    const canonicalWorktreePath = await realpath(worktreePath);
+    const rootPath = await realpath(join(canonicalWorktreePath, relativePath));
+    const resolvedRelativePath = relative(canonicalWorktreePath, rootPath);
+    if (
+      resolvedRelativePath === ".." ||
+      resolvedRelativePath.startsWith(`..${sep}`) ||
+      isAbsolute(resolvedRelativePath)
+    ) {
+      throw new Error(`The project folder resolves outside the new worktree at revision ${input.base}.`);
+    }
+    if (!(await stat(rootPath)).isDirectory()) {
+      throw new Error(`The project folder is not a directory at revision ${input.base}.`);
+    }
+    return { branch, worktreePath: canonicalWorktreePath, rootPath, sourceRoot, relativePath };
+  } catch (error) {
     await removeWorktreeAndBranch({ repoRoot: sourceRoot, path: worktreePath, branch, force: true });
-    throw new Error(`The project folder does not exist at revision ${input.base}.`);
+    if (["ENOENT", "ENOTDIR"].includes((error as NodeJS.ErrnoException).code ?? "")) {
+      throw new Error(`The project folder does not exist at revision ${input.base}.`);
+    }
+    throw error;
   }
-  return { branch, worktreePath, rootPath, sourceRoot, relativePath };
 };
 
 export const hasUsableGitBase = async (path: string) => {
