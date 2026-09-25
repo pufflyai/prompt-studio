@@ -141,7 +141,7 @@ export const landingSlotRecipe = defineSlotRecipe({
       flexShrink: 0,
       px: "xs",
       py: "xs",
-      "& [data-direction=next]": { flexDirection: "row-reverse" },
+      "& [data-direction=next]": { marginInlineStart: "auto", flexDirection: "row-reverse" },
     },
     heroCopy: {
       display: "flex",
