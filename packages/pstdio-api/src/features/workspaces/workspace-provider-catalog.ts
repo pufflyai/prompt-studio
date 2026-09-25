@@ -8,7 +8,8 @@ import { hasUsableGitBase } from "./worktree-setup";
 const discoverGitProvider = async (path: string) => {
   try {
     if (!(await hasUsableGitBase(path))) return null;
-    const [branches, currentBranch] = await Promise.all([listBranches(path), git(path, ["branch", "--show-current"])]);
+    const branches = await listBranches(path);
+    const currentBranch = await git(path, ["branch", "--show-current"]);
     const defaultValue = currentBranch ? (branches.find((branch) => branch.isCurrent)?.name ?? currentBranch) : "HEAD";
     const options = branches
       .filter((branch) => Boolean(currentBranch) || !branch.isCurrent)
