@@ -30,6 +30,7 @@ export const Editable: Story = {};
 export const ReadOnly: Story = { args: { isEditable: false } };
 
 export const ConstrainedContainer: Story = {
+  tags: ["!manifest"],
   args: {
     defaultCode: 'export const greeting: number = "Hello";\n',
   },
@@ -74,21 +75,38 @@ export const Tsx: Story = {
     fileName: "icon.tsx",
     defaultCode: 'declare const React: any;\nexport const Icon = () => <svg width={24}><path d="M0 0" /></svg>;\n',
   },
-  play: async () => {
+  play: async ({ canvasElement }) => {
     await preloadCodeEditor();
     const monaco: typeof import("monaco-editor") = await loader.init();
-    await waitFor(
-      async () => {
-        const model = monaco.editor.getModels().find((candidate) => candidate.getValue().includes("const Icon"));
-        expect(model).toBeDefined();
-        const getWorker = await monaco.typescript.getTypeScriptWorker();
-        const uri = model!.uri.toString();
-        const worker = await getWorker(model!.uri);
-        expect(await worker.getSyntacticDiagnostics(uri)).toEqual([]);
-        expect(await worker.getSemanticDiagnostics(uri)).toEqual([]);
+    const editor = await waitFor(
+      () => {
+        const instance = monaco.editor.getEditors().find((candidate) => canvasElement.contains(candidate.getDomNode()));
+        expect(instance).toBeDefined();
+        return instance!;
       },
       { timeout: 5_000 },
     );
+    const model = editor.getModel()!;
+    const source = model.getValue();
+    const uri = model.uri.toString();
+    const getWorker = await monaco.typescript.getTypeScriptWorker();
+    const worker = await getWorker(model.uri);
+    await waitFor(async () => {
+      expect(await worker.getSyntacticDiagnostics(uri)).toEqual([]);
+      expect(await worker.getSemanticDiagnostics(uri)).toEqual([]);
+    });
+    try {
+      model.setValue(`${source}\nexport const invalid: number = "wrong";`);
+      await waitFor(async () => {
+        const diagnostics = await worker.getSemanticDiagnostics(uri);
+        expect(diagnostics.map((diagnostic) => diagnostic.code)).toContain(2322);
+      });
+    } finally {
+      model.setValue(source);
+    }
+    await waitFor(async () => {
+      expect(await worker.getSemanticDiagnostics(uri)).toEqual([]);
+    });
   },
 };
 

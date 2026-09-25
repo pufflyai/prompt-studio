@@ -203,50 +203,6 @@ const isAlive = (pid: number) => {
   }
 };
 
-test("opens terminal URLs with Ctrl-click and Cmd-click", async ({ page, request, context }) => {
-  const projectResponse = await request.post(`${apiBase}/v1/projects`, {
-    data: { name: "Terminal links" },
-  });
-  expect(projectResponse.ok()).toBe(true);
-  const project = (await projectResponse.json()) as { id: string };
-  const url = "https://example.com/terminal?from=preview";
-  await context.route("https://example.com/**", (route) => route.fulfill({ body: "Terminal link opened" }));
-
-  try {
-    await prepareDashboard(page, project.id);
-    await page.goto(`/projects/${project.id}`);
-    await showSecondaryPanel(page);
-    await page.locator('[data-workbench-panel-header="secondary"]').getByRole("button", { name: "Add panel" }).click();
-    const terminalInput = page.getByRole("textbox", { name: "Terminal input" });
-    await terminalInput.pressSequentially(`printf '\\n${url}\\n'`);
-    await terminalInput.press("Enter");
-    const link = page
-      .locator(".xterm:visible .xterm-rows > div")
-      .filter({ hasText: new RegExp(`^${url.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`) });
-    await expect(link).toBeVisible();
-    const bounds = (await link.boundingBox())!;
-    const position = { x: bounds.x + 30, y: bounds.y + 8 };
-    await page.mouse.move(position.x, position.y);
-    await expect(page.locator(".xterm:visible .xterm-screen")).toHaveClass(/xterm-cursor-pointer/);
-    await page.mouse.click(position.x, position.y);
-    expect(context.pages()).toHaveLength(1);
-
-    for (const modifier of ["Control", "Meta"] as const) {
-      await page.mouse.move(position.x + 5, position.y);
-      await page.keyboard.down(modifier);
-      const opened = context.waitForEvent("page");
-      await page.mouse.click(position.x, position.y);
-      await page.keyboard.up(modifier);
-      const externalPage = await opened;
-      await expect(externalPage).toHaveURL(url);
-      expect(await externalPage.evaluate(() => window.opener)).toBeNull();
-      await externalPage.close();
-    }
-  } finally {
-    await request.delete(`${apiBase}/v1/projects/${project.id}`);
-  }
-});
-
 test("closing a terminal tab leaves no shell process behind", async ({ page, request }) => {
   const projectResponse = await request.post(`${apiBase}/v1/projects`, {
     data: { name: "PS-387 Terminal Cleanup" },

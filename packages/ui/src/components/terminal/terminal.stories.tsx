@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, fireEvent, spyOn, waitFor } from "storybook/test";
 import { createScriptedTerminalBridge, type ScriptedTerminalStep } from "./scripted-bridge";
 import { Terminal } from "./terminal";
 import type { TerminalBridge } from "./types";
@@ -53,6 +54,8 @@ export const Default: Story = {
   ),
 };
 
+const webLinks = ["https://example.com/terminal?from=preview", "http://localhost:5173/"];
+
 export const WebLinks: Story = {
   render: () => (
     <TerminalStory
@@ -60,13 +63,44 @@ export const WebLinks: Story = {
         createScriptedTerminalBridge({
           initial: [
             { data: "Ctrl-click or Cmd-click a URL to open it.\r\n" },
-            { data: "https://example.com/terminal?from=preview\r\n" },
-            { data: "http://localhost:5173/\r\n" },
+            ...webLinks.map((url) => ({ data: `${url}\r\n` })),
           ],
         })
       }
     />
   ),
+  play: async ({ canvasElement }) => {
+    // Keep the browser API boundary local so the story never opens external pages.
+    const open = spyOn(window, "open").mockReturnValue(null);
+    try {
+      for (const url of webLinks) {
+        const row = await waitFor(() => {
+          const element = Array.from(canvasElement.querySelectorAll<HTMLElement>(".xterm-rows > div")).find(
+            (candidate) => candidate.textContent?.trim() === url,
+          );
+          expect(element).toBeVisible();
+          return element!;
+        });
+        const screen = canvasElement.querySelector<HTMLElement>(".xterm-screen")!;
+        const bounds = row.getBoundingClientRect();
+        const position = { clientX: bounds.left + 30, clientY: bounds.top + bounds.height / 2 };
+        await fireEvent.mouseMove(screen, position);
+        await waitFor(() => expect(screen).toHaveClass("xterm-cursor-pointer"));
+        open.mockClear();
+        await fireEvent.mouseDown(screen, { ...position, button: 0 });
+        await fireEvent.mouseUp(screen, { ...position, button: 0 });
+        expect(open).not.toHaveBeenCalled();
+        for (const modifier of [{ ctrlKey: true }, { metaKey: true }]) {
+          await fireEvent.mouseDown(screen, { ...position, ...modifier, button: 0 });
+          await fireEvent.mouseUp(screen, { ...position, ...modifier, button: 0 });
+          expect(open).toHaveBeenLastCalledWith(url, "_blank", "noopener,noreferrer");
+        }
+        expect(open).toHaveBeenCalledTimes(2);
+      }
+    } finally {
+      open.mockRestore();
+    }
+  },
 };
 
 export const LightTheme: Story = {
