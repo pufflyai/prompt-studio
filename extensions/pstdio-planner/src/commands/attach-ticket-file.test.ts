@@ -17,6 +17,28 @@ const attachment = {
 };
 
 describe("ticket file attachment commands", () => {
+  for (const operation of ["attach", "detach"] as const) {
+    test(`does not recreate a deleted ticket while an ${operation} is pending`, async () => {
+      const storage = createMemoryStorage();
+      const ticket = await createTicketCommand.run(
+        ...makeCommandArgs({ storage, params: { title: "Ticket", attachments: [attachment] } }),
+      );
+      const pending =
+        operation === "attach"
+          ? attachTicketFileCommand.run(
+              ...makeCommandArgs({ storage, params: { ticketId: ticket.id, ref: attachment } }),
+            )
+          : detachTicketFileCommand.run(
+              ...makeCommandArgs({ storage, params: { ticketId: ticket.id, fileId: attachment.id } }),
+            );
+      const result = Promise.allSettled([pending]);
+      await ticketsCollection(storage).delete(ticket.id);
+
+      expect((await result)[0].status).toBe("rejected");
+      expect(await ticketsCollection(storage).get(ticket.id)).toBeUndefined();
+    });
+  }
+
   test("attaches a blob ref to a ticket", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));

@@ -5,6 +5,7 @@ import {
   params,
   type ResourceAnchor,
   type TemplateParam,
+  workbenchPanels,
 } from "@pstdio/sdk/extensions";
 import { ticketsCollection } from "../data/collections";
 import { findTicket } from "../data/resolve";
@@ -13,6 +14,24 @@ import { ticketResourceHierarchyMetadata } from "../data/ticket-resource-hierarc
 import type { StoredTicket } from "../data/types";
 import { notifyProposalRefined, resolveProposalRefinedNotification } from "../planner-notifications";
 import { ticketMenuSlots } from "../resource-kinds";
+
+const openActionSession = (
+  ctx: Pick<CommandContext, "navigation">,
+  session: { id: string; title?: string; status?: string },
+) => {
+  ctx.navigation.open({
+    kind: "panel",
+    panel: workbenchPanels.projectSession,
+    open: "preview",
+    resource: {
+      type: "session",
+      id: session.id,
+      extensionId: "pstdio",
+      label: session.title,
+      ...(session.status ? { metadata: { status: session.status } } : {}),
+    },
+  });
+};
 
 export const ticketActionParams = {
   ticket: params.text({ label: "Ticket", resolvedFrom: "resource" }),
@@ -204,6 +223,7 @@ export const refineTicketCommand = defineCommand({
       prompt: await renderOwnedTemplate(ctx, "refine-ticket", variables),
     });
 
+    openActionSession(ctx, session);
     return session;
   },
 });
@@ -265,11 +285,13 @@ export const breakIntoSubTicketsCommand = defineCommand({
     const ticketRef = resolveTicket(ctx, commandParams);
     const { anchor, shorthand } = await resolveTicketAnchor(ctx, ticketRef);
 
-    return ctx.sessions.create({
+    const session = await ctx.sessions.create({
       title: `Break into sub-tickets: ${shorthand}`,
       anchors: [anchor],
       ...harnessInput(agent),
       prompt: await renderOwnedTemplate(ctx, "create-sub-tickets", ticketTemplateVars(shorthand, template)),
     });
+    openActionSession(ctx, session);
+    return session;
   },
 });

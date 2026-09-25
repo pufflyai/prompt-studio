@@ -49,7 +49,7 @@ export const openView = defineView({
   body: {
     kind: "webview",
     entry: packageAsset("./open-artifact.tsx", import.meta.url),
-    capabilities: ["commands.execute", "navigation.open"],
+    capabilities: ["commands.execute"],
   },
 });
 export const detail = definePage({

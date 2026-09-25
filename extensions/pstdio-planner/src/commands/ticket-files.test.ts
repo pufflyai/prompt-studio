@@ -131,18 +131,27 @@ describe("ticket files tree commands", () => {
       ...makeCommandArgs({ storage, params: { ticketId: ticket.id, name: "notes.md" } }),
     );
     const openFile = { type: "ticket", id: ticket.id, label: ticket.shorthand, metadata: { documentId: file.id } };
+    const requested: unknown[] = [];
 
     const result = await deleteTicketFileCommand.run(
       ...makeCommandArgs({
         storage,
         params: { ticketId: ticket.id, fileId: file.id },
-        overrides: { resource: openFile },
+        overrides: {
+          resource: openFile,
+          navigation: {
+            open: (target) => {
+              requested.push(target);
+            },
+          },
+        },
       }),
     );
 
     const bodyTarget = ticketDocumentTarget(ticket, "unused");
     delete (bodyTarget.resource.metadata as { documentId?: string }).documentId;
-    expect(result).toEqual(bodyTarget);
+    expect(requested).toEqual([bodyTarget]);
+    expect(result).toEqual({ ticketId: ticket.id, fileId: file.id });
     expect((await ticketsCollection(storage).get(ticket.id))?.files).toEqual([]);
   });
 

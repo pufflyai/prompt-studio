@@ -14,6 +14,7 @@ const createSessionResource = () => ({
 describe("refineTicketCommand", () => {
   test("starts a refinement session for the active ticket resource", async () => {
     const sessions: unknown[] = [];
+    const navigations: unknown[] = [];
 
     await refineTicketCommand.run(
       ...makeCommandArgs({
@@ -21,6 +22,11 @@ describe("refineTicketCommand", () => {
         params: { context: "Tighten the acceptance criteria." },
         overrides: {
           resource: { type: "ticket", id: "PS-304" },
+          navigation: {
+            open: (target) => {
+              navigations.push(target);
+            },
+          },
           sessions: {
             create: async (input: unknown) => {
               sessions.push(input);
@@ -31,6 +37,12 @@ describe("refineTicketCommand", () => {
       }),
     );
 
+    expect(navigations).toEqual([
+      expect.objectContaining({
+        kind: "panel",
+        resource: expect.objectContaining({ type: "session", id: "session-1", extensionId: "pstdio" }),
+      }),
+    ]);
     expect(sessions).toEqual([
       {
         title: "Refine ticket: PS-304",

@@ -169,6 +169,7 @@ export const deleteGlassLabArtifactCommand = defineCommand({
   params: { rowId: params.text({ required: true }) },
   async run(ctx, commandParams) {
     await artifactsCollection(ctx.storage).delete(commandParams.rowId);
+    await ctx.resources.removed({ type: resourceKind, id: commandParams.rowId });
     await ctx.events.emit(labArtifactsChanged, { artifactId: commandParams.rowId });
     return { id: commandParams.rowId };
   },

@@ -27,18 +27,13 @@ const OpenArtifact = (props: { context: ExtensionViewRenderContext<HostProps> })
   useEffect(() => {
     if (!id) return;
     let cancelled = false;
-    void client.commands
-      .open({ url: artifactUrl(projectId, id) })
-      .then(async (target) => {
-        if (!cancelled) await host.call("navigation.open", { target });
-      })
-      .catch((error) => {
-        if (!cancelled) setError(String(error));
-      });
+    void client.commands.open({ url: artifactUrl(projectId, id) }).catch((error) => {
+      if (!cancelled) setError(String(error));
+    });
     return () => {
       cancelled = true;
     };
-  }, [client, host, projectId, id]);
+  }, [client, projectId, id]);
   return (
     <Center height="100dvh" bg="bg" color="fg">
       {error ? <AlertMessage status="error" title={error} /> : <Spinner />}
