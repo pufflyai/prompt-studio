@@ -4,21 +4,23 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-test("terminates packaged processes when the test body times out", async () => {
+test("terminates packaged process trees when the test body times out", async () => {
   const root = mkdtempSync(join(tmpdir(), "pstdio-fixture-timeout-"));
   const pidFile = join(root, "child.pid");
-  let childPid: number | undefined;
+  let childPids: number[] = [];
   const fixture = fileURLToPath(new URL("./packaged-fixture.ts", import.meta.url));
   const playwright = fileURLToPath(import.meta.resolve("@playwright/test/cli"));
   writeFileSync(join(root, "playwright.config.ts"), 'export default { timeout: 1000, workers: 1, reporter: "line" };');
   writeFileSync(
     join(root, "timeout.spec.ts"),
     `
-import { writeFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { test, spawnPackagedProcess } from ${JSON.stringify(fixture)};
 test("holds a packaged process past the test deadline", async () => {
-  const child = spawnPackagedProcess(${JSON.stringify(process.execPath)}, ["-e", "setInterval(() => {}, 1000)"], { stdio: "pipe" });
-  writeFileSync(${JSON.stringify(pidFile)}, String(child.pid));
+  const descendant = ${JSON.stringify(`import { writeFileSync } from "node:fs"; writeFileSync(${JSON.stringify(pidFile)}, JSON.stringify([process.ppid, process.pid])); setInterval(() => {}, 1000);`)};
+  const parent = "import { spawn } from 'node:child_process'; spawn(process.execPath, ['-e', " + JSON.stringify(descendant) + "], { stdio: 'ignore' }); setInterval(() => {}, 1000);";
+  spawnPackagedProcess(${JSON.stringify(process.execPath)}, ["-e", parent], { stdio: "pipe" });
+  while (!existsSync(${JSON.stringify(pidFile)})) await new Promise((resolve) => setTimeout(resolve, 10));
   // Expire only after the child exists; waiting a full second adds no coverage.
   test.setTimeout(1);
   await new Promise(() => {});
@@ -39,12 +41,14 @@ test("holds a packaged process past the test deadline", async () => {
     expect(`${stdout}\n${stderr}`).toContain("Test timeout of 1ms exceeded");
     expect(code).toBe(1);
     expect(existsSync(pidFile)).toBe(true);
-    childPid = Number(readFileSync(pidFile, "utf8"));
-    expect(() => process.kill(childPid!, 0)).toThrow();
+    childPids = JSON.parse(readFileSync(pidFile, "utf8"));
+    expect(childPids).toHaveLength(2);
+    for (const pid of childPids) expect(() => process.kill(pid, 0)).toThrow();
   } finally {
-    if (childPid) {
+    if (childPids.length === 0 && existsSync(pidFile)) childPids = JSON.parse(readFileSync(pidFile, "utf8"));
+    for (const pid of childPids) {
       try {
-        process.kill(childPid, "SIGKILL");
+        process.kill(pid, "SIGKILL");
       } catch {}
     }
     rmSync(root, { recursive: true, force: true });
