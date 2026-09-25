@@ -175651,132 +175651,437 @@
             {
               "type": "frame",
               "id": "C05i76",
-              "name": "Git worktree",
+              "name": "Create workspace · Git worktree",
               "width": 584,
-              "height": 300,
+              "height": 320,
               "fill": "$ds-bg",
               "cornerRadius": "$overlay-radius",
               "stroke": "$ds-border",
               "strokeWidth": 1,
               "layout": "vertical",
-              "gap": 16,
-              "padding": 16,
               "children": [
                 {
-                  "type": "text",
-                  "id": "V3uRG",
-                  "name": "Provider title",
-                  "fill": "$ds-fg",
-                  "content": "Git worktree",
-                  "fontFamily": "$font-heading",
-                  "fontSize": 15,
-                  "fontWeight": "600"
-                },
-                {
-                  "type": "text",
-                  "id": "B99TbM",
-                  "name": "Provider description",
-                  "fill": "$ds-fg-subtle",
-                  "content": "Git review and merge cover the entire repository.",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "id": "E6hca",
-                  "type": "ref",
-                  "ref": "nbn0J",
-                  "name": "Provider parameter",
+                  "type": "frame",
+                  "id": "f8e15",
+                  "name": "Header",
                   "width": "fill_container",
-                  "descendants": {
-                    "hcIyD": {
-                      "content": "Base revision: HEAD"
+                  "height": 52,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "Tpfoi",
+                      "name": "Title group",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "Q9GBNh",
+                          "name": "Title",
+                          "fill": "$ds-fg",
+                          "content": "Create workspace",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "BGoSz",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Close",
+                      "width": 28,
+                      "height": 28,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "x",
+                          "width": 14,
+                          "height": 14
+                        }
+                      }
                     }
-                  }
+                  ]
                 },
                 {
-                  "id": "JX68C",
-                  "type": "ref",
-                  "ref": "c24zV7",
-                  "name": "Create workspace",
-                  "theme": {
-                    "btn": "primary",
-                    "size": "sm"
-                  },
-                  "descendants": {
-                    "DsEVd": {
-                      "enabled": false
+                  "type": "frame",
+                  "id": "ue65v",
+                  "name": "Body",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "yd2Vd",
+                      "name": "Workspace type",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "hx0JV",
+                          "name": "Label",
+                          "fill": "$ds-fg",
+                          "content": "Workspace type",
+                          "fontFamily": "$font-body",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "H1RUU",
+                          "type": "ref",
+                          "ref": "clw66",
+                          "name": "Workspace type selector",
+                          "descendants": {
+                            "xr1ec": {
+                              "enabled": false
+                            },
+                            "sefGB": {
+                              "content": "Git worktree"
+                            }
+                          }
+                        }
+                      ]
                     },
-                    "Hf4GT": {
-                      "content": "Create workspace"
+                    {
+                      "type": "text",
+                      "id": "B99TbM",
+                      "name": "Provider description",
+                      "fill": "$ds-fg-subtle",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "Git review and merge cover the entire repository.",
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "frame",
+                      "id": "rvpdo",
+                      "name": "Base branch",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "eK0u0",
+                          "name": "Label",
+                          "fill": "$ds-fg",
+                          "content": "Base branch",
+                          "fontFamily": "$font-body",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "c9Jvpu",
+                          "type": "ref",
+                          "ref": "clw66",
+                          "name": "Base branch selector",
+                          "descendants": {
+                            "sefGB": {
+                              "content": "main"
+                            }
+                          }
+                        }
+                      ]
                     }
-                  }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "DIzsj",
+                  "name": "Footer",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "tNkBJ",
+                      "name": "Actions",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "duhhx",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Cancel",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false
+                            },
+                            "Hf4GT": {
+                              "content": "Cancel"
+                            }
+                          }
+                        },
+                        {
+                          "id": "lGLk1",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Create ticket",
+                          "theme": {
+                            "btn": "primary",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false
+                            },
+                            "Hf4GT": {
+                              "content": "Create workspace"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             },
             {
               "type": "frame",
               "id": "Kg0ti",
-              "name": "Remote workspace",
+              "name": "Create workspace · Remote environment",
               "width": 584,
-              "height": 300,
+              "height": 320,
               "fill": "$ds-bg",
               "cornerRadius": "$overlay-radius",
               "stroke": "$ds-border",
               "strokeWidth": 1,
               "layout": "vertical",
-              "gap": 16,
-              "padding": 16,
               "children": [
                 {
-                  "type": "text",
-                  "id": "U21JVI",
-                  "name": "Provider title",
-                  "fill": "$ds-fg",
-                  "content": "Remote workspace",
-                  "fontFamily": "$font-heading",
-                  "fontSize": 15,
-                  "fontWeight": "600"
-                },
-                {
-                  "type": "text",
-                  "id": "ksKyh",
-                  "name": "Provider description",
-                  "fill": "$ds-fg-subtle",
-                  "content": "The provider supplies its files. Local files are not uploaded.",
-                  "fontFamily": "$font-body",
-                  "fontSize": 12,
-                  "fontWeight": "normal"
-                },
-                {
-                  "id": "TP7Di",
-                  "type": "ref",
-                  "ref": "nbn0J",
-                  "name": "Provider parameter",
+                  "type": "frame",
+                  "id": "ivc69",
+                  "name": "Header",
                   "width": "fill_container",
-                  "descendants": {
-                    "hcIyD": {
-                      "content": "Environment: research"
+                  "height": 52,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "bottom": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "space_between",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "g8TQQs",
+                      "name": "Title group",
+                      "layout": "vertical",
+                      "gap": 2,
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "pD2ci",
+                          "name": "Title",
+                          "fill": "$ds-fg",
+                          "content": "Create workspace",
+                          "fontFamily": "$font-heading",
+                          "fontSize": 15,
+                          "fontWeight": "600"
+                        }
+                      ]
+                    },
+                    {
+                      "id": "acpyW",
+                      "type": "ref",
+                      "ref": "nvvgg",
+                      "name": "Close",
+                      "width": 28,
+                      "height": 28,
+                      "theme": {
+                        "btn": "ghost",
+                        "size": "xs"
+                      },
+                      "descendants": {
+                        "k7mgm": {
+                          "icon": "x",
+                          "width": 14,
+                          "height": 14
+                        }
+                      }
                     }
-                  }
+                  ]
                 },
                 {
-                  "id": "R5G7xy",
-                  "type": "ref",
-                  "ref": "c24zV7",
-                  "name": "Create workspace",
-                  "theme": {
-                    "btn": "primary",
-                    "size": "sm"
-                  },
-                  "descendants": {
-                    "DsEVd": {
-                      "enabled": false
+                  "type": "frame",
+                  "id": "oVzx1",
+                  "name": "Body",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "k33Vm",
+                      "name": "Workspace type",
+                      "width": "fill_container",
+                      "justifyContent": "space_between",
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "type": "text",
+                          "id": "RrItg",
+                          "name": "Label",
+                          "fill": "$ds-fg",
+                          "content": "Workspace type",
+                          "fontFamily": "$font-body",
+                          "fontSize": 13,
+                          "fontWeight": "normal"
+                        },
+                        {
+                          "id": "SRwbs",
+                          "type": "ref",
+                          "ref": "clw66",
+                          "name": "Workspace type selector",
+                          "descendants": {
+                            "xr1ec": {
+                              "enabled": false
+                            },
+                            "sefGB": {
+                              "content": "Remote environment"
+                            }
+                          }
+                        }
+                      ]
                     },
-                    "Hf4GT": {
-                      "content": "Create workspace"
+                    {
+                      "type": "text",
+                      "id": "ksKyh",
+                      "name": "Provider description",
+                      "fill": "$ds-fg-subtle",
+                      "textGrowth": "fixed-width",
+                      "width": "fill_container",
+                      "content": "The provider supplies its files. Local files are not uploaded.",
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "id": "TP7Di",
+                      "type": "ref",
+                      "ref": "nbn0J",
+                      "name": "Provider parameter",
+                      "width": "fill_container",
+                      "descendants": {
+                        "hcIyD": {
+                          "content": "Environment: research"
+                        }
+                      }
                     }
-                  }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "ksK26",
+                  "name": "Footer",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$ds-border-subtle",
+                  "strokeWidth": {
+                    "top": 1
+                  },
+                  "strokeAlignment": "inner",
+                  "strokeLinejoin": "round",
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "L71AJ",
+                      "name": "Actions",
+                      "gap": 8,
+                      "alignItems": "center",
+                      "children": [
+                        {
+                          "id": "YKOaG",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Cancel",
+                          "theme": {
+                            "btn": "ghost",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false
+                            },
+                            "Hf4GT": {
+                              "content": "Cancel"
+                            }
+                          }
+                        },
+                        {
+                          "id": "TrXMl",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "Create ticket",
+                          "theme": {
+                            "btn": "primary",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "enabled": false
+                            },
+                            "Hf4GT": {
+                              "content": "Create workspace"
+                            }
+                          }
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             }

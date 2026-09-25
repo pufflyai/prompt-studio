@@ -97,7 +97,11 @@ export const createProviderBackedWorkspace = async (
     updated.worktree_path &&
     provisioningRepoPath
   ) {
-    return input.provision(updated, provisioningRepoPath);
+    const provisioned = await input.provision(updated, provisioningRepoPath);
+    if (provisioned.setup_error) {
+      throw new Error(`Workspace ${provisioned.id} setup failed: ${provisioned.setup_error}`);
+    }
+    return provisioned;
   }
   return updated;
 };

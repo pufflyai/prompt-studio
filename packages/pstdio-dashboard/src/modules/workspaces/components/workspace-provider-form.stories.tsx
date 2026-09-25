@@ -1,3 +1,4 @@
+import { Dialog } from "@chakra-ui/react";
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { WorkspaceProviderForm } from "./workspace-provider-form";
 
@@ -5,7 +6,15 @@ const git = {
   id: "pstdio.worktree",
   label: "Git worktree",
   description: "Git review and merge cover the entire repository, including paths outside the project folder.",
-  params: { base: { type: "text" as const, label: "Base revision", defaultValue: "HEAD", required: true } },
+  params: {
+    base: {
+      type: "select" as const,
+      label: "Base branch",
+      defaultValue: "main",
+      required: true,
+      options: ["main", "develop", "feature/documents"].map((value) => ({ label: value, value })),
+    },
+  },
 };
 const remote = {
   id: "cloud.environment",
@@ -19,13 +28,28 @@ const remote = {
 const meta = {
   title: "Workspaces/Provider selection",
   component: WorkspaceProviderForm,
-  args: { providers: [], onSubmit: async () => {} },
+  args: { providers: [git, remote], onSubmit: async () => {}, onCancel: () => {} },
+  decorators: [
+    (Story) => (
+      <Dialog.Root open>
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
+              <Dialog.Title>Create workspace</Dialog.Title>
+            </Dialog.Header>
+            <Story />
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+    ),
+  ],
 } satisfies Meta<typeof WorkspaceProviderForm>;
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const NoProviders: Story = {};
-export const GitAndRemote: Story = { args: { providers: [git, remote] } };
-export const RemoteParameters: Story = { args: { providers: [remote] } };
+export const GitAndRemote: Story = {};
+export const GitBranches: Story = { args: { providers: [git] } };
+export const RemoteParameters: Story = { args: { providers: [remote, git] } };
+export const NoProviders: Story = { args: { providers: [] } };
 export const TranslationTokens: Story = {
   args: {
     providers: [
@@ -49,7 +73,7 @@ export const NoLocation: Story = { args: { providers: [] } };
 export const Provisioning: Story = { args: { providers: [remote], busy: true } };
 export const ProviderFailure: Story = {
   args: {
-    providers: [remote],
+    providers: [git, remote],
     onSubmit: async () => {
       throw new Error("The environment could not be created. Try again.");
     },

@@ -73,6 +73,10 @@ readiness and file capabilities. Remote workspaces never fall back to local file
 
 `ctx.workspaces.getDefault()` returns the project workspace.
 `ctx.workspaces.listProviders()` returns available providers and their parameters.
+Render these declared parameters after the user selects a workspace type. The Git
+provider supplies a **Base branch** selection; cloud providers supply their own fields.
+Local setup failures reject creation with the saved workspace ID and setup error.
+The workspace remains available for diagnosis and retry.
 Workspace context records expose `root_path` for a local directory and retain
 `worktree_path` during this release bridge.
 
