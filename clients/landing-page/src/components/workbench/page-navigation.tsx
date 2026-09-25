@@ -17,7 +17,7 @@ export const PageNavigation = (props: PageNavigationProps) => {
     { direction: "next", label: "Next", view: nextLandingView(view), icon: ArrowRight },
   ];
   return (
-    <Box as="nav" aria-label="Page navigation" css={panelStyles.heroNavigation}>
+    <Box as="nav" aria-label="Page navigation" css={panelStyles.pageNavigation}>
       {pages.map((page) => {
         const targetView = page.view;
         if (!targetView) return null;
@@ -33,7 +33,7 @@ export const PageNavigation = (props: PageNavigationProps) => {
               }}
             >
               <page.icon />
-              {VIEW_META[targetView].label}
+              {page.label}
             </a>
           </Button>
         );

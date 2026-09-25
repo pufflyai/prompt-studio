@@ -54,9 +54,9 @@ Legal pages keep the workbench shell, with the title bar, sidebar, and status ba
 but show the document as one centered column without the introduction and download
 panel. `DOCUMENT_VIEWS` in `src/content/landing-content.ts` names them.
 
-Ghost navigation buttons sit at the bottom of the introduction and download panel,
-outside its scroll area. Legal documents have no previous or next page links.
-Each button shows its destination page name and an arrow. Start Here
+Previous and Next buttons sit together in a header above the main panels, outside
+their scroll area. Legal documents have no previous or next page links.
+Each button has an arrow and an accessible label naming its destination. Start Here
 only shows the next page. The main pages follow the sidebar order, and Features
 leads back to Start Here.
 These links use browser history without remounting the download panel.
@@ -88,8 +88,7 @@ inspector follow the repository's icon editor.
 The dashboard supports agent selection, pause and resume, and approving a result.
 Each building block keeps the same shape across the page and the falling tools.
 The shapes above each example explain the blocks it uses. Search, notifications, navigation,
-extension management, and themes have a separate Features page. Space separates
-each feature's description and demo from the next feature.
+extension management, and themes have a separate Features page. A single page gap separates feature sections, without extra section padding.
 Use "workbench" for the overall home for tools. A workspace is a separate product concept.
 
 The page layout and preview styles use the local `landingStory` and `landingToolDemo`

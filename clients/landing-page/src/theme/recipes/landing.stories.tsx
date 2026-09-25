@@ -65,113 +65,117 @@ const LandingPanels = (props: { initialPage?: number; desktopAvailable?: boolean
           <Text>Prompt Studio</Text>
         </Box>
         <Box css={styles.body}>
-          <ResizableSplitLayout
-            layout={{ base: "stacked-reverse", lg: "split" }}
-            width="full"
-            height="full"
-            resizableSide="left"
-            defaultSizePx={480}
-            minSizePx={360}
-            contentMinSizePx={300}
-            collapsible={false}
-            resizeLabel="Resize download panel"
-            resizablePanel={
-              <Box css={styles.hero}>
-                <Box flex="1" minHeight="0">
-                  <ScrollArea height="full">
-                    <Box css={styles.heroCopy}>
-                      <HStack>
-                        <Badge css={styles.releaseBadge} size="lg">
-                          Alpha release
-                        </Badge>
-                      </HStack>
-                      <Text as="h1" textStyle="heading/XL">
-                        A workbench for your tools.
-                      </Text>
-                      <Text textStyle="paragraph/XL/regular" color="fg.muted">
-                        Coding agents can build tools to help with your work. Prompt Studio gives them a place to live,
-                        with the shared infrastructure they need to work together: search, CLI commands, editors, custom
-                        UI, and more.
-                      </Text>
-                      <Box css={styles.download}>
-                        <Button variant="primary" size="lg" width="full">
-                          {desktopAvailable ? <Download /> : <SquareTerminal />}
-                          {desktopAvailable ? "Download Prompt Studio" : "Use via CLI"}
-                        </Button>
-                        <Text textStyle="label/S/regular" color="fg.muted">
-                          {desktopAvailable
-                            ? "macOS · Apple silicon · DMG · v0.32.0"
-                            : "The desktop app is not available on this platform yet."}
-                        </Text>
-                        <HStack gap="xs">
-                          <SearchableMenu
-                            showSearch={false}
-                            searchPlaceholder="Find a build"
-                            emptyState="No builds available"
-                            trigger={
-                              <Button variant="ghost" size="sm">
-                                Other platforms
-                                <ChevronDown />
-                              </Button>
-                            }
-                            items={[
-                              { id: "mac", label: "macOS · Apple silicon · DMG", isSelected: desktopAvailable },
-                              { id: "linux", label: "Linux · x64 · DEB" },
-                            ]}
-                          />
-                          {desktopAvailable && (
-                            <Button asChild variant="ghost" size="sm">
-                              <a href="https://github.com/pufflyai/prompt-studio/blob/main/README.md">
-                                <SquareTerminal />
-                                Use via CLI
-                              </a>
+          <Box display="flex" flexDirection="column" flex="1" minHeight="0">
+            <Box as="nav" aria-label="Page navigation" css={styles.pageNavigation}>
+              {pageIndex > 0 && (
+                <Button
+                  variant="ghost"
+                  aria-label={`Previous: ${STORY_PAGES[pageIndex - 1].label}`}
+                  onClick={() => setPageIndex(pageIndex - 1)}
+                >
+                  <ArrowLeft />
+                  Previous
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                data-direction="next"
+                aria-label={`Next: ${STORY_PAGES[nextPageIndex].label}`}
+                onClick={() => setPageIndex(nextPageIndex)}
+              >
+                <ArrowRight />
+                Next
+              </Button>
+            </Box>
+            <Box css={styles.main}>
+              <ResizableSplitLayout
+                layout={{ base: "stacked-reverse", lg: "split" }}
+                width="full"
+                height="full"
+                resizableSide="left"
+                defaultSizePx={480}
+                minSizePx={360}
+                contentMinSizePx={300}
+                collapsible={false}
+                resizeLabel="Resize download panel"
+                resizablePanel={
+                  <Box css={styles.hero}>
+                    <Box flex="1" minHeight="0">
+                      <ScrollArea height="full">
+                        <Box css={styles.heroCopy}>
+                          <HStack>
+                            <Badge css={styles.releaseBadge} size="lg">
+                              Alpha release
+                            </Badge>
+                          </HStack>
+                          <Text as="h1" textStyle="heading/XL">
+                            A workbench for your tools.
+                          </Text>
+                          <Text textStyle="paragraph/XL/regular" color="fg.muted">
+                            Coding agents can build tools to help with your work. Prompt Studio gives them a place to
+                            live, with the shared infrastructure they need to work together: search, CLI commands,
+                            editors, custom UI, and more.
+                          </Text>
+                          <Box css={styles.download}>
+                            <Button variant="primary" size="lg" width="full">
+                              {desktopAvailable ? <Download /> : <SquareTerminal />}
+                              {desktopAvailable ? "Download Prompt Studio" : "Use via CLI"}
                             </Button>
-                          )}
-                        </HStack>
-                      </Box>
+                            <Text textStyle="label/S/regular" color="fg.muted">
+                              {desktopAvailable
+                                ? "macOS · Apple silicon · DMG · v0.32.0"
+                                : "The desktop app is not available on this platform yet."}
+                            </Text>
+                            <HStack gap="xs">
+                              <SearchableMenu
+                                showSearch={false}
+                                searchPlaceholder="Find a build"
+                                emptyState="No builds available"
+                                trigger={
+                                  <Button variant="ghost" size="sm">
+                                    Other platforms
+                                    <ChevronDown />
+                                  </Button>
+                                }
+                                items={[
+                                  { id: "mac", label: "macOS · Apple silicon · DMG", isSelected: desktopAvailable },
+                                  { id: "linux", label: "Linux · x64 · DEB" },
+                                ]}
+                              />
+                              {desktopAvailable && (
+                                <Button asChild variant="ghost" size="sm">
+                                  <a href="https://github.com/pufflyai/prompt-studio/blob/main/README.md">
+                                    <SquareTerminal />
+                                    Use via CLI
+                                  </a>
+                                </Button>
+                              )}
+                            </HStack>
+                          </Box>
+                        </Box>
+                      </ScrollArea>
                     </Box>
-                  </ScrollArea>
-                </Box>
-                <Box as="nav" aria-label="Page navigation" css={styles.heroNavigation}>
-                  {pageIndex > 0 && (
-                    <Button
-                      variant="ghost"
-                      aria-label={`Previous: ${STORY_PAGES[pageIndex - 1].label}`}
-                      onClick={() => setPageIndex(pageIndex - 1)}
-                    >
-                      <ArrowLeft />
-                      {STORY_PAGES[pageIndex - 1].label}
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    data-direction="next"
-                    aria-label={`Next: ${STORY_PAGES[nextPageIndex].label}`}
-                    onClick={() => setPageIndex(nextPageIndex)}
-                  >
-                    <ArrowRight />
-                    {STORY_PAGES[nextPageIndex].label}
-                  </Button>
-                </Box>
-              </Box>
-            }
-            contentPanel={
-              <Box css={styles.tools}>
-                {activeSection && (
-                  <ScrollArea height="full">
-                    <Stack gap="xl" p="xl">
-                      <Text as="h2" textStyle="heading/M">
-                        {activeSection}
-                      </Text>
-                      <Text textStyle="paragraph/M/regular" color="fg.muted">
-                        Build custom tools with your agent and use them together in one app.
-                      </Text>
-                    </Stack>
-                  </ScrollArea>
-                )}
-              </Box>
-            }
-          />
+                  </Box>
+                }
+                contentPanel={
+                  <Box css={styles.tools}>
+                    {activeSection && (
+                      <ScrollArea height="full">
+                        <Stack gap="xl" p="xl">
+                          <Text as="h2" textStyle="heading/M">
+                            {activeSection}
+                          </Text>
+                          <Text textStyle="paragraph/M/regular" color="fg.muted">
+                            Build custom tools with your agent and use them together in one app.
+                          </Text>
+                        </Stack>
+                      </ScrollArea>
+                    )}
+                  </Box>
+                }
+              />
+            </Box>
+          </Box>
         </Box>
         <HStack as="footer" css={styles.status}>
           <Button size="xs" variant="ghost">

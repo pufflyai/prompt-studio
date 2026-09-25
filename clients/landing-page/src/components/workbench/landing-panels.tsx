@@ -8,12 +8,11 @@ import { PageScroll } from "./page-scroll";
 
 interface LandingPanelsProps {
   children: ReactNode;
-  navigation: ReactNode;
   page: LandingPage;
 }
 
 export const LandingPanels = (props: LandingPanelsProps) => {
-  const { children, navigation, page } = props;
+  const { children, page } = props;
   const styles = useLandingStyles();
   return (
     <PageScroll scope="panels" pageKey={page.path}>
@@ -32,7 +31,6 @@ export const LandingPanels = (props: LandingPanelsProps) => {
                 <DownloadPanel headingLevel={page.view === "start" ? "h1" : "h2"} />
               </PageScroll>
             </Box>
-            {navigation}
           </Box>
         }
         contentPanel={children}
