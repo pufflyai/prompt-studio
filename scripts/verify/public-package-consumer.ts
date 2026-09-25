@@ -40,7 +40,7 @@ const consumerDependencies = (packages: { path: string; archive: string }[], rea
   }
   if (react)
     Object.assign(dependencies, {
-      vite: "^7.2.4",
+      vite: "^8.3.1",
       "@types/react": "^19.0.0",
       "@types/react-dom": "^19.0.0",
       "@types/node": "^25.0.0",

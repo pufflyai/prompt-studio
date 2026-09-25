@@ -11,14 +11,14 @@ export default defineConfig({
   build: {
     outDir: "dist-monaco",
     emptyOutDir: true,
-    rollupOptions: {
+    rolldownOptions: {
       input: path.resolve(import.meta.dirname, "src/components/diff-viewer/monaco-bundle.ts"),
       preserveEntrySignatures: "exports-only",
       output: {
         entryFileNames: "monaco.js",
         assetFileNames: (asset) =>
           asset.names.some((name) => name.endsWith(".css")) ? "monaco.css" : "assets/[name]-[hash][extname]",
-        inlineDynamicImports: true,
+        codeSplitting: false,
       },
     },
   },

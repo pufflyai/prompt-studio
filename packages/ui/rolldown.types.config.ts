@@ -1,7 +1,7 @@
 import path from "node:path";
 import { defineConfig } from "rolldown";
 import { dts } from "rolldown-plugin-dts";
-import { entries } from "./build-entries";
+import { entries } from "./build-entries.ts";
 
 // Bundles one .d.ts per entry. `@/` is a source alias, so it must be inlined rather than left as an import.
 export default defineConfig({

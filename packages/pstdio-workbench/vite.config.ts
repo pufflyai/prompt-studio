@@ -1,7 +1,7 @@
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import { entries, isExternal } from "./build-entries";
+import { entries, isExternal } from "./build-entries.ts";
 
 export default defineConfig({
   resolve: {
@@ -15,15 +15,8 @@ export default defineConfig({
       formats: ["es"],
       cssFileName: "style",
     },
-    rollupOptions: {
+    rolldownOptions: {
       external: isExternal,
-      output: {
-        globals: {
-          react: "React",
-          "react-dom": "ReactDOM",
-          "react/jsx-runtime": "jsxRuntime",
-        },
-      },
     },
     sourcemap: true,
     emptyOutDir: true,
