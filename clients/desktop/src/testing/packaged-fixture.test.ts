@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 test("terminates packaged process trees when the test body times out", async () => {
+  console.log("cleanup diagnostic: begin", Date.now());
   const node = Bun.which("node");
   if (!node) throw new Error("The packaged Playwright tests require Node.js");
   const root = mkdtempSync(join(tmpdir(), "pstdio-fixture-timeout-"));
@@ -19,12 +20,14 @@ test("terminates packaged process trees when the test body times out", async () 
 import { existsSync } from "node:fs";
 import { test, spawnPackagedProcess } from ${JSON.stringify(fixture)};
 test("holds a packaged process past the test deadline", async () => {
+  console.log("cleanup diagnostic: inner begin", Date.now());
   const descendant = ${JSON.stringify(`import { writeFileSync } from "node:fs"; writeFileSync(${JSON.stringify(pidFile)}, JSON.stringify([process.ppid, process.pid])); setInterval(() => {}, 1000);`)};
   const parent = "import { spawn } from 'node:child_process'; spawn(process.execPath, ['-e', " + JSON.stringify(descendant) + "], { stdio: 'ignore' }); setInterval(() => {}, 1000);";
-  spawnPackagedProcess(${JSON.stringify(node)}, ["-e", parent], { stdio: "pipe" });
+  spawnPackagedProcess(${JSON.stringify(node)}, ["-e", parent], { stdio: "inherit" });
   while (!existsSync(${JSON.stringify(pidFile)})) await new Promise((resolve) => setTimeout(resolve, 10));
   // Expire only after the child exists; waiting a full second adds no coverage.
   test.setTimeout(1);
+  console.log("cleanup diagnostic: descendants ready", Date.now());
   await new Promise(() => {});
 });
 `,
@@ -35,10 +38,19 @@ test("holds a packaged process past the test deadline", async () => {
       stdout: "pipe",
       stderr: "pipe",
     });
+    const capture = async (stream: ReadableStream<Uint8Array>) => {
+      let output = "";
+      for await (const bytes of stream) {
+        const chunk = new TextDecoder().decode(bytes);
+        output += chunk;
+        console.log("cleanup diagnostic: runner", Date.now(), chunk);
+      }
+      return output;
+    };
     const [code, stdout, stderr] = await Promise.all([
       runner.exited,
-      new Response(runner.stdout).text(),
-      new Response(runner.stderr).text(),
+      capture(runner.stdout),
+      capture(runner.stderr),
     ]);
     expect(`${stdout}\n${stderr}`).toContain("Test timeout of 1ms exceeded");
     expect(code).toBe(1);
