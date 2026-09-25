@@ -17,11 +17,14 @@ const createHome = () => {
 
 beforeAll(async () => {
   existingHome = createHome();
-  const source = await PGlite.create(existingHome);
+  const source = await PGlite.create();
   try {
     await source.exec("CREATE TABLE bootstrap_probe (value text); INSERT INTO bootstrap_probe VALUES ('image');");
     image = await source.dumpDataDir("gzip");
     await source.exec("UPDATE bootstrap_probe SET value = 'user data';");
+    // Materialize a closed disk fixture without bootstrapping PostgreSQL on disk.
+    const existing = await PGlite.create(existingHome, { loadDataDir: await source.dumpDataDir("none") });
+    await existing.close();
   } finally {
     await source.close();
   }

@@ -16,7 +16,12 @@ import {
   workspaceDiffFilesQueryOptions,
   workspaceFilesQueryOptions,
 } from "./data/workspace-queries";
-import { absoluteWorkspaceEntryPath, workspaceDeleteResource, workspaceIdOf } from "./workspace-file-resource";
+import {
+  absoluteWorkspaceEntryPath,
+  workspaceDeleteResource,
+  workspaceFilesUnavailableState,
+  workspaceIdOf,
+} from "./workspace-file-resource";
 
 const OPEN_WORKSPACE_FILE_COMMAND = "dashboard.workspace.open-file";
 const CREATE_WORKSPACE_FILE_ACTION = "workspace-file.create";
@@ -217,6 +222,8 @@ export const loadWorkspaceFileEntries = async (
   const resource = context.resource;
   const workspaceId = workspaceIdOf(resource);
   if (!resource || !workspaceId) return unsupportedSection("Files unavailable", "Workspace details are missing.");
+  const unavailable = workspaceFilesUnavailableState(resource);
+  if (unavailable) return unsupportedSection(unavailable.title, unavailable.description);
   const diffRequest = resolveWorkspaceDiffRequest({ resourceId: resource.id, metadata: resource.metadata });
 
   const [response, diffSummary, revealInFinder] = await Promise.all([

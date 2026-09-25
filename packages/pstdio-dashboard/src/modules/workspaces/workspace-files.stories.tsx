@@ -18,9 +18,27 @@ import {
 import { createWorkspacesModule } from "./module";
 
 const WORKSPACE_ID = "PS-118_A5";
-type WorkspaceStoryState = "diffs" | "files" | "text" | "image" | "default" | "collapsed" | "remote";
+type WorkspaceStoryState =
+  | "diffs"
+  | "files"
+  | "text"
+  | "image"
+  | "default"
+  | "collapsed"
+  | "provider-failed"
+  | "preparing"
+  | "remote"
+  | "failed";
 const selectedPathForStory = (state: WorkspaceStoryState) => {
-  if (state === "text" || state === "default" || state === "collapsed") return "README.md";
+  if (
+    state === "text" ||
+    state === "default" ||
+    state === "collapsed" ||
+    state === "preparing" ||
+    state === "failed" ||
+    state === "provider-failed"
+  )
+    return "README.md";
   if (state === "image") return "assets/logo.png";
   return undefined;
 };
@@ -34,9 +52,18 @@ const workspaceResource = (state: WorkspaceStoryState): ResourceRef => {
     metadata: {
       projectId: "prompt-studio",
       workspaceId: WORKSPACE_ID,
+      workspaceProviderState: state === "preparing" ? "provisioning" : "ready",
       workspaceShorthand: WORKSPACE_ID,
       workspaceType: state === "default" || state === "remote" ? "current_branch" : "worktree",
       workspaceView: state === "diffs" ? "diffs" : "files",
+      ...(state === "provider-failed" ? { workspaceProviderState: "failed", workspaceSupportsDiff: false } : {}),
+      ...(state === "failed"
+        ? {
+            workspaceProviderState: "failed",
+            workspaceError: "The project folder does not exist at revision HEAD.",
+            workspaceSupportsDiff: false,
+          }
+        : {}),
       ...(state === "remote"
         ? {
             workspaceExecutionKind: "remote",
@@ -167,3 +194,9 @@ export const ImagePreview: Story = { args: { state: "image" } };
 export const DefaultWorkspace: Story = { args: { state: "default" } };
 export const CollapsedFilesMenu: Story = { args: { state: "collapsed" } };
 export const RemoteWithoutFileViews: Story = { args: { state: "remote" } };
+
+export const PreparingWorkspace: Story = { args: { state: "preparing" } };
+
+export const FailedWorkspaceSetup: Story = { args: { state: "failed" } };
+
+export const FailedWorkspaceProvider: Story = { args: { state: "provider-failed" } };
