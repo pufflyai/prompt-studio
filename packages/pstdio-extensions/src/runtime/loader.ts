@@ -182,10 +182,11 @@ const createRuntimePackage = (packagePath: string, entryPath: string, packageNam
     mirrorNodeModules(nodeModulesPath, join(runtimePackagePath, "node_modules"));
   }
 
+  const canonicalPackagePath = realpathSync(runtimePackagePath);
   return {
     rootPath,
-    entryPath: join(runtimePackagePath, entryRelativePath),
-    packagePath: runtimePackagePath,
+    entryPath: join(canonicalPackagePath, entryRelativePath),
+    packagePath: canonicalPackagePath,
   };
 };
 
