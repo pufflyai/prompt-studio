@@ -1,9 +1,9 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { basename, join } from "node:path";
+import { basename } from "node:path";
 import type { CreateProjectInput, ExtensionSetupWarning } from "pstdio-api-contracts";
 import { installRepoDefaultExtensions, resolveDefaultExtensionsConfig } from "../extensions/default-extensions";
 import { syncRepoExtensionsForProject } from "../extensions/repo-extensions";
 import { runWorkspaceProvisioning } from "../workspaces/provision-coordinator";
+import { ensureWorkspaceConfig } from "../workspaces/workspace-config";
 import { PROVIDER_READY_TIMEOUT_MS } from "../workspaces/workspace-provider-creation";
 import { reconcileProviderWorkspaces } from "../workspaces/workspace-provider-reconciliation";
 import {
@@ -61,6 +61,7 @@ const initializeLocalProjectWorkspace = async (
 ) => {
   await deps.workspaceService.setInitializing(workspace.id, true);
   try {
+    await ensureWorkspaceConfig(rootPath, rootPath, workspace.id, projectId, deps);
     const setupError = await extensionSetupError(setupExtensions);
     if (setupError) throw new Error(setupError);
     const defaults = await resolveDefaultExtensionsConfig(process.env);
@@ -75,21 +76,6 @@ const initializeLocalProjectWorkspace = async (
       repoPath: rootPath,
     });
     deps.extensionRuntimeCatalog.invalidate({ projectId, reason: "runtime_refresh" });
-    const configDir = join(rootPath, ".pstdio");
-    await mkdir(configDir, { recursive: true });
-    await writeFile(
-      join(configDir, "config.json"),
-      `${JSON.stringify({ project_id: projectId, workspace_id: workspace.id }, null, 2)}\n`,
-    );
-    let ignore = "";
-    try {
-      ignore = await readFile(join(configDir, ".gitignore"), "utf8");
-    } catch {}
-    if (!ignore.split(/\r?\n/).includes("config.json"))
-      await writeFile(
-        join(configDir, ".gitignore"),
-        `${ignore}${ignore && !ignore.endsWith("\n") ? "\n" : ""}config.json\n`,
-      );
     return await runWorkspaceProvisioning(deps, { projectId, workspace, repoPath: rootPath });
   } catch (error) {
     return (

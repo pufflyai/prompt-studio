@@ -32,7 +32,9 @@ Extension `projectFiles` reads the default workspace. `workspaceFiles` reads the
 
 The CLI finds the nearest ancestor `.pstdio/config.json`, without asking Git for a root. Config identifies a project and workspace; it is not the authority for the project's home. Old config links in discarded folders cannot replace the default workspace.
 
-Deleting a project or workspace preserves user-selected folders. Providers can remove only the resources they created. Deleting a project removes its saved host data; it does not remove the chosen folder or its contents.
+Folder initialization claims this config before provisioning. Another host's binding is preserved and setup fails with a clear error. Retries accept the same identity. A known obsolete link can be replaced only when it does not belong to a live workspace at that folder.
+
+Deleting a project or workspace preserves user-selected folders and user files. Providers can remove only the resources they created. Project deletion removes its saved host data and its own matching CLI config binding, so the folder can be opened again. Foreign and malformed config files are preserved.
 
 ## Alpha upgrade
 

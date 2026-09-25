@@ -10,6 +10,7 @@ import { writeExtensionInstallEnvironmentProbe, writeExtensionWithDependency } f
 import { expectPackagedArtifacts } from "./packaged-artifacts-smoke";
 import { registerCoreDefaultExtensionSmokeTests } from "./packaged-core-extensions-smoke";
 import { expectExamplePages } from "./packaged-example-metadata";
+import { expectPackagedFolderOwnership } from "./packaged-folder-ownership";
 import { buildBinary, PACKAGED_BINARY_PATH } from "./packaged-helpers";
 import { expectPackagedNavigation, writeNavigationExtension } from "./packaged-navigation-smoke";
 import { registerRemoteExecutionSmokeTests } from "./packaged-remote-execution-smoke";
@@ -164,6 +165,14 @@ test(
       expect(await projectsRes.json()).toEqual([
         expect.objectContaining({ id: project.id, name: "packaged-serve-project" }),
       ]);
+      await expectPackagedFolderOwnership(restarted.baseUrl, runtimeAuthorization(restarted.descriptor), tempRoot);
+      const deleted = await fetch(`${restarted.baseUrl}/v1/projects/${project.id}`, {
+        method: "DELETE",
+        headers: runtimeAuthorization(restarted.descriptor),
+      });
+      expect(deleted.status).toBe(204);
+      expect(existsSync(repoPath)).toBe(true);
+      expect(existsSync(join(repoPath, ".pstdio/config.json"))).toBe(false);
     } finally {
       if (child) {
         await stopProcess(child);

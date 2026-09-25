@@ -4,6 +4,7 @@ import type { AppRouteHandler } from "../../../types";
 import { cleanupProjectArtifacts } from "../cleanup-project";
 import type { ProjectsRouteDeps } from "../deps";
 import { notFoundResponseSchema } from "../dto";
+import { withFolderCreation } from "../project-folder";
 
 export const removeProjectRoute = createRoute({
   method: "delete",
@@ -38,21 +39,24 @@ export const removeProjectHandler = (deps: ProjectsRouteDeps): AppRouteHandler<t
       return c.json({ error: "Project not found" }, 404);
     }
 
-    await cleanupProjectArtifacts(deps, id, {
-      removeProjectStorage: deps.fileService.removeProjectStorage,
-    });
-    const removeConnectionSecrets = await deps.extensionConnectionService.prepareProjectRemoval(id);
-    await deps.syncService.emitCascadeDeletes("projects", id);
+    const home = await deps.workspaceService.getDefault(id);
+    return withFolderCreation(home?.root_path ?? null, async () => {
+      await cleanupProjectArtifacts(deps, id, {
+        removeProjectStorage: deps.fileService.removeProjectStorage,
+      });
+      const removeConnectionSecrets = await deps.extensionConnectionService.prepareProjectRemoval(id);
+      await deps.syncService.emitCascadeDeletes("projects", id);
 
-    await deps.projectService.hardDelete(id);
-    try {
-      await removeConnectionSecrets();
-    } catch (error) {
-      apiLogger.error(
-        { err: error, event: "extension.project_secret_cleanup.deferred", projectId: id },
-        "Project connection secret cleanup will retry at startup",
-      );
-    }
-    return c.body(null, 204);
+      await deps.projectService.hardDelete(id);
+      try {
+        await removeConnectionSecrets();
+      } catch (error) {
+        apiLogger.error(
+          { err: error, event: "extension.project_secret_cleanup.deferred", projectId: id },
+          "Project connection secret cleanup will retry at startup",
+        );
+      }
+      return c.body(null, 204);
+    });
   };
 };

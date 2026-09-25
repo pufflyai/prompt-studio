@@ -59,35 +59,47 @@ test("opens a created Unicode folder, reuses it, and preserves files after delet
   }
 });
 
-test("keeps failed folder setup open and retries the same project after repair", async ({ page, request }) => {
-  mkdirSync(sharedRoot, { recursive: true });
-  const folder = realpathSync(mkdtempSync(join(sharedRoot, "folder-retry-")));
-  const configPath = join(folder, ".pstdio");
-  writeFileSync(configPath, "User content blocking setup");
-  let projectId: string | undefined;
-  try {
-    await page.goto("/");
-    if (!(await page.getByRole("button", { name: "Create project", exact: true }).isVisible()))
-      await page.getByRole("button", { name: "Switch project", exact: true }).click();
-    await page.getByRole("button", { name: "Create project", exact: true }).click();
-    const picker = page.getByRole("dialog").filter({ hasText: "Open project folder" });
-    await navigate(picker, folder);
-    await picker.getByRole("button", { name: "Open folder", exact: true }).click();
-    await expect(picker.getByRole("alert")).toBeVisible();
-    expect(readFileSync(configPath, "utf8")).toBe("User content blocking setup");
-    const projects = await (await request.get(`${uiOrigin}/v1/projects`)).json();
-    projectId = projects.find((project: { name: string }) => project.name === folder.split("/").at(-1)).id;
-    const workspaceUrl = `${uiOrigin}/v1/workspaces?project_id=${projectId}`;
-    const [failed] = await (await request.get(workspaceUrl)).json();
-    expect(failed.setup_error).toBeTruthy();
-    rmSync(configPath);
-    await picker.getByRole("button", { name: "Open folder", exact: true }).click();
-    await expect(picker).toBeHidden();
-    const [ready] = await (await request.get(workspaceUrl)).json();
-    expect(ready).toMatchObject({ id: failed.id, project_id: projectId, setup_error: null, initializing: false });
-    expect(JSON.parse(readFileSync(join(configPath, "config.json"), "utf8")).project_id).toBe(projectId);
-  } finally {
-    if (projectId) await request.delete(`${uiOrigin}/v1/projects/${projectId}`);
-    rmSync(folder, { recursive: true, force: true });
-  }
-});
+for (const blocker of ["file", "foreign binding"]) {
+  test(`keeps setup blocked by a ${blocker} open and retries the same project after repair`, async ({
+    page,
+    request,
+  }) => {
+    mkdirSync(sharedRoot, { recursive: true });
+    const folder = realpathSync(mkdtempSync(join(sharedRoot, "folder-retry-")));
+    const configPath = join(folder, ".pstdio");
+    let blockedPath = configPath;
+    let content = "User content blocking setup";
+    if (blocker === "foreign binding") {
+      mkdirSync(configPath);
+      blockedPath = join(configPath, "config.json");
+      content = JSON.stringify({ project_id: "another-host-project", workspace_id: "another-host-workspace" });
+    }
+    writeFileSync(blockedPath, content);
+    let projectId: string | undefined;
+    try {
+      await page.goto("/");
+      if (!(await page.getByRole("button", { name: "Create project", exact: true }).isVisible()))
+        await page.getByRole("button", { name: "Switch project", exact: true }).click();
+      await page.getByRole("button", { name: "Create project", exact: true }).click();
+      const picker = page.getByRole("dialog").filter({ hasText: "Open project folder" });
+      await navigate(picker, folder);
+      await picker.getByRole("button", { name: "Open folder", exact: true }).click();
+      await expect(picker.getByRole("alert")).toBeVisible();
+      expect(readFileSync(blockedPath, "utf8")).toBe(content);
+      const projects = await (await request.get(`${uiOrigin}/v1/projects`)).json();
+      projectId = projects.find((project: { name: string }) => project.name === folder.split("/").at(-1)).id;
+      const workspaceUrl = `${uiOrigin}/v1/workspaces?project_id=${projectId}`;
+      const [failed] = await (await request.get(workspaceUrl)).json();
+      expect(failed.setup_error).toBeTruthy();
+      rmSync(configPath, { recursive: true });
+      await picker.getByRole("button", { name: "Open folder", exact: true }).click();
+      await expect(picker).toBeHidden();
+      const [ready] = await (await request.get(workspaceUrl)).json();
+      expect(ready).toMatchObject({ id: failed.id, project_id: projectId, setup_error: null, initializing: false });
+      expect(JSON.parse(readFileSync(join(configPath, "config.json"), "utf8")).project_id).toBe(projectId);
+    } finally {
+      if (projectId) await request.delete(`${uiOrigin}/v1/projects/${projectId}`);
+      rmSync(folder, { recursive: true, force: true });
+    }
+  });
+}

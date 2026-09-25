@@ -45,7 +45,8 @@ const command = ["bun", "-e", "console.log(process.cwd())"];
 test("extension processes use the workspace folder and may choose a directory explicitly", async () => {
   const api = environment().process;
   expect((await api.run({ command })).stdout.trim()).toBe(root);
-  expect((await api.run({ command, cwd: tmpdir() })).stdout.trim()).toBe(await realpath(tmpdir()));
+  const explicitDirectory = (await api.run({ command, cwd: tmpdir() })).stdout.trim();
+  expect(await realpath(explicitDirectory)).toBe(await realpath(tmpdir()));
 });
 
 test.each([

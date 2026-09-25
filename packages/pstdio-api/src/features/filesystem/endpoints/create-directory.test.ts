@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { realpath } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createFilesystemRoutes } from "../routes";
@@ -23,7 +24,7 @@ test("creates a child folder and returns its canonical path", async () => {
   symlinkSync(root, alias);
   const response = await request(alias, "2026 笔记");
   expect(response.status).toBe(201);
-  expect(await response.json()).toEqual({ path: join(realpathSync(root), "2026 笔记") });
+  expect(await response.json()).toEqual({ path: join(await realpath(root), "2026 笔记") });
   expect(existsSync(join(root, "2026 笔记"))).toBe(true);
   expect((await request(root, "2026 笔记")).status).toBe(409);
 });

@@ -41,7 +41,7 @@ export const runWorkspaceProvisioning = async <
     providerId: workspace.provider_id,
   } satisfies WorkspaceProvisionPayload;
   try {
-    await hooks.ensureConfig(workspace.root_path, input.repoPath, workspace.id);
+    await hooks.ensureConfig(workspace.root_path, input.repoPath, workspace.id, projectId, deps);
     const outcome = await hooks.fireProvision(deps, projectId, workspaceEvents.provision, payload);
     const failure = outcome.diagnostics?.[0];
     const result = await deps.workspaceService.setSetupError(workspace.id, failure?.message ?? null);

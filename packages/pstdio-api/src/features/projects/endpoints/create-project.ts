@@ -2,6 +2,7 @@ import { createRoute, z } from "@hono/zod-openapi";
 import type { ExtensionSetupWarning } from "pstdio-api-contracts";
 import type { AppRouteHandler } from "../../../types";
 import { applyProjectHarnessSelection } from "../../harnesses/apply-harness-selection";
+import { ensureWorkspaceConfig } from "../../workspaces/workspace-config";
 import type { ProjectsRouteDeps } from "../deps";
 import { createProjectBodySchema, projectResponseSchema, toProjectResponse } from "../dto";
 import { retryProjectExtensions, setupProjectExtensions } from "../project-extension-setup";
@@ -49,6 +50,13 @@ const openExistingProject = async (
       extensionWarnings = await retryProjectExtensions(deps, project.id);
       return extensionWarnings;
     });
+  else if (home.root_path) {
+    try {
+      await ensureWorkspaceConfig(home.root_path, home.root_path, home.id, project.id, deps);
+    } catch (error) {
+      await deps.workspaceService.setSetupError(home.id, error instanceof Error ? error.message : String(error));
+    }
+  }
   const response = toProjectResponse(project);
   return extensionWarnings.length ? { ...response, extension_warnings: extensionWarnings } : response;
 };

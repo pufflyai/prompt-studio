@@ -1,3 +1,4 @@
+import { removeWorkspaceConfig } from "../workspaces/workspace-config";
 import { cleanupProviderBackedWorkspace } from "../workspaces/workspace-provider-lifecycle";
 import { isBuiltInProviderId, rootProviderId } from "../workspaces/workspace-provider-service";
 import type { ProjectsRouteDeps } from "./deps";
@@ -23,4 +24,6 @@ export const cleanupProjectArtifacts = async (
   }
 
   options.removeProjectStorage(projectId);
+  const home = projectWorkspaces.find((workspace) => workspace.is_default);
+  if (home?.root_path) await removeWorkspaceConfig(home.root_path, projectId, home.id);
 };
