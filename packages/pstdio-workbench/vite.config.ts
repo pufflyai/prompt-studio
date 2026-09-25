@@ -1,19 +1,7 @@
 import path from "node:path";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import dts from "vite-plugin-dts";
-
-// Inline only the private workspace packages that cannot be published; everything
-// else (react, @pstdio/sdk, @pstdio/ui, chakra, zustand, …) stays external so the
-// consumer provides a single copy.
-const INLINE_PACKAGES = new Set(["pstdio-extensions", "pstdio-api-contracts"]);
-
-const packageNameOf = (id: string) => (id.startsWith("@") ? id.split("/").slice(0, 2).join("/") : id.split("/")[0]);
-
-const isExternal = (id: string) => {
-  if (id.startsWith(".") || path.isAbsolute(id)) return false;
-  return !INLINE_PACKAGES.has(packageNameOf(id));
-};
+import { entries, isExternal } from "./build-entries";
 
 export default defineConfig({
   resolve: {
@@ -23,13 +11,7 @@ export default defineConfig({
   },
   build: {
     lib: {
-      entry: {
-        index: path.resolve(import.meta.dirname, "src/index.ts"),
-        react: path.resolve(import.meta.dirname, "src/react/index.ts"),
-        storage: path.resolve(import.meta.dirname, "src/storage/index.ts"),
-        extensions: path.resolve(import.meta.dirname, "src/extensions/index.ts"),
-        "webview-runtime": path.resolve(import.meta.dirname, "src/webview-runtime/index.ts"),
-      },
+      entry: entries,
       formats: ["es"],
       cssFileName: "style",
     },
@@ -51,20 +33,6 @@ export default defineConfig({
       babel: {
         plugins: [["babel-plugin-react-compiler"]],
       },
-    }),
-    dts({
-      tsconfigPath: "./tsconfig.build.json",
-      entryRoot: "..",
-      rollupTypes: true,
-      exclude: [
-        "src/**/*.test.ts",
-        "src/**/*.test.tsx",
-        "src/**/*.stories.ts",
-        "src/**/*.stories.tsx",
-        "src/**/*.storybook.ts",
-        "src/examples/**",
-      ],
-      afterDiagnostic: () => {},
     }),
   ],
 });
