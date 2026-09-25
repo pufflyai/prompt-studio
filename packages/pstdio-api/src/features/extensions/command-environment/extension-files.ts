@@ -78,6 +78,7 @@ export const createExtensionFilesApi = (input: {
     exists: async (path) => (await mountFor("read")).exists(path),
     readText: async (path) => (await mountFor("read")).readText(path),
     writeText: async (path, value) => (await beforeWrite()).writeText(path, value),
+    updateText: async (path, value) => (await beforeWrite()).updateText(path, value),
     readBytes: async (path) => (await mountFor("read")).readBytes(path),
     writeBytes: async (path, value) => (await beforeWrite()).writeBytes(path, value),
     list: async (pattern) => (await mountFor("read")).list(pattern),

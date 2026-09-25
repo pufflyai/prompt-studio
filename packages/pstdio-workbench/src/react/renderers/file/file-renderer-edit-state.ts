@@ -19,6 +19,7 @@ export interface FileEditControllerState {
   dirty: boolean;
   saving: boolean;
   saveError?: string;
+  removed?: true;
 }
 
 export interface FileEditControllerInput {
@@ -34,6 +35,7 @@ export type FileEditController = ReturnType<typeof createFileEditController>;
 
 export const createFileEditController = (input: FileEditControllerInput) => {
   let baseline: string | undefined;
+  let removed = false;
   let baselineRevision: string | undefined;
   let draft: string | null = null;
   let activeSave: { value: string; origin: FileRendererRefreshOrigin } | null = null;
@@ -50,6 +52,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
     dirty: draft !== null || (activeSave !== null && activeSave.value !== baseline),
     saving: activeSave !== null,
     ...(saveError ? { saveError } : {}),
+    ...(removed ? { removed: true as const } : {}),
   });
   const notify = () => input.onStateChange?.(getState());
 
@@ -92,7 +95,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
   };
 
   const runSave = () => {
-    if (draft === null || activeSave || saveError) return;
+    if (removed || draft === null || activeSave || saveError) return;
     const value = draft;
     draft = null;
     const origin = {
@@ -122,6 +125,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
         takeDeferredRefresh(result?.revision);
       })
       .catch((error) => {
+        if (removed) return;
         if (activeSave?.origin.operationId !== origin.operationId) return;
         activeSave = null;
         if (draft === null) draft = value;
@@ -139,6 +143,18 @@ export const createFileEditController = (input: FileEditControllerInput) => {
   };
 
   return {
+    getDraft() {
+      return draft ?? activeSave?.value ?? baseline;
+    },
+    markRemoved() {
+      const retain = hasPendingLocalState();
+      removed = true;
+      draft = draft ?? activeSave?.value ?? null;
+      activeSave = null;
+      clearTimer();
+      notify();
+      return retain;
+    },
     getBaseline() {
       return baseline;
     },
@@ -153,6 +169,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
     // something else. Returns null while pending local state must keep the
     // editor: the refresh is deferred until the save settles.
     acceptLoaded(value: string | undefined, revision?: string) {
+      if (removed) return null;
       if (hasPendingLocalState()) {
         deferRefresh(revision ? { revision } : {});
         return null;
@@ -164,6 +181,11 @@ export const createFileEditController = (input: FileEditControllerInput) => {
       return { shown };
     },
     handleChange(value: string) {
+      if (removed) {
+        draft = value;
+        notify();
+        return;
+      }
       if (saveError && value === draft) return;
       saveError = undefined;
       if (value === baseline && !activeSave) {
@@ -183,6 +205,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
       notify();
     },
     handleRefreshEvent(event: FileRendererRefreshEnvelope = {}) {
+      if (removed) return;
       if (event.resourceKey && event.resourceKey !== input.binding.resourceKey) return;
       if (isSelfRefresh(event)) return;
       if (event.revision && seenRefreshRevisions.has(event.revision)) return;
@@ -201,6 +224,7 @@ export const createFileEditController = (input: FileEditControllerInput) => {
       runSave();
     },
     retryLoad() {
+      if (removed) return;
       input.load({ resourceKey: input.binding.resourceKey });
     },
     flush() {

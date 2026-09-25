@@ -1,5 +1,6 @@
 import { Box, Icon, Menu } from "@chakra-ui/react";
 import type { KanbanRendererResourceRef, NavigationTargetPage, ResourceRef } from "@pstdio/sdk/extensions";
+import { isNavigationTarget } from "@pstdio/sdk/extensions";
 import {
   ListRow,
   type SessionCompletionStatus,
@@ -9,7 +10,6 @@ import {
 } from "@pstdio/ui";
 import { DiffBubble } from "@pstdio/ui/diff";
 import type { KanbanRendererRow } from "@pstdio/ui/kanban-renderer";
-import { isExtensionNavigationTarget } from "@pstdio/workbench/extensions";
 import { GitBranch } from "lucide-react";
 import { createElement, useEffect, useState } from "react";
 import { createDashboardResource } from "@/shared/app/resources";
@@ -64,8 +64,7 @@ const badgeSessionFrom = (value: unknown): ExtensionWorkspaceBadgeSession | unde
 const hasBadgeSession = (item: ExtensionWorkspaceBadgeItem): item is ExtensionWorkspaceBadgeSessionItem =>
   Boolean(item.session);
 
-const pageTargetFrom = (value: unknown) =>
-  isExtensionNavigationTarget(value) && value.kind === "page" ? value : undefined;
+const pageTargetFrom = (value: unknown) => (isNavigationTarget(value) && value.kind === "page" ? value : undefined);
 
 export const normalizeWorkspaceBadgeItems = (value: unknown): ExtensionWorkspaceBadgeItem[] => {
   if (!Array.isArray(value)) return [];

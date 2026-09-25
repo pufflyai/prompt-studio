@@ -81,3 +81,36 @@ describe("executeWebviewCommand", () => {
     expect(extensionCalls).toEqual([{ commandId: response.commandId }]);
   });
 });
+
+test("applies extension navigation once and preserves the webview response", async () => {
+  const workbench = createWorkbench();
+  let navigations = 0;
+  workbench.commands.registerCommand(
+    { id: "workbench.test.open", label: "Open" },
+    {
+      execute: () => {
+        navigations += 1;
+      },
+    },
+  );
+  const response = {
+    commandId: "example.notes.command.create",
+    extensionId: "example.notes",
+    outcome: {
+      ok: true,
+      status: "success",
+      value: { id: "note" },
+      navigationRequests: [
+        { kind: "command", target: { command: { kind: "command", extensionId: "pstdio", id: "workbench.test.open" } } },
+      ],
+    },
+  };
+  const result = await executeWebviewCommand({
+    commandId: response.commandId,
+    projectId: "project",
+    workbench,
+    executeExtensionCommand: async () => response,
+  });
+  expect(navigations).toBe(1);
+  expect(result).toBe(response);
+});

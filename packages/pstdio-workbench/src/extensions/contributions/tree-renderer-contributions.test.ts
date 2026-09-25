@@ -125,6 +125,107 @@ describe("extension tree renderer contributions", () => {
       }),
     ).toBe(`files:${documentId}`);
   });
+  test("applies explicit navigation from a tree action", async () => {
+    const startPage = { kind: "page", extensionId: "pstdio.lab", id: "start" } as const;
+    const page = { kind: "page", extensionId: "pstdio.lab", id: "ticket" } as const;
+    const workbench = createWorkbench({ startPage });
+    workbench.modes.registerMode({ id: "project", activate: () => undefined });
+    for (const id of ["start", "ticket"]) {
+      workbench.views.registerView({ id, title: id, body: { kind: "react", render: () => null } });
+    }
+    workbench.pages.registerPage({
+      id: "start",
+      ref: startPage,
+      path: "start",
+      modeId: "project",
+      main: { kind: "view", view: { kind: "view", id: "start" }, cardinality: "one" },
+      slots: [],
+    });
+    workbench.pages.registerPage({
+      id: "ticket",
+      ref: page,
+      path: "ticket",
+      modeId: "project",
+      parentId: "start",
+      resource: { kinds: [{ kind: "resource-kind", id: "ticket" }] },
+      main: { kind: "view", view: { kind: "view", id: "ticket" }, cardinality: "one" },
+      slots: [],
+    });
+    workbench.pageLocations.setProject("project-1");
+    const ticket = { type: "ticket", id: "ticket-1" };
+    const openFile = { ...ticket, metadata: { documentId: "file-1" } };
+    workbench.registerModule({
+      id: "test.extension-tree",
+      activate: (context) =>
+        registerWorkbenchExtensionTreeRenderers({
+          executeCommand: (commandId) => {
+            if (commandId === "pstdio.lab.command.delete-file")
+              return {
+                outcome: {
+                  ok: true,
+                  status: "success",
+                  value: { id: "file-1" },
+                  navigationRequests: [{ kind: "page", page, resource: ticket }],
+                },
+              };
+            return [
+              {
+                id: "files",
+                nodes: [{ id: "file-1", label: "notes.md" }],
+                actions: [{ id: "delete", label: "Delete", command: { kind: "command", id: "delete-file" } }],
+              },
+            ];
+          },
+          metadata,
+          projectId: "project-1",
+          workbench: context,
+        }),
+    });
+    workbench.navigationTrees.registerContribution({
+      id: "files",
+      idScope: "files",
+      owner: page,
+      sourceExtensionId: "pstdio.lab",
+      declarationIndex: 0,
+      viewId: treeId,
+    });
+    workbench.pageLocations.navigate({ kind: "page", page, resource: openFile });
+    const sections = await workbench.navigationTrees.getSections(page, "content", { resource: openFile });
+
+    await sections[0]?.actions?.[0]?.run?.({});
+
+    expect(workbench.pages.store.getState().location?.resource).toEqual(ticket);
+  });
+  test("does not send host-owned nodes to the extension children handler", async () => {
+    const workbench = createWorkbench();
+    const calls: string[] = [];
+    workbench.registerModule({
+      id: "test.extension-tree",
+      activate: (context) =>
+        registerWorkbenchExtensionTreeRenderers({
+          executeCommand: (commandId) => {
+            calls.push(commandId);
+            return [];
+          },
+          metadata,
+          projectId: "project-1",
+          workbench: context,
+        }),
+    });
+    const hostChild = { id: "host-child", label: "Host child" };
+
+    const children = await getWorkbenchRenderers(workbench).getChildren(treeId, {
+      id: "host",
+      label: "Host",
+      children: [hostChild],
+    });
+
+    expect(children).toEqual([hostChild]);
+    expect(calls).toEqual([]);
+  });
+});
+
+describe("existing extension behavior during SDK preparation", () => {
   test("opens the navigation target a tree action returns", async () => {
     const startPage = { kind: "page", extensionId: "pstdio.lab", id: "start" } as const;
     const page = { kind: "page", extensionId: "pstdio.lab", id: "ticket" } as const;
@@ -186,33 +287,6 @@ describe("extension tree renderer contributions", () => {
 
     await sections[0]?.actions?.[0]?.run?.({});
 
-    expect(workbench.pages.store.getState().location?.resource).toEqual(ticket);
-  });
-  test("does not send host-owned nodes to the extension children handler", async () => {
-    const workbench = createWorkbench();
-    const calls: string[] = [];
-    workbench.registerModule({
-      id: "test.extension-tree",
-      activate: (context) =>
-        registerWorkbenchExtensionTreeRenderers({
-          executeCommand: (commandId) => {
-            calls.push(commandId);
-            return [];
-          },
-          metadata,
-          projectId: "project-1",
-          workbench: context,
-        }),
-    });
-    const hostChild = { id: "host-child", label: "Host child" };
-
-    const children = await getWorkbenchRenderers(workbench).getChildren(treeId, {
-      id: "host",
-      label: "Host",
-      children: [hostChild],
-    });
-
-    expect(children).toEqual([hostChild]);
-    expect(calls).toEqual([]);
+    expect(workbench.pages.store.getState().location?.resource).toEqual({ ...ticket, extensionId: "pstdio.lab" });
   });
 });

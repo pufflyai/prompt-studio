@@ -208,3 +208,24 @@ describe("extensionStorageService", () => {
     expect(await svc.deleteCollectionItemIfValue(input, "ticket-1", { owner: "new" })).toBe(true);
   });
 });
+
+test("update-only collection writes preserve deletion and scope", async () => {
+  const scope = {
+    project_id: projectAId,
+    extension_instance_id: instanceAId,
+    scope_type: "project",
+    scope_id: projectAId,
+    collection: "items",
+    item_id: "alpha",
+  };
+  await svc.setCollectionItem({ ...scope, value_json: { count: 1 } });
+  expect(await svc.updateCollectionItem({ ...scope, value_json: { count: 2 } })).toBe(true);
+  expect((await svc.getCollectionItem(scope, "alpha"))?.value_json).toEqual({ count: 2 });
+  expect(await svc.updateCollectionItem({ ...scope, scope_id: projectBId, value_json: {} })).toBe(false);
+  await Promise.all([
+    svc.deleteCollectionItem(scope, "alpha"),
+    svc.updateCollectionItem({ ...scope, value_json: { count: 3 } }),
+  ]);
+  expect(await svc.getCollectionItem(scope, "alpha")).toBeNull();
+  expect(await svc.updateCollectionItem({ ...scope, value_json: {} })).toBe(false);
+});

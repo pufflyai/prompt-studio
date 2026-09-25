@@ -2,6 +2,7 @@ import type {
   NavigationTargetPage as SdkNavigationTargetPage,
   NavigationTargetPanel as SdkNavigationTargetPanel,
 } from "@pstdio/sdk/extensions";
+import { isNavigationTarget } from "@pstdio/sdk/extensions";
 import {
   type ContributionMetadata,
   normalizeContributionMetadata,
@@ -123,6 +124,9 @@ const dispatchItem = async (target: NavigationTargetItem, dispatcher: Navigation
 };
 
 const validateItem = (target: NavigationTargetItem, dispatcher: NavigationDispatcherContext) => {
+  if (target.kind === "href" && !isNavigationTarget(target)) {
+    throw new Error("Navigation requires an HTTP or HTTPS URL.");
+  }
   if (target.kind === "panel" && dispatcher.canOpenPanel?.(target) === false) {
     throw new Error(`Cannot open navigation panel target: ${target.panel.id}`);
   }

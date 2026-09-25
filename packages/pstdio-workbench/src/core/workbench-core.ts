@@ -3,6 +3,7 @@ import { createWorkbenchBreadcrumbController } from "./controllers/breadcrumbs/b
 import { createWorkbenchCommandPaletteController } from "./controllers/command-palette/command-palette-controller";
 import { createPlacementCloseController } from "./controllers/composition/placement-close-controller";
 import { createPlacementPinController } from "./controllers/composition/placement-pin-controller";
+import { removeWorkbenchResource } from "./controllers/composition/resource-removal";
 import { createWorkbenchFocusController } from "./controllers/focus/focus-controller";
 import { connectWorkbenchPageBreadcrumbs } from "./controllers/page-location/page-breadcrumbs";
 import { createWorkbenchPageLocationController } from "./controllers/page-location/page-location-controller";
@@ -86,6 +87,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const renderers = createCoreRenderers(input);
 
   const layoutCache = createWorkbenchLayoutCache(input);
+  const cachedInput = { ...input, persistence: undefined, layoutPersistence: layoutCache.layout };
   const locationAwareLayout = createLayoutModel({
     defaultRegionVisibility: input.defaultPanelOpenByRegionId,
     // The active mode owns region policy; the host input is the fallback. Resolved
@@ -139,7 +141,8 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
             resource: context.location?.resource,
           }).scope
       : undefined,
-    loadLayout: (context) => loadWorkbenchLocationLayout(input, { ...context, resource: context.location?.resource }),
+    loadLayout: (context) =>
+      loadWorkbenchLocationLayout(cachedInput, { ...context, resource: context.location?.resource }),
     enteredWithPersistedLayout: layout.enteredWithPersistedLayout,
     onDidChangePersistenceScope: layout.onDidChangePersistenceScope,
   });
@@ -164,6 +167,10 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   });
 
   const resources = createResourceRegistry({
+    remove: (resource, retained) => {
+      removeWorkbenchResource(core, resource, retained);
+      layoutCache.removeResource(resource);
+    },
     getPrimary: () => core.getPrimaryResource(),
     resolveView: views.getView,
   });
@@ -192,7 +199,7 @@ export const createWorkbench = (input: createWorkbenchInput = {}) => {
   const pages = createLiveWorkbenchPageRegistry({
     loadModeLayout: layoutCache.readMode,
     beforeApply: createPagePersistenceScopeHandler(input, layout, panelMenuState),
-    restorePageState: createPageStateRestorer(input),
+    restorePageState: createPageStateRestorer(cachedInput),
 
     revealRegion: (region) => revealPanelRegion(core, region),
     layout,

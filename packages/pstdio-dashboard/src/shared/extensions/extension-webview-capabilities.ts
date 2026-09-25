@@ -68,7 +68,10 @@ export const createDashboardExtensionWebviewCapabilities = (
             const request = params as { target?: NavigationTarget };
             if (!request.target) throw new Error("navigation.open requires a target.");
             return workbench.navigation.openTarget(
-              toWorkbenchNavigationTarget(request.target, { extensionId: input.extensionId }),
+              toWorkbenchNavigationTarget(request.target, {
+                extensionId: input.extensionId,
+                projectId: input.projectId,
+              }),
             );
           },
         }

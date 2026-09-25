@@ -1,18 +1,11 @@
 import { z } from "zod";
-import type { Struct } from "../extension-kernel";
-import { commandSourceSchema, extensionSlotKindSchema, jsonObjectSchema, serializableJsonObjectSchema } from "./common";
+import type { NavigationTarget, Struct } from "../extension-kernel";
+import { commandSourceSchema, extensionSlotKindSchema, jsonObjectSchema } from "./common";
+import { navigationTargetSchema } from "./navigation-target-metadata";
+import { extensionResourceRefSchema } from "./resource-ref";
 import { workbenchAttachmentTargetSchema } from "./targets";
 
-export const extensionResourceRefSchema = z.object({
-  shorthand: z.string().optional(),
-  type: z.string(),
-  id: z.string(),
-  projectId: z.string().optional(),
-  label: z.string().optional(),
-  icon: z.string().optional(),
-  extensionId: z.string().optional(),
-  metadata: serializableJsonObjectSchema.optional(),
-});
+export { extensionResourceRefSchema } from "./resource-ref";
 
 export const extensionSlotInvocationSchema = z.object({
   id: z.string(),
@@ -85,10 +78,13 @@ const commandDiagnosticSchema = z.object({
   metadata: jsonObjectSchema.optional(),
 });
 
+const responseNavigationTargetSchema: z.ZodType<NavigationTarget> = navigationTargetSchema;
+
 export const commandOutcomeSchema = z.object({
   ok: z.boolean(),
   status: z.enum(["success", "rejected", "error"]),
   value: z.unknown().optional(),
+  navigationRequests: z.array(responseNavigationTargetSchema).optional(),
   code: z.string().optional(),
   reason: z.string().optional(),
   data: jsonObjectSchema.optional(),

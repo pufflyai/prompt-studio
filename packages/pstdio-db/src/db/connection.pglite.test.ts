@@ -28,6 +28,8 @@ afterEach(() => {
 });
 
 describe("createDb", () => {
+  // Sequential lock checks leave database contents unchanged. Sharing the directory
+  // avoids copying over a thousand PostgreSQL files while every test owns its connections.
   let seed: ReturnType<typeof createTempDbPath>;
 
   beforeAll(async () => {
@@ -38,12 +40,6 @@ describe("createDb", () => {
 
   afterAll(() => fs.rmSync(seed.tempRoot, { recursive: true, force: true }));
 
-  // Lock tests need a real database, but do not need to repeat fresh-schema creation.
-  const createSeededDbPath = () => {
-    const target = createTempDbPath();
-    fs.cpSync(seed.dbPath, target.dbPath, { recursive: true });
-    return target;
-  };
   it("creates in-memory databases without migration files", async () => {
     const client = await createDb({ path: ":memory:" });
 
@@ -68,7 +64,7 @@ describe("createDb", () => {
   });
 
   it("refuses to open a database directory held by a live process", async () => {
-    const { dbPath, tempRoot } = createSeededDbPath();
+    const { dbPath } = seed;
     const first = await createDb({ path: dbPath });
 
     try {
@@ -77,24 +73,28 @@ describe("createDb", () => {
       );
     } finally {
       await first.close();
-      fs.rmSync(tempRoot, { force: true, recursive: true });
     }
   });
 
   it("allows a database directory to be reopened after close", async () => {
-    const { dbPath, tempRoot } = createSeededDbPath();
+    const { dbPath } = seed;
     const first = await createDb({ path: dbPath });
     await first.close();
 
     const second = await createDb({ path: dbPath });
-    await second.close();
-
-    fs.rmSync(tempRoot, { force: true, recursive: true });
+    try {
+      const result = await second.pglite.query("SELECT 1 AS ready");
+      expect(result.rows).toEqual([{ ready: 1 }]);
+    } finally {
+      await second.close();
+    }
   });
 
   it("reclaims a lock owned by a dead process", async () => {
-    const { dbPath, tempRoot } = createSeededDbPath();
+    const { dbPath } = seed;
     const lockPath = `${dbPath}.lock`;
+    // A closed connection leaves an empty lock directory; legacy locks were files.
+    fs.rmdirSync(lockPath);
     fs.writeFileSync(
       lockPath,
       JSON.stringify({ pid: 999_999_999, process: "stopped pstdio serve", startedAt: "2026-07-15T10:00:00.000Z" }),
@@ -104,14 +104,13 @@ describe("createDb", () => {
     await client.close();
 
     expect(fs.statSync(lockPath).isDirectory()).toBe(true);
-    fs.rmSync(tempRoot, { force: true, recursive: true });
+    expect(fs.readdirSync(lockPath)).toEqual([]);
   });
 
   it("refuses a symlink alias while the canonical database directory is open", async () => {
     const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "pstdio-db-alias-"));
-    const dbPath = path.join(tempRoot, "database");
+    const { dbPath } = seed;
     const aliasPath = path.join(tempRoot, "database-alias");
-    fs.cpSync(seed.dbPath, dbPath, { recursive: true });
     fs.symlinkSync(dbPath, aliasPath, "junction");
     const first = await createDb({ path: dbPath });
 
@@ -126,14 +125,15 @@ describe("createDb", () => {
   });
 
   it("reclaims an incomplete lock left without owner metadata", async () => {
-    const { dbPath, tempRoot } = createSeededDbPath();
+    const { dbPath } = seed;
     const lockPath = `${dbPath}.lock`;
+    // A closed connection leaves an empty lock directory; legacy locks were files.
+    fs.rmdirSync(lockPath);
     fs.writeFileSync(lockPath, "");
 
     const client = await createDb({ path: dbPath });
     await client.close();
-
-    fs.rmSync(tempRoot, { force: true, recursive: true });
+    expect(fs.readdirSync(lockPath)).toEqual([]);
   });
 
   it("upgrades a pre-extension-storage template into readable extension storage", async () => {

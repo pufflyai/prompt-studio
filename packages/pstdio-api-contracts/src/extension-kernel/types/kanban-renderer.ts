@@ -134,7 +134,8 @@ export interface KanbanRendererRowAction<TParams extends Struct = Struct> {
 
 export type KanbanRendererRowActivationHandler = RendererCallback<
   { row: KanbanRendererRow },
-  undefined | NavigationTarget
+  // biome-ignore lint/suspicious/noConfusingVoidType: Support existing target returns and explicit navigation callbacks during adoption.
+  void | NavigationTarget
 >;
 
 export interface KanbanRendererContribution extends RendererContributionBase {

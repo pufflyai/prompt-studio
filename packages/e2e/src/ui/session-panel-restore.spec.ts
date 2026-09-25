@@ -143,17 +143,17 @@ test("restores an attached session Side Panel and its session across refresh", a
 
   const attachedPanel = page.getByTestId("workbench-side-panel-attached");
   await expect(attachedPanel).toBeVisible();
-  await expect(attachedPanel.locator("[data-testid='content-editable'][contenteditable='true']")).toBeVisible();
+  await expect(attachedPanel.locator("[data-testid='content-editable'][contenteditable='true']:visible")).toBeVisible();
 
   // Refresh like a user reopening the page with the attached Side Panel visible.
   await page.reload();
   await expect(async () => {
     await expect(attachedPanel).toBeVisible({ timeout: 5_000 });
   }).toPass({ timeout: 30_000 });
-  await expect(attachedPanel.locator("[data-testid='content-editable'][contenteditable='true']")).toBeVisible();
+  await expect(attachedPanel.locator("[data-testid='content-editable'][contenteditable='true']:visible")).toBeVisible();
 
   const draft = "Keep this unsent PS-8 draft across refresh";
-  const chatInput = attachedPanel.locator("[data-testid='content-editable'][contenteditable='true']");
+  const chatInput = attachedPanel.locator("[data-testid='content-editable'][contenteditable='true']:visible");
   await chatInput.fill(draft);
   await expect(chatInput).toHaveText(draft);
 
@@ -161,7 +161,9 @@ test("restores an attached session Side Panel and its session across refresh", a
   await expect(async () => {
     await expect(attachedPanel).toBeVisible({ timeout: 5_000 });
   }).toPass({ timeout: 30_000 });
-  await expect(attachedPanel.locator("[data-testid='content-editable'][contenteditable='true']")).toHaveText(draft);
+  await expect(attachedPanel.locator("[data-testid='content-editable'][contenteditable='true']:visible")).toHaveText(
+    draft,
+  );
 
   // The persisted primary resource (the ticket) survives alongside the Side Panel session.
   await expect(

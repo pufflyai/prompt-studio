@@ -1,7 +1,8 @@
-import type { CommandExecuteRequest } from "@pstdio/sdk/api";
+import type { CommandExecuteRequest, CommandExecuteResponse } from "@pstdio/sdk/api";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import type { ResourceRef, WorkbenchCommandExecutionContext, WorkbenchModuleContext } from "../../core";
 import { unwrapCommandValue } from "./command-response";
+import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 export interface WorkbenchExtensionCommandContext {
   executeCommand(commandId: string, body: CommandExecuteRequest): Promise<unknown> | unknown;
   prepareCommandArgs?(
@@ -45,8 +46,10 @@ const handleDeletedResource = async (
   const result = context.workbench.pageLocations.navigateToParent();
   if (!result.ok) throw new Error(result.diagnostic.message);
 };
-export const executeWorkbenchExtensionCommand = async (
-  context: WorkbenchExtensionCommandContext,
+export const executeWorkbenchExtensionCommandResponse = async (
+  context: Pick<WorkbenchExtensionCommandContext, "executeCommand" | "projectId"> & {
+    workbench: Pick<WorkbenchModuleContext, "navigation" | "notifications">;
+  },
   commandId: string,
   input: ExecuteWorkbenchExtensionCommandInput = {},
 ) => {
@@ -59,7 +62,29 @@ export const executeWorkbenchExtensionCommand = async (
     source: "dashboard",
     ...(input.metadata ? { metadata: input.metadata } : {}),
   });
-  const value = unwrapCommandValue(response);
+  unwrapCommandValue(response);
+  const outcome = (response as Partial<CommandExecuteResponse> | undefined)?.outcome;
+  if (outcome?.status === "success") {
+    for (const target of outcome.navigationRequests ?? []) {
+      try {
+        await context.workbench.navigation.openTarget(toWorkbenchNavigationTarget(target));
+      } catch (error) {
+        context.workbench.notifications.show({
+          level: "warning",
+          title: "Command completed, but navigation failed",
+          message: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+  return response;
+};
+export const executeWorkbenchExtensionCommand = async (
+  context: WorkbenchExtensionCommandContext,
+  commandId: string,
+  input: ExecuteWorkbenchExtensionCommandInput = {},
+) => {
+  const value = unwrapCommandValue(await executeWorkbenchExtensionCommandResponse(context, commandId, input));
   await handleDeletedResource(context, input.resource, value);
   return value;
 };

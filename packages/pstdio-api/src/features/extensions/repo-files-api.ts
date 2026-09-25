@@ -11,6 +11,7 @@ export const createRepoFilesApi = (resolveRepoPath: (access: FileAccess) => Prom
     exists: async (path) => (await mountFor("read")).exists(path),
     readText: async (path) => (await mountFor("read")).readText(path),
     writeText: async (path, value) => (await mountFor("write")).writeText(path, value),
+    updateText: async (path, value) => (await mountFor("write")).updateText(path, value),
     readBytes: async (path) => (await mountFor("read")).readBytes(path),
     writeBytes: async (path, value) => (await mountFor("write")).writeBytes(path, value),
     list: async (pattern) => (await mountFor("read")).list(pattern),
