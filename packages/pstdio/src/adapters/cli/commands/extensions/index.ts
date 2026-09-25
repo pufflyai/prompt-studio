@@ -2,6 +2,8 @@ import type { Argv } from "yargs";
 import * as addCommand from "./add";
 import * as checkCommand from "./check";
 import * as devCommand from "./dev";
+import * as installBrowserCommand from "./install-browser";
+import * as testCommand from "./test";
 import * as updateCommand from "./update";
 
 export const command = "extensions [command]";
@@ -11,7 +13,13 @@ let _yargs: Argv;
 
 export const builder = (yargs: Argv) => {
   _yargs = yargs;
-  return yargs.command(addCommand).command(checkCommand).command(devCommand).command(updateCommand);
+  return yargs
+    .command(addCommand)
+    .command(checkCommand)
+    .command(devCommand)
+    .command(installBrowserCommand)
+    .command(updateCommand)
+    .command(testCommand);
 };
 
 export const handler = () => {

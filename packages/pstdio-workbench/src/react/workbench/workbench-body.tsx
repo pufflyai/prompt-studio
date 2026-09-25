@@ -79,6 +79,7 @@ const MainHeaderBar = (props: MainHeaderBarProps) => {
 
 export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const { workbench } = props;
+  const pageId = useWorkbenchStore(workbench.pages.store, (state) => state.activePageId);
   const modeSettings = useWorkbenchModeRegionSettings(workbench, "secondary");
   const panels = useWorkbenchMainPanels(workbench);
   const { hasMainHeader, secondaryPanel } = panels;
@@ -117,6 +118,7 @@ export const WorkbenchBody = (props: WorkbenchBodyProps) => {
   const mainContent = (
     <Grid
       data-workbench-panel="main"
+      data-workbench-page={pageId}
       gridTemplateRows="auto minmax(0, 1fr)"
       h="full"
       minH="0"

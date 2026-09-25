@@ -1,4 +1,5 @@
 import type { WorkbenchModuleContext } from "@pstdio/workbench";
+import { logExtensionHostDiagnostic } from "pstdio-extensions/bridge/host";
 
 const dashboardExtensionsReadyProjectIdContextKey = "dashboard.extensions.readyProjectId";
 
@@ -10,6 +11,7 @@ export const clearDashboardExtensionsReadyProject = (ctx: DashboardExtensionRead
 
 export const setDashboardExtensionsReadyProject = (ctx: DashboardExtensionReadinessContext, projectId: string) => {
   ctx.context.set(dashboardExtensionsReadyProjectIdContextKey, projectId);
+  logExtensionHostDiagnostic({ event: "registration-ready", projectId });
 };
 
 export const getDashboardExtensionsReadyProjectId = (ctx: DashboardExtensionReadinessContext) => {

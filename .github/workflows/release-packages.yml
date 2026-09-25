@@ -60,6 +60,10 @@ jobs:
       - name: Install dependencies
         run: node scripts/ci/install-native-dependencies.ts
 
+      - name: Install Chromium for packaged extension smoke tests
+        if: runner.os != 'Windows'
+        run: bunx playwright@1.60.0 install chromium --with-deps
+
       - name: Verify packaged Bun toolchain
         env:
           PSTDIO_VERIFY_PLATFORM_PKG: ${{ matrix.platform_pkg }}
@@ -115,6 +119,9 @@ jobs:
 
       - name: Scaffold platform packages
         run: bun run --cwd scripts release:platforms:scaffold
+
+      - name: Install Chromium for packaged extension smoke tests
+        run: bunx playwright@1.60.0 install chromium --with-deps
 
       - name: Verify binaries
         run: bun run --cwd scripts verify:packages
