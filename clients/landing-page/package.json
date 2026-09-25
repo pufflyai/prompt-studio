@@ -7,10 +7,10 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "assets:banner": "remotion still remotion/index.ts Banner public/images/banner.png --overwrite",
-    "assets:icon": "remotion still remotion/index.ts AppleTouchIcon public/images/apple-touch-icon.png --overwrite",
     "storybook": "storybook dev -p 6007",
-    "build-storybook": "storybook build"
+    "build-storybook": "storybook build",
+    "assets:banner": "bun install --cwd remotion --frozen-lockfile && bun run --cwd remotion banner",
+    "assets:icon": "bun install --cwd remotion --frozen-lockfile && bun run --cwd remotion icon"
   },
   "engines": {
     "bun": ">=1.4.2"
@@ -29,16 +29,12 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
-    "@fontsource/inter": "^5.3.0",
-    "@fontsource/onest": "^5.3.1",
-    "@remotion/cli": "^4.0.527",
     "@storybook/addon-docs": "^10.1.9",
     "@storybook/react": "^10.1.9",
     "@storybook/react-vite": "^10.1.9",
     "@types/matter-js": "^0.20.2",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "remotion": "^4.0.527",
     "storybook": "^10.1.9"
   }
 }

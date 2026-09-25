@@ -1,6 +1,6 @@
 ---
-"@pstdio/ui": patch
+"@pstdio/ui": minor
 "pstdio": patch
 ---
 
-Move ResourceActivityFeed to the @pstdio/ui/rich-text entry, next to the editor it renders with
+Breaking: import ResourceActivityFeed and its types from @pstdio/ui/rich-text instead of @pstdio/ui, next to the editor it renders with

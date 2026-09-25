@@ -133,6 +133,9 @@ fails when:
 - a line of a legal document is missing from its built page, or
 - a long line of legal text is copied into code under `src`.
 
+The build itself fails when a legal page in `DOCUMENT_VIEWS` has no markdown file, so
+a renamed or deleted document cannot ship as an empty page.
+
 ## Brand assets
 
 `remotion` holds the source for the images that other sites and apps show:
@@ -147,6 +150,11 @@ product. Render them after changing the source, or after the hero copy changes:
 bun run --cwd clients/landing-page assets:banner
 bun run --cwd clients/landing-page assets:icon
 ```
+
+`remotion` is its own package, outside the workspace, with its own lockfile. Remotion
+pins exact versions of shared libraries such as zod, and a second copy of zod in the
+workspace breaks the API's typecheck. Keeping the tool separate keeps its
+dependencies out of the app. The scripts above install it on first use.
 
 Rendering starts a headless browser, which Remotion downloads on first use. The
 render declares its own font faces, because Remotion's bundler drops the font

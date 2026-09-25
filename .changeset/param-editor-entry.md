@@ -1,6 +1,6 @@
 ---
-"@pstdio/ui": patch
+"@pstdio/ui": minor
 "pstdio": patch
 ---
 
-Serve the param editor from the @pstdio/ui/param-editor entry so the root entry stops pulling the markdown editor
+Breaking: import ParamEditor, its inputs, and its types from @pstdio/ui/param-editor instead of @pstdio/ui, so the root entry no longer pulls the markdown editor
