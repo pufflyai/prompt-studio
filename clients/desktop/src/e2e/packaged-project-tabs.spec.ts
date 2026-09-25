@@ -48,6 +48,14 @@ test("opens and closes project tabs while preserving pages and terminals", async
     await app.page.getByRole("option", { name: "Lab", exact: true }).click();
     await expect(app.page).toHaveURL(/\/extensions\/[^/]+\/lab$/);
     const lab = app.page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" });
+    const extensions = await app.page.evaluate(async (projectId) => {
+      const response = await fetch(`/v1/projects/${projectId}/extensions`);
+      return response.json();
+    }, first.id);
+    await testInfo.attach("project-extension-builds", {
+      body: JSON.stringify(extensions, null, 2),
+      contentType: "application/json",
+    });
     await expect(lab).toBeVisible();
     const firstPageUrl = app.page.url();
 
