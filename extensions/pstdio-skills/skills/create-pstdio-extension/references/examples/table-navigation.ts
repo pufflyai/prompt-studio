@@ -9,11 +9,12 @@ import {
 
 // An explicit callback type breaks the inference cycle when a table targets its own page.
 const note = defineResourceKind({ id: "note", label: "Note" });
-const activate: DataTableRendererRowActivationHandler = (_ctx, { row }) => ({
-  kind: "page",
-  page: collection.ref,
-  resource: row.resource,
-});
+const activate: DataTableRendererRowActivationHandler = (ctx, { row }) =>
+  ctx.navigation.open({
+    kind: "page",
+    page: collection.ref,
+    resource: row.resource,
+  });
 const table = defineView({
   id: "notes-table",
   title: "Notes",

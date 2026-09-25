@@ -124,3 +124,14 @@ describe("ticket body file-renderer commands", () => {
     expect((await ticketsCollection(storage).get(ticket.id))?.content).toBe("# Ticket\nbody");
   });
 });
+
+test("deleting a ticket while its editor save is pending cannot recreate it", async () => {
+  const storage = createMemoryStorage();
+  const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "Ticket" } }));
+  const save = saveTicketContentCommand.run(
+    ...makeCommandArgs({ storage, params: { id: ticket.id, content: "Stale draft" } }),
+  );
+  await ticketsCollection(storage).delete(ticket.id);
+  await Promise.allSettled([save]);
+  expect(await ticketsCollection(storage).get(ticket.id)).toBeUndefined();
+});

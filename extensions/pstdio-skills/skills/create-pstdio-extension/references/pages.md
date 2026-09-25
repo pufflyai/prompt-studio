@@ -42,3 +42,5 @@ Use `workbenchPages.sessions` and `workbenchPages.workspaces` without a resource
 ## Refresh installed guidance
 
 Update `pstdio-skills` with the SDK release, then run `pst agents install-skills <agent-id>` from the linked repository. Restart the agent session to read the updated files. For source development, first load the skill extension through `pst extensions dev <path-to-pstdio-skills>`.
+
+Commands and row activation callbacks request navigation with `ctx.navigation.open(target)` and return data. After committing deletion, call `await ctx.resources.removed(resource)`. The host removes clean resource bindings across clients and inactive pages. Other active resources stay selected. Dirty editors retain their draft and stop saving until explicitly closed. Keep missing-resource loads for disconnected clients and use update-only writes for existing documents.

@@ -300,6 +300,20 @@ await host.call("navigation.open", {
 
 The target chooses the screen. The host never guesses a page or panel from the resource kind.
 
+## Handler navigation and removal
+
+Commands and interaction callbacks use `ctx.navigation.open(target)`. It accepts the same `NavigationTarget` as webview `navigation.open`. The method records a request and returns void; it does not wait for the browser. Return ordinary data from the handler.
+
+Successful UI invocations apply recorded requests once through the existing navigation dispatcher. Nested calls share request order and keep each caller's extension identity. Failed children discard their requests; a failed root applies none. CLI, schedule, and event-hook execution records no navigation. A target-shaped return value is only data.
+
+After the data owner commits deletion, call `await ctx.resources.removed({ type: "note", id })`. The host checks that this extension declares the resource kind, fills its extension and project identity, and sends the fact to every connected client. Explicit foreign extension or project scope is rejected. Reporting does not delete data and is independent of later command failures.
+
+Identity is the existing `ResourceRef` tuple: extension, project, type, and ID. Repo- or workspace-backed resources must use IDs unique within that tuple. Artifact mounts are project-owned, even when invoked from a workspace. No additional resource registry is required.
+
+Clean bindings close, including retained inactive pages. A remaining routed resource is selected before the page parent. Dirty or saving file editors keep their draft, display a removal notice, and stop saving; users can copy the draft and close the tab. Removal also clears cached file content and visited layout caches. A missed live report still requires missing-resource handling on load.
+
+Data owners must prevent stale saves from recreating deleted data. For mounted text files, use `mount.writeText(path, value)` to create or replace, and `mount.updateText(path, value)` to update only an existing file. The latter opens without creating and cannot recreate a file deleted during that write. An existence check followed by write is insufficient. For stored collection items, use `collection.update(id, value)`. It atomically replaces an existing item and throws if it was deleted; `collection.put` still creates or replaces items.
+
 ## Pages and navigation
 
 A page owns its route and declares an optional resource constraint separately from Main presentation. Main shows a view or peer panels with an empty view. Extra slots and mode placements share the same static-view or resource-binding item.

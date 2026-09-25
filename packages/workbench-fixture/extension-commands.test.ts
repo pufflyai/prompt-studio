@@ -109,7 +109,7 @@ describe("workbench-fixture commands", () => {
       expect.arrayContaining([expect.objectContaining({ id: "role" }), expect.objectContaining({ id: "trustSignal" })]),
     );
 
-    await remove?.run({ events, storage } as never, { rowId: firstId });
+    await remove?.run({ events, storage, resources: { removed: async () => {} } } as never, { rowId: firstId });
 
     expect((await query?.run({ storage } as never, {}))?.rows.map((row) => row.id)).toEqual([secondId]);
     expect(emitted).toEqual(["artifacts.changed", "artifacts.changed", "artifacts.changed"]);

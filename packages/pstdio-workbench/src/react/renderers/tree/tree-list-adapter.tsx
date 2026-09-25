@@ -38,9 +38,14 @@ const activeNodeIds = (ids: string[]) => {
   if (uniqueIds.length === 0) return undefined;
   return uniqueIds.length === 1 ? uniqueIds[0] : uniqueIds;
 };
+const targetPanelResource = (target: NavigationTarget | undefined) => {
+  if (!target) return undefined;
+  const targets = target.kind === "compound" ? target.targets : [target];
+  return [...targets].reverse().find((candidate) => candidate.kind === "panel")?.resource;
+};
 const resolveTreeNodeResourceKey = (node: TreeNode) => {
-  if (node.resource) return resourceKey(node.resource);
-  return undefined;
+  const resource = node.resource ?? targetPanelResource(node.target);
+  return resource ? resourceKey(resource) : undefined;
 };
 const listTreeNodes = (nodes: TreeNode[], childrenByNodeId: Record<string, TreeNode[]>): TreeNode[] =>
   nodes.flatMap((node) => [
@@ -75,7 +80,8 @@ export const filterTreeListSelection = (
 };
 const pageRefsEqual = (left: PageRef, right: PageRef) => left.id === right.id && left.extensionId === right.extensionId;
 const targetMatchesPage = (target: NavigationTarget | undefined, activePage: PageRef, activeResource?: ResourceRef) => {
-  if (!target) return false;
+  // A resource panel owns its selection; its containing page can host other open resources.
+  if (!target || targetPanelResource(target)) return false;
   const targets = target.kind === "compound" ? target.targets : [target];
   return targets.some(
     (candidate) =>
@@ -110,15 +116,12 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
   );
   if (declaredSelection) return declaredSelection;
   const activeResourceKeys = getWorkbenchSelectionResourceKeys(activeResource);
-  let selectedResourceKey: string | undefined;
-  if (selectedNodeId) {
-    const selectedNode = findSectionNode(sections, selectedNodeId, childrenByNodeId);
-    selectedResourceKey = selectedNode ? resolveTreeNodeResourceKey(selectedNode) : undefined;
-    if (selectedResourceKey && activeResourceKeys.includes(selectedResourceKey)) return selectedNodeId;
-    // Keep the selected document when several nodes target the same page and resource.
-    if (activeLocation && targetMatchesPage(selectedNode?.target, activeLocation.page, activeLocation.resource)) {
-      return selectedNodeId;
-    }
+  const selectedNode = selectedNodeId ? findSectionNode(sections, selectedNodeId, childrenByNodeId) : undefined;
+  const selectedResourceKey = selectedNode ? resolveTreeNodeResourceKey(selectedNode) : undefined;
+  if (selectedResourceKey && activeResourceKeys.includes(selectedResourceKey)) return selectedNodeId;
+  // Keep the selected document when several nodes target the same page and resource.
+  if (activeLocation && targetMatchesPage(selectedNode?.target, activeLocation.page, activeResource)) {
+    return selectedNodeId;
   }
   const activeResourceNodeId = resolveActiveResourceNodeIds(sections, childrenByNodeId, activeResourceKeys);
   if (activeResourceNodeId) return activeResourceNodeId;
@@ -130,7 +133,7 @@ export const resolveTreeListSelection = (input: ResolveTreeListSelectionInput) =
   );
   if (activePageNodeId) return activePageNodeId;
   if (!selectedNodeId) return undefined;
-  if (activeResourceKeys.length > 0 && selectedResourceKey) return undefined;
+  if (selectedResourceKey) return undefined;
   return selectedNodeId;
 };
 const canVirtualizeTreeNode = (node: TreeListNode) =>

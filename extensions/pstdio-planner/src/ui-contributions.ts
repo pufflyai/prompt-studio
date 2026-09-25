@@ -94,7 +94,9 @@ export const createPlannerUi = (baseUrl: string) => {
       attributes: buildTicketAttributes(ticketStatuses.ref),
       query: queryTickets,
       refreshEvents: [plannerTicketsChanged],
-      onRowActivate: (_ctx, { row }) => (row.resource ? ticketPageTarget(row.resource) : undefined),
+      onRowActivate: (ctx, { row }) => {
+        if (row.resource) ctx.navigation.open(ticketPageTarget(row.resource));
+      },
       onAttributeChange: setTicketAttribute,
       onReorder: reorderTicket,
       onColumnAction: archiveTicketColumnAction,

@@ -1,5 +1,5 @@
 import type { ExtensionStorageApi } from "@pstdio/sdk/extensions";
-import { putTicket, ticketsCollection } from "./collections";
+import { ticketsCollection, updateTicket } from "./collections";
 import type { StoredTicketFile } from "./types";
 
 const loadTicket = async (storage: ExtensionStorageApi, ticketId: string) => {
@@ -28,7 +28,7 @@ export const createTicketFile = async (input: { storage: ExtensionStorageApi; ti
     createdAt: now,
     updatedAt: now,
   };
-  await putTicket(input.storage, { ...ticket, files: [...(ticket.files ?? []), file], updatedAt: now });
+  await updateTicket(input.storage, { ...ticket, files: [...(ticket.files ?? []), file], updatedAt: now });
   return file;
 };
 
@@ -51,13 +51,13 @@ export const updateTicketFile = async (input: {
         }
       : file,
   );
-  await putTicket(input.storage, { ...ticket, files, updatedAt: now });
+  await updateTicket(input.storage, { ...ticket, files, updatedAt: now });
   return files.find((file) => file.id === input.fileId) ?? null;
 };
 
 export const deleteTicketFile = async (input: { storage: ExtensionStorageApi; ticketId: string; fileId: string }) => {
   const ticket = await loadTicket(input.storage, input.ticketId);
   const files = (ticket.files ?? []).filter((file) => file.id !== input.fileId);
-  await putTicket(input.storage, { ...ticket, files, updatedAt: new Date().toISOString() });
+  await updateTicket(input.storage, { ...ticket, files, updatedAt: new Date().toISOString() });
   return { fileId: input.fileId };
 };
