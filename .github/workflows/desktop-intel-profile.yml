@@ -11,6 +11,10 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
+      - name: Isolate hosted runner indexing
+        run: |
+          sudo mdutil -a -i off
+          mdutil -a -s
       - uses: actions/setup-node@v5
         with:
           node-version: "24"
@@ -30,8 +34,8 @@ jobs:
           mkdir -p clients/desktop/out
           tar -xzf /tmp/pstdio-intel-package/pstdio-intel-diagnostic.tar.gz -C clients/desktop/out
           codesign --verify --deep --strict 'clients/desktop/out/Prompt Studio-darwin-x64/Prompt Studio.app'
-      - name: Collect diagnostic CPU profiles with unchanged tests
-        run: bun scripts/ci/run-intel-profile.ts
+      - name: Run the unchanged full packaged suite
+        run: bun run --cwd clients/desktop test:packaged
       - uses: actions/upload-artifact@v4
         if: always()
         with:
