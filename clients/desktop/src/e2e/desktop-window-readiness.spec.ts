@@ -53,23 +53,27 @@ test("loads the workbench after the startup window shows while lifecycle resourc
     delete env.ELECTRON_RUN_AS_NODE;
     const application = spawn(require("electron") as string, [entry, `--user-data-dir=${join(root, "profile")}`], {
       env: { ...env, PSTDIO_WINDOW_TEST_ORIGIN: `http://127.0.0.1:${address.port}` },
-      stdio: ["pipe", "inherit", "inherit", "ipc"],
+      stdio: ["ignore", "inherit", "inherit", "ipc"],
     });
     const messages = on(application, "message");
     try {
-      const [beforeStartup] = (await messages.next()).value!;
+      const [beforeStartup] = await test.step("receive initial window state", async () =>
+        (await messages.next()).value!);
       expect(beforeStartup).toEqual({ visible: false, workbenchVisible: false, workbenchCreated: false });
-      application.stdin!.write("show\n");
-      const [documentReady] = (await messages.next()).value!;
+      application.send("show");
+      const [documentReady] = await test.step("receive document-ready state", async () =>
+        (await messages.next()).value!);
       expect(documentReady).toEqual({ documentReadyVisible: true });
       await expect.poll(() => workbenchRequests).toBe(1);
-      const [lifecycleShown] = (await messages.next()).value!;
+      const [lifecycleShown] = await test.step("receive lifecycle-visible state", async () =>
+        (await messages.next()).value!);
       expect(lifecycleShown).toEqual({ lifecycleVisible: true });
-      const [afterStartup] = (await messages.next()).value!;
+      const [afterStartup] = await test.step("receive workbench-visible state", async () =>
+        (await messages.next()).value!);
       expect(afterStartup).toEqual({ visible: true, workbenchVisible: true });
       await expect
         .poll(async () => {
-          application.stdin!.write("focus\n");
+          application.send("focus");
           return (await messages.next()).value![0];
         })
         .toEqual({ workbenchFocused: true });

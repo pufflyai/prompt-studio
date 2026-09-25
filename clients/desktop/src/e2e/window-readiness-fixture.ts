@@ -35,7 +35,7 @@ void app.whenReady().then(async () => {
   controller.window.webContents.once("dom-ready", () => {
     process.send!({ documentReadyVisible: controller.window.isVisible() });
   });
-  process.stdin.once("data", async () => {
+  process.once("message", async () => {
     await controller.showLifecycle();
     process.send!({ lifecycleVisible: controller.window.isVisible() });
     await workbenchReady;
@@ -45,7 +45,7 @@ void app.whenReady().then(async () => {
       visible: controller.window.isVisible(),
       workbenchVisible: controller.window.contentView.children.some((view) => view.getVisible()),
     });
-    process.stdin.on("data", async () => {
+    process.on("message", async () => {
       const workbenchFocused = await controller.webContents()[1]?.executeJavaScript("document.hasFocus()");
       process.send!({ workbenchFocused });
     });
