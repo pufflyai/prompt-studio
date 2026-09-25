@@ -1,10 +1,12 @@
 import { Box, Center, Text } from "@chakra-ui/react";
 import { useThemePreference } from "@pstdio/ui";
-import { Terminal, type TerminalBridge } from "@pstdio/ui/terminal";
-import { useEffect, useRef, useState } from "react";
+import type { TerminalBridge } from "@pstdio/ui/terminal";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { ResourceRef, WorkbenchCore, WorkbenchPanelInstance, WorkbenchTerminalController } from "../../core";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
 import { terminalPlacementBindingId } from "./terminal-placement-binding";
+
+const Terminal = lazy(() => import("@pstdio/ui/terminal").then((module) => ({ default: module.Terminal })));
 
 interface ControllerTerminalBridgeOptions {
   getBindingId?: () => string | undefined;
@@ -110,13 +112,15 @@ export const WorkbenchTerminalPanel = (props: WorkbenchTerminalPanelProps) => {
 
   return (
     <Box h="full" minH="0" minW="0" w="full">
-      <Terminal
-        bridge={bridge}
-        theme={/dark/i.test(themePreference) ? "dark" : "light"}
-        autoFocus={active}
-        killOnUnmount={false}
-        onSessionOpen={setSessionId}
-      />
+      <Suspense fallback={null}>
+        <Terminal
+          bridge={bridge}
+          theme={/dark/i.test(themePreference) ? "dark" : "light"}
+          autoFocus={active}
+          killOnUnmount={false}
+          onSessionOpen={setSessionId}
+        />
+      </Suspense>
     </Box>
   );
 };

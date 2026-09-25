@@ -1,8 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect } from "@playwright/test";
-import type { WorkbenchCore } from "@pstdio/workbench";
 import { readRuntimeActivity } from "pstdio/runtime";
 import { test } from "../testing/packaged-fixture";
 import {
@@ -24,37 +23,9 @@ test("opens and closes project tabs while preserving pages and terminals", async
   let app: PackagedApp | null = null;
   try {
     app = await launchPackagedApp(home, {
-      PSTDIO_LOG_LEVEL: "info",
       PSTDIO_DEFAULT_EXTENSIONS: JSON.stringify({
         defaultExtensions: [{ source: fixturePath, installName: "workbench-fixture", skipInstall: true }],
       }),
-    });
-    app.page.on("console", (message) => {
-      if (message.text().startsWith("terminal-kill-stack")) console.log(message.text());
-    });
-    await app.page.evaluate(() => {
-      const workbench = (window as unknown as { __pstdioDashboardWorkbench?: WorkbenchCore }).__pstdioDashboardWorkbench;
-      if (workbench) {
-        const killBinding = workbench.terminal.killBinding;
-        workbench.terminal.killBinding = (bindingId) => {
-          console.log("terminal-kill-stack", JSON.stringify({ bindingId, scope: workbench.layout.getPersistenceScope(), stack: new Error().stack }));
-          return killBinding(bindingId);
-        };
-      }
-      const send = WebSocket.prototype.send;
-      WebSocket.prototype.send = function (data) {
-        if (typeof data === "string" && JSON.parse(data).type === "kill") console.log("terminal-kill-stack", new Error().stack);
-        return send.call(this, data);
-      };
-    });
-    app.page.on("websocket", (socket) => {
-      const record = (direction: string, event: { payload: string | Buffer }) => {
-        const data = JSON.parse(String(event.payload));
-        if (["open", "kill", "exit", "error"].includes(data.type)) console.log("terminal-wire", direction, data);
-      };
-      socket.on("framesent", (event) => record("sent", event));
-      socket.on("framereceived", (event) => record("received", event));
-      socket.on("close", () => console.log("terminal-wire", "close"));
     });
     const first = await createPackagedProject(app.page, "Docs");
     const second = await createPackagedProject(app.page, "Agentic design");
@@ -74,20 +45,10 @@ test("opens and closes project tabs while preserving pages and terminals", async
     const terminal = (await readRuntimeActivity(app.runtime)).terminals[0];
     await app.page.getByRole("option", { name: "Sessions", exact: true }).click();
     await expect(app.page.getByLabel("Main").getByText("No active conversations", { exact: true })).toBeVisible();
-    console.log("terminal-after-sessions", (await readRuntimeActivity(app.runtime)).terminals);
     await app.page.getByRole("option", { name: "Lab", exact: true }).click();
     await expect(app.page).toHaveURL(/\/extensions\/[^/]+\/lab$/);
     const lab = app.page.frameLocator('iframe[title="Lab"]').getByRole("heading", { name: "Sandbox webview" });
-    const extensions = await app.page.evaluate(async (projectId) => {
-      const response = await fetch(`/v1/projects/${projectId}/extensions`);
-      return response.json();
-    }, first.id);
-    await testInfo.attach("project-extension-builds", {
-      body: JSON.stringify(extensions, null, 2),
-      contentType: "application/json",
-    });
     await expect(lab).toBeVisible();
-    console.log("terminal-after-lab", (await readRuntimeActivity(app.runtime)).terminals);
     const firstPageUrl = app.page.url();
 
     await openPackagedProject(app.page, second);
@@ -114,7 +75,6 @@ test("opens and closes project tabs while preserving pages and terminals", async
       "true",
     );
     await expect(app.page).toHaveURL(secondPageUrl);
-    console.log("terminal-after-close", (await readRuntimeActivity(app.runtime)).terminals);
     expect((await readRuntimeActivity(app.runtime)).terminals).toEqual([terminal]);
     await openPackagedProject(app.page, first);
     await expect(app.page).toHaveURL(firstPageUrl);
@@ -131,10 +91,6 @@ test("opens and closes project tabs while preserving pages and terminals", async
     await expect(app.page.getByRole("dialog").getByText(second.name, { exact: true })).toBeVisible();
     expect((await readRuntimeActivity(app.runtime)).terminals).toEqual([terminal]);
   } finally {
-    const log = join(home, "logs.jsonl");
-    if (existsSync(log)) {
-      console.log("terminal-lifecycle", readFileSync(log, "utf8").split("\n").filter((line) => line.includes("terminal session")).join("\n"));
-    }
     await disposePackagedApp(app);
     await removePackagedHome(home);
   }

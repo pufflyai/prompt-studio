@@ -40,14 +40,7 @@ export const createPackagedHome = () => {
   const home = mkdtempSync(join(tmpdir(), "pstdio-desktop-package-"));
   registerPackagedCleanup(async () => {
     try {
-      const logPath = join(home, "logs.jsonl");
-      if (existsSync(logPath)) {
-        await test.info().attach("packaged-launch-log", {
-          body: redactSensitiveText(readFileSync(logPath, "utf8").slice(-32_000), [readDescriptor(home)?.token ?? ""]),
-          contentType: "text/plain",
-        });
-      }
-      await attachRuntimeOutput(home);
+      if (existsSync(home)) await attachPackagedLogs(home);
     } finally {
       await removePackagedHome(home);
     }
@@ -68,6 +61,16 @@ const attachRuntimeOutput = async (home: string) => {
     body: redactSensitiveText(readFileSync(path, "utf8").slice(-32_000), [readDescriptor(home)?.token ?? ""]),
     contentType: "text/plain",
   });
+};
+
+const attachPackagedLogs = async (home: string, runtime?: RuntimeDescriptor) => {
+  const logPath = join(home, "logs.jsonl");
+  const log = existsSync(logPath) ? readFileSync(logPath, "utf8").slice(-32_000) : "No runtime log was written.";
+  await test.info().attach("runtime-log", {
+    body: redactSensitiveText(log, [runtime?.token ?? "", readDescriptor(home)?.token ?? ""]),
+    contentType: "text/plain",
+  });
+  await attachRuntimeOutput(home);
 };
 
 export const waitForDescriptor = async (home: string, predicate = (_descriptor: RuntimeDescriptor) => true) => {
@@ -172,8 +175,13 @@ const launchPackaged = async <T>(
     const finishTrace = await startElectronTrace(context, `packaged-${child.pid}`);
     return { home, browser, child, lifecyclePage, startedAt, startup, finishTrace };
   } catch (error) {
-    await browser?.close().catch(() => {});
-    await stopPackagedProcess(child);
+    try {
+      // Failed startup has no app handle for the caller's normal disposal path.
+      await attachPackagedLogs(home);
+    } finally {
+      await browser?.close().catch(() => {});
+      await stopPackagedProcess(child);
+    }
     throw error;
   }
 };
@@ -242,13 +250,7 @@ export const runPackagedCli = (home: string, args: string[]) =>
 export const disposePackagedApp = async (app: PackagedWindow | null) => {
   if (!app) return;
   await app.finishTrace();
-  const logPath = join(app.home, "logs.jsonl");
-  const log = existsSync(logPath) ? readFileSync(logPath, "utf8").slice(-32_000) : "No runtime log was written.";
-  await test.info().attach("runtime-log", {
-    body: redactSensitiveText(log, [app.runtime?.token ?? "", readDescriptor(app.home)?.token ?? ""]),
-    contentType: "text/plain",
-  });
-  await attachRuntimeOutput(app.home);
+  await attachPackagedLogs(app.home, app.runtime);
   await app.browser.close().catch(() => {});
   await stopPackagedProcess(app.child);
 };
