@@ -18,6 +18,8 @@ jobs:
         with:
           bun-version-file: package.json
       - run: node scripts/ci/install-native-dependencies.ts
+      - name: Build the source Lab fixture dependencies
+        run: bunx lerna run build --scope workbench-fixture --include-dependencies
       - uses: actions/download-artifact@v4
         with:
           name: desktop-development-win32-x64
