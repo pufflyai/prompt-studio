@@ -49,10 +49,16 @@ export default defineConfig({
     dts({
       tsconfigPath: "./tsconfig.json",
       insertTypesEntry: true,
-      exclude: ["src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.stories.tsx"],
+      exclude: [
+        "src/**/*.test.ts",
+        "src/**/*.test.tsx",
+        "src/**/*.stories.tsx",
+        "src/components/diff-viewer/monaco-bundle.ts",
+      ],
       afterDiagnostic: () => {},
     }),
     svgr(),
-    externalizeDeps(),
+    // The prebuilt Monaco files stay separate, so apps copy them instead of bundling Monaco again.
+    externalizeDeps({ include: [/^@pstdio\/ui\/monaco\//] }),
   ],
 });

@@ -16,6 +16,9 @@ const nativeEntries: Record<string, readonly string[]> = {
   "@pstdio/workbench": [".", "./storage", "./webview-runtime"],
 };
 
+// CSS files and subpath patterns (such as `./monaco/*`) are not importable type entries.
+const isTypeEntry = (entry: string) => !entry.endsWith(".css") && !entry.includes("*");
+
 const consumerDependencies = (packages: { path: string; archive: string }[], react: boolean) => {
   const dependencies: Record<string, string> = { typescript: "6.0.2" };
   const overrides: Record<string, string> = {};
@@ -31,7 +34,7 @@ const consumerDependencies = (packages: { path: string; archive: string }[], rea
       }
     }
     for (const entry of Object.keys(manifest.exports)) {
-      if (entry.endsWith(".css") || (!react && !nativeEntries[manifest.name]?.includes(entry))) continue;
+      if (!isTypeEntry(entry) || (!react && !nativeEntries[manifest.name]?.includes(entry))) continue;
       imports.push(`${manifest.name}${entry === "." ? "" : entry.slice(1)}`);
     }
   }

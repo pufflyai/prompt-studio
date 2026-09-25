@@ -10,7 +10,8 @@
     "directory": ".publish"
   },
   "files": [
-    "dist"
+    "dist",
+    "dist-monaco"
   ],
   "type": "module",
   "sideEffects": [
@@ -58,10 +59,12 @@
       "import": "./dist/terminal.js",
       "types": "./dist/components/terminal/index.d.ts"
     },
-    "./style.css": "./dist/style.css"
+    "./style.css": "./dist/style.css",
+    "./monaco/*": "./dist-monaco/*"
   },
   "scripts": {
     "build": "bun run typegen:tokens && vite build && bun ../../scripts/release/stage-package.ts .",
+    "build:monaco": "vite build --config vite.monaco.config.ts",
     "visualize-bundle": "bunx vite-bundle-visualizer",
     "lint": "biome check .",
     "typegen:tokens": "chakra typegen ./src/theme/theme.ts && rm -f chakra-config.json",
@@ -69,7 +72,9 @@
     "perf:chat": "bunx playwright test -c playwright.chat-perf.config.ts",
     "perf:chat:trace": "PLAYWRIGHT_TRACE=on bunx playwright test -c playwright.chat-perf.config.ts",
     "test-storybook": "test-storybook",
+    "prestorybook": "bunx lerna run build:monaco --scope @pstdio/ui",
     "storybook": "storybook dev -p 6006",
+    "prebuild-storybook": "bunx lerna run build:monaco --scope @pstdio/ui",
     "build-storybook": "storybook build",
     "prepublishOnly": "bun run build"
   },
@@ -153,5 +158,39 @@
     "vite-plugin-dts": "^4.5.4",
     "vite-plugin-externalize-deps": "^0.8.0",
     "vite-plugin-svgr": "^4.3.0"
+  },
+  "nx": {
+    "targets": {
+      "build:monaco": {
+        "cache": true,
+        "inputs": [
+          "{projectRoot}/vite.monaco.config.ts",
+          "{projectRoot}/src/components/diff-viewer/monaco-bundle.ts",
+          {
+            "externalDependencies": [
+              "monaco-editor",
+              "vite"
+            ]
+          }
+        ],
+        "outputs": [
+          "{projectRoot}/dist-monaco"
+        ]
+      },
+      "build": {
+        "dependsOn": [
+          "^build",
+          "build:monaco"
+        ],
+        "inputs": [
+          "default",
+          "^default",
+          {
+            "dependentTasksOutputFiles": "**/*",
+            "transitive": false
+          }
+        ]
+      }
+    }
   }
 }
