@@ -1,5 +1,14 @@
 # harness-claude-code
 
+## 0.4.4
+
+_2026-09-25_
+
+### Patch Changes
+
+- 659348b: Keep Claude and Codex sessions alive during quiet work and drain stderr to prevent process stalls.
+- Updated internal dependencies: `@pstdio/sdk@0.25.0`
+
 ## 0.4.3
 
 _2026-09-14_

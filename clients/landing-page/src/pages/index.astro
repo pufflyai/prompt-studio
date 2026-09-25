@@ -1,8 +1,11 @@
 ---
 import { IndexPage } from "../components/index-page";
 import BaseLayout from "../layouts/base-layout.astro";
+import { loadLegalDocuments } from "../services/legal-documents";
+
+const legalDocuments = await loadLegalDocuments();
 ---
 
 <BaseLayout>
-  <IndexPage initialPath={Astro.url.pathname} client:load />
+  <IndexPage initialPath={Astro.url.pathname} legalDocuments={legalDocuments} client:load />
 </BaseLayout>

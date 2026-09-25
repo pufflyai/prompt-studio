@@ -11,13 +11,13 @@ interface PageNavigationProps {
 
 export const PageNavigation = (props: PageNavigationProps) => {
   const { view, onNavigate } = props;
-  const styles = useLandingStyles();
+  const panelStyles = useLandingStyles();
   const pages = [
     { direction: "previous", label: "Previous", view: previousLandingView(view), icon: ArrowLeft },
     { direction: "next", label: "Next", view: nextLandingView(view), icon: ArrowRight },
   ];
   return (
-    <Box as="nav" aria-label="Page navigation" css={styles.heroNavigation}>
+    <Box as="nav" aria-label="Page navigation" css={panelStyles.pageNavigation}>
       {pages.map((page) => {
         const targetView = page.view;
         if (!targetView) return null;

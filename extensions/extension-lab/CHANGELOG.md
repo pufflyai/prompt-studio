@@ -1,5 +1,14 @@
 # extension-lab
 
+## 0.9.6
+
+_2026-09-25_
+
+### Patch Changes
+
+- fbb0c3e: Adopt explicit handler navigation and resource removal reporting in first-party extensions.
+- Updated internal dependencies: `@pstdio/ui@0.26.0`, `@pstdio/sdk@0.25.0`
+
 ## 0.9.5
 
 _2026-09-14_

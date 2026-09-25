@@ -1,9 +1,10 @@
-import type {
-  HostCapabilityRegistry,
-  ThemePreference,
-  WebviewCapabilityDiagnostic,
-} from "pstdio-extensions/bridge/contract";
-import { createHostEventPublisher, ExtensionFrame, type HostEventPublisher } from "pstdio-extensions/bridge/host";
+import type { HostCapabilityRegistry, ThemePreference } from "pstdio-extensions/bridge/contract";
+import {
+  createHostEventPublisher,
+  createWebviewDiagnostics,
+  ExtensionFrame,
+  type HostEventPublisher,
+} from "pstdio-extensions/bridge/host";
 import type {
   WorkbenchCore,
   WorkbenchPanelInstance,
@@ -11,16 +12,6 @@ import type {
   WorkbenchRendererRegistration,
 } from "../../core";
 import { createWorkbenchWebviewHostCapabilities } from "./webview-host-capabilities";
-
-const logWebviewDiagnostics = (webviewId: string, diagnostics: WebviewCapabilityDiagnostic[]) => {
-  for (const diagnostic of diagnostics) {
-    console.warn(`[workbench.webview:${webviewId}] ${diagnostic.code}/${diagnostic.capability}: ${diagnostic.message}`);
-  }
-};
-
-const logWebviewError = (webviewId: string, message: string) => {
-  console.error(`[workbench.webview:${webviewId}] runtime error: ${message}`);
-};
 
 export interface BridgeWebviewRenderContext {
   workbench: WorkbenchCore;
@@ -122,8 +113,7 @@ export const renderBridgeWebviewFrame = (input: {
       theme={createTheme(context)}
       capabilities={createHostCapabilities(context)}
       hostEvents={context.hostEvents}
-      onDiagnostics={(diagnostics) => logWebviewDiagnostics(context.webviewId, diagnostics)}
-      onError={(error) => logWebviewError(context.webviewId, error.message)}
+      {...createWebviewDiagnostics({ extensionId: ownerId ?? "workbench", id: context.webviewId })}
     />
   );
 };

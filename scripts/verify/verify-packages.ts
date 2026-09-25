@@ -3,7 +3,7 @@ import { existsSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { loadEmbedConfig } from "../build/embed-manifest";
 import { getHostPlatformPackage, resolveCompiledBinaryPath, runCompiledBunSmoke } from "./compiled-bun-smoke";
-import { resolvePackagedRuntimeTestArgs } from "./packaged-runtime-smoke";
+import { preparePackagedSmokeBrowser, resolvePackagedRuntimeTestArgs } from "./packaged-runtime-smoke";
 import { verifyPublicPackages } from "./public-package-consumer";
 
 const config = loadEmbedConfig();
@@ -49,8 +49,11 @@ if (failed) {
   process.exit(1);
 }
 
-process.stdout.write("\nRunning packaged e2e checks...\n");
 const hostBinaryPath = resolveCompiledBinaryPath(platformPackage);
+process.stdout.write("\nPreparing Chromium for packaged e2e checks...\n");
+preparePackagedSmokeBrowser(platformPackage, hostBinaryPath);
+
+process.stdout.write("\nRunning packaged e2e checks...\n");
 const packagedE2e = spawnSync("bun", resolvePackagedRuntimeTestArgs(platformPackage), {
   cwd: "./packages/e2e",
   stdio: "inherit",

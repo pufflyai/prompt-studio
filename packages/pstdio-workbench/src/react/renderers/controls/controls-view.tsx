@@ -1,7 +1,7 @@
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 import type { ControlValueMap } from "@pstdio/sdk/extensions";
-import type { InputGroup, Param, ParamValue } from "@pstdio/ui";
-import { ParamEditor, ScrollArea } from "@pstdio/ui";
+import { ScrollArea } from "@pstdio/ui";
+import { type InputGroup, type Param, ParamEditor, type ParamValue } from "@pstdio/ui/param-editor";
 import { controlValueSchema } from "pstdio-api-contracts";
 import { useEffect, useRef, useState } from "react";
 import {

@@ -1,4 +1,4 @@
-import { ParamEditorRow, type SelectionOption, type SelectionParam } from "@pstdio/ui";
+import { ParamEditorRow, type SelectionOption, type SelectionParam } from "@pstdio/ui/param-editor";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { type CommandParamFieldProps, commandParamName } from "@pstdio/workbench/react";
 import { findAgentModel, resolveAgentModelParams } from "pstdio-api-contracts/agent-model-params";

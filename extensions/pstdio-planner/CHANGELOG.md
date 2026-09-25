@@ -1,5 +1,18 @@
 # pstdio-planner
 
+## 0.15.0
+
+_2026-09-25_
+
+### Minor Changes
+
+- e869009: add dependency flags to ticket create and update, and reject dependency cycles in updates and draft saves
+
+### Patch Changes
+
+- fbb0c3e: Adopt explicit handler navigation and resource removal reporting in first-party extensions.
+- Updated internal dependencies: `@pstdio/ui@0.26.0`, `@pstdio/sdk@0.25.0`
+
 ## 0.14.1
 
 _2026-09-14_

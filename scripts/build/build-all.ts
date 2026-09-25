@@ -48,7 +48,7 @@ for (const { target, pkg, bin } of buildTargets) {
 
   const outfile = join(outDir, bin);
   console.log(`\nCompiling for ${target}...`);
-  await $`bun build ${CLI_ENTRY} --compile --target=${target} --asset-naming [dir]/[name].[ext] --outfile ${outfile}`;
+  await $`bun build ${CLI_ENTRY} --compile --external "chromium-bidi/*" --target=${target} --asset-naming [dir]/[name].[ext] --outfile ${outfile}`;
   console.log(`  → ${relative(".", outfile)}`);
 }
 

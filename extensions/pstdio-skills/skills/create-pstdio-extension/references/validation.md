@@ -15,15 +15,16 @@ and use e2e checks when behavior changes.
 
 ## Focused checks
 
-Use Bun commands only.
+Use the Bun runtime included in the installed `pst` executable. Do not assume `bun`, `bunx`, or Node.js is installed separately. In a POSIX shell:
 
 ```bash
-bun test <path-to-test>
-bun run --cwd <path-to-extension> typecheck
+BUN_BE_BUN=1 pst test <path-to-test>
+BUN_BE_BUN=1 pst --cwd <path-to-extension> ./node_modules/typescript/bin/tsc --noEmit
 ```
 
-Run the extension typecheck only when the extension package has that script. For first-party extension behavior, prefer
-tests next to the relevant extension file or in the package that owns the runtime behavior.
+In PowerShell, set `$env:BUN_BE_BUN = "1"`, run the same commands without the environment prefix, and remove it with `Remove-Item Env:BUN_BE_BUN` before running normal `pst` commands. Keep this setting limited to the Bun command.
+
+Run the TypeScript command only when the extension has TypeScript installed and a `tsconfig.json`. Preserve any extra compiler options from its typecheck script. Execute the package's JavaScript entry file directly: package-command wrappers can require a separate runtime on Windows. For first-party extension behavior, prefer tests next to the relevant extension file or in the package that owns the runtime behavior.
 
 ## Local development loop
 
@@ -33,17 +34,35 @@ Run Prompt Studio and start the extension watcher from a linked git project:
 pst extensions dev <path-to-extension>
 ```
 
-The first cycle checks the extension contract and dashboard host capabilities, publishes a valid installed snapshot, enables it for the current project, and reports contribution and webview IDs. Later source saves refresh that snapshot. Changes to `package.json`, `bun.lock`, or `bun.lockb` run `bun install` before refresh. Errors stay in the terminal and do not stop the watcher or replace the last valid snapshot.
+The first cycle checks the extension contract and dashboard host capabilities, publishes a valid installed snapshot, enables it for the current project, and reports contribution and webview IDs. Later source saves refresh that snapshot. Changes to `package.json`, `bun.lock`, or `bun.lockb` install dependencies with the bundled Bun runtime before refresh. Errors stay in the terminal and do not stop the watcher or replace the last valid snapshot.
 
 Stop with Ctrl+C. The command removes watchers and temporary staging folders but leaves the last valid extension enabled.
 
-## Install and runtime smoke test
+## Isolated runtime smoke test
 
-Install the extension source into a throwaway Prompt Studio home and validate loaded contributions:
+Provision Chromium once, then run the installed CLI:
 
 ```bash
-PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions add <path-to-extension> --force
-PSTDIO_HOME="$HOME/.pstdio-smoke" pst extensions check
+pst extensions install-browser
+pst extensions test <path-to-extension>
+pst extensions test <path-to-extension> --json
+pst extensions test <path-to-extension> --project-path <fixture-containing-source> --keep-home
+```
+
+Browser setup uses the installed CLI's bundled Bun runtime with `BUN_BE_BUN=1` to install the matching browser package and execute its JavaScript entry file directly. It reuses downloaded browsers. On Linux, add `--with-deps` to install missing system libraries; this may require administrator access. `PLAYWRIGHT_BROWSERS_PATH` selects the browser cache for setup and smoke runs.
+
+The command copies inputs, installs dependencies, checks declarations, creates a fresh project, and opens resource-free pages in the real dashboard. It observes the initial mounted views and bridge calls. A caught capability denial still fails the run. It does not run arbitrary commands, create domain resources, click optional tabs, or test future interactions. Read the visited and unexercised contributions even when the command passes. An extension without pages can pass with zero UI visits.
+
+Exit codes are 0 for a smoke pass, 1 for an extension runtime failure, 2 for an installation or declaration error, and 3 for inputs or setup failures. JSON mode writes one result to stdout; progress and child logs go to stderr. `--keep-home` retains inputs, project, home, logs and the result; browser and host processes still stop.
+
+A fixture directory must contain the source and all local directory dependencies. Absolute local dependencies and source symlinks are rejected. Use relative paths and ordinary files. Without a fixture the run uses a minimal scratch Git repo, so repo-dependent behavior is outside coverage. The caller's linked project and API configuration are not used.
+
+Chromium is provisioned with Playwright 1.60.0. Supported browser targets are macOS arm64/x64, Windows x64, and Linux x64/arm64 on Playwright-supported distributions. Missing browser binaries or system libraries are setup failures. Build the dashboard before source-development runs; release validation must run the compiled command outside the checkout.
+
+For an existing disposable install, static checking remains available:
+
+```bash
+pst extensions check --scope user --json
 ```
 
 Treat warnings as actionable. They do not block loading, but they describe behavior an author should confirm.
@@ -96,5 +115,4 @@ Keep any packaged smoke-test expectations aligned with the current bundled artif
 
 ## Final validation
 
-Before handoff for non-documentation changes, run the full validation command your project defines
-(for example `bun run validate`). If validation cannot run, record the exact command, failure, and reason.
+Before handoff for non-documentation changes, run the full validation your project defines. Inspect package scripts and run their JavaScript or TypeScript entry files with bundled Bun as above; check that any additional tools are available before invoking them. Prompt Studio repository contributors use the repository's documented Bun toolchain and `bun run validate`. If validation cannot run, record the exact command, failure, and reason.

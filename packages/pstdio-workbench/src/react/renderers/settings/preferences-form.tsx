@@ -1,5 +1,5 @@
 import { Button, HStack, Stack } from "@chakra-ui/react";
-import { ParamEditor, type ParamEditorProps } from "@pstdio/ui";
+import { ParamEditor, type ParamEditorProps } from "@pstdio/ui/param-editor";
 import { useState } from "react";
 import type { PreferenceRegistry, PreferenceScope } from "../../../core";
 import {

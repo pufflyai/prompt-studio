@@ -1,5 +1,30 @@
 # pstdio
 
+## 0.34.0
+
+_2026-09-25_
+
+### Minor Changes
+
+- a8f6354: Add handler navigation and resource lifecycle APIs while preserving existing extension behavior.
+- 979a962: Add isolated extension smoke checks, browser setup through bundled Bun, and host diagnostics.
+
+### Patch Changes
+
+- abfc912: Breaking: import ResourceActivityFeed and its types from @pstdio/ui/rich-text instead of @pstdio/ui, next to the editor it renders with
+- 817e5d7: Close the processes and terminals an extension invocation starts when that invocation ends, honour `timeoutMs`, and cap command output at 8 MiB
+- 115222b: Show fresh document content on reopen and external refresh while preserving local edits.
+- c6b0e1b: Show desktop update results for up-to-date checks, verified downloads, completed installations, and failures.
+- f0da855: Resolve and watch scoped workspace dependencies on Windows and manage readable session attachments with their stored files.
+- f0da855: Keep parent context keys when child extension contributions refresh.
+- 1e6777b: Add repository-backed Markdown notes with independent titles, sidebar navigation, and a rename action.
+- abfc912: Breaking: import ParamEditor, its inputs, and its types from @pstdio/ui/param-editor instead of @pstdio/ui, so the root entry no longer pulls the markdown editor
+- fbb0c3e: Keep tree navigation ownership and selection aligned with active resources.
+- f0da855: Keep scheduler deadlines active until shutdown resolves.
+- 6e13c87: Keep overflowing chat tool call titles on a single line.
+- f0da855: Fix Windows database lock races and clean up claims after failed acquisition.
+- 5ed7348: Fix TSX file previews, keep editor popovers visible, and open terminal URLs with Ctrl-click or Cmd-click.
+
 ## 0.33.3
 
 _2026-09-14_

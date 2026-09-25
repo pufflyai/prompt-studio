@@ -1,5 +1,22 @@
 # @pstdio/workbench
 
+## 0.12.0
+
+_2026-09-25_
+
+### Minor Changes
+
+- a8f6354: Add handler navigation and resource lifecycle APIs while preserving existing extension behavior.
+
+### Patch Changes
+
+- 115222b: Show fresh document content on reopen and external refresh while preserving local edits.
+- f0da855: Keep parent context keys when child extension contributions refresh.
+- fbb0c3e: Keep tree navigation ownership and selection aligned with active resources.
+- 979a962: Add isolated extension smoke checks, browser setup through bundled Bun, and host diagnostics.
+- 5ed7348: Fix TSX file previews, keep editor popovers visible, and open terminal URLs with Ctrl-click or Cmd-click.
+- Updated internal dependencies: `@pstdio/ui@0.26.0`, `@pstdio/sdk@0.25.0`
+
 ## 0.11.4
 
 _2026-09-14_

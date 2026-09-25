@@ -1,4 +1,4 @@
-import type { Param, ParamValue, SelectionOption } from "@pstdio/ui";
+import type { Param, ParamValue, SelectionOption } from "@pstdio/ui/param-editor";
 import {
   type CommandParamEntry,
   type CommandParamValue,

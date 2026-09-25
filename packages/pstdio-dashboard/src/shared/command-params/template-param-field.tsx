@@ -1,4 +1,4 @@
-import { ParamEditorRow, type SelectionParam } from "@pstdio/ui";
+import { ParamEditorRow, type SelectionParam } from "@pstdio/ui/param-editor";
 import type { WorkbenchCore } from "@pstdio/workbench";
 import { type CommandParamFieldProps, commandParamName } from "@pstdio/workbench/react";
 import { useQuery } from "@tanstack/react-query";

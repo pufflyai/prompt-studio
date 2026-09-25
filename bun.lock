@@ -21,8 +21,8 @@
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
-        "@pstdio/sdk": "^0.24.1",
-        "@pstdio/ui": "0.25.0",
+        "@pstdio/sdk": "^0.25.0",
+        "@pstdio/ui": "0.26.0",
         "fonteditor-core": "^2.6.3",
         "pako": "^2.1.0",
         "react": "^19.0.0",
@@ -40,7 +40,7 @@
       "name": "pstdio-dev",
       "version": "0.1.0",
       "dependencies": {
-        "@pstdio/sdk": "^0.24.1",
+        "@pstdio/sdk": "^0.25.0",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -51,7 +51,7 @@
       "name": "pstdio-planner-loops",
       "version": "0.1.0",
       "dependencies": {
-        "@pstdio/sdk": "^0.24.1",
+        "@pstdio/sdk": "^0.25.0",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -60,7 +60,7 @@
     },
     "clients/desktop": {
       "name": "@pstdio/desktop",
-      "version": "0.33.3",
+      "version": "0.34.0",
       "dependencies": {
         "@chakra-ui/react": "3.32.0",
         "@emotion/react": "11.14.0",
@@ -125,12 +125,12 @@
     },
     "extensions/extension-lab": {
       "name": "extension-lab",
-      "version": "0.9.5",
+      "version": "0.9.6",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
-        "@pstdio/sdk": "^0.24.1",
-        "@pstdio/ui": "0.25.0",
+        "@pstdio/sdk": "^0.25.0",
+        "@pstdio/ui": "0.26.0",
         "lucide-react": "^0.556.0",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
@@ -146,9 +146,9 @@
     },
     "extensions/harness-claude-code": {
       "name": "harness-claude-code",
-      "version": "0.4.3",
+      "version": "0.4.4",
       "dependencies": {
-        "@pstdio/sdk": "^0.24.1",
+        "@pstdio/sdk": "^0.25.0",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -157,9 +157,9 @@
     },
     "extensions/harness-codex": {
       "name": "harness-codex",
-      "version": "0.3.3",
+      "version": "0.3.4",
       "dependencies": {
-        "@pstdio/sdk": "^0.24.1",
+        "@pstdio/sdk": "^0.25.0",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -168,9 +168,9 @@
     },
     "extensions/harness-open-code": {
       "name": "harness-open-code",
-      "version": "0.4.3",
+      "version": "0.4.4",
       "dependencies": {
-        "@pstdio/sdk": "^0.24.1",
+        "@pstdio/sdk": "^0.25.0",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -179,12 +179,12 @@
     },
     "extensions/pstdio-artifacts": {
       "name": "pstdio-artifacts",
-      "version": "0.2.3",
+      "version": "0.2.4",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
-        "@pstdio/sdk": "^0.24.1",
-        "@pstdio/ui": "0.25.0",
+        "@pstdio/sdk": "^0.25.0",
+        "@pstdio/ui": "0.26.0",
         "entities": "4.5.0",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
@@ -199,9 +199,20 @@
     },
     "extensions/pstdio-base-themes": {
       "name": "pstdio-base-themes",
-      "version": "0.3.3",
+      "version": "0.3.4",
       "dependencies": {
-        "@pstdio/sdk": "^0.24.1",
+        "@pstdio/sdk": "^0.25.0",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "typescript": "6.0.2",
+      },
+    },
+    "extensions/pstdio-notes": {
+      "name": "pstdio-notes",
+      "version": "0.2.0",
+      "dependencies": {
+        "@pstdio/sdk": "^0.25.0",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -210,12 +221,12 @@
     },
     "extensions/pstdio-planner": {
       "name": "pstdio-planner",
-      "version": "0.14.1",
+      "version": "0.15.0",
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
-        "@pstdio/sdk": "^0.24.1",
-        "@pstdio/ui": "0.25.0",
+        "@pstdio/sdk": "^0.25.0",
+        "@pstdio/ui": "0.26.0",
         "@tanstack/react-query": "^5.90.21",
         "lucide-react": "^0.556.0",
         "react": "^19.0.0",
@@ -232,9 +243,9 @@
     },
     "extensions/pstdio-reports": {
       "name": "pstdio-reports",
-      "version": "0.6.1",
+      "version": "0.6.2",
       "dependencies": {
-        "@pstdio/sdk": "^0.24.1",
+        "@pstdio/sdk": "^0.25.0",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -243,9 +254,9 @@
     },
     "extensions/pstdio-skills": {
       "name": "pstdio-skills",
-      "version": "0.4.3",
+      "version": "0.4.4",
       "dependencies": {
-        "@pstdio/sdk": "^0.24.1",
+        "@pstdio/sdk": "^0.25.0",
       },
       "devDependencies": {
         "@types/bun": "1.4.2",
@@ -254,9 +265,9 @@
     },
     "extensions/remote-workspaces": {
       "name": "remote-workspaces",
-      "version": "2.0.1",
+      "version": "2.0.2",
       "dependencies": {
-        "@pstdio/sdk": "^0.24.0",
+        "@pstdio/sdk": "^0.25.0",
       },
       "devDependencies": {
         "typescript": "6.0.2",
@@ -266,7 +277,7 @@
       "name": "local-example",
       "version": "0.1.2",
       "dependencies": {
-        "@pstdio/sdk": "^0.24.1",
+        "@pstdio/sdk": "^0.25.0",
       },
     },
     "packages/e2e": {
@@ -281,7 +292,7 @@
     },
     "packages/pstdio": {
       "name": "pstdio",
-      "version": "0.33.3",
+      "version": "0.34.0",
       "bin": {
         "pstdio": "./bin/pstdio.cjs",
         "pst": "./bin/pstdio.cjs",
@@ -299,6 +310,7 @@
         "@types/node": "^24.3.0",
         "@types/react": "^19.2.14",
         "@types/yargs": "^17.0.35",
+        "playwright-core": "1.60.0",
         "pstdio-api": "workspace:*",
         "pstdio-logging": "workspace:*",
         "pstdio-paths": "workspace:*",
@@ -306,12 +318,12 @@
         "typescript": "6.0.2",
       },
       "optionalDependencies": {
-        "@pstdio/cli-darwin-arm64": "0.33.3",
-        "@pstdio/cli-darwin-x64": "0.33.3",
-        "@pstdio/cli-linux-arm64": "0.33.3",
-        "@pstdio/cli-linux-x64": "0.33.3",
-        "@pstdio/cli-win-arm64": "0.33.3",
-        "@pstdio/cli-win-x64": "0.33.3",
+        "@pstdio/cli-darwin-arm64": "0.34.0",
+        "@pstdio/cli-darwin-x64": "0.34.0",
+        "@pstdio/cli-linux-arm64": "0.34.0",
+        "@pstdio/cli-linux-x64": "0.34.0",
+        "@pstdio/cli-win-arm64": "0.34.0",
+        "@pstdio/cli-win-x64": "0.34.0",
       },
     },
     "packages/pstdio-api": {
@@ -503,13 +515,13 @@
     },
     "packages/pstdio-workbench": {
       "name": "@pstdio/workbench",
-      "version": "0.11.4",
+      "version": "0.12.0",
       "dependencies": {
         "@dnd-kit/core": "^6.3.1",
         "@dnd-kit/sortable": "^10.0.0",
         "@dnd-kit/utilities": "^3.2.2",
-        "@pstdio/sdk": "^0.24.1",
-        "@pstdio/ui": "^0.25.0",
+        "@pstdio/sdk": "^0.25.0",
+        "@pstdio/ui": "^0.26.0",
         "@tanstack/react-hotkeys": "0.10.0",
         "lucide-react": "^0.556.0",
         "rimless": "0.8.2",
@@ -558,7 +570,7 @@
     },
     "packages/sdk": {
       "name": "@pstdio/sdk",
-      "version": "0.24.1",
+      "version": "0.25.0",
       "dependencies": {
         "mustache": "^4.2.0",
         "zod": "^4.3.6",
@@ -585,7 +597,7 @@
     },
     "packages/ui": {
       "name": "@pstdio/ui",
-      "version": "0.25.0",
+      "version": "0.26.0",
       "dependencies": {
         "@chakra-ui/charts": "^3.36.0",
         "@dnd-kit/core": "^6.3.1",
@@ -674,8 +686,8 @@
       "dependencies": {
         "@chakra-ui/react": "^3.0.0",
         "@emotion/react": "^11.0.0",
-        "@pstdio/sdk": "^0.24.1",
-        "@pstdio/ui": "0.25.0",
+        "@pstdio/sdk": "^0.25.0",
+        "@pstdio/ui": "0.26.0",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "zustand": "^5.0.0",
@@ -3889,6 +3901,8 @@
     "pstdio-file-types": ["pstdio-file-types@workspace:packages/pstdio-file-types"],
 
     "pstdio-logging": ["pstdio-logging@workspace:packages/pstdio-logging"],
+
+    "pstdio-notes": ["pstdio-notes@workspace:extensions/pstdio-notes"],
 
     "pstdio-paths": ["pstdio-paths@workspace:packages/pstdio-paths"],
 

@@ -26,13 +26,15 @@ export const LandingPanels = (props: LandingPanelsProps) => {
         collapsible={false}
         resizeLabel="Resize download panel"
         resizablePanel={
-          <Box css={styles.hero} as="section" aria-labelledby="download-panel-title">
-            <Box flex="1" minHeight="0">
-              <PageScroll>
-                <DownloadPanel headingLevel={page.view === "start" ? "h1" : "h2"} />
-              </PageScroll>
-            </Box>
+          <Box css={styles.downloadColumn}>
             {navigation}
+            <Box css={styles.hero} as="section" aria-labelledby="download-panel-title">
+              <Box flex="1" minHeight="0">
+                <PageScroll>
+                  <DownloadPanel headingLevel={page.view === "start" ? "h1" : "h2"} />
+                </PageScroll>
+              </Box>
+            </Box>
           </Box>
         }
         contentPanel={children}
