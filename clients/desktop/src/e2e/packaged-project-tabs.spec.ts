@@ -28,6 +28,16 @@ test("opens and closes project tabs while preserving pages and terminals", async
         defaultExtensions: [{ source: fixturePath, installName: "workbench-fixture", skipInstall: true }],
       }),
     });
+    app.page.on("console", (message) => {
+      if (message.text().startsWith("terminal-kill-stack")) console.log(message.text());
+    });
+    await app.page.evaluate(() => {
+      const send = WebSocket.prototype.send;
+      WebSocket.prototype.send = function (data) {
+        if (typeof data === "string" && JSON.parse(data).type === "kill") console.log("terminal-kill-stack", new Error().stack);
+        return send.call(this, data);
+      };
+    });
     app.page.on("websocket", (socket) => {
       const record = (direction: string, event: { payload: string | Buffer }) => {
         const data = JSON.parse(String(event.payload));
