@@ -5,6 +5,15 @@ on:
 permissions:
   contents: read
 jobs:
+  intel-checksum:
+    runs-on: macos-15-intel
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - run: node scripts/ci/desktop-checksum-benchmark.ts
   windows:
     runs-on: windows-latest
     timeout-minutes: 5
