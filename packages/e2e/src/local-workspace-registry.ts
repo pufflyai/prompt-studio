@@ -105,6 +105,7 @@ export const startLocalWorkspaceRegistry = async (input: {
   writeFileSync(input.configPath, `@pstdio:registry=${origin}/\n`);
 
   return {
+    origin,
     close: async () => {
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));
