@@ -1,6 +1,6 @@
 {
   "name": "pstdio-base-themes",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "displayName": "Prompt Studio Base Themes",
   "description": "Bundled color themes (Monokai, Solarized, Dracula) and the Seti file icon theme.",
   "publisher": "pstdio",
@@ -15,7 +15,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.24.1"
+    "@pstdio/sdk": "^0.25.0"
   },
   "devDependencies": {
     "@types/bun": "1.4.2",

@@ -1,5 +1,22 @@
 # @pstdio/ui
 
+## 0.26.0
+
+_2026-09-25_
+
+### Minor Changes
+
+- abfc912: Breaking: import ResourceActivityFeed and its types from @pstdio/ui/rich-text instead of @pstdio/ui, next to the editor it renders with
+- 0f306e6: Recall recent chat prompts with Arrow Up and Arrow Down, including while a response is processing.
+- abfc912: Breaking: import ParamEditor, its inputs, and its types from @pstdio/ui/param-editor instead of @pstdio/ui, so the root entry no longer pulls the markdown editor
+
+### Patch Changes
+
+- 79c601e: Keep the Markdown selection toolbar beside the selection when scrolling and hidden during drags, and preserve native quote editing and line breaks when loading and saving Markdown.
+- 6e13c87: Keep overflowing chat tool call titles on a single line.
+- 5ed7348: Fix TSX file previews, keep editor popovers visible, and open terminal URLs with Ctrl-click or Cmd-click.
+- Updated internal dependencies: `@pstdio/sdk@0.25.0`
+
 ## 0.25.0
 
 _2026-09-14_

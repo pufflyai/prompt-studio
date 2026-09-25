@@ -1,5 +1,15 @@
 # Prompt Studio Skills
 
+## 0.4.4
+
+_2026-09-25_
+
+### Patch Changes
+
+- fbb0c3e: Adopt explicit handler navigation and resource removal reporting in first-party extensions.
+- 979a962: Add isolated extension smoke checks, browser setup through bundled Bun, and host diagnostics.
+- Updated internal dependencies: `@pstdio/sdk@0.25.0`
+
 ## 0.4.3
 
 _2026-09-14_
