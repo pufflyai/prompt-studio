@@ -61,6 +61,17 @@ describe("notes", () => {
     ]);
   });
 
+  test.each([
+    "```md\n# Code example\n```",
+    "~~~md\n# Code example\n~~~",
+    "````md\n```\n# Code example\n````",
+  ])("ignores headings inside fenced code when choosing a label: %s", async (code) => {
+    const mount = createMount();
+    await mount.writeText("note.md", `${code}\n\n# Real heading\n`);
+
+    expect(await listNotes(mount)).toMatchObject([{ id: "note", title: "Real heading" }]);
+  });
+
   test("skips a note deleted after listing while preserving the remaining notes", async () => {
     const mount = createMount();
     await mount.writeText("keep.md", "# Keep");

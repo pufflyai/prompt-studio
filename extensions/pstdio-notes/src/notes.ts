@@ -19,8 +19,26 @@ const noteId = (title: string) => {
 };
 
 const titleOf = (id: string, content: string) => {
-  const heading = content.match(/^ {0,3}#{1,6}[\t ]+(.+)$/m);
-  return heading?.[1].replace(/[\t ]+#+[\t ]*$/, "").trim() || id;
+  let openFence: string | undefined;
+  for (const line of content.split(/\r?\n/)) {
+    const fence = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
+    if (fence) {
+      const marker = fence[1];
+      const info = fence[2];
+      if (!openFence && (marker[0] === "~" || !info.includes("`"))) {
+        openFence = marker;
+        continue;
+      }
+      if (openFence && marker[0] === openFence[0] && marker.length >= openFence.length && !info.trim()) {
+        openFence = undefined;
+        continue;
+      }
+    }
+    if (openFence) continue;
+    const heading = line.match(/^ {0,3}#{1,6}[\t ]+(.+)$/);
+    if (heading) return heading[1].replace(/[\t ]+#+[\t ]*$/, "").trim() || id;
+  }
+  return id;
 };
 
 export const noteExists = (mount: NotesMount, id: string) => mount.exists(notePath(id));

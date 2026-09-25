@@ -6,6 +6,7 @@ export const createNoteCommand = defineCommand({
   id: "notes.create",
   title: l10n("commands.createNote", "New note"),
   cli: true,
+  mutating: true,
   params: {
     title: params.text({ label: l10n("params.title", "Title"), required: true }),
   },
@@ -22,6 +23,7 @@ export const deleteNoteCommand = defineCommand({
   id: "notes.delete",
   title: l10n("commands.deleteNote", "Delete note"),
   cli: true,
+  mutating: true,
   params: {
     noteId: params.text({ label: l10n("params.noteId", "Note"), required: true }),
   },
