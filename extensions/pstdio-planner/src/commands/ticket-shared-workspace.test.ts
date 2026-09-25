@@ -5,7 +5,6 @@ import { archiveTicketCommand } from "./archive-ticket";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
 import { runAttemptCommand } from "./run-attempt";
-import { createWorkspaceCommand } from "./ticket-actions";
 import { listTicketFilesTreeCommand } from "./ticket-files";
 
 const home: ExtensionWorkspace = {
@@ -20,21 +19,6 @@ const home: ExtensionWorkspace = {
 };
 
 describe("ticket work in shared folders", () => {
-  test.each([
-    [{ ...home, initializing: true }, "setup is still running"],
-    [{ ...home, root_path: null }, "Attach a project folder"],
-  ] as const)("does not open an unavailable default workspace: %j", async (workspace, error) => {
-    await expect(
-      createWorkspaceCommand.run(
-        ...makeCommandArgs({
-          storage: createMemoryStorage(),
-          params: { ticket: "T-1" },
-          overrides: { workspaces: { getDefault: async () => workspace, listProviders: async () => [] } },
-        }),
-      ),
-    ).rejects.toThrow(error);
-  });
-
   test("archiving a ticket preserves the shared workspace", async () => {
     const storage = createMemoryStorage();
     const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title: "First" } }));
@@ -42,8 +26,11 @@ describe("ticket work in shared folders", () => {
     await archiveTicketCommand.run(
       ...makeCommandArgs({
         storage,
-        params: { ticket: ticket.id },
-        overrides: { workspaces: { list: async () => [home], archive } },
+        params: {},
+        overrides: {
+          resource: { type: "ticket", id: ticket.id },
+          workspaces: { list: async () => [home], archive },
+        },
       }),
     );
     expect(archive).not.toHaveBeenCalled();
@@ -59,71 +46,6 @@ describe("ticket work in shared folders", () => {
         }),
       ),
     ).rejects.toThrow("Planner attempts require a Git repository");
-  });
-
-  test("reuses the exact project workspace for multiple tickets without creating Git worktrees", async () => {
-    const storage = createMemoryStorage();
-    const create = mock(async () => {
-      throw new Error("Git is unavailable");
-    });
-    for (const title of ["First", "Second"]) {
-      const ticket = await createTicketCommand.run(...makeCommandArgs({ storage, params: { title } }));
-      const result = await createWorkspaceCommand.run(
-        ...makeCommandArgs({
-          storage,
-          params: { ticket: ticket.id },
-          overrides: {
-            workspaces: {
-              getDefault: async () => home,
-              listProviders: async () => [{ id: "pstdio.root", label: "Project folder", params: {} }],
-              create,
-            },
-          },
-        }),
-      );
-      expect(result).toMatchObject({ mode: "shared", workspace: home, session: null });
-    }
-    expect(create).not.toHaveBeenCalled();
-    expect(home.anchors_json).toEqual([]);
-  });
-
-  test("reuses a remote project workspace without inventing a local path", async () => {
-    const remote = { ...home, provider_id: "cloud.workspace", root_path: null, execution_kind: "remote" as const };
-    const result = await createWorkspaceCommand.run(
-      ...makeCommandArgs({
-        storage: createMemoryStorage(),
-        params: { ticket: "T-1" },
-        overrides: { workspaces: { getDefault: async () => remote, listProviders: async () => [] } },
-      }),
-    );
-    expect(result.workspace).toEqual(remote);
-    expect(result.mode).toBe("shared");
-  });
-
-  test("reports a provider setup failure instead of returning a broken workspace", async () => {
-    await expect(
-      createWorkspaceCommand.run(
-        ...makeCommandArgs({
-          storage: createMemoryStorage(),
-          params: { ticket: "T-1" },
-          overrides: {
-            workspaces: {
-              create: async () => ({ id: "failed", provider_state: "failed" }),
-              resolve: async () => ({
-                state: "failed",
-                executionKind: "local",
-                capabilities: { files: "none", diff: false, merge: false, rebase: false, archive: true, delete: true },
-                error: {
-                  code: "provider_create_failed",
-                  message: "The base revision has no selected subfolder.",
-                  retryable: true,
-                },
-              }),
-            },
-          },
-        }),
-      ),
-    ).rejects.toThrow("The base revision has no selected subfolder.");
   });
 
   test("shows the shared folder on a ticket without including other tickets' sessions", async () => {
@@ -146,7 +68,7 @@ describe("ticket work in shared folders", () => {
           },
         },
         overrides: {
-          workspaces: { list: async () => [home] },
+          workspaces: { list: async () => [home], listProviders: async () => [] },
           sessions: { list: async () => [otherSession], listByWorkspace } as never,
         },
       }),

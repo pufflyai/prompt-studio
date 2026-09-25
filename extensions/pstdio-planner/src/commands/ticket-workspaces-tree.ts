@@ -1,4 +1,6 @@
 import {
+  type CreateWorkspaceCommandParams,
+  commandRef,
   type ExtensionWorkspace,
   l10n,
   type TreeAction,
@@ -8,7 +10,11 @@ import {
 } from "@pstdio/sdk/extensions";
 import { ticketPageTarget } from "../data/ticket-page-target";
 import type { TicketResourceReference } from "../data/ticket-resource-hierarchy";
-import { createWorkspaceCommand } from "./ticket-actions";
+
+const createWorkspace = commandRef<CreateWorkspaceCommandParams>({
+  extensionId: "pstdio",
+  id: "workbench.workspace.create",
+});
 
 // Prefer the (renamable) workspace name so the sidenav reflects renames; the immutable
 // shorthand is only a fallback. The tree re-runs on workspace collection changes, so the
@@ -43,7 +49,7 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMet
 
   return {
     id: `workspace-${workspace.id}`,
-    label: workspace.is_default ? l10n("ticketWorkspaces.shared", "Project workspace (shared)") : label,
+    label: workspace.is_default ? l10n("ticketWorkspaces.project", "Project workspace") : label,
     icon,
     resource,
     target: {
@@ -57,13 +63,13 @@ const workspaceNode = (workspace: ExtensionWorkspace, ticket: LinkedWorkspaceMet
 
 const workspaceActivityAt = (workspace: ExtensionWorkspace) => workspace.updated_at ?? workspace.created_at ?? "";
 
-const workspaceSectionActions = (ticketId: string): TreeAction[] => [
+const workspaceSectionActions = (options: CreateWorkspaceCommandParams): TreeAction[] => [
   {
     id: "create-workspace",
-    label: "Create workspace",
+    label: l10n("kanbanRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
     icon: "Plus",
-    command: createWorkspaceCommand.ref,
-    params: { ticket: ticketId },
+    command: createWorkspace,
+    params: options,
   },
 ];
 
@@ -85,13 +91,13 @@ const emptyWorkspacesNode = (): TreeNode => ({
 
 export const buildWorkspacesSection = (
   workspaces: ExtensionWorkspace[],
-  ticketId: string,
   ticket: LinkedWorkspaceMetadata,
+  creationOptions: CreateWorkspaceCommandParams | undefined,
 ) =>
   ({
     id: "workspaces",
     label: "Workspaces",
     collapsible: true,
-    actions: workspaceSectionActions(ticketId),
+    actions: creationOptions ? workspaceSectionActions(creationOptions) : [],
     nodes: workspaces.length > 0 ? workspaceNodes(workspaces, ticket) : [emptyWorkspacesNode()],
   }) satisfies TreeViewSection;

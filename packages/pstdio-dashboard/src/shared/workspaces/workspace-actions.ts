@@ -1,3 +1,4 @@
+import type { CreateWorkspaceCommandParams } from "@pstdio/sdk/extensions";
 import { apiRequest } from "@/lib/api";
 
 interface DashboardWorkspaceResponse {
@@ -6,7 +7,7 @@ interface DashboardWorkspaceResponse {
   name: string;
 }
 
-interface CreateDashboardWorkspaceInput {
+interface CreateDashboardWorkspaceInput extends CreateWorkspaceCommandParams {
   projectId: string;
   providerId: string;
   params?: Record<string, unknown>;
@@ -19,6 +20,8 @@ export const createDashboardWorkspace = (input: CreateDashboardWorkspaceInput) =
       project_id: input.projectId,
       provider_id: input.providerId,
       params: input.params,
+      anchors: input.anchors,
+      shorthand_base: input.shorthand_base,
     },
   });
 

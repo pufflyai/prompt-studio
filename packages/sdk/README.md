@@ -32,6 +32,29 @@ Page targets change location. Panel targets preserve it. Compound targets contai
 
 Use `qualifyRef(owner, ref)` in provider contract modules. Keep definitions local and pass qualified refs between extensions. For webviews, declare capabilities and call the typed `GuestHost`; `placement.close` closes the calling placement through the normal tab controller.
 
+## Workspace creation
+
+Workspace creation belongs to the host. Use `ctx.workspaces.listProviders()` to
+check whether additional workspaces can be created. The existing project
+workspace is returned separately by `ctx.workspaces.getDefault()`.
+
+A tree action can call the public host command `workbench.workspace.create`:
+
+```ts
+const createWorkspace = commandRef<CreateWorkspaceCommandParams>({
+  extensionId: "pstdio",
+  id: "workbench.workspace.create",
+});
+```
+
+It accepts optional `anchors` and `shorthand_base` parameters. The host shows the available providers and their
+declared inputs, then creates the workspace with those resource links. Provider
+parameters stay nested and are passed unchanged. Cloud providers do not need Git
+or a local directory; creation may return while provisioning is still running.
+
+For programmatic creation, call `ctx.workspaces.create()` with an explicit
+`provider_id` and provider `params`.
+
 ## Dashboard URLs
 
 Use `serializePageUrl({ projectId, page, resource })` to return a dashboard link from a command. The page descriptor contains its `id`, qualified `ref`, and declared `path`; `resource` is optional. The workbench uses the same route and resource codec.

@@ -74,7 +74,7 @@ const ProviderParameters = (props: {
         </Text>
       )}
       <Button variant="primary" loading={busy} onClick={submit}>
-        Open workspace
+        Create workspace
       </Button>
     </Stack>
   );

@@ -9,7 +9,7 @@ pst workspaces merge --id <workspace-id> [--delete-workspace]
 pst workspaces delete --id <workspace-id>
 ```
 
-Providers declare their own parameters. The dashboard lists available providers and renders these parameters.
+Providers declare their own parameters. The dashboard lists providers that create additional workspaces and renders these parameters. The existing project workspace is listed separately. A plain folder has no creation choices until an extension supplies a provider.
 
 ```sh
 pst workspaces create --provider pstdio.worktree --params '{"base":"HEAD"}'

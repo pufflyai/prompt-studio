@@ -285,7 +285,7 @@ describe("createWorkspaceCommand", () => {
     const result = await createWorkspaceCommand.run(
       ...makeCommandArgs({
         storage,
-        params: { rowId: ticket.id },
+        params: { rowId: ticket.id, provider_id: "pstdio.worktree", params: { base: "HEAD" } },
         overrides: {
           workspaces: {
             create: async (input: unknown) => {
@@ -303,10 +303,8 @@ describe("createWorkspaceCommand", () => {
       }),
     );
     expect(result).toEqual({
-      mode: "worktree",
       ticket: storedTicket,
       workspace: { id: "workspace-1", workspace_shorthand: "T-1_A1" },
-      session: null,
     });
     expect(workspaces).toEqual([
       {
@@ -344,7 +342,7 @@ describe("createWorkspaceCommand", () => {
     await createWorkspaceCommand.run(
       ...makeCommandArgs({
         storage,
-        params: { rowId: child.id },
+        params: { rowId: child.id, provider_id: "pstdio.worktree" },
         overrides: {
           workspaces: {
             create: async (input: unknown) => {

@@ -311,15 +311,6 @@ describe("pstdio planner workspace contributions", () => {
     });
     expect(extension.placements?.find((placement) => placement.id === "tickets.project")).toBeUndefined();
   });
-  test("exposes ticket workspace creation as an extension-owned row action", () => {
-    const tickets = extension.views?.find((view) => view.id === "tickets");
-    expect(tickets?.body.kind === "kanban" ? tickets.body.rowActions : undefined).toContainEqual({
-      id: "create-workspace",
-      label: { $l10n: "kanbanRenderers.tickets.rowActions.createWorkspace", default: "Create workspace" },
-      icon: "git-branch",
-      command: { id: "create-workspace", kind: "command" },
-    });
-  });
   test("keeps tag and board rule settings separate from shared status fields", () => {
     expect(extension.settingsPanels?.map((panel) => panel.id)).toEqual(["ticket-tags"]);
     expect(extension.settingsSections).toEqual([

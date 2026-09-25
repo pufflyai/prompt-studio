@@ -11,7 +11,7 @@ export const listWorkspaceProvidersRoute = createRoute({
   request: { params: z.object({ projectId: z.string() }) },
   responses: {
     200: {
-      description: "Available workspace providers and their parameters.",
+      description: "Providers available to create additional workspaces and their parameters.",
       content: { "application/json": { schema: z.array(workspaceProviderDescriptorSchema) } },
     },
   },

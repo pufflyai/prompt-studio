@@ -5,6 +5,7 @@ import type {
   WorkspaceProviderRef,
   WorkspaceProviderState,
 } from "./extension-kernel/types/extension";
+import type { ResourceRole } from "./extension-kernel/types/resources";
 import { extensionResourceRefSchema } from "./extensions";
 import { extensionParamObjectSchema } from "./extensions/commands";
 import { jsonObjectSchema, localizableStringSchema } from "./extensions/common";
@@ -47,6 +48,10 @@ export const workspaceProviderErrorSchema = z.object({
   occurred_at: z.string(),
 });
 
+const workspaceAnchorSchema = extensionResourceRefSchema.extend({
+  role: z.enum(["primary", "context", "source", "result"] satisfies ResourceRole[]).optional(),
+});
+
 export const workspaceSchema = z.object({
   id: z.string(),
   project_id: z.string(),
@@ -69,7 +74,7 @@ export const workspaceSchema = z.object({
   setup_error: z.string().nullable(),
   workspace_shorthand: z.string(),
   startup_log_file_id: z.string().nullable(),
-  anchors_json: z.array(extensionResourceRefSchema),
+  anchors_json: z.array(workspaceAnchorSchema),
   created_at: z.string(),
   updated_at: z.string(),
   deleted_at: z.string().nullable(),
@@ -85,6 +90,10 @@ export const createWorkspaceInputSchema = z.object({
   provider_id: z.string().min(1),
   /** Provider parameters. The Git provider accepts a base ref. */
   params: jsonObjectSchema.optional(),
+  /** Optional resource links owned by the requesting tool. */
+  anchors: z.array(workspaceAnchorSchema).optional(),
+  /** Prefix for related workspace names; omitted workspaces use project-scoped WS-N names. */
+  shorthand_base: z.string().trim().min(1).optional(),
 });
 
 export const renameWorkspaceInputSchema = z.object({

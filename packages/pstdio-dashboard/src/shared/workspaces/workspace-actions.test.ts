@@ -52,8 +52,10 @@ describe("dashboard workspace actions", () => {
 
     await createDashboardWorkspace({
       projectId: "project-1",
-      providerId: "pstdio.worktree",
-      params: { base: "feature/custom-base" },
+      providerId: "cloud.environment",
+      params: { image: "notes" },
+      anchors: [{ type: "ticket", id: "ticket-1", role: "primary" }],
+      shorthand_base: "T-1",
     });
 
     expect(calls).toEqual([
@@ -62,8 +64,10 @@ describe("dashboard workspace actions", () => {
         url: "http://localhost:19840/v1/workspaces",
         body: JSON.stringify({
           project_id: "project-1",
-          provider_id: "pstdio.worktree",
-          params: { base: "feature/custom-base" },
+          provider_id: "cloud.environment",
+          params: { image: "notes" },
+          anchors: [{ type: "ticket", id: "ticket-1", role: "primary" }],
+          shorthand_base: "T-1",
         }),
       },
     ]);

@@ -1,18 +1,18 @@
 import { filterVisibleTabs, useTabVisibilityStore } from "@pstdio/ui";
 import {
   getActiveWorkbenchLocationPanel,
-  getActiveWorkbenchSubPanel,
+  getAnchorResource,
+  headerTrailingMenuPath,
   isWorkbenchPanelPlacementVisible,
-  matchesWorkbenchPanelMenuOwner,
   type WorkbenchCore,
   type WorkbenchPanelRegion,
   type WorkbenchRegion,
   type WorkbenchWidgetPlacement,
-  workbenchPanelMenuRegions,
   workbenchPanelRegions,
   workbenchRegionTabLeadingMenuPath,
 } from "../../core";
 import { listWorkbenchMenuItemsFromState } from "../menus/menu-items";
+import { useWorkbenchPanelMenus } from "../panel-menu/panel-menu";
 import { useWorkbenchCompositionPanels } from "../shared/use-workbench-composition-panels";
 import { useWorkbenchActiveModeId, useWorkbenchLocationResource } from "../shared/use-workbench-location-resource";
 import { useWorkbenchStore } from "../shared/use-workbench-store";
@@ -88,6 +88,11 @@ export const useWorkbenchRegionTabsState = (
       alwaysShowTabs: workbench.layout.getRegionSettings(region)?.alwaysShowTabs,
     });
   const hasActions = leadingItems.length > 0 || eligibleSubPanels.length > 0;
+  const hasTrailingActions =
+    region === "main" &&
+    listWorkbenchMenuItemsFromState({ itemsByPath, commands, contextValues }, headerTrailingMenuPath(region), {
+      resource: getAnchorResource(layoutState.layout, "primary"),
+    }).length > 0;
 
   return {
     commands,
@@ -101,32 +106,19 @@ export const useWorkbenchRegionTabsState = (
     eligibleSubPanels,
     showTabs,
     hasActions,
+    hasTrailingActions,
   };
 };
 
 export const useWorkbenchPanelHeaderVisible = (workbench: WorkbenchCore, region: WorkbenchPanelRegion) => {
-  const layoutState = useWorkbenchStore(workbench.layout.store, (state) => state);
-  const resource = useWorkbenchLocationResource(workbench);
-  const modeId = useWorkbenchActiveModeId(workbench);
-  const { showTabs, hasActions } = useWorkbenchRegionTabsState(workbench, region);
-  const activeSubPanel = getActiveWorkbenchSubPanel(layoutState.layout, region, resource, {
-    ignoreOwnerResourceKey: region === "side",
+  const { showTabs, hasActions, hasTrailingActions } = useWorkbenchRegionTabsState(workbench, region);
+  const { left, right } = useWorkbenchPanelMenus(workbench, region);
+  const hasPanelMenus = [left, right].some((menu) => menu.has && menu.collapsed);
+  return shouldShowPanelHeader({
+    hasTabs: showTabs,
+    hasHeaderActions: hasActions || hasTrailingActions,
+    hasPanelMenus,
   });
-  const activeLocationPanel = getActiveWorkbenchLocationPanel(layoutState.layout);
-  const menuRegions = workbenchPanelMenuRegions[region];
-  const hasPanelMenus = [menuRegions.left, menuRegions.right].some(
-    (menuRegion) =>
-      layoutState.layout.regions[menuRegion].widgets.some(
-        (placement) =>
-          isPlacementEligibleForRegion(workbench, region, placement, resource, modeId) &&
-          matchesWorkbenchPanelMenuOwner(layoutState.widgets[placement.contributionId], {
-            locationPanel: activeLocationPanel,
-            subPanel: activeSubPanel,
-          }),
-      ) || Boolean(workbench.layout.getPlaceholder(menuRegion)),
-  );
-
-  return shouldShowPanelHeader({ hasTabs: showTabs, hasHeaderActions: hasActions, hasPanelMenus });
 };
 
 export const useWorkbenchRegionTabsVisible = (workbench: WorkbenchCore, region: WorkbenchRegion) => {

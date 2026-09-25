@@ -12,6 +12,7 @@ import type {
 } from "../../core";
 import { isExtensionNavigationTarget, toWorkbenchNavigationTarget } from "../host/extension-navigation-target";
 import type { InternalWorkbenchExtensionMetadata as WorkbenchExtensionMetadata } from "../host/internal-workbench-extension-metadata";
+import { metadataCommandId } from "../host/workbench-extension-metadata-ref";
 import { localizeParamSchema } from "./param-schema-localization";
 import { createQueryParams, executeCallback, executeTreeActionCommand } from "./tree-renderer-callbacks";
 import type {
@@ -100,7 +101,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     ctx: TreeContext,
   ): TreeAction => {
     const commandId = action.command
-      ? `${action.command.extensionId ?? record.extensionId}.command.${action.command.id}`
+      ? metadataCommandId({ ...action.command, extensionId: action.command.extensionId ?? record.extensionId })
       : undefined;
     return {
       id: action.id,
@@ -115,11 +116,18 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
       // node-target navigation runs through the runner command and must not refetch.
       run: commandId
         ? async (params) => {
+            const actionParams = toActionParams(params, toRecordParams(action.params));
+            if (action.command?.extensionId === "pstdio") {
+              await input.workbench.commands.executeCommand(commandId, actionParams, {
+                resource: node?.resource ?? ctx.resource,
+              });
+              return;
+            }
             const result = await executeTreeActionCommand(
               input,
               record,
               commandId,
-              toActionParams(params, toRecordParams(action.params)),
+              actionParams,
               node?.resource ?? ctx.resource,
             );
             ctx.refresh();

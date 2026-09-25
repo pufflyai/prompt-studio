@@ -163,6 +163,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
   // Standalone workspaces use project-scoped `WS-<n>` shorthands.
   const createStandalone = async (input: {
     project_id: string;
+    anchors?: CreateInput["anchors"];
     name?: string;
     branch?: string;
     root_path?: string;
@@ -189,6 +190,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
     const record = buildWorkspaceRecord({
       project_id: input.project_id,
       shorthand,
+      anchors: input.anchors,
       name: input.name,
       branch: input.branch,
       root_path: input.root_path,

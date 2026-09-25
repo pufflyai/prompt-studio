@@ -22,7 +22,7 @@ import { reorderTicket } from "./commands/reorder-ticket";
 import { runAttemptCommand } from "./commands/run-attempt";
 import { saveTicketContent } from "./commands/save-ticket-content";
 import { setTicketAttribute } from "./commands/set-ticket-attribute";
-import { breakIntoSubTicketsCommand, createWorkspaceCommand, refineTicketCommand } from "./commands/ticket-actions";
+import { breakIntoSubTicketsCommand, refineTicketCommand } from "./commands/ticket-actions";
 import { listTicketFilesTree } from "./commands/ticket-files";
 import { queryTicketProperties } from "./commands/ticket-properties/query";
 import { updateTicketProperty } from "./commands/ticket-properties/update";
@@ -131,12 +131,6 @@ export const createPlannerUi = (baseUrl: string) => {
         },
       },
       rowActions: [
-        {
-          id: "create-workspace",
-          label: l10n("kanbanRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
-          icon: "git-branch",
-          command: createWorkspaceCommand.ref,
-        },
         {
           id: "run-attempt",
           label: l10n("kanbanRenderers.tickets.rowActions.runAttempt", "Run attempt"),

@@ -1,5 +1,5 @@
 import { Spinner } from "@chakra-ui/react";
-import { resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
+import { type CreateWorkspaceCommandParams, resourceKey, workbenchPages } from "@pstdio/sdk/extensions";
 import type { TreeNode, WorkbenchModuleContext, WorkbenchModuleContribution } from "@pstdio/workbench";
 import { workbenchCommandPaletteMenuPath } from "@pstdio/workbench";
 import { lazy, Suspense } from "react";
@@ -25,14 +25,24 @@ const WorkspaceDiffsPanel = lazy(() =>
   import("./components/workspace-widget").then((module) => ({ default: module.WorkspaceDiffsPanel })),
 );
 
-const openCreateWorkspace = (ctx: WorkbenchModuleContext) => {
+const openCreateWorkspace = (ctx: WorkbenchModuleContext, options: CreateWorkspaceCommandParams = {}) => {
   const projectId = getDashboardSelectedProjectId(ctx);
   if (!projectId) {
     ctx.pageLocations.clearProject();
     ctx.modes.setActiveMode("project-selection");
     return;
   }
-  return ctx.overlays.openOverlay(dashboardWidgetIds.createWorkspace, { title: "Create workspace" });
+  return ctx.overlays.openOverlay(dashboardWidgetIds.createWorkspace, {
+    title: "Create workspace",
+    resource: {
+      type: "workspace-draft",
+      id: projectId,
+      metadata: {
+        ...(options.shorthand_base ? { shorthand_base: options.shorthand_base } : {}),
+        ...(options.anchors ? { anchors: options.anchors.map((anchor) => ({ ...anchor })) } : {}),
+      },
+    },
+  });
 };
 const workspaceNavigationNode = (): TreeNode => ({
   id: dashboardViews.workspaces.id,
@@ -275,7 +285,7 @@ export const createWorkspacesModule = () =>
       );
       ctx.commands.registerCommand(
         { id: dashboardCommandIds.createWorkspace, label: "New workspace", category: "Dashboard", icon: "Plus" },
-        { execute: () => openCreateWorkspace(ctx) },
+        { execute: (options: CreateWorkspaceCommandParams | undefined) => openCreateWorkspace(ctx, options) },
       );
       ctx.layout.registerMenuItem(workbenchCommandPaletteMenuPath, {
         commandId: dashboardCommandIds.openWorkspaces,

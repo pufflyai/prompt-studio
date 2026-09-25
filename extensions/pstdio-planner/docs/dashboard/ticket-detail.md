@@ -61,7 +61,9 @@ so only that row is highlighted even though the ticket body and files share a ti
 3. Image attachments must be listed by the planner ticket files tree and
    previewed through the editor's content loader. Programmatic callers can use
    `pstdio.pstdio-planner.command.read-ticket-attachment`.
-4. Manual workspace creation must execute `pstdio.pstdio-planner.command.create-workspace`.
+4. Manual workspace creation must call the host's `workbench.workspace.create`
+   command with the ticket anchor and shorthand prefix. The host renders the
+   available providers and their declared parameters.
 5. Implementation attempts must execute `pstdio.pstdio-planner.command.run-attempt`.
 
 ### UX Requirements
@@ -71,6 +73,9 @@ so only that row is highlighted even though the ticket body and files share a ti
 - The files tree must show editable ticket files and read-only image
   attachments.
 - Linked workspaces must open as normal workspace resources.
+- The Workspaces tree shows its create action only when the provider catalog
+  offers an additional workspace. The existing Project workspace remains
+  available separately.
 
 ### Operational Requirements
 
@@ -89,13 +94,15 @@ so only that row is highlighted even though the ticket body and files share a ti
 5. Selecting an image attachment makes the content loader return a data URL
    and MIME type for a read-only preview.
 
-### Run Attempt Flow
+### Workspace and Attempt Flows
 
-1. `pstdio.pstdio-planner.command.create-workspace` creates a ticket-linked workspace without
-   starting a session.
+1. The Workspaces tree opens the host provider form. Programmatic callers use
+   `pstdio.pstdio-planner.command.create-workspace` with an explicit `provider_id`
+   and nested `params`. Both paths create a ticket-linked workspace without
+   starting a session; cloud providers do not require Git.
 2. `pstdio.pstdio-planner.command.run-attempt` checks dependency readiness, creates a managed
    attempt at the chosen commit, and starts its implementation session.
-3. Both commands pass the planner ticket shorthand as `shorthand_base` so the
+3. All creation paths pass the planner ticket shorthand as `shorthand_base` so the
    host workspace shorthand is allocated from the ticket.
 4. Planner stores the attempt and rolls the ticket to `In Progress`; generic
    session-start hooks do not change ticket workflow state.
@@ -114,7 +121,6 @@ so only that row is highlighted even though the ticket body and files share a ti
 
 | Action                 | Planner command                              |
 | ---------------------- | -------------------------------------------- |
-| Create workspace       | `pstdio.pstdio-planner.command.create-workspace`            |
 | Run attempt            | `pstdio.pstdio-planner.command.run-attempt`                 |
 | Break into sub-tickets | `pstdio.pstdio-planner.command.break-into-sub-tickets`      |
 | Refine ticket          | `pstdio.pstdio-planner.command.refine-ticket`               |

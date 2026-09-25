@@ -33,12 +33,12 @@ test("ticket work opens a shared non-Git folder and loads files without Git requ
     await page.goto(`/projects/${projectId}/extensions/pstdio.pstdio-planner/tickets`);
     await page.getByTestId("renderer-card").getByText("Plain folder ticket", { exact: true }).click();
     await page.getByText("Workspaces", { exact: true }).hover();
-    const section = page.getByRole("button", { name: "Create workspace", exact: true });
-    const result = page.waitForResponse((response) => response.url().includes("command.create-workspace/execute"));
-    await section.click();
-    expect((await (await result).json()).outcome.value.workspace.id).toBe(workspace.id);
-    await page.getByRole("option").filter({ hasText: "Project workspace (shared)" }).click();
+    await expect(page.getByRole("button", { name: "Create workspace", exact: true })).toHaveCount(0);
+    await page.getByRole("option", { name: "Project workspace", exact: true }).click();
     await expect(page.getByRole("option", { name: "notes.md", exact: true })).toBeVisible();
+    await expect(page.getByRole("tab")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Changes", exact: true })).toHaveCount(0);
+    await expect(page.locator('[data-workbench-panel-header="main"]')).not.toBeVisible();
     await page.getByRole("option", { name: "notes.md", exact: true }).click();
     await expect(page.locator(".monaco-editor .view-lines")).toContainText("Shared notes");
     expect(gitRequests).toEqual([]);

@@ -58,8 +58,23 @@ test("delete extension flow survives clicks inside the confirmation modal", asyn
   const project = (await projectRes.json()) as { id: string };
   const sourcePath = createInstalledExtension({ displayName, installName });
 
-  const listed = await request.get(`${apiBase}/v1/projects/${project.id}/extensions`);
-  expect(listed.ok()).toBe(true);
+  const enabled = await request.post(
+    `${apiBase}/v1/projects/${project.id}/extensions/installed/${installName}/enable`,
+    {
+      data: {
+        displayName,
+        extensionId: `e2e.${installName}`,
+        manifest: { id: `e2e.${installName}`, name: installName },
+        name: installName,
+        sourceHash: null,
+        sourceKind: "local_path",
+        sourcePath,
+        sourceRef: null,
+        version: "0.0.1",
+      },
+    },
+  );
+  expect(enabled.ok(), await enabled.text()).toBe(true);
 
   await bypassOnboarding(page, project.id);
   await page.goto(`/projects/${project.id}`);

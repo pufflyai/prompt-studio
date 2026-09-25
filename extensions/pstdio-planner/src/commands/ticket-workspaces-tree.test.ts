@@ -3,7 +3,6 @@ import { workbenchPages } from "@pstdio/sdk/extensions";
 import { createMemoryStorage } from "@pstdio/sdk/testing";
 import { makeCommandArgs } from "./command-context.fixture";
 import { createTicketCommand } from "./create-ticket";
-import { createWorkspaceCommand } from "./ticket-actions";
 import { listTicketFilesTreeCommand } from "./ticket-files";
 
 const ticketRendererParams = (ticket: { id: string; shorthand: string }, documentId?: string) => ({
@@ -63,13 +62,14 @@ describe("ticket files tree workspace commands", () => {
       label: "Workspaces",
       collapsible: true,
       actions: [
-        {
+        expect.objectContaining({
           id: "create-workspace",
-          label: "Create workspace",
-          icon: "Plus",
-          command: createWorkspaceCommand.ref,
-          params: { ticket: ticket.id },
-        },
+          command: { extensionId: "pstdio", kind: "command", id: "workbench.workspace.create" },
+          params: {
+            shorthand_base: ticket.shorthand,
+            anchors: [expect.objectContaining({ type: "ticket", id: ticket.id, role: "primary" })],
+          },
+        }),
       ],
       nodes: [
         {
@@ -191,13 +191,14 @@ describe("ticket files tree workspace commands", () => {
       label: "Workspaces",
       collapsible: true,
       actions: [
-        {
+        expect.objectContaining({
           id: "create-workspace",
-          label: "Create workspace",
-          icon: "Plus",
-          command: createWorkspaceCommand.ref,
-          params: { ticket: ticket.id },
-        },
+          command: { extensionId: "pstdio", kind: "command", id: "workbench.workspace.create" },
+          params: {
+            shorthand_base: ticket.shorthand,
+            anchors: [expect.objectContaining({ type: "ticket", id: ticket.id, role: "primary" })],
+          },
+        }),
       ],
       nodes: [
         {

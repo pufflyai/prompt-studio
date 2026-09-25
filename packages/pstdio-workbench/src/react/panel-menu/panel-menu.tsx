@@ -164,10 +164,7 @@ export const WorkbenchPanelMenuLayout = (props: {
   children: ReactNode;
 }) => {
   const { children, panel, workbench } = props;
-  const panelWidth = useWorkbenchPanelWidth(panel);
-  const responsiveCollapsed = shouldCollapseWorkbenchPanelMenus(panelWidth);
-  const left = useWorkbenchPanelMenu(workbench, panel, "left", responsiveCollapsed);
-  const right = useWorkbenchPanelMenu(workbench, panel, "right", responsiveCollapsed);
+  const { left, right } = useWorkbenchPanelMenus(workbench, panel);
   const withRight = addPanelMenu({ content: children, view: right, workbench });
   return addPanelMenu({ content: withRight, view: left, workbench });
 };
@@ -187,6 +184,14 @@ const useWorkbenchPanelWidth = (panel: WorkbenchPanelRegion) => {
   }, [panel]);
 
   return width;
+};
+
+export const useWorkbenchPanelMenus = (workbench: WorkbenchCore, panel: WorkbenchPanelRegion) => {
+  const panelWidth = useWorkbenchPanelWidth(panel);
+  const responsiveCollapsed = shouldCollapseWorkbenchPanelMenus(panelWidth);
+  const left = useWorkbenchPanelMenu(workbench, panel, "left", responsiveCollapsed);
+  const right = useWorkbenchPanelMenu(workbench, panel, "right", responsiveCollapsed);
+  return { left, right, panelWidth };
 };
 
 interface WorkbenchPanelMenuOpenerProps {
@@ -263,10 +268,7 @@ const WorkbenchPanelMenuOpener = (props: WorkbenchPanelMenuOpenerProps) => {
 
 export const WorkbenchPanelMenuOpeners = (props: { workbench: WorkbenchCore; panel: WorkbenchPanelRegion }) => {
   const { panel, workbench } = props;
-  const panelWidth = useWorkbenchPanelWidth(panel);
-  const responsiveCollapsed = shouldCollapseWorkbenchPanelMenus(panelWidth);
-  const left = useWorkbenchPanelMenu(workbench, panel, "left", responsiveCollapsed);
-  const right = useWorkbenchPanelMenu(workbench, panel, "right", responsiveCollapsed);
+  const { left, right, panelWidth } = useWorkbenchPanelMenus(workbench, panel);
   const views = [left, right];
   const closedMenus = [left, right].filter((view) => view.has && view.collapsed);
 

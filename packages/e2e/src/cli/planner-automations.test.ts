@@ -141,7 +141,7 @@ describe("planner automations", () => {
         source: "api",
         params: {
           agent: { harnessId: "pstdio.workbench-fixture.harness.fake" },
-          mode: "current_branch",
+          base: "HEAD",
         },
         resource: {
           type: "ticket",
@@ -214,15 +214,14 @@ describe("planner automations", () => {
         source: "api",
         params: {
           rowId: ticket.id,
-          mode: "current_branch",
+          provider_id: "pstdio.worktree",
+          params: { base: "HEAD" },
         },
       });
       expect(workspaceResult.outcome.ok).toBe(true);
       const workspaceValue = workspaceResult.outcome.value as {
-        session: unknown;
         workspace: { workspace_shorthand: string; anchors_json?: { type: string; label?: string }[] };
       };
-      expect(workspaceValue.session).toBeNull();
       expect(workspaceValue.workspace.workspace_shorthand).toBe(`${ticket.shorthand}_A1`);
       expect(
         workspaceValue.workspace.anchors_json?.some(

@@ -32,7 +32,14 @@ export interface CreateExtensionWorkspaceInput {
   anchors?: ResourceAnchor[];
 }
 
+/** Opens the host's provider selection form for a new workspace. */
+export interface CreateWorkspaceCommandParams {
+  anchors?: ResourceAnchor[];
+  shorthand_base?: string;
+}
+
 export interface ExtensionWorkspacesApi {
+  /** Available providers for additional workspaces. The existing default is returned by getDefault(). */
   listProviders(): Promise<{ id: string; label: Localizable<string>; params: ParamObjectSchema }[]>;
   list(): Promise<ExtensionWorkspace[]>;
   getDefault(): Promise<ExtensionWorkspace | null>;

@@ -2,6 +2,7 @@ import {
   type CommandContext,
   defineCommand,
   type ExtensionWorkspace,
+  type JsonObject,
   l10n,
   params,
   type ResourceAnchor,
@@ -143,35 +144,22 @@ export const createAnchoredWorkspace = async (
 export const createWorkspaceCommand = defineCommand({
   id: "create-workspace",
   title: "Create workspace",
-  menus: [
-    {
-      slot: ticketMenuSlots.headerOverflow,
-      label: l10n("kanbanRenderers.tickets.rowActions.createWorkspace", "Create workspace"),
-      icon: "git-branch",
-      placement: "first",
-    },
-  ],
   params: {
     ticket: ticketActionParams.ticket,
     rowId: ticketActionParams.rowId,
+    provider_id: params.text({ label: "Workspace provider", required: true }),
+    params: params.json<JsonObject>(),
   },
   async run(ctx, commandParams) {
-    const providers = await ctx.workspaces.listProviders();
-    if (!providers.some((provider) => provider.id === "pstdio.worktree")) {
-      const workspace = await ctx.workspaces.getDefault();
-      if (!workspace) throw new Error("Attach a project workspace in settings before opening ticket work.");
-      await requireReadyWorkspace(ctx, workspace);
-      const { ticket } = await resolveTicketIdentity(ctx, resolveTicket(ctx, commandParams));
-      return { mode: "shared", ticket, workspace, session: null };
-    }
-    const { mode, ticket, workspace } = await createAnchoredWorkspace(ctx, commandParams);
-
-    return {
-      mode,
-      ticket,
-      workspace,
-      session: null,
-    };
+    const { anchor, shorthand, ticket } = await resolveTicketAnchor(ctx, resolveTicket(ctx, commandParams));
+    const workspace = await ctx.workspaces.create({
+      project_id: ctx.projectId,
+      shorthand_base: shorthand,
+      anchors: [anchor],
+      provider_id: commandParams.provider_id,
+      params: commandParams.params,
+    });
+    return { ticket, workspace };
   },
 });
 

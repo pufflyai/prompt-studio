@@ -1,15 +1,16 @@
 import { Button, Dialog, Text } from "@chakra-ui/react";
 import type { WorkspaceProviderDescriptor } from "@pstdio/sdk/api";
+import type { CreateWorkspaceCommandParams } from "@pstdio/sdk/extensions";
 import type { WorkbenchPanelRenderInput } from "@pstdio/workbench/react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/api";
-import { getDashboardSelectedProjectId } from "@/shared/app/project-context";
 import { createDashboardWorkspace } from "@/shared/workspaces/workspace-actions";
 import { WorkspaceProviderForm } from "./workspace-provider-form";
 
 export const CreateWorkspaceWidget = (props: { input: WorkbenchPanelRenderInput }) => {
   const { input } = props;
-  const projectId = getDashboardSelectedProjectId(input.workbench);
+  const options = input.instance.resource?.metadata as CreateWorkspaceCommandParams | undefined;
+  const projectId = input.instance.resource?.id;
   const query = useQuery({
     queryKey: ["workspace-providers", projectId],
     queryFn: () => apiRequest<WorkspaceProviderDescriptor[]>(`/v1/projects/${projectId}/workspace-providers`),
@@ -20,7 +21,7 @@ export const CreateWorkspaceWidget = (props: { input: WorkbenchPanelRenderInput 
   return (
     <>
       <Dialog.Header>
-        <Dialog.Title>Open workspace</Dialog.Title>
+        <Dialog.Title>Create workspace</Dialog.Title>
       </Dialog.Header>
       <Dialog.Body>
         {query.isPending ? (
@@ -35,7 +36,13 @@ export const CreateWorkspaceWidget = (props: { input: WorkbenchPanelRenderInput 
             busy={mutation.isPending}
             onSubmit={async (providerId, params) => {
               if (!projectId) return;
-              await mutation.mutateAsync({ projectId, providerId, params });
+              await mutation.mutateAsync({
+                projectId,
+                providerId,
+                params,
+                anchors: options?.anchors,
+                shorthand_base: options?.shorthand_base,
+              });
               close();
             }}
           />

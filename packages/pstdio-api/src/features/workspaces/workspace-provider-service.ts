@@ -82,7 +82,7 @@ export const createProviderBackedWorkspace = async (
         name: input.name ?? "Project folder",
         root_path: sourcePath ?? undefined,
       });
-    if (input.standalone) return deps.workspaceService.createStandalone(createInput);
+    if (input.standalone) return deps.workspaceService.createStandalone({ ...createInput, anchors: input.anchors });
     return deps.workspaceService.create({
       ...createInput,
       shorthand_base: input.shorthandBase ?? "",

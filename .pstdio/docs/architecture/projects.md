@@ -22,6 +22,10 @@ Providers declare their parameters and capabilities. `pstdio.worktree` creates a
 
 Remote providers own their source and environment. They keep provider references rather than local paths. A remote target never falls back to the project folder. Creating one does not upload or synchronize local files.
 
+`GET /v1/projects/{id}/workspace-providers` lists providers that can create additional workspaces. The already-open project workspace is listed separately. Plain folders have no creation choices unless an extension supplies a provider. Git creation appears only with a usable commit; cloud providers do not require a local folder or Git source.
+
+`POST /v1/workspaces` accepts `project_id`, `provider_id`, provider `params`, and optional resource `anchors` and `shorthand_base`. Anchors keep the requesting tool's resource links. A shorthand base such as `DOC-7` produces `DOC-7_A1`; without it, the workspace uses the project's next `WS-N` name. Both forms retain anchors.
+
 Extension `projectFiles` reads the default workspace. `workspaceFiles` reads the selected workspace. Sessions, terminals, file mounts, extension discovery, and provisioning resolve workspace targets. Planner's commit-based implementation and review actions require Git; other tools remain available in plain folders.
 
 ## Location discovery and deletion

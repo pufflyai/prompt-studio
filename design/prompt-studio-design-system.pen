@@ -175608,14 +175608,14 @@
         {
           "type": "frame",
           "id": "os1DB",
-          "name": "Workspace provider choices",
+          "name": "Project workspace and available creation providers",
           "width": "fill_container",
           "gap": 24,
           "children": [
             {
               "type": "frame",
               "id": "lbQ1M",
-              "name": "Project folder",
+              "name": "Project workspace · Files only",
               "width": 584,
               "height": 300,
               "fill": "$ds-bg",
@@ -175631,7 +175631,7 @@
                   "id": "nlwxf",
                   "name": "Provider title",
                   "fill": "$ds-fg",
-                  "content": "Project folder",
+                  "content": "Project workspace",
                   "fontFamily": "$font-heading",
                   "fontSize": 15,
                   "fontWeight": "600"
@@ -175641,28 +175641,10 @@
                   "id": "Sjce7",
                   "name": "Provider description",
                   "fill": "$ds-fg-subtle",
-                  "content": "Sessions share the project folder.",
+                  "content": "Files only: no empty tab bar. Show create only when an additional workspace provider is available.",
                   "fontFamily": "$font-body",
                   "fontSize": 12,
                   "fontWeight": "normal"
-                },
-                {
-                  "id": "tAhsg",
-                  "type": "ref",
-                  "ref": "c24zV7",
-                  "name": "Open workspace",
-                  "theme": {
-                    "btn": "primary",
-                    "size": "sm"
-                  },
-                  "descendants": {
-                    "DsEVd": {
-                      "enabled": false
-                    },
-                    "Hf4GT": {
-                      "content": "Open workspace"
-                    }
-                  }
                 }
               ]
             },
@@ -175716,7 +175698,7 @@
                   "id": "JX68C",
                   "type": "ref",
                   "ref": "c24zV7",
-                  "name": "Open workspace",
+                  "name": "Create workspace",
                   "theme": {
                     "btn": "primary",
                     "size": "sm"
@@ -175726,7 +175708,7 @@
                       "enabled": false
                     },
                     "Hf4GT": {
-                      "content": "Open workspace"
+                      "content": "Create workspace"
                     }
                   }
                 }
@@ -175782,7 +175764,7 @@
                   "id": "R5G7xy",
                   "type": "ref",
                   "ref": "c24zV7",
-                  "name": "Open workspace",
+                  "name": "Create workspace",
                   "theme": {
                     "btn": "primary",
                     "size": "sm"
@@ -175792,7 +175774,7 @@
                       "enabled": false
                     },
                     "Hf4GT": {
-                      "content": "Open workspace"
+                      "content": "Create workspace"
                     }
                   }
                 }

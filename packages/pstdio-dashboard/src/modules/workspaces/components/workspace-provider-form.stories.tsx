@@ -1,12 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { WorkspaceProviderForm } from "./workspace-provider-form";
 
-const folder = {
-  id: "pstdio.root",
-  label: "Project folder",
-  description: "Work directly in the project folder. Sessions share its files.",
-  params: {},
-};
 const git = {
   id: "pstdio.worktree",
   label: "Git worktree",
@@ -25,18 +19,18 @@ const remote = {
 const meta = {
   title: "Workspaces/Provider selection",
   component: WorkspaceProviderForm,
-  args: { providers: [folder], onSubmit: async () => {} },
+  args: { providers: [], onSubmit: async () => {} },
 } satisfies Meta<typeof WorkspaceProviderForm>;
 export default meta;
 type Story = StoryObj<typeof meta>;
-export const SharedFolder: Story = {};
-export const GitAndRemote: Story = { args: { providers: [folder, git, remote] } };
+export const NoProviders: Story = {};
+export const GitAndRemote: Story = { args: { providers: [git, remote] } };
 export const RemoteParameters: Story = { args: { providers: [remote] } };
 export const NoLocation: Story = { args: { providers: [] } };
 export const Provisioning: Story = { args: { providers: [remote], busy: true } };
 export const ProviderFailure: Story = {
   args: {
-    providers: [folder],
+    providers: [remote],
     onSubmit: async () => {
       throw new Error("The environment could not be created. Try again.");
     },

@@ -5,14 +5,18 @@ workspace and session records provide execution data, but they do not own review
 verdicts or ticket transitions. Existing workspaces without an attempt record
 remain unmanaged.
 
-Tickets can also use the shared project workspace. In a plain-folder or remote
-project, **Create workspace** opens that existing workspace. It does not create
-a Git worktree or copy files. The ticket sidebar lists **Project workspace
-(shared)**, and sessions keep their own ticket links. Archiving a ticket does
-not archive the shared workspace.
+Tickets can also use the shared project workspace. The ticket sidebar lists
+**Project workspace**, and sessions keep their own ticket links. In a plain-folder
+or remote project without an available creation provider, the Workspaces section
+has no create action. Open the existing project workspace to work directly in its files.
+Archiving a ticket does not archive the shared workspace.
 
-When Git isolation is available, **Create workspace** creates an isolated Git
-worktree. Managed implementation and review attempts always require Git and a
+When providers are available, **Create workspace** opens the host's provider form.
+Choose a provider and supply its parameters. The new workspace keeps the ticket
+link, including while a remote environment is still provisioning. The API command
+accepts an explicit `provider_id` and `params` object.
+
+The Git provider creates an isolated worktree. Managed implementation and review attempts always require Git and a
 usable base commit. Workspace setup failures are reported before an attempt
 session starts.
 

@@ -41,6 +41,43 @@ const metadata: InternalWorkbenchExtensionMetadata = {
 };
 
 describe("extension tree renderer contributions", () => {
+  test("runs a host tree action in the workbench with its parameters", async () => {
+    const workbench = createWorkbench();
+    const calls: unknown[] = [];
+    const params = { anchors: [{ type: "ticket", id: "ticket-1" }], shorthand_base: "T-1" };
+    workbench.commands.registerCommand(
+      { id: "workbench.workspace.create", label: "Create workspace" },
+      { execute: (args) => calls.push(args) },
+    );
+    workbench.registerModule({
+      id: "test.host-tree-action",
+      activate: (context) =>
+        registerWorkbenchExtensionTreeRenderers({
+          executeCommand: (commandId) => {
+            expect(commandId).toBe("pstdio.lab.tree.body");
+            return [
+              {
+                id: "workspaces",
+                nodes: [],
+                actions: [
+                  {
+                    id: "create",
+                    command: { extensionId: "pstdio", kind: "command", id: "workbench.workspace.create" },
+                    params,
+                  },
+                ],
+              },
+            ];
+          },
+          metadata,
+          projectId: "project-1",
+          workbench: context,
+        }),
+    });
+    const sections = await getWorkbenchRenderers(workbench).getBody(treeId);
+    await sections[0]?.actions?.[0]?.run?.(params);
+    expect(calls).toEqual([params]);
+  });
   test.each([
     "body",
     "first-file",
