@@ -12,8 +12,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-15-intel
-            target: darwin-x64
+          - os: windows-latest
+            target: win32-x64
     steps:
       - uses: actions/checkout@v5
         with:
@@ -70,6 +70,18 @@ jobs:
           }
           $tools >> $env:GITHUB_PATH
 
+      - name: Inspect Windows home handles on failure
+        shell: pwsh
+        run: |
+          $tools = Join-Path $env:RUNNER_TEMP "handle"
+          $archive = Join-Path $env:RUNNER_TEMP "Handle.zip"
+          Invoke-WebRequest https://download.sysinternals.com/files/Handle.zip -OutFile $archive
+          Expand-Archive $archive -DestinationPath $tools
+          $signature = Get-AuthenticodeSignature (Join-Path $tools "handle64.exe")
+          if ($signature.Status -ne "Valid" -or $signature.SignerCertificate.Subject -notmatch "CN=Microsoft Corporation,") { throw "Handle must have a valid Microsoft signature" }
+          $tools >> $env:GITHUB_PATH
+          bun scripts/ci/desktop-handle-diagnostics.ts
+
       - name: Test packaged Electron
         if: runner.os == 'Linux'
         env:
@@ -97,3 +109,12 @@ jobs:
           name: desktop-readiness-${{ matrix.target }}
           path: clients/desktop/test-results
           if-no-files-found: error
+
+      - name: Preserve Windows development package for manual validation
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-development-win32-x64
+          path: clients/desktop/out/Prompt Studio-win32-x64
+          if-no-files-found: error
+          retention-days: 7
