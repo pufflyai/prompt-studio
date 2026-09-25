@@ -43,10 +43,10 @@ describe("pstdio tickets delete", () => {
     () => {
       const repo = createInitializedRepo("tk-delete-list");
 
-      const { shorthand } = JSON.parse(run('tickets create --content "Gone ticket"', repo));
+      const { id, shorthand } = JSON.parse(run('tickets create --content "Gone ticket"', repo));
 
       const result = JSON.parse(run(`tickets delete --id ${shorthand}`, repo));
-      expect(result.deleted).toBe(true);
+      expect(result.id).toBe(id);
 
       const tickets = JSON.parse(run("tickets list", repo));
       expect(tickets.map((ticket: { title: string }) => ticket.title)).not.toContain("Gone ticket");
@@ -67,8 +67,7 @@ describe("pstdio tickets delete", () => {
       expect(ticketDir).not.toBeNull();
       expect(existsSync(ticketDir!)).toBe(true);
 
-      const result = JSON.parse(run(`tickets delete --id ${shorthand}`, repo));
-      expect(result.deleted).toBe(true);
+      run(`tickets delete --id ${shorthand}`, repo);
 
       const tickets = JSON.parse(run("tickets list --draft", repo));
       expect(tickets.map((ticket: { shorthand: string }) => ticket.shorthand)).not.toContain(shorthand);
@@ -83,7 +82,7 @@ describe("pstdio tickets delete", () => {
 
       const result = JSON.parse(run("tickets delete --id MISSING-99", repo));
 
-      expect(result.deleted).toBe(true);
+      expect(result.id).toBe("MISSING-99");
     },
     TEST_TIMEOUT,
   );

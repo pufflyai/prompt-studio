@@ -52,7 +52,9 @@ export const createLabViews = (baseUrl: string) => {
       kind: "dataTable",
       query: queryGlassLabArtifacts,
       refreshEvents: [labArtifactsChanged],
-      onRowActivate: (_ctx, { row }) => (row.resource ? artifactPanelTarget(row.resource) : undefined),
+      onRowActivate: (ctx, { row }) => {
+        if (row.resource) ctx.navigation.open(artifactPanelTarget(row.resource));
+      },
       rowActions: [
         {
           id: "delete",
@@ -180,7 +182,9 @@ export const createLabViews = (baseUrl: string) => {
       query: queryLabWorkflowArtifacts,
       refreshEvents: [labArtifactsChanged],
       onAttributeChange: updateLabWorkflowArtifact,
-      onRowActivate: (_ctx, { row }) => (row.resource ? artifactPanelTarget(row.resource) : undefined),
+      onRowActivate: (ctx, { row }) => {
+        if (row.resource) ctx.navigation.open(artifactPanelTarget(row.resource));
+      },
       defaultSettings: {
         viewMode: "board",
         columnGrouping: "status",

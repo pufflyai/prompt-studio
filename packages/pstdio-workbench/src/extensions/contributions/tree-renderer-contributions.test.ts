@@ -41,6 +41,78 @@ const metadata: InternalWorkbenchExtensionMetadata = {
 };
 
 describe("extension tree renderer contributions", () => {
+  test("closes a note opened from a tree when its project reports removal", async () => {
+    const workbench = createWorkbench();
+    const page = { kind: "page", extensionId: "pstdio.lab", id: "notes" } as const;
+    workbench.modes.registerMode({ id: "project", activate: () => undefined });
+    workbench.views.registerView({ id: "editor", title: "Note", body: { kind: "react", render: () => null } });
+    workbench.pages.registerPage({
+      id: "notes",
+      ref: page,
+      path: "notes",
+      modeId: "project",
+      main: { kind: "panels", empty: { kind: "view", id: "editor" } },
+      slots: [
+        {
+          id: "note",
+          region: "main",
+          item: {
+            kind: "binding",
+            binding: {
+              kinds: [{ kind: "resource-kind", id: "note", extensionId: "pstdio.lab" }],
+              view: { kind: "view", id: "editor" },
+              cardinality: "many",
+            },
+          },
+        },
+      ],
+    });
+    workbench.pageLocations.setProject("project-1");
+    workbench.registerModule({
+      id: "test.extension-tree",
+      activate: (context) =>
+        registerWorkbenchExtensionTreeRenderers({
+          executeCommand: () => [
+            {
+              id: "notes",
+              nodes: [
+                {
+                  id: "one",
+                  label: "One",
+                  target: {
+                    kind: "compound",
+                    targets: [
+                      { kind: "page", page },
+                      {
+                        kind: "panel",
+                        panel: { kind: "page-slot", page, id: "note" },
+                        resource: { type: "note", id: "one" },
+                        open: "pin",
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+          metadata,
+          projectId: "project-1",
+          workbench: context,
+        }),
+    });
+    const sections = await getWorkbenchRenderers(workbench).getBody(treeId);
+    await workbench.navigation.openTarget(sections[0]!.nodes[0]!.target!);
+    expect(workbench.layout.getLayout().regions.main.widgets).toHaveLength(1);
+
+    workbench.resources.removed({ type: "note", id: "one", extensionId: "pstdio.lab", projectId: "project-1" });
+
+    expect(
+      Object.values(workbench.pages.store.getState().pageStates).flatMap((state) =>
+        Object.values(state.resourceInstances).flat(),
+      ),
+    ).toEqual([]);
+  });
+
   test.each([
     "body",
     "first-file",
@@ -250,6 +322,10 @@ describe("existing extension behavior during SDK preparation", () => {
 
     await sections[0]?.actions?.[0]?.run?.({});
 
-    expect(workbench.pages.store.getState().location?.resource).toEqual({ ...ticket, extensionId: "pstdio.lab" });
+    expect(workbench.pages.store.getState().location?.resource).toEqual({
+      ...ticket,
+      extensionId: "pstdio.lab",
+      projectId: "project-1",
+    });
   });
 });

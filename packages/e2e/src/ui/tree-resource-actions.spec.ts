@@ -125,7 +125,12 @@ test("tree file menus rename and delete files while workspace menus archive the 
       "aria-selected",
       "true",
     );
-    await expect(page).toHaveURL(openedUrl);
+    // Explicit handler navigation qualifies the destination with its project owner.
+    const ticketUrl = new URL(openedUrl);
+    const resourceUrl = new URL(ticketUrl.searchParams.get("resource")!);
+    resourceUrl.searchParams.set("projectId", project.id);
+    ticketUrl.searchParams.set("resource", resourceUrl.toString());
+    await expect(page).toHaveURL(ticketUrl.toString());
     const saved = await getPlannerTicket(request, apiBase, project.id, ticket.id);
     expect(saved?.archived).toBe(false);
     expect(saved?.files?.some((entry) => entry.id === file.id)).toBe(false);

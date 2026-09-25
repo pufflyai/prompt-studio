@@ -68,7 +68,7 @@ export const updateTicketCommand = defineCommand({
       ...(commandParams.blockedReason !== undefined ? { blockedReason: commandParams.blockedReason || null } : {}),
       updatedAt: new Date().toISOString(),
     };
-    await collection.put(existing.id, next);
+    await collection.update(existing.id, next);
     await ctx.events.emit(plannerTicketsChanged, { ticketId: existing.id });
     await syncBlockedNotificationSafely(ctx, existing, next);
     return next;

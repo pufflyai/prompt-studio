@@ -92,6 +92,7 @@ const createTreeMapper = (input: RegisterWorkbenchExtensionTreeRenderersInput, r
     return toWorkbenchNavigationTarget(target, {
       commandTargetOf,
       extensionId: record.extensionId,
+      projectId: input.projectId,
     });
   };
   const mapAction = (
