@@ -1,5 +1,13 @@
 # @pstdio/sdk
 
+## 0.25.0
+
+_2026-09-25_
+
+### Minor Changes
+
+- a8f6354: Add handler navigation and resource lifecycle APIs while preserving existing extension behavior.
+
 ## 0.24.1
 
 _2026-09-14_

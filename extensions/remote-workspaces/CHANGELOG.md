@@ -1,5 +1,13 @@
 # remote-workspaces
 
+## 2.0.2
+
+_2026-09-25_
+
+### Patch Changes
+
+- Updated internal dependencies: `@pstdio/sdk@0.25.0`
+
 ## 2.0.1
 
 _2026-09-10_

@@ -1,6 +1,6 @@
 {
   "name": "pstdio-notes",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "Notes",
   "description": "Write Markdown notes that live in the project repository.",
   "publisher": "pstdio",
@@ -18,7 +18,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@pstdio/sdk": "^0.24.1"
+    "@pstdio/sdk": "^0.25.0"
   },
   "devDependencies": {
     "@types/bun": "1.4.2",
