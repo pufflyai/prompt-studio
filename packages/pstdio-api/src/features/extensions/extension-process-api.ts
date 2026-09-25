@@ -89,22 +89,35 @@ const createStopGate = (kill: () => void) => {
 export interface ProcessApiOptions {
   /** Invocation that owns the spawned children. Absent for host-level probes. */
   scope?: InvocationScope;
+  resolveCwd?: () => Promise<string>;
   spawner?: ProcessSpawner;
 }
 
 export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunnerEnvironment["process"] => {
   const spawner = options.spawner ?? Bun.spawn;
   const signal = options.scope?.signal;
+  let closed = false;
+  const ensureActive = () => {
+    if (signal?.aborted) throw signal.reason;
+    if (closed) throw new Error("Invocation ended before the command could start.");
+  };
+  const resolveInput = async (input: ProcessRunInput) => {
+    ensureActive();
+    const cwd = await options.resolveCwd?.();
+    return { ...input, cwd: input.cwd ?? cwd };
+  };
 
   // Children outliving the invocation that started them is the leak this owns. The scope
   // stops whatever is still running when the invocation ends, however it ended.
   const running = new Set<(reason: unknown) => void>();
   options.scope?.register(() => {
+    closed = true;
     for (const stop of [...running]) stop(new Error("Invocation ended while the command was still running."));
   });
 
   const runToCompletion = async (input: ProcessRunInput) => {
-    if (signal?.aborted) throw signal.reason;
+    input = await resolveInput(input);
+    ensureActive();
 
     const resolved = resolveProcessCommand(input.command);
     // Its own process group, so stopping the command also stops whatever it started. Killing
@@ -165,6 +178,8 @@ export const createProcessApi = (options: ProcessApiOptions = {}): CommandRunner
       throw new Error(processOutput(result) || `Command failed: ${input.command.join(" ")}`);
     },
     async spawnDetached(input) {
+      input = await resolveInput(input);
+      ensureActive();
       const resolved = resolveProcessCommand(input.command);
       const proc = spawner(resolved.argv, {
         detached: true,

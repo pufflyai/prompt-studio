@@ -1,6 +1,7 @@
 import { type AgentClient, createAgentClient } from "./agents";
 import { type AutomationClient, createAutomationClient } from "./automation";
 import { createExtensionClient, type ExtensionClient } from "./extensions";
+import { createFilesystemClient, type FilesystemClient } from "./filesystem";
 import { createNotificationsClient, type NotificationsClient } from "./notifications";
 import { createProjectClient, type ProjectClient } from "./projects";
 import type { ClientOptions } from "./request";
@@ -14,6 +15,7 @@ import { createWorkspaceClient, type WorkspaceClient } from "./workspaces";
 
 export type PstdioClient = {
   projects: ProjectClient;
+  filesystem: FilesystemClient;
   workspaces: WorkspaceClient;
   sessions: SessionClient;
   skills: SkillClient;
@@ -30,6 +32,7 @@ export const createClient = (options: ClientOptions = {}): PstdioClient => {
   const request = createRequest(options);
   return {
     projects: createProjectClient(request),
+    filesystem: createFilesystemClient(request),
     workspaces: createWorkspaceClient(request),
     sessions: createSessionClient(request, options),
     skills: createSkillClient(request),

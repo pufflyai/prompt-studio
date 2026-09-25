@@ -170,6 +170,8 @@ export const createBenchEnvironment = (
     workspaces: {
       addAnchors: async () => {},
       removeAnchors: async () => {},
+      listProviders: async () => [],
+      getDefault: async () => seed?.workspaces?.find((workspace) => workspace.is_default) ?? null,
       list: async () => seed?.workspaces ?? [],
       archive: async (id) => ({ id }),
       cancel: async (id) => ({ id }),

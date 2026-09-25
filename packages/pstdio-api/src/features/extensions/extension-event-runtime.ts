@@ -10,6 +10,7 @@ import type {
 import { createCommandRunner } from "pstdio-extensions";
 import { apiLogger } from "../../lib/logger";
 import { createCommandEnvironment } from "./command-environment";
+import { resolveProvisionLocation } from "./command-environment/legacy-provision-location";
 import type { ExtensionsRouteDeps } from "./deps";
 
 export type ExtensionEventDeps = ExtensionsRouteDeps;
@@ -34,6 +35,7 @@ const resolveEventContext = async <TPayload extends Struct>(
   deps: ExtensionEventDeps,
   projectId: string,
   payload: TPayload,
+  eventId: string,
 ) => {
   const repos = await deps.repoService.listByProject(projectId);
   const requestedWorkspaceId = stringValue((payload as { workspaceId?: unknown }).workspaceId);
@@ -49,11 +51,13 @@ const resolveEventContext = async <TPayload extends Struct>(
   const repo =
     (repoId ? repos.find((candidate) => candidate.id === repoId) : undefined) ??
     (requestedRepoPath ? repos.find((candidate) => candidate.path === requestedRepoPath) : undefined);
-  const rootWorkspace = workspace?.provider_id === "pstdio.root";
-  const workspaceDir =
-    workspace?.execution_kind === "local"
-      ? (workspace.worktree_path ?? (rootWorkspace ? repo?.path : undefined))
-      : undefined;
+  const location = workspace
+    ? await resolveProvisionLocation(deps, workspace, {
+        eventId,
+        repo: repo ? { projectId, repoId: repo.id, path: repo.path } : undefined,
+      })
+    : undefined;
+  const workspaceDir = location?.root;
 
   const trustedPayload = { ...payload, projectId } as JsonObject;
   delete trustedPayload.workspaceId;
@@ -63,7 +67,7 @@ const resolveEventContext = async <TPayload extends Struct>(
   delete trustedPayload.branch;
   if (workspace) {
     trustedPayload.workspaceId = workspace.id;
-    trustedPayload.workspace = workspace as unknown as JsonObject;
+    trustedPayload.workspace = { ...workspace, root_path: workspaceDir ?? null } as unknown as JsonObject;
     if (workspaceDir) trustedPayload.workspaceDir = workspaceDir;
     if (workspace.branch) trustedPayload.branch = workspace.branch;
   }
@@ -80,13 +84,14 @@ export const fireExtensionEvent = async <TPayload extends Struct>(
 ) => {
   const eventId = eventIdFor(event);
   const snapshot = await deps.extensionRuntimeCatalog.get(projectId);
-  const context = await resolveEventContext(deps, projectId, payload);
+  const context = await resolveEventContext(deps, projectId, payload, eventId);
   const runner = createCommandRunner(snapshot.runtime, {
     logger: extensionEventLogger,
     buildEnvironment: (input) =>
       createCommandEnvironment(deps, snapshot.enabledSources, {
         artifactMounts: snapshot.runtime.artifactMounts,
         extensionId: input.extensionId,
+        eventId,
         name: input.name,
         project: snapshot.project,
         projectId: input.projectId,

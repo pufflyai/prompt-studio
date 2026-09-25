@@ -58,6 +58,8 @@ export type WebviewClient<TCommands, TSettings = undefined> = {
 export interface WebviewClientOptions {
   /** Overrides the extension id provided by the host bridge (e.g. in tests). */
   extensionId?: string;
+  /** Runs commands in this workspace; omitted commands use the project's default workspace. */
+  workspaceId?: string;
 }
 
 /**
@@ -89,6 +91,7 @@ export const createWebviewClient = <TCommands extends object, TSettings = undefi
     const response = await host.call("commands.execute", {
       commandId: `${extensionId}.command.${commandKey}`,
       params,
+      ...(options?.workspaceId ? { workspaceId: options.workspaceId } : {}),
     });
     return unwrapCommandOutcome(response);
   };

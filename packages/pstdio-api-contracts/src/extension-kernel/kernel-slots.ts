@@ -19,6 +19,9 @@ export interface WorkspaceProvisionPayload {
   workspace: ExtensionWorkspace;
   /** Absolute working directory to materialize files into — a worktree path or the repo root. */
   workspaceDir: string;
+  /** Local home directory of the project, independent of this workspace's repository. */
+  projectDir: string;
+  providerId: string;
   repoPath: string;
   branch?: string;
   type: WorkspaceType;
@@ -31,6 +34,8 @@ export interface SessionLifecyclePayload {
   originalSessionId?: string;
   workspace?: ExtensionWorkspace;
   workspaceId?: string;
+  /** Local working directory; absent for remote workspace targets. */
+  workspaceDir?: string;
   worktreePath?: string;
   branch?: string;
   anchors?: ResourceAnchor[];

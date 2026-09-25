@@ -52,6 +52,18 @@ const createHost = (respond: (call: RecordedCall) => unknown, extensionId?: stri
 const successOutcome = (value: unknown) => ({ outcome: { ok: true, status: "success", value } });
 
 describe("createWebviewClient commands", () => {
+  test("scopes command execution to the selected workspace", async () => {
+    const { host, calls } = createHost(() => successOutcome({ statuses: [] }), "pstdio-planner");
+    const client = createWebviewClient<typeof commands>(host, { workspaceId: "remote-workspace" });
+
+    await client.commands["ticket-status.read"]();
+
+    expect(calls[0]?.params).toMatchObject({
+      commandId: "pstdio-planner.command.ticket-status.read",
+      workspaceId: "remote-workspace",
+    });
+  });
+
   test("qualifies bare command keys with the host extension id", async () => {
     const { host, calls } = createHost(() => successOutcome({ statuses: [] }), "pstdio-planner");
     const client = createWebviewClient<typeof commands, typeof settings>(host);

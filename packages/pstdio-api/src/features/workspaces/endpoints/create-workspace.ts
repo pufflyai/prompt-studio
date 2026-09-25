@@ -44,7 +44,9 @@ export const createWorkspaceHandler = (deps: WorkspacesRouteDeps): AppRouteHandl
         params: input.params as JsonObject | undefined,
         repoId: input.repo_id,
         base: input.base,
-        standalone: true,
+        anchors: input.anchors,
+        shorthandBase: input.shorthand_base,
+        standalone: !input.shorthand_base,
         provision: (workspace, repoPath) =>
           runWorkspaceProvisioning(deps, { projectId: input.project_id, workspace, repoPath }),
       });

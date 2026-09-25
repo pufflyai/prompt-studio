@@ -11,24 +11,31 @@ import {
   fireExtensionEventAsync,
 } from "../extensions/extension-event-runtime";
 import { ensureWorkspaceConfig } from "./workspace-config";
+import { resolveWorkspaceLocation } from "./workspace-provider-execution-target";
 
 export type ProvisionCoordinatorDeps = ExtensionEventDeps;
 
-const buildProvisionPayload = (input: {
-  projectId: string;
-  workspace: ExtensionWorkspace;
-  repoPath: string;
-}): WorkspaceProvisionPayload => {
+const buildProvisionPayload = async (
+  deps: ProvisionCoordinatorDeps,
+  input: { projectId: string; workspace: ExtensionWorkspace; repoPath: string },
+) => {
   const { projectId, workspace, repoPath } = input;
+  const home = await deps.workspaceService.getDefault(projectId);
+  const projectLocation = home ? await resolveWorkspaceLocation(deps, home) : undefined;
+  if (!projectLocation) throw new Error("Project workspace has no local location for provisioning.");
+  const workspaceDir = resolveWorkspaceDir(workspace, repoPath);
+  const type = workspaceType(workspace, repoPath);
   return {
     projectId,
     workspaceId: workspace.id,
-    workspace,
-    workspaceDir: resolveWorkspaceDir(workspace, repoPath),
+    workspace: { ...workspace, root_path: workspaceDir },
+    workspaceDir,
+    projectDir: projectLocation.root,
+    providerId: workspace.provider_id ?? (type === "root" ? "pstdio.root" : "pstdio.worktree"),
     repoPath,
     branch: workspace.branch ?? undefined,
-    type: workspaceType(workspace, repoPath),
-  };
+    type,
+  } satisfies WorkspaceProvisionPayload;
 };
 
 // A workspace with a worktree path runs inside that worktree; otherwise it runs
@@ -81,7 +88,7 @@ const provisionRepo = async <W extends { id: string }>(
   input: { projectId: string; workspace: W; repoPath: string },
   hooks: WorkspaceProvisioningHooks,
 ) => {
-  const payload = buildProvisionPayload({
+  const payload = await buildProvisionPayload(deps, {
     projectId: input.projectId,
     workspace: input.workspace as unknown as ExtensionWorkspace,
     repoPath: input.repoPath,
@@ -119,6 +126,7 @@ export const runWorkspaceProvisioning = async <W extends { id: string }>(
   input: { projectId: string; workspace: W; repoPath: string },
   hooks: WorkspaceProvisioningHooks = defaultHooks(),
 ) => {
+  if ((input.workspace as ExtensionWorkspace).execution_kind === "remote") return input.workspace;
   const { workspace, payload, ok } = await gatedProvision(deps, input, hooks);
   if (ok) hooks.fireReadyAsync(deps, input.projectId, workspaceEvents.ready, payload);
   return workspace;

@@ -1,8 +1,17 @@
 import { join } from "node:path";
 import { resolvePstdioWorkspacesPath } from "pstdio-paths";
-import { createWorktree, resolveLatestBase } from "pstdio-wt";
+import { createWorktree, git, resolveLatestBase } from "pstdio-wt";
 
 export const resolveWorkspacesRoot = () => resolvePstdioWorkspacesPath({ env: process.env });
+
+export const hasUsableGitBase = async (path: string) => {
+  try {
+    await git(path, ["rev-parse", "--verify", "HEAD^{commit}"]);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 // Creates the git worktree backing a workspace and returns its branch + path. Shared by
 // workspace creation and extension-managed workflows so both produce

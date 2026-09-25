@@ -59,6 +59,7 @@ export const createProviderBackedWorkspace = async (
   const operationId = crypto.randomUUID();
   const createInput = {
     project_id: input.projectId,
+    anchors: input.anchors,
     name: input.name,
     provider_id: providerId,
     provider_params_json: params,

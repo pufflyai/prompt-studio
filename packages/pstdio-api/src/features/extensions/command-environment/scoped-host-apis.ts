@@ -2,13 +2,17 @@ import type {
   ExtensionConnectionsApi,
   ExtensionProjectContext,
   ExtensionTerminalApi,
+  RepoContext,
   TerminalSessionRequest,
 } from "pstdio-api-contracts/extension-kernel";
+import { workspaceEvents } from "pstdio-api-contracts/extension-kernel";
 import type { InvocationScope, ScopedHostApis } from "pstdio-extensions";
 import type { ExtensionsRouteDeps } from "../deps";
 import { createProcessApi } from "../extension-process-api";
 import { createSessionsApi } from "./sessions";
 import type { CommandEnvironmentRuntimeDeps } from "./types";
+import { resolveLocalWorkspaceTarget } from "./workspace-target";
+import { createWorkspaceTerminal } from "./workspace-terminal";
 import { createWorkspacesApi } from "./workspaces";
 
 const withConnectionSignal = (connections: ExtensionConnectionsApi, signal: AbortSignal): ExtensionConnectionsApi => ({
@@ -36,18 +40,43 @@ const withSessionOwnership = (terminal: ExtensionTerminalApi, scope: InvocationS
 
 export const createScopedHostApis = (
   deps: ExtensionsRouteDeps,
-  input: { project: ExtensionProjectContext; projectId: string },
+  input: {
+    project: ExtensionProjectContext;
+    projectId: string;
+    workspaceId?: string;
+    eventId?: string;
+    repo?: RepoContext;
+  },
   hosts: { connections: ExtensionConnectionsApi; terminal?: ExtensionTerminalApi },
   runtimeDeps: CommandEnvironmentRuntimeDeps,
   scope?: InvocationScope,
 ): ScopedHostApis => {
   const signal = scope?.signal;
+  const resolveCwd = input.workspaceId
+    ? async () => {
+        if (signal?.aborted) throw signal.reason;
+        const location = await resolveLocalWorkspaceTarget(
+          deps,
+          {
+            projectId: input.projectId,
+            workspaceId: input.workspaceId,
+            provisioningWorkspaceId: input.eventId === workspaceEvents.provision.id ? input.workspaceId : undefined,
+            eventId: input.eventId,
+            repo: input.repo,
+          },
+          "process",
+        );
+        if (signal?.aborted) throw signal.reason;
+        return location.root;
+      }
+    : undefined;
+  const terminal = hosts.terminal && resolveCwd ? createWorkspaceTerminal(hosts.terminal, resolveCwd) : hosts.terminal;
 
   return {
     sessions: createSessionsApi(deps, { projectId: input.projectId, project: input.project, signal }),
     workspaces: createWorkspacesApi(deps, { projectId: input.projectId, signal }, runtimeDeps),
     connections: signal ? withConnectionSignal(hosts.connections, signal) : hosts.connections,
-    process: createProcessApi({ scope }),
-    terminal: scope && hosts.terminal ? withSessionOwnership(hosts.terminal, scope) : hosts.terminal,
+    process: createProcessApi({ scope, resolveCwd }),
+    terminal: scope && terminal ? withSessionOwnership(terminal, scope) : terminal,
   };
 };

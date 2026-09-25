@@ -64,6 +64,27 @@ afterAll(async () => {
 });
 
 describe("POST /v1/workspaces", () => {
+  test("creates a provider workspace with caller anchors and shorthand", async () => {
+    const repoRoot = createGitRepo("anchored-workspace-repo");
+    await registerRepo(repoRoot);
+    const anchor = { type: "ticket", id: "ticket-1", label: "PS-391", role: "primary" };
+    const response = await app.request("/v1/workspaces", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        project_id: projectId,
+        provider_id: "pstdio.worktree",
+        params: { base: "HEAD" },
+        anchors: [anchor],
+        shorthand_base: "BRIDGE",
+      }),
+    });
+    expect(response.status).toBe(201);
+    const workspace = await response.json();
+    expect(workspace.anchors_json).toEqual([anchor]);
+    expect(workspace.workspace_shorthand).toStartWith("BRIDGE");
+  });
+
   test("creates a worktree-backed workspace without a ticket", async () => {
     const repoRoot = createGitRepo("create-workspace-repo");
     await registerRepo(repoRoot);
@@ -85,6 +106,17 @@ describe("POST /v1/workspaces", () => {
     const listRes = await app.request(`/v1/workspaces?project_id=${projectId}`);
     const workspaces = await listRes.json();
     expect(workspaces.map((item: { id: string }) => item.id)).toContain(workspace.id);
+  });
+
+  test("preserves anchors when the caller lets the host allocate a shorthand", async () => {
+    const anchor = { type: "document", id: "notes" };
+    const response = await app.request("/v1/workspaces", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ project_id: projectId, provider_id: "pstdio.worktree", anchors: [anchor] }),
+    });
+    expect(response.status).toBe(201);
+    expect((await response.json()).anchors_json).toEqual([anchor]);
   });
 
   test("returns 404 when the project has no repository", async () => {

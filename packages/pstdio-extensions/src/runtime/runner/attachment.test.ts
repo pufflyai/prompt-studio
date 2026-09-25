@@ -54,6 +54,8 @@ const environment: CommandRunnerEnvironment = {
   workspaces: {
     addAnchors: async () => {},
     removeAnchors: async () => {},
+    listProviders: async () => [],
+    getDefault: async () => null,
     list: async () => [],
     get: async () => null,
     getByShorthand: async () => null,

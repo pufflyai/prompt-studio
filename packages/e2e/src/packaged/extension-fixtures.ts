@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
 
-export const writeExtensionWithDependency = (root: string) => {
+export const writeExtensionWithDependency = (root: string, apiVersions = EXTENSION_API_VERSION) => {
   const extDir = join(root, "extensions", "dep-ext");
   const depDist = join(extDir, "node_modules", "test-dep", "dist");
   const sdkDir = join(extDir, "node_modules", "@pstdio", "sdk");
@@ -62,7 +62,7 @@ export const writeExtensionWithDependency = (root: string) => {
       publisher: "test",
       main: "./extension.ts",
       type: "module",
-      engines: { pstdio: EXTENSION_API_VERSION },
+      engines: { pstdio: apiVersions },
       dependencies: { "@pstdio/sdk": "0.0.0-test", "test-dep": "1.0.0" },
     }),
   );

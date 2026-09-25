@@ -93,13 +93,14 @@ const mergeRowActions = (rowActions: DataTableRowAction[], dynamicActions: DataT
   return [...dynamicActions, ...rowActions.filter((action) => !dynamicLabels.has(action.label))];
 };
 
-const RowActionsCell = (
-  props: CellContext<RowData, unknown> & {
-    actions: DataTableRowAction[];
-    getActions?: (row: RowData) => DataTableRowAction[];
-  },
-) => {
-  const { row, actions, getActions } = props;
+interface RowActionsColumnMeta {
+  actions: DataTableRowAction[];
+  getActions?: (row: RowData) => DataTableRowAction[];
+}
+
+const RowActionsCell = (props: CellContext<RowData, unknown>) => {
+  const { row, column } = props;
+  const { actions, getActions } = column.columnDef.meta as RowActionsColumnMeta;
   const resolvedActions = mergeRowActions(actions, getActions?.(row.original) ?? []);
 
   if (resolvedActions.length === 0) return null;
@@ -300,7 +301,9 @@ export function buildColumns(data: RowData[], columnKeys: string[], options: Bui
   const rowActionsColumn = columnHelper.display({
     id: "rowActions",
     header: "",
-    cell: (info) => <RowActionsCell {...info} actions={rowActions} getActions={getRowActions} />,
+    // Keep the component type stable so data refreshes preserve an open menu.
+    cell: RowActionsCell,
+    meta: { actions: rowActions, getActions: getRowActions } satisfies RowActionsColumnMeta,
     enableResizing: false,
     enableSorting: false,
     size: 36,

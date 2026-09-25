@@ -49,7 +49,7 @@ const isExtensionResource = (value: unknown): value is KanbanRendererResourceRef
   isRecord(value) && typeof value.type === "string" && typeof value.id === "string";
 
 const workspaceTypeFrom = (value: unknown): WorkspaceBadgeProps["workspaceType"] =>
-  value === "current_branch" ? "current_branch" : "worktree";
+  value === "current_branch" || value === "folder" || value === "remote" ? value : "worktree";
 
 // A status the shared session contract does not define must not reach the indicator, which
 // would render it as its generic "unknown" state instead of admitting it has none.

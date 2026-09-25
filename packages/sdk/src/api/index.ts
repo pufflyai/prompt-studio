@@ -21,6 +21,7 @@ export type {
   NotificationStatus,
   ResourceRef,
   UpdateNotificationInput,
+  WorkspaceProviderDescriptor,
 } from "pstdio-api-contracts";
 export type {
   AttemptExtensionFixResponse,

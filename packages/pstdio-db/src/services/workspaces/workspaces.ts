@@ -13,7 +13,6 @@ import {
   buildWorkspaceRecord,
   type CreateInput,
   insertDefaultWorkspace,
-  type JsonObject,
   nextStandaloneWorkspaceShorthand,
   nextWorkspaceShorthand,
   nowTimestamp,
@@ -160,17 +159,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
   };
 
   // Standalone workspaces use project-scoped `WS-<n>` shorthands.
-  const createStandalone = async (input: {
-    project_id: string;
-    name?: string;
-    branch?: string;
-    worktree_path?: string;
-    provider_id?: string;
-    provider_params_json?: JsonObject;
-    provider_state?: WorkspaceProviderState;
-    provider_operation_id?: string;
-    provider_operation_kind?: "create" | "cancel" | "archive" | "delete";
-  }) => {
+  const createStandalone = async (input: Omit<CreateInput, "shorthand_base">) => {
     const existingWorkspaces = await db
       .select({ workspace_shorthand: workspaces.workspace_shorthand })
       .from(workspaces)
@@ -188,6 +177,7 @@ export const createWorkspacesDBService = (db: DbClient) => {
     const record = buildWorkspaceRecord({
       project_id: input.project_id,
       shorthand,
+      anchors: input.anchors,
       name: input.name,
       branch: input.branch,
       worktree_path: input.worktree_path,

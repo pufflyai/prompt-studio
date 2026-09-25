@@ -175223,6 +175223,566 @@
           ]
         }
       ]
+    },
+    {
+      "type": "frame",
+      "id": "LmcML",
+      "x": 40909,
+      "y": -11572,
+      "name": "Folder onboarding and workspace providers",
+      "theme": {
+        "mode": "dark"
+      },
+      "width": 1900,
+      "height": 1100,
+      "fill": "$ds-bg",
+      "layout": "vertical",
+      "gap": 32,
+      "padding": 32,
+      "children": [
+        {
+          "type": "frame",
+          "id": "Wk3EM",
+          "name": "Folder picker states",
+          "width": "fill_container",
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "I2wLw",
+              "name": "cmp/FolderPicker",
+              "reusable": true,
+              "width": 584,
+              "height": 496,
+              "fill": "$ds-bg",
+              "cornerRadius": "$overlay-radius",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "children": [
+                {
+                  "type": "frame",
+                  "id": "WCuXU",
+                  "name": "Header",
+                  "width": "fill_container",
+                  "height": 52,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "p47wy",
+                      "name": "Title",
+                      "fill": "$ds-fg",
+                      "content": "Open project folder",
+                      "fontFamily": "$font-heading",
+                      "fontSize": 15,
+                      "fontWeight": "600"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "jWHZa",
+                  "name": "Body",
+                  "width": "fill_container",
+                  "height": "fill_container",
+                  "layout": "vertical",
+                  "gap": 12,
+                  "padding": 16,
+                  "children": [
+                    {
+                      "type": "frame",
+                      "id": "nm5fu",
+                      "name": "Navigation",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "id": "D5TnMu",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Home",
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "house"
+                            }
+                          }
+                        },
+                        {
+                          "id": "zsgoJ",
+                          "type": "ref",
+                          "ref": "nvvgg",
+                          "name": "Parent",
+                          "descendants": {
+                            "k7mgm": {
+                              "icon": "arrow-up"
+                            }
+                          }
+                        },
+                        {
+                          "id": "jePoE",
+                          "type": "ref",
+                          "ref": "nbn0J",
+                          "name": "Folder path",
+                          "width": "fill_container",
+                          "descendants": {
+                            "hcIyD": {
+                              "content": "/Users/alex/Documents",
+                              "fill": "$ds-fg"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "e3c889",
+                      "name": "Folder actions",
+                      "width": "fill_container",
+                      "gap": 8,
+                      "children": [
+                        {
+                          "id": "T9klK",
+                          "type": "ref",
+                          "ref": "nbn0J",
+                          "name": "Filter folders",
+                          "width": "fill_container",
+                          "descendants": {
+                            "hcIyD": {
+                              "content": "Filter folders"
+                            }
+                          }
+                        },
+                        {
+                          "id": "nZbUt",
+                          "type": "ref",
+                          "ref": "c24zV7",
+                          "name": "New folder",
+                          "theme": {
+                            "btn": "outline",
+                            "size": "sm"
+                          },
+                          "descendants": {
+                            "DsEVd": {
+                              "icon": "folder-plus"
+                            },
+                            "Hf4GT": {
+                              "content": "New folder"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "frame",
+                      "id": "num3Q",
+                      "name": "Folders",
+                      "width": "fill_container",
+                      "height": "fill_container",
+                      "layout": "vertical",
+                      "gap": 4,
+                      "children": [
+                        {
+                          "id": "U5wtCV",
+                          "type": "ref",
+                          "ref": "hIyB7",
+                          "name": ".research",
+                          "width": "fill_container",
+                          "descendants": {
+                            "vsjz1": {
+                              "icon": "folder"
+                            },
+                            "h0cJn": {
+                              "content": ".research"
+                            }
+                          }
+                        },
+                        {
+                          "id": "Z7pc3",
+                          "type": "ref",
+                          "ref": "hIyB7",
+                          "name": "1234",
+                          "width": "fill_container",
+                          "descendants": {
+                            "vsjz1": {
+                              "icon": "folder"
+                            },
+                            "h0cJn": {
+                              "content": "1234"
+                            }
+                          }
+                        },
+                        {
+                          "id": "lQgUD",
+                          "type": "ref",
+                          "ref": "hIyB7",
+                          "name": "Drafts",
+                          "width": "fill_container",
+                          "descendants": {
+                            "vsjz1": {
+                              "icon": "folder"
+                            },
+                            "h0cJn": {
+                              "content": "Drafts"
+                            }
+                          }
+                        },
+                        {
+                          "id": "uBpQq",
+                          "type": "ref",
+                          "ref": "hIyB7",
+                          "name": "研究",
+                          "width": "fill_container",
+                          "descendants": {
+                            "vsjz1": {
+                              "icon": "folder"
+                            },
+                            "h0cJn": {
+                              "content": "研究"
+                            }
+                          }
+                        }
+                      ]
+                    },
+                    {
+                      "type": "text",
+                      "id": "vzzEL",
+                      "name": "Shared folder guidance",
+                      "fill": "$ds-fg-subtle",
+                      "content": "Sessions work directly in this folder and share its files.",
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                },
+                {
+                  "type": "frame",
+                  "id": "e0HMZ3",
+                  "name": "Footer",
+                  "width": "fill_container",
+                  "height": 56,
+                  "stroke": "$ds-border",
+                  "gap": 8,
+                  "padding": [
+                    0,
+                    16
+                  ],
+                  "justifyContent": "end",
+                  "alignItems": "center",
+                  "children": [
+                    {
+                      "id": "z28bu",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Cancel",
+                      "theme": {
+                        "btn": "outline",
+                        "size": "sm"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Cancel"
+                        }
+                      }
+                    },
+                    {
+                      "id": "U5CKl9",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Open folder",
+                      "theme": {
+                        "btn": "primary",
+                        "size": "sm"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Open folder"
+                        }
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "rPCqj",
+              "type": "ref",
+              "ref": "I2wLw",
+              "name": "New folder entry",
+              "descendants": {
+                "num3Q": {
+                  "type": "frame",
+                  "id": "vGgQA",
+                  "name": "Folder state",
+                  "width": "fill_container",
+                  "height": 180,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "id": "tJ9Hz",
+                      "type": "ref",
+                      "ref": "nbn0J",
+                      "name": "Folder name",
+                      "width": "fill_container",
+                      "descendants": {
+                        "hcIyD": {
+                          "content": "New folder name"
+                        }
+                      }
+                    },
+                    {
+                      "id": "YHNoW",
+                      "type": "ref",
+                      "ref": "c24zV7",
+                      "name": "Create folder",
+                      "theme": {
+                        "btn": "primary",
+                        "size": "sm"
+                      },
+                      "descendants": {
+                        "DsEVd": {
+                          "enabled": false
+                        },
+                        "Hf4GT": {
+                          "content": "Create folder"
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "id": "Q6BAgT",
+              "type": "ref",
+              "ref": "I2wLw",
+              "name": "Empty folder and error",
+              "descendants": {
+                "num3Q": {
+                  "type": "frame",
+                  "id": "vsTEk",
+                  "name": "Folder state",
+                  "width": "fill_container",
+                  "height": 180,
+                  "layout": "vertical",
+                  "gap": 12,
+                  "children": [
+                    {
+                      "type": "text",
+                      "id": "FzzvS",
+                      "name": "Empty directory",
+                      "fill": "$ds-fg-subtle",
+                      "content": "This folder is empty.",
+                      "fontFamily": "$font-body",
+                      "fontSize": 14,
+                      "fontWeight": "normal"
+                    },
+                    {
+                      "type": "text",
+                      "id": "G5cYq",
+                      "name": "Creation error",
+                      "fill": "$ds-fg",
+                      "content": "A folder with that name already exists.",
+                      "fontFamily": "$font-body",
+                      "fontSize": 12,
+                      "fontWeight": "normal"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "type": "frame",
+          "id": "os1DB",
+          "name": "Project workspace and available creation providers",
+          "width": "fill_container",
+          "gap": 24,
+          "children": [
+            {
+              "type": "frame",
+              "id": "lbQ1M",
+              "name": "Project workspace · Files only",
+              "width": 584,
+              "height": 300,
+              "fill": "$ds-bg",
+              "cornerRadius": "$overlay-radius",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "nlwxf",
+                  "name": "Provider title",
+                  "fill": "$ds-fg",
+                  "content": "Project workspace",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "Sjce7",
+                  "name": "Provider description",
+                  "fill": "$ds-fg-subtle",
+                  "content": "Files only: no empty tab bar. Show create only when an additional workspace provider is available.",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "C05i76",
+              "name": "Git worktree",
+              "width": 584,
+              "height": 300,
+              "fill": "$ds-bg",
+              "cornerRadius": "$overlay-radius",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "V3uRG",
+                  "name": "Provider title",
+                  "fill": "$ds-fg",
+                  "content": "Git worktree",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "B99TbM",
+                  "name": "Provider description",
+                  "fill": "$ds-fg-subtle",
+                  "content": "Git review and merge cover the entire repository.",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "E6hca",
+                  "type": "ref",
+                  "ref": "nbn0J",
+                  "name": "Provider parameter",
+                  "width": "fill_container",
+                  "descendants": {
+                    "hcIyD": {
+                      "content": "Base revision: HEAD"
+                    }
+                  }
+                },
+                {
+                  "id": "JX68C",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Create workspace",
+                  "theme": {
+                    "btn": "primary",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Create workspace"
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              "type": "frame",
+              "id": "Kg0ti",
+              "name": "Remote workspace",
+              "width": 584,
+              "height": 300,
+              "fill": "$ds-bg",
+              "cornerRadius": "$overlay-radius",
+              "stroke": "$ds-border",
+              "strokeWidth": 1,
+              "layout": "vertical",
+              "gap": 16,
+              "padding": 16,
+              "children": [
+                {
+                  "type": "text",
+                  "id": "U21JVI",
+                  "name": "Provider title",
+                  "fill": "$ds-fg",
+                  "content": "Remote workspace",
+                  "fontFamily": "$font-heading",
+                  "fontSize": 15,
+                  "fontWeight": "600"
+                },
+                {
+                  "type": "text",
+                  "id": "ksKyh",
+                  "name": "Provider description",
+                  "fill": "$ds-fg-subtle",
+                  "content": "The provider supplies its files. Local files are not uploaded.",
+                  "fontFamily": "$font-body",
+                  "fontSize": 12,
+                  "fontWeight": "normal"
+                },
+                {
+                  "id": "TP7Di",
+                  "type": "ref",
+                  "ref": "nbn0J",
+                  "name": "Provider parameter",
+                  "width": "fill_container",
+                  "descendants": {
+                    "hcIyD": {
+                      "content": "Environment: research"
+                    }
+                  }
+                },
+                {
+                  "id": "R5G7xy",
+                  "type": "ref",
+                  "ref": "c24zV7",
+                  "name": "Create workspace",
+                  "theme": {
+                    "btn": "primary",
+                    "size": "sm"
+                  },
+                  "descendants": {
+                    "DsEVd": {
+                      "enabled": false
+                    },
+                    "Hf4GT": {
+                      "content": "Create workspace"
+                    }
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "themes": {

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
-import { EXTENSION_API_VERSION } from "pstdio-api-contracts/extension-kernel";
+import { EXTENSION_API_VERSION, parseExtensionApiVersions } from "pstdio-api-contracts/extension-kernel";
 import type { ExtensionDiagnostic } from "../types/runtime";
 import { createDiagnostic } from "./diagnostics";
 
@@ -188,22 +188,17 @@ const resolveEntry = (diagnostics: ExtensionDiagnostic[], packagePath: string, p
   return resolved;
 };
 
-// An extension declares the exact API version it was built against. Ranges are refused:
-// `^1.0.0-alpha.1` also matches `1.0.0-alpha.3` under semver, so a range would wave through
-// every alpha bump while looking like a gate.
-const isVersionRange = (declared: string) => /^[\^~><=*]/.test(declared);
-
 export const getExtensionApiVersionError = (name: string, declared: string) => {
-  if (declared === EXTENSION_API_VERSION) return null;
+  const versions = parseExtensionApiVersions(declared);
+  if (versions?.includes(EXTENSION_API_VERSION)) return null;
 
-  if (isVersionRange(declared)) {
-    return `Extension "${name}" declares engines.pstdio "${declared}". While the extension API is in alpha it must be the exact version "${EXTENSION_API_VERSION}", not a range.`;
+  if (!versions) {
+    return `Extension "${name}" declares engines.pstdio "${declared}". List exact supported API versions separated by "||", including "${EXTENSION_API_VERSION}". Ranges and wildcards are not supported.`;
   }
 
-  const repair =
-    Bun.semver.order(declared, EXTENSION_API_VERSION) < 0
-      ? "Run `pst extensions update` from a linked project to repair host-managed extensions, or update this extension to a build for this host."
-      : "Update Prompt Studio, or install a build of the extension for this host.";
+  const repair = versions.every((version) => Bun.semver.order(version, EXTENSION_API_VERSION) < 0)
+    ? "Run `pst extensions update` from a linked project to repair host-managed extensions, or update this extension to a build for this host."
+    : "Update Prompt Studio, or install a build of the extension for this host.";
   return `Extension "${name}" targets extension API ${declared} but this host provides ${EXTENSION_API_VERSION}. ${repair}`;
 };
 

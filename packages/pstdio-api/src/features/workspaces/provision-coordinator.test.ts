@@ -23,6 +23,7 @@ const makeDeps = (row: Row) => {
   const deps = {
     workspaceService: {
       list: async () => [row],
+      getDefault: async () => ({ id: "home", project_id: "p1", provider_id: "pstdio.root", worktree_path: null }),
       setInitializing: async (_id: string, value: boolean) => {
         calls.push(`initializing:${value}`);
         row.initializing = value;
@@ -248,6 +249,7 @@ describe("provisionProjectWorkspaces", () => {
     const deps = {
       workspaceService: {
         list: async () => [row],
+        getDefault: async () => ({ ...row, project_id: "p1", provider_id: "pstdio.root" }),
         setInitializing: async (_id: string, value: boolean) => {
           calls.push(`initializing:${value}`);
           row.initializing = value;
