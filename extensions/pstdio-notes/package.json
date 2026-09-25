@@ -1,0 +1,27 @@
+{
+  "name": "pstdio-notes",
+  "version": "0.1.0",
+  "displayName": "Notes",
+  "description": "Write Markdown notes that live in the project repository.",
+  "publisher": "pstdio",
+  "main": "./extension.ts",
+  "engines": {
+    "pstdio": "1.0.0-alpha.10"
+  },
+  "pstdio": {
+    "scope": "user"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pstdio/sdk": "^0.24.1"
+  },
+  "devDependencies": {
+    "@types/bun": "1.4.2",
+    "typescript": "6.0.2"
+  }
+}

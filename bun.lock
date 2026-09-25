@@ -208,6 +208,17 @@
         "typescript": "6.0.2",
       },
     },
+    "extensions/pstdio-notes": {
+      "name": "pstdio-notes",
+      "version": "0.1.0",
+      "dependencies": {
+        "@pstdio/sdk": "^0.24.1",
+      },
+      "devDependencies": {
+        "@types/bun": "1.4.2",
+        "typescript": "6.0.2",
+      },
+    },
     "extensions/pstdio-planner": {
       "name": "pstdio-planner",
       "version": "0.14.1",
@@ -3902,6 +3913,8 @@
     "pstdio-file-types": ["pstdio-file-types@workspace:packages/pstdio-file-types"],
 
     "pstdio-logging": ["pstdio-logging@workspace:packages/pstdio-logging"],
+
+    "pstdio-notes": ["pstdio-notes@workspace:extensions/pstdio-notes"],
 
     "pstdio-paths": ["pstdio-paths@workspace:packages/pstdio-paths"],
 

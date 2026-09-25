@@ -50,6 +50,7 @@ describe("isolated development paths", () => {
         ["harness-codex", "extensions/harness-codex"],
         ["harness-open-code", "extensions/harness-open-code"],
         ["pstdio-base-themes", "extensions/pstdio-base-themes"],
+        ["pstdio-notes", "extensions/pstdio-notes"],
         ["pstdio-planner", "extensions/pstdio-planner"],
         ["pstdio-planner-loops", ".pstdio/extensions/pstdio-planner-loops"],
         ["pstdio-reports", "extensions/pstdio-reports"],

@@ -67,6 +67,19 @@
       "default": false
     },
     {
+      "installName": "pstdio-notes",
+      "displayName": "Notes",
+      "description": "Write Markdown notes that live in the project repository.",
+      "origin": {
+        "kind": "git",
+        "url": "https://github.com/pufflyai/prompt-studio",
+        "path": "extensions/pstdio-notes",
+        "ref": "{hostRelease}"
+      },
+      "publisher": "pstdio",
+      "default": false
+    },
+    {
       "installName": "pstdio-planner",
       "displayName": "Prompt Studio Planner",
       "description": "Tickets, managed attempts, reviews, and templates.",
