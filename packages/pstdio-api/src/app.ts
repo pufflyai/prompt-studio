@@ -84,7 +84,6 @@ const createAppAutomationService = async (input: {
   maxRunsPerMinute: number;
 }) => {
   const service = createAutomationService(input);
-  await input.automationDBService.recoverInterruptedRuns();
   await input.automationDBService.pruneTerminalRuns(new Date(Date.now() - AUTOMATION_RUN_RETENTION_MS).toISOString());
   return service;
 };
@@ -173,6 +172,7 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
   });
 
   const sessionHookDeps = (): SessionHookDeps => ({
+    automationService,
     extensionResourceSequencesService: dbs.extensionResourceSequencesService,
     activityEventsService,
     eventBus,
@@ -261,6 +261,8 @@ export const createApp = async (input: CreateAppInput, dependencies: AppDependen
     activityEventsService,
     terminal: terminalSupervisor.api,
   };
+
+  await automationService.recoverInterruptedRuns();
 
   const extensionScheduler = startAppExtensionScheduler(deps, projectService, storageRoot);
   const notificationWakeTimer = startNotificationWakeTimer(notificationService);

@@ -2,6 +2,7 @@ import { createHash, scrypt, scryptSync, timingSafeEqual } from "node:crypto";
 import type { AutomationRunError } from "pstdio-api-contracts";
 import type { createAutomationDBService } from "pstdio-db";
 import type { ExtensionsRouteDeps } from "../extensions/deps";
+import { fireExtensionEventAsync } from "../extensions/extension-event-runtime";
 
 export const MAX_IDEMPOTENCY_KEY_LENGTH = 200;
 export const MAX_INPUT_BYTES = 64 * 1024;
@@ -177,6 +178,16 @@ export const recordRunActivity = async (deps: AutomationPolicyDeps, run: Automat
       },
     })
     .catch(() => undefined);
+  if (run.token_id === null) {
+    const principal = await deps.automationDBService.getPrincipal(run.project_id, run.principal_id);
+    if (principal?.created_by === "extension") {
+      fireExtensionEventAsync(deps.getCommandDeps(), run.project_id, `${principal.name}.event.automation-run-changed`, {
+        runId: run.id,
+        commandId: run.command_id,
+        status: run.status,
+      });
+    }
+  }
 };
 
 export const bearerTokenFrom = (request: Request) => {

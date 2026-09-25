@@ -6,6 +6,7 @@ import type {
   EventDeliveryResult,
   ExtensionActivityApi,
   ExtensionArtifactApi,
+  ExtensionAutomationApi,
   ExtensionConnectionsApi,
   ExtensionContextBase,
   ExtensionFilesApi,
@@ -62,6 +63,7 @@ export interface CommandRunnerEnvironment {
   repos: ExtensionReposApi;
   activity: ExtensionActivityApi;
   notify: ExtensionNotifyApi;
+  automation: ExtensionAutomationApi;
   process: ExtensionProcessApi;
   net: ExtensionNetApi;
   connections?: ExtensionConnectionsApi;

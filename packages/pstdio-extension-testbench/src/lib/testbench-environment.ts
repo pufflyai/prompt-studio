@@ -190,6 +190,16 @@ export const createBenchEnvironment = (
       resolve: async () => [],
       toast: async () => {},
     },
+    automation: {
+      enqueue: async () => {
+        throw new Error("Durable automation requires the host runtime.");
+      },
+      get: async () => undefined,
+      list: async () => [],
+      cancel: async () => {
+        throw new Error("Durable automation requires the host runtime.");
+      },
+    },
     process: {
       run: async () => ({ exitCode: 0, stderr: "", stdout: "" }),
       runOrThrow: async () => ({ exitCode: 0, stderr: "", stdout: "" }),

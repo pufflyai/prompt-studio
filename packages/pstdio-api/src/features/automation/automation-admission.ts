@@ -1,7 +1,6 @@
 import type { CreateAutomationRunInput } from "pstdio-api-contracts";
 import { validateCommandParams } from "pstdio-extensions";
 import {
-  type AutomationAuth,
   type AutomationPolicyDeps,
   AutomationRequestError,
   inputHash,
@@ -12,7 +11,7 @@ import {
 
 export const admitAutomationRun = async (input: {
   deps: AutomationPolicyDeps;
-  auth: AutomationAuth;
+  auth: { principal: { id: string }; token: { id: string } | null };
   projectId: string;
   idempotencyKey: string;
   body: CreateAutomationRunInput;
@@ -61,7 +60,7 @@ export const admitAutomationRun = async (input: {
   const stored = await deps.automationDBService.createRun({
     projectId,
     principalId: auth.principal.id,
-    tokenId: auth.token.id,
+    tokenId: auth.token?.id ?? null,
     commandId: body.commandId,
     idempotencyKey,
     inputHash: hash,
