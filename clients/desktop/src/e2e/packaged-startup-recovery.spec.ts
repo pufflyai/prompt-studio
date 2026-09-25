@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect } from "@playwright/test";
 import { test } from "../testing/packaged-fixture";
+import { resumeProcess, suspendProcess } from "../testing/suspend-process";
 import { waitForWorkbenchPage } from "./desktop-pages";
 import {
   createPackagedHome,
@@ -19,7 +20,6 @@ import { waitForVisibleElement } from "./visible-element-timing";
 test("recovers from a stalled runtime and retries without replacing its owner", async ({
   browserName: _browserName,
 }, testInfo) => {
-  test.skip(process.platform === "win32", "Suspending a runtime requires POSIX process signals.");
   const home = createPackagedHome();
   let app: PackagedWindow | null = null;
   let suspendedPid: number | null = null;
@@ -28,7 +28,7 @@ test("recovers from a stalled runtime and retries without replacing its owner", 
     const runtime = await waitForDescriptor(home);
     const descriptorPath = join(home, "runtime.json");
     const originalDescriptor = readFileSync(descriptorPath, "utf8");
-    process.kill(runtime.pid, "SIGSTOP");
+    suspendProcess(runtime.pid);
     suspendedPid = runtime.pid;
 
     app = await launchPackagedWindow(home);
@@ -51,7 +51,7 @@ test("recovers from a stalled runtime and retries without replacing its owner", 
       contentType: "image/png",
     });
 
-    process.kill(runtime.pid, "SIGCONT");
+    resumeProcess(runtime.pid);
     suspendedPid = null;
     await app.lifecyclePage.keyboard.press("Tab");
     const retry = app.lifecyclePage.getByRole("button", { name: "Retry", exact: true });
@@ -68,7 +68,7 @@ test("recovers from a stalled runtime and retries without replacing its owner", 
     expect(await close).toMatchObject({ exitCode: 0 });
     expect(readDescriptor(home)).toBeNull();
   } finally {
-    if (suspendedPid !== null) process.kill(suspendedPid, "SIGCONT");
+    if (suspendedPid !== null) resumeProcess(suspendedPid);
     await disposePackagedApp(app);
     removePackagedHome(home);
   }

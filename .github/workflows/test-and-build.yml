@@ -57,15 +57,9 @@ jobs:
       - name: Test monorepo (non-e2e)
         run: bunx lerna run test --ignore e2e
 
-  # Windows counterpart of `test_and_build`. Kept as a separate, non-blocking job
-  # (rather than an `os` matrix leg) so the existing `test_and_build` required
-  # check keeps its name, and so the known pre-existing Windows-only failures in
-  # `packages/pstdio-api` don't gate merges while they're being burned down.
-  # Flip `continue-on-error` off once the Windows suite is green.
   windows_test_and_build:
     runs-on: windows-latest
     timeout-minutes: 25
-    continue-on-error: true
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -233,6 +227,10 @@ jobs:
             target: linux-x64
           - os: macos-15
             target: darwin-arm64
+          - os: macos-15-intel
+            target: darwin-x64
+          - os: windows-latest
+            target: win32-x64
     steps:
       - uses: actions/checkout@v5
         with:
@@ -263,8 +261,8 @@ jobs:
         if: runner.os == 'Linux'
         run: xvfb-run -a bun run --cwd clients/desktop test:electron
 
-      - name: Test source Electron on macOS
-        if: runner.os == 'macOS'
+      - name: Test source Electron on macOS and Windows
+        if: runner.os != 'Linux'
         run: bun run --cwd clients/desktop test:electron
 
       - name: Package Electron with its native sidecar
@@ -279,14 +277,28 @@ jobs:
       - name: Verify packaged Electron fuses
         run: bun run --cwd clients/desktop verify:fuses
 
+      - name: Install Windows process suspension test tool
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $tools = Join-Path $env:RUNNER_TEMP "pstools"
+          $archive = Join-Path $env:RUNNER_TEMP "PSTools.zip"
+          Invoke-WebRequest https://download.sysinternals.com/files/PSTools.zip -OutFile $archive
+          Expand-Archive $archive -DestinationPath $tools
+          $signature = Get-AuthenticodeSignature (Join-Path $tools "pssuspend64.exe")
+          if ($signature.Status -ne "Valid" -or $signature.SignerCertificate.Subject -notmatch "CN=Microsoft Corporation,") {
+            throw "PsSuspend must have a valid Microsoft signature"
+          }
+          $tools >> $env:GITHUB_PATH
+
       - name: Test packaged Electron
         if: runner.os == 'Linux'
         env:
           DEBUG: pw:api,pw:browser
         run: xvfb-run -a bun run --cwd clients/desktop test:packaged
 
-      - name: Test packaged Electron on macOS
-        if: runner.os == 'macOS'
+      - name: Test packaged Electron on macOS and Windows
+        if: runner.os != 'Linux'
         env:
           DEBUG: pw:api,pw:browser
         run: bun run --cwd clients/desktop test:packaged
@@ -300,7 +312,7 @@ jobs:
           if-no-files-found: error
 
   build_docker:
-    needs: [test_and_build, e2e, e2e_cli, packaged_and_vite_e2e, desktop_e2e]
+    needs: [test_and_build, windows_test_and_build, e2e, e2e_cli, packaged_and_vite_e2e, desktop_e2e]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
