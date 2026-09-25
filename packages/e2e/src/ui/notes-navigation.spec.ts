@@ -38,7 +38,11 @@ test("nests notes under their sidebar group and follows the active note through 
       .toBe(true);
     const first = await executeNoteCommand(request, project.id, "create", { title: "First note" });
     const second = await executeNoteCommand(request, project.id, "create", { title: "Second note" });
-    await page.addInitScript(() => localStorage.setItem("onboarding-complete", "true"));
+    await page.addInitScript((projectId: string) => {
+      localStorage.setItem("onboarding-complete", "true");
+      localStorage.setItem("dashboard-wb2:selected-project:global", projectId);
+      localStorage.setItem("selected-agent", "pstdio.workbench-fixture.harness.fake");
+    }, project.id);
     await page.goto(`/projects/${project.id}/extensions/pstdio.pstdio-planner/tickets`);
     const sidebar = page.locator('[data-workbench-region="sidenav"]');
     const group = sidebar.getByRole("option", { name: "Notes", exact: true });
