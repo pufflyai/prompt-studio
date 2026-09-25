@@ -82,6 +82,23 @@ describe("createArtifactMount", () => {
 });
 
 describe("createFileMount", () => {
+  test("updates existing text without recreating a deleted file", async () => {
+    const mount = createFileMount(createTempDir());
+    await mount.writeText("note.md", "long initial content");
+    await mount.updateText("note.md", "short");
+    expect(await mount.readText("note.md")).toBe("short");
+    await mount.delete("note.md");
+    await expect(mount.updateText("note.md", "stale draft")).rejects.toThrow();
+    expect(await mount.exists("note.md")).toBe(false);
+  });
+
+  test("a concurrent delete cannot be undone by a text update", async () => {
+    const mount = createFileMount(createTempDir());
+    await mount.writeText("note.md", "initial");
+    await Promise.allSettled([mount.updateText("note.md", "draft"), mount.delete("note.md")]);
+    expect(await mount.exists("note.md")).toBe(false);
+  });
+
   test("round-trips files relative to the mount root", async () => {
     const root = createTempDir();
     const mount = createFileMount(root);

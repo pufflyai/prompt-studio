@@ -6,7 +6,9 @@ import {
   type SyncWriter,
   type SyncWriterProvider,
 } from "@pstdio/sdk/client";
+import type { ResourceRemovedEvent } from "@pstdio/sdk/extensions";
 import { publishExtensionEvent, publishExtensionEventReset } from "@/shared/extensions/extension-webview-broadcast";
+import { publishResourceRemoval } from "@/shared/extensions/resource-removal-feed";
 import { getWriter, type SyncedTable } from "./collections";
 
 export type SyncClient = SyncConnection;
@@ -33,8 +35,18 @@ const extensionEventWriter: SyncWriter = {
 };
 
 export const createDashboardSyncWriterProvider = (): SyncWriterProvider => ({
-  getWriter: (table) => (table === "extension_events" ? extensionEventWriter : getWriter(table as SyncedTable)),
+  getWriter: (table) => {
+    if (table === "extension_events") return extensionEventWriter;
+    if (table === "resource_events") return resourceEventWriter;
+    return getWriter(table as SyncedTable);
+  },
 });
+
+const resourceEventWriter: SyncWriter = {
+  truncateAndWrite: () => undefined,
+  upsert: (row) => publishResourceRemoval((row as unknown as ResourceRemovedEvent).resource),
+  remove: () => undefined,
+};
 
 export const startSync = (apiUrl: string, callbacks: SyncCallbacks = {}): SyncClient =>
   createClient({ baseUrl: apiUrl }).sync.start({

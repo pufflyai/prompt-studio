@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { createWorkbench } from "../../core";
-import { executeWorkbenchExtensionCommand } from "./workbench-extension-command";
+import {
+  executeWorkbenchExtensionCommand,
+  executeWorkbenchExtensionCommandResponse,
+} from "./workbench-extension-command";
 
 const setupPage = () => {
   const workbench = createWorkbench();
@@ -71,6 +74,122 @@ const setupPage = () => {
   return workbench;
 };
 describe("executeWorkbenchExtensionCommand", () => {
+  test("preserves the response envelope when navigation conversion rejects a target", async () => {
+    const workbench = setupPage();
+    const response = {
+      outcome: {
+        ok: true,
+        status: "success",
+        value: { id: "created" },
+        navigationRequests: [{ kind: "href", href: "javascript:alert(1)" }],
+      },
+    };
+    expect(
+      await executeWorkbenchExtensionCommandResponse(
+        { projectId: "project-1", workbench, executeCommand: () => response },
+        "create",
+      ),
+    ).toBe(response);
+    expect(workbench.notifications.listNotifications()).toHaveLength(1);
+  });
+
+  test("still rejects failed commands without applying their navigation", async () => {
+    const workbench = setupPage();
+    await expect(
+      executeWorkbenchExtensionCommand(
+        {
+          projectId: "project-1",
+          workbench,
+          executeCommand: () => ({
+            outcome: {
+              ok: false,
+              status: "error",
+              error: { message: "Create failed" },
+              navigationRequests: [
+                { kind: "page", page: { kind: "page", id: "tickets", extensionId: "acme.planner" } },
+              ],
+            },
+          }),
+        },
+        "create",
+      ),
+    ).rejects.toThrow("Create failed");
+    expect(workbench.pages.store.getState().activePageId).toBe("ticket");
+    expect(workbench.notifications.listNotifications()).toEqual([]);
+  });
+
+  test("keeps committed command success when navigation fails and continues later requests", async () => {
+    const workbench = setupPage();
+    const created: string[] = [];
+    const result = await executeWorkbenchExtensionCommand(
+      {
+        projectId: "project-1",
+        workbench,
+        executeCommand: () => {
+          created.push("created");
+          return {
+            outcome: {
+              ok: true,
+              status: "success",
+              value: { id: "created" },
+              navigationRequests: [
+                { kind: "panel", panel: { kind: "placement", id: "unavailable", extensionId: "acme.planner" } },
+                { kind: "page", page: { kind: "page", id: "tickets", extensionId: "acme.planner" } },
+              ],
+            },
+          };
+        },
+      },
+      "create",
+    );
+    expect(result).toEqual({ id: "created" });
+    expect(created).toEqual(["created"]);
+    expect(workbench.pages.store.getState().activePageId).toBe("tickets");
+    expect(workbench.notifications.listNotifications()).toEqual([
+      expect.objectContaining({ level: "warning", message: expect.stringContaining("unavailable") }),
+    ]);
+  });
+
+  test("applies explicit navigation once while returning ordinary data", async () => {
+    const workbench = setupPage();
+    const value = { id: "created" };
+    const result = await executeWorkbenchExtensionCommand(
+      {
+        projectId: "project-1",
+        workbench,
+        executeCommand: () => ({
+          outcome: {
+            ok: true,
+            status: "success",
+            value,
+            navigationRequests: [{ kind: "page", page: { kind: "page", id: "tickets", extensionId: "acme.planner" } }],
+          },
+        }),
+      },
+      "create",
+    );
+    expect(result).toEqual(value);
+    expect(workbench.pages.store.getState().activePageId).toBe("tickets");
+  });
+
+  test("returns target-shaped data without navigation", async () => {
+    const workbench = setupPage();
+    const value = { kind: "page", page: { kind: "page", id: "tickets", extensionId: "acme.planner" } };
+    expect(
+      await executeWorkbenchExtensionCommand(
+        {
+          projectId: "project-1",
+          workbench,
+          executeCommand: () => ({ outcome: { ok: true, status: "success", value } }),
+        },
+        "query",
+      ),
+    ).toEqual(value);
+    expect(workbench.pages.store.getState().activePageId).toBe("ticket");
+  });
+});
+
+describe("existing extension behavior during SDK preparation", () => {
   test("closes a scoped page resource through a breadcrumb delete action", async () => {
     const workbench = setupPage();
     const activeTicket = workbench.getPrimaryResource()!;

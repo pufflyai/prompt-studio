@@ -43,3 +43,36 @@ describe("createExtensionWebviewHostCapabilities", () => {
     expect(workbench.pages.store.getState().activePageId).toBe("pstdio.lab.page.tickets");
   });
 });
+
+test("webview command calls apply navigation once and preserve the response envelope", async () => {
+  const workbench = createWorkbench();
+  let opened = 0;
+  workbench.commands.registerCommand(
+    { id: "open", label: "Open" },
+    {
+      execute: () => {
+        opened++;
+      },
+    },
+  );
+  const response = {
+    commandId: "notes.create",
+    extensionId: "notes",
+    outcome: {
+      ok: true,
+      status: "success",
+      value: { id: "one" },
+      navigationRequests: [
+        { kind: "command", target: { command: { kind: "command", id: "open", extensionId: "pstdio" } } },
+      ],
+    },
+  };
+  const capabilities = createExtensionWebviewHostCapabilities({
+    executeCommand: () => response,
+    extensionIdForWebview: () => "notes",
+    projectId: "project",
+    slotKind: "panel",
+  })({ placement: {}, webviewId: "notes", workbench } as never);
+  expect(await capabilities["commands.execute"]?.({ commandId: "notes.create" })).toEqual(response);
+  expect(opened).toBe(1);
+});

@@ -1,4 +1,10 @@
-import type { NavigationTargetPage, PageLocation, PageRef, PlacementIdentity } from "@pstdio/sdk/extensions";
+import type {
+  NavigationTargetPage,
+  PageLocation,
+  PageRef,
+  PlacementIdentity,
+  ResourceRef,
+} from "@pstdio/sdk/extensions";
 import type { WorkbenchPageRegistry, WorkbenchPageRuntimeState } from "../../registries/pages/page-registry";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 
@@ -59,6 +65,7 @@ export interface WorkbenchPageLocationController {
   replay(location: PageLocation): WorkbenchPageNavigationResult;
   navigateToParent(): WorkbenchPageNavigationResult;
   closePlacement(identity: PlacementIdentity): WorkbenchPageNavigationResult;
+  removeResource(resource: ResourceRef, retained: readonly PlacementIdentity[]): void;
   goBack(): void;
   goForward(): void;
   dispose(): void;

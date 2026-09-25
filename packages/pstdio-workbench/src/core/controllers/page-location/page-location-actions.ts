@@ -1,4 +1,4 @@
-import type { NavigationTargetPage, PageLocation, PlacementIdentity } from "@pstdio/sdk/extensions";
+import type { NavigationTargetPage, PageLocation, PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 import { isWorkbenchProjectUrl } from "@pstdio/sdk/extensions";
 import type { WorkbenchStore } from "../../shared/store/workbench-store";
 import type {
@@ -29,6 +29,7 @@ interface PageLocationControllerActionsInput<Value> {
   ): WorkbenchPageNavigationResult;
   fail(source: WorkbenchPageLocationDiagnostic["source"], error: unknown): WorkbenchPageNavigationResult;
   closePlacement(identity: PlacementIdentity): WorkbenchPageNavigationResult;
+  removeResource(resource: ResourceRef, retained: readonly PlacementIdentity[]): void;
   canGoBack(): boolean;
   canGoForward(): boolean;
   dispose(): void;
@@ -48,6 +49,7 @@ export const createPageLocationControllerActions = <Value>(
   const { input } = actions;
   return {
     historyStore: actions.historyStore,
+    removeResource: actions.removeResource,
     setProject(projectId) {
       if (input.registry.store.getState().projectId === projectId) return;
       actions.clearProject(projectId);

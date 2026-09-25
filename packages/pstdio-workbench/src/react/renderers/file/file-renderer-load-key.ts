@@ -1,3 +1,4 @@
+import { resourceKey } from "@pstdio/sdk/extensions";
 import type { ResourceRef } from "../../../core";
 
 interface FileRendererLoadKeyInput {
@@ -22,7 +23,7 @@ export const createFileRendererLoadKey = (input: FileRendererLoadKeyInput) => {
         metadata: resource.metadata,
       })
     : null;
-  return `${fileRendererId}:${JSON.stringify(resourceValue)}`;
+  return `${JSON.stringify(resourceKey(resource))}:${fileRendererId}:${JSON.stringify(resourceValue)}`;
 };
 export const isCurrentLoadedFile = (
   loaded: {

@@ -1,6 +1,7 @@
 import type { WorkbenchAttachmentTarget } from "../workbench-targets";
 import type { ContributionRef } from "./contribution-identity";
 import type { JsonObject, JsonValue, Struct } from "./json";
+import type { NavigationTarget } from "./navigation-target";
 import type { RepoContext, ResourceRef } from "./resources";
 import type { SlotInvocationContext } from "./slots";
 
@@ -96,6 +97,7 @@ export type CommandOutcome<TResult = unknown> =
       ok: true;
       status: "success";
       value: TResult;
+      navigationRequests?: NavigationTarget[];
       notices?: CommandNotice[];
       diagnostics?: CommandDiagnostic[];
     }
