@@ -68,7 +68,8 @@ test("keeps process launch settings without passing caller credentials or arbitr
   const context = await createSmokeContext({
     source,
     env: {
-      ...process.env,
+      PATH: process.env.PATH,
+      SystemRoot: process.env.SystemRoot,
       GITHUB_TOKEN: "caller-token",
       AWS_SECRET_ACCESS_KEY: "caller-key",
       SMOKE_TEST_CALLER_SECRET: "caller-secret",
