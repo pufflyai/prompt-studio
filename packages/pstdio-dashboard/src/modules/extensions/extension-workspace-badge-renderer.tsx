@@ -14,11 +14,8 @@ import { GitBranch } from "lucide-react";
 import { createElement, useEffect, useState } from "react";
 import { createDashboardResource } from "@/shared/app/resources";
 import { normalizeExtensionResourceReference } from "@/shared/workbench/resource-hierarchy";
-import {
-  getDashboardWorkspaceDiffSummary,
-  requestDashboardWorkspaceDiffSummaries,
-  subscribeDashboardWorkspaceDiffSummaries,
-} from "@/shared/workspaces/workspace-diff-summary-data";
+import { getDashboardWorkspaceDiffSummary } from "@/shared/workspaces/workspace-diff-summary-data";
+import { watchDashboardWorkspaceDiffSummaries } from "@/shared/workspaces/workspace-diff-summary-watch";
 
 export interface ExtensionWorkspaceBadgeSession {
   id: string;
@@ -157,17 +154,8 @@ const ExtensionWorkspaceBadgeDisplay = (props: ExtensionWorkspaceBadgeDisplayPro
   const badgeLabel = selectedItem?.label;
 
   useEffect(() => {
-    let cancelled = false;
     const workspaceIds = workspaceIdsKey ? workspaceIdsKey.split("\n") : [];
-    const unsubscribe = subscribeDashboardWorkspaceDiffSummaries(() => setDiffVersion((version) => version + 1));
-    void requestDashboardWorkspaceDiffSummaries(workspaceIds).then(() => {
-      if (!cancelled) setDiffVersion((version) => version + 1);
-    });
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
+    return watchDashboardWorkspaceDiffSummaries(workspaceIds, () => setDiffVersion((version) => version + 1));
   }, [workspaceIdsKey]);
 
   if (!selectedItem) return null;
