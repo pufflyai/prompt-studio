@@ -31,5 +31,7 @@
   "settings.implementation.repositoryDefault": "Branche par défaut du dépôt",
   "settings.implementation.noGitFolder": "Les branches distantes nécessitent un dossier Git local.",
   "settings.implementation.error": "Impossible de mettre à jour les paramètres d’implémentation",
-  "ticketWorkspaces.project": "Espace de travail du projet"
+  "ticketWorkspaces.project": "Espace de travail du projet",
+  "commands.linkTicket": "Lier le ticket",
+  "commands.unlinkTicket": "Délier le ticket"
 }

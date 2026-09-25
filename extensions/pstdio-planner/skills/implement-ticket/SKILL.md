@@ -2,14 +2,19 @@
 name: implement-ticket
 description: "Implement a ticket end-to-end. Use when asked to implement or complete a ticket."
 metadata:
-  version: 0.0.13
+  version: 0.0.14
 ---
 
 Implement Planner tickets in a Prompt Studio workspace. Produce a committed revision and a change request report, then follow the configured review and pull request steps.
 
 ## Workspace
 
-Always work in a Prompt Studio workspace. When the user asks you to work in a worktree, create a Prompt Studio workspace with `pst workspaces create --provider pstdio.worktree`. It prints the workspace path. Work there. Do not use `git worktree add` or your agent's own worktree tool. Prompt Studio does not track those worktrees, so reports, reviews, and merges cannot find the work.
+Always work in a Prompt Studio workspace. Never use `git worktree add` or your agent's own worktree tool. Prompt Studio does not track those, so the ticket, reports, reviews and merges cannot find the work.
+
+- If you run inside a workspace from `pst pstdio-planner run-attempt`, work there.
+- When asked to implement tickets in a worktree, run `pst workspaces create`. It prints the workspace shorthand and path. Link each ticket with `pst tickets link --id <ticket> --workspace <workspace>`, then work at the printed path.
+- For several tickets in one workspace, create one workspace and link every ticket to it.
+- For one workspace per ticket, create and link a workspace for each ticket.
 
 Only a workspace started by `pst pstdio-planner run-attempt --ticket <shorthand>` has a managed attempt. The Planner derives its ticket status from the attempt and review verdicts; do not set that status directly. In any other workspace, skip step 5, update the ticket status after fixing review findings, and give the user the workspace ID, commit SHA, and report ID.
 

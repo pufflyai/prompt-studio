@@ -57,6 +57,7 @@ import {
   renameTicketFileCommand,
   updateTicketFileCommand,
 } from "./ticket-files";
+import { linkTicketCommand, unlinkTicketCommand } from "./ticket-links";
 import { ticketPropertiesQueryCommand } from "./ticket-properties/query";
 import { ticketPropertiesUpdateCommand } from "./ticket-properties/update";
 import {
@@ -88,6 +89,8 @@ import { workspaceActivityCommand } from "./workspace-activity";
 import { writeTicketCommand } from "./write-ticket";
 
 export const plannerCommands = [
+  linkTicketCommand,
+  unlinkTicketCommand,
   migrateTicketIdentitiesCommand,
   listTemplatesCommand,
   readTemplateCommand,
