@@ -1,5 +1,5 @@
 import { defineNavigationTree, defineView, l10n, params, workbenchModes } from "@pstdio/sdk/extensions";
-import { createNoteCommand, deleteNoteCommand } from "./commands";
+import { createNoteCommand, deleteNoteCommand, renameNoteCommand } from "./commands";
 import { listNotes } from "./notes";
 import { notesChanged, notesMount, noteTarget } from "./pages";
 
@@ -40,6 +40,21 @@ export const notesTree = defineView({
                 icon: "file-text",
                 target: noteTarget(note.id, note.title),
                 contextMenuActions: [
+                  {
+                    id: "rename",
+                    label: l10n("tree.actions.renameNote", "Rename note"),
+                    icon: "pencil",
+                    command: renameNoteCommand.ref,
+                    params: { noteId: note.id },
+                    input: {
+                      title: params.text({
+                        label: l10n("params.title", "Title"),
+                        required: true,
+                        defaultValue: note.title,
+                      }),
+                    },
+                    submitLabel: "Rename",
+                  },
                   {
                     id: "delete",
                     label: l10n("tree.actions.deleteNote", "Delete"),

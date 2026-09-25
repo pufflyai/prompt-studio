@@ -3,4 +3,4 @@
 "pstdio": patch
 ---
 
-Add the Notes extension: Markdown notes stored as files in the project repository.
+Add repository-backed Markdown notes with independent titles, sidebar navigation, and a rename action.

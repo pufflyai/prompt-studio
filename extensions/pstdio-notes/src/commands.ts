@@ -1,5 +1,5 @@
 import { defineCommand, l10n, params } from "@pstdio/sdk/extensions";
-import { createNote, deleteNote } from "./notes";
+import { createNote, deleteNote, renameNote } from "./notes";
 import { notesChanged, notesMount, noteTarget } from "./pages";
 
 export const createNoteCommand = defineCommand({
@@ -34,5 +34,21 @@ export const deleteNoteCommand = defineCommand({
     await ctx.events.emit(notesChanged, { noteId: commandParams.noteId });
 
     return { id: commandParams.noteId };
+  },
+});
+
+export const renameNoteCommand = defineCommand({
+  id: "notes.rename",
+  title: l10n("commands.renameNote", "Rename note"),
+  cli: true,
+  mutating: true,
+  params: {
+    noteId: params.text({ label: l10n("params.noteId", "Note"), required: true }),
+    title: params.text({ label: l10n("params.title", "Title"), required: true }),
+  },
+  async run(ctx, commandParams) {
+    const note = await renameNote(notesMount(ctx), commandParams.noteId, commandParams.title);
+    await ctx.events.emit(notesChanged, { noteId: note.id });
+    return note;
   },
 });

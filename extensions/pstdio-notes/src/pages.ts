@@ -9,7 +9,7 @@ import {
   type ResourceRef,
   workbenchModes,
 } from "@pstdio/sdk/extensions";
-import { noteExists, readNote, writeNote } from "./notes";
+import { noteExists, readNote, readNoteTitle, writeNote } from "./notes";
 
 export const notesChanged = eventRef<{ noteId?: string }>({
   extensionId: "pstdio.pstdio-notes",
@@ -82,6 +82,15 @@ export const notesPage = definePage({
       region: "main",
       order: 0,
       mountStrategy: "keep-mounted",
+      tab: {
+        refreshEvents: [notesChanged],
+        query: async (ctx, { renderer }) => {
+          const id = renderer.resource?.id;
+          const mount = notesMount(ctx);
+          if (!id || !(await noteExists(mount, id))) return {};
+          return { label: await readNoteTitle(mount, id) };
+        },
+      },
       item: {
         kind: "binding",
         binding: { kinds: [note.ref], view: editor.ref, cardinality: "many" },

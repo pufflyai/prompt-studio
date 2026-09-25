@@ -5,18 +5,21 @@ it in the rich Markdown editor, which renders headings, lists, links, tables, an
 
 ## Multiple documents
 
-- Use **New note** next to **Notes** to create a document. The title becomes its heading and the start of its file name.
+- Use **New note** next to **Notes** to create a titled document with an empty body.
 - The **Notes** entry expands or collapses the list. Clicking a note opens its tab, and the sidebar follows the active tab.
-- Each file name includes a unique ID so people can create notes with the same title at the same time.
-- A note's label in the list follows its first heading, so renaming the heading renames the note. Without a heading, the label uses its file ID.
+- Each note has a unique ID so people can create notes with the same title at the same time.
+- Titles are independent of the Markdown body. Editing or clearing the body keeps the title.
+- Right-click a note and choose **Rename note** to change its title. The sidebar and open tabs update without changing the body.
 - Delete a note from its context menu in the list.
 
 ## Where notes are stored
 
-Each note is one Markdown file in the project's default repository:
+Each note has a directory in the project's default repository. Its title and Markdown body are stored separately:
 
 ```txt
-<repo>/.pstdio/extension-storage/pstdio-notes/documents/<note>.md
+<repo>/.pstdio/extension-storage/pstdio-notes/documents/<note-id>/
+  title.txt
+  content.md
 ```
 
 The extension is installed once per user and works in every project, but the notes themselves belong to the repository.
