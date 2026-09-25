@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { isExtensionNavigationTarget, toWorkbenchNavigationTarget } from "./extension-navigation-target";
+import { isNavigationTarget } from "@pstdio/sdk/extensions";
+import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
 
 describe("toWorkbenchNavigationTarget", () => {
   test("keeps host command references in the host command namespace", () => {
@@ -41,21 +42,21 @@ describe("toWorkbenchNavigationTarget", () => {
           resource: { type: "ticket", id: "PS-1", label: "Ticket" },
           open: "preview",
         },
-        { extensionId: "pstdio.planner" },
+        { extensionId: "pstdio.planner", projectId: "project" },
       ),
     ).toEqual({
       kind: "panel",
       panel: { extensionId: "pstdio.planner", kind: "placement", id: "inspector" },
-      resource: { type: "ticket", id: "PS-1", label: "Ticket" },
+      resource: { type: "ticket", id: "PS-1", label: "Ticket", extensionId: "pstdio.planner", projectId: "project" },
       open: "preview",
     });
   });
 });
 
-describe("isExtensionNavigationTarget", () => {
+describe("isNavigationTarget", () => {
   test("accepts one leading page followed by a panel in a compound target", () => {
     expect(
-      isExtensionNavigationTarget({
+      isNavigationTarget({
         kind: "compound",
         targets: [
           { kind: "page", page: { kind: "page", id: "ticket" } },
@@ -67,7 +68,7 @@ describe("isExtensionNavigationTarget", () => {
 
   test("accepts page and panel actions in any order", () => {
     expect(
-      isExtensionNavigationTarget({
+      isNavigationTarget({
         kind: "compound",
         targets: [
           { kind: "panel", panel: { kind: "placement", id: "session" } },

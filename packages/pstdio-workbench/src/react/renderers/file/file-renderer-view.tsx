@@ -1,6 +1,6 @@
 import { Box, Button, Center, Flex, Spinner, Text } from "@chakra-ui/react";
 import { resourceKey } from "@pstdio/sdk/extensions";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { RegisteredFileRendererContribution, WorkbenchCore, WorkbenchPanelInstance } from "../../../core";
 import { getWorkbenchRenderers } from "../../../core";
 import {
@@ -112,15 +112,18 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   // object identity, while callbacks read the latest objects through refs.
   const contributionRef = useRef(contribution);
   const resourceRef = useRef(resource);
+  const placementRef = useRef(props.placement);
   useEffect(() => {
     contributionRef.current = contribution;
     resourceRef.current = resource;
+    placementRef.current = props.placement;
   });
   const contributionId = contribution.id;
   const hasSave = Boolean(contribution.save);
   // Re-binding a singleton widget to another resource changes `resource` and reloads.
   useEffect(() => {
     let cancelled = false;
+    let removed = false;
     setError(null);
     // A recently viewed document mounts immediately from the cache; the load
     // below reconciles it (unchanged content keeps the editor mounted).
@@ -129,14 +132,14 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     const load = () => {
       Promise.resolve(contributionRef.current.load(resourceRef.current))
         .then((next) => {
-          if (cancelled) return;
+          if (cancelled || removed) return;
           const updateLoaded = acceptFileRendererLoad(next, loadKey, controllerRef.current);
           if (!updateLoaded) return;
           setError(null);
           setLoaded(updateLoaded);
         })
         .catch((loadError) => {
-          if (cancelled) return;
+          if (cancelled || removed) return;
           setError({ loadKey, message: describeError(loadError) });
         });
     };
@@ -155,7 +158,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
           save: (value, origin) =>
             Promise.resolve(contributionRef.current.save?.(resourceRef.current, value, origin)).then((result) => {
               const current = readCachedFileContent(loadKey);
-              if (current) storeCachedFileContent(loadKey, { ...current, content: value });
+              if (current && !removed) storeCachedFileContent(loadKey, { ...current, content: value });
               return result ?? undefined;
             }),
         })
@@ -163,8 +166,15 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     if (cached) controllerRef.current?.setBaseline(cached.content, cached.revision);
     setEditState({ dirty: false, saving: false });
     load();
+    const removalSubscription = workbench.resources.onWillRemove((resource) => {
+      if (resourceKey(resource) !== resourceKey(resourceRef.current)) return [];
+      removed = true;
+      const retain = controllerRef.current?.markRemoved();
+      const identity = placementRef.current?.placementIdentity;
+      return retain && identity ? [identity] : [];
+    });
     const refreshSubscription = getWorkbenchRenderers(workbench).onDidRefreshFileRenderer((event) => {
-      if (event.fileRendererId !== contributionId) return;
+      if (removed || event.fileRendererId !== contributionId) return;
       const controller = controllerRef.current;
       if (controller) controller.handleRefreshEvent(event);
       else load();
@@ -172,6 +182,7 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
     return () => {
       cancelled = true;
       refreshSubscription.dispose();
+      removalSubscription.dispose();
       // Flush the last keystrokes on unbind; the load callback above is
       // cancelled, so a deferred refresh cannot resurrect the old binding.
       controllerRef.current?.flush();
@@ -235,11 +246,16 @@ export const WorkbenchFileRendererView = (props: WorkbenchFileRendererViewProps)
   // documents from the same renderer both start at revision 1, so keying on the
   // contribution alone reuses the editor and keeps showing the previous file.
   const editorKey = `${currentLoaded.loadKey}:${currentLoaded.editorRevision}`;
-  const errorNotice = loadError ? (
-    <FileRendererErrorNotice message={loadError} onRetry={retryLoad} />
-  ) : editState.saveError ? (
-    <FileRendererErrorNotice message={editState.saveError} onRetry={retrySave} />
-  ) : null;
+  let errorNotice: ReactNode = null;
+  if (editState.removed) {
+    errorNotice = (
+      <FileRendererErrorNotice message="This resource was removed. Your draft is kept here. Copy it before closing this tab." />
+    );
+  } else if (loadError) {
+    errorNotice = <FileRendererErrorNotice message={loadError} onRetry={retryLoad} />;
+  } else if (editState.saveError) {
+    errorNotice = <FileRendererErrorNotice message={editState.saveError} onRetry={retrySave} />;
+  }
   const handleActiveSectionChange = (sectionId: string | null) => {
     syncActiveFileSection({ workbench, navigation: sectionNavigation, sectionId });
   };

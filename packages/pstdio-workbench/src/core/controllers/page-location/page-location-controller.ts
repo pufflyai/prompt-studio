@@ -23,6 +23,7 @@ import type {
   WorkbenchPageNavigationResult,
 } from "./page-location-types";
 import { createPagePlacementCloser } from "./page-placement-closer";
+import { createPageResourceRemover } from "./page-resource-remover";
 
 export type {
   CreateWorkbenchPageLocationControllerInput,
@@ -246,6 +247,11 @@ export const createWorkbenchPageLocationController = <Value>(
     commit,
     fail,
     closePlacement: closeActivePlacement,
+    removeResource: createPageResourceRemover({
+      getState: input.registry.store.getState,
+      resources: internals.resources,
+      commit,
+    }),
     canGoBack: () => historyIndex > 0,
     canGoForward: () => historyIndex < maxHistoryIndex,
     dispose() {

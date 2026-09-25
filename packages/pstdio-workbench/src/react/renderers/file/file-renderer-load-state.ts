@@ -20,6 +20,12 @@ const fileContentCache = new Map<string, FileRendererContent>();
 
 export const readCachedFileContent = (loadKey: string) => fileContentCache.get(loadKey);
 
+export const clearCachedResourceContent = (resourceKey: string) => {
+  for (const key of fileContentCache.keys()) {
+    if (key.startsWith(`${JSON.stringify(resourceKey)}:`)) fileContentCache.delete(key);
+  }
+};
+
 export const storeCachedFileContent = (loadKey: string, content: FileRendererContent) => {
   fileContentCache.delete(loadKey);
   fileContentCache.set(loadKey, content);

@@ -12,8 +12,10 @@ import type {
   RepoContext,
   Struct,
 } from "@pstdio/sdk/extensions";
+import { qualifyNavigationTarget } from "@pstdio/sdk/extensions";
 import type { ExtensionRuntime } from "../../types/runtime";
 import { type EventDispatcher, refId } from "./dispatch";
+import type { NavigationScope } from "./navigation-scope";
 import type { InvocationScope } from "./scope";
 import type {
   BuildEnvironmentInput,
@@ -29,6 +31,7 @@ export interface ContextFactory {
     ids: BuildEnvironmentInput,
     depth: number,
     scope?: InvocationScope,
+    navigationScope?: NavigationScope,
   ): ExtensionContextBase;
   buildCommandContext(
     env: CommandRunnerEnvironment,
@@ -42,6 +45,7 @@ export interface ContextFactory {
     depth: number,
     scope: InvocationScope,
     workspace?: { workspaceDir?: string; workspaceId?: string },
+    navigationScope?: NavigationScope,
   ): CommandContext;
 }
 
@@ -57,6 +61,7 @@ export interface RunnerState {
 
 /** Where a nested `ctx.commands.execute()` runs from. */
 interface NestedExecuteOrigin {
+  navigationScope?: NavigationScope;
   depth: number;
   extensionId: string;
   projectId: string;
@@ -114,6 +119,7 @@ export const createExecuteBuilder = (runRef: {
       source: "api",
       metadata: invocation?.metadata,
       signal: origin.signal,
+      navigationScope: origin.navigationScope,
       depth: origin.depth + 1,
     });
     return outcome as CommandOutcome<never>;
@@ -125,9 +131,10 @@ export const createContextFactory = (
   logger: ExtensionLoggerApi,
   createExecute: (origin: NestedExecuteOrigin) => CommandHelpersApi["execute"],
 ): ContextFactory => ({
-  buildExtensionContext(env, ids, depth, scope) {
+  buildExtensionContext(env, ids, depth, scope, navigationScope) {
     const hostApis: ScopedHostApis = scope ? env.withScope(scope) : env;
     const origin = {
+      navigationScope,
       depth,
       extensionId: ids.extensionId,
       projectId: ids.projectId,
@@ -144,6 +151,11 @@ export const createContextFactory = (
       name: ids.name,
       storage: env.storage,
       resources: env.resources,
+      navigation: {
+        open: (target) => {
+          if (navigationScope) navigationScope.open(qualifyNavigationTarget(target, ids.extensionId, ids.projectId));
+        },
+      },
       artifacts: env.artifacts,
       repoFiles: env.repoFiles,
       workspaceFiles: env.workspaceFiles,
@@ -179,6 +191,7 @@ export const createContextFactory = (
     depth,
     scope,
     workspace,
+    navigationScope,
   ) {
     const base = this.buildExtensionContext(
       env,
@@ -191,6 +204,7 @@ export const createContextFactory = (
       },
       depth,
       scope,
+      navigationScope,
     );
     return {
       ...base,

@@ -1,4 +1,4 @@
-import type { ResourceRef } from "@pstdio/sdk/extensions";
+import type { PlacementIdentity, ResourceRef } from "@pstdio/sdk/extensions";
 
 export type { ResourceRef } from "@pstdio/sdk/extensions";
 
@@ -88,6 +88,8 @@ export interface ResourceRegistryStoreState {
   hierarchyProviders: Record<string, ResolvedResourceHierarchyProvider>;
 }
 export interface ResourceRegistry {
+  removed(resource: ResourceRef): void;
+  onWillRemove(listener: (resource: ResourceRef) => readonly PlacementIdentity[]): Disposable;
   store: WorkbenchStore<ResourceRegistryStoreState>;
   registerKind(kind: ResourceKindContribution, metadata?: ContributionMetadata): Disposable;
   getKind(kind: string): RegisteredResourceKind | undefined;
@@ -101,6 +103,7 @@ export interface ResourceRegistry {
   onDidDetectHierarchyCycle(listener: (cycle: ResourceHierarchyCycle) => void): Disposable;
 }
 export interface CreateResourceRegistryInput {
+  remove?(resource: ResourceRef, retained: readonly PlacementIdentity[]): void;
   // Resolves the active primary resource so listResources can scope provider candidates.
   getPrimary?: () => ResourceRef | undefined;
   resolveView?: (viewId: string) =>
@@ -111,6 +114,7 @@ export interface CreateResourceRegistryInput {
     | undefined;
 }
 export const createResourceRegistry = (input: CreateResourceRegistryInput = {}): ResourceRegistry => {
+  const removalListeners = new Set<(resource: ResourceRef) => readonly PlacementIdentity[]>();
   const cycleListeners = new Set<(cycle: ResourceHierarchyCycle) => void>();
   const store = createWorkbenchStore<ResourceRegistryStoreState>({
     name: "workbench.resources",
@@ -118,6 +122,16 @@ export const createResourceRegistry = (input: CreateResourceRegistryInput = {}):
   });
   return {
     store,
+    removed(resource) {
+      input.remove?.(
+        resource,
+        [...removalListeners].flatMap((listener) => listener(resource)),
+      );
+    },
+    onWillRemove(listener) {
+      removalListeners.add(listener);
+      return createDisposable(() => removalListeners.delete(listener));
+    },
     registerKind(kind, metadata) {
       const snapshot = store.getState();
       if (snapshot.kinds[kind.kind]) throw new Error(`Resource kind already registered: ${kind.kind}`);

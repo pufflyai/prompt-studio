@@ -30,6 +30,7 @@ import type {
   WorkbenchAttachmentInvocationContext,
   WorkspaceFilesMount,
 } from "@pstdio/sdk/extensions";
+import type { NavigationScope } from "./navigation-scope";
 import type { InvocationScope } from "./scope";
 
 export const DEFAULT_MAX_COMMAND_DEPTH = 10;
@@ -126,6 +127,7 @@ export interface CommandRunner {
 }
 
 export interface InternalExecuteInput extends CommandExecuteInput {
+  navigationScope?: NavigationScope;
   depth: number;
 }
 

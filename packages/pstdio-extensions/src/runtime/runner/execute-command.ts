@@ -113,6 +113,7 @@ const runExtensionCommand = async (
       input.depth,
       scope,
       { workspaceDir: input.workspaceDir, workspaceId: input.workspaceId },
+      input.navigationScope,
     );
   const buildMiddlewareCtx = async (invocation: CommandInvocation, middleware: RuntimeMiddlewareRecord) =>
     state.factory.buildCommandContext(
@@ -127,6 +128,7 @@ const runExtensionCommand = async (
       input.depth,
       scope,
       { workspaceDir: input.workspaceDir, workspaceId: input.workspaceId },
+      input.navigationScope,
     );
 
   const requestedPayload = buildRequestPayload(
@@ -261,6 +263,7 @@ const executePrivateHandler = async (
       },
       input.depth,
       scope,
+      input.navigationScope,
     );
     const value = await handler.handler(ctx, params);
     const elapsedMs = Date.now() - start;

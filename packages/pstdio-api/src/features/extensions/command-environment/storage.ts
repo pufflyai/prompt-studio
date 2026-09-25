@@ -77,6 +77,15 @@ export const createStorageApi = (
             project_id: input.projectId,
           });
         },
+        async update(id, value) {
+          const updated = await deps.extensionStorageService.updateCollectionItem({
+            ...scope,
+            collection: name,
+            item_id: id,
+            value_json: value,
+          });
+          if (!updated) throw new Error(`Item not found: ${id}`);
+        },
         async createIfAbsent(id, value) {
           return deps.extensionStorageService.createCollectionItemIfAbsent({
             ...scope,

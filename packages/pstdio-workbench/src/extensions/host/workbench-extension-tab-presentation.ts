@@ -1,8 +1,9 @@
 import type { WorkbenchExtensionMetadata } from "@pstdio/sdk/api";
-import { resourceKey } from "@pstdio/sdk/extensions";
+import { isNavigationTarget, resourceKey } from "@pstdio/sdk/extensions";
 import { text } from "pstdio-extensions/workbench";
 import type { Disposable, WorkbenchPanelTab, WorkbenchTabSnapshot } from "../../core";
-import { toWorkbenchNavigationTargetResult } from "./extension-navigation-target";
+import { toWorkbenchNavigationTarget } from "./extension-navigation-target";
+import { executeWorkbenchExtensionCommand } from "./workbench-extension-command";
 import type { RegisterWorkbenchExtensionContributionsInput } from "./workbench-extension-host-types";
 import type { WorkbenchExtensionRefreshEvent } from "./workbench-extension-refresh";
 
@@ -14,7 +15,9 @@ export type WorkbenchExtensionTabMetadata = NonNullable<MetadataPlacement["tab"]
 };
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   Boolean(value && typeof value === "object" && !Array.isArray(value));
-const toSnapshot = (value: unknown, extensionId: string): WorkbenchTabSnapshot => {
+const navigationAction = (value: unknown, extensionId: string, projectId: string) =>
+  isNavigationTarget(value) ? toWorkbenchNavigationTarget(value, { extensionId, projectId }) : undefined;
+const toSnapshot = (value: unknown, extensionId: string, projectId: string): WorkbenchTabSnapshot => {
   if (!isRecord(value)) return {};
   const indicator = isRecord(value.indicator)
     ? {
@@ -31,7 +34,7 @@ const toSnapshot = (value: unknown, extensionId: string): WorkbenchTabSnapshot =
             id: candidate.id,
             rows: candidate.rows.flatMap((row) => {
               if (!isRecord(row) || typeof row.id !== "string") return [];
-              const target = toWorkbenchNavigationTargetResult(row.action, { extensionId });
+              const target = navigationAction(row.action, extensionId, projectId);
               return [
                 {
                   id: row.id,
@@ -75,9 +78,7 @@ export const createWorkbenchExtensionTabPresentation = (
         }
       : undefined;
     void Promise.resolve(
-      input.executeCommand(metadata.queryHandlerId, {
-        projectId: input.projectId,
-        source: "dashboard",
+      executeWorkbenchExtensionCommand(input, metadata.queryHandlerId, {
         resource,
         params: {
           renderer: {
@@ -89,9 +90,8 @@ export const createWorkbenchExtensionTabPresentation = (
         },
       }),
     )
-      .then((response) => {
-        const value = isRecord(response) && isRecord(response.outcome) ? response.outcome.value : response;
-        snapshots.set(instance.instanceId, toSnapshot(value, metadata.extensionId));
+      .then((value) => {
+        snapshots.set(instance.instanceId, toSnapshot(value, metadata.extensionId, input.projectId));
         for (const listener of listeners) listener();
       })
       .finally(() => loading.delete(instance.instanceId));

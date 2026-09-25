@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { afterEach, describe, expect, test } from "bun:test";
 import { resourceKey } from "@pstdio/sdk/extensions";
 import { createWorkbench } from "@pstdio/workbench";
 import { getWriter } from "@/lib/sync/collections";
@@ -10,6 +10,12 @@ import { createSidenavModule } from "../sidenav/module";
 import { createWorkspacesModule } from "../workspaces/module";
 import { createSessionBubbleModule } from "./bubble/module";
 import { createSessionsModule } from "./module";
+
+afterEach(() => {
+  getWriter("workspaces")?.truncateAndWrite([]);
+  getWriter("sessions")?.truncateAndWrite([]);
+  getWriter("workspace_sessions")?.truncateAndWrite([]);
+});
 
 const createWorkspaceSessionWorkbench = () => {
   const workbench = createWorkbench();
