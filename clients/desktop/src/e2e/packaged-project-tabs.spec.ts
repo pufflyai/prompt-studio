@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { expect } from "@playwright/test";
+import type { WorkbenchCore } from "@pstdio/workbench";
 import { readRuntimeActivity } from "pstdio/runtime";
 import { test } from "../testing/packaged-fixture";
 import {
@@ -32,6 +33,14 @@ test("opens and closes project tabs while preserving pages and terminals", async
       if (message.text().startsWith("terminal-kill-stack")) console.log(message.text());
     });
     await app.page.evaluate(() => {
+      const workbench = (window as unknown as { __pstdioDashboardWorkbench?: WorkbenchCore }).__pstdioDashboardWorkbench;
+      if (workbench) {
+        const killBinding = workbench.terminal.killBinding;
+        workbench.terminal.killBinding = (bindingId) => {
+          console.log("terminal-kill-stack", JSON.stringify({ bindingId, scope: workbench.layout.getPersistenceScope(), stack: new Error().stack }));
+          return killBinding(bindingId);
+        };
+      }
       const send = WebSocket.prototype.send;
       WebSocket.prototype.send = function (data) {
         if (typeof data === "string" && JSON.parse(data).type === "kill") console.log("terminal-kill-stack", new Error().stack);
