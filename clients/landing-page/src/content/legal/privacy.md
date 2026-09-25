@@ -51,7 +51,7 @@ Every user is entitled to the following:
 - **The right to data portability** – You have the right to request that Pufflig AB transfer the data that we have collected to another organization, or directly to you, under certain conditions.
 
 If you make a request, we have one month to respond to you.
-If you would like to exercise any of these rights, please contact us at our email: [hello@pufflig.com](mailto:hello@pufflig.com)
+If you would like to exercise any of these rights, please contact us at our email: [hello@prompt.studio](mailto:hello@prompt.studio)
 
 ## Cookies
 
@@ -84,5 +84,5 @@ This privacy policy was last updated on March 21, 2025.
 ## How to contact us
 
 If you have any questions about Pufflig AB's privacy policy, the data we hold on you, or you would like to exercise one of your data protection rights, please do not hesitate to contact us.
-Email us at: [hello@pufflig.com](mailto:hello@pufflig.com).
+Email us at: [hello@prompt.studio](mailto:hello@prompt.studio).
 Or write us at: Pufflig AB, Rissneleden 10, 174 53 Sundbyberg, Sweden.
