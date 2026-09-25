@@ -25,12 +25,16 @@ jobs:
           path: ${{ runner.temp }}/desktop-candidate
           run-id: 36165823286
           github-token: ${{ github.token }}
+      - name: Build Lab frontend dependencies
+        run: bun run build -- --scope workbench-fixture --include-dependencies
       - name: Inspect compiled webviews with linked dependencies
         shell: pwsh
         run: |
           $env:E2E_PACKAGED_BINARY_PATH = Join-Path $env:RUNNER_TEMP "desktop-candidate/resources/bin/pstdio.exe"
           Set-Content packages/e2e/src/packaged/desktop-webview-diagnostic.test.ts 'import { registerLinkedWebviewSmokeTests } from "./packaged-linked-webview-smoke"; registerLinkedWebviewSmokeTests();'
           bun test packages/e2e/src/packaged/desktop-webview-diagnostic.test.ts
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          bun test packages/e2e/src/packaged/packaged-lab-build-diagnostic.test.ts
       - name: Reproduce synchronous Windows directory removal and verify asynchronous cleanup
         shell: pwsh
         run: |
