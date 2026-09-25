@@ -46,6 +46,7 @@ type RuntimeProcess = {
 };
 
 type RuntimeSpawnOptions = {
+  detached: boolean;
   env: NodeJS.ProcessEnv;
   stdio: ["ignore", "pipe", "pipe"];
   windowsHide: boolean;
@@ -166,6 +167,8 @@ export class DesktopRuntimeManager {
     this.#output = "";
     const instanceId = this.#deps.createInstanceId();
     const child = this.#deps.spawn(sidecarPath, createSidecarLaunchArguments(instanceId), {
+      // A desktop-owned runtime can be promoted to outlive the desktop process.
+      detached: true,
       env,
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
